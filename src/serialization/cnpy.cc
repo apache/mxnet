@@ -17,52 +17,53 @@
  * under the License.
  */
 
-#include <algorithm>
+#include "cnpy.h"
+#include <mxnet/op_attr_types.h>
+#include <mxnet/imperative.h>
 #include <stdint.h>
-#include <fstream>
-#include <complex>
+#include <string_view>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
+#include <fstream>
+#include <complex>
 #include <numeric>
 #include <limits>
 #include <regex>
+#include <tuple>
+#include <set>
 #include <stdexcept>
-#include <string>
-#include <string_view>
 #include <typeinfo>
-#include <vector>
 
-#include "cnpy.h"
 #include "zip.h"
 
-#include <mxnet/op_attr_types.h>
-#include <mxnet/imperative.h>
 
 
 namespace mxnet {
 
-void fortran_order_transpose_prepare(std::vector<dim_t>& shape) {
-    std::reverse(std::begin(shape), std::end(shape));
+void fortran_order_transpose_prepare(std::vector<dim_t>& shape) {  // NOLINT(runtime/references)
+  std::reverse(std::begin(shape), std::end(shape));
 }
 
+// NOLINTNEXTLINE(runtime/references)
 NDArray fortran_order_transpose(std::vector<dim_t>& shape, int type_flag, NDArray& array) {
-    std::reverse(std::begin(shape), std::end(shape));
-    TShape tshape(shape);
-    NDArray transposed(tshape, Context::CPU(), false, type_flag);
-    const std::vector<NDArray*> inputs {&array};
-    const std::vector<NDArray*> outputs {&transposed};
-    const std::vector<OpReqType> reqs {kWriteTo};  // Transpose does not support kWriteInplace
-    nnvm::NodeAttrs attrs;
-    if (!Imperative::Get()->is_np_shape()) {
-        attrs.op = nnvm::Op::Get("transpose");
-    } else {
-        attrs.op = nnvm::Op::Get("_npi_transpose");
-    }
-    attrs.op->attr_parser(&attrs);
-    Imperative::Get()->InvokeOp(Context::CPU(), attrs, inputs, outputs,
-                                reqs, DispatchMode::kFCompute, OpStatePtr());
-    return transposed;
+  std::reverse(std::begin(shape), std::end(shape));
+  TShape tshape(shape);
+  NDArray transposed(tshape, Context::CPU(), false, type_flag);
+  const std::vector<NDArray*> inputs {&array};
+  const std::vector<NDArray*> outputs {&transposed};
+  const std::vector<OpReqType> reqs {kWriteTo};  // Transpose does not support kWriteInplace
+  nnvm::NodeAttrs attrs;
+  if (!Imperative::Get()->is_np_shape()) {
+    attrs.op = nnvm::Op::Get("transpose");
+  } else {
+    attrs.op = nnvm::Op::Get("_npi_transpose");
+  }
+  attrs.op->attr_parser(&attrs);
+  Imperative::Get()->InvokeOp(Context::CPU(), attrs, inputs, outputs,
+                              reqs, DispatchMode::kFCompute, OpStatePtr());
+  return transposed;
 }
 
 
@@ -120,120 +121,121 @@ int dtype_descr(const std::string& dtype_descr) {
     else if (dtype_descr.find("u4'") != std::string::npos) return mshadow::kUint32;
     else if (dtype_descr.find("u8'") != std::string::npos) return mshadow::kUint64;
     else if (dtype_descr.find("bfloat16'") != std::string::npos) return mshadow::kBfloat16;
-    else LOG(FATAL) << "Unknown dtype descriptor " << dtype_descr << "encountered.";
+    else
+      LOG(FATAL) << "Unknown dtype descriptor " << dtype_descr << "encountered.";
     return -1;
 }
 
 std::string create_npy_header(const TBlob& blob) {
-    std::string dict;
-    dict += "{'descr': ";
-    dict += dtype_descr(blob);
-    dict += ", 'fortran_order': False, 'shape': (";
-    if (blob.ndim()) {
-        dict += std::to_string(blob.shape_[0]);
-        for (int i = 1; i < blob.ndim(); i++) {
-            dict += ", ";
-            dict += std::to_string(blob.shape_[i]);
-        }
-        if (blob.ndim() == 1) {
-            dict += ",";
-        }
+  std::string dict;
+  dict += "{'descr': ";
+  dict += dtype_descr(blob);
+  dict += ", 'fortran_order': False, 'shape': (";
+  if (blob.ndim()) {
+    dict += std::to_string(blob.shape_[0]);
+    for (int i = 1; i < blob.ndim(); i++) {
+      dict += ", ";
+      dict += std::to_string(blob.shape_[i]);
     }
-    dict += "), }";
-
-    // pad with spaces so that preamble+dict is modulo 64 bytes. preamble is
-    // 10 bytes. dict needs to end with \n
-    int remainder = 64 - (10 + dict.size() + 1) % 64;
-    dict.insert(dict.end(), remainder, ' ');
-    dict.push_back('\n');
-    assert((dict.size() + 10) % 64 == 0);
-
-    std::string header;
-    header += (char)0x93;
-    header += "NUMPY";
-
-    std::string::size_type size = dict.size();
-    CHECK(size <= std::numeric_limits<uint32_t>::max()) << "Shape too large for NPY serialization";
-    if (size <= std::numeric_limits<uint16_t>::max()) {
-        header += (char)0x01;  //major version of numpy format
-        header += (char)0x00;  //minor version of numpy format
-        uint16_t size_ = dict.size();
-        header += (char) (size_ & 0xFF);
-        header += (char) (size_ >> 8);
-    } else {
-        header += (char)0x02;  //major version of numpy format
-        header += (char)0x00;  //minor version of numpy format
-        uint32_t size_ = dict.size();
-        header += (char) (size_ & 0xFF);
-        header += (char) ((size_ >> 8) & 0xFF);
-        header += (char) ((size_ >> 16) & 0xFF);
-        header += (char) ((size_ >> 24) & 0xFF);
+    if (blob.ndim() == 1) {
+      dict += ",";
     }
+  }
+  dict += "), }";
 
-    header += dict;
+  // pad with spaces so that preamble+dict is modulo 64 bytes. preamble is
+  // 10 bytes. dict needs to end with \n
+  int remainder = 64 - (10 + dict.size() + 1) % 64;
+  dict.insert(dict.end(), remainder, ' ');
+  dict.push_back('\n');
+  assert((dict.size() + 10) % 64 == 0);
 
-    return header;
+  std::string header;
+  header += static_cast<char>(0x93);
+  header += "NUMPY";
+
+  std::string::size_type size = dict.size();
+  CHECK(size <= std::numeric_limits<uint32_t>::max()) << "Shape too large for NPY serialization";
+  if (size <= std::numeric_limits<uint16_t>::max()) {
+    header += static_cast<char>(0x01);  // major version of numpy format
+    header += static_cast<char>(0x00);  // minor version of numpy format
+    uint16_t size_ = dict.size();
+    header += static_cast<char>(size_ & 0xFF);
+    header += static_cast<char>(size_ >> 8);
+  } else {
+    header += static_cast<char>(0x02);  // major version of numpy format
+    header += static_cast<char>(0x00);  // minor version of numpy format
+    uint32_t size_ = dict.size();
+    header += static_cast<char>(size_ & 0xFF);
+    header += static_cast<char>((size_ >> 8) & 0xFF);
+    header += static_cast<char>((size_ >> 16) & 0xFF);
+    header += static_cast<char>((size_ >> 24) & 0xFF);
+  }
+
+  header += dict;
+
+  return header;
 }
 
 uint32_t parse_npy_header_len(std::ifstream& strm) {
-    strm.exceptions(std::istream::eofbit);
-    strm.exceptions(std::istream::failbit);
-    strm.exceptions(std::istream::badbit);
+  strm.exceptions(std::istream::eofbit);
+  strm.exceptions(std::istream::failbit);
+  strm.exceptions(std::istream::badbit);
 
-    CHECK(strm.get() == 0x93);
-    CHECK(strm.get() == 'N');
-    CHECK(strm.get() == 'U');
-    CHECK(strm.get() == 'M');
-    CHECK(strm.get() == 'P');
-    CHECK(strm.get() == 'Y');
+  CHECK_EQ(strm.get(), 0x93);
+  CHECK_EQ(strm.get(), 'N');
+  CHECK_EQ(strm.get(), 'U');
+  CHECK_EQ(strm.get(), 'M');
+  CHECK_EQ(strm.get(), 'P');
+  CHECK_EQ(strm.get(), 'Y');
 
-    uint8_t major_version = strm.get();
-    CHECK(major_version == 0x01 || major_version == 0x02) << "Unsupported npy major version";
-    CHECK(strm.get() == 0x00) << "Unsupported npy minor version";
+  uint8_t major_version = strm.get();
+  CHECK(major_version == 0x01 || major_version == 0x02) << "Unsupported npy major version";
+  CHECK(strm.get() == 0x00) << "Unsupported npy minor version";
 
-    uint32_t header_len = 0;
-    header_len += strm.get();
-    header_len += strm.get() >> 8;
-    if (major_version == 0x02) {
-        header_len += strm.get() >> 16;
-        header_len += strm.get() >> 24;
-    }
-    return header_len;
+  uint32_t header_len = 0;
+  header_len += strm.get();
+  header_len += strm.get() >> 8;
+  if (major_version == 0x02) {
+    header_len += strm.get() >> 16;
+    header_len += strm.get() >> 24;
+  }
+  return header_len;
 }
 
 std::tuple<int, int, std::vector<dim_t>> parse_npy_header_descr(const std::string& header) {
-    // Fortran order
-    std::string::size_type loc = header.find("fortran_order");
-    CHECK_NE(loc, std::string::npos) << "failed to find NPY header keyword: 'fortran_order'";
-    bool fortran_order = (header.substr(loc + 16, 4) == "True" ? true : false);
+  // Fortran order
+  std::string::size_type loc = header.find("fortran_order");
+  CHECK_NE(loc, std::string::npos) << "failed to find NPY header keyword: 'fortran_order'";
+  bool fortran_order = (header.substr(loc + 16, 4) == "True" ? true : false);
 
-    // Shape
-    loc = header.find("(");
-    std::string::size_type end_loc = header.find(")");
-    CHECK_NE(loc, std::string::npos) << "failed to find NPY header keyword: '('";
-    CHECK_NE(end_loc, std::string::npos) << "failed to find NPY header keyword: ')'";
-    std::string shape_str = header.substr(loc+1, end_loc-loc-1);
-    std::regex num_regex("[0-9][0-9]*");
-    std::smatch sm;
-    std::vector<dim_t> shape;
-    while(std::regex_search(shape_str, sm, num_regex)) {
-        shape.push_back(std::stoi(sm[0].str()));
-        shape_str = sm.suffix().str();
-    }
+  // Shape
+  loc = header.find("(");
+  std::string::size_type end_loc = header.find(")");
+  CHECK_NE(loc, std::string::npos) << "failed to find NPY header keyword: '('";
+  CHECK_NE(end_loc, std::string::npos) << "failed to find NPY header keyword: ')'";
+  std::string shape_str = header.substr(loc+1, end_loc-loc-1);
+  std::regex num_regex("[0-9][0-9]*");
+  std::smatch sm;
+  std::vector<dim_t> shape;
+  while (std::regex_search(shape_str, sm, num_regex)) {
+    shape.push_back(std::stoi(sm[0].str()));
+    shape_str = sm.suffix().str();
+  }
 
-    // endian, word size, data type
-    // byte order code | stands for not applicable.
-    loc = header.find("descr");
-    CHECK_NE(loc, std::string::npos) << "failed to find NPY header keyword: 'descr'";
-    // May use https://github.com/numpy/numpy/blob/38275835/numpy/core/src/multiarray/ctors.c#L365
-    CHECK(header[loc + 9] == MXNET_BYTEORDER_CHAR || header[loc + 9] == '|')
-        << "Loading files with non-native endianness "
-        << "is not yet supported. Please open the file "
-        << "with numpy.load, use byteswap method to "
-        << "convert endianness and re-save the file.";
+  // endian, word size, data type
+  // byte order code | stands for not applicable.
+  loc = header.find("descr");
+  CHECK_NE(loc, std::string::npos) << "failed to find NPY header keyword: 'descr'";
+  // May use https://github.com/numpy/numpy/blob/38275835/numpy/core/src/multiarray/ctors.c#L365
+  CHECK(header[loc + 9] == MXNET_BYTEORDER_CHAR || header[loc + 9] == '|')
+    << "Loading files with non-native endianness "
+    << "is not yet supported. Please open the file "
+    << "with numpy.load, use byteswap method to "
+    << "convert endianness and re-save the file.";
 
-    int type_flag = dtype_descr(header);
-    return std::tuple(type_flag, fortran_order, shape);
+  int type_flag = dtype_descr(header);
+  return std::tuple(type_flag, fortran_order, shape);
 }
 
 
@@ -259,37 +261,39 @@ void save_array(const std::string& fname, const NDArray& array_) {
 
   std::ofstream output(fname, std::ios::binary);
   output.write(npy_header.data(), npy_header.size());
-  output.write(static_cast<const char*>( blob.dptr_ ), blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_));
+  output.write(static_cast<const char*>(blob.dptr_), blob.Size() *
+               mshadow::mshadow_sizeof(blob.type_flag_));
 }
 
 NDArray load_array(const std::string& fname) {
-    std::ifstream strm(fname, std::ios::binary);
-    strm.exceptions(std::istream::eofbit);
-    strm.exceptions(std::istream::failbit);
-    strm.exceptions(std::istream::badbit);
+  std::ifstream strm(fname, std::ios::binary);
+  strm.exceptions(std::istream::eofbit);
+  strm.exceptions(std::istream::failbit);
+  strm.exceptions(std::istream::badbit);
 
-    uint32_t header_len = parse_npy_header_len(strm);
-    std::string header(header_len, ' ');
-    strm.read(header.data(), header_len);
-    auto [type_flag, fortran_order, shape] = parse_npy_header_descr(header);
+  uint32_t header_len = parse_npy_header_len(strm);
+  std::string header(header_len, ' ');
+  strm.read(header.data(), header_len);
+  auto[type_flag, fortran_order, shape] = parse_npy_header_descr(header);
 
-    if (fortran_order) {
-        fortran_order_transpose_prepare(shape);
-    }
+  if (fortran_order) {
+    fortran_order_transpose_prepare(shape);
+  }
 
-    TShape tshape(shape);
-    NDArray array(tshape, Context::CPU(), false, type_flag);
-    const TBlob& blob = array.data();
-    strm.read(reinterpret_cast<char*>(blob.dptr_), blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_));
+  TShape tshape(shape);
+  NDArray array(tshape, Context::CPU(), false, type_flag);
+  const TBlob& blob = array.data();
+  strm.read(reinterpret_cast<char*>(blob.dptr_), blob.Size() *
+            mshadow::mshadow_sizeof(blob.type_flag_));
 
-    if(fortran_order) {
-        array = fortran_order_transpose(shape, type_flag, array);
-    }
+  if (fortran_order) {
+    array = fortran_order_transpose(shape, type_flag, array);
+  }
 
-    return array;
+  return array;
 }
 
-}
+}  // namespace npy
 
 namespace npz {
 
@@ -336,8 +340,8 @@ void save_blob(int zip_open_flags, const std::string& zip_fname, const std::stri
 
 
 // Save shape of sparse ndarray in to scipy compatible shape.npy with int64 data
-void save_shape_array(int zip_open_flags, const std::string& zip_fname, const std::string& blob_name,
-                      const mxnet::TShape& shape) {
+void save_shape_array(int zip_open_flags, const std::string& zip_fname,
+                      const std::string& blob_name, const mxnet::TShape& shape) {
   int error;
   zip_t* archive = zip_open(zip_fname.c_str(), zip_open_flags, &error);
   if (archive == nullptr) {
@@ -358,37 +362,37 @@ void save_shape_array(int zip_open_flags, const std::string& zip_fname, const st
   dict.push_back('\n');
   assert((dict.size() + 10) % 64 == 0);
   std::string npy;
-  npy += (char)0x93;
+  npy += static_cast<char>(0x93);
   npy += "NUMPY";
   std::string::size_type size = dict.size();
   CHECK(size <= std::numeric_limits<uint32_t>::max()) << "Shape too large for NPY serialization";
   if (size <= std::numeric_limits<uint16_t>::max()) {
-      npy += (char)0x01;  //major version of numpy format
-      npy += (char)0x00;  //minor version of numpy format
+      npy += static_cast<char>(0x01);  // major version of numpy format
+      npy += static_cast<char>(0x00);  // minor version of numpy format
       uint16_t size_ = dict.size();
-      npy += (char) (size_ & 0xFF);
-      npy += (char) (size_ >> 8);
+      npy += static_cast<char>(size_ & 0xFF);
+      npy += static_cast<char>(size_ >> 8);
   } else {
-      npy += (char)0x02;  //major version of numpy format
-      npy += (char)0x00;  //minor version of numpy format
+      npy += static_cast<char>(0x02);  // major version of numpy format
+      npy += static_cast<char>(0x00);  // minor version of numpy format
       uint32_t size_ = dict.size();
-      npy += (char) (size_ & 0xFF);
-      npy += (char) ((size_ >> 8) & 0xFF);
-      npy += (char) ((size_ >> 16) & 0xFF);
-      npy += (char) ((size_ >> 24) & 0xFF);
+      npy += static_cast<char>(size_ & 0xFF);
+      npy += static_cast<char>((size_ >> 8) & 0xFF);
+      npy += static_cast<char>((size_ >> 16) & 0xFF);
+      npy += static_cast<char>((size_ >> 24) & 0xFF);
   }
   npy += dict;
 
   // Add shape data
   for (const uint64_t value : shape) {
-      npy += (char) (value & 0xFF);
-      npy += (char) ((value >> 8) & 0xFF);
-      npy += (char) ((value >> 16) & 0xFF);
-      npy += (char) ((value >> 24) & 0xFF);
-      npy += (char) ((value >> 32) & 0xFF);
-      npy += (char) ((value >> 40) & 0xFF);
-      npy += (char) ((value >> 48) & 0xFF);
-      npy += (char) ((value >> 56) & 0xFF);
+      npy += static_cast<char>(value & 0xFF);
+      npy += static_cast<char>((value >> 8) & 0xFF);
+      npy += static_cast<char>((value >> 16) & 0xFF);
+      npy += static_cast<char>((value >> 24) & 0xFF);
+      npy += static_cast<char>((value >> 32) & 0xFF);
+      npy += static_cast<char>((value >> 40) & 0xFF);
+      npy += static_cast<char>((value >> 48) & 0xFF);
+      npy += static_cast<char>((value >> 56) & 0xFF);
   }
 
   zip_error_t e;
@@ -412,8 +416,8 @@ void save_shape_array(int zip_open_flags, const std::string& zip_fname, const st
 }
 
 
-void save_format_array(int zip_open_flags, const std::string& zip_fname, const std::string& blob_name,
-                       const std::string_view& format) {
+void save_format_array(int zip_open_flags, const std::string& zip_fname,
+                       const std::string& blob_name, const std::string_view& format) {
   int error;
   zip_t* archive = zip_open(zip_fname.c_str(), zip_open_flags, &error);
   if (archive == nullptr) {
@@ -434,24 +438,24 @@ void save_format_array(int zip_open_flags, const std::string& zip_fname, const s
   dict.push_back('\n');
   assert((dict.size() + 10) % 64 == 0);
   std::string npy;
-  npy += (char)0x93;
+  npy += static_cast<char>(0x93);
   npy += "NUMPY";
   std::string::size_type size = dict.size();
   CHECK(size <= std::numeric_limits<uint32_t>::max());
   if (size <= std::numeric_limits<uint16_t>::max()) {
-      npy += (char)0x01;  //major version of numpy format
-      npy += (char)0x00;  //minor version of numpy format
+      npy += static_cast<char>(0x01);  // major version of numpy format
+      npy += static_cast<char>(0x00);  // minor version of numpy format
       uint16_t size_ = dict.size();
-      npy += (char) (size_ & 0xFF);
-      npy += (char) (size_ >> 8);
+      npy += static_cast<char>(size_ & 0xFF);
+      npy += static_cast<char>(size_ >> 8);
   } else {
-      npy += (char)0x02;  //major version of numpy format
-      npy += (char)0x00;  //minor version of numpy format
+      npy += static_cast<char>(0x02);  // major version of numpy format
+      npy += static_cast<char>(0x00);  // minor version of numpy format
       uint32_t size_ = dict.size();
-      npy += (char) (size_ & 0xFF);
-      npy += (char) ((size_ >> 8) & 0xFF);
-      npy += (char) ((size_ >> 16) & 0xFF);
-      npy += (char) ((size_ >> 24) & 0xFF);
+      npy += static_cast<char>(size_ & 0xFF);
+      npy += static_cast<char>((size_ >> 8) & 0xFF);
+      npy += static_cast<char>((size_ >> 16) & 0xFF);
+      npy += static_cast<char>((size_ >> 24) & 0xFF);
   }
   npy += dict;
 
@@ -523,408 +527,416 @@ void save_array(int write_mode, const std::string& zip_fname, const std::string&
 
 uint32_t parse_npy_header_len(zip_file_t* file, const std::string_view& fname,
                               const std::string& zip_fname) {
-    std::array<char, 12> buffer;
-    zip_int64_t bytesread = zip_fread(file, buffer.data(), 10);
-    if (bytesread != 10) {
-        LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+  std::array<char, 12> buffer;
+  zip_int64_t bytesread = zip_fread(file, buffer.data(), 10);
+  if (bytesread != 10) {
+    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+  }
+  CHECK_EQ(buffer[0], (char)0x93);
+  CHECK_EQ(buffer[1], 'N');
+  CHECK_EQ(buffer[2], 'U');
+  CHECK_EQ(buffer[3], 'M');
+  CHECK_EQ(buffer[4], 'P');
+  CHECK_EQ(buffer[5], 'Y');
+  uint8_t major_version = buffer[6];
+  CHECK(major_version == 0x01 || major_version == 0x02) << "Unsupported npy major version";
+  CHECK(buffer[7] == 0x00) << "Unsupported npy minor version";
+  uint32_t header_len = 0;
+  header_len += buffer[8];
+  header_len += buffer[9] >> 8;
+  if (major_version == 0x02) {
+    zip_int64_t bytesread = zip_fread(file, &buffer[10], 2);
+    if (bytesread != 2) {
+      LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
     }
-    CHECK(buffer[0] == (char)0x93);
-    CHECK(buffer[1] == 'N');
-    CHECK(buffer[2] == 'U');
-    CHECK(buffer[3] == 'M');
-    CHECK(buffer[4] == 'P');
-    CHECK(buffer[5] == 'Y');
-    uint8_t major_version = buffer[6];
-    CHECK(major_version == 0x01 || major_version == 0x02) << "Unsupported npy major version";
-    CHECK(buffer[7] == 0x00) << "Unsupported npy minor version";
-    uint32_t header_len = 0;
-    header_len += buffer[8];
-    header_len += buffer[9] >> 8;
-    if (major_version == 0x02) {
-        zip_int64_t bytesread = zip_fread(file, &buffer[10], 2);
-        if (bytesread != 2) {
-            LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-        }
-        header_len += buffer[10] >> 16;
-        header_len += buffer[11] >> 24;
-    }
-    return header_len;
+    header_len += buffer[10] >> 16;
+    header_len += buffer[11] >> 24;
+  }
+  return header_len;
 }
 
 
-std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(const std::string& zip_fname) {
+std::pair<std::vector<NDArray>, std::vector<std::string>>
+load_arrays(const std::string& zip_fname) {
+  int error;
+  zip_t* archive = zip_open(zip_fname.c_str(), ZIP_RDONLY, &error);
+  if (archive == nullptr) {
+    zip_error_t e;
+    zip_error_init_with_code(&e, error);
+    throw std::runtime_error(zip_error_strerror(&e));
+  }
 
-    int error;
-    zip_t* archive = zip_open(zip_fname.c_str(), ZIP_RDONLY, &error);
-    if (archive == nullptr) {
-        zip_error_t e;
-        zip_error_init_with_code(&e, error);
-        throw std::runtime_error(zip_error_strerror(&e));
+  // Collect the set of file-names per folder in the zip file. If the set of
+  // file names in a folder matches the scipy.sparse.save_npz pattern, the
+  // folder will be restored as single sparse ndarray.
+  std::unordered_map<std::string_view, std::set<std::string_view>> names;
+
+  zip_int64_t num_entries = zip_get_num_entries(archive, ZIP_FL_UNCHANGED);
+  for (zip_uint64_t i = 0; i < num_entries; i++) {
+    std::string_view entry_name = zip_get_name(archive, i, ZIP_FL_ENC_STRICT);
+    if (entry_name.substr(entry_name.size() - 4).compare(".npy") != 0) continue;  // only .npy
+
+    auto dir_sep_search = entry_name.rfind("/");
+    if (dir_sep_search == std::string::npos) {  // top level file
+      [[maybe_unused]] auto[iter, inserted] = names[""].insert(entry_name);
+      CHECK(inserted);
+    } else {  // file inside a folder
+      std::string_view dirname = entry_name.substr(0, dir_sep_search + 1);
+      std::string_view fname = entry_name.substr(dir_sep_search + 1);
+      [[maybe_unused]] auto[iter, inserted] = names[dirname].insert(fname);
+      CHECK(inserted);
     }
+  }
 
-    // Collect the set of file-names per folder in the zip file. If the set of
-    // file names in a folder matches the scipy.sparse.save_npz pattern, the
-    // folder will be restored as single sparse ndarray.
-    std::unordered_map<std::string_view, std::set<std::string_view>> names;
+  // Return values
+  std::vector<NDArray> arrays;
+  std::vector<std::string> return_names;
 
-    zip_int64_t num_entries = zip_get_num_entries(archive, ZIP_FL_UNCHANGED);
-    for (zip_uint64_t i = 0; i < num_entries; i++) {
-        std::string_view entry_name = zip_get_name(archive, i, ZIP_FL_ENC_STRICT);
-        if (entry_name.substr(entry_name.size() - 4).compare(".npy") != 0) continue;  // only .npy
+  // Patterns used by SciPy to save respective sparse matrix formats to a file
+  const std::set<std::string_view> bsr_csr_csc_pattern
+    {"data.npy", "indices.npy", "indptr.npy", "format.npy", "shape.npy"};
+  const std::set<std::string_view> row_sparse_pattern  // MXNet specific format not part of SciPy
+    {"data.npy", "indices.npy", "format.npy", "shape.npy"};
+  const std::set<std::string_view> coo_pattern
+    {"data.npy", "row.npy", "col.npy", "format.npy", "shape.npy"};
+  const std::set<std::string_view> dia_pattern
+    {"data.npy", "offsets.npy", "format.npy", "shape.npy"};
+  for (const auto& [dirname, dircontents] : names) {
+    if (dircontents == bsr_csr_csc_pattern) {
+      // Check format
+      std::string fname(dirname);
+      fname += "format.npy";
+      zip_file_t* file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+      if (file == nullptr) {
+        throw std::runtime_error(zip_strerror(archive));
+      }
 
-        auto dir_sep_search = entry_name.rfind("/");
-        if (dir_sep_search == std::string::npos) {  // top level file
-            [[maybe_unused]] auto [iter, inserted] = names[""].insert(entry_name);
-            CHECK(inserted);
-        } else {  // file inside a folder
-          std::string_view dirname = entry_name.substr(0, dir_sep_search + 1);
-          std::string_view fname = entry_name.substr(dir_sep_search + 1);
-          [[maybe_unused]] auto [iter, inserted] = names[dirname].insert(fname);
-          CHECK(inserted);
+      // In the special case of format.npy we ignore the header as it
+      // specifies the string datatype which is unsupported by MXNet
+      uint32_t header_len = parse_npy_header_len(file, fname, zip_fname);
+      std::string header;
+      header.resize(header_len);
+      zip_int64_t bytesread = zip_fread(file, header.data(), header_len);
+      if (bytesread != header_len) {
+        LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+      }
+      // and simply look at the next 3 bytes containing the format string
+      std::string format;
+      format.resize(3);
+      bytesread = zip_fread(file, format.data(), 3);
+      if (bytesread != 3) {
+        LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+      }
+
+      if (format == "csr") {
+        // Prepare reading storage data array
+        fname = dirname;
+        fname += "data.npy";
+        zip_file_t* data_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+        if (data_file == nullptr) {
+          throw std::runtime_error(zip_strerror(archive));
         }
-    }
-
-    // Return values
-    std::vector<NDArray> arrays;
-    std::vector<std::string> return_names;
-
-    // Patterns used by SciPy to save respective sparse matrix formats to a file
-    const std::set<std::string_view> bsr_csr_csc_pattern
-        {"data.npy", "indices.npy", "indptr.npy", "format.npy", "shape.npy"};
-    const std::set<std::string_view> row_sparse_pattern  // MXNet specific format not part of SciPy
-      {"data.npy", "indices.npy", "format.npy", "shape.npy"};
-    const std::set<std::string_view> coo_pattern
-        {"data.npy", "row.npy", "col.npy", "format.npy", "shape.npy"};
-    const std::set<std::string_view> dia_pattern
-        {"data.npy", "offsets.npy", "format.npy", "shape.npy"};
-    for (const auto& [dirname, dircontents] : names) {
-        if (dircontents == bsr_csr_csc_pattern) {
-            // Check format
-            std::string fname(dirname);
-            fname += "format.npy";
-            zip_file_t* file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-            if (file == nullptr) {
-                throw std::runtime_error(zip_strerror(archive));
-            }
-
-            // In the special case of format.npy we ignore the header as it
-            // specifies the string datatype which is unsupported by MXNet
-            uint32_t header_len = parse_npy_header_len(file, fname, zip_fname);
-            std::string header;
-            header.resize(header_len);
-            zip_int64_t bytesread = zip_fread(file, header.data(), header_len);
-            if (bytesread != header_len) {
-                LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-            }
-            // and simply look at the next 3 bytes containing the format string
-            std::string format;
-            format.resize(3);
-            bytesread = zip_fread(file, format.data(), 3);
-            if (bytesread != 3) {
-                LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-            }
-
-            if (format == "csr") {
-                // Prepare reading storage data array
-                fname = dirname;
-                fname += "data.npy";
-                zip_file_t* data_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-                if (data_file == nullptr) {
-                    throw std::runtime_error(zip_strerror(archive));
-                }
-                uint32_t header_len = parse_npy_header_len(data_file, fname, zip_fname);
-                std::string header;
-                header.resize(header_len);
-                zip_int64_t bytesread = zip_fread(data_file, header.data(), header_len);
-                if (bytesread != header_len) {
-                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-                }
-                auto [storage_type_flag, storage_fortran_order, storage_shape] = npy::parse_npy_header_descr(header);
-                if (storage_fortran_order) {
-                    LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented." ;
-                }
-                TShape storage_tshape(storage_shape);
-
-                // Prepare reading indptr aux array
-                fname = dirname;
-                fname += "indptr.npy";
-                zip_file_t* indptr_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-                if (indptr_file == nullptr) {
-                    throw std::runtime_error(zip_strerror(archive));
-                }
-                header_len = parse_npy_header_len(indptr_file, fname, zip_fname);
-                header.resize(header_len);
-                bytesread = zip_fread(indptr_file, header.data(), header_len);
-                if (bytesread != header_len) {
-                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-                }
-                auto [indptr_type_flag, indptr_fortran_order, indptr_shape] = npy::parse_npy_header_descr(header);
-                if (indptr_fortran_order) {
-                    LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented." ;
-                }
-                TShape indptr_tshape(indptr_shape);
-
-                // Prepare reading indices aux array
-                fname = dirname;
-                fname += "indices.npy";
-                zip_file_t* indices_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-                if (indices_file == nullptr) {
-                    throw std::runtime_error(zip_strerror(archive));
-                }
-                header_len = parse_npy_header_len(indices_file, fname, zip_fname);
-                header.resize(header_len);
-                bytesread = zip_fread(indices_file, header.data(), header_len);
-                if (bytesread != header_len) {
-                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-                }
-                auto [indices_type_flag, indices_fortran_order, indices_shape] = npy::parse_npy_header_descr(header);
-                if (indices_fortran_order) {
-                    LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented." ;
-                }
-                TShape indices_tshape(indices_shape);
-
-                // Read shape data array
-                fname = dirname;
-                fname += "shape.npy";
-                zip_file_t* shape_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-                if (shape_file == nullptr) {
-                    throw std::runtime_error(zip_strerror(archive));
-                }
-                header_len = parse_npy_header_len(shape_file, fname, zip_fname);
-                header.resize(header_len);
-                bytesread = zip_fread(shape_file, header.data(), header_len);
-                if (bytesread != header_len) {
-                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-                }
-                auto [shape_type_flag, shape_fortran_order, shape_shape] = npy::parse_npy_header_descr(header);
-                if (shape_fortran_order) {
-                    LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
-                }
-                CHECK_EQ(shape_type_flag, mshadow::kInt64) << "Expected shape information in int64 format.";
-                CHECK_EQ(shape_shape.size(), 1) << "Expected shape of shape information to be one-dimensional.";
-                TShape tshape(shape_shape.at(0), -1);
-                for (dim_t i = 0; i < shape_shape.at(0); i++) {
-                    int64_t dim;
-                    bytesread = zip_fread(shape_file, &dim, 8);
-                    if (bytesread != 8) {
-                        LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-                    }
-                    tshape[i] = dim;
-                }
-
-                // Construct aux datastructures
-                static_assert(csr::CSRAuxType::kIndPtr == 0);
-                static_assert(csr::CSRAuxType::kIdx == 1);
-                const std::vector<int> aux_types {indptr_type_flag, indices_type_flag};
-                const mxnet::ShapeVector aux_shapes {indptr_tshape, indices_tshape};
-
-                // Allocate NDArray
-                NDArray array(NDArrayStorageType::kCSRStorage, tshape, Context::CPU(), false,
-                              storage_type_flag, aux_types, aux_shapes, storage_tshape);
-
-                // Read data array
-                const TBlob& blob = array.data();
-                zip_uint64_t nbytes = blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_);
-                bytesread = zip_fread(data_file, blob.dptr_, nbytes);
-                if (bytesread != nbytes) {
-                    LOG(FATAL) << "Failed to read from data.npy member of " << zip_fname;
-                }
-
-                // Read indptr array
-                const TBlob& indptr_blob = array.aux_data(csr::CSRAuxType::kIndPtr);
-                nbytes = indptr_blob.Size() * mshadow::mshadow_sizeof(indptr_blob.type_flag_);
-                bytesread = zip_fread(indptr_file, indptr_blob.dptr_, nbytes);
-                if (bytesread != nbytes) {
-                    LOG(FATAL) << "Failed to read from indptr.npy member of " << zip_fname;
-                }
-
-                // Read indices array
-                const TBlob& indices_blob = array.aux_data(csr::CSRAuxType::kIdx);
-                nbytes = indices_blob.Size() * mshadow::mshadow_sizeof(indices_blob.type_flag_);
-                bytesread = zip_fread(indices_file, indices_blob.dptr_, nbytes);
-                if (bytesread != nbytes) {
-                    LOG(FATAL) << "Failed to read from indices.npy member of " << zip_fname;
-                }
-
-                arrays.push_back(array);
-                return_names.emplace_back(dirname.size() ?   // Exclude "/"
-                                          dirname.substr(0, dirname.size() - 1) : dirname);
-
-            } else {
-                throw std::runtime_error("Loading " + format + " sparse matrix format is unsupported.");
-            }
-        } else if (dircontents == row_sparse_pattern) {
-            // Check format
-            std::string fname(dirname);
-            fname += "format.npy";
-            zip_file_t* file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-            if (file == nullptr) {
-                throw std::runtime_error(zip_strerror(archive));
-            }
-
-            // In the special case of format.npy we ignore the header as it
-            // specifies the string datatype which is unsupported by MXNet
-            uint32_t header_len = parse_npy_header_len(file, fname, zip_fname);
-            std::string header;
-            header.resize(header_len);
-            zip_int64_t bytesread = zip_fread(file, header.data(), header_len);
-            if (bytesread != header_len) {
-                LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-            }
-            // and simply look at the next 10 bytes containing the format string
-            std::string format;
-            format.resize(10);
-            bytesread = zip_fread(file, format.data(), 10);
-
-            if (format == "row_sparse") {
-                // Prepare reading storage data array
-                fname = dirname;
-                fname += "data.npy";
-                zip_file_t* data_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-                if (data_file == nullptr) {
-                    throw std::runtime_error(zip_strerror(archive));
-                }
-                uint32_t header_len = parse_npy_header_len(data_file, fname, zip_fname);
-                std::string header;
-                header.resize(header_len);
-                zip_int64_t bytesread = zip_fread(data_file, header.data(), header_len);
-                if (bytesread != header_len) {
-                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-                }
-                auto [storage_type_flag, storage_fortran_order, storage_shape] = npy::parse_npy_header_descr(header);
-                if (storage_fortran_order) {
-                    LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented." ;
-                }
-                TShape storage_tshape(storage_shape);
-
-                // Prepare reading indices aux array
-                fname = dirname;
-                fname += "indices.npy";
-                zip_file_t* indices_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-                if (indices_file == nullptr) {
-                    throw std::runtime_error(zip_strerror(archive));
-                }
-                header_len = parse_npy_header_len(indices_file, fname, zip_fname);
-                header.resize(header_len);
-                bytesread = zip_fread(indices_file, header.data(), header_len);
-                if (bytesread != header_len) {
-                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-                }
-                auto [indices_type_flag, indices_fortran_order, indices_shape] = npy::parse_npy_header_descr(header);
-                if (indices_fortran_order) {
-                    LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented." ;
-                }
-                TShape indices_tshape(indices_shape);
-
-                // Read shape data array
-                fname = dirname;
-                fname += "shape.npy";
-                zip_file_t* shape_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-                if (shape_file == nullptr) {
-                    throw std::runtime_error(zip_strerror(archive));
-                }
-                header_len = parse_npy_header_len(shape_file, fname, zip_fname);
-                header.resize(header_len);
-                bytesread = zip_fread(shape_file, header.data(), header_len);
-                if (bytesread != header_len) {
-                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-                }
-                auto [shape_type_flag, shape_fortran_order, shape_shape] = npy::parse_npy_header_descr(header);
-                if (shape_fortran_order) {
-                    LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
-                }
-                CHECK_EQ(shape_type_flag, mshadow::kInt64) << "Expected shape information in int64 format.";
-                CHECK_EQ(shape_shape.size(), 1) << "Expected shape of shape information to be one-dimensional.";
-                TShape tshape(shape_shape.at(0), -1);
-                for (dim_t i = 0; i < shape_shape.at(0); i++) {
-                    int64_t dim;
-                    bytesread = zip_fread(shape_file, &dim, 8);
-                    if (bytesread != 8) {
-                        LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
-                    }
-                    tshape[i] = dim;
-                }
-
-                // Construct aux datastructures
-                static_assert(rowsparse::RowSparseAuxType::kIdx == 0);
-                const std::vector<int> aux_types {indices_type_flag};
-                const mxnet::ShapeVector aux_shapes {indices_tshape};
-
-                // Allocate NDArray
-                NDArray array(NDArrayStorageType::kRowSparseStorage, tshape, Context::CPU(), false,
-                              storage_type_flag, aux_types, aux_shapes, storage_tshape);
-
-                // Read data array
-                const TBlob& blob = array.data();
-                zip_uint64_t nbytes = blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_);
-                bytesread = zip_fread(data_file, blob.dptr_, nbytes);
-                if (bytesread != nbytes) {
-                    LOG(FATAL) << "Failed to read from data.npy member of " << zip_fname;
-                }
-
-                // Read indices array
-                const TBlob& indices_blob = array.aux_data(rowsparse::RowSparseAuxType::kIdx);
-                nbytes = indices_blob.Size() * mshadow::mshadow_sizeof(indices_blob.type_flag_);
-                bytesread = zip_fread(indices_file, indices_blob.dptr_, nbytes);
-                if (bytesread != nbytes) {
-                    LOG(FATAL) << "Failed to read from indices.npy member of " << zip_fname;
-                }
-
-                arrays.push_back(array);
-                return_names.emplace_back(dirname.size() ?   // Exclude "/"
-                                          dirname.substr(0, dirname.size() - 1) : dirname);
-
-            } else {
-                throw std::runtime_error("Loading " + format + " sparse matrix format is unsupported.");
-            }
-        } else if (dircontents == coo_pattern) {
-            throw std::runtime_error("Loading COO sparse matrix format is unsupported.");
-        } else if (dircontents == dia_pattern) {
-            throw std::runtime_error("Loading DIA sparse matrix format is unsupported.");
-        } else {  // Folder does not match scipy sparse pattern; treat containing files as dense
-            for (const std::string_view& fname : dircontents) {
-                std::string path(dirname);
-                path += fname;
-
-                // The string_view points to a null-terminated character array
-                // owned by zip_get_name and thus conversion to C char* is valid
-                zip_file_t* file = zip_fopen(archive, path.data(), ZIP_FL_UNCHANGED);
-                if (file == nullptr) {
-                    throw std::runtime_error(zip_strerror(archive));
-                }
-
-                uint32_t header_len = parse_npy_header_len(file, path, zip_fname);
-                std::string header;
-                header.resize(header_len);
-                zip_int64_t bytesread = zip_fread(file, header.data(), header_len);
-                if (bytesread != header_len) {
-                    LOG(FATAL) << "Failed to read from " << path << " member of " << zip_fname;
-                }
-                auto [type_flag, fortran_order, shape] = npy::parse_npy_header_descr(header);
-
-                if (fortran_order) {
-                    fortran_order_transpose_prepare(shape);
-                }
-
-                TShape tshape(shape);
-                NDArray array(tshape, Context::CPU(), false, type_flag);
-                const TBlob& blob = array.data();
-                bytesread = zip_fread(file, blob.dptr_, blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_));
-                if (bytesread != blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_)) {
-                    LOG(FATAL) << "Failed to read from " << path << " member of " << zip_fname;
-                }
-
-                if(fortran_order) {
-                    array = fortran_order_transpose(shape, type_flag, array);
-                }
-
-                arrays.push_back(array);
-                return_names.emplace_back(path.substr(0, path.size() - 4));  // Skip .npy
-            }
+        uint32_t header_len = parse_npy_header_len(data_file, fname, zip_fname);
+        std::string header;
+        header.resize(header_len);
+        zip_int64_t bytesread = zip_fread(data_file, header.data(), header_len);
+        if (bytesread != header_len) {
+          LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
         }
-    }
+        auto[storage_type_flag, storage_fortran_order, storage_shape] = \
+          npy::parse_npy_header_descr(header);
+        if (storage_fortran_order) {
+          LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
+        }
+        TShape storage_tshape(storage_shape);
 
-    return std::make_pair(arrays, return_names);
+        // Prepare reading indptr aux array
+        fname = dirname;
+        fname += "indptr.npy";
+        zip_file_t* indptr_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+        if (indptr_file == nullptr) {
+          throw std::runtime_error(zip_strerror(archive));
+        }
+        header_len = parse_npy_header_len(indptr_file, fname, zip_fname);
+        header.resize(header_len);
+        bytesread = zip_fread(indptr_file, header.data(), header_len);
+        if (bytesread != header_len) {
+          LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+        }
+        auto[indptr_type_flag, indptr_fortran_order, indptr_shape] = \
+          npy::parse_npy_header_descr(header);
+        if (indptr_fortran_order) {
+          LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
+        }
+        TShape indptr_tshape(indptr_shape);
+
+        // Prepare reading indices aux array
+        fname = dirname;
+        fname += "indices.npy";
+        zip_file_t* indices_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+        if (indices_file == nullptr) {
+          throw std::runtime_error(zip_strerror(archive));
+        }
+        header_len = parse_npy_header_len(indices_file, fname, zip_fname);
+        header.resize(header_len);
+        bytesread = zip_fread(indices_file, header.data(), header_len);
+        if (bytesread != header_len) {
+          LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+        }
+        auto[indices_type_flag, indices_fortran_order, indices_shape] = \
+          npy::parse_npy_header_descr(header);
+        if (indices_fortran_order) {
+          LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
+        }
+        TShape indices_tshape(indices_shape);
+
+        // Read shape data array
+        fname = dirname;
+        fname += "shape.npy";
+        zip_file_t* shape_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+        if (shape_file == nullptr) {
+          throw std::runtime_error(zip_strerror(archive));
+        }
+        header_len = parse_npy_header_len(shape_file, fname, zip_fname);
+        header.resize(header_len);
+        bytesread = zip_fread(shape_file, header.data(), header_len);
+        if (bytesread != header_len) {
+          LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+        }
+        auto[shape_type_flag, shape_fortran_order, shape_shape] = \
+          npy::parse_npy_header_descr(header);
+        if (shape_fortran_order) {
+          LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
+        }
+        CHECK_EQ(shape_type_flag, mshadow::kInt64) << "Expected shape information in int64 format.";
+        CHECK_EQ(shape_shape.size(), 1) << "Expected one-dimensional shape of shape information.";
+        TShape tshape(shape_shape.at(0), -1);
+        for (dim_t i = 0; i < shape_shape.at(0); i++) {
+          int64_t dim;
+          bytesread = zip_fread(shape_file, &dim, 8);
+          if (bytesread != 8) {
+            LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+          }
+          tshape[i] = dim;
+        }
+
+        // Construct aux datastructures
+        static_assert(csr::CSRAuxType::kIndPtr == 0);
+        static_assert(csr::CSRAuxType::kIdx == 1);
+        const std::vector<int> aux_types {indptr_type_flag, indices_type_flag};
+        const mxnet::ShapeVector aux_shapes {indptr_tshape, indices_tshape};
+
+        // Allocate NDArray
+        NDArray array(NDArrayStorageType::kCSRStorage, tshape, Context::CPU(), false,
+                      storage_type_flag, aux_types, aux_shapes, storage_tshape);
+
+        // Read data array
+        const TBlob& blob = array.data();
+        zip_uint64_t nbytes = blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_);
+        bytesread = zip_fread(data_file, blob.dptr_, nbytes);
+        if (bytesread != nbytes) {
+          LOG(FATAL) << "Failed to read from data.npy member of " << zip_fname;
+        }
+
+        // Read indptr array
+        const TBlob& indptr_blob = array.aux_data(csr::CSRAuxType::kIndPtr);
+        nbytes = indptr_blob.Size() * mshadow::mshadow_sizeof(indptr_blob.type_flag_);
+        bytesread = zip_fread(indptr_file, indptr_blob.dptr_, nbytes);
+        if (bytesread != nbytes) {
+          LOG(FATAL) << "Failed to read from indptr.npy member of " << zip_fname;
+        }
+
+        // Read indices array
+        const TBlob& indices_blob = array.aux_data(csr::CSRAuxType::kIdx);
+        nbytes = indices_blob.Size() * mshadow::mshadow_sizeof(indices_blob.type_flag_);
+        bytesread = zip_fread(indices_file, indices_blob.dptr_, nbytes);
+        if (bytesread != nbytes) {
+          LOG(FATAL) << "Failed to read from indices.npy member of " << zip_fname;
+        }
+
+        arrays.push_back(array);
+        return_names.emplace_back(dirname.size() ?   // Exclude "/"
+                                  dirname.substr(0, dirname.size() - 1) : dirname);
+
+      } else {
+        throw std::runtime_error("Loading " + format + " sparse matrix format is unsupported.");
+      }
+    } else if (dircontents == row_sparse_pattern) {
+      // Check format
+      std::string fname(dirname);
+      fname += "format.npy";
+      zip_file_t* file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+      if (file == nullptr) {
+        throw std::runtime_error(zip_strerror(archive));
+      }
+
+      // In the special case of format.npy we ignore the header as it
+      // specifies the string datatype which is unsupported by MXNet
+      uint32_t header_len = parse_npy_header_len(file, fname, zip_fname);
+      std::string header;
+      header.resize(header_len);
+      zip_int64_t bytesread = zip_fread(file, header.data(), header_len);
+      if (bytesread != header_len) {
+        LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+      }
+      // and simply look at the next 10 bytes containing the format string
+      std::string format;
+      format.resize(10);
+      bytesread = zip_fread(file, format.data(), 10);
+
+      if (format == "row_sparse") {
+        // Prepare reading storage data array
+        fname = dirname;
+        fname += "data.npy";
+        zip_file_t* data_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+        if (data_file == nullptr) {
+          throw std::runtime_error(zip_strerror(archive));
+        }
+        uint32_t header_len = parse_npy_header_len(data_file, fname, zip_fname);
+        std::string header;
+        header.resize(header_len);
+        zip_int64_t bytesread = zip_fread(data_file, header.data(), header_len);
+        if (bytesread != header_len) {
+          LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+        }
+        auto[storage_type_flag, storage_fortran_order, storage_shape] = \
+          npy::parse_npy_header_descr(header);
+        if (storage_fortran_order) {
+          LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
+        }
+        TShape storage_tshape(storage_shape);
+
+        // Prepare reading indices aux array
+        fname = dirname;
+        fname += "indices.npy";
+        zip_file_t* indices_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+        if (indices_file == nullptr) {
+          throw std::runtime_error(zip_strerror(archive));
+        }
+        header_len = parse_npy_header_len(indices_file, fname, zip_fname);
+        header.resize(header_len);
+        bytesread = zip_fread(indices_file, header.data(), header_len);
+        if (bytesread != header_len) {
+          LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+        }
+        auto[indices_type_flag, indices_fortran_order, indices_shape] = \
+          npy::parse_npy_header_descr(header);
+        if (indices_fortran_order) {
+          LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
+        }
+        TShape indices_tshape(indices_shape);
+
+        // Read shape data array
+        fname = dirname;
+        fname += "shape.npy";
+        zip_file_t* shape_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+        if (shape_file == nullptr) {
+          throw std::runtime_error(zip_strerror(archive));
+        }
+        header_len = parse_npy_header_len(shape_file, fname, zip_fname);
+        header.resize(header_len);
+        bytesread = zip_fread(shape_file, header.data(), header_len);
+        if (bytesread != header_len) {
+          LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+        }
+        auto[shape_type_flag, shape_fortran_order, shape_shape] = \
+          npy::parse_npy_header_descr(header);
+        if (shape_fortran_order) {
+          LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
+        }
+        CHECK_EQ(shape_type_flag, mshadow::kInt64) << "Expected shape information in int64 format.";
+        CHECK_EQ(shape_shape.size(), 1) << "Expected one-dimensional shape of shape information.";
+        TShape tshape(shape_shape.at(0), -1);
+        for (dim_t i = 0; i < shape_shape.at(0); i++) {
+          int64_t dim;
+          bytesread = zip_fread(shape_file, &dim, 8);
+          if (bytesread != 8) {
+            LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+          }
+          tshape[i] = dim;
+        }
+
+        // Construct aux datastructures
+        static_assert(rowsparse::RowSparseAuxType::kIdx == 0);
+        const std::vector<int> aux_types {indices_type_flag};
+        const mxnet::ShapeVector aux_shapes {indices_tshape};
+
+        // Allocate NDArray
+        NDArray array(NDArrayStorageType::kRowSparseStorage, tshape, Context::CPU(), false,
+                      storage_type_flag, aux_types, aux_shapes, storage_tshape);
+
+        // Read data array
+        const TBlob& blob = array.data();
+        zip_uint64_t nbytes = blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_);
+        bytesread = zip_fread(data_file, blob.dptr_, nbytes);
+        if (bytesread != nbytes) {
+          LOG(FATAL) << "Failed to read from data.npy member of " << zip_fname;
+        }
+
+        // Read indices array
+        const TBlob& indices_blob = array.aux_data(rowsparse::RowSparseAuxType::kIdx);
+        nbytes = indices_blob.Size() * mshadow::mshadow_sizeof(indices_blob.type_flag_);
+        bytesread = zip_fread(indices_file, indices_blob.dptr_, nbytes);
+        if (bytesread != nbytes) {
+          LOG(FATAL) << "Failed to read from indices.npy member of " << zip_fname;
+        }
+
+        arrays.push_back(array);
+        return_names.emplace_back(dirname.size() ?   // Exclude "/"
+                                  dirname.substr(0, dirname.size() - 1) : dirname);
+
+      } else {
+        throw std::runtime_error("Loading " + format + " sparse matrix format is unsupported.");
+      }
+    } else if (dircontents == coo_pattern) {
+      throw std::runtime_error("Loading COO sparse matrix format is unsupported.");
+    } else if (dircontents == dia_pattern) {
+      throw std::runtime_error("Loading DIA sparse matrix format is unsupported.");
+    } else {  // Folder does not match scipy sparse pattern; treat containing files as dense
+      for (const std::string_view& fname : dircontents) {
+        std::string path(dirname);
+        path += fname;
+
+        // The string_view points to a null-terminated character array
+        // owned by zip_get_name and thus conversion to C char* is valid
+        zip_file_t* file = zip_fopen(archive, path.data(), ZIP_FL_UNCHANGED);
+        if (file == nullptr) {
+          throw std::runtime_error(zip_strerror(archive));
+        }
+
+        uint32_t header_len = parse_npy_header_len(file, path, zip_fname);
+        std::string header;
+        header.resize(header_len);
+        zip_int64_t bytesread = zip_fread(file, header.data(), header_len);
+        if (bytesread != header_len) {
+          LOG(FATAL) << "Failed to read from " << path << " member of " << zip_fname;
+        }
+        auto[type_flag, fortran_order, shape] = npy::parse_npy_header_descr(header);
+
+        if (fortran_order) {
+          fortran_order_transpose_prepare(shape);
+        }
+
+        TShape tshape(shape);
+        NDArray array(tshape, Context::CPU(), false, type_flag);
+        const TBlob& blob = array.data();
+        bytesread = zip_fread(file, blob.dptr_,
+                              blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_));
+        if (bytesread != blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_)) {
+          LOG(FATAL) << "Failed to read from " << path << " member of " << zip_fname;
+        }
+
+        if (fortran_order) {
+          array = fortran_order_transpose(shape, type_flag, array);
+        }
+
+        arrays.push_back(array);
+        return_names.emplace_back(path.substr(0, path.size() - 4));  // Skip .npy
+      }
+    }
+  }
+
+  return std::make_pair(arrays, return_names);
 }
 
 }  // namespace npz

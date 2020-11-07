@@ -1920,7 +1920,7 @@ int MXNDArrayLoad(const char* fname,
   }
 
   if (magic == 0x04034b50) {  // zip file format; assumed to be npz // TODO endianness
-      auto [data, names] = npz::load_arrays(fname);
+      auto[data, names] = npz::load_arrays(fname);
       ret->ret_handles.resize(data.size());
       for (size_t i = 0; i < data.size(); ++i) {
           NDArray *ptr = new NDArray();

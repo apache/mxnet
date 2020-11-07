@@ -17,11 +17,13 @@
  * under the License.
  */
 
-#ifndef MXNET_NPZ_H_
-#define MXNET_NPZ_H_
+#ifndef MXNET_SERIALIZATION_CNPY_H_
+#define MXNET_SERIALIZATION_CNPY_H_
 
 #include <mxnet/ndarray.h>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace mxnet {
 
@@ -41,4 +43,4 @@ std::pair<std::vector<NDArray>, std::vector<std::string>>  load_arrays(const std
 
 }
 }  // namespace mxnet
-#endif
+#endif  // MXNET_SERIALIZATION_CNPY_H_
