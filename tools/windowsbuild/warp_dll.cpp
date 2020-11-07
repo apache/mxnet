@@ -78,7 +78,7 @@ int find_version()
 {
 	std::vector<int> known_sm = find_mxnet_dll();
 	int count = 0;
-	int version = 75;
+	int version = 9999;
 	if (cudaSuccess != cudaGetDeviceCount(&count))
 	{
 		return 30;
@@ -105,6 +105,11 @@ int find_version()
 			return known_sm[i];
 		}
 	}
+
+    if (version == 9999)
+    {
+        return 30;
+    }
 
 	return version;
 }

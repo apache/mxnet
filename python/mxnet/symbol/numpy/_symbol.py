@@ -160,11 +160,14 @@ class _Symbol(Symbol):
 
     def __repr__(self):
         """Gets a string representation of the symbol."""
-        if self.num_outputs > 1:
-            name = ', '.join([str(ele_sym) for ele_sym in self])
-            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        if self._alive:
+            if self.num_outputs > 1:
+                name = ', '.join([str(ele_sym) for ele_sym in self])
+                return '<%s group [%s]>' % (self.__class__.__name__, name)
+            else:
+                return '<%s %s>' % (self.__class__.__name__, self.name)
         else:
-            return '<%s %s>' % (self.__class__.__name__, self.name)
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     @property
     def name(self):

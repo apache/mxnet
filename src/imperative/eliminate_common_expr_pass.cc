@@ -88,7 +88,15 @@ bool NodeEqual(const Node* n, const Node* m) {
   // to be eligible
   static auto& resource_request = Op::GetAttr<FResourceRequest>("FResourceRequest");
   static auto& resource_request_ex = Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
-  if (resource_request.get(n->op(), nullptr) != nullptr) return false;
+  const auto fresource_request = resource_request.get(n->op(), nullptr);
+  if (fresource_request != nullptr) {
+    const auto& requests = fresource_request(n->attrs);
+    for (const auto& req : requests) {
+      if (req.type != ResourceRequest::kTempSpace) {
+        return false;
+      }
+    }
+  }
   if (resource_request_ex.get(n->op(), nullptr) != nullptr) return false;
 
   return true;

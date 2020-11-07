@@ -31,6 +31,7 @@ cdef class NDArrayBase:
     # handle for symbolic operator.
     cdef NDArrayHandle chandle
     cdef int cwritable
+    cdef public bint _alive
 
     cdef _set_handle(self, handle):
         cdef unsigned long long ptr
@@ -58,9 +59,11 @@ cdef class NDArrayBase:
     def __init__(self, handle, writable=True):
         self._set_handle(handle)
         self.cwritable = writable
+        self._alive = True
 
     def __dealloc__(self):
         CALL(MXNDArrayFree(self.chandle))
+        self._alive = False
 
     def __reduce__(self):
         return (_global_var._ndarray_cls, (None,), self.__getstate__())

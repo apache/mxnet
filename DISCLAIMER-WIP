@@ -13,9 +13,10 @@ For example, releases may have incomplete or un-reviewed licensing conditions.
 What follows is a list of known issues the project is currently aware of
 (note that this list, by definition, is likely to be incomplete):
 
-1. https://github.com/apache/incubator-mxnet/issues/17329
-2. https://github.com/apache/incubator-mxnet/issues/15547
-3. https://github.com/apache/incubator-mxnet/issues/15569
+1. The MXNet source code is distributed under the Apache License, Version 2.0. However
+building MXNet for GPUs requires compiling with Nvidia tools and libraries
+that are not compatible with Apache License, Version 2.0. This will affect the usage for
+any binary distributions of MXNet for GPU. 
 
 If you are planning to incorporate this work into your product/project,
 please be aware that you will need to conduct a thorough licensing review
