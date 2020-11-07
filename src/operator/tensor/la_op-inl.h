@@ -573,6 +573,13 @@ struct SignedLogDet {
   }
 };
 
+struct CopyArray {
+  template<typename SType, typename DType>
+  MSHADOW_XINLINE static void Map(size_t i, SType* src, DType* dest) {
+    dest[i] = src[i];
+  }
+};
+
 // det = det(A), the computation method is based on partial pivoting LU decomposition:
 //     A = PLU, so det(A) = det(P) * det(L) * det(U),
 //     det(P) depends on number of row changes in P
@@ -591,14 +598,19 @@ struct det {
     Tensor<xpu, 1, DType> sign = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(det.shape_, s);
     Copy(LU, A, s);
-    // since det(A) = det(trans(A)), so we'll use col-major blas routines here
-     // Calculations on the GPU path are internally done on int type.
-    using IndexInternalT = typename LapackIndex<xpu>::IndexT;
-    linalg_batch_getrf(LU, reinterpret_cast<const Tensor<xpu, 2, IndexInternalT>&>(pivot),
-                       false, s);
-    convert_to_int64_if_needed(s, pivot);
     using namespace mxnet_op;
     using namespace mshadow::expr;
+    // since det(A) = det(trans(A)), so we'll use col-major blas routines here
+    // Calculations on the GPU path are internally done on int type.
+    if (std::is_same<xpu, gpu>::value && !std::is_same<IndexT, int>::value) {
+      using IndexInternalT = typename LapackIndex<xpu>::IndexT;
+      Tensor<xpu, 2, IndexInternalT> workspace =
+          ctx.requested[0].get_space_typed<xpu, 2, IndexInternalT>(pivot.shape_, s);
+      linalg_batch_getrf(LU, workspace, false, s);
+      Kernel<CopyArray, xpu>::Launch(s, pivot.shape_.Size(), workspace.dptr_, pivot.dptr_);
+    } else {
+      linalg_batch_getrf(LU, pivot, false, s);
+    }
     Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
                                       LU.dptr_, sign.dptr_, det.dptr_);
     const_cast<Tensor<xpu, 1, DType>&>(det) = sign * F<mshadow_op::exp>(det);
@@ -1021,19 +1033,21 @@ struct det_backward {
       return;
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    convert_to_int_if_needed(s, pivot);
-    // Calculations on the GPU path are internally done on int type.
-    using IndexInternalT = typename LapackIndex<xpu>::IndexT;
-    linalg_batch_det_backward_helper(LU,
-                                     reinterpret_cast<const Tensor<xpu, 2, IndexInternalT>&>(pivot),
-                                     det, dA, DType(0), ctx);
+    if (std::is_same<xpu, gpu>::value && !std::is_same<IndexT, int>::value) {
+      using IndexInternalT = typename LapackIndex<xpu>::IndexT;
+      Tensor<xpu, 2, IndexInternalT> workspace =
+          ctx.requested[0].get_space_typed<xpu, 2, IndexInternalT>(pivot.shape_, s);
+      Kernel<CopyArray, xpu>::Launch(s, pivot.shape_.Size(), pivot.dptr_, workspace.dptr_);
+      linalg_batch_det_backward_helper(LU, workspace, det, dA, DType(0), ctx);
+    } else {
+      linalg_batch_det_backward_helper(LU, pivot, det, dA, DType(0), ctx);
+    }
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(det * ddet, \
       Shape3(det.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
     // stop grad for zero det temporarily
     Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
                                          dA.dptr_, det.dptr_, DType(0));
-    convert_to_int64_if_needed(s, pivot);
   }
 };
 
