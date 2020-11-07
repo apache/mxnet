@@ -14,7 +14,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-from __future__ import print_function
 from collections import namedtuple
 
 import mxnet as mx
@@ -381,6 +380,7 @@ def test_random_transforms():
     assert counter == pytest.approx(5000, 1e-1)
 
 @xfail_when_nonstandard_decimal_separator
+@pytest.mark.flaky
 def test_random_gray():
     from mxnet.gluon.data.vision import transforms
 
