@@ -2651,7 +2651,7 @@ class Symbol(SymbolBase):
         raise NotImplementedForSymbol(self.backward, None)
 
 
-    def _check_dynamic_shape_op(self):
+    def has_dynamic_shape_op(self):
         """Check if any dynamic shape op is present in the symbol.
         """
         has_dynamic_shape = ctypes.c_bool(False)

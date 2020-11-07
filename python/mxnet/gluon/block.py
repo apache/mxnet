@@ -1106,7 +1106,7 @@ class HybridBlock(Block):
             self._first_forward = False
             # partition static shape ops if the graph contains any dynamic shape op
             _, out = self._cached_graph
-            is_dynamic = out._check_dynamic_shape_op()
+            is_dynamic = out.has_dynamic_shape_op()
             if is_dynamic:
                 self._backend = 'static_shape'
                 self._backend_opts = {k : v for k, v in self._flags}
