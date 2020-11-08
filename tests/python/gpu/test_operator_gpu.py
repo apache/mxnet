@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
 import sys
 import os
 import time
@@ -372,6 +371,7 @@ def test_preloaded_multi_sgd():
 
 
 @pytest.mark.serial
+@pytest.mark.flaky
 def test_batchnorm_with_type():
   ctx_list_v2_2D = [
     {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float32}},
