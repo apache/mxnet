@@ -825,8 +825,13 @@ elseif(MSVC)
   endif()
 endif()
 
-add_subdirectory("3rdparty/libzip" EXCLUDE_FROM_ALL)  # used for numpy-compatible serialization
-target_link_libraries(mxnet PRIVATE libzip::zip)
+# used for numpy-compatible serialization
+function(load_libzip)
+  set(BUILD_SHARED_LIBS FALSE)
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/libzip" EXCLUDE_FROM_ALL)
+  target_link_libraries(mxnet PRIVATE libzip::zip)
+endfunction()
+load_libzip()
 
 if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
