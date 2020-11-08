@@ -340,6 +340,7 @@ def test_random_transforms():
 
 @xfail_when_nonstandard_decimal_separator
 @use_np
+@pytest.mark.flaky
 def test_random_gray():
     from mxnet.gluon.data.vision import transforms
 
