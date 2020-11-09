@@ -93,17 +93,16 @@ b.ndim, b.size, isinstance(b, np.ndarray)
 
 ## Save and load
 
-Users should call the official NumPy `save` and `load` methods respectively to save and load arrays.
+Users can use the `npx.save`, `npx.savez` and `npx.load` methods respectively to
+save and load arrays. `npx.save` saves single, dense arrays to the `.npy`
+format, whereas `npx.savez` can save a collection of both dense and sparse
+arrays to the `.npz` format.
 
 ```{.python .input}
 a = np.array(1, ctx=gpu)
 onp.save('a', a)
 onp.load('a.npy', a)
 ```
-
-For advanced use-cases, MXNet further provides `npx.save` and `npx.load`, which
-can save and load a dictionary of arrays to the `.npz` format such that it can
-be loaded from non-Python MXNet language bindings.
 
 ## Matplotlib
 

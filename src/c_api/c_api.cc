@@ -1882,7 +1882,7 @@ int MXNDArraySave(const char* fname,
 
   CHECK_NOTNULL(fname);
 
-  if (num_args == 1) {
+  if (num_args == 1 && keys == nullptr) {
       NDArray *array = static_cast<NDArray *>(args[0]);
       if (array->storage_type() == kDefaultStorage) {
           npy::save_array(fname, *array);
