@@ -483,6 +483,13 @@ def test_activations_swish():
     out = act_layer(mx.np.random.uniform(size=(10,)))
     out.asnumpy()
 
+
+@use_np
+def test_activations_silu():
+    act_layer = nn.SiLU()
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
 @use_np
 def test_concatenate():
     model = nn.HybridConcatenate(axis=1)
