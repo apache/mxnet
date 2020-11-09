@@ -827,7 +827,7 @@ endif()
 
 # used for numpy-compatible serialization
 function(load_libzip)
-  set(BUILD_SHARED_LIBS FALSE)
+  set(BUILD_SHARED_LIBS FALSE CACHE BOOL "Build shared libzip libraries")
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/libzip" EXCLUDE_FROM_ALL)
   target_link_libraries(mxnet PRIVATE libzip::zip)
 endfunction()
