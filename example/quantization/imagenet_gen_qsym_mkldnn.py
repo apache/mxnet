@@ -24,7 +24,7 @@ from inspect import currentframe, getframeinfo
 
 import mxnet as mx
 from mxnet import gluon
-from mxnet.contrib.quantization import *
+from mxnet.contrib.quantization import quantize_net_v2
 from mxnet.gluon.data import DataLoader
 from mxnet.gluon.data.vision import transforms
 from mxnet.gluon.model_zoo.vision import get_model
@@ -38,7 +38,7 @@ def download_calib_dataset(dataset_url, calib_dataset, logger=None):
         logger.info('Downloading calibration dataset from %s to %s' % (dataset_url, calib_dataset))
     mx.test_utils.download(dataset_url, calib_dataset)
 
-def get_from_gluon(model_name, image_shape, classes=1000, logger=None):
+def get_from_gluon(model_name, classes=1000, logger=None):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     model_path = os.path.join(dir_path, 'model')
     if logger is not None:
@@ -73,6 +73,8 @@ def get_exclude_symbols(model_name, exclude_first_conv):
         'squeezenet1': ['squeezenet_hybridsequential1_flatten0_flatten0'],
     }
     excluded_sym_names = regex_find_excluded_symbols(exclude_symbol_regex, model_name)
+    if excluded_sym_names is None:
+        excluded_sym_names = []
     if exclude_first_conv:
         first_conv_regex = {
             'alexnet': ['alexnet_hybridsequential0_conv2d0_fwd'],
@@ -161,11 +163,11 @@ if __name__ == '__main__':
     # download model
     if not args.no_pretrained:
         if logger:
-            logger.info('Get pre-trained model from Gluoncv modelzoo.')
+            logger.info('Get pre-trained model from Gluon-CV modelzoo.')
             logger.info('If you want to use custom model, please set --no-pretrained.')
-        net, prefix = get_from_gluon(model_name=args.model, image_shape=args.image_shape, classes=1000, logger=logger)
-        rgb_mean = '0.485, 0.456, 0.406'
-        rgb_std = '0.229, 0.224, 0.225'
+        net, prefix = get_from_gluon(model_name=args.model, classes=1000, logger=logger)
+        rgb_mean = '0.485,0.456,0.406'
+        rgb_std = '0.229,0.224,0.225'
         epoch = 0
     else:
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -257,4 +259,4 @@ if __name__ == '__main__':
     save_path = prefix + suffix
     model_path, params_path = qsym.export(save_path, epoch)
     if logger is not None:
-         logger.info(F'Saved quantized model into:\n{model_path}\n{params_path}')
+        logger.info(F'Saved quantized model into:\n{model_path}\n{params_path}')
