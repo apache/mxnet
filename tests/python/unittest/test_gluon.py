@@ -1302,6 +1302,13 @@ def test_activations():
     for test_point, ref_point in zip(swish_test(point_to_validate), swish(point_to_validate)):
         assert test_point == ref_point
 
+    silu = mx.gluon.nn.SiLU()
+    def silu_test(x):
+        return x * mx.nd.sigmoid(x)
+
+    for test_point, ref_point in zip(silu_test(point_to_validate), silu(point_to_validate)):
+        assert test_point == ref_point
+
     elu = mx.gluon.nn.ELU()
     def elu_test(x):
         def elu(x):
