@@ -166,16 +166,23 @@ def test_subgraph():
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out4[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
-    # Gluon Hybridize partitioning with shapes/types
+    # Gluon Hybridize partitioning with sym.var
     sym_block2 = nn.SymbolBlock(sym, [a,b])
     sym_block2.initialize()
+    a_var = mx.sym.var('a',shape=(3,2))
+    b_var = mx.sym.var('b',shape=(3,2))
+    sym_block2.optimize_for(a_var, b_var, backend='myProp')
+
+    # Gluon Hybridize partitioning with shapes/types
+    sym_block3 = nn.SymbolBlock(sym, [a,b])
+    sym_block3.initialize()
     a_data = mx.nd.ones((3,2))
     b_data = mx.nd.ones((3,2))
-    sym_block2.optimize_for(a_data, b_data, backend='myProp')
-    sym_block2.export('optimized')
-    sym_block3 = nn.SymbolBlock.imports('optimized-symbol.json',['a','b'],
+    sym_block3.optimize_for(a_data, b_data, backend='myProp')
+    sym_block3.export('optimized')
+    sym_block4 = nn.SymbolBlock.imports('optimized-symbol.json',['a','b'],
                                         'optimized-0000.params')
 
-    out5 = sym_block3(a_data, b_data)
+    out5 = sym_block4(a_data, b_data)
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out5[0].asnumpy(), rtol=1e-3, atol=1e-3)
