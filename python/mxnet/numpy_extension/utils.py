@@ -26,8 +26,9 @@ from ..base import c_handle_array, c_str, mx_uint, NDArrayHandle, py_str
 from ..dlpack import ndarray_to_dlpack_for_read, ndarray_to_dlpack_for_write
 from ..dlpack import ndarray_from_dlpack, ndarray_from_numpy
 from ..numpy import ndarray, array
+from ..ndarray import NDArray
 
-__all__ = ['save', 'load', 'to_dlpack_for_read', 'to_dlpack_for_write',
+__all__ = ['save', 'savez', 'load', 'to_dlpack_for_read', 'to_dlpack_for_write',
            'from_dlpack', 'from_numpy']
 
 def save(file, arr):
@@ -37,9 +38,7 @@ def save(file, arr):
     ----------
     file : str
         File or filename to which the data is saved.  If file is a file-object,
-        then the filename is unchanged.  If file is a string or Path, a ``.npy``
-        extension will be appended to the filename if it does not already
-        have one.
+        then the filename is unchanged.
     arr : ndarray
         Array data to be saved. Sparse formats are not supported. Please use
         savez function to save sparse arrays.
@@ -52,7 +51,7 @@ def save(file, arr):
     -----
     For a description of the ``.npy`` format, see :py:mod:`numpy.lib.format`.
     """
-    if not isinstance(arr, ndarray):
+    if not isinstance(arr, NDArray):
         raise ValueError("data needs to either be a MXNet ndarray")
     arr = [arr]
     keys = None
@@ -72,9 +71,7 @@ def savez(file, *args, **kwds):
     ----------
     file : str
         Either the filename (string) or an open file (file-like object)
-        where the data will be saved. If file is a string or a Path, the
-        ``.npz`` extension will be appended to the filename if it is not
-        already there.
+        where the data will be saved.
     args : Arguments, optional
         Arrays to save to the file. Since it is not possible for Python to
         know the names of the arrays outside `savez`, the arrays will be saved
@@ -116,7 +113,7 @@ def savez(file, *args, **kwds):
     str_keys = kwds.keys()
     nd_vals = kwds.values()
     if any(not isinstance(k, string_types) for k in str_keys) or \
-            any(not isinstance(v, ndarray) for v in nd_vals):
+            any(not isinstance(v, NDArray) for v in nd_vals):
         raise TypeError('Only accepts dict str->ndarray or list of ndarrays')
 
     keys = c_str_array(str_keys)

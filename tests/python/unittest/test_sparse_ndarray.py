@@ -30,6 +30,8 @@ import scipy.sparse as spsp
 from common import assertRaises, xfail_when_nonstandard_decimal_separator
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
+import pytest
+
 
 def sparse_nd_ones(shape, stype):
     return mx.nd.ones(shape).tostype(stype)
@@ -537,9 +539,8 @@ def test_sparse_nd_pickle():
             assert same(a.asnumpy(), b.asnumpy())
 
 
-# @kalyc: Getting rid of fixed seed as flakiness could not be reproduced
-# tracked at https://github.com/apache/incubator-mxnet/issues/11741
-def test_sparse_nd_save_load():
+@pytest.mark.parametrize('save_fn', [mx.nd.save, mx.npx.savez])
+def test_sparse_nd_save_load(save_fn):
     stypes = ['default', 'row_sparse', 'csr']
     stype_dict = {'default': NDArray, 'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
     num_data = 20
@@ -552,16 +553,23 @@ def test_sparse_nd_save_load():
         density = densities[np.random.randint(0, len(densities))]
         data_list1.append(rand_ndarray(shape, stype, density))
         assert isinstance(data_list1[-1], stype_dict[stype])
-    mx.nd.save(fname, data_list1)
+    if save_fn is mx.nd.save:
+        save_fn(fname, data_list1)
+    else:
+        save_fn(fname, *data_list1)
 
-    data_dict2 = mx.nd.load(fname)
-    data_list2 = [data_dict2['arr_' + str(i)] for i in range(num_data)]
+    data_list2 = mx.nd.load(fname)
+    if save_fn is mx.npx.savez:
+        data_list2 = [data_list2['arr_' + str(i)] for i in range(num_data)]
     assert len(data_list1) == len(data_list2)
     for x, y in zip(data_list1, data_list2):
         assert same(x.asnumpy(), y.asnumpy())
 
     data_map1 = {'ndarray xx %s' % i: x for i, x in enumerate(data_list1)}
-    mx.nd.save(fname, data_map1)
+    if save_fn is mx.nd.save:
+        save_fn(fname, data_map1)
+    else:
+        save_fn(fname, **data_map1)
     data_map2 = mx.nd.load(fname)
     assert len(data_map1) == len(data_map2)
     for k, x in data_map1.items():
@@ -570,7 +578,8 @@ def test_sparse_nd_save_load():
     os.remove(fname)
 
 
-def test_sparse_ndarray_load_csr_npz_scipy(tmp_path):
+@pytest.mark.parametrize('save_fn', [mx.nd.save, mx.npx.savez])
+def test_sparse_ndarray_load_csr_npz_scipy(tmp_path, save_fn):
     csr_sp = spsp.rand(50, 100, density=0.5, format="csr")
     spsp.save_npz(tmp_path / "csr.npz", csr_sp)
 
@@ -579,8 +588,9 @@ def test_sparse_ndarray_load_csr_npz_scipy(tmp_path):
     assert np.sum(csr_mx.indices.asnumpy() != csr_sp.indices) == 0
     assert np.sum(csr_mx.indptr.asnumpy() != csr_sp.indptr) == 0
 
-    csr_mx = mx.nd.save(str(tmp_path / "csr_mx.npz"), csr_mx)
-    csr_mx_loaded = mx.nd.load(str(tmp_path / "csr_mx.npz"))['']
+    csr_mx = save_fn(str(tmp_path / "csr_mx.npz"), csr_mx)
+    csr_mx_loaded = mx.nd.load(str(tmp_path / "csr_mx.npz"))
+    csr_mx_loaded = csr_mx_loaded[0] if save_fn is mx.nd.save else csr_mx_loaded['arr_0']
     assert np.sum(csr_mx_loaded.data.asnumpy() != csr_sp.data) == 0
     assert np.sum(csr_mx_loaded.indices.asnumpy() != csr_sp.indices) == 0
     assert np.sum(csr_mx_loaded.indptr.asnumpy() != csr_sp.indptr) == 0

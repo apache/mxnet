@@ -370,7 +370,8 @@ def test_ndarray_pickle():
         assert np.sum(a.asnumpy() != a2.asnumpy()) == 0
 
 
-def test_ndarray_saveload():
+@pytest.mark.parametrize('save_fn', [mx.nd.save, mx.npx.savez])
+def test_ndarray_saveload(save_fn):
     nrepeat = 10
     fname = 'tmp_list'
     for repeat in range(nrepeat):
@@ -378,14 +379,20 @@ def test_ndarray_saveload():
         # test save/load as list
         for i in range(10):
             data.append(random_ndarray(np.random.randint(1, 5)))
-        mx.nd.save(fname, data)
+        if save_fn is mx.nd.save:
+            save_fn(fname, data)
+        else:
+            save_fn(fname, *data)
         data2 = mx.nd.load(fname)
         assert len(data) == len(data2)
-        for x, y in zip(data, data2.values()):  # TODO consider not to return names if no explicit names were saved
+        for x, y in zip(data, data2 if save_fn is mx.nd.save else data2.values()):
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
         # test save/load as dict
         dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
-        mx.nd.save(fname, dmap)
+        if save_fn is mx.nd.save:
+            save_fn(fname, dmap)
+        else:
+            save_fn(fname, **dmap)
         dmap2 = mx.nd.load(fname)
         assert len(dmap2) == len(dmap)
         for k, x in dmap.items():
@@ -395,11 +402,16 @@ def test_ndarray_saveload():
         # test save/load as ndarray
         # we expect the single ndarray to be converted into a list containing the ndarray
         single_ndarray = data[0]
-        mx.nd.save(fname, single_ndarray)
+        save_fn(fname, single_ndarray)
 
         # Test loading with numpy
-        single_ndarray_loaded = np.load(fname)
-        assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded) == 0
+        if save_fn is mx.npx.savez:
+            single_ndarray_loaded = np.load(fname)['arr_0']
+            assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded) == 0
+
+            mx.npx.save(fname, single_ndarray)
+            single_ndarray_loaded = np.load(fname)
+            assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded) == 0
 
         # Test loading with mxnet backend
         single_ndarray_loaded = mx.nd.load(fname)
@@ -410,12 +422,13 @@ def test_ndarray_saveload():
     os.remove(fname)
 
 
+@mx.util.use_np
 def test_ndarray_load_fortran_order(tmp_path):
     arr = np.arange(20).reshape((2, 10)).T
     assert np.isfortran(arr)
     np.save(tmp_path / 'fortran_order.npy', arr)
 
-    mx_arr = mx.nd.load(str(tmp_path / 'fortran_order.npy'))[0]
+    mx_arr = mx.npx.load(str(tmp_path / 'fortran_order.npy'))[0]
     np_mx_arr = mx_arr.asnumpy()
     assert not np.isfortran(np_mx_arr)
     assert np.sum(np_mx_arr != arr) == 0

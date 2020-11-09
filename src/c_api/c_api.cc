@@ -1878,6 +1878,29 @@ int MXNDArrayWaitAll() {
   API_END();
 }
 
+int MXNDArrayLegacySave(const char* fname,
+                        uint32_t num_args,
+                        NDArrayHandle* args,
+                        const char** keys) {
+  API_BEGIN();
+  std::vector<NDArray> data(num_args);
+  std::vector<std::string> names;
+  for (uint32_t i = 0; i < num_args; ++i) {
+    data[i] = *static_cast<NDArray*>(args[i]);
+  }
+  if (keys != nullptr) {
+    names.resize(num_args);
+    for (uint32_t i = 0; i < num_args; ++i) {
+      names[i] = keys[i];
+    }
+  }
+  {
+    std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname, "w"));
+    mxnet::NDArray::Save(fo.get(), data, names);
+  }
+  API_END();
+}
+
 int MXNDArraySave(const char* fname,
                   uint32_t num_args,
                   NDArrayHandle* args,
