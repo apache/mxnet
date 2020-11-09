@@ -280,7 +280,7 @@ def compile_centos7_cpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib(lib_name, mx_lib, true)
+            utils.pack_lib(lib_name, mx_lib)
           }
         }
       }
@@ -866,7 +866,7 @@ def test_centos7_python3_cpu(lib_name) {
         ws('workspace/build-centos7-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
-              utils.unpack_and_init(lib_name, mx_lib, true)
+              utils.unpack_and_init(lib_name, mx_lib)
               utils.docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
               utils.publish_test_coverage()
             } finally {
