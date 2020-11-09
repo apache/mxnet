@@ -11382,7 +11382,12 @@ def atleast_1d(*arys):
     >>> np.atleast_1d(np.array(1), np.array([3, 4]))
     [array([1.]), array([3., 4.])]
     """
-    return _mx_nd_np.atleast_1d(*arys)
+    res = []
+    for ary in arys:
+        ary, _ = _as_onp_array(ary)
+        ary = _np.asanyarray(ary)
+        res.append(_as_mx_np_array(ary))
+    return _mx_nd_np.atleast_1d(*res)
 
 
 @set_module('mxnet.numpy')
@@ -11414,7 +11419,12 @@ def atleast_2d(*arys):
     >>> np.atleast_2d(np.array(1), np.array([1, 2]), np.array([[1, 2]]))
     [array([[1.]]), array([[1., 2.]]), array([[1., 2.]])]
     """
-    return _mx_nd_np.atleast_2d(*arys)
+    res = []
+    for ary in arys:
+        ary, _ = _as_onp_array(ary)
+        ary = _np.asanyarray(ary)
+        res.append(_as_mx_np_array(ary))
+    return _mx_nd_np.atleast_2d(*res)
 
 
 @set_module('mxnet.numpy')
@@ -11457,7 +11467,12 @@ def atleast_3d(*arys):
       [2.]]] (1, 2, 1)
     [[[1. 2.]]] (1, 1, 2)
     """
-    return _mx_nd_np.atleast_3d(*arys)
+    res = []
+    for ary in arys:
+        ary, _ = _as_onp_array(ary)
+        ary = _np.asanyarray(ary)
+        res.append(_as_mx_np_array(ary))
+    return _mx_nd_np.atleast_3d(*res)
 
 
 @set_module('mxnet.numpy')
