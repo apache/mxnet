@@ -1368,7 +1368,7 @@ class HybridBlock(Block):
 
         if path is not None:
             save_fn(params_filename, arg_dict)
-            return (sym_filename, params_filename)
+            return (sym_filename, params_filename if arg_dict else None)
 
         if remove_amp_cast:
             handle = SymbolHandle()
