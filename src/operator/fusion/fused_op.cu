@@ -740,7 +740,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   }
   common::cuda::rtc::launch(kernel_functions_[kernel_variant],
                             {num_blocks, 1, 1},
-                            {FusedOp::NTHREADS, 1, 1},
+                            {static_cast<unsigned int>(FusedOp::NTHREADS), 1, 1},
                             0, s, &args);
 }
 
