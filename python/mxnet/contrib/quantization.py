@@ -16,6 +16,7 @@
 # under the License.
 """Quantization module for generating quantized (INT8) models from FP32 models."""
 
+import abc
 import ctypes
 import logging
 import os
@@ -31,7 +32,7 @@ from ..io import DataDesc
 from ..context import cpu, Context
 from ..util import is_np_array
 
-def _quantize_params(qsym, params, th_dict):
+def _quantize_params(qsym, params, min_max_dict):
     """Given a quantized symbol and a dict of params that have not been quantized,
     generate quantized params. Currently only supports quantizing the arg_params
     with names of `weight` or `bias`, not aux_params. If `qsym` contains symbols
@@ -44,7 +45,7 @@ def _quantize_params(qsym, params, th_dict):
     qsym : Symbol
         Quantized symbol from FP32 symbol.
     params : dict of str->NDArray
-    th_dict: dict of min/max pairs of layers' output
+    min_max_dict: dict of min/max pairs of layers' output
     """
     inputs_name = qsym.list_arguments()
     quantized_params = {}
@@ -77,12 +78,12 @@ def _quantize_params(qsym, params, th_dict):
             quantized_params[name] = params[name]
         elif name.endswith(('_min')):
             output = name[: - len('_min')]
-            if output in th_dict:
-                quantized_params[name] = array_cls.array([th_dict[output][0]])
+            if output in min_max_dict:
+                quantized_params[name] = array_cls.array([min_max_dict[output][0]])
         elif name.endswith(('_max')):
             output = name[: - len('_min')]
-            if output in th_dict:
-                quantized_params[name] = array_cls.array([th_dict[output][1]])
+            if output in min_max_dict:
+                quantized_params[name] = array_cls.array([min_max_dict[output][1]])
     return quantized_params
 
 def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
@@ -177,20 +178,50 @@ def combine_histogram(old_hist, arr, new_min, new_max, new_th):
         hist[half_increased_bins:new_num_bins - half_increased_bins] += old_hist
         return (hist, hist_edges, min(old_min, new_min), max(old_max, new_max), new_th)
 
-class _LayerHistogramCollector(object):
+class CalibrationCollector(object):
+    """Base class for all other collectors used with quantization"""
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self):
+        self.include_layers = None
+        self.min_max_dict = None
+
+    @abc.abstractmethod
+    def collect(self, name, op_name, arr):
+        """Function which is registered to block as monitor callback. 
+            Parameters
+            ----------
+            name : str
+                Node name from which collected data comes from
+            op_name : str
+                Operator name from which collected data comes from. Single operator
+                can have multiple inputs/ouputs nodes - each should have different name
+            arr : NDArray
+                NDArray containing data of monitored node
+        """
+        pass
+
+    def post_calibrate(self):
+         # optionaly do sth with collected data
+        return self.min_max_dict # default return min_max_dict
+
+
+class _LayerHistogramCollector(CalibrationCollector):
     """Saves layer histogram in a dict with layer names as keys and lists of NDArrays as
     values. The collected histogram will be used for calculating the optimal thresholds for
     quantization using KL divergence.
     """
-    def __init__(self, num_bins=8001, include_layer=None, logger=None):
+    def __init__(self, quantized_dtype, num_bins=8001, include_layers=None, logger=None):
+        super(_LayerHistogramCollector, self).__init__()
         self.hist_dict = {}
         self.num_bins = num_bins
-        self.include_layer = include_layer
+        self.include_layers = include_layers
         self.logger = logger
+        self.quantized_dtype = quantized_dtype
 
-    def collect(self, name, opname, arr, *args):
+    def collect(self, name, op_name, arr):
         """Callback function for collecting layer output NDArrays."""
-        if name not in self.include_layer:
+        if name not in self.include_layers:
             return
         arr = arr.copyto(cpu()).asnumpy()
         if self.logger:
@@ -203,20 +234,75 @@ class _LayerHistogramCollector(object):
         else:
             hist, hist_edges = np.histogram(arr, bins=self.num_bins, range=(-th, th))
             self.hist_dict[name] = (hist, hist_edges, min_range, max_range, th)
+        
+    def post_calibrate(self):
+         min_max_dict = self.get_optimal_thresholds(self.hist_dict, self.quantized_dtype, logger=self.logger)
+         return min_max_dict 
 
-class _LayerOutputMinMaxCollector(object):
+    # pylint: disable=line-too-long
+    @staticmethod
+    def get_optimal_threshold(hist_data, quantized_dtype, num_quantized_bins=255):
+        """Given a dataset, find the optimal threshold for quantizing it.
+        The reference distribution is `q`, and the candidate distribution is `p`.
+        `q` is a truncated version of the original distribution.
+
+        Ref: http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
+        """
+        (hist, hist_edges, min_val, max_val, _) = hist_data
+        num_bins = len(hist)
+        assert (num_bins % 2 == 1)
+        if min_val >= 0 and quantized_dtype in ['auto', 'uint8']:
+            # We need to move negative bins to positive bins to fit uint8 range.
+            num_quantized_bins = num_quantized_bins * 2 + 1
+        hist = ndarray.array(hist, ctx=cpu())
+        hist_edges = ndarray.array(hist_edges, ctx=cpu())
+        threshold, divergence = ndarray.contrib.calibrate_entropy(hist=hist,
+                                                                hist_edges=hist_edges,
+                                                                num_quantized_bins=num_quantized_bins)
+        threshold = threshold.asnumpy()
+        divergence = divergence.asnumpy()
+        return min_val, max_val, threshold, divergence
+    # pylint: enable=line-too-long
+
+    @staticmethod
+    def get_optimal_thresholds(hist_dict, quantized_dtype, num_quantized_bins=255, logger=None):
+        """Given a ndarray dict, find the optimal threshold for quantizing each value of the key."""
+        assert isinstance(hist_dict, dict)
+        if logger is not None:
+            logger.info('Calculating optimal thresholds for quantization using KL divergence'
+                        ' with num_quantized_bins=%d' % num_quantized_bins)
+        th_dict = {}
+        # copy hist_dict keys since the keys() only returns a view in python3
+        layer_names = list(hist_dict.keys())
+        for name in layer_names:
+            assert name in hist_dict
+            min_val, max_val, th, divergence = \
+                _LayerHistogramCollector.get_optimal_threshold(hist_dict[name], quantized_dtype,
+                                                               num_quantized_bins=num_quantized_bins)
+            if min_val >= 0 and quantized_dtype in ['auto', 'uint8']:
+                th_dict[name] = (0, th)
+            else:
+                th_dict[name] = (-th, th)
+            del hist_dict[name]  # release the memory
+            if logger:
+                logger.debug('layer=%s, min_val=%f, max_val=%f, th=%f, divergence=%f'
+                            % (name, min_val, max_val, th, divergence))
+        return th_dict
+
+class _LayerOutputMinMaxCollector(CalibrationCollector):
     """Saves layer output min and max values in a dict with layer names as keys.
     The collected min and max values will be directly used as thresholds for quantization.
     """
-    def __init__(self, quantized_dtype, include_layer=None, logger=None):
+    def __init__(self, quantized_dtype, include_layers=None, logger=None):
+        super(_LayerOutputMinMaxCollector, self).__init__()
         self.min_max_dict = {}
         self.quantized_dtype = quantized_dtype
-        self.include_layer = include_layer
+        self.include_layers = include_layers
         self.logger = logger
 
-    def collect(self, name, op_name, arr, *args):
+    def collect(self, name, op_name, arr):
         """Callback function for collecting min and max values from an NDArray."""
-        if name not in self.include_layer:
+        if name not in self.include_layers:
             return
         arr = arr.copyto(cpu()).asnumpy()
         min_range = np.min(arr)
@@ -231,17 +317,17 @@ class _LayerOutputMinMaxCollector(object):
             self.logger.debug("Collecting layer %s min_range=%f, max_range=%f"
                               % (name, min_range, max_range))
 
-def _calibrate_quantized_sym(qsym, th_dict):
+def _calibrate_quantized_sym(qsym, min_max_dict):
     """Given a dictionary containing the thresholds for quantizing the layers,
     set the thresholds into the quantized symbol as the params of requantize operators.
     """
-    if th_dict is None or len(th_dict) == 0:
+    if min_max_dict  is None or len(min_max_dict) == 0:
         return qsym
-    num_layer_outputs = len(th_dict)
+    num_layer_outputs = len(min_max_dict)
     layer_output_names = []
     min_vals = []
     max_vals = []
-    for k, v in th_dict.items():
+    for k, v in min_max_dict.items():
         layer_output_names.append(k)
         min_vals.append(v[0])
         max_vals.append(v[1])
@@ -275,72 +361,6 @@ def _collect_layer_statistics(sym_block, data, collector, num_inputs, num_calib_
     return num_batches
 
 
-def _collect_layer_output_min_max(sym_block, data, quantized_dtype, num_inputs,
-                                  include_layer=None, num_calib_batches=None, logger=None):
-    """Collect min and max values from layer outputs and save them in
-    a dictionary mapped by layer names.
-    """
-    collector = _LayerOutputMinMaxCollector(quantized_dtype=quantized_dtype,
-                                            include_layer=include_layer, logger=logger)
-    num_batches = _collect_layer_statistics(sym_block, data, collector, num_inputs, num_calib_batches, logger)
-    return collector.min_max_dict, num_batches
-
-
-def _collect_layer_histogram(sym_block, data, num_inputs, include_layer=None,
-                             num_calib_batches=None, logger=None):
-    """Collect layer outputs and save them in a dictionary mapped by layer names."""
-    collector = _LayerHistogramCollector(include_layer=include_layer, logger=logger)
-    num_batches = _collect_layer_statistics(sym_block, data, collector, num_inputs, num_calib_batches, logger)
-    return collector.hist_dict, num_batches
-
-
-# pylint: disable=line-too-long
-def _get_optimal_threshold(hist_data, quantized_dtype, num_quantized_bins=255):
-    """Given a dataset, find the optimal threshold for quantizing it.
-    The reference distribution is `q`, and the candidate distribution is `p`.
-    `q` is a truncated version of the original distribution.
-
-    Ref: http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
-    """
-    (hist, hist_edges, min_val, max_val, _) = hist_data
-    num_bins = len(hist)
-    assert (num_bins % 2 == 1)
-    if min_val >= 0 and quantized_dtype in ['auto', 'uint8']:
-        # We need to move negative bins to positive bins to fit uint8 range.
-        num_quantized_bins = num_quantized_bins * 2 + 1
-    hist = ndarray.array(hist, ctx=cpu())
-    hist_edges = ndarray.array(hist_edges, ctx=cpu())
-    threshold, divergence = ndarray.contrib.calibrate_entropy(hist=hist,
-                                                              hist_edges=hist_edges,
-                                                              num_quantized_bins=num_quantized_bins)
-    threshold = threshold.asnumpy()
-    divergence = divergence.asnumpy()
-    return min_val, max_val, threshold, divergence
-# pylint: enable=line-too-long
-
-def _get_optimal_thresholds(hist_dict, quantized_dtype, num_quantized_bins=255, logger=None):
-    """Given a ndarray dict, find the optimal threshold for quantizing each value of the key."""
-    assert isinstance(hist_dict, dict)
-    if logger is not None:
-        logger.info('Calculating optimal thresholds for quantization using KL divergence'
-                    ' with num_quantized_bins=%d' % num_quantized_bins)
-    th_dict = {}
-    # copy hist_dict keys since the keys() only returns a view in python3
-    layer_names = list(hist_dict.keys())
-    for name in layer_names:
-        assert name in hist_dict
-        min_val, max_val, th, divergence = \
-            _get_optimal_threshold(hist_dict[name], quantized_dtype,
-                                   num_quantized_bins=num_quantized_bins)
-        if min_val >= 0 and quantized_dtype in ['auto', 'uint8']:
-            th_dict[name] = (0, th)
-        else:
-            th_dict[name] = (-th, th)
-        del hist_dict[name]  # release the memory
-        if logger:
-            logger.debug('layer=%s, min_val=%f, max_val=%f, th=%f, divergence=%f'
-                         % (name, min_val, max_val, th, divergence))
-    return th_dict
 
 
 def _generate_list_of_data_desc(data_shapes, data_types):
@@ -460,7 +480,7 @@ def quantize_model(sym, arg_params, aux_params,
                                           quantized_dtype=quantized_dtype,
                                           quantize_mode=quantize_mode,
                                           quantize_granularity=quantize_granularity)
-    th_dict = {}
+    min_max_dict = {}
     if calib_mode is not None and calib_mode != 'none':
         if not isinstance(ctx, Context):
             raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
@@ -477,31 +497,31 @@ def quantize_model(sym, arg_params, aux_params,
         sym_block.load_dict(param_dict)
 
         if calib_mode == 'entropy':
-            hist_dict, num_batches = _collect_layer_histogram(sym_block, calib_data, len(inputs),
-                                                              include_layer=calib_layers,
-                                                              num_calib_batches=num_calib_batches,
-                                                              logger=logger)
-            if logger:
-                logger.info('Collected layer outputs from FP32 model using %d batches' % num_batches)
-                logger.info('Calculating optimal thresholds for quantization')
-            th_dict = _get_optimal_thresholds(hist_dict, quantized_dtype, logger=logger)
+            collector = _LayerHistogramCollector(quantized_dtype=quantized_dtype,
+                                                 include_layers=calib_layers,
+                                                 logger=logger)
         elif calib_mode == 'naive':
-            th_dict, num_batches = _collect_layer_output_min_max(
-                                        sym_block, calib_data, quantized_dtype,
-                                        len(inputs), include_layer=calib_layers,
-                                        num_calib_batches=num_calib_batches,
-                                        logger=logger)
-            if logger:
-                logger.info('Collected layer output min/max values from FP32 model using %d batches'
-                            % num_batches)
+            collector = _LayerOutputMinMaxCollector(quantized_dtype=quantized_dtype,
+                                                    include_layers=calib_layers,
+                                                    logger=logger)
+
         else:
             raise ValueError('unknown calibration mode %s received,'
                              ' expected `none`, `naive`, or `entropy`' % calib_mode)
-        qsym = _calibrate_quantized_sym(qsym, th_dict)
+
+        num_batches = _collect_layer_statistics(sym_block, calib_data, collector,
+                                                len(inputs), num_calib_batches, logger)
+        if logger:
+            logger.info('Collected layer output min/max values from FP32 model using %d batches'
+                        % num_batches)
+            logger.info('Performing calibration post collecting operations')
+
+        min_max_dict = collector.post_calibrate()
+        qsym = _calibrate_quantized_sym(qsym, min_max_dict)
 
     if logger:
         logger.info('Quantizing parameters')
-    qarg_params = _quantize_params(qsym, arg_params, th_dict)
+    qarg_params = _quantize_params(qsym, arg_params, min_max_dict)
 
     return qsym, qarg_params, aux_params
 
@@ -593,8 +613,9 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
     quantize_granularity: str
         The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
         quantization. The default value is 'tensor-wise'.
-    LayerOutputCollector : class
+    LayerOutputCollector : subclass of CalibrationCollector
         For customize calibration method usage.
+        Passed object's include_layers attribute will be feed with names of layers which needs calibration
     logger : Object
         A logging object for printing information during the process of quantization.
     Returns
@@ -627,23 +648,33 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
                                          quantize_mode=quantize_mode,
                                          quantize_granularity=quantize_granularity)
 
-    th_dict = {}
     collector = None
     if calib_mode is not None and calib_mode != 'none':
         if calib_mode == 'entropy':
-            collector = _LayerHistogramCollector(
-                include_layer=calib_layers, logger=logger)
+            collector = _LayerHistogramCollector(quantized_dtype=quantized_dtype,
+                                                 include_layers=calib_layers, logger=logger)
             if logger:
                 logger.info(
                     'Create a layer output collector for entropy calibration.')
         elif calib_mode == 'naive':
             collector = _LayerOutputMinMaxCollector(quantized_dtype=quantized_dtype,
-                                                    include_layer=calib_layers, logger=logger)
+                                                    include_layers=calib_layers, logger=logger)
             if logger:
                 logger.info(
                     'Create a layer output minmax collector for naive calibration')
         elif calib_mode == 'customize' and LayerOutputCollector is not None:
+            if not isinstance(LayerOutputCollector, CalibrationCollector):
+                raise ValueError('LayerOutputCollecotr must be a subclass of a CalibrationCollector class,'
+                                  ' but it is %s' % LayerOutputCollector.__class__)
             collector = LayerOutputCollector
+
+            # Inject layer names that need calibration to collector
+            if hasattr(collector, "include_layers"):
+                if collector.include_layers is not None:
+                    logger.info('Customized collector has set include_layers attribute. '
+                                'Calibration layers not passed')
+                else:
+                    collector.include_layers = calib_layers
             if logger:
                 logger.info(
                     'Create a customize layer output minmax collector for calibration')
@@ -656,7 +687,7 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
 
     if logger:
         logger.info('Quantizing parameters')
-    qarg_params = _quantize_params(qsym, arg_params, th_dict)
+    qarg_params = _quantize_params(qsym, arg_params, min_max_dict={})
 
     return qsym, qarg_params, aux_params, collector, calib_layers
 
@@ -697,26 +728,21 @@ def calib_graph(qsym, arg_params, aux_params, collector,
         A tuple of calibrated symbol, quantized arg_params, aux_params.
     -------
     """
-    th_dict = {}
+    min_max_dict = {}
     if calib_mode is not None and calib_mode != 'none':
-        if calib_mode == 'entropy':
-            if logger:
-                logger.info('Calculating optimal thresholds for quantization')
-            th_dict = _get_optimal_thresholds(collector.hist_dict, quantized_dtype, logger=logger)
-        elif calib_mode == 'naive':
-            th_dict = collector.min_max_dict
-        elif calib_mode == 'customize':
-            th_dict = collector.min_max_dict
+        if calib_mode in ('entropy', 'naive', 'customize'):
+            min_max_dict = collector.post_calibrate()
+
         else:
             raise ValueError('unknown calibration mode %s received,'
                              ' expected `none`, `naive`, `entropy` or `customize`' % calib_mode)
-        qsym = _calibrate_quantized_sym(qsym, th_dict)
+        qsym = _calibrate_quantized_sym(qsym, min_max_dict)
     else:
-        raise ValueError('please set calibration mode to naive or entropy.')
+        raise ValueError('Please set calibration mode to naive, entropy or customize (with custom CalibrationCollector)')
 
     if logger:
         logger.info('Quantizing parameters')
-    qarg_params = _quantize_params(qsym, arg_params, th_dict)
+    qarg_params = _quantize_params(qsym, arg_params, min_max_dict)
 
     return qsym, qarg_params, aux_params
 
@@ -771,8 +797,9 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     ctx : Context
         Defines the device that users want to run forward propagation on the calibration
         dataset for collecting layer output statistics. Currently, only supports single context.
-    LayerOutputCollector : class
+    LayerOutputCollector : subclass of CalibrationCollector
         For customize calibration method usage.
+        Passed object's include_layers attribute will be feed with names of layers which needs calibration
     logger : Object
         A logging object for printing information during the process of quantization.
 

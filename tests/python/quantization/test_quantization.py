@@ -829,7 +829,7 @@ def test_quantize_params():
         params[name] = mx.nd.uniform(shape=(2, 2))
     qsym, _ = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
                                                 offline_params=offline_params, quantize_mode='full')
-    qparams = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
+    qparams = mx.contrib.quant._quantize_params(qsym, params, min_max_dict = {})
     param_names = params.keys()
     qparam_names = qparams.keys()
     for name in qparam_names:
@@ -905,7 +905,7 @@ def test_quantize_model():
                 assert k in qparams
                 assert same(v.asnumpy(), qparams[k].asnumpy())
         else:
-            qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
+            qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params, min_max_dict = {})
             assert len(qparams) == len(qparams_ground_truth)
             for k, v in qparams_ground_truth.items():
                 assert k in qparams
@@ -1098,18 +1098,18 @@ def test_quantize_sym_with_calib():
     qsym, _ = mx.contrib.quant._quantize_symbol(sym, ctx=mx.current_context(),
                                              offline_params=offline_params, quantize_mode='full')
     requantize_op_names = ['requantize_conv', 'requantize_fc']
-    th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0)),
-               'fc_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
+    min_max_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0)),
+                    'fc_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
     op_name_to_th_name = {'requantize_conv': 'conv_output', 'requantize_fc': 'fc_output'}
-    cqsym = mx.contrib.quant._calibrate_quantized_sym(qsym, th_dict)
+    cqsym = mx.contrib.quant._calibrate_quantized_sym(qsym, min_max_dict)
     attr_dict = cqsym.attr_dict()
     for name in requantize_op_names:
         assert name in attr_dict
         lhs = float(attr_dict[name]['min_calib_range'])
-        rhs = th_dict[op_name_to_th_name[name]][0]
+        rhs = min_max_dict[op_name_to_th_name[name]][0]
         assert_almost_equal(np.array([lhs]), np.array([rhs]))
         lhs = float(attr_dict[name]['max_calib_range'])
-        rhs = th_dict[op_name_to_th_name[name]][1]
+        rhs = min_max_dict[op_name_to_th_name[name]][1]
         assert_almost_equal(np.array([lhs]), np.array([rhs]), rtol=1e-3, atol=1e-4)
 
 
@@ -1179,7 +1179,7 @@ def test_optimal_threshold_adversarial_case():
     hist_edges.append(max_val)
     hist_data = (hist, hist_edges, min_val, max_val, max_val)
     for dtype in ['uint8', 'int8', 'auto']:
-        res = mx.contrib.quant._get_optimal_threshold(hist_data, dtype, num_quantized_bins=5)
+        res = mx.contrib.quant._LayerHistogramCollector.get_optimal_threshold(hist_data, dtype, num_quantized_bins=5)
         # The threshold should be 2.
         print (res)
         assert abs(res[2] - 2) < 1e-5
@@ -1202,7 +1202,7 @@ def test_get_optimal_thresholds():
         th = max(abs(min_range), abs(max_range))
         hist, hist_edges = np.histogram(arr, bins=8001, range=(-th, th))
         hist_dict = {'layer1' : (hist, hist_edges, min_range, max_range, th)}
-        th_dict = mx.contrib.quant._get_optimal_thresholds(hist_dict, dtype)
-        assert 'layer1' in th_dict
-        assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
+        min_max_dict = mx.contrib.quant._LayerHistogramCollector.get_optimal_thresholds(hist_dict, dtype)
+        assert 'layer1' in min_max_dict
+        assert_almost_equal(np.array([min_max_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
 
