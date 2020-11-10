@@ -101,7 +101,7 @@ gather_licenses() {
 
 # Compiles the dynamic mxnet library
 # Parameters:
-# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu100, cu92, etc.
+# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu101, cu102, etc.
 build_dynamic_libmxnet() {
     set -ex
 
@@ -112,6 +112,8 @@ build_dynamic_libmxnet() {
 
     cd /work/build
     source /opt/rh/devtoolset-8/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     if [[ ${mxnet_variant} = "cpu" ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
@@ -257,9 +259,10 @@ build_centos7_cpu() {
     set -ex
     cd /work/build
     source /opt/rh/devtoolset-7/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
@@ -272,6 +275,8 @@ build_centos7_mkldnn() {
     set -ex
     cd /work/build
     source /opt/rh/devtoolset-7/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
@@ -284,6 +289,8 @@ build_centos7_gpu() {
     set -ex
     cd /work/build
     source /opt/rh/devtoolset-7/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -1123,29 +1130,29 @@ build_jekyll_docs() {
 
 
 build_python_docs() {
-   set -ex
-   pushd .
+    set -ex
+    pushd .
 
-   build_docs_setup
+    build_docs_setup
 
-   pushd docs/python_docs
-   python3 -m pip install -r requirements
-   python3 -m pip install themes/mx-theme
-   python3 -m pip install -e /work/mxnet/python --user
+    pushd docs/python_docs
+    python3 -m pip install -r requirements
+    python3 -m pip install themes/mx-theme
+    python3 -m pip install -e /work/mxnet/python --user
 
-   export PATH=/home/jenkins_slave/.local/bin:$PATH
+    export PATH=/home/jenkins_slave/.local/bin:$PATH
 
-   pushd python
-   make clean
-   make html EVAL=0
+    pushd python
+    make clean
+    make html EVAL=0
 
-   GZIP=-9 tar zcvf python-artifacts.tgz -C build/_build/html .
-   popd
+    GZIP=-9 tar zcvf python-artifacts.tgz -C build/_build/html .
+    popd
 
-   mv python/python-artifacts.tgz /work/mxnet/docs/_build/
-   popd
+    mv python/python-artifacts.tgz /work/mxnet/docs/_build/
+    popd
 
-   popd
+    popd
 }
 
 
@@ -1173,9 +1180,50 @@ build_c_docs() {
 build_docs() {
     pushd docs/_build
     tar -xzf jekyll-artifacts.tgz
-    api_folder='html/api'
+    python_doc_folder='html/api/python/docs'
+
     # Python has it's own landing page/site so we don't put it in /docs/api
-    mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
+    mkdir -p $python_doc_folder && tar -xzf python-artifacts.tgz --directory $python_doc_folder
+
+     # check if .htaccess file exists
+    if [ ! -f "html/.htaccess" ]; then
+        echo "html/.htaccess file does not exist. Exiting 1"
+        exit 1
+    fi
+    # get the version
+    version=$(grep "RewriteRule" html/.htaccess | grep -E "versions\/[0-9]" | sed -nre 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
+    # count how many versions are found
+    lines=$(echo "$version" | wc -l)
+    # check if multiple versions are found
+    if [ "$lines" != "1" ]; then
+        echo "multiple versions detected: $lines. Exiting 1"
+        exit 1
+    fi
+    # check if no version is found
+    if [ "$version" == "" ]; then
+        echo "no version found. Exiting 1"
+        exit 1
+    fi
+    # print the one and only default mxnet version
+    echo "detected version is $version"
+    # check if the artifacts for this version exist
+    if [ -d "html/versions/$version/api" ]; then
+        echo "html/versions/$version/api directory exists"
+    else
+        echo "html/versions/$version/api directory does not exist! Exiting 1"
+        exit 1
+    fi
+
+    # copy the full site for this version to versions folder
+    mkdir -p html/versions/master
+    for f in 404.html api assets blog community ecosystem features feed.xml get_started index.html; do
+        cp -r html/$f html/versions/master/
+    done
+
+    # clean up temp files
+    find html -type f -name '.DS_Store' -delete
+
+    # archive artifact
     GZIP=-9 tar -zcvf full_website.tgz -C html .
     popd
 }
@@ -1183,8 +1231,8 @@ build_docs() {
 build_docs_beta() {
     pushd docs/_build
     tar -xzf jekyll-artifacts.tgz
-    api_folder='html/api'
-    mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
+    python_doc_folder="html/versions/$BRANCH/api/python/docs"
+    mkdir -p $python_doc_folder && tar -xzf python-artifacts.tgz --directory $python_doc_folder
     GZIP=-9 tar -zcvf beta_website.tgz -C html .
     popd
 }
@@ -1231,6 +1279,8 @@ build_static_libmxnet() {
     pushd .
     source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
@@ -1252,8 +1302,10 @@ ci_package_pypi() {
 cd_package_pypi() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
     popd
@@ -1296,6 +1348,8 @@ build_static_python_cpu() {
     export mxnet_variant=cpu
     source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh
     popd
 }
@@ -1306,6 +1360,8 @@ build_static_python_cu102() {
     export mxnet_variant=cu102
     source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh
     popd
 }

@@ -439,7 +439,7 @@ class GroupDataset final : public Dataset {
     CHECK_LT(idx, size_)
       << "GetItem index: " << idx << " out of bound: " << size_;
     ret->clear();
-    for (auto child : childs_) {
+    for (const auto& child : childs_) {
       std::vector<NDArray> temp_ret;
       if (!child->GetItem(idx, &temp_ret)) return false;
       ret->insert(ret->end(), temp_ret.begin(), temp_ret.end());

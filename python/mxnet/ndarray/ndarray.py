@@ -282,10 +282,13 @@ fixed-size items.
 
     def __repr__(self):
         """Returns a string representation of the array."""
-        shape_info = 'x'.join(['%d' % x for x in self.shape])
-        return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
-                                      self.__class__.__name__,
-                                      shape_info, self.ctx)
+        if self._alive:
+            shape_info = 'x'.join(['%d' % x for x in self.shape])
+            return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
+                                          self.__class__.__name__,
+                                          shape_info, self.ctx)
+        else:
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __reduce__(self):
         return NDArray, (None,), self.__getstate__()
@@ -5009,29 +5012,29 @@ from_numpy.__doc__ = from_numpy_doc
 
 to_dlpack_for_read = ndarray_to_dlpack_for_read()
 to_dlpack_for_read_doc = """Returns a reference view of NDArray that represents as DLManagedTensor until
-       all previous write operations on the current array are finished.
+all previous write operations on the current array are finished.
 
-    Parameters
-    ----------
-    data: NDArray
-        input data.
+Parameters
+----------
+data: NDArray
+    input data.
 
-    Returns
-    -------
-    PyCapsule (the pointer of DLManagedTensor)
-        a reference view of NDArray that represents as DLManagedTensor.
+Returns
+-------
+PyCapsule (the pointer of DLManagedTensor)
+    a reference view of NDArray that represents as DLManagedTensor.
 
-    Examples
-    --------
-    >>> x = mx.nd.ones((2,3))
-    >>> y = mx.nd.to_dlpack_for_read(x)
-    >>> type(y)
-    <class 'PyCapsule'>
-    >>> z = mx.nd.from_dlpack(y)
-    >>> z
-    [[1. 1. 1.]
-     [1. 1. 1.]]
-    <NDArray 2x3 @cpu(0)>
+Examples
+--------
+>>> x = mx.nd.ones((2,3))
+>>> y = mx.nd.to_dlpack_for_read(x)
+>>> type(y)
+<class 'PyCapsule'>
+>>> z = mx.nd.from_dlpack(y)
+>>> z
+[[1. 1. 1.]
+ [1. 1. 1.]]
+<NDArray 2x3 @cpu(0)>
 """
 to_dlpack_for_read.__doc__ = to_dlpack_for_read_doc
 
@@ -5039,27 +5042,27 @@ to_dlpack_for_write = ndarray_to_dlpack_for_write()
 to_dlpack_for_write_doc = """Returns a reference view of NDArray that represents as
 DLManagedTensor until all previous read/write operations on the current array are finished.
 
-    Parameters
-    ----------
-    data: NDArray
-        input data.
+Parameters
+----------
+data: NDArray
+    input data.
 
-    Returns
-    -------
-    PyCapsule (the pointer of DLManagedTensor)
-        a reference view of NDArray that represents as DLManagedTensor.
+Returns
+-------
+PyCapsule : the pointer of DLManagedTensor
+    a reference view of NDArray that represents as DLManagedTensor.
 
-    Examples
-    --------
-    >>> x = mx.nd.ones((2,3))
-    >>> w = mx.nd.to_dlpack_for_write(x)
-    >>> type(w)
-    <class 'PyCapsule'>
-    >>> u = mx.nd.from_dlpack(w)
-    >>> u += 1
-    >>> x
-    [[2. 2. 2.]
-     [2. 2. 2.]]
-    <NDArray 2x3 @cpu(0)>
+Examples
+--------
+>>> x = mx.nd.ones((2,3))
+>>> w = mx.nd.to_dlpack_for_write(x)
+>>> type(w)
+<class 'PyCapsule'>
+>>> u = mx.nd.from_dlpack(w)
+>>> u += 1
+>>> x
+[[2. 2. 2.]
+ [2. 2. 2.]]
+<NDArray 2x3 @cpu(0)>
 """
 to_dlpack_for_write.__doc__ = to_dlpack_for_write_doc

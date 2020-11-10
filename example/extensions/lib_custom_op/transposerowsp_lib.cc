@@ -60,7 +60,7 @@ void transpose(MXTensor& src, MXTensor& dst, const OpResource& res) {
     res.alloc_sparse(B, 0, mp.size());
     float *Bval = (float*) (B->data);
     int didx = 0, iidx = 0;
-    for(auto i : mp) {
+    for(const auto& i : mp) {
       B->indices[iidx++] = i.first;
       for(auto j : i.second) {
         Bval[didx++] = j;

@@ -54,6 +54,7 @@ option(USE_OPENMP "Build with Openmp support" ON)
 option(USE_FATBIN_COMPRESSION "Compress nvcc fatbin output" ON)
 cmake_dependent_option(USE_NVML "Build with nvml support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
+cmake_dependent_option(USE_CUTENSOR "Build with cuTENSOR support" ON "USE_CUDA" OFF) # one could set CUTENSOR_ROOT for search path
 cmake_dependent_option(USE_NVTX "Build with nvtx support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
   "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)
@@ -93,7 +94,7 @@ option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
 cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
-
+cmake_dependent_option(MXNET_FORCE_SHARED_CRT "Build with dynamic CRT on Windows (/MD)" ON "MXNET_BUILD_SHARED_LIBS" OFF)
 
 message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
 message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
@@ -103,6 +104,11 @@ message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
 if(USE_TVM_OP)
   add_definitions(-DMXNET_USE_TVM_OP=1)
+endif()
+
+if(MXNET_FORCE_SHARED_CRT)
+  set(DMLC_FORCE_SHARED_CRT ON)
+  set(gtest_force_shared_crt ON)
 endif()
 
 message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
@@ -254,8 +260,16 @@ endif()
 if(USE_MKLDNN)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(MSVC)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc /MT")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy /MT")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /EHsc /Gy")
+    set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /EHsc /Gy")
+    if(NOT MXNET_FORCE_SHARED_CRT)
+      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+      set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+      set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MT")
+      set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /MT")
+    endif()
   endif()
 
   function(load_mkldnn)
@@ -284,17 +298,7 @@ endif()
 
 if(USE_INTGEMM)
   message(STATUS "Using intgemm")
-  include(FetchContent)
-  FetchContent_Declare(
-    intgemm
-    GIT_REPOSITORY https://github.com/kpu/intgemm.git
-    GIT_TAG        02f671cf537fdbc818cf8111d1d9e557a8650d7a
-  )
-  FetchContent_GetProperties(intgemm)
-  if(NOT intgemm_POPULATED)
-    FetchContent_Populate(intgemm)
-  endif()
-  add_subdirectory(${intgemm_SOURCE_DIR} ${intgemm_BINARY_DIR} EXCLUDE_FROM_ALL)
+  add_subdirectory(3rdparty/intgemm EXCLUDE_FROM_ALL)
   add_definitions(-DMXNET_USE_INTGEMM=1)
 endif()
 
@@ -491,6 +495,18 @@ if(USE_CUDNN)
   endif()
 endif()
 
+# cutensor detection
+if(USE_CUTENSOR)
+  find_package(CUTENSOR)
+  if(CUTENSOR_FOUND)
+    add_definitions(-DUSE_CUTENSOR)
+    include_directories(SYSTEM ${CUTENSOR_INCLUDE})
+    list(APPEND mxnet_LINKER_LIBS ${CUTENSOR_LIBRARY})
+  else()
+    set(USE_CUTENSOR OFF)
+  endif()
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake)
   add_subdirectory("3rdparty/dmlc-core")
   set_target_properties(dmlc PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
@@ -550,13 +566,15 @@ if (NOT (EXTRA_OPERATORS STREQUAL ""))
     list(APPEND SOURCE ${EXTRA_SRC} ${EXTRA_CUSRC})
 endif()
 
-if(MSVC)
+if(MSVC AND NOT MXNET_FORCE_SHARED_CRT)
   foreach(flag_var
         CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
         CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
     if(${flag_var} MATCHES "/MD")
       string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-    endif(${flag_var} MATCHES "/MD")
+    elseif(${flag_var} MATCHES "/MDd")
+      string(REGEX REPLACE "/MDd" "/MTd" ${flag_var} "${${flag_var}}")    
+    endif()
   endforeach(flag_var)
 endif()
 
@@ -640,8 +658,8 @@ endif()
 add_subdirectory("3rdparty/mshadow")
 
 if(USE_CUDA AND USE_FATBIN_COMPRESSION)
-  string(APPEND CMAKE_CUDA_FLAGS "--fatbin-options -compress-all ")
-  message("-- CUDA: Adding NVCC options: --fatbin-options -compress-all ")
+  string(APPEND CMAKE_CUDA_FLAGS " --fatbin-options --compress-all")
+  message("-- CUDA: Adding NVCC options: --fatbin-options --compress-all")
 endif()
 if(UNIX)
   string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
@@ -670,17 +688,10 @@ if(UNIX)
     target_compile_options(mxnet PUBLIC "--coverage")
     target_link_libraries(mxnet PUBLIC gcov)
   endif()
-  if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
-    # TODO For handling mxnet's symbols the following can be replace by
-    # annotating symbol visibility in source code, specifying
-    # set(CMAKE_CXX_VISIBILITY_PRESET hidden) and
-    # set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
-    # Symbols from statically linked libraries can be discarded via -Wl,--exclude-libs,ALL
-    if(APPLE)
-      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
-    else()
-      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--version-script=${PROJECT_SOURCE_DIR}/cmake/libmxnet.ver")
-    endif()
+  if(APPLE)
+    set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
+  else()
+    set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--exclude-libs,ALL")
   endif()
 elseif(MSVC)
   if(USE_CUDA)
@@ -703,12 +714,33 @@ elseif(MSVC)
           PRIVATE
           "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-code=sm_${arch},compute_${arch}>"
         )
-        target_compile_options(
-          mxnet_${arch}
-          PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
-        target_compile_options(
-          mxnet_${arch}
-          PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+        if(MXNET_FORCE_SHARED_CRT)
+          target_compile_options(
+            mxnet_${arch} 
+            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MDd -Gy /bigobj>")
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")          
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
+        else()
+          target_compile_options(
+            mxnet_${arch} 
+            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")          
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+        endif()
       endforeach()
 
       add_custom_command(
@@ -716,15 +748,36 @@ elseif(MSVC)
         COMMAND gen_warp $<TARGET_FILE:mxnet_${mxnet_first_arch}> WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/ DEPENDS $<TARGET_FILE:mxnet_${mxnet_first_arch}>)
     else(USE_SPLIT_ARCH_DLL)
       string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
-      set(CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
+      string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
       add_library(mxnet SHARED ${SOURCE})
       target_link_libraries(mxnet PUBLIC mshadow)
-      target_compile_options(
-          mxnet
+      if(MXNET_FORCE_SHARED_CRT)
+        target_compile_options(
+            mxnet 
+            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MDd -Gy /bigobj>")
+        target_compile_options(
+            mxnet
+            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
+        target_compile_options(
+            mxnet
+            PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
+        target_compile_options(
+            mxnet
+            PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
+      else()
+        target_compile_options(
+          mxnet_${arch} 
           PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
-      target_compile_options(
-          mxnet
-          PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+        target_compile_options(
+          mxnet_${arch}
+          PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")          
+        target_compile_options(
+          mxnet_${arch}
+          PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+        target_compile_options(
+          mxnet_${arch}
+          PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+      endif()
     endif(USE_SPLIT_ARCH_DLL)
   else()
     add_library(mxnet SHARED ${SOURCE})
@@ -765,9 +818,15 @@ elseif(MSVC)
   set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
   set_target_properties(pass_lib PROPERTIES PREFIX "lib")
   if(USE_CUDA)
-    target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-LD -MT>")
-    target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/LD>")
-    target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/MT>")
+    if(MXNET_FORCE_SHARED_CRT)
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-LD -MD>")
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/LD>")
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/MD>")
+    else()
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-LD -MT>")
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/LD>")
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/MT>")
+    endif()
     set_target_properties(customop_gpu_lib PROPERTIES PREFIX "lib")
   endif()
 endif()

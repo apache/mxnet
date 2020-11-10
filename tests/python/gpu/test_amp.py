@@ -23,15 +23,15 @@ from random import randint
 import warnings
 import collections
 import ctypes
-import mxnet.contrib.amp as amp
+from mxnet import amp
 import pytest
 from mxnet.test_utils import set_default_context, same_symbol_structure
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
-from mxnet.contrib.amp import amp
+from mxnet.operator import get_all_registered_operators_grouped
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed, teardown_module, assert_raises_cudnn_not_satisfied
+from common import assert_raises_cudnn_not_satisfied
 sys.path.insert(0, os.path.join(curr_path, '../train'))
 set_default_context(mx.gpu(0))
 
@@ -42,7 +42,6 @@ def amp_tests(request):
 
     request.addfinalizer(teardown)
 
-@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 def test_amp_coverage(amp_tests):
     conditional = [item[0] for item in amp.lists.symbol_fp16.CONDITIONAL_FP32_FUNCS]
 
@@ -66,44 +65,37 @@ def test_amp_coverage(amp_tests):
     assert ret == [], "Elements " + str(ret) + " exist in more than 1 AMP list."
 
     # Check the coverage
-    py_str = lambda x: x.decode('utf-8')
+    covered = set(t)
+    ops = get_all_registered_operators_grouped()
+    required = set(k for k in ops
+                   if not k.startswith(("_backward", "_contrib_backward", "_npi_backward")) and
+                   not k.endswith("_backward"))
 
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
+    extra = covered - required
+    assert not extra, f"{len(extra)} operators are not needed in the AMP lists: {sorted(extra)}"
 
-    mx.base._LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist))
-    op_names = []
-    for i in range(size.value):
-        s = py_str(plist[i])
-        if not s.startswith("_backward") \
-           and not s.startswith("_contrib_backward_"):
-            op_names.append(s)
+    guidelines = """Please follow these guidelines for choosing a proper list:
+    - if your operator is not to be used in a computational graph
+      (e.g. image manipulation operators, optimizers) or does not have
+      inputs, put it in FP16_FP32_FUNCS list,
+    - if your operator requires FP32 inputs or is not safe to use with lower
+      precision, put it in FP32_FUNCS list,
+    - if your operator supports both FP32 and lower precision, has
+      multiple inputs and expects all inputs to be of the same
+      type, put it in WIDEST_TYPE_CASTS list,
+    - if your operator supports both FP32 and lower precision and has
+      either a single input or supports inputs of different type,
+      put it in FP16_FP32_FUNCS list,
+    - if your operator is both safe to use in lower precision and
+      it is highly beneficial to use it in lower precision, then
+      put it in FP16_FUNCS (this is unlikely for new operators)
+    - If you are not sure which list to choose, FP32_FUNCS is the
+                     safest option"""
+    diff = required - covered
+    assert not diff, f"{len(diff)} operators {sorted(diff)} do not exist in AMP lists (in " \
+        f"python/mxnet/amp/lists/symbol_fp16.py) - please add them. " \
+        f"\n{guidelines}"
 
-    ret1 = set(op_names) - set(t)
-
-    if ret1 != set():
-        warnings.warn("Operators " + str(ret1) + " do not exist in AMP lists (in "
-                       "python/mxnet/contrib/amp/lists/symbol_fp16.py) - please add them. "
-                       """Please follow these guidelines for choosing a proper list:
-                       - if your operator is not to be used in a computational graph
-                         (e.g. image manipulation operators, optimizers) or does not have
-                         inputs, put it in FP16_FP32_FUNCS list,
-                       - if your operator requires FP32 inputs or is not safe to use with lower
-                         precision, put it in FP32_FUNCS list,
-                       - if your operator supports both FP32 and lower precision, has
-                         multiple inputs and expects all inputs to be of the same
-                         type, put it in WIDEST_TYPE_CASTS list,
-                       - if your operator supports both FP32 and lower precision and has
-                         either a single input or supports inputs of different type,
-                         put it in FP16_FP32_FUNCS list,
-                       - if your operator is both safe to use in lower precision and
-                         it is highly beneficial to use it in lower precision, then
-                         put it in FP16_FUNCS (this is unlikely for new operators)
-                       - If you are not sure which list to choose, FP32_FUNCS is the
-                         safest option""")
-
-@with_seed()
 @pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_amp_conversion_rnn(amp_tests):
@@ -119,8 +111,6 @@ def test_amp_conversion_rnn(amp_tests):
         mx.test_utils.assert_almost_equal(out.asnumpy(), out2.asnumpy(), atol=1e-2, rtol=1e-2)
 
 
-@with_seed()
-@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 def test_fp16_casting(amp_tests):
     data = mx.sym.var("data")
     out1 = mx.sym.amp_cast(data, dtype="float16")

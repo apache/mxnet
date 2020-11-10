@@ -300,10 +300,15 @@ NDArray NDArray::ReshapeWithRecord(const mxnet::TShape &shape) {
   }
 
   nnvm::NodeAttrs attrs;
-  attrs.op = nnvm::Op::Get("Reshape");;
   std::ostringstream os;
   os << shape;
-  attrs.dict.insert({"shape", os.str()});
+  if (!Imperative::Get()->is_np_shape()) {
+      attrs.op = nnvm::Op::Get("Reshape");;
+      attrs.dict.insert({"shape", os.str()});
+  } else {
+      attrs.op = nnvm::Op::Get("_np_reshape");;
+      attrs.dict.insert({"newshape", os.str()});
+  }
   attrs.op->attr_parser(&attrs);
   std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
 
@@ -384,11 +389,38 @@ NDArray NDArray::At(index_t idx) const {
 NDArray NDArray::AtWithRecord(index_t idx) {
   CHECK(storage_type() == kDefaultStorage)
       << "Storage type " << storage_type() << " doesn't support At()";
-  NDArray ret = this->SliceWithRecord(idx, idx+1);
+  NDArray sliced = this->SliceWithRecord(idx, idx+1);
   if (shape_.ndim() > 1 || Imperative::Get()->is_np_shape()) {
-    return ret.ReshapeWithRecord(mxnet::TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
+    // Imperative reshape with concrete shape
+    NDArray reshaped = sliced.Reshape(mxnet::TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
+
+    // Record reshape with magic numbers
+    nnvm::NodeAttrs attrs;
+    std::ostringstream os;
+    if (!Imperative::Get()->is_np_shape()) {
+        os << mxnet::TShape({-3, -2});  // See ndarray.py reshape for definition of magic numbers
+        attrs.op = nnvm::Op::Get("Reshape");;
+        attrs.dict.insert({"shape", os.str()});
+    } else {
+        // See NumpyXReshapeInferShape for definition of magic numbers
+        os << mxnet::TShape({-3, -4});
+        attrs.op = nnvm::Op::Get("_npx_reshape");;
+        attrs.dict.insert({"newshape", os.str()});
+    }
+    attrs.op->attr_parser(&attrs);
+    std::vector<NDArray*> inputs(1, &sliced), outputs(1, &reshaped);
+
+    bool is_recording = Imperative::Get()->is_recording();
+    bool is_deferred_compute = Imperative::Get()->is_deferred_compute();
+    if (is_recording) {
+        Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+    } else if (is_deferred_compute) {
+        Imperative::Get()->RecordDeferredCompute(std::move(attrs), inputs, outputs);
+    }
+
+    return reshaped;
   } else {
-    return ret;
+    return sliced;
   }
 }
 

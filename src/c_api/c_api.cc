@@ -870,7 +870,13 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       auto in_first = in_shape->begin();
       auto in_last  = in_first + in_shape->size() - extra_inputs;
       mxnet::ShapeVector *sg_in_shapes = new mxnet::ShapeVector(in_first, in_last);
-      return mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+      bool res = mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+
+      // assign modified input shapes to ShapeVector
+      for (unsigned i = 0; i < sg_in_shapes->size(); ++i) {
+        SHAPE_ASSIGN_CHECK(*in_shape, i, sg_in_shapes->at(i));
+      }
+      return res;
     };
 
     // lambda function to call infer type
@@ -934,7 +940,12 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       auto in_last  = in_first + in_type->size() - extra_inputs;
       std::vector<int> *sg_in_types = new std::vector<int>(in_first, in_last);
 
-      return mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
+      bool res = mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
+      // copy and assign modified input types
+      for (size_t i = 0; i < sg_in_types->size(); i++) {
+        TYPE_ASSIGN_CHECK(*in_type, i, sg_in_types->at(i));
+      }
+      return res;
     };
 
     // lambda function to convert from external mutate_inputs to internal MXNet types
@@ -982,7 +993,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         // InferSType is defined in customized lib.
         // convert attributes to vector of char*
         std::vector<const char*> attr_keys, attr_vals;
-        for (auto kv : attrs.dict) {
+        for (const auto& kv : attrs.dict) {
           attr_keys.push_back(kv.first.c_str());
           attr_vals.push_back(kv.second.c_str());
         }
@@ -1034,8 +1045,13 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         auto in_last  = in_first + in_stypes->size() - extra_inputs;
         std::vector<int> *sg_in_stypes = new std::vector<int>(in_first, in_last);
 
-        return mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
-                                                       sg_in_stypes, out_stypes);
+        bool res = mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
+                                                           sg_in_stypes, out_stypes);
+        // copy and assign modified input storage types
+        for (size_t i = 0; i < sg_in_stypes->size(); i++) {
+          STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, sg_in_stypes->at(i));
+        }
+        return res;
     };
 
     // FGradient register lambda
@@ -1047,7 +1063,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       p->attrs.name = n->attrs.name + "_backward";
       // copy attributes and subgraphs
       p->attrs.dict = n->attrs.dict;
-      for (auto s : n->attrs.subgraphs)
+      for (const auto& s : n->attrs.subgraphs)
         p->attrs.subgraphs.push_back(s);
       // set control dependency and attr parser
       p->control_deps.emplace_back(n);
@@ -1101,8 +1117,8 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
 
       // determine amount of memory needed to store all the input shapes
       size_t buff_size = 0;
-      for (size_t i = 0; i < in_shapes.size(); ++i)
-        buff_size += in_shapes[i].ndim();
+      for (const auto & in_shape : in_shapes)
+        buff_size += in_shape.ndim();
 
       // copy input shapes to raw memory layout
       std::vector<uint32_t> inbuff(buff_size);
@@ -1361,50 +1377,54 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
 
       // convert input args
       for (size_t i=0; i < in_arg_names.size(); i++) {
-        arg_names.push_back(in_arg_names[i].c_str());
-        const NDArray &in_arg = *(in_args_ptr[i]);
+        if (in_args_ptr[i] != nullptr) {
+          arg_names.push_back(in_arg_names[i].c_str());
+          const NDArray &in_arg = *(in_args_ptr[i]);
 
 #if MXNET_USE_MKLDNN == 1
-        // reorder data if in MKLDNN format
-        if (in_arg.IsMKLDNNData()) {
-          in_arg.Reorder2DefaultAsync();
-          in_arg.WaitToRead();
-        }
+          // reorder data if in MKLDNN format
+          if (in_arg.IsMKLDNNData()) {
+            in_arg.Reorder2DefaultAsync();
+            in_arg.WaitToRead();
+          }
 #endif
 
-        // pull out parts of NDArray to send to backend
-        arg_data.push_back(in_arg.data().dptr_);
-        arg_shapes.push_back(in_arg.shape().data());
-        arg_dims.push_back(in_arg.shape().ndim());
-        arg_types.push_back(in_arg.dtype());
-        arg_verIDs.push_back(in_arg.version());
-        const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-        arg_dev_type.push_back(arg_ctx_str);
-        arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+          // pull out parts of NDArray to send to backend
+          arg_data.push_back(in_arg.data().dptr_);
+          arg_shapes.push_back(in_arg.shape().data());
+          arg_dims.push_back(in_arg.shape().ndim());
+          arg_types.push_back(in_arg.dtype());
+          arg_verIDs.push_back(in_arg.version());
+          const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+          arg_dev_type.push_back(arg_ctx_str);
+          arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+        }
       }
 
       // convert input aux
       for (size_t i=0; i < in_aux_names.size(); i++) {
-        aux_names.push_back(in_aux_names[i].c_str());
-        const auto &in_aux = *(in_aux_ptr[i]);
+        if (in_aux_ptr[i] != nullptr) {
+          aux_names.push_back(in_aux_names[i].c_str());
+          const auto &in_aux = *(in_aux_ptr[i]);
 
 #if MXNET_USE_MKLDNN == 1
-        // reorder data if in MKLDNN format
-        if (in_aux.IsMKLDNNData()) {
-          in_aux.Reorder2DefaultAsync();
-          in_aux.WaitToRead();
-        }
+          // reorder data if in MKLDNN format
+          if (in_aux.IsMKLDNNData()) {
+            in_aux.Reorder2DefaultAsync();
+            in_aux.WaitToRead();
+          }
 #endif
 
-        // pull out parts of NDArray to send to backend
-        aux_data.push_back(in_aux.data().dptr_);
-        aux_shapes.push_back(in_aux.shape().data());
-        aux_dims.push_back(in_aux.shape().ndim());
-        aux_types.push_back(in_aux.dtype());
-        aux_verIDs.push_back(in_aux.version());
-        const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-        aux_dev_type.push_back(aux_ctx_str);
-        aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+          // pull out parts of NDArray to send to backend
+          aux_data.push_back(in_aux.data().dptr_);
+          aux_shapes.push_back(in_aux.shape().data());
+          aux_dims.push_back(in_aux.shape().ndim());
+          aux_types.push_back(in_aux.dtype());
+          aux_verIDs.push_back(in_aux.version());
+          const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+          aux_dev_type.push_back(aux_ctx_str);
+          aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+        }
       }
 
       // convert graph to string
@@ -1417,7 +1437,7 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       // this temp workspace holds memory allocated by custom library via OpResource
       auto ndarray_alloc = [&](const mxnet::TShape &shape, Context ctx, int dtype,
                                std::string name, bool isArg) {
-        NDArray* arr = new NDArray(shape, ctx, dtype);
+        NDArray* arr = new NDArray(shape, ctx, false, dtype);
         if (isArg) {
           new_args.push_back(arr);
           new_arg_names.push_back(name);

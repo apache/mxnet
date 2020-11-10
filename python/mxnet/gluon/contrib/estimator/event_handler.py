@@ -496,13 +496,13 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
                 if self.monitor_op(monitor_value, self.best):
                     prefix = self.model_prefix + '-best'
                     self._save_params_and_trainer(estimator, prefix)
-                    self.best = monitor_value
                     if self.verbose > 0:
                         estimator.logger.info('[Epoch %d] CheckpointHandler: '
                                               '%s improved from %0.5f to %0.5f, '
                                               'updating best model at %s with prefix: %s',
                                               self.current_epoch, monitor_name,
                                               self.best, monitor_value, self.model_dir, prefix)
+                    self.best = monitor_value
                 else:
                     if self.verbose > 0:
                         estimator.logger.info('[Epoch %d] CheckpointHandler: '

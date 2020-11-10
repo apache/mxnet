@@ -69,7 +69,7 @@ struct kron_back_a {
     Shape<ndim> k;
     DType temp_agrad = 0;
 
-    for (int idx_b = 0; idx_b < bshape.Size(); idx_b++) {
+    for (index_t idx_b = 0; idx_b < bshape.Size(); idx_b++) {
       auto jb = unravel(idx_b, bshape);
       for (int q = 0; q < ndim; q++) {
         k[q] = ia[q]*bshape[q] + jb[q];
@@ -95,7 +95,7 @@ struct kron_back_b {
     Shape<ndim> k;
     DType temp_bgrad = 0;
 
-    for (int idx_a = 0; idx_a < ashape.Size(); idx_a++) {
+    for (index_t idx_a = 0; idx_a < ashape.Size(); idx_a++) {
       auto ia = unravel(idx_a, ashape);
       for (int q = 0; q < ndim; q++) {
         k[q] = ia[q] * bshape[q] + jb[q];

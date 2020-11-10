@@ -155,6 +155,7 @@ MXNET_REGISTER_API("_npi.concatenate")
   SetAttrDict<op::NumpyConcatenateParam>(&attrs);
   int num_inputs = arg_size - 2;
   std::vector<NDArray*> inputs;
+  inputs.reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
@@ -303,6 +304,7 @@ MXNET_REGISTER_API("_npi.column_stack")
   SetAttrDict<op::NumpyColumnStackParam>(&attrs);
   int num_outputs = 0;
   std::vector<NDArray*> inputs;
+  inputs.reserve(param.num_args);
   for (int i = 0; i < param.num_args; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
@@ -323,6 +325,7 @@ MXNET_REGISTER_API("_npi.hstack")
   SetAttrDict<op::ConcatParam>(&attrs);
   int num_outputs = 0;
   std::vector<NDArray*> inputs;
+  inputs.reserve(param.num_args);
   for (int i = 0; i < param.num_args; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
@@ -490,7 +493,10 @@ MXNET_REGISTER_API("_npi.diag")
   const nnvm::Op* op = Op::Get("_npi_diag");
   nnvm::NodeAttrs attrs;
   op::NumpyDiagParam param;
-  param.k = args[1].operator int();
+  if (features::is_enabled(features::INT64_TENSOR_SIZE))
+    param.k = args[1].operator int64_t();
+  else
+    param.k = args[1].operator int();
   attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyDiagParam>(&attrs);
@@ -580,7 +586,10 @@ MXNET_REGISTER_API("_npi.diagonal")
   const nnvm::Op* op = Op::Get("_npi_diagonal");
   nnvm::NodeAttrs attrs;
   op::NumpyDiagonalParam param;
-  param.offset = args[1].operator int();
+  if (features::is_enabled(features::INT64_TENSOR_SIZE))
+    param.offset = args[1].operator int64_t();
+  else
+    param.offset = args[1].operator int();
   param.axis1 = args[2].operator int();
   param.axis2 = args[3].operator int();
   attrs.parsed = param;
@@ -652,9 +661,15 @@ MXNET_REGISTER_API("_npi.tril_indices")
   const nnvm::Op* op = Op::Get("_npi_tril_indices");
   nnvm::NodeAttrs attrs;
   op::NumpyTrilindicesParam param;
-  param.n = args[0].operator int();
-  param.k = args[1].operator int();
-  param.m = args[2].operator int();
+  if (features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    param.n = args[0].operator int64_t();
+    param.k = args[1].operator int64_t();
+    param.m = args[2].operator int64_t();
+  } else {
+    param.n = args[0].operator int();
+    param.k = args[1].operator int();
+    param.m = args[2].operator int();
+  }
 
   attrs.parsed = param;
   attrs.op = op;

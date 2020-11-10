@@ -31,7 +31,7 @@ import contextvars
 import re
 import numpy as np
 
-from ..base import mx_real_t, MXNetError, NDArrayHandle, py_str
+from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, check_call, _LIB
 from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
     profiler as _profiler, context as _context
 from ..symbol.numpy import _symbol as np_symbol
@@ -901,6 +901,7 @@ class HybridBlock(Block):
     """
     def __init__(self):
         super(HybridBlock, self).__init__()
+        self._v2 = inspect.unwrap(self.hybrid_forward.__func__) is HybridBlock.hybrid_forward
         self._cached_graph = ()
         self._cached_op = None
         self._out_format = None
@@ -985,7 +986,7 @@ class HybridBlock(Block):
 
     def _get_graph(self, *args):
         if not self._cached_graph:
-            if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
+            if not self._v2:
                 return self._get_graph_v1(*args)
             else:  # Gluon 2 based on deferred compute mode
                 return self._get_graph_v2(*args)
@@ -1029,14 +1030,39 @@ class HybridBlock(Block):
 
         arg_dict, aux_dict = dict(), dict()
         if self._backend:
-            ctx = args[0].context
+            # set context for inputs
+            _, _, ctx_set, _ = _gather_type_ctx_info(list(args))
+            ctx = ctx_set.pop() if len(ctx_set) > 0 else None
             # get list of params in the order of out.list_arguments
-            arg_dict.update({name:args[data_names[name]] if name in data_names.keys() else params[name].data()
-                             for name in out.list_arguments()})
-            aux_dict.update({name:args[data_names[name]] if name in data_names.keys() else params[name].data()
-                             for name in out.list_auxiliary_states()})
-            # Partition the graph.
-            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
+            input_shapes = dict()
+            for name in out.list_arguments():
+                if name in data_names.keys() and data_names[name] < len(args):
+                    if isinstance(args[data_names[name]], NDArray):
+                        arg_dict[name] = args[data_names[name]]
+                    elif (isinstance(args[data_names[name]], symbol.Symbol) and
+                          '__shape__' in args[data_names[name]].list_attr()):
+                        shape_str = args[data_names[name]].list_attr()['__shape__']
+                        input_shapes[name] = tuple(map(int, shape_str.strip('()').split(',')))
+                elif name in params:
+                    arg_dict[name] = params[name].data()
+
+            for name in out.list_auxiliary_states():
+                if name in data_names.keys() and data_names[name] < len(args):
+                    if isinstance(args[data_names[name]], NDArray):
+                        aux_dict[name] = args[data_names[name]]
+                    elif (isinstance(args[data_names[name]], symbol.Symbol) and
+                          '__shape__' in args[data_names[name]].list_attr()):
+                        shape_str = args[data_names[name]].list_attr()['__shape__']
+                        input_shapes[name] = tuple(map(int, shape_str.strip('()').split(',')))
+                elif name in params:
+                    aux_dict[name] = params[name].data()
+
+            # Partition the graph
+            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, input_shapes, **self._backend_opts)
+
+            # convert to numpy symbol if needed
+            if _mx_npx.is_np_array():
+                out = out.as_np_ndarray()
 
             #update cached graph with partitioned graph
             self._cached_graph = data, out
@@ -1072,10 +1098,10 @@ class HybridBlock(Block):
                                            'added to the parameter dicts.\n'
                                            'Please check the backend.')
 
-                    param = Parameter(name)
+                    param = Parameter(name, dtype=param_data.dtype)
                     param._var_name = name
                     serialization_name = name  # HybridBlock.export
-                    param._load_init(param_data, args[0].context)
+                    param._load_init(param_data, param_data.context)
                 triple = (False, serialization_name, param)
 
             self._cached_op_args.append(triple)
@@ -1177,14 +1203,11 @@ class HybridBlock(Block):
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
-        if has_symbol:
-            raise ValueError('Inputs must be NDArrays for the optimize_for API'
-                             ' Please check the type of the args.\n')
         if not has_symbol and not has_ndarray:
-            raise ValueError('In HybridBlock, there must be one NDArray as input.'
+            raise ValueError('In HybridBlock, there must be one NDArray or one Symbol in the input.'
                              ' Please check the type of the args.\n')
         if len(ctx_set) > 1:
-            raise ValueError('Find multiple contexts in the input, '
+            raise ValueError('Found multiple contexts in the input, '
                              'After hybridized, the HybridBlock only supports one input '
                              'context. You can print the ele.ctx in the '
                              'input arguments to inspect their contexts. '
@@ -1278,7 +1301,7 @@ class HybridBlock(Block):
 
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
-        if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
+        if not self._v2:
             # Gluon 1 based on F:  hybrid_forward is defined by user
             self._infer_attrs('infer_shape', 'shape', *args)
         else:
@@ -1306,13 +1329,16 @@ class HybridBlock(Block):
 
         Parameters
         ----------
-        path : str
+        path : str or None
             Path to save model. Two files `path-symbol.json` and `path-xxxx.params`
             will be created, where xxxx is the 4 digits epoch number.
+            If None, do not export to file but return Python Symbol object and
+            corresponding dictionary of parameters.
         epoch : int
             Epoch number of saved model.
         remove_amp_cast : bool, optional
             Whether to remove the amp_cast and amp_multicast operators, before saving the model.
+
         Returns
         -------
         symbol_filename : str
@@ -1338,8 +1364,9 @@ class HybridBlock(Block):
             if var.name in rename_map:
                 var._set_attr(name=rename_map[var.name])
 
-        sym_filename = '%s-symbol.json'%path
-        sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
+        sym_filename = '%s-symbol.json' % (path if path is not None else "")
+        if path is not None:
+            sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
 
         arg_names = set(sym.list_arguments())
         aux_names = set(sym.list_auxiliary_states())
@@ -1355,9 +1382,18 @@ class HybridBlock(Block):
                     else:
                         arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
-        params_filename = '%s-%04d.params'%(path, epoch)
-        save_fn(params_filename, arg_dict)
-        return (sym_filename, params_filename)
+        params_filename = '%s-%04d.params'%((path if path is not None else ""), epoch)
+
+        if path is not None:
+            save_fn(params_filename, arg_dict)
+            return (sym_filename, params_filename)
+
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            import ctypes
+            check_call(_LIB.MXSymbolRemoveAmpCast(sym.handle, ctypes.byref(handle)))
+            sym = type(sym)(handle)
+        return sym, arg_dict
 
     def register_op_hook(self, callback, monitor_all=False):
         """Install op hook for block recursively.
@@ -1389,7 +1425,7 @@ class HybridBlock(Block):
             cld()._monitor_all = monitor_all
 
     def __call__(self, x, *args):
-        if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
+        if not self._v2:
             # Gluon 1 based on F:  hybrid_forward is defined by user
             return super().__call__(x, *args)
         else:  # Gluon 2 based on deferred compute mode

@@ -25,12 +25,11 @@ mx.test_utils.set_default_context(mx.gpu(0))
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from mxnet import profiler
-from mxnet.gluon import nn
-from mxnet.gluon.block import _block_scope
-from test_profiler import enable_profiler
+# We import all tests from ../unittest/test_profiler.py
+# They will be detected by test framework, as long as the current file has a different filename
+from test_profiler import *
 
-
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_gpu_memory_profiler_symbolic():
     enable_profiler('test_profiler.json')
     profiler.set_state('run')
@@ -38,7 +37,7 @@ def test_gpu_memory_profiler_symbolic():
     with profiler.scope("tensordot"):
         A = mx.sym.Variable('A')
         B = mx.sym.Variable('B')
-        C = mx.symbol.dot(A, B, name='dot')
+        C = mx.symbol.dot(A, B, name="dot")
 
     executor = C._simple_bind(mx.gpu(), 'write', A=(1024, 2048), B=(2048, 4096))
 
@@ -63,6 +62,10 @@ def test_gpu_memory_profiler_symbolic():
              'Requested Size' : str(4 * b.size)},
             {'Attribute Name' : 'tensordot:dot',
              'Requested Size' : str(4 * c.size)},
+            {'Attribute Name' : 'tensordot:dot_backward',
+             'Requested Size' : str(4 * a.size)},
+            {'Attribute Name' : 'tensordot:dot_backward',
+             'Requested Size' : str(4 * b.size)},
             {'Attribute Name' : 'init:_random_uniform',
              'Requested Size' : str(4 * a.size)},
             {'Attribute Name' : 'init:_random_uniform',
@@ -70,21 +73,20 @@ def test_gpu_memory_profiler_symbolic():
 
     # Sample gpu_memory_profile.csv:
     # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
+    # <unk>:_head_grad_0,16777216,0,16777216,0
     # init:_random_uniform,33554432,0,33554432,1
     # init:_random_uniform,8388608,0,8388608,1
     # resource:temp_space (sample_op.h +365),8,0,4096,0
     # symbol:arg_grad:unknown,8388608,0,8388608,0
     # symbol:arg_grad:unknown,33554432,0,33554432,0
     # tensordot:dot,16777216,0,16777216,0
-    # tensordot:dot_backward,33554432,0,33554432,0
     # tensordot:dot_backward,8388608,0,8388608,0
-    # tensordot:dot_head_grad,16777216,0,16777216,0
+    # tensordot:dot_backward,33554432,0,33554432,0
     # tensordot:in_arg:A,8388608,0,8388608,0
     # tensordot:in_arg:B,33554432,0,33554432,0
 
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
-        # TODO: Remove this print statement later on.
         for row in csv_reader:
             print(",".join(list(row.values())))
         for expected_alloc_entry in expected_alloc_entries:
@@ -107,6 +109,7 @@ def test_gpu_memory_profiler_symbolic():
                 assert False, "Unknown allocation entry has been encountered"
 
 
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_gpu_memory_profiler_gluon():
     enable_profiler(profile_filename='test_profiler.json')
     profiler.set_state('run')
@@ -161,7 +164,6 @@ def test_gpu_memory_profiler_gluon():
     # there is no unknown entries in the memory profile.
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
-        # TODO: Remove this print statement later on.
         for row in csv_reader:
             print(",".join(list(row.values())))
         for param in model.collect_params().values():
@@ -185,8 +187,3 @@ def test_gpu_memory_profiler_gluon():
             if row['Attribute Name'] == "<unk>:unknown" or \
                row['Attribute Name'] == "<unk>:":
                 assert False, "Unknown allocation entry has been encountered"
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

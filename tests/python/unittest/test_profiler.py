@@ -281,6 +281,7 @@ def test_aggregate_stats_sorting():
     profiler.set_state('stop')
 
 
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_aggregate_duplication():
     file_name = 'test_aggregate_duplication.json'
     enable_profiler(profile_filename=file_name, run=True, continuous_dump=True, \
