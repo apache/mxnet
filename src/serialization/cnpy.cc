@@ -23,8 +23,8 @@
 #include "cnpy.h"
 #include <mxnet/op_attr_types.h>
 #include <mxnet/imperative.h>
-#include <stdint.h>
 #include <string_view>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -213,8 +213,8 @@ std::tuple<int, int, std::vector<dim_t>> parse_npy_header_descr(const std::strin
   bool fortran_order = (header.substr(loc + 16, 4) == "True" ? true : false);
 
   // Shape
-  loc = header.find("(");
-  std::string::size_type end_loc = header.find(")");
+  loc = header.find('(');
+  std::string::size_type end_loc = header.find(')');
   CHECK_NE(loc, std::string::npos) << "failed to find NPY header keyword: '('";
   CHECK_NE(end_loc, std::string::npos) << "failed to find NPY header keyword: ')'";
   std::string shape_str = header.substr(loc+1, end_loc-loc-1);
