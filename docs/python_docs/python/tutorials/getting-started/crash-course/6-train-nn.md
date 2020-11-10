@@ -14,6 +14,7 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
+
 # Step 6: Train a Neural Network
 
 Now that you have seen all the necessary components for creating a neural network, you are
