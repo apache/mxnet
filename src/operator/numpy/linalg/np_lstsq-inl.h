@@ -168,7 +168,7 @@ linalg_gelsd_workspace_query<cpu, DType, IndexT>(const IndexT nrow, \
                                  &temp_work, -1, &temp_iwork); \
   CHECK_GE(info, 0) << "MXNET_LAPACK_" << #func << ": " \
     << "the " << -info << "-th argument had an illegal value"; \
-  *lwork = temp_work; \
+  *lwork = static_cast<IndexT>(temp_work); \
   *liwork = temp_iwork; \
   return; \
 }
@@ -260,10 +260,10 @@ inline bool GetOutputShapes(const mxnet::TShape& a_shape,
   }
   const int a_ndim = a_shape.ndim();
   const int b_ndim = b_shape.ndim();
-  const int a_nrow = a_shape[0];
-  const int a_ncol = a_shape[1];
-  const int b_nrow = b_shape[0];
-  const int b_nrhs = b_ndim == 2 ? b_shape[1] : 1;
+  const dim_t a_nrow = a_shape[0];
+  const dim_t a_ncol = a_shape[1];
+  const dim_t b_nrow = b_shape[0];
+  const dim_t b_nrhs = b_ndim == 2 ? b_shape[1] : 1;
   CHECK_EQ(a_ndim, 2) << a_ndim
     << "-dimensional array given. Array must be two-dimensional";
   CHECK(b_ndim == 1 || b_ndim == 2) << b_ndim
@@ -272,20 +272,21 @@ inline bool GetOutputShapes(const mxnet::TShape& a_shape,
     << "Incompatible dimensions of inputs";
   // x_shape
   if (b_ndim == 2) {
-    std::vector<int> x_shape_vec({a_ncol, b_nrhs});
+    std::vector<dim_t> x_shape_vec({a_ncol, b_nrhs});
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(x_shape_vec.begin(), x_shape_vec.end()));
   } else {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1, a_ncol));
   }
   // temp_residuals_shape
-  SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape(1, static_cast<dim_t>(std::max(1, b_nrhs))));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape(1, std::max(dim_t(1), b_nrhs)));
   // rank_shape
   SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape(0, 0));
   // s_shape
   if (a_nrow == 0 || a_ncol == 0) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 3, mxnet::TShape(1, 0));
   } else {
-    SHAPE_ASSIGN_CHECK(*out_attrs, 3, mxnet::TShape(1, std::max(1, std::min(a_nrow, a_ncol))));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 3, mxnet::TShape(1, std::max(dim_t(1),
+                                                                std::min(a_nrow, a_ncol))));
   }
   return shape_is_known(*out_attrs);
 }

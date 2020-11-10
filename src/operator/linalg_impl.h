@@ -1572,7 +1572,7 @@ lapack_index_t linalg_getri_workspace_query<cpu, DType>(const Tensor<cpu, 2, DTy
   DType lwork(0); \
   MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, A.size(0), A.dptr_, \
                       A.stride_, nullptr, &lwork, -1); \
-  return lwork; \
+  return static_cast<lapack_index_t>(lwork); \
 }
 
 LINALG_CPU_GETRI_WORKSPACE_QUERY(sgetri, float)

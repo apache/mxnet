@@ -433,7 +433,7 @@ void LaOpBackwardSolve(const nnvm::NodeAttrs& attrs,
         0 == b_shape[ndim - 1] || 0 == b_shape[ndim - 2]) { return; }
 
     const Tensor<xpu, idim + 1, OType> A = a_tblob.FlatToKD<xpu, idim + 1, OType>(s);
-    int work_space_size = sizeof(OType) * a_shape.Size();  // for inverse(A)
+    size_t work_space_size = sizeof(OType) * a_shape.Size();  // for inverse(A)
     work_space_size += sizeof(OType) * a_shape.Size();  // for getri work space
     work_space_size += 2 * sizeof(OType) * b_shape.Size();  // for B and X
     work_space_size += sizeof(IndexT) * A.size(0) * N;  // for pivot work space
