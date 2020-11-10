@@ -17,6 +17,9 @@
  * under the License.
  */
 
+// File is based on https://github.com/leezu/cnpy/tree/libzip released under MIT License
+// Copyright (C) 2011  Carl Rogers, 2018 Leonard Lausen
+
 #include "cnpy.h"
 #include <mxnet/op_attr_types.h>
 #include <mxnet/imperative.h>

@@ -15,7 +15,11 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
+
+// File is based on https://github.com/leezu/cnpy/tree/libzip released under MIT License
+// Copyright (C) 2011  Carl Rogers, 2018 Leonard Lausen
 
 #ifndef MXNET_SERIALIZATION_CNPY_H_
 #define MXNET_SERIALIZATION_CNPY_H_

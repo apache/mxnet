@@ -238,7 +238,7 @@
     3rdparty/libzip/regress/ossfuzz.sh
 
     =======================================================================================
-    MIT license (see licenses/LICENSE.MIT
+    MIT license
     =======================================================================================
 
     example/gluon/tree_lstm
@@ -318,6 +318,8 @@
     Apache-2.0 license + MIT License
     =======================================================================================
 
+    src/serialization/cnpy.h (Copy of the AL2 License available at the top of this file, MIT License available at licenses/MIT)
+    src/serialization/cnpy.cc (Copy of the AL2 License available at the top of this file, MIT License available at licenses/MIT)
     3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py (Copy of the referenced AL2 License available at top of current file)
 
     =======================================================================================
