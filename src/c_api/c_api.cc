@@ -1946,7 +1946,7 @@ int MXNDArrayLoad(const char* fname,
       CHECK_EQ(strm->Read(&magic, sizeof(uint32_t)), sizeof(uint32_t));
   }
 
-  if (magic == 0x04034b50) {  // zip file format; assumed to be npz // TODO endianness
+  if (magic == 0x04034b50 || magic == 0x504b0304) {  // zip file format; assumed to be npz
       auto[data, names] = npz::load_arrays(fname);
       ret->ret_handles.resize(data.size());
       for (size_t i = 0; i < data.size(); ++i) {
@@ -1966,7 +1966,7 @@ int MXNDArrayLoad(const char* fname,
       *out_arr = dmlc::BeginPtr(ret->ret_handles);
       *out_name_size = static_cast<uint32_t>(names.size());
       *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
-  } else if (magic == 0x4d554e93) {  // first bytes of npy format  // TODO endianness
+  } else if (magic == 0x4d554e93 || magic == 0x934e554d) {  // first bytes of npy format
       *out_size = 1;
       ret->ret_handles.resize(1);
       NDArray *ptr = new NDArray();
