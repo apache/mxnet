@@ -370,8 +370,10 @@ class Block:
             params = {v: k for k, v in reverse_params.items()}
 
         arg_dict = {key: val._reduce() for key, val in params.items()}
-        save_fn = _mx_npx.savez if is_np_array() else ndarray.save
-        save_fn(filename, arg_dict)
+        if is_np_array():
+            _mx_npx.savez(filename, **arg_dict)
+        else:
+            ndarray.save(filename, arg_dict)
 
     def load_parameters(self, filename, ctx=None, allow_missing=False,
                         ignore_extra=False, cast_dtype=False, dtype_source='current'):
@@ -1381,11 +1383,13 @@ class HybridBlock(Block):
                                       .format(name=name), stacklevel=3)
                     else:
                         arg_dict['aux:%s'%name] = param._reduce()
-        save_fn = _mx_npx.savez if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%((path if path is not None else ""), epoch)
 
         if path is not None:
-            save_fn(params_filename, arg_dict)
+            if is_np_array():
+                _mx_npx.savez(params_filename, **arg_dict)
+            else:
+                ndarray.save(params_filename, arg_dict)
             return (sym_filename, params_filename if arg_dict else None)
 
         if remove_amp_cast:
