@@ -263,7 +263,6 @@ build_centos7_cpu() {
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
