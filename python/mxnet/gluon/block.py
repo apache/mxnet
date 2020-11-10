@@ -1188,11 +1188,12 @@ class HybridBlock(Block):
             warnings.warn('"{block}" is being hybridized while still having forward hook/pre-hook. '
                           'If "{block}" is a child of HybridBlock, the hooks will not take effect.'
                           .format(block=self))
-        super(HybridBlock, self).hybridize(active, static_alloc=static_alloc,
-                                                   static_shape=static_shape,
-                                                   inline_limit=inline_limit,
-                                                   forward_bulk_size=forward_bulk_size,
-                                                   backward_bulk_size=backward_bulk_size)
+        super(HybridBlock, self).hybridize(active,
+                                           static_alloc=static_alloc,
+                                           static_shape=static_shape,
+                                           inline_limit=inline_limit,
+                                           forward_bulk_size=forward_bulk_size,
+                                           backward_bulk_size=backward_bulk_size)
 
     def cast(self, dtype):
         self._clear_cached_op()
