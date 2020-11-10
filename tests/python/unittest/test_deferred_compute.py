@@ -537,7 +537,7 @@ def test_dc_hybridblock_graph_partition():
             return mx.nd.sum(mx.nd.sum(mx.nd.contrib.boolean_mask(self.dense(x), idx)))
 
     def setup(*, nd):
-        x = mx.nd.array([[0, 1], [2, 3], [4, 5]])
+        x = mx.nd.array([[0, 1], [2, 3], [4, 5], [6, 7]])
         idx = mx.nd.array([1, 1, 1, 1])
         return [x, idx]
 
