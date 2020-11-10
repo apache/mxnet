@@ -100,8 +100,10 @@ arrays to the `.npz` format.
 
 ```{.python .input}
 a = np.array(1, ctx=gpu)
-onp.save('a', a)
-onp.load('a.npy', a)
+npx.save('a', a)
+npx.load('a')
+npx.savez('a', a=a, b=a*2)
+npx.load('a')
 ```
 
 ## Matplotlib
