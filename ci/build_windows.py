@@ -155,19 +155,16 @@ def windows_build(args):
     with remember_cwd():
         zlib_path = tempfile.mkdtemp()
         os.chdir(zlib_path)
-        r = requests.get('https://iweb.dl.sourceforge.net/project/gnuwin32/zlib/1.2.3/zlib-1.2.3-lib.zip', allow_redirects=True)
-        with open('zlib-1.2.3-lib.zip', 'wb') as f:
+        r = requests.get('https://github.com/madler/zlib/archive/v1.2.11.zip', allow_redirects=True)
+        with open('v1.2.11.zip', 'wb') as f:
             f.write(r.content)
-        with zipfile.ZipFile('zlib-1.2.3-lib.zip', 'r') as zip_ref:
+        with zipfile.ZipFile('v1.2.11.zip', 'r') as zip_ref:
             zip_ref.extractall('.')
-        # Fix https://sourceforge.net/p/gnuwin32/bugs/169/
-        with open('include/zconf.h', 'r') as f:
-            zconf = f.read()
-        zconf = zconf.replace(
-            '#if 1           /* HAVE_UNISTD_H -- this line is updated by ./configure */',
-            '#ifdef HAVE_UNISTD_H')
-        with open('include/zconf.h', 'w') as f:
-            f.write(zconf)
+        zlib_path = os.path.join(zlib_path, './zlib-1.2.11')
+        os.chdir(zlib_path)
+        cmd = "\"{}\" && cmake -GNinja -DBUILD_SHARED_LIBS=0 . && ninja".format(args.vcvars)
+        logging.info("Compiling zlib with CMake:\n{}".format(cmd))
+        check_call(cmd, shell=True)
 
     if 'GPU' in args.flavour:
         # Get Thrust version to be shipped in Cuda 11, due to flakyness of
