@@ -220,6 +220,10 @@ def windows_build(args):
                 logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
                 break
 
+    # Cleanup temporary directories
+    shutil.rmtree(tmpdirname)
+    shutil.rmtree(zlib_path)
+
     if ret == 0:
         windows_package(args)
     else:
