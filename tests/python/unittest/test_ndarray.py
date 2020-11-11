@@ -428,7 +428,7 @@ def test_ndarray_load_fortran_order(tmp_path):
     assert np.isfortran(arr)
     np.save(tmp_path / 'fortran_order.npy', arr)
 
-    mx_arr = mx.npx.load(str(tmp_path / 'fortran_order.npy'))[0]
+    mx_arr = mx.npx.load(str(tmp_path / 'fortran_order.npy'))
     np_mx_arr = mx_arr.asnumpy()
     assert not np.isfortran(np_mx_arr)
     assert np.sum(np_mx_arr != arr) == 0
