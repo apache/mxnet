@@ -131,7 +131,7 @@ class TestImage(unittest.TestCase):
         ]
 
     @use_np
-    @pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/18986')
+    @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18986')
     def test_bbox_augmenters(self):
         # only test if all augmenters will work
         im_list = [_generate_objects() + [x] for x in self.IMAGES]
