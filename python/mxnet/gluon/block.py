@@ -1059,7 +1059,7 @@ class HybridBlock(Block):
             out = [out]
         return _regroup(out, self._out_format)
 
-    def optimize_for(self, x, *args, backend=None, clear=True, static_alloc=False, static_shape=False, **kwargs):
+    def optimize_for(self, x, *args, backend=None, clear=False, static_alloc=False, static_shape=False, **kwargs):
         """Partitions the current HybridBlock and optimizes it for a given backend
         without executing a forward pass. Modifies the HybridBlock in-place.
 
@@ -1087,7 +1087,8 @@ class HybridBlock(Block):
             other inputs to model
         backend : str
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
-        clear : clears any previous optimizations
+        clear : bool, default False
+            Clears any previous optimizations
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : bool, default False
@@ -1097,9 +1098,12 @@ class HybridBlock(Block):
         **kwargs: The backend options, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         """
+        if len(kwargs) > 0:
+            self._backend_opts = kwargs
 
-        # do hybrize API call
-        self.hybridize(True, backend, clear, static_alloc=static_alloc, static_shape=static_shape, **kwargs)
+        if clear or not self._active:
+            # do hybrize API call
+            self.hybridize(True, backend, clear, static_alloc=static_alloc, static_shape=static_shape)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
@@ -1141,8 +1145,7 @@ class HybridBlock(Block):
                   static_alloc=False, static_shape=False,
                   inline_limit=2,
                   forward_bulk_size=None,
-                  backward_bulk_size=None,
-                  **kwargs):
+                  backward_bulk_size=None):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1154,7 +1157,8 @@ class HybridBlock(Block):
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
         backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
-        clear : clears any previous optimizations
+        clear : bool, default True
+            Clears any previous optimizations
         static_alloc : optional bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : optional bool, default False
@@ -1167,13 +1171,9 @@ class HybridBlock(Block):
             Segment size of bulk execution during forward pass.
         backward_bulk_size : optional int, default None
             Segment size of bulk execution during forward pass.
-        **kwargs : dict
-            Optional backend options when `hybridize` is called with an optimization backend.
         """
 
         self._backend = backend
-        if len(kwargs) > 0:
-            self._backend_opts = kwargs
 
         self._active = active
         self._flags = [("static_alloc", static_alloc), ("static_shape", static_shape),
