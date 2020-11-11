@@ -2653,6 +2653,15 @@ class Symbol(SymbolBase):
     def backward(self):
         raise NotImplementedForSymbol(self.backward, None)
 
+
+    def has_dynamic_shape_op(self):
+        """Check if any dynamic shape op is present in the symbol.
+        """
+        has_dynamic_shape = ctypes.c_bool(False)
+        check_call(_LIB.MXCheckDynamicShapeOp(self.handle,
+                                              ctypes.byref(has_dynamic_shape)))
+        return has_dynamic_shape.value
+
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         init=None, stype=None, profiler_scope=None, **kwargs):
     """Creates a symbolic variable with specified name.
