@@ -160,6 +160,14 @@ def windows_build(args):
             f.write(r.content)
         with zipfile.ZipFile('zlib-1.2.3-lib.zip', 'r') as zip_ref:
             zip_ref.extractall('.')
+        # Fix https://sourceforge.net/p/gnuwin32/bugs/169/
+        with open('include/zconf.h', 'r') as f:
+            zconf = f.read()
+        zconf = zconf.replace(
+            '#if 1           /* HAVE_UNISTD_H -- this line is updated by ./configure */',
+            '#ifdef HAVE_UNISTD_H')
+        with open('include/zconf.h', 'w') as f:
+            f.write(zconf)
 
     if 'GPU' in args.flavour:
         # Get Thrust version to be shipped in Cuda 11, due to flakyness of
