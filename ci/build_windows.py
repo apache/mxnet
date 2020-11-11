@@ -168,6 +168,8 @@ def windows_build(args):
             "ninja install".format(args.vcvars, zlib_path)
         logging.info("Compiling zlib with CMake:\n{}".format(cmd))
         check_call(cmd, shell=True)
+        os.remove(os.path.join(zlib_path, 'lib', 'libzlib.dll'))
+    shutil.rmtree(tmpdirname)
 
     if 'GPU' in args.flavour:
         # Get Thrust version to be shipped in Cuda 11, due to flakyness of
@@ -197,6 +199,8 @@ def windows_build(args):
             env = os.environ.copy()
             print("ZLIB_ROOT:", zlib_path)
             print(os.listdir(zlib_path))
+            print(os.listdir(os.path.listdir(zlib_path, 'lib' )))
+            print(os.listdir(os.path.listdir(zlib_path, 'include' )))
             env["ZLIB_ROOT"] = zlib_path
             if 'GPU' in args.flavour:
                 env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
