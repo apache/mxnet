@@ -157,7 +157,9 @@ def load(file):
                                   ctypes.byref(out_name_size),
                                   ctypes.byref(names)))
     if out_name_size.value == 0:
-        return [ndarray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+        if out_size.value != 1:
+            return [ndarray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+        return ndarray(NDArrayHandle(handles[0]))
     else:
         assert out_name_size.value == out_size.value
         return dict(
