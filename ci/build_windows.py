@@ -187,8 +187,6 @@ def windows_build(args):
         with remember_cwd():
             os.chdir(path)
             env = os.environ.copy()
-            print("ZLIB_ROOT:", zlib_path)
-            print(os.listdir(zlib_path))
             env["ZLIB_ROOT"] = zlib_path
             if 'GPU' in args.flavour:
                 env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
