@@ -155,10 +155,10 @@ def windows_build(args):
     with remember_cwd():
         zlib_path = tempfile.mkdtemp()
         os.chdir(zlib_path)
-        r = requests.get('https://iweb.dl.sourceforge.net/project/gnuwin32/zlib/1.2.3/zlib-1.2.3-bin.zip', allow_redirects=True)
-        with open('zlib-1.2.3-bin.zip', 'wb') as f:
+        r = requests.get('https://iweb.dl.sourceforge.net/project/gnuwin32/zlib/1.2.3/zlib-1.2.3-lib.zip', allow_redirects=True)
+        with open('zlib-1.2.3-lib.zip', 'wb') as f:
             f.write(r.content)
-        with zipfile.ZipFile('zlib-1.2.3-bin.zip', 'r') as zip_ref:
+        with zipfile.ZipFile('zlib-1.2.3-lib.zip', 'r') as zip_ref:
             zip_ref.extractall('.')
 
     if 'GPU' in args.flavour:
