@@ -165,6 +165,7 @@ def windows_build(args):
         cmd = "\"{}\" && cmake -GNinja -DBUILD_SHARED_LIBS=0 . && ninja".format(args.vcvars)
         logging.info("Compiling zlib with CMake:\n{}".format(cmd))
         check_call(cmd, shell=True)
+        os.remove('libzlib.dll')
 
     if 'GPU' in args.flavour:
         # Get Thrust version to be shipped in Cuda 11, due to flakyness of
@@ -192,6 +193,8 @@ def windows_build(args):
         with remember_cwd():
             os.chdir(path)
             env = os.environ.copy()
+            print("ZLIB_ROOT:", zlib_path)
+            print(os.listdir(zlib_path))
             env["ZLIB_ROOT"] = zlib_path
             if 'GPU' in args.flavour:
                 env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
