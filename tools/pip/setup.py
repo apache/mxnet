@@ -127,11 +127,6 @@ with open('doc/PYPI_README.md') as readme_file:
 with open('doc/{0}_ADDITIONAL.md'.format(variant)) as variant_doc:
     long_description = long_description + skip_markdown_comments(variant_doc.read())
 
-# pypi only supports rst, so use pandoc to convert
-import pypandoc
-if platform.system() == 'Darwin':
-    pypandoc.download_pandoc()
-long_description = pypandoc.convert_text(long_description, 'rst', 'md')
 short_description = 'MXNet is an ultra-scalable deep learning framework.'
 libraries = []
 if variant == 'CPU':
@@ -169,7 +164,7 @@ if platform.system() == 'Linux':
         package_data['mxnet'].append('mxnet/libgfortran.so.4')
     if os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
         shutil.copy(os.path.join(libdir, 'libopenblas.so.0'), mxdir)
-        package_data['mxnet'].append('mxnet/libquadmath.so.0')
+        package_data['mxnet'].append('mxnet/libopenblas.so.0')
 
 # Copy licenses and notice
 for f in os.listdir('mxnet/licenses'):
@@ -184,6 +179,7 @@ _generate_op_module_signature('mxnet', 'ndarray', _generate_ndarray_function_cod
 setup(name=package_name,
       version=__version__,
       long_description=long_description,
+      long_description_content_type='text/markdown',
       description=short_description,
       zip_safe=False,
       packages=find_packages(),
