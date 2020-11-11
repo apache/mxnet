@@ -153,19 +153,21 @@ def windows_build(args):
 
     # Install zlib dependency missing from AMI
     with remember_cwd():
+        tmpdirname = tempfile.mkdtemp()
         zlib_path = tempfile.mkdtemp()
-        os.chdir(zlib_path)
+        os.chdir(tmpdirname)
         r = requests.get('https://github.com/madler/zlib/archive/v1.2.11.zip', allow_redirects=True)
         with open('v1.2.11.zip', 'wb') as f:
             f.write(r.content)
         with zipfile.ZipFile('v1.2.11.zip', 'r') as zip_ref:
             zip_ref.extractall('.')
-        zlib_path = os.path.join(zlib_path, './zlib-1.2.11')
-        os.chdir(zlib_path)
-        cmd = "\"{}\" && cmake -GNinja -DBUILD_SHARED_LIBS=0 . && ninja".format(args.vcvars)
+        os.chdir('zlib-1.2.11')
+        os.mkdir('build')
+        os.chdir('build')
+        cmd = "\"{}\" && cmake -GNinja -DCMAKE_INSTALL_PREFIX={} -DBUILD_SHARED_LIBS=0 .. && " \
+            "ninja install".format(args.vcvars, zlib_path)
         logging.info("Compiling zlib with CMake:\n{}".format(cmd))
         check_call(cmd, shell=True)
-        os.remove('libzlib.dll')
 
     if 'GPU' in args.flavour:
         # Get Thrust version to be shipped in Cuda 11, due to flakyness of
