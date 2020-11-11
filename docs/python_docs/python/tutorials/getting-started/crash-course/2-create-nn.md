@@ -14,6 +14,7 @@
 <!--- KIND, either express or implied.  See the License for the -->  
 <!--- specific language governing permissions and limitations -->  
 <!--- under the License. -->
+
 # Step 2: Create a neural network  
   
 In this step, you learn how to use NP on Apache MXNet to create neural networks  
