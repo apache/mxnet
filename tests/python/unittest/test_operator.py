@@ -5089,7 +5089,7 @@ def test_masked_softmax(dtype, axis, ndims, n_broadcast_axis, temperature, scale
 
     np_data = mx_data.asnumpy()
     np_mask = np.random.randint(0, 2, shape_mask)
-    mx_mask = mx.nd.array(np_mask, dtype=np.int32)
+    mx_mask = mx.nd.array(np_mask, dtype=np.bool)
     mx_grad = rand_ndarray(shape, dtype=dtype)
     np_grad = mx_grad.asnumpy()
 
@@ -5122,7 +5122,7 @@ def test_masked_log_softmax(dtype, ndims):
     mx_data = rand_ndarray(shape, dtype=dtype)
     np_data = mx_data.asnumpy()
     np_mask = np.random.randint(0, 2, shape)
-    mx_mask = mx.nd.array(np_mask, dtype=np.int32)
+    mx_mask = mx.nd.array(np_mask, dtype=np.bool)
     np_out = np.log(np_masked_softmax(np_data, np_mask, axis)+1e-20) * np_mask
     data = mx.sym.Variable("data")
     mask = mx.sym.Variable("mask")
