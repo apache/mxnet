@@ -151,6 +151,16 @@ def windows_build(args):
     mxnet_root = get_mxnet_root()
     logging.info("Found MXNet root: {}".format(mxnet_root))
 
+    # Install zlib dependency missing from AMI
+    with remember_cwd():
+        zlib_path = tempfile.mkdtemp()
+        os.chdir(zlib_path)
+        r = requests.get('https://iweb.dl.sourceforge.net/project/gnuwin32/zlib/1.2.3/zlib-1.2.3-bin.zip', allow_redirects=True)
+        with open('zlib-1.2.3-bin.zip', 'wb') as f:
+            f.write(r.content)
+        with zipfile.ZipFile('zlib-1.2.3-bin.zip', 'r') as zip_ref:
+            zip_ref.extractall('.')
+
     if 'GPU' in args.flavour:
         # Get Thrust version to be shipped in Cuda 11, due to flakyness of
         # older Thrust versions with MSVC 19 compiler
@@ -177,6 +187,7 @@ def windows_build(args):
         with remember_cwd():
             os.chdir(path)
             env = os.environ.copy()
+            env["ZLIB_ROOT"] = zlib_path
             if 'GPU' in args.flavour:
                 env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
                 env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
