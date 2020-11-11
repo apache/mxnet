@@ -181,7 +181,7 @@ def windows_build(args):
 
 
     # cuda thrust / CUB + VS 2019 is flaky: try multiple times if fail
-    MAXIMUM_TRY = 5
+    MAXIMUM_TRY = 1
     build_try = 0
 
     while build_try < MAXIMUM_TRY:
