@@ -1005,7 +1005,7 @@ def test_np_save_load_ndarrays():
     shapes = [(2, 0, 1), (0,), (), (), (0, 4), (), (3, 0, 0, 0), (2, 1), (0, 5, 0), (4, 5, 6), (0, 0, 0)]
     array_list = [_np.random.randint(0, 10, size=shape) for shape in shapes]
     array_list = [np.array(arr, dtype=arr.dtype) for arr in array_list]
-    # test save/load single ndarray
+    # test save/load single ndarray to npy format
     for i, arr in enumerate(array_list):
         with TemporaryDirectory() as work_dir:
             fname = os.path.join(work_dir, 'dataset.npy')
@@ -1018,8 +1018,12 @@ def test_np_save_load_ndarrays():
     # test save/load a list of ndarrays
     with TemporaryDirectory() as work_dir:
         fname = os.path.join(work_dir, 'dataset.npy')
-        npx.save(fname, array_list)
-        array_list_loaded = mx.nd.load(fname)
+        npx.savez(fname, *array_list)
+        array_dict_loaded = mx.nd.load(fname)
+        array_list_loaded = [
+            array_dict_loaded['arr_{}'.format(str(i))]
+            for i in range(len(array_dict_loaded))
+        ]
         assert isinstance(arr_loaded, list)
         assert len(array_list) == len(array_list_loaded)
         assert all(isinstance(arr, np.ndarray) for arr in arr_loaded)
@@ -1033,7 +1037,7 @@ def test_np_save_load_ndarrays():
         arr_dict[k] = v
     with TemporaryDirectory() as work_dir:
         fname = os.path.join(work_dir, 'dataset.npy')
-        npx.save(fname, arr_dict)
+        npx.savez(fname, **arr_dict)
         arr_dict_loaded = npx.load(fname)
         assert isinstance(arr_dict_loaded, dict)
         assert len(arr_dict_loaded) == len(arr_dict)
