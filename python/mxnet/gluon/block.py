@@ -1022,7 +1022,7 @@ class HybridBlock(Block):
 
                     param = Parameter(name, dtype=param_data.dtype)
                     param._load_init(param_data, param_data.context)
-                    pair = (False, param)
+                pair = (False, param)
 
             self._cached_op_args.append(pair)
 
