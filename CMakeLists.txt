@@ -447,7 +447,7 @@ endif()
 # ---[ LAPack
 if(USE_LAPACK)
   message("USE_LAPACK is ON")
-  add_definitions(-DMXNET_USE_LAPACK=1)
+  # add_definitions(-DMXNET_USE_LAPACK=1)
   # In the CMAKE_BUILD_TYPE="Distribution" case, we link against Blas libraries
   # that already provide lapack symbols. Thus -llapack would be wrong.
   if (NOT MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
