@@ -164,7 +164,7 @@ def windows_build(args):
         os.chdir('zlib-1.2.11')
         os.mkdir('build')
         os.chdir('build')
-        cmd = "\"{}\" && cmake -GNinja -DCMAKE_INSTALL_PREFIX={} -DBUILD_SHARED_LIBS=0 " \
+        cmd = '"{}" && cmake -GNinja -DCMAKE_INSTALL_PREFIX={} -DBUILD_SHARED_LIBS=0 ' \
             "-DCMAKE_C_COMPILER=cl -DCMAKE_BUILD_TYPE=Release .. && " \
             "ninja install".format(args.vcvars, zlib_path)
         logging.info("Compiling zlib with CMake:\n{}".format(cmd))
@@ -187,7 +187,7 @@ def windows_build(args):
 
 
     # cuda thrust / CUB + VS 2019 is flaky: try multiple times if fail
-    MAXIMUM_TRY = 5
+    MAXIMUM_TRY = 1
     build_try = 0
 
     while build_try < MAXIMUM_TRY:
@@ -200,7 +200,9 @@ def windows_build(args):
             env = os.environ.copy()
             env["ZLIB_ROOT"] = zlib_path
             if 'GPU' in args.flavour:
-                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
+                # Workaround GPU build error c_api.cc(63) 'zip.h': No such file or directory
+                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {} /I {}'.format(
+                    thrust_path, os.path.join(zlib_path, 'include'))
                 env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
             cmd = '"{}" && cmake -GNinja {} {}'.format(args.vcvars, CMAKE_FLAGS[args.flavour],
                                                        mxnet_root)
