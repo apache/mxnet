@@ -11,7 +11,6 @@ FILE(GLOB CXX_SRCS
 add_library(external_lib SHARED ${CXX_SRCS})
 target_link_libraries(external_lib PUBLIC mxnet)
 
-# generic GPU stuff
 if(USE_CUDA)
   # specify GPU sources (optional)
   FILE(GLOB CU_SRCS "*.cu")
@@ -19,9 +18,12 @@ if(USE_CUDA)
 endif(USE_CUDA)
 
 if(UNIX)
-  # unix-specific stuff
+  # unix-specific build configuration
   if(USE_CUDA)
-    # unix+GPU-specific stuff
-    target_compile_options(external_lib PUBLIC -shared)
+    # unix+GPU-specific build configuration
   endif(USE_CUDA)
+endif()
+
+if(MSVC)
+  message(FATAL_ERROR "Windows builds are not support for external ops")
 endif()
