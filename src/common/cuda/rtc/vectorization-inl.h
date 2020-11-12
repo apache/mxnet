@@ -447,7 +447,7 @@ void VectorizedKernelRTCLauncher(const std::string &parameters,
 
     common::cuda::rtc::launch(function,
                               {static_cast<unsigned int>(blocks), 1, 1},
-                              {threads, 1, 1},
+                              {static_cast<unsigned int>(threads), 1, 1},
                               0, s, &args);
   }
 }
