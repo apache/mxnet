@@ -60,7 +60,7 @@ cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
   "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
-option(USE_LAPACKE_INTERFACE "USE LAPACKE interface for lapack support" OFF)
+option(USE_LAPACKE_INTERFACE "USE LAPACKE interface for lapack support" ON)
 option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
   option(USE_MKLDNN "Build with MKL-DNN support" ON)
@@ -460,7 +460,7 @@ if(USE_LAPACK)
 else()
   add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=0)
 endif()
-list(APPEND mxnet_LINKER_LIBS gfortran)
+# list(APPEND mxnet_LINKER_LIBS gfortran)
 
 
 # ---[ jemalloc
