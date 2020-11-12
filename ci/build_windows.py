@@ -165,11 +165,12 @@ def windows_build(args):
         os.mkdir('build')
         os.chdir('build')
         cmd = "\"{}\" && cmake -GNinja -DCMAKE_INSTALL_PREFIX={} -DBUILD_SHARED_LIBS=0 " \
-            "-DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl .. && " \
+            "-DCMAKE_C_COMPILER=cl -DCMAKE_BUILD_TYPE=Release .. && " \
             "ninja install".format(args.vcvars, zlib_path)
         logging.info("Compiling zlib with CMake:\n{}".format(cmd))
         check_call(cmd, shell=True)
     shutil.rmtree(tmpdirname)
+    os.remove(os.path.join(zlib_path, 'lib', 'zlib.lib'))
 
     if 'GPU' in args.flavour:
         # Get Thrust version to be shipped in Cuda 11, due to flakyness of
