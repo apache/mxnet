@@ -201,7 +201,7 @@ def windows_build(args):
             print(os.listdir(os.path.listdir(zlib_path, 'lib')))
             print(os.listdir(os.path.listdir(zlib_path, 'include')))
             env["ZLIB_ROOT"] = zlib_path
-            zlib_library = os.path.listdir(zlib_path, 'lib', 'libzlibstatic.a')
+            zlib_library = os.path.join(zlib_path, 'lib', 'libzlibstatic.a')
             if 'GPU' in args.flavour:
                 env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
                 env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
