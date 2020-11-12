@@ -160,23 +160,6 @@ def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
     calib_layers = [py_str(calib_str[i]) for i in range(size.value)]
     return Symbol(out), calib_layers
 
-def combine_histogram(old_hist, arr, new_min, new_max, new_th):
-    """ Collect layer histogram for arr and combine it with old histogram.
-    """
-    (old_hist, old_hist_edges, old_min, old_max, old_th) = old_hist
-    if new_th <= old_th:
-        hist, _ = np.histogram(arr, bins=len(old_hist), range=(-old_th, old_th))
-        return (old_hist + hist, old_hist_edges, min(old_min, new_min), max(old_max, new_max), old_th)
-    else:
-        # Need to generate new histogram with new_th
-        old_num_bins = len(old_hist)
-        old_step = 2 * old_th / old_num_bins
-        half_increased_bins = int((new_th - old_th) // old_step + 1)
-        new_num_bins = half_increased_bins * 2 + old_num_bins
-        new_th = half_increased_bins * old_step + old_th
-        hist, hist_edges = np.histogram(arr, bins=new_num_bins, range=(-new_th, new_th))
-        hist[half_increased_bins:new_num_bins - half_increased_bins] += old_hist
-        return (hist, hist_edges, min(old_min, new_min), max(old_max, new_max), new_th)
 
 class CalibrationCollector(object):
     """Base class for all other collectors used with quantization"""
@@ -188,7 +171,8 @@ class CalibrationCollector(object):
 
     @abc.abstractmethod
     def collect(self, name, op_name, arr):
-        """Function which is registered to block as monitor callback. 
+        """Function which is registered to Block as monitor callback. Names of layers
+        requiring calibration are stored in `self.include_layers` variable.
             Parameters
             ----------
             name : str
@@ -201,9 +185,11 @@ class CalibrationCollector(object):
         """
         pass
 
-    def post_calibrate(self):
-         # optionaly do sth with collected data
-        return self.min_max_dict # default return min_max_dict
+    def post_collect(self):
+        """ Function called after collecting parameters. Returns dictionary of min and max values
+        for each calibrated layer. If not overriden, returns content of `self.min_max_dict`.
+        """
+        return self.min_max_dict
 
 
 class _LayerHistogramCollector(CalibrationCollector):
@@ -230,14 +216,33 @@ class _LayerHistogramCollector(CalibrationCollector):
         max_range = np.max(arr)
         th = max(abs(min_range), abs(max_range))
         if name in self.hist_dict:
-            self.hist_dict[name] = combine_histogram(self.hist_dict[name], arr, min_range, max_range, th)
+            self.hist_dict[name] = self.combine_histogram(self.hist_dict[name], arr, min_range, max_range, th)
         else:
             hist, hist_edges = np.histogram(arr, bins=self.num_bins, range=(-th, th))
             self.hist_dict[name] = (hist, hist_edges, min_range, max_range, th)
         
-    def post_calibrate(self):
+    def post_collect(self):
          min_max_dict = self.get_optimal_thresholds(self.hist_dict, self.quantized_dtype, logger=self.logger)
          return min_max_dict 
+
+    @staticmethod
+    def combine_histogram(old_hist, arr, new_min, new_max, new_th):
+        """ Collect layer histogram for arr and combine it with old histogram.
+        """
+        (old_hist, old_hist_edges, old_min, old_max, old_th) = old_hist
+        if new_th <= old_th:
+            hist, _ = np.histogram(arr, bins=len(old_hist), range=(-old_th, old_th))
+            return (old_hist + hist, old_hist_edges, min(old_min, new_min), max(old_max, new_max), old_th)
+        else:
+            # Need to generate new histogram with new_th
+            old_num_bins = len(old_hist)
+            old_step = 2 * old_th / old_num_bins
+            half_increased_bins = int((new_th - old_th) // old_step + 1)
+            new_num_bins = half_increased_bins * 2 + old_num_bins
+            new_th = half_increased_bins * old_step + old_th
+            hist, hist_edges = np.histogram(arr, bins=new_num_bins, range=(-new_th, new_th))
+            hist[half_increased_bins:new_num_bins - half_increased_bins] += old_hist
+            return (hist, hist_edges, min(old_min, new_min), max(old_max, new_max), new_th)
 
     # pylint: disable=line-too-long
     @staticmethod
@@ -451,6 +456,7 @@ def quantize_model(sym, arg_params, aux_params,
         A tuple of quantized symbol, quantized arg_params, and aux_params.
     -------
     """
+    warnings.warn('WARNING: This will be deprecated please use quantize_net with Gluon models')
     if excluded_sym_names is None:
         excluded_sym_names = []
     if not isinstance(excluded_sym_names, list):
@@ -516,7 +522,7 @@ def quantize_model(sym, arg_params, aux_params,
                         % num_batches)
             logger.info('Performing calibration post collecting operations')
 
-        min_max_dict = collector.post_calibrate()
+        min_max_dict = collector.post_collect()
         qsym = _calibrate_quantized_sym(qsym, min_max_dict)
 
     if logger:
@@ -614,7 +620,7 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
         The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
         quantization. The default value is 'tensor-wise'.
     LayerOutputCollector : subclass of CalibrationCollector
-        For customize calibration method usage.
+        For custom calibration method usage.
         Passed object's include_layers attribute will be feed with names of layers which needs calibration
     logger : Object
         A logging object for printing information during the process of quantization.
@@ -662,7 +668,7 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
             if logger:
                 logger.info(
                     'Create a layer output minmax collector for naive calibration')
-        elif calib_mode == 'customize' and LayerOutputCollector is not None:
+        elif calib_mode == 'custom' and LayerOutputCollector is not None:
             if not isinstance(LayerOutputCollector, CalibrationCollector):
                 raise ValueError('LayerOutputCollecotr must be a subclass of a CalibrationCollector class,'
                                   ' but it is %s' % LayerOutputCollector.__class__)
@@ -671,16 +677,16 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
             # Inject layer names that need calibration to collector
             if hasattr(collector, "include_layers"):
                 if collector.include_layers is not None:
-                    logger.info('Customized collector has set include_layers attribute. '
+                    logger.info('Custom collector has set include_layers attribute. '
                                 'Calibration layers not passed')
                 else:
                     collector.include_layers = calib_layers
             if logger:
                 logger.info(
-                    'Create a customize layer output minmax collector for calibration')
+                    'Create a custom layer output minmax collector for calibration')
         else:
             raise ValueError('unknown calibration mode %s received,'
-                             ' expected `none`, `naive`, `entropy` or `customize`' % calib_mode)
+                             ' expected `none`, `naive`, `entropy` or `custom`' % calib_mode)
         if logger:
             logger.info('Collector created, please use set_monitor_callback'
                         ' to collect calibration information.')
@@ -730,15 +736,15 @@ def calib_graph(qsym, arg_params, aux_params, collector,
     """
     min_max_dict = {}
     if calib_mode is not None and calib_mode != 'none':
-        if calib_mode in ('entropy', 'naive', 'customize'):
-            min_max_dict = collector.post_calibrate()
+        if calib_mode in ('entropy', 'naive', 'custom'):
+            min_max_dict = collector.post_collect()
 
         else:
             raise ValueError('unknown calibration mode %s received,'
-                             ' expected `none`, `naive`, `entropy` or `customize`' % calib_mode)
+                             ' expected `none`, `naive`, `entropy` or `custom`' % calib_mode)
         qsym = _calibrate_quantized_sym(qsym, min_max_dict)
     else:
-        raise ValueError('Please set calibration mode to naive, entropy or customize (with custom CalibrationCollector)')
+        raise ValueError('Please set calibration mode to naive, entropy or custom (with custom CalibrationCollector)')
 
     if logger:
         logger.info('Quantizing parameters')
@@ -746,10 +752,10 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 
     return qsym, qarg_params, aux_params
 
-def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quantize_granularity='tensor-wise',
-                    exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
-                    calib_data=None, data_shapes=None, calib_mode='none',
-                    num_calib_batches=None, ctx=cpu(), LayerOutputCollector=None, logger=None):
+def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize_granularity='tensor-wise',
+                 exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
+                 calib_data=None, data_shapes=None, calib_mode='none',
+                 num_calib_batches=None, ctx=cpu(), LayerOutputCollector=None, logger=None):
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -791,6 +797,9 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         If calib_mode='entropy' (default mode), the thresholds for quantization will be
         derived such that the KL divergence between the distributions of FP32 layer outputs and
         quantized layer outputs is minimized based upon the calibration dataset.
+        If calib_mode='custom', the provided LayerOutputCollector will be used to determine
+        the thresholds for quantization. For more information refer to CalibrationCollector
+        documentation.
     num_calib_batches : int or None
         The maximum number of batches that user would like to use for calibration. If not provided,
         the whole calibration dataset will be used.
@@ -798,7 +807,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         Defines the device that users want to run forward propagation on the calibration
         dataset for collecting layer output statistics. Currently, only supports single context.
     LayerOutputCollector : subclass of CalibrationCollector
-        For customize calibration method usage.
+        For `custom` calibration method usage.
         Passed object's include_layers attribute will be feed with names of layers which needs calibration
     logger : Object
         A logging object for printing information during the process of quantization.
@@ -811,12 +820,9 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     """
     from ..gluon import SymbolBlock
 
-    if logger:
-        logger.info('Export HybridBlock')
-
-    backend = None
-    if ctx == mx.cpu():
-        backend = 'MKLDNN_QUANTIZE'
+    if ctx != mx.cpu():
+        raise ValueError('Quantization currently supports only CPU context')
+    backend = 'MKLDNN_QUANTIZE'
 
     network.hybridize(static_alloc=False, static_shape=False)
     data_types = None
@@ -902,7 +908,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         if calib_data is None:
             raise ValueError(
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
-        if calib_mode in ['naive', 'entropy', 'customize']:
+        if calib_mode in ['naive', 'entropy', 'custom']:
             inputs = [mx.sym.var(desc.name) for desc in data_descs]
             calib_net = SymbolBlock(symnet, inputs)
             calib_net.load_dict(params, cast_dtype=True, dtype_source='saved')
@@ -913,12 +919,12 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
             if logger:
                 logger.info('Collected layer output values from FP32 model using %d batches'
                             % num_batches)
+
             qsym, qarg_params, aux_params = calib_graph(
                 qsym=qsym, arg_params=args, aux_params=auxs, collector=collector,
                 calib_mode=calib_mode, quantized_dtype=quantized_dtype, logger=logger)
         else:
-            raise ValueError(
-                'please set calibration mode to naive or entropy.')
+            raise ValueError('calib_mode has to be one of: naive, entropy, custom')
     elif calib_mode is not None and calib_mode == 'none':
         inputs = [mx.sym.var(desc.name) for desc in data_descs]
 
@@ -926,23 +932,5 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     all_params = {('arg:%s' % k): v.as_in_context(cpu()) for k, v in qarg_params.items()}
     all_params.update({('aux:%s' % k): v.as_in_context(cpu()) for k, v in aux_params.items()})
     net.load_dict(all_params, cast_dtype=True, dtype_source='saved')
-    net.optimize_for(data_nd, backend=backend, backend_opts={'dedup_subgraph': True, 'skip_infer': True})
+    net.optimize_for(data_nd, backend=backend)
     return net
-
-def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
-                 exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
-                 calib_data=None, data_shapes=None, calib_mode='none',
-                 num_calib_batches=None, ctx=cpu(), logger=None):
-    """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
-       Will be deprecated after MXNet 2.0, please use quantize_net_v2.
-    """
-    warnings.warn('WARNING: This will be deprecated after MXNet 2.0, please use quantize_net_v2.')
-    return quantize_net_v2(network=network, quantized_dtype=quantized_dtype,
-                           quantize_mode=quantize_mode,
-                           quantize_granularity='tensor-wise',
-                           exclude_layers=exclude_layers,
-                           exclude_layers_match=exclude_layers_match,
-                           exclude_operators=exclude_operators,
-                           calib_data=calib_data, data_shapes=data_shapes,
-                           calib_mode=calib_mode, num_calib_batches=num_calib_batches,
-                           ctx=ctx, LayerOutputCollector=None, logger=logger)
