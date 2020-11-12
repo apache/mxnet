@@ -913,7 +913,7 @@ class HybridBlock(Block):
         self._monitor_all = False
         self._backend = None
         self._backend_opts = {}
-        self._partition_if_dynamic = True
+        self._partition_if_dynamic = False
         self._first_forward = True
 
     def __setattr__(self, name, value):
