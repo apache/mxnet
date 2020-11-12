@@ -198,8 +198,8 @@ def windows_build(args):
             env = os.environ.copy()
             print("ZLIB_ROOT:", zlib_path)
             print(os.listdir(zlib_path))
-            print(os.listdir(os.path.listdir(zlib_path, 'lib')))
-            print(os.listdir(os.path.listdir(zlib_path, 'include')))
+            print(os.listdir(os.path.join(zlib_path, 'lib')))
+            print(os.listdir(os.path.join(zlib_path, 'include')))
             env["ZLIB_ROOT"] = zlib_path
             zlib_library = os.path.join(zlib_path, 'lib', 'libzlibstatic.a')
             if 'GPU' in args.flavour:
