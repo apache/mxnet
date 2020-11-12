@@ -20,6 +20,7 @@
 
 import sys
 import numpy as onp
+from functools import wraps
 
 fallbacks = [
     '__version__',
@@ -116,10 +117,11 @@ fallback_mod = sys.modules[__name__]
 
 def get_func(obj, doc):
     """Get new numpy function with object and doc"""
-    def fn(*args, **kwargs):
+    @wraps(obj)
+    def wrapper(*args, **kwargs):
         return obj(*args, **kwargs)
-    fn.__doc__ = doc
-    return fn
+    wrapper.__doc__ = doc
+    return wrapper
 
 for obj_name in fallbacks:
     onp_obj = getattr(onp, obj_name)
