@@ -42,7 +42,7 @@ from ..executor import Executor
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
-from ..util import is_np_shape
+from ..util import is_np_shape, is_np_array
 from ..profiler import scope as _profiler_scope
 from ..profiler import _current_scope as _current_profiler_scope
 
@@ -1656,6 +1656,10 @@ class Symbol(SymbolBase):
                                'Provide a dictionary to the aux argument to optimize_for')
 
         new_sym = Symbol(out)
+
+        # convert to numpy symbol if needed
+        if is_np_array():
+            new_sym = new_sym.as_np_ndarray()
 
         arg_names = self.list_arguments()
         new_arg_names = new_sym.list_arguments()
