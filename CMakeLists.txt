@@ -460,6 +460,7 @@ if(USE_LAPACK)
 else()
   add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=0)
 endif()
+list(APPEND mxnet_LINKER_LIBS gfortran)
 
 
 # ---[ jemalloc
