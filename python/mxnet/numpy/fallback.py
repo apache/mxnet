@@ -19,8 +19,8 @@
 """Operators that fallback to official NumPy implementation."""
 
 import sys
-import numpy as onp
 from functools import wraps
+import numpy as onp
 
 fallbacks = [
     '__version__',
