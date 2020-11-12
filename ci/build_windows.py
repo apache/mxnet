@@ -164,7 +164,8 @@ def windows_build(args):
         os.chdir('zlib-1.2.11')
         os.mkdir('build')
         os.chdir('build')
-        cmd = "\"{}\" && cmake -GNinja -DCMAKE_INSTALL_PREFIX={} -DBUILD_SHARED_LIBS=0 .. && " \
+        cmd = "\"{}\" && cmake -GNinja -DCMAKE_INSTALL_PREFIX={} -DBUILD_SHARED_LIBS=0 " \
+            "-DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl .. && " \
             "ninja install".format(args.vcvars, zlib_path)
         logging.info("Compiling zlib with CMake:\n{}".format(cmd))
         check_call(cmd, shell=True)
@@ -228,8 +229,9 @@ def windows_build(args):
                 break
 
     # Cleanup temporary directories
-    shutil.rmtree(tmpdirname)
     shutil.rmtree(zlib_path)
+    if 'GPU' in args.flavour:
+        shutil.rmtree(tmpdirname)
 
     if ret == 0:
         windows_package(args)
