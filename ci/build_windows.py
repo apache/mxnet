@@ -202,14 +202,11 @@ def windows_build(args):
             print(os.listdir(os.path.join(zlib_path, 'lib')))
             print(os.listdir(os.path.join(zlib_path, 'include')))
             env["ZLIB_ROOT"] = zlib_path
-            zlib_library = os.path.join(zlib_path, 'lib', 'libzlibstatic.a')
             if 'GPU' in args.flavour:
                 env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
                 env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
-            cmd = '"{}" && cmake -GNinja -DZLIB_LIBRARY={} {} {}'.format(args.vcvars,
-                                                                         zlib_library,
-                                                                         CMAKE_FLAGS[args.flavour],
-                                                                         mxnet_root)
+            cmd = '"{}" && cmake -GNinja {} {}'.format(args.vcvars, CMAKE_FLAGS[args.flavour],
+                                                       mxnet_root)
             logging.info("Generating project with CMake:\n{}".format(cmd))
             check_call(cmd, shell=True, env=env)
 
