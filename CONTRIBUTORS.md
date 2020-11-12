@@ -132,6 +132,7 @@ healthy project. The PPMC actively seeks to appoint new committers from the list
 * [Yuxi Hu](https://github.com/yuxihu)
 * [Zach Kimberg](https://github.com/zachgk)
   - Zach is one of the major maintainers of the MXNet Scala package.
+* [Zhaoqi Zhu](https://github.com/Zha0q1)
 
 
 List of Contributors
