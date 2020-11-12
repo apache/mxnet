@@ -460,6 +460,10 @@ else()
   add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=0)
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
+  list(APPEND mxnet_LINKER_LIBS gfortran)
+endif()
+
 # ---[ jemalloc
 if(USE_JEMALLOC)
   find_package(JeMalloc)
