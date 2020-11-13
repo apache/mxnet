@@ -151,6 +151,17 @@ def windows_build(args):
     mxnet_root = get_mxnet_root()
     logging.info("Found MXNet root: {}".format(mxnet_root))
 
+    # Update cmake
+    with remember_cwd():
+        cmake_dir = tempfile.mkdtemp()
+        os.chdir(tmpdirname)
+        r = requests.get('https://github.com/Kitware/CMake/releases/download/v3.18.4/cmake-3.18.4-win32-x86.zip', allow_redirects=True)
+        with open('cmake.zip', 'wb') as f:
+            f.write(r.content)
+        with zipfile.ZipFile('cmake.zip', 'r') as zip_ref:
+            zip_ref.extractall('.')
+        cmake_bin = os.path.join(cmake_dir, 'cmake-3.18.4-win64-x64', 'bin', 'cmake.exe')
+
     # Install zlib dependency missing from AMI
     with remember_cwd():
         tmpdirname = tempfile.mkdtemp()
@@ -164,9 +175,9 @@ def windows_build(args):
         os.chdir('zlib-1.2.11')
         os.mkdir('build')
         os.chdir('build')
-        cmd = '"{}" && cmake -GNinja -DCMAKE_INSTALL_PREFIX={} -DBUILD_SHARED_LIBS=0 ' \
+        cmd = '"{}" && {} -GNinja -DCMAKE_INSTALL_PREFIX={} -DBUILD_SHARED_LIBS=0 ' \
             "-DCMAKE_C_COMPILER=cl -DCMAKE_BUILD_TYPE=Release .. && " \
-            "ninja install".format(args.vcvars, zlib_path)
+            "ninja install".format(args.vcvars, cmake_bin, zlib_path)
         logging.info("Compiling zlib with CMake:\n{}".format(cmd))
         check_call(cmd, shell=True)
     shutil.rmtree(tmpdirname)
@@ -184,7 +195,6 @@ def windows_build(args):
             with zipfile.ZipFile('thrust.zip', 'r') as zip_ref:
                 zip_ref.extractall('.')
             thrust_path = os.path.join(tmpdirname, "thrust-1.9.8")
-
 
     # cuda thrust / CUB + VS 2019 is flaky: try multiple times if fail
     MAXIMUM_TRY = 1
@@ -205,7 +215,7 @@ def windows_build(args):
                 #     thrust_path, os.path.join(mxnet_root, '3rdparty', 'libzip', 'lib'))
                 env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
                 env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
-            cmd = '"{}" && cmake -GNinja {} {}'.format(args.vcvars, CMAKE_FLAGS[args.flavour],
+            cmd = '"{}" && {} -GNinja {} {}'.format(args.vcvars, cmake_bin, CMAKE_FLAGS[args.flavour],
                                                        mxnet_root)
             logging.info("Generating project with CMake:\n{}".format(cmd))
             check_call(cmd, shell=True, env=env)
