@@ -789,7 +789,11 @@ add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/l
 add_library(pass_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_pass/pass_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
 
 if(IS_DIRECTORY ${BUILD_EXTENSION_PATH})
-  add_subdirectory(${BUILD_EXTENSION_PATH} ${BUILD_EXTENSION_PATH}/build)
+  if(MSVC)
+    message(FATAL_ERROR "Windows builds are not support for external ops")
+  else()
+    add_subdirectory(${BUILD_EXTENSION_PATH} ${BUILD_EXTENSION_PATH}/build)
+  endif()
 endif()
 
 target_include_directories(customop_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)

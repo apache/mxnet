@@ -16,14 +16,3 @@ if(USE_CUDA)
   FILE(GLOB CU_SRCS "*.cu")
   target_sources(external_lib PUBLIC ${CU_SRCS})
 endif(USE_CUDA)
-
-if(UNIX)
-  # unix-specific build configuration
-  if(USE_CUDA)
-    # unix+GPU-specific build configuration
-  endif(USE_CUDA)
-endif()
-
-if(MSVC)
-  message(FATAL_ERROR "Windows builds are not support for external ops")
-endif()
