@@ -155,7 +155,7 @@ def windows_build(args):
     with remember_cwd():
         cmake_dir = tempfile.mkdtemp()
         os.chdir(cmake_dir)
-        r = requests.get('https://github.com/Kitware/CMake/releases/download/v3.18.4/cmake-3.18.4-win32-x86.zip', allow_redirects=True)
+        r = requests.get('https://github.com/Kitware/CMake/releases/download/v3.18.4/cmake-3.18.4-win64-x64.zip', allow_redirects=True)
         with open('cmake.zip', 'wb') as f:
             f.write(r.content)
         with zipfile.ZipFile('cmake.zip', 'r') as zip_ref:
