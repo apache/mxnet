@@ -957,14 +957,35 @@ class HybridBlock(Block):
 
         arg_dict, aux_dict = dict(), dict()
         if self._backend:
-            ctx = args[0].context
+            # set context for inputs
+            _, _, ctx_set, _ = _gather_type_ctx_info(list(args))
+            ctx = ctx_set.pop() if len(ctx_set) > 0 else None
             # get list of params in the order of out.list_arguments
-            arg_dict.update({name:args[data_names[name]] if name in data_names.keys() else params[name].data()
-                             for name in out.list_arguments()})
-            aux_dict.update({name:args[data_names[name]] if name in data_names.keys() else params[name].data()
-                             for name in out.list_auxiliary_states()})
-            # Partition the graph.
-            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
+            input_shapes = dict()
+            for name in out.list_arguments():
+                if name in data_names.keys() and data_names[name] < len(args):
+                    if isinstance(args[data_names[name]], NDArray):
+                        arg_dict[name] = args[data_names[name]]
+                    elif (isinstance(args[data_names[name]], symbol.Symbol) and
+                          '__shape__' in args[data_names[name]].list_attr()):
+                        shape_str = args[data_names[name]].list_attr()['__shape__']
+                        input_shapes[name] = tuple(map(int, shape_str.strip('()').split(',')))
+                elif name in params:
+                    arg_dict[name] = params[name].data()
+
+            for name in out.list_auxiliary_states():
+                if name in data_names.keys() and data_names[name] < len(args):
+                    if isinstance(args[data_names[name]], NDArray):
+                        aux_dict[name] = args[data_names[name]]
+                    elif (isinstance(args[data_names[name]], symbol.Symbol) and
+                          '__shape__' in args[data_names[name]].list_attr()):
+                        shape_str = args[data_names[name]].list_attr()['__shape__']
+                        input_shapes[name] = tuple(map(int, shape_str.strip('()').split(',')))
+                elif name in params:
+                    aux_dict[name] = params[name].data()
+
+            # Partition the graph
+            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, input_shapes, **self._backend_opts)
 
             #update cached graph with partitioned graph
             self._cached_graph = data, out
@@ -1000,7 +1021,7 @@ class HybridBlock(Block):
                                            'Please check the backend.')
 
                     param = Parameter(name, dtype=param_data.dtype)
-                    param._load_init(param_data, args[0].context)
+                    param._load_init(param_data, param_data.context)
                 pair = (False, param)
 
             self._cached_op_args.append(pair)
@@ -1103,14 +1124,11 @@ class HybridBlock(Block):
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
-        if has_symbol:
-            raise ValueError('Inputs must be NDArrays for the optimize_for API'
-                             ' Please check the type of the args.\n')
         if not has_symbol and not has_ndarray:
-            raise ValueError('In HybridBlock, there must be one NDArray as input.'
+            raise ValueError('In HybridBlock, there must be one NDArray or one Symbol in the input.'
                              ' Please check the type of the args.\n')
         if len(ctx_set) > 1:
-            raise ValueError('Find multiple contexts in the input, '
+            raise ValueError('Found multiple contexts in the input, '
                              'After hybridized, the HybridBlock only supports one input '
                              'context. You can print the ele.ctx in the '
                              'input arguments to inspect their contexts. '
