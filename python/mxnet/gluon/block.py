@@ -1102,7 +1102,6 @@ class HybridBlock(Block):
             self._backend_opts = kwargs
 
         if clear or not self._active:
-            # do hybrize API call
             self.hybridize(True, backend, clear, static_alloc=static_alloc, static_shape=static_shape)
 
         # do part of forward API call
