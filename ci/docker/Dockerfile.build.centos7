@@ -59,8 +59,6 @@ RUN yum -y check-update || true && \
         # Libraries
         # Provide clbas headerfiles
         atlas-devel \
-        openblas-devel \
-        lapack-devel \
         opencv-devel \
         openssl-devel \
         zeromq-devel \
