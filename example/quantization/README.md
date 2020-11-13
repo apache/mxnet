@@ -89,7 +89,7 @@ optional arguments:
 
 A new benchmark script `launch_inference_mkldnn.sh` has been designed to launch performance benchmark for float32 or int8 image-classification models with Intel® MKL-DNN.
 ```
-usage: bash ./launch_inference_mkldnn.sh [[[-s symbol_file ] [-b batch_size] [-iter iteraton] [-ins instance] [-c cores/instance]] | [-h]]
+usage: bash ./launch_inference_mkldnn.sh -s symbol_file [-b batch_size] [-iter iteraton] [-ins instance] [-c cores/instance] [-h]
 
 arguments:
   -h, --help                show this help message and exit
