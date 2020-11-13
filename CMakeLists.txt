@@ -830,7 +830,11 @@ function(load_libzip)
   set(BUILD_SHARED_LIBS FALSE CACHE BOOL "Build shared libzip libraries")
   set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)  # Take ZLIB_ROOT into account
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/libzip" EXCLUDE_FROM_ALL)
-  list(APPEND mxnet_LINKER_LIBS libzip::zip)  # mxnet_LINKER_LIBS to support USE_SPLIT_ARCH_DLL on windows
+  if(MSVC AND USE_SPLIT_ARCH_DLL)
+    list(APPEND mxnet_LINKER_LIBS libzip::zip)
+  else()
+    target_link_libraries(mxnet PRIVATE libzip::zip)
+  endif()
 endfunction()
 load_libzip()
 
