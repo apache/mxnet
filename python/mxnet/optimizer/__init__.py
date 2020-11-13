@@ -19,8 +19,10 @@
 from . import (optimizer, contrib, updater, utils, sgd,
                sgld, signum, dcasgd, nag, adagrad,
                adadelta, adam, adamax, nadam, ftrl,
-               ftml, lars, lamb, rmsprop, lans)
+               ftml, lars, lamb, rmsprop, lans,bert_adam)
 # pylint: disable=wildcard-import
+from .bert_adam import *
+
 from .optimizer import *
 
 from .updater import *
