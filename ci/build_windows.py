@@ -155,7 +155,7 @@ def windows_build(args):
 
     path = args.output
 
-    # cuda thrust + VS 2019 is flaky: try multiple times if fail
+    # cuda thrust / CUB + VS 2019 is flaky: try multiple times if fail
     MAXIMUM_TRY = 5
     build_try = 0
 
@@ -169,6 +169,9 @@ def windows_build(args):
 
         with remember_cwd():
             os.chdir(path)
+            env = os.environ.copy()
+            if 'GPU' in args.flavour:
+                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2'
             cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
                                                          CMAKE_FLAGS[args.flavour],
                                                          mxnet_root)
