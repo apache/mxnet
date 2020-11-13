@@ -154,7 +154,7 @@ def windows_build(args):
     # Update cmake
     with remember_cwd():
         cmake_dir = tempfile.mkdtemp()
-        os.chdir(tmpdirname)
+        os.chdir(cmake_dir)
         r = requests.get('https://github.com/Kitware/CMake/releases/download/v3.18.4/cmake-3.18.4-win32-x86.zip', allow_redirects=True)
         with open('cmake.zip', 'wb') as f:
             f.write(r.content)
@@ -237,6 +237,7 @@ def windows_build(args):
 
     # Cleanup temporary directories
     shutil.rmtree(zlib_path)
+    shutil.rmtree(cmake_dir)
     if 'GPU' in args.flavour:
         shutil.rmtree(tmpdirname)
 
