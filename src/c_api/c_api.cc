@@ -22,7 +22,6 @@
  * \file c_api.cc
  * \brief C API of mxnet
  */
-#include <zip.h>
 #include <vector>
 #include <sstream>
 #include <string>
@@ -31,6 +30,7 @@
 #include <functional>
 #include <unordered_map>
 #include <utility>
+#include <zip.h>
 #include "dmlc/base.h"
 #include "dmlc/logging.h"
 #include "dmlc/io.h"
