@@ -67,8 +67,23 @@ RUN yum -y check-update || true && \
         # Build-dependencies for ccache 3.7.9
         gperf \
         libb2-devel \
-        libzstd-devel && \
+        libzstd-devel \
+        # Required by openblas build
+        gcc-gfortran && \
     yum clean all
+
+# Build OpenBLAS from source
+RUN mkdir ~/openblas && \
+    cd ~/openblas && \
+    OPENBLAS_VERSION=0.3.10 && \
+    wget \
+        https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.zip \
+        -O openblas.zip && \
+    unzip -q openblas.zip -d . && \
+    cd OpenBLAS-${OPENBLAS_VERSION} && \
+    CXX="g++ -fPIC" CC="gcc -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 \
+        USE_OPENMP=1 NO_SHARED=0 NO_LAPACK=0 && \
+    make PREFIX=/usr/local install
 
 # Make Python 3.6 and Maven 3.3 Software Collections available by default during
 # the following build steps in this Dockerfile
