@@ -81,7 +81,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         autoconf \
         gperf \
         libb2-dev \
-        libzstd-dev && \
+        libzstd-dev \
+        gfortran && \
     rm -rf /var/lib/apt/lists/*
 
 # Build OpenBLAS from source
