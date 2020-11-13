@@ -24,7 +24,7 @@ from inspect import currentframe, getframeinfo
 
 import mxnet as mx
 from mxnet import gluon
-from mxnet.contrib.quantization import quantize_net_v2
+from mxnet.contrib.quantization import quantize_net
 from mxnet.gluon.data import DataLoader
 from mxnet.gluon.data.vision import transforms
 from mxnet.gluon.model_zoo.vision import get_model
@@ -98,7 +98,9 @@ def get_exclude_symbols(model_name, exclude_first_conv):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with Intel MKL-DNN support')
     parser.add_argument('--model', type=str, default='resnet50_v1',
-                        help='model to be quantized.')
+                        help='model to be quantized. If no-pretrained is set then'
+                             'model must be provided to `model` directory in the same path'
+                             'as this python script')
     parser.add_argument('--epoch', type=int, default=0,
                         help='number of epochs, default is 0')
     parser.add_argument('--no-pretrained', action='store_true', default=False,
@@ -106,15 +108,16 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--calib-dataset', type=str, default='data/val_256_q90.rec',
                         help='path of the calibration dataset')
-    parser.add_argument('--image-shape', type=str, default='3,224,224')
-    parser.add_argument('--data-nthreads', type=int, default=60,
-                        help='number of threads for data decoding')
+    parser.add_argument('--image-shape', type=str, default='3,224,224',
+                        help='number of channels, height and width of input image separated by comma')
+    parser.add_argument('--data-nthreads', type=int, default=0,
+                        help='number of threads for data loading')
     parser.add_argument('--num-calib-batches', type=int, default=10,
                         help='number of batches for calibration')
     parser.add_argument('--exclude-first-conv', action='store_true', default=False,
                         help='excluding quantizing the first conv layer since the'
                              ' input data may have negative value which doesn\'t support at moment' )
-    parser.add_argument('--shuffle-dataset', action='store_true', default=True,
+    parser.add_argument('--shuffle-dataset', action='store_true',
                         help='shuffle the calibration dataset')
     parser.add_argument('--calib-mode', type=str, default='entropy',
                         help='calibration mode used for generating calibration table for the quantized symbol; supports'
@@ -159,6 +162,16 @@ if __name__ == '__main__':
             creator.create_index()
             creator.close()
 
+    # get image shape
+    image_shape = args.image_shape
+    data_shape = [(1,) + tuple(int(i) for i in image_shape.split(','))]
+
+    # check if directory for output model exists
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.join(dir_path, 'model')
+    if not os.path.exists(dir_path):
+        os.mkdir(dir_path) # without try catch block as we expect to finish
+                           # script if it fail
 
     # download model
     if not args.no_pretrained:
@@ -169,9 +182,12 @@ if __name__ == '__main__':
         rgb_mean = '0.485,0.456,0.406'
         rgb_std = '0.229,0.224,0.225'
         epoch = 0
+        net.hybridize()
+        net(mx.nd.zeros(data_shape[0])) # dummy forward pass to build graph
+        net.export(prefix) # save model
+        net.hybridize(active=False) # disable hybridization - it will be handled in quantization API
     else:
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        prefix = os.path.join(dir_path, 'model', args.model)
+        prefix = os.path.join(dir_path, args.model)
         epoch = args.epoch
         net = gluon.SymbolBlock.imports("{}-symbol.json".format(prefix), ['data'], "{}-0000.params".format(prefix))
 
@@ -192,8 +208,6 @@ if __name__ == '__main__':
     # get number of threads for decoding the dataset
     data_nthreads = args.data_nthreads
 
-    # get image shape
-    image_shape = args.image_shape
 
     exclude_first_conv = args.exclude_first_conv
     if args.quantized_dtype == "uint8":
@@ -221,7 +235,6 @@ if __name__ == '__main__':
     if logger:
         logger.info('These layers have been excluded %s' % excluded_sym_names)
 
-    data_shape = [(1,) + tuple(int(i) for i in image_shape.split(','))]
     if logger:
         logger.info('Input data shape = %s' % str(data_shape))
         logger.info('rgb_mean = %s' % rgb_mean)
@@ -233,9 +246,9 @@ if __name__ == '__main__':
     if calib_mode == 'none':
         if logger:
             logger.info('Quantizing FP32 model %s' % args.model)
-        qsym = quantize_net_v2(net, ctx=ctx, exclude_layers_match=excluded_sym_names, data_shapes=data_shape,
-                        calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
-                        logger=logger)
+        qsym = quantize_net(net, ctx=ctx, exclude_layers_match=excluded_sym_names, data_shapes=data_shape,
+                            calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
+                            logger=logger)
         suffix = '-quantized'
     else:
         if logger:
@@ -246,9 +259,9 @@ if __name__ == '__main__':
                                           transforms.ToTensor(),
                                           transforms.Normalize(mean=rgb_mean, std=rgb_std)])
         data_loader = DataLoader(dataset.transform_first(transformer), batch_size, shuffle=args.shuffle_dataset, num_workers=data_nthreads)
-        qsym = quantize_net_v2(net, ctx=ctx, exclude_layers_match=excluded_sym_names,
-                        calib_mode=calib_mode, calib_data=data_loader, num_calib_batches=num_calib_batches,
-                        quantized_dtype=args.quantized_dtype, logger=logger)
+        qsym = quantize_net(net, ctx=ctx, exclude_layers_match=excluded_sym_names,
+                            calib_mode=calib_mode, calib_data=data_loader, num_calib_batches=num_calib_batches,
+                            quantized_dtype=args.quantized_dtype, logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches
         elif calib_mode == 'naive':

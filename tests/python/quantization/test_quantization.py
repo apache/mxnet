@@ -1060,7 +1060,7 @@ def test_quantize_gluon_with_forward():
         random_data = mx.random.uniform(shape=data_shape)
         calib_data = mx.gluon.data.DataLoader(random_data, batch_size=batch_size)
 
-        quantized_resnet18_v1 = mx.contrib.quant.quantize_net_v2(resnet18_v1, quantized_dtype=qdtype,
+        quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
                                                               exclude_layers=None,
                                                               exclude_layers_match=excluded_names_match,
                                                               calib_mode='none',
@@ -1071,13 +1071,13 @@ def test_quantize_gluon_with_forward():
 
         for mode in ['naive', 'entropy']:
             qdtype = qdtype if mode is 'naive' else 'auto'
-            quantized_resnet18_v1 = mx.contrib.quant.quantize_net_v2(resnet18_v1, quantized_dtype=qdtype,
-                                                                     exclude_layers=None,
-                                                                     exclude_layers_match=excluded_names_match,
-                                                                     calib_data=calib_data,
-                                                                     calib_mode=mode,
-                                                                     num_calib_batches=num_calib_batches,
-                                                                     ctx=mx.current_context())
+            quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
+                                                                  exclude_layers=None,
+                                                                  exclude_layers_match=excluded_names_match,
+                                                                  calib_data=calib_data,
+                                                                  calib_mode=mode,
+                                                                  num_calib_batches=num_calib_batches,
+                                                                  ctx=mx.current_context())
 
             quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
             quantized_resnet18_v1(random_data)
@@ -1130,10 +1130,10 @@ def test_quantization_net_with_different_data_inputs_options():
     random_data = mx.random.uniform(shape=data_shape)
 
     # pass data_shapes as list of tuples
-    quantized_net = mx.contrib.quant.quantize_net_v2(net,
-                                                     quantized_dtype='auto',
-                                                     data_shapes=[data_shape],
-                                                     ctx=mx.current_context())
+    quantized_net = mx.contrib.quant.quantize_net(net,
+                                                  quantized_dtype='auto',
+                                                  data_shapes=[data_shape],
+                                                  ctx=mx.current_context())
     out = quantized_net(random_data)
     out.wait_to_read()
 
@@ -1142,10 +1142,10 @@ def test_quantization_net_with_different_data_inputs_options():
     net2 = mx.gluon.SymbolBlock(sym, mx.sym.var('data'))
     initialize_block_params(net2, mx.init.Normal(0.2))
     data_desc = mx.io.DataDesc('data', data_shape)
-    quantized_net2 = mx.contrib.quant.quantize_net_v2(net,
-                                                     quantized_dtype='auto',
-                                                     data_shapes=[data_desc],
-                                                     ctx=mx.current_context())
+    quantized_net2 = mx.contrib.quant.quantize_net(net,
+                                                   quantized_dtype='auto',
+                                                   data_shapes=[data_desc],
+                                                   ctx=mx.current_context())
     out2 = quantized_net2(random_data)
     out2.wait_to_read()
 
@@ -1154,10 +1154,10 @@ def test_quantization_net_with_different_data_inputs_options():
     net3 = mx.gluon.SymbolBlock(sym, mx.sym.var('data'))
     initialize_block_params(net3, mx.init.Normal(0.2))
     data_loader = mx.gluon.data.DataLoader(random_data, batch_size=batch_size)
-    quantized_net3 = mx.contrib.quant.quantize_net_v2(net,
-                                                      quantized_dtype='auto',
-                                                      calib_data=data_loader,
-                                                      ctx=mx.current_context())
+    quantized_net3 = mx.contrib.quant.quantize_net(net,
+                                                   quantized_dtype='auto',
+                                                   calib_data=data_loader,
+                                                   ctx=mx.current_context())
     out3 = quantized_net3(random_data)
     out3.wait_to_read()
 

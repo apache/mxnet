@@ -17,7 +17,7 @@
 
 # Model Quantization with Calibration Examples
 
-This folder contains examples of quantizing a FP32 model with Intel® MKL-DNN.
+This folder contains examples of quantizing a FP32 model with Intel® MKL-DNN to (U)INT8 model.
 
 <h2 id="0">Contents</h2>
 
@@ -27,34 +27,38 @@ This folder contains examples of quantizing a FP32 model with Intel® MKL-DNN.
 Intel® MKL-DNN supports quantization with subgraph features on Intel® CPU Platform and can bring performance improvements on the [Intel® Xeon® Scalable Platform](https://www.intel.com/content/www/us/en/processors/xeon/scalable/xeon-scalable-platform.html). To apply quantization flow to your project directly, please refer [Optimize custom models with MKL-DNN backend](#TODO(agrygielski)).
 
 ```
-usage: imagenet_gen_qsym_mkldnn.py [-h] [--model MODEL] [--epoch EPOCH]
-                                   [--no-pretrained] [--batch-size BATCH_SIZE]
-                                   [--calib-dataset CALIB_DATASET]
-                                   [--image-shape IMAGE_SHAPE]
-                                   [--data-nthreads DATA_NTHREADS]
-                                   [--num-calib-batches NUM_CALIB_BATCHES]
-                                   [--exclude-first-conv] [--shuffle-dataset]
-                                   [--calib-mode CALIB_MODE]
-                                   [--quantized-dtype {auto,int8,uint8}]
-                                   [--quiet]
+usage: python imagenet_gen_qsym_mkldnn.py [-h] [--model MODEL] [--epoch EPOCH]
+                                          [--no-pretrained] [--batch-size BATCH_SIZE]
+                                          [--calib-dataset CALIB_DATASET]
+                                          [--image-shape IMAGE_SHAPE]
+                                          [--data-nthreads DATA_NTHREADS]
+                                          [--num-calib-batches NUM_CALIB_BATCHES]
+                                          [--exclude-first-conv] [--shuffle-dataset]
+                                          [--calib-mode CALIB_MODE]
+                                          [--quantized-dtype {auto,int8,uint8}]
+                                          [--quiet]
 
-Generate a calibrated quantized model from a FP32 model with Intel MKL-DNN
-support
+Generate a calibrated quantized model from a FP32 model with Intel MKL-DNN support
 
 optional arguments:
   -h, --help            show this help message and exit
-  --model MODEL         model to be quantized.
-  --epoch EPOCH         number of epochs, default is 0
+  --model MODEL         model to be quantized. If no-pretrained is set then
+                        model must be provided to `model` directory in the same path
+                        as this python script, default is `resnet50_v1`
+  --epoch EPOCH         number of epochs, default is `0`
   --no-pretrained       If enabled, will not download pretrained model from
-                        MXNet or Gluon-CV modelzoo.
+                        MXNet or Gluon-CV modelzoo, default is `False`
   --batch-size BATCH_SIZE
+                        batch size to be used when calibrating model, default is `32`
   --calib-dataset CALIB_DATASET
-                        path of the calibration dataset
+                        path of the calibration dataset, default is `data/val_256_q90.rec`
   --image-shape IMAGE_SHAPE
+                        number of channels, height and width of input image separated by comma,
+                        default is `3,224,224`
   --data-nthreads DATA_NTHREADS
-                        number of threads for data decoding
+                        number of threads for data loading, default is `0`
   --num-calib-batches NUM_CALIB_BATCHES
-                        number of batches for calibration
+                        number of batches for calibration, default is `10`
   --exclude-first-conv  excluding quantizing the first conv layer since the
                         input data may have negative value which doesn't
                         support at moment
@@ -76,8 +80,10 @@ optional arguments:
                         the best inference accuracy of all three kinds of
                         quantized models if the calibration dataset is
                         representative enough of the inference dataset.
+                        default is `entropy`
   --quantized-dtype {auto,int8,uint8}
-                        quantization destination data type for input data
+                        quantization destination data type for input data,
+                        default is `auto`
   --quiet               suppress most of log
 ```
 
@@ -85,9 +91,9 @@ A new benchmark script `launch_inference_mkldnn.sh` has been designed to launch 
 ```
 usage: bash ./launch_inference_mkldnn.sh [[[-s symbol_file ] [-b batch_size] [-iter iteraton] [-ins instance] [-c cores/instance]] | [-h]]
 
-optional arguments:
+arguments:
   -h, --help                show this help message and exit
-  -s, --symbol_file         symbol file for benchmark
+  -s, --symbol_file         symbol file for benchmark, required
   -b, --batch_size          inference batch size
                             default: 64
   -iter, --iteration        inference iteration

@@ -207,14 +207,14 @@ def test_quantize_whole_model_with_forward(qdtype):
 
     calib_data = mx.nd.random.uniform(0.0 if qdtype=='uint8' else -1.0, 1.0, shape=data_shape)
     calib_data = mx.gluon.data.DataLoader(calib_data, batch_size=batch_size)
-    qsym = mx.contrib.quantization.quantize_net_v2(sym_block,
-                                                   ctx=mx.current_context(),
-                                                   exclude_layers=excluded_layers,
-                                                   quantized_dtype=qdtype,
-                                                   calib_mode='naive',
-                                                   calib_data=calib_data,
-                                                   num_calib_batches=1,
-                                                   quantize_mode='full')
+    qsym = mx.contrib.quantization.quantize_net(sym_block,
+                                                ctx=mx.current_context(),
+                                                exclude_layers=excluded_layers,
+                                                quantized_dtype=qdtype,
+                                                calib_mode='naive',
+                                                calib_data=calib_data,
+                                                num_calib_batches=1,
+                                                quantize_mode='full')
 
     outputs = qsym(in_data)
     for output in outputs:
