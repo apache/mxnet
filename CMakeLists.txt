@@ -828,6 +828,7 @@ endif()
 # used for numpy-compatible serialization
 function(load_libzip)
   set(BUILD_SHARED_LIBS FALSE CACHE BOOL "Build shared libzip libraries")
+  set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)  # Take ZLIB_ROOT into account
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/libzip" EXCLUDE_FROM_ALL)
   # Fix declaration of libzip target requirements (should be fixed in libzip/CMakelist.txt)
   # find_package(ZLIB 1.1.2 REQUIRED)
