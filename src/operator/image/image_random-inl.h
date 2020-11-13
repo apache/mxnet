@@ -860,7 +860,8 @@ inline void HLS2RGBConvert(const float& src_h,
 
     if (h < 0) {
       do { h += 6; } while (h < 0);
-    } else if (h >= 6) {
+    }
+    if (h >= 6) {  // h + 6 >= 6 holds true for some h < 0
       do { h -= 6; } while (h >= 6);
     }
 

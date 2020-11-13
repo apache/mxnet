@@ -1780,6 +1780,7 @@ def test_npx_batch_dot():
 @pytest.mark.parametrize('fix_gamma', [False, True])
 @pytest.mark.parametrize('cudnn_off', [False, True])
 @pytest.mark.parametrize('output_mean_var', [False, True])
+@pytest.mark.flaky
 def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
     momentum = 0.9
     epsilon = 1e-5
