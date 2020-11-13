@@ -683,7 +683,7 @@ build_ubuntu_cpu_large_tensor() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
-        -DUSE_MKLDNN=OFF                        \
+        -DUSE_MKLDNN=ON                         \
         -DUSE_INT64_TENSOR_SIZE=ON              \
         -G Ninja                                \
         /work/mxnet
@@ -700,7 +700,7 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_CUDNN=ON                          \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=OFF                        \
+        -DUSE_MKLDNN=ON                         \
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
