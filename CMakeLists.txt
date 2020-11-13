@@ -62,6 +62,7 @@ option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects supp
 option(USE_LAPACK "Build with lapack support" ON)
 option(USE_LAPACKE_INTERFACE "USE LAPACKE interface for lapack support" OFF)
 option(LINK_GFORTRAN "Link to gfortran" OFF)
+option(LINK_GOMP "Link to gomp" OFF)
 option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
   option(USE_MKLDNN "Build with MKL-DNN support" ON)
@@ -467,6 +468,10 @@ endif()
 
 if(LINK_GFORTRAN)
   list(APPEND mxnet_LINKER_LIBS gfortran)
+endif()
+
+if(LINK_GOMP)
+  list(APPEND mxnet_LINKER_LIBS gomp)
 endif()
 
 # ---[ jemalloc
