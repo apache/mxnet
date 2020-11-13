@@ -207,6 +207,8 @@ class VectorizedAccessor {
           if (reinterpret_cast<size_t>(ptr) >= reinterpret_cast<size_t>(unaligned_ptr_) &&
               reinterpret_cast<size_t>(ptr) < reinterpret_cast<size_t>(unaligned_ptr_ + N)) {
             storage_.scratch_.separate[j] = *ptr;
+          } else {
+            storage_.scratch_.separate[j] = DType();
           }
         }
       }
