@@ -21,6 +21,7 @@
 // Copyright (C) 2011  Carl Rogers, 2018 Leonard Lausen
 
 #include "cnpy.h"
+#include <zip.h>
 #include <mxnet/op_attr_types.h>
 #include <mxnet/imperative.h>
 #include <string_view>
@@ -38,7 +39,6 @@
 #include <set>
 #include <stdexcept>
 #include <typeinfo>
-#include <zip.h>
 
 
 
