@@ -30,7 +30,6 @@
 #include <functional>
 #include <unordered_map>
 #include <utility>
-#include <zip.h>
 #include "dmlc/base.h"
 #include "dmlc/logging.h"
 #include "dmlc/io.h"
@@ -61,6 +60,7 @@
 #include "../profiler/profiler.h"
 #include "../serialization/cnpy.h"
 #include "nnvm/pass_functions.h"
+#include "zip.h"
 
 using namespace mxnet;
 
