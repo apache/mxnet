@@ -830,15 +830,7 @@ function(load_libzip)
   set(BUILD_SHARED_LIBS FALSE CACHE BOOL "Build shared libzip libraries")
   set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)  # Take ZLIB_ROOT into account
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/libzip" EXCLUDE_FROM_ALL)
-  # Fix declaration of libzip target requirements (should be fixed in libzip/CMakelist.txt)
-  # find_package(ZLIB 1.1.2 REQUIRED)
-  # target_include_directories(zip PUBLIC ${ZLIB_INCLUDE_DIRS})
-  # target_include_directories(zip PUBLIC ${PROJECT_BINARY_DIR})  # zip.h zipconf.h for MSVC GPU Build
-  target_link_libraries(mxnet PRIVATE libzip::zip)
-  get_target_property(LIBZIP_INCLUDES libzip::zip INCLUDE_DIRECTORIES)
-  message(WARNING "ZLIB_INCLUDE_DIRS: ${ZLIB_INCLUDE_DIRS}")
-  message(WARNING "ZLIB_LIBRARIES: ${ZLIB_LIBRARIES}")
-  message(WARNING "LIBZIP_INCLUDES: ${LIBZIP_INCLUDES}")
+  list(APPEND mxnet_LINKER_LIBS libzip::zip)  # mxnet_LINKER_LIBS to support USE_SPLIT_ARCH_DLL on windows
 endfunction()
 load_libzip()
 

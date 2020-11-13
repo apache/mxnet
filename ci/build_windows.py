@@ -177,7 +177,7 @@ def windows_build(args):
         os.chdir('build')
         cmd = '"{}" && {} -GNinja -DCMAKE_INSTALL_PREFIX={} -DBUILD_SHARED_LIBS=0 ' \
             "-DCMAKE_C_COMPILER=cl -DCMAKE_BUILD_TYPE=Release .. && " \
-            "ninja -v install".format(args.vcvars, cmake_bin, zlib_path)
+            "ninja install".format(args.vcvars, cmake_bin, zlib_path)
         logging.info("Compiling zlib with CMake:\n{}".format(cmd))
         check_call(cmd, shell=True)
     shutil.rmtree(tmpdirname)
@@ -220,7 +220,7 @@ def windows_build(args):
             logging.info("Generating project with CMake:\n{}".format(cmd))
             check_call(cmd, shell=True, env=env)
 
-            cmd = "\"{}\" && ninja -v".format(args.vcvars)
+            cmd = "\"{}\" && ninja".format(args.vcvars)
             logging.info("Building:\n{}".format(cmd))
 
             t0 = int(time.time())
