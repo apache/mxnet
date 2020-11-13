@@ -267,6 +267,7 @@ build_centos7_cpu() {
         -DUSE_MKLDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
         -DUSE_CUDA=OFF \
+	-DLINK_GFORTRAN=ON \
         -G Ninja /work/mxnet
     ninja
 }
@@ -281,6 +282,7 @@ build_centos7_mkldnn() {
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
+	-DLINK_GFORTRAN=ON \
         -G Ninja /work/mxnet
     ninja
 }
@@ -297,7 +299,8 @@ build_centos7_gpu() {
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DUSE_DIST_KVSTORE=ON\
+        -DUSE_DIST_KVSTORE=ON \
+        -DLINK_GFORTRAN=ON \
         -G Ninja /work/mxnet
     ninja
 }
