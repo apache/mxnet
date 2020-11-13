@@ -61,6 +61,7 @@ cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
 option(USE_LAPACKE_INTERFACE "USE LAPACKE interface for lapack support" OFF)
+option(LINK_GFORTRAN "Link to gfortran" OFF)
 option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
   option(USE_MKLDNN "Build with MKL-DNN support" ON)
@@ -460,7 +461,11 @@ else()
   add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=0)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND NOT APPLE)
+if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND BLAS STREQUAL "Open")
+  set(LINK_GFORTRAN ON)
+endif()
+
+if(LINK_GFORTRAN)
   list(APPEND mxnet_LINKER_LIBS gfortran)
 endif()
 
