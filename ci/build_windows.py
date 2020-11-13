@@ -201,8 +201,9 @@ def windows_build(args):
             env["ZLIB_ROOT"] = zlib_path
             if 'GPU' in args.flavour:
                 # Workaround GPU build error c_api.cc(63) 'zip.h': No such file or directory
-                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {} /I {}'.format(
-                    thrust_path, os.path.join(mxnet_root, '3rdparty', 'libzip', 'lib'))
+                # env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {} /I {}'.format(
+                #     thrust_path, os.path.join(mxnet_root, '3rdparty', 'libzip', 'lib'))
+                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
                 env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
             cmd = '"{}" && cmake -GNinja {} {}'.format(args.vcvars, CMAKE_FLAGS[args.flavour],
                                                        mxnet_root)
