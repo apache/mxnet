@@ -460,7 +460,7 @@ else()
   add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=0)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
+if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND NOT APPLE)
   list(APPEND mxnet_LINKER_LIBS gfortran)
 endif()
 
@@ -969,12 +969,6 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
   # Staticbuild applies linker version script to hide private symbols, breaking unit tests
   add_subdirectory(tests)
 endif()
-
-
-if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
-  list(APPEND mxnet_LINKER_LIBS gfortran)
-endif()
-
 
 # ---[ Linter target
 find_package(Python3)
