@@ -879,7 +879,7 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/libzip" EXCLUDE_FROM_ALL)
 # Fix declaration of libzip target requirements (should be fixed in libzip/CMakelist.txt)
 find_package(ZLIB 1.1.2 REQUIRED)
 target_include_directories(zip PUBLIC ${ZLIB_INCLUDE_DIRS})
-# target_include_directories(libzip::zip PUBLIC ${PROJECT_BINARY_DIR})  # zipconf.h for MSVC GPU Build
+target_include_directories(zip PUBLIC ${PROJECT_BINARY_DIR})  # zip.h zipconf.h for MSVC GPU Build
 target_link_libraries(mxnet PRIVATE libzip::zip)
 get_target_property(LIBZIP_INCLUDES libzip::zip INCLUDE_DIRECTORIES)
 message(WARNING "ZLIB_INCLUDE_DIRS: ${ZLIB_INCLUDE_DIRS}")
