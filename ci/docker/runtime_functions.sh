@@ -267,6 +267,7 @@ build_centos7_cpu() {
         -DUSE_MKLDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
         -DUSE_CUDA=OFF \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -298,6 +299,7 @@ build_centos7_gpu() {
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_DIST_KVSTORE=ON\
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -319,6 +321,7 @@ build_ubuntu_cpu_openblas() {
         -DUSE_CUDA=OFF \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -334,6 +337,7 @@ build_ubuntu_cpu_mkl() {
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=ON \
         -DUSE_BLAS=MKL \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -GNinja /work/mxnet
     ninja
 }
@@ -366,6 +370,7 @@ build_ubuntu_cpu_cmake_no_tvm_op() {
         -DUSE_OPENCV=ON \
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja \
         /work/mxnet
 
@@ -518,6 +523,7 @@ build_ubuntu_cpu_mkldnn() {
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
         -DUSE_CPP_PACKAGE=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -533,6 +539,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=ON \
         -DUSE_BLAS=MKL \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -GNinja /work/mxnet
     ninja
 }
@@ -604,6 +611,7 @@ build_ubuntu_gpu_mkldnn() {
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CPP_PACKAGE=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -618,6 +626,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=OFF \
         -DUSE_CPP_PACKAGE=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -635,6 +644,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         -DUSE_CPP_PACKAGE=ON \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
