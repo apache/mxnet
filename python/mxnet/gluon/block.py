@@ -1115,7 +1115,7 @@ class HybridBlock(Block):
 
         if clear or not self._active:
             self.hybridize(True, backend, clear, static_alloc, static_shape,
-                           inline_limit, forward_bulk_size, backward_bulk_size, kwargs)
+                           inline_limit, forward_bulk_size, backward_bulk_size)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
