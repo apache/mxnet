@@ -50,10 +50,10 @@ __global__ void KernelStep1(const MultiLAMBKernelParam<DType, MPDType> kernel_pa
 
   MPDType biascorrection1, biascorrection2;
   if (bias_correction) {
-    biascorrection1 = 1.0 -
-                      static_cast<MPDType>(std::pow(beta1, kernel_params.step_count[tensor_id]));
-    biascorrection2 = 1.0 -
-                      static_cast<MPDType>(std::pow(beta2, kernel_params.step_count[tensor_id]));
+    biascorrection1 = 1.0 - static_cast<MPDType>(
+                      pow(beta1, static_cast<float>(kernel_params.step_count[tensor_id])));
+    biascorrection2 = 1.0 - static_cast<MPDType>(
+                      pow(beta2, static_cast<float>(kernel_params.step_count[tensor_id])));
   } else {
     biascorrection1 = static_cast<MPDType>(1.0);
     biascorrection2 = static_cast<MPDType>(1.0);
