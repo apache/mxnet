@@ -110,7 +110,7 @@ def test(backend):
     print('-------------------------------')
     print('Testing %s Gluon Hybridize partitioning with extra input' % backend)
     sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend="addInputPass",
-                            clear=False, dedup_subgraph=True)
+                            dedup_subgraph=True)
     out3 = sym_block2(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     print(out3)
     

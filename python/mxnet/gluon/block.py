@@ -1114,9 +1114,8 @@ class HybridBlock(Block):
             self._backend_opts = kwargs
 
         if clear or not self._active:
-            self.hybridize(True, backend, clear, static_alloc=static_alloc, static_shape=static_shape,
-                           inline_limit=inline_limit, forward_bulk_size=forward_bulk_size,
-                           backward_bulk_size=backward_bulk_size)
+            self.hybridize(True, backend, clear, static_alloc, static_shape,
+                           inline_limit, forward_bulk_size, backward_bulk_size, kwargs)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
@@ -1158,7 +1157,8 @@ class HybridBlock(Block):
                   static_alloc=False, static_shape=False,
                   inline_limit=2,
                   forward_bulk_size=None,
-                  backward_bulk_size=None):
+                  backward_bulk_size=None,
+                  **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1182,7 +1182,11 @@ class HybridBlock(Block):
             Segment size of bulk execution during forward pass.
         backward_bulk_size : optional int, default None
             Segment size of bulk execution during forward pass.
+        **kwargs:  optional
+            Backend options.
         """
+        if len(kwargs) > 0:
+            self._backend_opts = kwargs
 
         self._backend = backend
 

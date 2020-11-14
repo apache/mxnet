@@ -115,7 +115,7 @@ The `hybridize` function prepares the HybridBlock to be converted into a backend
 If you just want to partition the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
 
 ```python
-block.optimize_for(x, backend=None, clear=True, **kwargs)
+block.optimize_for(x, backend=None, clear=False, **kwargs)
 ```
 
 When the `optimize_for` API is called on a HybridBlock it partitions immediately. This lets users export the partitioned model without running a complete forward pass. Chaining multiple optimizations is as simple as calling `optimize_for` multiple times, no need to execute a forward pass (as opposed to `hybridize`).
