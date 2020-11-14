@@ -1175,7 +1175,7 @@ class HybridBlock(Block):
             out = [out]
         return _regroup(out, self._out_format)
 
-    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, partition_if_dynamic=True, **kwargs):
+    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, partition_if_dynamic=False, **kwargs):
         """Partitions the current HybridBlock and optimizes it for a given backend
         without executing a forward pass. Modifies the HybridBlock in-place.
 
@@ -1259,7 +1259,7 @@ class HybridBlock(Block):
             self._active = False
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, partition_if_dynamic=True, **kwargs):
+    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, partition_if_dynamic=False, **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
