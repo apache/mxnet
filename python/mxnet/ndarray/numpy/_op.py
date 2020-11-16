@@ -2116,7 +2116,9 @@ def gcd(x1, x2, out=None, **kwargs):
     >>> np.gcd(np.arange(6, dtype=int), 20)
     array([20,  1,  2,  1,  4,  5], dtype=int64)
     """
-    return _ufunc_helper(x1, x2, _npi.gcd, _np.gcd, _npi.gcd_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.gcd(x1, x2, out=out)
+    return _api_internal.gcd(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
