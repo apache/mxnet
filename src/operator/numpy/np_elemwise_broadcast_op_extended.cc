@@ -84,9 +84,7 @@ NNVM_REGISTER_OP(_npi_gcd)
 NNVM_REGISTER_OP(_npi_gcd_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
-  })
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
