@@ -92,7 +92,7 @@ def test(backend):
     inputs = [a,b]
     sym_block = nn.SymbolBlock(sym, inputs)
     sym_block.initialize()
-    sym_block.hybridize(backend=backend, backend_opts={'dedup_subgraph':True})
+    sym_block.hybridize(backend=backend, dedup_subgraph=True)
     out2 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     print(out2)
 
@@ -103,14 +103,14 @@ def test(backend):
     sym_block2 = nn.SymbolBlock(sym, inputs)
     sym_block2.initialize()
     sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend=backend,
-                            backend_opts={'dedup_subgraph':True})
+                            dedup_subgraph=True)
     sym_block2.export('partitioned')
 
     # Test with additional input to subgraph op
     print('-------------------------------')
     print('Testing %s Gluon Hybridize partitioning with extra input' % backend)
     sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend="addInputPass",
-                            clear=False, backend_opts={'dedup_subgraph':True})
+                            dedup_subgraph=True)
     out3 = sym_block2(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     print(out3)
     
