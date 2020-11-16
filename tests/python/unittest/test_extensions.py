@@ -161,7 +161,7 @@ def test_subgraph():
     # Gluon Hybridize partitioning with shapes/types
     sym_block = nn.SymbolBlock(sym, [a,b])
     sym_block.initialize()
-    sym_block.hybridize(backend='myProp')
+    sym_block.optimize_for(mx.nd.ones((3,2)),mx.nd.ones((3,2)),backend='myProp')
     out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out4[0].asnumpy(), rtol=1e-3, atol=1e-3)
