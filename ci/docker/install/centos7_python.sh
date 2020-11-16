@@ -30,4 +30,4 @@ yum -y install python36u
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 python3.6 get-pip.py
 # Restrict numpy version to < 1.19.0 due to https://github.com/apache/incubator-mxnet/issues/18600
-pip3 install nose pylint 'numpy>1.16.0,<1.19.0' nose-timer requests h5py scipy==1.2.3
+pip3 install nose pylint 'numpy>1.16.0,<1.19.0' nose-timer requests 'h5py<3' scipy==1.2.3
