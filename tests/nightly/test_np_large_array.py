@@ -188,7 +188,6 @@ def test_argmin():
     A.attach_grad()
     with mx.autograd.record():
         B = np.argmin(A)
-    print(B)
     assert B == 21
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
@@ -202,7 +201,6 @@ def test_argmax():
     A.attach_grad()
     with mx.autograd.record():
         B = np.argmax(A)
-    print(B)
     assert B == 21
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
@@ -983,6 +981,7 @@ def test_expm1():
 
 
 @use_np
+@pytest.mark.skip(reason='to be moved to new file and run separately as it takes lot of memory')
 def test_frexp():
     inp = np.ones((2, INT_OVERFLOW))
     inp[-1, -1] = 9
@@ -1090,7 +1089,7 @@ def test_prod():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1, -1] == 1
     with mx.autograd.record():
-        out2 = np.sum(inp, axis=0)
+        out2 = np.prod(inp, axis=0)
         out2.backward()
     assert out2.shape == (INT_OVERFLOW, )
     assert out2[0] == 2 and out2[-1] == 10
@@ -1654,6 +1653,7 @@ def test_digamma():
 
 
 @use_np
+@pytest.mark.skip(reason='to be moved to new file and run separately as it takes lot of memory')
 def test_rnn_dim_check():
     L_SEQ, BAT, L_INP, L_STA = 2**31, 4, 2**10, 2
     data = np.random.uniform(-1, 1, (L_SEQ, BAT, L_INP))
@@ -1664,6 +1664,7 @@ def test_rnn_dim_check():
 
 
 @use_np
+@pytest.mark.skip(reason='runs without MKLDNN, wtih is not default behavior')
 def test_rnn_vanilla():
     L_SEQ, BAT, L_INP, L_STA = 2**20, 4, 2**10, 2
     def batch_check(x, modes, params):

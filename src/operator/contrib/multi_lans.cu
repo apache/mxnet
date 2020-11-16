@@ -53,10 +53,10 @@ __global__ void KernelStep1(const MultiLANSKernelParam<DType, MPDType> kernel_pa
 
   MPDType biascorrection1, biascorrection2;
 
-  biascorrection1 = 1.0 -
-                    static_cast<MPDType>(std::pow(beta1, kernel_params.step_count[tensor_id]));
-  biascorrection2 = 1.0 -
-                    static_cast<MPDType>(std::pow(beta2, kernel_params.step_count[tensor_id]));
+  biascorrection1 = 1.0 - static_cast<MPDType>(
+                    pow(beta1, static_cast<float>(kernel_params.step_count[tensor_id])));
+  biascorrection2 = 1.0 - static_cast<MPDType>(
+                    pow(beta2, static_cast<float>(kernel_params.step_count[tensor_id])));
 
   MPDType r_weight[ILP_LAMB];
   MPDType r_grad[ILP_LAMB];

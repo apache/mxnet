@@ -915,6 +915,8 @@ class HybridBlock(Block):
         self._monitor_all = False
         self._backend = None
         self._backend_opts = {}
+        self._partition_if_dynamic = False
+        self._first_forward = True
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -994,7 +996,7 @@ class HybridBlock(Block):
                 return self._get_graph_v2(*args)
         return self._cached_graph
 
-    def _build_cache(self, *args):
+    def _build_cache(self, *args, update_graph=True):
         data, out = self._get_graph(*args)
         data_names = {data.name: i for i, data in enumerate(data)}
         params = {p.var().name: p for p in self.collect_params().values()}
@@ -1067,7 +1069,8 @@ class HybridBlock(Block):
                 out = out.as_np_ndarray()
 
             #update cached graph with partitioned graph
-            self._cached_graph = data, out
+            if update_graph:
+                self._cached_graph = data, out
 
         input_names = out.list_inputs()
         data_indices = []
@@ -1108,10 +1111,12 @@ class HybridBlock(Block):
 
             self._cached_op_args.append(triple)
 
-        flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
-                self._flags
-        self._cached_op = ndarray.CachedOp(out, flags)
-
+        for i in range(len(self._flags) - 1, -1, -1):
+            kv = self._flags[i]
+            if kv[0] in ['data_indices', 'param_indices']:
+                self._flags.remove(kv)
+        self._flags = [('data_indices', data_indices), ('param_indices', param_indices)] + self._flags
+        self._cached_op = ndarray.CachedOp(out, self._flags)
 
     def _deferred_infer_shape(self, *args):
         try:
@@ -1124,6 +1129,17 @@ class HybridBlock(Block):
     def _call_cached_op(self, *args):
         if self._cached_op is None:
             self._build_cache(*args)
+
+        if self._first_forward and self._partition_if_dynamic:
+            self._first_forward = False
+            # partition static shape ops if the graph contains any dynamic shape op
+            _, out = self._cached_graph
+            is_dynamic = out.has_dynamic_shape_op()
+            if is_dynamic:
+                self._backend = 'static_shape'
+                self._backend_opts = {k : v for k, v in self._flags}
+                self._build_cache(*args, update_graph=False)
+
         assert self._cached_op, "Gluon failed to build the cache. " \
                                 "This should never happen. " \
                                 "Please submit an issue on Github" \
@@ -1161,7 +1177,7 @@ class HybridBlock(Block):
             out = [out]
         return _regroup(out, self._out_format)
 
-    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, **kwargs):
+    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, partition_if_dynamic=False, **kwargs):
         """Partitions the current HybridBlock and optimizes it for a given backend
         without executing a forward pass. Modifies the HybridBlock in-place.
 
@@ -1192,6 +1208,8 @@ class HybridBlock(Block):
         backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         clear : clears any previous optimizations
+        partition_if_dynamic : bool
+            whether to partition the graph when dynamic shape op exists
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : bool, default False
@@ -1201,7 +1219,7 @@ class HybridBlock(Block):
         """
 
         # do hybrize API call
-        self.hybridize(True, backend, backend_opts, clear, **kwargs)
+        self.hybridize(True, backend, backend_opts, clear, partition_if_dynamic, **kwargs)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
@@ -1222,9 +1240,12 @@ class HybridBlock(Block):
                                 " https://github.com/apache/incubator-mxnet."
         # do not actually call the cached_op
 
+        self._first_forward = True
+
     def _clear_cached_op(self):
         self._cached_graph = ()
         self._cached_op = None
+        self._first_forward = True
 
     def register_child(self, block, name=None):
         if not isinstance(block, HybridBlock):
@@ -1240,7 +1261,7 @@ class HybridBlock(Block):
             self._active = False
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, **kwargs):
+    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, partition_if_dynamic=False, **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1253,6 +1274,8 @@ class HybridBlock(Block):
         backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         clear : clears any previous optimizations
+        partition_if_dynamic : bool
+            whether to partition the graph when dynamic shape op exists
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : bool, default False
@@ -1268,6 +1291,7 @@ class HybridBlock(Block):
             self._backend_opts = backend_opts
 
         self._active = active
+        self._partition_if_dynamic = partition_if_dynamic
         self._flags = list(kwargs.items())
         if clear:
             self._clear_cached_op()

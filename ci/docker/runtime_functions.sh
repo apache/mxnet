@@ -263,11 +263,11 @@ build_centos7_cpu() {
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
         -DUSE_CUDA=OFF \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -299,6 +299,7 @@ build_centos7_gpu() {
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_DIST_KVSTORE=ON\
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -320,6 +321,7 @@ build_ubuntu_cpu_openblas() {
         -DUSE_CUDA=OFF \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -335,6 +337,7 @@ build_ubuntu_cpu_mkl() {
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=ON \
         -DUSE_BLAS=MKL \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -GNinja /work/mxnet
     ninja
 }
@@ -367,6 +370,7 @@ build_ubuntu_cpu_cmake_no_tvm_op() {
         -DUSE_OPENCV=ON \
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja \
         /work/mxnet
 
@@ -519,6 +523,7 @@ build_ubuntu_cpu_mkldnn() {
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
         -DUSE_CPP_PACKAGE=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -534,6 +539,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=ON \
         -DUSE_BLAS=MKL \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -GNinja /work/mxnet
     ninja
 }
@@ -605,6 +611,7 @@ build_ubuntu_gpu_mkldnn() {
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CPP_PACKAGE=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -619,6 +626,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=OFF \
         -DUSE_CPP_PACKAGE=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -636,6 +644,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         -DUSE_CPP_PACKAGE=ON \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
@@ -684,7 +693,7 @@ build_ubuntu_cpu_large_tensor() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
-        -DUSE_MKLDNN=OFF                        \
+        -DUSE_MKLDNN=ON                         \
         -DUSE_INT64_TENSOR_SIZE=ON              \
         -G Ninja                                \
         /work/mxnet
@@ -701,7 +710,7 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_CUDNN=ON                          \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=OFF                        \
+        -DUSE_MKLDNN=ON                         \
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
@@ -1037,19 +1046,7 @@ nightly_test_large_tensor() {
     set -ex
     export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest tests/nightly/test_large_array.py::test_tensor
-    pytest tests/nightly/test_large_array.py::test_nn
-    pytest tests/nightly/test_large_array.py::test_basic
-}
-
-#Test Large Vectors
-nightly_test_large_vector() {
-    set -ex
-    export PYTHONPATH=./python/
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest tests/nightly/test_large_vector.py::test_tensor
-    pytest tests/nightly/test_large_vector.py::test_nn
-    pytest tests/nightly/test_large_vector.py::test_basic
+    pytest --timeout=0 tests/nightly/test_np_large_array.py
 }
 
 #Tests Model backwards compatibility on MXNet
