@@ -88,15 +88,15 @@ The `optimize_for` API takes at least 1 argument, `backend` which is a string th
 For the Gluon API, `hybridize` can be called on HybridBlocks to execute a graph pass on the internal CachedOp Symbol.
 
 ```python
-block.hybridize(backend=None, backend_opts=None, **kwargs)
+block.hybridize(backend=None, **kwargs)
 ```
 
-The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `backend` argument is a string that identifies which pass that will be executed on the model. The `backend_opts` takes other user-specified options that will be passed to the backend APIs. The actual pass runs once just before the first the forward pass.
+The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `backend` argument is a string that identifies which pass that will be executed on the model. `**kwargs` might contain other user-specified options that will be passed to the backend APIs. The actual pass runs once just before the first the forward pass.
 
 If you just want to run a graph pass on the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
 
 ```python
-block.optimize_for(x, backend=None, backend_opts=None, **kwargs)
+block.optimize_for(x, backend=None, **kwargs)
 ```
 
 When the `optimize_for` API is called on a HybridBlock it runs the graph pass immediately. This lets users export the modified model without running a complete forward pass.

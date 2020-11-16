@@ -107,15 +107,15 @@ The `optimize_for` API takes at least 1 argument, `backend` which is a string th
 For the Gluon API, `hybridize` can be called on HybridBlocks to partition the internal CachedOp Symbol.
 
 ```python
-block.hybridize(backend=None, backend_opts=None, clear=True, **kwargs)
+block.hybridize(backend=None, clear=True, **kwargs)
 ```
 
-The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `backend` argument is a string that identifies which backend that will partition the model. The `backend_opts` are other user-specified options (as a Python dictionary of strings mapped to strings) that will be passed to the backend partitioning APIs. The `clear` argument defaults to `True` and clears any previous optimizations done on the block. If you want to chain optimizations together, set `clear` to `False`. The actual partitioning takes place during the forward pass. If you want to use `hybridize` to chain multiple optimizations, be sure to execute a forward pass after each call to `hybridize`. 
+The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `backend` argument is a string that identifies which backend that will partition the model. `**kwargs` are other user-specified options (as a Python dictionary of strings mapped to strings) that will be passed to the backend partitioning APIs. The `clear` argument defaults to `False`, so it will chain optimizations together. If you want to clear any previous optimizations done on the block, set `clear` to `True`. The actual partitioning takes place during the forward pass. If you want to use `hybridize` to chain multiple optimizations, be sure to execute a forward pass after each call to `hybridize`.
 
 If you just want to partition the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
 
 ```python
-block.optimize_for(x, backend=None, backend_opts=None, clear=True, **kwargs)
+block.optimize_for(x, backend=None, clear=False, **kwargs)
 ```
 
 When the `optimize_for` API is called on a HybridBlock it partitions immediately. This lets users export the partitioned model without running a complete forward pass. Chaining multiple optimizations is as simple as calling `optimize_for` multiple times, no need to execute a forward pass (as opposed to `hybridize`).
