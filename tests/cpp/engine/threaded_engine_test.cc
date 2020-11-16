@@ -22,7 +22,6 @@
  * \file threaded_engine_test.cc
  * \brief threaded engine tests
 */
-#include <time.h>
 #include <dmlc/logging.h>
 #include <dmlc/thread_group.h>
 #include <dmlc/omp.h>
@@ -31,10 +30,12 @@
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <dmlc/timer.h>
+#include <ctime>
 #include <cstdio>
 #include <thread>
 #include <chrono>
 #include <vector>
+#include <random>
 
 #include "../src/engine/engine_impl.h"
 #include "../include/test_util.h"
@@ -62,15 +63,18 @@ void GenerateWorkload(int num_workloads, int num_var,
                       std::vector<Workload>* workloads) {
   workloads->clear();
   workloads->resize(num_workloads);
+  static thread_local std::mt19937 generator;
+  std::uniform_int_distribution<int> distribution_var(0, num_var - 1);
+  std::uniform_int_distribution<int> distribution_time(min_time, max_time - 1);
+  std::uniform_int_distribution<int> distribution_read(min_read, max_read - 1);
   for (int i = 0; i < num_workloads; ++i) {
     auto& wl = workloads->at(i);
-    wl.write = rand_r(&seed_) % num_var;
-    int r = rand_r(&seed_);
-    int num_read = min_read + (r % (max_read - min_read));
+    wl.write = distribution_var(generator);
+    int num_read = distribution_read(generator);
     for (int j = 0; j < num_read; ++j) {
-      wl.reads.push_back(rand_r(&seed_) % num_var);
+      wl.reads.push_back(distribution_var(generator));
     }
-    wl.time = min_time + rand_r(&seed_) % (max_time - min_time);
+    wl.time = distribution_time(generator);
   }
 }
 
@@ -103,7 +107,7 @@ double EvaluateWorkloads(const std::vector<Workload>& workloads,
 
   for (const auto& wl : workloads) {
     if (wl.reads.size() == 0) continue;
-    if (engine == NULL) {
+    if (engine == nullptr) {
       EvaluateWorkload(wl, data);
     } else {
       auto func = [wl, data](RunContext ctx, Engine::CallbackOnComplete cb) {
@@ -148,13 +152,13 @@ TEST(Engine, RandSumExpr) {
   std::vector<double> t(num_engine, 0.0);
   std::vector<mxnet::Engine*> engine(num_engine);
 
-  engine[0] = NULL;
+  engine[0] = nullptr;
   engine[1] = mxnet::engine::CreateNaiveEngine();
   engine[2] = mxnet::engine::CreateThreadedEnginePooled();
   engine[3] = mxnet::engine::CreateThreadedEnginePerDevice();
 
   for (int repeat = 0; repeat < num_repeat; ++repeat) {
-    srand(time(NULL) + repeat);
+    srand(time(nullptr) + repeat);
     int num_var = 100;
     GenerateWorkload(10000, num_var, 2, 20, 1, 10, &workloads);
     std::vector<std::vector<double>> data(num_engine);

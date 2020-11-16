@@ -34,6 +34,7 @@
 #include "gradient_compression.h"
 #include "../ndarray/ndarray_function.h"
 #include "../operator/tensor/sparse_retain-inl.h"
+#include "../profiler/profiler.h"
 #include "./kvstore_utils.h"
 namespace mxnet {
 namespace kvstore {
@@ -532,9 +533,12 @@ class CommDevice : public Comm {
         // NDArray.Slice or gpu direct memory access. for the latter, we need to
         // remove some ctx check, and also it reduces 20% perf
         buf.copy_buf.resize(src.size()-1);
+        const std::string profiler_scope =
+            profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "comm_dev:";
         for (size_t i = 0; i < src.size()-1; ++i) {
           buf.copy_buf[i] = NDArray(
             buf_merged.shape(), buf_merged.ctx(), false, buf_merged.dtype());
+          buf.copy_buf[i].AssignStorageInfo(profiler_scope, "copy_buf");
         }
       }
       for (size_t i = 0; i < src.size()-1; ++i) {
@@ -560,18 +564,23 @@ class CommDevice : public Comm {
       buf.compressed_recv_buf.resize(src.size());
       buf.compressed_send_buf.resize(src.size());
       buf.residual.resize(src.size());
-
+      const std::string profiler_scope =
+          profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "comm_dev:";
       for (size_t i = 0; i < src.size(); ++i) {
         buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx(),
                                   false, buf.merged.dtype());
+        buf.copy_buf[i].AssignStorageInfo(profiler_scope, "copy_buf");
         buf.residual[i] = NDArray(buf.merged.shape(), src[i].ctx(),
                                   false, buf.merged.dtype());
+        buf.residual[i].AssignStorageInfo(profiler_scope, "residual");
         buf.residual[i] = 0;
         int64_t small_size = gc_->GetCompressedSize(buf.merged.shape().Size());
         buf.compressed_recv_buf[i] = NDArray(mxnet::TShape{small_size}, buf.merged.ctx(),
-                                        false, buf.merged.dtype());
+                                             false, buf.merged.dtype());
+        buf.compressed_recv_buf[i].AssignStorageInfo(profiler_scope, "compressed_recv_buf");
         buf.compressed_send_buf[i] = NDArray(mxnet::TShape{small_size}, src[i].ctx(),
-                                        false, buf.merged.dtype());
+                                             false, buf.merged.dtype());
+        buf.compressed_send_buf[i].AssignStorageInfo(profiler_scope, "compressed_send_buf");
       }
     }
 
@@ -686,6 +695,9 @@ class CommDevice : public Comm {
       ctx_info[d.dev_id] = std::make_pair(d, 0);
     }
 
+    const std::string profiler_scope =
+        profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "kvstore:comm_dev:";
+
     for (auto& sorted_key_attr : sorted_key_attrs_) {
       const int key  = std::get<0>(sorted_key_attr);
       const mxnet::TShape& shape = std::get<1>(sorted_key_attr);
@@ -705,6 +717,7 @@ class CommDevice : public Comm {
       if (buf.merged.is_none()) {
         bool delay_alloc = true;
         buf.merged = NDArray(shape, ctx, delay_alloc, type);
+        buf.merged.AssignStorageInfo(profiler_scope, "merge_buf_" + std::to_string(key));
       }
       ctx_info[ctx.dev_id].second += shape.Size();
     }

@@ -89,7 +89,7 @@ void SequenceMaskExec(
 }
 
 template <> Operator *CreateOp<gpu>(SequenceMaskParam param, int dtype, int itype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
       MSHADOW_TYPE_SWITCH(itype, IType, {
           op = new SequenceMaskOp<gpu, DType, IType>(param);

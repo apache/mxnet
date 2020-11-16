@@ -115,6 +115,7 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
   const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
   std::vector<std::string> ret;
+  ret.reserve(params.num_args);
   for (int i = 0; i < params.num_args; ++i) {
     ret.push_back(std::string("arg") + std::to_string(i));
   }
@@ -139,7 +140,7 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
 NNVM_REGISTER_OP(Concat)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
-  nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr node = nnvm::Node::Create();
   if (param.dim > 0) {
     node->attrs.op = Op::Get("_contrib_quantized_concat");
     node->attrs.name = "quantized_" + attrs.name;

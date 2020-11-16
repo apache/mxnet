@@ -16,7 +16,7 @@
    under the License.
 
 Python Tutorials
-=====
+================
 
 Getting started
 ---------------
@@ -48,17 +48,10 @@ Packages & Modules
       MXNet's imperative interface for Python. If you're new to MXNet, start here!
 
    .. card::
-      :title: NDArray API
-      :link: packages/ndarray/index.html
+      :title: NP and NPX
+      :link: packages/np/index.html
 
-      How to use the NDArray API to manipulate data.
-      A useful set of tutorials for beginners.
-
-   .. card::
-      :title: Symbol API
-      :link: /api/python/docs/api/symbol/index.html
-
-      MXNet Symbol API has been depricated. API documentation is still available for reference.
+      This section contains the `mxnet.np` and `mxnet.npx` usage hints.
 
    .. card::
       :title: Autograd API
@@ -92,7 +85,7 @@ Performance
 
    .. card::
       :title: MKL-DNN
-      :link: performance/backend/mkldnn/mkldnn_quantization
+      :link: performance/backend/mkldnn/index.html
 
       How to get the most from your CPU by using Intel's MKL-DNN.
 
@@ -145,7 +138,6 @@ Deployment
 
 Customization
 -------------
-.. container:: cards
 
 Coming Soon (CustomOps and Custom Operators)
 

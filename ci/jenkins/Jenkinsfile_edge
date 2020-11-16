@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 240
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -35,16 +35,17 @@ utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
     custom_steps.compile_armv8_jetson_gpu(),
-    custom_steps.compile_armv7_cpu(),
-    custom_steps.compile_armv6_cpu(),
-    custom_steps.compile_armv8_cpu(),
+    custom_steps.compile_armv7_cpu('armv7'),
+    custom_steps.compile_armv6_cpu('armv6'),
+    custom_steps.compile_armv8_cpu('armv8'),
     custom_steps.compile_armv8_android_cpu(),
     custom_steps.compile_armv7_android_cpu()
-  ]) 
+  ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.test_qemu_armv7_cpu()
-  ]) 
+    custom_steps.test_qemu_armv7_cpu('armv7'),
+    custom_steps.test_qemu_armv8_cpu('armv8')
+  ])
 }
 ,
 failure_handler: {

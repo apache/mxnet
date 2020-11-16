@@ -36,7 +36,7 @@ bool SupportMKLDNNTranspose(const TransposeParam& param,
   auto data_ndim = data.shape().ndim();
 
   if (data_ndim > 4 || data_ndim == 0 || data.shape().Size() == 0 ||
-      data.dtype() != mshadow::kFloat32)
+      !(data.dtype() == mshadow::kFloat32 || data.dtype() == mshadow::kBfloat16))
     return false;
 
   return true;
@@ -151,4 +151,3 @@ void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 #endif
-

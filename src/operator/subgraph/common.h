@@ -24,7 +24,7 @@
 #include <set>
 #include <vector>
 #include "../elemwise_op_common.h"
-#include "../../executor/exec_pass.h"
+#include "../../imperative/exec_pass.h"
 
 namespace mxnet {
 namespace op {
@@ -243,7 +243,7 @@ inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequestHelper(
     const nnvm::Symbol& subgraph_sym) {
   static auto& fresource = Op::GetAttr<FResourceRequest>("FResourceRequest");
   std::set<ResourceRequest::Type> resource_types;
-  DFSVisit(subgraph_sym.outputs, [&](const nnvm::NodePtr& node) {
+  DFSVisit(subgraph_sym.outputs, [&](const nnvm::ObjectPtr& node) {
     if (!node->is_variable() && fresource.count(node->op())) {
       for (ResourceRequest& r : fresource[node->op()](node->attrs)){
         resource_types.insert(r.type);

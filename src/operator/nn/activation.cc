@@ -41,16 +41,19 @@ namespace activation {
 
 int GradNumInputs(int act_type) {
     // check activation.cu \sa ActivationGradCompute
+    if (dmlc::GetEnv("MXNET_MEMORY_OPT", 0)) {
+      return 2;
+    }
     switch (act_type) {
-        case kReLU:
-            return 2;
-        case kSoftReLU:
-        case kSoftSign:
-        case kTanh:
-        case kSigmoid:
-            return 3;
-        default:
-            CHECK(false) << "missing activation type";
+      case kReLU:
+        return 2;
+      case kSoftReLU:
+      case kSoftSign:
+      case kTanh:
+      case kSigmoid:
+        return 3;
+      default:
+        CHECK(false) << "missing activation type";
     }
     // unreachable
     return -1;
@@ -63,29 +66,36 @@ DMLC_REGISTER_PARAMETER(ActivationParam);
 // This will determine the order of the inputs for backward computation.
 struct ActivationGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
-    // ograds, output...
+    // ograds
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-    heads.emplace_back(n, activation::kOut, 0);
-
     const NodeAttrs& attrs = n->attrs;
     using namespace activation;
     int act_type = dmlc::get<ActivationParam>(attrs.parsed).act_type;
-    // for ReLU, no need to pass input data. This enables inplace optimization during the
-    // forward pass.
-    // check activation.cu \sa ActivationGradCompute
-    switch (act_type) {
+
+    if (dmlc::GetEnv("MXNET_MEMORY_OPT", 0)) {
+      if (act_type == kSoftSign) {
+        heads.push_back(n->inputs[activation::kData]);
+      } else {
+        heads.emplace_back(n, activation::kOut, 0);
+      }
+    } else {
+      heads.emplace_back(n, activation::kOut, 0);  // output
+      // for ReLU, no need to pass input data. This enables inplace optimization
+      // during the forward pass. check activation.cu \sa ActivationGradCompute
+      switch (act_type) {
         case kReLU:
-            break;
+          break;
         case kSoftReLU:
         case kSoftSign:
         case kTanh:
         case kSigmoid:
-            heads.push_back(n->inputs[activation::kData]);
-            break;
+          heads.push_back(n->inputs[activation::kData]);
+          break;
         default:
-            CHECK(false) << "missing activation type";
+          CHECK(false) << "missing activation type";
+      }
     }
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
@@ -102,7 +112,7 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   if (SupportMKLDNNAct(param, inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNActivationForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNActivationForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     MKLDNN_OPCHECK_RUN(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -118,10 +128,7 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), activation::GradNumInputs(param.act_type));
   if (SupportMKLDNNAct(param, inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    // XXX: for y = relu(x), y is passed as "in_data" to Backward()
-    const bool relu = param.act_type == activation::kReLU;
-    MKLDNNActivationBackward(attrs, ctx, inputs.at(0), relu ? inputs.at(1) : inputs.at(2), req[0],
-                             outputs[0]);
+    MKLDNNRun(MKLDNNActivationBackward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }

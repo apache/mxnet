@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
 #include "../../operator_common.h"
@@ -38,7 +39,7 @@ namespace op {
 struct NumpyMultinomialParam : public dmlc::Parameter<NumpyMultinomialParam> {
   int n;
   dmlc::optional<mxnet::Tuple<double>> pvals;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   DMLC_DECLARE_PARAMETER(NumpyMultinomialParam) {
     DMLC_DECLARE_FIELD(n)
       .describe("Number of experiments.");
@@ -50,10 +51,19 @@ struct NumpyMultinomialParam : public dmlc::Parameter<NumpyMultinomialParam> {
       "Note that this is for internal usage only. "
       "This operator will only have either input mx.ndarray or this list of pvals");
     DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe("Output shape. If the given shape is, "
       "e.g., (m, n, k), then m * n * k samples are drawn. "
       "Default is None, in which case a single value is returned.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream n_s, pvals_s, size_s;
+    n_s << n;
+    pvals_s << pvals;
+    size_s << size;
+    (*dict)["n"] = n_s.str();
+    (*dict)["pvals"] = pvals_s.str();
+    (*dict)["size"] = size_s.str();
   }
 };
 
@@ -78,7 +88,7 @@ inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
     pvals_length = ishape[0];
   }
   if (param.size.has_value()) {
-    const mxnet::Tuple<int>& size = param.size.value();
+    const mxnet::Tuple<index_t>& size = param.size.value();
     for (int i = 0; i < size.ndim(); ++i) {
       oshape_vec.emplace_back(size[i]);
     }

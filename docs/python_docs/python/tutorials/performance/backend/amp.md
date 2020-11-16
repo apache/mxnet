@@ -30,7 +30,7 @@ This tutorial shows how to get started with mixed precision training using AMP f
 For demonstration purposes we will use synthetic data loader.
 
 
-```python
+```{.python .input}
 import os
 import logging
 import warnings
@@ -39,7 +39,6 @@ import numpy as np
 import mxnet as mx
 import mxnet.gluon as gluon
 from mxnet import autograd
-from mxnet.test_utils import download_model
 import gluoncv as gcv
 from gluoncv.model_zoo import get_model
 
@@ -62,7 +61,7 @@ smoothl1_metric = mx.metric.Loss('SmoothL1')
 ```
 
 
-```python
+```{.python .input}
 class SyntheticDataLoader(object):
     def __init__(self, data_shape, batch_size):
         super(SyntheticDataLoader, self).__init__()
@@ -91,7 +90,7 @@ train_data = SyntheticDataLoader(data_shape, batch_size)
 ```
 
 
-```python
+```{.python .input}
 def get_network():
     # SSD with RN50 backbone
     net_name = 'ssd_512_resnet50_v1_coco'
@@ -99,7 +98,7 @@ def get_network():
         warnings.simplefilter("ignore")
         net = get_model(net_name, pretrained_base=True, norm_layer=gluon.nn.BatchNorm)
         net.initialize()
-        net.collect_params().reset_ctx(ctx)
+        net.reset_ctx(ctx)
 
     return net
 ```
@@ -109,7 +108,7 @@ def get_network():
 First, let us create the network.
 
 
-```python
+```{.python .input}
 net = get_network()
 net.hybridize(static_alloc=True, static_shape=True)
 ```
@@ -119,14 +118,14 @@ net.hybridize(static_alloc=True, static_shape=True)
 Next, we need to create a Gluon Trainer.
 
 
-```python
+```{.python .input}
 trainer = gluon.Trainer(
     net.collect_params(), 'sgd',
     {'learning_rate': lr, 'wd': wd, 'momentum': momentum})
 ```
 
 
-```python
+```{.python .input}
 mbox_loss = gcv.loss.SSDMultiBoxLoss()
 
 for epoch in range(1):
@@ -177,8 +176,8 @@ INFO:root:[Epoch 0][Batch 199], Speed: 58.422 samples/sec, CrossEntropy=0.396, S
 In order to start using AMP, we need to import and initialize it. This has to happen before we create the network.
 
 
-```python
-from mxnet.contrib import amp
+```{.python .input}
+from mxnet import amp
 
 amp.init()
 ```
@@ -191,7 +190,7 @@ INFO:root:Using AMP
 After that, we can create the network exactly the same way we did in FP32 training.
 
 
-```python
+```{.python .input}
 net = get_network()
 net.hybridize(static_alloc=True, static_shape=True)
 ```
@@ -199,7 +198,7 @@ net.hybridize(static_alloc=True, static_shape=True)
 For some models that may be enough to start training in mixed precision, but the full FP16 recipe recommends using dynamic loss scaling to guard against over- and underflows of FP16 values. Therefore, as a next step, we create a trainer and initialize it with support for AMP's dynamic loss scaling. Currently, support for dynamic loss scaling is limited to trainers created with `update_on_kvstore=False` option, and so we add it to our trainer initialization.
 
 
-```python
+```{.python .input}
 trainer = gluon.Trainer(
     net.collect_params(), 'sgd',
     {'learning_rate': lr, 'wd': wd, 'momentum': momentum},
@@ -213,7 +212,7 @@ amp.init_trainer(trainer)
 The last step is to apply the dynamic loss scaling during the training loop and . We can achieve that using the `amp.scale_loss` function.
 
 
-```python
+```{.python .input}
 mbox_loss = gcv.loss.SSDMultiBoxLoss()
 
 for epoch in range(1):
@@ -262,19 +261,18 @@ We got 60% speed increase from 3 additional lines of code!
 
 ## Inference with AMP
 
-To do inference with mixed precision for a trained model in FP32, you can use the conversion APIs: `amp.convert_model` for symbolic model and `amp.convert_hybrid_block` for gluon models. The conversion APIs will take the FP32 model as input and will return a mixed precision model, which can be used to run inference.
-Below, we demonstrate for a gluon model and a symbolic model:
+To do inference with mixed precision for a trained model in FP32, you can use the conversion API `amp.convert_hybrid_block` for gluon models. The conversion APIs will take the FP32 model as input and will return a mixed precision model, which can be used to run inference.
+Below, we demonstrate for a gluon model:
 - Conversion from FP32 model to mixed precision model.
 - Run inference on the mixed precision model.
-- For AMP conversion of bucketing module please refer to [example/rnn/bucketing/README.md](https://github.com/apache/incubator-mxnet/blob/master/example/rnn/bucketing/README.md).
 
-```python
+```{.python .input}
 with mx.Context(mx.gpu(0)):
     # Below is an example of converting a gluon hybrid block to a mixed precision block
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("ignore")
         model = get_model("resnet50_v1")
-        model.collect_params().initialize(ctx=mx.current_context())
+        model.initialize(ctx=mx.current_context())
         model.hybridize()
         model(mx.nd.zeros((1, 3, 224, 224)))
         converted_model = amp.convert_hybrid_block(model)
@@ -283,69 +281,12 @@ with mx.Context(mx.gpu(0)):
     result = converted_model.forward(mx.nd.random.uniform(shape=(1, 3, 224, 224),
                                                           dtype=np.float32))
 
-    # Below is an example of converting a symbolic model to a mixed precision model
-    model_path = "model"
-    if not os.path.isdir(model_path):
-        os.mkdir(model_path)
-    prefix, epoch = mx.test_utils.download_model("imagenet1k-resnet-18", dst_dir=model_path)
-    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
-    result_sym, result_arg_params, result_aux_params = amp.convert_model(sym,
-                                                                         arg_params,
-                                                                         aux_params)
-
-    # Run dummy inference with the converted symbolic model
-    mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.current_context())
-    mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
-    mod.set_params(result_arg_params, result_aux_params)
-    mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
-                                label=[mx.nd.ones((1,))]))
-    mod.get_outputs()[0].wait_to_read()
     print("Conversion and Inference completed successfully")
 ```
 
 You can also customize the operators to run in FP16 versus the operator to run in FP32 or to conditionally run in FP32.
-Also, you can force cast the params wherever possible to FP16. Below is an example which demonstrates both these use cases
-for symbolic model. You can do the same for gluon hybrid block with `amp.convert_hybrid_block` API, `cast_optional_params` flag.
-
-```python
-with mx.Context(mx.gpu(0)):
-    # Below is an example of converting a symbolic model to a mixed precision model
-    # with only Convolution op being force casted to FP16.
-    model_path = "model"
-    if not os.path.isdir(model_path):
-        os.mkdir(model_path)
-    prefix, epoch = mx.test_utils.download_model("imagenet1k-resnet-18", dst_dir=model_path)
-    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
-
-    # All Convolution ops should run in FP16, SoftmaxOutput and FullyConnected should run in FP32
-    # cast_optional_params=True: Force cast params to FP16 wherever possible
-    result_sym, result_arg_params, result_aux_params = amp.convert_model(sym,
-                                                                         arg_params,
-                                                                         aux_params,
-                                                                         target_dtype_ops=["Convolution"],
-                                                                         fp32_ops=["SoftmaxOutput", "FullyConnected"],
-                                                                         cast_optional_params=True)
-
-    # Run dummy inference with the converted symbolic model
-    mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.current_context())
-    mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
-    mod.set_params(result_arg_params, result_aux_params)
-    mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
-                                label=[mx.nd.ones((1,))]))
-    mod.get_outputs()[0].wait_to_read()
-
-    # Assert that the params for conv are in FP16, this is because cast_optional_params is set to True
-    assert mod._arg_params["conv0_weight"].dtype == np.float16
-    # FullyConnected params stay in FP32
-    assert mod._arg_params["fc1_bias"].dtype == np.float32
-
-    print("Conversion and Inference completed successfully")
-
-    # Serialize AMP model and save to disk
-    mod.save_checkpoint("amp_tutorial_model", 0, remove_amp_cast=False)
-```
+Also, you can force cast the params wherever possible to FP16. 
 
 ## Current limitations of AMP
 
 - AMP's dynamic loss scaling currently supports only Gluon trainer with `update_on_kvstore=False` option set
-- Using `SoftmaxOutput`, `LinearRegressionOutput`, `LogisticRegressionOutput`, `MAERegressionOutput` with dynamic loss scaling does not work when training networks with multiple Gluon trainers and so multiple loss scales

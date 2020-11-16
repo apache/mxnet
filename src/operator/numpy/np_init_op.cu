@@ -38,11 +38,20 @@ NNVM_REGISTER_OP(_npi_ones)
 NNVM_REGISTER_OP(_npi_identity)
 .set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(_np_zeros_like)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
+NNVM_REGISTER_OP(_npi_full_like)
+.set_attr<FCompute>("FCompute<gpu>", FullLikeOpCompute<gpu>);
 
-NNVM_REGISTER_OP(_np_ones_like)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
+NNVM_REGISTER_OP(_npi_full)
+.set_attr<FCompute>("FCompute<gpu>", InitFillWithScalarCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_atleast_1d)
+.set_attr<FCompute>("FCompute<gpu>", AtleastNDCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_atleast_2d)
+.set_attr<FCompute>("FCompute<gpu>", AtleastNDCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_atleast_3d)
+.set_attr<FCompute>("FCompute<gpu>", AtleastNDCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_arange)
 .set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeParam>);
@@ -52,6 +61,9 @@ NNVM_REGISTER_OP(_npi_eye)
 
 NNVM_REGISTER_OP(_npi_indices)
 .set_attr<FCompute>("FCompute<gpu>", IndicesCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_linspace)
+.set_attr<FCompute>("FCompute<gpu>", LinspaceCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_logspace)
 .set_attr<FCompute>("FCompute<gpu>", LogspaceCompute<gpu>);

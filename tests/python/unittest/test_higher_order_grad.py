@@ -22,15 +22,13 @@ from functools import reduce
 from operator import mul
 import random
 
-from nose.tools import ok_
-
-from common import with_seed
+from common import xfail_when_nonstandard_decimal_separator
 import mxnet
 from mxnet import nd, autograd, gluon
-from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd, same
+from mxnet.test_utils import (
+    assert_almost_equal, random_arrays, random_uniform_arrays, rand_shape_nd, same)
 
 
-@with_seed()
 def test_sin():
     def sin(x):
         return nd.sin(x)
@@ -50,7 +48,6 @@ def test_sin():
                               [grad_grad_op, grad_grad_grad_op], [2, 3])
 
 
-@with_seed()
 def test_cos():
     def cos(x):
         return nd.cos(x)
@@ -70,7 +67,6 @@ def test_cos():
                               [grad_grad_op, grad_grad_grad_op], [2, 3])
 
 
-@with_seed()
 def test_tan():
     def tan(x):
         return nd.tan(x)
@@ -87,7 +83,6 @@ def test_tan():
         check_second_order_unary(array, tan, grad_grad_op)
 
 
-@with_seed()
 def test_sinh():
     def sinh(x):
         return nd.sinh(x)
@@ -101,7 +96,6 @@ def test_sinh():
         check_second_order_unary(array, sinh, grad_grad_op)
 
 
-@with_seed()
 def test_cosh():
     def cosh(x):
         return nd.cosh(x)
@@ -115,13 +109,12 @@ def test_cosh():
         check_second_order_unary(array, cosh, grad_grad_op)
 
 
-@with_seed()
 def test_tanh():
     def tanh(x):
         return nd.tanh(x)
 
     def grad_op(x):
-        return 1 / nd.cosh(x)**2
+        return 1 - tanh(x)**2
 
     def grad_grad_op(x):
         return -2 * tanh(x) * grad_op(x)
@@ -129,11 +122,40 @@ def test_tanh():
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
+        check_nth_order_unary(array, tanh, grad_op, 1, rtol=1e-6, atol=1e-6)
         check_second_order_unary(
-            array, tanh, grad_grad_op, rtol=1e-6, atol=1e-6)
+            array, tanh, grad_grad_op, rtol=1e-6, atol=1e-5)
 
 
-@with_seed()
+def test_arcsin():
+    def arcsin(x):
+        return nd.arcsin(x)
+
+    def grad_grad_op(x):
+        return x / nd.sqrt((1-x**2)**3)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        # Domain of arcsin is [-1, 1]
+        array = random_uniform_arrays(shape, low=-0.99, high=0.99)[0]
+        check_second_order_unary(array, arcsin, grad_grad_op)
+
+
+def test_arccos():
+    def arccos(x):
+        return nd.arccos(x)
+
+    def grad_grad_op(x):
+        return -x / nd.sqrt((1-x**2)**3)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        # Domain of arccos is [-1, 1]
+        array = random_uniform_arrays(shape, low=-0.99, high=0.99)[0]
+        check_second_order_unary(array, arccos, grad_grad_op)
+
+
+@xfail_when_nonstandard_decimal_separator
 def test_arctan():
     def arctan(x):
         return nd.arctan(x)
@@ -150,7 +172,6 @@ def test_arctan():
         check_second_order_unary(array, arctan, grad_grad_op)
 
 
-@with_seed()
 def test_arcsinh():
     def arcsinh(x):
         return nd.arcsinh(x)
@@ -164,7 +185,6 @@ def test_arcsinh():
         check_second_order_unary(array, arcsinh, grad_grad_op)
 
 
-@with_seed()
 def test_arccosh():
     def arccosh(x):
         return nd.arccosh(x)
@@ -184,7 +204,7 @@ def test_arccosh():
         check_second_order_unary(array, arccosh, grad_grad_op)
 
 
-@with_seed()
+@xfail_when_nonstandard_decimal_separator
 def test_arctanh():
     def arctanh(x):
         return nd.arctanh(x)
@@ -194,11 +214,11 @@ def test_arctanh():
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
-        array = random_arrays(shape)
+        # Domain of arctanh is (-1, 1)
+        array = random_uniform_arrays(shape, low=-0.99, high=0.99)[0]
         check_second_order_unary(array, arctanh, grad_grad_op)
 
 
-@with_seed()
 def test_radians():
     def radians(x):
         return nd.radians(x)
@@ -212,7 +232,6 @@ def test_radians():
         check_second_order_unary(array, radians, grad_grad_op)
 
 
-@with_seed()
 def test_relu():
     def relu(x):
         return nd.relu(x)
@@ -226,7 +245,6 @@ def test_relu():
         check_second_order_unary(array, relu, grad_grad_op)
 
 
-@with_seed()
 def test_log():
     def log(x):
         return nd.log(x)
@@ -245,7 +263,7 @@ def test_log():
         check_nth_order_unary(array, log, [grad_op, grad_grad_op], [1, 2])
 
 
-@with_seed()
+@xfail_when_nonstandard_decimal_separator
 def test_log2():
     def log2(x):
         return nd.log2(x)
@@ -259,7 +277,7 @@ def test_log2():
         check_second_order_unary(array, log2, grad_grad_op)
 
 
-@with_seed()
+@xfail_when_nonstandard_decimal_separator
 def test_log10():
     def log10(x):
         return nd.log10(x)
@@ -273,7 +291,37 @@ def test_log10():
         check_second_order_unary(array, log10, grad_grad_op)
 
 
-@with_seed()
+@xfail_when_nonstandard_decimal_separator
+def test_square():
+    def grad_grad_op(x):
+        return nd.ones_like(x) * 2
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, nd.square, grad_grad_op)
+
+
+def test_expm1():
+    def grad_grad_op(x):
+        return nd.exp(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, nd.expm1, grad_grad_op)
+
+
+def test_log1p():
+    def grad_grad_op(x):
+        return -1/((1+x)**2)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, nd.log1p, grad_grad_op)
+
+
 def test_reciprocal():
     def reciprocal(x):
         return nd.reciprocal(x)
@@ -287,7 +335,6 @@ def test_reciprocal():
         check_second_order_unary(array, reciprocal, grad_grad_op)
 
 
-@with_seed()
 def test_abs():
     def abs(x):
         return nd.abs(x)
@@ -301,7 +348,6 @@ def test_abs():
         check_second_order_unary(array, abs, grad_grad_op)
 
 
-@with_seed()
 def test_clip():
     def clip(x):
         a_min, a_max = sorted([random.random(), random.random()])
@@ -317,7 +363,6 @@ def test_clip():
         check_second_order_unary(array, clip, grad_grad_op)
 
 
-@with_seed()
 def test_dropout():
     def dropout(x):
         return nd.Dropout(x)
@@ -331,7 +376,6 @@ def test_dropout():
         check_second_order_unary(array, dropout, grad_grad_op)
 
 
-@with_seed()
 def test_sigmoid():
     def sigmoid(x):
         return nd.sigmoid(x)
@@ -351,7 +395,7 @@ def test_sigmoid():
         check_nth_order_unary(array, sigmoid, grad_grad_op, 2)
 
 
-@with_seed()
+@xfail_when_nonstandard_decimal_separator
 def test_sqrt():
     def sqrt(x):
         return nd.sqrt(x)
@@ -371,7 +415,6 @@ def test_sqrt():
         check_second_order_unary(array, sqrt, grad_grad_op)
 
 
-@with_seed()
 def test_cbrt():
     def cbrt(x):
         return nd.cbrt(x)
@@ -389,6 +432,46 @@ def test_cbrt():
         # Only positive numbers
         assert((array > 0).all())
         check_second_order_unary(array, cbrt, grad_grad_op)
+
+
+@xfail_when_nonstandard_decimal_separator
+def test_rsqrt():
+    def rsqrt(x):
+        return nd.rsqrt(x)
+
+    def grad_grad_op(x):
+        return 3/(4 * nd.sqrt(x**5))
+
+    sigma = random.randint(25, 100)
+    mu = random.randint(500, 1000)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        array = sigma * array + mu
+        # Only positive numbers
+        assert((array > 0).all())
+        check_second_order_unary(array, rsqrt, grad_grad_op)
+
+
+@xfail_when_nonstandard_decimal_separator
+def test_rcbrt():
+    def rcbrt(x):
+        return nd.rcbrt(x)
+
+    def grad_grad_op(x):
+        return 4/(9 * nd.cbrt(x**7))
+
+    sigma = random.randint(25, 100)
+    mu = random.randint(500, 1000)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        array = sigma * array + mu
+        # Only positive numbers
+        assert((array > 0).all())
+        check_second_order_unary(array, rcbrt, grad_grad_op)
 
 
 def check_second_order_unary(x, op, grad_grad_op, rtol=None, atol=None):
@@ -510,14 +593,12 @@ def flatten2d_left(x):
     return x.reshape((s_0, s_1))
 
 
-@with_seed()
 def test_dense_backward_flatten():
     print("2nd order gradient for Fully Connected, flatten=True")
     for x in NDArrayGenerator(4,2):
         hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
-        with net.name_scope():
-            net.add(gluon.nn.Dense(hidden, flatten=True))
+        net.add(gluon.nn.Dense(hidden, flatten=True))
         net.initialize(mxnet.initializer.Constant(.5))
         x.attach_grad()
         with autograd.record():
@@ -542,27 +623,25 @@ def test_dense_backward_flatten():
         w_grad_grad_e = nd.dot(o_y, o_x_grad, transpose_a=True)
         x_grad_e = nd.dot(o_y, w)
         x_grad_grad_e = nd.dot(o_y, o_w_grad)
-        ok_(w_grad.shape == w.shape)
-        ok_(w_grad_grad.shape == w.shape)
-        ok_(x_grad.shape == x.shape)
-        ok_(x_grad_grad.shape == x.shape)
+        assert w_grad.shape == w.shape
+        assert w_grad_grad.shape == w.shape
+        assert x_grad.shape == x.shape
+        assert x_grad_grad.shape == x.shape
         w_grad_check = same(flatten2d_right(w_grad), flatten2d_right(w_grad_e))
         w_grad_grad_check = same(flatten2d_right(w_grad_grad), flatten2d_right(w_grad_grad_e))
         x_grad_check = same(flatten2d_right(x_grad), flatten2d_right(x_grad_e))
         x_grad_grad_check = same(flatten2d_right(x_grad_grad), flatten2d_right(x_grad_grad_e))
-        ok_(x_grad_check)
-        ok_(w_grad_check)
-        ok_(x_grad_grad_check)
-        ok_(w_grad_grad_check)
+        assert x_grad_check
+        assert w_grad_check
+        assert x_grad_grad_check
+        assert w_grad_grad_check
 
-@with_seed()
 def test_dense_backward_no_flatten():
     print("2nd order gradient for Fully Connected, flatten=False")
     for x in NDArrayGenerator(5,3):
         hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
-        with net.name_scope():
-            net.add(gluon.nn.Dense(hidden, flatten=False))
+        net.add(gluon.nn.Dense(hidden, flatten=False))
         net.initialize(mxnet.initializer.Constant(.5))
         x.attach_grad()
         with autograd.record():
@@ -595,12 +674,8 @@ def test_dense_backward_no_flatten():
         w_grad_grad_check = same(flatten2d_left(w_grad_grad), flatten2d_left(w_grad_grad_e))
         x_grad_check = same(flatten2d_left(x_grad), flatten2d_left(x_grad_e))
         x_grad_grad_check = same(flatten2d_left(x_grad_grad), flatten2d_left(x_grad_grad_e))
-        ok_(x_grad_check)
-        ok_(w_grad_check)
-        ok_(x_grad_grad_check)
-        ok_(w_grad_grad_check)
+        assert x_grad_check
+        assert w_grad_check
+        assert x_grad_grad_check
+        assert w_grad_grad_check
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

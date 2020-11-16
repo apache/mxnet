@@ -213,7 +213,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<gpu>(SpatialTransformerParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
 #if MXNET_USE_CUDNN == 1
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     if (param.cudnn_off.has_value() && param.cudnn_off.value()) {

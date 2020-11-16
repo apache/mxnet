@@ -35,5 +35,6 @@ computing and the state-of-art deep learning to Julia.
   and apply them to tasks such as image classification and data science challenges.
 
 ## Installation
-* [Ubuntu installation guide]({{'/get_started/ubuntu_setup' | relative_url}})
-* Mac / Windows guides are not available (contributions welcome!)
+* [Ubuntu installation guide]({{'/get_started/ubuntu_setup.html'|relative_url}})
+* [maxOS installation guide]({{'/get_started/osx_setup.html'|relative_url}})
+* [Windows installation guide]({{'/get_started/windows_setup.html'|relative_url}})

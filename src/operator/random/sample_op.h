@@ -29,6 +29,7 @@
 #include <mshadow/base.h>
 #include <string>
 #include <vector>
+#include "../../common/utils.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
@@ -99,9 +100,9 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam>,
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", kFloat32)
-    .add_enum("float64", kFloat64)
-    .add_enum("float16", kFloat16)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -124,9 +125,9 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam>,
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", kFloat32)
-    .add_enum("float64", kFloat64)
-    .add_enum("float16", kFloat16)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -149,9 +150,9 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam>,
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", kFloat32)
-    .add_enum("float64", kFloat64)
-    .add_enum("float16", kFloat16)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -172,9 +173,9 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam>,
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", kFloat32)
-    .add_enum("float64", kFloat64)
-    .add_enum("float16", kFloat16)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -195,9 +196,9 @@ struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam>,
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", kFloat32)
-    .add_enum("float64", kFloat64)
-    .add_enum("float16", kFloat16)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -220,9 +221,9 @@ struct SampleNegBinomialParam : public dmlc::Parameter<SampleNegBinomialParam>,
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", kFloat32)
-    .add_enum("float64", kFloat64)
-    .add_enum("float16", kFloat16)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -245,9 +246,9 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", kFloat32)
-    .add_enum("float64", kFloat64)
-    .add_enum("float16", kFloat16)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -270,8 +271,8 @@ struct SampleRandIntParam : public dmlc::Parameter<SampleRandIntParam>,
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("int32", kInt32)
-    .add_enum("int64", kInt64)
+    .add_enum("int32", mshadow::kInt32)
+    .add_enum("int64", mshadow::kInt64)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to int32 if not defined (dtype=None).");
@@ -746,14 +747,14 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
       dtype = param.dtype;
     } else {
       // Use default
-      dtype = kFloat32;
+      dtype = mxnet::common::GetDefaultDtype();
     }
   }
-  bool dtype_ok = (dtype == kFloat16) || (dtype == kFloat32) ||
-  (dtype == kFloat64);
+  bool dtype_ok = (dtype == mshadow::kFloat16) || (dtype == mshadow::kFloat32) ||
+  (dtype == mshadow::kFloat64);
   CHECK(dtype_ok) << "Output type must be float16, float32, float64: dtype is "
-  << dtype_out << " vs " << kFloat16 << " or " << kFloat32 << " or "
-  << kFloat64;
+  << dtype_out << " vs " << mshadow::kFloat16 << " or " << mshadow::kFloat32 << " or "
+  << mshadow::kFloat64;
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   return true;
 }
@@ -782,12 +783,12 @@ inline bool SampleOpType<SampleRandIntParam>(const nnvm::NodeAttrs& attrs,
       dtype = param.dtype;
     } else {
       // Use default
-      dtype = kInt32;
+      dtype = mshadow::kInt32;
     }
   }
-  bool dtype_ok = (dtype == kInt32) || (dtype == kInt64);
+  bool dtype_ok = (dtype == mshadow::kInt32) || (dtype == mshadow::kInt64);
   CHECK(dtype_ok) << "Output type must be int32, int64: dtype is "
-  << dtype_out << " vs " << kInt32 << " or " << kInt64;
+  << dtype_out << " vs " << mshadow::kInt32 << " or " << mshadow::kInt64;
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   return true;
 }

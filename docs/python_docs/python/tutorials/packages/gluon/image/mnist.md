@@ -47,7 +47,7 @@ Before we define the model, let's first fetch the [MNIST](http://yann.lecun.com/
 
 The following source code downloads and loads the images and the corresponding labels into memory.
 
-```python
+```{.python .input}
 import mxnet as mx
 
 # Fixing the random seed
@@ -63,7 +63,7 @@ Data iterators take care of this by randomly shuffling the inputs. Note that we 
 
 The following source code initializes the data iterators for the MNIST dataset. Note that we initialize two iterators: one for train data and one for test data.
 
-```python
+```{.python .input}
 batch_size = 100
 train_data = mx.io.NDArrayIter(mnist['train_data'], mnist['train_label'], batch_size, shuffle=True)
 val_data = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
@@ -75,7 +75,7 @@ We will cover a couple of approaches for performing the hand written digit recog
 
 Now, let's import required nn modules
 
-```python
+```{.python .input}
 from __future__ import print_function
 import mxnet as mx
 from mxnet import gluon
@@ -96,13 +96,12 @@ The last fully connected layer often has its hidden size equal to the number of 
 
 To do this, we will use [Sequential layer](https://mxnet.io/api/python/docs/api/gluon/_autogen/mxnet.gluon.nn.Sequential.html) type. This is simply a linear stack of neural network layers. `nn.Dense` layers are nothing but the fully connected layers we discussed above.
 
-```python
+```{.python .input}
 # define network
 net = nn.Sequential()
-with net.name_scope():
-    net.add(nn.Dense(128, activation='relu'))
-    net.add(nn.Dense(64, activation='relu'))
-    net.add(nn.Dense(10))
+net.add(nn.Dense(128, activation='relu'))
+net.add(nn.Dense(64, activation='relu'))
+net.add(nn.Dense(10))
 ```
 
 #### Initialize parameters and optimizer
@@ -116,7 +115,7 @@ We will use [Trainer](/api/python/docs/api/gluon/trainer.html) class to apply th
 [SGD optimizer](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.SGD) on the
 initialized parameters.
 
-```python
+```{.python .input}
 gpus = mx.test_utils.list_gpus()
 ctx =  [mx.gpu()] if gpus else [mx.cpu(0), mx.cpu(1)]
 net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
@@ -141,7 +140,7 @@ There are many predefined loss functions in gluon.loss. Here we use
 [softmax_cross_entropy_loss](https://mxnet.io/api/python/gluon/gluon.html#mxnet.gluon.loss.softmax_cross_entropy_loss) for digit classification. We will compute loss and do backward propagation inside
 training scope which is defined by `autograd.record()`.
 
-```python
+```{.python .input}
 %%time
 epoch = 10
 # Use Accuracy as the evaluation metric.
@@ -184,7 +183,7 @@ for i in range(epoch):
 
 After the above training completes, we can evaluate the trained model by running predictions on validation dataset. Since the dataset also has labels for all test images, we can compute the accuracy metric over validation data as follows:
 
-```python
+```{.python .input}
 # Use Accuracy as the evaluation metric.
 metric = mx.metric.Accuracy()
 # Reset the validation data iterator.
@@ -219,21 +218,18 @@ The following source code defines a convolutional neural network architecture ca
 A typical way to write your network is creating a new class inherited from `gluon.Block`
 class. We can define the network by composing and inheriting Block class as follows:
 
-```python
+```{.python .input}
 import mxnet.ndarray as F
 
 class Net(gluon.Block):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
-        with self.name_scope():
-            # layers created in name_scope will inherit name space
-            # from parent layer.
-            self.conv1 = nn.Conv2D(20, kernel_size=(5,5))
-            self.pool1 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
-            self.conv2 = nn.Conv2D(50, kernel_size=(5,5))
-            self.pool2 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
-            self.fc1 = nn.Dense(500)
-            self.fc2 = nn.Dense(10)
+        self.conv1 = nn.Conv2D(20, kernel_size=(5,5))
+        self.pool1 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
+        self.conv2 = nn.Conv2D(50, kernel_size=(5,5))
+        self.pool2 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
+        self.fc1 = nn.Dense(500)
+        self.fc2 = nn.Dense(10)
 
     def forward(self, x):
         x = self.pool1(F.tanh(self.conv1(x)))
@@ -252,7 +248,7 @@ We also imported `mxnet.ndarray` package to use activation functions from `ndarr
 
 Now, We will create the network as follows:
 
-```python
+```{.python .input}
 net = Net()
 ```
 
@@ -268,7 +264,7 @@ Training and prediction can be done in the similar way as we did for MLP.
 
 We will initialize the network parameters as follows:
 
-```python
+```{.python .input}
 # set the context on GPU is available otherwise CPU
 ctx = [mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()]
 net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
@@ -277,7 +273,7 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.03})
 
 #### Training
 
-```python
+```{.python .input}
 # Use Accuracy as the evaluation metric.
 metric = mx.metric.Accuracy()
 softmax_cross_entropy_loss = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -319,7 +315,7 @@ for i in range(epoch):
 
 Finally, we'll use the trained LeNet model to generate predictions for the test data.
 
-```python
+```{.python .input}
 # Use Accuracy as the evaluation metric.
 metric = mx.metric.Accuracy()
 # Reset the validation data iterator.

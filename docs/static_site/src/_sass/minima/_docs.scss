@@ -67,7 +67,9 @@
 }
 
 .docs-faq {
-  background-color: white;
+  background-color: $grey-color-light;
+  padding-top: 20px;
+  padding-bottom: 20px;
 }
 
 .docs-architecture {
@@ -76,4 +78,20 @@
   margin-bottom: 20px;
   padding-top: 20px;
   padding-bottom: 20px;
+}
+
+.docs-dev-guide {
+  background-color: white;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.language-binding-banner {
+  border: 1px solid transparent;
+  border-radius: .25rem;
+  color: #856404;
+  padding: .75rem 1.25rem;
+  margin-bottom: 1rem;
+  background-color: #fff3cd;
+  border-color: #ffeeba;
 }

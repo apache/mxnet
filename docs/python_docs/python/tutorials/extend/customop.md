@@ -26,7 +26,7 @@ Custom operator in python is easy to develop and good for prototyping, but may h
 
 
 
-```python
+```{.python .input}
 import numpy as np
 import mxnet as mx
 from mxnet import gluon, autograd
@@ -42,7 +42,7 @@ This operator implements the standard sigmoid activation function. This is only 
 First we implement the forward and backward computation by sub-classing `mx.operator.CustomOp`:
 
 
-```python
+```{.python .input}
 class Sigmoid(mx.operator.CustomOp):
     def forward(self, is_train, req, in_data, out_data, aux):
         """Implements forward computation.
@@ -75,7 +75,7 @@ class Sigmoid(mx.operator.CustomOp):
 Then we need to register the custom op and describe it's properties like input and output shapes so that mxnet can recognize it. This is done by sub-classing `mx.operator.CustomOpProp`:
 
 
-```python
+```{.python .input}
 @mx.operator.register("sigmoid")  # register with name "sigmoid"
 class SigmoidProp(mx.operator.CustomOpProp):
     def __init__(self):
@@ -110,7 +110,7 @@ class SigmoidProp(mx.operator.CustomOpProp):
 We can now use this operator by calling `mx.nd.Custom`:
 
 
-```python
+```{.python .input}
 x = mx.nd.array([0, 1, 2, 3])
 # attach gradient buffer to x for autograd
 x.attach_grad()
@@ -121,7 +121,7 @@ with autograd.record():
 print(y)
 ```
 
-```python
+```{.python .input}
 # call backward computation
 y.backward()
 # gradient is now saved to the grad buffer we attached previously
@@ -137,7 +137,7 @@ The dense operator performs a dot product between data and weight, then add bias
 ### Forward & backward implementation
 
 
-```python
+```{.python .input}
 class Dense(mx.operator.CustomOp):
     def __init__(self, bias):
         self._bias = bias
@@ -158,7 +158,7 @@ class Dense(mx.operator.CustomOp):
 ### Registration
 
 
-```python
+```{.python .input}
 @mx.operator.register("dense")  # register with name "sigmoid"
 class DenseProp(mx.operator.CustomOpProp):
     def __init__(self, bias):
@@ -192,12 +192,12 @@ class DenseProp(mx.operator.CustomOpProp):
 Parameterized CustomOp are usually used together with Blocks, which holds the parameter.
 
 
-```python
+```{.python .input}
 class DenseBlock(mx.gluon.Block):
     def __init__(self, in_channels, channels, bias, **kwargs):
         super(DenseBlock, self).__init__(**kwargs)
         self._bias = bias
-        self.weight = self.params.get('weight', shape=(channels, in_channels))
+        self.weight = gluon.Parameter('weight', shape=(channels, in_channels))
 
     def forward(self, x):
         ctx = x.context
@@ -207,7 +207,7 @@ class DenseBlock(mx.gluon.Block):
 ### Example usage
 
 
-```python
+```{.python .input}
 dense = DenseBlock(3, 5, 0.1)
 dense.initialize()
 x = mx.nd.uniform(shape=(4, 3))
@@ -218,7 +218,7 @@ print(y)
 ## Using custom operators with fork
 In Linux systems, the default method in multiprocessing to create process is by using fork. If there are unfinished async custom operations when forking, the program will be blocked because of python GIL. Always use sync calls like `wait_to_read` or `waitall` before calling fork.
 
-```python
+```{.python .input}
 x = mx.nd.array([0, 1, 2, 3])
 y = mx.nd.Custom(x, op_type='sigmoid')
 # unfinished async sigmoid operation will cause blocking
@@ -227,7 +227,7 @@ os.fork()
 
 Correctly handling this will make mxnet depend upon libpython, so the workaround now is to ensure that all custom operations are executed before forking process.
 
-```python
+```{.python .input}
 x = mx.nd.array([0, 1, 2, 3])
 y = mx.nd.Custom(x, op_type='sigmoid')
 # force execution by reading y

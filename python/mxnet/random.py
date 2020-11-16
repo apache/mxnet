@@ -19,7 +19,6 @@
 # pylint: disable=no-member, protected-access, unused-import, no-name-in-module
 # pylint: disable=wildcard-import, unused-wildcard-import
 """Random number interface of MXNet."""
-from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB, check_call, integer_types
@@ -56,37 +55,37 @@ def seed(seed_state, ctx="all"):
 
     Example
     -------
-    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
+    >>> print(mx.np.random.normal(shape=(2,2)).asnumpy())
     [[ 1.36481571 -0.62203991]
      [-1.4962182  -0.08511394]]
-    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
+    >>> print(mx.np.random.normal(shape=(2,2)).asnumpy())
     [[ 1.09544981 -0.20014545]
      [-0.20808885  0.2527658 ]]
     # Same results on the same device with the same seed
-    >>> mx.random.seed(128)
-    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
+    >>> mx.np.random.seed(128)
+    >>> print(mx.np.random.normal(shape=(2,2)).asnumpy())
     [[ 0.47400656 -0.75213492]
      [ 0.20251541  0.95352972]]
-    >>> mx.random.seed(128)
-    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
+    >>> mx.np.random.seed(128)
+    >>> print(mx.np.random.normal(shape=(2,2)).asnumpy())
     [[ 0.47400656 -0.75213492]
      [ 0.20251541  0.95352972]]
     # Different results on gpu(0) and gpu(1) with the same seed
-    >>> mx.random.seed(128)
-    >>> print(mx.nd.random.normal(shape=(2,2), ctx=mx.gpu(0)).asnumpy())
+    >>> mx.np.random.seed(128)
+    >>> print(mx.np.random.normal(shape=(2,2), ctx=mx.gpu(0)).asnumpy())
     [[ 2.5020072 -1.6884501]
      [-0.7931333 -1.4218881]]
-    >>> mx.random.seed(128)
-    >>> print(mx.nd.random.normal(shape=(2,2), ctx=mx.gpu(1)).asnumpy())
+    >>> mx.np.random.seed(128)
+    >>> print(mx.np.random.normal(shape=(2,2), ctx=mx.gpu(1)).asnumpy())
     [[ 0.24336822 -1.664805  ]
      [-1.0223296   1.253198  ]]
     # Seeding with `ctx` argument produces identical results on gpu(0) and gpu(1)
-    >>> mx.random.seed(128, ctx=mx.gpu(0))
-    >>> print(mx.nd.random.normal(shape=(2,2), ctx=mx.gpu(0)).asnumpy())
+    >>> mx.np.random.seed(128, ctx=mx.gpu(0))
+    >>> print(mx.np.random.normal(shape=(2,2), ctx=mx.gpu(0)).asnumpy())
     [[ 2.5020072 -1.6884501]
      [-0.7931333 -1.4218881]]
-    >>> mx.random.seed(128, ctx=mx.gpu(1))
-    >>> print(mx.nd.random.normal(shape=(2,2), ctx=mx.gpu(1)).asnumpy())
+    >>> mx.np.random.seed(128, ctx=mx.gpu(1))
+    >>> print(mx.np.random.normal(shape=(2,2), ctx=mx.gpu(1)).asnumpy())
     [[ 2.5020072 -1.6884501]
      [-0.7931333 -1.4218881]]
     """

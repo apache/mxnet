@@ -159,9 +159,17 @@ def collect_test_results_windows(original_file_name, new_file_name) {
 }
 
 
-def docker_run(platform, function_name, use_nvidia, shared_mem = '500m', env_vars = "") {
-  def command = "ci/build.py %ENV_VARS% --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
-  command = command.replaceAll('%ENV_VARS%', env_vars.length() > 0 ? "-e ${env_vars}" : '')
+def docker_run(platform, function_name, use_nvidia = false, shared_mem = '500m', env_vars = [],
+               build_args = "") {
+  def command = "ci/build.py %ENV_VARS% %BUILD_ARGS% --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  if (env_vars instanceof String || env_vars instanceof GString) {
+    env_vars = [env_vars]
+  }
+  env_vars << "BRANCH=${env.BRANCH_NAME}"
+  env_vars = env_vars.collect { "-e ${it}" }
+  def env_vars_str = env_vars.join(' ')
+  command = command.replaceAll('%ENV_VARS%', env_vars_str)
+  command = command.replaceAll('%BUILD_ARGS%', build_args.length() > 0 ? "${build_args}" : '')
   command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
   command = command.replaceAll('%PLATFORM%', platform)
   command = command.replaceAll('%FUNCTION_NAME%', function_name)
@@ -255,6 +263,7 @@ def assign_node_labels(args) {
   //    knowing about the limitations.
   NODE_LINUX_CPU = args.linux_cpu
   NODE_LINUX_GPU = args.linux_gpu
+  NODE_LINUX_GPU_G4 = args.linux_gpu_g4
   NODE_LINUX_GPU_P3 = args.linux_gpu_p3
   NODE_WINDOWS_CPU = args.windows_cpu
   NODE_WINDOWS_GPU = args.windows_gpu

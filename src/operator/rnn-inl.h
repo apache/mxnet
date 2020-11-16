@@ -31,6 +31,7 @@
 #include <mxnet/operator.h>
 #include <mxnet/storage.h>
 #include <algorithm>
+#include <random>
 #include <map>
 #include <vector>
 #include <string>
@@ -41,6 +42,7 @@
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
 #include "./rnn_impl.h"
+#include "../profiler/storage_profiler.h"
 
 #if MXNET_USE_CUDNN == 1
 STATIC_ASSERT_CUDNN_VERSION_GE(7000);
@@ -63,7 +65,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   bool bidirectional, state_outputs;
   int mode;
   float p;
-  int seq_length_, batch_size_, input_size_;
+  index_t seq_length_, batch_size_, input_size_;
 
   bool use_sequence_length;
   dmlc::optional<int> projection_size;
@@ -122,8 +124,8 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   }
 };
 
-inline int GetRnnParamSize(int num_layer,
-                           int input_size,
+inline index_t GetRnnParamSize(int num_layer,
+                           index_t input_size,
                            int state_size,
                            int direction,
                            int mode,
@@ -140,14 +142,14 @@ inline int GetRnnParamSize(int num_layer,
       size *= 3;
       break;
   }
-  int size1 = (input_size + state_size + 2) * size;  // first layer size
-  int size2 = (state_size * direction + state_size + 2) * size;  // other layers size
+  index_t size1 = (input_size + state_size + 2) * size;  // first layer size
+  index_t size2 = (state_size * direction + state_size + 2) * size;  // other layers size
   if (projection_size.has_value()) {
-    int proj_size = projection_size.value();
+    index_t proj_size = projection_size.value();
     size1 = (input_size + proj_size + 2) * size;
     size2 = (proj_size * direction + proj_size + 2) * size;
   }
-  int param_size = size1 + (num_layer - 1) * size2;
+  index_t param_size = size1 + (num_layer - 1) * size2;
   if (projection_size.has_value()) {
     param_size += projection_size.value() * state_size * num_layer * direction;
   }
@@ -182,9 +184,10 @@ inline int GetRnnBiasSize(int num_layer,
  *  - output -> h[t](, c[t] additionally with Lstm) time by time(sz: NxH(x2))
  *  - intermediate y[1...T] as next layer's inputs(sz: TxNxHxD)
  */
-inline size_t GetRNNWorkspaceSize(int seq_length,
-                                  int batch_size,
+inline size_t GetRNNWorkspaceSize(index_t seq_length,
+                                  index_t batch_size,
                                   int hidden_size,
+                                  int projection_size,
                                   int direction,
                                   int mode) {
   size_t size = 0;
@@ -192,7 +195,9 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
     case rnn_enum::kLstm:
       size = seq_length * batch_size * hidden_size * (4 + direction) +  // wx*x + inter-y
           batch_size * hidden_size * 6 +                                // wh*h + h + c
-          seq_length * hidden_size * 8;                    // Used in Backward, Δbx, Δbh
+          seq_length * hidden_size * 8 +                   // Used in Backward, Δbx, Δbh
+          // temporary dy in backward computation for bidirectional layers
+          seq_length * batch_size * hidden_size * (direction - 1 ? direction : 0);
       break;
     case rnn_enum::kGru:
       // Differs with Lstm, the outputs of three gates are also held in memory
@@ -213,8 +218,8 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
 
 inline size_t GetRNNReserveSpaceSize(int num_layer,
                                      int direction,
-                                     int seq_length,
-                                     int batch_size,
+                                     index_t seq_length,
+                                     index_t batch_size,
                                      int hidden_size,
                                      int mode) {
   size_t size = 0;
@@ -278,9 +283,9 @@ void RNNForwardTraining(DType* ws,
                         bool state_outputs,
                         const int num_layers,
                         const int direction,
-                        const int seq_length,
-                        const int batch_size,
-                        const int input_size,
+                        const index_t seq_length,
+                        const index_t batch_size,
+                        const index_t input_size,
                         const int state_size,
                         DType* x_ptr,
                         DType* hx_ptr,
@@ -291,23 +296,24 @@ void RNNForwardTraining(DType* ws,
                         DType* hy_ptr,
                         DType* cy_ptr,
                         const float dropout,
-                        int mode) {
+                        int mode,
+                        std::mt19937 &rnd_engine) {  // NOLINT(runtime/references)
   switch (mode) {
     case rnn_enum::kLstm:
       LstmForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                  batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
-                                 w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, dropout);
+                                 w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, dropout, rnd_engine);
       break;
     case rnn_enum::kGru:
       GruForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                 batch_size, input_size, state_size, x_ptr, hx_ptr,
-                                w_ptr, y_ptr, hy_ptr, dropout);
+                                w_ptr, y_ptr, hy_ptr, dropout, rnd_engine);
       break;
     case rnn_enum::kRnnTanh:
     case rnn_enum::kRnnRelu:
       VanillaRNNForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                        batch_size, input_size, state_size, x_ptr, hx_ptr,
-                                       w_ptr, y_ptr, hy_ptr, dropout, mode);
+                                       w_ptr, y_ptr, hy_ptr, dropout, mode, rnd_engine);
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -320,10 +326,11 @@ void RNNForwardInference(DType* ws,
                          bool state_outputs,
                          const int num_layers,
                          const int direction,
-                         const int seq_length,
-                         const int batch_size,
-                         const int input_size,
+                         const index_t seq_length,
+                         const index_t batch_size,
+                         const index_t input_size,
                          const int state_size,
+                         const int projection_size,
                          DType* x_ptr,
                          DType* hx_ptr,
                          DType* cx_ptr,
@@ -336,8 +343,8 @@ void RNNForwardInference(DType* ws,
   switch (mode) {
     case rnn_enum::kLstm:
       LstmForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
-                                  batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
-                                  w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr);
+                                  batch_size, input_size, state_size, projection_size,
+                                  x_ptr, hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr);
       break;
     case rnn_enum::kGru:
       GruForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
@@ -361,9 +368,9 @@ void RNNBackward(DType* ws,
                  DType* rs,
                  const int num_layers,
                  const int direction,
-                 const int seq_length,
-                 const int batch_size,
-                 const int input_size,
+                 const index_t seq_length,
+                 const index_t batch_size,
+                 const index_t input_size,
                  const int state_size,
                  DType* x_ptr,
                  DType* hx_ptr,
@@ -511,10 +518,7 @@ class RNNOp {
       this->temp_init_space_ = false;
       this->reserve_cpu_space_size_ = 0;
       this->temp_cpu_space_size_ = 0;
-      if (param_.projection_size.has_value()) {
-        LOG(FATAL) <<
-            "hidden layer projection is only supported for GPU with CuDNN later than 7.1.1";
-      }
+
       if (param_.lstm_state_clip_min.has_value()
           || param_.lstm_state_clip_max.has_value()) {
         LOG(FATAL) << "LSTM state clipping is only supported for GPU with CuDNN later than 7.2.1";
@@ -595,7 +599,7 @@ class RNNOp {
     const int bsize = GetRnnBiasSize(param_.num_layers, param_.state_size, direction, param_.mode);
     DType* b_ptr = w.dptr_ + w.shape_[0] - bsize;
 
-    DType* hy_ptr = NULL;
+    DType* hy_ptr = nullptr;
     if (param_.state_outputs) {
       hy_ptr = out_data[rnn_enum::kStateOut].dptr<DType>();
     }
@@ -603,8 +607,8 @@ class RNNOp {
 
 #if MXNET_USE_CUDNN_GE_7200
     Tensor<cpu, 1, char> host_workspace;
-    int *sequence_length_cpu_int = NULL;
-    IType *sequence_length_cpu_itype = NULL;
+    int *sequence_length_cpu_int = nullptr;
+    IType *sequence_length_cpu_itype = nullptr;
 
     if (ctx_.dev_type == kGPU) {
       int host_workspace_bytes =
@@ -648,8 +652,8 @@ class RNNOp {
       LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN version >= 7.2";
 #endif
     }
-    DType* cx_ptr = NULL;
-    DType* cy_ptr = NULL;
+    DType* cx_ptr = nullptr;
+    DType* cy_ptr = nullptr;
     if (param_.mode == rnn_enum::kLstm) {
       cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
     }
@@ -842,10 +846,16 @@ class RNNOp {
     }
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
 
-    if (ctx_.dev_type == kCPU) {
+#if !defined(__CUDACC__)  // cuda doesn't support C++17
+    if constexpr (std::is_same<xpu, cpu>::value) {
+      int projection_size = 0;
+      if (param_.projection_size.has_value()) {
+        projection_size = param_.projection_size.value();
+      }
+
       // allocate temp space
       const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-          param_.state_size, direction, param_.mode);
+          param_.state_size, projection_size, direction, param_.mode);
       if (!temp_init_space_ || temp_cpu_space_size_ < work_cpu_space_size) {
         temp_cpu_space_size_ = work_cpu_space_size;
         temp_cpu_space_ = NDArray(TShape({static_cast<dim_t>(temp_cpu_space_size_)}), ctx_,
@@ -855,7 +865,13 @@ class RNNOp {
       DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.data().dptr_);
 
       if (ctx.is_train || ctx.need_grad) {
+        mshadow::Random<cpu, unsigned> *prnd = ctx.requested[0].get_random<xpu, unsigned int>(s);
+        std::mt19937 &rnd_engine = prnd->GetRndEngine();
+
         // allocate reserve space
+        if (param_.projection_size.has_value()) {
+          LOG(FATAL) << "No training support for LSTM with projection on CPU currently.";
+        }
 
         const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                                      param_.seq_length_, param_.batch_size_,
@@ -886,7 +902,8 @@ class RNNOp {
                                   hy_ptr,
                                   cy_ptr,
                                   param_.p,
-                                  param_.mode);
+                                  param_.mode,
+                                  rnd_engine);
       } else {
         RNNForwardInference<DType>(work_cpu_space,
                                    param_.state_outputs,
@@ -896,6 +913,7 @@ class RNNOp {
                                    param_.batch_size_,
                                    param_.input_size_,
                                    param_.state_size,
+                                   projection_size,
                                    x.dptr_,
                                    hx.dptr_,
                                    cx_ptr,
@@ -907,6 +925,7 @@ class RNNOp {
                                    param_.mode);
       }
     }
+#endif
   }
 
   void Backward(const OpContext &ctx,
@@ -969,14 +988,14 @@ class RNNOp {
 
     DType* db_ptr = dw.dptr_ + w.shape_[0] - bsize;
 
-    DType * dhy_ptr = NULL;
+    DType * dhy_ptr = nullptr;
     if (param_.state_outputs) {
       dhy_ptr = out_grad[rnn_enum::kStateOut].dptr<DType>();
     }
 
-    DType* dcx_ptr = NULL;
-    DType* dcy_ptr = NULL;
-    DType* cx_ptr = NULL;
+    DType* dcx_ptr = nullptr;
+    DType* dcy_ptr = nullptr;
+    DType* cx_ptr = nullptr;
 
     if (param_.mode == rnn_enum::kLstm) {
       CHECK_NE(req[rnn_enum::kStateCell], kAddTo) << "AddTo is not supported for state cell";
@@ -1096,10 +1115,17 @@ class RNNOp {
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
 
     if (ctx_.dev_type == kCPU) {
+      int projection_size = 0;
+      if (param_.projection_size.has_value()) {
+        // TODO(zixuanweeei): Add training support for LSTM with projection on CPU.
+        // projection_size = param_.projection_size.value();
+        LOG(FATAL) << "No training support for LSTM with projection on CPU currently.";
+      }
+
       // allocate temp space
       const size_t work_cpu_space_size =
-          GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                              param_.state_size, direction, param_.mode);
+          GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_, param_.state_size,
+                              projection_size, direction, param_.mode);
       if (!temp_init_space_ || temp_cpu_space_size_ != work_cpu_space_size) {
         LOG(FATAL) << "Check temp init error";
       }
@@ -1319,17 +1345,8 @@ class RNNOp {
                                             strideA));
 
       // Create Dropout descriptors
-      if (param_.p > 0) {
-         ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc
-            (&dropout_desc_, s, 1.0f - param_.p, seed_);
-      }
-      // Only update the probability by passing in a null dropout_states ptr
-      DType* dropout_states = NULL;
-      size_t dropout_bytes = 0;
-      CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_, s->dnn_handle_,
-                                           param_.p,  // discard probability
-                                           dropout_states, dropout_bytes,
-                                           seed_));
+      ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc
+         (&dropout_desc_, s, param_.p);
 
       // RNN descriptors
       // adopt pseudo-fp16 for all architectures
@@ -1385,6 +1402,9 @@ class RNNOp {
       workspace_size_ = workspace_byte_ / sizeof(DType);
       // Allocate the reserve space
       reserve_space_ = Storage::Get()->Alloc(reserve_space_byte_, Context::GPU(s->dev_id));
+      reserve_space_.profiler_scope = "cudnn_rnn:";
+      reserve_space_.name = "reserve_space";
+      profiler::GpuDeviceStorageProfiler::Get()->UpdateStorageInfo(reserve_space_);
       // Check that number of params are correct
       size_t cudnn_param_size;
       CUDNN_CALL(cudnnGetRNNParamsSize(s->dnn_handle_,
@@ -1420,15 +1440,15 @@ class RNNOp {
       //   for (int j = 0; j < n; ++j) {
       //     CHECK_EQ(cudnnGetRNNLinLayerMatrixParams(s->dnn_handle_, rnn_desc_,
       //       i, x_desc_vec_[0], w_desc_, 0, j, m_desc, (void**)&p), CUDNN_STATUS_SUCCESS);
-      //     LOG(INFO) << ((int64_t)(p - NULL))/sizeof(DType) - last;
-      //     last = ((int64_t)(p - NULL))/sizeof(DType);
+      //     LOG(INFO) << ((int64_t)(p - nullptr))/sizeof(DType) - last;
+      //     last = ((int64_t)(p - nullptr))/sizeof(DType);
       //     cudnnDataType_t t;
       //     cudnnTensorFormat_t f;
       //     int ndim = 5;
       //     int dims[5] = {0, 0, 0, 0, 0};
       //     CHECK_EQ(cudnnGetFilterNdDescriptor(m_desc, ndim, &t, &f, &ndim, &dims[0]),
       //       CUDNN_STATUS_SUCCESS);
-      //     LOG(INFO) << "w: " <<  i << " " << j << " " << ((int64_t)(p - NULL))/sizeof(DType);
+      //     LOG(INFO) << "w: " <<  i << " " << j << " " << ((int64_t)(p - nullptr))/sizeof(DType);
       //     for (int i = 0; i < ndim; ++i) LOG(INFO) << dims[i];
       //   }
       // }
@@ -1437,9 +1457,9 @@ class RNNOp {
       //   for (int j = 0; j < n; ++j) {
       //     CHECK_EQ(cudnnGetRNNLinLayerBiasParams(s->dnn_handle_, rnn_desc_, i, x_desc_vec_[0],
       //       w_desc_, 0, j, m_desc, (void**)&p), CUDNN_STATUS_SUCCESS);
-      //     LOG(INFO) << ((int64_t)(p - NULL))/sizeof(DType) - last;
-      //     last = ((int64_t)(p - NULL))/sizeof(DType);
-      //     LOG(INFO) << "b: " << i << " " << j << " " << ((int64_t)(p - NULL))/sizeof(DType);
+      //     LOG(INFO) << ((int64_t)(p - nullptr))/sizeof(DType) - last;
+      //     last = ((int64_t)(p - nullptr))/sizeof(DType);
+      //     LOG(INFO) << "b: " << i << " " << j << " " << ((int64_t)(p - nullptr))/sizeof(DType);
       //   }
       // }
     }
@@ -1476,7 +1496,6 @@ class RNNOp {
   cudnnRNNInputMode_t input_mode_;
   cudnnDropoutDescriptor_t dropout_desc_;
   Storage::Handle reserve_space_;
-  uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   size_t workspace_byte_, reserve_space_byte_;
   int workspace_size_;
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;

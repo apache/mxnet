@@ -18,13 +18,12 @@
 # under the License.
 
 if [ $# -lt 1 ]; then
-    >&2 echo "Usage: build.sh <VARIANT> <TARGET>"
+    >&2 echo "Usage: build.sh <VARIANT>"
 fi
 
 export CURDIR=$PWD
 export DEPS_PATH=$PWD/staticdeps
 export VARIANT=$(echo $1 | tr '[:upper:]' '[:lower:]')
-export STATIC_BUILD_TARGET=$(echo $2 | tr '[:upper:]' '[:lower:]')
 export PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
 
 if [[ $VARIANT == darwin* ]]; then
@@ -49,15 +48,13 @@ else
 fi
 export MAKE="make $ADD_MAKE_FLAG"
 
-export CC="gcc -fPIC"
-export CXX="g++ -fPIC"
+export CC="gcc"
+export CXX="g++"
+export CFLAGS="${CFLAGS:+${CFLAGS}} -fPIC -mno-avx"
+export CXXFLAGS="${CXXFLAGS:+${CXXFLAGS}} -fPIC -mno-avx"
 export FC="gfortran"
 export PKG_CONFIG_PATH=$DEPS_PATH/lib/pkgconfig:$DEPS_PATH/lib64/pkgconfig:$DEPS_PATH/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
 export CPATH=$DEPS_PATH/include:$CPATH
-
-if [[ $PLATFORM == 'linux' && $VARIANT == cu* ]]; then
-    source tools/setup_gpu_build_tools.sh $VARIANT $DEPS_PATH
-fi
 
 mkdir -p $DEPS_PATH
 
@@ -69,8 +66,7 @@ mkdir -p licenses
 cp tools/dependencies/LICENSE.binary.dependencies licenses/
 cp NOTICE licenses/
 cp LICENSE licenses/
-cp DISCLAIMER licenses/
-
+cp DISCLAIMER-WIP licenses/
 
 # Build mxnet
 source tools/staticbuild/build_lib.sh

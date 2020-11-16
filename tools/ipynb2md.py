@@ -41,12 +41,12 @@ def remove_outputs(nb):
 
 
 def clear_notebook(old_ipynb, new_ipynb):
-    with io.open(old_ipynb, 'r') as f:
+    with open(old_ipynb, 'r') as f:
         nb = nbformat.read(f, nbformat.NO_CONVERT)
 
     remove_outputs(nb)
 
-    with io.open(new_ipynb, 'w', encoding='utf8') as f:
+    with open(new_ipynb, 'w', encoding='utf8') as f:
         nbformat.write(nb, f, nbformat.NO_CONVERT)
 
 

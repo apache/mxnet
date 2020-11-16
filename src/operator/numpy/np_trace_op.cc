@@ -54,7 +54,7 @@ inline bool NumpyTraceOpShape(const nnvm::NodeAttrs& attrs,
 
 DMLC_REGISTER_PARAMETER(NumpyTraceParam);
 
-NNVM_REGISTER_OP(_np_trace)
+NNVM_REGISTER_OP(_npi_trace)
 .describe(R"code(Computes the sum of the diagonal elements of a matrix.
 Input is a tensor *A* of dimension *n >= 2*.
 
@@ -83,11 +83,11 @@ Examples::
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyTraceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", NumpyTraceOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_trace"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_trace"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyTraceParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_np_trace)
+NNVM_REGISTER_OP(_backward_npi_trace)
 .set_attr_parser(ParamParser<NumpyTraceParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)

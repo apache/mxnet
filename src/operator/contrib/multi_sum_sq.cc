@@ -18,10 +18,10 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2020 by Contributors
  * \file multi_sum_sq.cc
  * \brief vectorized sum or squared over multiple arrays operators
- * \author Clement Fuji Tsang, Andrei Ivanov
+ * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez, Shuai Zheng
  */
 
 #include "./multi_sum_sq-inl.h"
@@ -52,31 +52,45 @@ NNVM_REGISTER_OP(multi_sum_sq)
     return ret;
   })
 .set_attr<FCompute>("FCompute<cpu>", MultiSumSq<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .add_argument("data", "NDArray-or-Symbol[]", "Arrays")
 .add_arguments(MultiSumSqParam::__FIELDS__());
 
+template<>
+size_t GetRequiredStorageMultiSumSq<cpu>(const std::vector<TBlob> &inputs,
+                                         int* param_max_chunks_per_tensor) {
+  return 0;
+}
+
 template<typename DType>
-inline void CalcSumSq(const std::vector<TBlob> &inputs, int nInputs,
-                      float *out_ptr, mshadow::Stream<cpu> *s) {
+inline void CalcSumSq(const std::vector<TBlob> &inputs, int n_inputs,
+                      float *out_ptr, mshadow::Stream<cpu> *s, float scale) {
   int i;
   size_t j;
 #pragma omp parallel for private(i, j)
-  for (i = 0; i < nInputs; ++i) {  // array index in inputs
+  for (i = 0; i < n_inputs; ++i) {  // array index in inputs
     float sum = 0;
     const auto address = inputs[i].FlatTo2D<cpu, DType>(s).dptr_;
-    const auto jMax = inputs[i].shape_.Size();
-    for (j = 0; j < jMax; ++j)
-      sum += address[j] * address[j];
-
+    const auto j_max = inputs[i].shape_.Size();
+    for (j = 0; j < j_max; ++j) {
+      auto val = static_cast<float>(address[j]);
+      if (scale != 1.0f) {
+         val *= scale;
+      }
+      sum += val * val;
+    }
     out_ptr[i] = sum;
   }
 }
 
 template<>
-void MultiSumSqRun<cpu>(const std::vector<TBlob> &inputs, int nInputs,
-                        float *out_ptr, mshadow::Stream<cpu> *s) {
+void MultiSumSqRun<cpu>(const std::vector<TBlob> &inputs, int n_inputs,
+                        float *out_ptr, const OpContext &ctx, float scale) {
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType,
-    CalcSumSq<DType>(inputs, nInputs, out_ptr, s);
+    CalcSumSq<DType>(inputs, n_inputs, out_ptr, ctx.get_stream<cpu>(), scale);
   )
 }
 

@@ -53,7 +53,7 @@ The dependencies could be categorized by several groups: BLAS libraries, CPU-bas
 
 | Dependencies  | MXNet Version |
 | :------------: |:-------------:| 
-|OpenBLAS| 0.3.3 |
+|OpenBLAS| 0.3.9 |
 |MKLDNN| 0.19 | 
 |CUDA| 10.1 |
 |cuDNN| 7.5.1 |
@@ -190,7 +190,7 @@ cd incubator-mxnet
 # http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/
 
 # Build PyPi package
-tools/staticbuild/build.sh cu100mkl pip
+tools/staticbuild/build.sh cu100mkl
 
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
@@ -204,7 +204,7 @@ pip install -e python
 export NCCL_DEBUG=VERSION
 vim tests/python/gpu/test_nccl.py
 # Remove @unittest.skip("Test requires NCCL library installed and enabled during build") then run
-nosetests --verbose tests/python/gpu/test_nccl.py
+pytest --verbose tests/python/gpu/test_nccl.py
 # test_nccl.test_nccl_pushpull ... NCCL version 2.4.2+cuda10.0
 # ok
 # ----------------------------------------------------------------------
@@ -228,7 +228,6 @@ Please run performance test aginast the MXNet you build before raising the PR.
 - [ ] Python/setup.py
 - [ ] tools/pip/setup.py
 - [ ] ci/docker/install/requirements
-- [ ] ci/docker/install/ubuntu_publish.sh
 - [ ] ci/docker/install/ubuntu_python.sh
 - [ ] ci/qemu/mxnet_requirements.txt
 - [ ] docs/install/requirements.txt 
@@ -279,7 +278,7 @@ sudo apt-get install -y git \
 2. Build PyPi package
 ```
 # Update the dependency under tools/dependencies, then
-tools/staticbuild/build.sh mkl pip
+tools/staticbuild/build.sh mkl
 
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
@@ -328,7 +327,7 @@ sudo apt-get install -y git \
 2. Build PyPi package
 ```
 # Update the dependency under tools/dependencies, then
-tools/staticbuild/build.sh mkl pip
+tools/staticbuild/build.sh mkl
 
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 

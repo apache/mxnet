@@ -16,7 +16,7 @@
    under the License.
 
 mxnet.contrib
-===============
+=============
 
 .. automodule:: mxnet.contrib
 
@@ -24,12 +24,6 @@ Contributed modules
 -------------------
 
 .. container:: cards
-
-   .. card::
-      :title: contrib.autograd
-      :link: autograd/index.html
-
-      Functions for Automatic differentiation.
 
    .. card::
       :title: contrib.io
@@ -48,12 +42,6 @@ Contributed modules
       :link: onnx/index.html
 
       ONNX support.
-
-   .. card::
-      :title: contrib.quantization
-      :link: quantization/index.html
-
-      Functions for quantization.
 
    .. card::
       :title: contrib.symbol

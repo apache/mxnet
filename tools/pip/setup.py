@@ -18,19 +18,21 @@
 # coding: utf-8
 # pylint: disable=invalid-name, exec-used
 """Setup mxnet package for pip."""
-from __future__ import absolute_import
 from datetime import datetime
 import os
 import sys
 import shutil
 import platform
+from setuptools import setup, find_packages
 
 if platform.system() == 'Linux':
-    sys.argv.append('--universal')
-    sys.argv.append('--plat-name=manylinux1_x86_64')
-
-from setuptools import setup, find_packages
-from setuptools.dist import Distribution
+    sys.argv.append('--python-tag')
+    sys.argv.append('py3')
+    sys.argv.append('--plat-name=manylinux2014_x86_64')
+elif platform.system() == 'Darwin':
+    sys.argv.append('--python-tag')
+    sys.argv.append('py3')
+    sys.argv.append('--plat-name=macosx_10_13_x86_64')
 
 # We can not import `mxnet.info.py` in setup.py directly since mxnet/__init__.py
 # Will be invoked which introduces dependences
@@ -56,15 +58,12 @@ if not travis_tag and not is_release:
 elif travis_tag.startswith('patch-'):
     __version__ = os.environ['TRAVIS_TAG'].split('-')[1]
 
-class BinaryDistribution(Distribution):
-    def has_ext_modules(self):
-        return platform.system() == 'Darwin'
-
 
 DEPENDENCIES = [
     'numpy<2.0.0,>1.16.0',
     'requests>=2.20.0,<3',
-    'graphviz<0.9.0,>=0.8.1'
+    'graphviz<0.9.0,>=0.8.1',
+    'contextvars;python_version<"3.7"'
 ]
 
 shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet'), ignore_errors=True)
@@ -87,7 +86,6 @@ shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/im2rec.py'), os.path.jo
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/kill-mxnet.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/parse_log.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/diagnose.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/tools/caffe_converter'), os.path.join(CURRENT_DIR, 'mxnet/tools/caffe_converter'))
 shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/tools/bandwidth'), os.path.join(CURRENT_DIR, 'mxnet/tools/bandwidth'))
 
 # copy headers to mxnet package
@@ -104,56 +102,66 @@ shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mshadow/mshadow'
 shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/tvm/nnvm/include/nnvm'),
                 os.path.join(CURRENT_DIR, 'mxnet/include/nnvm'))
 
+# copy cc file for mxnet extensions
+shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/src/lib_api.cc'),
+            os.path.join(CURRENT_DIR, 'mxnet/src'))
+
 package_name = 'mxnet'
 
 variant = os.environ['mxnet_variant'].upper()
 if variant != 'CPU':
     package_name = 'mxnet_{0}'.format(variant.lower())
 
+def skip_markdown_comments(md):
+    lines = md.splitlines()
+    for i in range(len(lines)):
+        if lines[i].strip():
+            if not lines[i].startswith('<!--') or not lines[i].endswith('-->'):
+                return '\n'.join(lines[i:])
+
 with open('doc/PYPI_README.md') as readme_file:
-    long_description = readme_file.read()
+    long_description = skip_markdown_comments(readme_file.read())
 
 with open('doc/{0}_ADDITIONAL.md'.format(variant)) as variant_doc:
-    long_description = long_description + variant_doc.read()
+    long_description = long_description + skip_markdown_comments(variant_doc.read())
 
-# pypi only supports rst, so use pandoc to convert
-import pypandoc
-if platform.system() == 'Darwin':
-    pypandoc.download_pandoc()
-long_description = pypandoc.convert_text(long_description, 'rst', 'md')
 short_description = 'MXNet is an ultra-scalable deep learning framework.'
 libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
 else:
-    if variant.startswith('CU100'):
-        libraries.append('CUDA-10.0')
-    elif variant.startswith('CU92'):
-        libraries.append('CUDA-9.2')
-    elif variant.startswith('CU91'):
-        libraries.append('CUDA-9.1')
-    elif variant.startswith('CU90'):
-        libraries.append('CUDA-9.0')
-    elif variant.startswith('CU80'):
-        libraries.append('CUDA-8.0')
-    elif variant.startswith('CU75'):
-        libraries.append('CUDA-7.5')
-    if variant.endswith('MKL'):
-        libraries.append('MKLDNN')
+    if variant.startswith('CU110'):
+        libraries.append('CUDA-11.0')
+    elif variant.startswith('CU102'):
+        libraries.append('CUDA-10.2')
+    elif variant.startswith('CU101'):
+        libraries.append('CUDA-10.1')
+
+from mxnet.runtime import Features
+if Features().is_enabled("MKLDNN"):
+    libraries.append('MKLDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
-if variant.endswith('MKL'):
-    if platform.system() == 'Darwin':
-    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
+if Features().is_enabled("MKLDNN"):
+    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':
-    shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libgfortran.so.3'), os.path.join(CURRENT_DIR, 'mxnet'))
-    package_data['mxnet'].append('mxnet/libgfortran.so.3')
-    shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libquadmath.so.0'), os.path.join(CURRENT_DIR, 'mxnet'))
-    package_data['mxnet'].append('mxnet/libquadmath.so.0')
+    libdir, mxdir = os.path.dirname(LIB_PATH[0]), os.path.join(CURRENT_DIR, 'mxnet')
+    if os.path.exists(os.path.join(libdir, 'libgfortran.so.3')):
+        shutil.copy(os.path.join(libdir, 'libgfortran.so.3'), mxdir)
+        package_data['mxnet'].append('mxnet/libgfortran.so.3')
+    elif os.path.exists(os.path.join(libdir, 'libgfortran.so.4')):
+        shutil.copy(os.path.join(libdir, 'libgfortran.so.4'), mxdir)
+        package_data['mxnet'].append('mxnet/libgfortran.so.4')
+    elif os.path.exists(os.path.join(libdir, 'libgfortran.so.5')):
+        shutil.copy(os.path.join(libdir, 'libgfortran.so.5'), mxdir)
+        package_data['mxnet'].append('mxnet/libgfortran.so.5')
+    if os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
+        shutil.copy(os.path.join(libdir, 'libopenblas.so.0'), mxdir)
+        package_data['mxnet'].append('mxnet/libopenblas.so.0')
 
 # Copy licenses and notice
 for f in os.listdir('mxnet/licenses'):
@@ -168,13 +176,13 @@ _generate_op_module_signature('mxnet', 'ndarray', _generate_ndarray_function_cod
 setup(name=package_name,
       version=__version__,
       long_description=long_description,
+      long_description_content_type='text/markdown',
       description=short_description,
       zip_safe=False,
       packages=find_packages(),
       package_data=package_data,
       include_package_data=True,
       install_requires=DEPENDENCIES,
-      distclass=BinaryDistribution,
       license='Apache 2.0',
       classifiers=[ # https://pypi.org/pypi?%3Aaction=list_classifiers
           'Development Status :: 5 - Production/Stable',
@@ -182,15 +190,11 @@ setup(name=package_name,
           'Intended Audience :: Education',
           'Intended Audience :: Science/Research',
           'License :: OSI Approved :: Apache Software License',
-          'Programming Language :: C++',
           'Programming Language :: Cython',
-          'Programming Language :: Other',  # R, Scala
-          'Programming Language :: Perl',
           'Programming Language :: Python',
-          'Programming Language :: Python :: 2.7',
-          'Programming Language :: Python :: 3.4',
-          'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
           'Programming Language :: Python :: Implementation :: CPython',
           'Topic :: Scientific/Engineering',
           'Topic :: Scientific/Engineering :: Artificial Intelligence',

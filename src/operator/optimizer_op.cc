@@ -43,6 +43,8 @@ DMLC_REGISTER_PARAMETER(FtrlParam);
 DMLC_REGISTER_PARAMETER(SignSGDParam);
 DMLC_REGISTER_PARAMETER(SignumParam);
 DMLC_REGISTER_PARAMETER(AdagradParam);
+DMLC_REGISTER_PARAMETER(LambUpdatePhaseOneParam);
+DMLC_REGISTER_PARAMETER(LambUpdatePhaseTwoParam);
 
 NNVM_REGISTER_OP(signsgd_update)
 .describe(R"code(Update function for SignSGD optimizer.
@@ -110,7 +112,6 @@ struct SGDMomStdDnsRspDnsKernel<req, cpu> {
     DType* mom_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
     const DType momentum, const DType lr, const DType wd, const DType rescale_grad) {
-    const DType rate = lr * wd;
     const bool non_zero = (i == 0) ? prefix_sum[0] > 0
                                    : prefix_sum[i] > prefix_sum[i-1];
 
@@ -120,17 +121,13 @@ struct SGDMomStdDnsRspDnsKernel<req, cpu> {
       const index_t data_i = row_i + j;
       const DType grad = non_zero ? grad_data[grad_i + j]
                                   : static_cast<DType>(0);
+      DType grad_rescaled = rescale_grad * grad;
       if (clip_gradient >= 0.0f) {
-        mom_data[data_i] = momentum * mom_data[data_i]
-                - rate * weight_data[data_i]
-                - lr *
-                mshadow_op::clip::Map(rescale_grad * grad,
-                                      clip_gradient);
-      } else {
-        mom_data[data_i] = momentum * mom_data[data_i]
-                  - rate * weight_data[data_i]
-                  - lr * rescale_grad * grad;
+        grad_rescaled = mshadow_op::clip::Map(grad_rescaled, clip_gradient);
       }
+      grad_rescaled += wd * weight_data[data_i];
+      mom_data[data_i] *= momentum;
+      mom_data[data_i] -= lr * grad_rescaled;
       KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + mom_data[data_i]);
     }
   }
@@ -206,20 +203,16 @@ struct AdamStdDnsRspDnsKernel<req, cpu> {
     const RType grad_i = (prefix_sum[i]-1) * row_length;
     for (index_t j = 0; j < row_length; j++) {
       const index_t data_i = row_i + j;
-      const DType grad_rescaled = non_zero ? static_cast<DType>(
-                                               grad_data[grad_i + j] * rescale_grad +
-                                               weight_data[data_i] * wd)
-                                           : static_cast<DType>(weight_data[data_i] * wd);
+      DType grad_rescaled = non_zero ? static_cast<DType>(
+                                         grad_data[grad_i + j] * rescale_grad)
+                                     : static_cast<DType>(0);
       if (clip_gradient >= 0.0f) {
-        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) *
-                            clip::Map(grad_rescaled, clip_gradient);
-        var_data[data_i] =  beta2 * var_data[data_i] + (1.f - beta2) * square::Map(
-                            clip::Map(grad_rescaled, clip_gradient));
-      } else {
-        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
-        var_data[data_i] = beta2 * var_data[data_i] +
-                           (1.f - beta2) * square::Map(grad_rescaled);
+        grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
       }
+      grad_rescaled += weight_data[data_i] * wd;
+      mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
+      var_data[data_i] = beta2 * var_data[data_i] +
+                         (1.f - beta2) * square::Map(grad_rescaled);
       KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] - lr * mean_data[data_i] /
                     (square_root::Map(var_data[data_i]) + epsilon));
     }
@@ -396,6 +389,7 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
     const MultiSGDMomParam& param = dmlc::get<MultiSGDMomParam>(attrs.parsed);
+    ret.reserve(param.num_weights);
     for (int i = 0; i < param.num_weights; ++i) {
       ret.push_back(i * 3 + 2);
     }
@@ -439,6 +433,7 @@ It updates the weights using::
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
     const MultiSGDParam& param = dmlc::get<MultiSGDParam>(attrs.parsed);
+    ret.reserve(param.num_weights);
     for (int i = 0; i < param.num_weights; ++i) {
       ret.push_back(i * 3 + 2);
     }
@@ -778,7 +773,7 @@ gradient and :math:`E[g^2]_t` is the decaying average over past squared gradient
 The :math:`E[g^2]_t` is given by:
 
 .. math::
-  E[g^2]_t = \gamma * E[g^2]_{t-1} + (1-\gamma) * g_t^2
+  E[g^2]_t = \rho * E[g^2]_{t-1} + (1-\rho) * g_t^2
 
 The update step is
 
@@ -789,7 +784,7 @@ The RMSProp code follows the version in
 http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
 Tieleman & Hinton, 2012.
 
-Hinton suggests the momentum term :math:`\gamma` to be 0.9 and the learning rate
+Hinton suggests the momentum term :math:`\rho` to be 0.9 and the learning rate
 :math:`\eta` to be 0.001.
 
 )code" ADD_FILELINE)
@@ -817,19 +812,19 @@ Define :math:`E[g^2]_t` is the decaying average over past squared gradient and
 :math:`E[g]_t` is the decaying average over past gradient.
 
 .. math::
-  E[g^2]_t = \gamma_1 * E[g^2]_{t-1} + (1 - \gamma_1) * g_t^2\\
-  E[g]_t = \gamma_1 * E[g]_{t-1} + (1 - \gamma_1) * g_t\\
-  \Delta_t = \gamma_2 * \Delta_{t-1} - \frac{\eta}{\sqrt{E[g^2]_t - E[g]_t^2 + \epsilon}} g_t\\
+  E[g^2]_t = \rho * E[g^2]_{t-1} + (1 - \rho) * g_t^2\\
+  E[g]_t = \rho * E[g]_{t-1} + (1 - \rho) * g_t\\
+  momentum_t = \gamma * momentum_{t-1} - \frac{\eta}{\sqrt{E[g^2]_t - E[g]_t^2 + \epsilon}} g_t\\
 
 The update step is
 
 .. math::
-  \theta_{t+1} = \theta_t + \Delta_t
+  \theta_{t+1} = \theta_t + momentum_t
 
 The RMSPropAlex code follows the version in
 http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 
-Graves suggests the momentum term :math:`\gamma_1` to be 0.95, :math:`\gamma_2`
+Graves suggests the momentum term :math:`\rho` to be 0.95, :math:`\gamma`
 to be 0.9 and the learning rate :math:`\eta` to be 0.0001.
 )code" ADD_FILELINE)
 .set_num_inputs(5)
@@ -920,6 +915,173 @@ Note that non-zero values for the weight decay option are not supported.
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("history", "NDArray-or-Symbol", "History")
 .add_arguments(AdagradParam::__FIELDS__());
+
+NNVM_REGISTER_OP(lamb_update_phase1)
+.describe(R"code(Phase I of lamb update it performs the following operations and returns g:.
+
+Link to paper: https://arxiv.org/pdf/1904.00962.pdf
+
+.. math::
+    \begin{gather*}
+    grad = grad * rescale_grad
+    if (grad < -clip_gradient)
+    then
+         grad = -clip_gradient
+    if (grad > clip_gradient)
+    then
+         grad = clip_gradient
+
+    mean = beta1 * mean + (1 - beta1) * grad;
+    variance = beta2 * variance + (1. - beta2) * grad ^ 2;
+
+    if (bias_correction)
+    then
+         mean_hat = mean / (1. - beta1^t);
+         var_hat = var / (1 - beta2^t);
+         g = mean_hat / (var_hat^(1/2) + epsilon) + wd * weight;
+    else
+         g = mean / (var_data^(1/2) + epsilon) + wd * weight;
+    \end{gather*}
+
+)code" ADD_FILELINE)
+.set_num_inputs(4)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LambUpdatePhaseOneParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
+.set_attr<FCompute>("FCompute<cpu>", LambUpdatePhaseOne<cpu>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3};
+  })
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mean", "NDArray-or-Symbol", "Moving mean")
+.add_argument("var", "NDArray-or-Symbol", "Moving variance")
+.add_arguments(LambUpdatePhaseOneParam::__FIELDS__());
+
+NNVM_REGISTER_OP(lamb_update_phase2)
+.describe(R"code(Phase II of lamb update it performs the following operations and updates grad.
+
+Link to paper: https://arxiv.org/pdf/1904.00962.pdf
+
+.. math::
+    \begin{gather*}
+    if (lower_bound >= 0)
+    then
+         r1 = max(r1, lower_bound)
+    if (upper_bound >= 0)
+    then
+         r1 = max(r1, upper_bound)
+
+    if (r1 == 0 or r2 == 0)
+    then
+         lr = lr
+    else
+         lr = lr * (r1/r2)
+    weight = weight - lr * g
+    \end{gather*}
+
+)code" ADD_FILELINE)
+.set_num_inputs(4)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LambUpdatePhaseTwoParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LambUpdatePhaseTwoShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
+.set_attr<FCompute>("FCompute<cpu>", LambUpdatePhaseTwo<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("g", "NDArray-or-Symbol", "Output of lamb_update_phase 1")
+.add_argument("r1", "NDArray-or-Symbol", "r1")
+.add_argument("r2", "NDArray-or-Symbol", "r2")
+.add_arguments(LambUpdatePhaseTwoParam::__FIELDS__());
+
+NNVM_REGISTER_OP(mp_lamb_update_phase1)
+.describe(R"code(Mixed Precision version of Phase I of lamb update 
+it performs the following operations and returns g:.
+
+          Link to paper: https://arxiv.org/pdf/1904.00962.pdf
+
+          .. math::
+              \begin{gather*}
+              grad32 = grad(float16) * rescale_grad
+              if (grad < -clip_gradient)
+              then
+                   grad = -clip_gradient
+              if (grad > clip_gradient)
+              then
+                   grad = clip_gradient
+
+              mean = beta1 * mean + (1 - beta1) * grad;
+              variance = beta2 * variance + (1. - beta2) * grad ^ 2;
+
+              if (bias_correction)
+              then
+                   mean_hat = mean / (1. - beta1^t);
+                   var_hat = var / (1 - beta2^t);
+                   g = mean_hat / (var_hat^(1/2) + epsilon) + wd * weight32;
+              else
+                   g = mean / (var_data^(1/2) + epsilon) + wd * weight32;
+              \end{gather*}
+
+          )code" ADD_FILELINE)
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LambUpdatePhaseOneParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
+.set_attr<nnvm::FInferType>("FInferType", MPLambPhaseOneType<2, 1, 5>)
+.set_attr<FCompute>("FCompute<cpu>", MPLambUpdatePhaseOne<cpu>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3};
+  })
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mean", "NDArray-or-Symbol", "Moving mean")
+.add_argument("var", "NDArray-or-Symbol", "Moving variance")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(LambUpdatePhaseOneParam::__FIELDS__());
+
+NNVM_REGISTER_OP(mp_lamb_update_phase2)
+.describe(R"code(Mixed Precision version Phase II of lamb update 
+it performs the following operations and updates grad.
+
+          Link to paper: https://arxiv.org/pdf/1904.00962.pdf
+
+          .. math::
+              \begin{gather*}
+              if (lower_bound >= 0)
+              then
+                   r1 = max(r1, lower_bound)
+              if (upper_bound >= 0)
+              then
+                   r1 = max(r1, upper_bound)
+
+              if (r1 == 0 or r2 == 0)
+              then
+                   lr = lr
+              else
+                   lr = lr * (r1/r2)
+              weight32 = weight32 - lr * g
+              weight(float16) = weight32
+              \end{gather*}
+
+          )code" ADD_FILELINE)
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LambUpdatePhaseTwoParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", MPLambUpdatePhaseTwoShape)
+.set_attr<nnvm::FInferType>("FInferType", MP_InferType<1, 1, 5>)
+.set_attr<FCompute>("FCompute<cpu>", MPLambUpdatePhaseTwo<cpu>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{4};
+  })
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("g", "NDArray-or-Symbol", "Output of mp_lamb_update_phase 1")
+.add_argument("r1", "NDArray-or-Symbol", "r1")
+.add_argument("r2", "NDArray-or-Symbol", "r2")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(LambUpdatePhaseTwoParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

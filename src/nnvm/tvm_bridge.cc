@@ -40,6 +40,7 @@
 #include <mxnet/engine.h>
 
 #include <memory>
+#include <utility>
 
 namespace mxnet {
 
@@ -55,7 +56,7 @@ class TVMFunctor {
  public:
   // constructor
   explicit TVMFunctor(PackedFunc func, PackedFunc fset_stream)
-      : func_(func), fset_stream_(fset_stream) {}
+      : func_(std::move(func)), fset_stream_(std::move(fset_stream)) {}
 
   void Init(const TVMArgs& args,
             const std::vector<int>& const_loc,
@@ -73,7 +74,7 @@ class TVMFunctor {
         const NDArray& nd =
             static_cast<NDArray*>(args.values[i].v_handle)[0];
         // We cannot set the value until
-        type_codes_[i] = kArrayHandle;
+        type_codes_[i] = kTVMDLTensorHandle;
         array_data_.push_back(nd);
         array_loc_.push_back(i);
         // check if there is read or mutate
@@ -86,7 +87,7 @@ class TVMFunctor {
           mutate_vars->push_back(nd.var());
         }
       } else {
-        CHECK_LT(args.type_codes[i], kTVMType)
+        CHECK_LT(args.type_codes[i], kTVMDataType)
             << "Only allow POD type in mxnet async call";
       }
     }
@@ -147,6 +148,7 @@ void WrapAsyncCall(TVMArgs wrap_args, TVMRetValue* wrap_rv) {
 
   // sorted position of constant arguments
   std::vector<int> const_loc;
+  const_loc.reserve(num_const);
   for (int i = 0; i < num_const; ++i) {
     const_loc.push_back(wrap_args[i + 3].operator int());
   }

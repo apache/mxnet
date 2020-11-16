@@ -30,7 +30,7 @@
 #include <mshadow/cuda/reduce.cuh>
 #include <algorithm>
 #include <vector>
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 #include "../mxnet_op.h"
 
 #define PSROIPOOLING_CUDA_CHECK(condition) \
@@ -134,7 +134,7 @@ inline void PSROIPoolForward(const Tensor<gpu, 4, DType> &out,
     kBaseThreadNum, 0, stream >> >(
       count, bottom_data, spatial_scale, channels, height, width,
       pooled_height, pooled_width, bottom_rois, output_dim_, group_size_, top_data);
-  PSROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
+  PSROIPOOLING_CUDA_CHECK(cudaGetLastError());
 }
 
 
@@ -231,7 +231,7 @@ inline void PSROIPoolBackwardAcc(const Tensor<gpu, 4, DType> &in_grad,
     kBaseThreadNum, 0, stream >> >(
       count, top_diff, num_rois, spatial_scale, channels, height, width,
       pooled_height, pooled_width, group_size_, output_dim_, bottom_diff, bottom_rois);
-  PSROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
+  PSROIPOOLING_CUDA_CHECK(cudaGetLastError());
 }
 
 }  // namespace cuda

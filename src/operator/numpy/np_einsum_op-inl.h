@@ -19,6 +19,8 @@
 
 /*
  * Copyright (c) 2005-2019, NumPy Developers.
+ * Copyright (c) 2019, The Apache Software Foundation.
+ *
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,6 +55,8 @@
 /*!
  * \file np_einsum_op-inl.h
  * \brief Function definition of numpy-compatible einsum operator
+ * modified by Haozheng Fan(@hzfan) from:
+ * https://github.com/numpy/numpy/blob/master/numpy/core/src/multiarray/einsum.c.src
  */
 
 #ifndef MXNET_OPERATOR_NUMPY_NP_EINSUM_OP_INL_H_
@@ -188,7 +192,7 @@ inline int parse_operand_subscripts(const char *subscripts, int length,
       /* Search for the next matching label. */
       char *next = reinterpret_cast<char*>(memchr(op_labels + idim + 1, label, ndim - idim - 1));
 
-      while (next != NULL) {
+      while (next != nullptr) {
         /* The offset from next to op_labels[idim] (negative). */
         *next = static_cast<char>((op_labels + idim) - next);
         /* Search for the next matching label. */
@@ -223,7 +227,7 @@ inline int parse_output_subscripts(const char *subscripts, int length,
     /* A proper label for an axis. */
     if (label > 0 && isalpha(label)) {
       /* Check that it doesn't occur again. */
-      CHECK(memchr(subscripts + i + 1, label, length - i - 1) == NULL)
+      CHECK(memchr(subscripts + i + 1, label, length - i - 1) == nullptr)
         << "einstein sum subscripts string includes "
         << "output subscript '" << static_cast<char>(label)
         << "' multiple times";
@@ -371,7 +375,7 @@ inline static int prepare_op_axes(int ndim, int iop, char *labels,
       /* It's a labeled dimension, find the matching one */
       char *match = reinterpret_cast<char*>(memchr(labels, label, ndim));
       /* If the op doesn't have the label, broadcast it */
-      if (match == NULL) {
+      if (match == nullptr) {
         axes[i] = -1;
       } else {
         /* Otherwise use it */
@@ -399,6 +403,15 @@ struct NumpyEinsumParam: public dmlc::Parameter<NumpyEinsumParam> {
     DMLC_DECLARE_FIELD(optimize)
       .set_default(0);
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s, optimize_s, subscripts_s;
+    num_args_s << num_args;
+    optimize_s << optimize;
+    subscripts_s << subscripts;
+    (*dict)["num_args"] = num_args_s.str();
+    (*dict)["optimize"] = optimize_s.str();
+    (*dict)["subscripts"] = subscripts_s.str();
+  }
 };
 
 class EinsumOp {
@@ -412,6 +425,10 @@ class EinsumOp {
     this->num_args = num_args;
     this->optimize = optimize;
     this->subscripts = subscripts;
+  }
+  bool operator==(const EinsumOp& other) const {
+    return this->num_args == other.num_args &&
+           !this->subscripts.compare(other.subscripts);
   }
 };  // class EinsumOp
 
@@ -600,7 +617,7 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
   int ndim_iter = ndim_output;
   for (label = min_label; label <= max_label; ++label) {
     if (label_counts[label] > 0 &&
-        memchr(output_labels, label, ndim_output) == NULL) {
+        memchr(output_labels, label, ndim_output) == nullptr) {
       CHECK(ndim_iter < NPY_MAXDIMS)
         << "too many subscripts in einsum";
       iter_labels[ndim_iter++] = label;
@@ -730,7 +747,9 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
         int j = 0;
         for (idim = 0; idim < ndim_iter; ++idim) {
           if (op_axes_arrays[i][idim] == -1 ||
-              opshape[i][op_axes_arrays[i][idim]] == 1) {
+              (iop != nop && opshape[i][op_axes_arrays[i][idim]] == 1 &&
+              op_axes_arrays[iop][idim] != -1 &&
+              opshape[iop][op_axes_arrays[iop][idim]] != 1)) {
             remainstride[iop][j++] = iterstride[iop][idim];
           } else {
             opstride[iop][op_axes_arrays[i][idim]] = iterstride[iop][idim];

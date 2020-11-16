@@ -24,6 +24,10 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
+#include <algorithm>
+#include <random>
+#include <utility>
+
 #include "../elemwise_op_common.h"
 #include "../../imperative/imperative_utils.h"
 #include "../subgraph_op_common.h"
@@ -41,7 +45,9 @@ typedef int64_t dgl_id_t;
  */
 class ArrayHeap {
  public:
-  explicit ArrayHeap(const std::vector<float>& prob) {
+  explicit ArrayHeap(const std::vector<float>& prob, unsigned int seed) {
+    generator_ = std::mt19937(seed);
+    distribution_ = std::uniform_real_distribution<float>(0.0, 1.0);
     vec_size_ = prob.size();
     bit_len_ = ceil(log2(vec_size_));
     limit_ = 1 << bit_len_;
@@ -58,7 +64,7 @@ class ArrayHeap {
       }
     }
   }
-  ~ArrayHeap() {}
+  ~ArrayHeap() = default;
 
   /*
    * Remove term from index (this costs O(log m) steps)
@@ -86,8 +92,8 @@ class ArrayHeap {
   /*
    * Sample from arrayHeap
    */
-  size_t Sample(unsigned int* seed) {
-    float xi = heap_[1] * (rand_r(seed)%100/101.0);
+  size_t Sample() {
+    float xi = heap_[1] * distribution_(generator_);
     int i = 1;
     while (i < limit_) {
       i = i << 1;
@@ -102,10 +108,10 @@ class ArrayHeap {
   /*
    * Sample a vector by given the size n
    */
-  void SampleWithoutReplacement(size_t n, std::vector<size_t>* samples, unsigned int* seed) {
+  void SampleWithoutReplacement(size_t n, std::vector<size_t>* samples) {
     // sample n elements
     for (size_t i = 0; i < n; ++i) {
-      samples->at(i) = this->Sample(seed);
+      samples->at(i) = this->Sample();
       this->Delete(samples->at(i));
     }
   }
@@ -115,6 +121,8 @@ class ArrayHeap {
   int bit_len_;   // bit size
   int limit_;
   std::vector<float> heap_;
+  std::mt19937 generator_;
+  std::uniform_real_distribution<float> distribution_;
 };
 
 struct NeighborSampleParam : public dmlc::Parameter<NeighborSampleParam> {
@@ -402,14 +410,16 @@ static bool CSRNeighborNonUniformSampleType(const nnvm::NodeAttrs& attrs,
 static void RandomSample(size_t set_size,
                          size_t num,
                          std::vector<size_t>* out,
-                         unsigned int* seed) {
+                         unsigned int seed) {
+  std::mt19937 generator(seed);
   std::unordered_set<size_t> sampled_idxs;
+  std::uniform_int_distribution<size_t> distribution(0, set_size - 1);
   while (sampled_idxs.size() < num) {
-    sampled_idxs.insert(rand_r(seed) % set_size);
+    sampled_idxs.insert(distribution(generator));
   }
   out->clear();
-  for (auto it = sampled_idxs.begin(); it != sampled_idxs.end(); it++) {
-    out->push_back(*it);
+  for (size_t sampled_idx : sampled_idxs) {
+    out->push_back(sampled_idx);
   }
 }
 
@@ -441,7 +451,7 @@ static void GetUniformSample(const dgl_id_t* val_list,
                              const size_t max_num_neighbor,
                              std::vector<dgl_id_t>* out_ver,
                              std::vector<dgl_id_t>* out_edge,
-                             unsigned int* seed) {
+                             unsigned int seed) {
   // Copy ver_list to output
   if (ver_len <= max_num_neighbor) {
     for (size_t i = 0; i < ver_len; ++i) {
@@ -485,7 +495,7 @@ static void GetNonUniformSample(const float* probability,
                                 const size_t max_num_neighbor,
                                 std::vector<dgl_id_t>* out_ver,
                                 std::vector<dgl_id_t>* out_edge,
-                                unsigned int* seed) {
+                                unsigned int seed) {
   // Copy ver_list to output
   if (ver_len <= max_num_neighbor) {
     for (size_t i = 0; i < ver_len; ++i) {
@@ -500,8 +510,8 @@ static void GetNonUniformSample(const float* probability,
   for (size_t i = 0; i < ver_len; ++i) {
     sp_prob[i] = probability[col_list[i]];
   }
-  ArrayHeap arrayHeap(sp_prob);
-  arrayHeap.SampleWithoutReplacement(max_num_neighbor, &sp_index, seed);
+  ArrayHeap arrayHeap(sp_prob, seed);
+  arrayHeap.SampleWithoutReplacement(max_num_neighbor, &sp_index);
   out_ver->resize(max_num_neighbor);
   out_edge->resize(max_num_neighbor);
   for (size_t i = 0; i < max_num_neighbor; ++i) {
@@ -519,9 +529,9 @@ static void GetNonUniformSample(const float* probability,
 struct neigh_list {
   std::vector<dgl_id_t> neighs;
   std::vector<dgl_id_t> edges;
-  neigh_list(const std::vector<dgl_id_t> &_neighs,
-             const std::vector<dgl_id_t> &_edges)
-    : neighs(_neighs), edges(_edges) {}
+  neigh_list(std::vector<dgl_id_t> _neighs,
+             std::vector<dgl_id_t> _edges)
+    : neighs(std::move(_neighs)), edges(std::move(_edges)) {}
 };
 
 /*
@@ -536,8 +546,8 @@ static void SampleSubgraph(const NDArray &csr,
                            const float* probability,
                            int num_hops,
                            size_t num_neighbor,
-                           size_t max_num_vertices) {
-  unsigned int time_seed = time(nullptr);
+                           size_t max_num_vertices,
+                           unsigned int random_seed) {
   size_t num_seeds = seed_arr.shape().Size();
   CHECK_GE(max_num_vertices, num_seeds);
 
@@ -594,7 +604,7 @@ static void SampleSubgraph(const NDArray &csr,
                        num_neighbor,
                        &tmp_sampled_src_list,
                        &tmp_sampled_edge_list,
-                       &time_seed);
+                       random_seed);
     } else {  // non-uniform-sample
       GetNonUniformSample(probability,
                        val_list + *(indptr + dst_id),
@@ -603,7 +613,7 @@ static void SampleSubgraph(const NDArray &csr,
                        num_neighbor,
                        &tmp_sampled_src_list,
                        &tmp_sampled_edge_list,
-                       &time_seed);
+                       random_seed);
     }
     CHECK_EQ(tmp_sampled_src_list.size(), tmp_sampled_edge_list.size());
     size_t pos = neighbor_list.size();
@@ -611,25 +621,25 @@ static void SampleSubgraph(const NDArray &csr,
     // First we push the size of neighbor vector
     neighbor_list.push_back(tmp_sampled_edge_list.size());
     // Then push the vertices
-    for (size_t i = 0; i < tmp_sampled_src_list.size(); ++i) {
-      neighbor_list.push_back(tmp_sampled_src_list[i]);
+    for (dgl_id_t & i : tmp_sampled_src_list) {
+      neighbor_list.push_back(i);
     }
     // Finally we push the edge list
-    for (size_t i = 0; i < tmp_sampled_edge_list.size(); ++i) {
-      neighbor_list.push_back(tmp_sampled_edge_list[i]);
+    for (dgl_id_t & i : tmp_sampled_edge_list) {
+      neighbor_list.push_back(i);
     }
     num_edges += tmp_sampled_src_list.size();
-    for (size_t i = 0; i < tmp_sampled_src_list.size(); ++i) {
+    for (dgl_id_t & i : tmp_sampled_src_list) {
       // If we have sampled the max number of vertices, we have to stop.
       if (sub_ver_mp.size() >= max_num_vertices)
         break;
       // We need to add the neighbor in the hashtable here. This ensures that
       // the vertex in the queue is unique. If we see a vertex before, we don't
       // need to add it to the queue again.
-      auto ret = sub_ver_mp.insert(tmp_sampled_src_list[i]);
+      auto ret = sub_ver_mp.insert(i);
       // If the sampled neighbor is inserted to the map successfully.
       if (ret.second)
-        sub_vers.emplace_back(tmp_sampled_src_list[i], cur_node_level + 1);
+        sub_vers.emplace_back(i, cur_node_level + 1);
     }
   }
   // Let's check if there is a vertex that we haven't sampled its neighbors.
@@ -720,11 +730,14 @@ static void CSRNeighborUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
                                           const std::vector<NDArray>& inputs,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<NDArray>& outputs) {
-  const NeighborSampleParam& params =
-    nnvm::get<NeighborSampleParam>(attrs.parsed);
+  const NeighborSampleParam& params = nnvm::get<NeighborSampleParam>(attrs.parsed);
 
   int num_subgraphs = inputs.size() - 1;
   CHECK_EQ(outputs.size(), 3 * num_subgraphs);
+
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  mshadow::Random<cpu, unsigned int> *prnd = ctx.requested[0].get_random<cpu, unsigned int>(s);
+  unsigned int seed = prnd->GetRandInt();
 
 #pragma omp parallel for
   for (int i = 0; i < num_subgraphs; i++) {
@@ -737,7 +750,12 @@ static void CSRNeighborUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
                    nullptr,                       // probability
                    params.num_hops,
                    params.num_neighbor,
-                   params.max_num_vertices);
+                   params.max_num_vertices,
+#if defined(_OPENMP)
+                   seed + omp_get_thread_num());
+#else
+                   seed);
+#endif
   }
 }
 
@@ -798,6 +816,9 @@ Example:
 .set_attr<mxnet::FInferShape>("FInferShape", CSRNeighborUniformSampleShape)
 .set_attr<nnvm::FInferType>("FInferType", CSRNeighborUniformSampleType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", CSRNeighborUniformSampleComputeExCPU)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest>{ResourceRequest::kRandom};
+})
 .add_argument("csr_matrix", "NDArray-or-Symbol", "csr matrix")
 .add_argument("seed_arrays", "NDArray-or-Symbol[]", "seed vertices")
 .set_attr<std::string>("key_var_num_args", "num_args")
@@ -811,13 +832,16 @@ static void CSRNeighborNonUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs
                                               const std::vector<NDArray>& inputs,
                                               const std::vector<OpReqType>& req,
                                               const std::vector<NDArray>& outputs) {
-  const NeighborSampleParam& params =
-    nnvm::get<NeighborSampleParam>(attrs.parsed);
+  const NeighborSampleParam& params = nnvm::get<NeighborSampleParam>(attrs.parsed);
 
   int num_subgraphs = inputs.size() - 2;
   CHECK_EQ(outputs.size(), 4 * num_subgraphs);
 
   const float* probability = inputs[1].data().dptr<float>();
+
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  mshadow::Random<cpu, unsigned int> *prnd = ctx.requested[0].get_random<cpu, unsigned int>(s);
+  unsigned int seed = prnd->GetRandInt();
 
 #pragma omp parallel for
   for (int i = 0; i < num_subgraphs; i++) {
@@ -831,7 +855,12 @@ static void CSRNeighborNonUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs
                    probability,
                    params.num_hops,
                    params.num_neighbor,
-                   params.max_num_vertices);
+                   params.max_num_vertices,
+#if defined(_OPENMP)
+                   seed + omp_get_thread_num());
+#else
+                   seed);
+#endif
   }
 }
 
@@ -897,6 +926,9 @@ Example:
 .set_attr<mxnet::FInferShape>("FInferShape", CSRNeighborNonUniformSampleShape)
 .set_attr<nnvm::FInferType>("FInferType", CSRNeighborNonUniformSampleType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", CSRNeighborNonUniformSampleComputeExCPU)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest>{ResourceRequest::kRandom};
+})
 .add_argument("csr_matrix", "NDArray-or-Symbol", "csr matrix")
 .add_argument("probability", "NDArray-or-Symbol", "probability vector")
 .add_argument("seed_arrays", "NDArray-or-Symbol[]", "seed vertices")
@@ -929,8 +961,8 @@ static bool DGLSubgraphStorageType(const nnvm::NodeAttrs& attrs,
 
   bool success = true;
   *dispatch_mode = DispatchMode::kFComputeEx;
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    if (!type_assign(&(*out_attrs)[i], mxnet::kCSRStorage))
+  for (int & out_attr : *out_attrs) {
+    if (!type_assign(&out_attr, mxnet::kCSRStorage))
     success = false;
   }
   return success;
@@ -968,8 +1000,8 @@ static bool DGLSubgraphType(const nnvm::NodeAttrs& attrs,
   for (size_t i = 0; i < num_g; i++) {
     CHECK_EQ(in_attrs->at(i + 1), mshadow::kInt64);
   }
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    out_attrs->at(i) = in_attrs->at(0);
+  for (int & out_attr : *out_attrs) {
+    out_attr = in_attrs->at(0);
   }
   return true;
 }
@@ -985,7 +1017,7 @@ class Bitmap {
  public:
   Bitmap(const dgl_id_t *vid_data, int64_t len): map(size) {
     for (int64_t i = 0; i < len; ++i) {
-      map[hash(vid_data[i])] = 1;
+      map[hash(vid_data[i])] = true;
     }
   }
 
@@ -1500,8 +1532,8 @@ static bool SubgraphCompactStorageType(const nnvm::NodeAttrs& attrs,
 
   bool success = true;
   *dispatch_mode = DispatchMode::kFComputeEx;
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    if (!type_assign(&(*out_attrs)[i], mxnet::kCSRStorage))
+  for (int & out_attr : *out_attrs) {
+    if (!type_assign(&out_attr, mxnet::kCSRStorage))
       success = false;
   }
   return success;
@@ -1539,11 +1571,11 @@ static bool SubgraphCompactShape(const nnvm::NodeAttrs& attrs,
 static bool SubgraphCompactType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
-  for (size_t i = 0; i < in_attrs->size(); i++) {
-    CHECK_EQ(in_attrs->at(i), mshadow::kInt64);
+  for (int & in_attr : *in_attrs) {
+    CHECK_EQ(in_attr, mshadow::kInt64);
   }
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    out_attrs->at(i) = mshadow::kInt64;
+  for (int & out_attr : *out_attrs) {
+    out_attr = mshadow::kInt64;
   }
   return true;
 }

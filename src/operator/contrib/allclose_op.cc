@@ -34,7 +34,7 @@ NNVM_REGISTER_OP(_contrib_allclose)
 
 .. math::
 
-    f(x) = |a−b|≤atol+rtol|b|
+    f(x) = |a-b|<=atol+rtol|b|
 
 where
 :math:`a, b` are the input tensors of equal types an shapes

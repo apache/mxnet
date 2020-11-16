@@ -59,46 +59,22 @@ Getting started
 
       Saving and loading trained models.
 
-   .. card::
-      :title: Using pre-trained models in MXNet
-      :link: image/pretrained_models.html
-
-      Using pre-trained models with Apache MXNet.
-
 Data
 ----
 
 .. container:: cards
 
    .. card::
-      :title: Data Loading
-      :link: data.html
-
-      How to load data for training.
-
-   .. card::
-      :title: Image Augmentation
-      :link: image-augmentation.html
+      :title: Data Augmentation
+      :link: data/data_augmentation.html
 
       Boost your training dataset with image augmentation.
-
-   .. card::
-      :title: Data Augmentation
-      :link: image/image-augmentation.html
-
-      A guide to data augmentation.
 
    .. card::
       :title: Gluon Datasets and DataLoader
       :link: data/datasets.html
 
       A guide to loading data using the Gluon API.
-
-   .. card::
-      :title: NDArray - Scientific computing on CPU and GPU
-      :link: ../ndarray/index.html
-
-      A guide to the NDArray data structure.
 
 Training
 --------
@@ -113,7 +89,7 @@ Training
 
    .. card::
       :title: Normalization Blocks
-      :link: data/normalization/normalization.html
+      :link: training/normalization/index.html
 
       Understand usage of normalization layers (such as BatchNorm).
 
@@ -167,7 +143,7 @@ Training
 
    .. card::
       :title: Autograd API
-      :link: /api/python/docs/tutorials/packages/autograd/index.html
+      :link: ../autograd/index.html
 
       How to use Automatic Differentiation with the Autograd API.
 
@@ -194,21 +170,11 @@ Advanced Topics
 
       Building custom operators with numpy.
 
-..
-<-- tutorial missing -->
    .. card::
       :title: Custom Loss
-      :link: custom-loss/custom-loss.html
+      :link: loss/custom-loss.html
 
       A guide to implementing custom losses.
-
-..
-
-   .. card::
-      :title: Gotchas using NumPy in Apache MXNet
-      :link: ../ndarray/gotchas_numpy_in_mxnet.html
-
-      Common misconceptions when using NumPy in Apache MXNet.
 
    .. card::
       :title: Hybridize

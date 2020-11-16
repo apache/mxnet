@@ -75,6 +75,13 @@ class OpenMP {
   void on_start_worker_thread(bool use_omp);
 
   /*!
+   * \brief Initialize a new process to use omp (after a fork,
+   *        in case you're starting threads in the atfork() that may interfere
+   *        with the initialization. Can serialize the init with this first.
+   */
+  void initialize_process();
+
+  /*!
    * \brief Get the OpenMP object's singleton pointer
    * \return Singleton OpenMP object pointer
    */

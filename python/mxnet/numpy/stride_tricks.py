@@ -18,7 +18,7 @@
 """Util functions with broadcast."""
 
 from ..ndarray.ndarray import _get_broadcast_shape
-from . import _op as _mx_np_op
+from ..ndarray import numpy as _mx_nd_np
 
 
 __all__ = ['broadcast_arrays']
@@ -62,4 +62,4 @@ def broadcast_arrays(*args):
         # Common case where nothing needs to be broadcasted.
         return list(args)
 
-    return [_mx_np_op.broadcast_to(array, shape) for array in args]
+    return [_mx_nd_np.broadcast_to(array, shape) for array in args]

@@ -69,6 +69,10 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(dshape.ndim(), 3U) \
       << "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]";
   // data: [sequence len, batch, input dimension]
+  for (int i = 0; i < dshape.ndim(); i++) {
+    CHECK_LT(dshape[i], INT32_MAX) << "ValueError: RNN does not support large"
+      << "dimensions (>= 2^31).";
+  }
   int batch_size = dshape[1];
   int input_size = dshape[2];
   int numDirections = param_.bidirectional ? 2 : 1;
@@ -176,34 +180,34 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
   if (dev_mask == kGPU) {
 #if MXNET_USE_CUDNN == 1
     request.emplace_back(ResourceRequest::kTempSpace);
-
-    const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
-    if (param.p != 0 && 1.0f - param.p > 0) {
-      request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
-    }
+    request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
+#endif
+  } else {
+    request.emplace_back(ResourceRequest::kRandom);
+#if MXNET_USE_MKLDNN == 1
+    request.emplace_back(ResourceRequest::kTempSpace);
 #endif
   }
   return request;
 }
 
+#if MXNET_USE_MKLDNN == 1
 inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
                                   const int dev_mask,
                                   DispatchMode* dispatch_mode,
                                   std::vector<int> *in_attrs,
                                   std::vector<int> *out_attrs) {
-  DispatchMode wanted_mode = DispatchMode::kFCompute;
-
-#if MXNET_USE_MKLDNN == 1
-  wanted_mode = DispatchMode::kFComputeEx;
-#endif  // MXNET_USE_MKLDNN == 1
-
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
+  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
+  const bool support_mkldnn_rnn =
+      !param.use_sequence_length && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1);
+  return MKLDNNStorageType(attrs, dev_mask, support_mkldnn_rnn,
+                           dispatch_mode, in_attrs, out_attrs);
 }
+#endif  // MXNET_USE_MKLDNN == 1
 
 struct RNNGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr &n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr &n,
           const std::vector<nnvm::NodeEntry> &ograd) const {
     const RNNParam& params = nnvm::get<RNNParam>(n->attrs.parsed);
     std::vector<nnvm::NodeEntry> heads{ n->inputs[rnn_enum::kData],
@@ -242,8 +246,7 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
   }
 
 #if MXNET_USE_MKLDNN == 1
-  if ((in_types[0] == mshadow::kFloat32 || in_types[0] == mshadow::kFloat16)
-      && in_shapes[0].ndim() == 3 && ctx.dev_type == kCPU) {
+  if (ctx.dev_type == kCPU && SupportMKLDNNRnn(param, in_types[rnn_enum::kData])) {
     const mxnet::TShape& data_shape = in_shapes[rnn_enum::kData];
     state = OpStatePtr::Create<MKLDNNRnnOp>(param, data_shape[0],
         data_shape[1], data_shape[2]);
@@ -269,8 +272,7 @@ static void RNNStatefulComputeExCPU(const OpStatePtr& state_ptr,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  if ((inputs[0].dtype() == mshadow::kFloat32 || inputs[0].dtype() == mshadow::kFloat16) &&
-      inputs[0].shape().ndim() == 3) {
+  if (SupportMKLDNNRnn(inputs[rnn_enum::kData].dtype())) {
     MKLDNNRnnOp& op = state_ptr.get_state<MKLDNNRnnOp>();
     op.Forward(ctx, inputs, req, outputs);
   } else {
@@ -283,8 +285,7 @@ static void RNNStatefulGradComputeExCPU(const OpStatePtr& state_ptr,
                                         const std::vector<NDArray>& inputs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
-  if ((inputs[0].dtype() == mshadow::kFloat32 || inputs[0].dtype() == mshadow::kFloat16) &&
-      inputs[0].shape().ndim() == 3) {
+  if (SupportMKLDNNRnn(inputs[rnn_enum::kData].dtype())) {
     MKLDNNRnnOp& op = state_ptr.get_state<MKLDNNRnnOp>();
     op.Backward(ctx, inputs, req, outputs);
   } else {
@@ -335,6 +336,23 @@ Long Short-Term Memory - Hochreiter, 1997. http://www.bioinf.jku.at/publications
             h_t = o_t * \tanh(c_t)
             \end{array}
 
+With the projection size being set, LSTM could use the projection feature to reduce the parameters
+size and give some speedups without significant damage to the accuracy.
+
+Long Short-Term Memory Based Recurrent Neural Network Architectures for Large Vocabulary Speech
+Recognition - Sak et al. 2014. https://arxiv.org/abs/1402.1128
+
+.. math::
+  \begin{array}{ll}
+            i_t = \mathrm{sigmoid}(W_{ii} x_t + b_{ii} + W_{ri} r_{(t-1)} + b_{ri}) \\
+            f_t = \mathrm{sigmoid}(W_{if} x_t + b_{if} + W_{rf} r_{(t-1)} + b_{rf}) \\
+            g_t = \tanh(W_{ig} x_t + b_{ig} + W_{rc} r_{(t-1)} + b_{rg}) \\
+            o_t = \mathrm{sigmoid}(W_{io} x_t + b_{o} + W_{ro} r_{(t-1)} + b_{ro}) \\
+            c_t = f_t * c_{(t-1)} + i_t * g_t \\
+            h_t = o_t * \tanh(c_t)
+            r_t = W_{hr} h_t
+            \end{array}
+
 **GRU**
 
 Gated Recurrent Unit - Cho et al. 2014. http://arxiv.org/abs/1406.1078
@@ -382,10 +400,10 @@ The definition of GRU here is slightly different from paper but compatible with 
 })
 .set_attr<mxnet::FInferShape>("FInferShape", RNNShape)
 .set_attr<nnvm::FInferType>("FInferType", RNNType)
-.set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
 .set_attr<FCreateOpState>("FCreateOpState", CreateRNNState)
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulComputeExCPU)
 #endif
@@ -403,6 +421,20 @@ The definition of GRU here is slightly different from paper but compatible with 
 .add_arguments(RNNParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_RNN)
+.set_num_inputs([](const NodeAttrs& attrs) {
+    const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+    int ret = 5;
+    if (params.state_outputs) {
+      ret += 2;
+    }
+    if (params.mode == rnn_enum::kLstm) {
+      ++ret;
+      if (params.state_outputs) {
+      ret += 2;
+      }
+    }
+    return ret;
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
   return GetNumInputArguments(params);
@@ -410,9 +442,9 @@ NNVM_REGISTER_OP(_backward_RNN)
 .set_attr_parser(ParamParser<RNNParam>)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulGradCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulGradComputeExCPU)
 #endif

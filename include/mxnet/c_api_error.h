@@ -21,7 +21,13 @@
  *  Copyright (c) 2018 by Contributors
  * \file c_api_error.h
  * \brief Error handling for C API.
+
+ *  WARNING: THIS IS NOT A C API. THE FILE IS TEMPORARILY KEPT UNDER THE NAME
+ *  C_API_ERROR.H FOR BACKWARDS COMPATIBILITY REASONS. DO NOT RELY ON THIS FILE
+ *  WHEN WRITING NEW CODE.
  */
+#include <string>
+
 #ifndef MXNET_C_API_ERROR_H_
 #define MXNET_C_API_ERROR_H_
 
@@ -51,6 +57,7 @@
   }                                                                            \
   on_exit_api();                                                               \
   return 0; // NOLINT(*)
+
 /*!
  * \brief Set the last error message needed by C API
  * \param msg The error message to set.
@@ -61,10 +68,7 @@ void MXAPISetLastError(const char* msg);
  * \param e the exception
  * \return the return value of API after exception is handled
  */
-inline int MXAPIHandleException(const std::exception &e) {
-  MXAPISetLastError(e.what());
-  return -1;
-}
+int MXAPIHandleException(const std::exception &e);
 
 namespace mxnet {
 extern void on_enter_api(const char *function);

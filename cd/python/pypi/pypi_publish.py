@@ -35,10 +35,8 @@ def post_wheel(path):
     logging.info('Posting {} to PyPI'.format(path))
     pypi_credentials = get_secret()
 
-    cmd = 'python3 -m twine upload --username {} --password {} {}'.format(
-        pypi_credentials['username'],
-        pypi_credentials['password'],
-        path)
+    cmd = 'python3 -m twine upload {}'.format(path)
+    version = os.path.basename(path).split('-')[1]
 
     # The PyPI credentials for DEV has username set to 'skipPublish'
     # This way we do not attempt to publish the PyPI package
@@ -47,10 +45,15 @@ def post_wheel(path):
         print('In DEV account, skipping publish')
         print('Would have run: {}'.format(cmd))
         return 0
+    elif any(test_version_mark in version for test_version_mark in ['a', 'b', 'dev']):
+        print('Skipping publishing nightly builds to Pypi.')
+        print('See https://github.com/pypa/pypi-support/issues/50 for details')
+        return 0
     else:
-        # DO NOT PRINT CMD IN THIS BLOCK, includes password
-        p = subprocess.run(cmd.split(' '),
-                        stdout=subprocess.PIPE)
+        env = os.environ.copy()
+        env['TWINE_USERNAME'] = pypi_credentials['username']
+        env['TWINE_PASSWORD'] = pypi_credentials['password']
+        p = subprocess.run(cmd.split(' '), stdout=subprocess.PIPE, env=env)
         logging.info(p.stdout)
         return p.returncode
 
@@ -81,7 +84,7 @@ def get_secret():
             raise e
     else:
         return json.loads(get_secret_value_response['SecretString'])
-        
-            
+
+
 if __name__ == '__main__':
     sys.exit(post_wheel(sys.argv[1]))

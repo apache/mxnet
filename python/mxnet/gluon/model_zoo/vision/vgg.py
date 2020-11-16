@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """VGG, implemented in Gluon."""
-from __future__ import division
 __all__ = ['VGG',
            'vgg11', 'vgg13', 'vgg16', 'vgg19',
            'vgg11_bn', 'vgg13_bn', 'vgg16_bn', 'vgg19_bn',
@@ -51,22 +50,21 @@ class VGG(HybridBlock):
     def __init__(self, layers, filters, classes=1000, batch_norm=False, **kwargs):
         super(VGG, self).__init__(**kwargs)
         assert len(layers) == len(filters)
-        with self.name_scope():
-            self.features = self._make_features(layers, filters, batch_norm)
-            self.features.add(nn.Dense(4096, activation='relu',
-                                       weight_initializer='normal',
-                                       bias_initializer='zeros'))
-            self.features.add(nn.Dropout(rate=0.5))
-            self.features.add(nn.Dense(4096, activation='relu',
-                                       weight_initializer='normal',
-                                       bias_initializer='zeros'))
-            self.features.add(nn.Dropout(rate=0.5))
-            self.output = nn.Dense(classes,
+        self.features = self._make_features(layers, filters, batch_norm)
+        self.features.add(nn.Dense(4096, activation='relu',
                                    weight_initializer='normal',
-                                   bias_initializer='zeros')
+                                   bias_initializer='zeros'))
+        self.features.add(nn.Dropout(rate=0.5))
+        self.features.add(nn.Dense(4096, activation='relu',
+                                   weight_initializer='normal',
+                                   bias_initializer='zeros'))
+        self.features.add(nn.Dropout(rate=0.5))
+        self.output = nn.Dense(classes,
+                               weight_initializer='normal',
+                               bias_initializer='zeros')
 
     def _make_features(self, layers, filters, batch_norm):
-        featurizer = nn.HybridSequential(prefix='')
+        featurizer = nn.HybridSequential()
         for i, num in enumerate(layers):
             for _ in range(num):
                 featurizer.add(nn.Conv2D(filters[i], kernel_size=3, padding=1,

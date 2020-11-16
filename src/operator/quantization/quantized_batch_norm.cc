@@ -126,7 +126,7 @@ the float32 data into int8.
 
 NNVM_REGISTER_OP(BatchNorm)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
-    nnvm::NodePtr node = nnvm::Node::Create();
+    nnvm::ObjectPtr node = nnvm::Node::Create();
     node->attrs.op = Op::Get("_contrib_quantized_batch_norm");
     node->attrs.name = "quantized_" + attrs.name;
     node->attrs.dict = attrs.dict;
@@ -135,11 +135,9 @@ NNVM_REGISTER_OP(BatchNorm)
     }
     return node;
   })
-.set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", [](const NodeAttrs &attrs, size_t index) {
-  if (index == 0)
-    return false;
-  else
-    return true;
+.set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", [](
+  const NodeAttrs &attrs, const size_t index, const std::string quantize_granularity) {
+  return (index != 0);
 });
 
 }  // namespace op

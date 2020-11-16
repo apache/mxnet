@@ -28,6 +28,7 @@
 
 #include <string>
 #include <vector>
+#include "../../api/operator/op_utils.h"
 #include "../tensor/init_op.h"
 
 namespace mxnet {
@@ -54,9 +55,17 @@ struct NumpyWindowsParam : public dmlc::Parameter<NumpyWindowsParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
     "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
+    .set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES
     .describe("Data-type of the returned array.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream M_s, dtype_s;
+    M_s << M;
+    dtype_s << dtype;
+    (*dict)["M"] = M_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 

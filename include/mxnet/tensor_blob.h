@@ -75,7 +75,7 @@ class TBlob {
 
   /*! \brief default constructor, default copy assign will work */
   TBlob(void)
-      : dptr_(NULL),
+      : dptr_(nullptr),
         type_flag_(mshadow::DataType<real_t>::kFlag) {
     SetDLTensor(cpu::kDevMask, 0);
   }
@@ -209,12 +209,13 @@ class TBlob {
    */
   template<typename Device, typename DType>
   inline mshadow::Tensor<Device, 2, DType> FlatTo2D(
-    mshadow::Stream<Device> *stream = NULL) const {
+    mshadow::Stream<Device> *stream = nullptr) const {
     CHECK(Device::kDevMask == this->dev_mask())
       << "TBlob.get: device type do not match specified type";
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
-      << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
+      << "Expected: " << mshadow::dtype_string(type_flag_)
+      << " v.s. given " << mshadow::dtype_string(mshadow::DataType<DType>::kFlag);
     return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
                                              shape_.FlatTo2D(),
                                              stream);
@@ -228,7 +229,7 @@ class TBlob {
    */
   template<typename Device, typename DType>
   inline mshadow::Tensor<Device, 1, DType> FlatTo1D(
-      mshadow::Stream<Device> *stream = NULL) const {
+      mshadow::Stream<Device> *stream = nullptr) const {
     return this->get_with_shape<Device, 1, DType>(
         mshadow::Shape1(shape_.Size()), stream);
   }
@@ -254,7 +255,8 @@ class TBlob {
   inline DType* dptr() const {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
-      << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
+      << "Expected: " << mshadow::dtype_string(type_flag_)
+      << " v.s. given " << mshadow::dtype_string(mshadow::DataType<DType>::kFlag);
     return static_cast<DType*>(dptr_);
   }
   /*! \brief device mask of the corresponding device */
@@ -283,7 +285,7 @@ class TBlob {
    * \tparam DType the type of elements in the tensor
    */
   template<typename Device, int dim, typename DType>
-  inline mshadow::Tensor<Device, dim, DType> get(mshadow::Stream<Device> *stream = NULL) const {
+  inline mshadow::Tensor<Device, dim, DType> get(mshadow::Stream<Device> *stream = nullptr) const {
     CHECK(Device::kDevMask == this->dev_mask())
       << "TBlob.get: device type do not match specified type";
     return mshadow::Tensor<Device, dim, DType>(dptr<DType>(),
@@ -302,7 +304,7 @@ class TBlob {
   template<typename Device, int dim, typename DType>
   inline mshadow::Tensor<Device, dim, DType> get_with_shape(
       const mshadow::Shape<dim> &shape,
-      mshadow::Stream<Device> *stream = NULL) const {
+      mshadow::Stream<Device> *stream = nullptr) const {
     CHECK(Device::kDevMask == this->dev_mask())
       << "TBlob.get: device type do not match specified type";
     CHECK_EQ(this->CheckContiguous(), true) << "TBlob.get_reshape: must be contiguous";
@@ -322,7 +324,7 @@ class TBlob {
    */
   template<typename Device, typename DType>
   inline mshadow::Tensor<Device, 3, DType> FlatTo3D(
-      int axis, mshadow::Stream<Device> *stream = NULL) const {
+      int axis, mshadow::Stream<Device> *stream = nullptr) const {
     return this->get_with_shape<Device, 3, DType>(
         this->shape_.FlatTo3D(axis), stream);
   }
@@ -339,7 +341,7 @@ class TBlob {
   template<typename Device, typename DType>
   inline mshadow::Tensor<Device, 3, DType> FlatTo3D(
       int axis_begin, int axis_end,
-      mshadow::Stream<Device> *stream = NULL) const {
+      mshadow::Stream<Device> *stream = nullptr) const {
     return this->get_with_shape<Device, 3, DType>(
         this->shape_.FlatTo3D(axis_begin, axis_end), stream);
   }
@@ -354,7 +356,7 @@ class TBlob {
    */
   template<typename Device, int dim, typename DType>
   inline mshadow::Tensor<Device, dim, DType> FlatToKD(
-     mshadow::Stream<Device> *stream = NULL) const {
+     mshadow::Stream<Device> *stream = nullptr) const {
     mshadow::Shape<dim> shape;
     shape[0] = 1;
     // Pad higher dimensions in case dim > ndim()
@@ -378,6 +380,7 @@ class TBlob {
       case mshadow::kFloat32: return DLDataType{kDLFloat, 32, 1};
       case mshadow::kFloat64: return DLDataType{kDLFloat, 64, 1};
       case mshadow::kFloat16: return DLDataType{kDLFloat, 16, 1};
+      case mshadow::kBfloat16: return DLDataType{kDLBfloat, 16, 1};
       case mshadow::kUint8: return DLDataType{kDLUInt, 8, 1};
       case mshadow::kInt32: return DLDataType{kDLInt, 32, 1};
       case mshadow::kInt8: return DLDataType{kDLInt, 8, 1};
@@ -401,8 +404,14 @@ class TBlob {
           case 64: return mshadow::kFloat64;
         }
         break;
+      case kDLBfloat:
+        switch (dldata_type.bits) {
+          case 16: return mshadow::kBfloat16;
+        }
+        break;
       case kDLUInt:
         switch (dldata_type.bits) {
+          case 1: return mshadow::kBool;
           case 8: return mshadow::kUint8;
         }
         break;

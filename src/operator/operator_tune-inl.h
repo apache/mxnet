@@ -431,6 +431,8 @@ class OperatorTune : public OperatorTuneByType<DType> {
       return mshadow::kFloat64;
     if (type_string == "float16")
       return mshadow::kFloat16;
+    if (type_string == "bfloat16")
+      return mshadow::kBfloat16;
     if (type_string == "int8")
       return mshadow::kInt8;
     if (type_string == "uint8")
@@ -526,6 +528,10 @@ class OperatorTune : public OperatorTuneByType<DType> {
   /*! \brief Output insertable (into code) instantiation+default-value macros */
   static bool output_tuning_data_;
 };
+
+// TODO(leezu) uncomment once gcc4.8 support is dropped; fixes Wno-undefined-var-template
+// template <typename DType>
+// std::unordered_set<std::string> OperatorTune<DType>::operator_names_;
 
 /*!
  * \brief Class that tunes unary operators

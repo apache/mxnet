@@ -19,5 +19,7 @@
 """Gluon Estimator Module"""
 from . import estimator
 from . import event_handler
+from . import batch_processor
 from .estimator import *
 from .event_handler import *
+from .batch_processor import *

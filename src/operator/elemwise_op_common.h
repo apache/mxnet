@@ -224,7 +224,7 @@ inline bool ElemwiseIntType(const nnvm::NodeAttrs& attrs,
 // Transfer gradient and input to FGradient function
 struct ElemwiseGradUseIn {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     return MakeNonlossGradNode(op_name, n, ograds, n->inputs, n->attrs.dict);
   }
@@ -233,7 +233,7 @@ struct ElemwiseGradUseIn {
 // Transfer gradient and output to FGradient function
 struct ElemwiseGradUseOut {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     uint32_t n_out = n->num_outputs();
@@ -247,7 +247,7 @@ struct ElemwiseGradUseOut {
 // Transfer gradient and input and output to FGradient function
 struct ElemwiseGradUseInOut {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     for (auto& h : n->inputs) {
@@ -264,7 +264,7 @@ struct ElemwiseGradUseInOut {
 // Transfer only gradient to FGradient function
 struct ElemwiseGradUseNone {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     return MakeNonlossGradNode(op_name, n, ograds, {}, n->attrs.dict);
   }
@@ -272,7 +272,7 @@ struct ElemwiseGradUseNone {
 
 struct CloneGradient {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> ret;
     const size_t input_count = n->inputs.size();

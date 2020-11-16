@@ -55,6 +55,14 @@
 #define MXNET_USE_CUDNN MSHADOW_USE_CUDNN
 #endif
 
+#ifndef MXNET_USE_CUTENSOR
+#define MXNET_USE_CUTENSOR MSHADOW_USE_CUTENSOR
+#endif
+
+#ifndef MXNET_USE_NVML
+#define MXNET_USE_NVML 0
+#endif
+
 #ifndef MXNET_USE_NCCL
 #define MXNET_USE_NCCL 0
 #endif
@@ -64,10 +72,6 @@
  */
 #ifndef MXNET_USE_CUSOLVER
 #define MXNET_USE_CUSOLVER MSHADOW_USE_CUSOLVER
-#endif
-
-#ifndef MXNET_ENABLE_CUDA_RTC
-#define MXNET_ENABLE_CUDA_RTC 0
 #endif
 
 /*! \brief Error message for using gpu when MXNET_USE_CUDA==0 */
@@ -111,10 +115,6 @@
 #define MXNET_USE_F16C MSHADOW_USE_F16C
 #endif
 
-#ifndef MXNET_USE_CAFFE
-#define MXNET_USE_CAFFE 0
-#endif
-
 #ifndef MXNET_USE_DIST_KVSTORE
 #define MXNET_USE_DIST_KVSTORE 0
 #endif
@@ -142,8 +142,8 @@ enum : unsigned {
   CUDA = 0,
   CUDNN,
   NCCL,
-  CUDA_RTC,
   TENSORRT,
+  CUTENSOR,
 
   // CPU Features / optimizations
   CPU_SSE,
@@ -179,10 +179,7 @@ enum : unsigned {
   OPENCV,
 
   // Misc
-  CAFFE,
-  PROFILER,
   DIST_KVSTORE,
-  CXX14,
   INT64_TENSOR_SIZE,
 
   // Signal handler to print stack traces on exceptions

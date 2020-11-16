@@ -160,7 +160,7 @@ In classification, we often apply the
 softmax operator to the predicted outputs to obtain prediction probabilities,
 and then apply the cross entropy loss against the true labels:
 
-$$ \begin{align}\begin{aligned}p = \softmax({pred})\\L = -\sum_i \sum_j {label}_j \log p_{ij}\end{aligned}\end{align}
+$$ \begin{align}\begin{aligned}p = \text{softmax}({pred})\\L = -\sum_i \sum_j {label}_j \log p_{ij}\end{aligned}\end{align}
 $$
 
 Running these two steps one-by-one, however, may lead to numerical instabilities. The `loss` module provides a single operators with softmax and cross entropy fused to avoid such problem.
@@ -209,7 +209,7 @@ The loss is large, if the predicted probability distribution is far from the gro
 
 For instance, in the following example we get a KL divergence of 0.02. We set ```from_logits=False```, so the loss functions will apply ```log_softmax``` on the network output, before computing the KL divergence.
 
-```python
+```{.python .input}
 output = mx.nd.array([[0.39056206, 1.3068528, 0.39056206, -0.30258512]])
 print('output.softmax(): {}'.format(output.softmax().asnumpy().tolist()))
 target_dist = mx.nd.array([[0.3, 0.4, 0.1, 0.2]])

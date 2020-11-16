@@ -429,7 +429,7 @@ class SimpleOpRegistry {
   /*!
    * \brief Find the entry with corresponding name.
    * \param name name of the function
-   * \return the corresponding function, can be NULL
+   * \return the corresponding function, can be nullptr
    */
   inline static const SimpleOpRegEntry *Find(const std::string &name) {
     return Get()->fmap_.at(name);

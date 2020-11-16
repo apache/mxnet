@@ -23,17 +23,19 @@
  * \brief implement kv_store
  */
 #include <mxnet/kvstore.h>
-#include <stdlib.h>
 #include <dmlc/logging.h>
 #include "./kvstore_local.h"
 
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
+#include "./p3store_dist.h"
 std::atomic<int> mxnet::kvstore::KVStoreDist::customer_id_{0};
 #endif  // MXNET_USE_DIST_KVSTORE
 #if MXNET_USE_NCCL
 #include "./kvstore_nccl.h"
 #endif  // MXNET_USE_NCCL
+
+#include <cstdlib>
 
 namespace mxnet {
 
@@ -51,7 +53,13 @@ KVStore* KVStore::Create(const char *type_name) {
 
   if (has("dist")) {
 #if MXNET_USE_DIST_KVSTORE
-    kv = new kvstore::KVStoreDist(use_device_comm);
+    auto ps_type = dmlc::GetEnv("DMLC_PS_VAN_TYPE", std::string("none"));
+    if (ps_type == "p3") {
+      CHECK(!has("async")) << "Asynchronous update is not supported in P3StoreDist";
+      kv = new kvstore::P3StoreDist(use_device_comm);
+    } else {
+      kv = new kvstore::KVStoreDist(use_device_comm);
+    }
     if (!has("_async") && kv->IsWorkerNode() && kv->get_rank() == 0) {
       // configure the server to be the sync mode
       kv->SendCommandToServers(static_cast<int>(kvstore::CommandType::kSyncMode), "");

@@ -135,11 +135,11 @@ class LoopState {
   // which will be used in the backward.
   std::vector<OpStatePtr> all_states;
   CachedOpPtr iter_op;
-  Symbol subgraph_sym;
+  nnvm::Symbol subgraph_sym;
   nnvm::Graph subgraph;
 
  public:
-  explicit LoopState(const Symbol &g);
+  explicit LoopState(const nnvm::Symbol &g, bool is_dynamic = true);
 
   void Forward(int iter_no,
                const std::vector<NDArray> &inputs,
@@ -155,15 +155,19 @@ class LoopState {
     all_inputs.clear();
     all_states.clear();
   }
-  static CachedOpPtr MakeSharedOp(const Symbol &sym) {
+  static CachedOpPtr MakeSharedOp(const nnvm::Symbol &sym, bool is_dynamic = true) {
     // We turn on static_alloc for two reasons.
     // It avoids the overhead of unnecessary memory allocation.
     // only static_alloc supports nested call of CachedOp.
     std::vector<std::pair<std::string, std::string> > kwargs = {
       {"inline_limit", "0"},
-      {"static_alloc", "1"},
-      {"is_dynamic", "1"}
+      {"static_alloc", "1"}
     };
+    if (is_dynamic) {
+      kwargs.push_back({"is_dynamic", "1"});
+    } else {
+      kwargs.push_back({"is_dynamic", "0"});
+    }
     return std::make_shared<CachedOp>(sym, kwargs);
   }
 };

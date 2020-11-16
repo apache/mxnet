@@ -21,16 +21,11 @@ Deployment
 The following tutorials will help you learn how to deploy MXNet on various
 platforms and in different language environments.
 
-Export_
+Export
 ------
 The following tutorials will help you learn export MXNet models.
 
 .. container:: cards
-
-   .. card::
-      :title: Export ONNX Models
-
-      COMING SOON
 
    .. card::
       :title: Export with GluonCV
@@ -38,23 +33,17 @@ The following tutorials will help you learn export MXNet models.
 
       How to export models trained with MXNet GluonCV.
 
-Inference_
+   .. card::
+      :title: Export ONNX Models
+      :link: export/onnx.html
+
+      Export your MXNet model to the Open Neural Exchange Format
+
+Inference
 ---------
 The following tutorials will help you learn how to deploy MXNet models for inference applications.
 
 .. container:: cards
-
-   .. card::
-      :title: CPP Inference
-      :link: inference/cpp.html
-
-      How to deploy MXNet C++ Models
-
-   .. card::
-      :title: Scala Inference
-      :link: inference/scala.html
-
-      How to run Scala inference
 
    .. card::
       :title: GluonCV Models in a C++ Inference Application
@@ -68,7 +57,25 @@ The following tutorials will help you learn how to deploy MXNet models for infer
 
       How to use quantized GluonCV models for inference on Intel Xeon Processors to gain higher performance.
 
-Cloud_
+   .. card::
+      :title: C++
+      :link: inference/cpp.html
+
+      How to use MXNet models in a C++ environment.
+
+   .. card::
+      :title: Image Classification on Jetson
+      :link: inference/image_classification_jetson.html
+
+      Example of running a pretrained image classification model on a Jetson module.
+
+   .. card::
+      :title: Object Detection on Jetson
+      :link: https://gluon-cv.mxnet.io/build/examples_detection/demo_jetson.html
+
+      Example of running a pretrained object detection model on a Jetson module.
+
+Cloud
 -----
 The following tutorials will show you how to use MXNet on AWS.
 
@@ -94,7 +101,7 @@ The following tutorials will show you how to use MXNet on AWS.
 
    .. card::
       :title: Training with Data from S3
-      :link: https://mxnet.apache.org/api/faq/s3_integration
+      :link: /api/faq/s3_integration
 
       How to train with data from Amazon S3 buckets.
 
@@ -117,7 +124,3 @@ Security
    export/index
    inference/index
    run-on-aws/index
-
-.. _Export: export/index.html
-.. _Inference: inference/index.html
-.. _Cloud: run-on-aws/index.html

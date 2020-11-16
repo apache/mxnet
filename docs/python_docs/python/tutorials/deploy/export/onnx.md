@@ -34,7 +34,7 @@ To run the tutorial you will need to have installed the following python modules
 *Note:* MXNet-ONNX importer and exporter follows version 7 of ONNX operator set which comes with ONNX v1.2.1.
 
 
-```python
+```{.python .input}
 import mxnet as mx
 import numpy as np
 from mxnet.contrib import onnx as onnx_mxnet
@@ -47,7 +47,7 @@ logging.basicConfig(level=logging.INFO)
 We download the pre-trained ResNet-18 [ImageNet](http://www.image-net.org/) model from the [MXNet Model Zoo](/api/python/docs/api/gluon/model_zoo/index.html).
 We will also download synset file to match labels.
 
-```python
+```{.python .input}
 # Download pre-trained resnet model - json and params by running following code.
 path='http://data.mxnet.io/models/imagenet/'
 [mx.test_utils.download(path+'resnet/18-layers/resnet-18-0000.params'),
@@ -61,7 +61,7 @@ Now, we have downloaded ResNet-18 symbol, params and synset file on the disk.
 
 Let us describe the MXNet's `export_model` API. 
 
-```python
+```{.python .input}
 help(onnx_mxnet.export_model)
 ```
 
@@ -109,7 +109,7 @@ Since we have downloaded pre-trained model files, we will use the `export_model`
 
 We will use the downloaded pre-trained model files (sym, params) and define input variables.
 
-```python
+```{.python .input}
 # Downloaded input symbol and params files
 sym = './resnet-18-symbol.json'
 params = './resnet-18-0000.params'
@@ -123,7 +123,7 @@ onnx_file = './mxnet_exported_resnet50.onnx'
 
 We have defined the input parameters required for the `export_model` API. Now, we are ready to covert the MXNet model into ONNX format.
 
-```python
+```{.python .input}
 # Invoke export model API. It returns path of the converted onnx model
 converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file)
 ```
@@ -134,7 +134,7 @@ This API returns path of the converted model which you can later use to import t
 
 Now we can check validity of the converted ONNX model by using ONNX checker tool. The tool will validate the model by checking if the content contains valid protobuf:
 
-```python
+```{.python .input}
 from onnx import checker
 import onnx
 

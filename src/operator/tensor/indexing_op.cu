@@ -33,7 +33,6 @@ namespace op {
 
 /*! \brief If there are out-of-bound indices, out will be assigned to 1.
  */
-
 struct is_valid_check {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, char* out, const DType* data,
@@ -239,10 +238,10 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
   const dim_t row_length = output.shape()[1];
   const dim_t data_size = static_cast<dim_t>(data.shape_.Size());
   // temp resource declarations
-  dim_t* lookup_table = NULL;
-  void* temp_storage = NULL;
-  dim_t* sorted_data = NULL;
-  dim_t* original_idx = NULL;
+  dim_t* lookup_table = nullptr;
+  void* temp_storage = nullptr;
+  dim_t* sorted_data = nullptr;
+  dim_t* original_idx = nullptr;
   // calculate number of bytes for temp resources
   size_t lookup_table_bytes = num_rows * sizeof(dim_t);
   size_t sorted_data_storage_bytes = data_size * sizeof(dim_t);
@@ -253,7 +252,7 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
   IType* data_ptr = data.dptr<IType>();
   size_t *null_ptr = nullptr;
   // unique operations will be applied on sorted data
-  cub::DeviceSelect::Unique(NULL, unique_workspace_bytes, sorted_data, sorted_data,
+  cub::DeviceSelect::Unique(nullptr, unique_workspace_bytes, sorted_data, sorted_data,
     null_ptr, data_size, Stream<gpu>::GetStream(s));
   // One more space reserved for unique count
   size_t temp_workspace_bytes = std::max(unique_workspace_bytes,
@@ -387,8 +386,8 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
     MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
-        dim_t* prefix_sum = NULL;
-        void* d_temp_storage = NULL;
+        dim_t* prefix_sum = nullptr;
+        void* d_temp_storage = nullptr;
         size_t temp_storage_bytes = 0;
         cub::DeviceScan::InclusiveSum(d_temp_storage,
                                       temp_storage_bytes,
@@ -433,6 +432,71 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
         Kernel<AddTakeGradRspGPUKernel, gpu>::Launch(s, num_threads, grad_data, prefix_sum,
             data.dptr<IType>(), ograd.dptr<DType>(), row_length);
       });
+    });
+  });
+}
+
+/*
+ * \brief check if any of the indices is out of bound
+ * \param s the stream
+ * \param idx_ptr the indices on the stream
+ * \param N the number of indices in an axis
+ * \param M the number of axises to exmaine
+ * \param mshape the array that stores shape for each dimension
+ * \param is_valid_dim_ptr the temparary workspace that contains out-of-bound indices
+ */
+template<typename DType>
+void GatherNDCheckBoundGPU(mshadow::Stream<gpu> *s, const DType* idx_ptr, index_t N,
+                          index_t M, const mshadow::Shape<10> mshape, DType* is_valid_dim_ptr) {
+  using namespace mxnet_op;
+  Kernel<set_zero, gpu>::Launch(s, M, is_valid_dim_ptr);
+  Kernel<is_valid_check_gather_nd, gpu>::Launch(s, M, is_valid_dim_ptr, idx_ptr, N, mshape);
+
+  std::vector<DType> is_valid_dim(M);
+  CUDA_CALL(cudaMemcpyAsync(is_valid_dim.data(), is_valid_dim_ptr, sizeof(DType)*M,
+                            cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
+  CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
+  for (int m = 0; m < M; m++) {
+    if (is_valid_dim[m] > mshape[m] - 1 || is_valid_dim[m] < - mshape[m]) {
+      LOG(FATAL)<< "IndexError: index " << is_valid_dim[m] << " is out of bounds for axis "
+        << m << " with size " << mshape[m];
+    }
+  }
+}
+
+void GatherNDForwardGPU(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  const mxnet::TShape& dshape = inputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[1].shape_;
+  int M = ishape[0];
+  int N = ishape.Size() / M;
+  int K = dshape.ProdShape(M, dshape.ndim());
+  mshadow::Shape<10> strides;
+  mshadow::Shape<10> mshape;
+  for (int i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) {
+    strides[i] = stride;
+    mshape[i] = dshape[i];
+  }
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+      // check whether indices are out of bound
+      IType* idx_ptr = inputs[1].dptr<IType>();
+      Tensor<gpu, 1, IType> workspace =
+        ctx.requested[0].get_space_typed<gpu, 1, IType>(Shape1(M), s);
+      IType* is_valid_dim_ptr = reinterpret_cast<IType*>(workspace.dptr_);
+      GatherNDCheckBoundGPU(s, idx_ptr, N, M, mshape, is_valid_dim_ptr);
+      Kernel<gather_nd, gpu>::Launch(
+        s, N, req[0], N, M, K, strides, mshape, outputs[0].dptr<DType>(),
+        inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
     });
   });
 }
@@ -486,8 +550,8 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   Stream<gpu> *s = ctx.get_stream<gpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[take_::kIdx].type_flag_, IType, {  // index data type
       if (param.mode == take_::kRaise) {
         // check out-of-bound indices
         IType min = 0;
@@ -620,27 +684,25 @@ __global__ void EmbeddingFindBounds(const IType *sorted_data,
  * \param grad_out output gradient data
  * \param embbedding_dim dimension of the dense embedding
  * \param vocab_dim maximum number of unique indices in the data array: tokens vocabulary size
+ * \param nelems_per_load number of elements per each load based on (LType / DType)
  * \param req write/add/null
  */
-template <typename LType, typename DType, typename IType>
+template <typename AType, typename LType, typename DType, typename IType>
 __global__ void EmbeddingGradKernel(DType *grad_in,
-                                      const IType *original_index,
-                                      const IType *index_bounds,
-                                      const DType *grad_out,
-                                      const index_t embbedding_dim,
-                                      const index_t vocab_dim,
-                                      const int req) {
+                                    const IType *original_index,
+                                    const IType *index_bounds,
+                                    const DType *grad_out,
+                                    const index_t embbedding_dim,
+                                    const index_t vocab_dim,
+                                    const int nelems_per_load,
+                                    const int req) {
   extern __shared__ int sharedmem[];
-  LType* grad_in_row =  reinterpret_cast<LType *>(sharedmem);
-
-  // LType has to be bigger than DType, guarded in the launcher code
-  const int n_val = sizeof(DType) < sizeof(LType) ? sizeof(LType) / sizeof(DType) : 1;
+  AType* grad_in_row =  reinterpret_cast<AType *>(sharedmem);
   const LType *aligned_grad_out = reinterpret_cast<const LType *>(grad_out);
   LType *aligned_grad_in = reinterpret_cast<LType *>(grad_in);
-  const index_t aligned_emb_dim = embbedding_dim / n_val;
-  DType *my_grad_in_row = reinterpret_cast<DType *>(&grad_in_row[threadIdx.x]);
-  LType Lvalue[1];
-  DType* Dvalues = reinterpret_cast<DType*>(Lvalue);
+  const index_t aligned_emb_dim = embbedding_dim / nelems_per_load;
+  LType load_value[1];
+  DType* data_values = reinterpret_cast<DType*>(load_value);
 
   IType my_row = blockIdx.x;
   if (my_row < vocab_dim) {
@@ -652,29 +714,37 @@ __global__ void EmbeddingGradKernel(DType *grad_in,
     for (index_t emb_id=threadIdx.x; emb_id < aligned_emb_dim; emb_id += blockDim.x) {
       // Initialize grad_in
       if (req == kAddTo) {
-        grad_in_row[threadIdx.x] = aligned_grad_in[my_row * aligned_emb_dim + emb_id];
+        *load_value = aligned_grad_in[my_row * aligned_emb_dim + emb_id];
+        for (index_t val_id = 0; val_id < nelems_per_load; val_id++) {
+          grad_in_row[val_id * blockDim.x + threadIdx.x] = static_cast<AType>(data_values[val_id]);
+        }
       } else {
-        grad_in_row[threadIdx.x] = 0.0;
+        for (index_t val_id = 0; val_id < nelems_per_load; val_id++) {
+          grad_in_row[val_id * blockDim.x + threadIdx.x] = static_cast<AType>(0.0);
+        }
       }
       // Add all rows from grad_out according to indices in data
       for (index_t data_idx=lower_bound; data_idx < (lower_bound + nOccurrences); ++data_idx) {
-        *Lvalue = aligned_grad_out[original_index[data_idx] * aligned_emb_dim + emb_id];
-        for (index_t val_id = 0; val_id < n_val; val_id++) {
-          my_grad_in_row[val_id] += Dvalues[val_id];
+        *load_value = aligned_grad_out[original_index[data_idx] * aligned_emb_dim + emb_id];
+        for (index_t val_id = 0; val_id < nelems_per_load; val_id++) {
+          grad_in_row[val_id * blockDim.x + threadIdx.x] += static_cast<AType>(data_values[val_id]);
         }
       }
       // Save results
-      aligned_grad_in[my_row * aligned_emb_dim + emb_id] = grad_in_row[threadIdx.x];
+      for (index_t val_id = 0; val_id < nelems_per_load; val_id++) {
+        data_values[val_id] = static_cast<DType>(grad_in_row[val_id * blockDim.x + threadIdx.x]);
+      }
+      aligned_grad_in[my_row * aligned_emb_dim + emb_id] = *load_value;
     }
   }
 }
 
-template<typename gpu, typename IType, typename DType>
+template<typename AType, typename IType, typename DType>
 void EmbeddingGradKernelCaller(const OpContext& ctx,
-                                mshadow::Tensor<gpu, 2, DType> grad_in,
-                                const mshadow::Tensor<gpu, 1, IType>& index,
-                                const mshadow::Tensor<gpu, 2, DType> &grad_out,
-                                const std::vector<OpReqType>& req) {
+                               mshadow::Tensor<gpu, 2, DType> grad_in,
+                               const mshadow::Tensor<gpu, 1, IType>& index,
+                               const mshadow::Tensor<gpu, 2, DType> &grad_out,
+                               const std::vector<OpReqType>& req) {
   using namespace mxnet_op;
   using namespace mshadow::expr;
 
@@ -728,20 +798,23 @@ void EmbeddingGradKernelCaller(const OpContext& ctx,
 
   // Compute Gradient
   int ltype = mxnet::common::cuda::get_load_type(embbedding_dim * sizeof(DType));
+
   MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
-    int nelems_per_thread = sizeof(LType) / sizeof(DType);
+    CHECK_LE(sizeof(DType), sizeof(LType));
+    int nelems_per_load = sizeof(LType) / sizeof(DType);
     int threads_block_grad = 32;
     int maxThreads = 1024;
-    while (threads_block_grad < (embbedding_dim/nelems_per_thread) &&
+    while (threads_block_grad < (embbedding_dim/nelems_per_load) &&
           (threads_block_grad < maxThreads))
       threads_block_grad += 32;
-    size_t required_shared = threads_block_grad * sizeof(LType);
+    size_t required_shared = threads_block_grad * nelems_per_load * sizeof(AType);
     dim3 blocks(vocab_dim, 1);
-    EmbeddingGradKernel<LType><<<blocks, threads_block_grad, required_shared,
+    EmbeddingGradKernel<AType, LType><<<blocks, threads_block_grad, required_shared,
                   Stream<gpu>::GetStream(s)>>>(
                   grad_in.dptr_, original_index.dptr_,
                   bounds_index.dptr_, grad_out.dptr_,
                   embbedding_dim, vocab_dim,
+                  nelems_per_load,
                   req[embedding::kWeight]);
   });
 }
@@ -767,9 +840,17 @@ void EmbeddingOpBackward<gpu>(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& oshape = inputs[0].shape_;
 
   Stream<gpu> *s = ctx.get_stream<gpu>();
+
   CHECK_NE(req[embedding::kWeight], kWriteInplace)
     << "Backward of Embedding does not support writing in place.";
-  MSHADOW_TYPE_SWITCH(outputs[1].type_flag_, DType, {
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
+  if (!safe_acc && outputs[1].type_flag_ == mshadow::kFloat16) {
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for EmbeddingOpBackward "
+                    "with float16 inputs. "
+                    "See https://mxnet.apache.org/api/faq/env_var "
+                    "for more details.");
+  }
+  MXNET_REAL_ACC_TYPE_SWITCH(outputs[1].type_flag_, DType, AType, {
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {
       Tensor < gpu, 1, IType > data = inputs[1].get_with_shape<gpu, 1, IType>(
         Shape1(ishape.ProdShape(0, ishape.ndim())), s);
@@ -778,7 +859,10 @@ void EmbeddingOpBackward<gpu>(const nnvm::NodeAttrs& attrs,
       Tensor<gpu, 2, DType> grad_in = outputs[1].get<gpu, 2, DType>(s);
 
       if (req[embedding::kWeight] == kWriteTo || req[embedding::kWeight] == kAddTo) {
-        EmbeddingGradKernelCaller(ctx, grad_in, data, grad_out, req);
+        if (safe_acc)
+            EmbeddingGradKernelCaller<AType>(ctx, grad_in, data, grad_out, req);
+        else
+            EmbeddingGradKernelCaller<DType>(ctx, grad_in, data, grad_out, req);
       } else {
         LOG(FATAL) << "wrong req";
       }
@@ -787,18 +871,11 @@ void EmbeddingOpBackward<gpu>(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(Embedding)
-.set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpForwardEx<gpu>);
-
-NNVM_REGISTER_OP(_contrib_SparseEmbedding)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpForwardEx<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_Embedding)
 .set_attr<FCompute>("FCompute<gpu>", EmbeddingOpBackward<gpu>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", EmbeddingOpBackwardEx<gpu>);
-
-NNVM_REGISTER_OP(_backward_SparseEmbedding)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpBackwardEx<gpu>);
 
 NNVM_REGISTER_OP(take)
 .set_attr<FCompute>("FCompute<gpu>", TakeOpForward<gpu>);
@@ -813,7 +890,7 @@ NNVM_REGISTER_OP(one_hot)
 .set_attr<FCompute>("FCompute<gpu>", OneHotOpForward<gpu>);
 
 NNVM_REGISTER_OP(gather_nd)
-.set_attr<FCompute>("FCompute<gpu>", GatherNDForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", GatherNDForwardGPU);
 
 NNVM_REGISTER_OP(scatter_nd)
 .set_attr<FCompute>("FCompute<gpu>", ScatterNDForward<gpu>);

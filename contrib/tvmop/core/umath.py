@@ -25,13 +25,16 @@ _bin_logic_op_map = {
     'less': lambda a, b, *idx: a[idx] < b[idx],
     'greater_equal': lambda a, b, *idx: a[idx] >= b[idx],
     'less_equal': lambda a, b, *idx: a[idx] <= b[idx],
+    'logical_and': lambda a, b, *idx: tvm.all(a[idx] != 0, b[idx] != 0),
+    'logical_or': lambda a, b, *idx: tvm.any(a[idx] != 0, b[idx] != 0),
+    'logical_xor': lambda a, b, *idx: tvm.all(tvm.any(a[idx] != 0, b[idx] != 0), tvm.any(a[idx] == 0, b[idx] == 0)),
 }
 
 
 def _compute_binary_logic(op, dtype, ndim):
-    a = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='a')
-    b = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='b')
-    c = tvm.compute([tvm.var() for _ in range(ndim)],
+    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], dtype=dtype, name='a')
+    b = tvm.placeholder([tvm.size_var() for _ in range(ndim)], dtype=dtype, name='b')
+    c = tvm.compute([tvm.size_var() for _ in range(ndim)],
                     lambda *idx: _bin_logic_op_map[op](a, b, *idx), name='c')
     s = tvm.create_schedule(c.op)
     return s, a, b, c
@@ -87,13 +90,16 @@ _bin_scalar_logic_op_map = {
     'less_scalar': lambda a, b, *idx: a[idx].astype(b.dtype) < b,
     'greater_equal_scalar': lambda a, b, *idx: a[idx].astype(b.dtype) >= b,
     'less_equal_scalar': lambda a, b, *idx: a[idx].astype(b.dtype) <= b,
+    'logical_and_scalar': lambda a, b, *idx: tvm.all(a[idx].astype(b.dtype) != 0 , b != 0),
+    'logical_or_scalar': lambda a, b, *idx: tvm.any(a[idx].astype(b.dtype) != 0, b != 0),
+    'logical_xor_scalar': lambda a, b, *idx: tvm.all(tvm.any(a[idx].astype(b.dtype) != 0, b != 0), tvm.any(a[idx].astype(b.dtype) == 0, b == 0)),
 }
 
 
 def _compute_binary_scalar_logic(op, dtype, ndim):
-    a = tvm.placeholder([tvm.var() for _ in range(ndim)], name='a', dtype=dtype)
+    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='a', dtype=dtype)
     b = tvm.var('b', dtype='float64')
-    c = tvm.compute([tvm.var() for _ in range(ndim)],
+    c = tvm.compute([tvm.size_var() for _ in range(ndim)],
                     lambda *idx: _bin_scalar_logic_op_map[op](a, b, *idx), name='c')
     s = tvm.create_schedule(c.op)
     return s, a, b, c

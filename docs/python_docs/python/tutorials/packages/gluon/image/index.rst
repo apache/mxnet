@@ -33,22 +33,6 @@ Basic Image Tutorials
 
       How to create a convolutional neural network for handwritten digit recognition.
 
-   .. card::
-      :title: Image Recognition with Pretrained Models
-      :link: pre-trained_models.html
-
-      How to use pretrained models to recognize what is in an image.
-
-Advanced Image Tutorials
----------------------
-
-.. container:: cards
-
-   .. card::
-      :title: Image similarity search with InfoGAN
-      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/info_gan.html
-
-      Implementing an InfoGAN based on the MXNet Gluon.
 
 GluonCV Toolkit Tutorials
 -------------------------

@@ -23,7 +23,6 @@
  * \brief Tests thread safety and lifetime of thread local store
 */
 #include <gtest/gtest.h>
-#include <time.h>
 #include <dmlc/logging.h>
 #include <dmlc/thread_group.h>
 #include <dmlc/omp.h>
@@ -31,6 +30,7 @@
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <dmlc/timer.h>
+#include <ctime>
 #include <cstdio>
 #include <thread>
 #include <chrono>
@@ -56,7 +56,7 @@ static int ThreadSafetyTest(int num, std::vector<int>* tmp_inputs, std::vector<i
     return 0;
 }
 
-TEST(ThreadLocal, verify_thread_safety) {
+TEST(ThreadLocal, VerifyThreadSafety) {
     std::vector<int> tmp_inputs;
     tmp_inputs.resize(num_elements);
     std::vector<int*> outputs;

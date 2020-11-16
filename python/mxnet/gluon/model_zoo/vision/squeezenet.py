@@ -25,15 +25,14 @@ import os
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ...contrib.nn import HybridConcurrent
 from .... import base
 
 # Helpers
 def _make_fire(squeeze_channels, expand1x1_channels, expand3x3_channels):
-    out = nn.HybridSequential(prefix='')
+    out = nn.HybridSequential()
     out.add(_make_fire_conv(squeeze_channels, 1))
 
-    paths = HybridConcurrent(axis=1, prefix='')
+    paths = nn.HybridConcatenate(axis=1)
     paths.add(_make_fire_conv(expand1x1_channels, 1))
     paths.add(_make_fire_conv(expand3x3_channels, 3, 1))
     out.add(paths)
@@ -41,7 +40,7 @@ def _make_fire(squeeze_channels, expand1x1_channels, expand3x3_channels):
     return out
 
 def _make_fire_conv(channels, kernel_size, padding=0):
-    out = nn.HybridSequential(prefix='')
+    out = nn.HybridSequential()
     out.add(nn.Conv2D(channels, kernel_size, padding=padding))
     out.add(nn.Activation('relu'))
     return out
@@ -66,43 +65,42 @@ class SqueezeNet(HybridBlock):
         super(SqueezeNet, self).__init__(**kwargs)
         assert version in ['1.0', '1.1'], ("Unsupported SqueezeNet version {version}:"
                                            "1.0 or 1.1 expected".format(version=version))
-        with self.name_scope():
-            self.features = nn.HybridSequential(prefix='')
-            if version == '1.0':
-                self.features.add(nn.Conv2D(96, kernel_size=7, strides=2))
-                self.features.add(nn.Activation('relu'))
-                self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
-                self.features.add(_make_fire(16, 64, 64))
-                self.features.add(_make_fire(16, 64, 64))
-                self.features.add(_make_fire(32, 128, 128))
-                self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
-                self.features.add(_make_fire(32, 128, 128))
-                self.features.add(_make_fire(48, 192, 192))
-                self.features.add(_make_fire(48, 192, 192))
-                self.features.add(_make_fire(64, 256, 256))
-                self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
-                self.features.add(_make_fire(64, 256, 256))
-            else:
-                self.features.add(nn.Conv2D(64, kernel_size=3, strides=2))
-                self.features.add(nn.Activation('relu'))
-                self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
-                self.features.add(_make_fire(16, 64, 64))
-                self.features.add(_make_fire(16, 64, 64))
-                self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
-                self.features.add(_make_fire(32, 128, 128))
-                self.features.add(_make_fire(32, 128, 128))
-                self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
-                self.features.add(_make_fire(48, 192, 192))
-                self.features.add(_make_fire(48, 192, 192))
-                self.features.add(_make_fire(64, 256, 256))
-                self.features.add(_make_fire(64, 256, 256))
-            self.features.add(nn.Dropout(0.5))
+        self.features = nn.HybridSequential()
+        if version == '1.0':
+            self.features.add(nn.Conv2D(96, kernel_size=7, strides=2))
+            self.features.add(nn.Activation('relu'))
+            self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
+            self.features.add(_make_fire(16, 64, 64))
+            self.features.add(_make_fire(16, 64, 64))
+            self.features.add(_make_fire(32, 128, 128))
+            self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
+            self.features.add(_make_fire(32, 128, 128))
+            self.features.add(_make_fire(48, 192, 192))
+            self.features.add(_make_fire(48, 192, 192))
+            self.features.add(_make_fire(64, 256, 256))
+            self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
+            self.features.add(_make_fire(64, 256, 256))
+        else:
+            self.features.add(nn.Conv2D(64, kernel_size=3, strides=2))
+            self.features.add(nn.Activation('relu'))
+            self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
+            self.features.add(_make_fire(16, 64, 64))
+            self.features.add(_make_fire(16, 64, 64))
+            self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
+            self.features.add(_make_fire(32, 128, 128))
+            self.features.add(_make_fire(32, 128, 128))
+            self.features.add(nn.MaxPool2D(pool_size=3, strides=2, ceil_mode=True))
+            self.features.add(_make_fire(48, 192, 192))
+            self.features.add(_make_fire(48, 192, 192))
+            self.features.add(_make_fire(64, 256, 256))
+            self.features.add(_make_fire(64, 256, 256))
+        self.features.add(nn.Dropout(0.5))
 
-            self.output = nn.HybridSequential(prefix='')
-            self.output.add(nn.Conv2D(classes, kernel_size=1))
-            self.output.add(nn.Activation('relu'))
-            self.output.add(nn.AvgPool2D(13))
-            self.output.add(nn.Flatten())
+        self.output = nn.HybridSequential()
+        self.output.add(nn.Conv2D(classes, kernel_size=1))
+        self.output.add(nn.Activation('relu'))
+        self.output.add(nn.AvgPool2D(13))
+        self.output.add(nn.Flatten())
 
     def hybrid_forward(self, F, x):
         x = self.features(x)

@@ -147,7 +147,7 @@ class Executor {
                         const std::vector<NDArray> &arg_grad_store,
                         const std::vector<OpReqType> &grad_req_type,
                         const std::vector<NDArray> &aux_states,
-                        Executor* shared_exec = NULL);
+                        Executor* shared_exec = nullptr);
 
   static Executor* SimpleBind(nnvm::Symbol symbol,
                               const Context& default_ctx,

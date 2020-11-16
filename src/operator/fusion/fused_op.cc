@@ -21,7 +21,7 @@
 
 #include "./fused_op.h"
 #include "../operator_common.h"
-#include "../../executor/exec_pass.h"
+#include "../../imperative/exec_pass.h"
 
 #if MXNET_USE_CUDA
 
@@ -61,6 +61,7 @@ FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) :
 bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
                          std::vector<mxnet::TShape> *in_attrs,
                          std::vector<mxnet::TShape> *out_attrs) {
+  std::lock_guard<std::mutex> lock(my_mutex_);
   subgraph_.attrs.erase("shape");
   subgraph_.attrs.erase("shape_inputs");
   std::vector<mxnet::TShape> input_shapes(*in_attrs);
@@ -95,7 +96,6 @@ bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
     inferred = inferred && !op::shape_is_none(attr);
   }
   if (inferred) {
-    std::lock_guard<std::mutex> lock(my_mutex_);
     intermediate_shapes_.push_back({*in_attrs, *out_attrs, shapes});
   }
   return inferred;
@@ -104,6 +104,7 @@ bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
 bool FusedOp::InferType(const nnvm::NodeAttrs &attrs,
                         std::vector<int> *in_attrs,
                         std::vector<int> *out_attrs) {
+  std::lock_guard<std::mutex> lock(my_mutex_);
   subgraph_.attrs.erase("dtype");
   subgraph_.attrs.erase("dtype_inputs");
   std::vector<int> input_types(*in_attrs);
@@ -138,14 +139,13 @@ bool FusedOp::InferType(const nnvm::NodeAttrs &attrs,
     inferred = inferred && !op::type_is_none(attr);
   }
   if (inferred) {
-    std::lock_guard<std::mutex> lock(my_mutex_);
     intermediate_dtypes_.push_back({*in_attrs, *out_attrs, types});
   }
   return inferred;
 }
 
 template <typename Attr>
-std::tuple<const nnvm::NodePtr,
+std::tuple<const nnvm::ObjectPtr,
            std::vector<Attr>,
            std::vector<Attr>>
 FusedOp::GetAttrs(const std::string& attr_name, const uint32_t node_id) {
@@ -192,7 +192,7 @@ bool FusedOpInferType(const nnvm::NodeAttrs& attrs,
 }
 
 void FusedOpProvideShape(const nnvm::NodeAttrs& attrs,
-                         const std::vector<nnvm::NodePtr>& nodes,
+                         const std::vector<nnvm::ObjectPtr>& nodes,
                          const std::vector<std::vector<mxnet::TShape>> &in_attrs,
                          const std::vector<std::vector<mxnet::TShape>> &out_attrs) {
   const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
@@ -200,7 +200,7 @@ void FusedOpProvideShape(const nnvm::NodeAttrs& attrs,
 }
 
 void FusedOpProvideType(const nnvm::NodeAttrs& attrs,
-                        const std::vector<nnvm::NodePtr>& nodes,
+                        const std::vector<nnvm::ObjectPtr>& nodes,
                         const std::vector<std::vector<int>> &in_attrs,
                         const std::vector<std::vector<int>> &out_attrs) {
   const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
@@ -208,7 +208,7 @@ void FusedOpProvideType(const nnvm::NodeAttrs& attrs,
 }
 
 void FusedOpProvideStorageType(const nnvm::NodeAttrs& attrs,
-                               const std::vector<nnvm::NodePtr>& nodes,
+                               const std::vector<nnvm::ObjectPtr>& nodes,
                                const std::vector<std::vector<int>> &in_attrs,
                                const std::vector<std::vector<int>> &out_attrs) {}
 
@@ -243,7 +243,7 @@ NNVM_REGISTER_OP(_FusedOp)
 .set_attr_parser(FusedOpParamParser)
 .add_argument("data", "NDArray-or-Symbol[]", "Data");
 
-std::tuple<const nnvm::NodePtr,
+std::tuple<const nnvm::ObjectPtr,
            std::vector<mxnet::TShape>,
            std::vector<mxnet::TShape>>
 FusedOpHelperShape(const NodeAttrs& attrs) {
@@ -253,7 +253,7 @@ FusedOpHelperShape(const NodeAttrs& attrs) {
   return op->GetAttrs<mxnet::TShape>("shape", node_id);
 }
 
-std::tuple<const nnvm::NodePtr,
+std::tuple<const nnvm::ObjectPtr,
            std::vector<int>,
            std::vector<int>>
 FusedOpHelperType(const NodeAttrs& attrs) {
@@ -272,7 +272,7 @@ NNVM_REGISTER_OP(_FusedOpHelper)
 .set_attr<exec::FAccessSubgraphType>("FAccessSubgraphType", FusedOpHelperType);
 
 
-std::tuple<const nnvm::NodePtr,
+std::tuple<const nnvm::ObjectPtr,
            std::vector<mxnet::TShape>,
            std::vector<mxnet::TShape>>
 FusedOpOutHelperShape(const NodeAttrs& attrs) {
@@ -282,7 +282,7 @@ FusedOpOutHelperShape(const NodeAttrs& attrs) {
   return op->GetAuxShape(node_id);
 }
 
-std::tuple<const nnvm::NodePtr,
+std::tuple<const nnvm::ObjectPtr,
            std::vector<int>,
            std::vector<int>>
 FusedOpOutHelperType(const NodeAttrs& attrs) {

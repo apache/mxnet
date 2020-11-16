@@ -19,8 +19,6 @@
 #
 # Options:
 #
-#   USE_MKLDNN                    : Search for MKL:ML library variant
-#
 #   MKL_USE_SINGLE_DYNAMIC_LIBRARY  : use single dynamic library interface
 #   MKL_USE_STATIC_LIBS             : use static libraries
 #   MKL_MULTI_THREADED              : use multi-threading
@@ -30,7 +28,7 @@
 # This module defines the following variables:
 #
 #   MKL_FOUND            : True mkl is found
-#   MKL_INCLUDE_DIR      : unclude directory
+#   MKL_INCLUDE_DIR      : include directory
 #   MKL_LIBRARIES        : the libraries to link against.
 #
 # cjolivier01: Changed to also look for MKLDNN library (subset of mkl) instead of standard MKL package
@@ -41,17 +39,24 @@ if(MKL_FOUND)
 endif()
 
 # ---[ Root folders
-set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
+set(INTEL_HOME_ROOT "$ENV{HOME}/intel" CACHE PATH "Folder contains user-installed intel libs")
+set(INTEL_OPT_ROOT "/opt/intel" CACHE PATH "Folder contains root-installed intel libs")
 
 
   # ---[ Options
-  mxnet_option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
-  mxnet_option(MKL_USE_STATIC_LIBS "Use static libraries" OFF IF NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY)
-  mxnet_option(MKL_MULTI_THREADED  "Use multi-threading"   ON IF NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY)
-  mxnet_option(MKL_USE_ILP64  "Use ilp64 data model" OFF)
-  mxnet_option(MKL_USE_CLUSTER "Use cluster functions" OFF IF CMAKE_SIZEOF_VOID_P EQUAL 4)
+  if(UNIX)
+    # Single dynamic library interface leads to conflicts between intel omp and llvm omp
+    # https://github.com/apache/incubator-mxnet/issues/17641
+    option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" OFF)
+  else()
+    option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
+  endif()
+  cmake_dependent_option(MKL_USE_STATIC_LIBS "Use static libraries" ON "NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY" OFF)
+  cmake_dependent_option(MKL_MULTI_THREADED  "Use multi-threading"  ON "NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY" OFF)
+  option(MKL_USE_ILP64 "Use ilp64 data model" OFF)
+  cmake_dependent_option(MKL_USE_CLUSTER "Use cluster functions" OFF "CMAKE_SIZEOF_VOID_P EQUAL 4" OFF)
 
-  find_path(MKL_ROOT include/mkl.h PATHS $ENV{MKL_ROOT} ${INTEL_ROOT}/mkl
+  find_path(MKL_ROOT include/mkl.h PATHS $ENV{MKLROOT} ${INTEL_HOME_ROOT}/mkl ${INTEL_OPT_ROOT}/mkl
     DOC "Folder contains MKL")
 
   # ---[ Find include dir
@@ -122,7 +127,6 @@ set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
     list(APPEND MKL_LIBRARIES ${${__mkl_lib_upper}_LIBRARY})
   endforeach()
 
-
   if(NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY)
     if (MKL_USE_STATIC_LIBS)
       set(__iomp5_libs iomp5 libiomp5mt.lib)
@@ -131,19 +135,22 @@ set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
     endif()
 
     if(WIN32)
-      find_path(INTEL_INCLUDE_DIR omp.h PATHS ${INTEL_ROOT} PATH_SUFFIXES include)
+      find_path(INTEL_INCLUDE_DIR omp.h PATHS ${MKL_ROOT} PATH_SUFFIXES include)
       list(APPEND __looked_for INTEL_INCLUDE_DIR)
     endif()
 
-    find_library(MKL_RTL_LIBRARY ${__iomp5_libs}
-      PATHS ${INTEL_RTL_ROOT} ${INTEL_ROOT}/compiler ${MKL_ROOT}/.. ${MKL_ROOT}/../compiler
+    find_library(IOMP_LIBRARY ${__iomp5_libs}
+      PATHS ${MKL_ROOT} ${MKL_ROOT}/compiler ${MKL_ROOT}/.. ${MKL_ROOT}/../compiler
       PATH_SUFFIXES ${__path_suffixes}
       DOC "Path to Path to OpenMP runtime library")
 
-    list(APPEND __looked_for MKL_RTL_LIBRARY)
-    list(APPEND MKL_LIBRARIES ${MKL_RTL_LIBRARY})
+    list(APPEND __looked_for IOMP_LIBRARY)
+    list(APPEND MKL_LIBRARIES ${IOMP_LIBRARY})
   endif()
 
+  if(MKL_USE_STATIC_LIBS AND UNIX)
+    set(MKL_LIBRARIES -Wl,--start-group "${MKL_LIBRARIES}" -Wl,--end-group)
+  endif()
 
 
 include(FindPackageHandleStandardArgs)
