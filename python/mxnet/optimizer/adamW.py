@@ -19,8 +19,8 @@
 import math
 import os
 import numpy as np
-from .optimizer import Optimizer,register
-from ..ndarray import (zeros, clip, sqrt, square,full, NDArray)
+from .optimizer import Optimizer, register
+from ..ndarray import (zeros, clip, sqrt, square, full, NDArray)
 from ..ndarray.contrib import mp_adamw_update, adamw_update,\
     multi_mp_adamw_update, multi_adamw_update
 
@@ -181,8 +181,7 @@ class AdamW(Optimizer):
                 new_lrs.append(lr * math.sqrt(coef2) / coef1)
             lrs = new_lrs
         if not isinstance(self.rescale_grad, NDArray):
-            self.rescale_grad = full(shape=(1,), val=self.rescale_grad,
-                                           ctx=weights[0].context)
+            self.rescale_grad = full(shape=(1,), val=self.rescale_grad, ctx=weights[0].context)
         else:
             self.rescale_grad = self.rescale_grad.as_in_context(weights[0].context)
         kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
