@@ -170,6 +170,14 @@ void DNNLConcatBackward(const nnvm::NodeAttrs& attrs,
                         const std::vector<OpReqType>& req,
                         const std::vector<NDArray>& outputs);
 
+/* For dot */
+template <bool isNumpy>
+void DNNLDotForward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<NDArray>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<NDArray>& outputs);
+
 /* For batch dot */
 template <bool subgraph>
 void DNNLBatchDotForward(const nnvm::NodeAttrs& attrs,
