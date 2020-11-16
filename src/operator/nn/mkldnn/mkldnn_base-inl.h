@@ -213,6 +213,7 @@ bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray &input, const
 bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param, const NDArray &input,
                              const NDArray &output);
 bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray &data);
+bool SupportMKLDNNDot(const std::vector<NDArray> &inputs, const NDArray &output);
 bool SupportMKLDNNBatchDot(const std::vector<NDArray> &inputs, const NDArray &output);
 }  // namespace op
 

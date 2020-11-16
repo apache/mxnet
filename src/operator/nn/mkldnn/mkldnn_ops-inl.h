@@ -128,6 +128,12 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                           const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs);
 
+/* For dot */
+void MKLDNNDotForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                      const std::vector<NDArray> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<NDArray> &outputs);
+
 /* For batch dot */
 void MKLDNNBatchDotForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                            const std::vector<NDArray> &inputs,

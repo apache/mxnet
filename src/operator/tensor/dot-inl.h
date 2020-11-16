@@ -40,6 +40,10 @@
 #ifdef __CUDACC__
 #include "./dot-inl.cuh"
 #endif  // __CUDACC__
+#if MXNET_USE_ONEDNN == 1
+#include "./../nn/mkldnn/mkldnn_base-inl.h"
+#include "./../nn/mkldnn/mkldnn_ops-inl.h"
+#endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
 namespace op {
@@ -272,7 +276,11 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     target_stype = hint_has_value ? target_stype : kDefaultStorage;
     if (target_stype == kDefaultStorage) {
       dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+#if MXNET_USE_ONEDNN == 1
+                                       DispatchMode::kFComputeEx);
+#else
                                        DispatchMode::kFCompute);
+#endif
     }
   }
   if (!dispatched && lhs_stype == kCSRStorage && only_lhs_transpose && rhs_rsp_or_dns) {
@@ -1284,6 +1292,22 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known((*out_attrs)[0]);
 }
 
+#if MXNET_USE_ONEDNN == 1
+static inline void DotForwardExMKLDNN(const nnvm::NodeAttrs& attrs,
+                                      const OpContext& ctx,
+                                      const std::vector<NDArray>& inputs,
+                                      const std::vector<OpReqType>& req,
+                                      const std::vector<NDArray>& outputs) {
+  if (SupportMKLDNNDot(inputs, outputs[0])) {
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    MKLDNNRun(MKLDNNDotForward, attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(DotForward_<cpu>, attrs, ctx, inputs, req, outputs);
+  } else {
+    FallBackCompute(DotForward_<cpu>, attrs, ctx, inputs, req, outputs);
+  }
+}
+#endif
+
 template<typename xpu>
 void DotForwardEx(const nnvm::NodeAttrs& attrs,
                   const OpContext& ctx,
@@ -1293,6 +1317,17 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
+#if MXNET_USE_ONEDNN == 1
+  if (common::ContainsOnlyStorage(inputs, kDefaultStorage) &&
+      common::ContainsOnlyStorage(outputs, kDefaultStorage)) {
+    if (std::is_same<xpu, cpu>::value) {
+      DotForwardExMKLDNN(attrs, ctx, inputs, req, outputs);
+    } else {
+      FallBackCompute(DotForward_<gpu>, attrs, ctx, inputs, req, outputs);
+    }
+    return;
+  }
+#endif
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   CHECK_EQ(inputs[0].shape().ndim(), 2) << "sparse dot only supports 2 dimensional lhs";
   CHECK_EQ(inputs[1].shape().ndim(), 2) << "sparse dot only supports 2 dimensional rhs";

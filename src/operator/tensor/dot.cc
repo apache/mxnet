@@ -23,10 +23,6 @@
  */
 
 #include "./dot-inl.h"
-#if MXNET_USE_ONEDNN == 1
-#include "./../nn/mkldnn/mkldnn_base-inl.h"
-#include "./../nn/mkldnn/mkldnn_ops-inl.h"
-#endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
 namespace op {
@@ -96,6 +92,9 @@ above patterns, ``dot`` will fallback and generate output with default storage.
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", DotForward_<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", DotForwardEx<cpu>)
+#if MXNET_USE_ONEDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_dot"})
 .add_argument("lhs", "NDArray-or-Symbol", "The first input")
 .add_argument("rhs", "NDArray-or-Symbol", "The second input")
