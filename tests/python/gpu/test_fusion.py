@@ -26,7 +26,6 @@ from mxnet.test_utils import *
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, teardown_module, with_seed
 
 def check_fused_symbol(sym, **kwargs):
     inputs = sym.list_inputs()
@@ -250,14 +249,12 @@ def check_leakyrelu_ops():
     check_fused_symbol(mx.sym.LeakyReLU(a+b, act_type='gelu'), a=arr1, b=arr2)
 
 
-@with_seed()
 def test_fusion():
     check_unary_ops()
     check_binary_ops()
     check_other_ops()
     check_leakyrelu_ops()
 
-@with_seed()
 def test_fusion_compiler_cache():
     # Stresses the internal cache of CUfunctions by creating the same kernel multiple times and
     # on multiple GPUs if available.
@@ -276,7 +273,6 @@ def test_fusion_compiler_cache():
     if num_gpus > 1:
         check_fused_symbol(a+b, ctx=mx.gpu(1), a=arr1, b=arr2)
 
-@with_seed()
 @use_np
 def test_fusion_boolean_inputs():
     from mxnet.gluon import HybridBlock
@@ -296,7 +292,6 @@ def test_fusion_boolean_inputs():
     out = foo(mx.np.ones((10,), ctx=mx.gpu(), dtype=np.bool))
     mx.npx.waitall()
 
-@with_seed()
 def test_fusion_different_dimensions():
     from mxnet.gluon import HybridBlock
 
@@ -320,7 +315,6 @@ def test_fusion_different_dimensions():
     assert np.all(out.asnumpy() == np.ones((10,10)))
     assert out.shape == (10,10,1)
 
-@with_seed()
 def test_input_reorder():
     class Block(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -353,3 +347,22 @@ def test_input_reorder():
                     arrays[use_fusion][i] = arg.grad
         for key in ['result'] + list(range(len(arg_data))):
             assert_allclose(arrays['0'][key].asnumpy(), arrays['1'][key].asnumpy())
+
+def test_fusion_cycle():
+    class Test(gluon.nn.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Test, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x, y):
+            x = F.relu(x)
+            y = F.relu(y)
+            z1 = F.expand_dims(F.sum_axis(x, axis=1), axis=1)
+            z2 = F.expand_dims(F.sum_axis(y, axis=1), axis=1)
+            return x + z2, y + z1
+
+    t = Test()
+    a = mx.nd.zeros(shape=(10,1), ctx=mx.gpu())
+    b = mx.nd.zeros(shape=(10,1), ctx=mx.gpu())
+    t.hybridize(static_alloc=True, static_shape=True)
+    out = t(a, b)
+    mx.nd.waitall()

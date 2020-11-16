@@ -60,7 +60,7 @@ void transpose(MXTensor& src, MXTensor& dst, const OpResource& res) {
     res.alloc_sparse(B, 0, mp.size());
     float *Bval = (float*) (B->data);
     int didx = 0, iidx = 0;
-    for(auto i : mp) {
+    for(const auto& i : mp) {
       B->indices[iidx++] = i.first;
       for(auto j : i.second) {
         Bval[didx++] = j;
@@ -178,6 +178,9 @@ class MyStatefulTransposeRowSP : public CustomStatefulOp {
 };
 
 MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
+                            const MXContext& ctx,
+                            const std::vector<std::vector<unsigned int> >& in_shapes,
+                            const std::vector<int> in_types,
                             CustomStatefulOp** op_inst) {
   // testing passing of keyword arguments
   int count = attrs.count("test_kw") > 0 ? std::stoi(attrs.at("test_kw")) : 0;

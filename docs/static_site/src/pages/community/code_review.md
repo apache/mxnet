@@ -105,7 +105,7 @@ Minimum Dependency
 Always be cautious in introducing dependencies. While it is important to
 reuse code and avoid reinventing the wheel, dependencies can increase
 burden of users in deployment. A good design principle is that a feature
-or function should only have a dependecy if/when a user actually use it.
+or function should only have a dependency if/when a user actually use it.
 
 Ensure Readability
 ------------------
@@ -156,6 +156,11 @@ request, then select approve, or comment on the code and click request
 changes. Code owner can decide if the code can be merged in case by case
 if some of the reviewers did not respond in time(e.g. a week) and
 existing reviews are sufficient.
+
+Get Started
+-----------
+
+Checkout the following [PRs that need review](https://github.com/apache/mxnet/labels/pr-awaiting-review)"
 
 <script async defer src="https://buttons.github.io/buttons.js"></script>
 <script src="https://apis.google.com/js/platform.js"></script>

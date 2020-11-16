@@ -682,5 +682,21 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_encdec_valatt)
 NNVM_REGISTER_OP(_contrib_div_sqrt_dim)
 .set_attr<FCompute>("FCompute<gpu>", DivSqrtDimForward_<gpu>);
 
+
+NNVM_REGISTER_OP(_contrib_sldwin_atten_mask_like)
+.set_attr<FCompute>("FCompute<gpu>", SldWinAttenMaskLikeForward<gpu>);
+
+NNVM_REGISTER_OP(_contrib_sldwin_atten_score)
+.set_attr<FCompute>("FCompute<gpu>", SldWinAttenScoreForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_sldwin_atten_score)
+.set_attr<FCompute>("FCompute<gpu>", SldWinAttenScoreBackward<gpu>);
+
+NNVM_REGISTER_OP(_contrib_sldwin_atten_context)
+.set_attr<FCompute>("FCompute<gpu>", SldWinAttenContextForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_sldwin_atten_context)
+.set_attr<FCompute>("FCompute<gpu>", SldWinAttenContextBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

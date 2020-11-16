@@ -148,7 +148,7 @@ __device__ inline vector::VectorizedStorage<DType, nvec> load_slice(const DType 
   vector::VectorizedStorage<DType, nvec> ret;
   #pragma unroll
   for (int j = 0; j < nvec; j++) {
-      ret.scratch_.separate[j] = *(input + idx[j]);
+      ret.scratch_.separate[j] = idx[j] < shape.size ? *(input + idx[j]) : DType {};
   }
   return ret;
 }

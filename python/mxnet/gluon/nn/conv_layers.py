@@ -170,8 +170,12 @@ class _Conv(HybridBlock):
             s += ', {}'.format(self.act)
         s += ')'
         shape = self.weight.shape
+        if 'Transpose' in self.__class__.__name__:
+            mapping = '{1} -> {0}'
+        else:
+            mapping = '{0} -> {1}'
         return s.format(name=self.__class__.__name__,
-                        mapping='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]),
+                        mapping=mapping.format(shape[1] if shape[1] else None, shape[0]),
                         **self._kwargs)
 
 

@@ -92,16 +92,16 @@ snippet shows an example of c++ docstring.
 /*!
  * \brief Description of my function
  * \param arg1 Description of arg1
- * \param arg2 Descroption of arg2
+ * \param arg2 Description of arg2
  * \returns describe return value
  */
 int myfunction(int arg1, int arg2) {
-  // When necessary, also add comment to clarify internal logics
+  // When necessary, also add comment to clarify internal logic
 }
 ```
 
 Besides documenting function usages, we also highly recommend
-contributors to add comments about code logics to improve readability.
+contributors to add comments about code logic to improve readability.
 
 Write Tutorials
 ---------------

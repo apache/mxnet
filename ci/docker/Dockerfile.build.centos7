@@ -53,6 +53,7 @@ RUN yum -y check-update || true && \
         protobuf-devel \
         # CentOS Software Collections https://www.softwarecollections.org
         devtoolset-7 \
+        devtoolset-8 \
         rh-python36 \
         rh-maven35 \
         # Libraries
@@ -69,8 +70,8 @@ RUN yum -y check-update || true && \
         libzstd-devel && \
     yum clean all
 
-# Make GCC7, Python 3.5 and Maven 3.3 Software Collections available by default
-# during build and runtime of this container
+# Make Python 3.6 and Maven 3.3 Software Collections available by default during
+# the following build steps in this Dockerfile
 SHELL [ "/usr/bin/scl", "enable", "devtoolset-7", "rh-python36", "rh-maven35" ]
 
 # Install minimum required cmake version

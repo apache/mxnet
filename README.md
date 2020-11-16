@@ -23,7 +23,7 @@
 
 Apache MXNet (incubating) for Deep Learning
 ===========================================
-[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/releases) [![GitHub stars](https://img.shields.io/github/stars/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/stargazers) [![GitHub forks](https://img.shields.io/github/forks/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/network) [![GitHub contributors](https://img.shields.io/github/contributors-anon/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/graphs/contributors) [![GitHub issues](https://img.shields.io/github/issues/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/issues) [![good first issue](https://img.shields.io/github/issues/apache/incubator-mxnet/good%20first%20issue)](https://github.com/apache/incubator-mxnet/labels/good%20first%20issue) [![GitHub license](https://img.shields.io/github/license/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/blob/master/LICENSE) [![Twitter](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Fapache%2Fincubator-mxnet)](https://twitter.com/intent/tweet?text=Wow:%20https%3A%2F%2Fgithub.com%2Fapache%2Fincubator-mxnet%20@ApacheMXNet) [![Twitter Follow](https://img.shields.io/twitter/follow/ApacheMXNet?style=social)](https://twitter.com/ApacheMXNet)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/releases) [![GitHub stars](https://img.shields.io/github/stars/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/stargazers) [![GitHub forks](https://img.shields.io/github/forks/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/network) [![GitHub contributors](https://img.shields.io/github/contributors-anon/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/graphs/contributors) [![GitHub issues](https://img.shields.io/github/issues/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/issues) [![good first issue](https://img.shields.io/github/issues/apache/incubator-mxnet/good%20first%20issue)](https://github.com/apache/incubator-mxnet/labels/good%20first%20issue) [![GitHub pull requests by-label](https://img.shields.io/github/issues-pr/apache/mxnet/pr-awaiting-review)](https://github.com/apache/mxnet/labels/pr-awaiting-review) [![GitHub license](https://img.shields.io/github/license/apache/incubator-mxnet)](https://github.com/apache/incubator-mxnet/blob/master/LICENSE) [![Twitter](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Fapache%2Fincubator-mxnet)](https://twitter.com/intent/tweet?text=Wow:%20https%3A%2F%2Fgithub.com%2Fapache%2Fincubator-mxnet%20@ApacheMXNet) [![Twitter Follow](https://img.shields.io/twitter/follow/ApacheMXNet?style=social)](https://twitter.com/ApacheMXNet)
 
 Apache MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
 It allows you to ***mix*** [symbolic and imperative programming](https://mxnet.apache.org/api/architecture/program_model)
@@ -32,7 +32,7 @@ At its core, MXNet contains a dynamic dependency scheduler that automatically pa
 A graph optimization layer on top of that makes symbolic execution fast and memory efficient.
 MXNet is portable and lightweight, scalable to many GPUs and machines.
 
-MXNet is more than a deep learning project. It is a [community](https://mxnet.apache.org/community)
+MXNet is more than a deep learning project. It is a [community](https://mxnet.apache.org/versions/master/community)
 on a mission of democratizing AI. It is a collection of [blue prints and guidelines](https://mxnet.apache.org/api/architecture/overview)
 for building deep learning systems, and interesting insights of DL systems for hackers.
 
@@ -60,8 +60,8 @@ Contents
 * [Ecosystem](https://mxnet.apache.org/ecosystem)
 * [API Documentation](https://mxnet.apache.org/api)
 * [Examples](https://github.com/apache/incubator-mxnet-examples)
-* [Social Media](https://mxnet.apache.org/community#social-media)
-* [Contribute to MXNet](https://mxnet.apache.org/community/)
+* [Stay Connected](#stay-connected)
+* [Social Media](#social-media)
 
 What's New
 ----------

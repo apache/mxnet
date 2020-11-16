@@ -21,7 +21,6 @@ import os
 import sys
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, teardown_module
 from test_tvm_op import *
 
 set_default_context(mx.gpu(0))

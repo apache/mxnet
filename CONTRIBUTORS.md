@@ -20,14 +20,14 @@ Contributors of Apache MXNet (incubating)
 Apache MXNet adopts the Apache way and governs by merit. We believe that it is important to create
 an inclusive community where everyone can use, contribute to, and influence the direction of
 the project. We actively invite contributors who have earned the merit to be part of the
-development community. See [MXNet Community Guide][https://mxnet.apache.org/community/community].
+development community. See [MXNet Community Guide](https://mxnet.apache.org/community/community).
 
 
-PMC
+PPMC
 ---
-The Project Management Committee(PMC) consists group of active committers that moderate the
-discussion, manage the project release, and proposes new committer/PMC members. Here's the list of
-PMC members in alphabetical order by first name.
+The Podling Project Management Committee (PPMC) is a group of active committers that moderate the
+discussion, manage the project release, and appoint new committers and PPMC members. Here's the list of
+PPMC members in alphabetical order by first name:
 
 * [Anirudh Subramanian](https://github.com/anirudh2290)
 * [Bing Xu](https://github.com/antinucleon)
@@ -43,6 +43,7 @@ PMC members in alphabetical order by first name.
 * [Henri Yandell](https://github.com/hen)
 * [Hongliang Liu](https://github.com/phunterlau)
 * [Indhu Bharathi](https://github.com/indhub)
+* [Jackie Wu](https://github.com/wkcn)
 * [Jian Zhang](https://github.com/jzhang-zju)
 * [Joe Spisak](https://github.com/jspisak)
 * [Jun Wu](https://github.com/reminisce)
@@ -51,11 +52,12 @@ PMC members in alphabetical order by first name.
 * [Ly Nguyen](https://github.com/lxn2)
 * [Madan Jampani](https://github.com/madjam)
 * [Marco de Abreu](https://github.com/marcoabreu)
- - Marco is the creator of the current MXNet CI.
+  - Marco is the creator of the current MXNet CI.
 * [Mu Li](https://github.com/mli)
   - Mu is the contributor of the distributed key-value store in MXNet.
 * [Nan Zhu](https://github.com/CodingCat)
 * [Naveen Swamy](https://github.com/nswamy)
+* [Przemek Tredak](https://github.com/ptrendx)
 * [Qiang Kou](https://github.com/thirdwing)
   - KK is a R ninja, he makes mxnet available for R users.
 * [Qing Lan](https://github.com/lanking520)
@@ -90,22 +92,23 @@ PMC members in alphabetical order by first name.
 
 Committers
 ----------
-Committers are individuals who are granted the write access to the project. A committer is usually
+Committers are individuals who are granted write access to the project. A committer is usually
 responsible for a certain area or several areas of the code where they oversee the code review
 process. The area of contribution can take all forms, including code contributions and code
 reviews, documents, education, and outreach. Committers are essential for a high quality and
-healthy project. The community actively look for new committers from contributors.
+healthy project. The PPMC actively seeks to appoint new committers from the list of contributors.
 
 * [Aaron Markham](https://github.com/aaronmarkham)
 * [Alex Zai](https://github.com/azai91)
 * [Anirudh Acharya](https://github.com/anirudhacharya)
 * [Aston Zhang](https://github.com/astonzhang)
+* [Chaitanya Bapat](https://github.com/ChaiBapchya)
+* [Ciyong Chen](https://github.com/ciyongch)
 * [Da Zheng](https://github.com/zheng-da)
 * [Ding Kuo](https://github.com/chinakook)
 * [Hao Jin](https://github.com/haojin2)
 * [Haozheng Fan](https://github.com/hzfan)
 * [Iblis Lin](https://github.com/iblis17)
-* [Jackie Wu](https://github.com/wkcn)
 * [Jeremie Desgagne-Bouchard](https://github.com/jeremiedb)
 * [Jiajun Wang](https://github.com/arcadiaphy)
 * [Junru Shao](https://github.com/junrushao1994)
@@ -115,9 +118,10 @@ healthy project. The community actively look for new committers from contributor
 * [Lai Wei](https://github.com/roywei)
 * [Lin Yuan](https://github.com/apeforest)
   - Lin supports MXNet distributed training using Horovod and is also a major contributor to higher order gradients.
+* [Manu Seth](https://github.com/mseth10/)
 * [Nicolas Modrzyk](https://github.com/hellonico)
 * [Patric Zhao](https://github.com/pengzhao-intel)
-* - Patric is a parallel computing expert and a major contributor to the MXNet MKL-DNN backend.
+  - Patric is a parallel computing expert and a major contributor to the MXNet MKL-DNN backend.
 * [Przemysław Trędak](https://github.com/ptrendx)
 * [Rahul Huilgol](https://github.com/rahul003)
 * [Roshani Nagmote](https://github.com/roshrini)
@@ -128,12 +132,14 @@ healthy project. The community actively look for new committers from contributor
 * [Yuxi Hu](https://github.com/yuxihu)
 * [Zach Kimberg](https://github.com/zachgk)
   - Zach is one of the major maintainers of the MXNet Scala package.
+* [Zhaoqi Zhu](https://github.com/Zha0q1)
 
 
 List of Contributors
 --------------------
 * [Top-100 Contributors](https://github.com/apache/incubator-mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
+* [Aditya Trivedi](https://github.com/iadi7ya)
 * [Feng Wang](https://github.com/happynear)
   - Feng makes MXNet compatible with Windows Visual Studio.
 * [Jack Deng](https://github.com/jdeng)
@@ -148,7 +154,7 @@ List of Contributors
 * [Nan Xiao](https://github.com/road2stat)
 * [Wei Wu](https://github.com/tornadomeet)
 * [Michaël Benesty](https://github.com/pommedeterresautee)
-  -Michaël contributes the R visualization module of MXNet
+  - Michaël contributes the R visualization module of MXNet
 * [Kublai Jing](https://github.com/Kublai-Jing)
 * [chenjx1005](https://github.com/chenjx1005)
 * [ry](https://github.com/ry)
@@ -218,7 +224,6 @@ List of Contributors
 * [Xizhou Zhu](https://github.com/einsiedler0408/)
 * [Jean Kossaifi](https://github.com/JeanKossaifi/)
 * [Kenta Kubo](https://github.com/kkk669/)
-* [Manu Seth](https://github.com/mseth10/)
 * [Calum Leslie](https://github.com/calumleslie)
 * [Andre Tamm](https://github.com/andretamm)
 * [Julian Salazar](https://github.com/JulianSlzr)
@@ -228,7 +233,6 @@ List of Contributors
 * [dwSun](https://github.com/dwSun/)
 * [David Braude](https://github.com/dabraude/)
 * [Nick Robinson](https://github.com/nickrobinson)
-* [Kan Wu](https://github.com/wkcn)
 * [Zheqin Wang](https://github.com/rasefon)
 * [Thom Lane](https://github.com/thomelane)
 * [Sina Afrooze](https://github.com/safrooze)
@@ -240,7 +244,6 @@ List of Contributors
 * [Per Goncalves da Silva](https://github.com/perdasilva)
 * [Zhijingcheng Yu](https://github.com/jasonyu1996)
 * [Cheng-Che Lee](https://github.com/stu1130)
-* [Chaitanya Bapat](https://github.com/ChaiBapchya)
 * [LuckyPigeon](https://github.com/LuckyPigeon)
 * [Anton Chernov](https://github.com/lebeg)
 * [Denisa Roberts](https://github.com/D-Roberts)
@@ -256,7 +259,6 @@ List of Contributors
 * [Satya Krishna Gorti](https://github.com/satyakrishnagorti)
 * [Neo Chien](https://github.com/cchung100m)
 * [Wujie Zhou](https://github.com/eureka7mt)
-* [Ciyong Chen](https://github.com/ciyongch)
 * [Hao Li](https://github.com/lihaofd)
 * [Jin Huang](https://github.com/jinhuang415)
 * [Luobao Zou](https://github.com/luobao-intel)

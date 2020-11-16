@@ -18,7 +18,7 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
-__all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish', 'GELU']
+__all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish', 'GELU', 'SiLU']
 
 from ... import initializer
 from ..block import HybridBlock
@@ -215,7 +215,7 @@ class GELU(HybridBlock):
 
 class Swish(HybridBlock):
     r"""
-    Swish Activation function
+    Swish Activation function (SiLU with a hyperparameter)
         https://arxiv.org/pdf/1710.05941.pdf
 
     Parameters
@@ -240,3 +240,32 @@ class Swish(HybridBlock):
             return x * F.npx.sigmoid(self._beta * x)
         else:
             return x * F.sigmoid(self._beta * x, name='fwd')
+
+
+class SiLU(HybridBlock):
+    r"""
+    Sigmoid Linear Units
+        Originally proposed "Gaussian Error Linear Units (GELUs)", Hendrycks et al, 2016
+        https://arxiv.org/abs/1606.08415
+
+    Parameters
+    ----------
+    beta : float
+        silu(x) = x * sigmoid(x)
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+    """
+
+    def __init__(self, **kwargs):
+        super(SiLU, self).__init__(**kwargs)
+
+    def hybrid_forward(self, F, x):
+        if is_np_array():
+            return x * F.npx.sigmoid(x)
+        else:
+            return x * F.sigmoid(x, name='fwd')

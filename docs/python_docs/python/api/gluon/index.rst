@@ -16,7 +16,7 @@
    under the License.
 
 mxnet.gluon
-============
+===========
 
 The Gluon library in Apache MXNet provides a clear, concise, and simple API for deep learning.
 It makes it easy to prototype, build, and train deep learning models without sacrificing training speed.
@@ -159,6 +159,5 @@ Utilities
    symbol_block
    constant
    parameter
-   parameter_dict
    trainer
    */index

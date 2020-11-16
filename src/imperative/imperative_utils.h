@@ -752,9 +752,10 @@ inline void PushOperator(const OpStatePtr& state,
                           engine::CallbackOnComplete on_complete) {
       OpContext opctx{need_grad, is_train, rctx, on_complete, requested};
       REDEFINE_INPUTS_OUTPUTS(inputs, outputs, inputsA, outputsA);
-      INVALIDATE_OUTPUTS_COND(exec_type != ExecType::kCrossDeviceCopy, outputsA, req);
-      CREATE_DEFAULT_INPUTS(exec_type != ExecType::kCrossDeviceCopy, attrs,
-                            CreateDefaultInputs(&inputsA));
+      INVALIDATE_OUTPUTS_COND(exec_type != ExecType::kCrossDeviceCopy && op->name != "_CachedOp",
+                              outputsA, req);
+      CREATE_DEFAULT_INPUTS(exec_type != ExecType::kCrossDeviceCopy && op->name != "_CachedOp",
+                            attrs, CreateDefaultInputs(&inputsA));
       fcompute_ex(state, opctx, inputsA, req, outputsA);
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync
           && rctx.get_stream<gpu>() && !rctx.is_bulk) {
@@ -862,9 +863,6 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, mxnet::ShapeVector&& shapes,
   }
   g.attrs.erase("shape");
   g.attrs.erase("shape_inputs");
-  if (node_range.second > node_range.first) {
-    g.attrs["node_range"] = std::make_shared<dmlc::any>(node_range);
-  }
   if (node_range.second > node_range.first) {
     g.attrs["node_range"] = std::make_shared<dmlc::any>(node_range);
   }

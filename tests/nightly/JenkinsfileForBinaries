@@ -64,7 +64,6 @@ core_logic: {
         ws('workspace/large_tensor-cpu') {
             utils.unpack_and_init('cpu_int64', mx_lib)
             utils.docker_run('ubuntu_cpu', 'nightly_test_large_tensor', false)
-            utils.docker_run('ubuntu_cpu', 'nightly_test_large_vector', false)
         }
       }
     },

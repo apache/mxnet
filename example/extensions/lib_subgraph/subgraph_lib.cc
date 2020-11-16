@@ -156,6 +156,9 @@ class MyStatefulOp : public CustomStatefulOp {
 };
 
 MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
+                            const MXContext& ctx,
+                            const std::vector<std::vector<unsigned int> >& in_shapes,
+                            const std::vector<int> in_types,
                             CustomStatefulOp** op_inst) {
   std::string serialized_subgraph = "[empty]";
   // MXNet subgraph is stored as Symbol in operator node attrs subgraphs field
@@ -207,10 +210,15 @@ MXReturnValue mySupportedOps(const mxnet::ext::Graph* graph,
 }
 
 MXReturnValue myReviewSubgraph(const mxnet::ext::Graph *subgraph, int subgraph_id, bool* accept,
-                               const std::unordered_map<std::string, std::string>& options) {
+                               const std::unordered_map<std::string, std::string>& options,
+                               std::unordered_map<std::string, std::string>* attrs) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }
+
+  std::string sg = subgraph->toString();
+  std::cout << "subgraph " << subgraph_id << ": " << std::endl;
+  std::cout << sg << std::endl;
 
   // check if option `reject` was specified, and if so check if value is 'True'
   if(options.count("reject") > 0 && options.at("reject").compare("True") == 0) {
@@ -221,6 +229,9 @@ MXReturnValue myReviewSubgraph(const mxnet::ext::Graph *subgraph, int subgraph_i
     *accept = true;
     std::cout << "accepting subgraph" << std::endl;
   }
+
+  attrs->emplace("myKey","myVal");
+
   return MX_SUCCESS;
 }
 

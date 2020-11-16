@@ -73,12 +73,15 @@ class Symbol(SymbolBase):
 
     def __repr__(self):
         """Gets a string representation of the symbol."""
-        name = self.name
-        if name is None:
-            name = ', '.join([i.name for i in self])
-            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        if self._alive:
+            name = self.name
+            if name is None:
+                name = ', '.join([i.name for i in self])
+                return '<%s group [%s]>' % (self.__class__.__name__, name)
+            else:
+                return '<%s %s>' % (self.__class__.__name__, name)
         else:
-            return '<%s %s>' % (self.__class__.__name__, name)
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __iter__(self):
         """Returns a generator object of symbol.
@@ -1476,50 +1479,44 @@ class Symbol(SymbolBase):
     # pylint: disable=too-many-locals
     def optimize_for(self, backend, args=None, aux=None, ctx=None,
                      shape_dict=None, type_dict=None, stype_dict=None, skip_infer=False, **kwargs):
-        """Partitions current symbol and optimizes it for a given backend,
-        returns new partitioned symbol.
+        r"""Partitions current symbol and optimizes it for a given backend.
+
+        The backend must have registered the partitioning graph pass in
+        ``SubgraphBackendRegistry``.
 
         Parameters
         ----------
         backend : str
-            The name of backend, as registered in `SubgraphBackendRegistry`
-
+            The name of backend, as registered in ``SubgraphBackendRegistry``
         args : dict of str to NDArray, optional
             Input arguments to the symbol, required to infer shapes/types before partitioning
-            - If type is a dict of str to `NDArray`, then it maps the name of arguments
-              to the corresponding `NDArray`. Non defined arguments' `NDArray`s don't have to be
-              specified in the dict.
-
+            If type is a dict of str to NDArray, then it maps the names of arguments
+            to the corresponding NDArray. Undefined arguments' NDArrays
+            don't have to be specified in the dict.
         aux : dict of str to NDArray, optional
             Input auxiliary arguments to the symbol
-            - If type is a dict of str to `NDArray`, then it maps the name of arguments
-              to the corresponding `NDArray`.
-
+            If type is a dict of str to :class:`NDArray`, then it maps the name of arguments
+            to the corresponding :class:`NDArray`.
         ctx : Context, optional
             Device context, used to infer stypes
-
-        shape_dict  : Dict of str->tuple, optional
+        shape_dict : Dict of str->tuple, optional
             Input shape dictionary.
-            Used iff input NDArray is not in `args`.
-
-        type_dict  : Dict of str->numpy.dtype, optional
+            Used iff input :class:`NDArray` is not in ``args``.
+        type_dict : Dict of str->numpy.dtype, optional
             Input type dictionary.
-            Used iff input NDArray is not in `args`.
-
+            Used iff input :class:`NDArray` is not in ``args``.
         stype_dict  : Dict of str->str, optional
             Input storage type dictionary.
-            Used iff input NDArray is not in `args`.
-
+            Used iff input :class:`NDArray` is not in ``args``.
         skip_infer : bool, optional
             If True, the optimization skips the shape, type and storage type inference pass.
-
         kwargs : optional arguments
-            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
+            Passed on to ``PrePartition`` and ``PostPartition`` functions of ``SubgraphProperty``
 
         Returns
         -------
         out : SymbolHandle
-            The created symbol for target backend.
+            A symbol with the partitioned graph for target backend.
         """
         out = SymbolHandle()
         assert isinstance(backend, str)
@@ -2655,6 +2652,15 @@ class Symbol(SymbolBase):
 
     def backward(self):
         raise NotImplementedForSymbol(self.backward, None)
+
+
+    def has_dynamic_shape_op(self):
+        """Check if any dynamic shape op is present in the symbol.
+        """
+        has_dynamic_shape = ctypes.c_bool(False)
+        check_call(_LIB.MXCheckDynamicShapeOp(self.handle,
+                                              ctypes.byref(has_dynamic_shape)))
+        return has_dynamic_shape.value
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         init=None, stype=None, profiler_scope=None, **kwargs):

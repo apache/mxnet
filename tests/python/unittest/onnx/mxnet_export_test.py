@@ -23,7 +23,6 @@ import logging
 import tempfile
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '..'))
-from common import setup_module, teardown_module, with_seed
 from mxnet import nd, sym
 from mxnet.test_utils import set_default_context
 from mxnet.gluon import nn
@@ -96,13 +95,11 @@ class TestExport(unittest.TestCase):
     def setUp(self):
         set_default_context(mx.cpu(0))
 
-    @with_seed()
     def test_onnx_export_single_output(self):
         net = nn.HybridSequential()
         net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net)
 
-    @with_seed()
     def test_onnx_export_multi_output(self):
         class MultiOutputBlock(nn.HybridBlock):
             def __init__(self):
@@ -119,25 +116,21 @@ class TestExport(unittest.TestCase):
         assert len(sym.Group(net(sym.Variable('data'))).list_outputs()) == 10
         _check_onnx_export(net, group_outputs=True)
 
-    @with_seed()
     def test_onnx_export_list_shape(self):
         net = nn.HybridSequential()
         net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net, shape_type=list)
 
-    @with_seed()
     def test_onnx_export_extra_params(self):
         net = nn.HybridSequential()
         net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net, extra_params={'extra_param': nd.array([1, 2])})
 
-    @with_seed()
     def test_onnx_export_slice(self):
         net = nn.HybridSequential()
         net.add(nn.Dense(100, activation='relu'), SplitConcatBlock(), nn.Dense(10))
         _check_onnx_export(net)
 
-    @with_seed()
     def test_onnx_export_slice_changing_shape(self):
         net = nn.HybridSequential()
         net.add(nn.Dense(100, activation='relu'), SplitConcatBlock(),

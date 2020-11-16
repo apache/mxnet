@@ -271,7 +271,10 @@ MXNET_REGISTER_API("_npi.linspace")
   op::LinspaceParam param;
   param.start = args[0].operator double();
   param.stop = args[1].operator double();
-  param.num = args[2].operator int();
+  if (features::is_enabled(features::INT64_TENSOR_SIZE))
+    param.num = args[2].operator int64_t();
+  else
+    param.num = args[2].operator int();
   if (args[3].type_code() == kNull) {
     param.endpoint = true;
   } else {
@@ -301,7 +304,10 @@ MXNET_REGISTER_API("_npi.logspace")
   op::LogspaceParam param;
   param.start = args[0].operator double();
   param.stop = args[1].operator double();
-  param.num = args[2].operator int();
+  if (features::is_enabled(features::INT64_TENSOR_SIZE))
+    param.num = args[2].operator int64_t();
+  else
+    param.num = args[2].operator int();
   if (args[3].type_code() == kNull) {
     param.endpoint = true;
   } else {

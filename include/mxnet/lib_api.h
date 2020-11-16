@@ -53,7 +53,7 @@
 #endif
 
 /* Make sure to update the version number everytime you make changes */
-#define MX_LIBRARY_VERSION 9
+#define MX_LIBRARY_VERSION 10
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
@@ -594,10 +594,10 @@ class Graph {
   static Graph* fromJson(JsonVal val);
 
   /* \brief convert graph object back to JSON object */
-  JsonVal toJson();
+  JsonVal toJson() const;
 
   /* \brief convert graph object to JSON string */
-  std::string toString();
+  std::string toString() const;
 
   /* \brief visits a node "n" */
   void _dfs_util(Node* n, std::unordered_set<Node*>* to_visit,
@@ -732,6 +732,9 @@ typedef MXReturnValue (*mutateInputs_t)(const std::unordered_map<std::string,
                                         std::vector<int>* input_indices);
 typedef MXReturnValue (*createOpState_t)(const std::unordered_map<std::string,
                                          std::string>& attributes,
+                                         const MXContext& ctx,
+                                         const std::vector<std::vector<unsigned int> >& in_shapes,
+                                         const std::vector<int> in_types,
                                          CustomStatefulOp**);
 
 /*!
@@ -816,7 +819,9 @@ typedef MXReturnValue (*createSelector_t)(const mxnet::ext::Graph *graph,
 typedef MXReturnValue (*reviewSubgraph_t)(const mxnet::ext::Graph *subgraph, int subgraph_id,
                                           bool* accept,
                                           const std::unordered_map<std::string,
-                                                                   std::string>& options);
+                                                                   std::string>& options,
+                                          std::unordered_map<std::string,
+                                                             std::string>* attrs);
 
 /*!
  * \brief An abstract class for subgraph property
@@ -907,25 +912,25 @@ class Registry {
 
 /*! \brief declare a variable with custom name */
 #define MX_REGISTER_NAME_(Name) MXNet ## _CustomOp ## _
-#define MX_REGISTER_DEF_(Name) CustomOp MX_REGISTER_NAME_(Name)
+#define MX_REGISTER_DEF_(Name) mxnet::ext::CustomOp MX_REGISTER_NAME_(Name)
 
 #define MX_REGISTER_PROP_NAME_(Name) MXNet ## _CustomSubProp ## _
-#define MX_REGISTER_PROP_DEF_(Name) CustomPartitioner MX_REGISTER_PROP_NAME_(Name)
+#define MX_REGISTER_PROP_DEF_(Name) mxnet::ext::CustomPartitioner MX_REGISTER_PROP_NAME_(Name)
 
 #define MX_REGISTER_PASS_NAME_(Name) MXNet ## _CustomPass ## _
-#define MX_REGISTER_PASS_DEF_(Name) CustomPass MX_REGISTER_PASS_NAME_(Name)
+#define MX_REGISTER_PASS_DEF_(Name) mxnet::ext::CustomPass MX_REGISTER_PASS_NAME_(Name)
 
 /*! \brief assign a var to a value */
 #define REGISTER_OP(Name) MX_STR_CONCAT(MX_REGISTER_DEF_(Name), __COUNTER__) = \
-    Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
+    mxnet::ext::Registry<mxnet::ext::CustomOp>::get()->add(MX_TOSTRING(Name))
 
 #define REGISTER_PARTITIONER(Name) \
   MX_STR_CONCAT(MX_REGISTER_PROP_DEF_(Name), __COUNTER__) = \
-    Registry<CustomPartitioner>::get()->add(MX_TOSTRING(Name))
+    mxnet::ext::Registry<mxnet::ext::CustomPartitioner>::get()->add(MX_TOSTRING(Name))
 
 #define REGISTER_PASS(Name) \
   MX_STR_CONCAT(MX_REGISTER_PASS_DEF_(Name), __COUNTER__) = \
-    Registry<CustomPass>::get()->add(MX_TOSTRING(Name))
+    mxnet::ext::Registry<mxnet::ext::CustomPass>::get()->add(MX_TOSTRING(Name))
 
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
@@ -1000,8 +1005,9 @@ typedef int (*opCallMutateInputs_t)(mutateInputs_t mutate, const char* const* ke
 
 #define MXLIB_OPCALLCREATEOPSTATE_STR "_opCallCreateOpState"
 typedef int (*opCallCreateOpState_t)(createOpState_t create_op, const char* const* keys,
-                                     const char* const* vals, int num,
-                                     void** state_op);
+                                     const char* const* vals, int num, const char* dev_type,
+                                     int dev_id, unsigned int** inshapes, int* indims,
+                                     int num_in, const int* intypes, void** state_op);
 
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
 typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
@@ -1190,8 +1196,9 @@ extern "C" {
 
   /*! \brief returns status of calling createStatefulOp function for operator from library */
   MX_INT_RET _opCallCreateOpState(mxnet::ext::createOpState_t create_op, const char* const* keys,
-                                  const char* const* vals, int num,
-                                  void** state_op);
+                                  const char* const* vals, int num, const char* dev_type,
+                                  int dev_id, unsigned int** inshapes, int* indims,
+                                  int num_in, const int* intypes, void** state_op);
 
   /*! \brief returns status of calling Stateful Forward/Backward for operator from library */
   MX_INT_RET _opCallFStatefulCompute(int is_forward, void* state_op, const int64_t** inshapes,
