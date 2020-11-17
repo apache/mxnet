@@ -1490,7 +1490,7 @@ def _add_workload_lcm():
 
 def _add_workload_gcd():
     OpArgMngr.add_workload('gcd', np.array([24, 30], dtype=np.int8), np.array([20, 75], dtype=np.int8))
-    OpArgMngr.add_workload('gcd', np.array([24, 120], dtype=np.uint8), np.array([20, 75], dtype=np.uint8))
+    OpArgMngr.add_workload('gcd', np.array([24, 30], dtype=np.uint8), np.array([20, 75], dtype=np.uint8))
     OpArgMngr.add_workload('gcd', np.array(195225786*2, dtype=np.int32), np.array(195225786*5, dtype=np.int32))
 
 
