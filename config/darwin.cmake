@@ -122,7 +122,7 @@ set(USE_CPP_PACKAGE OFF CACHE BOOL "Build C++ Package")
 # This will cause performance degradation reported in issue #14496
 # Set to 1 for large tensor with tensor size greater than INT32_MAX i.e. 2147483647
 # Note: the size of each dimension is still bounded by INT32_MAX
-set(USE_INT64_TENSOR_SIZE OFF CACHE BOOL "Use int64_t to represent the total number of elements in a tensor")
+set(USE_INT64_TENSOR_SIZE ON CACHE BOOL "Use int64_t to represent the total number of elements in a tensor")
 
 # Other GPU features
 set(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
