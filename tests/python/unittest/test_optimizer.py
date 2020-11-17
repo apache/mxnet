@@ -899,8 +899,8 @@ def test_dcasgd():
 
 @xfail_when_nonstandard_decimal_separator
 def test_adamW():
-    opt1 = AdamW
-    opt2 = AdamW
+    opt1 = mx.optimizer.AdamW
+    opt2 = mx.optimizer.AdamW
     shapes = [(3, 4, 5), (10, 4), (7,)]
     beta1_options = [{}, {'beta1': 0.5}, {'beta1': 0.7}]
     beta2_options = [{}, {'beta2': 0.8}, {'beta2': 0.9}]
