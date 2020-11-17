@@ -897,7 +897,7 @@ def test_dcasgd():
                 kwarg.update({'multi_precision': True})
             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shapes, dtype)
 
-@xfail_when_nonstandard_decimal_separator
+
 def test_adamW():
     opt1 = mx.optimizer.AdamW
     opt2 = mx.optimizer.AdamW
