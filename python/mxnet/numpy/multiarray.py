@@ -11384,7 +11384,8 @@ def atleast_1d(*arys):
     """
     res = []
     for ary in arys:
-        ary = array(ary)
+        if not isinstance(ary, NDArray):
+            ary = array(ary)
         res.append(ary)
     return _mx_nd_np.atleast_1d(*res)
 
@@ -11420,7 +11421,8 @@ def atleast_2d(*arys):
     """
     res = []
     for ary in arys:
-        ary = array(ary)
+        if not isinstance(ary, NDArray):
+            ary = array(ary)
         res.append(ary)
     return _mx_nd_np.atleast_2d(*res)
 
@@ -11467,7 +11469,8 @@ def atleast_3d(*arys):
     """
     res = []
     for ary in arys:
-        ary = array(ary)
+        if not isinstance(ary, NDArray):
+            ary = array(ary)
         res.append(ary)
     return _mx_nd_np.atleast_3d(*res)
 
