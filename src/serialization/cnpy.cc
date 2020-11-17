@@ -722,6 +722,7 @@ load_arrays(const std::string& zip_fname) {
           }
           tshape[i] = dim;
         }
+        zip_fclose(shape_file);
 
         // Construct aux datastructures
         static_assert(csr::CSRAuxType::kIndPtr == 0);
@@ -737,6 +738,7 @@ load_arrays(const std::string& zip_fname) {
         const TBlob& blob = array.data();
         zip_uint64_t nbytes = blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_);
         bytesread = zip_fread(data_file, blob.dptr_, nbytes);
+        zip_fclose(data_file);
         if (bytesread != nbytes) {
           LOG(FATAL) << "Failed to read from data.npy member of " << zip_fname;
         }
@@ -745,6 +747,7 @@ load_arrays(const std::string& zip_fname) {
         const TBlob& indptr_blob = array.aux_data(csr::CSRAuxType::kIndPtr);
         nbytes = indptr_blob.Size() * mshadow::mshadow_sizeof(indptr_blob.type_flag_);
         bytesread = zip_fread(indptr_file, indptr_blob.dptr_, nbytes);
+        zip_fclose(indptr_file);
         if (bytesread != nbytes) {
           LOG(FATAL) << "Failed to read from indptr.npy member of " << zip_fname;
         }
@@ -753,6 +756,7 @@ load_arrays(const std::string& zip_fname) {
         const TBlob& indices_blob = array.aux_data(csr::CSRAuxType::kIdx);
         nbytes = indices_blob.Size() * mshadow::mshadow_sizeof(indices_blob.type_flag_);
         bytesread = zip_fread(indices_file, indices_blob.dptr_, nbytes);
+        zip_fclose(indices_file);
         if (bytesread != nbytes) {
           LOG(FATAL) << "Failed to read from indices.npy member of " << zip_fname;
         }
@@ -858,6 +862,7 @@ load_arrays(const std::string& zip_fname) {
           }
           tshape[i] = dim;
         }
+        zip_fclose(shape_file);
 
         // Construct aux datastructures
         static_assert(rowsparse::RowSparseAuxType::kIdx == 0);
@@ -872,6 +877,7 @@ load_arrays(const std::string& zip_fname) {
         const TBlob& blob = array.data();
         zip_uint64_t nbytes = blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_);
         bytesread = zip_fread(data_file, blob.dptr_, nbytes);
+        zip_fclose(data_file);
         if (bytesread != nbytes) {
           LOG(FATAL) << "Failed to read from data.npy member of " << zip_fname;
         }
@@ -880,6 +886,7 @@ load_arrays(const std::string& zip_fname) {
         const TBlob& indices_blob = array.aux_data(rowsparse::RowSparseAuxType::kIdx);
         nbytes = indices_blob.Size() * mshadow::mshadow_sizeof(indices_blob.type_flag_);
         bytesread = zip_fread(indices_file, indices_blob.dptr_, nbytes);
+        zip_fclose(indices_file);
         if (bytesread != nbytes) {
           LOG(FATAL) << "Failed to read from indices.npy member of " << zip_fname;
         }
@@ -925,6 +932,7 @@ load_arrays(const std::string& zip_fname) {
         const TBlob& blob = array.data();
         bytesread = zip_fread(file, blob.dptr_,
                               blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_));
+        zip_fclose(file);
         if (bytesread != blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_)) {
           LOG(FATAL) << "Failed to read from " << path << " member of " << zip_fname;
         }
@@ -938,6 +946,8 @@ load_arrays(const std::string& zip_fname) {
       }
     }
   }
+
+  zip_discard(archive);
 
   return std::make_pair(arrays, return_names);
 }

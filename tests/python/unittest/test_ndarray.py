@@ -406,7 +406,8 @@ def test_ndarray_saveload(save_fn):
 
         # Test loading with numpy
         if save_fn is mx.npx.savez:
-            single_ndarray_loaded = np.load(fname)['arr_0']
+            with np.load(fname) as fname_np_loaded:
+                single_ndarray_loaded = fname_np_loaded['arr_0']
             assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded) == 0
 
             mx.npx.save(fname, single_ndarray)
