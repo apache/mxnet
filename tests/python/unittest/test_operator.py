@@ -6463,8 +6463,7 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
-## TODO: test fails intermittently when cudnn on. temporarily disabled cudnn until gets fixed.
-## tracked at https://github.com/apache/incubator-mxnet/issues/14288
+@pytest.mark.flaky
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -6591,18 +6590,18 @@ def test_dropout():
     check_dropout_ratio(1.0, shape)
     check_dropout_ratio(0.75, shape)
     check_dropout_ratio(0.25, shape)
-    # check_dropout_ratio(0.5, shape, cudnn_off=False)
-    # check_dropout_ratio(0.0, shape, cudnn_off=False)
-    # check_dropout_ratio(1.0, shape, cudnn_off=False)
-    # check_dropout_ratio(0.75, shape, cudnn_off=False)
-    # check_dropout_ratio(0.25, shape, cudnn_off=False)
+    check_dropout_ratio(0.5, shape, cudnn_off=False)
+    check_dropout_ratio(0.0, shape, cudnn_off=False)
+    check_dropout_ratio(1.0, shape, cudnn_off=False)
+    check_dropout_ratio(0.75, shape, cudnn_off=False)
+    check_dropout_ratio(0.25, shape, cudnn_off=False)
 
     check_passthrough(0.5, shape)
     check_passthrough(0.0, shape)
     check_passthrough(1.0, shape)
-    # check_passthrough(0.5, shape, cudnn_off=False)
-    # check_passthrough(0.0, shape, cudnn_off=False)
-    # check_passthrough(1.0, shape, cudnn_off=False)
+    check_passthrough(0.5, shape, cudnn_off=False)
+    check_passthrough(0.0, shape, cudnn_off=False)
+    check_passthrough(1.0, shape, cudnn_off=False)
 
     nshape = (10, 10, 10, 10)
     with mx.autograd.train_mode():
@@ -6619,19 +6618,19 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
         check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
-        # check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
 
 @pytest.mark.skip(reason="test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
