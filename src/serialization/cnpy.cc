@@ -712,16 +712,28 @@ load_arrays(const std::string& zip_fname) {
         if (shape_fortran_order) {
           LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
         }
-        CHECK_EQ(shape_type_flag, mshadow::kInt64) << "Expected shape information in int64 format.";
         CHECK_EQ(shape_shape.size(), 1) << "Expected one-dimensional shape of shape information.";
         TShape tshape(shape_shape.at(0), -1);
-        for (dim_t i = 0; i < shape_shape.at(0); i++) {
-          int64_t dim;
-          bytesread = zip_fread(shape_file, &dim, 8);
-          if (bytesread != 8) {
-            LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+        if (shape_type_flag == mshadow::kInt64) {  // Used in most SciPy builds
+          for (dim_t i = 0; i < shape_shape.at(0); i++) {
+            int64_t dim;
+            bytesread = zip_fread(shape_file, &dim, 8);
+            if (bytesread != 8) {
+              LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+            }
+            tshape[i] = dim;
           }
-          tshape[i] = dim;
+        } else if (shape_type_flag == mshadow::kInt32) {  // Used in SciPy pip wheels on Windows
+          for (dim_t i = 0; i < shape_shape.at(0); i++) {
+            int32_t dim;
+            bytesread = zip_fread(shape_file, &dim, 4);
+            if (bytesread != 4) {
+              LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+            }
+            tshape[i] = dim;
+          }
+        } else {
+          LOG(FATAL) << "Expected shape information in int64 or int32 format.";
         }
         zip_fclose(shape_file);
 
