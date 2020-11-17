@@ -107,7 +107,7 @@ block.export('partitioned')
 ```
 
 For the Gluon API, hybridization is needed, so calling `optimize_for` on a non-hybridized block will hybridize it.
-If the users need to pass some hybridization parameters, they can either call `hybridize` explicitedly, or directly pass the arguments to `optimize_for`.
+If the users need to pass some hybridization parameters, they can either call `hybridize` explicitly, or directly pass the arguments to `optimize_for`.
 
 This:
 ```python
@@ -119,7 +119,7 @@ is equivalent to:
 block.optimize_for(x, backend='myPart', static_shape=True, static_alloc=False)
 ```
 
-It's important to note that `hybridize` clars the CachedOp and any previous optimization.
+It's important to note that `hybridize` clears the CachedOp and any previous optimization.
 
 ```python
 block.optimize_for(x, backend='myPart')
