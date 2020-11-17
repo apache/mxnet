@@ -1233,10 +1233,10 @@ class HybridBlock(Block):
         """
         self._backend = backend
         if len(kwargs) > 0:
-             self._backend_opts = kwargs
+            self._backend_opts = kwargs
 
         if clear or not self._active:
-            self.hybridize(True, clear, partition_if_dynamic, static_alloc, static_shape,
+            self.hybridize(True, partition_if_dynamic, static_alloc, static_shape,
                            inline_limit, forward_bulk_size, backward_bulk_size)
 
         # do part of forward API call
@@ -1259,6 +1259,9 @@ class HybridBlock(Block):
         # do not actually call the cached_op
 
         self._first_forward = True
+        # clear the backend
+        self._backend = None
+        self._backend_opts = None
 
     def _clear_cached_op(self):
         self._cached_graph = ()
@@ -1279,7 +1282,7 @@ class HybridBlock(Block):
             self._active = False
         self._clear_cached_op()
 
-    def hybridize(self, active=True, clear=True,
+    def hybridize(self, active=True,
                   partition_if_dynamic=False,
                   static_alloc=False,
                   static_shape=False,
@@ -1293,12 +1296,6 @@ class HybridBlock(Block):
         ----------
         active : bool, default True
             Whether to turn hybrid on or off.
-        backend : str
-            The name of backend, as registered in `SubgraphBackendRegistry`, default None
-        backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
-            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
-        clear : bool, default True
-            clears any previous optimizations
         partition_if_dynamic : bool, default False
             whether to partition the graph when dynamic shape op exists
         static_alloc : bool, default False
@@ -1323,8 +1320,7 @@ class HybridBlock(Block):
             self._flags.append(("forward_bulk_size", forward_bulk_size))
         if backward_bulk_size is not None:
             self._flags.append(("backward_bulk_size", backward_bulk_size))
-        if clear:
-            self._clear_cached_op()
+        self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:
             warnings.warn('"{block}" is being hybridized while still having forward hook/pre-hook. '
                           'If "{block}" is a child of HybridBlock, the hooks will not take effect.'

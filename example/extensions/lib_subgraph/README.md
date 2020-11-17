@@ -110,7 +110,7 @@ For the Gluon API, `hybridize` can be called on HybridBlocks to partition the in
 block.hybridize(backend=None, clear=True)
 ```
 
-The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `clear` argument defaults to `True` and clears any previous optimizations done on the block. If you want to chain optimizations together, set `clear` to `False`. The actual partitioning takes place during the forward pass.
+The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `clear` argument defaults to `True` and clears any previous optimizations done on the block. The actual partitioning takes place during the forward pass.
 
 If you just want to partition the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
 
