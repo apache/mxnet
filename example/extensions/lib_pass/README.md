@@ -84,11 +84,7 @@ APIs in MXNet are available in both Symbol and Gluon APIs. For the Symbol API, `
 sym.optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
 ```
 
-The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to use to optimize the model. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before executing the graph pass. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend APIs.
-
-The `hybridize` function prepares the HybridBlock to be converted into a backend symbol.
-
-If you just want to run a graph pass on the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
+The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to use to optimize the model. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before executing the graph pass. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend APIs (in the `kwargs`).
 
 ```python
 block.optimize_for(x, backend=None, backend_opts=None, **kwargs)
