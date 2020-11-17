@@ -1009,10 +1009,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
     common::CopyGraph(&unoptimized_graph, g, false);
 
     if (common::CheckForInputNameDuplicates(unoptimized_graph.indexed_graph())) {
-      g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
-      g = FusePointwiseForward(std::move(g));
-      g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
-      g = FusePointwiseBackward(std::move(g));
+      g = exec::FusePointwise(std::move(g), num_forward_outputs_);
       // Check the topological order of inputs
       const auto &original_inputs = unoptimized_graph.indexed_graph().input_nodes();
       const auto &new_inputs = g.indexed_graph().input_nodes();
