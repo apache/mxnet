@@ -698,6 +698,7 @@ elseif(MSVC)
       foreach(arch ${arch_code_list})
         add_library(mxnet_${arch} SHARED ${SOURCE})
         target_link_libraries(mxnet_${arch} PUBLIC mshadow)
+        target_compile_definitions(mxnet_${arch} PRIVATE -DWIN32_LEAN_AND_MEAN)
         target_compile_options(
           mxnet_${arch}
           PRIVATE
@@ -744,6 +745,7 @@ elseif(MSVC)
       string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
       string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
       add_library(mxnet SHARED ${SOURCE})
+      target_compile_definitions(mxnet PRIVATE -DWIN32_LEAN_AND_MEAN)
       target_link_libraries(mxnet PUBLIC mshadow)
       if(MXNET_FORCE_SHARED_CRT)
         target_compile_options(
@@ -775,6 +777,7 @@ elseif(MSVC)
     endif(USE_SPLIT_ARCH_DLL)
   else()
     add_library(mxnet SHARED ${SOURCE})
+    target_compile_definitions(mxnet PRIVATE -DWIN32_LEAN_AND_MEAN)
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
 endif()
