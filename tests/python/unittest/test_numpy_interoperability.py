@@ -3255,13 +3255,15 @@ def _check_interoperability_helper(op_name, rel_tol, abs_tol, *args, **kwargs):
     strs = op_name.split('.')
     if len(strs) == 1:
         onp_op = getattr(_np, op_name)
+        mxnp_op = getattr(np, op_name)
     elif len(strs) == 2:
         onp_op = getattr(getattr(_np, strs[0]), strs[1])
+        mxnp_op = getattr(getattr(np, strs[0]), strs[1])
     else:
         assert False
     if not is_op_runnable():
         return
-    out = onp_op(*args, **kwargs)
+    out = mxnp_op(*args, **kwargs)
     expected_out = _get_numpy_op_output(onp_op, *args, **kwargs)
     if isinstance(out, (tuple, list)):
         assert type(out) == type(expected_out)

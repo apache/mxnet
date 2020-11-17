@@ -140,12 +140,12 @@ void strided_batch_sgemm(bool transA, bool transB,
 
 #if (MSHADOW_USE_MKL && INTEL_MKL_VERSION >= 20160000)
   const int GROUP_SIZE = 1;
-  MKL_INT p_m[GROUP_SIZE] = {m};
-  MKL_INT p_n[GROUP_SIZE] = {n};
-  MKL_INT p_k[GROUP_SIZE] = {k};
-  MKL_INT p_lda[GROUP_SIZE] = {lda};
-  MKL_INT p_ldb[GROUP_SIZE] = {ldb};
-  MKL_INT p_ldc[GROUP_SIZE] = {ldc};
+  MKL_INT p_m[GROUP_SIZE] = {static_cast<MKL_INT>(m)};
+  MKL_INT p_n[GROUP_SIZE] = {static_cast<MKL_INT>(n)};
+  MKL_INT p_k[GROUP_SIZE] = {static_cast<MKL_INT>(k)};
+  MKL_INT p_lda[GROUP_SIZE] = {static_cast<MKL_INT>(lda)};
+  MKL_INT p_ldb[GROUP_SIZE] = {static_cast<MKL_INT>(ldb)};
+  MKL_INT p_ldc[GROUP_SIZE] = {static_cast<MKL_INT>(ldc)};
 
   float p_alpha[GROUP_SIZE] = {alpha};
   float p_beta[GROUP_SIZE] = {beta};
@@ -153,7 +153,7 @@ void strided_batch_sgemm(bool transA, bool transB,
   CBLAS_TRANSPOSE cblas_a_trans = transA ? CblasTrans : CblasNoTrans;
   CBLAS_TRANSPOSE cblas_b_trans = transB ? CblasTrans : CblasNoTrans;
 
-  MKL_INT p_group_sizeb[GROUP_SIZE] = {batchCount};
+  MKL_INT p_group_sizeb[GROUP_SIZE] = {static_cast<MKL_INT>(batchCount)};
   CBLAS_TRANSPOSE p_transa[GROUP_SIZE] = {cblas_a_trans};
   CBLAS_TRANSPOSE p_transb[GROUP_SIZE] = {cblas_b_trans};
 
