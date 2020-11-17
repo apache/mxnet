@@ -269,7 +269,7 @@ MSHADOW_XINLINE void binary_broadcast_assign(const index_t idx, const bool addto
 
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP,
          typename IndexOP = mxnet::op::mshadow_op::set_index_no_op<AType, index_t>>
-MSHADOW_XINLINE AType seq_reduce_assign_block(size_t start, size_t len,
+MSHADOW_XINLINE std::pair<AType, AType> seq_reduce_assign_block(size_t start, size_t len,
                                               size_t j,
                                               const DType* __restrict big,
                                               const Shape<ndim>& rshape,
@@ -284,8 +284,7 @@ MSHADOW_XINLINE AType seq_reduce_assign_block(size_t start, size_t len,
       IndexOP::Op(&temp, k);
     Reducer::Reduce(val, temp, residual);
   }
-  Reducer::Finalize(val, residual);
-  return val;
+  return std::make_pair(val, residual);
 }
 
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType,
@@ -310,16 +309,16 @@ MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const 
     }
   } else {
     const int thread_count = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-    auto vals = std::make_unique<AType[]>(thread_count);
-    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    auto pairs = std::make_unique<std::pair<AType, AType>[]>(thread_count);
+    #pragma omp parallel for num_threads(thread_count)
     for (int i = 0; i < thread_count; ++i) {
-      vals[i] = seq_reduce_assign_block<Reducer, ndim, AType, DType, OType, OP, IndexOP>
+      pairs[i] = seq_reduce_assign_block<Reducer, ndim, AType, DType, OType, OP, IndexOP>
           (i * (M / thread_count),
           i < (thread_count - 1) ? (M / thread_count) : (M / thread_count) + M % thread_count,
           j, big, rshape, rstride);
     }
     for (int i = 0; i < thread_count; ++i) {
-      Reducer::Reduce(val, vals[i], residual);
+      Reducer::Merge(val, residual, pairs[i].first, pairs[i].second);
     }
   }
   Reducer::Finalize(val, residual);
