@@ -542,6 +542,49 @@ lcm(const DType a, const DType2 b) {
 }
 
 template <typename DType, typename DType2>
+__device__ inline typename type_util::mixed_type<DType, DType2>::type
+gcd(const DType a, const DType2 b) {
+  if (type_util::is_integral<DType>::value &&
+      type_util::is_integral<DType2>::value) {
+    DType A = a;
+    DType2 B = b;
+    // minus cases.
+    if (a < 0) {
+      A = -a;
+    }
+    if (b < 0) {
+      B = -b;
+    }
+    // handle zero-valued cases.
+    DType c;
+    if (a == 0 && b != 0) {
+      c = B;
+    } else if (b == 0 && a != 0) {
+      c = A;
+    } else if (a == 0 && b == 0) {
+      c = 0;
+    } else {
+      DType tmp;
+      if (A < B) {
+        tmp = A;
+        A = B;
+        B = tmp;
+      }
+      while (A % B != 0) {
+        A = A % B;
+        tmp = A;
+        A = B;
+        B = tmp;
+      }
+      c = B;
+    }
+    return c;
+  } else {
+    return 0;
+  }
+}
+
+template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type bitwise_xor(const DType a,
                                                                        const DType2 b) {
   using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
