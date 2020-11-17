@@ -609,24 +609,25 @@ load_arrays(const std::string& zip_fname) {
       // Check format
       std::string fname(dirname);
       fname += "format.npy";
-      zip_file_t* file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-      if (file == nullptr) {
+      zip_file_t* format_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+      if (format_file == nullptr) {
         throw std::runtime_error(zip_strerror(archive));
       }
 
       // In the special case of format.npy we ignore the header as it
       // specifies the string datatype which is unsupported by MXNet
-      uint32_t header_len = parse_npy_header_len(file, fname, zip_fname);
+      uint32_t header_len = parse_npy_header_len(format_file, fname, zip_fname);
       std::string header;
       header.resize(header_len);
-      zip_int64_t bytesread = zip_fread(file, header.data(), header_len);
+      zip_int64_t bytesread = zip_fread(format_file, header.data(), header_len);
       if (bytesread != header_len) {
         LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
       }
       // and simply look at the next 3 bytes containing the format string
       std::string format;
       format.resize(3);
-      bytesread = zip_fread(file, format.data(), 3);
+      bytesread = zip_fread(format_file, format.data(), 3);
+      zip_fclose(format_file);
       if (bytesread != 3) {
         LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
       }
@@ -772,24 +773,25 @@ load_arrays(const std::string& zip_fname) {
       // Check format
       std::string fname(dirname);
       fname += "format.npy";
-      zip_file_t* file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
-      if (file == nullptr) {
+      zip_file_t* format_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+      if (format_file == nullptr) {
         throw std::runtime_error(zip_strerror(archive));
       }
 
       // In the special case of format.npy we ignore the header as it
       // specifies the string datatype which is unsupported by MXNet
-      uint32_t header_len = parse_npy_header_len(file, fname, zip_fname);
+      uint32_t header_len = parse_npy_header_len(format_file, fname, zip_fname);
       std::string header;
       header.resize(header_len);
-      zip_int64_t bytesread = zip_fread(file, header.data(), header_len);
+      zip_int64_t bytesread = zip_fread(format_file, header.data(), header_len);
       if (bytesread != header_len) {
         LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
       }
       // and simply look at the next 10 bytes containing the format string
       std::string format;
       format.resize(10);
-      bytesread = zip_fread(file, format.data(), 10);
+      bytesread = zip_fread(format_file, format.data(), 10);
+      zip_fclose(format_file);
 
       if (format == "row_sparse") {
         // Prepare reading storage data array
