@@ -29,6 +29,8 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include "../../../api/operator/op_utils.h"
+#include "../../../common/utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -44,12 +46,12 @@ struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
   dmlc::optional<float> high;
   std::string ctx;
   int dtype;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   DMLC_DECLARE_PARAMETER(NumpyUniformParam) {
     DMLC_DECLARE_FIELD(low);
     DMLC_DECLARE_FIELD(high);
     DMLC_DECLARE_FIELD(size)
-        .set_default(dmlc::optional<mxnet::Tuple<int>>())
+        .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
         .describe(
             "Output shape. If the given shape is, "
             "e.g., (m, n, k), then m * n * k samples are drawn. "
@@ -58,13 +60,25 @@ struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
         "Context of output, in format [cpu|gpu|cpu_pinned](n)."
         " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
+        .add_enum("None", -1)
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
-        .set_default(mshadow::kFloat32)
+        .set_default(-1)
         .describe(
             "DType of the output in case this can't be inferred. "
-            "Defaults to float32 if not defined (dtype=None).");
+            "Defaults to float32 or float64 if not defined (dtype=None).");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream low_s, high_s, dtype_s, size_s;
+    low_s << low;
+    high_s << high;
+    dtype_s << dtype;
+    size_s << size;
+    (*dict)["low"] = low_s.str();
+    (*dict)["high"] = high_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    (*dict)["size"] = size_s.str();
   }
 };
 
@@ -76,7 +90,7 @@ inline bool NumpyUniformOpType(const nnvm::NodeAttrs &attrs,
   if (otype != -1) {
     (*out_attrs)[0] = otype;
   } else {
-    (*out_attrs)[0] = mshadow::kFloat32;
+    (*out_attrs)[0] = mxnet::common::GetDefaultDtype();
   }
   return true;
 }

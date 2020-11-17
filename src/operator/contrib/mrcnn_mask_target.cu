@@ -119,6 +119,7 @@ __device__ void RoIAlignForward(
     const int sampling_ratio,
     const int num_rois,
     const int num_gtmasks,
+    const bool continuous_coordinate,
     T* out_data) {  // (B, N, C, H, W)
   // Update kernel
   for (size_t index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -135,14 +136,21 @@ __device__ void RoIAlignForward(
 
     const T* offset_rois = rois + batch_idx * (4 * num_rois) + n * 4;
     // Do not using rounding; this implementation detail is critical
-    T roi_start_w = offset_rois[0];
-    T roi_start_h = offset_rois[1];
-    T roi_end_w = offset_rois[2];
-    T roi_end_h = offset_rois[3];
+    T roi_offset = continuous_coordinate ? static_cast<T>(0.5) : static_cast<T>(0);
+    T roi_start_w = offset_rois[0] - roi_offset;
+    T roi_start_h = offset_rois[1] - roi_offset;
+    T roi_end_w = offset_rois[2] - roi_offset;
+    T roi_end_h = offset_rois[3] - roi_offset;
+
+    T roi_width = roi_end_w - roi_start_w;
+    T roi_height = roi_end_h - roi_start_h;
 
     // Force malformed ROIs to be 1x1
-    T roi_width = max(roi_end_w - roi_start_w, (T)1.);
-    T roi_height = max(roi_end_h - roi_start_h, (T)1.);
+    if (!continuous_coordinate) {  // backward compatiblity
+      // Force malformed ROIs to be 1x1
+      roi_width = max(roi_width, (T)1.);
+      roi_height = max(roi_height, (T)1.);
+    }
     T bin_size_h = static_cast<T>(roi_height) / static_cast<T>(pooled_height);
     T bin_size_w = static_cast<T>(roi_width) / static_cast<T>(pooled_width);
 
@@ -190,6 +198,7 @@ __global__ void MRCNNMaskTargetKernel(const DType *rois,
                                       DType* sampled_masks,
                                       DType* mask_cls,
                                       const int total_out_el,
+                                      const bool aligned,
                                       int batch_size,
                                       int num_classes,
                                       int num_rois,
@@ -202,7 +211,7 @@ __global__ void MRCNNMaskTargetKernel(const DType *rois,
   // computing sampled_masks
   RoIAlignForward(gt_masks, rois, matches, total_out_el,
                   num_classes, gt_height, gt_width, mask_size_h, mask_size_w,
-                  sample_ratio, num_rois, num_gtmasks, sampled_masks);
+                  sample_ratio, num_rois, num_gtmasks, aligned, sampled_masks);
   // computing mask_cls
   int num_masks = batch_size * num_rois * num_classes;
   int mask_vol = mask_size_h * mask_size_w;
@@ -251,8 +260,8 @@ void MRCNNMaskTargetRun<gpu>(const MRCNNMaskTargetParam& param, const std::vecto
 
     MRCNNMaskTargetKernel<<<dimGrid, dimBlock, 0, stream>>>
     (rois.dptr_, gt_masks.dptr_, matches.dptr_, cls_targets.dptr_,
-    out_masks.dptr_, out_mask_cls.dptr_,
-    num_el, batch_size, param.num_classes, param.num_rois,
+    out_masks.dptr_, out_mask_cls.dptr_, num_el, param.aligned,
+    batch_size, param.num_classes, param.num_rois,
     num_gtmasks, gt_height, gt_width,
     param.mask_size[0], param.mask_size[1], param.sample_ratio);
     MSHADOW_CUDA_POST_KERNEL_CHECK(MRCNNMaskTargetKernel);

@@ -34,6 +34,10 @@
 #include "nnvm/graph_attr_types.h"
 #include "nnvm/graph.h"
 #include "nnvm/pass.h"
+#include "runtime/object.h"
+#include "runtime/ffi_helper.h"
+#include "node/container.h"
+#include "ir/expr.h"
 
 namespace mxnet {
 
@@ -58,6 +62,17 @@ class Tuple {
   /*! \brief destructor */
   inline ~Tuple() {
     delete [] data_heap_;
+  }
+  /*!
+   * constructor to construct a tuple with all `value`.
+   * \param ndim the number of dimension
+   * \param value the dimension size for all dims
+   */
+  inline Tuple(const int ndim, const dim_t value) {  // NOLINT(*)
+    this->SetDim(ndim);
+    if (ndim > 0) {
+      std::fill_n(begin(), ndim, value);
+    }
   }
   /*!
    * \brief copy constructor from another tuple
@@ -103,6 +118,16 @@ class Tuple {
                RandomAccessIterator end) {
     this->assign(begin, end);
   }
+
+  inline explicit Tuple(const runtime::ObjectRef& src) {
+    using namespace runtime;
+    ADT adt = Downcast<ADT, ObjectRef>(src);
+    this->SetDim(adt.size());
+    for (int i = 0; i < ndim_; ++i) {
+      this->begin()[i] = Downcast<Integer, ObjectRef>(adt[i])->value;
+    }
+  }
+
   /*!
    * \brief Assign content to tuple from iterator.
    * \param begin the beginning of iterator
@@ -468,6 +493,8 @@ class TShape : public Tuple<dim_t> {
                 RandomAccessIterator end) {
     this->assign(begin, end);
   }
+
+  inline explicit TShape(const ObjectRef& src): Tuple(src) {}
   /*!
    * \brief assignment function from tshape
    * \param src source shape.

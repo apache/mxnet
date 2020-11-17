@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Engine properties management."""
-from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB, check_call

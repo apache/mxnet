@@ -150,6 +150,68 @@ extern "C" {
 
   MXNET_LAPACK_FSIG_GETRI(sgetri, float)
   MXNET_LAPACK_FSIG_GETRI(dgetri, double)
+
+  #ifdef __ANDROID__
+    #define MXNET_LAPACK_FSIG_GESV(func, dtype) \
+      int func##_(int *n, int *nrhs, dtype *a, int *lda, \
+                   int *ipiv, dtype *b, int *ldb, int *info);
+  #else
+    #define MXNET_LAPACK_FSIG_GESV(func, dtype) \
+      void func##_(int *n, int *nrhs, dtype *a, int *lda, \
+                   int *ipiv, dtype *b, int *ldb, int *info);
+  #endif
+
+  MXNET_LAPACK_FSIG_GESV(sgesv, float)
+  MXNET_LAPACK_FSIG_GESV(dgesv, double)
+
+  #ifdef __ANDROID__
+    #define MXNET_LAPACK_FSIG_GESDD(func, dtype) \
+    int func##_(char *jobz, int *m, int *n, dtype *a, int *lda, dtype *s, \
+                dtype *u, int *ldu, \
+                dtype *vt, int *ldvt, \
+                dtype *work, int *lwork, int *iwork, int *info);
+  #else
+    #define MXNET_LAPACK_FSIG_GESDD(func, dtype) \
+    void func##_(char *jobz, int *m, int *n, dtype *a, int *lda, dtype *s, \
+                 dtype *u, int *ldu, \
+                 dtype *vt, int *ldvt, \
+                 dtype *work, int *lwork, int *iwork, int *info);
+  #endif
+
+  MXNET_LAPACK_FSIG_GESDD(sgesdd, float)
+  MXNET_LAPACK_FSIG_GESDD(dgesdd, double)
+
+  #ifdef __ANDROID__
+    #define MXNET_LAPACK_FSIG_GEEV(func, dtype) \
+    int func##_(char *jobvl, char *jobvr, int *n, dtype *a, int *lda, \
+                dtype *wr, dtype *wi, \
+                dtype *vl, int *ldvl, dtype *vr, int *ldvr, \
+                dtype *work, int *lwork, int *info);
+  #else
+    #define MXNET_LAPACK_FSIG_GEEV(func, dtype) \
+    void func##_(char *jobvl, char *jobvr, int *n, dtype *a, int *lda, \
+                 dtype *wr, dtype *wi, \
+                 dtype *vl, int *ldvl, dtype *vr, int *ldvr, \
+                 dtype *work, int *lwork, int *info);
+  #endif
+
+  MXNET_LAPACK_FSIG_GEEV(sgeev, float)
+  MXNET_LAPACK_FSIG_GEEV(dgeev, double)
+
+  #ifdef __ANDROID__
+    #define MXNET_LAPACK_FSIG_GELSD(func, dtype) \
+    int func##_(int *m, int *n, int *nrhs, dtype *a, int *lda, \
+                dtype *b, int *ldb, dtype *s, dtype *rcond, int *rank, \
+                dtype *work, int *lwork, int *iwork, int *info);
+  #else
+    #define MXNET_LAPACK_FSIG_GELSD(func, dtype) \
+    void func##_(int *m, int *n, int *nrhs, dtype *a, int *lda, \
+                 dtype *b, int *ldb, dtype *s, dtype *rcond, int *rank, \
+                 dtype *work, int *lwork, int *iwork, int *info);
+  #endif
+
+  MXNET_LAPACK_FSIG_GELSD(sgelsd, float)
+  MXNET_LAPACK_FSIG_GELSD(dgelsd, double)
 }
 
 #endif  // MSHADOW_USE_MKL == 0
@@ -197,6 +259,8 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   #define MXNET_LAPACK_dpotri LAPACKE_dpotri
   #define mxnet_lapack_sposv  LAPACKE_sposv
   #define mxnet_lapack_dposv  LAPACKE_dposv
+  #define MXNET_LAPACK_dgesv  LAPACKE_dgesv
+  #define MXNET_LAPACK_sgesv  LAPACKE_sgesv
 
   // The following functions differ in signature from the
   // MXNET_LAPACK-signature and have to be wrapped.
@@ -225,6 +289,32 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   }
   MXNET_LAPACK_CWRAP_ORGLQ(s, float)
   MXNET_LAPACK_CWRAP_ORGLQ(d, double)
+
+  #define MXNET_LAPACK_CWRAP_GEQRF(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##geqrf(int matrix_layout, int m, int n, \
+                                          dtype *a, int lda, dtype *tau, \
+                                          dtype *work, int lwork) { \
+    if (lwork != -1) { \
+      return LAPACKE_##prefix##geqrf(matrix_layout, m, n, a, lda, tau); \
+    } \
+    *work = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_GEQRF(s, float)
+  MXNET_LAPACK_CWRAP_GEQRF(d, double)
+
+  #define MXNET_LAPACK_CWRAP_ORGQR(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##orgqr(int matrix_layout, int m, int n, int k, \
+                                          dtype *a, int lda, dtype *tau, \
+                                          dtype *work, int lwork) { \
+    if (lwork != -1) { \
+      return LAPACKE_##prefix##orgqr(matrix_layout, m, n, k, a, lda, tau); \
+    } \
+    *work = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_ORGQR(s, float)
+  MXNET_LAPACK_CWRAP_ORGQR(d, double)
 
   // This has to be called internally in COL_MAJOR format even when matrix_layout
   // is row-major as otherwise the eigenvectors would be returned as cols in a
@@ -267,6 +357,24 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_GESVD(s, float)
   MXNET_LAPACK_CWRAP_GESVD(d, double)
 
+  // Computes the singular value decomposition of a general rectangular matrix
+  // using a divide and conquer method.
+  #define MXNET_LAPACK_CWRAP_GESDD(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##gesdd(int matrix_layout, int m, int n, \
+                                          dtype *a, int lda, dtype *s, \
+                                          dtype *u, int ldu, \
+                                          dtype *vt, int ldvt, \
+                                          dtype *work, int lwork, int *iwork) { \
+    if (lwork != -1) { \
+      return LAPACKE_##prefix##gesdd(matrix_layout, 'O', m, n, a, lda, \
+                                     s, u, ldu, vt, ldvt); \
+    } \
+    *work = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_GESDD(s, float)
+  MXNET_LAPACK_CWRAP_GESDD(d, double)
+
   #define MXNET_LAPACK_CWRAP_GETRI(prefix, dtype) \
   inline int MXNET_LAPACK_##prefix##getri(int matrix_layout, int n, dtype *a, int lda, \
                                           int *ipiv, dtype *work, int lwork) { \
@@ -278,6 +386,38 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   }
   MXNET_LAPACK_CWRAP_GETRI(s, float)
   MXNET_LAPACK_CWRAP_GETRI(d, double)
+
+  #define MXNET_LAPACK_CWRAP_GEEV(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##geev(int matrix_layout, char jobvl, char jobvr, \
+                                         int n, dtype *a, int lda, \
+                                         dtype *wr, dtype *wi, \
+                                         dtype *vl, int ldvl, dtype *vr, int ldvr, \
+                                         dtype *work, int lwork) { \
+    if (lwork != -1) { \
+      return LAPACKE_##prefix##geev(matrix_layout, jobvl, jobvr, \
+                                    n, a, lda, wr, wi, vl, ldvl, vr, ldvr); \
+    } \
+    *work = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_GEEV(s, float)
+  MXNET_LAPACK_CWRAP_GEEV(d, double)
+
+  #define MXNET_LAPACK_CWRAP_GELSD(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##gelsd(int matrix_layout, int m, int n, int nrhs, \
+                                          dtype *a, int lda, dtype *b, int ldb, \
+                                          dtype *s, dtype rcond, int *rank, \
+                                          dtype *work, int lwork, int *iwork) { \
+    if (lwork != -1) { \
+      return LAPACKE_##prefix##gelsd(matrix_layout, m, n, nrhs, a, lda, b, ldb, \
+                                     s, rcond, rank); \
+    } \
+    *work = 0; \
+    *iwork = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_GELSD(s, float)
+  MXNET_LAPACK_CWRAP_GELSD(d, double)
 
 #elif MXNET_USE_LAPACK
 
@@ -366,6 +506,38 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_ORGLQ(s, float)
   MXNET_LAPACK_CWRAP_ORGLQ(d, double)
 
+  #define MXNET_LAPACK_CWRAP_GEQRF(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##geqrf(int matrix_layout, int m, int n, \
+                                          dtype *a, int lda, dtype* tau, \
+                                          dtype* work, int lwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      CHECK(false) << "MXNET_LAPACK_" << #prefix << "geqrf implemented for col-major layout only"; \
+      return 1; \
+    } else { \
+      int info(0); \
+      prefix##geqrf_(&m, &n, a, &lda, tau, work, &lwork, &info); \
+      return info; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_GEQRF(s, float)
+  MXNET_LAPACK_CWRAP_GEQRF(d, double)
+
+  #define MXNET_LAPACK_CWRAP_ORGQR(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##orgqr(int matrix_layout, int m, int n, int k, \
+                                          dtype *a, int lda, dtype* tau, \
+                                          dtype* work, int lwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      CHECK(false) << "MXNET_LAPACK_" << #prefix << "orgqr implemented for col-major layout only"; \
+      return 1; \
+    } else { \
+      int info(0); \
+      prefix##orgqr_(&m, &n, &k, a, &lda, tau, work, &lwork, &info); \
+      return info; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_ORGQR(s, float)
+  MXNET_LAPACK_CWRAP_ORGQR(d, double)
+
   // Note: Supports row-major format only. Internally, column-major is used, so all
   // inputs/outputs are flipped (in particular, uplo is flipped).
   #define MXNET_LAPACK_CWRAP_SYEVD(func, dtype) \
@@ -406,6 +578,44 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_GESVD(sgesvd, float)
   MXNET_LAPACK_CWRAP_GESVD(dgesvd, double)
 
+  #define MXNET_LAPACK_CWRAP_GESDD(func, dtype) \
+  inline int MXNET_LAPACK_##func(int matrix_layout, int m, int n, \
+                                 dtype *a, int lda, dtype *s, \
+                                 dtype *u, int ldu, \
+                                 dtype *vt, int ldvt, \
+                                 dtype *work, int lwork, int *iwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      CHECK(false) << "MXNET_LAPACK_" << #func << " implemented for row-major layout only"; \
+      return 1; \
+    } else { \
+      int info(0); \
+      char jobz('O'); \
+      func##_(&jobz, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt, work, &lwork, iwork, &info); \
+      return info; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_GESDD(sgesdd, float)
+  MXNET_LAPACK_CWRAP_GESDD(dgesdd, double)
+
+  #define MXNET_LAPACK_CWRAP_GEEV(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##geev(int matrix_layout, char jobvl, char jobvr, \
+                                         int n, dtype *a, int lda, \
+                                         dtype *wr, dtype *wi, \
+                                         dtype *vl, int ldvl, dtype *vr, int ldvr, \
+                                         dtype *work, int lwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      CHECK(false) << "MXNET_LAPACK_" << #prefix << "geev implemented for col-major layout only"; \
+      return 1; \
+    } else { \
+      int info(0); \
+      prefix##geev_(&jobvl, &jobvr, \
+                    &n, a, &lda, wr, wi, vl, &ldvl, vr, &ldvr, work, &lwork, &info); \
+      return info; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_GEEV(s, float)
+  MXNET_LAPACK_CWRAP_GEEV(d, double)
+
   #define MXNET_LAPACK
 
   // Note: Both MXNET_LAPACK_*getrf, MXNET_LAPACK_*getri can only be called with col-major format
@@ -440,9 +650,41 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_GETRI(s, float)
   MXNET_LAPACK_CWRAP_GETRI(d, double)
 
+  #define MXNET_LAPACK_CWRAP_GESV(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##gesv(int matrix_layout, \
+                                         int n, int nrhs, dtype *a, int lda, \
+                                         int *ipiv, dtype *b, int ldb) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      CHECK(false) << "MXNET_LAPACK_" << #prefix << "gesv implemented for col-major layout only"; \
+      return 1; \
+    } else { \
+      int info(0); \
+      prefix##gesv_(&n, &nrhs, a, &lda, ipiv, b, &ldb, &info); \
+      return info; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_GESV(s, float)
+  MXNET_LAPACK_CWRAP_GESV(d, double)
+
+  #define MXNET_LAPACK_CWRAP_GELSD(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##gelsd(int matrix_layout, int m, int n, int nrhs, \
+                                          dtype *a, int lda, dtype *b, int ldb, \
+                                          dtype *s, dtype rcond, int *rank, \
+                                          dtype *work, int lwork, int *iwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      CHECK(false) << "MXNET_LAPACK_" << #prefix << "gesv implemented for col-major layout only"; \
+      return 1; \
+    } else { \
+      int info(0); \
+      prefix##gelsd_(&m, &n, &nrhs, a, &lda, b, &ldb, s, &rcond, rank, \
+                     work, &lwork, iwork, &info); \
+      return info; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_GELSD(s, float)
+  MXNET_LAPACK_CWRAP_GELSD(d, double)
+
 #else
-
-
 
   #define MXNET_LAPACK_ROW_MAJOR 101
   #define MXNET_LAPACK_COL_MAJOR 102
@@ -473,6 +715,37 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
                           int ldut, dtype* s, dtype* v, int ldv, \
                           dtype* work, int lwork);
 
+  #define MXNET_LAPACK_CWRAPPER7(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_order, int n, int nrhs, dtype *a, \
+                          int lda, int *ipiv, dtype *b, int ldb); \
+
+  #define MXNET_LAPACK_CWRAPPER8(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, char jobvl, char jobvr, \
+                          int n, dtype *a, int lda, \
+                          dtype *wr, dtype *wi, \
+                          dtype *vl, int ldvl, dtype *vr, int ldvr, \
+                          dtype *work, int lwork); \
+
+  #define MXNET_LAPACK_CWRAPPER9(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, \
+                          dtype *a, int lda, dtype *s, \
+                          dtype *u, int ldu, \
+                          dtype *vt, int ldvt, \
+                          dtype *work, int lwork, int *iwork);
+
+  #define MXNET_LAPACK_CWRAPPER10(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* a, \
+                          int lda, dtype* tau, dtype* work, int lwork);
+
+  #define MXNET_LAPACK_CWRAPPER11(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, int nrhs, \
+                          dtype *a, int lda, dtype *b, int ldb, \
+                          dtype *s, dtype rcond, int *rank, \
+                          dtype *work, int lwork, int *iwork);
+
+  #define MXNET_LAPACK_CWRAPPER12(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, int k, dtype* a, \
+                          int lda, dtype* tau, dtype* work, int lwork);
 
   #define MXNET_LAPACK_UNAVAILABLE(func) \
   int mxnet_lapack_##func(...);
@@ -500,6 +773,24 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
 
   MXNET_LAPACK_CWRAPPER6(sgesvd, float)
   MXNET_LAPACK_CWRAPPER6(dgesvd, double)
+
+  MXNET_LAPACK_CWRAPPER7(sgesv, float)
+  MXNET_LAPACK_CWRAPPER7(dgesv, double)
+
+  MXNET_LAPACK_CWRAPPER8(sgeev, float)
+  MXNET_LAPACK_CWRAPPER8(dgeev, double)
+
+  MXNET_LAPACK_CWRAPPER9(sgesdd, float)
+  MXNET_LAPACK_CWRAPPER9(dgesdd, double)
+
+  MXNET_LAPACK_CWRAPPER10(sgeqrf, float)
+  MXNET_LAPACK_CWRAPPER10(dgeqrf, double)
+
+  MXNET_LAPACK_CWRAPPER11(sgelsd, float)
+  MXNET_LAPACK_CWRAPPER11(dgelsd, double)
+
+  MXNET_LAPACK_CWRAPPER12(sorgqr, float)
+  MXNET_LAPACK_CWRAPPER12(dorgqr, double)
 
   #undef MXNET_LAPACK_CWRAPPER1
   #undef MXNET_LAPACK_CWRAPPER2

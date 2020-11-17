@@ -535,11 +535,11 @@ TempWorkspace<DType> GetWorkspace(const index_t num_batch,
                                  workspace.indices_temp_spaces;
 
   // Obtain the memory for workspace
-  Tensor<gpu, 1, DType> scratch_memory = ctx.requested[box_nms_enum::kTempSpace]
-    .get_space_typed<gpu, 1, DType>(mshadow::Shape1(workspace_size), s);
+  Tensor<gpu, 1, uint8_t> scratch_memory = ctx.requested[box_nms_enum::kTempSpace]
+    .get_space_typed<gpu, 1, uint8_t>(mshadow::Shape1(workspace_size), s);
 
   // Populate workspace pointers
-  workspace.scores = scratch_memory.dptr_;
+  workspace.scores = reinterpret_cast<DType*>(scratch_memory.dptr_);
   workspace.scratch = reinterpret_cast<uint8_t*>(workspace.scores) +
                                                  workspace.scores_temp_space;
   workspace.buffer = reinterpret_cast<DType*>(workspace.scratch +

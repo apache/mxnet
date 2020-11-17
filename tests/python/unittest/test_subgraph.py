@@ -21,14 +21,14 @@ import numpy as np
 import mxnet as mx
 import copy
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown
+import pytest
 from mxnet.gluon.model_zoo.vision import get_model
 
 def make_subgraph(subg, *args):
     js = subg.tojson()
-    return mx.sym._internal._CachedOp(*args, subgraph=js)
+    return subg
 
-@with_seed()
+@pytest.mark.serial
 def test_make_subgraph():
     def make_subgraph1(stype):
         a = mx.symbol.Variable(name='a', stype=stype)
@@ -117,10 +117,10 @@ def test_make_subgraph():
             all_inputs = copy.deepcopy(inputs)
             all_inputs.update(aux_states)
             args_grad = {key : mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
-            e1 = orig.bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
+            e1 = orig._bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
                     aux_states=all_inputs)
             args_grad = {key : mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
-            e2 = subg.bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
+            e2 = subg._bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
                     aux_states=all_inputs)
             e1.forward(is_train=True)
             e2.forward(is_train=True)
@@ -137,6 +137,7 @@ def test_make_subgraph():
                         rtol=0.001, atol=0.0001)
 
 
+@pytest.mark.serial
 def test_subgraph_with_customOp():
     class MyAdd(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
@@ -186,10 +187,6 @@ def test_subgraph_with_customOp():
     b = a + 1
     b = mx.symbol.Custom(data=a, op_type='MyAdd1')
     c = mx.symbol.Custom(data=a, op_type='MyAdd2')
-    b.bind(mx.cpu(), {'a': inp}).forward()
-    c.bind(mx.cpu(), {'a': inp}).forward()
+    b._bind(mx.cpu(), {'a': inp}).forward()
+    c._bind(mx.cpu(), {'a': inp}).forward()
     mx.nd.waitall()
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

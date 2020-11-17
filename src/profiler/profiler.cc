@@ -31,7 +31,7 @@
 #include "./profiler.h"
 
 #if MXNET_USE_CUDA
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800
@@ -154,9 +154,9 @@ void Profiler::SetConfig(int mode,
  */
 void Profiler::EmitPid(std::ostream *os, const std::string& name, size_t pid) {
   (*os) << "        {\n"
-        << "            \"ph\": \"" << static_cast<char>(ProfileStat::kMetadata) <<  "\",\n"
+        << R"(            "ph": ")" << static_cast<char>(ProfileStat::kMetadata) <<  "\",\n"
         << "            \"args\": {\n"
-        << "                \"name\": \"" << name << "\"\n"
+        << R"(                "name": ")" << name << "\"\n"
         << "            },\n"
         << "            \"pid\": " << pid << ",\n"
         << "            \"name\": \"process_name\"\n"
@@ -246,7 +246,7 @@ void Profiler::DumpProfile(bool perform_cleanup) {
   if (last_pass) {
     file << "\n" << std::endl;
     file << "    ]," << std::endl;
-    file << "    \"displayTimeUnit\": \"ms\"" << std::endl;
+    file << R"(    "displayTimeUnit": "ms")" << std::endl;
     file << "}" << std::endl;
   }
   enable_output_ = continuous_dump_ && !last_pass;  // If we're appending, then continue.
@@ -292,6 +292,24 @@ void Profiler::SetContinuousProfileDump(bool continuous_dump, float delay_in_sec
       old_thread->request_shutdown();
     }
   }
+}
+
+ProfilerScope* ProfilerScope::Get() {
+  static std::mutex mtx;
+  static std::shared_ptr<ProfilerScope> prof_scope = nullptr;
+  std::unique_lock<std::mutex> lk(mtx);
+  if (!prof_scope) {
+    prof_scope = std::make_shared<ProfilerScope>();
+  }
+  return prof_scope.get();
+}
+
+void ProfilerScope::SetCurrentProfilerScope(const std::string& scope) {
+  current_profiler_scope_ = scope;
+}
+
+std::string ProfilerScope::GetCurrentProfilerScope() const {
+  return current_profiler_scope_;
 }
 
 }  // namespace profiler

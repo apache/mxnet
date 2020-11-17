@@ -179,47 +179,6 @@ function(mxnet_parse_header_single_define LIBNAME HDR_PATH VARNAME)
   endif()
 endfunction()
 
-########################################################################################################
-# An option that the user can select. Can accept condition to control when option is available for user.
-# Usage:
-#   mxnet_option(<option_variable> "doc string" <initial value or boolean expression> [IF <condition>])
-function(mxnet_option variable description value)
-  set(__value ${value})
-  set(__condition "")
-  set(__varname "__value")
-  foreach(arg ${ARGN})
-    if(arg STREQUAL "IF" OR arg STREQUAL "if")
-      set(__varname "__condition")
-    else()
-      list(APPEND ${__varname} ${arg})
-    endif()
-  endforeach()
-  unset(__varname)
-  if("${__condition}" STREQUAL "")
-    set(__condition 2 GREATER 1)
-  endif()
-
-  if(${__condition})
-    if("${__value}" MATCHES ";")
-      if(${__value})
-        option(${variable} "${description}" ON)
-      else()
-        option(${variable} "${description}" OFF)
-      endif()
-    elseif(DEFINED ${__value})
-      if(${__value})
-        option(${variable} "${description}" ON)
-      else()
-        option(${variable} "${description}" OFF)
-      endif()
-    else()
-      option(${variable} "${description}" ${__value})
-    endif()
-  else()
-    option(${variable} "${description}" OFF)
-  endif()
-endfunction()
-
 ################################################################################################
 # Utility macro for comparing two lists. Used for CMake debugging purposes
 # Usage:

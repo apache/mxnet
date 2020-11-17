@@ -16,7 +16,6 @@
 # under the License.
 
 """Register backend ops in mxnet.ndarray namespace"""
-from __future__ import absolute_import
 import os as _os
 import ctypes
 import numpy as _np  # pylint: disable=unused-import
@@ -24,7 +23,7 @@ import numpy as _np  # pylint: disable=unused-import
 from ._internal import NDArrayBase, _imperative_invoke # pylint: disable=unused-import
 from ..ndarray_doc import _build_doc
 
-from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null, _is_np_op  # pylint: disable=unused-import
+from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null, _is_np_op, _output_is_list  # pylint: disable=unused-import
 from ..util import use_np_shape  # pylint: disable=unused-import
 
 
@@ -176,6 +175,7 @@ def _generate_ndarray_function_code(handle, op_name, func_name, signature_only=F
 
     code = []
     is_np_op = _is_np_op(op_name)
+    output_is_list = _output_is_list(op_name)
     doc_str_idx = 1
     if is_np_op:
         doc_str_idx = 2
@@ -193,8 +193,11 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             if dtype_name is not None:
                 code.append("""
     if '%s' in kwargs:
-        kwargs['%s'] = _np.dtype(kwargs['%s']).name"""%(
-            dtype_name, dtype_name, dtype_name))
+        if _np.dtype(kwargs['%s']).names:
+            kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
+        else:
+            kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
+                dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
             code.append("""
     _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)
@@ -232,7 +235,11 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                     code.append("""
     if %s is not _Null:
         keys.append('%s')
-        vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+        if _np.dtype(%s).names:
+            vals.append(_np.dtype(%s).names[0])
+        else:
+            vals.append(_np.dtype(%s).name) """%(dtype_name, dtype_name, dtype_name,
+                                                 dtype_name, dtype_name))
 
     verify_ndarrays_fn =\
         _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_legacy_ndarrays.__name__
@@ -241,8 +248,8 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
     {verify_fn}("{op_name}", "{func_name}", ndargs, out)
         """.format(verify_fn=verify_ndarrays_fn, op_name=op_name, func_name=func_name))
         code.append("""
-    return _imperative_invoke(%d, ndargs, keys, vals, out, %s)"""%(
-        handle.value, str(is_np_op)))
+    return _imperative_invoke(%d, ndargs, keys, vals, out, %s, %s)"""%(
+        handle.value, str(is_np_op), str(output_is_list)))
     else:
         code.append("""
     return (0,)""")

@@ -36,9 +36,10 @@ using namespace mshadow;
 // Copies lower/upper triangular part to upper/lower, i.e. to the opposite side.
 struct CopyTriangularToOppositeSide {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int matrix_size, int stride, DType* data, bool to_lower) {
+  MSHADOW_XINLINE static void Map(index_t i, size_t matrix_size, index_t stride,
+                                  DType* data, bool to_lower) {
     // Below computation works even when we are dealing with a batch of matrices.
-    const int row((i % matrix_size) / stride), col(i % stride);
+    const index_t row((i % matrix_size) / stride), col(i % stride);
     if (row > col) {
        if (to_lower) {
          data[i] = data[i + (col - row) * (stride - 1)];
@@ -52,9 +53,9 @@ struct CopyTriangularToOppositeSide {
 // Zero's lower/upper triangular part of a matrix.
 struct ZeroTriangular {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int matrix_size, int stride, DType* data,
-                                  bool zero_lower) {
-    const int row((i % matrix_size) / stride), col(i % stride);
+  MSHADOW_XINLINE static void Map(index_t i, size_t matrix_size, index_t stride,
+                                  DType* data, bool zero_lower) {
+    const index_t row((i % matrix_size) / stride), col(i % stride);
     if ((!zero_lower && (row < col)) || (zero_lower && (row > col))) data[i] = 0;
   }
 };
@@ -502,6 +503,9 @@ struct det {
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& det,
                  const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, int>& pivot,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    if (A.shape_.Size() == 0U) {
+      return;
+    }
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 1, DType> sign = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(det.shape_, s);
@@ -524,6 +528,9 @@ struct slogdet {
                  const Tensor<xpu, 1, DType>& logabsdet, const Tensor<xpu, 3, DType>& LU,
                  const Tensor<xpu, 2, int>& pivot, const OpContext& ctx,
                  const nnvm::NodeAttrs& attrs) {
+    if (A.shape_.Size() == 0U) {
+      return;
+    }
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Copy(LU, A, s);
     linalg_batch_getrf(LU, pivot, false, s);
@@ -921,6 +928,9 @@ struct det_backward {
     using namespace mshadow;
     using namespace mshadow::expr;
     using namespace mxnet_op;
+    if (dA.shape_.Size() == 0U) {
+      return;
+    }
     // compute inverse(A) and stores it to LU
     linalg_batch_det_backward_helper(LU, pivot, det, dA, DType(0), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(det * ddet, \
@@ -949,6 +959,9 @@ struct slogdet_backward {
     using namespace mshadow;
     using namespace mshadow::expr;
     using namespace mxnet_op;
+    if (dA.shape_.Size() == 0U) {
+      return;
+    }
     // compute inverse(A) and stores it to LU
     linalg_batch_det_backward_helper(LU, pivot, logabsdet, dA, DType(-INFINITY), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogabsdet, \

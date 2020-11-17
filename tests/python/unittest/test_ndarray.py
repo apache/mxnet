@@ -23,8 +23,8 @@ import os
 import pickle as pkl
 import random
 import functools
-from nose.tools import assert_raises, raises
-from common import with_seed, assertRaises, TemporaryDirectory
+import pytest
+from common import assertRaises, TemporaryDirectory
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
@@ -74,7 +74,6 @@ def random_ndarray(dim):
     return data
 
 
-@with_seed()
 def test_ndarray_setitem():
     shape = (3, 4, 2)
 
@@ -154,8 +153,23 @@ def test_ndarray_setitem():
         assert x.shape == trivial_shape
         assert same(x.asnumpy(), x_np)
 
+    # test https://github.com/apache/incubator-mxnet/issues/16647
+    dst = mx.nd.zeros((1, 3, 1))  # destination array
+    src = [1, 2, 3]
+    dst[0, :len(src), 0] = src
+    assert same(dst.asnumpy(), np.array([1, 2, 3], dtype=dst.dtype).reshape(dst.shape))
 
-@with_seed()
+    dst = mx.nd.zeros((1, 3, 1))  # destination array
+    src = [1, 2, 3]
+    dst[0, :len(src), 0] = mx.nd.array(src)
+    assert same(dst.asnumpy(), np.array([1, 2, 3], dtype=dst.dtype).reshape(dst.shape))
+
+    dst = mx.nd.zeros((1, 3, 1))  # destination array
+    src = [1, 2]
+    dst[0, :len(src), 0] = src
+    assert same(dst.asnumpy(), np.array([1, 2, 0], dtype=dst.dtype).reshape(dst.shape))
+
+
 def test_ndarray_elementwise():
     nrepeat = 10
     maxdim = 4
@@ -173,14 +187,12 @@ def test_ndarray_elementwise():
             check_with_uniform(lambda x: mx.nd.norm(x).asscalar(), 1, dim, np.linalg.norm)
 
 
-@with_seed()
 def test_ndarray_elementwisesum():
     ones = mx.nd.ones((10,), dtype=np.int32)
     res = mx.nd.ElementWiseSum(ones, ones*2, ones*4, ones*8)
     assert same(res.asnumpy(), ones.asnumpy()*15)
 
 
-@with_seed()
 def test_ndarray_negate():
     npy = np.random.uniform(-10, 10, (2,3,4))
     arr = mx.nd.array(npy)
@@ -193,7 +205,6 @@ def test_ndarray_negate():
     assert_almost_equal(npy, arr.asnumpy())
 
 
-@with_seed()
 def test_ndarray_magic_abs():
     for dim in range(1, 7):
         shape = rand_shape_nd(dim)
@@ -202,7 +213,6 @@ def test_ndarray_magic_abs():
         assert_almost_equal(abs(arr).asnumpy(), arr.abs().asnumpy())
 
 
-@with_seed()
 def test_ndarray_reshape():
     tensor = (mx.nd.arange(30) + 1).reshape(2, 3, 5)
     true_res = mx.nd.arange(30) + 1
@@ -221,9 +231,9 @@ def test_ndarray_reshape():
     assert same(tensor.reshape(-1, 15).reshape(0, -4, 3, -1).asnumpy(), true_res.reshape(2, 3, 5).asnumpy())
     assert same(tensor.reshape(-1, 0).asnumpy(), true_res.reshape(10, 3).asnumpy())
     assert same(tensor.reshape(-1, 0, reverse=True).asnumpy(), true_res.reshape(6, 5).asnumpy())
+    # https://github.com/apache/incubator-mxnet/issues/18886
+    assertRaises(ValueError, tensor.reshape, (2, 3))
 
-
-@with_seed()
 def test_ndarray_flatten():
     tensor = (mx.nd.arange(30) + 1).reshape(2, 3, 5)
     copy = tensor.flatten()
@@ -236,7 +246,6 @@ def test_ndarray_flatten():
     assert same(ref.asnumpy(), tensor.reshape(2, 15).asnumpy())
 
 
-@with_seed()
 def test_ndarray_squeeze():
     def check_squeeze(shape, axis=None):
         data = mx.random.uniform(low=-10.0, high=10.0, shape=shape)
@@ -266,7 +275,6 @@ def test_ndarray_squeeze():
     check_squeeze((1, 1, 1, 1))
 
 
-@with_seed()
 def test_ndarray_expand_dims():
     for ndim in range(1, 6):
         for axis in range(-ndim-1, ndim+1):
@@ -282,7 +290,6 @@ def test_ndarray_expand_dims():
             assert not same(ref.asnumpy(), out_expected)
 
 
-@with_seed()
 def test_ndarray_choose():
     shape = (100, 20)
     npy = np.arange(np.prod(shape)).reshape(shape)
@@ -294,7 +301,6 @@ def test_ndarray_choose():
                     mx.nd.choose_element_0index(arr, mx.nd.array(indices)).asnumpy())
 
 
-@with_seed()
 def test_ndarray_fill():
     shape = (100, 20)
     npy = np.arange(np.prod(shape)).reshape(shape)
@@ -310,7 +316,6 @@ def test_ndarray_fill():
                     mx.nd.fill_element_0index(arr, mx.nd.array(val), mx.nd.array(indices)).asnumpy())
 
 
-@with_seed()
 def test_ndarray_onehot():
     shape = (100, 20)
     npy = np.arange(np.prod(shape)).reshape(shape)
@@ -331,14 +336,12 @@ def test_init_from_scalar():
     assert same(npy, arr.asnumpy())
 
 
-@with_seed()
 def test_ndarray_copy():
     c = mx.nd.array(np.random.uniform(-10, 10, (10, 10)))
     d = c.copyto(mx.Context('cpu', 0))
     assert np.sum(np.abs(c.asnumpy() != d.asnumpy())) == 0.0
 
 
-@with_seed()
 def test_ndarray_scalar():
     c = mx.nd.empty((10,10))
     d = mx.nd.empty((10,10))
@@ -354,7 +357,6 @@ def test_ndarray_scalar():
     assert(np.sum(d.asnumpy()) < 1e-5)
 
 
-@with_seed()
 def test_ndarray_pickle():
     maxdim = 5
     for dim in range(1, maxdim):
@@ -368,7 +370,6 @@ def test_ndarray_pickle():
         assert np.sum(a.asnumpy() != a2.asnumpy()) == 0
 
 
-@with_seed()
 def test_ndarray_saveload():
     nrepeat = 10
     fname = 'tmp_list.bin'
@@ -401,7 +402,6 @@ def test_ndarray_saveload():
     os.remove(fname)
 
 
-@with_seed()
 def test_ndarray_legacy_load():
     data = []
     for i in range(6):
@@ -413,7 +413,6 @@ def test_ndarray_legacy_load():
         assert same(data[i].asnumpy(), legacy_data[i].asnumpy())
 
 
-@with_seed()
 def test_buffer_load():
     nrepeat = 10
     with TemporaryDirectory(prefix='test_buffer_load_') as tmpdir:
@@ -460,7 +459,7 @@ def test_buffer_load():
                 assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_single_ndarray[:-10])
 
 
-@with_seed()
+@pytest.mark.serial
 def test_ndarray_slice():
     shape = (10,)
     A = mx.nd.array(np.random.uniform(-10, 10, shape))
@@ -492,7 +491,6 @@ def test_ndarray_slice():
         assert same(A[i, :].asnumpy(), A2[i, :])
 
 
-@with_seed()
 def test_ndarray_crop():
     # get crop
     x = mx.nd.ones((2, 3, 4))
@@ -517,7 +515,7 @@ def test_ndarray_crop():
     assert same(x.asnumpy(), np_x)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_ndarray_concatenate():
     axis = 1
     shapes = [(2, 3, 4, 2), (2, 2, 4, 2), (2, 1, 4, 2)]
@@ -530,7 +528,6 @@ def test_ndarray_concatenate():
     assert same(array_np, array_nd.asnumpy())
 
 
-@with_seed()
 def test_clip():
     shape = (10,)
     A = mx.random.uniform(-10, 10, shape)
@@ -541,7 +538,6 @@ def test_clip():
         assert B1[i] <= 2
 
 
-@with_seed()
 def test_dot():
     # Non-zero atol required, as exposed by seed 828791701
     atol = 1e-5
@@ -579,13 +575,13 @@ def test_dot():
     assert_almost_equal(c, C.asnumpy(), atol=atol)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_reduce():
     sample_num = 300
     def test_reduce_inner(numpy_reduce_func, nd_reduce_func, multi_axes,
                           allow_almost_equal=False, check_dtype=True):
         dtypes = [(np.float16, 1),
-                  (np.float32, 5),
+                  (np.float32, 4),
                   (np.double, 6)]
         for i in range(sample_num):
             dtype, decimal = random.choice(dtypes)
@@ -649,17 +645,13 @@ def test_reduce():
                       mx.nd.max, True)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
                       mx.nd.min, True)
-    # argmax and argmin are sensitive to the precision of the calculation (repro seed 1985162693).
-    # Force numpy to match mxnet's float32.
-    test_reduce_inner(lambda data, axis,
-                             keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmax),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.argmax),
                       mx.nd.argmax, False, check_dtype=False)
-    test_reduce_inner(lambda data, axis,
-                             keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmin),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.argmin),
                       mx.nd.argmin, False, check_dtype=False)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_broadcast():
     sample_num = 1000
     def test_broadcast_to():
@@ -722,7 +714,7 @@ def test_broadcast():
     test_broadcast_like_axis()
 
 
-@with_seed()
+@pytest.mark.serial
 def test_broadcast_binary():
     N = 100
     def check_broadcast_binary(fn):
@@ -757,7 +749,6 @@ def test_broadcast_binary():
     check_broadcast_binary(lambda x, y: x.astype(np.float32) == y.astype(np.float32))
 
 
-@with_seed()
 def test_moveaxis():
     X = mx.nd.array([[[1, 2, 3], [4, 5, 6]],
                      [[7, 8, 9], [10, 11, 12]]])
@@ -832,7 +823,6 @@ def test_moveaxis():
     test_errors()
 
 
-@with_seed()
 def test_arange():
     for i in range(5):
         start = np.random.rand() * 10
@@ -849,7 +839,6 @@ def test_arange():
     assert_almost_equal(pred, gt)
 
 
-@with_seed()
 def test_linspace():
     for i in range(5):
         start = np.random.rand() * 100
@@ -866,7 +855,7 @@ def test_linspace():
         assert_almost_equal(pred, gt)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_order():
     ctx = default_context()
     dat_size = 5
@@ -1101,7 +1090,6 @@ def test_order():
         assert_almost_equal(nd_ret_sort, gt)
 
 
-@with_seed()
 def test_ndarray_equal():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -1111,7 +1099,6 @@ def test_ndarray_equal():
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
 
-@with_seed()
 def test_ndarray_not_equal():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -1121,7 +1108,6 @@ def test_ndarray_not_equal():
     assert (z.asnumpy() == np.zeros((2, 3))).all()
 
 
-@with_seed()
 def test_ndarray_greater():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -1133,7 +1119,6 @@ def test_ndarray_greater():
     assert (z.asnumpy() == np.zeros((2, 3))).all()
 
 
-@with_seed()
 def test_ndarray_greater_equal():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -1147,7 +1132,6 @@ def test_ndarray_greater_equal():
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
 
-@with_seed()
 def test_ndarray_lesser():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -1159,7 +1143,6 @@ def test_ndarray_lesser():
     assert (z.asnumpy() == np.zeros((2, 3))).all()
 
 
-@with_seed()
 def test_ndarray_lesser_equal():
     x = mx.nd.zeros((2, 3))
     y = mx.nd.ones((2, 3))
@@ -1173,7 +1156,6 @@ def test_ndarray_lesser_equal():
     assert (z.asnumpy() == np.ones((2, 3))).all()
 
 
-@with_seed()
 def test_ndarray_take():
     for data_ndim in range(2, 5):
         for idx_ndim in range(1, 4):
@@ -1191,7 +1173,6 @@ def test_ndarray_take():
             assert_almost_equal(result.asnumpy(), data_real[idx_real])
 
 
-@with_seed()
 def test_iter():
     x = mx.nd.array([1, 2, 3])
     y = []
@@ -1201,7 +1182,7 @@ def test_iter():
     for i in range(x.size):
         assert same(y[i].asnumpy(), x[i].asnumpy())
 
-@with_seed()
+@pytest.mark.serial
 def test_cached():
     sym = mx.sym.Convolution(kernel=(3, 3), num_filter=10) + 2
     op = mx.nd.CachedOp(sym)
@@ -1244,7 +1225,6 @@ def test_cached():
         o.backward()
 
 
-@with_seed()
 def test_output():
     shape = (2,2)
     ones = mx.nd.ones(shape)
@@ -1269,7 +1249,7 @@ def test_output():
         assert_almost_equal(np.eye(N, k=k), mx.nd.eye(N, k=k).asnumpy())
 
 
-@with_seed()
+@pytest.mark.serial
 def test_ndarray_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split', 'split_v2',
@@ -1329,9 +1309,9 @@ def test_ndarray_fluent():
     check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
 
 
-@raises(ValueError)
 def test_bool_ambiguous():
-    bool(mx.nd.ones((2,3,4)))
+    with pytest.raises(ValueError):
+        bool(mx.nd.ones((2,3,4)))
 
 
 def test_bool():
@@ -1340,6 +1320,7 @@ def test_bool():
     assert bool(mx.nd.ones((1,)))
 
 
+@pytest.mark.serial
 def test_basic_indexing_is_contiguous():
     x_np = np.arange(np.prod((6, 7, 8, 9))).reshape((6, 7, 8, 9))
     x_mx = mx.nd.array(x_np)
@@ -1376,7 +1357,7 @@ def test_basic_indexing_is_contiguous():
                 assert (y_mx[slc].asnumpy() == 0).all()
 
 
-@with_seed()
+@pytest.mark.serial
 def test_ndarray_indexing():
     def test_getitem(np_array, index, is_scalar=False):
         """`is_scalar` indicates whether we should expect a scalar for the result.
@@ -1591,10 +1572,10 @@ def test_ndarray_indexing():
                   # Test basic indexing with newaxis
                   (None, False),
                   ((1, None, -2, 3, -4), False),
-                  ((1, slice(2, 5), None), False), 
-                  ((slice(None), slice(1, 4), None, slice(2, 3)), False), 
-                  ((slice(1, 3), slice(1, 3), slice(1, 3), slice(1, 3), None), False), 
-                  ((slice(1, 3), slice(1, 3), None, slice(1, 3), slice(1, 3)), False), 
+                  ((1, slice(2, 5), None), False),
+                  ((slice(None), slice(1, 4), None, slice(2, 3)), False),
+                  ((slice(1, 3), slice(1, 3), slice(1, 3), slice(1, 3), None), False),
+                  ((slice(1, 3), slice(1, 3), None, slice(1, 3), slice(1, 3)), False),
                   ((None, slice(1, 2), 3, None), False),
                   ((1, None, 2, 3, None, None, 4), False),
                   # Advanced indexing
@@ -1670,7 +1651,6 @@ def test_assign_large_int_to_ndarray():
     b = a.asnumpy()
     assert same(b[1,0], 16800000)
 
-@with_seed()
 def test_assign_a_row_to_ndarray():
     """Test case from https://github.com/apache/incubator-mxnet/issues/9976"""
     H, W = 10, 10
@@ -1700,7 +1680,6 @@ def test_assign_a_row_to_ndarray():
     a_nd[0, :] = a_nd[1]
     assert same(a_np, a_nd.asnumpy())
 
-@with_seed()
 def test_ndarray_astype():
     x = mx.nd.zeros((2, 3), dtype='int32')
     y = x.astype('float32')
@@ -1733,7 +1712,7 @@ def test_ndarray_astype():
     assert (id(x) == id(y))
 
 
-@with_seed()
+@pytest.mark.serial
 def test_norm(ctx=default_context()):
     try:
         import scipy
@@ -1772,13 +1751,12 @@ def test_norm(ctx=default_context()):
                         assert_almost_equal(npy_out, mx_out)
 
 
-@with_seed()
 def test_ndarray_cpu_shared_ctx():
     ctx = mx.Context('cpu_shared', 0)
     res = mx.nd.zeros((1, 2, 3), ctx=ctx)
     assert(res.context == ctx)
 
-@with_seed()
+@pytest.mark.serial
 def test_dlpack():
     for dtype in [np.float32, np.int32]:
         for shape in [(3, 4, 5, 6), (2, 10), (15,)]:
@@ -1806,7 +1784,6 @@ def test_dlpack():
             assert_almost_equal(a_np, d)
             assert_almost_equal(a_np, e)
 
-@with_seed()
 def test_ndarray_is_inf():
     random_dimensions = np.random.randint(2, 5)
     random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
@@ -1820,7 +1797,6 @@ def test_ndarray_is_inf():
     np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
     # astype since numpy functions default return type is boolean array instead of int
 
-@with_seed()
 def test_ndarray_is_finite():
     random_dimensions = np.random.randint(2, 5)
     random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
@@ -1834,7 +1810,6 @@ def test_ndarray_is_finite():
     np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
     # astype since numpy functions default return type is boolean array instead of int
 
-@with_seed()
 def test_ndarray_is_nan():
     random_dimensions = np.random.randint(2, 5)
     random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
@@ -1848,7 +1823,6 @@ def test_ndarray_is_nan():
     np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
     # astype since numpy functions default return type is boolean array instead of int
 
-@with_seed()
 def test_ndarray_nan_comparison():
     random_dimensions = np.random.randint(2, 5)
     random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
@@ -1908,7 +1882,6 @@ def test_zero_from_numpy():
         assert False
 
 
-@with_seed()
 def test_save_load_scalar_zero_size_ndarrays():
     def check_save_load(save_is_np_shape, load_is_np_shape, shapes, save_throw_exception, load_throw_exception):
         with mx.np_shape(save_is_np_shape):
@@ -2002,14 +1975,15 @@ def _test_update_ops_mutation_impl():
             {'rescale_grad': 0.1, 'lr': 0.01, 'wd': 1e-3})
 
 
-@with_seed()
+@pytest.mark.serial
 def test_update_ops_mutation():
     _test_update_ops_mutation_impl()
 
 
 # Problem :
 # https://github.com/apache/incubator-mxnet/pull/15768#issuecomment-532046408
-@with_seed(412298777)
+@pytest.mark.seed(412298777)
+@pytest.mark.serial
 def test_update_ops_mutation_failed_seed():
     # The difference was -5.9604645e-08 which was
     # lower than then `rtol` of 1e-07
@@ -2050,7 +2024,3 @@ def test_load_saved_gpu_array_when_no_gpus_are_present():
     # but there are no GPUs
     array.__setstate__(ndarray_state)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

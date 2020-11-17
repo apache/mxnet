@@ -219,13 +219,13 @@ We can see that the three lines of print statements defined in the `hybrid_forwa
 
 ## Key differences and limitations of hybridization
 
-The difference between a purely imperative `Block` and hybridizable `HybridBlock` can superficially appear to be simply the injection of the `F` function space (resolving to [`mx.nd`](/api/python/docs/api/ndarray/index.html) or [`mx.sym`](/api/python/docs/api/symbol/index.html)) in the forward function that is renamed from `forward` to `hybrid_forward`. However there are some limitations that apply when using hybrid blocks. In the following section we will review the main differences, giving example of code snippets that generate errors when such blocks get hybridized.
+The difference between a purely imperative `Block` and hybridizable `HybridBlock` can superficially appear to be simply the injection of the `F` function space (resolving to [mx.nd](/api/python/docs/api/ndarray/index.html) or [mx.sym](/api/python/docs/api/symbol/index.html)) in the forward function that is renamed from `forward` to `hybrid_forward`. However there are some limitations that apply when using hybrid blocks. In the following section we will review the main differences, giving example of code snippets that generate errors when such blocks get hybridized.
 
 ### Indexing
 
 When trying to access specific elements in a tensor like this:
 
-```python
+```{.python .input}
 def hybrid_forward(self, F, x):
     return x[0,0]
 ```
@@ -234,13 +234,13 @@ Would generate the following error:
 
 `TypeError: Symbol only support integer index to fetch i-th output`
 
-There are however several operators that can help you with array manipulations like: [`F.split`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.split), [`F.slice`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.slice), [`F.take`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.take),[`F.pick`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.pick), [`F.where`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.where), [`F.reshape`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape) or [`F.reshape_like`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape_like).
+There are however several operators that can help you with array manipulations like: [F.split](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.split), [F.slice](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.slice), [F.take](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.take),[F.pick](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.pick), [F.where](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.where), [F.reshape](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape) or [F.reshape_like](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape_like).
 
 ### Data Type
 
 Sometimes one can be tempted to use conditional logic on the type of the input tensors however the following block:
 
-```python
+```{.python .input}
 def hybrid_forward(self, F, x):
     if x.dtype =='float16':
         return x
@@ -255,7 +255,7 @@ You cannot use the `dtype` of the symbol at runtime. Symbols only describe opera
 
 Similarly you cannot use the compute context of symbol for the same reason that symbols only describe the operations on the data and not the data (or context). You cannot do this:
 
-```python
+```{.python .input}
 def hybrid_forward(self, F, x):
     if x.context == mx.cpu():
         return x
@@ -270,7 +270,7 @@ Accessing the current compute context is not possible with symbols. Consider pas
 
 Accessing shape information of tensors is very often used for example when trying to flatten a tensor and then reshape it back to its original shape.
 
-```python
+```{.python .input}
 def hybrid_forward(self, F, x):
     return x*x.shape[0]
 ```
@@ -286,7 +286,7 @@ There are also a lot of operators that support special indices to help with most
 
 Last but not least, you cannot directly assign values in tensor in a symbolic graph, the resulting tensors always needs to be the results of operations performed on the inputs of the computational graph. The following code:
 
-```python
+```{.python .input}
 def hybrid_forward(self, F, x):
     x[0] = 2
     return x
@@ -298,7 +298,7 @@ Direct item assignment is not possible in symbolic graph since it needs to be pa
 
 e.g to set the first element to 2 you can do:
 
-```python
+```{.python .input}
 x = mx.nd.array([1,2,3])
 value = mx.nd.ones_like(x)*2
 condition = mx.nd.array([0,1,1])

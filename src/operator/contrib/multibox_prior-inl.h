@@ -204,7 +204,7 @@ class MultiBoxPriorProp: public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not implemented";
-    return NULL;
+    return nullptr;
   }
 
   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,

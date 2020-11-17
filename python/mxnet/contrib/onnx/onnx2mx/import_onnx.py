@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name,too-many-locals,no-self-use
 """ Support import export formats."""
-from __future__ import absolute_import as _abs
 import numpy as np
 from .... import symbol
 from .... import ndarray as nd

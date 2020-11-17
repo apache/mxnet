@@ -38,6 +38,7 @@
 #include "elemwise_unary_op.h"
 #include "../../common/utils.h"
 #include "./init_op.h"
+#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -106,61 +107,67 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
  private:
-  template<typename xpu, typename LOP, typename ROP, typename DType>
+  template<typename LOP, typename ROP>
   static void BackwardUseNone_(const nnvm::NodeAttrs &attrs,
-                               const OpContext &ctx,
+                               mshadow::Stream<cpu>* s,
                                const std::vector<TBlob> &inputs,
                                const std::vector<OpReqType> &req,
                                const std::vector<TBlob> &outputs) {
-    using namespace mxnet_op;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    const int size = static_cast<int>((outputs[0].Size() + DataType<DType>::kLanes - 1)
-                                      / DataType<DType>::kLanes);
-    const DType *ograd_dptr = inputs[0].dptr<DType>();
-    if (std::is_same<LOP, mshadow_op::identity>::value && req[0] == kWriteInplace) {
-      CHECK_EQ(ograd_dptr, outputs[0].dptr<DType>());
-    } else if (req[0] != kNullOp) {
-      DType *lgrad_dptr = outputs[0].dptr<DType>();
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        Kernel<mxnet_op::op_with_req<LOP, Req>, xpu>::Launch(s, size, lgrad_dptr, ograd_dptr);
-      });
-    }
-    if (std::is_same<ROP, mshadow_op::identity>::value && req[1] == kWriteInplace) {
-      CHECK_EQ(ograd_dptr, outputs[1].dptr<DType>());
-    } else if (req[1] != kNullOp) {
-      DType *rgrad_dptr = outputs[1].dptr<DType>();
-      MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
-        Kernel<mxnet_op::op_with_req<ROP, Req>, xpu>::Launch(s, size, rgrad_dptr, ograd_dptr);
-      });
-    }
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      using namespace mxnet_op;
+      const size_t size = static_cast<size_t>((outputs[0].Size() + DataType<DType>::kLanes - 1)
+                                        / DataType<DType>::kLanes);
+      const DType *ograd_dptr = inputs[0].dptr<DType>();
+      if (std::is_same<LOP, mshadow_op::identity>::value && req[0] == kWriteInplace) {
+        CHECK_EQ(ograd_dptr, outputs[0].dptr<DType>());
+      } else if (req[0] != kNullOp) {
+        DType *lgrad_dptr = outputs[0].dptr<DType>();
+        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+          Kernel<mxnet_op::op_with_req<LOP, Req>, cpu>::Launch(s, size, lgrad_dptr, ograd_dptr);
+        });
+      }
+      if (std::is_same<ROP, mshadow_op::identity>::value && req[1] == kWriteInplace) {
+        CHECK_EQ(ograd_dptr, outputs[1].dptr<DType>());
+      } else if (req[1] != kNullOp) {
+        DType *rgrad_dptr = outputs[1].dptr<DType>();
+        MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
+          Kernel<mxnet_op::op_with_req<ROP, Req>, cpu>::Launch(s, size, rgrad_dptr, ograd_dptr);
+        });
+      }
+    });
   }
 
-  template<typename xpu, typename LOP, typename ROP, typename DType>
+  template<typename LOP, typename ROP>
   static void BackwardUseIn_(const nnvm::NodeAttrs &attrs,
-                             const OpContext &ctx,
+                             mshadow::Stream<cpu>* s,
                              const std::vector<TBlob> &inputs,
                              const std::vector<OpReqType> &req,
                              const std::vector<TBlob> &outputs) {
-    DCHECK_EQ(outputs.size(), 2U);
-    DCHECK_EQ(inputs.size(), 3U);
-    mxnet_op::Stream<xpu> *s = ctx.get_stream<xpu>();
-    const DType *ograd_dptr = inputs[0].dptr<DType>();
-    const DType *lhs_dptr = inputs[1].dptr<DType>();
-    const DType *rhs_dptr = inputs[2].dptr<DType>();
-    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-      const int size = static_cast<int>(
-        (outputs[0].Size() + mxnet_op::DataType<DType>::kLanes - 1)
-        / mxnet_op::DataType<DType>::kLanes);
-      DType * lgrad_dptr = outputs[0].dptr<DType>();
-      mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<LOP>, Req>, xpu>::Launch(
-        s, size, lgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);});
-    MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
-      const int size = static_cast<int>(
-        (outputs[1].Size() + mxnet_op::DataType<DType>::kLanes - 1)
-        / mxnet_op::DataType<DType>::kLanes);
-      DType * rgrad_dptr = outputs[1].dptr<DType>();
-      mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<ROP>, Req>, xpu>::Launch(
-        s, size, rgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);});
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      DCHECK_EQ(outputs.size(), 2U);
+      DCHECK_EQ(inputs.size(), 3U);
+      const DType *ograd_dptr = inputs[0].dptr<DType>();
+      const DType *lhs_dptr = inputs[1].dptr<DType>();
+      const DType *rhs_dptr = inputs[2].dptr<DType>();
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        const size_t size = static_cast<size_t>(
+          (outputs[0].Size() + mxnet_op::DataType<DType>::kLanes - 1)
+          / mxnet_op::DataType<DType>::kLanes);
+        DType * lgrad_dptr = outputs[0].dptr<DType>();
+        mxnet_op::Kernel<
+          mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<LOP>, Req>, cpu>::Launch(
+            s, size, lgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);
+      });
+      MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
+        const size_t size = static_cast<size_t>(
+          (outputs[1].Size() + mxnet_op::DataType<DType>::kLanes - 1)
+          / mxnet_op::DataType<DType>::kLanes);
+        DType * rgrad_dptr = outputs[1].dptr<DType>();
+        mxnet_op::Kernel<
+          mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<ROP>, Req>, cpu>::Launch(
+            s, size, rgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);
+      });
+    });
   }
 
   template<
@@ -198,33 +205,6 @@ class ElemwiseBinaryOp : public OpBase {
       RspRspOp<op::mshadow_op::mul>(
         s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
         false, false, true, false);
-    }
-  }
-
-  template<typename xpu, typename LOP, typename ROP>
-  static inline void DnsCsrCsrOpBackward(const nnvm::NodeAttrs &attrs,
-                                         const OpContext &ctx,
-                                         const std::vector<NDArray> &inputs,
-                                         const std::vector<OpReqType> &req,
-                                         const std::vector<NDArray> &outputs) {
-    const bool supported_ops = std::is_same<mshadow_op::right, LOP>::value &&
-                                std::is_same<mshadow_op::left, ROP>::value;
-    CHECK(supported_ops)
-      << "Only backward for mul is supported (LOP should be right, ROP should be left)";
-    const NDArray& out_grad = inputs[0];
-    const NDArray& lhs_in = inputs[1];
-    const NDArray& rhs_in = inputs[2];
-    const NDArray& lhs_grad = outputs[0];
-    const NDArray& rhs_grad = outputs[1];
-    const bool reverse = (outputs[0].storage_type() == kCSRStorage);
-    if (reverse) {
-      DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, out_grad, rhs_in, req[0], lhs_grad, false);
-      Compute<xpu, mshadow_op::mul>(attrs, ctx, {out_grad.data(), lhs_in.data()}, {req[1]},
-                                    {rhs_grad.data()});
-    } else {
-      DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, out_grad, lhs_in, req[1], rhs_grad, false);
-      Compute<xpu, mshadow_op::mul>(attrs, ctx, {out_grad.data(), rhs_in.data()}, {req[0]},
-                                    {lhs_grad.data()});
     }
   }
 
@@ -506,7 +486,7 @@ class ElemwiseBinaryOp : public OpBase {
                       const std::vector<TBlob> &outputs) {
     using namespace mxnet_op;
     if (req[0] == kNullOp) return;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     CHECK_EQ(inputs.size(), 2U);
     CHECK_EQ(outputs.size(), 1U);
     if (outputs[0].type_flag_ == mshadow::kBool) {
@@ -520,6 +500,64 @@ class ElemwiseBinaryOp : public OpBase {
           Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
           outputs[0].dptr<DType>(),
           inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+        }
+      });
+    });
+  }
+
+template<typename xpu, typename OP>
+  static void MixedUnaryBackwardUseInCompute(const nnvm::NodeAttrs &attrs,
+                                             const OpContext &ctx,
+                                             const std::vector<TBlob> &inputs,
+                                             const std::vector<OpReqType> &req,
+                                             const std::vector<TBlob> &outputs) {
+    using namespace mxnet_op;
+    if (req[0] == kNullOp) return;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    if (mxnet::common::is_int(outputs[0].type_flag_) ||
+        outputs[0].type_flag_ == mshadow::kBool) {
+      LOG(FATAL) << "gradient computation of operator " << attrs.op->name << " for "
+                 << mshadow::dtype_string(outputs[0].type_flag_) << " type is not supported";
+    }
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
+        + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
+        if (size != 0) {
+          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
+          outputs[0].dptr<DType>(),
+          inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+        }
+      });
+    });
+  }
+
+  template<typename xpu, typename OP>
+  static void MixedUnaryBackwardUseInOutCompute(const nnvm::NodeAttrs &attrs,
+                                                const OpContext &ctx,
+                                                const std::vector<TBlob> &inputs,
+                                                const std::vector<OpReqType> &req,
+                                                const std::vector<TBlob> &outputs) {
+    using namespace mxnet_op;
+    if (req[0] == kNullOp) return;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    CHECK_EQ(inputs.size(), 3U);
+    CHECK_EQ(outputs.size(), 1U);
+    if (mxnet::common::is_int(outputs[0].type_flag_) ||
+        outputs[0].type_flag_ == mshadow::kBool) {
+      LOG(FATAL) << "gradient computation of operator " << attrs.op->name << " for "
+                 << mshadow::dtype_string(outputs[0].type_flag_) << " type is not supported";
+    }
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[2].Size())
+        + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
+        if (size != 0) {
+          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
+          outputs[0].dptr<DType>(),
+          inputs[0].dptr<DType>(), inputs[2].dptr<DType>());
         }
       });
     });
@@ -562,38 +600,16 @@ class ElemwiseBinaryOp : public OpBase {
     CHECK_EQ(outputs.size(), 1U);
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
       MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
+        MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[1].type_flag_, EType, {
           const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
           + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
           if (size != 0) {
             Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
                                                                 outputs[0].dptr<bool>(),
                                                                 inputs[0].dptr<DType>(),
-                                                                inputs[1].dptr<DType>());
+                                                                inputs[1].dptr<EType>());
           }
-      });
-    });
-  }
-
-  template<typename xpu, typename OP>
-  static void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
-                               const OpContext &ctx,
-                               const std::vector<TBlob> &inputs,
-                               const std::vector<OpReqType> &req,
-                               const std::vector<TBlob> &outputs) {
-    using namespace mxnet_op;
-    if (req[0] == kNullOp) return;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    CHECK_EQ(inputs.size(), 2U);
-    CHECK_EQ(outputs.size(), 1U);
-    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-      MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
-        const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
-        + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
-        if (size != 0) {
-          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
-          outputs[0].dptr<DType>(),
-          inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
-        }
+        });
       });
     });
   }
@@ -694,20 +710,8 @@ class ElemwiseBinaryOp : public OpBase {
                                      const std::vector<TBlob> &inputs,
                                      const std::vector<OpReqType> &req,
                                      const std::vector<TBlob> &outputs) {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      BackwardUseNone_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
-    });
-  }
-
-  template<typename xpu, typename LOP, typename ROP>
-  static inline void BackwardUseNoneWithHalf2(const nnvm::NodeAttrs &attrs,
-                                              const OpContext &ctx,
-                                              const std::vector<TBlob> &inputs,
-                                              const std::vector<OpReqType> &req,
-                                              const std::vector<TBlob> &outputs) {
-    MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
-      BackwardUseNone_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
-    });
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    BackwardUseNone_<LOP, ROP>(attrs, s, inputs, req, outputs);
   }
 
   template<typename xpu, typename LOP, typename ROP>
@@ -751,25 +755,12 @@ class ElemwiseBinaryOp : public OpBase {
                                    const std::vector<TBlob> &inputs,
                                    const std::vector<OpReqType> &req,
                                    const std::vector<TBlob> &outputs) {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      BackwardUseIn_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
-    });
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    BackwardUseIn_<LOP, ROP>(attrs, s, inputs, req, outputs);
   }
+
 
   template<typename xpu, typename LOP, typename ROP>
-  static inline void BackwardUseInWithHalf2(const nnvm::NodeAttrs &attrs,
-                                            const OpContext &ctx,
-                                            const std::vector<TBlob> &inputs,
-                                            const std::vector<OpReqType> &req,
-                                            const std::vector<TBlob> &outputs) {
-    MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
-      BackwardUseIn_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
-    });
-  }
-
-  template<
-    typename xpu, typename LOP, typename ROP,
-    bool in0_ok_dense = false, bool in1_ok_dense = false, bool in2_ok_dense = false>
   static inline void BackwardUseInEx(const nnvm::NodeAttrs &attrs,
                                      const OpContext &ctx,
                                      const std::vector<NDArray> &inputs,
@@ -778,21 +769,16 @@ class ElemwiseBinaryOp : public OpBase {
     using namespace common;
     CHECK_EQ(inputs.size(), 3U);
     CHECK_EQ(outputs.size(), 2U);  // lhs input grad, rhs input grad
-    const auto out_grad_stype = inputs[0].storage_type();
     const auto lhs_grad_stype = outputs[0].storage_type();
     const auto rhs_grad_stype = outputs[1].storage_type();
     if (ContainsOnlyStorage(inputs, kRowSparseStorage) &&
         (lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
         (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
       // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
-      RspRspOpBackward<xpu, LOP, ROP, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
+      RspRspOpBackward<xpu, LOP, ROP, false, false, false>(
         attrs, ctx, inputs, req, outputs, BackwardUseIn<xpu, LOP, ROP>);
-    }
-    if (((lhs_grad_stype == kDefaultStorage && rhs_grad_stype == kCSRStorage) ||
-         (lhs_grad_stype == kCSRStorage && rhs_grad_stype == kDefaultStorage)) &&
-        out_grad_stype == kDefaultStorage) {
-      // dns, csr, dns -> [csr, dns] / csr, dns, dns -> [dns, csr]
-      DnsCsrCsrOpBackward<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
+    } else {
+      LOG(FATAL) << "Not Implemented";
     }
   }
 };  // class ElemwiseBinaryOp
@@ -861,6 +847,43 @@ class ElemwiseBinaryOp : public OpBase {
     [](const NodeAttrs& attrs) { \
       return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};})
 
+#if MXNET_USE_CUDA
+
+struct ElemwiseBinaryRTCCompute {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+struct ElemwiseBinaryRTCBwdUseNone {
+  std::string LOP;
+  std::string ROP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+struct ElemwiseBinaryRTCBwdUseIn {
+  std::string LOP;
+  std::string ROP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+#endif
+
 }  // namespace op
 }  // namespace mxnet
+
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_H_

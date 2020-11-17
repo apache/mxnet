@@ -171,7 +171,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<gpu>(CountSketchParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   switch (dtype) {
       case mshadow::kFloat32:
           op = new CountSketchOp<gpu, float>(param);

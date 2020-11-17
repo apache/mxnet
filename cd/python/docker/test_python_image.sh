@@ -25,7 +25,6 @@ set -ex
 
 # Variant parameter should be passed in
 mxnet_variant=${1:?"Missing mxnet variant"}
-python_cmd=${2:?"Missing python version (python or python3)"}
 
 if [ -z "${MXNET_COMMIT_ID}" ]; then
     echo "MXNET_COMMIT_ID environment variable is empty. Please rebuild the image with MXNET_COMMIT_ID build-arg specified."
@@ -33,15 +32,9 @@ if [ -z "${MXNET_COMMIT_ID}" ]; then
 fi
 
 # Execute tests
-if [[ $mxnet_variant == cu* ]]; then
-    mnist_params="--gpu 0"
-    test_conv_params="--gpu"
+if [[ $mxnet_variant != native ]]; then
+    python3 tests/python/mkl/test_mkldnn.py
 fi
 
-if [[ $mxnet_variant == *mkl ]]; then
-    ${python_cmd} tests/python/mkl/test_mkldnn.py
-fi
-
-${python_cmd} tests/python/train/test_conv.py ${test_conv_params}
-${python_cmd} example/image-classification/train_mnist.py ${mnist_params}
+# TODO: Add more tests (18549)
 

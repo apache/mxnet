@@ -38,7 +38,7 @@
 #include <tuple>
 #include "./comm.h"
 #include "./kvstore_local.h"
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 
 // NCCL v2 introduces NCCL_MAJOR macro for versioning,
 // so if there is no such macro defined in nccl.h
@@ -293,7 +293,7 @@ class KVStoreNCCL : public KVStoreLocal {
             } else {
             MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
             ncclReduce(src[i].data().dptr<DType>(),
-                              NULL,
+                              nullptr,
                               src[i].shape().Size(),
                               GetNCCLType(src[i].dtype()),
                               ncclSum,

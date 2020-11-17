@@ -32,8 +32,8 @@ namespace op {
 
 bool SupportMKLDNNSum(const NDArray& input) {
   int ndim = input.shape().ndim();
-  return input.dtype() == mshadow::kFloat32 && (ndim >= 1 && ndim <= 4) &&
-         input.storage_type() == kDefaultStorage;
+  return (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
+         (ndim >= 1 && ndim <= 4) && input.storage_type() == kDefaultStorage;
 }
 
 static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
@@ -45,7 +45,7 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNNSum(inputs[0]) && SupportMKLDNNSum(inputs[1])) {
-    MKLDNNSumForward(attrs, ctx, inputs, req[0], outputs[0]);
+    MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
     return;
   } else if (inputs[0].storage_type() == kDefaultStorage
              && inputs[1].storage_type() == kDefaultStorage) {
@@ -123,8 +123,8 @@ static void _backward_ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
 #if MXNET_USE_MKLDNN == 1
   if (inputs[0].IsMKLDNNData()) {
-    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
-    MKLDNNCopy(attrs, ctx, inputs[0], req[1], outputs[1]);
+    MKLDNNRun(MKLDNNCopy, attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNCopy, attrs, ctx, inputs[0], req[1], outputs[1]);
     return;
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     FallBackCompute(
@@ -274,8 +274,6 @@ NNVM_REGISTER_OP(_backward_div)
                                   return std::vector<std::pair<int, int> >{{0, 1}};
                                 })
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
-  cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseInEx<
   cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_mod)

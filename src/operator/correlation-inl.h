@@ -54,9 +54,9 @@ struct CorrelationParam : public dmlc::Parameter<CorrelationParam> {
     .describe("kernel size for Correlation must be an odd number");
     DMLC_DECLARE_FIELD(max_displacement).set_default(1)
     .describe("Max displacement of Correlation ");
-    DMLC_DECLARE_FIELD(stride1).set_default(1)
+    DMLC_DECLARE_FIELD(stride1).set_default(1).set_lower_bound(1)
     .describe("stride1 quantize data1 globally");
-    DMLC_DECLARE_FIELD(stride2).set_default(1)
+    DMLC_DECLARE_FIELD(stride2).set_default(1).set_lower_bound(1)
     .describe("stride2 quantize data2 within the neighborhood centered around data1");
     DMLC_DECLARE_FIELD(pad_size).set_default(0)
     .describe("pad for Correlation");
@@ -263,7 +263,7 @@ void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) overr
 }
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
-    return NULL;
+    return nullptr;
   }
 
   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,

@@ -46,7 +46,8 @@ static bool BinaryScalarLogicStorageType(const nnvm::NodeAttrs& attrs,
   const auto in_stype = in_attrs->at(0);
   auto &out_stype = out_attrs->at(0);
   bool dispatched = false;
-  const double alpha = nnvm::get<double>(attrs.parsed);
+  const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
+  const double alpha = param.scalar;
   bool is_sparse = OP::Map(static_cast<double>(0), alpha) == 0;
   if (!dispatched && in_stype == kDefaultStorage) {
     // dns -> dns

@@ -18,13 +18,17 @@
 from __future__ import print_function
 import time
 import os
+import csv
 import json
-import unittest
+import numpy as np
 from collections import OrderedDict
 
 import mxnet as mx
 from mxnet import profiler
+from mxnet.gluon import nn
+from mxnet.test_utils import is_cd_run
 from common import run_in_spawned_process
+import pytest
 
 
 def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
@@ -34,8 +38,7 @@ def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate
                         profile_api=True,
                         filename=profile_filename,
                         continuous_dump=continuous_dump,
-                        aggregate_stats=aggregate_stats
-                        )
+                        aggregate_stats=aggregate_stats)
     if run is True:
         profiler.set_state('run')
 
@@ -51,7 +54,7 @@ def test_profiler():
     B = mx.sym.Variable('B')
     C = mx.symbol.dot(A, B)
 
-    executor = C.simple_bind(mx.cpu(1), 'write', A=(4096, 4096), B=(4096, 4096))
+    executor = C._simple_bind(mx.cpu(1), 'write', A=(4096, 4096), B=(4096, 4096))
 
     a = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
     b = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
@@ -61,10 +64,10 @@ def test_profiler():
 
     for i in range(iter_num):
         if i == begin_profiling_iter:
-            t0 = time.clock()
+            t0 = time.process_time()
             profiler.set_state('run')
         if i == end_profiling_iter:
-            t1 = time.clock()
+            t1 = time.process_time()
             profiler.set_state('stop')
         executor.forward()
         c = executor.outputs[0]
@@ -81,6 +84,7 @@ def test_profile_create_domain():
     profiler.set_state('stop')
 
 
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_profile_create_domain_dept():
     profiler.set_config(profile_symbolic=True, filename='test_profile_create_domain_dept.json')
     profiler.set_state('run')
@@ -261,7 +265,7 @@ def test_aggregate_stats_sorting():
         for domain_name, domain in target_dict['Time'].items():
             lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
             check_ascending(lst, ascending)
-        # Memory items do not have stat 'Total' 
+        # Memory items do not have stat 'Total'
         if sort_by != 'total':
             for domain_name, domain in target_dict['Memory'].items():
                 lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
@@ -277,6 +281,7 @@ def test_aggregate_stats_sorting():
     profiler.set_state('stop')
 
 
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_aggregate_duplication():
     file_name = 'test_aggregate_duplication.json'
     enable_profiler(profile_filename=file_name, run=True, continuous_dump=True, \
@@ -370,7 +375,7 @@ def check_custom_operator_profiling_multiple_custom_ops_output(debug_str):
 
 def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     class MyAdd(mx.operator.CustomOp):
-        def forward(self, is_train, req, in_data, out_data, aux):        
+        def forward(self, is_train, req, in_data, out_data, aux):
             self.assign(out_data[0], req[0], in_data[0] + 1)
 
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
@@ -424,8 +429,8 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
         a = mx.symbol.Variable('a')
         b = mx.symbol.Custom(data=a, op_type='MyAdd1')
         c = mx.symbol.Custom(data=a, op_type='MyAdd2')
-        y = b.bind(mx.cpu(), {'a': inp})
-        z = c.bind(mx.cpu(), {'a': inp})
+        y = b._bind(mx.cpu(), {'a': inp})
+        z = c._bind(mx.cpu(), {'a': inp})
         yy = y.forward()
         zz = z.forward()
     mx.nd.waitall()
@@ -435,17 +440,19 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     profiler.set_state('stop')
 
 
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_symbolic():
     custom_operator_profiling_multiple_custom_ops(None, 'symbolic', \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
 
 
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_imperative():
     custom_operator_profiling_multiple_custom_ops(None, 'imperative', \
             'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_naive_engine():
     # run the three tests above using Naive Engine
     run_in_spawned_process(test_custom_operator_profiling, \
@@ -457,8 +464,3 @@ def test_custom_operator_profiling_naive_engine():
     run_in_spawned_process(custom_operator_profiling_multiple_custom_ops, \
             {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'symbolic', \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

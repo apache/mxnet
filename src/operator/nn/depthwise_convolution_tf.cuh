@@ -26,7 +26,7 @@
 */
 #ifndef MXNET_OPERATOR_NN_DEPTHWISE_CONVOLUTION_TF_CUH_
 #define MXNET_OPERATOR_NN_DEPTHWISE_CONVOLUTION_TF_CUH_
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 #include "../mxnet_op.h"
 
 namespace tf {

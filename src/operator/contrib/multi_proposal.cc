@@ -289,11 +289,11 @@ class MultiProposalOp : public Operator{
     this->param_ = param;
   }
 
-  virtual void Forward(const OpContext &ctx,
+  void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_states) {
+                       const std::vector<TBlob> &aux_states) override {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 3);
@@ -458,13 +458,13 @@ class MultiProposalOp : public Operator{
     }
   }
 
-  virtual void Backward(const OpContext &ctx,
+  void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
                         const std::vector<TBlob> &out_data,
                         const std::vector<OpReqType> &req,
                         const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_states) {
+                        const std::vector<TBlob> &aux_states) override {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_grad.size(), 3);

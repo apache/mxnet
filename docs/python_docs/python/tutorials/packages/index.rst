@@ -38,27 +38,21 @@ Shared APIs
 .. container:: cards
 
    .. card::
-      :title: NDArray API
-      :link: ndarray/index.html
+      :title: NP API
+      :link: np/index.html
 
-      How to use the NDArray API to manipulate data.
-      A useful set of tutorials for beginners.
-
-   .. card::
-      :title: Symbol API
-      :link: symbol/index.html
-
-      How to use MXNet's Symbol API.
+      Hints on MXNet NP and NPX modules, an array library that provides NumPy-compatible interfaces.
 
    .. card::
       :title: Autograd API
-      :link: autograd/autograd.html
+      :link: autograd/index.html
 
       How to use Automatic Differentiation with the Autograd API.
 
    .. card::
       :title: Learning Rate
       :link: gluon/training/learning_rates/learning_rate_schedules.html
+
       How to use the Learning Rate Scheduler.
 
    .. card::
@@ -69,7 +63,7 @@ Shared APIs
 
    .. card::
       :title: Data APIs
-      :link: data/index.html
+      :link: gluon/data/index.html
 
       How to use MXNet's data APIs.
 
@@ -90,6 +84,12 @@ Shared APIs
       :link: optimizer/index.html
 
       How to use the optimizers.
+
+   .. card::
+      :title: Legacy
+      :link: legacy/index.html
+
+      Legacy modules from MXNet 1.x.
 
 .. toctree::
    :hidden:

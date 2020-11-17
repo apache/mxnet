@@ -34,7 +34,8 @@ namespace op {
 bool SupportMKLDNNDeconv(const DeconvolutionParam &params,
                          const NDArray &input) {
   if (params.kernel.ndim() != 2) return false;
-  return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
+  return (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16)
+         && input.shape().ndim() == 4;
 }
 
 static inline mkldnn::memory::desc GetBiasDesc(mkldnn::memory::desc md) {

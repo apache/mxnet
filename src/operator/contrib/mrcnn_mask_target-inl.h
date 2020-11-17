@@ -46,6 +46,7 @@ struct MRCNNMaskTargetParam : public dmlc::Parameter<MRCNNMaskTargetParam> {
   int num_rois;
   int num_classes;
   int sample_ratio;
+  bool aligned;
   mxnet::TShape mask_size;
 
   DMLC_DECLARE_PARAMETER(MRCNNMaskTargetParam) {
@@ -58,6 +59,9 @@ struct MRCNNMaskTargetParam : public dmlc::Parameter<MRCNNMaskTargetParam> {
     .describe("Size of the pooled masks height and width: (h, w).");
     DMLC_DECLARE_FIELD(sample_ratio).set_default(2)
     .describe("Sampling ratio of ROI align. Set to -1 to use adaptative size.");
+    DMLC_DECLARE_FIELD(aligned).set_default(false)
+    .describe("Center-aligned ROIAlign introduced in Detectron2. "
+    "To enable, set aligned to True.");
   }
 };
 

@@ -77,6 +77,7 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
 static inline std::vector<std::string> ListArguments(const UpSamplingParam& param) {
   if (param.sample_type == up_enum::kNearest) {
     std::vector<std::string> ret;
+    ret.reserve(param.num_args);
     for (int i = 0; i < param.num_args; ++i) {
       ret.push_back(std::string("arg") + std::to_string(i));
     }
@@ -106,7 +107,7 @@ static bool UpSamplingType(const nnvm::NodeAttrs& attrs,
 
 struct UpSamplingGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(n->attrs.parsed);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
@@ -203,7 +204,7 @@ Example::
               "For bilinear upsampling, there should be 2 inputs - 1 data and 1 weight.")
 .add_arguments(UpSamplingParam::__FIELDS__())
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
-    [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
+    [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
       if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
       if (index == 1) {
         var->attrs.dict["__init__"] = "[\"bilinear\", {}]";
@@ -211,6 +212,14 @@ Example::
     });
 
 NNVM_REGISTER_OP(_backward_UpSampling)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(attrs.parsed);
+  if (param_.sample_type != up_enum::kNearest) {
+    return 3;
+  } else {
+    return 1;
+  }
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const UpSamplingParam& params = nnvm::get<UpSamplingParam>(attrs.parsed);
   return params.sample_type == up_enum::kNearest ? params.num_args : 2;

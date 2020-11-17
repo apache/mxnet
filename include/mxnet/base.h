@@ -39,18 +39,6 @@
 
 
 /*!
- * \brief define compatible keywords in g++
- *  Used to support g++-4.6 and g++4.7
- */
-#if DMLC_USE_CXX11 && defined(__GNUC__) && !defined(__clang_version__)
-#if __GNUC__ == 4 && __GNUC_MINOR__ < 8
-#error "Currently we need g++ 4.8 or higher to fully support c++11 features"
-#define override
-#define final
-#endif
-#endif
-
-/*!
  * \brief define dllexport for Visual Studio
  */
 #ifdef _MSC_VER
@@ -71,9 +59,9 @@
 #endif
 
 /*! \brief major version */
-#define MXNET_MAJOR 1
+#define MXNET_MAJOR 2
 /*! \brief minor version */
-#define MXNET_MINOR 5
+#define MXNET_MINOR 0
 /*! \brief patch version */
 #define MXNET_PATCH 0
 /*! \brief mxnet version */
@@ -351,11 +339,11 @@ struct RunContext {
   /*! \brief base Context */
   Context ctx;
   /*!
-   * \brief the stream of the device, can be NULL or Stream<gpu>* in GPU mode
+   * \brief the stream of the device, can be nullptr or Stream<gpu>* in GPU mode
    */
   void *stream;
   /*!
-   * \brief the auxiliary stream of the device, can be NULL or Stream<gpu>* in GPU mode
+   * \brief the auxiliary stream of the device, can be nullptr or Stream<gpu>* in GPU mode
    */
   void *aux_stream;
   /*!
@@ -551,7 +539,7 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 #define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
 
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 1 || MXNET_USE_INTGEMM == 1
 constexpr size_t kMKLDNNAlign = 64;
 #endif
 

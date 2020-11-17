@@ -35,7 +35,6 @@ Load MXNET and Gluon
     import time
     import random
     import os
-    import io
     import logging
     import numpy as np
     import mxnet as mx
@@ -226,11 +225,11 @@ EOS tokens to target sentence.
     data_val_lengths = get_data_lengths(data_val)
     data_test_lengths = get_data_lengths(data_test)
 
-    with io.open(os.path.join(save_dir, 'val_gt.txt'), 'w', encoding='utf-8') as of:
+    with open(os.path.join(save_dir, 'val_gt.txt'), 'w', encoding='utf-8') as of:
         for ele in val_tgt_sentences:
             of.write(' '.join(ele) + '\n')
 
-    with io.open(os.path.join(save_dir, 'test_gt.txt'), 'w', encoding='utf-8') as of:
+    with open(os.path.join(save_dir, 'test_gt.txt'), 'w', encoding='utf-8') as of:
         for ele in test_tgt_sentences:
             of.write(' '.join(ele) + '\n')
 
@@ -391,7 +390,7 @@ testing datasets.
 
 
     def write_sentences(sentences, file_path):
-        with io.open(file_path, 'w', encoding='utf-8') as of:
+        with open(file_path, 'w', encoding='utf-8') as of:
             for sent in sentences:
                 of.write(' '.join(sent) + '\n')
 

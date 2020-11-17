@@ -232,7 +232,7 @@ for more details.
 
 NNVM_REGISTER_OP(_backward_contrib_BilinearResize2D)
 .set_attr_parser(ParamParser<BilinearSampleParam>)
-.set_num_inputs(BilinearSampleOpNumBackwardInputs)
+.set_num_inputs(1)
 .set_num_outputs(BilinearSampleOpNumBackwardOutputs)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpBackward<cpu>);

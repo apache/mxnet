@@ -240,6 +240,3 @@ def test_adjacency():
     assert_array_equal(adj.indices, g.indices)
     assert_array_equal(adj.data, mx.nd.ones(shape=g.indices.shape))
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

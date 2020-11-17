@@ -23,18 +23,10 @@ The `docker-python` directory can be used to release mxnet python docker images 
 It uses the appropriate pip binaries to build different docker images. Both python2 (default) and python3 images are available as -
 * {version}_cpu
 * {version}_cpu_mkl
-* {version}_gpu_cu90
-* {version}_gpu_cu90_mkl
-* {version}_gpu_cu80
-* {version}_gpu_cu80_mkl
 * {version}_gpu_cu92
 * {version}_gpu_cu92_mkl
 * {version}_cpu_py3
 * {version}_cpu_mkl_py3
-* {version}_gpu_cu90_py3
-* {version}_gpu_cu90_mkl_py3
-* {version}_gpu_cu80_py3
-* {version}_gpu_cu80_mkl_py3
 * {version}_gpu_cu92_py3
 * {version}_gpu_cu92_mkl_py3
 
@@ -55,8 +47,6 @@ For example:
 `./build_python_dockerfile.sh 1.3.0 1.3.0.post0 ~/build-docker/incubator-mxnet`
 
 ### Tests run
-* [test_conv.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/train/test_conv.py)
-* [train_mnist.py](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_mnist.py)
 * [test_mxnet.py](https://github.com/apache/incubator-mxnet/blob/master/docker/docker-python/test_mxnet.py): This script is used to make sure that the docker image builds the expected mxnet version. That is, the version picked by pip is the same as as the version passed as a parameter.
 
 ### Dockerhub Credentials

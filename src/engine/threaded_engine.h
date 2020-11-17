@@ -242,7 +242,7 @@ struct ThreadedOpr final : public Opr,
   /*! \brief The property of the operator */
   FnProperty prop;
   /*! \brief The name of the operator */
-  const char* opr_name{nullptr};
+  std::string opr_name;
   /*!
    * \brief Whether this is an temporary operator
    *        that can be deleted right after the operation completed.
@@ -351,13 +351,13 @@ class ThreadedEngine : public Engine {
    */
   void ExecuteOprBlock(RunContext run_ctx, OprBlock* opr_block) {
     ThreadedOpr* threaded_opr = opr_block->opr;
-    if (opr_block->profiling && threaded_opr->opr_name) {
+    if (opr_block->profiling && threaded_opr->opr_name.size()) {
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
       if (profiler_->AggregateEnabled()) {
         attrs.reset(new profiler::ProfileOperator::Attributes());
       }
       const Context& ctx = opr_block->ctx;
-      opr_block->opr_profile.reset(new profiler::ProfileOperator(threaded_opr->opr_name,
+      opr_block->opr_profile.reset(new profiler::ProfileOperator(threaded_opr->opr_name.c_str(),
                                                                  attrs.release()));
       opr_block->opr_profile->startForDevice(ctx.dev_type, ctx.dev_id);
     }

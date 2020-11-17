@@ -19,8 +19,9 @@
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
 # pylint: disable=too-many-branches, too-many-statements
 """Profiler setting methods."""
-from __future__ import absolute_import
 import ctypes
+import contextlib
+import contextvars
 import warnings
 from .base import _LIB, check_call, c_str, ProfileHandle, c_str_array, py_str, KVStoreHandle
 
@@ -37,6 +38,8 @@ def set_config(**kwargs):
     ----------
     filename : string,
         output file for profile data
+    gpu_memory_profile_filename_prefix : string
+        filename prefix for the GPU memory profile
     profile_all : boolean,
         all profile types enabled
     profile_symbolic : boolean,
@@ -182,11 +185,11 @@ def dumps(reset=False, format='table', sort_by='total', ascending=False):
             "Invalid value provided for ascending: {0}. Support: False, True".format(ascending)
     assert  reset in reset_to_int.keys(),\
             "Invalid value provided for reset: {0}. Support: False, True".format(reset)
-    check_call(_LIB.MXAggregateProfileStatsPrintEx(ctypes.byref(debug_str),
-                                                   reset_to_int[reset],
-                                                   format_to_int[format],
-                                                   sort_by_to_int[sort_by],
-                                                   asc_to_int[ascending]))
+    check_call(_LIB.MXAggregateProfileStatsPrint(ctypes.byref(debug_str),
+                                                 reset_to_int[reset],
+                                                 format_to_int[format],
+                                                 sort_by_to_int[sort_by],
+                                                 asc_to_int[ascending]))
     return py_str(debug_str.value)
 
 
@@ -487,7 +490,7 @@ class Marker(object):
         self.name = name
         self.domain = domain
 
-    def mark(self, scope='process'):
+    def mark(self, scope='process'):  # pylint: disable=redefined-outer-name
         """Set up the profiler state to record operator.
 
         Parameters
@@ -498,3 +501,31 @@ class Marker(object):
             Default is `process`.
         """
         check_call(_LIB.MXProfileSetMarker(self.domain.handle, c_str(self.name), c_str(scope)))
+
+
+@contextlib.contextmanager
+def scope(name='<unk>:', append_mode=True):
+    """Assign the profiler scope for the GPU memory profiler.
+
+    It is implicitly invoked when the Gluon API is used.
+
+    Parameters
+    ==========
+    name : Name of the Profiler Scope
+    append_mode : Whether to append the old profiler scope at the front.
+
+    """
+    name = name + ":" if not name.endswith(":") else name
+    if append_mode and _current_scope.get() != "<unk>:":
+        name = _current_scope.get() + name
+    token = _current_scope.set(name)
+    # Invoke the C API to propagate the profiler scope information to the
+    # C++ backend.
+    check_call(_LIB.MXSetProfilerScope(c_str(name)))
+    yield name
+    _current_scope.reset(token)
+    # Invoke the C API once again to recover the previous scope information.
+    check_call(_LIB.MXSetProfilerScope(c_str(_current_scope.get())))
+
+# initialize the default profiler scope
+_current_scope = contextvars.ContextVar('profilerscope', default='<unk>:')

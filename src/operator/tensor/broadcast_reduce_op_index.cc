@@ -135,10 +135,6 @@ Examples::
   // picks elements with specified indices along axis 1
   pick(x, y=[0,1,0], 1) = [ 1.,  4.,  5.]
 
-  y = [[ 1.],
-       [ 0.],
-       [ 2.]]
-
   // picks elements with specified indices along axis 1 using 'wrap' mode
   // to place indicies that would normally be out of bounds
   pick(x, y=[2,-1,-2], 1, mode='wrap') = [ 1.,  4.,  5.]
@@ -148,7 +144,7 @@ Examples::
        [ 2.]]
 
   // picks elements with specified indices along axis 1 and dims are maintained
-  pick(x,y, 1, keepdims=True) = [[ 2.],
+  pick(x, y, 1, keepdims=True) = [[ 2.],
                                  [ 3.],
                                  [ 6.]]
 
@@ -164,7 +160,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", PickOpType)
 .set_attr<FCompute>("FCompute<cpu>", PickOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
     auto ret = MakeGradNode("_backward_pick", n, {ograds[0], n->inputs[1]},
                             n->attrs.dict);

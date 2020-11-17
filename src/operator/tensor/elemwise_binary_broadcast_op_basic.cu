@@ -23,49 +23,44 @@
  * \brief GPU Implementation of basic functions for elementwise binary broadcast operator.
  */
 #include "./elemwise_unary_op.h"
-#include "./elemwise_binary_op.h"
+#include "./elemwise_binary_op-inl.h"
 #include "./elemwise_binary_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(broadcast_add)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, op::mshadow_op::plus>)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"add"})
 .set_attr<FComputeEx>("FComputeEx<gpu>", BinaryBroadcastComputeDenseEx<gpu, op::mshadow_op::plus>);
 
 NNVM_REGISTER_OP(_backward_broadcast_add)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseNone<gpu, mshadow_op::identity,
-                                                                mshadow_op::identity>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseNone{"identity", "identity"});
 
 NNVM_REGISTER_OP(broadcast_sub)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, op::mshadow_op::minus>)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"sub"})
 .set_attr<FComputeEx>("FComputeEx<gpu>", BinaryBroadcastComputeDenseEx<gpu, op::mshadow_op::minus>);
 
 NNVM_REGISTER_OP(_backward_broadcast_sub)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseNone<gpu, mshadow_op::identity,
-                                                                mshadow_op::negation>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseNone{"identity", "negation"});
 
 NNVM_REGISTER_OP(broadcast_mul)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, op::mshadow_op::mul>)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mul"})
 .set_attr<FComputeEx>("FComputeEx<gpu>", BinaryBroadcastComputeSparseEx<gpu, op::mshadow_op::mul>);
 
 NNVM_REGISTER_OP(_backward_broadcast_mul)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::right,
-                                                                mshadow_op::left>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"right", "left"});
 
 NNVM_REGISTER_OP(broadcast_div)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, op::mshadow_op::div>)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"div"})
 .set_attr<FComputeEx>("FComputeEx<gpu>", BinaryBroadcastComputeSparseEx<gpu, op::mshadow_op::div>);
 
 NNVM_REGISTER_OP(_backward_broadcast_div)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::div_grad,
-                                                                mshadow_op::div_rgrad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"div_grad", "div_rgrad"});
 
 NNVM_REGISTER_OP(broadcast_mod)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::mod>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mod"});
 
 NNVM_REGISTER_OP(_backward_broadcast_mod)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::mod_grad,
-                                                                  mshadow_op::mod_rgrad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"mod_grad", "mod_rgrad"});
 
 }  // namespace op
 }  // namespace mxnet

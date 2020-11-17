@@ -719,3 +719,6 @@ We welcome your contributions to MXNet.
 and
 [test_operator.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/unittest/test_operator.py#L6514).
 
+## Additional Resources
+- [Use TensorInspector to Help Debug Operators](./tensor_inspector_tutorial)
+- [Use RTC to write CUDA kernels](./using_rtc)

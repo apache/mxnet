@@ -37,7 +37,7 @@
 
 namespace mxnet {
 using nnvm::Graph;
-using nnvm::NodePtr;
+using nnvm::ObjectPtr;
 using nnvm::NodeEntry;
 using dmlc::any;
 using mxnet::op::AMPCastParam;
@@ -50,7 +50,7 @@ static void CheckAndUpdateInferredDtypes(
     mshadow::TypeFlag result_dtype,
     std::unordered_map<std::string, mshadow::TypeFlag> *visited_vars,
     nnvm::DTypeVector *inferred_dtype_result) {
-  const NodePtr &input_node = node_entry.node;
+  const ObjectPtr &input_node = node_entry.node;
   if (!visited_vars->count(input_node->attrs.name)) {
     if ((*inferred_dtype_result)[idx.entry_id(node_entry)] == -1) {
       (*visited_vars)[input_node->attrs.name] = result_dtype;
@@ -67,13 +67,13 @@ static void CheckAndUpdateInferredDtypes(
 }
 
 // Graph pass to infer unknown nodes which are input nodes
-// as FP16 if possible
+// as LP16 if possible
 Graph AMPInferUnknown(Graph &&src) {
   const nnvm::DTypeVector &inferred_dtypes =
       src.GetAttr<nnvm::DTypeVector>("inferred_dtypes");
   const int target_dtype = src.GetAttr<int>("target_dtype");
-  CHECK(target_dtype == mshadow::kFloat16)
-      << "Only float16 target_dtype is supported yet";
+  CHECK(target_dtype == mshadow::kFloat16 || target_dtype == mshadow::kBfloat16)
+      << "Only float16 and bfloat16 target_dtypes are supported yet";
 
   nnvm::DTypeVector inferred_dtype_result(inferred_dtypes);
   const nnvm::IndexedGraph &idx = src.indexed_graph();
@@ -84,7 +84,7 @@ Graph AMPInferUnknown(Graph &&src) {
   // and check if inputs to these nodes are variables.
   // If input nodes are variables, set dtype for these inputs
   // and check for conflicts if an input node goes to two cast nodes
-  DFSVisit(src.outputs, [&](const NodePtr &node) {
+  DFSVisit(src.outputs, [&](const ObjectPtr &node) {
     if (!node->is_variable()) {
       std::string op_name = node->op()->name;
 
@@ -94,7 +94,7 @@ Graph AMPInferUnknown(Graph &&src) {
         // and already has dtype set, make sure the dtype inferred again
         // is same, otherwise reset dtype to original dtype
         for (const NodeEntry &node_entry : node->inputs) {
-          const NodePtr &input_node = node_entry.node;
+          const ObjectPtr &input_node = node_entry.node;
           if (input_node->is_variable() &&
               (node->attrs.dict.find("dtype") != node->attrs.dict.end())) {
             const AMPCastParam &param =
@@ -112,7 +112,7 @@ Graph AMPInferUnknown(Graph &&src) {
         // if it is not already set
         mshadow::TypeFlag max_dtype = static_cast<mshadow::TypeFlag>(target_dtype);
         for (const NodeEntry& node_entry : node->inputs) {
-          const NodePtr& input_node = node_entry.node;
+          const ObjectPtr& input_node = node_entry.node;
           if (!input_node->is_variable()) {
             // if one input is not a variable then don't infer the dtype of other
             // input node dtypes
@@ -121,7 +121,7 @@ Graph AMPInferUnknown(Graph &&src) {
         }
         if (max_dtype == target_dtype) {
           for (const NodeEntry &node_entry : node->inputs) {
-            const NodePtr &input_node = node_entry.node;
+            const ObjectPtr &input_node = node_entry.node;
             if (input_node->is_variable()) {
               CheckAndUpdateInferredDtypes(inferred_dtypes, idx, node_entry,
                                            max_dtype, &visited_vars,

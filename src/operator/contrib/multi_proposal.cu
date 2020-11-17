@@ -335,7 +335,7 @@ void _nms(mshadow::Stream<gpu> *s,
   const int boxes_dim = boxes.size(1);
 
   float* boxes_dev = boxes.dptr_;
-  uint64_t* mask_dev = NULL;
+  uint64_t* mask_dev = nullptr;
 
   const int col_blocks = DIVUP(boxes_num, threadsPerBlock);
   FRCNN_CUDA_CHECK(cudaMalloc(&mask_dev,
@@ -348,7 +348,7 @@ void _nms(mshadow::Stream<gpu> *s,
                                   nms_overlap_thresh,
                                   boxes_dev,
                                   mask_dev);
-  FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+  FRCNN_CUDA_CHECK(cudaGetLastError());
   std::vector<uint64_t> mask_host(boxes_num * col_blocks);
 
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
@@ -475,7 +475,7 @@ class MultiProposalGPUOp : public Operator{
                            &anchors);
 
     // Copy generated anchors to GPU
-    float* workspace_proposals_ptr = NULL;
+    float* workspace_proposals_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_proposals_ptr,
                                 sizeof(float) * num_images * count_anchors * 5));
     Tensor<xpu, 3> workspace_proposals(workspace_proposals_ptr,
@@ -494,7 +494,7 @@ class MultiProposalGPUOp : public Operator{
     ProposalGridKernel<<<dimGrid, dimBlock>>>(
       count, num_anchors, height, width, param_.feature_stride,
       scores.dptr_, workspace_proposals.dptr_);
-    FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+    FRCNN_CUDA_CHECK(cudaGetLastError());
 
     // Transform anchors and bbox_deltas into bboxes
     CheckLaunchParam(dimGrid, dimBlock, "BBoxPred");
@@ -507,27 +507,27 @@ class MultiProposalGPUOp : public Operator{
         count, num_anchors, height, width, param_.feature_stride, im_info.dptr_,
         workspace_proposals.dptr_, bbox_deltas.dptr_, workspace_proposals.dptr_);
     }
-    FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+    FRCNN_CUDA_CHECK(cudaGetLastError());
 
     // filter boxes with less than rpn_min_size
     CheckLaunchParam(dimGrid, dimBlock, "FilterBox");
     FilterBoxKernel<<<dimGrid, dimBlock>>>(
       count, count_anchors, param_.rpn_min_size, im_info.dptr_, workspace_proposals.dptr_);
-    FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+    FRCNN_CUDA_CHECK(cudaGetLastError());
 
 
 
     dimGrid = dim3((count_anchors + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock);
     dimBlock = dim3(kMaxThreadsPerBlock);
     // Copy score to a continuous memory
-    float* score_ptr = NULL;
+    float* score_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&score_ptr, sizeof(float) * count_anchors));
     Tensor<xpu, 1> score(score_ptr, Shape1(count_anchors));
-    int* order_ptr = NULL;
+    int* order_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&order_ptr, sizeof(int) * count_anchors));
     Tensor<xpu, 1, int> order(order_ptr, Shape1(count_anchors));
 
-    float* workspace_ordered_proposals_ptr = NULL;
+    float* workspace_ordered_proposals_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_ordered_proposals_ptr,
         sizeof(float) * rpn_pre_nms_top_n * 5));
     Tensor<xpu, 2> workspace_ordered_proposals(workspace_ordered_proposals_ptr,
@@ -541,7 +541,7 @@ class MultiProposalGPUOp : public Operator{
       CopyScoreKernel << <dimGrid, dimBlock >> >(
           count_anchors, workspace_proposals.dptr_ + b * count_anchors * 5,
           score.dptr_, order.dptr_);
-      FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+      FRCNN_CUDA_CHECK(cudaGetLastError());
 
       // argsort score, save order
       thrust::stable_sort_by_key(thrust::device,
@@ -549,7 +549,7 @@ class MultiProposalGPUOp : public Operator{
           score.dptr_ + score.size(0),
           order.dptr_,
           thrust::greater<real_t>());
-      FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+      FRCNN_CUDA_CHECK(cudaGetLastError());
 
       // Reorder proposals according to order
 
@@ -558,7 +558,7 @@ class MultiProposalGPUOp : public Operator{
       ReorderProposalsKernel << <dimGrid, dimBlock >> >(
           rpn_pre_nms_top_n, workspace_proposals.dptr_ + b * count_anchors * 5,
           order.dptr_, workspace_ordered_proposals.dptr_);
-      FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+      FRCNN_CUDA_CHECK(cudaGetLastError());
 
       // perform nms
       std::vector<int> _keep(workspace_ordered_proposals.size(0));
@@ -580,7 +580,7 @@ class MultiProposalGPUOp : public Operator{
           param_.rpn_post_nms_top_n, workspace_ordered_proposals.dptr_, keep, out_size, b,
           out.dptr_ + b * param_.rpn_post_nms_top_n * 5,
           out_score.dptr_ + b * param_.rpn_post_nms_top_n);
-      FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+      FRCNN_CUDA_CHECK(cudaGetLastError());
     }
     // free temporary memory
     FRCNN_CUDA_CHECK(cudaFree(keep));

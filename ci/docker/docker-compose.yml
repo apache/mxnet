@@ -1,0 +1,242 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# We use the cache_from feature introduced in file form version 3.4 (released 2017-11-01)
+version: "3.4"
+
+# For simplicity, only the centos7_cpu is commented. But the comments apply to
+# all other services as well.
+services:
+  ###################################################################################################
+  # Dockerfile.build.centos7 based images used for building on CentOS7. On
+  # CentOS7, we respectively test the oldest supported toolchain and dependency
+  # versions
+  ###################################################################################################
+  centos7_cpu:
+    # The resulting image will be named build.centos7_cpu:latest and will be
+    # pushed to the dockerhub user specified in the environment variable
+    # ${DOCKER_CACHE_REGISTRY} (typicall "mxnetci") under this name
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_cpu:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      # Use "base" target declared in Dockerfile.build.centos7 as "build.centos7_cpu:latest"  
+      target: base
+      args:
+        # BASE_IMAGE is used to dynamically specify the FROM image in Dockerfile.build.centos7
+        BASE_IMAGE: centos:7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_cpu:latest
+  centos7_gpu_cu101:
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu101:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      target: base
+      args:
+        BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu101:latest
+  centos7_gpu_cu102:
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu102:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      target: base
+      args:
+        BASE_IMAGE: nvidia/cuda:10.2-cudnn7-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu102:latest
+  centos7_gpu_cu110:
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu110:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      target: base
+      args:
+        BASE_IMAGE: nvidia/cuda:11.0-cudnn8-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu110:latest
+  ###################################################################################################
+  # Dockerfile.build.ubuntu based images. On Ubuntu we test more recent
+  # toolchain and dependency versions compared to CentOS7. We attempt to update
+  # the Ubuntu base image every 6 months, following the Ubuntu release cycle,
+  # and testing the dependencies in their version provided by the respective
+  # Ubuntu release.
+  ###################################################################################################
+  ubuntu_cpu:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu
+      target: base
+      args:
+        BASE_IMAGE: ubuntu:18.04
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu:latest
+  ubuntu_gpu_cu101:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu101:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu
+      target: gpu
+      args:
+        BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu101:latest
+  ubuntu_gpu_cu102:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu102:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu
+      target: gpu
+      args:
+        BASE_IMAGE: nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu102:latest
+  ubuntu_gpu_cu110:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu110:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu
+      target: gpu
+      args:
+        BASE_IMAGE: nvidia/cuda:11.0-cudnn8-devel-ubuntu18.04
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu110:latest
+  ubuntu_build_cuda:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_build_cuda:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu
+      target: gpu
+      args:
+        BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_build_cuda:latest
+  ###################################################################################################
+  # Dockerfile.build.android based images used for testing cross-compilation for plain ARM
+  ###################################################################################################
+  armv6:
+    image: ${DOCKER_CACHE_REGISTRY}/build.armv6:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.arm
+      target: armv6
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.armv6:latest
+  armv7:
+    image: ${DOCKER_CACHE_REGISTRY}/build.armv7:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.arm
+      target: armv7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.armv7:latest
+  armv8:
+    image: ${DOCKER_CACHE_REGISTRY}/build.armv8:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.arm
+      target: armv8
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.armv8:latest
+  ###################################################################################################
+  # Dockerfile.test.arm based images for testing ARM artefacts via QEMU
+  ###################################################################################################
+  test.armv7:
+    image: ${DOCKER_CACHE_REGISTRY}/test.armv7:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.test.arm
+      args:
+        BASE_IMAGE: arm32v7/ubuntu:20.04
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/test.armv7:latest
+  test.armv8:
+    image: ${DOCKER_CACHE_REGISTRY}/test.armv8:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.test.arm
+      args:
+        BASE_IMAGE: arm64v8/ubuntu:20.04
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/test.armv8:latest
+  ###################################################################################################
+  # Dockerfile.build.android based images used for testing cross-compilation for Android
+  ###################################################################################################
+  android_armv7:
+    image: ${DOCKER_CACHE_REGISTRY}/build.android_armv7:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.android
+      target: armv7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.android_armv7:latest
+  android_armv8:
+    image: ${DOCKER_CACHE_REGISTRY}/build.android_armv8:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.android
+      target: armv8
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.android_armv8:latest
+  ###################################################################################################
+  # Dockerfile.publish.test based images used for testing binary artifacts on minimal systems.
+  ###################################################################################################
+  publish.test.centos7_cpu:
+    image: ${DOCKER_CACHE_REGISTRY}/publish.test.centos7_cpu:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.publish.test.centos7
+      args:
+        BASE_IMAGE: centos:7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/publish.test.centos7_cpu:latest
+  publish.test.centos7_gpu:
+    image: ${DOCKER_CACHE_REGISTRY}/publish.test.centos7_gpu:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.publish.test.centos7
+      args:
+        BASE_IMAGE: nvidia/cuda:9.2-cudnn7-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/publish.test.centos7_gpu:latest
+  ###################################################################################################
+  # Miscellaneous containers
+  ###################################################################################################
+  jetson:
+    image: ${DOCKER_CACHE_REGISTRY}/build.jetson:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.jetson
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.jetson:latest
+  ubuntu_cpu_jekyll:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu_jekyll:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu_cpu_jekyll
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu_jekyll:latest
+  ubuntu_blc:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_blc:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu_blc
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_blc:latest

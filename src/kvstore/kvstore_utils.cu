@@ -50,7 +50,7 @@ size_t UniqueImplGPU(NDArray *workspace, mshadow::Stream<gpu> *s,
   size_t *null_ptr = nullptr;
   size_t *null_dptr = nullptr;
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-  cub::DeviceSelect::Unique(NULL, unique_temp_bytes, null_dptr, null_dptr,
+  cub::DeviceSelect::Unique(nullptr, unique_temp_bytes, null_dptr, null_dptr,
                             null_ptr, size, stream);
   // estimate sort temp space
   const size_t sort_output_bytes = size * sizeof(IType);
@@ -60,7 +60,7 @@ size_t UniqueImplGPU(NDArray *workspace, mshadow::Stream<gpu> *s,
   const int begin_bit = 0;
   // The most-significant bit index (exclusive) needed for key comparison
   const int end_bit = sizeof(IType) * 8;
-  cub::DeviceRadixSort::SortKeys(NULL, sort_temp_bytes, null_dptr, null_dptr,
+  cub::DeviceRadixSort::SortKeys(nullptr, sort_temp_bytes, null_dptr, null_dptr,
                                  size, begin_bit, end_bit, stream);
 #else
   // sort_temp_bytes remains 0 because thrust request memory by itself

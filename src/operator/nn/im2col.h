@@ -182,7 +182,7 @@ inline void im2col_nd_core_cpu(const DType* data_input, const bool im2col,
       // Loop over spatial axes in forward order to compute the indices in the
       // image and column, and whether the index lies in the padding.
       index_t index_col = c_col;
-      int index_im = c_col / kernel_size;
+      index_t index_im = c_col / kernel_size;
       bool is_padding = false;
       for (index_t d_i = 0; d_i < num_spatial_axes; ++d_i) {
         const index_t d = d_iter[d_i];
@@ -191,7 +191,7 @@ inline void im2col_nd_core_cpu(const DType* data_input, const bool im2col,
         is_padding |= d_im < 0 || d_im >= static_cast<int>(im_shape[d_i + 2]);
         index_col *= col_shape[d_i + 1];
         index_col += d;
-        index_im *= static_cast<int>(im_shape[d_i + 2]);
+        index_im *= static_cast<index_t>(im_shape[d_i + 2]);
         index_im += d_im;
       }
       if (im2col) {

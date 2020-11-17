@@ -61,10 +61,10 @@ struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
   int mode;
   bool align_corners;
   DMLC_DECLARE_PARAMETER(BilinearSampleParam) {
-    DMLC_DECLARE_FIELD(height).set_default(1).set_range(1, 10000)
+    DMLC_DECLARE_FIELD(height).set_default(1).set_lower_bound(1)
     .describe("output height (required, but ignored if scale_height is defined or mode is not "
               "\"size\")");
-    DMLC_DECLARE_FIELD(width).set_default(1).set_range(1, 10000)
+    DMLC_DECLARE_FIELD(width).set_default(1).set_lower_bound(1)
     .describe("output width (required, but ignored if scale_width is defined or mode is not "
               "\"size\")");
     DMLC_DECLARE_FIELD(scale_height).set_default(dmlc::optional<float>())
@@ -323,15 +323,6 @@ inline uint16_t BilinearSampleOpNumInputs(const NodeAttrs& attrs) {
   auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
   if (param.mode == bilinear_resize::like) {
     return 2;
-  } else {
-    return 1;
-  }
-}
-
-inline uint16_t BilinearSampleOpNumBackwardInputs(const NodeAttrs& attrs) {
-  auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
-  if (param.mode == bilinear_resize::like) {
-    return 3;
   } else {
     return 1;
   }

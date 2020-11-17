@@ -27,6 +27,7 @@
 
 #if MXNET_USE_MKLDNN == 1
 #include <utility>
+#include <vector>
 #include <mkldnn.hpp>
 #include "../lrn-inl.h"
 #include "./mkldnn_base-inl.h"
@@ -171,9 +172,10 @@ static MKLDNNLRNFwd &GetLRNFwd(const LRNParam& param,
   return it->second;
 }
 
-void MKLDNNLRNForward(const OpContext &ctx, const LRNParam &param,
+void MKLDNNLRNForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                       const NDArray &in_data, const OpReqType req,
                       const NDArray &out_data) {
+  const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
   auto in_buffer = in_data;
   if (in_buffer.IsView() && in_buffer.IsMKLDNNData())
     in_buffer = in_buffer.Reorder2Default();
@@ -244,22 +246,21 @@ static MKLDNNLRNBwd &GetLRNBwd(const LRNParam &param, const NDArray &in_data,
   return it->second;
 }
 
-void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
-                       const NDArray &out_grad,
-                       const NDArray &in_data,
-                       const OpReqType req,
-                       const NDArray &in_grad) {
-  if (req == kNullOp) {
+void MKLDNNLRNBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                       const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
+                       const std::vector<NDArray> &outputs) {
+  if (req[0] == kNullOp) {
     return;
   }
+  const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
+  const NDArray &out_grad = inputs[0];
+  const NDArray &in_data = inputs[1];
+  const NDArray &in_grad = outputs[0];
   // TODO(alex): (MXNET-846) figure out why in_grad output incorrect when in_data is nchw8c
-  auto in_buffer = in_data;
-  if (in_buffer.IsMKLDNNData()) {
-    in_buffer = in_data.Reorder2Default();
-  }
+  const auto in_buffer = in_data.Reorder2Default();
   MKLDNNLRNBwd &bwd = GetLRNBwd(param, in_buffer, in_grad, out_grad);
   mkldnn_output_t diff_src_mem =
-      CreateMKLDNNMem(in_grad, bwd.bwd_pd.diff_src_desc(), req);
+      CreateMKLDNNMem(in_grad, bwd.bwd_pd.diff_src_desc(), req[0]);
 
   bwd.Execute(out_grad, in_buffer, in_grad, diff_src_mem);
 }
@@ -267,4 +268,3 @@ void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
 }  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_LRN_INL_H__
-

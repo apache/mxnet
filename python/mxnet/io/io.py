@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=unnecessary-pass
 """Data iterators for common data formats."""
-from __future__ import absolute_import
 from collections import namedtuple
 
 import sys
@@ -34,9 +33,9 @@ from ..base import mx_real_t
 from ..base import check_call, build_param_doc as _build_param_doc
 from ..ndarray import NDArray
 from ..ndarray.sparse import CSRNDArray
-from ..ndarray import _ndarray_cls
+from ..util import is_np_array
 from ..ndarray import array
-from ..ndarray import concat
+from ..ndarray import concat, tile
 
 from .utils import _init_data, _has_instance, _getdata_by_idx
 
@@ -104,8 +103,8 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
 
         Parameters
         ----------
-        shapes : a tuple of (name_, shape_)
-        types : a tuple of  (name_, np.dtype)
+        shapes : a tuple of (name, shape)
+        types : a tuple of  (name, np.dtype)
         """
         if types is not None:
             type_dict = dict(types)
@@ -709,23 +708,27 @@ class NDArrayIter(DataIter):
 
     def _concat(self, first_data, second_data):
         """Helper function to concat two NDArrays."""
+        if (not first_data) or (not second_data):
+            return first_data if first_data else second_data
         assert len(first_data) == len(
             second_data), 'data source should contain the same size'
-        if first_data and second_data:
-            return [
-                concat(
-                    first_data[x],
-                    second_data[x],
-                    dim=0
-                ) for x in range(len(first_data))
-            ]
-        elif (not first_data) and (not second_data):
+        return [
+            concat(
+                first_data[i],
+                second_data[i],
+                dim=0
+            ) for i in range(len(first_data))
+        ]
+
+    def _tile(self, data, repeats):
+        if not data:
             return []
-        else:
-            return [
-                first_data[0] if first_data else second_data[0]
-                for x in range(len(first_data))
-            ]
+        res = []
+        for datum in data:
+            reps = [1] * len(datum.shape)
+            reps[0] = repeats
+            res.append(tile(datum, reps))
+        return res
 
     def _batchify(self, data_source):
         """Load data from underlying arrays, internal use only."""
@@ -748,7 +751,13 @@ class NDArrayIter(DataIter):
             self.cursor + self.batch_size > self.num_data:
             pad = self.batch_size - self.num_data + self.cursor
             first_data = self._getdata(data_source, start=self.cursor)
-            second_data = self._getdata(data_source, end=pad)
+            if pad > self.num_data:
+                repeats = pad // self.num_data
+                second_data = self._tile(self._getdata(data_source, end=self.num_data), repeats)
+                if pad % self.num_data != 0:
+                    second_data = self._concat(second_data, self._getdata(data_source, end=pad % self.num_data))
+            else:
+                second_data = self._getdata(data_source, end=pad)
             return self._concat(first_data, second_data)
         # normal case
         else:
@@ -813,9 +822,13 @@ class MXDataIter(DataIter):
     --------
     src/io : The underlying C++ data iterator implementation, e.g., `CSVIter`.
     """
-    def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
+    def __init__(self, handle, data_name='data', label_name='softmax_label', **kwargs):
         super(MXDataIter, self).__init__()
+        from ..ndarray import _ndarray_cls
+        from ..numpy.multiarray import _np_ndarray_cls
+        self._create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
         self.handle = handle
+        self._kwargs = kwargs
         # debug option, used to test the speed with io effect eliminated
         self._debug_skip_load = False
 
@@ -872,12 +885,12 @@ class MXDataIter(DataIter):
     def getdata(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
-        return _ndarray_cls(hdl, False)
+        return self._create_ndarray_fn(hdl, False)
 
     def getlabel(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        return _ndarray_cls(hdl, False)
+        return self._create_ndarray_fn(hdl, False)
 
     def getindex(self):
         index_size = ctypes.c_uint64(0)
@@ -897,6 +910,24 @@ class MXDataIter(DataIter):
         pad = ctypes.c_int(0)
         check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
         return pad.value
+
+    def getitems(self):
+        output_vars = ctypes.POINTER(NDArrayHandle)()
+        num_output = ctypes.c_int(0)
+        check_call(_LIB.MXDataIterGetItems(self.handle,
+                                           ctypes.byref(num_output),
+                                           ctypes.byref(output_vars)))
+        out = [self._create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
+                                       False) for i in range(num_output.value)]
+        return tuple(out)
+
+    def __len__(self):
+        length = ctypes.c_int64(-1)
+        check_call(_LIB.MXDataIterGetLenHint(self.handle, ctypes.byref(length)))
+        if length.value < 0:
+            return 0
+        return length.value
+
 
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""
@@ -947,6 +978,14 @@ def _make_io_iterator(handle):
         param_vals = []
 
         for k, val in kwargs.items():
+            if iter_name == 'ThreadedDataLoader':
+                # convert ndarray to handle
+                if hasattr(val, 'handle'):
+                    val = val.handle.value
+                elif isinstance(val, (tuple, list)):
+                    val = [vv.handle.value if hasattr(vv, 'handle') else vv for vv in val]
+                elif isinstance(getattr(val, '_iter', None), MXDataIter):
+                    val = val._iter.handle.value
             param_keys.append(k)
             param_vals.append(str(val))
         # create atomic symbol

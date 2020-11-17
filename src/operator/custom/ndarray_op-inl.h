@@ -83,20 +83,20 @@ Operator* CreateOp(NDArrayOpParam param);
 class NDArrayOpProp : public OperatorProperty {
  public:
   std::vector<std::string> ListArguments() const override {
-    char ** args = NULL;
+    char ** args = nullptr;
     CHECK(param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments));
     std::vector<std::string> ret;
-    for (int i = 0; args[i] != NULL; ++i) {
+    for (int i = 0; args[i] != nullptr; ++i) {
       ret.emplace_back(args[i]);
     }
     return ret;
   }
 
   std::vector<std::string> ListOutputs() const override {
-    char ** args = NULL;
+    char ** args = nullptr;
     CHECK(param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs));
     std::vector<std::string> ret;
-    for (int i = 0; args[i] != NULL; ++i) {
+    for (int i = 0; args[i] != nullptr; ++i) {
       ret.emplace_back(args[i]);
     }
     return ret;

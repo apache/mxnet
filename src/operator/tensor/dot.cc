@@ -141,11 +141,11 @@ which is computed by::
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotForward_<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n,
+    [](const nnvm::ObjectPtr& n,
        const std::vector<nnvm::NodeEntry>& ograds) {
   const DotParam& param = nnvm::get<DotParam>(n->attrs.parsed);
-  nnvm::NodePtr lhs_grad;
-  nnvm::NodePtr rhs_grad;
+  nnvm::ObjectPtr lhs_grad;
+  nnvm::ObjectPtr rhs_grad;
   std::string lhs_gnode_name = n->attrs.name + "_backward_lhs";
   std::string rhs_gnode_name = n->attrs.name + "_backward_rhs";
   if (param.transpose_a && param.transpose_b) {

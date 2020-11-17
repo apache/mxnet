@@ -31,7 +31,6 @@
 #include <mxnet/base.h>
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
-#include <operator/nn/deconvolution-inl.h>
 
 #include "../../../common/utils.h"
 #include "../../../ndarray/ndarray_function.h"
@@ -39,10 +38,10 @@
 #include "../../nn/activation-inl.h"
 #include "../../nn/batch_norm-inl.h"
 #include "../../nn/convolution-inl.h"
+#include "../../nn/deconvolution-inl.h"
 #include "../../nn/fully_connected-inl.h"
 #include "../../nn/pooling-inl.h"
 #include "../../nn/concat-inl.h"
-#include "../../softmax_output-inl.h"
 #include "../../tensor/matrix_op-inl.h"
 
 #if MXNET_USE_TENSORRT_ONNX_CHECKER
@@ -394,20 +393,6 @@ void ConvertFullyConnected(NodeProto* node_proto, const NodeAttrs& attrs,
   }
 }
 
-void ConvertSoftmaxOutput(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
-                          const nnvm::IndexedGraph& /*ig*/,
-                          const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
-  node_proto->set_op_type("Softmax");
-
-  // Setting by default to 1 since MXNet doesn't provide such an attribute for softmax in its
-  // node params. This attribute is only relevant when the input is coerced to 2D, and in that
-  // case dimension 0 is assumed to be the batch dimension.
-  AttributeProto* const axis = node_proto->add_attribute();
-  axis->set_name("axis");
-  axis->set_type(AttributeProto::INT);
-  axis->set_i(1);
-}
-
 void ConvertFlatten(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
                     const nnvm::IndexedGraph& /*ig*/,
                     const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
@@ -579,7 +564,7 @@ void ConvertConstant(
   auto size = shape.Size();
 
   if (dtype == TensorProto_DataType_FLOAT) {
-    std::shared_ptr<float> shared_data_ptr(new float[size]);
+    std::shared_ptr<float[]> shared_data_ptr(new float[size]);
     float* const data_ptr = shared_data_ptr.get();
     nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
 
@@ -587,7 +572,7 @@ void ConvertConstant(
       initializer_proto->add_float_data(data_ptr[blob_idx]);
     }
   } else if (dtype == TensorProto_DataType_FLOAT16) {
-    std::shared_ptr<uint16_t> shared_data_ptr(new uint16_t[size]);
+    std::shared_ptr<uint16_t[]> shared_data_ptr(new uint16_t[size]);
     uint16_t* const data_ptr = shared_data_ptr.get();
     nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
     for (size_t blob_idx = 0; blob_idx < size; ++blob_idx) {

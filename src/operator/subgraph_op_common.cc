@@ -189,10 +189,10 @@ bool is_type_udf(const int &x) {
   return x == -1;
 }
 
-LoopState::LoopState(const Symbol &g) {
+LoopState::LoopState(const nnvm::Symbol &g, bool is_dynamic) {
   this->subgraph_sym = g;
   this->subgraph.outputs = g.outputs;
-  this->iter_op = LoopState::MakeSharedOp(g);
+  this->iter_op = LoopState::MakeSharedOp(g, is_dynamic);
 }
 
 void LoopState::Forward(int iter_no,
@@ -217,8 +217,9 @@ void LoopState::Forward(int iter_no,
     inputs[i] = &in_bufs[i];
   for (size_t i = 0; i < outputs.size(); i++)
     outputs[i] = &out_bufs[i];
-
-  OpStatePtr state = iter_op->Forward(nullptr, inputs, outputs);
+  CHECK(inputs.size() > 0) << "loop forward requires at least 1 input";
+  Context default_ctx = cinputs[0].ctx();
+  OpStatePtr state = iter_op->Forward(nullptr, inputs, outputs, default_ctx);
   // If an input and an output share the array, the output array will be changed
   // by CachedOp. We need to copy data to the real output.
   for (size_t i = 0; i < out_bufs.size(); i++)
