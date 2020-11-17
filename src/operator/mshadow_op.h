@@ -1714,12 +1714,9 @@ struct gcd : public mxnet_op::tunable {
     if (a < 0) {
       a = -a;
     }
-
-    // minus cases.
     if (b < 0) {
       b = -b;
     }
-
     // handle zero-valued cases.
     DType c;
     if (a == 0 && b != 0) {
@@ -1737,11 +1734,9 @@ struct gcd : public mxnet_op::tunable {
       }
       while (a % b != 0) {
         a = a % b;
-        if (a < b) {
-          tmp = a;
-          a = b;
-          b = tmp;
-        }
+        tmp = a;
+        a = b;
+        b = tmp;
       }
       c = b;
     }
