@@ -2353,7 +2353,6 @@ def convert_slice(node, **kwargs):
     starts = convert_string_to_list(attrs.get("begin"))
     ends = convert_string_to_list(attrs.get("end"))
     steps = attrs.get("step", [])
-    in_shape = kwargs['in_shape'][0]
     nodes = [
         create_const_node(name+"_begin", np.array(starts, dtype='int64'), kwargs),
         create_const_node(name+"_end", np.array(ends, dtype='int64'), kwargs)
@@ -2364,5 +2363,64 @@ def convert_slice(node, **kwargs):
         inputs.append(name+"_steps")
     nodes.append(onnx.helper.make_node("Slice", inputs, [name], name=name))
     return nodes
+
+
+@mx_op.register("zeros_like")
+def convert_zeros_like(node, **kwargs):
+    """Map MXNet's zeros_like operator attributes to onnx's ConstantOfShape operator.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    tensor_value = onnx.helper.make_tensor(name+"_val", onnx.TensorProto.INT32, [1], [0])
+    node = onnx.helper.make_node(
+        "ConstantOfShape",
+        input_nodes,
+        [name],
+        name=name,
+        value=tensor_value
+    )
+    return [node]
+
+
+@mx_op.register("_contrib_arange_like")
+def convert_arange_like(node, **kwargs):
+    """Map MXNet's arange_like operator attributes to onnx's Range operator.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError("ONNX opset 11 or greater is required to export this operator")
+
+    in_shape = kwargs['in_shape']
+    axis = attrs.get('axis')
+    if axis is None:
+        # output will be same shape as input
+        raise NotImplementedError("arange_like operator without axis attribute not yet implemented.")
+    else:
+        # determine shape of axis
+        axis_dim = in_shape[int(axis)]
+
+    start = attrs.get('start', np.float32(0.))
+    step = attrs.get('step', np.float32(1.0))
+    repeat = int(attrs.get('repeat', 1))
+    if repeat != 1:
+        raise NotImplementedError("arange_like operator with repeat != 1 not yet implemented.")
+
+    nodes = [
+        create_const_scalar_node(name+"_start", start, kwargs),
+        create_const_scalar_node(name+"_limit", np.float32(np.inf), kwargs),
+        create_const_scalar_node(name+"_step", step, kwargs)
+    ]
+
+    node = onnx.helper.make_node(
+        "Range",
+        [name+"_start", name+"_limit", name+"_step"],
+        [name],
+        name=name
+    )
+    return [node]
+
+
+
 
 
