@@ -81,6 +81,8 @@ typedef mshadow::cpu cpu;
 typedef mshadow::gpu gpu;
 /*! \brief index type usually use unsigned */
 typedef mshadow::index_t index_t;
+/*! \brief index type for blas library.*/
+typedef mshadow::lapack_index_t lapack_index_t;
 /*! \brief data type that will be used to store ndarray */
 typedef mshadow::default_real_t real_t;
 /*! \brief operator structure from NNVM */
