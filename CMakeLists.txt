@@ -60,7 +60,8 @@ cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
   "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
-option(USE_LAPACKE_INTERFACE "USE LAPACKE interface for lapack support" OFF)
+option(USE_ILP64_LAPACKE "Use ILP64 LAPACKE interface" OFF)
+option(USE_LAPACKE_INTERFACE "Use LAPACKE interface for lapack support" OFF)
 option(LINK_GFORTRAN "Link to gfortran" OFF)
 option(LINK_GOMP "Link to gomp" OFF)
 option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
@@ -448,6 +449,17 @@ elseif(UNIX)
   list(APPEND mxnet_LINKER_LIBS Threads::Threads)
 endif()
 
+if(USE_ILP64_LAPACKE)
+  set(USE_LAPACKE_INTERFACE ON)
+  if(NOT USE_INT64_TENSOR_SIZE)
+    message(FATAL_ERROR "USE_INT64_TENSOR_SIZE must be set to ON when USE_ILP64_LAPACKE=ON")
+  endif()
+  add_definitions(-DMXNET_USE_ILP64_LAPACKE=1)
+else()
+  add_definitions(-DMXNET_USE_ILP64_LAPACKE=0)
+endif()
+
+
 # ---[ LAPack
 if(USE_LAPACK)
   message("USE_LAPACK is ON")
@@ -464,7 +476,8 @@ else()
   add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=0)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND BLAS STREQUAL "Open")
+if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND
+  (BLAS STREQUAL "Open" OR BLAS STREQUAL "open" ))
   set(LINK_GFORTRAN ON)
 endif()
 

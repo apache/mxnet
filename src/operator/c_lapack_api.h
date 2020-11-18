@@ -247,10 +247,9 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   #if MSHADOW_USE_MKL
     #include <mkl_lapacke.h>
   #else
-    // enable these after we support ilp64 mkl
-    // #if MXNET_USE_INT64_TENSOR_SIZE
-    //   #define lapack_int int64_t
-    // #endif
+    if MXNET_USE_ILP64_LAPACKE
+       #define lapack_int int64_t
+     #endif
     // prevent multiple inclusion of complex.h in lapacke.h
     #define lapack_complex_float float _Complex
     #define lapack_complex_double double _Complex

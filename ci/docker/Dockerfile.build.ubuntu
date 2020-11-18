@@ -95,7 +95,7 @@ RUN mkdir ~/openblas && \
     unzip -q openblas.zip -d . && \
     cd OpenBLAS-${OPENBLAS_VERSION} && \
     CXX="g++ -fPIC" CC="gcc -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 \
-        USE_OPENMP=1 NO_SHARED=0 NO_LAPACK=0 && \
+        INTERFACE64=1 BINARY=64 USE_OPENMP=1 NO_SHARED=0 NO_LAPACK=0 && \
     make PREFIX=/usr/local install
 
 # ccache 3.7.9 has fixes for caching nvcc outputs

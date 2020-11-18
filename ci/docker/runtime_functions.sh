@@ -360,6 +360,7 @@ build_ubuntu_cpu_cmake_debug() {
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
         -DUSE_SIGNAL_HANDLER=ON \
+        -DUSE_ILP64_LAPACKE=ON \
         -DLINK_GOMP=ON \
         -G Ninja \
         /work/mxnet
@@ -377,6 +378,7 @@ build_ubuntu_cpu_cmake_no_tvm_op() {
         -DUSE_OPENCV=ON \
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_ILP64_LAPACKE=ON \
         -DLINK_GOMP=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja \
@@ -460,6 +462,7 @@ build_ubuntu_cpu_clang6() {
         -DUSE_OPENMP=OFF \
         -DUSE_DIST_KVSTORE=ON \
         -DUSE_CPP_PACKAGE=ON \
+        -DUSE_ILP64_LAPACKE=ON \
         -DLINK_GOMP=ON \
         -G Ninja /work/mxnet
     ninja
@@ -492,6 +495,7 @@ build_ubuntu_cpu_clang_tidy() {
        -DUSE_DIST_KVSTORE=ON \
        -DUSE_CPP_PACKAGE=ON \
        -DCMAKE_CXX_CLANG_TIDY=clang-tidy-10 \
+       -DUSE_ILP64_LAPACKE=ON \
        -DLINK_GOMP=ON \
        -G Ninja /work/mxnet
     ninja
@@ -506,6 +510,7 @@ build_ubuntu_cpu_clang6_mkldnn() {
        -DUSE_CUDA=OFF \
        -DUSE_CPP_PACKAGE=ON \
        -DUSE_OPENMP=OFF \
+       -DUSE_ILP64_LAPACKE=ON \
        -DLINK_GOMP=ON \
        -G Ninja /work/mxnet
     ninja
@@ -607,6 +612,7 @@ build_ubuntu_gpu_tensorrt() {
           -DUSE_MKLDNN=0                          \
           -DUSE_MKL_IF_AVAILABLE=OFF              \
           -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+          -DUSE_ILP64_LAPACKE=ON                  \          
           -DLINK_GOMP=1                           \
           -G Ninja                                \
           /work/mxnet
