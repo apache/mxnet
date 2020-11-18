@@ -29,7 +29,7 @@ namespace rtc {
 
 const char fp16_support_string[] = R"code(
 struct __align__(2) __half {
-  __host__ __device__ __half() { }
+  __host__ __device__ __half() : __x(0) { }
   unsigned short __x;
 };
 /* Definitions of intrinsics */

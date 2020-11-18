@@ -1350,19 +1350,22 @@ class ndarray(NDArray):
          [0.84426576 0.60276335 0.85794562]] @gpu(0)
 
         """
-        array_str = self.asnumpy().__repr__()
-        dtype = self.dtype
-        default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
-        if 'dtype=' in array_str:
-            if dtype == default_dtype:
-                array_str = array_str[:array_str.rindex(',')] + ')'
-        elif dtype not in (default_dtype, _np.bool_):
-            array_str = array_str[:-1] + ', dtype={})'.format(dtype)
+        if self._alive:
+            array_str = self.asnumpy().__repr__()
+            dtype = self.dtype
+            default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
+            if 'dtype=' in array_str:
+                if dtype == default_dtype:
+                    array_str = array_str[:array_str.rindex(',')] + ')'
+            elif dtype not in (default_dtype, _np.bool_):
+                array_str = array_str[:-1] + ', dtype={})'.format(dtype)
 
-        context = self.ctx
-        if context.device_type == 'cpu':
-            return array_str
-        return array_str[:-1] + ', ctx={})'.format(str(context))
+            context = self.ctx
+            if context.device_type == 'cpu':
+                return array_str
+            return array_str[:-1] + ', ctx={})'.format(str(context))
+        else:
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __str__(self):
         """Returns a string representation of the array."""
@@ -11382,7 +11385,12 @@ def atleast_1d(*arys):
     >>> np.atleast_1d(np.array(1), np.array([3, 4]))
     [array([1.]), array([3., 4.])]
     """
-    return _mx_nd_np.atleast_1d(*arys)
+    res = []
+    for ary in arys:
+        if not isinstance(ary, NDArray):
+            ary = array(ary)
+        res.append(ary)
+    return _mx_nd_np.atleast_1d(*res)
 
 
 @set_module('mxnet.numpy')
@@ -11414,7 +11422,12 @@ def atleast_2d(*arys):
     >>> np.atleast_2d(np.array(1), np.array([1, 2]), np.array([[1, 2]]))
     [array([[1.]]), array([[1., 2.]]), array([[1., 2.]])]
     """
-    return _mx_nd_np.atleast_2d(*arys)
+    res = []
+    for ary in arys:
+        if not isinstance(ary, NDArray):
+            ary = array(ary)
+        res.append(ary)
+    return _mx_nd_np.atleast_2d(*res)
 
 
 @set_module('mxnet.numpy')
@@ -11457,7 +11470,12 @@ def atleast_3d(*arys):
       [2.]]] (1, 2, 1)
     [[[1. 2.]]] (1, 1, 2)
     """
-    return _mx_nd_np.atleast_3d(*arys)
+    res = []
+    for ary in arys:
+        if not isinstance(ary, NDArray):
+            ary = array(ary)
+        res.append(ary)
+    return _mx_nd_np.atleast_3d(*res)
 
 
 @set_module('mxnet.numpy')

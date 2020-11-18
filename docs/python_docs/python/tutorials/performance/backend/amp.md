@@ -177,7 +177,7 @@ In order to start using AMP, we need to import and initialize it. This has to ha
 
 
 ```{.python .input}
-from mxnet.contrib import amp
+from mxnet import amp
 
 amp.init()
 ```

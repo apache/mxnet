@@ -26,13 +26,12 @@ import mxnet as mx
 from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, use_np
-from common import with_seed, retry, TemporaryDirectory, xfail_when_nonstandard_decimal_separator
+from common import retry, TemporaryDirectory, xfail_when_nonstandard_decimal_separator
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
 
 
-@with_seed()
 @use_np
 def test_np_empty():
     # (input dtype, expected output dtype)
@@ -78,7 +77,6 @@ def test_np_empty():
                         assert_exception(np.empty, NotImplementedError, shape, dtype, order, ctx)
 
 
-@with_seed()
 @use_np
 def test_np_array_creation():
     dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, _np.bool, _np.bool_,
@@ -105,7 +103,6 @@ def test_np_array_creation():
             assert same(mx_arr.asnumpy(), np_arr)
 
 
-@with_seed()
 @use_np
 @pytest.mark.serial
 def test_np_zeros():
@@ -160,7 +157,6 @@ def test_np_zeros():
             check_zero_array_creation(shape, dtype)
 
 
-@with_seed()
 @use_np
 def test_np_ones():
     # test np.ones in Gluon
@@ -214,7 +210,6 @@ def test_np_ones():
             check_ones_array_creation(shape, dtype)
 
 
-@with_seed()
 @use_np
 @pytest.mark.serial
 def test_identity():
@@ -261,7 +256,6 @@ def test_identity():
 
 
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 @pytest.mark.serial
 def test_np_ndarray_binary_element_wise_ops():
     np_op_map = {
@@ -516,7 +510,6 @@ def test_np_ndarray_binary_element_wise_ops():
             check_binary_op_result(None, (0, 2), op, dtype)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_np_hybrid_block_multiple_outputs():
     @use_np
@@ -550,7 +543,6 @@ def test_np_hybrid_block_multiple_outputs():
     assert_exception(net, TypeError, data_np)
 
 
-@with_seed()
 @use_np
 def test_np_grad_ndarray_type():
     data = np.array(2, dtype=_np.float32)
@@ -559,7 +551,6 @@ def test_np_grad_ndarray_type():
     assert type(data.detach()) == np.ndarray
 
 
-@with_seed()
 @use_np
 @pytest.mark.serial
 def test_np_ndarray_astype():
@@ -597,7 +588,6 @@ def test_np_ndarray_astype():
                 check_astype_equal(itype, otype, copy, hybridize)
 
 
-@with_seed()
 def test_np_ndarray_copy():
     mx_data = np.array([2, 3, 4, 5], dtype=_np.int32)
     assert_exception(mx_data.copy, NotImplementedError, order='F')
@@ -606,7 +596,6 @@ def test_np_ndarray_copy():
     assert same(mx_ret.asnumpy(), np_ret)
 
 
-@with_seed()
 def test_formatting():
     def test_0d():
         a = np.array(np.pi)
@@ -634,7 +623,6 @@ def test_formatting():
     # for exmpale, if a = np.array([np.pi]), the return value of '{}'.format(a) is '[3.1415927] @gpu(0)'
 
 
-@with_seed()
 @use_np
 @pytest.mark.serial
 def test_np_ndarray_indexing():
@@ -1011,7 +999,6 @@ def test_np_ndarray_indexing():
     test_getitem_slice_bound()
 
 
-@with_seed()
 @use_np
 @pytest.mark.serial
 def test_np_save_load_ndarrays():
@@ -1056,7 +1043,6 @@ def test_np_save_load_ndarrays():
 
 
 @retry(5)
-@with_seed()
 @use_np
 @pytest.mark.serial
 def test_np_multinomial():
@@ -1130,7 +1116,6 @@ def test_np_multinomial():
                 mx.test_utils.assert_almost_equal(freq[i, :], pvals, rtol=0.20, atol=1e-1)
 
 
-@with_seed()
 @pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
                                                  " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
@@ -1143,7 +1128,6 @@ def test_boolean_index_single():
     assert same(a[np.array(True, dtype=np.bool_)].asnumpy(), a[None].asnumpy())
     assert same(a[np.array(False, dtype=np.bool_)].asnumpy(), a[None][0:0].asnumpy())
 
-@with_seed()
 @pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
                                                  " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
@@ -1160,7 +1144,6 @@ def test_boolean_index_catch_exception():
     index = np.zeros((4, 4), dtype=bool)
     assert_exception(arr.__getitem__, IndexError, index)
 
-@with_seed()
 @pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
                                                  " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
@@ -1172,7 +1155,6 @@ def test_boolean_index_onedim():
     b = np.array([True], dtype=bool)
     assert same(a[b].asnumpy(), a.asnumpy())
 
-@with_seed()
 @pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
                                                  " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
@@ -1190,7 +1172,6 @@ def test_boolean_index_twodim():
     assert same(a[b[1]].asnumpy(), _np.array([[4, 5, 6]], dtype=a.dtype))
     assert same(a[b[0]].asnumpy(), a[b[2]].asnumpy())
 
-@with_seed()
 @pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
                                                  " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
@@ -1202,7 +1183,6 @@ def test_boolean_index_list():
     assert same(a[b].asnumpy(), _np.array([1, 3], dtype=a.dtype))
     (a[None, b], [[1, 3]])
 
-@with_seed()
 @pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
                                                  " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
@@ -1240,7 +1220,6 @@ def test_boolean_index_tuple():
     _np_b = b.asnumpy()
     assert same(a[b > 1].asnumpy(), _np_a[_np_b > 1])
 
-@with_seed()
 @pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
                                                  " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
@@ -1286,7 +1265,6 @@ def test_boolean_index_assign():
     mx_data[False, 1] = 8
     assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-@with_seed()
 @pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
                                                  " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
@@ -1306,7 +1284,6 @@ def test_boolean_index_autograd():
     assert_almost_equal(a.grad.asnumpy(), a_grad_np, rtol=1e-4, atol=1e-5, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_np_get_dtype():
     dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, _np.bool, _np.bool_,

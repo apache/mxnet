@@ -25,3 +25,6 @@
 [submodule "3rdparty/nvidia_cub"]
 	path = 3rdparty/nvidia_cub
 	url = https://github.com/NVlabs/cub.git
+[submodule "3rdparty/intgemm"]
+	path = 3rdparty/intgemm
+	url = https://github.com/kpu/intgemm

@@ -24,8 +24,8 @@
  * \author Clement Fuji Tsang
  */
 
-#ifndef MXNET_OPERATOR_CONTRIB_ALL_FINITE_INL_H_
-#define MXNET_OPERATOR_CONTRIB_ALL_FINITE_INL_H_
+#ifndef MXNET_OPERATOR_ALL_FINITE_INL_H_
+#define MXNET_OPERATOR_ALL_FINITE_INL_H_
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
@@ -34,12 +34,12 @@
 #include <nnvm/op.h>
 #include <nnvm/op_attr_types.h>
 #include <vector>
-#include "../operator_common.h"
-#include "../mshadow_op.h"
-#include "../elemwise_op_common.h"
-#include "../mxnet_op.h"
-#include "../tensor/init_op.h"
-#include "../tensor/util/tensor_util-inl.h"
+#include "operator_common.h"
+#include "mshadow_op.h"
+#include "elemwise_op_common.h"
+#include "mxnet_op.h"
+#include "tensor/init_op.h"
+#include "tensor/util/tensor_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -97,4 +97,4 @@ MultiAllFiniteKernelParam<DType> FillMultiAllFiniteParam(const MultiAllFinitePar
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_CONTRIB_ALL_FINITE_INL_H_
+#endif  // MXNET_OPERATOR_ALL_FINITE_INL_H_

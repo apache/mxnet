@@ -32,21 +32,21 @@ import sys
 import numpy as np
 
 from mxnet import numpy
-from ... import symbol
-from ...context import gpu
-from ...symbol import Symbol
-from ...symbol import contrib as symbol_contrib
-from ... import ndarray
-from ...ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from .. import symbol
+from ..context import gpu
+from ..symbol import Symbol
+from ..symbol import contrib as symbol_contrib
+from .. import ndarray
+from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from . import lists
-from ...gluon import Block, trainer
-from ... import base
-from ...base import (_NP_OP_PREFIX, _NP_OP_SUBMODULE_LIST, _NP_EXT_OP_PREFIX,
-                     _NP_EXT_OP_SUBMODULE_LIST, _NP_INTERNAL_OP_PREFIX,
-                     c_str_array, SymbolHandle, check_call, _LIB, mx_uint, c_array_buf)
-from ... import optimizer as opt
+from ..gluon import Block, trainer
+from .. import base
+from ..base import (_NP_OP_PREFIX, _NP_OP_SUBMODULE_LIST, _NP_EXT_OP_PREFIX,
+                    _NP_EXT_OP_SUBMODULE_LIST, _NP_INTERNAL_OP_PREFIX,
+                    c_str_array, SymbolHandle, check_call, _LIB, mx_uint, c_array_buf)
+from .. import optimizer as opt
 from .loss_scaler import LossScaler
-from ...operator import get_all_registered_operators_grouped
+from ..operator import get_all_registered_operators_grouped
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
@@ -701,7 +701,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
     """
-    from ...gluon import HybridBlock, SymbolBlock
+    from ..gluon import HybridBlock, SymbolBlock
     assert isinstance(block, HybridBlock), "block input should be a HybridBlock"
     if not block._cached_graph:
         raise RuntimeError(

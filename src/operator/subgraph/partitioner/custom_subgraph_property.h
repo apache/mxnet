@@ -208,26 +208,28 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     arg_dev_type.clear();
     arg_dev_id.clear();
     for (size_t i=0; i < in_arg_names.size(); i++) {
-      arg_names.push_back(in_arg_names[i].c_str());
-      const NDArray &in_arg = *(in_args_ptr[i]);
+      if (in_args_ptr[i] != nullptr) {
+        arg_names.push_back(in_arg_names[i].c_str());
+        const NDArray &in_arg = *(in_args_ptr[i]);
 
 #if MXNET_USE_MKLDNN == 1
-      // reorder data if in MKLDNN format
-      if (in_arg.IsMKLDNNData()) {
-        in_arg.Reorder2DefaultAsync();
-        in_arg.WaitToRead();
-      }
+        // reorder data if in MKLDNN format
+        if (in_arg.IsMKLDNNData()) {
+          in_arg.Reorder2DefaultAsync();
+          in_arg.WaitToRead();
+        }
 #endif
 
-      // pull out parts of NDArray to send to backend
-      arg_data.push_back(in_arg.data().dptr_);
-      arg_shapes.push_back(in_arg.shape().data());
-      arg_dims.push_back(in_arg.shape().ndim());
-      arg_types.push_back(in_arg.dtype());
-      arg_verIDs.push_back(in_arg.version());
-      const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-      arg_dev_type.push_back(arg_ctx_str);
-      arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+        // pull out parts of NDArray to send to backend
+        arg_data.push_back(in_arg.data().dptr_);
+        arg_shapes.push_back(in_arg.shape().data());
+        arg_dims.push_back(in_arg.shape().ndim());
+        arg_types.push_back(in_arg.dtype());
+        arg_verIDs.push_back(in_arg.version());
+        const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+        arg_dev_type.push_back(arg_ctx_str);
+        arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+      }
     }
 
     // convert input aux
@@ -240,26 +242,28 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     aux_dev_type.clear();
     aux_dev_id.clear();
     for (size_t i=0; i < in_aux_names.size(); i++) {
-      aux_names.push_back(in_aux_names[i].c_str());
-      const auto &in_aux = *(in_aux_ptr[i]);
+      if (in_aux_ptr[i] != nullptr) {
+        aux_names.push_back(in_aux_names[i].c_str());
+        const auto &in_aux = *(in_aux_ptr[i]);
 
 #if MXNET_USE_MKLDNN == 1
-      // reorder data if in MKLDNN format
-      if (in_aux.IsMKLDNNData()) {
-        in_aux.Reorder2DefaultAsync();
-        in_aux.WaitToRead();
-      }
+        // reorder data if in MKLDNN format
+        if (in_aux.IsMKLDNNData()) {
+          in_aux.Reorder2DefaultAsync();
+          in_aux.WaitToRead();
+        }
 #endif
 
-      // pull out parts of NDArray to send to backend
-      aux_data.push_back(in_aux.data().dptr_);
-      aux_shapes.push_back(in_aux.shape().data());
-      aux_dims.push_back(in_aux.shape().ndim());
-      aux_types.push_back(in_aux.dtype());
-      aux_verIDs.push_back(in_aux.version());
-      const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-      aux_dev_type.push_back(aux_ctx_str);
-      aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+        // pull out parts of NDArray to send to backend
+        aux_data.push_back(in_aux.data().dptr_);
+        aux_shapes.push_back(in_aux.shape().data());
+        aux_dims.push_back(in_aux.shape().ndim());
+        aux_types.push_back(in_aux.dtype());
+        aux_verIDs.push_back(in_aux.version());
+        const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+        aux_dev_type.push_back(aux_ctx_str);
+        aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+      }
     }
 
     // remove all graph attrs, some cannot be saved to json
@@ -285,13 +289,17 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         for (unsigned oid = 0; oid < node->num_outputs(); oid++) {
           const uint32_t out_entry_id = indexed_graph.entry_id(nid, oid);
           mxnet::TShape& shape = shapes[out_entry_id];
-          ss << shape;
+          if (shape.ndim() == -1)
+            ss << "[None]";
+          else
+            ss << shape;
           if (oid < node->num_outputs()-1) ss << ",";
         }
         ss << "]";
         node->attrs.dict[MX_STR_SHAPE] = ss.str();
       }
     }
+
     // set dtype attrs for each node in the graph
     if (g.HasAttr("dtype")) {
       std::vector<int> dtypes = g.GetAttr<std::vector<int> >("dtype");
