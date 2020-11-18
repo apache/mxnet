@@ -891,6 +891,7 @@ def test_np_max_min_error(func, shape, exception):
 @pytest.mark.parametrize('is_weighted', [True, False])
 @pytest.mark.parametrize('returned', [True, False])
 @pytest.mark.parametrize('req_a', ['null', 'add', 'write'])
+@pytest.mark.flaky
 def test_np_average(a_shape, w_shape, axes, is_weighted, req_a,
                     hybridize, returned, dtype):
     class TestAverage(HybridBlock):

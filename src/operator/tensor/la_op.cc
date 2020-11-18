@@ -1040,6 +1040,8 @@ Examples::
   return 2; })
 .set_attr<mxnet::FInferShape>("FInferShape", DetShape<2>)
 .set_attr<nnvm::FInferType>("FInferType", DetType<2>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 2, slogdet>)
 .set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<2>{"_backward_linalg_slogdet"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");

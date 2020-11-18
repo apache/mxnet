@@ -328,7 +328,7 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
         }
       } else {
         mshadow::Shape<10> in_strides;
-        int stride = 1;
+        index_t stride = 1;
         for (int i = arrshape.ndim() - 1; i >= 0; stride *= arrshape[i], --i) {
           in_strides[i] = stride;
         }
