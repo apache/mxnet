@@ -167,7 +167,7 @@ class CalibrationCollector(object):
 
     def __init__(self):
         self.include_layers = None
-        self.min_max_dict = None
+        self.min_max_dict = {}
 
     @abc.abstractmethod
     def collect(self, name, op_name, arr):
@@ -872,6 +872,9 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
 
     symnet, params = network.export(None)
     symnet = symnet.optimize_for(backend=backend)
+
+    if is_np_array():
+        symnet = symnet.as_np_ndarray()
 
     args, auxs = dict(), dict()
     for k, v in params.items():
