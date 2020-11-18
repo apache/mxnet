@@ -83,16 +83,10 @@ sym, _, _ = mx.model.load_checkpoint('mymodel', 0)
 # Symbol/Module flow
 sym2 = sym.optimize_for("myPart")
 
-# Gluon flow 1
-sym_block = nn.SymbolBlock(sym, inputs)
-sym_block.hybridize(backend='myPart')
-
-# Gluon flow 2
+# Gluon flow
 sym_block = nn.SymbolBlock(sym, inputs)
 sym_block.optimize_for(x, backend='myPart')
 ```
-
-In the Gluon hybridize flow, the model is actually hybridized during the first inference, rather than immediately when calling `hybridize`. This hybridize-based flow is useful if a user expects to run inference immediately after hybridizing. But for users than just want to partition but not run a whole forward pass, the `optimize_for` API combines the hybrdize/forward APIs but does not run a forward pass. After calling `optimize_for` users can `export` their model immediately without running a forward pass. 
 
 ### Using a Custom Partitioner Library
 
@@ -102,35 +96,35 @@ Partitioning APIs in MXNet are available in both Symbol and Gluon APIs. For the 
 sym.optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
 ```
 
-The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to partition the model for. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before partitioning, and passed to the backend to use during compilation. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend partitioning APIs.
+The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to partition the model for. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before partitioning, and passed to the backend to use during compilation. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend partitioning APIs. The backend options can be passed as kwargs.
 
-For the Gluon API, `hybridize` can be called on HybridBlocks to partition the internal CachedOp Symbol.
-
-```python
-block.hybridize(backend=None, backend_opts=None, clear=True, **kwargs)
-```
-
-The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `backend` argument is a string that identifies which backend that will partition the model. The `backend_opts` are other user-specified options (as a Python dictionary of strings mapped to strings) that will be passed to the backend partitioning APIs. The `clear` argument defaults to `True` and clears any previous optimizations done on the block. If you want to chain optimizations together, set `clear` to `False`. The actual partitioning takes place during the forward pass. If you want to use `hybridize` to chain multiple optimizations, be sure to execute a forward pass after each call to `hybridize`. 
-
-If you just want to partition the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
-
-```python
-block.optimize_for(x, backend=None, backend_opts=None, clear=True, **kwargs)
-```
-
-When the `optimize_for` API is called on a HybridBlock it partitions immediately. This lets users export the partitioned model without running a complete forward pass. Chaining multiple optimizations is as simple as calling `optimize_for` multiple times, no need to execute a forward pass (as opposed to `hybridize`).
+When the `optimize_for` API is called on a HybridBlock it partitions immediately. This lets users export the partitioned model without running a complete forward pass. Chaining multiple optimizations is as simple as calling `optimize_for` multiple times.
 
 ```python
 block.optimize_for(x, backend='myPart')
-block.optimize_for(x, backend='myOtherPart', clear=False)
+block.optimize_for(x, backend='myOtherPart')
 block.export('partitioned')
 ```
 
-But you can also use `optimize_for` in place of `hybridize` and run inference immediately after too.
+For the Gluon API, hybridization is needed, so calling `optimize_for` on a non-hybridized block will hybridize it.
+If the users need to pass some hybridization parameters, they can either call `hybridize` explicitly, or directly pass the arguments to `optimize_for`.
+
+This:
+```python
+block.hybridize(static_shape=True, static_alloc=False)
+block.optimize_for(x, backend='myPart')
+```
+is equivalent to:
+```python
+block.optimize_for(x, backend='myPart', static_shape=True, static_alloc=False)
+```
+
+It's important to note that `hybridize` clears the CachedOp and any previous optimization.
 
 ```python
 block.optimize_for(x, backend='myPart')
-block(x)
+block.hybridize()
+# block is not optimized for myPart anymore!!
 ```
 
 ### Writing A Custom Partitioner

@@ -438,7 +438,7 @@ def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
                                        ctx=mx.current_context())
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
-    sym_block.hybridize(backend=subgraph_backend)
+    sym_block.optimize_for(*x, backend=subgraph_backend)
     outputs2 = sym_block(*x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
@@ -472,7 +472,7 @@ def test_subgraph_backend_gluon_ext1(tmpdir):
     op_names = ['FullyConnected']
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
-    net.hybridize(backend = subgraph_backend)
+    net.optimize_for(x, backend = subgraph_backend)
     outputs2 = net(x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
@@ -510,7 +510,7 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
     op_names = ['FullyConnected']
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
-    net.hybridize(backend = subgraph_backend)
+    net.optimize_for(x, backend = subgraph_backend)
     outputs2 = net(x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 

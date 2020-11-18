@@ -62,16 +62,6 @@ def test(backend):
     out = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     print(out)
 
-    # Gluon Hybridize partitioning with shapes/types
-    print('-------------------------------')
-    print('Testing %s Gluon Hybridize partitioning with shapes/types' % backend)
-    inputs = [a,b]
-    sym_block = nn.SymbolBlock(sym, inputs)
-    sym_block.initialize()
-    sym_block.hybridize(backend=backend)
-    out2 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
-    print(out2)
-
     # Gluon Hybridize partitioning with shapes/types without inference
     print('-------------------------------')
     print('Testing %s Gluon Hybridize partitioning with shapes/types without inference' % backend)
@@ -84,7 +74,7 @@ def test(backend):
     # Test with additional input to subgraph op
     print('-------------------------------')
     print('Testing %s Gluon Hybridize partitioning with extra input' % backend)
-    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend="addInputPass", clear=False)
+    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend="addInputPass")
     out3 = sym_block2(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     print(out3)
     
@@ -102,13 +92,13 @@ def test(backend):
     out5 = sym2_block(mx.nd.ones((3,2)))
     print(out5)
 
-    # Gluon Hybridize partitioning with shapes/types
+    # Gluon optimize_for partitioning with shapes/types
     print('-------------------------------')
-    print('Testing %s Gluon Hybridize partitioning with shapes/types' % backend)
+    print('Testing %s Gluon optimize_for partitioning with shapes/types' % backend)
     inputs = [a]
     sym2_block = nn.SymbolBlock(sym2, inputs)
     sym2_block.initialize()
-    sym2_block.hybridize(backend=backend)
+    sym2_block.optimize_for(mx.nd.ones((3,2)), backend=backend)
     out8 = sym2_block(mx.nd.ones((3,2)))
     print(out8)
 
