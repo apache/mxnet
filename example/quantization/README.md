@@ -135,7 +135,7 @@ bash ./launch_inference_mkldnn.sh -s ./model/resnet50_v1-quantized-5batches-naiv
 
 <h3 id='4'>Custom Model</h3>
 
-This script also supports custom symbolic models. You can easily add some quantization layer configs in `imagenet_gen_qsym_mkldnn.py` like below:
+This script also supports custom symbolic models. Some quantization layer configs can be easly aded in `imagenet_gen_qsym_mkldnn.py` like below:
 
 ```
 if logger:
@@ -144,7 +144,7 @@ if logger:
 # add rgb mean/std of your model.
 rgb_mean = '0,0,0'
 rgb_std = '0,0,0'
-# add layer names you donnot want to quantize.
+# add layer names that shouldn't be quantized.
 if logger:
     frameinfo = getframeinfo(currentframe())
     logger.info(F'Please set proper excluded_sym_names inside this script below {frameinfo.filename}:{frameinfo.lineno} for model {args.model} if required!')
@@ -155,18 +155,17 @@ if exclude_first_conv:
 
 Some tips on quantization configs:
 
-1. First, you should prepare your data, symbol file (custom-symbol.json) and parameter file (custom-0000.params) of your fp32 symbolic model.
-2. Then, you should run the following command and verify that your fp32 symbolic model runs inference as expected.
+1. First, data should be prepared, symbol file (custom-symbol.json) and parameter file (custom-0000.params) of fp32 symbolic model.
+2. Then, the following command should be run verifying if fp32 symbolic model runs inference as expected.
 
 ```
-
 # Launch FP32 Inference
 python imagenet_inference.py --symbol-file=./model/custom-symbol.json --param-file=./model/custom-0000.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/*
 ```
 
-3. Then, you should add `rgb_mean`, `rgb_std` and `excluded_sym_names` in this script.
+3. Then, `rgb_mean`, `rgb_std` and `excluded_sym_names` should be added in this script.
 
-4. Then, you can run the following command for quantization:
+4. Then, the following command for quantization can be run:
 
 ```
 python imagenet_gen_qsym_mkldnn.py --model=custom --num-calib-batches=5 --calib-mode=naive
@@ -174,7 +173,7 @@ python imagenet_gen_qsym_mkldnn.py --model=custom --num-calib-batches=5 --calib-
 
 5. After quantization, the quantized symbol and parameter files will be saved in the `model/` directory.
 
-6. Finally, you can run INT8 inference:
+6. Finally, INT8 inference can be run:
 
 ```
 # Launch INT8 Inference

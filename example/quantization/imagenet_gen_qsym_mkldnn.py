@@ -148,10 +148,9 @@ if __name__ == '__main__':
     if logger:
         logger.info(args)
         logger.info('shuffle_dataset=%s' % args.shuffle_dataset)
+        logger.info('calibration mode set to %s' % args.calib_mode)
 
     calib_mode = args.calib_mode
-    if logger:
-        logger.info('calibration mode set to %s' % calib_mode)
 
     # download calibration dataset
     if calib_mode != 'none':
@@ -234,8 +233,6 @@ if __name__ == '__main__':
 
     if logger:
         logger.info('These layers have been excluded %s' % excluded_sym_names)
-
-    if logger:
         logger.info('Input data shape = %s' % str(data_shape))
         logger.info('rgb_mean = %s' % rgb_mean)
         logger.info('rgb_std = %s' % rgb_std)

@@ -138,7 +138,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     }
   }
   CHECK_EQ(inputs.size(), input_size);
-  size_t idx = 0;
+  index_t idx = 0;
 
   auto in_data = idx++;
   auto in_weight = idx++;
@@ -147,7 +147,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
   auto in_beta = mkldnn_param.with_bn ? (idx++) : 0;
   auto in_mean = mkldnn_param.with_bn ? (idx++) : 0;
   auto in_var = mkldnn_param.with_bn ? (idx++) : 0;
-  auto in_sum = (mkldnn_param.with_sum && !mkldnn_param.dedup_sum) ? (idx++) : 0;
+  auto in_sum = mkldnn_param.with_sum ? (mkldnn_param.dedup_sum? in_data : idx++) : -1;
   float data_min =
       mkldnn_param.quantized ? inputs[idx++].data().dptr<float>()[0] : 0.0;
   float data_max =
