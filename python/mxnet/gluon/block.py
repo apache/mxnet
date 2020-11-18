@@ -1227,7 +1227,7 @@ class HybridBlock(Block):
         forward_bulk_size : optional int, default None
             Segment size of bulk execution during forward pass.
         backward_bulk_size : optional int, default None
-            Segment size of bulk execution during forward pass.
+            Segment size of bulk execution during backward pass.
         **kwargs: The backend options, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         """
@@ -1309,7 +1309,7 @@ class HybridBlock(Block):
         forward_bulk_size : optional int, default None
             Segment size of bulk execution during forward pass.
         backward_bulk_size : optional int, default None
-            Segment size of bulk execution during forward pass.
+            Segment size of bulk execution during backward pass.
         """
 
         self._active = active
