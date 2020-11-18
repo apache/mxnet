@@ -1019,11 +1019,18 @@ def test_np_save_load_ndarrays(load_fn):
     with TemporaryDirectory() as work_dir:
         fname = os.path.join(work_dir, 'dataset.npy')
         npx.savez(fname, *array_list)
-        array_dict_loaded = load_fn(fname)
-        array_list_loaded = [
-            array_dict_loaded['arr_{}'.format(str(i))]
-            for i in range(len(array_dict_loaded))
-        ]
+        if load_fn is _np.load:
+            with load_fn(fname) as array_dict_loaded:  # Ensure NPZFile is closed
+                array_list_loaded = [
+                    array_dict_loaded['arr_{}'.format(str(i))]
+                    for i in range(len(array_dict_loaded))
+                ]
+        else:
+            array_dict_loaded = load_fn(fname)
+            array_list_loaded = [
+                array_dict_loaded['arr_{}'.format(str(i))]
+                for i in range(len(array_dict_loaded))
+            ]
         assert len(array_list) == len(array_list_loaded)
         assert all(isinstance(arr, np.ndarray) for arr in arr_loaded)
         for a1, a2 in zip(array_list, array_list_loaded):
@@ -1037,12 +1044,20 @@ def test_np_save_load_ndarrays(load_fn):
     with TemporaryDirectory() as work_dir:
         fname = os.path.join(work_dir, 'dataset.npy')
         npx.savez(fname, **arr_dict)
-        arr_dict_loaded = load_fn(fname)
-        assert isinstance(arr_dict_loaded, (dict, _np.lib.npyio.NpzFile))
-        assert len(arr_dict_loaded) == len(arr_dict)
-        for k, v in arr_dict_loaded.items():
-            assert k in arr_dict
-            assert _np.array_equal(v.asnumpy() if load_fn is npx.load else v, arr_dict[k].asnumpy())
+        if load_fn is _np.load:
+            with load_fn(fname) as arr_dict_loaded:  # Ensure NPZFile is closed
+                assert isinstance(arr_dict_loaded, _np.lib.npyio.NpzFile)
+                assert len(arr_dict_loaded) == len(arr_dict)
+                for k, v in arr_dict_loaded.items():
+                    assert k in arr_dict
+                    assert _np.array_equal(v.asnumpy() if load_fn is npx.load else v, arr_dict[k].asnumpy())
+        else:
+            arr_dict_loaded = load_fn(fname)
+            assert isinstance(arr_dict_loaded, dict)
+            assert len(arr_dict_loaded) == len(arr_dict)
+            for k, v in arr_dict_loaded.items():
+                assert k in arr_dict
+                assert _np.array_equal(v.asnumpy() if load_fn is npx.load else v, arr_dict[k].asnumpy())
 
 
 @retry(5)
