@@ -7542,6 +7542,7 @@ def test_np_flipud_fliplr():
 
 
 @use_np
+@pytest.mark.flaky
 def test_np_around():
     class TestAround(HybridBlock):
         def __init__(self, decimals):
