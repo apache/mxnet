@@ -1943,7 +1943,8 @@ int MXNDArrayLoad(const char* fname,
   uint32_t magic;
   {
       std::unique_ptr<dmlc::Stream> strm(dmlc::Stream::Create(fname, "r"));
-      CHECK_EQ(strm->Read(&magic, sizeof(uint32_t)), sizeof(uint32_t));
+      CHECK_EQ(strm->Read(&magic, sizeof(uint32_t)), sizeof(uint32_t))
+        << "Failed to read 32 bits from file.";
   }
 
   if (magic == 0x04034b50 || magic == 0x504b0304) {  // zip file format; assumed to be npz
