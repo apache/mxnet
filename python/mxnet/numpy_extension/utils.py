@@ -26,61 +26,103 @@ from ..base import c_handle_array, c_str, mx_uint, NDArrayHandle, py_str
 from ..dlpack import ndarray_to_dlpack_for_read, ndarray_to_dlpack_for_write
 from ..dlpack import ndarray_from_dlpack, ndarray_from_numpy
 from ..numpy import ndarray, array
+from ..ndarray import NDArray
 
-__all__ = ['save', 'load', 'to_dlpack_for_read', 'to_dlpack_for_write',
+__all__ = ['save', 'savez', 'load', 'to_dlpack_for_read', 'to_dlpack_for_write',
            'from_dlpack', 'from_numpy']
 
 def save(file, arr):
-    """Saves a list of `ndarray`s or a dict of `str`->`ndarray` to file.
-
-    Examples of filenames:
-
-    - ``/path/to/file``
-    - ``s3://my-bucket/path/to/file`` (if compiled with AWS S3 supports)
-    - ``hdfs://path/to/file`` (if compiled with HDFS supports)
+    """Save an array to a binary file in NumPy ``.npy`` format.
 
     Parameters
     ----------
     file : str
-        Filename to which the data is saved.
-    arr : `ndarray` or list of `ndarray`s or dict of `str` to `ndarray`
-        The data to be saved.
+        File or filename to which the data is saved.  If file is a file-object,
+        then the filename is unchanged.
+    arr : ndarray
+        Array data to be saved. Sparse formats are not supported. Please use
+        savez function to save sparse arrays.
+
+    See Also
+    --------
+    savez : Save several arrays into a ``.npz`` archive
 
     Notes
     -----
-    This function can only be called within numpy semantics, i.e., `npx.is_np_shape()`
-    and `npx.is_np_array()` must both return true.
+    For a description of the ``.npy`` format, see :py:mod:`numpy.lib.format`.
     """
-    if not (is_np_shape() and is_np_array()):
-        raise ValueError('Cannot save `mxnet.numpy.ndarray` in legacy mode. Please activate'
-                         ' numpy semantics by calling `npx.set_np()` in the global scope'
-                         ' before calling this function.')
-    if isinstance(arr, ndarray):
-        arr = [arr]
-    if isinstance(arr, dict):
-        str_keys = arr.keys()
-        nd_vals = arr.values()
-        if any(not isinstance(k, string_types) for k in str_keys) or \
-                any(not isinstance(v, ndarray) for v in nd_vals):
-            raise TypeError('Only accepts dict str->ndarray or list of ndarrays')
-        keys = c_str_array(str_keys)
-        handles = c_handle_array(nd_vals)
-    elif isinstance(arr, list):
-        if any(not isinstance(v, ndarray) for v in arr):
-            raise TypeError('Only accepts dict str->ndarray or list of ndarrays')
-        keys = None
-        handles = c_handle_array(arr)
-    else:
-        raise ValueError("data needs to either be a ndarray, dict of (str, ndarray) pairs "
-                         "or a list of ndarrays.")
-    check_call(_LIB.MXNDArraySave(c_str(file),
-                                  mx_uint(len(handles)),
-                                  handles,
-                                  keys))
+    if not isinstance(arr, NDArray):
+        raise ValueError("data needs to either be a MXNet ndarray")
+    arr = [arr]
+    keys = None
+    handles = c_handle_array(arr)
+    check_call(_LIB.MXNDArraySave(c_str(file), mx_uint(len(handles)), handles, keys))
+
+
+def savez(file, *args, **kwds):
+    """Save several arrays into a single file in uncompressed ``.npz`` format.
+
+    If arguments are passed in with no keywords, the corresponding variable
+    names, in the ``.npz`` file, are 'arr_0', 'arr_1', etc. If keyword
+    arguments are given, the corresponding variable names, in the ``.npz``
+    file will match the keyword names.
+
+    Parameters
+    ----------
+    file : str
+        Either the filename (string) or an open file (file-like object)
+        where the data will be saved.
+    args : Arguments, optional
+        Arrays to save to the file. Since it is not possible for Python to
+        know the names of the arrays outside `savez`, the arrays will be saved
+        with names "arr_0", "arr_1", and so on. These arguments can be any
+        expression.
+    kwds : Keyword arguments, optional
+        Arrays to save to the file. Arrays will be saved in the file with the
+        keyword names.
+
+    Returns
+    -------
+    None
+
+    See Also
+    --------
+    save : Save a single array to a binary file in NumPy format.
+
+    Notes
+    -----
+    The ``.npz`` file format is a zipped archive of files named after the
+    variables they contain.  The archive is not compressed and each file
+    in the archive contains one variable in ``.npy`` format. For a
+    description of the ``.npy`` format, see :py:mod:`numpy.lib.format`.
+
+    When opening the saved ``.npz`` file with `load` a dictionary object
+    mapping file-names to the arrays themselves.
+
+    When saving dictionaries, the dictionary keys become filenames
+    inside the ZIP archive. Therefore, keys should be valid filenames.
+    E.g., avoid keys that begin with ``/`` or contain ``.``.
+    """
+
+    if len(args):
+        for i, arg in enumerate(args):
+            name = 'arr_{}'.format(str(i))
+            assert name not in kwds, 'Naming conflict between arg {} and kwargs.'.format(str(i))
+            kwds[name] = arg
+
+    str_keys = kwds.keys()
+    nd_vals = kwds.values()
+    if any(not isinstance(k, string_types) for k in str_keys) or \
+            any(not isinstance(v, NDArray) for v in nd_vals):
+        raise TypeError('Only accepts dict str->ndarray or list of ndarrays')
+
+    keys = c_str_array(str_keys)
+    handles = c_handle_array(nd_vals)
+    check_call(_LIB.MXNDArraySave(c_str(file), mx_uint(len(handles)), handles, keys))
 
 
 def load(file):
-    """Loads an array from file.
+    """Load arrays from ``.npy``, ``.npz`` or legacy MXNet file format.
 
     See more details in ``save``.
 
@@ -115,7 +157,9 @@ def load(file):
                                   ctypes.byref(out_name_size),
                                   ctypes.byref(names)))
     if out_name_size.value == 0:
-        return [ndarray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+        if out_size.value != 1:
+            return [ndarray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+        return ndarray(NDArrayHandle(handles[0]))
     else:
         assert out_name_size.value == out_size.value
         return dict(

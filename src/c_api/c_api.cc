@@ -58,7 +58,9 @@
 #include "../operator/subgraph/subgraph_property.h"
 #include "../common/utils.h"
 #include "../profiler/profiler.h"
+#include "../serialization/cnpy.h"
 #include "nnvm/pass_functions.h"
+#include "zip.h"
 
 using namespace mxnet;
 
@@ -1876,10 +1878,10 @@ int MXNDArrayWaitAll() {
   API_END();
 }
 
-int MXNDArraySave(const char* fname,
-                  uint32_t num_args,
-                  NDArrayHandle* args,
-                  const char** keys) {
+int MXNDArrayLegacySave(const char* fname,
+                        uint32_t num_args,
+                        NDArrayHandle* args,
+                        const char** keys) {
   API_BEGIN();
   std::vector<NDArray> data(num_args);
   std::vector<std::string> names;
@@ -1899,6 +1901,36 @@ int MXNDArraySave(const char* fname,
   API_END();
 }
 
+int MXNDArraySave(const char* fname,
+                  uint32_t num_args,
+                  NDArrayHandle* args,
+                  const char** keys) {
+  API_BEGIN();
+
+  CHECK_NOTNULL(fname);
+
+  if (num_args == 1 && keys == nullptr) {
+      NDArray *array = static_cast<NDArray *>(args[0]);
+      if (array->storage_type() == kDefaultStorage) {
+          npy::save_array(fname, *array);
+      } else {
+          int write_mode = ZIP_TRUNCATE | ZIP_CREATE;
+          npz::save_array(write_mode, fname, "", *array);
+      }
+  } else {
+      int write_mode = ZIP_TRUNCATE | ZIP_CREATE;
+      for (uint32_t i = 0; i < num_args; ++i) {
+          NDArray *array = static_cast<NDArray *>(args[i]);
+          const std::string array_key = keys == nullptr ? "arr_" + std::to_string(i) : keys[i];
+          npz::save_array(write_mode, fname, array_key, *array);
+
+          // Append to the created zip file going forward
+          write_mode = 0;
+      }
+  }
+  API_END();
+}
+
 int MXNDArrayLoad(const char* fname,
                   uint32_t *out_size,
                   NDArrayHandle** out_arr,
@@ -1907,26 +1939,63 @@ int MXNDArrayLoad(const char* fname,
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_vec_str.clear();
   API_BEGIN();
-  std::vector<NDArray> data;
-  std::vector<std::string> &names = ret->ret_vec_str;
+
+  uint32_t magic;
   {
-    std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
-    mxnet::NDArray::Load(fi.get(), &data, &names);
+      std::unique_ptr<dmlc::Stream> strm(dmlc::Stream::Create(fname, "r"));
+      CHECK_EQ(strm->Read(&magic, sizeof(uint32_t)), sizeof(uint32_t))
+        << "Failed to read 32 bits from file.";
   }
-  ret->ret_handles.resize(data.size());
-  for (size_t i = 0; i < data.size(); ++i) {
-    NDArray *ptr = new NDArray();
-    *ptr = data[i];
-    ret->ret_handles[i] = ptr;
+
+  if (magic == 0x04034b50 || magic == 0x504b0304) {  // zip file format; assumed to be npz
+      auto[data, names] = npz::load_arrays(fname);
+      ret->ret_handles.resize(data.size());
+      for (size_t i = 0; i < data.size(); ++i) {
+          NDArray *ptr = new NDArray();
+          *ptr = data[i];
+          ret->ret_handles[i] = ptr;
+      }
+      ret->ret_vec_str.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_str[i] = names[i];
+      }
+      ret->ret_vec_charp.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_charp[i] = ret->ret_vec_str[i].c_str();
+      }
+      *out_size = static_cast<uint32_t>(data.size());
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+      *out_name_size = static_cast<uint32_t>(names.size());
+      *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
+  } else if (magic == 0x4d554e93 || magic == 0x934e554d) {  // first bytes of npy format
+      *out_size = 1;
+      ret->ret_handles.resize(1);
+      NDArray *ptr = new NDArray();
+      *ptr = npy::load_array(fname);  // Only supports local filesystem at this point in time
+      ret->ret_handles[0] = ptr;
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+  } else {
+      std::vector<NDArray> data;
+      std::vector<std::string> &names = ret->ret_vec_str;
+      {
+          std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
+          mxnet::NDArray::Load(fi.get(), &data, &names);
+      }
+      ret->ret_handles.resize(data.size());
+      for (size_t i = 0; i < data.size(); ++i) {
+          NDArray *ptr = new NDArray();
+          *ptr = data[i];
+          ret->ret_handles[i] = ptr;
+      }
+      ret->ret_vec_charp.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_charp[i] = names[i].c_str();
+      }
+      *out_size = static_cast<uint32_t>(data.size());
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+      *out_name_size = static_cast<uint32_t>(names.size());
+      *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   }
-  ret->ret_vec_charp.resize(names.size());
-  for (size_t i = 0; i < names.size(); ++i) {
-    ret->ret_vec_charp[i] = names[i].c_str();
-  }
-  *out_size = static_cast<uint32_t>(data.size());
-  *out_arr = dmlc::BeginPtr(ret->ret_handles);
-  *out_name_size = static_cast<uint32_t>(names.size());
-  *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
 }
 

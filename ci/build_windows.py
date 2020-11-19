@@ -151,8 +151,29 @@ def windows_build(args):
     mxnet_root = get_mxnet_root()
     logging.info("Found MXNet root: {}".format(mxnet_root))
 
+    # Install zlib dependency missing from AMI
+    with remember_cwd():
+        tmpdirname = tempfile.mkdtemp()
+        zlib_path = tempfile.mkdtemp()
+        os.chdir(tmpdirname)
+        r = requests.get('https://github.com/madler/zlib/archive/v1.2.11.zip', allow_redirects=True)
+        with open('v1.2.11.zip', 'wb') as f:
+            f.write(r.content)
+        with zipfile.ZipFile('v1.2.11.zip', 'r') as zip_ref:
+            zip_ref.extractall('.')
+        os.chdir('zlib-1.2.11')
+        os.mkdir('build')
+        os.chdir('build')
+        cmd = '"{}" && cmake -GNinja -DCMAKE_INSTALL_PREFIX={} -DBUILD_SHARED_LIBS=0 ' \
+            "-DCMAKE_C_COMPILER=cl -DCMAKE_BUILD_TYPE=Release .. && " \
+            "ninja install".format(args.vcvars, zlib_path)
+        logging.info("Compiling zlib with CMake:\n{}".format(cmd))
+        check_call(cmd, shell=True)
+    shutil.rmtree(tmpdirname)
+    os.remove(os.path.join(zlib_path, 'lib', 'zlib.lib'))
+
     # cuda thrust / CUB + VS 2019 is flaky: try multiple times if fail
-    MAXIMUM_TRY = 5
+    MAXIMUM_TRY = 1
     build_try = 0
 
     while build_try < MAXIMUM_TRY:
@@ -163,6 +184,7 @@ def windows_build(args):
         with remember_cwd():
             os.chdir(path)
             env = os.environ.copy()
+            env["ZLIB_ROOT"] = zlib_path
             if 'GPU' in args.flavour:
                 env["CXXFLAGS"] = '/FS /MD /O2 /Ob2'
             cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
@@ -185,6 +207,9 @@ def windows_build(args):
                 logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
                 logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
                 break
+
+    # Cleanup temporary directories
+    shutil.rmtree(zlib_path)
 
     if ret == 0:
         windows_package(args)

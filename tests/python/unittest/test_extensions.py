@@ -179,9 +179,10 @@ def test_subgraph():
     a_data = mx.nd.ones((3,2))
     b_data = mx.nd.ones((3,2))
     sym_block3.optimize_for(a_data, b_data, backend='myProp')
-    sym_block3.export('optimized')
-    sym_block4 = nn.SymbolBlock.imports('optimized-symbol.json',['a','b'],
-                                        'optimized-0000.params')
+    sym_filename, params_filename = sym_block3.export('optimized')
+    assert sym_filename == 'optimized-symbol.json'
+    assert params_filename is None
+    sym_block4 = nn.SymbolBlock.imports(sym_filename, ['a','b'], params_filename)
 
     out5 = sym_block4(a_data, b_data)
     # check that result matches one executed by MXNet

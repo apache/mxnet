@@ -91,13 +91,18 @@ b = a[0]
 b.ndim, b.size, isinstance(b, np.ndarray)
 ```
 
-## Save
+## Save and load
 
-The `save` method in `mxnet.np` saves data into a binary format that's not compatible with NumPy format. For example, it contains the device information. (TODO, needs more discussion here.) 
+Users can use the `npx.save`, `npx.savez` and `npx.load` methods respectively to
+save and load arrays. `npx.save` saves single, dense arrays to the `.npy`
+format, whereas `npx.savez` can save a collection of both dense and sparse
+arrays to the `.npz` format.
 
 ```{.python .input}
 a = np.array(1, ctx=gpu)
 npx.save('a', a)
+npx.load('a')
+npx.savez('a', a=a, b=a*2)
 npx.load('a')
 ```
 
