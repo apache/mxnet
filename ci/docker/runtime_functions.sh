@@ -118,17 +118,20 @@ build_dynamic_libmxnet() {
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
             -DUSE_CUDA=OFF \
+	    -DLINK_GFORTRAN=ON \
             -G Ninja /work/mxnet
     elif [[ ${mxnet_variant} = "native" ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=OFF \
             -DUSE_CUDA=OFF \
+	    -DLINK_GFORTRAN=ON \
             -G Ninja /work/mxnet
     elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
             -DUSE_DIST_KVSTORE=ON \
             -DUSE_CUDA=ON \
+	    -DLINK_GFORTRAN=ON \
             -G Ninja /work/mxnet
     else
         echo "Error: Unrecognized mxnet variant '${mxnet_variant}'"
