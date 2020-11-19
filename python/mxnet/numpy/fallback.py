@@ -19,6 +19,7 @@
 """Operators that fallback to official NumPy implementation."""
 
 import sys
+from functools import wraps
 import numpy as onp
 
 fallbacks = [
@@ -114,11 +115,17 @@ fallbacks = [
 
 fallback_mod = sys.modules[__name__]
 
+def get_func(obj, doc):
+    """Get new numpy function with object and doc"""
+    @wraps(obj)
+    def wrapper(*args, **kwargs):
+        return obj(*args, **kwargs)
+    wrapper.__doc__ = doc
+    return wrapper
+
 for obj_name in fallbacks:
     onp_obj = getattr(onp, obj_name)
     if callable(onp_obj):
-        def fn(*args, **kwargs):
-            return onp_obj(*args, **kwargs)
         new_fn_doc = onp_obj.__doc__
         if obj_name in {'divmod', 'float_power', 'frexp', 'heaviside', 'modf', 'signbit', 'spacing'}:
             # remove reference of kwargs doc and the reference to ufuncs
@@ -128,8 +135,7 @@ for obj_name in fallbacks:
             # remove unused reference
             new_fn_doc = new_fn_doc.replace(
                 '.. [1] Wikipedia page: https://en.wikipedia.org/wiki/Trapezoidal_rule', '')
-        fn.__doc__ = new_fn_doc
-        setattr(fallback_mod, obj_name, fn)
+        setattr(fallback_mod, obj_name, get_func(onp_obj, new_fn_doc))
     else:
         setattr(fallback_mod, obj_name, onp_obj)
 

@@ -75,7 +75,7 @@ struct gesvd {
     if (A.dptr_ != V.dptr_) Copy(V, A, s);
     // From here on, we work on V only
     // Reserve workspace (size determined by query)
-    int lwork(linalg_gesvd_workspace_query(UT[0], L[0], V[0], s));
+    size_t lwork(linalg_gesvd_workspace_query(UT[0], L[0], V[0], s));
     Tensor<xpu, 1, DType> work;
     if (!workspace) {
       work = ctx.requested[0]

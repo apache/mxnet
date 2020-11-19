@@ -439,11 +439,12 @@ struct syevd {
                  const Tensor<xpu, 2, DType>& L, const OpContext& ctx,
                  const nnvm::NodeAttrs& attrs) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    using IndexT = typename LapackIndex<xpu>::IndexT;
     linalg_check_batch_size(A.size(0), U.size(0), L.size(0));
     if (A.dptr_ != U.dptr_) Copy(U, A, s);
     // From here on, we work on U only
     // Reserve workspace (size determined by query)
-    int lwork(linalg_syevd_workspace_query(U[0], L[0], s));
+    IndexT lwork(linalg_syevd_workspace_query(U[0], L[0], s));
     Tensor<xpu, 1, DType> work = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
     // Loop over items in batch
@@ -467,21 +468,21 @@ struct inverse {
     if (B.shape_.Size() == 0U) {
       return;
     }
-    linalg_batch_inverse(A, B, ctx);
+    linalg_batch_inverse<xpu>(A, B, ctx);
   }
 };
 
 // this kernel computes sign(det(A)), log(abs(det(A))) from LU decomposition
 struct SignedLogDet {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int N, int* pivot,
+  template<typename DType, typename IndexT>
+  MSHADOW_XINLINE static void Map(size_t i, size_t N, IndexT* pivot,
                                   DType *LU, DType* sign, DType *logdet) {
-    int changes(0);
+    IndexT changes(0);
     DType diag_sign(1);
     DType diag_logsum(0);
-    int *pivot_mat = pivot + i * N;
+    IndexT *pivot_mat = pivot + i * N;
     DType *LU_mat = LU + i * N * N;
-    for (int j = 0; j < N; ++j) {
+    for (IndexT j = 0; j < N; ++j) {
       changes += (pivot_mat[j] != (j + 1));
       DType diag = LU_mat[j * (N + 1)];
       diag_sign *= ((DType(0) < diag) - (diag < DType(0)));
@@ -492,6 +493,13 @@ struct SignedLogDet {
   }
 };
 
+struct CopyArray {
+  template<typename SType, typename DType>
+  MSHADOW_XINLINE static void Map(size_t i, SType* src, DType* dest) {
+    dest[i] = src[i];
+  }
+};
+
 // det = det(A), the computation method is based on partial pivoting LU decomposition:
 //     A = PLU, so det(A) = det(P) * det(L) * det(U),
 //     det(P) depends on number of row changes in P
@@ -499,9 +507,9 @@ struct SignedLogDet {
 //     det(U) = prod(diag(U))
 // LU and pivot store the LU decomposition output which will be used in computing gradient
 struct det {
-  template<typename xpu, typename DType>
+  template<typename xpu, typename DType, typename IndexT>
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& det,
-                 const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, IndexT>& pivot,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     if (A.shape_.Size() == 0U) {
       return;
@@ -511,9 +519,19 @@ struct det {
       .get_space_typed<xpu, 1, DType>(det.shape_, s);
     Copy(LU, A, s);
     // since det(A) = det(trans(A)), so we'll use col-major blas routines here
-    linalg_batch_getrf(LU, pivot, false, s);
     using namespace mxnet_op;
     using namespace mshadow::expr;
+    using IndexInternalT = typename LapackIndex<xpu>::IndexT;
+    if (std::is_same<xpu, gpu>::value && !std::is_same<IndexT, IndexInternalT>::value) {
+      // Calculations on the GPU path are internally done on int type.
+      Tensor<xpu, 2, IndexInternalT> pivot_int =
+          ctx.requested[0].get_space_typed<xpu, 2, IndexInternalT>(pivot.shape_, s);
+      linalg_batch_getrf(LU, pivot_int, false, s);
+      Kernel<CopyArray, xpu>::Launch(s, pivot.shape_.Size(), pivot_int.dptr_, pivot.dptr_);
+    } else {
+      linalg_batch_getrf(LU, pivot, false, s);
+    }
+
     Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
                                       LU.dptr_, sign.dptr_, det.dptr_);
     const_cast<Tensor<xpu, 1, DType>&>(det) = sign * F<mshadow_op::exp>(det);
@@ -523,19 +541,28 @@ struct det {
 // sign = sign(det(A))
 // logabsdet = log(abs(det(A)))
 struct slogdet {
-  template<typename xpu, typename DType>
+  template<typename xpu, typename DType, typename IndexT>
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& sign,
                  const Tensor<xpu, 1, DType>& logabsdet, const Tensor<xpu, 3, DType>& LU,
-                 const Tensor<xpu, 2, int>& pivot, const OpContext& ctx,
+                 const Tensor<xpu, 2, IndexT>& pivot, const OpContext& ctx,
                  const nnvm::NodeAttrs& attrs) {
     if (A.shape_.Size() == 0U) {
       return;
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Copy(LU, A, s);
-    linalg_batch_getrf(LU, pivot, false, s);
     using namespace mxnet_op;
     using namespace mshadow::expr;
+    using IndexInternalT = typename LapackIndex<xpu>::IndexT;
+    if (std::is_same<xpu, gpu>::value && !std::is_same<IndexT, IndexInternalT>::value) {
+      // Calculations on the GPU path are internally done on int type.
+      Tensor<xpu, 2, IndexInternalT> pivot_int =
+          ctx.requested[0].get_space_typed<xpu, 2, IndexInternalT>(pivot.shape_, s);
+      linalg_batch_getrf(LU, pivot_int, false, s);
+      Kernel<CopyArray, xpu>::Launch(s, pivot.shape_.Size(), pivot_int.dptr_, pivot.dptr_);
+    } else {
+      linalg_batch_getrf(LU, pivot, false, s);
+    }
     Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
                                       LU.dptr_, sign.dptr_, logabsdet.dptr_);
   }
@@ -918,11 +945,11 @@ struct StopZeroDetGrad {
 // The closed form solution is pretty easy when A is invertible.
 // For non-invertible A, grad is not backwarded.
 struct det_backward {
-  template<typename xpu, typename DType>
+  template<typename xpu, typename DType, typename IndexT>
   static void op(const Tensor<xpu, 1, DType>& ddet,
                  const Tensor<xpu, 1, DType>& det,
                  const Tensor<xpu, 3, DType>& LU,
-                 const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 2, IndexT>& pivot,
                  const Tensor<xpu, 3, DType>& dA,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     using namespace mshadow;
@@ -932,11 +959,20 @@ struct det_backward {
       return;
     }
     // compute inverse(A) and stores it to LU
-    linalg_batch_det_backward_helper(LU, pivot, det, dA, DType(0), ctx);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    using IndexInternalT = typename LapackIndex<xpu>::IndexT;
+    if (std::is_same<xpu, gpu>::value && !std::is_same<IndexT, IndexInternalT>::value) {
+      // Calculations on the GPU path are internally done on int type.
+      Tensor<xpu, 2, IndexInternalT> pivot_int =
+          ctx.requested[0].get_space_typed<xpu, 2, IndexInternalT>(pivot.shape_, s);
+      Kernel<CopyArray, xpu>::Launch(s, pivot.shape_.Size(), pivot.dptr_, pivot_int.dptr_);
+      linalg_batch_det_backward_helper(LU, pivot_int, det, dA, DType(0), ctx);
+    } else {
+      linalg_batch_det_backward_helper(LU, pivot, det, dA, DType(0), ctx);
+    }
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(det * ddet, \
       Shape3(det.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
-    Stream<xpu> *s = ctx.get_stream<xpu>();
     // stop grad for zero det temporarily
     Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
                                          dA.dptr_, det.dptr_, DType(0));
@@ -948,12 +984,12 @@ struct det_backward {
 // For non-invertible A, grad is not backwarded.
 // Grad is not properly defined on sign, so it's not backwarded either.
 struct slogdet_backward {
-  template<typename xpu, typename DType>
+  template<typename xpu, typename DType, typename IndexT>
   static void op(const Tensor<xpu, 1, DType>& dlogabsdet,
                  const Tensor<xpu, 1, DType>& sign,
                  const Tensor<xpu, 1, DType>& logabsdet,
                  const Tensor<xpu, 3, DType>& LU,
-                 const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 2, IndexT>& pivot,
                  const Tensor<xpu, 3, DType>& dA,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     using namespace mshadow;
@@ -963,11 +999,20 @@ struct slogdet_backward {
       return;
     }
     // compute inverse(A) and stores it to LU
-    linalg_batch_det_backward_helper(LU, pivot, logabsdet, dA, DType(-INFINITY), ctx);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    using IndexInternalT = typename LapackIndex<xpu>::IndexT;
+    if (std::is_same<xpu, gpu>::value && !std::is_same<IndexT, IndexInternalT>::value) {
+      // Calculations on the GPU path are internally done on int type.
+      Tensor<xpu, 2, IndexInternalT> pivot_int =
+          ctx.requested[0].get_space_typed<xpu, 2, IndexInternalT>(pivot.shape_, s);
+      Kernel<CopyArray, xpu>::Launch(s, pivot.shape_.Size(), pivot.dptr_, pivot_int.dptr_);
+      linalg_batch_det_backward_helper(LU, pivot_int, logabsdet, dA, DType(-INFINITY), ctx);
+    } else {
+      linalg_batch_det_backward_helper(LU, pivot, logabsdet, dA, DType(-INFINITY), ctx);
+    }
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogabsdet, \
       Shape3(logabsdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
-    Stream<xpu> *s = ctx.get_stream<xpu>();
     // stop grad for zero det
     Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
                                          dA.dptr_, logabsdet.dptr_, DType(-INFINITY));

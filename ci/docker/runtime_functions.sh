@@ -268,6 +268,7 @@ build_centos7_cpu() {
         -DUSE_DIST_KVSTORE=ON \
         -DUSE_CUDA=OFF \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -DUSE_INT64_TENSOR_SIZE=OFF \
         -G Ninja /work/mxnet
     ninja
 }
@@ -282,6 +283,7 @@ build_centos7_mkldnn() {
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
+        -DUSE_INT64_TENSOR_SIZE=OFF \
         -G Ninja /work/mxnet
     ninja
 }
@@ -298,8 +300,9 @@ build_centos7_gpu() {
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DUSE_DIST_KVSTORE=ON\
+        -DUSE_DIST_KVSTORE=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -DUSE_INT64_TENSOR_SIZE=OFF \
         -G Ninja /work/mxnet
     ninja
 }
@@ -694,7 +697,6 @@ build_ubuntu_cpu_large_tensor() {
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
         -DUSE_MKLDNN=ON                         \
-        -DUSE_INT64_TENSOR_SIZE=ON              \
         -G Ninja                                \
         /work/mxnet
 
@@ -714,7 +716,6 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DUSE_INT64_TENSOR_SIZE=ON              \
         -G Ninja                                \
         /work/mxnet
 

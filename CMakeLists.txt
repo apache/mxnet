@@ -88,7 +88,6 @@ option(USE_SIGNAL_HANDLER "Print stack traces on segfaults." ON)
 option(USE_TENSORRT "Enable inference optimization with TensorRT." OFF)
 option(USE_ASAN "Enable Clang/GCC ASAN sanitizers." OFF)
 cmake_dependent_option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF "NOT MSVC" OFF)
-option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(BUILD_EXTENSION_PATH "Path to extension to build" "")
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
@@ -304,6 +303,8 @@ endif()
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+cmake_dependent_option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" ON "CMAKE_SIZEOF_VOID_P EQUAL 8" OFF)
 
 include(cmake/ChooseBlas.cmake)
 
@@ -1000,3 +1001,4 @@ if(BUILD_CYTHON_MODULES)
     message(FATAL_ERROR "No python interpreter found to build cython modules")
   endif()
 endif()
+

@@ -53,7 +53,8 @@ struct polyval_backward_p {
     DType igrad_p = 0;
     index_t j = x_size - 1;
     while (j >= 0) {
-        igrad_p += pow(x_dptr[j], p_size - i - 1) * ograd_dptr[j];
+        igrad_p += pow(x_dptr[j], static_cast<DType>(p_size) -
+                                  static_cast<DType>(i + 1)) * ograd_dptr[j];
         j--;
     }
     KERNEL_ASSIGN(igrad_p_dptr[i], req, igrad_p);

@@ -222,17 +222,17 @@ struct TakeNonzeroAxis {
    */
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
-                                  const IType* idx, const int out_prev_stride,
-                                  const int in_prev_stride, const int in_stride,
+                                  const IType* idx, const index_t out_prev_stride,
+                                  const index_t in_prev_stride, const index_t in_stride,
                                   const int in_ndims, const int out_ndims, const int idx_ndims,
                                   const int axis_dim, const int axis) {
     // i is the global flattened index in the output
-    const int64_t out_head_index = i / out_prev_stride;
-    const int64_t out_rest_index = i % out_prev_stride;
-    const int64_t out_mid_index = out_rest_index / in_stride;
-    const int64_t out_tail_index = (axis == in_ndims - 1) ?
+    const index_t out_head_index = i / out_prev_stride;
+    const index_t out_rest_index = i % out_prev_stride;
+    const index_t out_mid_index = out_rest_index / in_stride;
+    const index_t out_tail_index = (axis == in_ndims - 1) ?
                                    0 : (out_rest_index % in_stride);
-    int64_t idx_index = static_cast<int64_t>(idx[out_mid_index]);
+    index_t idx_index = static_cast<index_t>(idx[out_mid_index]);
     if (clip) {
       idx_index = (idx_index < 0) ? 0 : idx_index;
       idx_index = (idx_index > axis_dim - 1) ? (axis_dim - 1) : idx_index;
@@ -240,9 +240,9 @@ struct TakeNonzeroAxis {
       idx_index %= axis_dim;
       idx_index += (idx_index < 0) ? axis_dim : 0;
     }
-    const int64_t in_tail_index = out_tail_index;
-    const int64_t in_head_index = out_head_index;
-    int64_t in_src_index = in_tail_index + idx_index * in_stride;
+    const index_t in_tail_index = out_tail_index;
+    const index_t in_head_index = out_head_index;
+    index_t in_src_index = in_tail_index + idx_index * in_stride;
     in_src_index += in_head_index * in_prev_stride;
     out_data[i] = in_data[in_src_index];
   }

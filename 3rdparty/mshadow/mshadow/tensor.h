@@ -50,6 +50,17 @@ struct gpu {
   /*! \brief device flag number, identifies this device */
   static const int kDevMask = 1 << 1;
 };
+
+template <typename xpu>
+struct LapackIndex {
+    using IndexT = lapack_index_t;
+};
+
+template <>
+struct LapackIndex <gpu> {
+    using IndexT = int;
+};
+
 template<int ndim>
 struct Shape;
 
