@@ -677,7 +677,7 @@ class Block(object):
         If the model is not able to be recreated deterministically do not
         use this set of APIs to save/load your model.
 
-        For HybridBlocks, the cached_graph (Symbol & inputs) if
+        For HybridBlocks, the cached_graph (Symbol & inputs) is saved if
         it has already been hybridized.
 
         Parameters
@@ -1402,7 +1402,7 @@ class HybridBlock(Block):
     def infer_type(self, *args):
         """Infers data type of Parameters from inputs."""
         self._infer_attrs('infer_type', 'dtype', *args)
-        
+
     def export(self, path, epoch=0, remove_amp_cast=True):
         """Export HybridBlock to json format that can be loaded by
         `gluon.SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.

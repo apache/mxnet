@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import mxnet as mx
 from common import with_seed
 
 @with_seed()
@@ -57,3 +58,7 @@ def test_save():
     # run inference again
     out2 = net2(x)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
