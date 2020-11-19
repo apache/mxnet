@@ -462,7 +462,7 @@ endif()
 
 if(USE_LAPACKE_INTERFACE)
   message("USE_LAPACKE_INTERFACE is ON")
-  if(Not USE_LAPACK)
+  if(NOT USE_LAPACK)
     message("Automatically set USE_LAPACK=ON")
     set(USE_LAPACK ON)
   endif()
