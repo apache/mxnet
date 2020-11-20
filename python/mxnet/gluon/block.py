@@ -722,7 +722,7 @@ class Block(object):
         index = [0]
         _save_cached_graphs(self, index, model)
         # save model
-        fp = open(prefix+'-model.json','w')
+        fp = open(prefix+'-model.json', 'w')
         json.dump(model, fp)
         fp.close()
         # save params
@@ -734,7 +734,7 @@ class Block(object):
         Reconfigures a model using the saved configuration. This function
         does not regenerate the model architecture. It resets the children's
         names as they were when saved in order to match the names of the
-        saved parameters. 
+        saved parameters.
 
         This function assumes the Blocks in the model were created in the same
         order they were when the model was saved. This is because each Block is
@@ -784,7 +784,7 @@ class Block(object):
                 param = blk.params._params[p]
                 new_name = blk.name +'_'+ p[len(blk.params._prefix):]
                 blk.params._params.pop(p)
-                blk.params._params[new_name] = param            
+                blk.params._params[new_name] = param
             # recursively reload children
             for ch_name, child in blk._children.items():
                 index[0] += 1
