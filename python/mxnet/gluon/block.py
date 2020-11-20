@@ -36,7 +36,7 @@ from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, c
 from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
     profiler as _profiler, context as _context
 from ..symbol.numpy import _symbol as np_symbol
-from ..symbol import Symbol
+from ..symbol import Symbol, fromjson
 from ..ndarray import NDArray
 from .parameter import Parameter, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
@@ -683,11 +683,11 @@ class Block:
                     blk._in_format = mdl['in_format']
                     blk._out_format = mdl['out_format']
                     # get saved symbol
-                    out = Symbol.fromjson(mdl['symbol'])
+                    out = fromjson(mdl['symbol'])
                     syms = []
                     # recreate inputs for this symbol
                     for inp in mdl['inputs']:
-                        syms.append(Symbol.fromjson(inp))
+                        syms.append(fromjson(inp))
                     # reset cached_graph and active status
                     blk._cached_graph = (syms, out)
                     blk._active = True

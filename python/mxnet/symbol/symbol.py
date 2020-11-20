@@ -46,7 +46,7 @@ from ..util import is_np_shape
 from ..profiler import scope as _profiler_scope
 from ..profiler import _current_scope as _current_profiler_scope
 
-__all__ = ["Symbol", "var", "Variable", "Group",
+__all__ = ["Symbol", "var", "Variable", "Group", "load", "fromjson",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
            "ones", "full", "arange", "linspace", "histogram", "split_v2"]
 
@@ -1395,38 +1395,6 @@ class Symbol(SymbolBase):
         else:
             check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
-    def load(self, fname):
-        """Loads symbol from a JSON file.
-
-        You can also use pickle to do the job if you only work on python.
-        The advantage of load/save is the file is language agnostic.
-        This means the file saved using save can be loaded by other language binding of mxnet.
-        You also get the benefit being able to directly load/save from cloud storage(S3, HDFS).
-
-        Parameters
-        ----------
-        fname : str
-            The name of the file, examples:
-
-            - `s3://my-bucket/path/my-s3-symbol`
-            - `hdfs://my-bucket/path/my-hdfs-symbol`
-            - `/path-to/my-local-symbol`
-
-        Returns
-        -------
-        sym : Symbol
-            The loaded symbol.
-
-        See Also
-        --------
-        Symbol.save : Used to save symbol into file.
-        """
-        if not isinstance(fname, string_types):
-            raise TypeError('fname need to be string')
-        handle = SymbolHandle()
-        check_call(_LIB.MXSymbolCreateFromFile(c_str(fname), ctypes.byref(handle)))
-        return Symbol(handle)
-
     def tojson(self, remove_amp_cast=True):
         """Saves symbol to a JSON string.
 
@@ -1442,29 +1410,6 @@ class Symbol(SymbolBase):
         else:
             check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
         return py_str(json_str.value)
-
-    def fromjson(self, json_str):
-        """Loads symbol from json string.
-
-        Parameters
-        ----------
-        json_str : str
-            A JSON string.
-
-        Returns
-        -------
-        sym : Symbol
-            The loaded symbol.
-
-        See Also
-        --------
-        Symbol.tojson : Used to save symbol into json string.
-        """
-        if not isinstance(json_str, string_types):
-            raise TypeError('fname required to be string')
-        handle = SymbolHandle()
-        check_call(_LIB.MXSymbolCreateFromJSON(c_str(json_str), ctypes.byref(handle)))
-        return Symbol(handle)
 
     @staticmethod
     def _get_ndarray_inputs(arg_key, args, arg_names, allow_missing):
@@ -2841,6 +2786,63 @@ def Group(symbols, create_fn=Symbol):
         mx_uint(len(symbols)),
         c_handle_array(symbols), ctypes.byref(handle)))
     return create_fn(handle)
+
+
+def load(fname):
+    """Loads symbol from a JSON file.
+
+    You can also use pickle to do the job if you only work on python.
+    The advantage of load/save is the file is language agnostic.
+    This means the file saved using save can be loaded by other language binding of mxnet.
+    You also get the benefit being able to directly load/save from cloud storage(S3, HDFS).
+
+    Parameters
+    ----------
+    fname : str
+        The name of the file, examples:
+
+        - `s3://my-bucket/path/my-s3-symbol`
+        - `hdfs://my-bucket/path/my-hdfs-symbol`
+        - `/path-to/my-local-symbol`
+
+    Returns
+    -------
+    sym : Symbol
+        The loaded symbol.
+
+    See Also
+    --------
+    Symbol.save : Used to save symbol into file.
+    """
+    if not isinstance(fname, string_types):
+        raise TypeError('fname need to be string')
+    handle = SymbolHandle()
+    check_call(_LIB.MXSymbolCreateFromFile(c_str(fname), ctypes.byref(handle)))
+    return Symbol(handle)
+
+
+def fromjson(json_str):
+    """Loads symbol from json string.
+
+    Parameters
+    ----------
+    json_str : str
+        A JSON string.
+
+    Returns
+    -------
+    sym : Symbol
+        The loaded symbol.
+
+    See Also
+    --------
+    Symbol.tojson : Used to save symbol into json string.
+    """
+    if not isinstance(json_str, string_types):
+        raise TypeError('fname required to be string')
+    handle = SymbolHandle()
+    check_call(_LIB.MXSymbolCreateFromJSON(c_str(json_str), ctypes.byref(handle)))
+    return Symbol(handle)
 
 
 # pylint: disable=no-member
