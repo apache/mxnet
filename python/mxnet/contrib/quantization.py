@@ -32,7 +32,6 @@ from ..base import _LIB, check_call, py_str
 from ..base import c_array, c_str, mx_uint, c_str_array
 from ..base import NDArrayHandle, SymbolHandle
 from ..symbol import Symbol
-from ..symbol import load as sym_load
 from .. import ndarray
 from ..ndarray import load as nd_load
 from ..ndarray import save as nd_save
@@ -376,7 +375,7 @@ def _load_sym(sym, logger=None):
         symbol_file_path = os.path.join(cur_path, sym)
         if logger:
             logger.info('Loading symbol from file %s' % symbol_file_path)
-        return sym_load(symbol_file_path)
+        return Symbol.load(symbol_file_path)
     elif isinstance(sym, Symbol):
         return sym
     else:

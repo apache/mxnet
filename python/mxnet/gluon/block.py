@@ -24,6 +24,7 @@ import threading
 import copy
 import warnings
 import re
+import json
 from collections import OrderedDict, defaultdict
 import numpy as np
 
@@ -694,7 +695,7 @@ class Block(object):
             # encode unique name based on block type and ID
             name = type(blk).__name__.lower()
             structure[name+str(index[0])] = mdl
-            if isinstance(blk, mx.gluon.nn.HybridBlock):
+            if isinstance(blk, HybridBlock):
                 if blk._cached_graph:
                     # save in/out formats
                     mdl['in_format'] = blk._in_format
@@ -763,17 +764,17 @@ class Block(object):
             mdl = structure[name+str(index[0])]
             # rename block to what it was when saved
             blk._name = mdl['orig_name']
-            if isinstance(blk, mx.gluon.nn.HybridBlock):
+            if isinstance(blk, HybridBlock):
                 if mdl['hybridized']:
                     # restore in/out formats
                     blk._in_format = mdl['in_format']
                     blk._out_format = mdl['out_format']
                     # get saved symbol
-                    out = mx.sym.load_json(mdl['symbol'])
+                    out = Symbol.fromjson(mdl['symbol'])
                     syms = []
                     # recreate inputs for this symbol
                     for inp in mdl['inputs']:
-                        syms.append(mx.sym.load_json(inp))
+                        syms.append(Symbol.fromjson(inp))
                     # reset cached_graph and active status
                     blk._cached_graph = (syms, out)
                     blk._active = True
