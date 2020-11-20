@@ -27,8 +27,7 @@ contextvars;python_version<"3.7"
 # Optional dependencies
 onnx==1.7.0
 onnxruntime==1.4.0
-# protobuf version frozen due to ps-lite
-protobuf==3.5.2
+protobuf==3.14.0
 scipy==1.4.1
 tabulate==0.7.5
 Cython==0.29.7
