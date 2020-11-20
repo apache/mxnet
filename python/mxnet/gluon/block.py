@@ -30,7 +30,7 @@ import numpy as np
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, np_symbol
-from ..symbol import Symbol
+from ..symbol import Symbol, fromjson
 from ..ndarray import NDArray
 from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
@@ -770,11 +770,11 @@ class Block(object):
                     blk._in_format = mdl['in_format']
                     blk._out_format = mdl['out_format']
                     # get saved symbol
-                    out = Symbol.fromjson(mdl['symbol'])
+                    out = fromjson(mdl['symbol'])
                     syms = []
                     # recreate inputs for this symbol
                     for inp in mdl['inputs']:
-                        syms.append(Symbol.fromjson(inp))
+                        syms.append(fromjson(inp))
                     # reset cached_graph and active status
                     blk._cached_graph = (syms, out)
                     blk._active = True
