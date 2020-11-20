@@ -45,7 +45,7 @@ def test_save():
     net1.initialize()
     # hybridize (the hybridizeable blocks, ie. the Dense layers)
     net1.hybridize()
-    x = mx.nd.empty((1,10))
+    x = mx.nd.zeros((1,10))
     out1 = net1(x)
 
     # save hybridized model
