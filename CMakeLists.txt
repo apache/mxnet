@@ -479,11 +479,11 @@ if(USE_LAPACK)
   endif()
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND
-  (BLAS STREQUAL "Open" OR BLAS STREQUAL "open" ))
+if(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
   set(LINK_GFORTRAN ON)
 endif()
 
+set(LINK_GFORTRAN OFF)
 if(LINK_GFORTRAN)
   list(APPEND mxnet_LINKER_LIBS gfortran)
 endif()
