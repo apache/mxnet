@@ -344,6 +344,13 @@ const float kPi = 3.1415926f;
   typedef index_t openmp_index_t;
 #endif
 
+#if MSHADOW_USE_MKL && MXNET_USE_LAPACK
+  // lapack_index_t could be replaced by index_t and removed when all blas library support large tensor
+  typedef index_t lapack_index_t;
+#else
+  typedef int lapack_index_t;
+#endif
+
 /*! \brief float point type that will be used in default by mshadow */
 typedef float default_real_t;
 
