@@ -29,6 +29,7 @@ import contextlib
 import contextvars
 
 import re
+import json
 import numpy as np
 
 from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, check_call, _LIB
@@ -605,7 +606,7 @@ class Block:
             # encode unique name based on block type and ID
             name = type(blk).__name__.lower()
             structure[name+str(index[0])] = mdl
-            if isinstance(blk, mx.gluon.nn.HybridBlock):
+            if isinstance(blk, HybridBlock):
                 if blk._cached_graph:
                     # save in/out formats
                     mdl['in_format'] = blk._in_format
@@ -628,7 +629,7 @@ class Block:
                 param = blk.params[p]
                 pmap[p]=param._uuid
             # recursively save children
-            for ch_name, child in blk._children.items():
+            for child in blk._children.values():
                 index[0] += 1
                 _save_cached_graphs(child(), index, mdl)
         # save top-level block
@@ -647,7 +648,7 @@ class Block:
         Reconfigures a model using the saved configuration. This function
         does not regenerate the model architecture. It resets each Block's
         parameter UUIDs as they were when saved in order to match the names of the
-        saved parameters. 
+        saved parameters.
 
         This function assumes the Blocks in the model were created in the same
         order they were when the model was saved. This is because each Block is
@@ -676,17 +677,17 @@ class Block:
             name = type(blk).__name__.lower()
             # lookup previous encoded name based on block type and ID
             mdl = structure[name+str(index[0])]
-            if isinstance(blk, mx.gluon.nn.HybridBlock):
+            if isinstance(blk, HybridBlock):
                 if mdl['hybridized']:
                     # restore in/out formats
                     blk._in_format = mdl['in_format']
                     blk._out_format = mdl['out_format']
                     # get saved symbol
-                    out = mx.sym.load_json(mdl['symbol'])
+                    out = Symbol.fromjson(mdl['symbol'])
                     syms = []
                     # recreate inputs for this symbol
                     for inp in mdl['inputs']:
-                        syms.append(mx.sym.load_json(inp))
+                        syms.append(Symbol.fromjson(inp))
                     # reset cached_graph and active status
                     blk._cached_graph = (syms, out)
                     blk._active = True
@@ -694,17 +695,17 @@ class Block:
             pmap = mdl['params']
             for p, uuid in pmap.items():
                 param = blk.params[p]
-                param._uuid = pmap[p]
+                param._uuid = uuid
             # recursively reload children
-            for ch_name, child in blk._children.items():
+            for child in blk._children.values():
                 index[0] += 1
                 _load_cached_graphs(child(), index, mdl)
         # load top-level block
         index = [0]
         _load_cached_graphs(self, index, model)
         # load params
-        self.load_parameters('MyModel-model.params')        
-            
+        self.load_parameters('MyModel-model.params')
+
     def hybridize(self, active=True, **kwargs):
         """ Please refer description of HybridBlock hybridize().
         """

@@ -1135,7 +1135,7 @@ def test_foreach():
         out.extend(states)
         out = mx.sym.Group(out)
         js_1 = out.tojson()
-        out = mx.sym.load_json(js_1)
+        out = mx.sym.fromjson(js_1)
         js_2 = out.tojson()
         assert js_1 == js_2
         arr_grads = []
@@ -1457,7 +1457,7 @@ def test_foreach_nested():
     out = mx.sym.broadcast_add(out, states[0])
 
     js_1 = out.tojson()
-    out = mx.sym.load_json(js_1)
+    out = mx.sym.fromjson(js_1)
     js_2 = out.tojson()
     assert js_1 == js_2
 

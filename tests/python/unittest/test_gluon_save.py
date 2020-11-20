@@ -58,3 +58,5 @@ def test_save():
     # run inference again
     out2 = net2(x)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+
+test_save()

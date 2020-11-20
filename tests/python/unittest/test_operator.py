@@ -2269,7 +2269,7 @@ def test_reshape_new(src_shape, shape_args, reverse, dst_shape):
     net = mx.sym.Variable("data")
     net = mx.sym.Reshape(net, shape=shape_args, reverse=reverse)
     js = net.tojson()
-    net = mx.sym.load_json(js)
+    net = mx.sym.fromjson(js)
     _, output_shape, __ = net.infer_shape(data=src_shape)
     assert output_shape[0] == dst_shape, \
         'Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s, ' \
@@ -2308,7 +2308,7 @@ def test_reshape_old():
     net = mx.sym.Variable("data")
     net = mx.sym.Reshape(net, target_shape=(2, 0))
     js = net.tojson()
-    net = mx.sym.load_json(js)
+    net = mx.sym.fromjson(js)
     _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
     assert(output_shape[0] == (2, 75))
     # Test for Flatten
@@ -2329,7 +2329,7 @@ def test_reshape_like():
         rhs = mx.sym.Variable("rhs")
         net = mx.sym.reshape_like(lhs, rhs, lhs_begin=lbeg, lhs_end=lend, rhs_begin=rbeg, rhs_end=rend)
         js = net.tojson()
-        net = mx.sym.load_json(js)
+        net = mx.sym.fromjson(js)
         _, output_shape, __ = net.infer_shape(lhs=lhs_shape, rhs=rhs_shape)
 
         assert output_shape[0] == dst_shape, \
@@ -2370,7 +2370,7 @@ def test_reshape_like():
     rhs = mx.sym.Variable("rhs")
     net = mx.sym.reshape_like(lhs, rhs)
     js = net.tojson()
-    net = mx.sym.load_json(js)
+    net = mx.sym.fromjson(js)
     _, output_shape, __ = net.infer_shape(lhs=(40, 30), rhs=(30,20,2))
     assert(output_shape[0] == (30,20,2))
 
