@@ -1395,7 +1395,7 @@ class Symbol(SymbolBase):
         else:
             check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
-    def load(fname):
+    def load(self, fname):
         """Loads symbol from a JSON file.
 
         You can also use pickle to do the job if you only work on python.
@@ -1427,7 +1427,6 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXSymbolCreateFromFile(c_str(fname), ctypes.byref(handle)))
         return Symbol(handle)
 
-            
     def tojson(self, remove_amp_cast=True):
         """Saves symbol to a JSON string.
 
@@ -1444,7 +1443,7 @@ class Symbol(SymbolBase):
             check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
         return py_str(json_str.value)
 
-    def fromjson(json_str):
+    def fromjson(self, json_str):
         """Loads symbol from json string.
 
         Parameters
@@ -1467,7 +1466,6 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXSymbolCreateFromJSON(c_str(json_str), ctypes.byref(handle)))
         return Symbol(handle)
 
-    
     @staticmethod
     def _get_ndarray_inputs(arg_key, args, arg_names, allow_missing):
         """Helper function to get NDArray lists handles from various inputs.

@@ -627,7 +627,7 @@ class Block:
             pnames = list(blk.params.keys())
             for p in pnames:
                 param = blk.params[p]
-                pmap[p]=param._uuid
+                pmap[p] = param._uuid
             # recursively save children
             for child in blk._children.values():
                 index[0] += 1
@@ -636,7 +636,7 @@ class Block:
         index = [0]
         _save_cached_graphs(self, index, model)
         # save model
-        fp = open(prefix+'-model.json','w')
+        fp = open(prefix+'-model.json', 'w')
         json.dump(model, fp)
         fp.close()
         # save params
