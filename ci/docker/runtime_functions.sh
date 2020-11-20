@@ -118,20 +118,17 @@ build_dynamic_libmxnet() {
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
             -DUSE_CUDA=OFF \
-	    -DLINK_GFORTRAN=ON \
             -G Ninja /work/mxnet
     elif [[ ${mxnet_variant} = "native" ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=OFF \
             -DUSE_CUDA=OFF \
-	    -DLINK_GFORTRAN=ON \
             -G Ninja /work/mxnet
     elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
             -DUSE_DIST_KVSTORE=ON \
             -DUSE_CUDA=ON \
-	    -DLINK_GFORTRAN=ON \
             -G Ninja /work/mxnet
     else
         echo "Error: Unrecognized mxnet variant '${mxnet_variant}'"
@@ -270,7 +267,6 @@ build_centos7_cpu() {
         -DUSE_MKLDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
         -DUSE_CUDA=OFF \
-        -DLINK_GFORTRAN=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -DUSE_INT64_TENSOR_SIZE=OFF \
         -G Ninja /work/mxnet
@@ -288,7 +284,6 @@ build_centos7_mkldnn() {
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
         -DUSE_INT64_TENSOR_SIZE=OFF \
-        -DLINK_GFORTRAN=ON \
         -G Ninja /work/mxnet
     ninja
 }
@@ -308,7 +303,6 @@ build_centos7_gpu() {
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -DUSE_INT64_TENSOR_SIZE=OFF \
-        -DLINK_GFORTRAN=ON \
         -G Ninja /work/mxnet
     ninja
 }

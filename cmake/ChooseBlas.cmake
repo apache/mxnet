@@ -45,25 +45,24 @@ elseif(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
   add_definitions(-DMXNET_USE_BLAS_OPEN=1)
-  include(CheckCSourceCompiles)
-  find_package(OpenMP COMPONENTS C)
-  list(APPEND CMAKE_REQUIRED_INCLUDES ${OpenBLAS_INCLUDE_DIR})
-  list(APPEND CMAKE_REQUIRED_LIBRARIES ${OpenBLAS_LIB})
-  check_c_source_compiles(
-    "
-    #include <cblas.h>
-    int main(int argc, char **argv){
-      int n = 1;
-      float*  A, B, C;
-      cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 1, 1, n,  1.0, A, n, B, 1, 0.0, C, 1);
-      return 0;
-    }
-    "
-    OPENBLAS_NO_OMP
-  )
-  if(NOT OPENBLAS_NO_OMP)
-    message("Openblas uses OMP, automatically linking to it")
-    list(APPEND mshadow_LINKER_LIBS "${OpenMP_C_LIBRARIES}")
+  if(NOT MSVC)
+    execute_process(COMMAND nm -g ${OpenBLAS_LIB}
+                    COMMAND grep omp_get_num_threads
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		    OUTPUT_VARIABLE OPENBLAS_USES_OMP)
+    if(NOT OPENBLAS_USES_OMP STREQUAL "")
+      message("Openblas uses OMP, automatically linking to it")
+      find_package(OpenMP COMPONENTS C REQUIRED)
+      list(APPEND mshadow_LINKER_LIBS "${OpenMP_C_LIBRARIES}")
+    endif()
+    execute_process(COMMAND nm -g ${OpenBLAS_LIB}
+                    COMMAND grep gfortran
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                    OUTPUT_VARIABLE OPENBLAS_USES_GFORTRAN)
+    if(NOT OPENBLAS_USES_GFORTRAN STREQUAL "")
+      message("Openblas uses GFortran, automatically linking to it")
+      list(APPEND mshadow_LINKER_LIBS gfortran)
+    endif()
   endif()
 elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
   if (USE_INT64_TENSOR_SIZE)
