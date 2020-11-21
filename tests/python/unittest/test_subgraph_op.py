@@ -412,10 +412,10 @@ def test_subgraph_exe9(sym, subgraph_backend, op_names):
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
-        
+
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
-def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
+def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmp_path):
     """Call hybridize() to partition the graph, and then compare results of the partitioned
     sym and the original sym. Here do an inference before hybridizing with the subgraph_backend
     which means we'll pass shapes/types"""
@@ -428,17 +428,14 @@ def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
     sym_block.hybridize()
     outputs1 = sym_block(*x)
 
-    _, json_path = tempfile.mkstemp(suffix='-symbol.json', dir=str(tmpdir))
-    export_path = json_path.replace('-symbol.json', '')
-    params_path = export_path + '-0000.params'
-    sym_block.export(export_path)
+    sym_filename, params_filename = sym_block.export(str(tmp_path / 'sym-block'))
 
     # load model and partition
-    sym_block = nn.SymbolBlock.imports(json_path,sym[1], params_path,
+    sym_block = nn.SymbolBlock.imports(sym_filename, sym[1], params_filename,
                                        ctx=mx.current_context())
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
-                                                c_str_array(op_names)))
-    sym_block.hybridize(backend=subgraph_backend)
+                                                   c_str_array(op_names)))
+    sym_block.optimize_for(*x, backend=subgraph_backend)
     outputs2 = sym_block(*x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
@@ -472,7 +469,7 @@ def test_subgraph_backend_gluon_ext1(tmpdir):
     op_names = ['FullyConnected']
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
-    net.hybridize(backend = subgraph_backend)
+    net.optimize_for(x, backend = subgraph_backend)
     outputs2 = net(x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
@@ -510,7 +507,7 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
     op_names = ['FullyConnected']
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
-    net.hybridize(backend = subgraph_backend)
+    net.optimize_for(x, backend = subgraph_backend)
     outputs2 = net(x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 

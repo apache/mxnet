@@ -337,7 +337,8 @@ const float kPi = 3.1415926f;
   typedef index_t openmp_index_t;
 #endif
 
-#if MSHADOW_USE_MKL || MXNET_USE_ILP64_LAPACKE
+
+#if (MSHADOW_USE_MKL && MXNET_USE_LAPACK) || MXNET_USE_ILP64_LAPACKE
   // lapack_index_t could be replaced by index_t and removed when all blas library support large tensor
   typedef index_t lapack_index_t;
 #else
