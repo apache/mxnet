@@ -1070,17 +1070,19 @@ def test_quantize_gluon_with_forward():
         quantized_resnet18_v1(random_data)
 
         for mode in ['naive', 'entropy']:
-            qdtype = qdtype if mode is 'naive' else 'auto'
-            quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
-                                                                  exclude_layers=None,
-                                                                  exclude_layers_match=excluded_names_match,
-                                                                  calib_data=calib_data,
-                                                                  calib_mode=mode,
-                                                                  num_calib_batches=num_calib_batches,
-                                                                  ctx=mx.current_context())
+            for quantize_granularity in ['tensor-wise', 'channel-wise']:
+                qdtype = qdtype if mode is 'naive' else 'auto'
+                quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
+                                                                    exclude_layers=None,
+                                                                    exclude_layers_match=excluded_names_match,
+                                                                    calib_data=calib_data,
+                                                                    calib_mode=mode,
+                                                                    quantize_granularity=quantize_granularity,
+                                                                    num_calib_batches=num_calib_batches,
+                                                                    ctx=mx.current_context())
 
-            quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
-            quantized_resnet18_v1(random_data)
+                quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
+                quantized_resnet18_v1(random_data)
 
     for qdtype in ['int8', 'uint8']:
         check_quantize_net(qdtype)

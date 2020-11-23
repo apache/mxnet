@@ -935,5 +935,5 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
     all_params = {('arg:%s' % k): v.as_in_context(cpu()) for k, v in qarg_params.items()}
     all_params.update({('aux:%s' % k): v.as_in_context(cpu()) for k, v in aux_params.items()})
     net.load_dict(all_params, cast_dtype=True, dtype_source='saved')
-    net.optimize_for(data_nd, backend=backend)
+    net.optimize_for(data_nd, backend=backend, skip_infer=True)
     return net
