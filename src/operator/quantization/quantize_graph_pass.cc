@@ -340,7 +340,7 @@ Graph QuantizeGraph(Graph &&src) {
             // to better align with calibration phase. No need to change name to weights/bias.
             std::string suffix = "";
             if (mirror_node->op() != nullptr) {
-              auto name = GetOutputName(e.node.get(), e.index);
+              std::string name = GetOutputName(e.node.get(), e.index);
               suffix = "_" + name;
             }
 
@@ -505,7 +505,7 @@ Graph QuantizeGraph(Graph &&src) {
       for (const auto &idx : calib_idx) {
         if (reverse_mirror_map.count(node)) {
           const auto& fp32_in_node = reverse_mirror_map[node];
-          auto name = GetOutputName(fp32_in_node.get(), node->inputs[idx].index);
+          std::string name = GetOutputName(fp32_in_node.get(), node->inputs[idx].index);
           calib_nodes.push_back(fp32_in_node->attrs.name + "_" + name);
         } else {
           const auto& e = node->inputs[idx];
@@ -514,7 +514,7 @@ Graph QuantizeGraph(Graph &&src) {
           } else {
             if (reverse_mirror_map.count(e.node)) {
               const auto& fp32_in_node = reverse_mirror_map.at(e.node);
-              auto name = GetOutputName(fp32_in_node.get(), e.index);
+              std::string name = GetOutputName(fp32_in_node.get(), e.index);
               calib_nodes.push_back(fp32_in_node->attrs.name + "_" + name);
             } else {
               LOG(FATAL) << "Can't find calibration node for " << node->attrs.name;
@@ -527,10 +527,10 @@ Graph QuantizeGraph(Graph &&src) {
       for (const auto& idx : calib_idx) {
         if (reverse_mirror_map.count(node)) {
           const auto& fp32_in_node = reverse_mirror_map[node];
-          auto name = GetOutputName(fp32_in_node.get(), static_cast<uint32_t>(idx));
+          std::string name = GetOutputName(fp32_in_node.get(), static_cast<uint32_t>(idx));
           calib_nodes.push_back(fp32_in_node->attrs.name + "_" + name);
         } else {
-          auto name = GetOutputName(node.get(), static_cast<uint32_t>(idx));
+          std::string name = GetOutputName(node.get(), static_cast<uint32_t>(idx));
           calib_nodes.push_back(node->attrs.name + "_" + name);
         }
       }

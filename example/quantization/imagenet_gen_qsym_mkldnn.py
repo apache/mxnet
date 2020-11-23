@@ -130,7 +130,7 @@ if __name__ == '__main__':
                              ' inference results.'
                              ' 3. entropy: calculate KL divergence of the fp32 output and quantized output for optimal'
                              ' thresholds. This mode is expected to produce the best inference accuracy of all three'
-                             ' kinds of quantized models if the calibration dataset is representative enough of the'
+                             ' kinds of calibration modes if the calibration dataset is representative enough of the'
                              ' inference dataset.')
     parser.add_argument('--quantized-dtype', type=str, default='auto',
                         choices=['auto', 'int8', 'uint8'],
@@ -140,6 +140,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     ctx = mx.cpu(0)
     logger = None
+
     if not args.quiet:
         logging.basicConfig()
         logger = logging.getLogger('logger')
@@ -236,6 +237,7 @@ if __name__ == '__main__':
         logger.info('Input data shape = %s' % str(data_shape))
         logger.info('rgb_mean = %s' % rgb_mean)
         logger.info('rgb_std = %s' % rgb_std)
+
     rgb_mean = [float(i) for i in rgb_mean.split(',')]
     mean_args = {'mean_r': rgb_mean[0], 'mean_g': rgb_mean[1], 'mean_b': rgb_mean[2]}
     rgb_std = [float(i) for i in rgb_std.split(',')]

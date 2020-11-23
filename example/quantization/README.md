@@ -135,7 +135,7 @@ bash ./launch_inference_mkldnn.sh -s ./model/resnet50_v1-quantized-5batches-naiv
 
 <h3 id='4'>Custom Model</h3>
 
-This script also supports custom symbolic models. Some quantization layer configs can be easly aded in `imagenet_gen_qsym_mkldnn.py` like below:
+This script also supports custom symbolic models. Quantization layer configs can easily be added in `imagenet_gen_qsym_mkldnn.py` like below:
 
 ```
 if logger:
@@ -155,17 +155,17 @@ if exclude_first_conv:
 
 Some tips on quantization configs:
 
-1. First, data should be prepared, symbol file (custom-symbol.json) and parameter file (custom-0000.params) of fp32 symbolic model.
-2. Then, the following command should be run verifying if fp32 symbolic model runs inference as expected.
+1. First, data, symbol file (custom-symbol.json) and parameter file (custom-0000.params) of fp32 symbolic model should be prepared.
+2. Then, following command should be run to verify that fp32 symbolic model runs inference as expected.
 
 ```
 # Launch FP32 Inference
 python imagenet_inference.py --symbol-file=./model/custom-symbol.json --param-file=./model/custom-0000.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/*
 ```
 
-3. Then, `rgb_mean`, `rgb_std` and `excluded_sym_names` should be added in this script.
+3. Proper `rgb_mean`, `rgb_std` and `excluded_sym_names` should be added in `imagenet_gen_qsym_mkldnn.py` script.
 
-4. Then, the following command for quantization can be run:
+4. Run following command for quantization:
 
 ```
 python imagenet_gen_qsym_mkldnn.py --model=custom --num-calib-batches=5 --calib-mode=naive
@@ -177,7 +177,7 @@ python imagenet_gen_qsym_mkldnn.py --model=custom --num-calib-batches=5 --calib-
 
 ```
 # Launch INT8 Inference
-python imagenet_inference.py --symbol-file=./model/*.json --param-file=./model/*.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=* --dataset=./data/*
+python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-10batches-entropy-symbol.json --param-file=./model/resnet50_v1-quantized-10batches-entropy-0000.params --benchmark
 
 # Launch dummy data Inference
 bash ./launch_inference_mkldnn.sh -s ./model/*.json

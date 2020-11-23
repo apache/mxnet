@@ -69,7 +69,7 @@ def initialize_block_params(block, initializer):
     for _, param in block.collect_params('.*weight').items():
         param.initialize(initializer)
 
-def benchmark_score(symblock, ctx, batch_size, num_batches, data_layer_type):
+def benchmark_score(symblock, ctx, batch_size, warmup_batches, num_batches, data_layer_type):
     if data_layer_type == "int8":
         dshape = mx.io.DataDesc(name='data', shape=(
             batch_size,) + data_shape, dtype=np.int8)
@@ -89,9 +89,8 @@ def benchmark_score(symblock, ctx, batch_size, num_batches, data_layer_type):
                 for _, shape in [dshape]]
 
     # run
-    dry_run = 5                 # use 5 iterations to warm up
-    for i in range(dry_run+num_batches):
-        if i == dry_run:
+    for i in range(warmup_batches+num_batches):
+        if i == warmup_batches:
             tic = time.time()
         outputs = symblock.forward(*data)
         for output in outputs:
@@ -113,6 +112,7 @@ if __name__ == '__main__':
     parser.add_argument('--data-nthreads', type=int, default=60, help='number of threads for data decoding')
     parser.add_argument('--num-skipped-batches', type=int, default=0, help='skip the number of batches for inference')
     parser.add_argument('--num-inference-batches', type=int, required=True, help='number of images used for inference')
+    parser.add_argument('--num-warmup-batches', type=int, default=5, help='number of warmup batches used for benchmark')
     parser.add_argument('--shuffle-dataset', action='store_true', default=True,
                         help='shuffle the score dataset')
     parser.add_argument('--data-layer-type', type=str, default='float32',
@@ -172,7 +172,9 @@ if __name__ == '__main__':
         symblock = gluon.SymbolBlock.imports(symbol_file, ['data'])
         initialize_block_params(symblock, mx.init.One())
 
-        logger.info('Running model %s for inference' % symbol_file)
+        logger.info(f'Running model {symbol_file} for inference.')
+        logger.info(f'Warmup batches: {args.num_warmup_batches}')
+        logger.info(f'Inference batches: {args.num_inference_batches}')
         speed = benchmark_score(symblock, ctx, batch_size,
-                                args.num_inference_batches, data_layer_type)
+                                args.num_warmup_batches, args.num_inference_batches, data_layer_type)
         logger.info('batch size %2d, image/sec: %f', batch_size, speed)
