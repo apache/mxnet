@@ -1071,7 +1071,7 @@ class _Symbol(Symbol):
     def broadcast_like(self, *args, **kwargs):
         raise AttributeError('_Symbol object has no attribute broadcast_like')
 
-    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-arguments
     def optimize_for(self, backend, args=None, aux=None, ctx=None,
                      shape_dict=None, type_dict=None, stype_dict=None, skip_infer=False, **kwargs):
         """Partitions current symbol and optimizes it for a given backend."""
