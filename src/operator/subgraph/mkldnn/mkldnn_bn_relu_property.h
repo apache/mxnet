@@ -52,13 +52,13 @@ class SgMKLDNNBNReLUSelector : public SubgraphSelector {
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
     if (n.op() && n.op()->name == "BatchNorm") {
       if (new_node.op() && status_ == kStart &&
-          (new_node.op()->name=="relu" || (new_node.op()->name == "Activation" &&
+          (new_node.op()->name == "relu" || (new_node.op()->name == "Activation" &&
            nnvm::get<ActivationParam>(new_node.attrs.parsed).act_type == activation::kReLU))) {
         status_ = kSuccess;
         return true;
       } else {
         // Do not fuse if BatchNorm is connected to other nodes
-        // e.g: ->- BN --- ReLU --- elementwise_add ->- 
+        // e.g: ->- BN --- ReLU --- elementwise_add ->-
         //           \                   /
         //            \-------->--------/
         status_ = kFail;
@@ -87,7 +87,7 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
     disable_bn_relu_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_BN_RELU", false);
   }
 
-  void PrePartition(const nnvm::Graph& g, 
+  void PrePartition(const nnvm::Graph& g,
     const std::unordered_map<std::string, std::string>& options_map) override {
     dedup_subgraph = true;
   }
