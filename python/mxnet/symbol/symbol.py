@@ -1657,10 +1657,6 @@ class Symbol(SymbolBase):
 
         new_sym = Symbol(out)
 
-        # convert to numpy symbol if needed
-        if is_np_array():
-            new_sym = new_sym.as_np_ndarray()
-
         arg_names = self.list_arguments()
         new_arg_names = new_sym.list_arguments()
         deleted_arg_names = set([item for item in arg_names
