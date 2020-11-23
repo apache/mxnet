@@ -42,7 +42,7 @@ from ..executor import Executor
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
-from ..util import is_np_shape, is_np_array
+from ..util import is_np_shape
 from ..profiler import scope as _profiler_scope
 from ..profiler import _current_scope as _current_profiler_scope
 
