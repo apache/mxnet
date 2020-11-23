@@ -456,8 +456,8 @@ if(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
 		    RESULT_VARIABLE OPENBLAS_USES_OMP_RET)
     if(NOT OPENBLAS_USES_OMP_OUT STREQUAL "" AND NOT OPENBLAS_USES_OMP_RET)
       message("Openblas uses OMP, automatically linking to it")
-      find_package(OpenMP COMPONENTS C REQUIRED)
-      list(APPEND mxnet_LINKER_LIBS "${OpenMP_C_LIBRARIES}")
+      find_package(OpenMP COMPONENTS CXX REQUIRED)
+      list(APPEND mxnet_LINKER_LIBS "${OpenMP_CXX_LIBRARIES}")
     endif()
     # check if we need to link to gfortran
     execute_process(COMMAND ${CMAKE_NM} -g ${OpenBLAS_LIB}
