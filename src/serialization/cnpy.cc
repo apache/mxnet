@@ -331,6 +331,12 @@ void save_blob(int zip_open_flags, const std::string& zip_fname, const std::stri
     zip_source_free(source);
     throw std::runtime_error(zip_strerror(archive));
   }
+  error = zip_set_file_compression(archive, index, ZIP_CM_STORE, 0);
+  if (error != 0) {
+      std::string strerror{zip_strerror(archive)};
+      zip_discard(archive);
+      throw std::runtime_error(strerror);
+  }
 
   // Write everything
   error = zip_close(archive);
@@ -408,6 +414,12 @@ void save_shape_array(int zip_open_flags, const std::string& zip_fname,
     zip_source_free(source);
     throw std::runtime_error(zip_strerror(archive));
   }
+  error = zip_set_file_compression(archive, index, ZIP_CM_STORE, 0);
+  if (error != 0) {
+      std::string strerror{zip_strerror(archive)};
+      zip_discard(archive);
+      throw std::runtime_error(strerror);
+  }
 
   // Write everything
   error = zip_close(archive);
@@ -473,6 +485,12 @@ void save_format_array(int zip_open_flags, const std::string& zip_fname,
   if (index < 0) {
     zip_source_free(source);
     throw std::runtime_error(zip_strerror(archive));
+  }
+  error = zip_set_file_compression(archive, index, ZIP_CM_STORE, 0);
+  if (error != 0) {
+      std::string strerror{zip_strerror(archive)};
+      zip_discard(archive);
+      throw std::runtime_error(strerror);
   }
 
   // Write everything
