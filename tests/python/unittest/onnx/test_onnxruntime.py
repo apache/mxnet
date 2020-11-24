@@ -27,11 +27,11 @@ import tempfile
 import pytest
 
 
-def run_cv_model_test(model, version=True):
+def run_cv_model_test(model):
     def get_gluon_cv_model(model_name, tmp):
         tmpfile = os.path.join(tmp, model_name)
         ctx = mx.cpu(0)
-        model = mx.gluon.model_zoo.vision.get_model(model_name, pretrained=version, ctx=ctx, root=tmp)
+        model = mx.gluon.model_zoo.vision.get_model(model_name, pretrained=True, ctx=ctx, root=tmp)
         data_shape = (2,3,224,224)
         model.initialize()
         model.hybridize()
@@ -117,7 +117,7 @@ def run_cv_model_test(model, version=True):
     # cleanup
     shutil.rmtree(tmpdir)
 
-@pytest.mark.skip(reason="Issue with gluon model export")
+@pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
 def test_cv_model_inference_onnxruntime_mobilenet0_5():
     run_cv_model_test('mobilenet0.5')
 
@@ -142,19 +142,19 @@ def test_cv_model_inference_onnxruntime_resnet152_v1():
 def test_cv_model_inference_onnxruntime_resnet152_v2():
     run_cv_model_test('resnet152_v2')
 
-@pytest.mark.skip(reason="Issue with gluon model export")
+@pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
 def test_cv_model_inference_onnxruntime_squeezenet1_0():
     run_cv_model_test('squeezenet1.0')
 
-@pytest.mark.skip(reason="Issue with gluon model export")
+@pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
 def test_cv_model_inference_onnxruntime_squeezenet1_1():
     run_cv_model_test('squeezenet1.1')
 
-@pytest.mark.skip(reason="Issue with gluon model export")
+@pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
 def test_cv_model_inference_onnxruntime_vgg11():
     run_cv_model_test('vgg11')
 
-@pytest.mark.skip(reason="Issue with gluon model export")
+@pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
 def test_cv_model_inference_onnxruntime_vgg11_bn():
     run_cv_model_test('vgg11_bn')
 
