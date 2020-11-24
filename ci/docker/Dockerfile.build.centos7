@@ -45,7 +45,6 @@ RUN yum -y check-update || true && \
         # Development tools
         git \
         make \
-        ninja-build \
         automake \
         autoconf \
         libtool \
