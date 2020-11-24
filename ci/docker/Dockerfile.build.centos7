@@ -45,6 +45,7 @@ RUN yum -y check-update || true && \
         # Development tools
         git \
         make \
+        ninja-build \
         automake \
         autoconf \
         libtool \
@@ -69,13 +70,6 @@ RUN yum -y check-update || true && \
         gcc-gfortran && \
     yum clean all
 
-RUN mkdir ~/ninja && \
-    cd ~/ninja &&  \
-    wget https://github.com/ninja-build/ninja/releases/download/v1.10.1/ninja-linux.zip && \
-    unzip ninja-linux.zip -d /usr/local/bin/ && \
-    alternatives --install /usr/bin/ninja ninja /usr/local/bin/ninja 1 && \
-    ninja --version
-
 # Build OpenBLAS from source
 RUN mkdir ~/openblas && \
     cd ~/openblas && \
@@ -94,9 +88,9 @@ SHELL [ "/usr/bin/scl", "enable", "devtoolset-7", "rh-python36", "rh-maven35" ]
 
 # Install minimum required cmake version
 RUN cd /usr/local/src && \
-    wget -nv https://cmake.org/files/v3.16/cmake-3.16.9-Linux-x86_64.sh && \
-    sh cmake-3.16.9-Linux-x86_64.sh --prefix=/usr/local --skip-license && \
-    rm cmake-3.16.9-Linux-x86_64.sh
+    wget -nv https://cmake.org/files/v3.13/cmake-3.13.5-Linux-x86_64.sh && \
+    sh cmake-3.13.5-Linux-x86_64.sh --prefix=/usr/local --skip-license && \
+    rm cmake-3.13.5-Linux-x86_64.sh
 
 # ccache 3.7.9 has fixes for caching nvcc outputs
 RUN cd /usr/local/src && \
