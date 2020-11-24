@@ -54,7 +54,7 @@ elseif(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
                     RESULT_VARIABLE OPENBLAS_USES_OMP_RET)
     if(NOT OPENBLAS_USES_OMP_OUT STREQUAL "" AND NOT OPENBLAS_USES_OMP_RET)
       message("Openblas uses OMP, automatically linking to it")
-      find_package(OpenMP COMPONENTS CXX REQUIRED)
+      find_package(OpenMP COMPONENTS CXX)
       list(APPEND mshadow_LINKER_LIBS "${OpenMP_CXX_LIBRARIES}")
     endif()
     # check if we need to link to gfortran
