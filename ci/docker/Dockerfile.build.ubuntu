@@ -86,6 +86,13 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         gfortran-4.8 && \
     rm -rf /var/lib/apt/lists/*
 
+RUN mkdir ~/ninja && \
+    cd ~/ninja &&  \
+    wget https://github.com/ninja-build/ninja/releases/download/v1.10.1/ninja-linux.zip && \
+    unzip ninja-linux.zip -d /usr/local/bin/ && \
+    update-alternatives --install /usr/bin/ninja ninja /usr/local/bin/ninja 1 --force && \
+    ninja --version
+
 # Build OpenBLAS from source
 RUN mkdir ~/openblas && \
     cd ~/openblas && \
