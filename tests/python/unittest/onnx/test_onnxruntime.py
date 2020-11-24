@@ -32,8 +32,6 @@ def run_cv_model_test(model):
         tmpfile = os.path.join(tmp, model_name)
         ctx = mx.cpu(0)
         model = mx.gluon.model_zoo.vision.get_model(model_name, pretrained=True, ctx=ctx, root=tmp)
-        data_shape = (2,3,224,224)
-        model.initialize()
         model.hybridize()
         data = mx.nd.zeros((2,3,224,224), dtype='float32', ctx=ctx)
         model(data)
