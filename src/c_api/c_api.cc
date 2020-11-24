@@ -59,8 +59,8 @@
 #include "../common/utils.h"
 #include "../profiler/profiler.h"
 #include "../serialization/cnpy.h"
+#include "../serialization/miniz.h"
 #include "nnvm/pass_functions.h"
-#include "zip.h"
 
 using namespace mxnet;
 
@@ -1909,45 +1909,42 @@ int MXNDArraySave(const char* fname,
 
   CHECK_NOTNULL(fname);
 
+  // We may use mz_zip_writer_init_v2 later instead of mz_zip_writer_init_file
+  // and write an adapter for DMLC stream based on pZip->m_pWrite (and
+  // pZip->m_pIO_opaque)
   if (num_args == 1 && keys == nullptr) {
       NDArray *array = static_cast<NDArray *>(args[0]);
       if (array->storage_type() == kDefaultStorage) {
           npy::save_array(fname, *array);
       } else {
-          int error;
-          zip_t* archive = zip_open(fname, ZIP_TRUNCATE | ZIP_CREATE, &error);
-          if (archive == nullptr) {
-              zip_error_t e;
-              zip_error_init_with_code(&e, error);
-              throw std::runtime_error(zip_error_strerror(&e));
-          }
-          npz::save_array(archive, "", *array);
-          error = zip_close(archive);
-          if (error != 0) {
-              std::string strerror{zip_strerror(archive)};
-              zip_discard(archive);
-              throw std::runtime_error(strerror);
-          }
+          mz_zip_archive archive {};
+          CHECK(mz_zip_writer_init_file(&archive, fname, 0))
+              << "Failed to open archive " << fname << ": "
+              << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+          npz::save_array(&archive, "", *array);
+          CHECK(mz_zip_writer_finalize_archive(&archive))
+              << "Failed to finalize archive " << fname
+              << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+          CHECK(mz_zip_writer_end(&archive))
+              << "Failed to end archive " << fname
+              << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
       }
   } else {
-      int error;
-      zip_t* archive = zip_open(fname, ZIP_TRUNCATE | ZIP_CREATE, &error);
-      if (archive == nullptr) {
-          zip_error_t e;
-          zip_error_init_with_code(&e, error);
-          throw std::runtime_error(zip_error_strerror(&e));
-      }
+      mz_zip_archive archive {};
+      CHECK(mz_zip_writer_init_file(&archive, fname, 0))
+          << "Failed to open archive " << fname << ": "
+          << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
       for (uint32_t i = 0; i < num_args; ++i) {
           NDArray *array = static_cast<NDArray *>(args[i]);
           const std::string array_key = keys == nullptr ? "arr_" + std::to_string(i) : keys[i];
-          npz::save_array(archive, array_key, *array);
+          npz::save_array(&archive, array_key, *array);
       }
-      error = zip_close(archive);
-      if (error != 0) {
-          std::string strerror{zip_strerror(archive)};
-          zip_discard(archive);
-          throw std::runtime_error(strerror);
-      }
+      CHECK(mz_zip_writer_finalize_archive(&archive))
+          << "Failed to finalize archive " << fname
+          << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+      CHECK(mz_zip_writer_end(&archive))
+          << "Failed to end archive " << fname
+          << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
   }
   API_END();
 }

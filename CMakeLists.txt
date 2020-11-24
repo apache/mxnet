@@ -837,20 +837,6 @@ elseif(MSVC)
   endif()
 endif()
 
-# used for numpy-compatible serialization
-function(load_libzip)
-  set(BUILD_SHARED_LIBS FALSE CACHE BOOL "Build shared libzip libraries")
-  set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)  # Take ZLIB_ROOT into account
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/libzip" EXCLUDE_FROM_ALL)
-  if(MSVC AND USE_SPLIT_ARCH_DLL AND USE_CUDA)
-    list(APPEND mxnet_LINKER_LIBS libzip::zip)
-    set(mxnet_LINKER_LIBS "${mxnet_LINKER_LIBS}" PARENT_SCOPE)
-  else()
-    target_link_libraries(mxnet PRIVATE libzip::zip)
-  endif()
-endfunction()
-load_libzip()
-
 if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
