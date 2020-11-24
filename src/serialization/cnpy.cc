@@ -42,7 +42,6 @@
 #include "zip.h"
 
 
-
 namespace mxnet {
 
 void fortran_order_transpose_prepare(std::vector<dim_t>& shape) {  // NOLINT(runtime/references)
@@ -301,16 +300,7 @@ NDArray load_array(const std::string& fname) {
 namespace npz {
 
 
-void save_blob(int zip_open_flags, const std::string& zip_fname, const std::string& blob_name,
-               const TBlob& blob) {
-  int error;
-  zip_t* archive = zip_open(zip_fname.c_str(), zip_open_flags, &error);
-  if (archive == nullptr) {
-    zip_error_t e;
-    zip_error_init_with_code(&e, error);
-    throw std::runtime_error(zip_error_strerror(&e));
-  }
-
+void save_blob(zip_t* archive, const std::string& blob_name, const TBlob& blob) {
   std::string npy_header = npy::create_npy_header(blob);
 
   // Declare buffers from making up the .npy file
@@ -331,15 +321,7 @@ void save_blob(int zip_open_flags, const std::string& zip_fname, const std::stri
     zip_source_free(source);
     throw std::runtime_error(zip_strerror(archive));
   }
-  error = zip_set_file_compression(archive, index, ZIP_CM_STORE, 0);
-  if (error != 0) {
-      std::string strerror{zip_strerror(archive)};
-      zip_discard(archive);
-      throw std::runtime_error(strerror);
-  }
-
-  // Write everything
-  error = zip_close(archive);
+  int error = zip_set_file_compression(archive, index, ZIP_CM_STORE, 0);
   if (error != 0) {
     std::string strerror{zip_strerror(archive)};
     zip_discard(archive);
@@ -349,16 +331,7 @@ void save_blob(int zip_open_flags, const std::string& zip_fname, const std::stri
 
 
 // Save shape of sparse ndarray in to scipy compatible shape.npy with int64 data
-void save_shape_array(int zip_open_flags, const std::string& zip_fname,
-                      const std::string& blob_name, const mxnet::TShape& shape) {
-  int error;
-  zip_t* archive = zip_open(zip_fname.c_str(), zip_open_flags, &error);
-  if (archive == nullptr) {
-    zip_error_t e;
-    zip_error_init_with_code(&e, error);
-    throw std::runtime_error(zip_error_strerror(&e));
-  }
-
+void save_shape_array(zip_t* archive, const std::string& blob_name, const mxnet::TShape& shape) {
   // Special case of create_npy_header for TShape data
   std::string dict;
   dict += "{'descr': '<i8', 'fortran_order': False, 'shape': (";
@@ -414,15 +387,7 @@ void save_shape_array(int zip_open_flags, const std::string& zip_fname,
     zip_source_free(source);
     throw std::runtime_error(zip_strerror(archive));
   }
-  error = zip_set_file_compression(archive, index, ZIP_CM_STORE, 0);
-  if (error != 0) {
-      std::string strerror{zip_strerror(archive)};
-      zip_discard(archive);
-      throw std::runtime_error(strerror);
-  }
-
-  // Write everything
-  error = zip_close(archive);
+  int error = zip_set_file_compression(archive, index, ZIP_CM_STORE, 0);
   if (error != 0) {
     std::string strerror{zip_strerror(archive)};
     zip_discard(archive);
@@ -431,16 +396,8 @@ void save_shape_array(int zip_open_flags, const std::string& zip_fname,
 }
 
 
-void save_format_array(int zip_open_flags, const std::string& zip_fname,
-                       const std::string& blob_name, const std::string_view& format) {
-  int error;
-  zip_t* archive = zip_open(zip_fname.c_str(), zip_open_flags, &error);
-  if (archive == nullptr) {
-    zip_error_t e;
-    zip_error_init_with_code(&e, error);
-    throw std::runtime_error(zip_error_strerror(&e));
-  }
-
+void save_format_array(zip_t* archive, const std::string& blob_name,
+                       const std::string_view& format) {
   // Special case of create_npy_header for TShape data
   std::string dict;
   dict += "{'descr': '|s";
@@ -486,15 +443,7 @@ void save_format_array(int zip_open_flags, const std::string& zip_fname,
     zip_source_free(source);
     throw std::runtime_error(zip_strerror(archive));
   }
-  error = zip_set_file_compression(archive, index, ZIP_CM_STORE, 0);
-  if (error != 0) {
-      std::string strerror{zip_strerror(archive)};
-      zip_discard(archive);
-      throw std::runtime_error(strerror);
-  }
-
-  // Write everything
-  error = zip_close(archive);
+  int error = zip_set_file_compression(archive, index, ZIP_CM_STORE, 0);
   if (error != 0) {
     std::string strerror{zip_strerror(archive)};
     zip_discard(archive);
@@ -503,8 +452,7 @@ void save_format_array(int zip_open_flags, const std::string& zip_fname,
 }
 
 
-void save_array(int write_mode, const std::string& zip_fname, const std::string& array_name,
-                const NDArray& array_) {
+void save_array(zip_t* archive, const std::string& array_name, const NDArray& array_) {
   NDArray array;  // a copy on cpu
   if (array_.ctx().dev_mask() != cpu::kDevMask) {
     array = array_.Copy(Context::CPU());
@@ -521,24 +469,22 @@ void save_array(int write_mode, const std::string& zip_fname, const std::string&
 
   switch (array.storage_type()) {
   case kDefaultStorage: {
-    save_blob(write_mode, zip_fname, array_name, array.data());
+    save_blob(archive, array_name, array.data());
     break;
   }
   case kCSRStorage: {
-    save_blob(write_mode, zip_fname, array_name + "/data", array.data());
-    write_mode = 0;  // Append to the created zip file going forward
-    save_blob(write_mode, zip_fname, array_name + "/indptr", array.aux_data(csr::kIndPtr));
-    save_blob(write_mode, zip_fname, array_name + "/indices", array.aux_data(csr::kIdx));
-    save_shape_array(write_mode, zip_fname, array_name + "/shape", array.shape());
-    save_format_array(write_mode, zip_fname, array_name + "/format", "csr");
+    save_blob(archive, array_name + "/data", array.data());
+    save_blob(archive, array_name + "/indptr", array.aux_data(csr::kIndPtr));
+    save_blob(archive, array_name + "/indices", array.aux_data(csr::kIdx));
+    save_shape_array(archive, array_name + "/shape", array.shape());
+    save_format_array(archive, array_name + "/format", "csr");
     break;
   }
   case kRowSparseStorage: {
-    save_blob(write_mode, zip_fname, array_name + "/data", array.data());
-    write_mode = 0;  // Append to the created zip file going forward
-    save_blob(write_mode, zip_fname, array_name + "/indices", array.aux_data(rowsparse::kIdx));
-    save_shape_array(write_mode, zip_fname, array_name + "/shape", array.shape());
-    save_format_array(write_mode, zip_fname, array_name + "/format", "row_sparse");
+    save_blob(archive, array_name + "/data", array.data());
+    save_blob(archive, array_name + "/indices", array.aux_data(rowsparse::kIdx));
+    save_shape_array(archive, array_name + "/shape", array.shape());
+    save_format_array(archive, array_name + "/format", "row_sparse");
     break;
   }
   default: LOG(FATAL) << "Unknown storage type " << array.storage_type() << "encountered.";

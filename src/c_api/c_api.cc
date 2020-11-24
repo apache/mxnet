@@ -1914,18 +1914,39 @@ int MXNDArraySave(const char* fname,
       if (array->storage_type() == kDefaultStorage) {
           npy::save_array(fname, *array);
       } else {
-          int write_mode = ZIP_TRUNCATE | ZIP_CREATE;
-          npz::save_array(write_mode, fname, "", *array);
+          int error;
+          zip_t* archive = zip_open(fname, ZIP_TRUNCATE | ZIP_CREATE, &error);
+          if (archive == nullptr) {
+              zip_error_t e;
+              zip_error_init_with_code(&e, error);
+              throw std::runtime_error(zip_error_strerror(&e));
+          }
+          npz::save_array(archive, "", *array);
+          error = zip_close(archive);
+          if (error != 0) {
+              std::string strerror{zip_strerror(archive)};
+              zip_discard(archive);
+              throw std::runtime_error(strerror);
+          }
       }
   } else {
-      int write_mode = ZIP_TRUNCATE | ZIP_CREATE;
+      int error;
+      zip_t* archive = zip_open(fname, ZIP_TRUNCATE | ZIP_CREATE, &error);
+      if (archive == nullptr) {
+          zip_error_t e;
+          zip_error_init_with_code(&e, error);
+          throw std::runtime_error(zip_error_strerror(&e));
+      }
       for (uint32_t i = 0; i < num_args; ++i) {
           NDArray *array = static_cast<NDArray *>(args[i]);
           const std::string array_key = keys == nullptr ? "arr_" + std::to_string(i) : keys[i];
-          npz::save_array(write_mode, fname, array_key, *array);
-
-          // Append to the created zip file going forward
-          write_mode = 0;
+          npz::save_array(archive, array_key, *array);
+      }
+      error = zip_close(archive);
+      if (error != 0) {
+          std::string strerror{zip_strerror(archive)};
+          zip_discard(archive);
+          throw std::runtime_error(strerror);
       }
   }
   API_END();
