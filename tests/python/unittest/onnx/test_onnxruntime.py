@@ -66,11 +66,13 @@ def run_cv_model_test(model):
         e_x = np.exp(x - np.max(x))
         return e_x / e_x.sum(axis=0)
 
-    def load_imgnet_labels():
-        mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/image_net_labels.json')
-        return np.array(json.load(open('image_net_labels.json', 'r')))
+    def load_imgnet_labels(tmpdir):
+        tmpfile = os.path.join(tmpdir, 'image_net_labels.json')
+        mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/image_net_labels.json',
+                               fname=tmpfile)
+        return np.array(json.load(open(tmpfile, 'r')))
 
-    def download_test_images():
+    def download_test_images(tmpdir):
         test_images = [
             ['dog.jpg',['boxer']],
             ['apron.jpg', ['apron', 'maillot']],
@@ -80,13 +82,12 @@ def run_cv_model_test(model):
         ]
         for f,_ in test_images:
             mx.test_utils.download('https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/images/'+f+'?raw=true',
-                                   fname=f)
+                                   fname=os.path.join(tmpdir, f))
         return test_images
 
-    labels = load_imgnet_labels()
-    test_images = download_test_images()
-
     tmpdir = tempfile.mkdtemp()
+    labels = load_imgnet_labels(tmpdir)
+    test_images = download_test_images(tmpdir)
     sym_file, params_file = get_gluon_cv_model(model, tmpdir)
     onnx_file = export_model_to_onnx(sym_file, params_file)
     #print("exported onnx file: ",onnx_file)
@@ -98,7 +99,7 @@ def run_cv_model_test(model):
     input_name = session.get_inputs()[0].name
 
     for img,classes in test_images:
-        img_data = normalize_image(img)
+        img_data = normalize_image(os.path.join(tmpdir, img))
         raw_result = session.run([], {input_name: img_data})
         res = softmax(np.array(raw_result)).tolist()
         class_idx = np.argmax(res)
