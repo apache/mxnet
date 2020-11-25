@@ -58,7 +58,9 @@
 #include "../operator/subgraph/subgraph_property.h"
 #include "../common/utils.h"
 #include "../profiler/profiler.h"
+#include "../serialization/cnpy.h"
 #include "nnvm/pass_functions.h"
+#include "zip.h"
 
 using namespace mxnet;
 
@@ -870,7 +872,13 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       auto in_first = in_shape->begin();
       auto in_last  = in_first + in_shape->size() - extra_inputs;
       mxnet::ShapeVector *sg_in_shapes = new mxnet::ShapeVector(in_first, in_last);
-      return mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+      bool res = mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+
+      // assign modified input shapes to ShapeVector
+      for (unsigned i = 0; i < sg_in_shapes->size(); ++i) {
+        SHAPE_ASSIGN_CHECK(*in_shape, i, sg_in_shapes->at(i));
+      }
+      return res;
     };
 
     // lambda function to call infer type
@@ -934,7 +942,12 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       auto in_last  = in_first + in_type->size() - extra_inputs;
       std::vector<int> *sg_in_types = new std::vector<int>(in_first, in_last);
 
-      return mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
+      bool res = mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
+      // copy and assign modified input types
+      for (size_t i = 0; i < sg_in_types->size(); i++) {
+        TYPE_ASSIGN_CHECK(*in_type, i, sg_in_types->at(i));
+      }
+      return res;
     };
 
     // lambda function to convert from external mutate_inputs to internal MXNet types
@@ -1034,8 +1047,13 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         auto in_last  = in_first + in_stypes->size() - extra_inputs;
         std::vector<int> *sg_in_stypes = new std::vector<int>(in_first, in_last);
 
-        return mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
-                                                       sg_in_stypes, out_stypes);
+        bool res = mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
+                                                           sg_in_stypes, out_stypes);
+        // copy and assign modified input storage types
+        for (size_t i = 0; i < sg_in_stypes->size(); i++) {
+          STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, sg_in_stypes->at(i));
+        }
+        return res;
     };
 
     // FGradient register lambda
@@ -1361,50 +1379,54 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
 
       // convert input args
       for (size_t i=0; i < in_arg_names.size(); i++) {
-        arg_names.push_back(in_arg_names[i].c_str());
-        const NDArray &in_arg = *(in_args_ptr[i]);
+        if (in_args_ptr[i] != nullptr) {
+          arg_names.push_back(in_arg_names[i].c_str());
+          const NDArray &in_arg = *(in_args_ptr[i]);
 
 #if MXNET_USE_MKLDNN == 1
-        // reorder data if in MKLDNN format
-        if (in_arg.IsMKLDNNData()) {
-          in_arg.Reorder2DefaultAsync();
-          in_arg.WaitToRead();
-        }
+          // reorder data if in MKLDNN format
+          if (in_arg.IsMKLDNNData()) {
+            in_arg.Reorder2DefaultAsync();
+            in_arg.WaitToRead();
+          }
 #endif
 
-        // pull out parts of NDArray to send to backend
-        arg_data.push_back(in_arg.data().dptr_);
-        arg_shapes.push_back(in_arg.shape().data());
-        arg_dims.push_back(in_arg.shape().ndim());
-        arg_types.push_back(in_arg.dtype());
-        arg_verIDs.push_back(in_arg.version());
-        const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-        arg_dev_type.push_back(arg_ctx_str);
-        arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+          // pull out parts of NDArray to send to backend
+          arg_data.push_back(in_arg.data().dptr_);
+          arg_shapes.push_back(in_arg.shape().data());
+          arg_dims.push_back(in_arg.shape().ndim());
+          arg_types.push_back(in_arg.dtype());
+          arg_verIDs.push_back(in_arg.version());
+          const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+          arg_dev_type.push_back(arg_ctx_str);
+          arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+        }
       }
 
       // convert input aux
       for (size_t i=0; i < in_aux_names.size(); i++) {
-        aux_names.push_back(in_aux_names[i].c_str());
-        const auto &in_aux = *(in_aux_ptr[i]);
+        if (in_aux_ptr[i] != nullptr) {
+          aux_names.push_back(in_aux_names[i].c_str());
+          const auto &in_aux = *(in_aux_ptr[i]);
 
 #if MXNET_USE_MKLDNN == 1
-        // reorder data if in MKLDNN format
-        if (in_aux.IsMKLDNNData()) {
-          in_aux.Reorder2DefaultAsync();
-          in_aux.WaitToRead();
-        }
+          // reorder data if in MKLDNN format
+          if (in_aux.IsMKLDNNData()) {
+            in_aux.Reorder2DefaultAsync();
+            in_aux.WaitToRead();
+          }
 #endif
 
-        // pull out parts of NDArray to send to backend
-        aux_data.push_back(in_aux.data().dptr_);
-        aux_shapes.push_back(in_aux.shape().data());
-        aux_dims.push_back(in_aux.shape().ndim());
-        aux_types.push_back(in_aux.dtype());
-        aux_verIDs.push_back(in_aux.version());
-        const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-        aux_dev_type.push_back(aux_ctx_str);
-        aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+          // pull out parts of NDArray to send to backend
+          aux_data.push_back(in_aux.data().dptr_);
+          aux_shapes.push_back(in_aux.shape().data());
+          aux_dims.push_back(in_aux.shape().ndim());
+          aux_types.push_back(in_aux.dtype());
+          aux_verIDs.push_back(in_aux.version());
+          const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+          aux_dev_type.push_back(aux_ctx_str);
+          aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+        }
       }
 
       // convert graph to string
@@ -1417,7 +1439,7 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       // this temp workspace holds memory allocated by custom library via OpResource
       auto ndarray_alloc = [&](const mxnet::TShape &shape, Context ctx, int dtype,
                                std::string name, bool isArg) {
-        NDArray* arr = new NDArray(shape, ctx, dtype);
+        NDArray* arr = new NDArray(shape, ctx, false, dtype);
         if (isArg) {
           new_args.push_back(arr);
           new_arg_names.push_back(name);
@@ -1856,10 +1878,10 @@ int MXNDArrayWaitAll() {
   API_END();
 }
 
-int MXNDArraySave(const char* fname,
-                  uint32_t num_args,
-                  NDArrayHandle* args,
-                  const char** keys) {
+int MXNDArrayLegacySave(const char* fname,
+                        uint32_t num_args,
+                        NDArrayHandle* args,
+                        const char** keys) {
   API_BEGIN();
   std::vector<NDArray> data(num_args);
   std::vector<std::string> names;
@@ -1879,6 +1901,36 @@ int MXNDArraySave(const char* fname,
   API_END();
 }
 
+int MXNDArraySave(const char* fname,
+                  uint32_t num_args,
+                  NDArrayHandle* args,
+                  const char** keys) {
+  API_BEGIN();
+
+  CHECK_NOTNULL(fname);
+
+  if (num_args == 1 && keys == nullptr) {
+      NDArray *array = static_cast<NDArray *>(args[0]);
+      if (array->storage_type() == kDefaultStorage) {
+          npy::save_array(fname, *array);
+      } else {
+          int write_mode = ZIP_TRUNCATE | ZIP_CREATE;
+          npz::save_array(write_mode, fname, "", *array);
+      }
+  } else {
+      int write_mode = ZIP_TRUNCATE | ZIP_CREATE;
+      for (uint32_t i = 0; i < num_args; ++i) {
+          NDArray *array = static_cast<NDArray *>(args[i]);
+          const std::string array_key = keys == nullptr ? "arr_" + std::to_string(i) : keys[i];
+          npz::save_array(write_mode, fname, array_key, *array);
+
+          // Append to the created zip file going forward
+          write_mode = 0;
+      }
+  }
+  API_END();
+}
+
 int MXNDArrayLoad(const char* fname,
                   uint32_t *out_size,
                   NDArrayHandle** out_arr,
@@ -1887,26 +1939,63 @@ int MXNDArrayLoad(const char* fname,
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_vec_str.clear();
   API_BEGIN();
-  std::vector<NDArray> data;
-  std::vector<std::string> &names = ret->ret_vec_str;
+
+  uint32_t magic;
   {
-    std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
-    mxnet::NDArray::Load(fi.get(), &data, &names);
+      std::unique_ptr<dmlc::Stream> strm(dmlc::Stream::Create(fname, "r"));
+      CHECK_EQ(strm->Read(&magic, sizeof(uint32_t)), sizeof(uint32_t))
+        << "Failed to read 32 bits from file.";
   }
-  ret->ret_handles.resize(data.size());
-  for (size_t i = 0; i < data.size(); ++i) {
-    NDArray *ptr = new NDArray();
-    *ptr = data[i];
-    ret->ret_handles[i] = ptr;
+
+  if (magic == 0x04034b50 || magic == 0x504b0304) {  // zip file format; assumed to be npz
+      auto[data, names] = npz::load_arrays(fname);
+      ret->ret_handles.resize(data.size());
+      for (size_t i = 0; i < data.size(); ++i) {
+          NDArray *ptr = new NDArray();
+          *ptr = data[i];
+          ret->ret_handles[i] = ptr;
+      }
+      ret->ret_vec_str.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_str[i] = names[i];
+      }
+      ret->ret_vec_charp.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_charp[i] = ret->ret_vec_str[i].c_str();
+      }
+      *out_size = static_cast<uint32_t>(data.size());
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+      *out_name_size = static_cast<uint32_t>(names.size());
+      *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
+  } else if (magic == 0x4d554e93 || magic == 0x934e554d) {  // first bytes of npy format
+      *out_size = 1;
+      ret->ret_handles.resize(1);
+      NDArray *ptr = new NDArray();
+      *ptr = npy::load_array(fname);  // Only supports local filesystem at this point in time
+      ret->ret_handles[0] = ptr;
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+  } else {
+      std::vector<NDArray> data;
+      std::vector<std::string> &names = ret->ret_vec_str;
+      {
+          std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
+          mxnet::NDArray::Load(fi.get(), &data, &names);
+      }
+      ret->ret_handles.resize(data.size());
+      for (size_t i = 0; i < data.size(); ++i) {
+          NDArray *ptr = new NDArray();
+          *ptr = data[i];
+          ret->ret_handles[i] = ptr;
+      }
+      ret->ret_vec_charp.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_charp[i] = names[i].c_str();
+      }
+      *out_size = static_cast<uint32_t>(data.size());
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+      *out_name_size = static_cast<uint32_t>(names.size());
+      *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   }
-  ret->ret_vec_charp.resize(names.size());
-  for (size_t i = 0; i < names.size(); ++i) {
-    ret->ret_vec_charp[i] = names[i].c_str();
-  }
-  *out_size = static_cast<uint32_t>(data.size());
-  *out_arr = dmlc::BeginPtr(ret->ret_handles);
-  *out_name_size = static_cast<uint32_t>(names.size());
-  *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
 }
 

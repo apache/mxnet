@@ -65,9 +65,6 @@ TOP_LEVEL_LICENSE_FILE = 'LICENSE'
 
 # the folders or files that will be ignored
 _WHITE_LIST = [
-               # Licensed under docker/Dockerfiles/License.md
-               'docker/Dockerfiles',
-
                # Git submodules under different licenses
                '3rdparty/ctc_include/contrib/moderngpu',
                '3rdparty/dlpack',

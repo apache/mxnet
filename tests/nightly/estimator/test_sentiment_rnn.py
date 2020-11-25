@@ -32,9 +32,6 @@ from mxnet.contrib import text
 from mxnet.gluon import nn, rnn
 from mxnet.gluon.contrib.estimator import estimator
 
-# use with_seed decorator in python/unittest/common.py
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python', 'unittest'))
-from common import with_seed
 import pytest
 
 
@@ -205,7 +202,6 @@ def run(net, train_dataloader, test_dataloader, num_epochs, ctx, lr):
     return acc
 
 
-@with_seed()
 def test_estimator_cpu():
     '''
     Test estimator by doing one pass over each model with synthetic data
@@ -241,8 +237,7 @@ def test_estimator_cpu():
         run(net, train_dataloader, val_dataloader, num_epochs=num_epochs, ctx=ctx, lr=lr)
 
 
-# using fixed seed to reduce flakiness in accuracy assertion
-@with_seed(7)
+@pytest.mark.seed(7)  # using fixed seed to reduce flakiness in accuracy assertion
 @pytest.mark.skipif(mx.context.num_gpus() < 1, reason="skip if no GPU")
 def test_estimator_gpu():
     '''

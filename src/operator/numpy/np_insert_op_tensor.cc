@@ -81,6 +81,8 @@ bool NumpyInsertTensorShape(const nnvm::NodeAttrs& attrs,
         << "alueError: assignment to 0-d array.";
       out_shape->push_back(valshape);
     }
+    CHECK_LT((*out_shape)[0].Size(), (int64_t{1} << 31) - 1) <<
+        "Large Tensor Support is not support for [insert_tensor] variant of insert operator";
     return shape_is_known(out_shape[0]);
   } else {
     CHECK(axis >= -1 * arrshape.ndim() && axis < arrshape.ndim())
@@ -88,11 +90,11 @@ bool NumpyInsertTensorShape(const nnvm::NodeAttrs& attrs,
     axis += (axis < 0) ? arrshape.ndim() : 0;
   }
 
-  int seq_cnt = objShape.Size();
+  size_t seq_cnt = objShape.Size();
 
   mxnet::TShape newshape(arrshape);
   mxnet::TShape val_newshape(arrshape.ndim(), -1);
-  int numnew = 0;  // amount of new column insert to 'arr' in 'axis'
+  index_t numnew = 0;  // amount of new column insert to 'arr' in 'axis'
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
   for (int i = valshape.ndim() - 1, j = arrshape.ndim() - 1; i >= 0 || j >= 0; --i, --j) {
@@ -114,6 +116,8 @@ bool NumpyInsertTensorShape(const nnvm::NodeAttrs& attrs,
 
   newshape[axis] += numnew;
   out_shape->push_back(newshape);
+  CHECK_LT((*out_shape)[0].Size(), (int64_t{1} << 31) - 1) <<
+      "Large Tensor Support is not support for [insert_tensor] variant of insert operator";
   return shape_is_known(newshape);
 }
 

@@ -207,6 +207,8 @@ class VectorizedAccessor {
           if (reinterpret_cast<size_t>(ptr) >= reinterpret_cast<size_t>(unaligned_ptr_) &&
               reinterpret_cast<size_t>(ptr) < reinterpret_cast<size_t>(unaligned_ptr_ + N)) {
             storage_.scratch_.separate[j] = *ptr;
+          } else {
+            storage_.scratch_.separate[j] = DType();
           }
         }
       }
@@ -447,7 +449,7 @@ void VectorizedKernelRTCLauncher(const std::string &parameters,
 
     common::cuda::rtc::launch(function,
                               {static_cast<unsigned int>(blocks), 1, 1},
-                              {threads, 1, 1},
+                              {static_cast<unsigned int>(threads), 1, 1},
                               0, s, &args);
   }
 }

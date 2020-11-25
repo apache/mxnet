@@ -38,7 +38,7 @@ def _monitor_callback_wrapper(callback):
 
 class NDArrayBase(object):
     """Base data structure for ndarray"""
-    __slots__ = ["handle", "writable"]
+    __slots__ = ["handle", "writable", "_alive"]
     # pylint: disable= no-member
 
     def __init__(self, handle, writable=True):
@@ -53,9 +53,11 @@ class NDArrayBase(object):
             assert isinstance(handle, NDArrayHandle)
         self.handle = handle
         self.writable = writable
+        self._alive = True
 
     def __del__(self):
         check_call(_LIB.MXNDArrayFree(self.handle))
+        self._alive = False
 
     def __reduce__(self):
         return (_global_var._ndarray_cls, (None,), self.__getstate__())

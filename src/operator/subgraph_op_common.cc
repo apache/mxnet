@@ -189,10 +189,10 @@ bool is_type_udf(const int &x) {
   return x == -1;
 }
 
-LoopState::LoopState(const nnvm::Symbol &g) {
+LoopState::LoopState(const nnvm::Symbol &g, bool is_dynamic) {
   this->subgraph_sym = g;
   this->subgraph.outputs = g.outputs;
-  this->iter_op = LoopState::MakeSharedOp(g);
+  this->iter_op = LoopState::MakeSharedOp(g, is_dynamic);
 }
 
 void LoopState::Forward(int iter_no,

@@ -314,12 +314,12 @@ struct BLASEngine<cpu, float> {
 #if (MSHADOW_USE_MKL && INTEL_MKL_VERSION >= 20160000)
   // since same m/n/k is used for all single gemms, so we put all gemms into one group
   const int GROUP_SIZE = 1;
-  MKL_INT p_m[GROUP_SIZE] = {m};
-  MKL_INT p_n[GROUP_SIZE] = {n};
-  MKL_INT p_k[GROUP_SIZE] = {k};
-  MKL_INT p_lda[GROUP_SIZE] = {lda};
-  MKL_INT p_ldb[GROUP_SIZE] = {ldb};
-  MKL_INT p_ldc[GROUP_SIZE] = {ldc};
+  MKL_INT p_m[GROUP_SIZE] = {static_cast<MKL_INT>(m)};
+  MKL_INT p_n[GROUP_SIZE] = {static_cast<MKL_INT>(n)};
+  MKL_INT p_k[GROUP_SIZE] = {static_cast<MKL_INT>(k)};
+  MKL_INT p_lda[GROUP_SIZE] = {static_cast<MKL_INT>(lda)};
+  MKL_INT p_ldb[GROUP_SIZE] = {static_cast<MKL_INT>(ldb)};
+  MKL_INT p_ldc[GROUP_SIZE] = {static_cast<MKL_INT>(ldc)};
 
   float p_alpha[GROUP_SIZE] = {alpha};
   float p_beta[GROUP_SIZE] = {beta};
@@ -327,7 +327,7 @@ struct BLASEngine<cpu, float> {
   CBLAS_TRANSPOSE cblas_a_trans = GetT(transa);
   CBLAS_TRANSPOSE cblas_b_trans = GetT(transb);
 
-  MKL_INT p_group_sizeb[GROUP_SIZE] = {batch_count};
+  MKL_INT p_group_sizeb[GROUP_SIZE] = {static_cast<MKL_INT>(batch_count)};
   CBLAS_TRANSPOSE p_transa[GROUP_SIZE] = {cblas_a_trans};
   CBLAS_TRANSPOSE p_transb[GROUP_SIZE] = {cblas_b_trans};
 
@@ -423,12 +423,12 @@ struct BLASEngine<cpu, double> {
 #if (MSHADOW_USE_MKL && INTEL_MKL_VERSION >= 20160000)
   // since same m/n/k is used for all single gemms, so we put all gemms into one group
   const int GROUP_SIZE = 1;
-  MKL_INT p_m[GROUP_SIZE] = {m};
-  MKL_INT p_n[GROUP_SIZE] = {n};
-  MKL_INT p_k[GROUP_SIZE] = {k};
-  MKL_INT p_lda[GROUP_SIZE] = {lda};
-  MKL_INT p_ldb[GROUP_SIZE] = {ldb};
-  MKL_INT p_ldc[GROUP_SIZE] = {ldc};
+  MKL_INT p_m[GROUP_SIZE] = {static_cast<MKL_INT>(m)};
+  MKL_INT p_n[GROUP_SIZE] = {static_cast<MKL_INT>(n)};
+  MKL_INT p_k[GROUP_SIZE] = {static_cast<MKL_INT>(k)};
+  MKL_INT p_lda[GROUP_SIZE] = {static_cast<MKL_INT>(lda)};
+  MKL_INT p_ldb[GROUP_SIZE] = {static_cast<MKL_INT>(ldb)};
+  MKL_INT p_ldc[GROUP_SIZE] = {static_cast<MKL_INT>(ldc)};
 
   double p_alpha[GROUP_SIZE] = {alpha};
   double p_beta[GROUP_SIZE] = {beta};
@@ -436,7 +436,7 @@ struct BLASEngine<cpu, double> {
   CBLAS_TRANSPOSE cblas_a_trans = GetT(transa);
   CBLAS_TRANSPOSE cblas_b_trans = GetT(transb);
 
-  MKL_INT p_group_sizeb[GROUP_SIZE] = {batch_count};
+  MKL_INT p_group_sizeb[GROUP_SIZE] = {static_cast<MKL_INT>(batch_count)};
   CBLAS_TRANSPOSE p_transa[GROUP_SIZE] = {cblas_a_trans};
   CBLAS_TRANSPOSE p_transb[GROUP_SIZE] = {cblas_b_trans};
 

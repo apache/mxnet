@@ -317,9 +317,9 @@ void NumpyVstackBackward(const nnvm::NodeAttrs& attrs,
 }
 
 struct NumpyTrilindicesParam : public dmlc::Parameter<NumpyTrilindicesParam> {
-  int n;
-  int k;
-  int m;
+  index_t n;
+  index_t k;
+  index_t m;
   DMLC_DECLARE_PARAMETER(NumpyTrilindicesParam) {
     DMLC_DECLARE_FIELD(n)
       .describe("The row dimension of the arrays for which"
@@ -346,8 +346,8 @@ struct NumpyTrilindicesParam : public dmlc::Parameter<NumpyTrilindicesParam> {
 template<int req>
 struct TrilindicesOpForwardImpl {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data0, DType* out_data1,
-                                  int* data, int length) {
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data0, DType* out_data1,
+                                  index_t* data, index_t length) {
     KERNEL_ASSIGN(out_data0[i], req, data[i]);
     KERNEL_ASSIGN(out_data1[i], req, data[i + length]);
   }
@@ -371,22 +371,22 @@ void TrilindicesOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& out_data1 = outputs[1];
 
   CHECK_EQ(out_data0.shape_[0], out_data1.shape_[0]);
-  int length = out_data0.shape_[0];
+  index_t length = out_data0.shape_[0];
 
-  std::vector<int> indices_cpu(2 * length, 0);
-  size_t total_temp_size = 2 * length * sizeof(int);
+  std::vector<index_t> indices_cpu(2 * length, 0);
+  size_t total_temp_size = 2 * length * sizeof(index_t);
   Tensor<xpu, 1, char> temp_space =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(total_temp_size), s);
-  int* indices = reinterpret_cast<int*>(temp_space.dptr_);
+  index_t* indices = reinterpret_cast<index_t*>(temp_space.dptr_);
 
-  int n = param.n;
-  int m = param.m;
-  int k = param.k;
+  index_t n = param.n;
+  index_t m = param.m;
+  index_t k = param.k;
 
-  int end = k;
-  int idx = 0;
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j <= std::min(end, m - 1); j++) {
+  index_t end = k;
+  index_t idx = 0;
+  for (index_t i = 0; i < n; i++) {
+    for (index_t j = 0; j <= std::min(end, m - 1); j++) {
       indices_cpu[idx] = i;
       indices_cpu[idx + length] = j;
       idx++;
@@ -397,14 +397,14 @@ void TrilindicesOpForward(const nnvm::NodeAttrs& attrs,
   if (ctx.run_ctx.ctx.dev_mask() == gpu::kDevMask) {
   #if MXNET_USE_CUDA
     cudaMemcpyAsync(indices, indices_cpu.data(),
-                    indices_cpu.size() * sizeof(int),
+                    indices_cpu.size() * sizeof(index_t),
                     cudaMemcpyHostToDevice,
                     Stream<gpu>::GetStream(ctx.get_stream<gpu>()));
   #else
     LOG(FATAL) << "Illegal attempt to use GPU in a CPU-only build";
   #endif
   } else {
-    std::memcpy(indices, indices_cpu.data(), indices_cpu.size() * sizeof(int));
+    std::memcpy(indices, indices_cpu.data(), indices_cpu.size() * sizeof(index_t));
   }
 
   MSHADOW_IDX_TYPE_SWITCH(out_data0.type_flag_, DType, {

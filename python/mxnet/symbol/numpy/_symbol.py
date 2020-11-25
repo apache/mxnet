@@ -160,11 +160,14 @@ class _Symbol(Symbol):
 
     def __repr__(self):
         """Gets a string representation of the symbol."""
-        if self.num_outputs > 1:
-            name = ', '.join([str(ele_sym) for ele_sym in self])
-            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        if self._alive:
+            if self.num_outputs > 1:
+                name = ', '.join([str(ele_sym) for ele_sym in self])
+                return '<%s group [%s]>' % (self.__class__.__name__, name)
+            else:
+                return '<%s %s>' % (self.__class__.__name__, self.name)
         else:
-            return '<%s %s>' % (self.__class__.__name__, self.name)
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     @property
     def name(self):
@@ -1068,6 +1071,14 @@ class _Symbol(Symbol):
     def broadcast_like(self, *args, **kwargs):
         raise AttributeError('_Symbol object has no attribute broadcast_like')
 
+    # pylint: disable=too-many-arguments
+    def optimize_for(self, backend, args=None, aux=None, ctx=None,
+                     shape_dict=None, type_dict=None, stype_dict=None, skip_infer=False, **kwargs):
+        """Partitions current symbol and optimizes it for a given backend."""
+        new_sym = super().optimize_for(backend, args, aux, ctx, shape_dict, type_dict,
+                                       stype_dict, skip_infer, **kwargs)
+        new_sym = new_sym.as_np_ndarray()
+        return new_sym
 
 @set_module('mxnet.symbol.numpy')
 def zeros(shape, dtype=float, order='C', ctx=None):

@@ -32,21 +32,21 @@ import sys
 import numpy as np
 
 from mxnet import numpy
-from ... import symbol
-from ...context import gpu
-from ...symbol import Symbol
-from ...symbol import contrib as symbol_contrib
-from ... import ndarray
-from ...ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from .. import symbol
+from ..context import gpu
+from ..symbol import Symbol
+from ..symbol import contrib as symbol_contrib
+from .. import ndarray
+from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from . import lists
-from ...gluon import Block, trainer
-from ... import base
-from ...base import (_NP_OP_PREFIX, _NP_OP_SUBMODULE_LIST, _NP_EXT_OP_PREFIX,
-                     _NP_EXT_OP_SUBMODULE_LIST, _NP_INTERNAL_OP_PREFIX,
-                     c_str_array, SymbolHandle, check_call, _LIB, mx_uint, c_array_buf)
-from ... import optimizer as opt
+from ..gluon import Block, trainer
+from .. import base
+from ..base import (_NP_OP_PREFIX, _NP_OP_SUBMODULE_LIST, _NP_EXT_OP_PREFIX,
+                    _NP_EXT_OP_SUBMODULE_LIST, _NP_INTERNAL_OP_PREFIX,
+                    c_str_array, SymbolHandle, check_call, _LIB, mx_uint, c_array_buf)
+from .. import optimizer as opt
 from .loss_scaler import LossScaler
-from ...operator import get_all_registered_operators_grouped
+from ..operator import get_all_registered_operators_grouped
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
@@ -80,20 +80,27 @@ def _get_nd_fun_to_wrap(name, module, submodule_dict):
     else:
         func_name = name
         cur_module = module
-    return func_name, cur_module
+    return func_name, [cur_module]
 
 def _get_np_fun_to_wrap(name, ns_prefix):
     for pre, mod, subs in ((_NP_OP_PREFIX, 'numpy', _NP_OP_SUBMODULE_LIST),
                            (_NP_EXT_OP_PREFIX, 'numpy_extension', _NP_EXT_OP_SUBMODULE_LIST),
                            (_NP_INTERNAL_OP_PREFIX, 'numpy._internal', [])):
         if name.startswith(pre):
-            name = name[len(pre):]
+            nm = name[len(pre):]
             for sub in subs:
-                if name.startswith(sub):
-                    return name[len(sub):], sys.modules[f'{ns_prefix}.{mod}.{sub[1:-1]}']
-            return name, sys.modules[f'{ns_prefix}.{mod}']
-    assert False
-    return None  # for pylint
+                if nm.startswith(sub):
+                    func, modules = nm[len(sub):], [sys.modules[f'{ns_prefix}.{mod}.{sub[1:-1]}']]
+                    break
+            else:
+                func, modules = nm, [sys.modules[f'{ns_prefix}.{mod}']]
+                break
+    else:
+        assert False, f'Unable to find target module for {name} in {ns_prefix}'
+    if name.startswith(_NP_INTERNAL_OP_PREFIX) and ns_prefix == 'mxnet.ndarray':
+        if hasattr(ndarray.numpy._api_internal, func):
+            modules.append(ndarray.numpy._api_internal)
+    return func, modules
 
 def _wrap_module_functions(module, is_numpy_module, target_dtype, get_aliases, get_cond_aliases,
                            get_fun_to_wrap, target_precision_ops=None, conditional_fp32_ops=None,
@@ -209,49 +216,40 @@ def _wrap_module_functions(module, is_numpy_module, target_dtype, get_aliases, g
     wrap_list = target_precision_ops if target_precision_ops is not None \
                     else list_lp16_ops(target_dtype)
     for fun_name in get_aliases(wrap_list):
-        try:
-            fun_name, cur_module = get_fun_to_wrap(fun_name, module)
+        fun_name, modules = get_fun_to_wrap(fun_name, module)
+        for cur_module in modules:
             f_to_wrap = getattr(cur_module, fun_name)
             fp32_param = fp32_param_list[fun_name] if (fp32_param_list and fun_name in fp32_param_list) else None
             setattr(cur_module, fun_name, _wrapper(f_to_wrap, target_dtype, fp32_param=fp32_param))
             if not is_numpy_module and cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, target_dtype, fp32_param=fp32_param))
-        except AttributeError:
-            raise
 
     wrap_list = fp32_ops if fp32_ops is not None else list_fp32_ops(target_dtype)
     for fun_name in get_aliases(wrap_list):
-        try:
-            fun_name, cur_module = get_fun_to_wrap(fun_name, module)
+        fun_name, modules = get_fun_to_wrap(fun_name, module)
+        for cur_module in modules:
             f_to_wrap = getattr(cur_module, fun_name)
             setattr(cur_module, fun_name, _wrapper(f_to_wrap, np.float32))
             if not is_numpy_module and cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32))
-        except AttributeError:
-            raise
 
     wrap_list = conditional_fp32_ops if conditional_fp32_ops is not None \
                     else list_conditional_fp32_ops(target_dtype)
     for fun_name, arg, arg_values in get_cond_aliases(wrap_list):
-        try:
-            fun_name, cur_module = get_fun_to_wrap(fun_name, module)
+        fun_name, modules = get_fun_to_wrap(fun_name, module)
+        for cur_module in modules:
             f_to_wrap = getattr(cur_module, fun_name)
             setattr(cur_module, fun_name, _wrapper(f_to_wrap, np.float32, cond_arg=(arg, arg_values)))
             if not is_numpy_module and cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32, cond_arg=(arg, arg_values)))
-        except AttributeError:
-            raise
-
 
     for fun_name in get_aliases(list_widest_type_cast(target_dtype)):
-        try:
-            fun_name, cur_module = get_fun_to_wrap(fun_name, module)
+        fun_name, modules = get_fun_to_wrap(fun_name, module)
+        for cur_module in modules:
             f_to_wrap = getattr(cur_module, fun_name)
             setattr(cur_module, fun_name, _symbol_widest_wrapper(f_to_wrap))
             if not is_numpy_module and cur_module == module:
                 setattr(module.op, fun_name, _symbol_widest_wrapper(f_to_wrap))
-        except AttributeError:
-            raise
 
 def _wrap_loss_output_functions(module, ls, target_dtype):
     if module == ndarray:
@@ -701,7 +699,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
         because of a cast layer following it, but will reduce the computation and memory
         overhead of the model if casted.
     """
-    from ...gluon import HybridBlock, SymbolBlock
+    from ..gluon import HybridBlock, SymbolBlock
     assert isinstance(block, HybridBlock), "block input should be a HybridBlock"
     if not block._cached_graph:
         raise RuntimeError(

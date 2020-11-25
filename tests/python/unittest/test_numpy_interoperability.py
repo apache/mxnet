@@ -29,7 +29,7 @@ from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
 from mxnet.test_utils import is_op_runnable
-from common import assertRaises, with_seed, random_seed
+from common import assertRaises, random_seed
 from mxnet.numpy_dispatch_protocol import with_array_function_protocol, with_array_ufunc_protocol
 from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARRAY_UFUNC_LIST
 
@@ -3255,13 +3255,15 @@ def _check_interoperability_helper(op_name, rel_tol, abs_tol, *args, **kwargs):
     strs = op_name.split('.')
     if len(strs) == 1:
         onp_op = getattr(_np, op_name)
+        mxnp_op = getattr(np, op_name)
     elif len(strs) == 2:
         onp_op = getattr(getattr(_np, strs[0]), strs[1])
+        mxnp_op = getattr(getattr(np, strs[0]), strs[1])
     else:
         assert False
     if not is_op_runnable():
         return
-    out = onp_op(*args, **kwargs)
+    out = mxnp_op(*args, **kwargs)
     expected_out = _get_numpy_op_output(onp_op, *args, **kwargs)
     if isinstance(out, (tuple, list)):
         assert type(out) == type(expected_out)
@@ -3308,7 +3310,6 @@ def check_interoperability(op_list):
             _check_interoperability_helper(name, rel_tol, abs_tol, *workload['args'], **workload['kwargs'])
 
 
-@with_seed()
 @use_np
 @with_array_function_protocol
 @pytest.mark.serial
@@ -3322,7 +3323,6 @@ def test_np_memory_array_function():
         assert op(data_mx, np.ones((5, 0))) == op(data_np, _np.ones((5, 0)))
 
 
-@with_seed()
 @use_np
 @with_array_function_protocol
 @pytest.mark.serial
@@ -3330,7 +3330,6 @@ def test_np_array_function_protocol():
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)
 
 
-@with_seed()
 @use_np
 @with_array_ufunc_protocol
 @pytest.mark.serial
@@ -3338,7 +3337,6 @@ def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
 
 
-@with_seed()
 @use_np
 @pytest.mark.serial
 def test_np_fallback_ops():

@@ -139,11 +139,12 @@ struct SVDWrapper {
                  const TBlob& v, const mxnet::TShape& vt_shape,
                  const TBlob& work, const OpContext& ctx) {
     Stream<xpu> *s_xpu = ctx.get_stream<xpu>();
+    using IndexT = typename LapackIndex<xpu>::IndexT;
     const mxnet::TShape& a_shape = a.shape_;
     const mxnet::TShape& ut_axis = GetTransAxis(u.shape_);
     const int a_ndim = a.ndim();
-    const int nrow = a_shape[a_ndim - 2];
-    const int ncol = a_shape[a_ndim - 1];
+    const IndexT nrow = a_shape[a_ndim - 2];
+    const IndexT ncol = a_shape[a_ndim - 1];
     if (nrow > ncol) {
       const_cast<TBlob&>(u) = u.reshape(ut_shape);
       const_cast<TBlob&>(v) = v.reshape(vt_shape);
@@ -219,7 +220,7 @@ struct WSQ {
       std::vector<DType> s_vec(s_shape1.Size(), 0);
       std::vector<DType> v_vec(v_shape2.Size(), 0);
       // Get workspace size in linalg_gesdd.
-      workspace_size += linalg_gesdd_workspace_query(
+      workspace_size += linalg_gesdd_workspace_query<xpu, DType, lapack_index_t>(
         a.shape_[a_ndim - 2], a.shape_[a_ndim - 1],
         TBlob(u_vec.data(), u_shape2, a.dev_mask(), a.dev_id()).get<xpu, 2, DType>(s),
         TBlob(s_vec.data(), s_shape1, a.dev_mask(), a.dev_id()).get<xpu, 1, DType>(s),

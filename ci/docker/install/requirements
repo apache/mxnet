@@ -25,9 +25,9 @@ graphviz<0.9.0,>=0.8.1
 contextvars;python_version<"3.7"
 
 # Optional dependencies
-onnx==1.5.0
-# protobuf version frozen due to ps-lite
-protobuf==3.5.2
+onnx==1.7.0
+onnxruntime==1.4.0
+protobuf==3.14.0
 scipy==1.4.1
 tabulate==0.7.5
 Cython==0.29.7
@@ -36,15 +36,14 @@ Cython==0.29.7
 cpplint==1.3.0
 pylint==2.3.1  # pylint and astroid need to be aligned
 astroid==2.3.3  # pylint and astroid need to be aligned
-pytest==5.3.5
+pytest==6.1.2
 pytest-env==0.6.2
-pytest-cov==2.8.1
-pytest-xdist==1.31.0
-pytest-timeout==1.3.4
-flaky==3.6.1
+pytest-cov==2.10.1
+pytest-xdist==2.1.0
+pytest-timeout==1.4.2
+flaky==3.7.0
 setuptools==49.6.0  # https://github.com/pypa/setuptools/issues/2352
 wheel
-mock==2.0.0
 
 # TVM dependencies
 decorator==4.4.0
