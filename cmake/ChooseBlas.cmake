@@ -65,9 +65,18 @@ elseif(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
                     RESULT_VARIABLE OPENBLAS_USES_GFORTRAN_RET)
     if(NOT OPENBLAS_USES_GFORTRAN_OUT STREQUAL "" AND NOT OPENBLAS_USES_GFORTRAN_RET)
       message("Openblas uses GFortran, automatically linking to it")
-      set(Fortran_COMPILER_ID GNU)
-      include(cmake/Modules/FindFortran.cmake)
-      list(APPEND mshadow_LINKER_LIBS ${Fortran_GNU_RUNTIME_LIBRARIES})
+      #set(Fortran_COMPILER_ID GNU)
+      #include(cmake/Modules/FindFortran.cmake)
+      #list(APPEND mshadow_LINKER_LIBS ${Fortran_GNU_RUNTIME_LIBRARIES})
+      file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/gen/CMakeLists.txt"
+      "cmake_minimum_required(VERSION ${CMAKE_VERSION})
+project(CheckFortran Fortran)
+message(\"gfortran is HERE\$\{CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES\}\")
+")
+      execute_process(
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/gen/
+        COMMAND ${CMAKE_COMMAND} .
+      )
     endif()
     # check the lapack flavor of openblas
     include(CheckSymbolExists)
