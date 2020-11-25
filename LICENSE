@@ -241,7 +241,7 @@
     =======================================================================================
 
     src/serialization/miniz.cc
-    src/serialization/miniz.h (Copy of the License available at src/serialization/miniz.cc)
+    src/serialization/miniz.h
     example/gluon/tree_lstm
     3rdparty/tvm/3rdparty/cma
     3rdparty/onnx-tensorrt

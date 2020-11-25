@@ -319,7 +319,7 @@ size_t npy_header_blob_read_callback(void *pOpaque, mz_uint64 file_ofs, void *pB
         std::memcpy(pBuf, pSrc, n);
     }
     return n;
-};
+}
 
 
 void save_blob(mz_zip_archive* archive, const std::string& blob_name, const TBlob& blob) {
@@ -602,7 +602,8 @@ load_arrays(const std::string& zip_fname) {
         CHECK_NE(nullptr, indptr_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         header_len = parse_npy_header_len(indptr_file, fname, zip_fname);
         header.resize(header_len);
-        CHECK_EQ(mz_zip_reader_extract_iter_read(indptr_file, header.data(), header_len), header_len)
+        CHECK_EQ(mz_zip_reader_extract_iter_read(indptr_file, header.data(), header_len),
+                 header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         auto[indptr_type_flag, indptr_fortran_order, indptr_shape] = \
@@ -620,7 +621,8 @@ load_arrays(const std::string& zip_fname) {
         CHECK_NE(nullptr, indices_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         header_len = parse_npy_header_len(indices_file, fname, zip_fname);
         header.resize(header_len);
-        CHECK_EQ(mz_zip_reader_extract_iter_read(indices_file, header.data(), header_len), header_len)
+        CHECK_EQ(mz_zip_reader_extract_iter_read(indices_file, header.data(), header_len),
+                 header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         auto[indices_type_flag, indices_fortran_order, indices_shape] = \
@@ -745,9 +747,9 @@ load_arrays(const std::string& zip_fname) {
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         auto[storage_type_flag, storage_fortran_order, storage_shape] = \
-            npy::parse_npy_header_descr(header);
+          npy::parse_npy_header_descr(header);
         if (storage_fortran_order) {
-            LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
+          LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
         }
         TShape storage_tshape(storage_shape);
 
@@ -759,13 +761,14 @@ load_arrays(const std::string& zip_fname) {
         CHECK_NE(nullptr, indices_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         header_len = parse_npy_header_len(indices_file, fname, zip_fname);
         header.resize(header_len);
-        CHECK_EQ(mz_zip_reader_extract_iter_read(indices_file, header.data(), header_len), header_len)
+        CHECK_EQ(mz_zip_reader_extract_iter_read(indices_file, header.data(), header_len),
+                 header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         auto[indices_type_flag, indices_fortran_order, indices_shape] = \
-            npy::parse_npy_header_descr(header);
+          npy::parse_npy_header_descr(header);
         if (indices_fortran_order) {
-            LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
+          LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
         }
         TShape indices_tshape(indices_shape);
 
