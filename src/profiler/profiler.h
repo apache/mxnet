@@ -54,7 +54,10 @@ struct static_string {
   inline explicit static_string(const char *s) { set(s); }
   inline const char *c_str() const { return &string_[0]; }
   inline void set(const char *s) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
     strncpy(&string_[0], s, string_size - 1);
+#pragma GCC diagnostic pop
     string_[string_size - 1] = '\0';
   }
   inline void append(const char *s) {
