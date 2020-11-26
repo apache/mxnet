@@ -121,7 +121,7 @@ COPY runtime_functions.sh /work/
 ####################################################################################################
 FROM base as gpu
 
-# Install TensorRT
+# Install TensorRT and CuDNN
 # We need to redeclare ARG due to
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG BASE_IMAGE
@@ -140,6 +140,7 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     apt-get install -y libnvinfer${TRT_MAJOR_VERSION}=${TRT_VERSION} \
                        libnvinfer-dev=${TRT_VERSION} \
                        libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \
-                       libnvinfer-plugin-dev=${TRT_VERSION} && \
+                       libnvinfer-plugin-dev=${TRT_VERSION} \
+                       libcudnn8-dev && \
     rm -rf /var/lib/apt/lists/*
 
