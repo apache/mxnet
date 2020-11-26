@@ -881,7 +881,7 @@ load_arrays(const std::string& zip_fname) {
         }
 
         arrays.push_back(array);
-        return_names.emplace_back(path.substr(0, path.size() - 5));  // Skip .npy\0
+        return_names.emplace_back(path.substr(0, path.size() - 4));
       }
     }
   }
