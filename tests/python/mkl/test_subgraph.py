@@ -170,7 +170,6 @@ def check_quantize(sym, data_shape, out_type, name='conv',
                                                                     quantized_dtype=out_type,
                                                                     calib_mode='naive',
                                                                     calib_data=calib_data,
-                                                                    label_names=None,
                                                                     num_calib_batches=1,
                                                                     quantize_mode='full',
                                                                     quantize_granularity=quantize_granularity)
@@ -902,7 +901,6 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
                                                                    quantized_dtype='int8',
                                                                    calib_mode='naive',
                                                                    calib_data=calib_data,
-                                                                   label_names=None,
                                                                    num_calib_batches=1,
                                                                    quantize_mode='full')
   qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
@@ -951,7 +949,6 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
                                                                    quantized_dtype='int8',
                                                                    calib_mode='naive',
                                                                    calib_data=calib_data,
-                                                                   label_names=None,
                                                                    num_calib_batches=1,
                                                                    quantize_mode='full')
   qarg_params['data'] = data_nd
