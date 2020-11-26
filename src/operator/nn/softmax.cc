@@ -194,15 +194,25 @@ NNVM_REGISTER_OP(masked_softmax)
 .describe(R"code(Applies the softmax function masking elements according to the mask provided)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<MaskedSoftmaxParam>)
 .set_attr<nnvm::FListOutputNames>("FListInputNames",
-    [](const NodeAttrs& attrs){
+  [](const NodeAttrs& attrs){
     return std::vector<std::string>{"data", "mask"};
-})
+  })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
-    [](const NodeAttrs& attrs) {
+  [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output"};
-})
+  })
 .set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxCompute<cpu, mxnet_op::softmax_fwd>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_masked_softmax"})
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto data_grad = MakeNode("_backward_masked_softmax", n->attrs.name + "_backward_data",
+                              {ograds[0], n->inputs[1], nnvm::NodeEntry(n, 0, 0)}, &n->attrs.dict, &n);
+    auto mask_grad = MakeNode("zeros_like", n->attrs.name + "_backward_mask",
+                              {n->inputs[1]}, nullptr, &n);
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(data_grad);
+    ret.emplace_back(mask_grad);
+    return ret;
+  })
 .set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxOpType)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -220,12 +230,12 @@ NNVM_REGISTER_OP(masked_softmax)
 .add_arguments(MaskedSoftmaxParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_masked_softmax)
-.set_num_inputs(4)
-.set_num_outputs(2)
+.set_num_inputs(3)
+.set_num_outputs(1)
 .set_attr<nnvm::FListOutputNames>("FListInputNames",
-    [](const NodeAttrs& attrs){
-    return std::vector<std::string>{"ograd", "data", "mask", "output"};
-})
+  [](const NodeAttrs& attrs){
+    return std::vector<std::string>{"ograd", "mask", "output"};
+  })
 .set_attr<mxnet::FInferShape>("FInferShape", MaskedSoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxGradOpType)
 .set_attr<FResourceRequest>("FResourceRequest",

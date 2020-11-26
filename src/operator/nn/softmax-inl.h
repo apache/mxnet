@@ -1403,49 +1403,41 @@ static inline bool MaskedSoftmaxOpShape(const nnvm::NodeAttrs& attrs,
 static inline bool MaskedSoftmaxGradOpShape(const nnvm::NodeAttrs& attrs,
                                             mxnet::ShapeVector *in_shape,
                                             mxnet::ShapeVector *out_shape) {
-  CHECK_EQ(out_shape->size(), 2U);
-  CHECK_EQ(in_shape->size(), 4U);
+  CHECK_EQ(out_shape->size(), 1U);
+  CHECK_EQ(in_shape->size(), 3U);
 
-  mxnet::TShape& data_shape = (*in_shape)[1];
-  mxnet::TShape& mask_shape = (*in_shape)[2];
+  mxnet::TShape& ograd_shape = (*in_shape)[0];
+  mxnet::TShape& mask_shape = (*in_shape)[1];
 
-  if (!mxnet::ndim_is_known(data_shape) || !mxnet::ndim_is_known(mask_shape)) {
+  if (!mxnet::ndim_is_known(ograd_shape) || !mxnet::ndim_is_known(mask_shape)) {
     return false;
   }
-  CHECK(data_shape.ndim() == mask_shape.ndim())
+  CHECK(ograd_shape.ndim() == mask_shape.ndim())
       << "Number of dimensions in data and mask does not match";
-  CHECK(data_shape.ndim() > 0)
+  CHECK(ograd_shape.ndim() > 0)
       << "Empty tuple is not allowed";
 
-  for (int i = 0; i < data_shape.ndim(); ++i) {
-    CHECK(data_shape[i] == mask_shape[i] || mask_shape[i] == 1)
-      << "Mask cannot be broadcasted from " << mask_shape << " to " << data_shape;
+  for (int i = 0; i < ograd_shape.ndim(); ++i) {
+    CHECK(ograd_shape[i] == mask_shape[i] || mask_shape[i] == 1)
+      << "Mask cannot be broadcasted from " << mask_shape << " to " << ograd_shape;
   }
 
   SHAPE_ASSIGN_CHECK(*out_shape, 0, in_shape->at(0));
-  SHAPE_ASSIGN_CHECK(*out_shape, 0, in_shape->at(1));
-  SHAPE_ASSIGN_CHECK(*out_shape, 1, in_shape->at(2));
-  SHAPE_ASSIGN_CHECK(*out_shape, 0, in_shape->at(3));
+  SHAPE_ASSIGN_CHECK(*out_shape, 0, in_shape->at(2));
   SHAPE_ASSIGN_CHECK(*in_shape, 0, out_shape->at(0));
-  SHAPE_ASSIGN_CHECK(*in_shape, 1, out_shape->at(0));
-  SHAPE_ASSIGN_CHECK(*in_shape, 2, out_shape->at(1));
-  SHAPE_ASSIGN_CHECK(*in_shape, 3, out_shape->at(0));
+  SHAPE_ASSIGN_CHECK(*in_shape, 2, out_shape->at(0));
   return true;
 }
 
 static inline bool MaskedSoftmaxGradOpType(const nnvm::NodeAttrs& attrs,
                                            std::vector<int>* in_attrs,
                                            std::vector<int>* out_attrs) {
-  CHECK_EQ(out_attrs->size(), 2U);
-  CHECK_EQ(in_attrs->size(), 4U);
-  int in_dtype = (*in_attrs)[1];
-  int out_dtype = (*in_attrs)[3];
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_EQ(in_attrs->size(), 3U);
+  int out_dtype = (*in_attrs)[2];
   TYPE_ASSIGN_CHECK(*in_attrs, 0, out_dtype);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_dtype);
-  TYPE_ASSIGN_CHECK(*out_attrs, 1, in_attrs->at(2));
 
-  return (*out_attrs)[0] != -1 && (*in_attrs)[0] != -1 &&
-         (*out_attrs)[1] != -1 && (*in_attrs)[1] != -1;
+  return true;
 }
 
 static inline std::vector<std::pair<int, int> >
@@ -1639,11 +1631,7 @@ void MaskedSoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
                               const std::vector<OpReqType>& req,
                               const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
-  // set zeros in mask gradient
-  if (req[1] != kNullOp) {
-    mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
-      ctx.get_stream<xpu>(), outputs[1].Size(), outputs[1].dptr<bool>());
-  }
+
   if (req[0] == kNullOp) return;
   const MaskedSoftmaxParam& param = nnvm::get<MaskedSoftmaxParam>(attrs.parsed);
   int axis = CheckAxis(param.axis, inputs[0].ndim());
@@ -1658,21 +1646,21 @@ void MaskedSoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         MXNET_NDIM_SWITCH(inputs[0].ndim(), ndim, {
           OType* ograd_ptr = inputs[0].dptr<OType>();
-          OType* out_ptr = inputs[3].dptr<OType>();
-          bool* mask_ptr = inputs[2].dptr<bool>();
+          OType* out_ptr = inputs[2].dptr<OType>();
+          bool* mask_ptr = inputs[1].dptr<bool>();
           DType* grad_data = outputs[0].dptr<DType>();
           if (safe_acc) {
             MaskedSoftmaxGrad<OP1, OP2, Req, negate, AType>(
                 ctx.get_stream<xpu>(), out_ptr,
                 ograd_ptr, grad_data, mask_ptr,
-                inputs[1].shape_.get<ndim>(), inputs[2].shape_.get<ndim>(),
+                inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
                 axis, static_cast<DType>(scale),
                 static_cast<DType>(temperature), ctx);
           } else {
             MaskedSoftmaxGrad<OP1, OP2, Req, negate, DType>(
                 ctx.get_stream<xpu>(), out_ptr,
                 ograd_ptr, grad_data, mask_ptr,
-                inputs[1].shape_.get<ndim>(), inputs[2].shape_.get<ndim>(),
+                inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
                 axis, static_cast<DType>(scale),
                 static_cast<DType>(temperature), ctx);
           }
