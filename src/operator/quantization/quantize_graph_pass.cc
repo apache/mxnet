@@ -27,6 +27,7 @@
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
 #include <queue>
+#include <stack>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -339,13 +340,17 @@ Graph QuantizeGraph(Graph &&src) {
             // Or the output name is not ending with 'output', just put the output name here
             // to better align with calibration phase. No need to change name to weights/bias.
             std::string suffix = "";
+            std::string new_name = e.node->attrs.name;
+
             if (mirror_node->op() != nullptr) {
               std::string name = GetOutputName(e.node.get(), e.index);
               suffix = "_" + name;
+            } else if(!offline_params.count(new_name)){
+              new_name = node->attrs.name + "_" + new_name;
             }
 
             ObjectPtr quantize_node = InsertNode("_contrib_quantize_v2",
-              e.node->attrs.name + suffix + "_quantize", new_node, mirror_entry);
+              new_name + suffix + "_quantize", new_node, mirror_entry);
             quantize_node->attrs.dict["out_type"] = quantized_dtype;
             quantize_node->op()->attr_parser(&(quantize_node->attrs));
             mirror_entry_map[e] = NodeEntry{quantize_node, 0, e.version};
@@ -498,8 +503,23 @@ Graph QuantizeGraph(Graph &&src) {
       Op::GetAttr<mxnet::FNeedCalibrateInput>("FNeedCalibrateInput");
   static const auto& need_calib_output_map =
       Op::GetAttr<mxnet::FNeedCalibrateOutput>("FNeedCalibrateOutput");
+
+  std::stack<std::string> calib_variables;
   std::vector<std::string> calib_nodes;
   DFSVisit(ret.outputs, [&](const ObjectPtr& node) {
+    if (node->op() && !calib_variables.empty()) {
+      if (reverse_mirror_map.count(node)) {
+          const std::string& var_name = calib_variables.top();
+          const auto& fp32_in_node = reverse_mirror_map[node];
+          for (const auto &input_node : fp32_in_node->inputs) {
+            if (var_name == input_node.node->attrs.name) {
+              calib_nodes.push_back(fp32_in_node->attrs.name + "_" + var_name);
+              calib_variables.pop();
+              break;
+            }
+          }
+      }
+    }
     if (need_calib_input_map.count(node->op())) {
       const auto calib_idx = need_calib_input_map[node->op()](node->attrs);
       for (const auto &idx : calib_idx) {
@@ -510,7 +530,10 @@ Graph QuantizeGraph(Graph &&src) {
         } else {
           const auto& e = node->inputs[idx];
           if (e.node->is_variable()) {
-            calib_nodes.push_back(e.node->attrs.name);
+            // monitor callback join operator name and variable name as observable node,
+            // utilize fact that we're using DFS and put variable name on stack to
+            // find operator node name for this variable node
+            calib_variables.emplace(e.node->attrs.name);
           } else {
             if (reverse_mirror_map.count(e.node)) {
               const auto& fp32_in_node = reverse_mirror_map.at(e.node);
@@ -548,6 +571,10 @@ static inline void SetCalibTableForEntry(
 
   if (!e.node->is_variable()) {
     full_node_name += "_" + out_name;
+  } else {
+    const std::string suffix = "_quantize";
+    full_node_name = node->attrs.name;
+    full_node_name = std::string(full_node_name.begin(), full_node_name.end() - suffix.size());
   }
 
   const std::string prefix = "quantized_";
