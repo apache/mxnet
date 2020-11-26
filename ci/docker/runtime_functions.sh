@@ -742,7 +742,7 @@ sanity_license() {
 
 sanity_cpp() {
     set -ex
-    3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests --exclude_path src/operator/contrib/ctc_include include/mkldnn src/serialization/miniz.cc src/serialization/miniz.h
+    3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests --exclude_path src/operator/contrib/ctc_include include/mkldnn
 }
 
 sanity_python() {

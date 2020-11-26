@@ -240,8 +240,8 @@
     MIT license
     =======================================================================================
 
-    src/serialization/miniz.cc
-    src/serialization/miniz.h
+    3rdparty/miniz.c
+    3rdparty/miniz.h
     example/gluon/tree_lstm
     3rdparty/tvm/3rdparty/cma
     3rdparty/onnx-tensorrt

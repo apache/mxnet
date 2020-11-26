@@ -59,7 +59,7 @@
 #include "../common/utils.h"
 #include "../profiler/profiler.h"
 #include "../serialization/cnpy.h"
-#include "../serialization/miniz.h"
+#include "miniz.h"
 #include "nnvm/pass_functions.h"
 
 using namespace mxnet;
