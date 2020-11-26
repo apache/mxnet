@@ -558,7 +558,7 @@ load_arrays(const std::string& zip_fname) {
       fname += "format.npy";
       mz_zip_reader_extract_iter_state* format_file = mz_zip_reader_extract_file_iter_new(
           &archive, fname.data(), 0);
-      CHECK_NE(nullptr, format_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+      CHECK(nullptr != format_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
 
       // In the special case of format.npy we ignore the header as it
       // specifies the string datatype which is unsupported by MXNet
@@ -581,7 +581,7 @@ load_arrays(const std::string& zip_fname) {
         fname += "data.npy";
         mz_zip_reader_extract_iter_state* data_file = mz_zip_reader_extract_file_iter_new(
             &archive, fname.data(), 0);
-        CHECK_NE(nullptr, data_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+        CHECK(nullptr != data_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         header_len = parse_npy_header_len(data_file, fname, zip_fname);
         header.resize(header_len);
         CHECK_EQ(mz_zip_reader_extract_iter_read(data_file, header.data(), header_len), header_len)
@@ -599,7 +599,7 @@ load_arrays(const std::string& zip_fname) {
         fname += "indptr.npy";
         mz_zip_reader_extract_iter_state* indptr_file = mz_zip_reader_extract_file_iter_new(
             &archive, fname.data(), 0);
-        CHECK_NE(nullptr, indptr_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+        CHECK(nullptr != indptr_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         header_len = parse_npy_header_len(indptr_file, fname, zip_fname);
         header.resize(header_len);
         CHECK_EQ(mz_zip_reader_extract_iter_read(indptr_file, header.data(), header_len),
@@ -618,7 +618,7 @@ load_arrays(const std::string& zip_fname) {
         fname += "indices.npy";
         mz_zip_reader_extract_iter_state* indices_file = mz_zip_reader_extract_file_iter_new(
             &archive, fname.data(), 0);
-        CHECK_NE(nullptr, indices_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+        CHECK(nullptr != indices_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         header_len = parse_npy_header_len(indices_file, fname, zip_fname);
         header.resize(header_len);
         CHECK_EQ(mz_zip_reader_extract_iter_read(indices_file, header.data(), header_len),
@@ -637,7 +637,7 @@ load_arrays(const std::string& zip_fname) {
         fname += "shape.npy";
         mz_zip_reader_extract_iter_state* shape_file = mz_zip_reader_extract_file_iter_new(
             &archive, fname.data(), 0);
-        CHECK_NE(nullptr, shape_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+        CHECK(nullptr != shape_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         header_len = parse_npy_header_len(shape_file, fname, zip_fname);
         header.resize(header_len);
         CHECK_EQ(mz_zip_reader_extract_iter_read(shape_file, header.data(), header_len), header_len)
@@ -718,7 +718,7 @@ load_arrays(const std::string& zip_fname) {
       fname += "format.npy";
       mz_zip_reader_extract_iter_state* format_file = mz_zip_reader_extract_file_iter_new(
           &archive, fname.data(), 0);
-      CHECK_NE(nullptr, format_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+      CHECK(nullptr != format_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
 
       // In the special case of format.npy we ignore the header as it
       // specifies the string datatype which is unsupported by MXNet
@@ -740,7 +740,7 @@ load_arrays(const std::string& zip_fname) {
         fname += "data.npy";
         mz_zip_reader_extract_iter_state* data_file = mz_zip_reader_extract_file_iter_new(
             &archive, fname.data(), 0);
-        CHECK_NE(nullptr, data_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+        CHECK(nullptr != data_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         header_len = parse_npy_header_len(data_file, fname, zip_fname);
         header.resize(header_len);
         CHECK_EQ(mz_zip_reader_extract_iter_read(data_file, header.data(), header_len), header_len)
@@ -758,7 +758,7 @@ load_arrays(const std::string& zip_fname) {
         fname += "indices.npy";
         mz_zip_reader_extract_iter_state* indices_file = mz_zip_reader_extract_file_iter_new(
             &archive, fname.data(), 0);
-        CHECK_NE(nullptr, indices_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+        CHECK(nullptr != indices_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         header_len = parse_npy_header_len(indices_file, fname, zip_fname);
         header.resize(header_len);
         CHECK_EQ(mz_zip_reader_extract_iter_read(indices_file, header.data(), header_len),
@@ -777,7 +777,7 @@ load_arrays(const std::string& zip_fname) {
         fname += "shape.npy";
         mz_zip_reader_extract_iter_state* shape_file = mz_zip_reader_extract_file_iter_new(
             &archive, fname.data(), 0);
-        CHECK_NE(nullptr, shape_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+        CHECK(nullptr != shape_file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
         header_len = parse_npy_header_len(shape_file, fname, zip_fname);
         header.resize(header_len);
         CHECK_EQ(mz_zip_reader_extract_iter_read(shape_file, header.data(), header_len), header_len)
@@ -853,7 +853,7 @@ load_arrays(const std::string& zip_fname) {
         path += fname;
         mz_zip_reader_extract_iter_state* file = mz_zip_reader_extract_file_iter_new(
             &archive, path.data(), 0);
-        CHECK_NE(nullptr, file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+        CHECK(nullptr != file) << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
 
         uint32_t header_len = parse_npy_header_len(file, path, zip_fname);
         std::string header;
