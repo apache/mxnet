@@ -520,7 +520,7 @@ load_arrays(const std::string& zip_fname) {
   for (mz_uint i = 0; i < num_entries; i++) {
     mz_uint filename_length = mz_zip_reader_get_filename(&archive, i, nullptr, 0);
     std::string entry_name;
-    entry_name.resize(filename_length);
+    entry_name.resize(filename_length);  // filename_length includes the \0 terminator
     CHECK_EQ(filename_length, mz_zip_reader_get_filename(&archive, i, entry_name.data(),
                                                          filename_length));
     std::string_view entry_name_v {entry_name.data(), entry_name.size() - 1};  // -1 due to \0
@@ -528,11 +528,11 @@ load_arrays(const std::string& zip_fname) {
 
     auto dir_sep_search = entry_name_v.rfind("/");
     if (dir_sep_search == std::string::npos) {  // top level file
-      [[maybe_unused]] auto[iter, inserted] = names[""].insert(entry_name);
+      [[maybe_unused]] auto[iter, inserted] = names[""].emplace(entry_name_v);
       CHECK(inserted);
     } else {  // file inside a folder
-      std::string dirname = entry_name.substr(0, dir_sep_search + 1);
-      std::string fname = entry_name.substr(dir_sep_search + 1);
+      std::string dirname {entry_name_v.substr(0, dir_sep_search + 1)};
+      std::string fname {entry_name_v.substr(dir_sep_search + 1)};
       [[maybe_unused]] auto[iter, inserted] = names[dirname].insert(fname);
       CHECK(inserted);
     }
