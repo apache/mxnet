@@ -59,6 +59,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         g++ \
         g++-8 \
         intel-mkl-2020.0-088 \
+        libomp-dev \
         ## Dependencies
         libgomp1 \
         libturbojpeg0-dev \
