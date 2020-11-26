@@ -119,6 +119,7 @@ def run_cv_model_test(model):
 def test_cv_model_inference_onnxruntime_mobilenet0_5():
     run_cv_model_test('mobilenet0.5')
 
+@pytest.mark.flaky
 def test_cv_model_inference_onnxruntime_mobilenetv2_1_0():
     run_cv_model_test('mobilenetv2_1.0')
 
