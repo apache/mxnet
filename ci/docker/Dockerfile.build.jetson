@@ -58,18 +58,6 @@ RUN git clone --recursive -b v0.3.12 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local && \
     rm -rf OpenBLAS
 
-RUN git clone --recursive -b v1.2.11 https://github.com/madler/zlib.git && \
-    cd /usr/local/zlib && \
-    CHOST=arm \
-    CC=aarch64-linux-gnu-gcc \
-    AR=aarch64-linux-gnu-ar \
-    RANLIB=aarch64-linux-gnu-ranlib \
-    ./configure --static --prefix=/usr/aarch64-linux-gnu && \
-    make -j$(nproc) && \
-    make install && \
-    cd /usr/local && \
-    rm -rf zlib
-
 # Install aarch64 cross depedencies based on Jetpack 4.4
 # Dependencies require cuda-toolkit-10.2 which isn't installed in nvidia docker container
 # It contains cuda-compat instead. However deb files currently depend on cuda-toolkit alone.
