@@ -346,7 +346,7 @@ Graph QuantizeGraph(Graph &&src) {
               std::string name = GetOutputName(e.node.get(), e.index);
               suffix = "_" + name;
             } else if (!offline_params.count(new_name)) {
-              new_name = node->attrs.name + "_" + new_name;
+              new_name = node->attrs.name + "_" + e.node->attrs.name;
             }
 
             ObjectPtr quantize_node = InsertNode("_contrib_quantize_v2",
