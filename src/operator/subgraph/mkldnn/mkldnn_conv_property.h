@@ -107,8 +107,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
           return true;
         }
       case kBN:
-        if ((!disable_conv_sum_) && 
-        (node_name == "elemwise_add" || node_name == "_npi_add")) {
+        if ((!disable_conv_sum_) && (node_name == "elemwise_add" || node_name == "_npi_add")) {
           matched_list_.push_back(&new_node);
           status_ = kSum;
           return true;

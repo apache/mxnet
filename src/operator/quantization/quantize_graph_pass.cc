@@ -345,7 +345,7 @@ Graph QuantizeGraph(Graph &&src) {
             if (mirror_node->op() != nullptr) {
               std::string name = GetOutputName(e.node.get(), e.index);
               suffix = "_" + name;
-            } else if(!offline_params.count(new_name)){
+            } else if (!offline_params.count(new_name)) {
               new_name = node->attrs.name + "_" + new_name;
             }
 
