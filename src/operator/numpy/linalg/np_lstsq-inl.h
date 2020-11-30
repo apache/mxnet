@@ -71,32 +71,33 @@ struct LstsqParam : public dmlc::Parameter<LstsqParam> {
   }
 };
 
-template<typename xpu, typename DType>
-inline void linalg_gelsd_workspace_query(const int nrow,
-                                         const int ncol,
-                                         const int nrhs,
-                                         int *lwork,
-                                         int *liwork,
+template<typename xpu, typename DType, typename IndexT>
+inline void linalg_gelsd_workspace_query(const IndexT nrow,
+                                         const IndexT ncol,
+                                         const IndexT nrhs,
+                                         IndexT *lwork,
+                                         IndexT *liwork,
                                          const Tensor<xpu, 2, DType>& A,
                                          const Tensor<xpu, 2, DType>& B,
                                          const Tensor<xpu, 1, DType>& S);
 
-template<typename xpu, typename DType>
-inline void linalg_gelsd(const int nrow,
-                         const int ncol,
-                         const int nrhs,
+template<typename xpu, typename DType, typename IndexT>
+inline void linalg_gelsd(const IndexT nrow,
+                         const IndexT ncol,
+                         const IndexT nrhs,
                          const DType rcond,
-                         int *rank,
+                         IndexT *rank,
                          const Tensor<xpu, 2, DType>& A,
                          const Tensor<xpu, 2, DType>& B,
                          const Tensor<xpu, 1, DType>& SingularValues,
                          const Tensor<xpu, 1, DType>& Work,
-                         const Tensor<xpu, 1, int>& Iwork);
+                         const Tensor<xpu, 1, IndexT>& Iwork);
 
 struct LstsqTypeTransposeHelper {
   template<typename InDType, typename OutDType>
-  MSHADOW_XINLINE static void Map(int i, const InDType *in_ptr, OutDType *out_ptr,
-                                  const int nrow, const int ncol, const int ld) {
+  MSHADOW_XINLINE static void Map(lapack_index_t i, const InDType *in_ptr, OutDType *out_ptr,
+                                  const lapack_index_t nrow, const lapack_index_t ncol,
+                                  const lapack_index_t ld) {
     if (ld >= nrow && i < nrow * ncol) {
       out_ptr[i / ncol + (i % ncol) * ld] = static_cast<OutDType>(in_ptr[i]);
     }
@@ -106,11 +107,11 @@ struct LstsqTypeTransposeHelper {
 template<int req>
 struct ValuesAssignHelper {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType *in_data, DType *out_data) {
+  MSHADOW_XINLINE static void Map(lapack_index_t i, const DType *in_data, DType *out_data) {
     KERNEL_ASSIGN(out_data[i], req, in_data[i]);
   }
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType& in_data, DType *out_data) {
+  MSHADOW_XINLINE static void Map(lapack_index_t i, const DType& in_data, DType *out_data) {
     KERNEL_ASSIGN(out_data[i], req, in_data);
   }
 };
@@ -118,8 +119,9 @@ struct ValuesAssignHelper {
 template<int req>
 struct SolutionAssignHelper {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType *trans_b_ptr, DType *x_ptr,
-                                  const int nrow, const int ncol, const int nrhs, const int ldb) {
+  MSHADOW_XINLINE static void Map(lapack_index_t i, const DType *trans_b_ptr, DType *x_ptr,
+                                  const lapack_index_t nrow, const lapack_index_t ncol,
+                                  const lapack_index_t nrhs, const lapack_index_t ldb) {
     if (i < ncol * nrhs && ldb >= nrow && ldb >= ncol) {
       KERNEL_ASSIGN(x_ptr[i], req, trans_b_ptr[i / nrhs  + (i % nrhs) * ldb]);
     }
@@ -129,11 +131,12 @@ struct SolutionAssignHelper {
 template<int req>
 struct ResidualsAssignHelper {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType *trans_b_ptr, DType *residuals_ptr,
-                                  const int nrow, const int ncol, const int nrhs, const int ldb) {
+  MSHADOW_XINLINE static void Map(lapack_index_t i, const DType *trans_b_ptr, DType *residuals_ptr,
+                                  const lapack_index_t nrow, const lapack_index_t ncol,
+                                  const lapack_index_t nrhs, const lapack_index_t ldb) {
     if (i < nrhs) {
       DType residuals_values = 0;
-      for (int j = ncol; j < nrow; ++j) {
+      for (lapack_index_t j = ncol; j < nrow; ++j) {
         residuals_values += trans_b_ptr[j + i * ldb] * trans_b_ptr[j + i * ldb];
       }
       KERNEL_ASSIGN(residuals_ptr[i], req, residuals_values);
@@ -141,13 +144,13 @@ struct ResidualsAssignHelper {
   }
 };
 
-#define LINALG_CPU_GELSD_WORKSPACE_QUERY(func, DType) \
+#define LINALG_CPU_GELSD_WORKSPACE_QUERY(func, DType, IndexT) \
 template<> inline void \
-linalg_gelsd_workspace_query<cpu, DType>(const int nrow, \
-                                         const int ncol, \
-                                         const int nrhs, \
-                                         int *lwork, \
-                                         int *liwork, \
+linalg_gelsd_workspace_query<cpu, DType, IndexT>(const IndexT nrow, \
+                                         const IndexT ncol, \
+                                         const IndexT nrhs, \
+                                         IndexT *lwork, \
+                                         IndexT *liwork, \
                                          const Tensor<cpu, 2, DType>& A, \
                                          const Tensor<cpu, 2, DType>& B, \
                                          const Tensor<cpu, 1, DType>& S) { \
@@ -156,39 +159,41 @@ linalg_gelsd_workspace_query<cpu, DType>(const int nrow, \
   CHECK(B.size(0) == nrhs && B.size(1) == B.stride_) \
     << "nrhs or ldb dismatch B shape and ldb should >= max(1, max(nrow, ncol))"; \
   DType temp_work = -1, rcond = -1; \
-  int temp_iwork = -1, rank = -1; \
-  int info = MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, nrow, ncol, nrhs, \
-                                 A.dptr_, static_cast<int>(A.stride_), \
-                                 B.dptr_, static_cast<int>(B.stride_), \
+  IndexT temp_iwork = -1; \
+  IndexT rank = -1; \
+  IndexT info = MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, nrow, ncol, nrhs, \
+                                 A.dptr_, A.stride_, \
+                                 B.dptr_, B.stride_, \
                                  B.dptr_, rcond, &rank, \
                                  &temp_work, -1, &temp_iwork); \
   CHECK_GE(info, 0) << "MXNET_LAPACK_" << #func << ": " \
     << "the " << -info << "-th argument had an illegal value"; \
-  *lwork = static_cast<int>(temp_work); \
+  *lwork = static_cast<IndexT>(temp_work); \
   *liwork = temp_iwork; \
   return; \
 }
 
-#define LINALG_CPU_GELSD(func, DType) \
+#define LINALG_CPU_GELSD(func, DType, IndexT) \
 template<> inline void \
-linalg_gelsd<cpu, DType>(const int nrow, \
-                         const int ncol, \
-                         const int nrhs, \
+linalg_gelsd<cpu, DType, IndexT>(\
+                         const IndexT nrow, \
+                         const IndexT ncol, \
+                         const IndexT nrhs, \
                          const DType rcond, \
-                         int *rank, \
+                         IndexT *rank, \
                          const Tensor<cpu, 2, DType>& A, \
                          const Tensor<cpu, 2, DType>& B, \
                          const Tensor<cpu, 1, DType>& SingularValues, \
                          const Tensor<cpu, 1, DType>& Work, \
-                         const Tensor<cpu, 1, int>& Iwork) { \
+                         const Tensor<cpu, 1, IndexT>& Iwork) { \
   CHECK(A.size(0) == ncol && A.size(1) == A.stride_) \
     << "ncol or lda dismatch A shape and lda should >= max(1, nrow)."; \
   CHECK(B.size(0) == nrhs && B.size(1) == B.stride_) \
     << "nrhs or ldb dismatch B shape and ldb should >= max(1, max(nrow, ncol))"; \
   CHECK(SingularValues.MSize() >= std::min(nrow, ncol)) \
     << "SingularValues is too small"; \
-  const int lwork = Work.MSize(); \
-  int info = MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, nrow, ncol, nrhs, \
+  const IndexT lwork = Work.MSize(); \
+  IndexT info = MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, nrow, ncol, nrhs, \
                                  A.dptr_, A.stride_, B.dptr_, B.stride_, \
                                  SingularValues.dptr_, rcond, rank, \
                                  Work.dptr_, lwork, Iwork.dptr_); \
@@ -201,11 +206,11 @@ linalg_gelsd<cpu, DType>(const int nrow, \
   return; \
 }
 
-LINALG_CPU_GELSD_WORKSPACE_QUERY(sgelsd, float)
-LINALG_CPU_GELSD_WORKSPACE_QUERY(dgelsd, double)
+LINALG_CPU_GELSD_WORKSPACE_QUERY(sgelsd, float, LapackIndex<cpu>::IndexT)
+LINALG_CPU_GELSD_WORKSPACE_QUERY(dgelsd, double, LapackIndex<cpu>::IndexT)
 
-LINALG_CPU_GELSD(sgelsd, float)
-LINALG_CPU_GELSD(dgelsd, double)
+LINALG_CPU_GELSD(sgelsd, float, LapackIndex<cpu>::IndexT)
+LINALG_CPU_GELSD(dgelsd, double, LapackIndex<cpu>::IndexT)
 
 #ifdef __CUDACC__
 
@@ -255,10 +260,10 @@ inline bool GetOutputShapes(const mxnet::TShape& a_shape,
   }
   const int a_ndim = a_shape.ndim();
   const int b_ndim = b_shape.ndim();
-  const int a_nrow = a_shape[0];
-  const int a_ncol = a_shape[1];
-  const int b_nrow = b_shape[0];
-  const int b_nrhs = b_ndim == 2 ? b_shape[1] : 1;
+  const dim_t a_nrow = a_shape[0];
+  const dim_t a_ncol = a_shape[1];
+  const dim_t b_nrow = b_shape[0];
+  const dim_t b_nrhs = b_ndim == 2 ? b_shape[1] : 1;
   CHECK_EQ(a_ndim, 2) << a_ndim
     << "-dimensional array given. Array must be two-dimensional";
   CHECK(b_ndim == 1 || b_ndim == 2) << b_ndim
@@ -267,30 +272,31 @@ inline bool GetOutputShapes(const mxnet::TShape& a_shape,
     << "Incompatible dimensions of inputs";
   // x_shape
   if (b_ndim == 2) {
-    std::vector<int> x_shape_vec({a_ncol, b_nrhs});
+    std::vector<dim_t> x_shape_vec({a_ncol, b_nrhs});
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(x_shape_vec.begin(), x_shape_vec.end()));
   } else {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1, a_ncol));
   }
   // temp_residuals_shape
-  SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape(1, static_cast<dim_t>(std::max(1, b_nrhs))));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape(1, std::max(dim_t(1), b_nrhs)));
   // rank_shape
   SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape(0, 0));
   // s_shape
   if (a_nrow == 0 || a_ncol == 0) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 3, mxnet::TShape(1, 0));
   } else {
-    SHAPE_ASSIGN_CHECK(*out_attrs, 3, mxnet::TShape(1, std::max(1, std::min(a_nrow, a_ncol))));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 3, mxnet::TShape(1, std::max(dim_t(1),
+                                                                std::min(a_nrow, a_ncol))));
   }
   return shape_is_known(*out_attrs);
 }
 
-template<typename xpu, typename DType>
+template<typename xpu, typename DType, typename IndexT>
 size_t LstsqWorkspaceSize(const TBlob& a,
                           const TBlob& b,
                           const mxnet::TShape& x_shape,
-                          int *lwork,
-                          int *liwork,
+                          IndexT *lwork,
+                          IndexT *liwork,
                           const OpContext& ctx) {
   const int a_ndim = a.ndim();
   const int b_ndim = b.ndim();
@@ -304,24 +310,22 @@ size_t LstsqWorkspaceSize(const TBlob& a,
       const mxnet::TShape& a_shape = a.shape_;
       const mxnet::TShape& b_shape = b.shape_;
       if (xpu::kDevCPU) {
-        int nrow = a_shape[0];
-        int ncol = a_shape[1];
-        int nrhs = b_ndim == 2 ? b_shape[1] : 1;
-        int lda = std::max(1, nrow);
-        int ldb = std::max(1, std::max(nrow, ncol));
+        IndexT nrow = a_shape[0];
+        IndexT ncol = a_shape[1];
+        IndexT nrhs = b_ndim == 2 ? b_shape[1] : 1;
+        IndexT lda = std::max<IndexT>(1, nrow);
+        IndexT ldb = std::max<IndexT>(1, std::max(nrow, ncol));
         // Lapack routine can't handle lda = 0 and ldb = 0.
         // If nrow == 0, leading dimension of A_trans and B_trans will be 0.
         if (nrow == 0) { return 0U; }
         if (ncol == 0 && nrhs == 0) { return 0U; }
         // If ncol != 0, need to invoke lapack routine.
         // Lapack routine can't handle n_rhs = 0, so allocate the array one larger in that axis.
-        int temp_nrhs = nrhs == 0 ? 1 : nrhs;
-        std::vector<DType> temp_a_vec(ncol * lda, 0);
-        std::vector<DType> temp_b_vec(temp_nrhs * ldb, 0);
-        std::vector<DType> temp_s_vec(std::max(1, std::min(nrow, ncol)), 0);
-        mshadow::Tensor<cpu, 2, DType> A(temp_a_vec.data(), Shape2(ncol, lda), lda, s_cpu);
-        mshadow::Tensor<cpu, 2, DType> B(temp_b_vec.data(), Shape2(temp_nrhs, ldb), ldb, s_cpu);
-        mshadow::Tensor<cpu, 1, DType> S(temp_s_vec.data(), Shape1(temp_s_vec.size()), s_cpu);
+        IndexT temp_nrhs = nrhs == 0 ? 1 : nrhs;
+        IndexT SSize = std::max<IndexT>(1, std::min(nrow, ncol));
+        mshadow::Tensor<cpu, 2, DType> A(nullptr, Shape2(ncol, lda), lda, s_cpu);
+        mshadow::Tensor<cpu, 2, DType> B(nullptr, Shape2(temp_nrhs, ldb), ldb, s_cpu);
+        mshadow::Tensor<cpu, 1, DType> S(nullptr, Shape1(SSize), s_cpu);
         // Invoke lapack workspace query.
         linalg_gelsd_workspace_query<cpu, DType>(nrow, ncol, temp_nrhs,
                                                  lwork, liwork, A, B, S);
@@ -330,16 +334,16 @@ size_t LstsqWorkspaceSize(const TBlob& a,
         // For B size because on lapack routine exit, B will be overwritten by solution result.
         workspace_size += temp_nrhs * ldb * sizeof(DType);
         // For singular values size.
-        workspace_size += std::max(1, std::min(nrow, ncol)) * sizeof(DType);
+        workspace_size += std::max<IndexT>(1, std::min(nrow, ncol)) * sizeof(DType);
         // For workspace size in linalg_gesld.
-        workspace_size += (*lwork) * sizeof(DType) + (*liwork) * sizeof(int);
+        workspace_size += (*lwork) * sizeof(DType) + (*liwork) * sizeof(IndexT);
       }
     });
   });
   return workspace_size;
 }
 
-template<typename xpu>
+template<typename xpu, typename IndexT>
 void LstsqOpForwardImpl(const TBlob& a,
                         const TBlob& b,
                         const TBlob& x,
@@ -347,8 +351,8 @@ void LstsqOpForwardImpl(const TBlob& a,
                         const TBlob& rank,
                         const TBlob& singularValues,
                         bool *empty_residuals,
-                        const int& lwork,
-                        const int& liwork,
+                        const IndexT& lwork,
+                        const IndexT& liwork,
                         std::vector<char> *workspace,
                         const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
@@ -365,12 +369,12 @@ void LstsqOpForwardImpl(const TBlob& a,
   const mxnet::TShape& b_shape = b.shape_;
   MSHADOW_SGL_DBL_TYPE_SWITCH(x.type_flag_, DType, {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    const int nrow = a_shape[0];
-    const int ncol = a_shape[1];
-    const int nrhs = b.ndim() == 2 ? b_shape[1] : 1;
-    const int lda = std::max(1, nrow);
-    const int ldb = std::max(1, std::max(nrow, ncol));
-    const int snum = std::max(1, std::min(nrow, ncol));
+    const IndexT nrow = a_shape[0];
+    const IndexT ncol = a_shape[1];
+    const IndexT nrhs = b.ndim() == 2 ? b_shape[1] : 1;
+    const IndexT lda  = std::max<IndexT>(1, nrow);
+    const IndexT ldb = std::max<IndexT>(1, std::max(nrow, ncol));
+    const IndexT snum = std::max<IndexT>(1, std::min(nrow, ncol));
     if (nrow == 0) {
       // Assign 0 for all values in x.
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
@@ -378,19 +382,19 @@ void LstsqOpForwardImpl(const TBlob& a,
           s, x.Size(), static_cast<DType>(0), x.dptr<DType>());
       });
       // Assign values for rank.
-      ASSIGN_DISPATCH(*rank.dptr<int>(), kWriteTo, 0);
+      ASSIGN_DISPATCH(*rank.dptr<IndexT>(), kWriteTo, 0);
       // Assign values for empty_residuals.
       *empty_residuals = true;
       return;
     }
     if (ncol == 0 && nrhs == 0) {
       // Assign values for rank.
-      ASSIGN_DISPATCH(*rank.dptr<int>(), kWriteTo, 0);
+      ASSIGN_DISPATCH(*rank.dptr<IndexT>(), kWriteTo, 0);
       // Assign values for empty_residuals.
       *empty_residuals = true;
       return;
     }
-    int temp_nrhs = nrhs == 0 ? 1 : nrhs;
+    IndexT temp_nrhs = nrhs == 0 ? 1 : nrhs;
     mxnet::TShape trans_a_shape(mxnet::Tuple<dim_t>({ ncol, lda }));
     mxnet::TShape trans_b_shape(mxnet::Tuple<dim_t>({ temp_nrhs, ldb }));
     // Allocate data memory.
@@ -398,7 +402,7 @@ void LstsqOpForwardImpl(const TBlob& a,
     DType *b_ptr = a_ptr + trans_a_shape.Size();
     DType *s_ptr = b_ptr + trans_b_shape.Size();
     DType *work_ptr = s_ptr + snum;
-    int *iwork_ptr = reinterpret_cast<int*>(work_ptr + lwork);
+    IndexT *iwork_ptr = reinterpret_cast<IndexT*>(work_ptr + lwork);
     TBlob trans_a(a_ptr, trans_a_shape, a.dev_mask(), a.dev_id());
     TBlob trans_b(b_ptr, trans_b_shape, b.dev_mask(), b.dev_id());
     TBlob singular_values(s_ptr, Shape1(snum), singularValues.dev_mask(), singularValues.dev_id());
@@ -424,12 +428,12 @@ void LstsqOpForwardImpl(const TBlob& a,
     }
     // Invoke lapack routines.
     linalg_gelsd<xpu, DType>(nrow, ncol, temp_nrhs,
-                             rcond, rank.dptr<int>(),
+                             rcond, rank.dptr<IndexT>(),
                              trans_a.get<xpu, 2, DType>(s),
                              trans_b.get<xpu, 2, DType>(s),
                              singular_values.get<xpu, 1, DType>(s),
                              work.get<xpu, 1, DType>(s),
-                             iwork.get<xpu, 1, int>(s));
+                             iwork.get<xpu, 1, IndexT>(s));
     if (ncol != 0 && nrhs == 0) {
       // Assign values for singularValues.
       MXNET_ASSIGN_REQ_SWITCH(req[3], req_type, {
@@ -446,7 +450,7 @@ void LstsqOpForwardImpl(const TBlob& a,
           s, x.Size(), trans_b.dptr<DType>(), x.dptr<DType>(), nrow, ncol, nrhs, ldb);
       });
       // Assign values for residuals and residualsEmpty.
-      if (*(rank.dptr<int>()) < ncol || nrow <= ncol) {
+      if (*(rank.dptr<IndexT>()) < ncol || nrow <= ncol) {
         *empty_residuals = true;
       } else {
         *empty_residuals = false;
@@ -465,7 +469,7 @@ void LstsqOpForwardImpl(const TBlob& a,
   });
 }
 
-template<typename DType>
+template<typename DType, typename IndexT>
 inline void GpuCallbackCpuImpl(const TBlob& a,
                                const TBlob& b,
                                const TBlob& x,
@@ -473,8 +477,8 @@ inline void GpuCallbackCpuImpl(const TBlob& a,
                                const TBlob& singularValues,
                                const NDArray& residuals_ndarray,
                                const mxnet::TShape& temp_residuals_shape,
-                               const int& lwork,
-                               const int& liwork,
+                               const IndexT& lwork,
+                               const IndexT& liwork,
                                std::vector<char> *workspace,
                                const nnvm::NodeAttrs& attrs,
                                const OpContext& ctx,
@@ -486,7 +490,7 @@ inline void GpuCallbackCpuImpl(const TBlob& a,
       std::vector<BType> b_vec(b.Size(), 0);
       std::vector<DType> x_vec(x.Size(), 0);
       std::vector<DType> temp_residuals_vec(temp_residuals_shape.Size(), 0);
-      std::vector<int> rank_vec(rank.Size(), 0);
+      std::vector<IndexT> rank_vec(rank.Size(), 0);
       std::vector<DType> singularValues_vec(singularValues.Size(), 0);
       mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
       cudaStream_t stream = Stream<gpu>::GetStream(s);
@@ -524,7 +528,7 @@ inline void GpuCallbackCpuImpl(const TBlob& a,
       // Copy back to gpu.
       CUDA_CALL(cudaMemcpyAsync(x.dptr<DType>(), x_vec.data(), sizeof(DType) * x.Size(),
                                 cudaMemcpyHostToDevice, stream));
-      CUDA_CALL(cudaMemcpyAsync(rank.dptr<int>(), rank_vec.data(), sizeof(int) * rank.Size(),
+      CUDA_CALL(cudaMemcpyAsync(rank.dptr<IndexT>(), rank_vec.data(), sizeof(IndexT) * rank.Size(),
                                 cudaMemcpyHostToDevice, stream));
       CUDA_CALL(cudaMemcpyAsync(singularValues.dptr<DType>(), singularValues_vec.data(),
                                 sizeof(DType) * singularValues.Size(),
@@ -551,6 +555,7 @@ void LstsqOpForward(const nnvm::NodeAttrs& attrs,
   CHECK(req[2] == kWriteTo || req[2] == kWriteInplace);
   CHECK(req[3] == kWriteTo || req[3] == kWriteInplace);
   using namespace mshadow;
+  using IndexT = typename LapackIndex<cpu>::IndexT;
   const NDArray& a_ndarray = inputs[0];
   const NDArray& b_ndarray = inputs[1];
   const NDArray& x_ndarray = outputs[0];
@@ -569,7 +574,7 @@ void LstsqOpForward(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_SGL_DBL_TYPE_SWITCH(x_ndarray.dtype(), DType, {
     // Allocate workspace.
-    int lwork = 0, liwork = 0;
+    IndexT lwork = 0, liwork = 0;
     size_t workspace_size = LstsqWorkspaceSize<cpu, DType>(a_ndarray.data(), b_ndarray.data(),
                                                            x_shape, &lwork, &liwork, ctx);
     std::vector<char> workspace(workspace_size);

@@ -44,8 +44,8 @@ CudaModule::Chunk::Chunk(
       << "For lower version of CUDA, please prepend your kernel defintiions "
       << "with extern \"C\" instead.";
 #endif
-  std::vector<const char*> c_options;
-  for (const auto& i : options) c_options.push_back(i.c_str());
+  std::vector<const char*> c_options(options.size());
+  for (const auto& i : options) c_options.emplace_back(i.c_str());
   nvrtcResult compile_res = nvrtcCompileProgram(prog_, c_options.size(), c_options.data());
   if (compile_res != NVRTC_SUCCESS) {
     size_t err_size;
@@ -55,10 +55,30 @@ CudaModule::Chunk::Chunk(
     LOG(FATAL) << err.data();
   }
 
-  size_t ptx_size;
-  NVRTC_CALL(nvrtcGetPTXSize(prog_, &ptx_size));
-  ptx_ = new char[ptx_size];
-  NVRTC_CALL(nvrtcGetPTX(prog_, ptx_));
+  bool use_ptx = true;
+  for (const auto& opt : options) {
+    if (opt.find("sm_") != std::string::npos) {
+      use_ptx = false;
+      break;
+    }
+  }
+
+  if (use_ptx) {
+    size_t ptx_size;
+    NVRTC_CALL(nvrtcGetPTXSize(prog_, &ptx_size));
+    ptx_.resize(ptx_size);
+    NVRTC_CALL(nvrtcGetPTX(prog_, ptx_.data()));
+  } else {
+#if CUDA_VERSION >= 11010
+    size_t cubin_size;
+    NVRTC_CALL(nvrtcGetCUBINSize(prog_, &cubin_size));
+    ptx_.resize(cubin_size);
+    NVRTC_CALL(nvrtcGetCUBIN(prog_, ptx_.data()));
+#else
+    LOG(FATAL) << "Your CUDA version does not support compiling for sm_XX target. "
+               << "Use compute_XX target instead or upgrade to CUDA 11.1 or later.";
+#endif
+  }
 }
 
 
@@ -67,7 +87,6 @@ CudaModule::Chunk::~Chunk() {
     CUDA_DRIVER_CALL(cuModuleUnload(kv.second));
   }
   NVRTC_CALL(nvrtcDestroyProgram(&prog_));
-  delete ptx_;
 }
 
 
@@ -83,7 +102,7 @@ CUfunction CudaModule::Chunk::GetFunction(
     module = iter->second;
   } else {
     device_store.SetDevice(ctx.dev_id);
-    CUDA_DRIVER_CALL(cuModuleLoadDataEx(&module, ptx_, 0, 0, 0));
+    CUDA_DRIVER_CALL(cuModuleLoadDataEx(&module, ptx_.data(), 0, nullptr, nullptr));
     mod_[ctx.dev_id] = module;
   }
   CUfunction function;
@@ -176,7 +195,7 @@ void CudaModule::Kernel::Launch(
         function, grid_dim_x, grid_dim_y, grid_dim_z,
         block_dim_x, block_dim_y, block_dim_z,
         shared_mem, s->stream_,
-        p_args.data(), 0));
+        p_args.data(), nullptr));
     CUDA_CALL(cudaStreamSynchronize(s->stream_));
   }, ctx, read_vars, write_vars, FnProperty::kNormal, 0,
   mangled_name_.c_str());

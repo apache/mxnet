@@ -38,16 +38,16 @@ namespace op {
 
 using namespace mshadow;
 
-template<typename xpu, typename DType>
+template<typename xpu, typename DType, typename IndexT>
 void linalg_solve(const Tensor<xpu, 2, DType>& A,
                   const Tensor<xpu, 2, DType>& X,
-                  const Tensor<xpu, 1, int>& ipiv,
+                  const Tensor<xpu, 1, IndexT>& ipiv,
                   Stream<xpu> *s);
 
-template<typename xpu, typename DType>
+template<typename xpu, typename DType, typename IndexT>
 void linalg_batch_solve(const Tensor<xpu, 3, DType>& A,
                         const Tensor<xpu, 3, DType>& X,
-                        const Tensor<xpu, 2, int>& ipiv,
+                        const Tensor<xpu, 2, IndexT>& ipiv,
                         const mxnet::OpContext& ctx);
 
 template<typename xpu, typename DType> inline
@@ -86,12 +86,12 @@ inline void check_solve(const Tensor<xpu, 2, DType>& A,
 template<> inline \
 void linalg_solve<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                               const Tensor<cpu, 2, DType>& X, \
-                              const Tensor<cpu, 1, int>& ipiv, \
+                              const Tensor<cpu, 1, lapack_index_t>& ipiv, \
                               Stream<cpu> *s) { \
   check_solve(A, X); \
-  const int N = X.size(1), nrhs = X.size(0); \
-  const int lda = (N == 0 ? 1 : N), ldx = (N == 0 ? 1 : N); \
-  int res(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, N, nrhs, \
+  const lapack_index_t N = X.size(1), nrhs = X.size(0); \
+  const lapack_index_t lda = (N == 0 ? 1 : N), ldx = (N == 0 ? 1 : N); \
+  lapack_index_t res(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, N, nrhs, \
                                A.dptr_, lda, ipiv.dptr_, X.dptr_, ldx)); \
   CHECK_LE(res, 0) << #fname << ": U(" << res << ", " << res \
     << ") is exactly zero. The factorization has been completed," \
@@ -220,32 +220,32 @@ LINALG_GPU_SOLVE(double)
 
 #endif  // __CUDACC__
 
-#define LINALG_XPU_BATCH_SOLVE(xpu, DType) \
+#define LINALG_XPU_BATCH_SOLVE(xpu, DType, IndexT) \
 template<> inline \
-void linalg_batch_solve<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
-                                    const Tensor<xpu, 3, DType>& X, \
-                                    const Tensor<xpu, 2, int>& ipiv, \
-                                    const mxnet::OpContext& ctx) { \
+void linalg_batch_solve<xpu, DType, IndexT>(const Tensor<xpu, 3, DType>& A, \
+                                            const Tensor<xpu, 3, DType>& X, \
+                                            const Tensor<xpu, 2, IndexT>& ipiv, \
+                                            const mxnet::OpContext& ctx) { \
   Stream<xpu> *s = ctx.get_stream<xpu>(); \
   for (index_t i = 0; i < A.size(0); ++i) { \
     linalg_solve(A[i], X[i], ipiv[i], s); \
   } \
 }
-LINALG_XPU_BATCH_SOLVE(cpu, float)
-LINALG_XPU_BATCH_SOLVE(cpu, double)
+LINALG_XPU_BATCH_SOLVE(cpu, float, LapackIndex<cpu>::IndexT)
+LINALG_XPU_BATCH_SOLVE(cpu, double,  LapackIndex<cpu>::IndexT)
 
 #ifdef __CUDACC__
 
-LINALG_XPU_BATCH_SOLVE(gpu, float)
-LINALG_XPU_BATCH_SOLVE(gpu, double)
+LINALG_XPU_BATCH_SOLVE(gpu, float,  LapackIndex<gpu>::IndexT)
+LINALG_XPU_BATCH_SOLVE(gpu, double,  LapackIndex<gpu>::IndexT)
 
 #endif  // __CUDACC__
 
 struct solve {
-  template<typename xpu, typename DType>
+  template<typename xpu, typename DType, typename IndexT>
   static void op(const Tensor<xpu, 3, DType>& A,
                  const Tensor<xpu, 3, DType>& X,
-                 const Tensor<xpu, 2, int>& ipiv,
+                 const Tensor<xpu, 2, IndexT>& ipiv,
                  const OpContext& ctx,
                  const nnvm::NodeAttrs& attrs) {
     linalg_batch_solve(A, X, ipiv, ctx);  // ipiv for work_space in Lapacke_#gesv
@@ -259,6 +259,7 @@ void LaOpForwardSolve(const nnvm::NodeAttrs& attrs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
   using namespace mshadow;
+  using IndexT = typename LapackIndex<xpu>::IndexT;
   CHECK_EQ(inputs.size(), inum);
   CHECK_EQ(outputs.size(), onum);
   CHECK_EQ(req.size(), onum);
@@ -279,8 +280,9 @@ void LaOpForwardSolve(const nnvm::NodeAttrs& attrs,
     if (0 == a_shape[ndim - 1] || 0 == a_shape[ndim - 2] ||
         0 == b_shape[ndim - 1] || 0 == b_shape[ndim - 2]) { return; }
 
-    const int work_space_size =
-      sizeof(OType) * (a_shape.Size() + b_shape.Size()) + sizeof(int) * ipiv_shape.Size();
+    const size_t work_space_size =
+      sizeof(OType) * (a_shape.Size() + b_shape.Size()) +
+      sizeof(IndexT) * ipiv_shape.Size();
     Tensor<xpu, 1, char> work_buffer =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(work_space_size), s);
     MSHADOW_TYPE_SWITCH(a_tblob.type_flag_, AType, {
@@ -300,20 +302,20 @@ void LaOpForwardSolve(const nnvm::NodeAttrs& attrs,
         b_shape[ndim - 1], b_shape[ndim - 2], b_shape[ndim - 1] * b_shape[ndim - 2]);
     });
     // transpose shape
-    int temp = b_shape[ndim - 1];
+    IndexT temp = b_shape[ndim - 1];
     b_shape[ndim - 1] = b_shape[ndim - 2];
     b_shape[ndim - 2] = temp;
     mxnet::TBlob a_transpose_tblob(reinterpret_cast<OType*>(work_buffer.dptr_),
       a_shape, a_tblob.dev_mask(), a_tblob.dev_id());
     mxnet::TBlob b_transpose_tblob(reinterpret_cast<OType*>(work_buffer.dptr_) + a_shape.Size(),
       b_shape, b_tblob.dev_mask(), b_tblob.dev_id());
-    mxnet::TBlob ipiv_tblob(reinterpret_cast<int*>(
+    mxnet::TBlob ipiv_tblob(reinterpret_cast<IndexT*>(
       reinterpret_cast<OType*>(work_buffer.dptr_) + a_shape.Size() + b_shape.Size()),
       ipiv_shape, b_tblob.dev_mask(), b_tblob.dev_id());
 
     laop::op(a_transpose_tblob.FlatToKD<xpu, idim + 1, OType>(s),
              b_transpose_tblob.FlatToKD<xpu, idim + 1, OType>(s),
-             ipiv_tblob.FlatToKD<xpu, idim, int>(s),
+             ipiv_tblob.FlatToKD<xpu, idim, IndexT>(s),
              ctx,
              attrs);
     // X = transpose(B)
@@ -344,28 +346,28 @@ struct solve_backward {
   }
 };
 
-template<typename xpu, typename DType>
+template<typename xpu, typename DType, typename IndexT>
 inline void batch_inverse(const Tensor<xpu, 3, DType>& inv_A,
                           const Tensor<xpu, 3, DType>& LU,
-                          const Tensor<xpu, 2, int>& pivot,
+                          const Tensor<xpu, 2, IndexT>& pivot,
                           const mxnet::OpContext& ctx);
 
-#define CPU_BATCH_INVERSE(xpu, DType) \
+#define CPU_BATCH_INVERSE(xpu, DType, IndexT) \
 template<> inline \
 void batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& inv_A, \
                                const Tensor<xpu, 3, DType>& LU, \
-                               const Tensor<xpu, 2, int>& pivot, \
+                               const Tensor<xpu, 2, IndexT>& pivot, \
                                const mxnet::OpContext& ctx) { \
   Stream<xpu> *s = ctx.get_stream<xpu>(); \
-  for (index_t i = 0; i < inv_A.size(0); ++i) { \
+  for (IndexT i = 0; i < inv_A.size(0); ++i) { \
     linalg_getrf(inv_A[i], pivot[i], true, s); \
     const Tensor<xpu, 1, DType> work( \
       LU[i].dptr_, Shape1(LU.size(1) * LU.size(2))); \
     linalg_getri(inv_A[i], pivot[i], work, s); \
   } \
 }
-CPU_BATCH_INVERSE(cpu, float)
-CPU_BATCH_INVERSE(cpu, double)
+CPU_BATCH_INVERSE(cpu, float,  LapackIndex<cpu>::IndexT)
+CPU_BATCH_INVERSE(cpu, double, LapackIndex<cpu>::IndexT)
 
 #ifdef __CUDACC__
 
@@ -409,6 +411,7 @@ void LaOpBackwardSolve(const nnvm::NodeAttrs& attrs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
   using namespace mshadow;
+  using IndexT = typename LapackIndex<xpu>::IndexT;
   CHECK_EQ(inputs.size(), inum);
   CHECK_EQ(outputs.size(), onum);
   CHECK_EQ(req.size(), onum);
@@ -425,15 +428,15 @@ void LaOpBackwardSolve(const nnvm::NodeAttrs& attrs,
       b_shape[a_shape.ndim() - 1] = b_tblob.shape_[a_shape.ndim() - 1];
     }
     const int ndim = a_shape.ndim();
-    const int N = a_shape[ndim - 1];
+    const IndexT N = a_shape[ndim - 1];
     if (0 == a_shape[ndim - 1] || 0 == a_shape[ndim - 2] ||
         0 == b_shape[ndim - 1] || 0 == b_shape[ndim - 2]) { return; }
 
     const Tensor<xpu, idim + 1, OType> A = a_tblob.FlatToKD<xpu, idim + 1, OType>(s);
-    int work_space_size = sizeof(OType) * a_shape.Size();  // for inverse(A)
+    size_t work_space_size = sizeof(OType) * a_shape.Size();  // for inverse(A)
     work_space_size += sizeof(OType) * a_shape.Size();  // for getri work space
     work_space_size += 2 * sizeof(OType) * b_shape.Size();  // for B and X
-    work_space_size += sizeof(int) * A.size(0) * N;  // for pivot work space
+    work_space_size += sizeof(IndexT) * A.size(0) * N;  // for pivot work space
     Tensor<xpu, 1, char> work_buffer =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(work_space_size), s);
 
@@ -472,10 +475,10 @@ void LaOpBackwardSolve(const nnvm::NodeAttrs& attrs,
       b_shape, b_tblob.dev_mask(), b_tblob.dev_id());
     const Tensor<xpu, idim + 1, OType> X = x_cp_tblob.FlatToKD<xpu, idim + 1, OType>(s);
 
-    mxnet::TBlob pivot_tblob(reinterpret_cast<int*>(
+    mxnet::TBlob pivot_tblob(reinterpret_cast<IndexT*>(
       reinterpret_cast<OType*>(work_buffer.dptr_) + 2 * a_shape.Size() + 2 * b_shape.Size()),
       Shape2(A.size(0), N), a_tblob.dev_mask(), a_tblob.dev_id());
-    const Tensor<xpu, idim, int> pivot = pivot_tblob.FlatToKD<xpu, idim, int>(s);
+    const Tensor<xpu, idim, IndexT> pivot = pivot_tblob.FlatToKD<xpu, idim, IndexT>(s);
 
     // calculate inverse(A) on CPU or GPU
     batch_inverse(inv_A, LU, pivot, ctx);

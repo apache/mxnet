@@ -20,6 +20,7 @@ import gc
 
 import mxnet as mx
 from mxnet import gluon
+from mxnet import init
 from mxnet.gluon import nn
 from mxnet.base import py_str, MXNetError
 from mxnet.test_utils import assert_almost_equal, default_context, assert_allclose
@@ -1010,16 +1011,47 @@ def check_sequential(net):
     net.add(dense2)
     dense3 = gluon.nn.Dense(10)
     net.add(dense3)
+    net.initialize()
 
+    net(mx.nd.zeros((10, 10)))
+    net.hybridize()
     assert net[1] is dense2
     assert net[-1] is dense3
     slc = net[1:3]
     assert len(slc) == 2 and slc[0] is dense2 and slc[1] is dense3
     assert isinstance(slc, type(net))
 
+def check_sequential_dc(net):
+    class MyBlock(mx.gluon.HybridBlock):
+        def __init__(self):
+            super().__init__()
+            self.dense = mx.gluon.nn.Dense(units=10, in_units=10)
+            self.weight = mx.gluon.Parameter('weight', shape=(10, ))
+
+        def forward(self, x):
+            return self.dense(x) + self.weight.data()
+
+    dense1 = MyBlock()
+    net.add(dense1)
+    dense2 = MyBlock()
+    net.add(dense2)
+    dense3 = MyBlock()
+    net.add(dense3)
+
+    net.initialize()
+    net.hybridize()
+    net(mx.nd.zeros((10, 10)))
+    assert net[1] is dense2
+    assert net[-1] is dense3
+    slc = net[1:3]
+    assert len(slc) == 2 and slc[0] is dense2 and slc[1] is dense3
+    assert isinstance(slc, type(net))
+
+@pytest.mark.garbage_expected
 def test_sequential():
     check_sequential(gluon.nn.Sequential())
     check_sequential(gluon.nn.HybridSequential())
+    check_sequential_dc(gluon.nn.HybridSequential())
 
 def test_sequential_warning():
     with warnings.catch_warnings(record=True) as w:
@@ -1268,6 +1300,13 @@ def test_activations():
         return x * mx.nd.sigmoid(x)
 
     for test_point, ref_point in zip(swish_test(point_to_validate), swish(point_to_validate)):
+        assert test_point == ref_point
+
+    silu = mx.gluon.nn.SiLU()
+    def silu_test(x):
+        return x * mx.nd.sigmoid(x)
+
+    for test_point, ref_point in zip(silu_test(point_to_validate), silu(point_to_validate)):
         assert test_point == ref_point
 
     elu = mx.gluon.nn.ELU()
@@ -1832,10 +1871,6 @@ def test_share_inputs_outputs():
             res = t(d1)
             assert_almost_equal(res.asnumpy(), d1.asnumpy())
 
-    param = deepcopy(params[2])
-    param['param_indices'] = (1)
-    param['data_indices'] = (0)
-    params.append(param)
     # Test the case that inputs and outputs of a backward graph share NDArrays.
     for param in params:
         t = TestIOBackward()
@@ -1976,6 +2011,39 @@ def test_batchnorm_16c():
             x = mx.nd.random.uniform(-1.0, 1.0, shape=shape)
             net = Net(chn_list[i], 1, 1)
             check_layer_forward_withinput(net, x)
+
+
+def test_batchnorm_chnls():
+    chn_list = [1024, 512, 256, 128, 64, 45, 32, 16, 3]
+    class Net(gluon.HybridBlock):
+        def __init__(self,
+                     chn_num,
+                     norm_kwargs=None,
+                     in_channels=3,
+                     **kwargs):
+            super(Net, self).__init__(**kwargs)
+            self.in_channels = in_channels
+            self.conv1 = gluon.nn.Conv3D(
+                    in_channels=self.in_channels,
+                    channels=chn_num,
+                    kernel_size=(1, 7, 7),
+                    strides=(1, 2, 2),
+                    padding=(0, 3, 3),
+                    use_bias=False,
+                    )
+            self.bn1 = gluon.nn.BatchNorm(in_channels=chn_num, **({} if norm_kwargs is None else norm_kwargs))
+
+        def hybrid_forward(self, F, x):
+            """Hybrid forward of R2+1D net"""
+            conv = self.conv1(x)
+            out = self.bn1(conv)
+            return out
+
+    for i in range(len(chn_list)):
+        net = Net(chn_list[i])
+        net.initialize(init=init.Constant(1))
+        x = mx.nd.zeros((1, 3, 8, 160, 160))
+        net(x).asnumpy()
 
 
 def test_concat():
@@ -3041,24 +3109,43 @@ def test_ModulatedDeformableConvolution():
     with mx.autograd.record():
         y = net(x)
 
-def test_concatenate():
+
+@pytest.mark.parametrize('dc', [True, False])
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.garbage_expected
+def test_concatenate(dc, hybridize):
+    if dc:
+        class MyBlock(mx.gluon.HybridBlock):
+            def __init__(self, units, activation=None, in_units=0):
+                super().__init__()
+                self.dense = mx.gluon.nn.Dense(units, activation=activation, in_units=in_units)
+
+            def forward(self, x):
+                return self.dense(x)
+    else:
+        MyBlock = nn.Dense
+
     model = nn.HybridConcatenate(axis=1)
-    model.add(nn.Dense(128, activation='tanh', in_units=10))
-    model.add(nn.Dense(64, activation='tanh', in_units=10))
-    model.add(nn.Dense(32, in_units=10))
+    model.add(MyBlock(128, activation='tanh', in_units=10))
+    model.add(MyBlock(64, activation='tanh', in_units=10))
+    model.add(MyBlock(32, in_units=10))
     model2 = nn.Concatenate(axis=1)
-    model2.add(nn.Dense(128, activation='tanh', in_units=10))
-    model2.add(nn.Dense(64, activation='tanh', in_units=10))
-    model2.add(nn.Dense(32, in_units=10))
+    model2.add(MyBlock(128, activation='tanh', in_units=10))
+    model2.add(MyBlock(64, activation='tanh', in_units=10))
+    model2.add(MyBlock(32, in_units=10))
 
     # symbol
-    x = mx.sym.var('data')
-    y = model(x)
-    assert len(y.list_arguments()) == 7
+    if not dc:
+        x = mx.sym.var('data')
+        y = model(x)
+        assert len(y.list_arguments()) == 7
 
     # ndarray
     model.initialize(mx.init.Xavier(magnitude=2.24))
     model2.initialize(mx.init.Xavier(magnitude=2.24))
+    if hybridize:
+        model.hybridize()
+        model2.hybridize()
     x = model(mx.nd.zeros((32, 10)))
     x2 = model2(mx.nd.zeros((32, 10)))
     assert x.shape == (32, 224)

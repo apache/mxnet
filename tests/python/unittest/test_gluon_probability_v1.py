@@ -1261,6 +1261,7 @@ def test_gluon_binomial_v1():
 
 
 @use_np
+@pytest.mark.flaky
 def test_gluon_bernoulli_v1():
     class TestBernoulli(HybridBlock):
         def __init__(self, func, is_logit=False):

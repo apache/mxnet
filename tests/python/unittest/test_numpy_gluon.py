@@ -397,7 +397,6 @@ def test_net_symbol_save_load():
     check_gluon_save_load(Case2, [mx.np.random.normal(0, 1, (10, 5, 8)),
                                   mx.np.random.normal(0, 1, (10, 5, 8))])
 
-
 @use_np
 def test_hybridize_boolean_dtype():
     class Foo(gluon.HybridBlock):
@@ -417,6 +416,28 @@ def test_hybridize_boolean_dtype():
     out2 = foo(valid_length)
 
     assert mx.test_utils.same(out1.asnumpy(), out2.asnumpy())
+
+
+@use_np
+def test_optimize_for():
+    class TestBlock(gluon.HybridBlock):
+        def __init__(self):
+            super(TestBlock, self).__init__()
+            self.d = mx.gluon.nn.Dense(1)
+        def hybrid_forward(self, F, a, b, *args):
+            res = self.d.hybrid_forward(F, a, b)
+            return res
+
+    a = mx.np.random.uniform(low=-1, high=1, size=(1,1))
+    b = mx.np.random.uniform(low=-1, high=1, size=(1,1))
+
+    net = TestBlock()
+    net.initialize()
+    net.hybridize()
+
+    out = net(a, b)
+    net.optimize_for(a, b, backend="MKLDNN")
+    out2 = net(a, b)
 
 
 @use_np
@@ -459,6 +480,13 @@ def test_activations_gelu():
 @use_np
 def test_activations_swish():
     act_layer = nn.Swish()
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@use_np
+def test_activations_silu():
+    act_layer = nn.SiLU()
     out = act_layer(mx.np.random.uniform(size=(10,)))
     out.asnumpy()
 

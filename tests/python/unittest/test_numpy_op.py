@@ -891,6 +891,7 @@ def test_np_max_min_error(func, shape, exception):
 @pytest.mark.parametrize('is_weighted', [True, False])
 @pytest.mark.parametrize('returned', [True, False])
 @pytest.mark.parametrize('req_a', ['null', 'add', 'write'])
+@pytest.mark.flaky
 def test_np_average(a_shape, w_shape, axes, is_weighted, req_a,
                     hybridize, returned, dtype):
     class TestAverage(HybridBlock):
@@ -1780,6 +1781,7 @@ def test_npx_batch_dot():
 @pytest.mark.parametrize('fix_gamma', [False, True])
 @pytest.mark.parametrize('cudnn_off', [False, True])
 @pytest.mark.parametrize('output_mean_var', [False, True])
+@pytest.mark.flaky
 def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
     momentum = 0.9
     epsilon = 1e-5
@@ -7542,6 +7544,7 @@ def test_np_flipud_fliplr():
 
 
 @use_np
+@pytest.mark.flaky
 def test_np_around():
     class TestAround(HybridBlock):
         def __init__(self, decimals):

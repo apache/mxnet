@@ -5671,41 +5671,44 @@ def test_psroipooling_with_type():
                                                'psroipool_rois': 'null'}, arg_params=arg_params)
 
 
-def test_deformable_convolution():
-    for num_batch in [1, 2]:
-        for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
-            for input_height, input_width in itertools.product([5, 6], [5, 6]):
-                for dilate in [(1, 1), (2, 2)]:
-                    for grad_nodes in [['im_data'], ['offset_data'], ['weight']]:
-                        output_height = input_height
-                        output_width = input_width
-                        im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
-                        offset_data = \
-                            np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
-                            * 0.8 + 0.1
+@pytest.mark.parametrize('num_batch', [1, 2])
+@pytest.mark.parametrize('num_channel_data_deformable_group', itertools.product([4, 8], [1, 2]))
+@pytest.mark.parametrize('input_height_width', itertools.product([5, 6], [5, 6]))
+@pytest.mark.parametrize('dilate', [(1, 1), (2, 2)])
+@pytest.mark.parametrize('grad_nodes', [['im_data'], ['offset_data'], ['weight']])
+def test_deformable_convolution(num_batch, num_channel_data_deformable_group, input_height_width,
+                                dilate, grad_nodes):
+    num_channel_data, num_deformable_group = num_channel_data_deformable_group
+    input_height, input_width = input_height_width
+    output_height = input_height
+    output_width = input_width
+    im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
+    offset_data = \
+        np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
+        * 0.8 + 0.1
 
-                        weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
-                        bias = np.zeros(num_channel_data)
+    weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
+    bias = np.zeros(num_channel_data)
 
-                        im_data_var = mx.symbol.Variable(name="im_data").as_np_ndarray()
-                        offset_data_var = mx.symbol.Variable(name="offset_data").as_np_ndarray()
-                        weight_var = mx.symbol.Variable(name="weight").as_np_ndarray()
-                        bias_var = mx.symbol.Variable(name="bias").as_np_ndarray()
-                        op = mx.sym.npx.deformable_convolution(name='test_op', data=im_data_var,
-                                                               offset=offset_data_var,
-                                                               weight=weight_var, bias=bias_var,
-                                                               num_filter=num_channel_data, pad=dilate,
-                                                               kernel=(3, 3), stride=(1, 1), dilate=dilate,
-                                                               num_deformable_group=num_deformable_group)
-                        if grad_nodes[0] == 'offset_data':
-                            # wider tolerance needed for coordinate differential
-                            rtol, atol = 1.0, 1e-2
-                        else:
-                            rtol, atol = 0.05, 1e-3
-                        # By now we only have gpu implementation
-                        if default_context().device_type == 'gpu':
-                            check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
-                                                   grad_nodes=grad_nodes, ctx=mx.gpu(0), numeric_eps=1.0/64)
+    im_data_var = mx.symbol.Variable(name="im_data").as_np_ndarray()
+    offset_data_var = mx.symbol.Variable(name="offset_data").as_np_ndarray()
+    weight_var = mx.symbol.Variable(name="weight").as_np_ndarray()
+    bias_var = mx.symbol.Variable(name="bias").as_np_ndarray()
+    op = mx.sym.npx.deformable_convolution(name='test_op', data=im_data_var,
+                                           offset=offset_data_var,
+                                           weight=weight_var, bias=bias_var,
+                                           num_filter=num_channel_data, pad=dilate,
+                                           kernel=(3, 3), stride=(1, 1), dilate=dilate,
+                                           num_deformable_group=num_deformable_group)
+    if grad_nodes[0] == 'offset_data':
+        # wider tolerance needed for coordinate differential
+        rtol, atol = 1.0, 1e-2
+    else:
+        rtol, atol = 0.05, 1e-3
+    # By now we only have gpu implementation
+    if default_context().device_type == 'gpu':
+        check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
+                               grad_nodes=grad_nodes, ctx=mx.gpu(0), numeric_eps=1.0/64)
 
 
 def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w, pooled_h, sample_per_part, part_size, output_dim, num_classes, trans_std, feat_h, feat_w):
@@ -6463,8 +6466,7 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
-## TODO: test fails intermittently when cudnn on. temporarily disabled cudnn until gets fixed.
-## tracked at https://github.com/apache/incubator-mxnet/issues/14288
+@pytest.mark.flaky
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -6591,18 +6593,18 @@ def test_dropout():
     check_dropout_ratio(1.0, shape)
     check_dropout_ratio(0.75, shape)
     check_dropout_ratio(0.25, shape)
-    # check_dropout_ratio(0.5, shape, cudnn_off=False)
-    # check_dropout_ratio(0.0, shape, cudnn_off=False)
-    # check_dropout_ratio(1.0, shape, cudnn_off=False)
-    # check_dropout_ratio(0.75, shape, cudnn_off=False)
-    # check_dropout_ratio(0.25, shape, cudnn_off=False)
+    check_dropout_ratio(0.5, shape, cudnn_off=False)
+    check_dropout_ratio(0.0, shape, cudnn_off=False)
+    check_dropout_ratio(1.0, shape, cudnn_off=False)
+    check_dropout_ratio(0.75, shape, cudnn_off=False)
+    check_dropout_ratio(0.25, shape, cudnn_off=False)
 
     check_passthrough(0.5, shape)
     check_passthrough(0.0, shape)
     check_passthrough(1.0, shape)
-    # check_passthrough(0.5, shape, cudnn_off=False)
-    # check_passthrough(0.0, shape, cudnn_off=False)
-    # check_passthrough(1.0, shape, cudnn_off=False)
+    check_passthrough(0.5, shape, cudnn_off=False)
+    check_passthrough(0.0, shape, cudnn_off=False)
+    check_passthrough(1.0, shape, cudnn_off=False)
 
     nshape = (10, 10, 10, 10)
     with mx.autograd.train_mode():
@@ -6619,19 +6621,19 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
         check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
-        # check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
 
 @pytest.mark.skip(reason="test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
@@ -9249,4 +9251,82 @@ def test_broadcast_ops_on_misaligned_input_oneside(dtype, lead_dim, both_ways):
     expected = c.asnumpy() + d.asnumpy()
     mx.nd.waitall()
     assert_almost_equal(f, expected)
+
+
+def test_sldwin_selfatten_operators():
+    def gen_sliding_window_mask_full(batch_size, num_heads, seq_length, w, symmetric, d):
+        mask_np = np.zeros((batch_size, num_heads, seq_length, seq_length))
+        for i in range(seq_length):
+            end = (i + 1 + w * d) if symmetric else (i + 1)
+            for j in range(i - w * d, end, d):
+                if j >= 0 and j < seq_length:
+                    mask_np[:, :, i, j] = 1
+        return mask_np
+
+    def test_sldwin_atten_op_impl(batch_size, seq_length, num_heads,
+                                  num_head_units, w, symmetric, d):
+        # Generate the data
+        query = np.random.normal(0, 1, (batch_size, seq_length, num_heads, num_head_units))
+        key = np.random.normal(0, 1, (batch_size, seq_length, num_heads, num_head_units))
+        value = np.random.normal(0, 1, (batch_size, seq_length, num_heads, num_head_units))
+        valid_length = np.zeros((batch_size,))
+        valid_length[:] = seq_length
+
+        query = mx.np.array(query, dtype=np.float32)
+        key = mx.np.array(key, dtype=np.float32)
+        value = mx.np.array(value, dtype=np.float32)
+        dilation = mx.np.ones((num_heads,), dtype=np.int32)
+        dilation[:] = d
+        valid_length = mx.np.array(valid_length, dtype=np.int32)
+
+        query.attach_grad()
+        key.attach_grad()
+        value.attach_grad()
+
+        with mx.autograd.record():
+            score = mx.npx.sldwin_atten_score(query, key, dilation,
+                w=w, symmetric=symmetric)
+            mask = mx.npx.sldwin_atten_mask_like(score, dilation, valid_length,
+                w=w, symmetric=symmetric)
+            score = score * mask
+            out = mx.npx.sldwin_atten_context(score, value, dilation,
+                w=w, symmetric=symmetric)
+            out.backward()
+
+        out_np = out.asnumpy()
+        grad_query = query.grad.asnumpy()
+        grad_key = key.grad.asnumpy()
+        grad_value = value.grad.asnumpy()
+
+        query.grad[:] = 0
+        key.grad[:] = 0
+        value.grad[:] = 0
+
+        mask_np = gen_sliding_window_mask_full(batch_size, num_heads, seq_length,
+                                               w, symmetric, d)
+        mask = mx.np.array(mask_np, dtype=np.float32)
+
+        with mx.autograd.record():
+            score = mx.npx.batch_dot(mx.np.swapaxes(query, 1, 2),
+                                     mx.np.swapaxes(key, 1, 2),
+                                     transpose_b=True)
+            score = score * mask
+            out = mx.npx.batch_dot(score,
+                                   mx.np.swapaxes(value, 1, 2)).transpose((0, 2, 1, 3))
+            out.backward()
+
+        out_np_gt = out.asnumpy()
+        grad_query_gt = query.grad.asnumpy()
+        grad_key_gt = key.grad.asnumpy()
+        grad_value_gt = value.grad.asnumpy()
+
+        assert_allclose(out_np_gt, out_np, 1E-3, 1E-3)
+        assert_allclose(grad_query_gt, grad_query, 1E-3, 1E-3)
+        assert_allclose(grad_key_gt, grad_key, 1E-3, 1E-3)
+        assert_allclose(grad_value_gt, grad_value, 1E-3, 1E-3)
+
+    for symmetric in [True, False]:
+        for d in [1, 2, 3]:
+            test_sldwin_atten_op_impl(2, 128, 2, 8, 16, symmetric, d)
+            test_sldwin_atten_op_impl(1, 8, 2, 4, 2, symmetric, d)
 

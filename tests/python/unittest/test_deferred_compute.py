@@ -527,6 +527,23 @@ def test_dc_hybridblock_dynamic_shape():
         net.initialize()
         _assert_dc_gluon(setup, net, numpy=True)
 
+def test_dc_hybridblock_graph_partition():
+    class MyBlock(mx.gluon.HybridBlock):
+        def __init__(self):
+            super().__init__()
+            self.dense = mx.gluon.nn.Dense(units=4)
+
+        def forward(self, x, idx):
+            return mx.nd.sum(mx.nd.sum(mx.nd.contrib.boolean_mask(self.dense(x), idx)))
+
+    def setup(*, nd):
+        x = mx.nd.array([[0, 1], [2, 3], [4, 5], [6, 7]])
+        idx = mx.nd.array([1, 1, 1, 1])
+        return [x, idx]
+
+    net = MyBlock()
+    net.initialize()
+    _assert_dc_gluon(setup, net, numpy=False, autograd=False)
 
 def test_dc_hybridblock_symbolblock_error():
     model = mx.gluon.nn.HybridSequential()

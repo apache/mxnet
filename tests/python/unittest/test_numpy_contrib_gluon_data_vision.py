@@ -18,9 +18,11 @@
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import *
+import sys
 import shutil
 import tempfile
 import unittest
+import pytest
 
 def _get_data(url, dirname):
     import os, tarfile

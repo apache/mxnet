@@ -712,6 +712,18 @@ MXNET_DLL int MXNDArraySaveRawBytes(NDArrayHandle handle,
  * \param keys the name of the NDArray, optional, can be NULL
  * \return 0 when success, -1 when failure happens
  */
+MXNET_DLL int MXNDArrayLegacySave(const char* fname,
+                                  uint32_t num_args,
+                                  NDArrayHandle* args,
+                                  const char** keys);
+/*!
+ * \brief Save list of narray into the file.
+ * \param fname name of the file.
+ * \param num_args number of arguments to save.
+ * \param args the array of NDArrayHandles to be saved.
+ * \param keys the name of the NDArray, optional, can be NULL
+ * \return 0 when success, -1 when failure happens
+ */
 MXNET_DLL int MXNDArraySave(const char* fname,
                             uint32_t num_args,
                             NDArrayHandle* args,
@@ -3113,6 +3125,14 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
                                  NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
                                  EngineFnPropertyHandle prop_handle DEFAULT(NULL),
                                  int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
+
+/*!
+ * \brief This function checks if any dynamic shape op is present in the symbol.
+ * \param sym_handle handler of the input symbol.
+ * \param has_dynamic_shape Flag to indicate if the symbol contains dynamic shape op.
+ */
+MXNET_DLL int MXCheckDynamicShapeOp(SymbolHandle sym_handle,
+                                    bool* has_dynamic_shape);
 
 #ifdef __cplusplus
 }

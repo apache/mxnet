@@ -188,7 +188,6 @@ def test_argmin():
     A.attach_grad()
     with mx.autograd.record():
         B = np.argmin(A)
-    print(B)
     assert B == 21
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
@@ -202,7 +201,6 @@ def test_argmax():
     A.attach_grad()
     with mx.autograd.record():
         B = np.argmax(A)
-    print(B)
     assert B == 21
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
@@ -983,6 +981,7 @@ def test_expm1():
 
 
 @use_np
+@pytest.mark.skip(reason='to be moved to new file and run separately as it takes lot of memory')
 def test_frexp():
     inp = np.ones((2, INT_OVERFLOW))
     inp[-1, -1] = 9
@@ -1090,7 +1089,7 @@ def test_prod():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1, -1] == 1
     with mx.autograd.record():
-        out2 = np.sum(inp, axis=0)
+        out2 = np.prod(inp, axis=0)
         out2.backward()
     assert out2.shape == (INT_OVERFLOW, )
     assert out2[0] == 2 and out2[-1] == 10
@@ -1654,6 +1653,7 @@ def test_digamma():
 
 
 @use_np
+@pytest.mark.skip(reason='to be moved to new file and run separately as it takes lot of memory')
 def test_rnn_dim_check():
     L_SEQ, BAT, L_INP, L_STA = 2**31, 4, 2**10, 2
     data = np.random.uniform(-1, 1, (L_SEQ, BAT, L_INP))
@@ -1664,6 +1664,7 @@ def test_rnn_dim_check():
 
 
 @use_np
+@pytest.mark.skip(reason='runs without MKLDNN, wtih is not default behavior')
 def test_rnn_vanilla():
     L_SEQ, BAT, L_INP, L_STA = 2**20, 4, 2**10, 2
     def batch_check(x, modes, params):
@@ -1967,6 +1968,24 @@ def test_array_split():
 
 
 @use_np
+def test_take():
+    inp = np.zeros((INT_OVERFLOW, 2))
+    inp[0], inp[-1] = 1, 2
+    indices = np.array([[0],[INT_OVERFLOW-1]], dtype='int64')
+    inp.attach_grad()
+    indices.attach_grad()
+    with mx.autograd.record():
+        out = np.take(inp, indices, axis=0)
+        out.backward()
+    assert out.shape == (2, 1, 2)
+    assert out[0, 0, 0] == 1 and out[1, 0, 0] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == 1 and inp.grad[-1, 0] == 1
+    assert indices.grad.shape == indices.shape
+    assert indices[0, 0] == 0
+
+
+@use_np
 def test_std():
     N = 2*20
     inp = np.zeros((2, INT_OVERFLOW))
@@ -2109,6 +2128,22 @@ def test_dsplit():
     assert out[1][0][1][0] == 0
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1][-1][0] == 0 and inp.grad[0][1][1] == 1
+
+
+@use_np
+def test_tril_indices():
+    N = 2**16
+    data = np.tril_indices(N, -1)
+    assert data[0].shape == (((1 + (N-1)) * (N-1) / 2), )
+    assert data[0][-1] == N - 1 and data[1][-1] == N - 2
+
+
+@use_np
+def test_tril_indices_extreme():
+    data = np.tril_indices(n=2, m=INT_OVERFLOW+2, k=INT_OVERFLOW)
+    assert data[0].shape == (INT_OVERFLOW + 1 + INT_OVERFLOW + 2, )
+    assert data[0][-1] == 1 and data[1][-1] == INT_OVERFLOW + 1
+    assert data[0][INT_OVERFLOW] == 0 and data[1][INT_OVERFLOW] == INT_OVERFLOW
 
 
 @use_np
@@ -2273,3 +2308,19 @@ def test_fill_diagonal():
     data2 = np.zeros((INT_OVERFLOW, 2))
     np.fill_diagonal(data2, [1, 2], wrap=True)
     assert data2[0, 0] == 1 and data2[-1, -1] == 2
+
+
+@use_np
+def test_insert():
+    inp = np.zeros((INT_OVERFLOW, 2))
+    inp2 = np.ones((INT_OVERFLOW))
+    inp2[-1] = 2
+    inp3 = inp.flatten()
+    out = np.insert(inp, 1, inp2, axis=1)
+    out2 = np.insert(inp3, slice(1, 2), np.array([5, 6]))
+    assert out.shape == (INT_OVERFLOW, 3)
+    assert out2.shape == (INT_OVERFLOW * 2 + 2,)
+    assert out[0, 1] == 1 and out[-1, 1] == 2
+    assert out2[1] == 5 and out2[2] == 6
+    assertRaises(MXNetError, np.insert, arr=inp3, obj=np.array([2, 2], dtype=np.int64), values=np.array([5, 6]))
+

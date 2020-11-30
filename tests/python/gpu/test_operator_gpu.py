@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
 import sys
 import os
 import time
@@ -52,7 +51,7 @@ from test_ndarray import *
 from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
-from test_contrib_optimizer import test_adamw
+from test_optimizer import test_adamW
 del test_custom_op_fork  #noqa
 
 set_default_context(mx.gpu(0))
@@ -372,6 +371,7 @@ def test_preloaded_multi_sgd():
 
 
 @pytest.mark.serial
+@pytest.mark.flaky
 def test_batchnorm_with_type():
   ctx_list_v2_2D = [
     {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float32}},

@@ -151,22 +151,8 @@ def windows_build(args):
     mxnet_root = get_mxnet_root()
     logging.info("Found MXNet root: {}".format(mxnet_root))
 
-    if 'GPU' in args.flavour:
-        # Get Thrust version to be shipped in Cuda 11, due to flakyness of
-        # older Thrust versions with MSVC 19 compiler
-        with remember_cwd():
-            tmpdirname = tempfile.mkdtemp()
-            os.chdir(tmpdirname)
-            r = requests.get('https://github.com/thrust/thrust/archive/1.9.8.zip', allow_redirects=True)
-            with open('thrust.zip', 'wb') as f:
-                f.write(r.content)
-            with zipfile.ZipFile('thrust.zip', 'r') as zip_ref:
-                zip_ref.extractall('.')
-            thrust_path = os.path.join(tmpdirname, "thrust-1.9.8")
-
-
     # cuda thrust / CUB + VS 2019 is flaky: try multiple times if fail
-    MAXIMUM_TRY = 5
+    MAXIMUM_TRY = 1
     build_try = 0
 
     while build_try < MAXIMUM_TRY:
@@ -178,8 +164,7 @@ def windows_build(args):
             os.chdir(path)
             env = os.environ.copy()
             if 'GPU' in args.flavour:
-                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
-                env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
+                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2'
             cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
                                                          CMAKE_FLAGS[args.flavour],
                                                          mxnet_root)

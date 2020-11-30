@@ -47,3 +47,78 @@ def test_dynamic_shape():
     assert_almost_equal(result.asnumpy(), result_nd)
     assert_almost_equal(data.grad.asnumpy(), data_grad_nd)
 
+def test_dynamic_shape_with_reshape():
+    # test dynamic shape op followed by reshape op
+    class _TestBlock(gluon.HybridBlock):
+
+        def __init__(self):
+            super(_TestBlock, self).__init__()
+
+        def hybrid_forward(self, F, data, index):
+            return F.contrib.boolean_mask(data, index).reshape((-1, ))
+
+    block = _TestBlock()
+    block.hybridize()
+    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.nd.array([0, 1, 1])
+    data.attach_grad()
+    with mx.autograd.record():
+        result = block(data, index)
+    result.backward()
+    result_nd = np.array([4, 5, 6, 7, 8, 9])
+    data_grad_nd = np.array([[0., 0., 0.], [1., 1., 1.], [1., 1., 1.]])
+    assert_almost_equal(result.asnumpy(), result_nd)
+    assert_almost_equal(data.grad.asnumpy(), data_grad_nd)
+
+def test_dynamic_shape_multiple_hybridize():
+    # test multiple hybridize calls for the same block
+    class _TestBlock(gluon.HybridBlock):
+
+        def __init__(self):
+            super(_TestBlock, self).__init__()
+
+        def hybrid_forward(self, F, data, index):
+            return F.sum(F.contrib.boolean_mask(data, index)) - 5
+
+    block = _TestBlock()
+    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.nd.array([0, 1, 0])
+    result_nd = np.array([10])
+
+    block.hybridize()
+    result = block(data, index)
+    assert_almost_equal(result.asnumpy(), result_nd)
+
+    block.hybridize(static_alloc=True)
+    result = block(data, index)
+    assert_almost_equal(result.asnumpy(), result_nd)
+
+    block.hybridize(static_alloc=True, static_shape=True)
+    result = block(data, index)
+    assert_almost_equal(result.asnumpy(), result_nd)
+
+def test_dynamic_shape_switch_hybridize():
+    # test hybridize switch on and off for the same block 
+    class _TestBlock(gluon.HybridBlock):
+        def __init__(self):
+            super(_TestBlock, self).__init__()
+
+        def hybrid_forward(self, F, data, index):
+            return F.sum(F.contrib.boolean_mask(data, index)) - 5
+
+    block = _TestBlock()
+    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.nd.array([0, 1, 0])
+    result_nd = np.array([10])
+
+    block.hybridize()
+    result = block(data, index)
+    assert_almost_equal(result.asnumpy(), result_nd)
+
+    block.hybridize(active=False)
+    result = block(data, index)
+    assert_almost_equal(result.asnumpy(), result_nd)
+
+    block.hybridize(static_alloc=True, static_shape=True)
+    result = block(data, index)
+    assert_almost_equal(result.asnumpy(), result_nd)

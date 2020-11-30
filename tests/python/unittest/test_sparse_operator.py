@@ -1645,6 +1645,7 @@ def test_sparse_square_sum():
 
 
 @pytest.mark.serial
+@pytest.mark.flaky
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):

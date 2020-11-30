@@ -147,6 +147,8 @@ Advanced Activation Layers
     nn.ELU
     nn.SELU
     nn.Swish
+    nn.SiLU
+    nn.GELU
 
 API Reference
 -------------

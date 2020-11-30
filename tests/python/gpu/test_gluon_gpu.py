@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
 import sys
 import os
 import time
@@ -128,6 +127,7 @@ def test_lstmp():
 
 
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
+@pytest.mark.flaky
 def test_lstm_clip():
     hidden_size, projection_size = 4096, 2048
     batch_size, seq_len = 32, 80
