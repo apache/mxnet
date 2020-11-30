@@ -1017,7 +1017,7 @@ def test_np_save_load_ndarrays(load_fn):
 
     # test save/load a list of ndarrays
     with TemporaryDirectory() as work_dir:
-        fname = os.path.join(work_dir, 'dataset.npy')
+        fname = os.path.join(work_dir, 'dataset.npz')
         npx.savez(fname, *array_list)
         if load_fn is _np.load:
             with load_fn(fname) as array_dict_loaded:  # Ensure NPZFile is closed
@@ -1042,7 +1042,7 @@ def test_np_save_load_ndarrays(load_fn):
     for k, v in zip(keys, array_list):
         arr_dict[k] = v
     with TemporaryDirectory() as work_dir:
-        fname = os.path.join(work_dir, 'dataset.npy')
+        fname = os.path.join(work_dir, 'dataset.npz')
         npx.savez(fname, **arr_dict)
         if load_fn is _np.load:
             with load_fn(fname) as arr_dict_loaded:  # Ensure NPZFile is closed

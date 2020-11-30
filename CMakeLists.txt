@@ -528,6 +528,10 @@ add_library(nnvm OBJECT ${NNVMSOURCE})
 set_target_properties(nnvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
 
+add_library(miniz STATIC "3rdparty/miniz/miniz.c")
+target_include_directories(miniz PUBLIC "3rdparty/miniz")
+list(APPEND mxnet_LINKER_LIBS miniz)
+
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
 FILE(GLOB_RECURSE GROUP_Include "src/*.h" "3rdparty/tvm/nnvm/*.h" "3rdparty/mshadow/mshadow/*.h" "plugin/*.h")
@@ -836,20 +840,6 @@ elseif(MSVC)
     set_target_properties(customop_gpu_lib PROPERTIES PREFIX "lib")
   endif()
 endif()
-
-# used for numpy-compatible serialization
-function(load_libzip)
-  set(BUILD_SHARED_LIBS FALSE CACHE BOOL "Build shared libzip libraries")
-  set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)  # Take ZLIB_ROOT into account
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/libzip" EXCLUDE_FROM_ALL)
-  if(MSVC AND USE_SPLIT_ARCH_DLL AND USE_CUDA)
-    list(APPEND mxnet_LINKER_LIBS libzip::zip)
-    set(mxnet_LINKER_LIBS "${mxnet_LINKER_LIBS}" PARENT_SCOPE)
-  else()
-    target_link_libraries(mxnet PRIVATE libzip::zip)
-  endif()
-endfunction()
-load_libzip()
 
 if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
