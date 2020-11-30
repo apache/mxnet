@@ -309,6 +309,8 @@
          (Except 3rdparty/intgemm/test/3rd_party/catch.hpp is under the Boost license, listed separately)
     builtin_fp16.h - For details, see 3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
          Copyright (c) 2009-2015 by llvm/compiler-rt contributors
+    LayerNormCPUKernel from Marian - For details see src/operator/nn/layer_norm.cc
+         Copyright (c) 2016 Marcin Junczys-Dowmunt, the University of Edinburgh, Adam Mickiewicz University
 
     =======================================================================================
     3-clause BSD license
