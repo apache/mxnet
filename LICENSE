@@ -249,6 +249,7 @@
     docs/python_docs/themes/mx-theme
     3rdparty/intgemm
     3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
+    src/operator/nn/layer_norm.cc
 
     =======================================================================================
     3-clause BSD license
