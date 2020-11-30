@@ -5671,41 +5671,44 @@ def test_psroipooling_with_type():
                                                'psroipool_rois': 'null'}, arg_params=arg_params)
 
 
-def test_deformable_convolution():
-    for num_batch in [1, 2]:
-        for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
-            for input_height, input_width in itertools.product([5, 6], [5, 6]):
-                for dilate in [(1, 1), (2, 2)]:
-                    for grad_nodes in [['im_data'], ['offset_data'], ['weight']]:
-                        output_height = input_height
-                        output_width = input_width
-                        im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
-                        offset_data = \
-                            np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
-                            * 0.8 + 0.1
+@pytest.mark.parametrize('num_batch', [1, 2])
+@pytest.mark.parametrize('num_channel_data_deformable_group', itertools.product([4, 8], [1, 2]))
+@pytest.mark.parametrize('input_height_width', itertools.product([5, 6], [5, 6]))
+@pytest.mark.parametrize('dilate', [(1, 1), (2, 2)])
+@pytest.mark.parametrize('grad_nodes', [['im_data'], ['offset_data'], ['weight']])
+def test_deformable_convolution(num_batch, num_channel_data_deformable_group, input_height_width,
+                                dilate, grad_nodes):
+    num_channel_data, num_deformable_group = num_channel_data_deformable_group
+    input_height, input_width = input_height_width
+    output_height = input_height
+    output_width = input_width
+    im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
+    offset_data = \
+        np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
+        * 0.8 + 0.1
 
-                        weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
-                        bias = np.zeros(num_channel_data)
+    weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
+    bias = np.zeros(num_channel_data)
 
-                        im_data_var = mx.symbol.Variable(name="im_data").as_np_ndarray()
-                        offset_data_var = mx.symbol.Variable(name="offset_data").as_np_ndarray()
-                        weight_var = mx.symbol.Variable(name="weight").as_np_ndarray()
-                        bias_var = mx.symbol.Variable(name="bias").as_np_ndarray()
-                        op = mx.sym.npx.deformable_convolution(name='test_op', data=im_data_var,
-                                                               offset=offset_data_var,
-                                                               weight=weight_var, bias=bias_var,
-                                                               num_filter=num_channel_data, pad=dilate,
-                                                               kernel=(3, 3), stride=(1, 1), dilate=dilate,
-                                                               num_deformable_group=num_deformable_group)
-                        if grad_nodes[0] == 'offset_data':
-                            # wider tolerance needed for coordinate differential
-                            rtol, atol = 1.0, 1e-2
-                        else:
-                            rtol, atol = 0.05, 1e-3
-                        # By now we only have gpu implementation
-                        if default_context().device_type == 'gpu':
-                            check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
-                                                   grad_nodes=grad_nodes, ctx=mx.gpu(0), numeric_eps=1.0/64)
+    im_data_var = mx.symbol.Variable(name="im_data").as_np_ndarray()
+    offset_data_var = mx.symbol.Variable(name="offset_data").as_np_ndarray()
+    weight_var = mx.symbol.Variable(name="weight").as_np_ndarray()
+    bias_var = mx.symbol.Variable(name="bias").as_np_ndarray()
+    op = mx.sym.npx.deformable_convolution(name='test_op', data=im_data_var,
+                                           offset=offset_data_var,
+                                           weight=weight_var, bias=bias_var,
+                                           num_filter=num_channel_data, pad=dilate,
+                                           kernel=(3, 3), stride=(1, 1), dilate=dilate,
+                                           num_deformable_group=num_deformable_group)
+    if grad_nodes[0] == 'offset_data':
+        # wider tolerance needed for coordinate differential
+        rtol, atol = 1.0, 1e-2
+    else:
+        rtol, atol = 0.05, 1e-3
+    # By now we only have gpu implementation
+    if default_context().device_type == 'gpu':
+        check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
+                               grad_nodes=grad_nodes, ctx=mx.gpu(0), numeric_eps=1.0/64)
 
 
 def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w, pooled_h, sample_per_part, part_size, output_dim, num_classes, trans_std, feat_h, feat_w):
