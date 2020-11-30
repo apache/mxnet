@@ -958,3 +958,19 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   qex.outputs[0].wait_to_read()
   assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
                                rtol=1e-2, atol=1e-2, etol=0.01)
+
+@pytest.mark.parametrize('axis', [0, 1, 2, 3])
+def test_bn_relu_fusion(axis):
+    dummy_data = mx.nd.uniform(-1.0, 1.0, shape=(32, 3, 224, 224))
+
+    net = mx.gluon.nn.HybridSequential()
+    net.add(mx.gluon.nn.BatchNorm(axis=axis))
+    net.add(mx.gluon.nn.Activation('relu'))
+    net.initialize()
+
+    out1 = net(dummy_data)
+    out1.wait_to_read()
+    net.optimize_for(dummy_data, backend='MKLDNN')
+    out2 = net(dummy_data)
+
+    assert_almost_equal(out1, out2)
