@@ -703,6 +703,21 @@ build_ubuntu_cpu_large_tensor() {
     ninja
 }
 
+build_ubuntu_cpu_large_tensor_nightly() {
+    set -ex
+    cd /work/build
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DUSE_CUDA=OFF                          \
+        -DUSE_CUDNN=OFF                         \
+        -DUSE_MKLDNN=ON                         \
+        -DUSE_BLAS=MKL                          \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja
+}
+
 build_ubuntu_gpu_large_tensor() {
     set -ex
     cd /work/build
