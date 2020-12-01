@@ -177,6 +177,12 @@ extern "C" {
     #include <cblas.h>
 }
 #elif MSHADOW_USE_MKL
+  #if MSHADOW_INT64_TENSOR_SIZE == 1
+    // Define MKL_INT here to use exactly the same 64bits integer type definitions.
+    // If MKL_INT will not be defined here, the mkl header defines it as long long int.
+    #define MKL_INT int64_t
+    #define MKL_UINT uint64_t
+  #endif
   #include <mkl_blas.h>
   #include <mkl_cblas.h>
   #include <mkl_vsl.h>
@@ -331,6 +337,13 @@ const float kPi = 3.1415926f;
   typedef index_t openmp_index_t;
 #endif
 
+#if MSHADOW_USE_MKL && MXNET_USE_LAPACK
+  // lapack_index_t could be replaced by index_t and removed when all blas library support large tensor
+  typedef index_t lapack_index_t;
+#else
+  typedef int lapack_index_t;
+#endif
+
 /*! \brief float point type that will be used in default by mshadow */
 typedef float default_real_t;
 
@@ -457,6 +470,9 @@ struct DataType<bool> {
 
 /*! \brief type enum value for default real type */
 const int default_type_flag = DataType<default_real_t>::kFlag;
+
+/*! \brief TypeFlag value for type of indexes */
+const int index_type_flag = DataType<lapack_index_t>::kFlag;
 
 /*! layout flag */
 enum LayoutFlag {

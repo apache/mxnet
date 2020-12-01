@@ -233,7 +233,8 @@ void Imperative::RecordOp(
 
   nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs = std::move(attrs);
-  if (node->attrs.name == "") {
+  // if node name is empty or node name is equal to op name - name it with unique name
+  if (node->attrs.name == "" || node->attrs.op->name == node->attrs.name) {
     node->attrs.name = "node_" + std::to_string(node_count_++);
   } else {
     node_count_++;
@@ -326,7 +327,8 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
   }
   node->attrs = std::move(attrs);
   // Need to support NameManager in imperative API to better name node->attrs.name
-  if (node->attrs.name == "") {
+  // if node name is empty or node name is equal to op name - name it with unique name
+  if (node->attrs.name == "" || node->attrs.op->name == node->attrs.name) {
     node->attrs.name = "node_" + std::to_string(node_count_++);
   } else {
     node_count_++;

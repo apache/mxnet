@@ -28,8 +28,8 @@ from mxnet.test_utils import download, is_cd_run, assert_almost_equal, default_c
 import pytest
 
 base_path = os.path.join(os.path.dirname(__file__), "../../..")
-def check_platform():
-    return platform.machine() not in ['x86_64', 'AMD64']
+def check_platform(supported_platforms=['x86_64', 'AMD64']):
+    return platform.machine() not in supported_platforms
 
 @pytest.mark.skipif(check_platform(), reason="not all machine types supported")
 @pytest.mark.skipif(is_cd_run(), reason="continuous delivery run - ignoring test")
@@ -161,21 +161,50 @@ def test_subgraph():
     # Gluon Hybridize partitioning with shapes/types
     sym_block = nn.SymbolBlock(sym, [a,b])
     sym_block.initialize()
-    sym_block.hybridize(backend='myProp')
+    sym_block.optimize_for(mx.nd.ones((3,2)),mx.nd.ones((3,2)),backend='myProp')
     out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out4[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
-    # Gluon Hybridize partitioning with shapes/types
+    # Gluon Hybridize partitioning with sym.var
     sym_block2 = nn.SymbolBlock(sym, [a,b])
     sym_block2.initialize()
+    a_var = mx.sym.var('a',shape=(3,2))
+    b_var = mx.sym.var('b',shape=(3,2))
+    sym_block2.optimize_for(a_var, b_var, backend='myProp')
+
+    # Gluon Hybridize partitioning with shapes/types
+    sym_block3 = nn.SymbolBlock(sym, [a,b])
+    sym_block3.initialize()
     a_data = mx.nd.ones((3,2))
     b_data = mx.nd.ones((3,2))
-    sym_block2.optimize_for(a_data, b_data, backend='myProp')
-    sym_block2.export('optimized')
-    sym_block3 = nn.SymbolBlock.imports('optimized-symbol.json',['a','b'],
-                                        'optimized-0000.params')
+    sym_block3.optimize_for(a_data, b_data, backend='myProp')
+    sym_filename, params_filename = sym_block3.export('optimized')
+    assert sym_filename == 'optimized-symbol.json'
+    assert params_filename is None
+    sym_block4 = nn.SymbolBlock.imports(sym_filename, ['a','b'], params_filename)
 
-    out5 = sym_block3(a_data, b_data)
+    out5 = sym_block4(a_data, b_data)
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out5[0].asnumpy(), rtol=1e-3, atol=1e-3)
+
+@pytest.mark.skipif(check_platform(['x86_64']), reason="not all machine types supported")
+@pytest.mark.skipif(is_cd_run(), reason="continuous delivery run - ignoring test")
+def test_external_op():
+    # check if operator already exists
+    if hasattr(mx.nd, 'min_ex'):
+        raise MXNetError('Operator already loaded')
+
+    lib = 'libexternal_lib.so'
+    fname = os.path.join(base_path,'example/extensions/lib_external_ops/build/'+lib)
+    if not os.path.exists(fname):
+        raise MXNetError("library %s not found " % lib)
+
+    fname = os.path.abspath(fname)
+    mx.library.load(fname, False)
+
+    # execute operator
+    try:
+        mx.nd.min_ex()
+    except:
+        raise MXNetError('Operator not loaded successfully')

@@ -18,7 +18,7 @@
 # coding: utf-8
 """Lists of functions whitelisted/blacklisted for automatic mixed precision in symbol API."""
 
-from ....runtime import Features
+from ...runtime import Features
 
 
 # Functions that should be cast to lower precision
@@ -591,6 +591,9 @@ FP32_FUNCS = [
     '_npx_deformable_convolution',
     '_npx_modulated_deformable_convolution',
     '_contrib_DeformablePSROIPooling',
+    '_contrib_sldwin_atten_score',
+    '_contrib_sldwin_atten_mask_like',
+    '_contrib_sldwin_atten_context',
     ]
 
 if Features().is_enabled('MKLDNN'):

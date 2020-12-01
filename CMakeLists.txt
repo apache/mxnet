@@ -88,12 +88,12 @@ option(USE_SIGNAL_HANDLER "Print stack traces on segfaults." ON)
 option(USE_TENSORRT "Enable inference optimization with TensorRT." OFF)
 option(USE_ASAN "Enable Clang/GCC ASAN sanitizers." OFF)
 cmake_dependent_option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF "NOT MSVC" OFF)
-option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
+option(BUILD_EXTENSION_PATH "Path to extension to build" "")
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
 cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
-
+cmake_dependent_option(MXNET_FORCE_SHARED_CRT "Build with dynamic CRT on Windows (/MD)" ON "MXNET_BUILD_SHARED_LIBS" OFF)
 
 message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
 message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
@@ -103,6 +103,11 @@ message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
 if(USE_TVM_OP)
   add_definitions(-DMXNET_USE_TVM_OP=1)
+endif()
+
+if(MXNET_FORCE_SHARED_CRT)
+  set(DMLC_FORCE_SHARED_CRT ON)
+  set(gtest_force_shared_crt ON)
 endif()
 
 message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
@@ -173,7 +178,6 @@ add_definitions(-DDMLC_STRICT_CXX11)
 add_definitions(-DDMLC_USE_CXX14)
 add_definitions(-DMSHADOW_IN_CXX11)
 if(MSVC)
-  add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DMXNET_EXPORTS)
@@ -254,8 +258,16 @@ endif()
 if(USE_MKLDNN)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(MSVC)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc /MT")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy /MT")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /EHsc /Gy")
+    set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /EHsc /Gy")
+    if(NOT MXNET_FORCE_SHARED_CRT)
+      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+      set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+      set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /MT")
+      set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /MT")
+    endif()
   endif()
 
   function(load_mkldnn)
@@ -284,23 +296,15 @@ endif()
 
 if(USE_INTGEMM)
   message(STATUS "Using intgemm")
-  include(FetchContent)
-  FetchContent_Declare(
-    intgemm
-    GIT_REPOSITORY https://github.com/kpu/intgemm.git
-    GIT_TAG        02f671cf537fdbc818cf8111d1d9e557a8650d7a
-  )
-  FetchContent_GetProperties(intgemm)
-  if(NOT intgemm_POPULATED)
-    FetchContent_Populate(intgemm)
-  endif()
-  add_subdirectory(${intgemm_SOURCE_DIR} ${intgemm_BINARY_DIR} EXCLUDE_FROM_ALL)
+  add_subdirectory(3rdparty/intgemm EXCLUDE_FROM_ALL)
   add_definitions(-DMXNET_USE_INTGEMM=1)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+cmake_dependent_option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" ON "CMAKE_SIZEOF_VOID_P EQUAL 8" OFF)
 
 include(cmake/ChooseBlas.cmake)
 
@@ -524,6 +528,10 @@ add_library(nnvm OBJECT ${NNVMSOURCE})
 set_target_properties(nnvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
 
+add_library(miniz STATIC "3rdparty/miniz/miniz.c")
+target_include_directories(miniz PUBLIC "3rdparty/miniz")
+list(APPEND mxnet_LINKER_LIBS miniz)
+
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
 FILE(GLOB_RECURSE GROUP_Include "src/*.h" "3rdparty/tvm/nnvm/*.h" "3rdparty/mshadow/mshadow/*.h" "plugin/*.h")
@@ -557,13 +565,15 @@ if (NOT (EXTRA_OPERATORS STREQUAL ""))
     list(APPEND SOURCE ${EXTRA_SRC} ${EXTRA_CUSRC})
 endif()
 
-if(MSVC)
+if(MSVC AND NOT MXNET_FORCE_SHARED_CRT)
   foreach(flag_var
         CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
         CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
     if(${flag_var} MATCHES "/MD")
       string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-    endif(${flag_var} MATCHES "/MD")
+    elseif(${flag_var} MATCHES "/MDd")
+      string(REGEX REPLACE "/MDd" "/MTd" ${flag_var} "${${flag_var}}")    
+    endif()
   endforeach(flag_var)
 endif()
 
@@ -693,6 +703,7 @@ elseif(MSVC)
       foreach(arch ${arch_code_list})
         add_library(mxnet_${arch} SHARED ${SOURCE})
         target_link_libraries(mxnet_${arch} PUBLIC mshadow)
+        target_compile_definitions(mxnet_${arch} PRIVATE -DWIN32_LEAN_AND_MEAN)
         target_compile_options(
           mxnet_${arch}
           PRIVATE
@@ -703,12 +714,33 @@ elseif(MSVC)
           PRIVATE
           "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-code=sm_${arch},compute_${arch}>"
         )
-        target_compile_options(
-          mxnet_${arch}
-          PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
-        target_compile_options(
-          mxnet_${arch}
-          PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+        if(MXNET_FORCE_SHARED_CRT)
+          target_compile_options(
+            mxnet_${arch} 
+            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MDd -Gy /bigobj>")
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")          
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
+        else()
+          target_compile_options(
+            mxnet_${arch} 
+            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")          
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+          target_compile_options(
+            mxnet_${arch}
+            PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+        endif()
       endforeach()
 
       add_custom_command(
@@ -718,16 +750,39 @@ elseif(MSVC)
       string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
       string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
       add_library(mxnet SHARED ${SOURCE})
+      target_compile_definitions(mxnet PRIVATE -DWIN32_LEAN_AND_MEAN)
       target_link_libraries(mxnet PUBLIC mshadow)
-      target_compile_options(
-          mxnet
+      if(MXNET_FORCE_SHARED_CRT)
+        target_compile_options(
+            mxnet 
+            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MDd -Gy /bigobj>")
+        target_compile_options(
+            mxnet
+            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
+        target_compile_options(
+            mxnet
+            PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
+        target_compile_options(
+            mxnet
+            PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MD -Gy /bigobj>")
+      else()
+        target_compile_options(
+          mxnet_${arch} 
           PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
-      target_compile_options(
-          mxnet
-          PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+        target_compile_options(
+          mxnet_${arch}
+          PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")          
+        target_compile_options(
+          mxnet_${arch}
+          PRIVATE "$<$<AND:$<CONFIG:RELWITHDEBINFO>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+        target_compile_options(
+          mxnet_${arch}
+          PRIVATE "$<$<AND:$<CONFIG:MINSIZEREL>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+      endif()
     endif(USE_SPLIT_ARCH_DLL)
   else()
     add_library(mxnet SHARED ${SOURCE})
+    target_compile_definitions(mxnet PRIVATE -DWIN32_LEAN_AND_MEAN)
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
 endif()
@@ -739,6 +794,14 @@ add_library(transposecsr_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensio
 add_library(transposerowsp_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/transposerowsp_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
 add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
 add_library(pass_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_pass/pass_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
+
+if(IS_DIRECTORY ${BUILD_EXTENSION_PATH})
+  if(MSVC)
+    message(FATAL_ERROR "Windows builds are not support for external ops")
+  else()
+    add_subdirectory(${BUILD_EXTENSION_PATH} ${BUILD_EXTENSION_PATH}/build)
+  endif()
+endif()
 
 target_include_directories(customop_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 target_include_directories(transposecsr_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
@@ -765,9 +828,15 @@ elseif(MSVC)
   set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
   set_target_properties(pass_lib PROPERTIES PREFIX "lib")
   if(USE_CUDA)
-    target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-LD -MT>")
-    target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/LD>")
-    target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/MT>")
+    if(MXNET_FORCE_SHARED_CRT)
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-LD -MD>")
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/LD>")
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/MD>")
+    else()
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-LD -MT>")
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/LD>")
+      target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/MT>")
+    endif()
     set_target_properties(customop_gpu_lib PROPERTIES PREFIX "lib")
   endif()
 endif()
@@ -922,3 +991,4 @@ if(BUILD_CYTHON_MODULES)
     message(FATAL_ERROR "No python interpreter found to build cython modules")
   endif()
 endif()
+

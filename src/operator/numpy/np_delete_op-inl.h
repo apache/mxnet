@@ -48,23 +48,23 @@ namespace mxnet {
 namespace op {
 
 struct NumpyDeleteParam : public dmlc::Parameter<NumpyDeleteParam> {
-  dmlc::optional<int> start;
-  dmlc::optional<int> stop;
-  dmlc::optional<int> step;
-  dmlc::optional<int> int_ind;
+  dmlc::optional<index_t> start;
+  dmlc::optional<index_t> stop;
+  dmlc::optional<index_t> step;
+  dmlc::optional<index_t> int_ind;
   dmlc::optional<int> axis;
   DMLC_DECLARE_PARAMETER(NumpyDeleteParam) {
     DMLC_DECLARE_FIELD(start)
-    .set_default(dmlc::optional<int>())
+    .set_default(dmlc::optional<index_t>())
     .describe("If 'obj' is slice, 'start' is one of it's arguments.");
     DMLC_DECLARE_FIELD(stop)
-    .set_default(dmlc::optional<int>())
+    .set_default(dmlc::optional<index_t>())
     .describe("If 'obj' is slice, 'stop' is one of it's arguments.");
     DMLC_DECLARE_FIELD(step)
-    .set_default(dmlc::optional<int>())
+    .set_default(dmlc::optional<index_t>())
     .describe("If 'obj' is slice, 'step' is one of it's arguments.");
     DMLC_DECLARE_FIELD(int_ind)
-    .set_default(dmlc::optional<int>())
+    .set_default(dmlc::optional<index_t>())
     .describe("If 'obj' is int, 'int_ind' is the index before which"
               "'values' is inserted");
     DMLC_DECLARE_FIELD(axis)
@@ -97,7 +97,7 @@ struct SliceToIndices {
    * \brief transfer slice to indices array
    */
   template<typename IType>
-  MSHADOW_XINLINE static void Map(int i, IType* indices, int start, int step) {
+  MSHADOW_XINLINE static void Map(index_t i, IType* indices, int start, int step) {
     indices[i] = start + i * step;
   }
 };
@@ -111,9 +111,9 @@ struct IsDeleteCal {
    * \param indices the indices need to be deleted
    */
   template<typename IType>
-  MSHADOW_XINLINE static void Map(int i, int N, bool* is_delete, const IType* indices) {
+  MSHADOW_XINLINE static void Map(index_t i, int N, bool* is_delete, const IType* indices) {
     if ((indices[i] >= 0) && (indices[i] < N)) {
-      is_delete[static_cast<int>(indices[i])] = true;
+      is_delete[static_cast<index_t>(indices[i])] = true;
     }
   }
 };
@@ -125,7 +125,7 @@ struct OutPosCal {
    *          is_delete         F T T F F
    *          out_position      0 - - 1 2
    */
-  MSHADOW_XINLINE static void Map(int i, int64_t* out_pos, const bool* is_delete) {
+  MSHADOW_XINLINE static void Map(index_t i, int64_t* out_pos, const bool* is_delete) {
     if (!is_delete[i]) {
       int cnt = 0;
       for (int j = 0; j < i; ++j) {
@@ -151,7 +151,7 @@ struct DeleteKernel {
    * \param axis - delete sub-array along this axis
    */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
                                   const DType* in_arr,
                                   const bool* is_delete,
                                   const int64_t* out_pos,
@@ -162,7 +162,7 @@ struct DeleteKernel {
     mshadow::Shape<ndim> arr_idx = mxnet_op::unravel(i, arrshape);
     if (!is_delete[arr_idx[axis]]) {
       arr_idx[axis] = out_pos[arr_idx[axis]];
-      int64_t dest_idx = mxnet_op::dot(arr_idx, out_stride);
+      index_t dest_idx = mxnet_op::dot(arr_idx, out_stride);
       KERNEL_ASSIGN(out_data[dest_idx], req, in_arr[i]);
     }
   }
@@ -178,11 +178,11 @@ struct DeleteKernel {
  * /return step - slice.indices(range).step
  * /return tot - total number of slice.indices(range)
  */
-inline void SliceIndices(const dmlc::optional<int>& pstart,
-                         const dmlc::optional<int>& pstop,
-                         const dmlc::optional<int>& pstep,
-                         const int range,
-                         int* start, int* stop, int* step,
+inline void SliceIndices(const dmlc::optional<index_t>& pstart,
+                         const dmlc::optional<index_t>& pstop,
+                         const dmlc::optional<index_t>& pstep,
+                         const index_t range,
+                         index_t* start, index_t* stop, index_t* step,
                          size_t* tot) {
   *step = pstep.has_value() ? pstep.value() : 1;
   CHECK_NE(*step, 0) << "'step' can not equal to 0.";
@@ -197,10 +197,10 @@ inline void SliceIndices(const dmlc::optional<int>& pstart,
   if (pstart.has_value()) {
     *start = pstart.value();
     *start += (*start < 0) ? range : 0;
-    *start = (*start < 0) ? ((*step < 0) ? -1 : 0) : *start;
-    *start = (*start >= range) ? ((*step < 0) ? range - 1 : range) : *start;
+    *start = (*start < 0) ? ((*step < 0) ? index_t{-1} : 0) : *start;
+    *start = (*start >= range) ? ((*step < 0) ? range - index_t{1} : range) : *start;
   } else {
-    *start = (*step > 0) ? 0 : range - 1;
+    *start = (*step > 0) ? 0 : range - index_t{1};
   }
   if (*step > 0 && *stop >= *start) {
     *tot = static_cast<size_t>((*stop - *start + *step - 1) / *step);
@@ -244,14 +244,14 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
   }
 
   axis = CheckAxis(axis, ndim);
-  int N = (arr.shape())[axis];
+  index_t N = (arr.shape())[axis];
   mxnet::TShape outshape(arr.shape());
   // if obj is slice, they're obj's arguments
-  int start = 0, stop = 0, step = 0;
+  index_t start = 0, stop = 0, step = 0;
   // total number to be deleted
   size_t numtodel = 0;
   // if obj is scaler, index is it's value
-  int index = 0;
+  index_t index = 0;
 
   if (param.step.has_value()) {  // obj is slice
     SliceIndices(param.start, param.stop, param.step,
@@ -325,7 +325,7 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
                                      reinterpret_cast<bool*>(is_delete_ptr) + arr.shape()[axis]);
     #endif
     numtodel = 0;
-    for (int i = 0; i < arr.shape()[axis]; ++i) {
+    for (index_t i = 0; i < arr.shape()[axis]; ++i) {
       if (vec_is_delete[i]) {
         numtodel++;
       }

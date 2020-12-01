@@ -51,7 +51,7 @@ RUN /work/deb_ubuntu_ccache.sh
 COPY toolchains/aarch64-linux-gnu-toolchain.cmake /usr
 ENV CMAKE_TOOLCHAIN_FILE=/usr/aarch64-linux-gnu-toolchain.cmake
 
-RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
+RUN git clone --recursive -b v0.3.12 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local/OpenBLAS && \
     make NOFORTRAN=1 CC=aarch64-linux-gnu-gcc && \
     make PREFIX=/usr/aarch64-linux-gnu install && \

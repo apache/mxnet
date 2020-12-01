@@ -282,10 +282,13 @@ fixed-size items.
 
     def __repr__(self):
         """Returns a string representation of the array."""
-        shape_info = 'x'.join(['%d' % x for x in self.shape])
-        return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
-                                      self.__class__.__name__,
-                                      shape_info, self.ctx)
+        if self._alive:
+            shape_info = 'x'.join(['%d' % x for x in self.shape])
+            return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
+                                          self.__class__.__name__,
+                                          shape_info, self.ctx)
+        else:
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __reduce__(self):
         return NDArray, (None,), self.__getstate__()

@@ -28,7 +28,7 @@ namespace op {
 
 struct ComputeBinKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType* in_data, const DType* bin_bounds,
+  MSHADOW_XINLINE static void Map(index_t i, const DType* in_data, const DType* bin_bounds,
                                   int* bin_indices, int bin_cnt, double min, double max) {
     DType data = in_data[i];
     int target = -1;
@@ -42,7 +42,7 @@ struct ComputeBinKernel {
   }
 
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType* in_data, int* bin_indices,
+  MSHADOW_XINLINE static void Map(index_t i, const DType* in_data, int* bin_indices,
                                    const DType* bin_bounds, int num_bins) {
     DType data = in_data[i];
     int target = -1;

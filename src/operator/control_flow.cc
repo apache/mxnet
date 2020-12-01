@@ -67,7 +67,7 @@ class ForeachState: public LoopState {
   ForeachParam params;
   int num_iterations;
 
-  ForeachState(const nnvm::Symbol &g, const ForeachParam &params) : LoopState(g) {
+  ForeachState(const nnvm::Symbol &g, const ForeachParam &params) : LoopState(g, false) {
     this->params = params;
   }
 };

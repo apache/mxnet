@@ -20,7 +20,7 @@ Contributors of Apache MXNet (incubating)
 Apache MXNet adopts the Apache way and governs by merit. We believe that it is important to create
 an inclusive community where everyone can use, contribute to, and influence the direction of
 the project. We actively invite contributors who have earned the merit to be part of the
-development community. See [MXNet Community Guide][https://mxnet.apache.org/community/community].
+development community. See [MXNet Community Guide](https://mxnet.apache.org/community/community).
 
 
 PPMC
@@ -102,6 +102,7 @@ healthy project. The PPMC actively seeks to appoint new committers from the list
 * [Alex Zai](https://github.com/azai91)
 * [Anirudh Acharya](https://github.com/anirudhacharya)
 * [Aston Zhang](https://github.com/astonzhang)
+* [Chaitanya Bapat](https://github.com/ChaiBapchya)
 * [Ciyong Chen](https://github.com/ciyongch)
 * [Da Zheng](https://github.com/zheng-da)
 * [Ding Kuo](https://github.com/chinakook)
@@ -131,6 +132,7 @@ healthy project. The PPMC actively seeks to appoint new committers from the list
 * [Yuxi Hu](https://github.com/yuxihu)
 * [Zach Kimberg](https://github.com/zachgk)
   - Zach is one of the major maintainers of the MXNet Scala package.
+* [Zhaoqi Zhu](https://github.com/Zha0q1)
 
 
 List of Contributors
@@ -242,7 +244,6 @@ List of Contributors
 * [Per Goncalves da Silva](https://github.com/perdasilva)
 * [Zhijingcheng Yu](https://github.com/jasonyu1996)
 * [Cheng-Che Lee](https://github.com/stu1130)
-* [Chaitanya Bapat](https://github.com/ChaiBapchya)
 * [LuckyPigeon](https://github.com/LuckyPigeon)
 * [Anton Chernov](https://github.com/lebeg)
 * [Denisa Roberts](https://github.com/D-Roberts)

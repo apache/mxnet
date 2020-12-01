@@ -1485,3 +1485,23 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }
+
+int MXCheckDynamicShapeOp(SymbolHandle sym_handle,
+                          bool* has_dynamic_shape) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  *has_dynamic_shape = false;
+  // traverse the symbol and check if any dynamic shape is present
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
+  *s = sym->Copy();
+  nnvm::Graph g = Symbol2Graph(*s);
+  const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
+  DFSVisit(g.outputs, [infershape, has_dynamic_shape](const nnvm::ObjectPtr n) {
+    if (*has_dynamic_shape) return;
+    if (!n->is_variable() && !infershape.count(n->op())) {
+      *has_dynamic_shape = true;
+      return;
+    }
+  });
+  API_END_HANDLE_ERROR(delete s);
+}

@@ -19,9 +19,9 @@
 """Dynamic loss scaler for AMP."""
 import logging
 
-from ... import autograd as ag
-from ... import ndarray
-from ...util import is_np_array
+from .. import autograd as ag
+from .. import ndarray
+from ..util import is_np_array
 
 class LossScaler(object):
     """Dynamic loss scaler for AMP.

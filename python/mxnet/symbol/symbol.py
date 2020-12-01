@@ -73,12 +73,15 @@ class Symbol(SymbolBase):
 
     def __repr__(self):
         """Gets a string representation of the symbol."""
-        name = self.name
-        if name is None:
-            name = ', '.join([i.name for i in self])
-            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        if self._alive:
+            name = self.name
+            if name is None:
+                name = ', '.join([i.name for i in self])
+                return '<%s group [%s]>' % (self.__class__.__name__, name)
+            else:
+                return '<%s %s>' % (self.__class__.__name__, name)
         else:
-            return '<%s %s>' % (self.__class__.__name__, name)
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __iter__(self):
         """Returns a generator object of symbol.
@@ -2649,6 +2652,15 @@ class Symbol(SymbolBase):
 
     def backward(self):
         raise NotImplementedForSymbol(self.backward, None)
+
+
+    def has_dynamic_shape_op(self):
+        """Check if any dynamic shape op is present in the symbol.
+        """
+        has_dynamic_shape = ctypes.c_bool(False)
+        check_call(_LIB.MXCheckDynamicShapeOp(self.handle,
+                                              ctypes.byref(has_dynamic_shape)))
+        return has_dynamic_shape.value
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         init=None, stype=None, profiler_scope=None, **kwargs):
