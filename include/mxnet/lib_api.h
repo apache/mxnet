@@ -686,7 +686,18 @@ class CustomOpSelector {
  */
 class CustomStatefulOp {
  public:
+  CustomStatefulOp();
   virtual ~CustomStatefulOp();
+
+  template<class A, typename ...Ts>
+  static CustomStatefulOp* create(Ts...args) {
+    CustomStatefulOp* op = new A(args...);
+    op->created = true;
+    return op;
+  }
+
+  bool wasCreated() { return created; }
+  
   virtual MXReturnValue Forward(std::vector<MXTensor>* inputs,
                                 std::vector<MXTensor>* outputs,
                                 const OpResource& op_res) = 0;
@@ -696,6 +707,11 @@ class CustomStatefulOp {
     MX_ERROR_MSG << "Error! Operator does not support backward" << std::endl;
     return MX_FAIL;
   }
+
+  bool ignore_warn;
+
+ private:
+  bool created;
 };
 
 /*! \brief StatefulOp wrapper class to pass to backend OpState */
