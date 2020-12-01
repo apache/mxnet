@@ -349,7 +349,7 @@ void NumpyUniqueCPUForward(const nnvm::NodeAttrs& attrs,
     }
   } else {
     CHECK_LT(inputs[0].shape().Size(), INT32_MAX) << "ValueError: np.unique does not support large"
-      << " tensors (>= 2^31).";
+      << " input tensors (containing >= 2^31).";
     if (!param.axis.has_value()) {
       NumpyUniqueCPUNoneAxisImpl(param, ctx, inputs, req, outputs);
     } else {
