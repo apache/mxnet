@@ -48,7 +48,7 @@ inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape param_dim = param.dimensions;
   if (!shape_is_known(param_dim)) return false;
   CHECK_LT(param_dim.Size(), INT32_MAX) << "ValueError: np.indices does not support large"
-     << " tensors (>= 2^31).";
+     << " input tensors (>= 2^31 elements).";
   const int indim = param.dimensions.ndim();
   mxnet::TShape ret(indim + 1, -1);
   ret[0] = indim;
