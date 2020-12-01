@@ -69,6 +69,7 @@ elseif(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
       file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/temp/CMakeLists.txt"
       "cmake_minimum_required(VERSION ${CMAKE_VERSION})
 project(CheckFortran Fortran)
+set(CMAKE_Fortran_COMPILER gfortran)
 file(WRITE \"${CMAKE_CURRENT_BINARY_DIR}/temp/FortranDir.cmake\"
 \"
 set(FORTRAN_DIR \\\"\$\{CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES\}\\\")
@@ -84,6 +85,7 @@ set(FORTRAN_DIR \\\"\$\{CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES\}\\\")
       message("FORTRAN_DIR is ${FORTRAN_DIR}")
       message("FORTRAN_LIB is ${FORTRAN_LIB}")
       list(APPEND mshadow_LINKER_LIBS ${FORTRAN_LIB})
+      file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/temp/")
     endif()
     # check the lapack flavor of openblas
     include(CheckSymbolExists)
