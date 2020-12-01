@@ -88,7 +88,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     rm -rf /var/lib/apt/lists/*
 
 # Build OpenBLAS from source
-RUN mkdir ~/openblas && \
+RUN export LIBRARY_PATH=$LIBRARY_PATH:/usr/lib/gcc/x86_64-linux-gnu/7/ && \
+    mkdir ~/openblas && \
     cd ~/openblas && \
     OPENBLAS_VERSION=0.3.10 && \
     wget \
@@ -96,8 +97,8 @@ RUN mkdir ~/openblas && \
         -O openblas.zip && \
     unzip -q openblas.zip -d . && \
     cd OpenBLAS-${OPENBLAS_VERSION} && \
-    CXX="clang++-10 -fPIC" CC="clang-10 -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 \
-        USE_OPENMP=1 INTERFACE64=1 BINARY=64 && \
+    CXX="clang++-6.0 -fPIC" CC="clang-6.0 -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 \
+        USE_OPENMP=0 INTERFACE64=1 BINARY=64 && \
     make PREFIX=/usr/local/opt install && \
     cd .. && \
     rm -rf OpenBLAS-${OPENBLAS_VERSION} && \
@@ -106,7 +107,6 @@ RUN mkdir ~/openblas && \
     CXX="g++ -fPIC" CC="gcc -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 \
         USE_OPENMP=1 INTERFACE64=1 BINARY=64 && \
     make PREFIX=/usr/local install
-
 
 # ccache 3.7.9 has fixes for caching nvcc outputs
 RUN cd /usr/local/src && \

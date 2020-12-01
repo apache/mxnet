@@ -105,7 +105,6 @@ _WHITE_LIST = [
                'docs/static_site/src/assets/js/clipboard.js',
                'cmake/upstream/FindCUDAToolkit.cmake',
                'cmake/upstream/select_compute_arch.cmake',
-               'cmake/Modules/FindFortran.cmake',
 
                # This file
                'tools/license_header.py',

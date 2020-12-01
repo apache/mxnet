@@ -448,6 +448,7 @@ build_ubuntu_gpu_clang10_werror() {
 build_ubuntu_cpu_clang6() {
     set -ex
     cd /work/build
+    export OpenBLAS_HOME=/usr/local/opt/
     CXX=clang++-6.0 CC=clang-6.0 cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
@@ -462,6 +463,7 @@ build_ubuntu_cpu_clang6() {
 build_ubuntu_cpu_clang100() {
     set -ex
     cd /work/build
+    export OpenBLAS_HOME=/usr/local/opt/
     CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=OFF \
@@ -476,6 +478,7 @@ build_ubuntu_cpu_clang100() {
 build_ubuntu_cpu_clang_tidy() {
     set -ex
     cd /work/build
+    export OpenBLAS_HOME=/usr/local/opt/
     # TODO(leezu) USE_OPENMP=OFF 3rdparty/dmlc-core/CMakeLists.txt:79 broken?
     CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -493,6 +496,7 @@ build_ubuntu_cpu_clang_tidy() {
 build_ubuntu_cpu_clang6_mkldnn() {
     set -ex
     cd /work/build
+    export OpenBLAS_HOME=/usr/local/opt/
     CXX=clang++-6.0 CC=clang-6.0 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
@@ -506,6 +510,7 @@ build_ubuntu_cpu_clang6_mkldnn() {
 build_ubuntu_cpu_clang100_mkldnn() {
     set -ex
     cd /work/build
+    export OpenBLAS_HOME=/usr/local/opt/
     CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
