@@ -686,6 +686,7 @@ class CustomOpSelector {
  */
 class CustomStatefulOp {
  public:
+  virtual ~CustomStatefulOp();
   virtual MXReturnValue Forward(std::vector<MXTensor>* inputs,
                                 std::vector<MXTensor>* outputs,
                                 const OpResource& op_res) = 0;
@@ -700,6 +701,7 @@ class CustomStatefulOp {
 /*! \brief StatefulOp wrapper class to pass to backend OpState */
 class CustomStatefulOpWrapper {
  public:
+  ~CustomStatefulOpWrapper();
   explicit CustomStatefulOpWrapper(CustomStatefulOp* inst) : instance(inst) {}
   CustomStatefulOp* get_instance() { return instance; }
  private:

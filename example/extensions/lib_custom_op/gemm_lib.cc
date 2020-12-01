@@ -184,6 +184,10 @@ class MyStatefulGemm : public CustomStatefulOp {
                           const std::unordered_map<std::string, std::string>& attrs)
     : count(count), attrs_(attrs) {}
 
+  ~MyStatefulGemm() {
+    std::cout << "Info: destructing MyStatefulGemm" << std::endl;
+  }
+  
   MXReturnValue Forward(std::vector<MXTensor>* inputs,
                         std::vector<MXTensor>* outputs,
                         const OpResource& op_res) {

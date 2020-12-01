@@ -858,6 +858,12 @@ void mxnet::ext::CustomOp::raiseDuplicateContextError() {
     + op_name_str + "'");
 }
 
+mxnet::ext::CustomStatefulOp::~CustomStatefulOp() {};
+
+mxnet::ext::CustomStatefulOpWrapper::~CustomStatefulOpWrapper() {
+  if(instance) delete instance;
+}
+
 mxnet::ext::CustomPass::CustomPass() : name("ERROR") {}
 mxnet::ext::CustomPass::CustomPass(const char* pass_name)
   : name(pass_name) {}
