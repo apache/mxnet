@@ -55,7 +55,9 @@ struct static_string {
   inline const char *c_str() const { return &string_[0]; }
   inline void set(const char *s) {
 #pragma GCC diagnostic push
+#if __GNUC__ >= 8
 #pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
     strncpy(&string_[0], s, string_size - 1);
 #pragma GCC diagnostic pop
     string_[string_size - 1] = '\0';
