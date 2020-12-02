@@ -85,9 +85,9 @@ set(USE_LLVM ON)
 set(USE_BLAS none)
 
 # /path/to/mkl: mkl root path when use mkl blas library
-# set(USE_MKL_PATH /opt/intel/mkl) for UNIX
-# set(USE_MKL_PATH ../IntelSWTools/compilers_and_libraries_2018/windows/mkl) for WIN32
-set(USE_MKL_PATH none)
+# set(USE_MKL /opt/intel/mkl) for UNIX
+# set(USE_MKL ../IntelSWTools/compilers_and_libraries_2018/windows/mkl) for WIN32
+set(USE_MKL OFF)
 
 # Whether use contrib.random in runtime
 set(USE_RANDOM OFF)
