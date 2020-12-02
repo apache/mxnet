@@ -511,7 +511,8 @@ FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 if(MSVC)
-  list(REMOVE_ITEM SOURCE "src/nnvm/tvm_bridge.cc")
+  FILE(GLOB_RECURSE TVM_BRIDGE_SOURCE "src/*/tvm_bridge.cc")
+  list(REMOVE_ITEM SOURCE ${TVM_BRIDGE_SOURCE})
 endif()
 
 if(NOT USE_INTGEMM)
