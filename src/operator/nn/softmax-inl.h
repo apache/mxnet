@@ -184,9 +184,8 @@ struct masked_softmax_where_scale {
   }
 };
 
-template<typename OP, bool negate, typename AType, typename DType,
-         typename OType, int ndim>
-inline void MaskedSoftmax(Stream<cpu> *s, DType *in, OType *out, bool *mask,
+template<typename OP, bool negate, typename AType, typename DType, int ndim>
+inline void MaskedSoftmax(Stream<cpu> *s, DType *in, DType *out, bool *mask,
                           Shape<ndim> data_shape, Shape<ndim> mask_shape,
                           int axis, const double scale,
                           const double temperature, bool normalize,
@@ -305,20 +304,20 @@ inline void SoftmaxGrad(Stream<cpu> *s, OType *out, OType *ograd,
 }
 
 template<typename OP1, typename OP2, int Req, bool negate, typename AType, int ndim,
-         typename DType, typename OType>
-inline void MaskedSoftmaxGrad(Stream<cpu> *s, OType *out, OType *ograd,
+         typename DType>
+inline void MaskedSoftmaxGrad(Stream<cpu> *s, DType *out, DType *ograd,
                               DType *igrad, bool *mask, Shape<ndim> data_shape,
                               Shape<ndim> mask_shape, int axis,
                               const double scale, const double temperature,
                               const OpContext& ctx) {
-  Tensor<cpu, 1, OType> workspace = ctx.requested[0].get_space_typed<cpu, 1, OType>(
+  Tensor<cpu, 1, DType> workspace = ctx.requested[0].get_space_typed<cpu, 1, DType>(
     Shape1(data_shape.Size()), s);
-  OType* masked_ograd = TBlob(workspace).dptr<OType>();
+  DType* masked_ograd = TBlob(workspace).dptr<DType>();
   Kernel<masked_softmax_where_scale, cpu>::Launch(s, data_shape.Size(), masked_ograd,
                                                   mask, ograd, 0.0, data_shape, mask_shape,
                                                   1.0);
   int* max_lenghts = nullptr;
-  SoftmaxGrad<OP1, OP2, Req, negate, AType, DType, OType, int, ndim>(
+  SoftmaxGrad<OP1, OP2, Req, negate, AType, DType, DType, int, ndim>(
       s, out, masked_ograd, igrad,
       max_lenghts, data_shape,
       axis, temperature);
@@ -486,8 +485,8 @@ MSHADOW_XINLINE index_t get_mask_position(const index_t idx, const Shape<ndim>& 
 }
 
 template<bool normalize, int x_bits, typename OP, bool negate, typename AType,
-         int ndim, typename DType, typename OType>
-__global__ void masked_softmax_kernel(DType *in, OType *out, bool *in_mask,
+         int ndim, typename DType>
+__global__ void masked_softmax_kernel(DType *in, DType *out, bool *in_mask,
                                       index_t M, int axis, Shape<ndim> sshape,
                                       Shape<ndim> stride, Shape<ndim> mask_shape,
                                       const double scale, const double temperature) {
@@ -536,14 +535,14 @@ __global__ void masked_softmax_kernel(DType *in, OType *out, bool *in_mask,
     val = (negate ? -in[base + i*sa] : in[base + i*sa]) / scale;
     bool mask_value = bcst_mask_axis ? in_mask[base_mask] : in_mask[base_mask + i*sa_mask];
     out[base + i*sa] =
-      mask_value ? OType(OP::Map((val - smax)/static_cast<DType>(temperature), ssum)) :
-                             OType(0.0f);
+      mask_value ? DType(OP::Map((val - smax)/static_cast<DType>(temperature), ssum)) :
+                             DType(0.0f);
   }
 }
 
 template<bool normalize, typename OP, bool negate, typename AType, typename LType,
-         typename LTypeMask, typename DType, typename OType, int ndim>
-__global__ void masked_softmax_stride1_kernel(const DType *in, OType *out, bool *in_mask,
+         typename LTypeMask, typename DType, int ndim>
+__global__ void masked_softmax_stride1_kernel(const DType *in, DType *out, bool *in_mask,
                                               const index_t M, int axis, Shape<ndim> sshape,
                                               Shape<ndim> mask_shape, const double scale,
                                               const double temperature, const int rows_per_block,
@@ -1193,13 +1192,6 @@ struct MaskedSoftmaxParam : public dmlc::Parameter<MaskedSoftmaxParam> {
     .describe("Scaling factor applied before softmax");
     DMLC_DECLARE_FIELD(temperature).set_default(dmlc::optional<double>())
     .describe("Temperature parameter in softmax");
-    DMLC_DECLARE_FIELD(dtype)
-    .add_enum("float16", mshadow::kFloat16)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .set_default(dmlc::optional<int>())
-    .describe("DType of the output in case this can't be inferred. "
-              "Defaults to the same as input's dtype if not defined (dtype=None).");
     DMLC_DECLARE_FIELD(normalize)
     .set_default(dmlc::optional<bool>(true))
     .describe("Whether to normalize input data x: x = x - max(x)");
@@ -1208,11 +1200,6 @@ struct MaskedSoftmaxParam : public dmlc::Parameter<MaskedSoftmaxParam> {
 
 static inline bool softmax_has_dtype_override(const nnvm::NodeAttrs& attrs) {
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  return param.dtype.has_value() && param.dtype.value() != -1;
-}
-
-static inline bool masked_softmax_has_dtype_override(const nnvm::NodeAttrs& attrs) {
-  const MaskedSoftmaxParam& param = nnvm::get<MaskedSoftmaxParam>(attrs.parsed);
   return param.dtype.has_value() && param.dtype.value() != -1;
 }
 
@@ -1364,14 +1351,8 @@ static inline bool MaskedSoftmaxOpType(const nnvm::NodeAttrs& attrs,
   const MaskedSoftmaxParam& param = nnvm::get<MaskedSoftmaxParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2U);
 
-  if (masked_softmax_has_dtype_override(attrs)) {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype.value());
-    type_assign(&(*in_attrs)[0], (*out_attrs)[0]);
-    return true;
-  } else {
-    std::vector<int> tmp = {in_attrs->at(0)};
-    return ElemwiseType<1, 1>(attrs, &tmp, out_attrs);
-  }
+  std::vector<int> tmp = {in_attrs->at(0)};
+  return ElemwiseType<1, 1>(attrs, &tmp, out_attrs);
 }
 
 static inline bool MaskedSoftmaxOpShape(const nnvm::NodeAttrs& attrs,
@@ -1434,8 +1415,11 @@ static inline bool MaskedSoftmaxGradOpType(const nnvm::NodeAttrs& attrs,
                                            std::vector<int>* out_attrs) {
   CHECK_EQ(out_attrs->size(), 1U);
   CHECK_EQ(in_attrs->size(), 3U);
-  int out_dtype = (*in_attrs)[2];
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_dtype);
+  int data_dtype = (*in_attrs)[0];
+  TYPE_ASSIGN_CHECK(*in_attrs, 2, data_dtype);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, data_dtype);
+  data_dtype = (*out_attrs)[0];
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, data_dtype);
 
   return true;
 }
@@ -1532,23 +1516,21 @@ void MaskedSoftmaxCompute(const nnvm::NodeAttrs& attrs,
                     "for more details.");
   }
   MXNET_REAL_ACC_TYPE_SWITCH(inputs[0].type_flag_, DType, AType, {
-    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      MXNET_NDIM_SWITCH(inputs[0].ndim(), ndim, {
-        bool* mask_ptr = inputs[1].dptr<bool>();
-        if (safe_acc) {
-          MaskedSoftmax<OP, negate, AType>(
-            ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
-            outputs[0].dptr<OType>(), mask_ptr,
-            inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
-            axis, scale, temperature, param.normalize.value(), ctx);
-        } else {
-          MaskedSoftmax<OP, negate, DType>(
-            ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
-            outputs[0].dptr<OType>(), mask_ptr,
-            inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
-            axis, scale, temperature, param.normalize.value(), ctx);
-        }
-      });
+    MXNET_NDIM_SWITCH(inputs[0].ndim(), ndim, {
+      bool* mask_ptr = inputs[1].dptr<bool>();
+      if (safe_acc) {
+        MaskedSoftmax<OP, negate, AType>(
+          ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
+          outputs[0].dptr<DType>(), mask_ptr,
+          inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
+          axis, scale, temperature, param.normalize.value(), ctx);
+      } else {
+        MaskedSoftmax<OP, negate, DType>(
+          ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
+          outputs[0].dptr<DType>(), mask_ptr,
+          inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
+          axis, scale, temperature, param.normalize.value(), ctx);
+      }
     });
   });
 }
@@ -1641,30 +1623,28 @@ void MaskedSoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
     param.temperature.value() : 1.0;
 
   bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
-  MXNET_REAL_ACC_TYPE_SWITCH(inputs[0].type_flag_, OType, AType, {
-    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        MXNET_NDIM_SWITCH(inputs[0].ndim(), ndim, {
-          OType* ograd_ptr = inputs[0].dptr<OType>();
-          OType* out_ptr = inputs[2].dptr<OType>();
-          bool* mask_ptr = inputs[1].dptr<bool>();
-          DType* grad_data = outputs[0].dptr<DType>();
-          if (safe_acc) {
-            MaskedSoftmaxGrad<OP1, OP2, Req, negate, AType>(
-                ctx.get_stream<xpu>(), out_ptr,
-                ograd_ptr, grad_data, mask_ptr,
-                inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
-                axis, static_cast<DType>(scale),
-                static_cast<DType>(temperature), ctx);
-          } else {
-            MaskedSoftmaxGrad<OP1, OP2, Req, negate, DType>(
-                ctx.get_stream<xpu>(), out_ptr,
-                ograd_ptr, grad_data, mask_ptr,
-                inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
-                axis, static_cast<DType>(scale),
-                static_cast<DType>(temperature), ctx);
-          }
-        });
+  MXNET_REAL_ACC_TYPE_SWITCH(inputs[0].type_flag_, DType, AType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      MXNET_NDIM_SWITCH(inputs[0].ndim(), ndim, {
+        DType* ograd_ptr = inputs[0].dptr<DType>();
+        DType* out_ptr = inputs[2].dptr<DType>();
+        bool* mask_ptr = inputs[1].dptr<bool>();
+        DType* grad_data = outputs[0].dptr<DType>();
+        if (safe_acc) {
+          MaskedSoftmaxGrad<OP1, OP2, Req, negate, AType>(
+              ctx.get_stream<xpu>(), out_ptr,
+              ograd_ptr, grad_data, mask_ptr,
+              inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
+              axis, static_cast<DType>(scale),
+              static_cast<DType>(temperature), ctx);
+        } else {
+          MaskedSoftmaxGrad<OP1, OP2, Req, negate, DType>(
+              ctx.get_stream<xpu>(), out_ptr,
+              ograd_ptr, grad_data, mask_ptr,
+              inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
+              axis, static_cast<DType>(scale),
+              static_cast<DType>(temperature), ctx);
+        }
       });
     });
   });

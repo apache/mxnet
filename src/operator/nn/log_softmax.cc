@@ -172,7 +172,8 @@ This is equivalent to computing masked softmax followed by log.)code")
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto data_grad = MakeNode("_backward_masked_log_softmax", n->attrs.name + "_backward_data",
-                              {ograds[0], n->inputs[1], nnvm::NodeEntry(n, 0, 0)}, &n->attrs.dict, &n);
+                              {ograds[0], n->inputs[1], nnvm::NodeEntry(n, 0, 0)},
+                              &n->attrs.dict, &n);
     auto mask_grad = MakeNode("zeros_like", n->attrs.name + "_backward_mask",
                               {n->inputs[1]}, nullptr, &n);
     std::vector<nnvm::NodeEntry> ret;

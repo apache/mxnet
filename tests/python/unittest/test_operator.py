@@ -5027,7 +5027,7 @@ def test_masked_log_softmax(dtype, ndims):
     rtol = 1e-2 if dtype == np.float16 else 1e-3
     atol = 1e-4 if dtype == np.float16 else 1e-5
     check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol, dtype="asnumpy")
-    #check_numeric_gradient(mx_sym, location, rtol=1e-1, atol=1e-2)
+    check_numeric_gradient(mx_sym, location, rtol=1e-1, atol=1e-2, grad_nodes=['data'])
 
 
 def test_pick():
