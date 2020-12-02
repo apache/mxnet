@@ -17,7 +17,7 @@
 
 # MXNet Gluon Fit API
 
-In this tutorial, you will learn how to use the [Gluon Fit API](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design) which is the easiest way to train deep learning models using the [Gluon API](/api/python/docs/tutorials/packages/gluon/index.html) in Apache MXNet.
+In this tutorial, you will learn how to use the [Gluon Fit API](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design) which is the easiest way to train deep learning models using the [Gluon API](../index.rst) in Apache MXNet.
 
 With the Fit API, you can train a deep learning model with a minimal amount of code. Just specify the network, loss function and the data you want to train on. You don't need to worry about the boiler plate code to loop through the dataset in batches (often called as 'training loop'). Advanced users can train with bespoke training loops, and many of these use cases will be covered by the Fit API.
 
@@ -27,7 +27,7 @@ To demonstrate the Fit API, you will train an image classification model using t
 
 To complete this tutorial, you will need:
 
-- [MXNet](/get_started) (The version of MXNet will be >= 1.5.0, you can use `pip install mxnet` to get 1.5.0 release pip package or build from source with master, refer to [MXNet installation](/get_started?version=master&platform=linux&language=python&environ=pip&processor=cpu)
+- [MXNet](https://mxnet.apache.org/get_started) (The version of MXNet will be >= 1.5.0, you can use `pip install mxnet` to get 1.5.0 release pip package or build from source with master, refer to [MXNet installation](https://mxnet.apache.org/get_started?version=master&platform=linux&language=python&environ=pip&processor=cpu)
 - [Jupyter Notebook](https://jupyter.org/index.html) (For interactively running the provided .ipynb file)
 
 
@@ -89,7 +89,7 @@ val_data_loader = gluon.data.DataLoader(fashion_mnist_val, batch_size=batch_size
 
 ## Model and Optimizers
 
-Let's load the resnet-18 model architecture from [Gluon Model Zoo](https://mxnet.apache.org/api/python/gluon/model_zoo.html) and initialize its parameters. The Gluon Model Zoo contains a repository of pre-trained models as well the model architecture definitions. We are using the model architecture from the model zoo in order to train it from scratch.
+Let's load the resnet-18 model architecture from [Gluon Model Zoo](../../../../api/gluon/model_zoo/index.rst) and initialize its parameters. The Gluon Model Zoo contains a repository of pre-trained models as well the model architecture definitions. We are using the model architecture from the model zoo in order to train it from scratch.
 
 
 ```{.python .input}
@@ -98,7 +98,7 @@ resnet_18_v1.initialize(init = mx.init.Xavier(), ctx=ctx)
 ```
 
 We will be using `SoftmaxCrossEntropyLoss` as the loss function since this is a multi-class classification problem. We will be using `sgd` (Stochastic Gradient Descent) as the optimizer.
-You can experiment with a [different loss](/api/python/docs/api/gluon/loss/index.html) or [optimizer](/api/python/docs/api/optimizer/index.html) as well.
+You can experiment with a [different loss](../../../../api/gluon/loss/index.rst) or [optimizer](../../../../api/optimizer/index.rst) as well.
 
 
 ```{.python .input}
@@ -252,7 +252,7 @@ with warnings.catch_warnings():
     Epoch 2, loss 0.3229 <!--notebook-skip-line-->
 ```
 
-You can load the saved model, by using the `load_parameters` API in Gluon. For more details refer to the [Loading model parameters from file tutorial](/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html#saving-model-parameters-to-file)
+You can load the saved model, by using the `load_parameters` API in Gluon. For more details refer to the [Loading model parameters from file tutorial](../blocks/save_load_params.ipynb#Loading-model-parameters-from-file)
 
 
 ```{.python .input}

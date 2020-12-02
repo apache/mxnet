@@ -20,7 +20,7 @@
 
 Setting the learning rate for stochastic gradient descent (SGD) is crucially important when training neural network because it controls both the speed of convergence and the ultimate performance of the network. Set the learning too low and you could be twiddling your thumbs for quite some time as the parameters update very slowly. Set it too high and the updates will skip over optimal solutions, or worse the optimizer might not converge at all!
 
-Leslie Smith from the U.S. Naval Research Laboratory presented a method for finding a good learning rate in a paper called ["Cyclical Learning Rates for Training Neural Networks"](https://arxiv.org/abs/1506.01186). We implement this method in MXNet (with the Gluon API) and create a 'Learning Rate Finder' which you can use while training your own networks. We take a look at the central idea of the paper, cyclical learning rate schedules, in the ['Advanced Learning Rate Schedules'](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules_advanced.html) tutorial.
+Leslie Smith from the U.S. Naval Research Laboratory presented a method for finding a good learning rate in a paper called ["Cyclical Learning Rates for Training Neural Networks"](https://arxiv.org/abs/1506.01186). We implement this method in MXNet (with the Gluon API) and create a 'Learning Rate Finder' which you can use while training your own networks. We take a look at the central idea of the paper, cyclical learning rate schedules, in the ['Advanced Learning Rate Schedules'](./learning_rate_schedules_advanced.ipynb) tutorial.
 
 ## Simple Idea
 
@@ -327,6 +327,6 @@ Although we get quite similar results to when we set the learning rate at 0.05 (
 
 ## Wrap Up
 
-Give Learning Rate Finder a try on your current projects, and experiment with the different learning rate schedules found in the [basic learning rate tutorial](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules.html) and the [advanced learning rate tutorial](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules_advanced.html).
+Give Learning Rate Finder a try on your current projects, and experiment with the different learning rate schedules found in the [basic learning rate tutorial](./learning_rate_schedules.ipynb) and the [advanced learning rate tutorial](./learning_rate_schedules_advanced.ipynb).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

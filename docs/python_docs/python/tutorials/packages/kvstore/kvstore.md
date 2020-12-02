@@ -166,6 +166,6 @@ When the distributed version is ready, we will update this section.
 <!-- flexibly as your choice.  -->
 
 ## Next Steps
-* [MXNet tutorials index](/api/python/docs/tutorials/)
+* [MXNet tutorials index](../../index.rst)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
