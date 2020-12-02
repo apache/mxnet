@@ -22,12 +22,11 @@ import onnxruntime
 import json
 import os
 import shutil
-import tempfile
 
 import pytest
 
 
-def run_cv_model_test(model):
+def run_cv_model_test(model, tmpdir):
     def get_gluon_cv_model(model_name, tmp):
         tmpfile = os.path.join(tmp, model_name)
         ctx = mx.cpu(0)
@@ -85,7 +84,6 @@ def run_cv_model_test(model):
                                    fname=os.path.join(tmpdir, f))
         return test_images
 
-    tmpdir = tempfile.mkdtemp()
     labels = load_imgnet_labels(tmpdir)
     test_images = download_test_images(tmpdir)
     sym_file, params_file = get_gluon_cv_model(model, tmpdir)
@@ -117,67 +115,51 @@ def run_cv_model_test(model):
     shutil.rmtree(tmpdir)
 
 @pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
-def test_cv_model_inference_onnxruntime_mobilenet0_5():
-    run_cv_model_test('mobilenet0.5')
+def test_cv_model_inference_onnxruntime_mobilenet0_5(tmp_path):
+    run_cv_model_test('mobilenet0.5', tmp_path)
 
-@pytest.mark.flaky
-def test_cv_model_inference_onnxruntime_mobilenetv2_1_0():
-    run_cv_model_test('mobilenetv2_1.0')
+def test_cv_model_inference_onnxruntime_mobilenetv2_1_0(tmp_path):
+    run_cv_model_test('mobilenetv2_1.0', tmp_path)
 
-def test_cv_model_inference_onnxruntime_resnet18_v1():
-    run_cv_model_test('resnet18_v1')
+def test_cv_model_inference_onnxruntime_resnet18_v1(tmp_path):
+    run_cv_model_test('resnet18_v1', tmp_path)
 
-def test_cv_model_inference_onnxruntime_resnet18_v2():
-    run_cv_model_test('resnet18_v2')
+def test_cv_model_inference_onnxruntime_resnet18_v2(tmp_path):
+    run_cv_model_test('resnet18_v2', tmp_path)
 
-def test_cv_model_inference_onnxruntime_resnet101_v1():
-    run_cv_model_test('resnet101_v1')
+def test_cv_model_inference_onnxruntime_resnet101_v1(tmp_path):
+    run_cv_model_test('resnet101_v1', tmp_path)
 
-def test_cv_model_inference_onnxruntime_resnet101_v2():
-    run_cv_model_test('resnet101_v2')
+def test_cv_model_inference_onnxruntime_resnet101_v2(tmp_path):
+    run_cv_model_test('resnet101_v2', tmp_path)
 
-def test_cv_model_inference_onnxruntime_resnet152_v1():
-    run_cv_model_test('resnet152_v1')
+def test_cv_model_inference_onnxruntime_resnet152_v1(tmp_path):
+    run_cv_model_test('resnet152_v1', tmp_path)
 
-def test_cv_model_inference_onnxruntime_resnet152_v2():
-    run_cv_model_test('resnet152_v2')
-
-@pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
-def test_cv_model_inference_onnxruntime_squeezenet1_0():
-    run_cv_model_test('squeezenet1.0')
+def test_cv_model_inference_onnxruntime_resnet152_v2(tmp_path):
+    run_cv_model_test('resnet152_v2', tmp_path)
 
 @pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
-def test_cv_model_inference_onnxruntime_squeezenet1_1():
-    run_cv_model_test('squeezenet1.1')
+def test_cv_model_inference_onnxruntime_squeezenet1_0(tmp_path):
+    run_cv_model_test('squeezenet1.0', tmp_path)
 
 @pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
-def test_cv_model_inference_onnxruntime_vgg11():
-    run_cv_model_test('vgg11')
+def test_cv_model_inference_onnxruntime_squeezenet1_1(tmp_path):
+    run_cv_model_test('squeezenet1.1', tmp_path)
 
 @pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
-def test_cv_model_inference_onnxruntime_vgg11_bn():
-    run_cv_model_test('vgg11_bn')
+def test_cv_model_inference_onnxruntime_vgg11(tmp_path):
+    run_cv_model_test('vgg11', tmp_path)
 
-def test_cv_model_inference_onnxruntime_vgg19():
-    run_cv_model_test('vgg19')
+@pytest.mark.skip(reason="Older gluon models are not supported, tracked with #19580")
+def test_cv_model_inference_onnxruntime_vgg11_bn(tmp_path):
+    run_cv_model_test('vgg11_bn', tmp_path)
 
-def test_cv_model_inference_onnxruntime_vgg19_bn():
-    run_cv_model_test('vgg19_bn')
+def test_cv_model_inference_onnxruntime_vgg19(tmp_path):
+    run_cv_model_test('vgg19', tmp_path)
 
-if __name__ == "__main__":
-    test_cv_model_inference_onnxruntime_mobilenet0_5()
-    test_cv_model_inference_onnxruntime_mobilenetv2_1_0()
-    test_cv_model_inference_onnxruntime_resnet18_v1()
-    test_cv_model_inference_onnxruntime_resnet18_v2()
-    test_cv_model_inference_onnxruntime_resnet101_v1()
-    test_cv_model_inference_onnxruntime_resnet101_v2()
-    test_cv_model_inference_onnxruntime_resnet152_v1()
-    test_cv_model_inference_onnxruntime_resnet152_v2()
-    test_cv_model_inference_onnxruntime_squeezenet1_0()
-    test_cv_model_inference_onnxruntime_squeezenet1_1()
-    test_cv_model_inference_onnxruntime_vgg11()
-    test_cv_model_inference_onnxruntime_vgg11_bn()
-    test_cv_model_inference_onnxruntime_vgg19()
-    test_cv_model_inference_onnxruntime_vgg19_bn()
+def test_cv_model_inference_onnxruntime_vgg19_bn(tmp_path):
+    run_cv_model_test('vgg19_bn', tmp_path)
+
 
 
