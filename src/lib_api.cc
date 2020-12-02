@@ -862,7 +862,7 @@ mxnet::ext::CustomStatefulOp::CustomStatefulOp() : ignore_warn(false), created(f
 mxnet::ext::CustomStatefulOp::~CustomStatefulOp() {};
 
 mxnet::ext::CustomStatefulOpWrapper::~CustomStatefulOpWrapper() {
-  if(instance) delete instance;
+  destroy_(instance);
 }
 
 mxnet::ext::CustomPass::CustomPass() : name("ERROR") {}
@@ -1253,6 +1253,13 @@ MX_INT_RET _opCallCreateOpState(mxnet::ext::createOpState_t create_op, const cha
   mxnet::ext::CustomStatefulOp** op_ptr =
     reinterpret_cast<mxnet::ext::CustomStatefulOp**>(state_op);
   return create_op(attrs, ctx, in_shapes, in_types, op_ptr);
+}
+
+/*! \brief calls StatefulOp destructor for operator from library */
+MX_VOID_RET _opCallDestroyOpState(void* state_op) {
+  mxnet::ext::CustomStatefulOp* op_ptr =
+    reinterpret_cast<mxnet::ext::CustomStatefulOp*>(state_op);
+  delete op_ptr;
 }
 
 /*! \brief returns status of calling Stateful Forward/Backward for operator from library */
