@@ -478,6 +478,8 @@ FP32_FUNCS = [
     'softmax',
     'Softmax',
     'log_softmax',
+    'masked_softmax',
+    'masked_log_softmax',
     'InstanceNorm',
     'LayerNorm',
     'GroupNorm',
