@@ -159,7 +159,7 @@ class MXNetGraph(object):
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy())
                      for k, v in weights_dict.items()])
 
-    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, verbose=False):
+    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, verbose=False, opset_version=None):
         """Convert MXNet graph to ONNX graph
 
         Parameters
@@ -174,6 +174,8 @@ class MXNetGraph(object):
             Input data type e.g. np.float32
         verbose : Boolean
             If true will print logs of the model conversion
+        opset_version : Int
+            ONNX opset version to use for export, defaults to latest supported by onnx package
 
         Returns
         -------
@@ -183,9 +185,13 @@ class MXNetGraph(object):
         try:
             from onnx import (checker, helper, NodeProto, ValueInfoProto, TensorProto)
             from onnx.helper import make_tensor_value_info
+            from onnx.defs import onnx_opset_version
         except ImportError:
             raise ImportError("Onnx and protobuf need to be installed. "
                               + "Instructions to install - https://github.com/onnx/onnx")
+
+        if opset_version is None:
+            opset_version = onnx_opset_version()
 
         # When MXNet model is saved to json file , MXNet adds a node for label.
         # The name of this node is, name of the last node + "_label" ( i.e if last node
@@ -251,7 +257,8 @@ class MXNetGraph(object):
                     graph_shapes=graph_shapes,
                     initializer=initializer,
                     index_lookup=index_lookup,
-                    idx=idx
+                    idx=idx,
+                    opset_version=opset_version
                 )
 
             if isinstance(converted, list):

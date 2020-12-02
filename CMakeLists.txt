@@ -178,7 +178,6 @@ add_definitions(-DDMLC_STRICT_CXX11)
 add_definitions(-DDMLC_USE_CXX14)
 add_definitions(-DMSHADOW_IN_CXX11)
 if(MSVC)
-  add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DMXNET_EXPORTS)
@@ -511,6 +510,11 @@ endif()
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
+if(MSVC)
+  FILE(GLOB_RECURSE TVM_BRIDGE_SOURCE "src/*/tvm_bridge.cc")
+  list(REMOVE_ITEM SOURCE ${TVM_BRIDGE_SOURCE})
+endif()
+
 if(NOT USE_INTGEMM)
   FILE(GLOB_RECURSE INTGEMM_OPERATOR_SOURCE "src/operator/contrib/intgemm/*.cc" "src/operator/contrib/intgemm/*.h")
   list(REMOVE_ITEM SOURCE ${INTGEMM_OPERATOR_SOURCE})
@@ -528,6 +532,10 @@ FILE(GLOB_RECURSE NNVMSOURCE
 add_library(nnvm OBJECT ${NNVMSOURCE})
 set_target_properties(nnvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
+
+add_library(miniz STATIC "3rdparty/miniz/miniz.c")
+target_include_directories(miniz PUBLIC "3rdparty/miniz")
+list(APPEND mxnet_LINKER_LIBS miniz)
 
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
@@ -700,6 +708,7 @@ elseif(MSVC)
       foreach(arch ${arch_code_list})
         add_library(mxnet_${arch} SHARED ${SOURCE})
         target_link_libraries(mxnet_${arch} PUBLIC mshadow)
+        target_compile_definitions(mxnet_${arch} PRIVATE -DWIN32_LEAN_AND_MEAN)
         target_compile_options(
           mxnet_${arch}
           PRIVATE
@@ -746,6 +755,7 @@ elseif(MSVC)
       string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
       string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
       add_library(mxnet SHARED ${SOURCE})
+      target_compile_definitions(mxnet PRIVATE -DWIN32_LEAN_AND_MEAN)
       target_link_libraries(mxnet PUBLIC mshadow)
       if(MXNET_FORCE_SHARED_CRT)
         target_compile_options(
@@ -777,6 +787,7 @@ elseif(MSVC)
     endif(USE_SPLIT_ARCH_DLL)
   else()
     add_library(mxnet SHARED ${SOURCE})
+    target_compile_definitions(mxnet PRIVATE -DWIN32_LEAN_AND_MEAN)
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
 endif()
@@ -859,12 +870,11 @@ function(BuildTVMOP)
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
   set_target_properties(tvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
-  set_target_properties(tvm_topi PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
   set_target_properties(tvm_runtime PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endfunction()
 
 if(USE_TVM_OP)
-  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+  list(APPEND mxnet_LINKER_LIBS tvm_runtime)
   BuildTVMOP()
   find_package(Python3 REQUIRED)
   set(TVM_OP_COMPILE_OPTIONS "-o${CMAKE_CURRENT_BINARY_DIR}" "--config" "${CMAKE_CURRENT_BINARY_DIR}/tvmop.conf" "-L" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm")

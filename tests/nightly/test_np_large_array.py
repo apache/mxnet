@@ -208,6 +208,7 @@ def test_argmax():
 
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_trigonometric_family():
     def batch_check(x, funcs):
         for f in funcs:
@@ -2253,6 +2254,7 @@ def test_interp():
 
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_edge_padding():
     inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
     out = np.pad(inp, ((1, 1), (1, 1)), "edge")
@@ -2271,6 +2273,7 @@ def test_constant_padding():
 
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_minimum_padding():
     inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
     out = np.pad(inp, ((1, 1), (1, 1)), "minimum")
@@ -2280,6 +2283,7 @@ def test_minimum_padding():
 
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_reflection_padding():
     inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
     out = np.pad(inp, ((1, 1), (1, 1)), "reflect")
@@ -2289,6 +2293,7 @@ def test_reflection_padding():
 
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_symmetric_padding():
     inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
     out = np.pad(inp, ((1, 1), (1, 1)), "symmetric")

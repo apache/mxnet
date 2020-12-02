@@ -23,10 +23,10 @@ from ..utils import reduce_axes, assign_by_req
 
 def _compute_sum(itype, otype, ndim, reduce1st_dim, req):
     axes = ([reduce1st_dim, 1 - reduce1st_dim] * ndim)[:ndim]
-    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='a', dtype=itype)
-    reduce_output = reduce_axes(a, axes, tvm.sum, otype)
+    a = tvm.te.placeholder([tvm.te.size_var() for _ in range(ndim)], name='a', dtype=itype)
+    reduce_output = reduce_axes(a, axes, tvm.tir.sum, otype)
     output_placeholder, final_output = assign_by_req(reduce_output, req)
-    s = tvm.create_schedule(final_output.op)
+    s = tvm.te.create_schedule(final_output.op)
     return s, a, output_placeholder, final_output, [reduce_output, final_output]
 
 
@@ -53,8 +53,8 @@ def _sum_gpu(itype, otype, ndim, reduce1st_dim, req):
         itype, otype, ndim, reduce1st_dim, req)
     num_threads = 64
     for t in tensor_list:
-        block_x = tvm.thread_axis("blockIdx.x")
-        thread_x = tvm.thread_axis("threadIdx.x")
+        block_x = tvm.te.thread_axis("blockIdx.x")
+        thread_x = tvm.te.thread_axis("threadIdx.x")
         axes = [axis for axis in t.op.axis]
         fused = s[t].fuse(*axes)
         bx, tx = s[t].split(fused, factor=num_threads)

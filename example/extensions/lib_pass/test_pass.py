@@ -58,16 +58,6 @@ def test_model(pass_name):
     out = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     print(out)
 
-    # Gluon Hybridize
-    print('-------------------------------')
-    print('Testing pass "%s" Gluon Hybridize with shapes/types' % pass_name)
-    inputs = [a,b]
-    sym_block = nn.SymbolBlock(sym, inputs)
-    sym_block.initialize()
-    sym_block.hybridize(backend=pass_name)
-    out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
-    print(out4)
-    
     # Gluon optimize_for
     print('-------------------------------')
     print('Testing pass "%s" Gluon Hybridize with shapes/types without inference' % pass_name)

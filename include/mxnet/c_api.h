@@ -712,6 +712,18 @@ MXNET_DLL int MXNDArraySaveRawBytes(NDArrayHandle handle,
  * \param keys the name of the NDArray, optional, can be NULL
  * \return 0 when success, -1 when failure happens
  */
+MXNET_DLL int MXNDArrayLegacySave(const char* fname,
+                                  uint32_t num_args,
+                                  NDArrayHandle* args,
+                                  const char** keys);
+/*!
+ * \brief Save list of narray into the file.
+ * \param fname name of the file.
+ * \param num_args number of arguments to save.
+ * \param args the array of NDArrayHandles to be saved.
+ * \param keys the name of the NDArray, optional, can be NULL
+ * \return 0 when success, -1 when failure happens
+ */
 MXNET_DLL int MXNDArraySave(const char* fname,
                             uint32_t num_args,
                             NDArrayHandle* args,
