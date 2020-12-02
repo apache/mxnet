@@ -99,7 +99,7 @@ services:
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_tensorrt_cu111:latest
   ubuntu_gpu_cu111:
-    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_tensorrt_cu111:latest
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu111:latest
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu
