@@ -71,18 +71,6 @@ RUN git clone --recursive -b v0.3.12 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local && \
     rm -rf OpenBLAS
 
-RUN git clone --recursive -b v1.2.11 https://github.com/madler/zlib.git && \
-    cd /usr/local/zlib && \
-    CHOST=arm \
-    CC=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/bin/arm-linux-gcc \
-    AR=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/bin/arm-linux-ar \
-    RANLIB=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/bin/arm-linux-ranlib \
-    ./configure --static --prefix=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/arm-buildroot-linux-gnueabihf/sysroot && \
-    make -j$(nproc) && \
-    make install && \
-    cd /usr/local && \
-    rm -rf zlib
-
 WORKDIR /work/mxnet
 
 
