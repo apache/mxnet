@@ -1000,6 +1000,16 @@ def test_np_ndarray_indexing():
 
 
 @use_np
+@pytest.mark.parametrize('load_fn', [_np.load, npx.load])
+def test_np_save_load_large_ndarrays(load_fn, tmp_path):
+    weight = mx.np.arange(32768 * 512).reshape((32768, 512))
+    mx.npx.savez(str(tmp_path / 'params.npz'), weight=weight)
+    arr_loaded = load_fn(str(tmp_path / 'params.npz'))['weight']
+    assert _np.array_equal(arr_loaded.asnumpy() if load_fn is npx.load
+                           else arr_loaded, weight)
+
+
+@use_np
 @pytest.mark.serial
 @pytest.mark.parametrize('load_fn', [_np.load, npx.load])
 def test_np_save_load_ndarrays(load_fn):
