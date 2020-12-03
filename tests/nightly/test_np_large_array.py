@@ -2142,6 +2142,23 @@ def test_dsplit():
 
 
 @use_np
+def test_unique():
+    inp = np.zeros((2, HALF_INT_OVERFLOW))
+    assertRaises(ValueError, np.unique, inp, axis=1)
+
+
+@use_np
+def test_repeat():
+    inp = np.ones((2, HALF_INT_OVERFLOW))
+    assertRaises(ValueError, np.repeat, inp, repeats=2, axis=1)
+
+
+@use_np
+def test_indices():
+    assertRaises(ValueError, np.indices, (2, HALF_INT_OVERFLOW))
+
+
+@use_np    
 def test_tril_indices():
     N = 2**16
     data = np.tril_indices(N, -1)
@@ -2545,4 +2562,3 @@ def test_dot():
     assert inp1.grad[-1, -1] == 3
     assert inp2.grad.shape == inp2.shape
     assert inp2.grad[-1, -1] == 2
-
