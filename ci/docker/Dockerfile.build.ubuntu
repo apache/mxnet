@@ -151,3 +151,4 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     apt-get install -y libcudnn8-dev && \
     rm -rf /var/lib/apt/lists/*
 
+ENV CUDNN_VERSION=8.0.5
