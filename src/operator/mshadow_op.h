@@ -1201,7 +1201,12 @@ struct product {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#endif
     dst *= src;
+#pragma GCC diagnostic pop
   }
   /*! \brief do reduction into dst */
   template<typename DType>
@@ -1389,7 +1394,12 @@ struct nanprod {
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
     if (IsNan(src)) return;
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#endif
     dst *= src;
+#pragma GCC diagnostic pop
   }
   /*! \brief do reduction into dst */
   template<typename DType>
