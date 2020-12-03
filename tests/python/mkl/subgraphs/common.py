@@ -129,15 +129,12 @@ def check_quantize(net_original, data_shape, out_type, name='conv',
       output.wait_to_read()
   ref_out = outputs
 
-  excluded_layers = []
-  excluded_operators = []
-
   calib_data = mx.gluon.data.DataLoader(data, batch_size=1)
   for quantize_granularity in quantize_granularity_list:
     qnet = quantization.quantize_net(net_original,
                                      ctx=mx.current_context(),
-                                     exclude_layers=excluded_layers,
-                                     exclude_operators=excluded_operators,
+                                     exclude_layers=None,
+                                     exclude_operators=None,
                                      quantized_dtype=out_type,
                                      calib_mode='naive',
                                      calib_data=calib_data,
@@ -162,7 +159,7 @@ def check_fusion(net_original, data_shape, attrs_dict, check_fp32_fusion=True, c
                  out_types=['uint8', 'int8', 'auto'], dedup_subgraph=True):
   net_original.initialize()
   net_original.hybridize(static_alloc=False, static_shape=False)
-  data = mx.nd.random.uniform(shape=data_shape)
+  data = mx.random.uniform(shape=data_shape, dtype='float32', ctx=mx.current_context())
   net_original(data)
   net_fusion = copy.copy(net_original)
   sym, params = net_original.export(None)
@@ -196,26 +193,23 @@ def check_fusion(net_original, data_shape, attrs_dict, check_fp32_fusion=True, c
     net_fusion.optimize_for(data, backend=SG_PASS_NAME)
     out_fused = net_fusion(data)
 
-    for i in range(len(out_fused)):
-      assert_almost_equal(out_unfused.asnumpy(), out_fused.asnumpy(), rtol=1e-3, atol=1e-1)
+    assert_almost_equal(out_unfused.asnumpy(), out_fused.asnumpy(), rtol=1e-3, atol=1e-1)
 
   if check_quantization:
     # fp32 to int8
     for out_type in out_types:
       check_quantize(net_original, data_shape, out_type, name=name)
 
-def check_neg_fusion(net, attrs_name=None, excluded_attrs=None,
+def check_neg_fusion(net_original, attrs_name=None, excluded_attrs=None,
                      data_shapes=(4,4,10,10), name='conv'):
-  net.initialize()
-  net.hybridize()
-  if isinstance(data_shapes, tuple):
-    data_nd = [mx.nd.random.uniform(shape=data_shapes)]
-  else:
-    data_nd = [mx.nd.random.uniform(shape=dshape) for dshape in data_shapes]
-
-  net(*data_nd)
   op_name = config[name][OP_NAME]
-  sym, _ = net.export(None)
+
+  data_nd = mx.nd.random.uniform(shape=data_shapes)
+  net_original.initialize()
+  net_original.hybridize()
+  net_original(data_nd)
+
+  sym, _ = net_original.export(None)
   sym_sg = sym.optimize_for(SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
 
   attrs_dict = sym_sg.attr_dict()

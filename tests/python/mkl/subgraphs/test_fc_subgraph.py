@@ -104,7 +104,7 @@ def test_neg_fc_relu(data_shape, use_bias, flatten):
 
   attrs, excluded_attrs = [], []
   net = NegFCReLU(use_bias, flatten)
-  check_neg_fusion(net, attrs, excluded_attrs, [data_shape], name='fc')
+  check_neg_fusion(net, attrs, excluded_attrs, data_shape, name='fc')
 
 
 @pytest.mark.parametrize('data_min,data_max,weight_min,weight_max', [

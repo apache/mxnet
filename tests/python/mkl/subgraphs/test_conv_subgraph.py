@@ -335,9 +335,9 @@ def test_pos_conv_bn(use_bias, data_shape):
 
 # used in multiple tests
 class ConvBNSum(nn.HybridBlock):
-  def __init__(self, reverse_sum_order, **kwargs):
+  def __init__(self, channels, reverse_sum_order, **kwargs):
       super(ConvBNSum, self).__init__(**kwargs)
-      self.conv0 = nn.Conv2D(channels=4, kernel_size=(1, 1), strides=1, use_bias=False)
+      self.conv0 = nn.Conv2D(channels=channels, kernel_size=(1, 1), strides=1, use_bias=False)
       self.bn = nn.BatchNorm()
       self.reverse = reverse_sum_order
 
@@ -348,12 +348,13 @@ class ConvBNSum(nn.HybridBlock):
         return x + self.bn(self.conv0(x))
 
 
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('reverse_sum_order', [True, False])
 @pytest.mark.parametrize('dedup_subgraph', [True, False])
-def test_conv_bn_sum(reverse_sum_order, dedup_subgraph):
-  data_shape=(64, 4, 10, 10)
+def test_conv_bn_sum(data_shape, reverse_sum_order, dedup_subgraph):
   attr = {'sg_mkldnn_conv_bn_add_0' : {'with_bn': 'true'}}
-  net = ConvBNSum(reverse_sum_order=reverse_sum_order)
+  # channels after conv+bn should be same as input channels
+  net = ConvBNSum(channels=data_shape[1] ,reverse_sum_order=reverse_sum_order)
   check_fusion(net, data_shape, attr, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
 
 
@@ -384,15 +385,16 @@ def test_mobilenetv2_struct(data_shape, reverse_sum_order, dedup_subgraph):
   check_fusion(net, data_shape, attr, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
 
 
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('reverse_sum_order', [False, True])
 @pytest.mark.parametrize('model_name', ['conv_bn_sum', 'mobilenetv2_struct'])
-def test_deduplication(reverse_sum_order, model_name):
-  shape = (64, 4, 10, 10)
-  data_nd = mx.random.uniform(-1, 1, shape=shape, ctx=mx.cpu())
+def test_deduplication(data_shape, reverse_sum_order, model_name):
+  data_nd = mx.random.uniform(-1, 1, shape=data_shape, ctx=mx.cpu())
   if (model_name == 'mobilenetv2_struct'):
     model_dedup = MobileNetV2Struct(reverse_sum_order=reverse_sum_order)
   else:
-    model_dedup = ConvBNSum(reverse_sum_order=reverse_sum_order)
+    # channels after conv+bn should be same as input channels
+    model_dedup = ConvBNSum(channels=data_shape[1], reverse_sum_order=reverse_sum_order)
 
   model_dedup.initialize()
   model_no_dedup = copy.copy(model_dedup)
