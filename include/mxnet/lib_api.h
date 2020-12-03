@@ -697,7 +697,7 @@ class CustomStatefulOp {
   }
 
   bool wasCreated() { return created; }
-  
+
   virtual MXReturnValue Forward(std::vector<MXTensor>* inputs,
                                 std::vector<MXTensor>* outputs,
                                 const OpResource& op_res) = 0;
@@ -1019,7 +1019,7 @@ typedef int (*opCallCreateOpState_t)(createOpState_t create_op, const char* cons
 
 #define MXLIB_OPCALLDESTROYOPSTATE_STR "_opCallDestroyOpState"
 typedef int (*opCallDestroyOpState_t)(void* state_op);
- 
+
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
 typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      const int64_t** inshapes, int* indims,
@@ -1140,7 +1140,7 @@ class CustomStatefulOpWrapper {
   CustomStatefulOp* instance;
   opCallDestroyOpState_t destroy_;
 };
- 
+
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #define MX_INT_RET  __declspec(dllexport) int __cdecl
 #define MX_VOID_RET __declspec(dllexport) void __cdecl
