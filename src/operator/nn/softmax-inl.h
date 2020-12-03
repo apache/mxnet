@@ -1348,7 +1348,6 @@ static inline bool MaskedSoftmaxOpType(const nnvm::NodeAttrs& attrs,
                                        std::vector<int>* in_attrs,
                                        std::vector<int>* out_attrs) {
   CHECK_EQ(out_attrs->size(), 1);
-  const MaskedSoftmaxParam& param = nnvm::get<MaskedSoftmaxParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2U);
 
   std::vector<int> tmp = {in_attrs->at(0)};
