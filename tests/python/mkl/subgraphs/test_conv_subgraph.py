@@ -1,228 +1,23 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-
-import sys
-import os
-import mxnet as mx
-import numpy as np
-import unittest
-import pytest
-import ctypes
-import copy
-
-
-from mxnet.contrib import quantization
-from mxnet.gluon import nn
-from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
+from common import *
 
 def test_float64_fallback():
-    dtype = 'float64'
-    net = nn.Dense(2, dtype=dtype,)
-    in_data = mx.nd.array([[2, 3, 4]], dtype=dtype)
-    net.initialize()
-    out = net(in_data)
-    out.wait_to_read()
-    assert in_data.dtype == out.dtype
+  class ConvWithDtype(nn.HybridBlock):
+    def __init__(self, dtype='float32', **kwargs):
+        super(ConvWithDtype, self).__init__(**kwargs)
+        self.weight = mx.gluon.Parameter('weight', dtype=dtype, allow_deferred_init=True)
+        self.bias = mx.gluon.Parameter('bias', dtype=dtype, allow_deferred_init=True)
 
-OP_NAME='op_name'
-QUANTIZED_OP_NAME='quantized_op_name'
-SG_PASS_NAME='MKLDNN'
-QUANTIZE_SG_PASS_NAME='MKLDNN_QUANTIZE'
-config =  {
-  'conv': {
-    OP_NAME: 'sg_mkldnn_conv',
-    QUANTIZED_OP_NAME: 'quantized_sg_mkldnn_conv'
-  },
-  'fc': {
-    OP_NAME: 'sg_mkldnn_fully_connected',
-    QUANTIZED_OP_NAME: 'quantized_sg_mkldnn_fully_connected'
-  }
-}
+    def hybrid_forward(self, F, x, weight, bias):
+        out = F.Convolution(x, kernel=(1,1), num_filter=3, weight=weight, no_bias=False, bias=bias)
+        return out
 
-DATA_SHAPE=[(64, 4, 10, 10), (4, 3, 24, 24), (1, 16, 32, 32)]
-fc_post_ops_list=['relu', 'sigmoid', 'tanh', 'softrelu',
-                  'square', 'square_root', 'abs', 'exp', 'bounded_relu']
-
-
-# Helpers
-class RELU6(nn.HybridBlock):
-    """Relu6 used in MobileNetV2."""
-
-    def __init__(self, **kwargs):
-        super(RELU6, self).__init__(**kwargs)
-
-    def hybrid_forward(self, F, x):
-        return F.clip(x, 0, 6, name="relu6")
-
-class CustomNormalInit(mx.init.Initializer):
-    """Initializes weights with random values sampled from a normal distribution
-    with a custom mean and standard deviation of `sigma`.
-    """
-    def __init__(self, mean=0, sigma=0.01):
-        super(CustomNormalInit, self).__init__(mean=mean, sigma=sigma)
-        self.mean = mean
-        self.sigma = sigma
-
-    def _init_weight(self, _, arr):
-        mx.random.normal(self.mean, self.sigma, arr.shape, dtype=arr.dtype, out=arr)
-
-
-def check_qsym_calibrated(qsym, out_type, name='conv'):
-  quantized_op_name = 'quantized_' + name
-  assert ''.join(qsym.attr_dict().keys()).find(quantized_op_name) != -1
-  for k, v in qsym.attr_dict().items():
-    if k.find('_quantize') != -1:
-      assert v['out_type'] == out_type
-    if k.find(quantized_op_name) != -1:
-      if quantized_op_name.startswith("quantized_sg_mkldnn_fully_connected") and 'enable_float_output' in v:
-        continue
-      assert 'min_calib_range' in v
-      assert 'max_calib_range' in v
-
-def check_qsym_scale_align(qsym):
-  assert ''.join(qsym.attr_dict().keys()).find('quantized_sg_mkldnn_conv') != -1
-  init = False
-  for k, v in qsym.attr_dict().items():
-    if k.find('quantized_sg_mkldnn_conv') != -1:
-      assert 'min_calib_range' in v
-      assert 'max_calib_range' in v
-      if not init:
-        min_calib_range = v['min_calib_range']
-        max_calib_range = v['max_calib_range']
-        init = True
-      else:
-        assert min_calib_range == v['min_calib_range']
-        assert max_calib_range == v['max_calib_range']
-
-
-def check_quantize(net_original, data_shape, out_type, name='conv',
-                   check_calibration=True, check_scale_align=False):
-  quantize_granularity_list = ['tensor-wise']
-  if name == 'fc':
-    quantize_granularity_list += ['channel-wise']
-
-  if name in config:
-    name = config[name][OP_NAME]
-
-  net_original.initialize(init=mx.init.Normal(0.5), force_reinit=True)
-  min_value = -1 if out_type != 'uint8' else 0
-  data = mx.random.uniform(min_value, 1.0, shape=data_shape, dtype='float32', ctx=mx.current_context())
-
-  outputs = net_original(data)
-  for output in outputs:
-      output.wait_to_read()
-  ref_out = outputs
-
-  excluded_layers = []
-  excluded_operators = []
-
-  calib_data = mx.gluon.data.DataLoader(data, batch_size=1)
-  for quantize_granularity in quantize_granularity_list:
-    qnet = quantization.quantize_net(net_original,
-                                     ctx=mx.current_context(),
-                                     exclude_layers=excluded_layers,
-                                     exclude_operators=excluded_operators,
-                                     quantized_dtype=out_type,
-                                     calib_mode='naive',
-                                     calib_data=calib_data,
-                                     num_calib_batches=1,
-                                     quantize_mode='full',
-                                     quantize_granularity=quantize_granularity)
-    qsym, _ = qnet.export(None)
-    if check_calibration:
-      check_qsym_calibrated(qsym, out_type, name=name)
-    if check_scale_align:
-      check_qsym_scale_align(qsym)
-
-    quantized_out = qnet(data)
-    for i in range(len(ref_out)):
-      min_range = mx.nd.min(ref_out[i]).asscalar()
-      max_range = mx.nd.max(ref_out[i]).asscalar()
-      atol = 0.1 * max(abs(min_range), abs(max_range))
-      assert_almost_equal_with_err(quantized_out.asnumpy(), ref_out.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
-
-
-def check_fusion(net_original, data_shape, attrs_dict, check_fp32_fusion=True, check_quantization=True,
-                 out_types=['uint8', 'int8', 'auto'], dedup_subgraph=True):
-  net_original.initialize()
-  net_original.hybridize(static_alloc=False, static_shape=False)
-  data = mx.nd.random.uniform(shape=data_shape)
-  net_original(data)
-  net_fusion = copy.copy(net_original)
-  sym, params = net_original.export(None)
-
-  if check_fp32_fusion:
-    data_min = -1.0
-    data_max = 1.0
-    if ''.join(sym.get_internals().list_outputs()).find('sqrt') != -1:
-      check_quantization = False
-      data_min = 0
-
-    sym_sg = sym.optimize_for(SG_PASS_NAME, dedup_subgraph=dedup_subgraph, skip_infer=True)
-    for name, attrs in attrs_dict.items():
-      if name in config:
-        op_name = config[name][OP_NAME]
-      else:
-        op_name = name
-      assert ''.join(sym_sg.get_internals().list_outputs()).find(op_name) != -1
-      if len(attrs):
-          found = False
-          for k, v in sym_sg.attr_dict().items():
-            if k.find(op_name) != -1:
-              found = True
-              for attr_name, attr_value in attrs.items():
-                assert v[attr_name].lower() == attr_value.lower()
-          assert found
-
-    data = mx.nd.random.uniform(shape=data_shape, low=data_min, high=data_max)
-    out_unfused = net_original(data)
-
-    net_fusion.optimize_for(data, backend=SG_PASS_NAME)
-    out_fused = net_fusion(data)
-
-    for i in range(len(out_fused)):
-      assert_almost_equal(out_unfused.asnumpy(), out_fused.asnumpy(), rtol=1e-3, atol=1e-1)
-
-  if check_quantization:
-    # fp32 to int8
-    for out_type in out_types:
-      check_quantize(net_original, data_shape, out_type, name=name)
-
-def check_neg_fusion(net, attrs_name=None, excluded_attrs=None,
-                     data_shapes=(4,4,10,10), name='conv'):
+  dtype = 'float64'
+  net = ConvWithDtype(dtype=dtype)
+  in_data = mx.nd.random.normal(shape=[3,3,3,3], dtype=dtype)
   net.initialize()
-  net.hybridize()
-  if isinstance(data_shapes, tuple):
-    data_nd = [mx.nd.random.uniform(shape=data_shapes)]
-  else:
-    data_nd = [mx.nd.random.uniform(shape=dshape) for dshape in data_shapes]
-
-  net(*data_nd)
-  op_name = config[name][OP_NAME]
-  sym, _ = net.export(None)
-  sym_sg = sym.optimize_for(SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
-
-  attrs_dict = sym_sg.attr_dict()
-  for k, v in attrs_dict.items():
-    if k.find(op_name) != -1:
-      for attr in attrs_name:
-        assert v[attr] == 'true'
-      for exc_attr in excluded_attrs:
-        assert exc_attr not in v.keys()
+  out = net(in_data)
+  out.wait_to_read()
+  assert in_data.dtype == out.dtype
 
 
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
@@ -423,6 +218,7 @@ def test_pos_single_concat(data_shape, input_num, dim, out_type):
   check_quantize(concat, data_shape, out_type, name='conv',
                   check_calibration=False)
 
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('out_type', ['int8', 'auto'])
 def test_pos_single_concat_pos_neg(data_shape, out_type):
@@ -561,6 +357,7 @@ class MobileNetV2Struct(nn.HybridBlock):
       else:
         return out + self.bn2(self.conv2(out))
 
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('reverse_sum_order', [True, False])
 @pytest.mark.parametrize('dedup_subgraph', [True, False])
@@ -591,19 +388,6 @@ def test_deduplication(reverse_sum_order, model_name):
 
   assert_almost_equal(out.asnumpy(), out_dedup.asnumpy(), rtol=1e-3, atol=1e-1)
 
-
-class TailNegBlock(nn.HybridBlock):
-  def __init__(self, **kwargs):
-    super(TailNegBlock, self).__init__(**kwargs)
-    self.fc1 = nn.Dense(10, flatten=True)
-    self.fc2 = nn.Dense(10, flatten=True)
-
-  def hybrid_forward(self, F, x1, x2):
-    out_fc1 = self.fc1(x1)
-    out_fc2 = self.fc2(x2)
-    out = F.concat(out_fc1, out_fc2)
-    out = F.softmax(out)
-    return out
 
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_bn(data_shape):
@@ -799,86 +583,6 @@ def test_neg_conv_bn_add_relu(data_shape):
   check_neg_fusion(net3, attrs3, excluded_attrs3, data_shape)
 
 
-@pytest.mark.parametrize('data_shape', DATA_SHAPE)
-@pytest.mark.parametrize('use_bias', [True, False])
-@pytest.mark.parametrize('flatten', [True, False])
-def test_single_fc(data_shape, use_bias, flatten):
-
-  class SingleFC(nn.HybridBlock):
-    def __init__(self, use_bias, flatten, **kwargs):
-      super(SingleFC, self).__init__(**kwargs)
-      self.fc = nn.Dense(units=64, use_bias=use_bias, flatten=flatten)
-
-    def hybrid_forward(self, F, x):
-      return self.fc(x)
-
-  attrs = {'fc': {}}
-  net = SingleFC(use_bias, flatten)
-  check_fusion(net, data_shape, attrs, check_quantization=flatten)
-
-
-@pytest.mark.parametrize('data_shape', DATA_SHAPE)
-@pytest.mark.parametrize('use_bias', [True, False])
-@pytest.mark.parametrize('flatten', [True, False])
-@pytest.mark.parametrize('alg', fc_post_ops_list)
-def test_fc_eltwise(data_shape, use_bias, flatten, alg):
-  # fc + eltwise fusion case
-  class FCEltwise(nn.HybridBlock):
-    def __init__(self, use_bias, flatten, alg, **kwargs):
-      super(FCEltwise, self).__init__(**kwargs)
-      self.fc = nn.Dense(units=64, use_bias=use_bias, flatten=flatten,
-                          weight_initializer=CustomNormalInit(mean=0.5, sigma=0.1) if alg == 'square_root' else None)
-                                            #avoid calculating square root of negative values
-      self.alg = alg
-
-    def hybrid_forward(self, F, x):
-      fc_out = self.fc(x)
-      if self.alg in ['relu', 'sigmoid', 'tanh', 'softrelu']:
-        out = F.Activation(fc_out, act_type=self.alg)
-      elif self.alg == 'square':
-        out = F.square(fc_out)
-      elif self.alg == 'square_root':
-        out = F.sqrt(fc_out)
-      elif self.alg == 'abs':
-        out = F.abs(fc_out)
-      elif self.alg == 'exp':
-        out = F.exp(fc_out)
-      else:
-        out = F.clip(fc_out, 0, 1.0)
-      return out
-
-  attrs = {'fc': {'with_eltwise': 'true'}}
-  net = FCEltwise(use_bias, flatten, alg)
-  check_fusion(net, data_shape, attrs, check_quantization=flatten)
-
-
-@pytest.mark.parametrize('data_shape', DATA_SHAPE)
-@pytest.mark.parametrize('use_bias', [True, False])
-@pytest.mark.parametrize('flatten', [True, False])
-def test_neg_fc_relu(data_shape, use_bias, flatten):
-  # fc + relu can't be fusion case
-  # eg.1
-  # fc -----------> relu
-  #  |
-  #  |
-  #  ---------------> [custom op]
-  class NegFCReLU(nn.HybridBlock):
-    def __init__(self, use_bias, flatten, **kwargs):
-      super(NegFCReLU, self).__init__(**kwargs)
-      self.fc = nn.Dense(units=64, use_bias=use_bias, flatten=flatten)
-      self.act1 = nn.Activation('relu')
-      self.act2 = nn.Activation('sigmoid')
-      self.tail_neg = TailNegBlock()
-
-    def hybrid_forward(self, F, x):
-      fc_out = self.fc(x)
-      return self.tail_neg(self.act1(fc_out), self.act2(fc_out))
-
-
-  attrs, excluded_attrs = [], []
-  net = NegFCReLU(use_bias, flatten)
-  check_neg_fusion(net, attrs, excluded_attrs, [data_shape], name='fc')
-
 
 @pytest.mark.parametrize('data_min,data_max,weight_min,weight_max', [
     (-1, 1, 0, 0),
@@ -890,42 +594,41 @@ def test_neg_fc_relu(data_shape, use_bias, flatten):
 ])
 def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max):
   data_shape = (1, 32, 2, 2)
-  data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
-  weight = mx.symbol.Variable('weight', dtype='float32')
-  bias = mx.symbol.Variable('bias', dtype='float32')
-  sym = mx.symbol.Convolution(data=data, weight=weight, bias=bias, name='conv', num_filter=64,
-                               kernel=(1, 1), stride=(1, 1))
   data_nd = mx.random.uniform(data_min, data_max, shape=data_shape, ctx=mx.cpu())
   weight_nd = mx.random.uniform(weight_min, weight_max, shape=[64, 32, 1, 1], ctx=mx.cpu())
   bias_nd = mx.random.uniform(-1, +1, shape=[64], ctx=mx.cpu())
-  arg_params = {
-      'weight': weight_nd,
-      'bias': bias_nd
-  }
 
-  ex = sym._bind(mx.cpu(), arg_params, args_grad=None)
-  ex.forward(data = data_nd)
-  ex.outputs[0].wait_to_read()
-  sym_sg = sym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
+  class ConvBiasOverflow(nn.HybridBlock):
+        def __init__(self, dtype='float32', **kwargs):
+            super(ConvBiasOverflow, self).__init__(**kwargs)
+            self.weight = mx.gluon.Parameter('weight', dtype=dtype, allow_deferred_init=True)
+            self.bias = mx.gluon.Parameter('bias', dtype=dtype, allow_deferred_init=True)
+
+        def hybrid_forward(self, F, x, weight, bias):
+            conv1 = F.Convolution(x, num_filter=64, kernel=(1,1), weight=weight, no_bias=False, bias=bias)
+            return conv1
+
+  net = ConvBiasOverflow()
+  net.initialize()
+  net(data_nd) # dummy run
+
+  net.weight.data()[:] = weight_nd
+  net.bias.data()[:] = bias_nd
+  out = net(data_nd)
   
   calib_data = mx.gluon.data.DataLoader(data_nd, batch_size=data_shape[0])
-  qsym, qarg_params, qaux_params = quantization.quantize_model(sym=sym_sg,
-                                                               arg_params=arg_params,
-                                                               aux_params={},
-                                                               ctx=mx.cpu(),
-                                                               excluded_sym_names=None,
-                                                               excluded_op_names=None,
-                                                               quantized_dtype='int8',
-                                                               calib_mode='naive',
-                                                               calib_data=calib_data,
-                                                               num_calib_batches=1,
-                                                               quantize_mode='full')
-  qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
-  qarg_params['data'] = data_nd
-  qex = qsym._bind(mx.cpu(), qarg_params, args_grad=None)
-  qex.forward()
-  qex.outputs[0].wait_to_read()
-  assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
+  qnet = quantization.quantize_net(net,
+                                   ctx=mx.cpu(),
+                                   exclude_layers=None,
+                                   exclude_operators=None,
+                                   quantized_dtype='int8',
+                                   calib_mode='naive',
+                                   calib_data=calib_data,
+                                   num_calib_batches=1,
+                                   quantize_mode='full')
+
+  out_quantized = qnet(data_nd)
+  assert_almost_equal_with_err(out.asnumpy(), out_quantized.asnumpy(),
                                rtol=1e-2, atol=1e-2, etol=0.01)
 
 
