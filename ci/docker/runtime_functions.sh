@@ -429,6 +429,7 @@ build_ubuntu_gpu_clang10_werror() {
 
     CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_CUDA=ON \
+       -DUSE_NVML=OFF \
        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
        -GNinja /work/mxnet
@@ -531,10 +532,6 @@ build_ubuntu_cpu_mkldnn_mkl() {
     ninja
 }
 
-build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda101_cudnn7
-}
-
 build_ubuntu_gpu_tensorrt() {
 
     set -ex
@@ -579,6 +576,7 @@ build_ubuntu_gpu_tensorrt() {
           -DUSE_TENSORRT=1                        \
           -DUSE_OPENMP=0                          \
           -DUSE_MKLDNN=0                          \
+          -DUSE_NVML=OFF                          \
           -DUSE_MKL_IF_AVAILABLE=OFF              \
           -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
           -G Ninja                                \
@@ -594,6 +592,7 @@ build_ubuntu_gpu_mkldnn() {
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
@@ -607,6 +606,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=OFF \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
@@ -621,6 +621,7 @@ build_ubuntu_gpu() {
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=ON \
         -DUSE_MKLDNN=OFF \
@@ -638,6 +639,7 @@ build_ubuntu_gpu_debug() {
         -DCMAKE_BUILD_TYPE=Debug \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=ON \
         -DUSE_MKLDNN=OFF \
@@ -668,6 +670,7 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
+        -DUSE_NVML=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLDNN=ON                         \
         -DUSE_DIST_KVSTORE=ON                   \
