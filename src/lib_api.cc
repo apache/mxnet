@@ -858,8 +858,8 @@ void mxnet::ext::CustomOp::raiseDuplicateContextError() {
     + op_name_str + "'");
 }
 
-mxnet::ext::CustomStatefulOp::CustomStatefulOp() : ignore_warn(false), created(false) {};
-mxnet::ext::CustomStatefulOp::~CustomStatefulOp() {};
+mxnet::ext::CustomStatefulOp::CustomStatefulOp() : ignore_warn(false), created(false) {}
+mxnet::ext::CustomStatefulOp::~CustomStatefulOp() {}
 
 mxnet::ext::CustomStatefulOpWrapper::~CustomStatefulOpWrapper() {
   destroy_(instance);
