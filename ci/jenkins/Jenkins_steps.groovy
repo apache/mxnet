@@ -218,12 +218,12 @@ def compile_unix_mkldnn_nocudnn_gpu(lib_name) {
 }
 
 def compile_unix_full_gpu(lib_name) {
-    return ['GPU: CUDA10.1+cuDNN7': {
+    return ['GPU: CUDA+cuDNN': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_cuda101_cudnn7', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu', false)
             utils.pack_lib(lib_name, mx_lib_cpp_examples)
           }
         }
@@ -232,27 +232,13 @@ def compile_unix_full_gpu(lib_name) {
 }
 
 def compile_unix_full_gpu_debug(lib_name) {
-    return ['GPU: CUDA10.1+cuDNN7, debug': {
+    return ['GPU: CUDA+cuDNN, debug': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_cuda101_cudnn7_debug', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_debug', false)
             utils.pack_lib(lib_name, mx_lib_cpp_examples)
-          }
-        }
-      }
-    }]
-}
-
-def compile_unix_cmake_gpu(lib_name) {
-    return ['GPU: CMake': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cmake-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_cmake', false)
-            utils.pack_lib(lib_name, mx_cmake_lib_cython)
           }
         }
       }

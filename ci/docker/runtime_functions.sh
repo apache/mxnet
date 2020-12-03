@@ -318,7 +318,6 @@ build_ubuntu_cpu_openblas() {
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_TVM_OP=ON \
-        -DUSE_CPP_PACKAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
@@ -394,7 +393,6 @@ build_ubuntu_cpu_cmake_asan() {
         -DUSE_GPERFTOOLS=OFF \
         -DUSE_JEMALLOC=OFF \
         -DUSE_ASAN=ON \
-        -DUSE_CPP_PACKAGE=ON \
         /work/mxnet
     make -j $(nproc) mxnet
 }
@@ -405,7 +403,6 @@ build_ubuntu_cpu_gcc8_werror() {
     CC=gcc-8 CXX=g++-8 cmake \
         -DUSE_CUDA=OFF \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-        -DUSE_CPP_PACKAGE=ON \
         -GNinja /work/mxnet
     ninja
 }
@@ -416,7 +413,6 @@ build_ubuntu_cpu_clang10_werror() {
     CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_CUDA=OFF \
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-       -DUSE_CPP_PACKAGE=ON \
        -GNinja /work/mxnet
     ninja
 }
@@ -435,7 +431,6 @@ build_ubuntu_gpu_clang10_werror() {
        -DUSE_CUDA=ON \
        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-       -DUSE_CPP_PACKAGE=OFF \
        -GNinja /work/mxnet
     ninja
 }
@@ -449,7 +444,6 @@ build_ubuntu_cpu_clang6() {
         -DUSE_CUDA=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_DIST_KVSTORE=ON \
-        -DUSE_CPP_PACKAGE=ON \
         -G Ninja /work/mxnet
     ninja
 }
@@ -463,7 +457,6 @@ build_ubuntu_cpu_clang100() {
        -DUSE_CUDA=OFF \
        -DUSE_OPENMP=ON \
        -DUSE_DIST_KVSTORE=ON \
-       -DUSE_CPP_PACKAGE=ON \
        -G Ninja /work/mxnet
     ninja
 }
@@ -479,7 +472,6 @@ build_ubuntu_cpu_clang_tidy() {
        -DUSE_OPENMP=OFF \
        -DCMAKE_BUILD_TYPE=Debug \
        -DUSE_DIST_KVSTORE=ON \
-       -DUSE_CPP_PACKAGE=ON \
        -DCMAKE_CXX_CLANG_TIDY=clang-tidy-10 \
        -G Ninja /work/mxnet
     ninja
@@ -492,7 +484,6 @@ build_ubuntu_cpu_clang6_mkldnn() {
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
        -DUSE_CUDA=OFF \
-       -DUSE_CPP_PACKAGE=ON \
        -DUSE_OPENMP=OFF \
        -G Ninja /work/mxnet
     ninja
@@ -505,7 +496,6 @@ build_ubuntu_cpu_clang100_mkldnn() {
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
        -DUSE_CUDA=OFF \
-       -DUSE_CPP_PACKAGE=ON \
        -G Ninja /work/mxnet
     ninja
 }
@@ -520,7 +510,6 @@ build_ubuntu_cpu_mkldnn() {
         -DUSE_TVM_OP=ON \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
-        -DUSE_CPP_PACKAGE=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
@@ -606,7 +595,6 @@ build_ubuntu_gpu_mkldnn() {
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DUSE_CPP_PACKAGE=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
@@ -621,13 +609,12 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=OFF \
-        -DUSE_CPP_PACKAGE=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
 
-build_ubuntu_gpu_cuda101_cudnn7() {
+build_ubuntu_gpu() {
     set -ex
     cd /work/build
     cmake \
@@ -637,7 +624,6 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=ON \
         -DUSE_MKLDNN=OFF \
-        -DUSE_CPP_PACKAGE=ON \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
@@ -645,7 +631,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     ninja
 }
 
-build_ubuntu_gpu_cuda101_cudnn7_debug() {
+build_ubuntu_gpu_debug() {
     set -ex
     cd /work/build
     cmake \
@@ -655,29 +641,9 @@ build_ubuntu_gpu_cuda101_cudnn7_debug() {
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=ON \
         -DUSE_MKLDNN=OFF \
-        -DUSE_CPP_PACKAGE=ON \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -G Ninja /work/mxnet
-    ninja
-}
-
-build_ubuntu_gpu_cmake() {
-    set -ex
-    cd /work/build
-    cmake \
-        -DUSE_SIGNAL_HANDLER=ON                 \
-        -DUSE_CUDA=ON                           \
-        -DUSE_CUDNN=ON                          \
-        -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLDNN=OFF                        \
-        -DUSE_DIST_KVSTORE=ON                   \
-        -DCMAKE_BUILD_TYPE=Release              \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DBUILD_CYTHON_MODULES=1                \
-        -G Ninja                                \
-        /work/mxnet
-
     ninja
 }
 
