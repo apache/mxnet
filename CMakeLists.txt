@@ -428,6 +428,16 @@ if(USE_OPENMP)
     if(OPENMP_FOUND)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+      # Enable pragma omp simd
+      # "While the name of this switch is 'experimental', the switch itself, and
+      # the functionality it enables is fully supported and production-ready.
+      # The name reflects that it doesn’t enable any complete subset or
+      # version of an OpenMP standard."
+      # -- https://devblogs.microsoft.com/cppblog/simd-extension-to-c-openmp-in-visual-studio/
+      if(MSVC)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -openmp:experimental")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:experimental")
+      endif()
       if(NOT BLAS STREQUAL "MKL")
         # Linker flags for Intel OMP are already set in case MKL is used. Only set if not MKL
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
