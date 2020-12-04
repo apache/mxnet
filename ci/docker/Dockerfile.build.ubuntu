@@ -98,7 +98,7 @@ RUN export LIBRARY_PATH=$LIBRARY_PATH:/usr/lib/gcc/x86_64-linux-gnu/7/ && \
     cd OpenBLAS-${OPENBLAS_VERSION} && \
     CXX="clang++-6.0 -fPIC" CC="clang-6.0 -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 \
         USE_OPENMP=0 INTERFACE64=1 BINARY=64 && \
-    make PREFIX=/usr/local/opt install && \
+    make PREFIX=/usr/local/openblas-clang install && \
     cd .. && \
     rm -rf OpenBLAS-${OPENBLAS_VERSION} && \
     unzip -q openblas.zip -d . && \
