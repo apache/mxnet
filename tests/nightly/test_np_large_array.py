@@ -655,7 +655,7 @@ def test_where():
     assert inp1.grad[0, 0] == 1 and inp1.grad[-1 ,-1] == 0
     assert inp2.grad.shape == inp2.shape
     assert inp2.grad[0, 0] == 0 and inp2.grad[-1 ,-1] == 1
-    # onse side is scalar
+    # one side is scalar
     with mx.autograd.record():
         out = np.where(inp1==0, inp1, 2)
         out.backward()
