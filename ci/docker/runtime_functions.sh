@@ -477,45 +477,44 @@ build_ubuntu_cpu() {
 
 build_ubuntu_cpu_openblas() {
     set -ex
-    export CC="gcc"
-    export CXX="g++"
-    build_ccache_wrappers
-    make \
-        DEV=1                         \
-        USE_TVM_OP=1                  \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
-        USE_DIST_KVSTORE=1            \
-        USE_LIBJPEG_TURBO=1           \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
-    make cython PYTHON=python3
+    cd /work/build
+    CXXFLAGS="-Wno-error=strict-overflow" cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_DIST_KVSTORE=ON \
+        -DBUILD_CYTHON_MODULES=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_mkl() {
     set -ex
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    make \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=mkl                  \
-        USE_MKL_LAYERNORM=1           \
-        USE_TVM_OP=1                  \
-        USE_MKLDNN=0                  \
-        USE_INTEL_PATH=/opt/intel     \
-        USE_DIST_KVSTORE=1            \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=OFF \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_BLAS=MKL \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     pushd .
     cd /work/build
-    build_ccache_wrappers
     cmake \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
         -DPython3_EXECUTABLE=python3 \
@@ -535,7 +534,6 @@ build_ubuntu_cpu_cmake_no_tvm_op() {
     set -ex
     pushd .
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
@@ -557,9 +555,6 @@ build_ubuntu_cpu_cmake_asan() {
 
     pushd .
     cd /work/build
-    export CXX=g++-8
-    export CC=gcc-8
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -570,8 +565,6 @@ build_ubuntu_cpu_cmake_asan() {
         -DUSE_GPERFTOOLS=OFF \
         -DUSE_JEMALLOC=OFF \
         -DUSE_ASAN=ON \
-        -DUSE_CPP_PACKAGE=ON \
-        -DMXNET_USE_CPU=ON \
         /work/mxnet
     make -j $(nproc) mxnet
     # Disable leak detection but enable ASAN to link with ASAN but not fail with build tooling.
@@ -583,33 +576,67 @@ build_ubuntu_cpu_cmake_asan() {
 
 build_ubuntu_cpu_clang39() {
     set -ex
-    export CXX=clang++-3.9
-    export CC=clang-3.9
-    build_ccache_wrappers
-    make \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
-        USE_OPENMP=0                  \
-        USE_DIST_KVSTORE=1            \
-        -j$(nproc)
+    cd /work/build
+    CC=gcc-8 CXX=g++-8 cmake \
+        -DUSE_CUDA=OFF \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_clang60() {
     set -ex
+    cd /work/build
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_CUDA=OFF \
+       -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+       -GNinja /work/mxnet
+    ninja
+}
 
-    export CXX=clang++-6.0
-    export CC=clang-6.0
+build_ubuntu_gpu_clang10_werror() {
+    set -ex
+    cd /work/build
+    # Disable cpp package as OpWrapperGenerator.py dlopens libmxnet.so,
+    # requiring presence of cuda driver libraries that are missing on CI host
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda-10.1/targets/x86_64-linux/lib/stubs
+    # Workaround https://github.com/thrust/thrust/issues/1072
+    # Can be deleted on Cuda 11
+    export CXXFLAGS="-I/usr/local/thrust"
 
-    build_ccache_wrappers
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_CUDA=ON \
+       -DUSE_NVML=OFF \
+       -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+       -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+       -GNinja /work/mxnet
+    ninja
+}
 
-    make  \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
-        USE_OPENMP=1                  \
-        USE_DIST_KVSTORE=1            \
-        -j$(nproc)
+build_ubuntu_cpu_clang6() {
+    set -ex
+    cd /work/build
+    CXX=clang++-6.0 CC=clang-6.0 cmake \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_DIST_KVSTORE=ON \
+        -G Ninja /work/mxnet
+    ninja
+}
+
+build_ubuntu_cpu_clang100() {
+    set -ex
+    cd /work/build
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_MKL_IF_AVAILABLE=OFF \
+       -DUSE_MKLDNN=OFF \
+       -DUSE_CUDA=OFF \
+       -DUSE_OPENMP=ON \
+       -DUSE_DIST_KVSTORE=ON \
+       -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_clang_tidy() {
@@ -621,17 +648,16 @@ build_ubuntu_cpu_clang_tidy() {
 
     pushd .
     cd /work/build
-    build_ccache_wrappers
-    cmake \
-        -DUSE_CUDA=OFF \
-        -DUSE_MKLDNN=OFF \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_OPENCV=ON \
-        -DCMAKE_BUILD_TYPE=Debug \
-        -G Ninja \
-        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-        /work/mxnet
-
+    # TODO(leezu) USE_OPENMP=OFF 3rdparty/dmlc-core/CMakeLists.txt:79 broken?
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_MKL_IF_AVAILABLE=OFF \
+       -DUSE_MKLDNN=OFF \
+       -DUSE_CUDA=OFF \
+       -DUSE_OPENMP=OFF \
+       -DCMAKE_BUILD_TYPE=Debug \
+       -DUSE_DIST_KVSTORE=ON \
+       -DCMAKE_CXX_CLANG_TIDY=clang-tidy-10 \
+       -G Ninja /work/mxnet
     ninja
     cd /work/mxnet
     $CLANG_TIDY -p /work/build -j $(nproc) -clang-tidy-binary clang-tidy-6.0 /work/mxnet/src
@@ -640,74 +666,94 @@ build_ubuntu_cpu_clang_tidy() {
 
 build_ubuntu_cpu_clang39_mkldnn() {
     set -ex
-
-    export CXX=clang++-3.9
-    export CC=clang-3.9
-
-    build_ccache_wrappers
-
-    make \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_OPENMP=0                  \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    CXX=clang++-6.0 CC=clang-6.0 cmake \
+       -DUSE_MKL_IF_AVAILABLE=OFF \
+       -DUSE_MKLDNN=ON \
+       -DUSE_CUDA=OFF \
+       -DUSE_OPENMP=OFF \
+       -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_clang60_mkldnn() {
     set -ex
-
-    export CXX=clang++-6.0
-    export CC=clang-6.0
-
-    build_ccache_wrappers
-
-    make \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_OPENMP=1                  \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_MKL_IF_AVAILABLE=OFF \
+       -DUSE_MKLDNN=ON \
+       -DUSE_CUDA=OFF \
+       -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_mkldnn() {
     set -ex
-
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_TVM_OP=1                  \
-        USE_BLAS=openblas             \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
-
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_TVM_OP=1                  \
-        USE_BLAS=mkl                  \
-        USE_SIGNAL_HANDLER=1          \
-        USE_INTEL_PATH=/opt/intel/    \
-        -j$(nproc)
-}
-
-build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda101_cudnn7
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=OFF \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_BLAS=MKL \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_gpu_tensorrt() {
 
     set -ex
 
-    build_ccache_wrappers
+    export ONNX_NAMESPACE=onnx
+
+    # Build ONNX
+    pushd .
+    echo "Installing ONNX."
+    cd 3rdparty/onnx-tensorrt/third_party/onnx
+    rm -rf build
+    mkdir -p build
+    cd build
+    cmake -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
+    make -j$(nproc)
+    export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
+    export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
+    export CXXFLAGS=-I`pwd`
+
+    popd
+
+    # Build ONNX-TensorRT
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.2/targets/x86_64-linux/include/
+    pushd .
+    cd 3rdparty/onnx-tensorrt/
+    mkdir -p build
+    cd build
+    cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
+    make -j$(nproc)
+    export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
+    popd
+
+    mkdir -p /work/mxnet/lib/
+    cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
+    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so /work/mxnet/lib/
 
     cd /work/build
     cmake -DUSE_CUDA=1                            \
@@ -717,6 +763,7 @@ build_ubuntu_gpu_tensorrt() {
           -DUSE_TENSORRT=1                        \
           -DUSE_OPENMP=0                          \
           -DUSE_MKLDNN=0                          \
+          -DUSE_NVML=OFF                          \
           -DUSE_MKL_IF_AVAILABLE=OFF              \
           -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
           -G Ninja                                \
@@ -731,40 +778,34 @@ build_ubuntu_gpu_tensorrt() {
 
 build_ubuntu_gpu_mkldnn() {
     set -ex
-
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                                     \
-        USE_CPP_PACKAGE=1                         \
-        USE_BLAS=openblas                         \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_TVM_OP=0                              \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
-
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                                     \
-        USE_BLAS=openblas                         \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=0                               \
-        USE_TVM_OP=0                              \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DUSE_CUDNN=OFF \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -G Ninja /work/mxnet
+    ninja
 }
 
-build_ubuntu_gpu_cuda101_cudnn7() {
+build_ubuntu_gpu() {
     set -ex
     build_ccache_wrappers
     make \
@@ -844,73 +885,41 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
-        -DUSE_SIGNAL_HANDLER=ON                 \
-        -DUSE_CUDA=1                            \
-        -DUSE_CUDNN=1                           \
-        -DUSE_TVM_OP=0                          \
-        -DPython3_EXECUTABLE=python3            \
-        -DUSE_MKLML_MKL=1                       \
-        -DCMAKE_BUILD_TYPE=Release              \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -G Ninja                                \
-        /work/mxnet
-
+        -DUSE_CUDNN=ON \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_DIST_KVSTORE=ON \
+        -DBUILD_CYTHON_MODULES=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -G Ninja /work/mxnet
     ninja
 }
 
-build_ubuntu_gpu_cmake() {
+build_ubuntu_gpu_debug() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
-        -DUSE_SIGNAL_HANDLER=ON                 \
-        -DUSE_CUDA=ON                           \
-        -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=OFF                        \
-        -DPython3_EXECUTABLE=python3            \
-        -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=OFF                        \
-        -DUSE_DIST_KVSTORE=ON                   \
-        -DCMAKE_BUILD_TYPE=Release              \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DBUILD_CYTHON_MODULES=1                \
-        -G Ninja                                \
-        /work/mxnet
-
-    ninja
-}
-
-build_ubuntu_gpu_cmake_no_rtc() {
-    set -ex
-    cd /work/build
-    build_ccache_wrappers
-    cmake \
-        -DUSE_SIGNAL_HANDLER=ON                 \
-        -DUSE_CUDA=ON                           \
-        -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=OFF                        \
-        -DPython3_EXECUTABLE=python3            \
-        -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=ON                         \
-        -DUSE_DIST_KVSTORE=ON                   \
-        -DCMAKE_BUILD_TYPE=Release              \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DBUILD_CYTHON_MODULES=1                \
-        -DENABLE_CUDA_RTC=OFF                   \
-        -G Ninja                                \
-        /work/mxnet
-
+        -DUSE_CUDNN=ON \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_DIST_KVSTORE=ON \
+        -DBUILD_CYTHON_MODULES=ON \
+        -G Ninja /work/mxnet
     ninja
 }
 
 build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
@@ -927,16 +936,13 @@ build_ubuntu_cpu_large_tensor() {
 build_ubuntu_gpu_large_tensor() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=OFF                        \
-        -DPython3_EXECUTABLE=python3            \
+        -DUSE_NVML=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=OFF                        \
+        -DUSE_MKLDNN=ON                         \
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \

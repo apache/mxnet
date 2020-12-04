@@ -97,7 +97,10 @@ struct Shape {
    * \return the corresponding dimension size
    */
   MSHADOW_XINLINE const index_t &operator[](int idx) const {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
     return shape_[idx];
+#pragma GCC diagnostic pop
   }
   /*!
    * \return whether two shape equals
