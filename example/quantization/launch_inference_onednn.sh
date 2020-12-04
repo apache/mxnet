@@ -19,7 +19,7 @@
 
 usage()
 {
-    echo "usage: bash ./launch_inference_mkldnn.sh [[[-s symbol_file ] [-b batch_size] [-iter iteraton] [-ins instance] [-c cores/instance]] | [-h]]"
+    echo "usage: bash ./launch_inference_onednn.sh [[[-s symbol_file ] [-b batch_size] [-iter iteraton] [-ins instance] [-c cores/instance]] | [-h]]"
 }
 
 while [ $# -gt 0 ]; do
@@ -92,7 +92,7 @@ echo ""
 rm BENCHMARK_*.log  || echo "benchmarking..."
 
 i=0
-while [ "$i" -le $INS ]; do
+while [ "$i" -lt $INS ]; do
   a=$((i * CORES))
   b=$((a + CORES - 1))
   memid=$((b/CORES_PER_NUMA % NUM_NUMA_NODE))

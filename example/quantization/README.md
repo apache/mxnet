@@ -17,17 +17,17 @@
 
 # Model Quantization with Calibration Examples
 
-This folder contains examples of quantizing a FP32 model with Intel® MKL-DNN to (U)INT8 model.
+This folder contains examples of quantizing a FP32 model with Intel® oneAPI Deep Neural Network Library (oneDNN) to (U)INT8 model.
 
 <h2 id="0">Contents</h2>
 
-* [1. Model Quantization with Intel® MKL-DNN](#1)
-<h2 id="1">Model Quantization with Intel® MKL-DNN</h2>
+* [1. Model Quantization with Intel® oneDNN](#1)
+<h2 id="1">Model Quantization with Intel® oneDNN</h2>
 
-Intel® MKL-DNN supports quantization with subgraph features on Intel® CPU Platform and can bring performance improvements on the [Intel® Xeon® Scalable Platform](https://www.intel.com/content/www/us/en/processors/xeon/scalable/xeon-scalable-platform.html). To apply quantization flow to your project directly, please refer [Optimize custom models with MKL-DNN backend](#TODO(agrygielski)).
+Intel® oneDNN supports quantization with subgraph features on Intel® CPU Platform and can bring performance improvements on the [Intel® Xeon® Scalable Platform](https://www.intel.com/content/www/us/en/processors/xeon/scalable/xeon-scalable-platform.html). To apply quantization flow to your project directly, please refer [Optimize custom models with oneDNN backend](#TODO(agrygielski)).
 
 ```
-usage: python imagenet_gen_qsym_mkldnn.py [-h] [--model MODEL] [--epoch EPOCH]
+usage: python imagenet_gen_qsym_onednn.py [-h] [--model MODEL] [--epoch EPOCH]
                                           [--no-pretrained] [--batch-size BATCH_SIZE]
                                           [--calib-dataset CALIB_DATASET]
                                           [--image-shape IMAGE_SHAPE]
@@ -38,7 +38,7 @@ usage: python imagenet_gen_qsym_mkldnn.py [-h] [--model MODEL] [--epoch EPOCH]
                                           [--quantized-dtype {auto,int8,uint8}]
                                           [--quiet]
 
-Generate a calibrated quantized model from a FP32 model with Intel MKL-DNN support
+Generate a calibrated quantized model from a FP32 model with Intel oneDNN support
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -87,9 +87,9 @@ optional arguments:
   --quiet               suppress most of log
 ```
 
-A new benchmark script `launch_inference_mkldnn.sh` has been designed to launch performance benchmark for float32 or int8 image-classification models with Intel® MKL-DNN.
+A new benchmark script `launch_inference_onednn.sh` has been designed to launch performance benchmark for float32 or int8 image-classification models with Intel® oneDNN.
 ```
-usage: bash ./launch_inference_mkldnn.sh -s symbol_file [-b batch_size] [-iter iteraton] [-ins instance] [-c cores/instance] [-h]
+usage: bash ./launch_inference_onednn.sh -s symbol_file [-b batch_size] [-iter iteraton] [-ins instance] [-c cores/instance] [-h]
 
 arguments:
   -h, --help                show this help message and exit
@@ -105,7 +105,7 @@ arguments:
 
 example: resnet int8 performance benchmark on c5.24xlarge(duo sockets, 24 physical cores per socket).
 
-    bash ./launch_inference_mkldnn.sh -s ./model/resnet50_v1-quantized-5batches-naive-symbol.json
+    bash ./launch_inference_onednn.sh -s ./model/resnet50_v1-quantized-5batches-naive-symbol.json
 
 will launch two instances for throughput benchmark and each instance will use 24 physical cores.
 ```
@@ -116,7 +116,7 @@ will launch two instances for throughput benchmark and each instance will use 24
 The following command is to download the pre-trained model from [MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/) and transfer it into the symbolic model which would be finally quantized. The [validation dataset](http://data.mxnet.io/data/val_256_q90.rec) is available for testing the pre-trained models:
 
 ```
-python imagenet_gen_qsym_mkldnn.py --model=resnet50_v1 --num-calib-batches=5 --calib-mode=naive
+python imagenet_gen_qsym_onednn.py --model=resnet50_v1 --num-calib-batches=5 --calib-mode=naive
 ```
 
 The model would be automatically replaced in fusion and quantization format. It is then saved as the quantized symbol and parameter files in the `./model` directory. Set `--model` to `resnet18_v1/resnet50_v1b/resnet101_v1` to quantize other models. The following command is to launch inference.
@@ -129,13 +129,13 @@ python imagenet_inference.py --symbol-file=./model/resnet50_v1-symbol.json --par
 python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batches-naive-symbol.json --param-file=./model/resnet50_v1-quantized-0000.params --rgb-mean=0.485,0.456,0.406 --rgb-std=0.229,0.224,0.225 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec
 
 # Launch dummy data Inference
-bash ./launch_inference_mkldnn.sh -s ./model/resnet50_v1-symbol.json
-bash ./launch_inference_mkldnn.sh -s ./model/resnet50_v1-quantized-5batches-naive-symbol.json
+bash ./launch_inference_onednn.sh -s ./model/resnet50_v1-symbol.json
+bash ./launch_inference_onednn.sh -s ./model/resnet50_v1-quantized-5batches-naive-symbol.json
 ```
 
 <h3 id='4'>Custom Model</h3>
 
-This script also supports custom symbolic models. Quantization layer configs can easily be added in `imagenet_gen_qsym_mkldnn.py` like below:
+This script also supports custom symbolic models. Quantization layer configs can easily be added in `imagenet_gen_qsym_onednn.py` like below:
 
 ```
 if logger:
@@ -163,12 +163,12 @@ Some tips on quantization configs:
 python imagenet_inference.py --symbol-file=./model/custom-symbol.json --param-file=./model/custom-0000.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/*
 ```
 
-3. Proper `rgb_mean`, `rgb_std` and `excluded_sym_names` should be added in `imagenet_gen_qsym_mkldnn.py` script.
+3. Proper `rgb_mean`, `rgb_std` and `excluded_sym_names` should be added in `imagenet_gen_qsym_onednn.py` script.
 
 4. Run following command for quantization:
 
 ```
-python imagenet_gen_qsym_mkldnn.py --model=custom --num-calib-batches=5 --calib-mode=naive
+python imagenet_gen_qsym_onednn.py --model=custom --num-calib-batches=5 --calib-mode=naive
 ```
 
 5. After quantization, the quantized symbol and parameter files will be saved in the `model/` directory.
@@ -180,5 +180,5 @@ python imagenet_gen_qsym_mkldnn.py --model=custom --num-calib-batches=5 --calib-
 python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-10batches-entropy-symbol.json --param-file=./model/resnet50_v1-quantized-10batches-entropy-0000.params --benchmark
 
 # Launch dummy data Inference
-bash ./launch_inference_mkldnn.sh -s ./model/*.json
+bash ./launch_inference_onednn.sh -s ./model/*.json
 ```

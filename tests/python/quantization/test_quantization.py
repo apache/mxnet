@@ -333,7 +333,6 @@ def test_quantized_elemwise_add():
         elemwise_add_fp32_exe.arg_dict[arg_names[1]][:] = dataB_val
 
         output = elemwise_add_fp32_exe.forward()[0]
-        print(output)
         qdataA = mx.sym.Variable(name='qdataA', shape=data_shape, dtype=qtype)
         qdataB = mx.sym.Variable(name='qdataB', shape=data_shape, dtype=qtype)
         min_dataA = mx.sym.Variable(name='min_dataA', dtype='float32')
@@ -351,18 +350,16 @@ def test_quantized_elemwise_add():
         elemwise_add_int8_exe.arg_dict[qarg_names[4]][:] = data_low
         elemwise_add_int8_exe.arg_dict[qarg_names[5]][:] = data_high
         qoutput, min_range, max_range = elemwise_add_int8_exe.forward()
-        print(qoutput)
         int8_rslt = qoutput.astype(output.dtype)*max_range/0x7fffffff
-        print(int8_rslt)
         diff = mx.nd.abs(output - int8_rslt)
         cond = mx.nd.lesser(2, diff).sum().asscalar()
         assert cond == 0
 
     for qtype in ['int8', 'uint8']:
         check_quantized_elemwise_add((4, 6), qtype)
-        # check_quantized_elemwise_add((13, 74, 52), qtype)
-        # check_quantized_elemwise_add((3, 4, 56, 56), qtype)
-        # check_quantized_elemwise_add((32, 56, 64, 11), qtype)
+        check_quantized_elemwise_add((13, 74, 52), qtype)
+        check_quantized_elemwise_add((3, 4, 56, 56), qtype)
+        check_quantized_elemwise_add((32, 56, 64, 11), qtype)
 
 
 def test_quantized_elemwise_mul():
