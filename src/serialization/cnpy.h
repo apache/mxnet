@@ -29,6 +29,8 @@
 #include <utility>
 #include <vector>
 
+#include "miniz.h"
+
 namespace mxnet {
 
 namespace npy {
@@ -40,8 +42,7 @@ NDArray load_array(const std::string& fname);
 
 namespace npz {
 
-void save_array(int write_mode, const std::string& zip_fname, const std::string& array_name,
-                const NDArray& array);
+void save_array(mz_zip_archive* archive, const std::string& array_name, const NDArray& array);
 
 std::pair<std::vector<NDArray>, std::vector<std::string>>  load_arrays(const std::string& fname);
 

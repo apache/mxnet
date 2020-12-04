@@ -39,7 +39,7 @@ namespace tvm {
 namespace runtime {
 
 void TVMOpModule::Load(const std::string &filepath) {
-  static const PackedFunc *f_load = Registry::Get("module._LoadFromFile");
+  static const PackedFunc *f_load = Registry::Get("runtime.ModuleLoadFromFile");
   std::lock_guard<std::mutex> lock(mutex_);
   Module module = (*f_load)(filepath, "");
   module_ptr_ = std::make_shared<Module>();

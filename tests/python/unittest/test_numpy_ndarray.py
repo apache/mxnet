@@ -1000,6 +1000,16 @@ def test_np_ndarray_indexing():
 
 
 @use_np
+@pytest.mark.parametrize('load_fn', [_np.load, npx.load])
+def test_np_save_load_large_ndarrays(load_fn, tmp_path):
+    weight = mx.np.arange(32768 * 512).reshape((32768, 512))
+    mx.npx.savez(str(tmp_path / 'params.npz'), weight=weight)
+    arr_loaded = load_fn(str(tmp_path / 'params.npz'))['weight']
+    assert _np.array_equal(arr_loaded.asnumpy() if load_fn is npx.load
+                           else arr_loaded, weight)
+
+
+@use_np
 @pytest.mark.serial
 @pytest.mark.parametrize('load_fn', [_np.load, npx.load])
 def test_np_save_load_ndarrays(load_fn):
@@ -1017,7 +1027,7 @@ def test_np_save_load_ndarrays(load_fn):
 
     # test save/load a list of ndarrays
     with TemporaryDirectory() as work_dir:
-        fname = os.path.join(work_dir, 'dataset.npy')
+        fname = os.path.join(work_dir, 'dataset.npz')
         npx.savez(fname, *array_list)
         if load_fn is _np.load:
             with load_fn(fname) as array_dict_loaded:  # Ensure NPZFile is closed
@@ -1042,7 +1052,7 @@ def test_np_save_load_ndarrays(load_fn):
     for k, v in zip(keys, array_list):
         arr_dict[k] = v
     with TemporaryDirectory() as work_dir:
-        fname = os.path.join(work_dir, 'dataset.npy')
+        fname = os.path.join(work_dir, 'dataset.npz')
         npx.savez(fname, **arr_dict)
         if load_fn is _np.load:
             with load_fn(fname) as arr_dict_loaded:  # Ensure NPZFile is closed

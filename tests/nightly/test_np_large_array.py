@@ -208,6 +208,7 @@ def test_argmax():
 
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_trigonometric_family():
     def batch_check(x, funcs):
         for f in funcs:
@@ -2131,6 +2132,23 @@ def test_dsplit():
 
 
 @use_np
+def test_unique():
+    inp = np.zeros((2, HALF_INT_OVERFLOW))
+    assertRaises(ValueError, np.unique, inp, axis=1)
+
+
+@use_np
+def test_repeat():
+    inp = np.ones((2, HALF_INT_OVERFLOW))
+    assertRaises(ValueError, np.repeat, inp, repeats=2, axis=1)
+
+
+@use_np
+def test_indices():
+    assertRaises(ValueError, np.indices, (2, HALF_INT_OVERFLOW))
+
+
+@use_np    
 def test_tril_indices():
     N = 2**16
     data = np.tril_indices(N, -1)
@@ -2253,6 +2271,7 @@ def test_interp():
 
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_edge_padding():
     inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
     out = np.pad(inp, ((1, 1), (1, 1)), "edge")
@@ -2271,6 +2290,7 @@ def test_constant_padding():
 
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_minimum_padding():
     inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
     out = np.pad(inp, ((1, 1), (1, 1)), "minimum")
@@ -2280,6 +2300,7 @@ def test_minimum_padding():
 
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_reflection_padding():
     inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
     out = np.pad(inp, ((1, 1), (1, 1)), "reflect")
@@ -2289,6 +2310,7 @@ def test_reflection_padding():
 
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_symmetric_padding():
     inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
     out = np.pad(inp, ((1, 1), (1, 1)), "symmetric")
@@ -2323,4 +2345,3 @@ def test_insert():
     assert out[0, 1] == 1 and out[-1, 1] == 2
     assert out2[1] == 5 and out2[2] == 6
     assertRaises(MXNetError, np.insert, arr=inp3, obj=np.array([2, 2], dtype=np.int64), values=np.array([5, 6]))
-

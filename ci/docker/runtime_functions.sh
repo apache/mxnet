@@ -314,11 +314,10 @@ build_ubuntu_cpu() {
 build_ubuntu_cpu_openblas() {
     set -ex
     cd /work/build
-    CXXFLAGS="-Wno-error=strict-overflow" CC=gcc-7 CXX=g++-7 cmake \
+    CXXFLAGS="-Wno-error=strict-overflow" cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_TVM_OP=ON \
-        -DUSE_CPP_PACKAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
@@ -332,7 +331,7 @@ build_ubuntu_cpu_openblas() {
 build_ubuntu_cpu_mkl() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=OFF \
         -DUSE_MKLDNN=OFF \
@@ -348,7 +347,7 @@ build_ubuntu_cpu_mkl() {
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DCMAKE_BUILD_TYPE=Debug \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
@@ -365,7 +364,7 @@ build_ubuntu_cpu_cmake_debug() {
 build_ubuntu_cpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -384,8 +383,6 @@ build_ubuntu_cpu_cmake_asan() {
     set -ex
 
     cd /work/build
-    export CXX=g++-8
-    export CC=gcc-8
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -396,8 +393,6 @@ build_ubuntu_cpu_cmake_asan() {
         -DUSE_GPERFTOOLS=OFF \
         -DUSE_JEMALLOC=OFF \
         -DUSE_ASAN=ON \
-        -DUSE_CPP_PACKAGE=ON \
-        -DMXNET_USE_CPU=ON \
         /work/mxnet
     make -j $(nproc) mxnet
 }
@@ -405,11 +400,9 @@ build_ubuntu_cpu_cmake_asan() {
 build_ubuntu_cpu_gcc8_werror() {
     set -ex
     cd /work/build
-    CXX=g++-8 CC=gcc-8 cmake \
+    CC=gcc-8 CXX=g++-8 cmake \
         -DUSE_CUDA=OFF \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-        -DUSE_CPP_PACKAGE=ON \
-        -DMXNET_USE_CPU=ON \
         -GNinja /work/mxnet
     ninja
 }
@@ -420,8 +413,6 @@ build_ubuntu_cpu_clang10_werror() {
     CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_CUDA=OFF \
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-       -DUSE_CPP_PACKAGE=ON \
-       -DMXNET_USE_CPU=ON \
        -GNinja /work/mxnet
     ninja
 }
@@ -438,9 +429,9 @@ build_ubuntu_gpu_clang10_werror() {
 
     CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_CUDA=ON \
+       -DUSE_NVML=OFF \
        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-       -DUSE_CPP_PACKAGE=OFF \
        -GNinja /work/mxnet
     ninja
 }
@@ -448,13 +439,13 @@ build_ubuntu_gpu_clang10_werror() {
 build_ubuntu_cpu_clang6() {
     set -ex
     cd /work/build
+    export OpenBLAS_HOME=/usr/local/openblas-clang/
     CXX=clang++-6.0 CC=clang-6.0 cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_DIST_KVSTORE=ON \
-        -DUSE_CPP_PACKAGE=ON \
         -G Ninja /work/mxnet
     ninja
 }
@@ -462,13 +453,13 @@ build_ubuntu_cpu_clang6() {
 build_ubuntu_cpu_clang100() {
     set -ex
     cd /work/build
+    export OpenBLAS_HOME=/usr/local/openblas-clang/
     CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=OFF \
        -DUSE_CUDA=OFF \
        -DUSE_OPENMP=ON \
        -DUSE_DIST_KVSTORE=ON \
-       -DUSE_CPP_PACKAGE=ON \
        -G Ninja /work/mxnet
     ninja
 }
@@ -476,6 +467,7 @@ build_ubuntu_cpu_clang100() {
 build_ubuntu_cpu_clang_tidy() {
     set -ex
     cd /work/build
+    export OpenBLAS_HOME=/usr/local/openblas-clang/
     # TODO(leezu) USE_OPENMP=OFF 3rdparty/dmlc-core/CMakeLists.txt:79 broken?
     CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -484,7 +476,6 @@ build_ubuntu_cpu_clang_tidy() {
        -DUSE_OPENMP=OFF \
        -DCMAKE_BUILD_TYPE=Debug \
        -DUSE_DIST_KVSTORE=ON \
-       -DUSE_CPP_PACKAGE=ON \
        -DCMAKE_CXX_CLANG_TIDY=clang-tidy-10 \
        -G Ninja /work/mxnet
     ninja
@@ -493,11 +484,11 @@ build_ubuntu_cpu_clang_tidy() {
 build_ubuntu_cpu_clang6_mkldnn() {
     set -ex
     cd /work/build
+    export OpenBLAS_HOME=/usr/local/openblas-clang/
     CXX=clang++-6.0 CC=clang-6.0 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
        -DUSE_CUDA=OFF \
-       -DUSE_CPP_PACKAGE=ON \
        -DUSE_OPENMP=OFF \
        -G Ninja /work/mxnet
     ninja
@@ -506,11 +497,11 @@ build_ubuntu_cpu_clang6_mkldnn() {
 build_ubuntu_cpu_clang100_mkldnn() {
     set -ex
     cd /work/build
+    export OpenBLAS_HOME=/usr/local/openblas-clang/
     CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
        -DUSE_CUDA=OFF \
-       -DUSE_CPP_PACKAGE=ON \
        -G Ninja /work/mxnet
     ninja
 }
@@ -518,14 +509,13 @@ build_ubuntu_cpu_clang100_mkldnn() {
 build_ubuntu_cpu_mkldnn() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
-        -DUSE_CPP_PACKAGE=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
@@ -534,7 +524,7 @@ build_ubuntu_cpu_mkldnn() {
 build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=OFF \
         -DUSE_MKLDNN=ON \
@@ -547,16 +537,10 @@ build_ubuntu_cpu_mkldnn_mkl() {
     ninja
 }
 
-build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda101_cudnn7
-}
-
 build_ubuntu_gpu_tensorrt() {
 
     set -ex
 
-    export CC=gcc-7
-    export CXX=g++-7
     export ONNX_NAMESPACE=onnx
 
     # Build ONNX
@@ -597,6 +581,7 @@ build_ubuntu_gpu_tensorrt() {
           -DUSE_TENSORRT=1                        \
           -DUSE_OPENMP=0                          \
           -DUSE_MKLDNN=0                          \
+          -DUSE_NVML=OFF                          \
           -DUSE_MKL_IF_AVAILABLE=OFF              \
           -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
           -G Ninja                                \
@@ -608,12 +593,12 @@ build_ubuntu_gpu_tensorrt() {
 build_ubuntu_gpu_mkldnn() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DUSE_CPP_PACKAGE=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
@@ -622,29 +607,29 @@ build_ubuntu_gpu_mkldnn() {
 build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=OFF \
-        -DUSE_CPP_PACKAGE=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja /work/mxnet
     ninja
 }
 
-build_ubuntu_gpu_cuda101_cudnn7() {
+build_ubuntu_gpu() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=ON \
         -DUSE_MKLDNN=OFF \
-        -DUSE_CPP_PACKAGE=ON \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
@@ -652,47 +637,27 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     ninja
 }
 
-build_ubuntu_gpu_cuda101_cudnn7_debug() {
+build_ubuntu_gpu_debug() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DCMAKE_BUILD_TYPE=Debug \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=ON \
         -DUSE_MKLDNN=OFF \
-        -DUSE_CPP_PACKAGE=ON \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -G Ninja /work/mxnet
-    ninja
-}
-
-build_ubuntu_gpu_cmake() {
-    set -ex
-    cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
-        -DUSE_SIGNAL_HANDLER=ON                 \
-        -DUSE_CUDA=ON                           \
-        -DUSE_CUDNN=ON                          \
-        -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=OFF                        \
-        -DUSE_DIST_KVSTORE=ON                   \
-        -DCMAKE_BUILD_TYPE=Release              \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DBUILD_CYTHON_MODULES=1                \
-        -G Ninja                                \
-        /work/mxnet
-
     ninja
 }
 
 build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
@@ -706,12 +671,12 @@ build_ubuntu_cpu_large_tensor() {
 build_ubuntu_gpu_large_tensor() {
     set -ex
     cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
+    cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
+        -DUSE_NVML=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=ON                         \
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
@@ -913,11 +878,13 @@ unittest_centos7_gpu() {
 integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+	export MXNET_SUBGRAPH_VERBOSE=0
+	export DMLC_LOG_STACK_TRACE_DEPTH=10
 	python3 tests/python/unittest/onnx/backend_test.py
 	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/mxnet_export_test.py
 	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_models.py
 	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_node.py
+	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_onnxruntime.py
 }
 
 integrationtest_ubuntu_cpu_dist_kvstore() {
@@ -1052,7 +1019,7 @@ nightly_test_large_tensor() {
     set -ex
     export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest --timeout=0 tests/nightly/test_np_large_array.py
+    pytest --timeout=0 --forked tests/nightly/test_np_large_array.py
 }
 
 #Tests Model backwards compatibility on MXNet
