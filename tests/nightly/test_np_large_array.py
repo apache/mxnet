@@ -2132,6 +2132,23 @@ def test_dsplit():
 
 
 @use_np
+def test_unique():
+    inp = np.zeros((2, HALF_INT_OVERFLOW))
+    assertRaises(ValueError, np.unique, inp, axis=1)
+
+
+@use_np
+def test_repeat():
+    inp = np.ones((2, HALF_INT_OVERFLOW))
+    assertRaises(ValueError, np.repeat, inp, repeats=2, axis=1)
+
+
+@use_np
+def test_indices():
+    assertRaises(ValueError, np.indices, (2, HALF_INT_OVERFLOW))
+
+
+@use_np    
 def test_tril_indices():
     N = 2**16
     data = np.tril_indices(N, -1)
@@ -2328,4 +2345,3 @@ def test_insert():
     assert out[0, 1] == 1 and out[-1, 1] == 2
     assert out2[1] == 5 and out2[2] == 6
     assertRaises(MXNetError, np.insert, arr=inp3, obj=np.array([2, 2], dtype=np.int64), values=np.array([5, 6]))
-
