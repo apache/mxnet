@@ -100,21 +100,23 @@ set(FORTRAN_DIR \\\"\$\{CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES\}\\\")
     endif()
     if(EXISTS "${OpenBLAS_INCLUDE_DIR}/lapacke.h")
       message("Detected lapacke.h, automatically using the LAPACKE interface")
-      set(USE_LAPACKE_INTERFACE ON CACHE BOOL "Use LAPACKE interface for lapack support" FORCE)
+      add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=1)
+      set(USE_LAPACKE_INTERFACE 1)
       if(OPENBLAS_ILP64)
-        message("Automatically setting USE_ILP64_LAPACKE=1")
-        set(USE_ILP64_LAPACKE ON CACHE BOOL "Use ILP64 LAPACKE interface" FORCE)
+        message("Detected ILP64 LAPACKE")
+        add_definitions(-DMXNET_USE_ILP64_LAPACKE=1)
       endif()
-    endif()
-    execute_process(COMMAND ${CMAKE_NM} -g ${OpenBLAS_LIB}
-                    COMMAND grep sgetri_
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                    OUTPUT_VARIABLE OPENBLAS_CONTAINS_C_LAPACK_OUT
-                    RESULT_VARIABLE OPENBLAS_CONTAINS_C_LAPACK_RET)
-    if(OPENBLAS_CONTAINS_C_LAPACK_OUT STREQUAL ""
-       AND NOT OPENBLAS_CONTAINS_C_LAPACK_RET
-       AND USE_LAPACK)
-      list(APPEND mshadow_LINKER_LIBS lapack)
+    else()
+      execute_process(COMMAND ${CMAKE_NM} -g ${OpenBLAS_LIB}
+                      COMMAND grep sgetri_
+                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                      OUTPUT_VARIABLE OPENBLAS_CONTAINS_C_LAPACK_OUT
+                      RESULT_VARIABLE OPENBLAS_CONTAINS_C_LAPACK_RET)
+      if(OPENBLAS_CONTAINS_C_LAPACK_OUT STREQUAL ""
+         AND NOT OPENBLAS_CONTAINS_C_LAPACK_RET
+         AND USE_LAPACK)
+        list(APPEND mshadow_LINKER_LIBS lapack)
+      endif()
     endif()
   endif()
 elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
