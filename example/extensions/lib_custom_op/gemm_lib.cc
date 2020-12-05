@@ -185,7 +185,7 @@ class MyStatefulGemm : public CustomStatefulOp {
                           std::unordered_map<std::string, std::string>  attrs)
     : count(count), attrs_(std::move(attrs)) {}
 
-  ~MyStatefulGemm() {
+  override ~MyStatefulGemm() {
     std::cout << "Info: destructing MyStatefulGemm" << std::endl;
   }
   
