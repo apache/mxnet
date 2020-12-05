@@ -854,7 +854,7 @@ void mxnet::ext::CustomOp::raiseDuplicateContextError() {
 }
 
 mxnet::ext::CustomStatefulOp::CustomStatefulOp() : ignore_warn(false), created(false) {}
-mxnet::ext::CustomStatefulOp::~CustomStatefulOp() {}
+mxnet::ext::CustomStatefulOp::~CustomStatefulOp() = default;
 
 mxnet::ext::CustomStatefulOpWrapper::~CustomStatefulOpWrapper() {
   destroy_(instance);
