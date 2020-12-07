@@ -184,6 +184,10 @@ class MyStatefulGemm : public CustomStatefulOp {
                           const std::unordered_map<std::string, std::string>& attrs)
     : count(count), attrs_(attrs) {}
 
+  ~MyStatefulGemm() {
+    std::cout << "Info: destructing MyStatefulGemm" << std::endl;
+  }
+  
   MXReturnValue Forward(std::vector<MXTensor>* inputs,
                         std::vector<MXTensor>* outputs,
                         const OpResource& op_res) {
@@ -210,7 +214,7 @@ MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& 
   // testing passing of keyword arguments
   int count = attrs.count("test_kw") > 0 ? std::stoi(attrs.at("test_kw")) : 0;
   // creating stateful operator instance
-  *op_inst = new MyStatefulGemm(count, attrs);
+  *op_inst = CustomStatefulOp::create<MyStatefulGemm>(count, attrs);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }

@@ -544,6 +544,9 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
   opCallCreateOpState_t callCreateOpState =
     get_func<opCallCreateOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLCREATEOPSTATE_STR));
 
+  opCallDestroyOpState_t callDestroyOpState =
+    get_func<opCallDestroyOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLDESTROYOPSTATE_STR));
+
   opCallFStatefulComp_t callFStatefulComp =
     get_func<opCallFStatefulComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFULCOMP_STR));
 
@@ -1171,7 +1174,13 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       << "Error custom library failed to create stateful operator '" << name_str << "'" << msgs;
 
       CustomStatefulOp* state_op = reinterpret_cast<CustomStatefulOp*>(state_op_inst);
-      return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op);
+      if (!state_op->wasCreated() && !state_op->ignore_warn)
+        LOG(INFO) << "WARNING! Custom stateful op " << state_op_inst << " was created without "
+                  << "calling CustomStatefulOp::create(). Please ensure this object was "
+                  << "allocated with 'new' since it will be destructed with 'delete'. "
+                  << "To suppress this message without calling CustomStatefulOp::create() "
+                  << "set ignore_warn to 'true' on custom stateful op instance.";
+      return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op, callDestroyOpState);
     };
 
     /* -------------- BELOW IS THE REGISTRATION FOR CUSTOM OPERATORS --------------- */
