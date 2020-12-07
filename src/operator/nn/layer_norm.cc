@@ -131,9 +131,9 @@ void LayerNormCPUKernel(size_t width,
                         Data *std) {
   // Parallelize over independent instances to normalize.
   // MSVC says index variable in OpenMP 'for' statement must have signed integral type.
-  const ssize_t signed_instances = static_cast<ssize_t>(instances);
+  const mshadow::index_t signed_instances = static_cast<mshadow::index_t>(instances);
 #pragma omp parallel for
-  for (ssize_t j = 0; j < signed_instances; ++j) {
+  for (nnvm::dim_t j = 0; j < signed_instances; ++j) {
     const Data *from = data + j * width;
 
     // Sum the values to compute mean.
