@@ -2443,32 +2443,35 @@ def test_relu():
 
 @use_np
 def test_leaky_relu():
-    a = -1 * mx.np.ones(shape=(LARGE_X, SMALL_Y))
+    inp = -1 * mx.np.ones(shape=(LARGE_X, SMALL_Y))
+    inp.attach_grad()
 
     def check_leaky():
-        res = mx.npx.leaky_relu(a, act_type="leaky", slope=0.3)
-        assert_almost_equal(res[-1][-1], 0.3*a[-1][-1], atol=1e-3, rtol=1e-3)
+        with mx.autograd.record():
+            res = mx.npx.leaky_relu(inp, act_type="leaky", slope=0.3)
+            res.backward()
+        assert_almost_equal(res[-1][-1], 0.3 * inp[-1][-1], atol=1e-3, rtol=1e-3)
+        assert_almost_equal(inp.grad[0][-1], -0.3 * inp[-1][-1], atol=1e-3, rtol=1e-3)
 
     def check_elu():
-        res = mx.npx.leaky_relu(a, act_type="elu", slope=0.3)
-        assert_almost_equal(res[-1][-1], 0.3*(_np.exp(a[-1][-1])-1), atol=1e-3, rtol=1e-3)
+        with mx.autograd.record():
+            res = mx.npx.leaky_relu(inp, act_type="elu", slope=0.3)
+            res.backward()
+        assert_almost_equal(res[-1][-1], 0.3*(_np.exp(inp[-1][-1])-1), atol=1e-3, rtol=1e-3)
+        assert_almost_equal(inp.grad[-1][0], 0.3*_np.exp(inp[-1][-1]), atol=1e-3, rtol=1e-3)
 
     def check_selu():
         lam = 1.0507009873554804934193349852946
         alpha = 1.6732632423543772848170429916717
-        res = mx.npx.leaky_relu(a, act_type="selu")
-        assert_almost_equal(res[-1][-1], (lam * alpha * (_np.exp(a[-1][-1])-1)), atol=1e-3, rtol=1e-3)
-
-    def check_rrelu():
-        lower = 0.125
-        upper = 0.333999991
-        res = mx.npx.leaky_relu(a, act_type="rrelu")
-        assert_almost_equal(res[0][-1][-1], (lower + upper) / 2 * a[-1][-1], atol=1e-3, rtol=1e-3)
+        with mx.autograd.record():
+            res = mx.npx.leaky_relu(inp, act_type="selu")
+            res.backward()
+        assert_almost_equal(res[-1][-1], (lam * alpha * (_np.exp(inp[-1][-1])-1)), atol=1e-3, rtol=1e-3)
+        assert_almost_equal(inp.grad[0][0], 0.590423, atol=1e-3, rtol=1e-3)
 
     check_leaky()
     check_elu()
     check_selu()
-    check_rrelu()
 
 
 @use_np
@@ -2484,3 +2487,21 @@ def test_norm():
     assert inp.grad.shape == shape
     assert_almost_equal(inp.grad[0][0], 1/5, atol=1e-3, rtol=1e-3)
 
+
+@use_np
+def test_embedding():
+    inp = np.arange(0, 4, dtype=np.int32).reshape(2, 2)
+    vec = np.ones((4, INT_OVERFLOW))
+    vec[0][INT_OVERFLOW-1] = 3
+    vec[1][INT_OVERFLOW//2] = 2
+    vec[2][1] = 2
+    vec[3][0] = 0
+    out = npx.embedding(inp, vec, 4, INT_OVERFLOW)
+    assert out[0][0][INT_OVERFLOW-1] == 3
+    assert out[0][0][0] == 1
+    assert out[0][1][INT_OVERFLOW//2] == 2
+    assert out[0][1][1] == 1
+    assert out[1][0][1] == 2
+    assert out[1][0][INT_OVERFLOW//2] == 1
+    assert out[1][1][0] == 0
+    assert out[1][1][INT_OVERFLOW-1] == 1
