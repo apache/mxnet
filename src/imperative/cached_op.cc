@@ -327,10 +327,9 @@ bool CachedOp::SetBackwardGraph(
   node_range = {num_forward_nodes, idx.num_nodes()};
   entry_range = {num_forward_entries, idx.num_node_entries()};
 
-  bool contain_dynamic_shape = false;
   bool match = true;
   match &= CheckAndInferShape(&g, std::move(shapes), false,
-                              node_range, entry_range, &contain_dynamic_shape);
+                              node_range, entry_range);
   match &= CheckAndInferType(&g, std::move(dtypes), false,
                              node_range, entry_range);
   exec::DevMaskVector dev_mask(idx.num_nodes(), default_ctx.dev_mask());
