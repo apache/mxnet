@@ -14,8 +14,8 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
-# Necessary components that are not in the network
 
+# Step 4: Necessary components that are not in the network
 
 Data and models are not the only components that
 you need to train a deep learning model. In this notebook, you will

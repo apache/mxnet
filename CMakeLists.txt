@@ -316,6 +316,7 @@ if(USE_ASAN)
 endif()
 
 list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
+message("After choosing blas, linking to ${mxnet_LINKER_LIBS}")
 
 foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
     include_directories(${var})
@@ -443,18 +444,18 @@ elseif(UNIX)
   list(APPEND mxnet_LINKER_LIBS Threads::Threads)
 endif()
 
-
 # ---[ LAPack
 if(USE_LAPACK)
   message("USE_LAPACK is ON")
   add_definitions(-DMXNET_USE_LAPACK=1)
-  # In the CMAKE_BUILD_TYPE="Distribution" case, we link against Blas libraries
-  # that already provide lapack symbols. Thus -llapack would be wrong.
-  if (NOT MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
-    list(APPEND mxnet_LINKER_LIBS lapack)
+  if(NOT USE_LAPACKE_INTERFACE)
+    # BLAS=open case is handled in ChooseBlas.cmake
+    if(NOT MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution"
+       AND NOT BLAS STREQUAL "Open" AND NOT BLAS STREQUAL "open")
+      list(APPEND mxnet_LINKER_LIBS lapack)
+    endif()
   endif()
 endif()
-
 
 # ---[ jemalloc
 if(USE_JEMALLOC)

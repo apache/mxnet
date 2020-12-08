@@ -126,6 +126,7 @@ valid_data_loader = mx.gluon.data.DataLoader(valid_dataset, batch_size, num_work
 With both `DataLoader`s defined, you can now train a model to classify each image and evaluate the validation loss at each epoch. See the next tutorial for how this is done.
 
 # Using own data with included `Dataset`s
+
 Gluon has a number of different Dataset classes for working with your own image data straight out-of-the-box. You can get started quickly using the mxnet.gluon.data.vision.datasets.ImageFolderDataset which loads images directly from a user-defined folder, and infers the label (i.e. class) from the folders.
 
 Here you will run through an example for image classification, but a similar process applies for other vision tasks. If you already have your own collection of images to work with you should partition your data into training and test sets, and place all objects of the same class into seperate folders. Similar to:
@@ -197,11 +198,13 @@ imshow(data.asnumpy(), cmap='gray')
 ![datasets caltech101 face](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/caltech101_face.png)<!--notebook-skip-line-->
 
 # Using your own data with custom `Dataset`s
+
 Sometimes you have data that doesn't quite fit the format expected by the included Datasets. You might be able to preprocess your data to fit the expected format, but it is easy to create your own dataset to do this.
 
 All you need to do is create a class that implements a `__getitem__` method, that returns a sample (i.e. a tuple of mx.nd.NDArrays).
 
 # New in MXNet 2.0: faster C++ backend dataloaders
+
 As part of an effort to speed up the current data loading pipeline using gluon dataset and dataloader, a new dataloader was created that uses only a C++ backend and avoids potentially slow calls to Python functions.
 
 See [original issue](https://github.com/apache/incubator-mxnet/issues/17269), [pull request](https://github.com/apache/incubator-mxnet/pull/17464) and [implementation](https://github.com/apache/incubator-mxnet/pull/17841).

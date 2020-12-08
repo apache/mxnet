@@ -53,7 +53,7 @@
 #endif
 
 /* Make sure to update the version number everytime you make changes */
-#define MX_LIBRARY_VERSION 10
+#define MX_LIBRARY_VERSION 11
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
@@ -686,6 +686,18 @@ class CustomOpSelector {
  */
 class CustomStatefulOp {
  public:
+  CustomStatefulOp();
+  virtual ~CustomStatefulOp();
+
+  template<class A, typename ...Ts>
+  static CustomStatefulOp* create(Ts...args) {
+    CustomStatefulOp* op = new A(args...);
+    op->created = true;
+    return op;
+  }
+
+  bool wasCreated() { return created; }
+
   virtual MXReturnValue Forward(std::vector<MXTensor>* inputs,
                                 std::vector<MXTensor>* outputs,
                                 const OpResource& op_res) = 0;
@@ -695,15 +707,11 @@ class CustomStatefulOp {
     MX_ERROR_MSG << "Error! Operator does not support backward" << std::endl;
     return MX_FAIL;
   }
-};
 
-/*! \brief StatefulOp wrapper class to pass to backend OpState */
-class CustomStatefulOpWrapper {
- public:
-  explicit CustomStatefulOpWrapper(CustomStatefulOp* inst) : instance(inst) {}
-  CustomStatefulOp* get_instance() { return instance; }
+  bool ignore_warn;
+
  private:
-  CustomStatefulOp* instance;
+  bool created;
 };
 
 /*! \brief Custom Operator function templates */
@@ -1009,6 +1017,9 @@ typedef int (*opCallCreateOpState_t)(createOpState_t create_op, const char* cons
                                      int dev_id, unsigned int** inshapes, int* indims,
                                      int num_in, const int* intypes, void** state_op);
 
+#define MXLIB_OPCALLDESTROYOPSTATE_STR "_opCallDestroyOpState"
+typedef int (*opCallDestroyOpState_t)(void* state_op);
+
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
 typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      const int64_t** inshapes, int* indims,
@@ -1118,6 +1129,18 @@ typedef int (*msgSize_t)(void);
 #define MXLIB_MSGGET_STR "_msgGet"
 typedef int (*msgGet_t)(int idx, const char** msg);
 
+/*! \brief StatefulOp wrapper class to pass to backend OpState */
+class CustomStatefulOpWrapper {
+ public:
+  ~CustomStatefulOpWrapper();
+  explicit CustomStatefulOpWrapper(CustomStatefulOp* inst, opCallDestroyOpState_t destroy)
+    : instance(inst), destroy_(destroy) {}
+  CustomStatefulOp* get_instance() { return instance; }
+ private:
+  CustomStatefulOp* instance;
+  opCallDestroyOpState_t destroy_;
+};
+
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #define MX_INT_RET  __declspec(dllexport) int __cdecl
 #define MX_VOID_RET __declspec(dllexport) void __cdecl
@@ -1199,6 +1222,9 @@ extern "C" {
                                   const char* const* vals, int num, const char* dev_type,
                                   int dev_id, unsigned int** inshapes, int* indims,
                                   int num_in, const int* intypes, void** state_op);
+
+  /*! \brief returns status of deleting StatefulOp instance for operator from library */
+  MX_VOID_RET _opCallDestroyOpState(void* state_op);
 
   /*! \brief returns status of calling Stateful Forward/Backward for operator from library */
   MX_INT_RET _opCallFStatefulCompute(int is_forward, void* state_op, const int64_t** inshapes,
