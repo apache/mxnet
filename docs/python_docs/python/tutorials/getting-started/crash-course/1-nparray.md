@@ -28,7 +28,7 @@ To get started, run the following commands to import the `np` package together
 with the NumPy extensions package `npx`. Together, `np` with `npx` make up the
 NP on MXNet front end.
 
-```python
+```{.python .input}
 import mxnet as mx
 from mxnet import np, npx
 npx.set_np()  # Activate NumPy-like mode.
@@ -38,21 +38,21 @@ In this step, create a 2D array (also called a matrix). The following code
 example creates a matrix with values from two sets of numbers: 1, 2, 3 and 4, 5,
 6. This might also be referred to as a tuple of a tuple of integers.
 
-```python
+```{.python .input}
 np.array(((1, 2, 3), (5, 6, 7)))
 ```
 
 You can also create a very simple matrix with the same shape (2 rows by 3
 columns), but fill it with 1's.
 
-```python
+```{.python .input}
 x = np.full((2, 3), 1) 
 x
 ```
 
 Alternatively, you could use the following array creation routine.
 
-```python
+```{.python .input}
 x = np.ones((2, 3)) 
 x
 ```
@@ -61,7 +61,7 @@ You can create arrays whose values are sampled randomly. For example, sampling
 values uniformly between -1 and 1. The following code example creates the same
 shape, but with random sampling.
 
-```python
+```{.python .input}
 y = np.random.uniform(-1, 1, (2, 3))
 y
 ```
@@ -73,27 +73,27 @@ addition, `.dtype` tells the data type of the stored values. As you notice when
 we generate random uniform values we generate `float32` not `float64` as normal
 NumPy arrays.
 
-```python
+```{.python .input}
 (x.shape, x.size, x.dtype)
 ```
 
 You could also specifiy the datatype when you create your ndarray.
 
-```python
+```{.python .input}
 x = np.full((2, 3), 1, dtype="int8") 
 x.dtype
 ```
 
 Versus the default of `float32`.
 
-```python
+```{.python .input}
 x = np.full((2, 3), 1) 
 x.dtype
 ```
 
 When we multiply, by default we use the datatype with the most precision.
 
-```python
+```{.python .input}
 x = x.astype("int8") + x.astype(int) + x.astype("float32")
 x.dtype
 ```
@@ -104,48 +104,48 @@ A ndarray supports a large number of standard mathematical operations. Here are
 some examples. You can perform element-wise multiplication by using the
 following code example.
 
-```python
+```{.python .input}
 x * y
 ```
 
 You can perform exponentiation by using the following code example.
 
-```python
+```{.python .input}
 np.exp(y)
 ```
 
 You can also find a matrix’s transpose to compute a proper matrix-matrix product
 by using the following code example.
 
-```python
+```{.python .input}
 np.dot(x, y.T)
 ```
 
 Alternatively, you could use the matrix multiplication function.
 
-```python
+```{.python .input}
 np.matmul(x, y.T)
 ```
 
 You can leverage built in operators, like summation.
 
-```python
+```{.python .input}
 x.sum()
 ```
 
 You can also gather a mean value.
 
-```python
+```{.python .input}
 x.mean()
 ```
 
 You can perform flatten and reshape just like you normally would in NumPy!
 
-```python
+```{.python .input}
 x.flatten()
 ```
 
-```python
+```{.python .input}
 x.reshape(6, 1)
 ```
 
@@ -155,19 +155,19 @@ The ndarrays support slicing in many ways you might want to access your data.
 The following code example shows how to read a particular element, which returns
 a 1D array with shape `(1,)`.
 
-```python
+```{.python .input}
 y[1, 2]
 ```
 
 This example shows how to read the second and third columns from `y`.
 
-```python
+```{.python .input}
 y[:, 1:3]
 ```
 
 This example shows how to write to a specific element.
 
-```python
+```{.python .input}
 y[:, 1:3] = 2
 y
 ```
@@ -175,7 +175,7 @@ y
 You can perform multi-dimensional slicing, which is shown in the following code
 example.
 
-```python
+```{.python .input}
 y[1:2, 0:2] = 4
 y
 ```
@@ -185,12 +185,12 @@ y
 You can convert MXNet ndarrays to and from NumPy ndarrays, as shown in the
 following example. The converted arrays do not share memory.
 
-```python
+```{.python .input}
 a = x.asnumpy()
 (type(a), a)
 ```
 
-```python
+```{.python .input}
 a = np.array(a)
 (type(a), a)
 ```
@@ -198,7 +198,7 @@ a = np.array(a)
 Additionally, you can move them to different GPU contexts. You will dive more
 into this later, but here is an example for now.
 
-```python
+```{.python .input}
 a.copyto(mx.gpu(0))
 ```
 
@@ -208,4 +208,4 @@ Ndarrays also have some additional features which make Deep Learning possible
 and efficient. Namely, differentiation, and being able to leverage GPU's.
 Another important feature of ndarrays that we will discuss later is 
 autograd. But first, we will abstract an additional level and talk about building
-Neural Network Layers [Step 2: Create a neural network](2-create-nn.md)
+Neural Network Layers [Step 2: Create a neural network](./2-create-nn.ipynb)

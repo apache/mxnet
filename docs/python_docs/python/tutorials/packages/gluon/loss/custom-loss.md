@@ -19,9 +19,9 @@
 
 All neural networks need a loss function for training. A loss function is a quantitive measure of how bad the predictions of the network are when compared to ground truth labels. Given this score, a network can improve by iteratively updating its weights to minimise this loss. Some tasks use a combination of multiple loss functions, but often you'll just use one. MXNet Gluon provides a number of the most commonly used loss functions, and you'll choose certain functions depending on your network and task. Some common task and loss function pairs include:
 
-- Regression: [L1Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.L1Loss), [L2Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.L2Loss)
-- Classification: [SigmoidBinaryCrossEntropyLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss), [SoftmaxBinaryCrossEntropyLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.SoftmaxBinaryCrossEntropyLoss)
-- Embeddings: [HingeLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.HingeLoss)
+- Regression: [L1Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.L1Loss), [L2Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.L2Loss)
+- Classification: [SigmoidBinaryCrossEntropyLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss), [SoftmaxCrossEntropyLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.SoftmaxCrossEntropyLoss)
+- Embeddings: [HingeLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.HingeLoss)
 
 However, we may sometimes want to solve problems that require customized loss functions; this tutorial shows how we can do that in Gluon. We will implement contrastive loss which is typically used in Siamese networks.
 
@@ -37,7 +37,7 @@ import random
 
 [Contrastive loss](http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf) is a distance-based loss function. During training, pairs of images are fed into a model. If the images are similar, the loss function will return 0, otherwise 1.
 
-<img src="images/contrastive_loss.jpeg" width="400">
+![contrastive loss](/_static/contrastive_loss.jpeg)
 
 *Y* is a binary label indicating similarity between training images. Contrastive loss uses the Euclidean distance *D* between images and is the sum of 2 terms:
  - the loss for a pair of similar points
@@ -45,7 +45,7 @@ import random
 
 The loss function uses a margin *m* which is has the effect that dissimlar pairs only contribute if their loss is within a certain margin.
 
-In order to implement such a customized loss function in Gluon, we only need to define a new class that is inheriting from the [Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.Loss) base class. We then define the contrastive loss logic in the [hybrid_forward](/api/python/docs/api/gluon/hybrid_block.html#mxnet.gluon.HybridBlock.hybrid_forward) method. This method takes the images `image1`, `image2` and the label which defines whether  `image1` and `image2` are similar (=0) or  dissimilar (=1). The input F is an `mxnet.ndarry` or an `mxnet.symbol` if we hybridize the network. Gluon's `Loss` base class is in fact a [HybridBlock](/api/python/docs/api/gluon/hybrid_block.html). This means we can either run  imperatively or symbolically. When we hybridize our custom loss function, we can get performance speedups.
+In order to implement such a customized loss function in Gluon, we only need to define a new class that is inheriting from the [Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.Loss) base class. We then define the contrastive loss logic in the [hybrid_forward](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock.hybrid_forward) method. This method takes the images `image1`, `image2` and the label which defines whether  `image1` and `image2` are similar (=0) or  dissimilar (=1). The input F is an `mxnet.ndarry` or an `mxnet.symbol` if we hybridize the network. Gluon's `Loss` base class is in fact a [HybridBlock](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock). This means we can either run  imperatively or symbolically. When we hybridize our custom loss function, we can get performance speedups.
 
 
 ```{.python .input}
@@ -156,7 +156,7 @@ plt.show()
 
 ```
 
-![example1](images/inuktitut_1.png)
+![example1](/_static/inuktitut_1.png)
 
 
 ### Train the Siamese network
@@ -208,7 +208,7 @@ for i, data in enumerate(test_dataloader):
 
 ```
 
-![example2](images/inuktitut_2.png)
+![example2](/_static/inuktitut_2.png)
 
 
 ### Common pitfalls with custom loss functions

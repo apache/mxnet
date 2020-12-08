@@ -219,7 +219,7 @@ We can see that the three lines of print statements defined in the `hybrid_forwa
 
 ## Key differences and limitations of hybridization
 
-The difference between a purely imperative `Block` and hybridizable `HybridBlock` can superficially appear to be simply the injection of the `F` function space (resolving to [mx.nd](/api/python/docs/api/ndarray/index.html) or [mx.sym](/api/python/docs/api/symbol/index.html)) in the forward function that is renamed from `forward` to `hybrid_forward`. However there are some limitations that apply when using hybrid blocks. In the following section we will review the main differences, giving example of code snippets that generate errors when such blocks get hybridized.
+The difference between a purely imperative `Block` and hybridizable `HybridBlock` can superficially appear to be simply the injection of the `F` function space (resolving to [mx.nd](../../../../api/legacy/ndarray/ndarray.rst) or [mx.sym](../../../../api/legacy/symbol/index.rst)) in the forward function that is renamed from `forward` to `hybrid_forward`. However there are some limitations that apply when using hybrid blocks. In the following section we will review the main differences, giving example of code snippets that generate errors when such blocks get hybridized.
 
 ### Indexing
 
@@ -234,7 +234,7 @@ Would generate the following error:
 
 `TypeError: Symbol only support integer index to fetch i-th output`
 
-There are however several operators that can help you with array manipulations like: [F.split](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.split), [F.slice](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.slice), [F.take](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.take),[F.pick](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.pick), [F.where](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.where), [F.reshape](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape) or [F.reshape_like](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape_like).
+There are however several operators that can help you with array manipulations like: [F.split](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.split), [F.slice](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.slice), [F.take](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.take),[F.pick](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.pick), [F.where](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.where), [F.reshape](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.reshape) or [F.reshape_like](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.reshape_like).
 
 ### Data Type
 
@@ -280,7 +280,7 @@ Trying to access the shape of a tensor in a hybridized block would result in thi
 Again, you cannot use the shape of the symbol at runtime as symbols only describe operations and not the underlying data they operate on.
 Note: This will change in the future as Apache MXNet will support [dynamic shape inference](https://cwiki.apache.org/confluence/display/MXNET/Dynamic+shape), and the shapes of symbols will be symbols themselves
 
-There are also a lot of operators that support special indices to help with most of the use-cases where you would want to access the shape information. For example, `F.reshape(x, (0,0,-1))` will keep the first two dimensions unchanged and collapse all further dimensions into the third dimension. See the documentation of the [F.reshape](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape) for more details.
+There are also a lot of operators that support special indices to help with most of the use-cases where you would want to access the shape information. For example, `F.reshape(x, (0,0,-1))` will keep the first two dimensions unchanged and collapse all further dimensions into the third dimension. See the documentation of the [F.reshape](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.reshape) for more details.
 
 ### Item assignment
 
@@ -294,7 +294,7 @@ def hybrid_forward(self, F, x):
 
 Would get you this error `TypeError: 'Symbol' object does not support item assignment`.
 
-Direct item assignment is not possible in symbolic graph since it needs to be part of a computational graph. One way is to use add more inputs to your graph and use masking or the [F.where](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.where) operator.
+Direct item assignment is not possible in symbolic graph since it needs to be part of a computational graph. One way is to use add more inputs to your graph and use masking or the [F.where](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.where) operator.
 
 e.g to set the first element to 2 you can do:
 

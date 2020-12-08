@@ -712,6 +712,7 @@ sanity_cpp() {
 
 sanity_python() {
     set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     python3 -m pylint --rcfile=ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }
@@ -728,7 +729,7 @@ cd_unittest_ubuntu() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export CD_JOB=1 # signal this is a CD run so any unecessary tests can be skipped
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
 
@@ -767,7 +768,7 @@ unittest_ubuntu_python3_cpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
     MXNET_ENGINE_TYPE=NaiveEngine \
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
@@ -781,7 +782,7 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
     MXNET_ENGINE_TYPE=NaiveEngine \
                      OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
@@ -797,7 +798,7 @@ unittest_ubuntu_python3_gpu() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator and not test_amp_init.py' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
@@ -816,7 +817,7 @@ unittest_ubuntu_python3_gpu_cython() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     check_cython
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator and not test_amp_init.py' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
@@ -834,7 +835,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_OFF_TEST_ONLY=true
     export MXNET_ENABLE_CYTHON=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator and not test_amp_init.py' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
@@ -846,6 +847,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
 
 unittest_cpp() {
     set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     build/tests/mxnet_unit_tests
 }
 
@@ -853,6 +855,7 @@ unittest_centos7_cpu() {
     set -ex
     source /opt/rh/rh-python36/enable
     cd /work/mxnet
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     OMP_NUM_THREADS=$(expr $(nproc) / 4) python -m pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
     MXNET_ENGINE_TYPE=NaiveEngine \
         OMP_NUM_THREADS=$(expr $(nproc) / 4) python -m pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
@@ -865,7 +868,7 @@ unittest_centos7_gpu() {
     source /opt/rh/rh-python36/enable
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator and not test_amp_init.py' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
@@ -879,7 +882,7 @@ integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/
 	export MXNET_SUBGRAPH_VERBOSE=0
-	export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
 	python3 tests/python/unittest/onnx/backend_test.py
 	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/mxnet_export_test.py
 	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_models.py
@@ -894,7 +897,7 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_USE_OPERATOR_TUNING=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     cd tests/nightly/
     python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=gluon_step_cpu
     python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=gluon_sparse_step_cpu
@@ -910,6 +913,7 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
     set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     pushd .
     cd /work/mxnet/python
     pip3 install -e .
@@ -929,7 +933,7 @@ integrationtest_ubuntu_gpu_byteps() {
     git clone -b v0.2.3 https://github.com/bytedance/byteps ~/byteps
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     cd tests/nightly/
 
     export NVIDIA_VISIBLE_DEVICES=0
@@ -952,7 +956,7 @@ test_ubuntu_cpu_python3() {
     set -ex
     pushd .
     export MXNET_LIBRARY_PATH=/work/build/libmxnet.so
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     VENV=mxnet_py3_venv
     virtualenv -p `which python3` $VENV
     source $VENV/bin/activate
@@ -976,7 +980,7 @@ unittest_ubuntu_python3_arm() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     python3 -m pytest -n 2 --verbose tests/python/unittest/test_engine.py
 }
 
@@ -1010,7 +1014,7 @@ test_rat_check() {
 nightly_test_KVStore_singleNode() {
     set -ex
     export PYTHONPATH=./python/
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     tests/nightly/test_kvstore.py
 }
 
@@ -1018,7 +1022,7 @@ nightly_test_KVStore_singleNode() {
 nightly_test_large_tensor() {
     set -ex
     export PYTHONPATH=./python/
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     pytest --timeout=0 --forked tests/nightly/test_np_large_array.py
 }
 
@@ -1026,7 +1030,7 @@ nightly_test_large_tensor() {
 nightly_model_backwards_compat_test() {
     set -ex
     export PYTHONPATH=/work/mxnet/python/
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     ./tests/nightly/model_backwards_compatibility_check/model_backward_compat_checker.sh
 }
 
@@ -1034,7 +1038,7 @@ nightly_model_backwards_compat_test() {
 nightly_model_backwards_compat_train() {
     set -ex
     export PYTHONPATH=./python/
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     ./tests/nightly/model_backwards_compatibility_check/train_mxnet_legacy_models.sh
 }
 
@@ -1043,7 +1047,7 @@ nightly_tutorial_test_ubuntu_python3_gpu() {
     cd /work/mxnet/docs
     export BUILD_VER=tutorial
     export MXNET_DOCS_BUILD_MXNET=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
@@ -1055,7 +1059,7 @@ nightly_tutorial_test_ubuntu_python3_gpu() {
 
 nightly_estimator() {
     set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
     cd /work/mxnet/tests/nightly/estimator
     export PYTHONPATH=/work/mxnet/python/
     pytest test_estimator_cnn.py

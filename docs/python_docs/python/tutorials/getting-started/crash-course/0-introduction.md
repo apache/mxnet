@@ -33,9 +33,9 @@ Apache MXNet is an open-source deep learning framework that provides a comprehen
 
 #### Tensors A.K.A Arrays
 
-Tensors give us a generic way of describing $n$-dimensional **arrays** with an arbitrary number of axes. Vectors, for example, are first-order tensors, and matrices are second-order tensors. Tensors with more than two orders(axes) do not have special mathematical names. The [ndarray](https://mxnet.apache.org/versions/1.7/api/python/docs/api/ndarray/index.html) package in MXNet provides a tensor implementation. This class is similar to NumPy's ndarray with additional features. First, MXNet’s `NDArray` supports fast execution on a wide range of hardware configurations, including CPU, GPU, and multi-GPU machines where as NumPy only supports CPU computation. Second, MXNet’s `NDArray` executes code lazily, allowing it to automatically parallelize multiple operations across the available hardware.
+Tensors give us a generic way of describing $n$-dimensional **arrays** with an arbitrary number of axes. Vectors, for example, are first-order tensors, and matrices are second-order tensors. Tensors with more than two orders(axes) do not have special mathematical names. The [NP](../../../api/np/index.rst) package in MXNet provides a NumPy-compatible tensor implementation, `np.ndarray` with additional features. First, MXNet’s `np.ndarray` supports fast execution on a wide range of hardware configurations, including CPU, GPU, and multi-GPU machines where as NumPy only supports CPU computation. Second, MXNet’s `np.ndarray` executes code lazily, allowing it to automatically parallelize multiple operations across the available hardware.
 
-You will get familiar to arrays in the [next section](1-nparray.md) of this crash course.
+You will get familiar to arrays in the [next section](./1-nparray.ipynb) of this crash course.
 
 ### Computing paradigms
 
@@ -44,9 +44,9 @@ You will get familiar to arrays in the [next section](1-nparray.md) of this cras
 Neural network designs like [ResNet-152](https://www.cv-foundation.org/openaccess/content_cvpr_2016/papers/He_Deep_Residual_Learning_CVPR_2016_paper.pdf) have a fair degree of regularity. They consist of _blocks_ of repeated (or at least similarly designed) layers; these blocks then form the basis of more complex network designs. A block can be a single layer, a component consisting of multiple layers, or the entire complex neural network itself! One benefit of working with the block abstraction is that you can combine blocks into larger artifacts; often recursively. By defining code to generate blocks of arbitrary complexity on demand, you can write surprisingly compact code and still implement complex neural networks.
 
 
-From a programming standpoint, a block is represented by a class and [Block](https://mxnet.apache.org/versions/1.7/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block)  is the base class for all neural networks layers in MXNet. Any subclass of it must define a forward propagation function that transforms its input into output and must store any necessary parameters if required.
+From a programming standpoint, a block is represented by a class and [Block](../../../api/gluon/block.rst#mxnet.gluon.Block)  is the base class for all neural networks layers in MXNet. Any subclass of it must define a forward propagation function that transforms its input into output and must store any necessary parameters if required.
 
-You will see more about blocks in [Array](1-nparray.md) and [Create neural network](2-create-nn.md) sections.
+You will see more about blocks in [Array](./1-nparray.ipynb) and [Create neural network](./2-create-nn.ipynb) sections.
 
 #### HybridBlock
 
@@ -62,7 +62,7 @@ You can learn more about the difference between symbolic vs. imperative programm
 
 When designing MXNet, developers considered whether it was possible to harness the benefits of both imperative and symbolic programming. The developers believed that users should be able to develop and debug using pure imperative programming, while having the ability to convert most programs into symbolic programming to be run when product-level computing performance and deployment are required. 
 
-In hybrid programming, you can build models using either the [HybridBlock](https://mxnet.apache.org/versions/1.7/api/python/docs/api/gluon/hybrid_block.html) or the [HybridSequential](https://mxnet.apache.org/versions/1.6/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.HybridSequential) and [HybridConcurrent](https://mxnet.incubator.apache.org/versions/1.7/api/python/docs/api/gluon/contrib/index.html#mxnet.gluon.contrib.nn.HybridConcurrent) classes. By default, they are executed in the same way Block or Sequential  and Concurrent  classes are executed in imperative programming. When the  `hybridize`  function is called, Gluon will convert the program’s execution into the style used in symbolic programming. This allows one to optimize the compute-intensive components without sacrifices in the way a model is implemented. In fact, most models can make use of hybrid programming’s execution style.
+In hybrid programming, you can build models using either the [HybridBlock](../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock) or the [HybridSequential](../../../api/gluon/nn/index.rst#mxnet.gluon.nn.HybridSequential) and [HybridConcatenate](../../../api/gluon/nn/index.rst#mxnet.gluon.nn.HybridConcatenate) classes. By default, they are executed in the same way [Block](../../../api/gluon/block.rst#mxnet.gluon.Block) or [Sequential](../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Sequential) and [Concurrent](../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Concatenate) classes are executed in imperative programming. When the  `hybridize`  function is called, Gluon will convert the program’s execution into the style used in symbolic programming. This allows one to optimize the compute-intensive components without sacrifices in the way a model is implemented. In fact, most models can make use of hybrid programming’s execution style.
 
 You will learn more about hybrid blocks and use them in the upcoming sections of the course.
 
@@ -72,7 +72,7 @@ Gluon is an imperative high-level front end API in MXNet for deep learning that�
 
 ## Next steps
 
-Dive deeper on [array representations](1-nparray.md) in MXNet.
+Dive deeper on [array representations](./1-nparray.ipynb) in MXNet.
 
 ## References
 1.  [Dive into Deep Learning](http://d2l.ai/) 

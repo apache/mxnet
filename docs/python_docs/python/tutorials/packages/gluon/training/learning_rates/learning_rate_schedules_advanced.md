@@ -88,7 +88,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_triangular.png) <!--notebook-skip-line-->
+![lr adv triangular](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_triangular.png) <!--notebook-skip-line-->
 
 
 ### Cosine
@@ -126,7 +126,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cosine.png) <!--notebook-skip-line-->
+![lr adv cosine](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cosine.png) <!--notebook-skip-line-->
 
 
 ## Custom Schedule Modifiers
@@ -172,7 +172,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_warmup.png) <!--notebook-skip-line-->
+![lr adv warmup](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_warmup.png) <!--notebook-skip-line-->
 
 
 ### Cool-Down
@@ -217,7 +217,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cooldown.png) <!--notebook-skip-line-->
+![lr adv cooldown](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cooldown.png) <!--notebook-skip-line-->
 
 
 #### 1-Cycle: for "Super-Convergence"
@@ -257,7 +257,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_onecycle.png) <!--notebook-skip-line-->
+![lr adv onecycle](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_onecycle.png) <!--notebook-skip-line-->
 
 
 ### Cyclical
@@ -304,7 +304,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cyclical.png) <!--notebook-skip-line-->
+![lr adv cyclical](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cyclical.png) <!--notebook-skip-line-->
 
 
 And lastly, we implement the scheduled used in ["SGDR: Stochastic Gradient Descent with Warm Restarts" by Ilya Loshchilov, Frank Hutter (2016)](https://arxiv.org/abs/1608.03983). We repeat cosine annealing schedules, but each time we halve the magnitude and double the cycle length.
@@ -317,7 +317,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_sgdr.png) <!--notebook-skip-line-->
+![lr adv sgdr](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_sgdr.png) <!--notebook-skip-line-->
 
 
 **_Want to learn more?_** Checkout the "Learning Rate Schedules" tutorial for a more basic overview of learning rates found in `mx.lr_scheduler`, and an example of how to use them while training your own models.

@@ -21,9 +21,9 @@ Training a neural network model consists of iteratively performing three simple 
 
 The first step is the forward step which computes the loss.  In MXNet Gluon, this first step is achieved by doing a forward pass by calling `net.forward(X)` or simply `net(X)` and then calling the loss function with the result of the forward pass and the labels. For example `l = loss_fn(net(X), y)`.
 
-The second step is the backward step which computes the gradient of the loss with respect to the parameters. In Gluon, this step is  achieved by doing the first step in an [autograd.record()](/api/python/docs/api/autograd/index.html) scope to record the computations needed to calculate the loss, and then calling `l.backward()` to compute the gradient of the loss with respect to the parameters.
+The second step is the backward step which computes the gradient of the loss with respect to the parameters. In Gluon, this step is  achieved by doing the first step in an [autograd.record()](../../../../api/autograd/index.rst#mxnet.autograd.record) scope to record the computations needed to calculate the loss, and then calling `l.backward()` to compute the gradient of the loss with respect to the parameters.
 
-The final step is to update the neural network model parameters using an optimization algorithm. In Gluon, this step is performed by the [gluon.Trainer](/api/python/docs/api/gluon/trainer.html) and is the subject of this guide. When creating a  Gluon `Trainer` you must provide a collection of parameters that need to be learnt. You also provide an `Optimizer` that will be used to update the parameters every training iteration when `trainer.step` is called.
+The final step is to update the neural network model parameters using an optimization algorithm. In Gluon, this step is performed by the [gluon.Trainer](../../../../api/gluon/trainer.rst#mxnet.gluon.Trainer) and is the subject of this guide. When creating a  Gluon `Trainer` you must provide a collection of parameters that need to be learnt. You also provide an `Optimizer` that will be used to update the parameters every training iteration when `trainer.step` is called.
 
 ## Basic Usage
 
@@ -97,7 +97,7 @@ print(curr_weight - net.weight.grad() * 1 / batch_size)
 
 In the previous example, we use the string argument `sgd` to select the optimization method, and `optimizer_params` to specify the optimization method arguments.
 
-All pre-defined optimization methods can be passed in this way and the complete list of implemented optimizers is provided in the [mxnet.optimizer](/api/python/docs/api/optimizer/index.html) module.
+All pre-defined optimization methods can be passed in this way and the complete list of implemented optimizers is provided in the [mxnet.optimizer](../../../../api/optimizer/index.rst) module.
 
 However we can also pass an optimizer instance directly to the `Trainer` constructor.
 
@@ -114,14 +114,14 @@ trainer.step(batch_size)
 net.weight.data()
 ```
 
-For reference and implementation details about each optimizer, please refer to the [guide](/api/python/docs/api/optimizer/index.html) for the `optimizer` module.
+For reference and implementation details about each optimizer, please refer to the [guide](../../optimizer/index.ipynb) and [API doc](../../../../api/optimizer/index.rst) for the `optimizer` module.
 
 ### KVStore Options
 
 The `Trainer` constructor also accepts the following keyword arguments for :
 
-- `kvstore` – how key value store  should be created for multi-gpu and distributed training. Check out  [mxnet.kvstore.KVStore](/api/python/docs/api/kvstore/index.html) for more information. String options are any of the following ['local', 'device', 'dist_device_sync', 'dist_device_async'].
-- `compression_params` – Specifies type of gradient compression and additional arguments depending on the type of compression being used. See [mxnet.KVStore.set_gradient_compression_method](/api/python/docs/api/kvstore/index.html#mxnet.kvstore.KVStore.set_gradient_compression) for more details on gradient compression.
+- `kvstore` – how key value store  should be created for multi-gpu and distributed training. Check out  [mxnet.kvstore.KVStore](../../../../api/kvstore/index.rst) for more information. String options are any of the following ['local', 'device', 'dist_device_sync', 'dist_device_async'].
+- `compression_params` – Specifies type of gradient compression and additional arguments depending on the type of compression being used. See [mxnet.KVStore.set_gradient_compression_method](../../../../api/kvstore/generated/mxnet.kvstore.KVStore.rst) for more details on gradient compression.
 - `update_on_kvstore` – Whether to perform parameter updates on KVStore. If None, then the `Trainer` instance  will choose the more suitable option depending on the type of KVStore.
 
 ### Changing the Learning Rate
@@ -143,7 +143,7 @@ trainer.learning_rate
 
 
 
-In addition, there are multiple pre-defined learning rate scheduling methods that are already implemented in the [mxnet.lr_scheduler](/api/python/docs/api/lr_scheduler/index.html) module. The learning rate schedulers can be incorporated into your trainer by passing them in as an `optimizer_param` entry. Please refer to the [LR scheduler guide](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules.html) to learn more.
+In addition, there are multiple pre-defined learning rate scheduling methods that are already implemented in the [mxnet.lr_scheduler](../../../../api/lr_scheduler/index.rst) module. The learning rate schedulers can be incorporated into your trainer by passing them in as an `optimizer_param` entry. Please refer to the [LR scheduler guide](./learning_rates/learning_rate_schedules.ipynb) to learn more.
 
 
 
@@ -160,9 +160,9 @@ In addition, there are multiple pre-defined learning rate scheduling methods tha
 
 While optimization and optimizers play a significant role in deep learning model training, there are still other important components to model training. Here are a few suggestions about where to look next.
 
-* The [Optimizer API](/api/python/docs/api/optimizer/index.html) and [optimizer guide](/api/python/docs/tutorials/packages/optimizer/index.html) have information about all the different optimizers implemented in MXNet and their update steps. The [Dive into Deep Learning](https://en.diveintodeeplearning.org/chapter_optimization/index.html) book also has a chapter dedicated to optimization methods and explains various key optimizers in great detail.
+* The [Optimizer API](../../../../api/optimizer/index.rst) and [optimizer guide](../../optimizer/index.ipynb) have information about all the different optimizers implemented in MXNet and their update steps. The [Dive into Deep Learning](http://d2l.ai/chapter_optimization/index.html) book also has a chapter dedicated to optimization methods and explains various key optimizers in great detail.
 
-- Take a look at the [guide to parameter initialization](/api/python/docs/tutorials/packages/gluon/blocks/init.html) in MXNet to learn about what initialization schemes are already implemented, and how to implement your custom initialization schemes.
-- Also check out this  [guide on parameter management](/api/python/docs/tutorials/packages/gluon/blocks/parameters.html) to learn about how to manage model parameters in gluon.
-- Make sure to take a look at the [guide to scheduling learning rates](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules.html) to learn how to create learning rate schedules to make your training converge faster.
-- Finally take a look at the [KVStore API](/api/python/docs/api/kvstore/index.html) to learn how parameter values are synchronized over multiple devices.
+- Take a look at the [guide to parameter initialization](../blocks/init.ipynb) in MXNet to learn about what initialization schemes are already implemented, and how to implement your custom initialization schemes.
+- Also check out this  [guide on parameter management](../blocks/parameters.ipynb) to learn about how to manage model parameters in gluon.
+- Make sure to take a look at the [guide to scheduling learning rates](./learning_rates/learning_rate_schedules.ipynb) to learn how to create learning rate schedules to make your training converge faster.
+- Finally take a look at the [KVStore API](../../../../api/kvstore/index.rst) to learn how parameter values are synchronized over multiple devices.

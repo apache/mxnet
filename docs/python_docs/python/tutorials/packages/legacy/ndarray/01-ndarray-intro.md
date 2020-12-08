@@ -26,7 +26,7 @@ This content was extracted and simplified from the gluon tutorials in
 [Dive Into Deep Learning](https://d2l.ai/).
 
 ## Prerequisites
-* [MXNet installed in a Python environment](/get_started?version=master&platform=linux&language=python&environ=pip&processor=cpu).
+* [MXNet installed in a Python environment](https://mxnet.apache.org/get_started?version=master&platform=linux&language=python&environ=pip&processor=cpu).
 * Python 2.7.x or Python 3.x
 
 
@@ -91,7 +91,7 @@ print(x)
 ```
 
 Similarly, `ndarray` has a function to create a matrix of all ones aptly named
-[ones](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.ones).
+[ones](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.ones).
 
 ```{.python .input}
 x = nd.ones((3, 4))
@@ -102,7 +102,7 @@ Often, we'll want to create arrays whose values are sampled randomly. This is
 especially common when we intend to use the array as a parameter in a neural
 network. In this snippet, we initialize with values drawn from a standard normal
 distribution with zero mean and unit variance using
-[random_normal](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.random_normal).
+[random_normal](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.random_normal).
 
 <!--
 Is it that important to introduce zero mean and unit variance right now?

@@ -19,7 +19,7 @@
 
 <!-- adapted from diveintodeeplearning -->
 
-In the [Neural Networks](nn.html) section we played fast and loose with setting
+In the [Neural Networks](./nn.ipynb) section we played fast and loose with setting
 up our networks. In particular we did the following things that *shouldn't*
 work:
 
@@ -318,5 +318,5 @@ cases you should now be aware of include custom initialization and tied paramete
 
 ## Recommended Next Steps
 
-* Check out the [API Docs](/api/python/docs/api/optimizer/index.html) on initialization for a list of available initialization methods.
-* See [this tutorial](/api/python/docs/tutorials/packages/gluon/blocks/naming.html) for more information on Gluon Parameters.
+* Check out the [API Docs](../../../../api/optimizer/index.rst) on initialization for a list of available initialization methods.
+* See [this tutorial](./naming.ipynb) for more information on Gluon Parameters.
