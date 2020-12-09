@@ -171,8 +171,8 @@ def create_const_node(input_name, value, kwargs):
     from onnx.helper import make_tensor, make_tensor_value_info
     initializer = kwargs["initializer"]
     input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
-    value_node = make_tensor_value_info(input_name, input_type, ())
-    tensor_node = make_tensor(input_name, input_type, (), value)
+    value_node = make_tensor_value_info(input_name, input_type, value.shape)
+    tensor_node = make_tensor(input_name, input_type, value.shape, value)
     initializer.append(tensor_node)
     return value_node
 
@@ -2354,8 +2354,8 @@ def convert_slice(node, **kwargs):
     ends = convert_string_to_list(attrs.get("end"))
     steps = attrs.get("step", [])
     nodes = [
-        create_const_node(name+"_begin", np.array(starts, dtype='int64'), kwargs),
-        create_const_node(name+"_end", np.array(ends, dtype='int64'), kwargs)
+        create_const_node(name+"_begin", np.array(starts), kwargs),
+        create_const_node(name+"_end", np.array(ends), kwargs)
     ]
     inputs = [input_nodes[0], name+"_begin", name+"_end"]
     if len(steps) > 0:
@@ -2369,16 +2369,16 @@ def convert_slice(node, **kwargs):
 def convert_zeros_like(node, **kwargs):
     """Map MXNet's zeros_like operator attributes to onnx's ConstantOfShape operator.
     """
+    from onnx.helper import make_node, make_tensor
     name, input_nodes, _ = get_inputs(node, kwargs)
-    tensor_value = onnx.helper.make_tensor(name+"_val", onnx.TensorProto.INT32, [1], [0])
-    node = onnx.helper.make_node(
-        "ConstantOfShape",
-        input_nodes,
-        [name],
-        name=name,
-        value=tensor_value
-    )
-    return [node]
+
+    # create tensor with shape of input
+    create_const_node(name+"_shape", np.array(kwargs['in_shape'][0], dtype='int64'), kwargs)
+    tensor_value = make_tensor(name+"_zero", kwargs['in_type'], [1], [0])
+    nodes = [
+        make_node("ConstantOfShape", [name+"_shape"], [name], value=tensor_value)
+    ]
+    return nodes
 
 
 @mx_op.register("_contrib_arange_like")
@@ -2397,19 +2397,19 @@ def convert_arange_like(node, **kwargs):
 
     if axis is None:
         # output will be same shape as input
-        output_shape = in_shape
+        output_shape = in_shape[0]
     else:
         # determine shape of axis
-        output_shape = in_shape[int(axis)]
+        output_shape = in_shape[0][int(axis)]
 
-    start = attrs.get('start', np.float32(0.))
-    step = attrs.get('step', np.float32(1.0))
-    repeat = int(attrs.get('repeat', 1))
+    start = np.double(attrs.get('start', 0.))
+    step = np.double(attrs.get('step', 1.))
+    repeat = np.double(attrs.get('repeat', 1))
     if repeat != 1:
         raise NotImplementedError("arange_like operator with repeat != 1 not yet implemented.")
 
     tot_elements = np.prod(output_shape)
-    limit = start + (tot_elements * step)
+    limit = np.double(start + (tot_elements * step))
 
     # create constant inputs
     create_const_scalar_node(name+"_start", start, kwargs)
@@ -2419,6 +2419,6 @@ def convert_arange_like(node, **kwargs):
 
     nodes = [
         make_node("Range", [name+"_start", name+"_limit", name+"_step"], [name+"_range0_out"]),
-        make_node("Reshape", [name+"_range0_out", name+"_shape"], [name])
+        make_node("Reshape", [name+"_range0_out", name+"_shape"], [name], name=name+"_output")
     ]
     return nodes
