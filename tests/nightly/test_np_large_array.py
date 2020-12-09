@@ -652,9 +652,9 @@ def test_where():
     assert out.shape == inp1.shape
     assert out[0, 0] == 0 and out[-1, -1] == 2
     assert inp1.grad.shape == inp1.shape
-    assert inp1.grad[0, 0] == 1 and inp1.grad[-1 ,-1] == 0
+    assert inp1.grad[0, 0] == 1 and inp1.grad[-1, -1] == 0
     assert inp2.grad.shape == inp2.shape
-    assert inp2.grad[0, 0] == 0 and inp2.grad[-1 ,-1] == 1
+    assert inp2.grad[0, 0] == 0 and inp2.grad[-1, -1] == 1
     # one side is scalar
     with mx.autograd.record():
         out = np.where(inp1==0, inp1, 2)
@@ -662,7 +662,7 @@ def test_where():
     assert out.shape == inp1.shape
     assert out[0, 0] == 0 and out[-1, -1] == 2
     assert inp1.grad.shape == inp1.shape
-    assert inp1.grad[0, 0] == 1 and inp1.grad[-1 ,-1] == 0
+    assert inp1.grad[0, 0] == 1 and inp1.grad[-1, -1] == 0
     # both sides ar scalar
     with mx.autograd.record():
         out = np.where(inp1==0, 0, 2)
@@ -670,7 +670,7 @@ def test_where():
     assert out.shape == inp1.shape
     assert out[0, 0] == 0 and out[-1, -1] == 2
     assert inp1.grad.shape == inp1.shape
-    assert inp1.grad[-1 ,-1] == 0
+    assert inp1.grad[-1, -1] == 0
 
 @use_np
 def test_logical_family():
