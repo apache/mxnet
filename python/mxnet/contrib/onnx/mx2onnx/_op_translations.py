@@ -2379,3 +2379,46 @@ def convert_zeros_like(node, **kwargs):
         value=tensor_value
     )
     return [node]
+
+
+@mx_op.register("_contrib_arange_like")
+def convert_arange_like(node, **kwargs):
+    """Map MXNet's arange_like operator attributes to onnx's Range and Reshape operators.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError("ONNX opset 11 or greater is required to export this operator")
+
+    in_shape = kwargs['in_shape']
+    axis = attrs.get('axis')
+
+    if axis is None:
+        # output will be same shape as input
+        output_shape = in_shape
+    else:
+        # determine shape of axis
+        output_shape = in_shape[int(axis)]
+
+    start = attrs.get('start', np.float32(0.))
+    step = attrs.get('step', np.float32(1.0))
+    repeat = int(attrs.get('repeat', 1))
+    if repeat != 1:
+        raise NotImplementedError("arange_like operator with repeat != 1 not yet implemented.")
+
+    tot_elements = np.prod(output_shape)
+    limit = start + (tot_elements * step)
+
+    # create constant inputs
+    create_const_scalar_node(name+"_start", start, kwargs)
+    create_const_scalar_node(name+"_limit", limit, kwargs)
+    create_const_scalar_node(name+"_step", step, kwargs)
+    create_const_node(name+"_shape", np.array(output_shape), kwargs)
+
+    nodes = [
+        make_node("Range", [name+"_start", name+"_limit", name+"_step"], [name+"_range0_out"]),
+        make_node("Reshape", [name+"_range0_out", name+"_shape"], [name])
+    ]
+    return nodes
