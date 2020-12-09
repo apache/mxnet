@@ -110,8 +110,18 @@ example: resnet int8 performance benchmark on c5.24xlarge(duo sockets, 24 physic
 will launch two instances for throughput benchmark and each instance will use 24 physical cores.
 ```
 
+The following models have been tested on Linux systems. Accuracy is collected on Intel XEON Cascade Lake CPU. For CPU with Skylake Lake or eariler architecture, the accuracy may not be the same.
+| Model | Source | Dataset | FP32 Accuracy (top-1/top-5)| INT8 Accuracy (top-1/top-5)|
+|:---|:---|---|:---:|:---:|
+| ResNet18-V1  | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |70.45%/89.55%|70.22%/89.38%|
+| ResNet50-V1  | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |76.36%/93.49%|76.04%/93.30%|
+| ResNet101-V1  | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |78.23%/93.99%|77.85%/93.69%|
+| MobileNet v2 1.0  | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |71.72%/90.28%|71.22%/89.92%|
+| VGG16 | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |72.83%/91.11%|72.81%/91.10%|
+| VGG19  | [MXNet ModelZoo](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/model_zoo)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |73.67%/91.63%|73.67%/91.67%|
+*Measured on validation ImageNet (ILSVRC2012) with batch-size=64,  num-calib-batches=10 and calib-mode=entropy*
 
-<h3 id='3'>ResNetV1</h3>
+<h3>Pre-trained Model</h3>
 
 The following command is to download the pre-trained model from [MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/) and transfer it into the symbolic model which would be finally quantized. The [validation dataset](http://data.mxnet.io/data/val_256_q90.rec) is available for testing the pre-trained models:
 
@@ -119,7 +129,7 @@ The following command is to download the pre-trained model from [MXNet ModelZoo]
 python imagenet_gen_qsym_onednn.py --model=resnet50_v1 --num-calib-batches=5 --calib-mode=naive
 ```
 
-The model would be automatically replaced in fusion and quantization format. It is then saved as the quantized symbol and parameter files in the `./model` directory. Set `--model` to `resnet18_v1/resnet50_v1b/resnet101_v1` to quantize other models. The following command is to launch inference.
+The model would be automatically replaced in fusion and quantization format. It is then saved as the quantized symbol and parameter files in the `./model` directory. Set `--model` to one of above listed verified models to quantize them. The following command is to launch inference.
 
 ```
 # Launch FP32 Inference

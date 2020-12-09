@@ -33,8 +33,8 @@ def download_dataset(dataset_url, dataset_dir, logger=None):
 
 
 def score(symblock, data, ctx, max_num_examples, skip_num_batches, logger=None):
-    metrics = [gluon.metric.create('acc')]#,
-            #    gluon.metric.create('top_k_accuracy', top_k=5)]
+    metrics = [gluon.metric.create('acc')],
+               gluon.metric.create('top_k_accuracy', top_k=5)]
 
     # make sure that fp32 inference works on the same images as calibrated quantized model
     logger.info('Skipping the first %d batches' % skip_num_batches)
@@ -101,6 +101,7 @@ def benchmark_score(symblock, ctx, batch_size, warmup_batches, num_batches, data
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Score a model on a dataset')
+    parser.add_argument('--ctx', type=str, default='cpu')
     parser.add_argument('--benchmark', type=bool, default=False, help='dummy data benchmark')
     parser.add_argument('--symbol-file', type=str, required=True, help='symbol file path')
     parser.add_argument('--param-file', type=str, required=False, help='param file path')
@@ -121,11 +122,17 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    ctx = mx.cpu(0)
-
     logging.basicConfig()
     logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)
+
+    if args.ctx == 'cpu':
+        ctx = mx.cpu(0)
+    elif args.ctx == 'gpu':
+        ctx = mx.gpu(0)
+        logger.warning('Notice that oneDNN optimized and quantized model may not work with GPU context')
+    else:
+        raise ValueError('ctx %s is not supported in this script' % args.ctx)
 
     symbol_file = args.symbol_file
     param_file = args.param_file
