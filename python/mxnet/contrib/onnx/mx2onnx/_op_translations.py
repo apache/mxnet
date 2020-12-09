@@ -2370,7 +2370,7 @@ def convert_zeros_like(node, **kwargs):
     """Map MXNet's zeros_like operator attributes to onnx's ConstantOfShape operator.
     """
     from onnx.helper import make_node, make_tensor
-    name, input_nodes, _ = get_inputs(node, kwargs)
+    name, _, _ = get_inputs(node, kwargs)
 
     # create tensor with shape of input
     create_const_node(name+"_shape", np.array(kwargs['in_shape'][0], dtype='int64'), kwargs)
@@ -2386,7 +2386,7 @@ def convert_arange_like(node, **kwargs):
     """Map MXNet's arange_like operator attributes to onnx's Range and Reshape operators.
     """
     from onnx.helper import make_node
-    name, input_nodes, attrs = get_inputs(node, kwargs)
+    name, _, attrs = get_inputs(node, kwargs)
 
     opset_version = kwargs['opset_version']
     if opset_version < 11:
