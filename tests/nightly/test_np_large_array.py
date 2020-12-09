@@ -2372,3 +2372,25 @@ def test_convolution():
     assert inp.grad.shape == inp.shape
     assert inp.grad[0][0][0][0] == 0
 
+
+@use_np
+def test_deconvolution():
+    dim = 2
+    batch_size = 1
+    channel = 3
+    height = SMALL_Y
+    width = LARGE_X // 5
+    num_filter = 4
+    kernel = (4,) * dim   # => shape = (3, 3)
+
+    inp=mx.np.ones(shape=(batch_size, channel, 1, width))
+    weight = mx.np.ones(shape=(channel, num_filter, kernel[0], kernel[1]))
+    bias = mx.np.array(num_filter,)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = mx.npx.deconvolution(data=inp, weight=weight, num_filter=num_filter, \
+                                   kernel=kernel, no_bias=True)
+    assert out.shape == (batch_size, channel + 1, kernel[0], width + 3)
+    assert out[0][0][kernel[0]//2][kernel[1]] == channel * num_filter
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0][0][0][0] == 0
