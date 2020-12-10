@@ -24,12 +24,12 @@ import pytest
 
 def op_export_test(op_name, Model, inputs, tmp_path):
     def export_to_onnx(model, op_name, inputs):
-        model_path = f'{tmp_path}/{op_name}'
+        model_path = '{}/{}'.format(tmp_path, op_name)
         model.export(model_path, epoch=0)
-        sym_file = f'{model_path}-symbol.json'
-        params_file = f'{model_path}-0000.params'
+        sym_file = '{}-symbol.json'.format(model_path)
+        params_file = '{}-0000.params'.format(model_path)
         dtype = inputs[0].dtype
-        onnx_file = f'{tmp_path}/{op_name}.onnx'
+        onnx_file = '{}/{}.onnx'.format(tmp_path, op_name)
         mx.contrib.onnx.export_model(sym_file, params_file, [i.shape for i in inputs],
                                      dtype, onnx_file)
         return onnx_file
@@ -68,6 +68,18 @@ def test_onnx_export_slice(tmp_path):
             return out
     x = mx.nd.array([[1,2,3,4],[5,6,7,8],[9,10,11,12]], dtype='float32')
     op_export_test('slice', Model, [x], tmp_path)
+
+def test_onnx_export_stack(tmp_path):
+    dtype = 'float32'
+    class Model(HybridBlock):
+        def __init__(self, **kwargs):
+            super(Model, self).__init__(**kwargs)
+        def hybrid_forward(self, F, x, y):
+            out = F.stack(x, y)
+            return out
+    x = mx.nd.array([1, 2], dtype=dtype)
+    y = mx.nd.array([3, 4], dtype=dtype)
+    op_export_test('stack', Model, [x, y], tmp_path)
 
 def test_onnx_export_zeros_like(tmp_path):
     class Model(HybridBlock):
@@ -109,6 +121,7 @@ if __name__ == '__main__':
     with tempfile.TemporaryDirectory() as tmp_path:
         test_onnx_export_abs(tmp_path)
         test_onnx_export_slice(tmp_path)
+        test_onnx_export_stack(tmp_path)
         test_onnx_export_zeros_like(tmp_path)
         test_onnx_export_arange_like(tmp_path)
         test_onnx_export_layernorm(tmp_path)

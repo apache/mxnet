@@ -171,8 +171,9 @@ def create_const_node(input_name, value, kwargs):
     from onnx.helper import make_tensor, make_tensor_value_info
     initializer = kwargs["initializer"]
     input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
-    value_node = make_tensor_value_info(input_name, input_type, value.shape)
-    tensor_node = make_tensor(input_name, input_type, value.shape, value)
+    input_shape = value.shape
+    value_node = make_tensor_value_info(input_name, input_type, input_shape)
+    tensor_node = make_tensor(input_name, input_type, input_shape, value)
     initializer.append(tensor_node)
     return value_node
 
@@ -824,6 +825,7 @@ def convert_leakyrelu(node, **kwargs):
     """Map MXNet's LeakyReLU operator attributes to onnx's Elu/LeakyRelu/PRelu operators
     based on the input node's attributes and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     act_type = attrs.get("act_type", "leaky")
@@ -839,41 +841,17 @@ def convert_leakyrelu(node, **kwargs):
             outputs=[name],
             name=name)
     elif act_type in ('gelu'):
-        nodes = []
         sqrt2 = np.float32(1.4142135623730951)
-        nodes.append(create_const_scalar_node(name+"_sqrt2", sqrt2, kwargs))
-        nodes.append(onnx.helper.make_node(
-            "Div",
-            inputs=[input_nodes[0], name+"_sqrt2"],
-            outputs=[name+"_div0_out"],
-            name=name+"_div0"
-        ))
-        nodes.append(onnx.helper.make_node(
-            "Erf",
-            inputs=[name+"_div0_out"],
-            outputs=[name+"_erf0_out"],
-            name=name+"_erf0"
-        ))
-        nodes.append(create_const_scalar_node(name+"_one", np.float32(1.0), kwargs))
-        nodes.append(create_const_scalar_node(name+"_half", np.float32(0.5), kwargs))
-        nodes.append(onnx.helper.make_node(
-            "Add",
-            inputs=[name+"_erf0_out", name+"_one"],
-            outputs=[name+"_add0_out"],
-            name=name+"_add0"
-        ))
-        nodes.append(onnx.helper.make_node(
-            "Mul",
-            inputs=[input_nodes[0], name+"_add0_out"],
-            outputs=[name+"_mul0_out"],
-            name=name+"_mul0"
-        ))
-        nodes.append(onnx.helper.make_node(
-            "Mul",
-            inputs=[name+"_mul0_out", name+"_half"],
-            outputs=[name],
-            name=name
-        ))
+        nodes = [
+            create_const_scalar_node(name+"_sqrt2", sqrt2, kwargs),
+            make_node("Div", [input_nodes[0], name+"_sqrt2"], [name+"_div0_out"]),
+            make_node("Erf", [name+"_div0_out"], [name+"_erf0_out"]),
+            create_const_scalar_node(name+"_one", np.float32(1.0), kwargs),
+            create_const_scalar_node(name+"_half", np.float32(0.5), kwargs),
+            make_node("Add", [name+"_erf0_out", name+"_one"], [name+"_add0_out"]),
+            make_node("Mul", [input_nodes[0], name+"_add0_out"], [name+"_mul0_out"]),
+            make_node("Mul", [name+"_mul0_out", name+"_half"], [name])
+        ]
         return nodes
     else:
         node = onnx.helper.make_node(
@@ -2323,7 +2301,7 @@ def convert_stack(node, **kwargs):
     """Map MXNet's stack operator to onnx operators.
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
-    axis = int(attrs.get('axis'))
+    axis = int(attrs.get('axis', 0))
     idx = 0
     nodes = []
     for input_node in input_nodes:
@@ -2335,14 +2313,13 @@ def convert_stack(node, **kwargs):
         ))
         idx += 1
 
-    concat_node = onnx.helper.make_node(
+    nodes.append(onnx.helper.make_node(
         "Concat",
         inputs=[name+"_unsqueeze"+str(i) for i in range(len(nodes))],
         outputs=[name],
         name=name,
         axis=axis
-    )
-    nodes.append(concat_node)
+    ))
     return nodes
 
 
@@ -2402,7 +2379,7 @@ def convert_arange_like(node, **kwargs):
         output_shape = in_shape[0]
     else:
         # determine shape of axis
-        output_shape = in_shape[0][int(axis)]
+        output_shape = [in_shape[0][int(axis)]]
 
     start = np.array([attrs.get('start', 0.)], dtype=dtype)
     step = np.array([attrs.get('step', 1.)], dtype=dtype)
@@ -2414,13 +2391,12 @@ def convert_arange_like(node, **kwargs):
     limit = np.array([start + (tot_elements * step)], dtype=dtype)
 
     # create constant inputs
-    create_const_scalar_node(name+"_start", start, kwargs)
-    create_const_scalar_node(name+"_limit", limit, kwargs)
-    create_const_scalar_node(name+"_step", step, kwargs)
-    create_const_node(name+"_shape", np.array(output_shape), kwargs)
-
     nodes = [
+        create_const_scalar_node(name+"_start", start, kwargs),
+        create_const_scalar_node(name+"_limit", limit, kwargs),
+        create_const_scalar_node(name+"_step", step, kwargs),
+        create_const_node(name+"_shape", np.array(output_shape, dtype='int64'), kwargs),
         make_node("Range", [name+"_start", name+"_limit", name+"_step"], [name+"_range0_out"]),
-        make_node("Reshape", [name+"_range0_out", name+"_shape"], [name], name=name+"_output")
+        make_node("Reshape", [name+"_range0_out", name+"_shape"], [name])
     ]
     return nodes
