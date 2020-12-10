@@ -2393,6 +2393,7 @@ def convert_arange_like(node, **kwargs):
         raise AttributeError("ONNX opset 11 or greater is required to export this operator")
 
     input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
     in_shape = kwargs['in_shape']
     axis = attrs.get('axis')
 
@@ -2403,14 +2404,14 @@ def convert_arange_like(node, **kwargs):
         # determine shape of axis
         output_shape = in_shape[0][int(axis)]
 
-    start = np.array([attrs.get('start', 0.)], dtype=onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type])
-    step = np.array([attrs.get('step', 1.)], dtype=onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type])
-    repeat = np.array([attrs.get('repeat', 1)], dtype=onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type])
+    start = np.array([attrs.get('start', 0.)], dtype=dtype)
+    step = np.array([attrs.get('step', 1.)], dtype=dtype)
+    repeat = np.array([attrs.get('repeat', 1)], dtype=dtype)
     if repeat != 1:
         raise NotImplementedError("arange_like operator with repeat != 1 not yet implemented.")
 
     tot_elements = np.prod(output_shape)
-    limit = np.array([start + (tot_elements * step)], dtype=onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type])
+    limit = np.array([start + (tot_elements * step)], dtype=dtype)
 
     # create constant inputs
     create_const_scalar_node(name+"_start", start, kwargs)
