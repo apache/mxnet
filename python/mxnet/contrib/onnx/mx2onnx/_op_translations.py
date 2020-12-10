@@ -1519,7 +1519,16 @@ def convert_reshape(node, **kwargs):
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
+    reverse = attrs.get('reverse', 'False')
     output_shape_list = convert_string_to_list(attrs["shape"])
+    data_shape = list(kwargs['in_shape'][0])
+    if reverse == 'True':
+        output_shape_list.reverse()
+        data_shape.reverse()
+        for i, dim in enumerate(output_shape_list):
+            if dim == 0:
+                output_shape_list[i] = data_shape[i]
+        output_shape_list.reverse()
 
     initializer = kwargs["initializer"]
     output_shape_np = np.array(output_shape_list, dtype='int64')
@@ -2214,3 +2223,119 @@ def convert_take(node, **kwargs):
         name=name,
     )
     return [node]
+
+
+@mx_op.register("broadcast_axis")
+def convert_broadcast_axis(node, **kwargs):
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    data_shape_list = list(kwargs['in_shape'][0])
+    axis = convert_string_to_list(attrs.get('axis', '()'))
+    size = convert_string_to_list(attrs.get('size', '()'))
+    assert len(axis) == len(size)
+    for i, axis in enumerate(axis):
+        data_shape_list[axis] *= size[i]
+
+    initializer = kwargs["initializer"]
+    shape_np = np.array(data_shape_list, dtype='int64')
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[shape_np.dtype]
+    dims = np.shape(shape_np)
+    shape_name = name+'_out_shape'
+    tensor_node = onnx.helper.make_tensor_value_info(shape_name, data_type, dims)
+
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=shape_name,
+            data_type=data_type,
+            dims=dims,
+            vals=data_shape_list,
+            raw=False,
+        )
+    )
+
+    return [make_node('Expand', [input_nodes[0], shape_name], [name], name=name)]
+
+
+@mx_op.register("SequenceMask")
+def convert_sequencemask(node, **kwargs):
+    from onnx.helper import make_node
+    from onnx import numpy_helper
+    from onnx import AttributeProto, TensorProto, GraphProto
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    use_sequence_length = attrs.get('use_sequence_length', 'False')
+    mask_val = attrs.get('value', 0)
+    axis = attrs.get('axis', 0)
+    data_shape = kwargs['in_shape'][0]
+    max_len = data_shape[0] if axis == '0' else data_shape[1]
+    batch_size = data_shape[1] if axis == '0' else data_shape[0]
+
+    if(use_sequence_length == 'False'):
+        return [make_node('Identity', [input_nodes[0]], [name], name=name)]
+
+    create_const_scalar_node(name+'_zero', np.float32(0), kwargs)
+    create_const_scalar_node(name+'_max_len', np.float32(max_len), kwargs)
+    create_const_scalar_node(name+'_one', np.float32(1), kwargs)
+    create_const_scalar_node(name+'_mask_val', np.float32(mask_val), kwargs),
+
+    output_shape_list = []
+    if (axis == '0'):
+        output_shape_list = (max_len, 1)
+    else:
+        output_shape_list = (batch_size, 1)
+    initializer = kwargs["initializer"]
+    output_shape_np = np.array(output_shape_list, dtype='int64')
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np.dtype]
+    dims = np.shape(output_shape_np)
+    output_shape_name = "shape_tensor"
+    tensor_node = onnx.helper.make_tensor_value_info(output_shape_name, data_type, dims)
+
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=output_shape_name,
+            data_type=data_type,
+            dims=dims,
+            vals=output_shape_list,
+            raw=False,
+        )
+    )
+
+    output_shape_list2 = data_shape[0:2] + tuple(1 for _ in data_shape[2:])
+    initializer = kwargs["initializer"]
+    output_shape_np2 = np.array(output_shape_list2, dtype='int64')
+    data_type2 = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np2.dtype]
+    dims2 = np.shape(output_shape_np2)
+
+    output_shape_name2 = "mask_shape_tensor"
+    tensor_node2 = onnx.helper.make_tensor_value_info(output_shape_name2, data_type2, dims2)
+
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=output_shape_name2,
+            data_type=data_type2,
+            dims=dims2,
+            vals=output_shape_list2,
+            raw=False,
+        )
+    )
+
+    nodes = []
+    if(axis == '0'):
+        nodes += [
+            make_node('Range', [name+'_zero', name+'_max_len', name+'_one'], [name+'_range0_out']),
+            make_node('Reshape', [name+'_range0_out', output_shape_name], [name+"_reshape0_out"]),
+            make_node('Less', [name+'_reshape0_out', input_nodes[1]], [name+'_less0_out']),
+            make_node('Reshape', [name+'_less0_out', output_shape_name2], [name+"_reshape1_out"]),
+            make_node('Where', [name+'_reshape1_out', input_nodes[0], name+'_mask_val'], [name]),
+        ]
+    else:
+        nodes += [
+            make_node('Range', [name+'_zero', name+'_max_len', name+'_one'], [name+'_range0_out']),
+            make_node('Reshape', [input_nodes[1], output_shape_name], [name+"_reshape0_out"]),
+            make_node('Less', [name+'_range0_out', name+'_reshape0_out'], [name+'_less0_out']),
+            make_node('Reshape', [name+'_less0_out', output_shape_name2], [name+"_reshape1_out"]),
+            make_node('Where', [name+'_reshape1_out', input_nodes[0], name+'_mask_val'], [name]),
+        ]
+    return nodes
+
