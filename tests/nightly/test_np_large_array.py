@@ -2412,7 +2412,6 @@ def test_empty():
 def test_shape_reshape():
     inp = np.zeros((2, INT_OVERFLOW))
     inp[0, -1] = 1
-    npx.waitall()
     assert np.shape(inp) == (2, INT_OVERFLOW)
     out = np.reshape(inp, (INT_OVERFLOW, 2))
     assert np.shape(inp) == (2, INT_OVERFLOW)
