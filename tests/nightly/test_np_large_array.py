@@ -2415,7 +2415,6 @@ def test_shape_reshape():
     npx.waitall()
     assert np.shape(inp) == (2, INT_OVERFLOW)
     out = np.reshape(inp, (INT_OVERFLOW, 2))
-    npx.waitall()
     assert np.shape(inp) == (2, INT_OVERFLOW)
     assert np.shape(out) == (INT_OVERFLOW, 2)
     assert out[HALF_INT_OVERFLOW-1, 1] == 1
