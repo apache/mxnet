@@ -2283,7 +2283,7 @@ def convert_layer_norm(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     in_shape = kwargs['in_shape']
-    axes = [-i for i in range(len(in_shape), 0, -1)]
+    axes = [-i for i in range(len(in_shape[0]), 0, -1)]
     eps = attrs.get('eps')
     nodes = [
         make_node("ReduceMean", [input_nodes[0]], [name+"_rm0_out"], axes=axes),
