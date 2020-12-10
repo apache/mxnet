@@ -265,6 +265,9 @@ def load_docker_cache(tag, docker_registry) -> None:
     if docker_registry:
         # noinspection PyBroadException
         try:
+            if "dkr.ecr" in registry:
+                # we need to get credentials to login to ECR
+                os.system("$(aws ecr get-login --no-include-email)")
             import docker_cache
             logging.info('Docker cache download is enabled from registry %s', docker_registry)
             docker_cache.load_docker_cache(registry=docker_registry, docker_tag=tag)
@@ -275,7 +278,7 @@ def load_docker_cache(tag, docker_registry) -> None:
 
 def push_docker_cache(registry, tag, image_id) -> None:
     """Uploads tagged container to given docker registry"""
-    if docker_registry:
+    if registry:
         # noinspection PyBroadException
         try:
             if "dkr.ecr" in registry:
