@@ -273,7 +273,7 @@ def load_docker_cache(tag, docker_registry) -> None:
     else:
         logging.info('Distributed docker cache disabled')
 
-def push_docker_cache(registry, docker_tag, image_id) -> None:
+def push_docker_cache(registry, tag, image_id) -> None:
     """Uploads tagged container to given docker registry"""
     if docker_registry:
         # noinspection PyBroadException
