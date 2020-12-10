@@ -30,22 +30,20 @@ def op_export_test(op_name, Model, inputs, tmp_path):
         params_file = f'{model_path}-0000.params'
         dtype = inputs[0].dtype
         onnx_file = f'{tmp_path}/{op_name}.onnx'
-        mx.contrib.onnx.export_model(sym_file, params_file, [inputs.shape],
+        mx.contrib.onnx.export_model(sym_file, params_file, [i.shape for i in inputs],
                                      dtype, onnx_file)
         return onnx_file
     def onnx_rt(onnx_file, inputs):
         sess = rt.InferenceSession(onnx_file)
-        input_name = sess.get_inputs()[0].name
-        pred = sess.run(None, {input_name: inputs.asnumpy()})[0]
-        #input_dict = dict((sess.get_inputs()[i].name, inputs[i].asnumpy()) for i in range(len(inputs)))
-        #pred = sess.run(None, input_dict)[0]
+        input_dict = dict((sess.get_inputs()[i].name, inputs[i].asnumpy()) for i in range(len(inputs)))
+        pred = sess.run(None, input_dict)[0]
         return pred
 
     # create a new model 
     model = Model()
     model.initialize(ctx=mx.cpu(0))
     model.hybridize()
-    pred_nat = model(inputs)
+    pred_nat = model(*inputs)
     print(pred_nat)
     onnx_file = export_to_onnx(model, op_name, inputs)
     pred_onx = onnx_rt(onnx_file, inputs)
@@ -61,7 +59,7 @@ def test_onnx_export_abs(tmp_path):
             out = F.abs(x)
             return out
     x = mx.nd.array([[-2, -1], [0, 99]], dtype='float32')
-    op_export_test('abs', Model, x, tmp_path)
+    op_export_test('abs', Model, [x], tmp_path)
 
 def test_onnx_export_slice(tmp_path):
     class Model(HybridBlock):
@@ -71,7 +69,7 @@ def test_onnx_export_slice(tmp_path):
             out = F.slice(x, begin=(0,1), end=(2,4))
             return out
     x = mx.nd.array([[1,2,3,4],[5,6,7,8],[9,10,11,12]], dtype='float32')
-    op_export_test('slice', Model, x, tmp_path)
+    op_export_test('slice', Model, [x], tmp_path)
 
 def test_onnx_export_zeros_like(tmp_path):
     class Model(HybridBlock):
@@ -81,7 +79,7 @@ def test_onnx_export_zeros_like(tmp_path):
             out = F.zeros_like(x)
             return out
     x = mx.nd.array([[-2,-1,0],[0,50,99],[4,5,6],[7,8,9]], dtype='float32')
-    op_export_test('zeros_like', Model, x, tmp_path)
+    op_export_test('zeros_like', Model, [x], tmp_path)
 
 @pytest.mark.parametrize("dtype", ["float32", "double"])
 def test_onnx_export_arange_like(dtype, tmp_path):
@@ -92,7 +90,7 @@ def test_onnx_export_arange_like(dtype, tmp_path):
             out = F.contrib.arange_like(x)
             return out
     x = mx.nd.array([[-2,-1,0],[0,50,99],[4,5,6],[7,8,9]], dtype=dtype)
-    op_export_test('arange_like', Model, x, tmp_path)
+    op_export_test('arange_like', Model, [x], tmp_path)
 
 
 if __name__ == '__main__':
@@ -102,4 +100,3 @@ if __name__ == '__main__':
         test_onnx_export_slice(tmp_path)
         test_onnx_export_zeros_like(tmp_path)
         test_onnx_export_arange_like(tmp_path)
-
