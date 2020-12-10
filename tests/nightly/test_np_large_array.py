@@ -321,6 +321,28 @@ def test_bincount():
 
 
 @use_np
+def test_bitwise_family():
+    def batch_check(x1, x2, funcs):
+        x1.attach_grad()
+        for f in funcs:
+            with mx.autograd.record():
+                y = f(x1, x2)
+                y.backward()
+            one = np.ones((1), dtype='int32')
+            assert y.shape == (INT_OVERFLOW, 2)
+            assert y[-1, -1] == f(one, one)
+            assert x1.grad.shape == x1.shape
+            assert x1.grad[-1, -1] == 0
+    # test on broadcast input
+    inp1 = np.ones((INT_OVERFLOW, 1), dtype='int32')
+    inp2 = np.ones((INT_OVERFLOW, 2), dtype='int32')
+    batch_check(inp1, inp2, [np.bitwise_and, np.bitwise_or, np.bitwise_xor])
+    out = np.bitwise_not(inp1)
+    assert out.shape == (INT_OVERFLOW, 1)
+    assert out[0] == np.bitwise_not(np.ones((1), dtype='int32')) 
+
+
+@use_np
 def test_blackman():
     data = np.blackman(INT_OVERFLOW)
     ind = int(INT_OVERFLOW / 6)
@@ -544,6 +566,113 @@ def test_slice_assign():
     B[-1] = 2
     assert B[-1, 0] == 2 and B[-1, 1] == 2
 
+@use_np
+def test_flatnonzero():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.flatnonzero(inp)
+        out.backward()
+    assert out.shape == (1, )
+    assert out[0] == int(2 * INT_OVERFLOW - 1)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+@use_np
+def test_ravel():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[0, -1], inp[-1, -1] = 1, 2
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.ravel(inp)
+        out.backward()
+    assert out.shape == (DOUBLE_INT_OVERFLOW, )
+    assert out[INT_OVERFLOW-1] == 1 and out[-1] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
+
+@use_np
+def test_mean():
+    inp = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.mean(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    assert_almost_equal(out[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+                rtol=1e-3, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert_almost_equal(inp.grad[-1, -1], np.array((1.0/INT_OVERFLOW)), \
+                rtol=1e-3, atol=1e-5)
+
+@use_np
+def test_median():
+    inp = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.median(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    assert_almost_equal(out[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+                rtol=1e-3, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+@use_np
+def test_percentile():
+    # np.percentile and np.quantile share the same implementation
+    inp = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.percentile(inp, 50, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    assert_almost_equal(out[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+                rtol=1e-3, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+@use_np
+def test_shares_memory():
+    # np.shares_memory and np.may_share_memory share the same implementation
+    inp = np.ones((2, INT_OVERFLOW))
+    out = np.shares_memory(inp[0,:100], inp[0,100:])
+    out2 = np.shares_memory(inp[1,:101], inp[1,100:])
+    assert out == False and out2 == True
+
+@use_np
+def test_where():
+    inp1 = np.zeros((2, INT_OVERFLOW))
+    inp1[-1, -1] = 1
+    inp2 = inp1 + 1
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out = np.where(inp1==0, inp1, inp2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[0, 0] == 0 and out[-1, -1] == 2
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[0, 0] == 1 and inp1.grad[-1, -1] == 0
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[0, 0] == 0 and inp2.grad[-1, -1] == 1
+    # one side is scalar
+    with mx.autograd.record():
+        out = np.where(inp1==0, inp1, 2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[0, 0] == 0 and out[-1, -1] == 2
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[0, 0] == 1 and inp1.grad[-1, -1] == 0
+    # both sides ar scalar
+    with mx.autograd.record():
+        out = np.where(inp1==0, 0, 2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[0, 0] == 0 and out[-1, -1] == 2
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1, -1] == 0
 
 @use_np
 def test_logical_family():
