@@ -20,6 +20,7 @@ from mxnet.gluon import HybridBlock, nn
 import numpy as np
 import onnxruntime as rt
 from mxnet.test_utils import assert_almost_equal
+import pytest
 
 def op_export_test(op_name, Model, inputs, tmp_path):
     def export_to_onnx(model, op_name, inputs):
@@ -36,6 +37,8 @@ def op_export_test(op_name, Model, inputs, tmp_path):
         sess = rt.InferenceSession(onnx_file)
         input_name = sess.get_inputs()[0].name
         pred = sess.run(None, {input_name: inputs.asnumpy()})[0]
+        #input_dict = dict((sess.get_inputs()[i].name, inputs[i].asnumpy()) for i in range(len(inputs)))
+        #pred = sess.run(None, input_dict)[0]
         return pred
 
     # create a new model 
@@ -80,6 +83,16 @@ def test_onnx_export_zeros_like(tmp_path):
     x = mx.nd.array([[-2,-1,0],[0,50,99],[4,5,6],[7,8,9]], dtype='float32')
     op_export_test('zeros_like', Model, x, tmp_path)
 
+@pytest.mark.parametrize("dtype", ["float32", "double"])
+def test_onnx_export_arange_like(dtype, tmp_path):
+    class Model(HybridBlock):
+        def __init__(self, **kwargs):
+            super(Model, self).__init__(**kwargs)
+        def hybrid_forward(self, F, x):
+            out = F.contrib.arange_like(x)
+            return out
+    x = mx.nd.array([[-2,-1,0],[0,50,99],[4,5,6],[7,8,9]], dtype=dtype)
+    op_export_test('arange_like', Model, x, tmp_path)
 
 
 if __name__ == '__main__':
@@ -88,4 +101,5 @@ if __name__ == '__main__':
         test_onnx_export_abs(tmp_path)
         test_onnx_export_slice(tmp_path)
         test_onnx_export_zeros_like(tmp_path)
+        test_onnx_export_arange_like(tmp_path)
 
