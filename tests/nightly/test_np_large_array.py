@@ -1357,85 +1357,85 @@ def test_tile():
 @use_np
 def test_trace():
     N = 2**16
-    inp1 = np.eye(N)
-    inp1.attach_grad()
+    inp = np.eye(N)
+    inp.attach_grad()
     with mx.autograd.record():
-        out1 = np.trace(inp1)
-        out1.backward()
-    assert out1 == N
-    assert inp1.grad.shape == inp1.shape
-    assert inp1.grad[0, 0] == 1 and inp1.grad[-1, -1] == 1
-    inp2 = np.zeros((2, INT_OVERFLOW))
-    inp2[-1, -1] = 1
-    inp2.attach_grad()
+        out = np.trace(inp)
+        out.backward()
+    assert out == N
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == 1 and inp.grad[-1, -1] == 1
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
     with mx.autograd.record():
-        out2 = np.trace(inp2, offset=INT_OVERFLOW-2)
-        out2.backward()
-    assert out2 == 1
-    assert inp2.grad.shape == inp2.shape
-    assert inp2.grad[0, -2] == 1 and inp2.grad[-1, -1] == 1
+        out = np.trace(inp, offset=INT_OVERFLOW-2)
+        out.backward()
+    assert out == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, -2] == 1 and inp.grad[-1, -1] == 1
 
 
 @use_np
 def test_tri():
     N = 2**16
-    data1 = np.tri(N)
-    assert data1.shape == (N, N)
-    assert data1[0, 0] == 1 and data1[-1, -1] == 1
-    assert data1[0, -1] == 0 and data1[-1, 0] == 1
-    data2 = np.tri(2, INT_OVERFLOW, INT_OVERFLOW-2)
-    assert data2.shape == (2, INT_OVERFLOW)
-    assert data2[0, -1] == 0 and data2[-1, -1] == 1
+    data = np.tri(N)
+    assert data.shape == (N, N)
+    assert data[0, 0] == 1 and data[-1, -1] == 1
+    assert data[0, -1] == 0 and data[-1, 0] == 1
+    data = np.tri(2, INT_OVERFLOW, INT_OVERFLOW-2)
+    assert data.shape == (2, INT_OVERFLOW)
+    assert data[0, -1] == 0 and data[-1, -1] == 1
 
 
 @use_np
 def test_tril():
     N = 2**16
-    inp1 = np.ones((N, N))
-    inp1.attach_grad()
+    inp = np.ones((N, N))
+    inp.attach_grad()
     with mx.autograd.record():
-        out1 = np.tril(inp1)
-        out1.backward()
-    assert out1.shape == (N, N)
-    assert out1[-1, -1] == 1 and out1[0, -1] == 0 and out1[-1, 0] == 1
-    assert inp1.grad.shape == inp1.shape
-    assert inp1.grad[-1, -1] == 1 and inp1.grad[0, -1] == 0 and \
-        inp1.grad[-1, 0] == 1
-    inp2 = np.ones((2, INT_OVERFLOW))
-    inp2[-1, -1] = 1
-    inp2.attach_grad()
+        out = np.tril(inp)
+        out.backward()
+    assert out.shape == (N, N)
+    assert out[-1, -1] == 1 and out[0, -1] == 0 and out[-1, 0] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1 and inp.grad[0, -1] == 0 and \
+        inp.grad[-1, 0] == 1
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
     with mx.autograd.record():
-        out2 = np.tril(inp2, k=INT_OVERFLOW-2)
-        out2.backward()
-    assert out2.shape == inp2.shape
-    assert out2[0, -1] == 0 and out2[-1, -1] == 1
-    assert inp2.grad.shape == inp2.shape
-    assert inp2.grad[0, -1] == 0 and inp2.grad[-1, -1] == 1
+        out = np.tril(inp, k=INT_OVERFLOW-2)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, -1] == 0 and out[-1, -1] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, -1] == 0 and inp.grad[-1, -1] == 1
 
 
 @use_np
 def test_triu():
     N = 2**16
-    inp1 = np.ones((N, N))
-    inp1.attach_grad()
+    inp = np.ones((N, N))
+    inp.attach_grad()
     with mx.autograd.record():
-        out1 = np.triu(inp1)
-        out1.backward()
-    assert out1.shape == (N, N)
-    assert out1[-1, -1] == 1 and out1[0, -1] == 1 and out1[-1, 0] == 0
-    assert inp1.grad.shape == inp1.shape
-    assert inp1.grad[-1, -1] == 1 and inp1.grad[0, -1] == 1 and \
-        inp1.grad[-1, 0] == 0
-    inp2 = np.ones((2, INT_OVERFLOW))
-    inp2[-1, -1] = 1
-    inp2.attach_grad()
+        out = np.triu(inp)
+        out.backward()
+    assert out.shape == (N, N)
+    assert out[-1, -1] == 1 and out[0, -1] == 1 and out[-1, 0] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1 and inp.grad[0, -1] == 1 and \
+        inp.grad[-1, 0] == 0
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
     with mx.autograd.record():
-        out2 = np.triu(inp2, k=INT_OVERFLOW-1)
-        out2.backward()
-    assert out2.shape == inp2.shape
-    assert out2[0, -1] == 1 and out2[-1, -1] == 0
-    assert inp2.grad.shape == inp2.shape
-    assert inp2.grad[0, -1] == 1 and inp2.grad[-1, -1] == 0
+        out = np.triu(inp, k=INT_OVERFLOW-1)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, -1] == 1 and out[-1, -1] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, -1] == 1 and inp.grad[-1, -1] == 0
 
 
 @use_np
