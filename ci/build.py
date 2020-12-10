@@ -265,7 +265,7 @@ def load_docker_cache(tag, docker_registry) -> None:
     if docker_registry:
         # noinspection PyBroadException
         try:
-            if "dkr.ecr" in registry:
+            if "dkr.ecr" in docker_registry:
                 # we need to get credentials to login to ECR
                 os.system("$(aws ecr get-login --no-include-email)")
             import docker_cache
