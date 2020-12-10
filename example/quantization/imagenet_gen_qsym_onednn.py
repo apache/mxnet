@@ -54,17 +54,18 @@ def regex_find_excluded_symbols(patterns_dict, model_name):
     return None
 
 def get_exclude_symbols(model_name, exclude_first_conv):
-    # Grouped supported models at the time of commit:
-    # alexnet
-    # densenet121, densenet161
-    # densenet169, densenet201
-    # inceptionv3
-    # mobilenet0.25, mobilenet0.5, mobilenet0.75, mobilenet1.0,
-    # mobilenetv2_0.25, mobilenetv2_0.5, mobilenetv2_0.75, mobilenetv2_1.0
-    # resnet101_v1, resnet152_v1, resnet18_v1, resnet34_v1, resnet50_v1
-    # resnet101_v2, resnet152_v2, resnet18_v2, resnet34_v2, resnet50_v2
-    # squeezenet1.0, squeezenet1.1
-    # vgg11, vgg11_bn, vgg13, vgg13_bn, vgg16, vgg16_bn, vgg19, vgg19_bn
+    """Grouped supported models at the time of commit:
+    - alexnet
+    - densenet121, densenet161
+    - densenet169, densenet201
+    - inceptionv3
+    - mobilenet0.25, mobilenet0.5, mobilenet0.75, mobilenet1.0,
+    - mobilenetv2_0.25, mobilenetv2_0.5, mobilenetv2_0.75, mobilenetv2_1.0
+    - resnet101_v1, resnet152_v1, resnet18_v1, resnet34_v1, resnet50_v1
+    - resnet101_v2, resnet152_v2, resnet18_v2, resnet34_v2, resnet50_v2
+    - squeezenet1.0, squeezenet1.1
+    - vgg11, vgg11_bn, vgg13, vgg13_bn, vgg16, vgg16_bn, vgg19, vgg19_bn
+    """
     exclude_symbol_regex = {
         'mobilenet[^v]': ['mobilenet_hybridsequential0_flatten0_flatten0', 'mobilenet_hybridsequential0_globalavgpool2d0_fwd'],
         'mobilenetv2': ['mobilenetv2_hybridsequential1_flatten0_flatten0'],
@@ -92,8 +93,6 @@ def get_exclude_symbols(model_name, exclude_first_conv):
             raise ValueError('Currently, model %s is not supported in this script' % model_name)
         excluded_sym_names += excluded_first_conv_sym_names
     return excluded_sym_names
-
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with Intel oneDNN support')
@@ -207,7 +206,6 @@ if __name__ == '__main__':
 
     # get number of threads for decoding the dataset
     data_nthreads = args.data_nthreads
-
 
     exclude_first_conv = args.exclude_first_conv
     if args.quantized_dtype == "uint8":

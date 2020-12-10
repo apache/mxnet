@@ -19,12 +19,9 @@
 
 This folder contains examples of quantizing a FP32 model with Intel® oneAPI Deep Neural Network Library (oneDNN) to (U)INT8 model.
 
-<h2 id="0">Contents</h2>
-
-* [1. Model Quantization with Intel® oneDNN](#1)
 <h2 id="1">Model Quantization with Intel® oneDNN</h2>
 
-Intel® oneDNN supports quantization with subgraph features on Intel® CPU Platform and can bring performance improvements on the [Intel® Xeon® Scalable Platform](https://www.intel.com/content/www/us/en/processors/xeon/scalable/xeon-scalable-platform.html). To apply quantization flow to your project directly, please refer [Optimize custom models with oneDNN backend](#TODO(agrygielski)).
+Intel® oneDNN supports quantization with subgraph features on Intel® CPU Platform and can bring performance improvements on the [Intel® Xeon® Scalable Platform](https://www.intel.com/content/www/us/en/processors/xeon/scalable/xeon-scalable-platform.html).
 
 ```
 usage: python imagenet_gen_qsym_onednn.py [-h] [--model MODEL] [--epoch EPOCH]
@@ -75,7 +72,7 @@ optional arguments:
                         worsens with more examples used in calibration. It is
                         recommended to use `entropy` mode as it produces more
                         accurate inference results. 3. entropy: calculate KL
-                        divergence of the fp32 output and quantized output for
+                        divergence of the FP32 output and quantized output for
                         optimal thresholds. This mode is expected to produce
                         the best inference accuracy of all three kinds of
                         quantized models if the calibration dataset is
@@ -87,7 +84,7 @@ optional arguments:
   --quiet               suppress most of log
 ```
 
-A new benchmark script `launch_inference_onednn.sh` has been designed to launch performance benchmark for float32 or int8 image-classification models with Intel® oneDNN.
+A new benchmark script `launch_inference_onednn.sh` has been designed to launch performance benchmark for FP32 or INT8 image-classification models with Intel® oneDNN.
 ```
 usage: bash ./launch_inference_onednn.sh -s symbol_file [-b batch_size] [-iter iteraton] [-ins instance] [-c cores/instance] [-h]
 
@@ -103,7 +100,7 @@ arguments:
   -c, --core                number of cores per instance
                             default: divide full physical cores
 
-example: resnet int8 performance benchmark on c5.24xlarge(duo sockets, 24 physical cores per socket).
+example: resnet INT8 performance benchmark on c5.24xlarge(duo sockets, 24 physical cores per socket).
 
     bash ./launch_inference_onednn.sh -s ./model/resnet50_v1-quantized-5batches-naive-symbol.json
 
@@ -165,8 +162,8 @@ if exclude_first_conv:
 
 Some tips on quantization configs:
 
-1. First, data, symbol file (custom-symbol.json) and parameter file (custom-0000.params) of fp32 symbolic model should be prepared.
-2. Then, following command should be run to verify that fp32 symbolic model runs inference as expected.
+1. First, data, symbol file (custom-symbol.json) and parameter file (custom-0000.params) of FP32 symbolic model should be prepared.
+2. Then, following command should be run to verify that FP32 symbolic model runs inference as expected.
 
 ```
 # Launch FP32 Inference
