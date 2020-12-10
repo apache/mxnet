@@ -27,6 +27,8 @@ __version__ = '0.3'
 
 import argparse
 import glob
+import hashlib
+import os
 import pprint
 import re
 import shutil
@@ -58,7 +60,11 @@ def get_docker_tag(platform: str, registry: str) -> str:
     platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
         registry = "mxnet_local"
-    return "{0}/{1}".format(registry, platform)
+    dockerfile_hash = 'unk'
+    with open(get_dockerfile(platform),"rb") as f:
+        bytes = f.read()
+        dockerfile_hash = hashlib.sha256(bytes).hexdigest()[:12]
+    return "{0}:{1}-{2}".format(registry, platform, dockerfile_hash)
 
 
 def get_dockerfile(platform: str, path=get_dockerfiles_path()) -> str:
@@ -117,6 +123,8 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     image_id = _get_local_image_id(docker_tag=tag)
     if not image_id:
         raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
+    # now that we've built the container, push it to our docker cache
+    push_docker_cache(registry, tag, image_id)
     return image_id
 
 
@@ -265,6 +273,22 @@ def load_docker_cache(tag, docker_registry) -> None:
     else:
         logging.info('Distributed docker cache disabled')
 
+def push_docker_cache(registry, docker_tag, image_id) -> None:
+    """Uploads tagged container to given docker registry"""
+    if docker_registry:
+        # noinspection PyBroadException
+        try:
+            if "dkr.ecr" in registry:
+                # we need to get credentials to login to ECR
+                os.system("$(aws ecr get-login --no-include-email)")
+            import docker_cache
+            logging.info('Docker cache upload is enabled to registry %s', registry)
+            docker_cache._upload_image(registry, tag, image_id)
+        except Exception:
+            logging.exception('Unable to push image to Docker cache...')
+    else:
+        logging.info('Distributed docker cache disabled')
+
 
 def log_environment():
     instance_info = ec2_instance_info()
@@ -406,7 +430,8 @@ def main() -> int:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
             build_docker(platform, registry=args.docker_registry,
-                         num_retries=args.docker_build_retries, no_cache=args.no_cache)
+                         num_retries=args.docker_build_retries, no_cache=args.no_cache,
+                         cache_intermediate=args.cache_intermediate)
             if args.build_only:
                 continue
             shutil.rmtree(buildir(), ignore_errors=True)
