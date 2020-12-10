@@ -915,7 +915,7 @@ class HybridBlock(Block):
         self._monitor_all = False
         self._backend = None
         self._backend_opts = {}
-        self._partition_if_dynamic = False
+        self._partition_if_dynamic = True
         self._first_forward = True
 
     def __setattr__(self, name, value):
@@ -1174,7 +1174,7 @@ class HybridBlock(Block):
         return _regroup(out, self._out_format)
 
     def optimize_for(self, x, *args, backend=None, clear=False,
-                     partition_if_dynamic=False,
+                     partition_if_dynamic=True,
                      static_alloc=False,
                      static_shape=False,
                      inline_limit=2,
@@ -1281,7 +1281,7 @@ class HybridBlock(Block):
         self._clear_cached_op()
 
     def hybridize(self, active=True,
-                  partition_if_dynamic=False,
+                  partition_if_dynamic=True,
                   static_alloc=False,
                   static_shape=False,
                   inline_limit=2,
