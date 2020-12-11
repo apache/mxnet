@@ -2225,6 +2225,69 @@ def convert_take(node, **kwargs):
     return [node]
 
 
+def make_tensor(shape_list, shape_name, initializer):
+    shape_np = np.array(shape_list, dtype='int64')
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[shape_np.dtype]
+    dims = np.shape(shape_np)
+    tensor_node = onnx.helper.make_tensor_value_info(shape_name, data_type, dims)
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=shape_name,
+            data_type=data_type,
+            dims=dims,
+            vals=shape_list,
+            raw=False,
+        )
+    )
+
+
+@mx_op.register("_contrib_interleaved_matmul_selfatt_qk")
+def convert_matmul_selfatt_qk(node, **kwargs):
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    heads = int(attrs.get('heads'))
+    data_shape = kwargs['in_shape'][0]
+    # a, b, c, d, e are seq_len, batch_size, num_heads, 3, head_dim respectively
+    a, b, _ = data_shape
+    c = heads
+    d = 3
+    e = int(_ / c / d)
+
+    one_over_sqrt_e = 1.0 / e ** 0.5
+    create_const_scalar_node(name+'_one_over_sqrt_e', np.float32(one_over_sqrt_e), kwargs)
+    make_tensor([a, b, c, d, e], name+'_shape0',kwargs["initializer"])
+    make_tensor([0, 0, 0, 0, 0], name+'_slice_start0',kwargs["initializer"])
+    make_tensor([a, b, c, 1, e], name+'_slice_end0',kwargs["initializer"])
+    make_tensor([a, b, c, e], name+'_shape1',kwargs["initializer"])
+    make_tensor([b * c, a, e], name+'_shape2',kwargs["initializer"])
+    make_tensor([0, 0, 0, 1, 0], name+'_slice_start1',kwargs["initializer"])
+    make_tensor([a, b, c, 2, e], name+'_slice_end1',kwargs["initializer"])
+
+    nodes = [
+            make_node('Reshape', [input_nodes[0], name+'_shape0'], [name+'_reshape0_out']),
+            make_node('Slice', [name+'_reshape0_out', name+'_slice_start0', name+'_slice_end0'], \
+                      [name+'_slice0_out']),
+            make_node('Reshape', [name+'_slice0_out', name+'_shape1'], [name+'_reshape1_out']),
+            make_node('Transpose', [name+'_reshape1_out'], [name+'_transpose0_out'], \
+                      perm=(1, 2, 0, 3)),
+            make_node('Reshape', [name+'_transpose0_out', name+'_shape2'], [name+'_reshape2_out']),
+            make_node('Mul', [name+'_reshape2_out', name+'_one_over_sqrt_e'], [name+'_mul0_out']),
+            #div_sqrt
+            make_node('Slice', [name+'_reshape0_out', name+'_slice_start1', name+'_slice_end1'], \
+                      [name+'_slice1_out']),
+            make_node('Reshape', [name+'_slice1_out', name+'_shape1'], [name+'_reshape3_out']),
+            make_node('Transpose', [name+'_reshape3_out'], [name+'_transpose1_out'], \
+                      perm=(1, 2, 0, 3)),
+            make_node('Reshape', [name+'_transpose1_out', name+'_shape2'], [name+'_reshape4_out']),
+            make_node('Transpose', [name+'_reshape4_out'], [name+'_transpose2_out'], \
+                      perm=(0, 2, 1)),
+            make_node('MatMul', [name+'_mul0_out', name+'_transpose2_out'], [name], name=name)
+        ]
+
+    return nodes
+
+
 @mx_op.register("broadcast_axis")
 def convert_broadcast_axis(node, **kwargs):
     from onnx.helper import make_node
@@ -2237,31 +2300,19 @@ def convert_broadcast_axis(node, **kwargs):
     for i, axis in enumerate(axis):
         data_shape_list[axis] *= size[i]
 
-    initializer = kwargs["initializer"]
-    shape_np = np.array(data_shape_list, dtype='int64')
-    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[shape_np.dtype]
-    dims = np.shape(shape_np)
-    shape_name = name+'_out_shape'
-    tensor_node = onnx.helper.make_tensor_value_info(shape_name, data_type, dims)
+    make_tensor(data_shape_list, name+'_shape',kwargs["initializer"])
 
-    initializer.append(
-        onnx.helper.make_tensor(
-            name=shape_name,
-            data_type=data_type,
-            dims=dims,
-            vals=data_shape_list,
-            raw=False,
-        )
-    )
+    return [make_node('Expand', [input_nodes[0], name+'_shape'], [name], name=name)]
 
-    return [make_node('Expand', [input_nodes[0], shape_name], [name], name=name)]
+
+@mx_op.register("_contrib_interleaved_matmul_selfatt_valatt")
+def convert_interleaved_matmul_selfatt_valatt(node, **kwargs):
+    return []
 
 
 @mx_op.register("SequenceMask")
 def convert_sequencemask(node, **kwargs):
     from onnx.helper import make_node
-    from onnx import numpy_helper
-    from onnx import AttributeProto, TensorProto, GraphProto
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     use_sequence_length = attrs.get('use_sequence_length', 'False')
