@@ -123,8 +123,9 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     image_id = _get_local_image_id(docker_tag=tag)
     if not image_id:
         raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
-    # now that we've built the container, push it to our docker cache
-    push_docker_cache(registry, tag, image_id)
+    # now that we've built the container, push it to our docker cache if DOCKER_ECR_CACHE is defined
+    if 'DOCKER_ECR_REGISTRY' in os.environ:
+        push_docker_cache(registry, tag, image_id)
     return image_id
 
 
