@@ -267,7 +267,7 @@ def load_docker_cache(tag, docker_registry) -> None:
         try:
             if "dkr.ecr" in docker_registry:
                 # we need to get credentials to login to ECR
-                os.system("$(aws ecr get-login --no-include-email)")
+                os.system("$(aws ecr get-login --region ${DOCKER_ECR_REGION} --no-include-email)")
             import docker_cache
             logging.info('Docker cache download is enabled from registry %s', docker_registry)
             docker_cache.load_docker_cache(registry=docker_registry, docker_tag=tag)
@@ -283,7 +283,7 @@ def push_docker_cache(registry, tag, image_id) -> None:
         try:
             if "dkr.ecr" in registry:
                 # we need to get credentials to login to ECR
-                os.system("$(aws ecr get-login --no-include-email)")
+                os.system("$(aws ecr get-login --region ${DOCKER_ECR_REGION} --no-include-email)")
             import docker_cache
             logging.info('Docker cache upload is enabled to registry %s', registry)
             docker_cache._upload_image(registry, tag, image_id)
