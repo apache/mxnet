@@ -2349,6 +2349,8 @@ def convert_matmul_selfatt_qk(node, **kwargs):
             make_node('MatMul', [name+'_mul0_out', name+'_transpose2_out'], [name], name=name)
         ]
 
+    return nodes
+
 
 @mx_op.register("broadcast_axis")
 def convert_broadcast_axis(node, **kwargs):
