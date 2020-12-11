@@ -31,9 +31,13 @@ echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.
 
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
 
+add-apt-repository ppa:cran/libgit2
+
 apt-get update || true
 apt-get install -y --allow-unauthenticated \
     libcairo2-dev \
+    libgit2-dev \
+    libssh2-1-dev \
     libssl-dev \
     libxml2-dev \
     libxt-dev \
