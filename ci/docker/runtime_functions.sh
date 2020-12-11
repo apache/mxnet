@@ -1281,6 +1281,7 @@ integrationtest_ubuntu_cpu_onnx() {
 	pytest tests/python-pytest/onnx/mxnet_export_test.py
 	pytest tests/python-pytest/onnx/test_models.py
 	pytest tests/python-pytest/onnx/test_node.py
+	pytest tests/python-pytest/onnx/test_operators.py
 	pytest tests/python-pytest/onnx/test_onnxruntime.py
 }
 

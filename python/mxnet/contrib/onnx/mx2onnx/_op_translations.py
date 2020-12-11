@@ -154,6 +154,29 @@ def create_basic_op_node(op_name, node, kwargs):
     )
     return [node]
 
+def create_const_scalar_node(input_name, value, kwargs):
+    """Helper function to create a tensor value node and a
+    initializer tensor node with constant value."""
+    from onnx.helper import make_tensor, make_tensor_value_info
+    initializer = kwargs["initializer"]
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
+    value_node = make_tensor_value_info(input_name, input_type, ())
+    tensor_node = make_tensor(input_name, input_type, (), (value,))
+    initializer.append(tensor_node)
+    return value_node
+
+def create_const_node(input_name, value, kwargs):
+    """Helper function to create a tensor value node and a
+    initializer tensor node with constant value."""
+    from onnx.helper import make_tensor, make_tensor_value_info
+    initializer = kwargs["initializer"]
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
+    input_shape = value.shape
+    value_node = make_tensor_value_info(input_name, input_type, input_shape)
+    tensor_node = make_tensor(input_name, input_type, input_shape, value)
+    initializer.append(tensor_node)
+    return value_node
+
 @mx_op.register("null")
 def convert_weights_and_inputs(node, **kwargs):
     """Helper function to convert weights and inputs.
@@ -802,6 +825,7 @@ def convert_leakyrelu(node, **kwargs):
     """Map MXNet's LeakyReLU operator attributes to onnx's Elu/LeakyRelu/PRelu operators
     based on the input node's attributes and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     act_type = attrs.get("act_type", "leaky")
@@ -816,6 +840,19 @@ def convert_leakyrelu(node, **kwargs):
             inputs=input_nodes,
             outputs=[name],
             name=name)
+    elif act_type in ('gelu'):
+        sqrt2 = np.float32(1.4142135623730951)
+        nodes = [
+            create_const_scalar_node(name+"_sqrt2", sqrt2, kwargs),
+            make_node("Div", [input_nodes[0], name+"_sqrt2"], [name+"_div0_out"]),
+            make_node("Erf", [name+"_div0_out"], [name+"_erf0_out"]),
+            create_const_scalar_node(name+"_one", np.float32(1.0), kwargs),
+            create_const_scalar_node(name+"_half", np.float32(0.5), kwargs),
+            make_node("Add", [name+"_erf0_out", name+"_one"], [name+"_add0_out"]),
+            make_node("Mul", [input_nodes[0], name+"_add0_out"], [name+"_mul0_out"]),
+            make_node("Mul", [name+"_mul0_out", name+"_half"], [name])
+        ]
+        return nodes
     else:
         node = onnx.helper.make_node(
             act_name[act_type],
@@ -2225,6 +2262,33 @@ def convert_take(node, **kwargs):
     return [node]
 
 
+@mx_op.register("LayerNorm")
+def convert_layer_norm(node, **kwargs):
+    """Map MXNet's LayerNorm operator attributes to onnx operators.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    in_shape = kwargs['in_shape']
+    axes = [-i for i in range(len(in_shape[0]), 0, -1)]
+    eps = attrs.get('eps')
+    nodes = [
+        make_node("ReduceMean", [input_nodes[0]], [name+"_rm0_out"], axes=axes),
+        make_node("Sub", [input_nodes[0], name+"_rm0_out"], [name+"_sub0_out"]),
+        create_const_scalar_node(name+"_two", np.float32(2.), kwargs),
+        make_node("Pow", [name+"_sub0_out", name+"_two"], [name+"_pow0_out"]),
+        make_node("ReduceMean", [name+"_pow0_out"], [name+"_rm1_out"], axes=axes),
+        create_const_scalar_node(name+"_eps", np.float32(eps), kwargs),
+        make_node("Add", [name+"_rm1_out", name+"_eps"], [name+"_add0_out"]),
+        make_node("Sqrt", [name+"_add0_out"], [name+"_sqrt0_out"]),
+        make_node("Div", [name+"_sub0_out", name+"_sqrt0_out"], [name+"_div0_out"]),
+        make_node("Mul", [name+"_div0_out", input_nodes[1]], [name+"_mul0_out"]),
+        make_node("Add", [name+"_mul0_out", input_nodes[2]], [name], name)
+    ]
+
+    return nodes
+
+
 def make_tensor(shape_list, shape_name, initializer):
     shape_np = np.array(shape_list, dtype='int64')
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[shape_np.dtype]
@@ -2284,8 +2348,6 @@ def convert_matmul_selfatt_qk(node, **kwargs):
                       perm=(0, 2, 1)),
             make_node('MatMul', [name+'_mul0_out', name+'_transpose2_out'], [name], name=name)
         ]
-
-    return nodes
 
 
 @mx_op.register("broadcast_axis")
@@ -2388,5 +2450,127 @@ def convert_sequencemask(node, **kwargs):
             make_node('Reshape', [name+'_less0_out', output_shape_name2], [name+"_reshape1_out"]),
             make_node('Where', [name+'_reshape1_out', input_nodes[0], name+'_mask_val'], [name]),
         ]
+    return nodes
+
+
+@mx_op.register("Embedding")
+def convert_embedding(node, **kwargs):
+    """Map MXNet's Embedding operator attributes to onnx's
+    Gather operator."""
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    axis = int(attrs.get('axis', 0))
+    node = onnx.helper.make_node(
+        "Gather",
+        input_nodes,
+        [name],
+        axis=axis,
+        name=name
+    )
+    return [node]
+
+
+@mx_op.register("stack")
+def convert_stack(node, **kwargs):
+    """Map MXNet's stack operator to onnx operators.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    axis = int(attrs.get('axis', 0))
+    idx = 0
+    nodes = []
+    for input_node in input_nodes:
+        nodes.append(onnx.helper.make_node(
+            "Unsqueeze",
+            inputs=[input_node],
+            outputs=[name+"_unsqueeze"+str(idx)],
+            axes=[axis]
+        ))
+        idx += 1
+
+    nodes.append(onnx.helper.make_node(
+        "Concat",
+        inputs=[name+"_unsqueeze"+str(i) for i in range(len(nodes))],
+        outputs=[name],
+        name=name,
+        axis=axis
+    ))
+    return nodes
+
+
+@mx_op.register("slice")
+def convert_slice(node, **kwargs):
+    """Map MXNet's slice operator to onnx Slice operator."""
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    starts = convert_string_to_list(attrs.get("begin"))
+    ends = convert_string_to_list(attrs.get("end"))
+    steps = attrs.get("step", [])
+    nodes = [
+        create_const_node(name+"_begin", np.array(starts), kwargs),
+        create_const_node(name+"_end", np.array(ends), kwargs)
+    ]
+    inputs = [input_nodes[0], name+"_begin", name+"_end"]
+    if len(steps) > 0:
+        nodes.append(create_const_node(name+"_steps", np.array(steps, dtype='int64'), kwargs))
+        inputs.append(name+"_steps")
+    nodes.append(onnx.helper.make_node("Slice", inputs, [name], name=name))
+    return nodes
+
+
+@mx_op.register("zeros_like")
+def convert_zeros_like(node, **kwargs):
+    """Map MXNet's zeros_like operator attributes to onnx's ConstantOfShape operator.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, _, _ = get_inputs(node, kwargs)
+
+    # create tensor with shape of input
+    create_const_node(name+"_shape", np.array(kwargs['in_shape'][0], dtype='int64'), kwargs)
+    tensor_value = make_tensor(name+"_zero", kwargs['in_type'], [1], [0])
+    nodes = [
+        make_node("ConstantOfShape", [name+"_shape"], [name], value=tensor_value)
+    ]
+    return nodes
+
+
+@mx_op.register("_contrib_arange_like")
+def convert_arange_like(node, **kwargs):
+    """Map MXNet's arange_like operator attributes to onnx's Range and Reshape operators.
+    """
+    from onnx.helper import make_node
+    name, _, attrs = get_inputs(node, kwargs)
+
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError("ONNX opset 11 or greater is required to export this operator")
+
+    input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+    in_shape = kwargs['in_shape']
+    axis = attrs.get('axis')
+
+    if axis is None:
+        # output will be same shape as input
+        output_shape = in_shape[0]
+    else:
+        # determine shape of axis
+        output_shape = [in_shape[0][int(axis)]]
+
+    start = np.array([attrs.get('start', 0.)], dtype=dtype)
+    step = np.array([attrs.get('step', 1.)], dtype=dtype)
+    repeat = np.array([attrs.get('repeat', 1)], dtype=dtype)
+    if repeat != 1:
+        raise NotImplementedError("arange_like operator with repeat != 1 not yet implemented.")
+
+    tot_elements = np.prod(output_shape)
+    limit = np.array([start + (tot_elements * step)], dtype=dtype)
+
+    # create constant inputs
+    nodes = [
+        create_const_scalar_node(name+"_start", start, kwargs),
+        create_const_scalar_node(name+"_limit", limit, kwargs),
+        create_const_scalar_node(name+"_step", step, kwargs),
+        create_const_node(name+"_shape", np.array(output_shape, dtype='int64'), kwargs),
+        make_node("Range", [name+"_start", name+"_limit", name+"_step"], [name+"_range0_out"]),
+        make_node("Reshape", [name+"_range0_out", name+"_shape"], [name])
+    ]
     return nodes
 
