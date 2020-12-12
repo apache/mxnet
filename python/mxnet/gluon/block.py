@@ -636,9 +636,8 @@ class Block:
         index = [0]
         _save_cached_graphs(self, index, model)
         # save model
-        fp = open(prefix+'-model.json', 'w')
-        json.dump(model, fp)
-        fp.close()
+        with open(prefix+'-model.json', 'w') as fp:
+            json.dump(model, fp)
         # save params
         self.save_parameters('MyModel-model.params')
 
@@ -669,9 +668,9 @@ class Block:
             <prefix>-model.json and <prefix>-model.params
         """
         # load model json from file
-        fp = open(prefix+'-model.json')
-        model = json.load(fp)
-        fp.close()
+        with open(prefix+'-model.json') as fp:
+            model = json.load(fp)
+
         def _load_cached_graphs(blk, index, structure):
             # get block name
             name = type(blk).__name__.lower()
