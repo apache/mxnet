@@ -2289,8 +2289,8 @@ def convert_layer_norm(node, **kwargs):
     return nodes
 
 
-def make_tensor(shape_list, shape_name, initializer):
-    shape_np = np.array(shape_list, dtype='int64')
+def make_tensor(shape_list, shape_name, initializer, dtype='int64'):
+    shape_np = np.array(shape_list, dtype=dtype)
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[shape_np.dtype]
     dims = np.shape(shape_np)
     tensor_node = onnx.helper.make_tensor_value_info(shape_name, data_type, dims)
@@ -2308,27 +2308,50 @@ def make_tensor(shape_list, shape_name, initializer):
 @mx_op.register("_contrib_interleaved_matmul_selfatt_qk")
 def convert_matmul_selfatt_qk(node, **kwargs):
     from onnx.helper import make_node
+    from onnx import TensorProto
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     heads = int(attrs.get('heads'))
-    data_shape = kwargs['in_shape'][0]
+    
     # a, b, c, d, e are seq_len, batch_size, num_heads, 3, head_dim respectively
-    a, b, _ = data_shape
-    c = heads
-    d = 3
-    e = int(_ / c / d)
-
-    one_over_sqrt_e = 1.0 / e ** 0.5
-    create_const_scalar_node(name+'_one_over_sqrt_e', np.float32(one_over_sqrt_e), kwargs)
-    make_tensor([a, b, c, d, e], name+'_shape0',kwargs["initializer"])
-    make_tensor([0, 0, 0, 0, 0], name+'_slice_start0',kwargs["initializer"])
-    make_tensor([a, b, c, 1, e], name+'_slice_end0',kwargs["initializer"])
-    make_tensor([a, b, c, e], name+'_shape1',kwargs["initializer"])
-    make_tensor([b * c, a, e], name+'_shape2',kwargs["initializer"])
-    make_tensor([0, 0, 0, 1, 0], name+'_slice_start1',kwargs["initializer"])
-    make_tensor([a, b, c, 2, e], name+'_slice_end1',kwargs["initializer"])
-
+    make_tensor([heads], name+"_const_heads", kwargs["initializer"])
+    make_tensor([0], name+"_0", kwargs["initializer"])
+    make_tensor([1], name+"_1", kwargs["initializer"])
+    make_tensor([1], name+"_1_f", kwargs["initializer"], dtype='float32')
+    make_tensor([2], name+"_2", kwargs["initializer"])
+    make_tensor([3], name+"_3", kwargs["initializer"])
+    make_tensor([4], name+"_4", kwargs["initializer"])
+    make_tensor([5], name+"_5", kwargs["initializer"])
+    make_tensor([heads], name+"_c", kwargs["initializer"])
+    make_tensor([3], name+"_d", kwargs["initializer"])
+ 
     nodes = [
+            make_node('Shape', [input_nodes[0]], [name+"_data_shape"]),
+            make_node('Slice', [name+'_data_shape', name+'_0', name+'_1'], [name+"_a"]),
+            make_node('Slice', [name+'_data_shape', name+'_1', name+'_2'], [name+"_b"]),
+            make_node('Slice', [name+'_data_shape', name+'_2', name+'_3'], [name+"_cde"]),
+            make_node('Div', [name+'_cde', name+'_c'], [name+'_de']),
+            make_node('Div', [name+'_de', name+'_d'], [name+'_e']),
+            make_node('Cast', [name+'_e'], [name+'_e_f'], to=int(TensorProto.FLOAT)),
+            make_node('Sqrt', [name+'_e_f'], [name+'_sqrt_e']),
+            make_node('Div', [name+'_1_f', name+'_sqrt_e'], [name+'_1_over_sqrt_e']),
+            make_node('Mul', [name+'_b', name+'_c'], [name+'_bc']),
+
+            make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_d', name+'_e'], \
+                      [name+'_shape0'], axis=0),
+            make_node("Concat", [name+'_0', name+'_0', name+'_0', name+'_0', name+'_0'], \
+                      [name+'_slice_start0'], axis=0),
+            make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_1', name+'_e'], \
+                      [name+'_slice_end0'], axis=0),
+            make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_e'], \
+                      [name+'_shape1'], axis=0),
+            make_node("Concat", [name+'_bc', name+'_a', name+'_e'], \
+                      [name+'_shape2'], axis=0),
+            make_node("Concat", [name+'_0', name+'_0', name+'_0', name+'_1', name+'_0'], \
+                      [name+'_slice_start1'], axis=0),
+            make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_2', name+'_e'], \
+                      [name+'_slice_end1'], axis=0),
+
             make_node('Reshape', [input_nodes[0], name+'_shape0'], [name+'_reshape0_out']),
             make_node('Slice', [name+'_reshape0_out', name+'_slice_start0', name+'_slice_end0'], \
                       [name+'_slice0_out']),
@@ -2336,8 +2359,7 @@ def convert_matmul_selfatt_qk(node, **kwargs):
             make_node('Transpose', [name+'_reshape1_out'], [name+'_transpose0_out'], \
                       perm=(1, 2, 0, 3)),
             make_node('Reshape', [name+'_transpose0_out', name+'_shape2'], [name+'_reshape2_out']),
-            make_node('Mul', [name+'_reshape2_out', name+'_one_over_sqrt_e'], [name+'_mul0_out']),
-            #div_sqrt
+            make_node('Mul', [name+'_reshape2_out', name+'_1_over_sqrt_e'], [name+'_mul0_out']),
             make_node('Slice', [name+'_reshape0_out', name+'_slice_start1', name+'_slice_end1'], \
                       [name+'_slice1_out']),
             make_node('Reshape', [name+'_slice1_out', name+'_shape1'], [name+'_reshape3_out']),
