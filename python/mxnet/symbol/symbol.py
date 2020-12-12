@@ -3035,9 +3035,9 @@ def load(fname):
     fname : str
         The name of the file, examples:
 
-    - `s3://my-bucket/path/my-s3-symbol`
-    - `hdfs://my-bucket/path/my-hdfs-symbol`
-    - `/path-to/my-local-symbol`
+        - `s3://my-bucket/path/my-s3-symbol`
+        - `hdfs://my-bucket/path/my-hdfs-symbol`
+        - `/path-to/my-local-symbol`
 
     Returns
     -------
