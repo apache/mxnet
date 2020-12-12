@@ -235,7 +235,7 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<cpu, 1, DType>& dat,
   const size_t M(work.size(0)/(sizeof(DType)*N));
   const int omp_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
   #pragma omp parallel for num_threads(omp_threads)
-  for (size_t i = 0; i < M; ++i) {
+  for (index_t i = 0; i < static_cast<index_t>(M); ++i) {
     // Tensor `work` stores the flattened source data, while `dat` stores the sorted result.
     DType *vals = reinterpret_cast<DType*>(work.dptr_);
     DType *sorted_vals = dat.dptr_+i*N;
@@ -495,8 +495,8 @@ void TopKImpl(const RunContext &ctx,
     workspace_curr_ptr += temp_size;
   }
 
-  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size * element_num, 1, DType{0}, DType{1},
-    kWriteTo, reinterpret_cast<DType*>(indices.dptr_));
+  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size * element_num, 1, IDXType{0}, IDXType{1},
+    kWriteTo, reinterpret_cast<IDXType*>(indices.dptr_));
   CHECK_EQ(indices.CheckContiguous(), true);
 
   // 2. Perform inplace batch sort.
@@ -799,7 +799,7 @@ void TopK(const nnvm::NodeAttrs& attrs,
         TopKImpl<xpu, DType, index_t, index_t>(ctx.run_ctx, ctx.requested[0], req,
                                                inputs[0], outputs, param);
       } else {
-        TopKImpl<xpu, DType, int32_t, index_t>(ctx.run_ctx, ctx.requested[0], req,
+        TopKImpl<xpu, DType, index_t, int32_t>(ctx.run_ctx, ctx.requested[0], req,
                                                inputs[0], outputs, param);
       }
     });
@@ -823,7 +823,7 @@ void Sort(const nnvm::NodeAttrs& attrs,
       TopKImpl<xpu, DType, index_t, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0],
                                     outputs, topk_param);
     } else {
-      TopKImpl<xpu, DType, int32_t, int32_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0],
+      TopKImpl<xpu, DType, index_t, int32_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0],
                                     outputs, topk_param);
     }
   });
@@ -950,7 +950,7 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
       if (inputs[0].Size() >= INT_MAX) {
         TopKBackwardImpl<xpu, DType, index_t, index_t>(ctx, inputs, req, outputs, param);
       } else {
-        TopKBackwardImpl<xpu, DType, int32_t, int32_t>(ctx, inputs, req, outputs, param);
+        TopKBackwardImpl<xpu, DType, index_t, int32_t>(ctx, inputs, req, outputs, param);
       }
     });
   } else {
