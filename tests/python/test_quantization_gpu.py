@@ -14,21 +14,14 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+import os
+import sys
+import mxnet as mx
 
-# coding: utf-8
-"""Experimental contributions"""
 
-from . import symbol
-from . import ndarray
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../quantization'))
+from mxnet.test_utils import set_default_context
+from test_quantization import *
 
-from . import symbol as sym
-from . import ndarray as nd
-
-from . import tensorboard
-
-from . import text
-from . import onnx
-from . import io
-from . import quantization
-from . import quantization as quant
-from . import tensorrt
+set_default_context(mx.gpu(0))
