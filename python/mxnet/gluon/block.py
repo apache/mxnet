@@ -600,12 +600,13 @@ class Block:
         """
         # create empty model structure
         model = {}
-        def _save_cached_graphs(blk, index, structure):
+        def _save_cached_graphs(blk, structure, index=0):
             # create new entry for this block
             mdl = {}
             # encode unique name based on block type and ID
             name = type(blk).__name__.lower()
-            structure[name+str(index[0])] = mdl
+            structure[name+str(index)] = mdl
+            index += 1
             if isinstance(blk, HybridBlock):
                 if blk._cached_graph:
                     # save in/out formats
@@ -630,11 +631,12 @@ class Block:
                 pmap[p] = param._uuid
             # recursively save children
             for child in blk._children.values():
-                index[0] += 1
-                _save_cached_graphs(child(), index, mdl)
+                index = _save_cached_graphs(child(), mdl, index)
+            # return latest index (ie. block count)
+            return index
+
         # save top-level block
-        index = [0]
-        _save_cached_graphs(self, index, model)
+        _save_cached_graphs(self, model)
         # save model
         with open(prefix+'-model.json', 'w') as fp:
             json.dump(model, fp)
@@ -671,11 +673,12 @@ class Block:
         with open(prefix+'-model.json') as fp:
             model = json.load(fp)
 
-        def _load_cached_graphs(blk, index, structure):
+        def _load_cached_graphs(blk, structure, index=0):
             # get block name
             name = type(blk).__name__.lower()
             # lookup previous encoded name based on block type and ID
-            mdl = structure[name+str(index[0])]
+            mdl = structure[name+str(index)]
+            index += 1
             if isinstance(blk, HybridBlock):
                 if mdl['hybridized']:
                     # restore in/out formats
@@ -697,11 +700,12 @@ class Block:
                 param._uuid = uuid
             # recursively reload children
             for child in blk._children.values():
-                index[0] += 1
-                _load_cached_graphs(child(), index, mdl)
+                index = _load_cached_graphs(child(), mdl, index)
+            # return latest index (ie. block count)
+            return index
+
         # load top-level block
-        index = [0]
-        _load_cached_graphs(self, index, model)
+        _load_cached_graphs(self, model)
         # load params
         self.load_parameters('MyModel-model.params')
 
