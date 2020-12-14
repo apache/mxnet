@@ -2377,19 +2377,46 @@ def convert_matmul_selfatt_qk(node, **kwargs):
 @mx_op.register("broadcast_axis")
 def convert_broadcast_axis(node, **kwargs):
     from onnx.helper import make_node
+    from onnx import TensorProto
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     data_shape_list = list(kwargs['in_shape'][0])
     axis = convert_string_to_list(attrs.get('axis', '()'))
     size = convert_string_to_list(attrs.get('size', '()'))
     assert len(axis) == len(size)
+
+    make_tensor([0], name+'_0', kwargs["initializer"])
+    make_tensor([1], name+'_1', kwargs["initializer"])
+    make_tensor([], name+'_void', kwargs["initializer"])
+    create_const_scalar_node(name+'_0_s', np.int64(0), kwargs)
+    create_const_scalar_node(name+'_1_s', np.int64(1), kwargs)
+
+    shape_name = name+'_shape_0'
+    nodes = [
+            make_node('Shape', [input_nodes[0]], [shape_name]),
+            make_node('Shape', [shape_name], [name+'_in_dim']),
+            make_node('Reshape', [name+'_in_dim', name+'_void'], [name+'_in_dim_s']),
+            make_node('Range', [name+'_0_s', name+'_in_dim_s', name+'_1_s'], [name+'_range']),
+        ]
+
     for i, axis in enumerate(axis):
-        data_shape_list[axis] *= size[i]
+        if axis not in (0, 1):
+            make_tensor([axis], name+'_'+str(axis), kwargs["initializer"])
+        make_tensor([size[i]-1], name+'_size_'+str(i), kwargs["initializer"])
+        _ = [
+             # this is a "one-hot" tensor
+             make_node('Equal', [name+'_range', name+'_'+str(axis)], [name+'_equal_'+str(i)]),
+             make_node('Cast', [name+'_equal_'+str(i)], [name+'_cast_'+str(i)], to=int(TensorProto.INT64)),
+             make_node('Mul', [name+'_size_'+str(i), name+'_cast_'+str(i)], [name+'_mul_'+str(i)]),
+             make_node('Add', [name+'_mul_'+str(i), name+'_1'], [name+'_add_'+str(i)]),
+             make_node('Mul', [name+'_add_'+str(i), shape_name], [name+'_shape_'+str(i+1)])
+            ]
+        shape_name = name+'_shape_'+str(i+1)
+        nodes += _
 
-    make_tensor(data_shape_list, name+'_shape',kwargs["initializer"])
+    nodes += [make_node('Expand', [input_nodes[0], shape_name], [name], name=name)]
 
-    return [make_node('Expand', [input_nodes[0], name+'_shape'], [name], name=name)]
-
+    return nodes
 
 @mx_op.register("_contrib_interleaved_matmul_selfatt_valatt")
 def convert_interleaved_matmul_selfatt_valatt(node, **kwargs):
