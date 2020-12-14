@@ -2426,80 +2426,57 @@ def convert_interleaved_matmul_selfatt_valatt(node, **kwargs):
 @mx_op.register("SequenceMask")
 def convert_sequencemask(node, **kwargs):
     from onnx.helper import make_node
+    from onnx import TensorProto
+
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     use_sequence_length = attrs.get('use_sequence_length', 'False')
-    mask_val = attrs.get('value', 0)
-    axis = attrs.get('axis', 0)
-    data_shape = kwargs['in_shape'][0]
-    max_len = data_shape[0] if axis == '0' else data_shape[1]
-    batch_size = data_shape[1] if axis == '0' else data_shape[0]
+    mask_val = float(attrs.get('value', '0'))
+    axis = int(attrs.get('axis', '0'))
 
     if(use_sequence_length == 'False'):
         return [make_node('Identity', [input_nodes[0]], [name], name=name)]
 
-    create_const_scalar_node(name+'_zero', np.float32(0), kwargs)
-    create_const_scalar_node(name+'_max_len', np.float32(max_len), kwargs)
-    create_const_scalar_node(name+'_one', np.float32(1), kwargs)
+    make_tensor([], name+'_void', kwargs["initializer"])
+    make_tensor([0], name+'_0', kwargs["initializer"])
+    make_tensor([1], name+'_1', kwargs["initializer"])
+    make_tensor([2], name+'_2', kwargs["initializer"])
+    create_const_scalar_node(name+'_0_s', np.int64(0), kwargs)
+    create_const_scalar_node(name+'_1_s', np.int64(1), kwargs)
+    create_const_scalar_node(name+'_2_s', np.int64(2), kwargs)
     create_const_scalar_node(name+'_mask_val', np.float32(mask_val), kwargs),
 
-    output_shape_list = []
-    if (axis == '0'):
-        output_shape_list = (max_len, 1)
-    else:
-        output_shape_list = (batch_size, 1)
-    initializer = kwargs["initializer"]
-    output_shape_np = np.array(output_shape_list, dtype='int64')
-    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np.dtype]
-    dims = np.shape(output_shape_np)
-    output_shape_name = "shape_tensor"
-    tensor_node = onnx.helper.make_tensor_value_info(output_shape_name, data_type, dims)
+    nodes = [
+        make_node('Shape', [input_nodes[0]], [name+'_in_shape']),
+        make_node('Slice', [name+'_in_shape', name+'_0', name+'_1'], [name+'_slice_0']),
+        make_node('Slice', [name+'_in_shape', name+'_1', name+'_2'], [name+'_slice_1']),
+        make_node('Concat', [name+'_slice_0', name+'_1'], [name+'_shape_0'], axis=0),
+        make_node('Shape', [name+'_in_shape'], [name+'_in_dim']),
+        make_node('Reshape', [name+'_in_dim', name+'_void'], [name+'_in_dim_s']),
+        make_node('Range', [name+'_0_s', name+'_in_dim_s', name+'_1_s'], [name+'_range_0']),
+        make_node('Less', [name+'_range_0', name+'_2'], [name+'_less_0']),
+        make_node('Where', [name+'_less_0', name+'_in_shape', name+'_1'], [name+'_shape_1'])
+        ]
 
-    initializer.append(
-        onnx.helper.make_tensor(
-            name=output_shape_name,
-            data_type=data_type,
-            dims=dims,
-            vals=output_shape_list,
-            raw=False,
-        )
-    )
-
-    output_shape_list2 = data_shape[0:2] + tuple(1 for _ in data_shape[2:])
-    initializer = kwargs["initializer"]
-    output_shape_np2 = np.array(output_shape_list2, dtype='int64')
-    data_type2 = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np2.dtype]
-    dims2 = np.shape(output_shape_np2)
-
-    output_shape_name2 = "mask_shape_tensor"
-    tensor_node2 = onnx.helper.make_tensor_value_info(output_shape_name2, data_type2, dims2)
-
-    initializer.append(
-        onnx.helper.make_tensor(
-            name=output_shape_name2,
-            data_type=data_type2,
-            dims=dims2,
-            vals=output_shape_list2,
-            raw=False,
-        )
-    )
-
-    nodes = []
-    if(axis == '0'):
+    if(axis == 0):
         nodes += [
-            make_node('Range', [name+'_zero', name+'_max_len', name+'_one'], [name+'_range0_out']),
-            make_node('Reshape', [name+'_range0_out', output_shape_name], [name+"_reshape0_out"]),
-            make_node('Less', [name+'_reshape0_out', input_nodes[1]], [name+'_less0_out']),
-            make_node('Reshape', [name+'_less0_out', output_shape_name2], [name+"_reshape1_out"]),
-            make_node('Where', [name+'_reshape1_out', input_nodes[0], name+'_mask_val'], [name]),
+            make_node('Reshape', [name+'_slice_0', name+'_void'], [name+'_max_len'], name = '111'),
+            make_node('Range', [name+'_0_s', name+'_max_len', name+'_1_s'], [name+'_range_1']),
+            make_node('Reshape', [name+'_range_1', name+'_shape_0'], [name+"_reshape_0"], name='2222'),
+            make_node('Cast', [input_nodes[1]], [name+'_cast'], to=int(TensorProto.INT64)),
+            make_node('Less', [name+'_reshape_0', name+'_cast'], [name+'_less_1']),
+            make_node('Reshape', [name+'_less_1', name+'_shape_1'], [name+"_reshape_1"], name = '3333'),
+            make_node('Where', [name+'_reshape_1', input_nodes[0], name+'_mask_val'], [name]),
         ]
     else:
         nodes += [
-            make_node('Range', [name+'_zero', name+'_max_len', name+'_one'], [name+'_range0_out']),
-            make_node('Reshape', [input_nodes[1], output_shape_name], [name+"_reshape0_out"]),
-            make_node('Less', [name+'_range0_out', name+'_reshape0_out'], [name+'_less0_out']),
-            make_node('Reshape', [name+'_less0_out', output_shape_name2], [name+"_reshape1_out"]),
-            make_node('Where', [name+'_reshape1_out', input_nodes[0], name+'_mask_val'], [name]),
+            make_node('Reshape', [name+'_slice_1', name+'_void'], [name+'_max_len']),
+            make_node('Range', [name+'_0_s', name+'_max_len', name+'_1_s'], [name+'_range_1']),
+            make_node('Reshape', [input_nodes[1], name+'_shape_0'], [name+"_reshape_0"]),
+            make_node('Cast', [name+"_reshape_0"], [name+'_cast'], to=int(TensorProto.INT64)),
+            make_node('Less', [name+'_range_1', name+'_cast'], [name+'_less_1']),
+            make_node('Reshape', [name+'_less_1', name+'_shape_1'], [name+"_reshape_1"]),
+            make_node('Where', [name+'_reshape_1', input_nodes[0], name+'_mask_val'], [name]),
         ]
     return nodes
 
