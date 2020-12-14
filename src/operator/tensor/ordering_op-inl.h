@@ -306,7 +306,10 @@ MSHADOW_XINLINE void MergeTopK(IDXType K, DType *val1, IDXType *ind1, DType *val
 template<typename DType, typename IDXType>
 __global__ void PartialSortSmallK(IDXType K, IDXType N, DType *val, IDXType *ind, bool is_ascend) {
   // Buffer for pairwise reduction.
-  extern __shared__ index_t buff[];
+  extern __shared__ __align__(sizeof(IDXType)) unsigned char temp_smem[];
+  IDXType *buff = reinterpret_cast<IDXType *>(temp_smem);
+
+
   // Start of buffer sections associated with this thread.
   const IDXType offset(threadIdx.x*K);
   IDXType *ind_buff = reinterpret_cast<IDXType*>(&buff[offset]);
@@ -325,7 +328,7 @@ __global__ void PartialSortSmallK(IDXType K, IDXType N, DType *val, IDXType *ind
   for (IDXType i = first; i < last; i += blockDim.x) {
     DType cur_val(val[i]);
     IDXType cur_ind(ind[i]);
-    for (index_t j = K; j-- && TopKCompare(cur_val, cur_ind, val_buff[j],
+    for (IDXType j = K; j-- && TopKCompare(cur_val, cur_ind, val_buff[j],
                                            ind_buff[j], is_ascend); ) {
       if (j+1 < K) {
         val_buff[j+1] = val_buff[j];
@@ -380,7 +383,7 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
       mxnet::op::SortByKey(batch_id, ind, true, &sort_work);
     }
   } else {
-    const int nthreads(mshadow::cuda::kBaseThreadNum);
+    const IDXType nthreads(mshadow::cuda::kBaseThreadNum);
     PartialSortSmallK<<<M, nthreads, nthreads*K*(sizeof(IDXType)+sizeof(DType)),
                         mshadow::Stream<gpu>::GetStream(s)>>>
                         (K, N, dat.dptr_, ind.dptr_, is_ascend);
