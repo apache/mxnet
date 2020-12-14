@@ -218,7 +218,7 @@ bool LayerNormComputeMKL(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
-  if (req[0] == kNullOp) return;
+  if (req[0] == kNullOp) return true;
   CHECK_NE(req[0], kAddTo);
   CHECK_EQ(inputs.size(), 3U);
   int axis = GetRealAxis(param.axis, inputs[0].ndim());
@@ -260,10 +260,10 @@ void LayerNormCompute<cpu>(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx, const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
+  if (LayerNormCPU(attrs, ctx, inputs, req, outputs)) return;
 #if MSHADOW_USE_MKL == 1
   if (LayerNormComputeMKL(attrs, ctx, inputs, req, outputs)) return;
 #endif
-  if (LayerNormCPU(attrs, ctx, inputs, req, outputs)) return;
   LayerNormComputeGeneral<cpu>(attrs, ctx, inputs, req, outputs);
 }
 
