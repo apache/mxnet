@@ -45,7 +45,7 @@ from . import op
 from ._internal import SymbolBase, _set_symbol_class
 from ..util import is_np_shape
 
-__all__ = ["Symbol", "var", "Variable", "Group", "load", "fromjson",
+__all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
            "ones", "full", "arange", "linspace", "histogram", "split_v2"]
 
@@ -1369,7 +1369,7 @@ class Symbol(SymbolBase):
 
         See Also
         --------
-        symbol.fromjson : Used to load symbol from JSON string.
+        symbol.load_json : Used to load symbol from JSON string.
         """
         json_str = ctypes.c_char_p()
         if remove_amp_cast:
@@ -3055,7 +3055,7 @@ def load(fname):
     return Symbol(handle)
 
 
-def fromjson(json_str):
+def load_json(json_str):
     """Loads symbol from json string.
 
     Parameters

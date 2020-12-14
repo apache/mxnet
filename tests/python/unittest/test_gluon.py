@@ -1917,7 +1917,7 @@ def test_legacy_save_params():
     a = net(mx.sym.var('data'))
     a.save('test.json')
     net.save_params('test.params')
-    model = gluon.nn.SymbolBlock(outputs=mx.sym.fromjson(open('test.json', 'r').read()),
+    model = gluon.nn.SymbolBlock(outputs=mx.sym.load_json(open('test.json', 'r').read()),
                                      inputs=mx.sym.var('data'))
     model.load_params('test.params', ctx=mx.cpu())
 

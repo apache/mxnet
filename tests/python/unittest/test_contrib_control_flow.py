@@ -1234,7 +1234,7 @@ def test_foreach():
         out.extend(states)
         out = mx.sym.Group(out)
         js_1 = out.tojson()
-        out = mx.sym.fromjson(js_1)
+        out = mx.sym.load_json(js_1)
         js_2 = out.tojson()
         assert js_1 == js_2
         arr_grads = []
@@ -1556,7 +1556,7 @@ def test_foreach_nested():
     out = mx.sym.broadcast_add(out, states[0])
 
     js_1 = out.tojson()
-    out = mx.sym.fromjson(js_1)
+    out = mx.sym.load_json(js_1)
     js_2 = out.tojson()
     assert js_1 == js_2
 
@@ -1631,7 +1631,7 @@ def check_foreach_rnn(cell_type, num_states):
     out = mx.sym.contrib.foreach(step, data, init_states)
     out = sym_group(out)
     js_1 = out.tojson()
-    out = mx.sym.fromjson(js_1)
+    out = mx.sym.load_json(js_1)
     js_2 = out.tojson()
     assert js_1 == js_2
     e1 = out.bind(ctx=default_context(), args=args1, args_grad=args_grad1)
@@ -1647,7 +1647,7 @@ def check_foreach_rnn(cell_type, num_states):
     unroll_outs.extend(states)
     out = mx.sym.Group(unroll_outs)
     js_1 = out.tojson()
-    out = mx.sym.fromjson(js_1)
+    out = mx.sym.load_json(js_1)
     js_2 = out.tojson()
     assert js_1 == js_2
     e2 = out.bind(ctx=default_context(), args=args2, args_grad=args_grad2)
