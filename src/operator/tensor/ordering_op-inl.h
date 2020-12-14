@@ -802,7 +802,7 @@ void TopK(const nnvm::NodeAttrs& attrs,
         TopKImpl<xpu, DType, index_t, index_t>(ctx.run_ctx, ctx.requested[0], req,
                                                inputs[0], outputs, param);
       } else {
-        TopKImpl<xpu, DType, index_t, int32_t>(ctx.run_ctx, ctx.requested[0], req,
+        TopKImpl<xpu, DType, int32_t, int32_t>(ctx.run_ctx, ctx.requested[0], req,
                                                inputs[0], outputs, param);
       }
     });
@@ -826,7 +826,7 @@ void Sort(const nnvm::NodeAttrs& attrs,
       TopKImpl<xpu, DType, index_t, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0],
                                     outputs, topk_param);
     } else {
-      TopKImpl<xpu, DType, index_t, int32_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0],
+      TopKImpl<xpu, DType, int32_t, int32_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0],
                                     outputs, topk_param);
     }
   });
@@ -953,7 +953,7 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
       if (inputs[0].Size() >= INT_MAX) {
         TopKBackwardImpl<xpu, DType, index_t, index_t>(ctx, inputs, req, outputs, param);
       } else {
-        TopKBackwardImpl<xpu, DType, index_t, int32_t>(ctx, inputs, req, outputs, param);
+        TopKBackwardImpl<xpu, DType, int32_t, int32_t>(ctx, inputs, req, outputs, param);
       }
     });
   } else {
