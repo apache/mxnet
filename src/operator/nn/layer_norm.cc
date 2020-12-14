@@ -161,9 +161,10 @@ void LayerNormCPUKernel(size_t width,
 
     // Write normalized values.
     Data *to = out + j * width;
+    Accum inv_sigma = 1.f / sigma;
 #pragma omp simd
     for (size_t i = 0; i < width; ++i) {
-      to[i] = (from[i] - mean_value) * gamma[i] / sigma + beta[i];
+      to[i] = (from[i] - mean_value) * gamma[i] * inv_sigma + beta[i];
     }
   }
 }
