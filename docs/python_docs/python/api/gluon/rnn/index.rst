@@ -25,7 +25,6 @@ Build-in recurrent neural network layers are provided in the following two modul
     :nosignatures:
 
     mxnet.gluon.rnn
-    mxnet.gluon.contrib.rnn
 
 .. currentmodule:: mxnet.gluon
 

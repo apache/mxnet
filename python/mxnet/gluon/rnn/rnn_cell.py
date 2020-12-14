@@ -1432,9 +1432,9 @@ def dynamic_unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
     >>> state_shape = (batch_size, input_size)
     >>> states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(2)]
     >>> valid_length = mx.nd.array([2, 3])
-    >>> output, states = mx.gluon.contrib.rnn.rnn_cell.dynamic_unroll(cell, rnn_data, states,
-                                                                      valid_length=valid_length,
-                                                                      layout='TNC')
+    >>> output, states = mx.gluon.rnn.rnn_cell.dynamic_unroll(cell, rnn_data, states,
+    ...                                                       valid_length=valid_length,
+    ...                                                       layout='TNC')
     >>> print(output)
     [[[ 0.00767238  0.00023103  0.03973929 -0.00925503 -0.05660512]
       [ 0.00881535  0.05428379 -0.02493718 -0.01834097  0.02189514]]

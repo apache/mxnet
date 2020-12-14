@@ -30,7 +30,7 @@ For matrices of high sparsity (e.g. ~1% non-zeros = ~1% density), there are two 
 - memory consumption is reduced significantly
 - certain operations are much faster (e.g. matrix-vector multiplication)
 
-You may be familiar with the CSR storage format in [SciPy](https://www.scipy.org/) and will note the similarities in MXNet's implementation. However there are some additional competitive features in `CSRNDArray` inherited from `NDArray`, such as non-blocking asynchronous evaluation and automatic parallelization that are not available in SciPy's flavor of CSR. You can find further explanations for evaluation and parallelization strategy in MXNet in the [NDArray tutorial](https://mxnet.apache.org/tutorials/basic/ndarray.html#lazy-evaluation-and-automatic-parallelization).
+You may be familiar with the CSR storage format in [SciPy](https://www.scipy.org/) and will note the similarities in MXNet's implementation. However there are some additional competitive features in `CSRNDArray` inherited from `NDArray`, such as non-blocking asynchronous evaluation and automatic parallelization that are not available in SciPy's flavor of CSR. You can find further explanations for evaluation and parallelization strategy in MXNet in the [NDArray tutorial](../gotchas_numpy_in_mxnet.ipynb).
 
 The introduction of `CSRNDArray` also brings a new attribute, `stype` as a holder for storage type info, to `NDArray`. You can query **ndarray.stype** now in addition to the oft-queried attributes such as **ndarray.shape**, **ndarray.dtype**, and **ndarray.context**. For a typical dense NDArray, the value of `stype` is **"default"**. For a `CSRNDArray`, the value of stype is **"csr"**.
 
@@ -38,12 +38,12 @@ The introduction of `CSRNDArray` also brings a new attribute, `stype` as a holde
 
 To complete this tutorial, you will need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/get_started)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.apache.org/get_started)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
     ```
-- Basic knowledge of NDArray in MXNet. See the detailed tutorial for NDArray in [NDArray - Imperative tensor operations on CPU/GPU](https://mxnet.apache.org/tutorials/basic/ndarray.html).
+- Basic knowledge of NDArray in MXNet. See the detailed tutorial for NDArray in [NDArray - Imperative tensor operations on CPU/GPU](../01-ndarray-intro.rst).
 - SciPy - A section of this tutorial uses SciPy package in Python. If you don't have SciPy, the example in that section will be ignored.
 - GPUs - A section of this tutorial uses GPUs. If you don't have GPUs on your machine, simply set the variable `gpu_device` (set in the GPUs section of this tutorial) to `mx.cpu()`.
 
@@ -400,7 +400,7 @@ Note that multi-dimensional indexing or slicing along a particular axis is curre
 
 ## Sparse Operators and Storage Type Inference
 
-Operators that have specialized implementation for sparse arrays can be accessed in `mx.nd.sparse`. You can read the [mxnet.ndarray.sparse API documentation](https://mxnet.apache.org/versions/master/api/python/ndarray/sparse.html) to find what sparse operators are available.
+Operators that have specialized implementation for sparse arrays can be accessed in `mx.nd.sparse`. You can read the [mxnet.ndarray.sparse API documentation](../../../../../api/legacy/ndarray/sparse/index.rst) to find what sparse operators are available.
 
 
 ```{.python .input}
@@ -489,7 +489,7 @@ dataiter = mx.io.NDArrayIter(data, labels, batch_size, last_batch_handle='discar
 ```
 
 
-You can also load data stored in the [libsvm file format](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/) using `mx.io.LibSVMIter`, where the format is: ``<label> <col_idx1>:<value1> <col_idx2>:<value2> ... <col_idxN>:<valueN>``. Each line in the file records the label and the column indices and data for non-zero entries. For example, for a matrix with 6 columns, ``1 2:1.5 4:-3.5`` means the label is ``1``, the data is ``[[0, 0, 1,5, 0, -3.5, 0]]``. More detailed examples of `mx.io.LibSVMIter` are available in the [API documentation](https://mxnet.apache.org/versions/master/api/python/io/io.html#mxnet.io.LibSVMIter).
+You can also load data stored in the [libsvm file format](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/) using `mx.io.LibSVMIter`, where the format is: ``<label> <col_idx1>:<value1> <col_idx2>:<value2> ... <col_idxN>:<valueN>``. Each line in the file records the label and the column indices and data for non-zero entries. For example, for a matrix with 6 columns, ``1 2:1.5 4:-3.5`` means the label is ``1``, the data is ``[[0, 0, 1,5, 0, -3.5, 0]]``. More detailed examples of `mx.io.LibSVMIter` are available in the [API documentation](../../../../../api/legacy/io/index.rst#mxnet.io.LibSVMIter).
 
 
 ```{.python .input}
@@ -556,7 +556,7 @@ except mx.MXNetError as err:
 
 ## Next 
 
-[Train a Linear Regression Model with Sparse Symbols](/api/python/docs/tutorials/packages/ndarray/sparse/train.html)
+[Train a Linear Regression Model with Gluon Sparse](./train_gluon.ipynb)
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

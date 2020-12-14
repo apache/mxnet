@@ -78,6 +78,9 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
 }
 
 static inline size_t GetInSumIndex(const MKLDNNConvFusionParam &param) {
+  if (param.full_conv_param.mkldnn_param.dedup_sum) {
+    return 0;
+  }
   return 2 + (param.full_conv_param.conv_param.no_bias ? 0 : 1) +
          (param.full_conv_param.mkldnn_param.with_bn ? 4 : 0);
 }
@@ -127,8 +130,15 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       2 + (conv_param.no_bias ? 0 : 1) + (mkldnn_param.with_bn ? 4 : 0) +
       (mkldnn_param.with_sum ? 1 : 0) +
       (mkldnn_param.quantized ? 2 + (full_conv_param.mkldnn_param.with_sum ? 2 : 0) : 0);
+  // When dedup is on, in_data is used to calculate sum instead of in_sum
+  if (mkldnn_param.dedup_sum) {
+    input_size -= 1;
+    if (mkldnn_param.quantized) {
+      input_size -= 2;
+    }
+  }
   CHECK_EQ(inputs.size(), input_size);
-  size_t idx = 0;
+  index_t idx = 0;
 
   auto in_data = idx++;
   auto in_weight = idx++;
@@ -137,17 +147,22 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
   auto in_beta = mkldnn_param.with_bn ? (idx++) : 0;
   auto in_mean = mkldnn_param.with_bn ? (idx++) : 0;
   auto in_var = mkldnn_param.with_bn ? (idx++) : 0;
-  auto in_sum = mkldnn_param.with_sum ? (idx++) : 0;
+  auto in_sum = mkldnn_param.with_sum ? (mkldnn_param.dedup_sum? in_data : idx++) : -1;
   float data_min =
       mkldnn_param.quantized ? inputs[idx++].data().dptr<float>()[0] : 0.0;
   float data_max =
       mkldnn_param.quantized ? inputs[idx++].data().dptr<float>()[0] : 0.0;
-  float sum_min = (mkldnn_param.with_sum && mkldnn_param.quantized)
-                      ? inputs[idx++].data().dptr<float>()[0]
-                      : 0.0;
-  float sum_max = (mkldnn_param.with_sum && mkldnn_param.quantized)
-                      ? inputs[idx++].data().dptr<float>()[0]
-                      : 0.0;
+  float sum_min = 0.0f;
+  float sum_max = 0.0f;
+  if (mkldnn_param.with_sum && mkldnn_param.quantized) {
+    if (mkldnn_param.dedup_sum) {
+      sum_min = data_min;
+      sum_max = data_max;
+      } else {
+      sum_min = inputs[idx++].data().dptr<float>()[0];
+      sum_max = inputs[idx++].data().dptr<float>()[0];
+    }
+  }
   CHECK_EQ(input_size, idx);
   bool has_bias = mkldnn_param.with_bn || !conv_param.no_bias;
   NDArray data = inputs[in_data];
@@ -370,7 +385,8 @@ static uint32_t SgMKLDNNConvNumInputs(const NodeAttrs &attrs) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   auto num_input = DefaultSubgraphOpNumInputs(attrs);
   if (param.full_conv_param.mkldnn_param.quantized)
-    return num_input + 2 + (param.full_conv_param.mkldnn_param.with_sum ? 2 : 0);
+    return num_input + 2 + (param.full_conv_param.mkldnn_param.with_sum
+                          && !param.full_conv_param.mkldnn_param.dedup_sum ? 2 : 0);
   else
     return num_input;
 }
@@ -458,13 +474,14 @@ static std::vector<std::string> SgMKLDNNConvListInputNames(const NodeAttrs &attr
     input_names.emplace_back("mean");
     input_names.emplace_back("var");
   }
-  if (param.full_conv_param.mkldnn_param.with_sum) {
+  auto &mkldnn_param = param.full_conv_param.mkldnn_param;
+  if (mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
     input_names.emplace_back("sum");
   }
   if (param.full_conv_param.mkldnn_param.quantized) {
     input_names.emplace_back("data_min");
     input_names.emplace_back("data_max");
-    if (param.full_conv_param.mkldnn_param.with_sum) {
+    if (mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
       input_names.emplace_back("sum_min");
       input_names.emplace_back("sum_max");
     }
@@ -498,7 +515,7 @@ static void FilterMinMaxIndice(const MKLDNNConvParam &mkldnn_param,
                                std::unordered_set<size_t> *minmax_indice) {
   base_out_shapes->push_back(out_shapes->at(0));
   size_t last = in_shapes->size() - 1;
-  if (mkldnn_param.with_sum) {
+  if (mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
     minmax_indice->insert(last);
     minmax_indice->insert(last - 1);
     minmax_indice->insert(last - 2);
@@ -560,14 +577,15 @@ static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs &attrs,
     int orig_data = base_in_types[0];
     base_in_types[0] = mshadow::kFloat32;
     int orig_sum = base_in_types[0];
-    if (param.full_conv_param.mkldnn_param.with_sum) {
+    auto &mkldnn_param = param.full_conv_param.mkldnn_param;
+    if (param.full_conv_param.mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
       auto sum_index = GetInSumIndex(param);
       orig_sum = base_in_types[sum_index];
       base_in_types[sum_index] = mshadow::kFloat32;
     }
     bool result = DefaultSubgraphOpType(attrs, &base_in_types, &base_out_types);
     base_in_types[0] = orig_data;
-    if (param.full_conv_param.mkldnn_param.with_sum) {
+    if (param.full_conv_param.mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
       auto sum_index = GetInSumIndex(param);
       base_in_types[sum_index] = orig_sum;
     }
@@ -634,7 +652,8 @@ static bool SgMKLDNNConvOpStorageType(const nnvm::NodeAttrs &attrs,
 std::vector<std::pair<int, int>> SgMKLDNNConvInplaceOption(
     const NodeAttrs &attrs) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
-  if (param.full_conv_param.mkldnn_param.with_sum) {
+  if (param.full_conv_param.mkldnn_param.with_sum &&
+      !param.full_conv_param.mkldnn_param.dedup_sum) {
     return std::vector<std::pair<int, int>>{{GetInSumIndex(param), 0}};
   } else {
     return std::vector<std::pair<int, int>>();

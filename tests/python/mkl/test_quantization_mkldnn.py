@@ -14,21 +14,18 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+import os
+import sys
+import mxnet as mx
 
-# coding: utf-8
-"""Experimental contributions"""
+os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST'] = '1'
+os.environ['MXNET_SUBGRAPH_BACKEND'] = 'NONE'
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../quantization'))
+from test_quantization import *
 
-from . import symbol
-from . import ndarray
-
-from . import symbol as sym
-from . import ndarray as nd
-
-from . import tensorboard
-
-from . import text
-from . import onnx
-from . import io
-from . import quantization
-from . import quantization as quant
-from . import tensorrt
+if __name__ == '__main__':
+    import pytest
+    pytest.main()
+    del os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST']
+    del os.environ['MXNET_SUBGRAPH_BACKEND']

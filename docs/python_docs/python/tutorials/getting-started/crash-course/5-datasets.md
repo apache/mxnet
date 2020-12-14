@@ -17,12 +17,11 @@
 
 
 # Step 5: `Dataset`s and `DataLoader`
------------
 
 One of the most critical steps for model training and inference is loading the data: without data you can't do Machine Learning! In this tutorial you will use the Gluon API to define a Dataset and use a DataLoader to iterate through the dataset in mini-batches.
 
 
-```python
+```{.python .input}
 import mxnet as mx
 import os
 import time
@@ -30,14 +29,14 @@ import tarfile
 ```
 
 ## Introduction to `Dataset`s
---------
+
 Dataset objects are used to represent collections of data, and include methods to load and parse the data (that is often stored on disk). Gluon has a number of different `Dataset` classes for working with image data straight out-of-the-box, but you'll use the ArrayDataset to introduce the idea of a `Dataset`.
 
 You will first start by generating random data `X` (with 3 variables) and corresponding random labels `y` to simulate a typical supervised learning task. You will generate 10 samples and pass them all to the `ArrayDataset`.
 
 
 
-```python
+```{.python .input}
 mx.random.seed(42) # Fix the seed for reproducibility
 X = mx.random.uniform(shape=(10, 3))
 y = mx.random.uniform(shape=(10, 1))
@@ -48,8 +47,7 @@ A key feature of a `Dataset` is the __*ability to retrieve a single sample given
 
 
 
-```python
-
+```{.python .input}
 sample_idx = 4
 sample = dataset[sample_idx]
 
@@ -63,17 +61,12 @@ print(sample)
 You get a tuple of a data sample and its corresponding label, which makes sense because you passed the data `X` and the labels `y` in that order when you instantiated the `ArrayDataset`. You don't usually retrieve individual samples from `Dataset` objects though (unless you're quality checking the output samples). Instead you use a `DataLoader`.
 
 ## Introduction to `DataLoader`
-----------
 
 A DataLoader is used to create mini-batches of samples from a Dataset, and provides a convenient iterator interface for looping these batches. It's typically much more efficient to pass a mini-batch of data through a neural network than a single sample at a time, because the computation can be performed in parallel. A required parameter of `DataLoader` is the size of the mini-batches you want to create, called `batch_size`.
 
 Another benefit of using `DataLoader` is the ability to easily load data in parallel using multiprocessing. You can set the `num_workers` parameter to the number of CPUs available on your machine for maximum performance, or limit it to a lower number to spare resources.
 
-
-
-
-```python
-
+```{.python .input}
 from multiprocessing import cpu_count
 CPU_COUNT = cpu_count()
 
@@ -83,14 +76,11 @@ for X_batch, y_batch in data_loader:
     print("X_batch has shape {}, and y_batch has shape {}".format(X_batch.shape, y_batch.shape))
 ```
 
-
-
 You can see 2 mini-batches of data (and labels), each with 5 samples, which makes sense given that you started with a dataset of 10 samples. When comparing the shape of the batches to the samples returned by the `Dataset`,you've gained an extra dimension at the start which is sometimes called the batch axis.
 
 Our `data_loader` loop will stop when every sample of `dataset` has been returned as part of a batch. Sometimes the dataset length isn't divisible by the mini-batch size, leaving a final batch with a smaller number of samples. `DataLoader`'s default behavior is to return this smaller mini-batch, but this can be changed by setting the `last_batch` parameter to `discard` (which ignores the last batch) or `rollover` (which starts the next epoch with the remaining samples).
 
 ## Machine learning with `Dataset`s and `DataLoader`s
----------
 
 You will often use a few different `Dataset` objects in your Machine Learning project. It's essential to separate your training dataset from testing dataset, and it's also good practice to have validation dataset (a.k.a. development dataset) that can be used for optimising hyperparameters.
 
@@ -98,11 +88,7 @@ Using Gluon `Dataset` objects, you define the data to be included in each of the
 
 Many of the image `Dataset`'s accept a function (via the optional `transform` parameter) which is applied to each sample returned by the `Dataset`. It's useful for performing data augmentation, but can also be used for more simple data type conversion and pixel value scaling as seen below.
 
-
-
-
-```python
-
+```{.python .input}
 def transform(data, label):
     data = data.astype('float32')/255
     return data, label
@@ -112,8 +98,7 @@ valid_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=False, transfor
 ```
 
 
-```python
-%matplotlib inline
+```{.python .input}
 from matplotlib.pylab import imshow
 
 sample_idx = 234
@@ -128,14 +113,11 @@ print("Label description: {}".format(label_desc[label]))
 imshow(data[:,:,0].asnumpy(), cmap='gray')
 ```
 
-
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/fashion_mnist_bag.png)
+![datasets fashion mnist bag](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/fashion_mnist_bag.png)
 
 When training machine learning models it is important to shuffle the training samples every time you pass through the dataset (i.e. each epoch). Sometimes the order of your samples will have a spurious relationship with the target variable, and shuffling the samples helps remove this. With DataLoader it's as simple as adding `shuffle=True`. You don't need to shuffle the validation and testing data though.
 
-
-```python
-
+```{.python .input}
 batch_size = 32
 train_data_loader = mx.gluon.data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=CPU_COUNT)
 valid_data_loader = mx.gluon.data.DataLoader(valid_dataset, batch_size, num_workers=CPU_COUNT)
@@ -144,24 +126,24 @@ valid_data_loader = mx.gluon.data.DataLoader(valid_dataset, batch_size, num_work
 With both `DataLoader`s defined, you can now train a model to classify each image and evaluate the validation loss at each epoch. See the next tutorial for how this is done.
 
 # Using own data with included `Dataset`s
--------
+
 Gluon has a number of different Dataset classes for working with your own image data straight out-of-the-box. You can get started quickly using the mxnet.gluon.data.vision.datasets.ImageFolderDataset which loads images directly from a user-defined folder, and infers the label (i.e. class) from the folders.
 
 Here you will run through an example for image classification, but a similar process applies for other vision tasks. If you already have your own collection of images to work with you should partition your data into training and test sets, and place all objects of the same class into seperate folders. Similar to:
 
 ```
- ./images/train/car/abc.jpg
- ./images/train/car/efg.jpg
- ./images/train/bus/hij.jpg
- ./images/train/bus/klm.jpg
- ./images/test/car/xyz.jpg
- ./images/test/bus/uvw.jpg
+./images/train/car/abc.jpg
+./images/train/car/efg.jpg
+./images/train/bus/hij.jpg
+./images/train/bus/klm.jpg
+./images/test/car/xyz.jpg
+./images/test/bus/uvw.jpg
 ```
 
 You can download the Caltech 101 dataset if you don't already have images to work with for this example, but please note the download is 126MB.
 
 
-```python
+```{.python .input}
 data_folder = "data"
 dataset_name = "101_ObjectCategories"
 archive_file = "{}.tar.gz".format(dataset_name)
@@ -186,18 +168,7 @@ You instantiate the ImageFolderDatasets by providing the path to the data, and t
 
 Optionally, you can pass a `transform` parameter to these `Dataset`'s as you've seen before.
 
-
-```python
-cd data
-```
-
-
-```python
-!ls
-```
-
-
-```python
+```{.python .input}
 training_path='/home/ec2-user/SageMaker/data/101_ObjectCategories'
 testing_path='/home/ec2-user/SageMaker/data/101_ObjectCategories_test'
 train_dataset = mx.gluon.data.vision.datasets.ImageFolderDataset(training_path)
@@ -209,8 +180,7 @@ Samples from these datasets are tuples of data and label. Images are loaded from
 As with the Fashion MNIST dataset the labels will be integer encoded. You can use the `synsets` property of the ImageFolderDatasets to retrieve the original descriptions (e.g. `train_dataset.synsets[i]`).
 
 
-```python
-
+```{.python .input}
 sample_idx = 539
 sample = train_dataset[sample_idx]
 data = sample[0]
@@ -225,31 +195,28 @@ imshow(data.asnumpy(), cmap='gray')
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/caltech101_face.png)<!--notebook-skip-line-->
+![datasets caltech101 face](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/caltech101_face.png)<!--notebook-skip-line-->
 
 # Using your own data with custom `Dataset`s
-------
+
 Sometimes you have data that doesn't quite fit the format expected by the included Datasets. You might be able to preprocess your data to fit the expected format, but it is easy to create your own dataset to do this.
 
 All you need to do is create a class that implements a `__getitem__` method, that returns a sample (i.e. a tuple of mx.nd.NDArrays).
 
 # New in MXNet 2.0: faster C++ backend dataloaders
-------
+
 As part of an effort to speed up the current data loading pipeline using gluon dataset and dataloader, a new dataloader was created that uses only a C++ backend and avoids potentially slow calls to Python functions.
 
 See [original issue](https://github.com/apache/incubator-mxnet/issues/17269), [pull request](https://github.com/apache/incubator-mxnet/pull/17464) and [implementation](https://github.com/apache/incubator-mxnet/pull/17841).
 
 The current data loading pipeline is the major bottleneck for many training tasks. The flow can be summarized as:
 
-
-```python
-| Dataset.__getitem__ -> 
-| Transform.__call__()/forward() ->
-| Batchify ->
-| (optional communicate through shared_mem) ->
-| split_and_load(ctxs) ->
-| <training on GPUs> -> 
-```
+- `Dataset.__getitem__`
+- `Transform.__call__()/forward()`
+- `Batchify`
+- (optional communicate through shared_mem)
+- `split_and_load(ctxs)`
+- training on GPUs
 
 Performance concerns include slow python dataset/transform functions, multithreading issues due to global interpreter lock, Python multiprocessing issues due to speed, and batchify issues due to poor memory management.
 
@@ -264,16 +231,15 @@ Users can continue to with the traditional gluon.data.Dataloader and the C++ bac
 
 Here you will show a performance increase on a t3.2xl instance for the CIFAR10 dataset with the C++ backend.
 
-### Using the C++ backend:
+## Using the C++ backend:
 
-
-```python
+```{.python .input}
 cpp_dl = mx.gluon.data.DataLoader(
     mx.gluon.data.vision.CIFAR10(train=True, transform=None), batch_size=32, num_workers=2,try_nopython=True)
 ```
 
 
-```python
+```{.python .input}
 start = time.time()
 for _ in range(3):
     print(len(cpp_dl))
@@ -283,16 +249,15 @@ print('Elapsed time for backend dataloader:', time.time() - start)
 ```
 
 
-### Using the Python backend:
+## Using the Python backend:
 
-
-```python
+```{.python .input}
 dl = mx.gluon.data.DataLoader(
     mx.gluon.data.vision.CIFAR10(train=True, transform=None), batch_size=32, num_workers=2,try_nopython=False)
 ```
 
 
-```python
+```{.python .input}
 start = time.time()
 for _ in range(3):
     print(len(dl))
@@ -301,10 +266,6 @@ for _ in range(3):
 print('Elapsed time for python dataloader:', time.time() - start)
 ```
 
-
-### The C++ backend loader was almost 3X faster for this particular use case
-This improvement in performance will not be seen in all cases, but when possible you are encouraged to compare the dataloader throughput for these two options.
-
 ## Next Steps
------
-Now that you have some experience with MXNet's datasets and dataloaders, it's time to use them for [Step 6: Training a Neural Network](https://github.com/vidyaravipati/incubator-mxnet/blob/mxnet2.0_crashcourse/docs/python_docs/python/tutorials/getting-started/crash-course/6-train-nn.md).
+
+Now that you have some experience with MXNet's datasets and dataloaders, it's time to use them for [Step 6: Training a Neural Network](./6-train-nn.ipynb).

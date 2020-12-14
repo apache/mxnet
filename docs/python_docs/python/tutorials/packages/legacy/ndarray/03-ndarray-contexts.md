@@ -24,7 +24,7 @@ This content was extracted and simplified from the gluon tutorials in
 [Dive Into Deep Learning](https://d2l.ai/).
 
 ## Prerequisites
-* [MXNet installed (with GPU support) in a Python environment](/get_started).
+* [MXNet installed (with GPU support) in a Python environment](https://mxnet.apache.org/get_started).
 * Python 2.7.x or Python 3.x
 * **One or more GPUs**
 
@@ -86,4 +86,4 @@ print(z)
 
 ## Next Up
 
-[Back to NDArray API Guides](.)
+[Back to NDArray API Guides](../../../../api/legacy/ndarray/index.rst)

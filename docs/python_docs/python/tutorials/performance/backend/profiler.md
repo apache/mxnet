@@ -235,7 +235,7 @@ Moreover, you can set `MKLDNN_VERBOSE=2` to collect both creating and executing 
 
 
 ### Profiling Custom Operators
-Should the existing NDArray operators fail to meet all your model's needs, MXNet supports [Custom Operators](/api/python/docs/tutorials/extend/customop.html) that you can define in Python. In `forward()` and `backward()` of a custom operator, there are two kinds of code: "pure Python" code (NumPy operators included) and "sub-operators" (NDArray operators called within `forward()` and `backward()`). With that said, MXNet can profile the execution time of both kinds without additional setup. Specifically, the MXNet profiler will break a single custom operator call into a pure Python event and several sub-operator events if there are any. Furthermore, all of those events will have a prefix in their names, which is, conveniently, the name of the custom operator you called.
+Should the existing NDArray operators fail to meet all your model's needs, MXNet supports [Custom Operators](../../extend/customop.ipynb) that you can define in Python. In `forward()` and `backward()` of a custom operator, there are two kinds of code: "pure Python" code (NumPy operators included) and "sub-operators" (NDArray operators called within `forward()` and `backward()`). With that said, MXNet can profile the execution time of both kinds without additional setup. Specifically, the MXNet profiler will break a single custom operator call into a pure Python event and several sub-operator events if there are any. Furthermore, all of those events will have a prefix in their names, which is, conveniently, the name of the custom operator you called.
 
 Let's try profiling custom operators with the following code example:
 
@@ -316,7 +316,7 @@ profiler.dump()
 
 MXNet's Profiler is the recommended starting point for profiling MXNet code, but NVIDIA also provides a couple of tools for low-level profiling of CUDA code: [NVProf](https://devblogs.nvidia.com/cuda-pro-tip-nvprof-your-handy-universal-gpu-profiler/), [Visual Profiler](https://developer.nvidia.com/nvidia-visual-profiler) and [Nsight Compute](https://developer.nvidia.com/nsight-compute). You can use these tools to profile all kinds of executables, so they can be used for profiling Python scripts running MXNet. And you can use these in conjunction with the MXNet Profiler to see high-level information from MXNet alongside the low-level CUDA kernel information.
 
-#### NVProf and Visual Profiler
+### NVProf and Visual Profiler
 
 NVProf and Visual Profiler are available in CUDA 9 and CUDA 10 toolkits. You can get a timeline view of CUDA kernel executions, and also analyse the profiling results to get automated recommendations. It is useful for profiling end-to-end training but the interface can sometimes become slow and unresponsive.
 
@@ -332,25 +332,25 @@ We specified an output file called `my_profile.nvvp` and this will be annotated 
 
 You can open this file in Visual Profiler to visualize the results.
 
-![Operator profiling](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_nvprof.png)
+![Operator profiling nvprof](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_nvprof.png)
 
 At the top of the plot we have CPU tasks such as driver operations, memory copy calls, MXNet engine operator invocations, and imperative MXNet API calls.  Below we see the kernels active on the GPU during the same time period.
 
-![Operator profiling](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_nvprof_zoomed.png)
+![Operator profiling nvprof zoomed](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_nvprof_zoomed.png)
 
 Zooming in on a backwards convolution operator we can see that it is in fact made up of a number of different GPU kernel calls, including a cuDNN winograd convolution call, and a fast-fourier transform call.
 
-![Operator profiling](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_winograd.png)
+![Operator profiling winograd](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_winograd.png)
 
 Selecting any of these kernel calls (the winograd convolution call shown here) will get you some interesting GPU performance information such as occupancy rates (vs theoretical), shared memory usage and execution duration.
 
-#### Nsight Compute
+### Nsight Compute
 
 Nsight Compute is available in CUDA 10 toolkit, but can be used to profile code running CUDA 9. You don't get a timeline view, but you get many low level statistics about each individual kernel executed and can compare multiple runs (i.e. create a baseline).
 
 ![Nsight Compute](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profile_nsight_compute.png)
 
-### Further reading
+## Further reading
 
 - [Examples using MXNet profiler.](https://github.com/apache/incubator-mxnet/tree/master/example/profiler)
 - [Some tips for improving MXNet performance.](https://mxnet.apache.org/api/faq/perf)
