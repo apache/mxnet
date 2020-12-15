@@ -2585,7 +2585,7 @@ def convert_arange_like(node, **kwargs):
             make_node('Reshape', [name+'_redprod0_out', name+'_void'], [name+'_reshape0_out']),
             make_node("Cast", [name+"_reshape0_out"], [name+"_cast0_out"], to=input_type),
             make_node("Range", [name+"_start", name+"_cast0_out", name+"_step"], [name+"_range0_out"]),
-            make_node("Reshape", [name+"_range0_out", name+"_shape0_out"], [name]) 
+            make_node("Reshape", [name+"_range0_out", name+"_shape0_out"], [name])
         ]
     else:
         # determine shape of axis
