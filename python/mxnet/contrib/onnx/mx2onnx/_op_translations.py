@@ -2580,24 +2580,24 @@ def convert_arange_like(node, **kwargs):
     if axis == 'None':
         # output will be same shape as input
         nodes = [
-            make_node('Shape', [input_nodes[0]], [name+"_shape"]),
-            make_node("ReduceProd", [name+"_shape"], [name+"_limit"]),
-            make_node('Reshape', [name+'_limit', name+'_void'], [name+'_limit_s']),
-            make_node("Cast", [name+"_limit_s"], [name+"_limit_cast"], to=input_type),
-            make_node("Range", [name+"_start", name+"_limit_cast", name+"_step"], [name+"_range0_out"]),
-            make_node("Reshape", [name+"_range0_out", name+"_shape"], [name]) 
+            make_node('Shape', [input_nodes[0]], [name+"_shape0_out"]),
+            make_node("ReduceProd", [name+"_shape0_out"], [name+"_redprod0_out"]),
+            make_node('Reshape', [name+'_redprod0_out', name+'_void'], [name+'_reshape0_out']),
+            make_node("Cast", [name+"_reshape0_out"], [name+"_cast0_out"], to=input_type),
+            make_node("Range", [name+"_start", name+"_cast0_out", name+"_step"], [name+"_range0_out"]),
+            make_node("Reshape", [name+"_range0_out", name+"_shape0_out"], [name]) 
         ]
     else:
         # determine shape of axis
         create_tensor([int(axis)], name+"_axis_start", kwargs["initializer"], dtype='int64')
         create_tensor([int(axis)+1], name+"_axis_end", kwargs["initializer"], dtype='int64')
         nodes = [
-            make_node('Shape', [input_nodes[0]], [name+"_shape"]),
-            make_node('Slice', [name+"_shape", name+"_axis_start", name+"_axis_end"], [name+"_slice0_out"]),
-            make_node("ReduceProd", [name+"_slice0_out"], [name+"_limit"]),
-            make_node('Reshape', [name+'_limit', name+'_void'], [name+'_limit_s']),
-            make_node("Cast", [name+"_limit_s"], [name+"_limit_cast"], to=input_type),
-            make_node("Range", [name+"_start", name+"_limit_cast", name+"_step"], [name])
+            make_node('Shape', [input_nodes[0]], [name+"_shape0_out"]),
+            make_node('Slice', [name+"_shape0_out", name+"_axis_start", name+"_axis_end"], [name+"_slice0_out"]),
+            make_node("ReduceProd", [name+"_slice0_out"], [name+"_reprod0_out"]),
+            make_node('Reshape', [name+'_reprod0_out', name+'_void'], [name+'_reshape0_out']),
+            make_node("Cast", [name+"_reshape0_out"], [name+"_cast0_out"], to=input_type),
+            make_node("Range", [name+"_start", name+"_cast0_out", name+"_step"], [name])
         ]
 
     return nodes
