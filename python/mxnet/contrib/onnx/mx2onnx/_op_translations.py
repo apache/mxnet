@@ -2491,7 +2491,7 @@ def convert_embedding(node, **kwargs):
     axis = int(attrs.get('axis', 0))
     node = onnx.helper.make_node(
         "Gather",
-        input_nodes,
+        [input_nodes[1], input_nodes[0]],
         [name],
         axis=axis,
         name=name
