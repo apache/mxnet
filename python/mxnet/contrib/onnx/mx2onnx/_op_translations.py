@@ -1645,10 +1645,10 @@ def convert_cast(node, **kwargs):
 
 @mx_op.register("slice_axis")
 def convert_slice_axis(node, **kwargs):
-    from onnx.helper import make_node
     """Map MXNet's slice_axis operator attributes to onnx's Slice operator
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     axis = int(attrs.get("axis"))
@@ -1656,8 +1656,8 @@ def convert_slice_axis(node, **kwargs):
     end = attrs.get("end", None)
 
     nodes = []
-    create_tensor([axis], name+'_axis',kwargs["initializer"])
-    create_tensor([begin], name+'_begin',kwargs["initializer"])
+    create_tensor([axis], name+'_axis', kwargs["initializer"])
+    create_tensor([begin], name+'_begin', kwargs["initializer"])
     if not end or end == 'None':
         # ONNX doesn't support None for ends. Since ends=None depicts
         # length of dimension, passing dimension in this case.
@@ -1665,14 +1665,14 @@ def convert_slice_axis(node, **kwargs):
         nodes += [
             make_node('Shape', [input_nodes[0]], [name+"_data_shape"]),
             make_node('Slice', [name+'_data_shape', name+'_axis', name+'_axis_plus_1'],
-                [name+"_end"]),
+                      [name+"_end"])
         ]
     else:
-        create_tensor([int(end)], name+'_end',kwargs["initializer"])
+        create_tensor([int(end)], name+'_end', kwargs["initializer"])
 
     nodes += [
         make_node('Slice', [input_nodes[0], name+'_begin', name+'_end', name+'_axis'],
-            [name], name=name)
+                  [name], name=name)
         ]
 
     return nodes
