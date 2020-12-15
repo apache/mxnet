@@ -903,9 +903,9 @@ class FeedForward(BASE_ESTIMATOR):
                                    rescale_grad=(1.0/batch_size),
                                    **(self.kwargs))
         elif isinstance(self.optimizer, opt.Optimizer):
+            optimizer = self.optimizer
             if not optimizer.idx2name:
                 optimizer.idx2name = param_idx2name.copy()
-            optimizer = self.optimizer
 
         # do training
         _train_multi_device(self.symbol, self.ctx, arg_names, param_names, aux_names,
