@@ -133,11 +133,32 @@ def test_onnx_export_SequenceMask(tmp_path, dtype):
     op_export_test('SequenceMask_2', M2, [x, seq_len2], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32'])
+@pytest.mark.parametrize('dtype', ['float32'])
 def test_onnx_export_contrib_interleaved_matmul_selfatt_qk(tmp_path, dtype):
     M1 = def_model('contrib.interleaved_matmul_selfatt_qk', heads=3)
-    x1 = mx.nd.random.uniform(0, 1, (3, 3, 3*3*3))
+    x1 = mx.nd.random.uniform(0, 1, (3, 3, 3*3*3), dtype=dtype)
     op_export_test('contrib_interleaved_matmul_selfatt_qk_1', M1, [x1], tmp_path)
     M2 = def_model('contrib.interleaved_matmul_selfatt_qk', heads=5)
-    x2 = mx.nd.random.uniform(0, 1, (7, 5, 4*5*6))
+    x2 = mx.nd.random.uniform(0, 1, (7, 5, 4*5*6), dtype=dtype)
     op_export_test('contrib_interleaved_matmul_selfatt_qk_2', M2, [x2], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32'])
+def test_onnx_export_slice_axis(tmp_path, dtype):
+    x = mx.nd.array([[  1.,   2.,   3.,   4.],
+                     [  5.,   6.,   7.,   8.],
+                     [  9.,  10.,  11.,  12.]], dtype=dtype)
+    M1 = def_model('slice_axis', axis=0, begin=1, end=3)
+    M2 = def_model('slice_axis', axis=0, begin=1, end=None)
+    M3 = def_model('slice_axis', axis=1, begin=-3, end=-1)
+    op_export_test('slice_axis_1', M1, [x], tmp_path)
+    op_export_test('slice_axis_2', M2, [x], tmp_path)
+    op_export_test('slice_axis_3', M3, [x], tmp_path)
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32'])
+def test_onnx_export_reshape(tmp_path, dtype):
+    x = mx.nd.ones((2, 3, 4, 5, 6), dtype=dtype)
+    M1 = def_model('reshape', shape=(2, 1, 1, -1, 0, 1, 0), reverse=True)
+    op_export_test('reshape_1', M1, [x], tmp_path)
+    M2 = def_model('reshape', shape=(6, 1, 0, -1))
+    op_export_test('reshape_2', M2, [x], tmp_path)
