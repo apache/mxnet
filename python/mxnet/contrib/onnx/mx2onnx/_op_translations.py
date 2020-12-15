@@ -2257,6 +2257,7 @@ def convert_layer_norm(node, **kwargs):
     """Map MXNet's LayerNorm operator attributes to onnx operators.
     """
     from onnx.helper import make_node
+    from onnx import TensorProto
     name, input_nodes, attrs = get_inputs(node, kwargs)
     axes = int(attrs.get('axis', -1))
     eps = attrs.get('eps', 9.99999975e-06)
@@ -2281,29 +2282,29 @@ def convert_layer_norm(node, **kwargs):
 
     if axes == -1:
         nodes += [
-                    make_node("Mul", [name+"_div0_out", input_nodes[1]], [name+"_mul0_out"]),
-                    make_node("Add", [name+"_mul0_out", input_nodes[2]], [name])
-                 ]
+            make_node("Mul", [name+"_div0_out", input_nodes[1]], [name+"_mul0_out"]),
+            make_node("Add", [name+"_mul0_out", input_nodes[2]], [name])
+        ]
     else: 
         nodes += [
-                    make_node("Shape", [input_nodes[0]], [name+"_shape0_out"]),
-                    make_node("Shape", [name+"_shape0_out"], [name+"_in_dim"]),
-                    make_node("Reshape", [name+"_in_dim", name+"_void"], [name+"_in_dim_s"]),
-                    make_node("Range", [name+"_0_s", name+"_in_dim_s", name+"_1_s"], [name+"_range"]),
-                    make_node("Equal", [name+"_range", name+"_axes"], [name+"_equal"]),
-                    make_node("Cast", [name+"_equal"], [name+"_one_hot"], to=int(TensorProto.INT64)),
-                    make_node("Slice", [name+"_shape0_out", name+"_axes", name+"_axes+1"], [name+"_slice_out"]),
-                    make_node("Reshape", [name+"_slice_out", name+"_void"], [name+"_slice_out_s"]),
-                    make_node("Sub", [name+"_slice_out_s", name+"_1_s"], [name+"_sub1_out"]),
-                    make_node("Mul", [name+"_one_hot", name+"_sub1_out"], [name+"_mul0_out"]),
-                    make_node("Add", [name+"_mul0_out", name+"_1_s"], [name+"_add1_out"]),
-                    make_node('Reshape', [input_nodes[1], name+"_add1_out"], [name+"gamma_exp"]),
-                    make_node('Reshape', [input_nodes[2], name+"_add1_out"], [name+"beta_exp"]),
-                    make_node('Expand', [name+"gamma_exp", name+"_shape0_out"], [name+"gamma_exp1"]),
-                    make_node('Expand', [name+"beta_exp", name+"_shape0_out"], [name+"beta_exp1"]),
-                    make_node("Mul", [name+"_div0_out", name+"gamma_exp1"], [name+"_mul1_out"]),
-                    make_node("Add", [name+"_mul1_out", name+"beta_exp1"], [name])
-                 ]
+            make_node("Shape", [input_nodes[0]], [name+"_shape0_out"]),
+            make_node("Shape", [name+"_shape0_out"], [name+"_in_dim"]),
+            make_node("Reshape", [name+"_in_dim", name+"_void"], [name+"_in_dim_s"]),
+            make_node("Range", [name+"_0_s", name+"_in_dim_s", name+"_1_s"], [name+"_range"]),
+            make_node("Equal", [name+"_range", name+"_axes"], [name+"_equal"]),
+            make_node("Cast", [name+"_equal"], [name+"_one_hot"], to=int(TensorProto.INT64)),
+            make_node("Slice", [name+"_shape0_out", name+"_axes", name+"_axes+1"], [name+"_slice_out"]),
+            make_node("Reshape", [name+"_slice_out", name+"_void"], [name+"_slice_out_s"]),
+            make_node("Sub", [name+"_slice_out_s", name+"_1_s"], [name+"_sub1_out"]),
+            make_node("Mul", [name+"_one_hot", name+"_sub1_out"], [name+"_mul0_out"]),
+            make_node("Add", [name+"_mul0_out", name+"_1_s"], [name+"_add1_out"]),
+            make_node('Reshape', [input_nodes[1], name+"_add1_out"], [name+"gamma_exp"]),
+            make_node('Reshape', [input_nodes[2], name+"_add1_out"], [name+"beta_exp"]),
+            make_node('Expand', [name+"gamma_exp", name+"_shape0_out"], [name+"gamma_exp1"]),
+            make_node('Expand', [name+"beta_exp", name+"_shape0_out"], [name+"beta_exp1"]),
+            make_node("Mul", [name+"_div0_out", name+"gamma_exp1"], [name+"_mul1_out"]),
+            make_node("Add", [name+"_mul1_out", name+"beta_exp1"], [name])
+        ]
     return nodes
 
 
@@ -2378,6 +2379,7 @@ def convert_matmul_selfatt_qk(node, **kwargs):
 def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
     """Map MXNet's _contrib_interleaved_matmul_selfatt_valatt operator attributes to onnx's operator.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
     qkv, att = input_nodes
     num_heads = int(attrs.get('heads'))

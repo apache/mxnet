@@ -100,8 +100,8 @@ def test_onnx_export_arange_like(tmp_path, dtype, axis, start, step, test_data):
     x = mx.nd.array(test_data, dtype=dtype)
     op_export_test('arange_like', M, [x], tmp_path)
 
-
-def test_onnx_export_layernorm(tmp_path):
+@pytest.mark.parametrize('dtype', ['float32'])
+def test_onnx_export_layernorm(tmp_path, dtype):
     x = mx.nd.random.uniform(1, 2, (3, 4, 5), dtype=dtype)
     axes = list(range(np.shape(np.shape(x))[0]))
     axes.append(-1)
