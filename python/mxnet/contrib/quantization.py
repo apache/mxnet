@@ -288,7 +288,8 @@ class _LayerHistogramCollector(CalibrationCollector):
                 th_dict[name] = (-th, th)
             del hist_dict[name]  # release the memory
             if logger:
-                logger.debug(f"layer={name}, min_val={min_val}, max_val={max_val}, th={th}, divergence={divergence}")
+                logger.debug("layer={name}, min_val={min_val}, max_val={max_val}, th={th}, divergence={divergence}"
+                             .format(name=name, min_val=min_val, max_val=max_val, th=th, divergence=divergence))
         return th_dict
 
 class _LayerOutputMinMaxCollector(CalibrationCollector):
