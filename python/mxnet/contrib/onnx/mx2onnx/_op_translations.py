@@ -1632,7 +1632,8 @@ def convert_slice_axis(node, **kwargs):
     if not ends or ends == 'None':
         # ONNX doesn't support None for ends. Since ends=None depicts
         # length of dimension, passing dimension in this case.
-        ends = sys.maxsize
+        in_shape = kwargs['in_shape'][0]
+        ends = in_shape[axes]
 
     node = onnx.helper.make_node(
         "Slice",
@@ -1640,7 +1641,7 @@ def convert_slice_axis(node, **kwargs):
         [name],
         axes=[axes],
         starts=[starts],
-        ends=[ends],
+        ends=[int(ends)],
         name=name,
     )
     return [node]
@@ -2260,9 +2261,9 @@ def convert_layer_norm(node, **kwargs):
     axes = int(attrs.get('axis', -1))
     eps = attrs.get('eps', 9.99999975e-06)
 
-    make_tensor([axes], name+"_axes", kwargs["initializer"])
-    make_tensor([axes+1], name+"_axes+1", kwargs["initializer"])
-    make_tensor([], name+"_void", kwargs["initializer"])
+    create_tensor([axes], name+"_axes", kwargs["initializer"])
+    create_tensor([axes+1], name+"_axes+1", kwargs["initializer"])
+    create_tensor([], name+"_void", kwargs["initializer"])
     create_const_scalar_node(name+'_0_s', np.int64(0), kwargs)
     create_const_scalar_node(name+'_1_s', np.int64(1), kwargs)
     create_const_scalar_node(name+"_2_s", np.int64(2), kwargs)
