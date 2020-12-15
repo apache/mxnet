@@ -102,11 +102,14 @@ def test_onnx_export_arange_like(tmp_path, dtype, axis, start, step, test_data):
 
 
 def test_onnx_export_layernorm(tmp_path):
-    M = def_model('LayerNorm', axis=1)
-    x = mx.nd.array([[1,3],[2,4]], dtype='float32')
-    gamma = mx.random.uniform(0, 1, x[0].shape, dtype='float32')
-    beta = mx.random.uniform(0, 1, x[0].shape, dtype='float32')
-    op_export_test('LayerNorm', M, [x, gamma, beta], tmp_path)
+    x = mx.nd.random.uniform(1, 2, (3, 4, 5), dtype=dtype)
+    axes = list(range(np.shape(np.shape(x))[0]))
+    axes.append(-1)
+    for axis in axes:
+        M = def_model('LayerNorm', axis=axis)
+        gamma = mx.random.uniform(0, 1, [np.shape(x)[axis]], dtype=dtype)
+        beta = mx.random.uniform(0, 1, [np.shape(x)[axis]], dtype=dtype)
+        op_export_test('LayerNorm', M, [x, gamma, beta], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32'])
@@ -145,6 +148,13 @@ def test_onnx_export_contrib_interleaved_matmul_selfatt_qk(tmp_path, dtype):
     M2 = def_model('contrib.interleaved_matmul_selfatt_qk', heads=5)
     x2 = mx.nd.random.uniform(0, 1, (7, 5, 4*5*6))
     op_export_test('contrib_interleaved_matmul_selfatt_qk_2', M2, [x2], tmp_path)
+
+@pytest.mark.parametrize('dtype', ['float32'])
+def test_onnx_export_contrib_interleaved_matmul_selfatt_valatt(tmp_path, dtype):
+    M = def_model('contrib.interleaved_matmul_selfatt_valatt', heads=6)
+    x = mx.nd.random.uniform(0, 1, (4, 5, 6*7*3), dtype=dtype)
+    att = mx.nd.random.uniform(0, 1, (5*6, 4, 4), dtype=dtype)
+    op_export_test('contrib_interleaved_matmul_selfatt_valatt', M, [x, att], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
