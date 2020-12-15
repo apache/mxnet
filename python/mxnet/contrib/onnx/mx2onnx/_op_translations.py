@@ -2444,7 +2444,8 @@ def convert_sequencemask(node, **kwargs):
     create_const_scalar_node(name+'_0_s', np.int64(0), kwargs)
     create_const_scalar_node(name+'_1_s', np.int64(1), kwargs)
     create_const_scalar_node(name+'_2_s', np.int64(2), kwargs)
-    create_const_scalar_node(name+'_mask_val', np.float32(mask_val), kwargs),
+    make_tensor([mask_val], name+'_mask_val', kwargs["initializer"], dtype='float32')
+    #create_const_scalar_node(name+'_mask_val', np.float32(mask_val), kwargs),
 
     nodes = [
         make_node('Shape', [input_nodes[0]], [name+'_in_shape']),
@@ -2466,7 +2467,7 @@ def convert_sequencemask(node, **kwargs):
             make_node('Cast', [input_nodes[1]], [name+'_cast'], to=int(TensorProto.INT64)),
             make_node('Less', [name+'_reshape_0', name+'_cast'], [name+'_less_1']),
             make_node('Reshape', [name+'_less_1', name+'_shape_1'], [name+"_reshape_1"], name = '3333'),
-            make_node('Where', [name+'_reshape_1', input_nodes[0], name+'_mask_val'], [name]),
+            make_node('Where', [name+'_reshape_1', input_nodes[0], name+'_mask_val'], [name], name=name),
         ]
     else:
         nodes += [
@@ -2476,7 +2477,8 @@ def convert_sequencemask(node, **kwargs):
             make_node('Cast', [name+"_reshape_0"], [name+'_cast'], to=int(TensorProto.INT64)),
             make_node('Less', [name+'_range_1', name+'_cast'], [name+'_less_1']),
             make_node('Reshape', [name+'_less_1', name+'_shape_1'], [name+"_reshape_1"]),
-            make_node('Where', [name+'_reshape_1', input_nodes[0], name+'_mask_val'], [name]),
+            #make_node('Cast', [input_nodes[0]], [name+'_cast111'], to=int(TensorProto.FLOAT)),
+            make_node('Where', [name+'_reshape_1', input_nodes[0], name+'_mask_val'], [name], name=name),
         ]
     return nodes
 
