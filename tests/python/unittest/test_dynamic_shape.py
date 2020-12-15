@@ -122,3 +122,27 @@ def test_dynamic_shape_switch_hybridize():
     block.hybridize(static_alloc=True, static_shape=True)
     result = block(data, index)
     assert_almost_equal(result.asnumpy(), result_nd)
+
+def test_dynamic_shape_backward():
+    # test dynamic shape ops with backward prop
+    class _TestBlock(gluon.HybridBlock):
+        def __init__(self):
+            super(_TestBlock, self).__init__()
+
+        def hybrid_forward(self, F, data, index):
+            return F.contrib.boolean_mask(F.sum(F.transpose(data)), index)
+
+    block = _TestBlock()
+    for static_alloc in [True, False]:
+      block.hybridize(static_alloc=static_alloc)
+      data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+      index = mx.nd.array([1])
+      data.attach_grad()
+      with mx.autograd.record():
+        result = block(data, index)
+      result.backward()
+      result_nd = np.array([45.])
+      data_grad_nd = np.array([[1., 1., 1.], [1., 1., 1.], [1., 1., 1.]])
+      assert_almost_equal(result.asnumpy(), result_nd)
+      assert_almost_equal(data.grad.asnumpy(), data_grad_nd)
+

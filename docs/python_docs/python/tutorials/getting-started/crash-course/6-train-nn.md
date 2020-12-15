@@ -14,6 +14,7 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
+
 # Step 6: Train a Neural Network
 
 Now that you have seen all the necessary components for creating a neural network, you are
@@ -28,15 +29,36 @@ and diseased examples of leafs from twelve different plant species. To get this
 dataset you have to download and extract it with the following commands.
 
 ```{.python .input}
-# Download dataset
-!wget https://md-datasets-cache-zipfiles-prod.s3.eu-west-1.amazonaws.com/hb74ynkjcn-1.zip
+# Import all the necessary libraries to train
+import time
+import os
+import zipfile
+
+import mxnet as mx
+from mxnet import np, npx, gluon, init, autograd
+from mxnet.gluon import nn
+from mxnet.gluon.data.vision import transforms
+
+import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import numpy as np
+
+from prepare_dataset import process_dataset #utility code to rearrange the data
+
+mx.random.seed(42)
 ```
 
 ```{.python .input}
-# Extract the dataset in a folder that create and call plants
-!mkdir plants
-!unzip hb74ynkjcn-1.zip -d plants
-!rm hb74ynkjcn-1.zip
+# Download dataset
+url = 'https://md-datasets-cache-zipfiles-prod.s3.eu-west-1.amazonaws.com/hb74ynkjcn-1.zip'
+zip_file_path = mx.gluon.utils.download(url)
+
+os.makedirs('plants', exist_ok=True)
+
+with zipfile.ZipFile(zip_file_path, 'r') as zf:
+    zf.extractall('plants')
+
+os.remove(zip_file_path)
 ```
 
 #### Data inspection
@@ -62,43 +84,25 @@ plants
     |-- healthy
 ```
 
-Each plant species has its own directory, for each of those directories you might 
+Each plant species has its own directory, for each of those directories you might
 find subdirectories with examples of diseased leaves, healthy
 leaves, or both. With this dataset you can formulate different classification
 problems; for example, you can create a multi-class classifier that determines
-the species of a plant based on the leaves; you can instead create a binary 
-classifier that tells you whether the plant is healthy or diseased. Additionally, you can create 
-a multi-class, multi-label classifier that tells you both: what species a 
-plant is and whether the plant is diseased or healthy. In this example you will stick to 
+the species of a plant based on the leaves; you can instead create a binary
+classifier that tells you whether the plant is healthy or diseased. Additionally, you can create
+a multi-class, multi-label classifier that tells you both: what species a
+plant is and whether the plant is diseased or healthy. In this example you will stick to
 the simplest classification question, which is whether a plant is healthy or not.
 
 To do this, you need to manipulate the dataset in two ways. First, you need to
 combine all images with labels consisting of healthy and diseased, regardless of the species, and then you
 need to split the data into train, validation, and test sets. We prepared a
 small utility script that does this to get the dataset ready for you.
-Once you run this utility code on the data, the structure will be 
-already organized in folders containing the right images in each of the classes, 
+Once you run this utility code on the data, the structure will be
+already organized in folders containing the right images in each of the classes,
 you can use the `ImageFolderDataset` class to import the images from the file to MXNet.
 
 ```{.python .input}
-# Import all the necessary libraries to train
-import time
-
-import mxnet as mx
-from mxnet import np, npx, gluon, init, autograd
-from mxnet.gluon import nn
-from mxnet.gluon.data.vision import transforms
-
-import matplotlib.pyplot as plt
-import matplotlib.pyplot as plt
-import numpy as np
-
-from prepare_dataset import process_dataset #utility code to rearrange the data
-
-mx.random.seed(42)
-```
-
-```python
 # Call the utility function to rearrange the images
 process_dataset('plants')
 ```
@@ -126,7 +130,7 @@ datasets
 Now, you need to create three different Dataset objects from the `train`,
 `validation`, and `test` folders, and the `ImageFolderDataset` class takes
 care of inferring the classes from the directory names. If you don't remember
-how the `ImageFolderDataset` works, take a look at [Step 5](5-datasets.md) 
+how the `ImageFolderDataset` works, take a look at [Step 5](5-datasets.md)
 of this course for a deeper description.
 
 ```{.python .input}
@@ -160,15 +164,16 @@ Usually, you downsize images before passing them to a neural network to reduce t
 It is also customary to make slight modifications to the images to improve generalization. That is why you add
 transformations to the data in a process called Data Augmentation.
 
-You can augment data in MXNet using `transforms`. For a complete list of all 
-the available transformations in MXNet check out [this link.](https://mxnet.apache.org/versions/1.6/api/python/docs/api/gluon/data/vision/transforms/index.html)
+You can augment data in MXNet using `transforms`. For a complete list of all
+the available transformations in MXNet check out
+[available transforms](../../../api/gluon/data/vision/transforms/index.rst).
 It is very common to use more than one transform per image, and it is also
 common to process transforms sequentially. To this end, you can use the `transforms.Compose` class.
 This class is very useful to create a transformation pipeline for your images.
 
-You have to compose two different transformation pipelines, one for training 
-and the other one for validating and testing. This is because each pipeline 
-serves different pursposes. You need to downsize, convert to tensor and normalize 
+You have to compose two different transformation pipelines, one for training
+and the other one for validating and testing. This is because each pipeline
+serves different pursposes. You need to downsize, convert to tensor and normalize
 images across all the different datsets; however, you typically do not want to randomly flip
 or add color jitter to the validation or test images since you could reduce performance.
 
@@ -203,21 +208,21 @@ With your augmentations ready, you can create the `DataLoaders` to use them. To
 do this the `gluon.data.DataLoader` class comes in handy. You have to pass the dataset with
 the applied transformations (notice the `.transform_first()` method on the datasets)
 to `gluon.data.DataLoader`. Additionally, you need to decide the batch size,
-which is how many images you will be passing to the network, 
+which is how many images you will be passing to the network,
 and whether you want to shuffle the dataset.
 
 ```{.python .input}
 # Create data loaders
 batch_size = 4
 train_loader = gluon.data.DataLoader(train_dataset.transform_first(training_transformer),
-                                     batch_size=batch_size, 
-                                     shuffle=True, 
+                                     batch_size=batch_size,
+                                     shuffle=True,
                                      try_nopython=True)
-validation_loader = gluon.data.DataLoader(val_dataset.transform_first(validation_transformer), 
-                                          batch_size=batch_size, 
+validation_loader = gluon.data.DataLoader(val_dataset.transform_first(validation_transformer),
+                                          batch_size=batch_size,
                                           try_nopython=True)
 test_loader = gluon.data.DataLoader(test_dataset.transform_first(validation_transformer),
-                                    batch_size=batch_size, 
+                                    batch_size=batch_size,
                                     try_nopython=True)
 ```
 
@@ -296,7 +301,7 @@ class LeafNetwork(nn.HybridBlock):
         self.dense1 = dense_block(100)
         self.dense2 = dense_block(10)
         self.dense3 = nn.Dense(2)
-        
+
     def forward(self, batch):
         batch = self.conv1(batch)
         batch = self.conv2(batch)
@@ -305,7 +310,7 @@ class LeafNetwork(nn.HybridBlock):
         batch = self.dense1(batch)
         batch = self.dense2(batch)
         batch = self.dense3(batch)
-        
+
         return batch
 ```
 
@@ -317,7 +322,7 @@ hybridize the model.
 
 ```{.python .input}
 # Create the model based on the blueprint provided and initialize the parameters
-ctx = mx.cpu() 
+ctx = mx.cpu()
 
 initializer = mx.initializer.Xavier()
 
@@ -365,7 +370,7 @@ def test(val_data):
         labels = batch[1]
         outputs = model(data)
         acc.update([labels], [outputs])
-        
+
     _, accuracy = acc.get()
     return accuracy
 ```
@@ -398,13 +403,13 @@ for epoch in range(epochs):
         accuracy.update([label], [outputs])
         if log_interval and (idx + 1) % log_interval == 0:
             _, acc = accuracy.get()
-     
+
             print(f"""Epoch[{epoch + 1}] Batch[{idx + 1}] Speed: {batch_size / (time.time() - btic)} samples/sec \
                   batch loss = {loss.mean().asscalar()} | accuracy = {acc}""")
             btic = time.time()
 
     _, acc = accuracy.get()
-    
+
     acc_val = test(validation_loader)
     print(f"[Epoch {epoch + 1}] training: accuracy={acc}")
     print(f"[Epoch {epoch + 1}] time cost: {time.time() - tic}")
@@ -434,9 +439,9 @@ parameters in a file. Later, when you want to use the network to make prediction
 you can load the parameters back!
 
 ```{.python .input}
-# Save parameters in the 
+# Save parameters in the
 model.save_parameters('leaf_models.params')
 ```
 
 This is the end of this tutorial, to see how you can speed up the training by
-using GPU hardware continue to the [next tutorial](7-use-gpus.md)
+using GPU hardware continue to the [next tutorial](./7-use-gpus.ipynb)

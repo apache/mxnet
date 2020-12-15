@@ -21,19 +21,17 @@ In this tutorial, we'll give you a step by step walk-through of how to build a h
 
 MNIST is a widely used dataset for the hand-written digit classification task. It consists of 70,000 labeled 28x28 pixel grayscale images of hand-written digits. The dataset is split into 60,000 training images and 10,000 test images. There are 10 classes (one for each of the 10 digits). The task at hand is to train a model using the 60,000 training images and subsequently test its classification accuracy on the 10,000 test images.
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png)
+![mnist mnist](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png)
 
 **Figure 1:** Sample images from the MNIST dataset.
 
-This tutorial uses MXNet's new high-level interface, gluon package to implement MLP using
+This tutorial uses MXNet's new high-level interface, Gluon package to implement MLP using
 imperative fashion.
-
-This is based on the Mnist tutorial with symbolic approach. You can find it [here](https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/image/mnist.html).
 
 ## Prerequisites
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/get_started).
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.apache.org/get_started).
 
 - [Python Requests](http://docs.python-requests.org/en/master/) and [Jupyter Notebook](http://jupyter.org/index.html).
 
@@ -94,7 +92,7 @@ In an MLP, the outputs of most FC layers are fed into an activation function, wh
 The following code declares three fully connected layers with 128, 64 and 10 neurons each.
 The last fully connected layer often has its hidden size equal to the number of output classes in the dataset. Furthermore, these FC layers uses ReLU activation for performing an element-wise ReLU transformation on the FC layer output.
 
-To do this, we will use [Sequential layer](https://mxnet.io/api/python/docs/api/gluon/_autogen/mxnet.gluon.nn.Sequential.html) type. This is simply a linear stack of neural network layers. `nn.Dense` layers are nothing but the fully connected layers we discussed above.
+To do this, we will use [Sequential layer](../../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Sequential) type. This is simply a linear stack of neural network layers. `nn.Dense` layers are nothing but the fully connected layers we discussed above.
 
 ```{.python .input}
 # define network
@@ -106,13 +104,13 @@ net.add(nn.Dense(10))
 
 #### Initialize parameters and optimizer
 
-The following source code initializes all parameters received from parameter dict using [Xavier](https://mxnet.io/api/python/docs/api/gluon-related/_autogen/mxnet.initializer.Xavier.html) initializer
+The following source code initializes all parameters received from parameter dict using [Xavier](../../../../api/initializer/index.rst#mxnet.initializer.Xavier) initializer
 to train the MLP network we defined above.
 
 For our training, we will make use of the stochastic gradient descent (SGD) optimizer. In particular, we'll be using mini-batch SGD. Standard SGD processes train data one example at a time. In practice, this is very slow and one can speed up the process by processing examples in small batches. In this case, our batch size will be 100, which is a reasonable choice. Another parameter we select here is the learning rate, which controls the step size the optimizer takes in search of a solution. We'll pick a learning rate of 0.02, again a reasonable choice. Settings such as batch size and learning rate are what are usually referred to as hyper-parameters. What values we give them can have a great impact on training performance.
 
-We will use [Trainer](/api/python/docs/api/gluon/trainer.html) class to apply the
-[SGD optimizer](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.SGD) on the
+We will use [Trainer](../../../../api/gluon/trainer.rst) class to apply the
+[SGD optimizer](../../../../api/optimizer/index.rst#mxnet.optimizer.SGD) on the
 initialized parameters.
 
 ```{.python .input}
@@ -128,7 +126,7 @@ Typically, one runs the training until convergence, which means that we have lea
 
 We will take following steps for training:
 
-- Define [Accuracy evaluation metric](https://mxnet.io/api/python/metric/metric.html#mxnet.metric.Accuracy) over training data.
+- Define [Accuracy evaluation metric](../../../../api/gluon/metric/index.rst#mxnet.gluon.metric.Accuracy) over training data.
 - Loop over inputs for every epoch.
 - Forward input through network to get output.
 - Compute loss with output and label inside record scope.
@@ -137,7 +135,7 @@ We will take following steps for training:
 
 Loss function takes (output, label) pairs and computes a scalar loss for each sample in the mini-batch. The scalars measure how far each output is from the label.
 There are many predefined loss functions in gluon.loss. Here we use
-[softmax_cross_entropy_loss](https://mxnet.io/api/python/gluon/gluon.html#mxnet.gluon.loss.softmax_cross_entropy_loss) for digit classification. We will compute loss and do backward propagation inside
+[softmax_cross_entropy_loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.SoftmaxCrossEntropyLoss) for digit classification. We will compute loss and do backward propagation inside
 training scope which is defined by `autograd.record()`.
 
 ```{.python .input}
@@ -252,7 +250,7 @@ Now, We will create the network as follows:
 net = Net()
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/conv_mnist.png){ width=500px }
+![mnist conv mnist](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/conv_mnist.png){ width=500px }
 
 **Figure 3:** First conv + pooling layer in LeNet.
 

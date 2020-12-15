@@ -31,12 +31,12 @@ In this tutorial we will:
 ## Pre-requisite
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet > 1.1.0](/get_started)
+- [MXNet > 1.1.0](https://mxnet.apache.org/get_started)
 - [onnx](https://github.com/onnx/onnx)
 - matplotlib
 
 We recommend that you have first followed this tutorial:
-- [Inference using an ONNX model on MXNet Gluon](/api/python/docs/tutorials/packages/onnx/inference_on_onnx_model.html)
+- [Inference using an ONNX model on MXNet Gluon](./inference_on_onnx_model.ipynb)
 
 
 ```{.python .input}
@@ -214,7 +214,7 @@ print(categories[dataset_train[N][1]])
 
 
 
-![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/motorbike.png?raw=true)<!--notebook-skip-line-->
+![onnx motorbike](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/motorbike.png?raw=true)<!--notebook-skip-line-->
 
 
 ## Fine-Tuning the ONNX model
@@ -449,7 +449,7 @@ plot_predictions(caltech101_images_test, result, categories, TOP_P)
 ```
 
 
-![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/caltech101_correct.png?raw=true)<!--notebook-skip-line-->
+![onnx caltech101 correct](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/caltech101_correct.png?raw=true)<!--notebook-skip-line-->
 
 
 **Great!** The network classified these images correctly after being fine-tuned on a dataset that contains images of `wrench`, `dolphin` and `lotus`

@@ -29,13 +29,14 @@ import contextlib
 import contextvars
 
 import re
+import json
 import numpy as np
 
 from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, check_call, _LIB
 from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
     profiler as _profiler, context as _context
 from ..symbol.numpy import _symbol as np_symbol
-from ..symbol import Symbol
+from ..symbol import Symbol, fromjson
 from ..ndarray import NDArray
 from .parameter import Parameter, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
@@ -573,6 +574,143 @@ class Block:
         for v in params.values():
             v.initialize(None, ctx, init, force_reinit=force_reinit)
 
+    def save(self, prefix):
+        """Save the model architecture and parameters to load again later
+
+        Saves the model architecture as a nested dictionary where each Block
+        in the model is a dictionary and its children are sub-dictionaries.
+
+        Each Block is uniquely identified by Block class name and a unique ID.
+        We save each Block's parameter UUID to restore later in order to match
+        the saved parameters.
+
+        Recursively traverses a Block's children in order (since its an
+        OrderedDict) and uses the unique ID to denote that specific Block.
+
+        Assumes that the model is created in an identical order every time.
+        If the model is not able to be recreated deterministically do not
+        use this set of APIs to save/load your model.
+
+        For HybridBlocks, the cached_graph is saved (Symbol & inputs) if
+        it has already been hybridized.
+
+        Parameters
+        ----------
+        prefix : str
+            The prefix to use in filenames for saving this model:
+            <prefix>-model.json and <prefix>-model.params
+        """
+        # create empty model structure
+        model = {}
+        def _save_cached_graphs(blk, structure, index=0):
+            # create new entry for this block
+            mdl = {}
+            # encode unique name based on block type and ID
+            name = type(blk).__name__.lower()
+            structure[name+str(index)] = mdl
+            index += 1
+            if isinstance(blk, HybridBlock):
+                if blk._cached_graph:
+                    # save in/out formats
+                    mdl['in_format'] = blk._in_format
+                    mdl['out_format'] = blk._out_format
+                    # save cached graph & input symbols
+                    syms, out = blk._cached_graph
+                    mdl_syms = []
+                    for sym in syms:
+                        mdl_syms.append(sym.tojson())
+                    mdl['inputs'] = mdl_syms
+                    mdl['symbol'] = out.tojson()
+                    mdl['hybridized'] = True
+                else:
+                    mdl['hybridized'] = False
+            # save param uuids
+            pmap = {}
+            mdl['params'] = pmap
+            pnames = list(blk.params.keys())
+            for p in pnames:
+                param = blk.params[p]
+                pmap[p] = param._uuid
+            # recursively save children
+            for child in blk._children.values():
+                index = _save_cached_graphs(child(), mdl, index)
+            # return latest index (ie. block count)
+            return index
+
+        # save top-level block
+        _save_cached_graphs(self, model)
+        # save model
+        with open(prefix+'-model.json', 'w') as fp:
+            json.dump(model, fp)
+        # save params
+        self.save_parameters('MyModel-model.params')
+
+    def load(self, prefix):
+        """Load a model saved using the `save` API
+
+        Reconfigures a model using the saved configuration. This function
+        does not regenerate the model architecture. It resets each Block's
+        parameter UUIDs as they were when saved in order to match the names of the
+        saved parameters.
+
+        This function assumes the Blocks in the model were created in the same
+        order they were when the model was saved. This is because each Block is
+        uniquely identified by Block class name and a unique ID in order (since
+        its an OrderedDict) and uses the unique ID to denote that specific Block.
+
+        Assumes that the model is created in an identical order every time.
+        If the model is not able to be recreated deterministically do not
+        use this set of APIs to save/load your model.
+
+        For HybridBlocks, the cached_graph (Symbol & inputs) and settings are
+        restored if it had been hybridized before saving.
+
+        Parameters
+        ----------
+        prefix : str
+            The prefix to use in filenames for loading this model:
+            <prefix>-model.json and <prefix>-model.params
+        """
+        # load model json from file
+        with open(prefix+'-model.json') as fp:
+            model = json.load(fp)
+
+        def _load_cached_graphs(blk, structure, index=0):
+            # get block name
+            name = type(blk).__name__.lower()
+            # lookup previous encoded name based on block type and ID
+            mdl = structure[name+str(index)]
+            index += 1
+            if isinstance(blk, HybridBlock):
+                if mdl['hybridized']:
+                    # restore in/out formats
+                    blk._in_format = mdl['in_format']
+                    blk._out_format = mdl['out_format']
+                    # get saved symbol
+                    out = fromjson(mdl['symbol'])
+                    syms = []
+                    # recreate inputs for this symbol
+                    for inp in mdl['inputs']:
+                        syms.append(fromjson(inp))
+                    # reset cached_graph and active status
+                    blk._cached_graph = (syms, out)
+                    blk._active = True
+            # reload param uuids
+            pmap = mdl['params']
+            for p, uuid in pmap.items():
+                param = blk.params[p]
+                param._uuid = uuid
+            # recursively reload children
+            for child in blk._children.values():
+                index = _load_cached_graphs(child(), mdl, index)
+            # return latest index (ie. block count)
+            return index
+
+        # load top-level block
+        _load_cached_graphs(self, model)
+        # load params
+        self.load_parameters('MyModel-model.params')
+
     def hybridize(self, active=True, **kwargs):
         """ Please refer description of HybridBlock hybridize().
         """
@@ -915,7 +1053,7 @@ class HybridBlock(Block):
         self._monitor_all = False
         self._backend = None
         self._backend_opts = {}
-        self._partition_if_dynamic = False
+        self._partition_if_dynamic = True
         self._first_forward = True
 
     def __setattr__(self, name, value):
@@ -1174,7 +1312,7 @@ class HybridBlock(Block):
         return _regroup(out, self._out_format)
 
     def optimize_for(self, x, *args, backend=None, clear=False,
-                     partition_if_dynamic=False,
+                     partition_if_dynamic=True,
                      static_alloc=False,
                      static_shape=False,
                      inline_limit=2,
@@ -1281,7 +1419,7 @@ class HybridBlock(Block):
         self._clear_cached_op()
 
     def hybridize(self, active=True,
-                  partition_if_dynamic=False,
+                  partition_if_dynamic=True,
                   static_alloc=False,
                   static_shape=False,
                   inline_limit=2,

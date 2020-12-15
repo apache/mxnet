@@ -16,7 +16,7 @@
    under the License.
 
 What is NP on MXNet
-=====================
+===================
 
 NP on MXNet provides a NumPy-like interface with extensions
 for deep learning. It contains two modules, ``mxnet.np``, which is similar to

@@ -287,6 +287,7 @@ List of Contributors
 * [Wei Chu](https://github.com/waytrue17)
 * [Joe Evans](https://github.com/josephevans)
 * [Nikolay Ulmasov](https://github.com/r3stl355)
+* [Paweł Głomski](https://github.com/PawelGlomski-Intel)
 
 Label Bot
 ---------

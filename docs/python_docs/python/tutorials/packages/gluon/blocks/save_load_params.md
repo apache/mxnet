@@ -162,7 +162,7 @@ new_net.load_parameters(file_name, ctx=ctx)
 
 Note that to do this, we need the definition of the network as Python code. If we want to recreate this network on a different machine using the saved weights, we need the same Python code (`build_lenet`) that created the network to create the `new_net` object shown above. This means Python code needs to be copied over to any machine where we want to run this network.
 
-If our network is [Hybrid](https://mxnet.apache.org/tutorials/gluon/hybrid.html), we can even save the network architecture into files and we won't need the network definition in a Python file to load the network. We'll see how to do it in the next section.
+If our network is [Hybrid](./hybridize.ipynb), we can even save the network architecture into files and we won't need the network definition in a Python file to load the network. We'll see how to do it in the next section.
 
 Let's test the model we just loaded from file.
 
@@ -199,13 +199,13 @@ def verify_loaded_model(net):
 
 verify_loaded_model(new_net)
 ```
-![Model inputs](https://raw.githubusercontent.com/indhub/web-data/4a9c100aa996df3dff0e7f493029d411c2b526c3/mxnet/tutorials/gluon/save_load_params/mnist_in_1.png) <!--notebook-skip-line-->
+![Model inputs mnist in 1](https://raw.githubusercontent.com/indhub/web-data/4a9c100aa996df3dff0e7f493029d411c2b526c3/mxnet/tutorials/gluon/save_load_params/mnist_in_1.png) <!--notebook-skip-line-->
 
 Model predictions:  [1. 1. 4. 5. 0. 5. 7. 0. 3. 6.] <!--notebook-skip-line-->
 
 ## Saving model parameters AND architecture to file
 
-[Hybrid](https://mxnet.apache.org/tutorials/gluon/hybrid.html) models can be serialized as JSON files using the `export` function. Once serialized, these models can be loaded from other language bindings like C++ or Scala for faster inference or inference in different environments.
+[Hybrid](./hybridize.ipynb) models can be serialized as JSON files using the `export` function. Once serialized, these models can be loaded from other language bindings like C++ or Scala for faster inference or inference in different environments.
 
 Note that the network we created above is not a Hybrid network and therefore cannot be serialized into a JSON file. So, let's create a Hybrid version of the same network and train it.
 
@@ -269,10 +269,8 @@ with warnings.catch_warnings():
 verify_loaded_model(deserialized_net)
 ```
 
-![Model inputs](https://raw.githubusercontent.com/indhub/web-data/4a9c100aa996df3dff0e7f493029d411c2b526c3/mxnet/tutorials/gluon/save_load_params/mnist_in_2.png) <!--notebook-skip-line-->
+![Model inputs mnist in 2](https://raw.githubusercontent.com/indhub/web-data/4a9c100aa996df3dff0e7f493029d411c2b526c3/mxnet/tutorials/gluon/save_load_params/mnist_in_2.png) <!--notebook-skip-line-->
 
 Model predictions:  [4. 8. 0. 1. 5. 5. 8. 8. 1. 9.] <!--notebook-skip-line-->
 
 That's all! We learned how to save and load Gluon networks from files. Parameters of any Gluon network can be persisted into files. For hybrid networks, both the architecture of the network and the parameters can be saved to and loaded from files.
-
-<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

@@ -17,9 +17,7 @@
 
 # Parameter Management
 
-<!-- adapted from diveintodeeplearning -->
-
-The ultimate goal of training deep neural networks is finding good parameter values for a given architecture. The [nn.Sequential](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Sequential) class is a perfect tool to work with standard models. However, very few models are entirely standard, and most scientists want to build novel things, which requires working with model parameters.
+The ultimate goal of training deep neural networks is finding good parameter values for a given architecture. The [nn.Sequential](../../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Sequential) class is a perfect tool to work with standard models. However, very few models are entirely standard, and most scientists want to build novel things, which requires working with model parameters.
 
 This section shows how to manipulate parameters. In particular we will cover the following aspects:
 
@@ -74,7 +72,7 @@ print(net[0].params['dense0_weight'].data())
 
 Note that the weights are nonzero as they were randomly initialized when we constructed the network.
 
-[data](/api/python/docs/api/gluon/parameter.html#mxnet.gluon.Parameter.data) is not the only method that we can invoke. For instance, we can compute the gradient with respect to the parameters. It has the same shape as the weight. However, since we did not invoke backpropagation yet, the values are all 0.
+[data](../../../../api/gluon/parameter.rst#mxnet.gluon.Parameter.data) is not the only method that we can invoke. For instance, we can compute the gradient with respect to the parameters. It has the same shape as the weight. However, since we did not invoke backpropagation yet, the values are all 0.
 
 ```{.python .input  n=5}
 net[0].weight.grad()
@@ -82,7 +80,7 @@ net[0].weight.grad()
 
 ### All Parameters at Once
 
-Accessing parameters as described above can be a bit tedious, in particular if we have more complex blocks, or blocks of blocks (or even blocks of blocks of blocks), since we need to walk through the entire tree in reverse order to learn how the blocks were constructed. To avoid this, blocks come with a method [collect_params](/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.collect_params) which grabs all parameters of a network in one dictionary such that we can traverse it with ease. It does so by iterating over all constituents of a block and calls `collect_params` on sub-blocks as needed. To see the difference, consider the following:
+Accessing parameters as described above can be a bit tedious, in particular if we have more complex blocks, or blocks of blocks (or even blocks of blocks of blocks), since we need to walk through the entire tree in reverse order to learn how the blocks were constructed. To avoid this, blocks come with a method [collect_params](../../../../api/gluon/block.rst#mxnet.gluon.Block.collect_params) which grabs all parameters of a network in one dictionary such that we can traverse it with ease. It does so by iterating over all constituents of a block and calls `collect_params` on sub-blocks as needed. To see the difference, consider the following:
 
 ```{.python .input  n=6}
 # Parameters only for the first layer
@@ -143,7 +141,7 @@ rgnet[0][1][0].bias.data()
 
 ### Saving and loading parameters
 
-In order to save parameters, we can use [save_parameters](/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.save_parameters) method on the whole network or a particular subblock. The only parameter that is needed is the `file_name`. In a similar way, we can load parameters back from the file. We use [load_parameters](/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.load_parameters) method for that:
+In order to save parameters, we can use [save_parameters](../../../../api/gluon/block.rst#mxnet.gluon.Block.save_parameters) method on the whole network or a particular subblock. The only parameter that is needed is the `file_name`. In a similar way, we can load parameters back from the file. We use [load_parameters](../../../../api/gluon/block.rst#mxnet.gluon.Block.load_parameters) method for that:
 
 ```{.python .input}
 rgnet.save_parameters('model.params')
@@ -152,7 +150,7 @@ rgnet.load_parameters('model.params')
 
 ## Parameter Initialization
 
-Now that we know how to access the parameters, let's look at how to initialize them properly. By default, MXNet initializes the weight matrices uniformly by drawing from $U[-0.07, 0.07]$ and the bias parameters are all set to $0$. However, we often need to use other methods to initialize the weights. MXNet's [init](/api/python/docs/api/initializer/index.html#mxnet.initializer) module provides a variety of preset initialization methods, but if we want something unusual, we need to do a bit of extra work.
+Now that we know how to access the parameters, let's look at how to initialize them properly. By default, MXNet initializes the weight matrices uniformly by drawing from $U[-0.07, 0.07]$ and the bias parameters are all set to $0$. However, we often need to use other methods to initialize the weights. MXNet's [init](../../../../api/initializer/index.rst) module provides a variety of preset initialization methods, but if we want something unusual, we need to do a bit of extra work.
 
 ### Built-in Initialization
 
@@ -165,14 +163,14 @@ net.initialize(init=init.Normal(sigma=0.01), force_reinit=True)
 net[0].weight.data()[0]
 ```
 
-If we wanted to initialize all parameters to 1, we could do this simply by changing the initializer to [Constant(1)](/api/python/docs/api/initializer/index.html#mxnet.initializer.Constant).
+If we wanted to initialize all parameters to 1, we could do this simply by changing the initializer to [Constant(1)](../../../../api/initializer/index.rst#mxnet.initializer.Constant).
 
 ```{.python .input  n=10}
 net.initialize(init=init.Constant(1), force_reinit=True)
 net[0].weight.data()[0]
 ```
 
-If we want to initialize only a specific parameter in a different manner, we can simply set the initializer only for the appropriate subblock (or parameter) for that matter. For instance, below we initialize the second layer to a constant value of 42 and we use the [Xavier](/api/python/docs/api/initializer/index.html#mxnet.initializer.Xavier) initializer for the weights of the first layer.
+If we want to initialize only a specific parameter in a different manner, we can simply set the initializer only for the appropriate subblock (or parameter) for that matter. For instance, below we initialize the second layer to a constant value of 42 and we use the [Xavier](../../../../api/initializer/index.rst#mxnet.initializer.Xavier) initializer for the weights of the first layer.
 
 ```{.python .input  n=11}
 net[1].initialize(init=init.Constant(42), force_reinit=True)
@@ -183,7 +181,7 @@ print(net[0].weight.data()[0])
 
 ### Custom Initialization
 
-Sometimes, the initialization methods we need are not provided in the `init` module. If this is the case, we can implement a subclass of the [Initializer](/api/python/docs/api/initializer/index.html#mxnet.initializer.Initializer) class so that we can use it like any other initialization method. Usually, we only need to implement the `_init_weight` method and modify the incoming NDArray according to the initial result. In the example below, we pick a nontrivial distribution, just to prove the point. We draw the coefficients from the following distribution:
+Sometimes, the initialization methods we need are not provided in the `init` module. If this is the case, we can implement a subclass of the [Initializer](../../../../api/initializer/index.rst#mxnet.initializer.Initializer) class so that we can use it like any other initialization method. Usually, we only need to implement the `_init_weight` method and modify the incoming NDArray according to the initial result. In the example below, we pick a nontrivial distribution, just to prove the point. We draw the coefficients from the following distribution:
 
 $$
 \begin{aligned}
@@ -206,7 +204,7 @@ net.initialize(MyInit(), force_reinit=True)
 net[0].weight.data()[0]
 ```
 
-If even this functionality is insufficient, we can set parameters directly. Since `data()` returns an NDArray we can access it just like any other matrix. A note for advanced users - if you want to adjust parameters within an [autograd](/api/python/docs/api/autograd/index.html) scope you need to use [set_data](/api/python/docs/api/gluon/parameter.html#mxnet.gluon.Parameter.set_data) to avoid confusing the automatic differentiation mechanics.
+If even this functionality is insufficient, we can set parameters directly. Since `data()` returns an NDArray we can access it just like any other matrix. A note for advanced users - if you want to adjust parameters within an [autograd](../../../../api/autograd/index.rst) scope you need to use [set_data](../../../../api/gluon/parameter.rst#mxnet.gluon.Parameter.set_data) to avoid confusing the automatic differentiation mechanics.
 
 ```{.python .input  n=13}
 net[0].weight.data()[:] += 1
@@ -240,4 +238,4 @@ net[1].weight.data()[0,0] = 100
 print(net[1].weight.data()[0] == net[2].weight.data()[0])
 ```
 
-The above example shows that the parameters of the second and third layer are tied. They are identical rather than just being equal. That is, by changing one of the parameters the other one changes, too. What happens to the gradients is quite ingenious. Since the model parameters contain gradients, the gradients of the second hidden layer and the third hidden layer are accumulated in the [shared.params.grad()](/api/python/docs/api/gluon/parameter.html#mxnet.gluon.Parameter.grad) during backpropagation.
+The above example shows that the parameters of the second and third layer are tied. They are identical rather than just being equal. That is, by changing one of the parameters the other one changes, too. What happens to the gradients is quite ingenious. Since the model parameters contain gradients, the gradients of the second hidden layer and the third hidden layer are accumulated in the [shared.params.grad()](../../../../api/gluon/parameter.rst#mxnet.gluon.Parameter.grad) during backpropagation.

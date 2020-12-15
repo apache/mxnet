@@ -415,7 +415,7 @@ def test_dynamic_reshape():
         shape = mx.sym.Variable('shape')
         net = mx.sym.contrib.dynamic_reshape(data, shape)
         js = net.tojson()
-        net = mx.sym.load_json(js)
+        net = mx.sym.fromjson(js)
         dat_npy = np.random.rand(*src_shape)
         grad_npy = np.random.rand(*dst_shape)
         args = {

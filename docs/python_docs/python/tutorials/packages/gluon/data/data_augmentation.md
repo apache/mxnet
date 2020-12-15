@@ -23,7 +23,7 @@ Although this technique can be applied in a variety of domains, it's very common
 
 #### What are the prerequisites?
 
-You should be familiar with the concept of a transform and how to apply it to a dataset before reading this tutorial. Check out the [Data Transforms tutorial]() if this is new to you or you need a quick refresher.
+You should be familiar with the concept of a transform and how to apply it to a dataset before reading this tutorial.
 
 #### Where can I find the augmentation transforms?
 
@@ -48,7 +48,7 @@ example_image = mx.image.imread("giraffe.jpg")
 plt.imshow(example_image.asnumpy())
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_5_1.png)
+![data augmentation output 5 1](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_5_1.png)
 
 
 Since these augmentations are random, we'll apply the same augmentation a few times and plot all of the outputs. We define a few utility functions to help with this.
@@ -74,7 +74,7 @@ def apply(img, aug, num_rows=2, num_cols=4, scale=3):
     show_images(Y, num_rows, num_cols, scale)
 ```
 
-# Spatial Augmentation
+## Spatial Augmentation
 
 One form of augmentation affects the spatial position of pixel values. Using combinations of slicing, scaling, translating, rotating and flipping the values of the original image can be shifted to create new images. Some operations (like scaling and rotation) require interpolation as pixels in the new image are combinations of pixels in the original image.
 
@@ -97,7 +97,7 @@ shape_aug = transforms.RandomResizedCrop(size=(200, 200),
 apply(example_image, shape_aug)
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_12_0.png)
+![data augmentation output 12 0](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_12_0.png)
 
 
 ### `RandomFlipLeftRight`
@@ -109,7 +109,7 @@ A simple augmentation technique is flipping. Usually flipping horizontally doesn
 apply(example_image, transforms.RandomFlipLeftRight())
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_15_0.png)
+![data augmentation output 15 0](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_15_0.png)
 
 
 ### `RandomFlipTopBottom`
@@ -121,10 +121,10 @@ Although it's not as common as flipping left and right, you can flip the image v
 apply(example_image, transforms.RandomFlipTopBottom())
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_18_0.png)
+![data augmentation output 18 0](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_18_0.png)
 
 
-# Color Augmentation
+## Color Augmentation
 
 Usually, exact coloring doesn't play a significant role in the classification or detection of objects, so augmenting the colors of images is a good technique to make the network invariant to color shifts. Color properties that can be changed include brightness, contrast, saturation and hue.
 
@@ -144,7 +144,7 @@ So by setting this to 0.5 we randomly change the brightness of the image to a va
 apply(example_image, transforms.RandomBrightness(0.5))
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_23_0.png)
+![data augmentation output 23 0](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_23_0.png)
 
 
 ### `RandomContrast`
@@ -165,7 +165,7 @@ image += gray
 apply(example_image, transforms.RandomContrast(0.5))
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_26_0.png)
+![data augmentation output 26 0](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_26_0.png)
 
 
 ### `RandomSaturation`
@@ -177,7 +177,7 @@ Use `RandomSaturation` to add a random saturation jitter to an image. Saturation
 apply(example_image, transforms.RandomSaturation(0.5))
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_29_0.png)
+![data augmentation output 29 0](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_29_0.png)
 
 
 ### `RandomHue`
@@ -189,7 +189,7 @@ Use `RandomHue` to add a random hue jitter to images. Hue can be thought of as t
 apply(example_image, transforms.RandomHue(0.5))
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_32_0.png)
+![data augmentation output 32 0](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_32_0.png)
 
 
 ### `RandomColorJitter`
@@ -205,7 +205,7 @@ color_aug = transforms.RandomColorJitter(brightness=0.5,
 apply(example_image, color_aug)
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_35_0.png)
+![data augmentation output 35 0](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_35_0.png)
 
 
 ### `RandomLighting`
@@ -217,11 +217,11 @@ Use `RandomLighting` for an AlexNet-style PCA-based noise augmentation.
 apply(example_image, transforms.RandomLighting(alpha=1))
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_38_0.png)
+![data augmentation output 38 0](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_38_0.png)
 
-# Composed Augmentations
+## Composed Augmentations
 
-In practice, we apply multiple augmentation techniques to an image to increase the variety of images in the dataset. Using the `Compose` transform that was introduced in the [Data Transforms tutorial](), we can apply 3 of the transforms we previously used above.
+In practice, we apply multiple augmentation techniques to an image to increase the variety of images in the dataset using the `Compose` transform. We can apply 3 of the transforms we previously used above.
 
 
 ```{.python .input}
@@ -230,6 +230,4 @@ augs = transforms.Compose([
 apply(example_image, augs)
 ```
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_41_0.png)
-
-<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
+![data augmentation output 41 0](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/transforms/output_41_0.png)

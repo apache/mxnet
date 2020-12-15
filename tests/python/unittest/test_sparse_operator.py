@@ -695,6 +695,7 @@ def check_sparse_mathematical_core(name, stype,
 
 
 @pytest.mark.serial
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18829')
 def test_sparse_mathematical_core():
     def util_sign(a):
         if np.isclose(a, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):

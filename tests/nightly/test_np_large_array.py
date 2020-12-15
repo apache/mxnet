@@ -83,6 +83,7 @@ def test_softmax():
         output = npx.softmax(input_data, axis=axis)
         assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
 
+
 '''
   _ _ _  _ _ __  _ __ _  _
  | ' \ || | '  \| '_ \ || |
@@ -320,6 +321,28 @@ def test_bincount():
 
 
 @use_np
+def test_bitwise_family():
+    def batch_check(x1, x2, funcs):
+        x1.attach_grad()
+        for f in funcs:
+            with mx.autograd.record():
+                y = f(x1, x2)
+                y.backward()
+            one = np.ones((1), dtype='int32')
+            assert y.shape == (INT_OVERFLOW, 2)
+            assert y[-1, -1] == f(one, one)
+            assert x1.grad.shape == x1.shape
+            assert x1.grad[-1, -1] == 0
+    # test on broadcast input
+    inp1 = np.ones((INT_OVERFLOW, 1), dtype='int32')
+    inp2 = np.ones((INT_OVERFLOW, 2), dtype='int32')
+    batch_check(inp1, inp2, [np.bitwise_and, np.bitwise_or, np.bitwise_xor])
+    out = np.bitwise_not(inp1)
+    assert out.shape == (INT_OVERFLOW, 1)
+    assert out[0] == np.bitwise_not(np.ones((1), dtype='int32')) 
+
+
+@use_np
 def test_blackman():
     data = np.blackman(INT_OVERFLOW)
     ind = int(INT_OVERFLOW / 6)
@@ -543,6 +566,113 @@ def test_slice_assign():
     B[-1] = 2
     assert B[-1, 0] == 2 and B[-1, 1] == 2
 
+@use_np
+def test_flatnonzero():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.flatnonzero(inp)
+        out.backward()
+    assert out.shape == (1, )
+    assert out[0] == int(2 * INT_OVERFLOW - 1)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+@use_np
+def test_ravel():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[0, -1], inp[-1, -1] = 1, 2
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.ravel(inp)
+        out.backward()
+    assert out.shape == (DOUBLE_INT_OVERFLOW, )
+    assert out[INT_OVERFLOW-1] == 1 and out[-1] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
+
+@use_np
+def test_mean():
+    inp = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.mean(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    assert_almost_equal(out[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+                rtol=1e-3, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert_almost_equal(inp.grad[-1, -1], np.array((1.0/INT_OVERFLOW)), \
+                rtol=1e-3, atol=1e-5)
+
+@use_np
+def test_median():
+    inp = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.median(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    assert_almost_equal(out[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+                rtol=1e-3, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+@use_np
+def test_percentile():
+    # np.percentile and np.quantile share the same implementation
+    inp = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.percentile(inp, 50, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    assert_almost_equal(out[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+                rtol=1e-3, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+@use_np
+def test_shares_memory():
+    # np.shares_memory and np.may_share_memory share the same implementation
+    inp = np.ones((2, INT_OVERFLOW))
+    out = np.shares_memory(inp[0,:100], inp[0,100:])
+    out2 = np.shares_memory(inp[1,:101], inp[1,100:])
+    assert out == False and out2 == True
+
+@use_np
+def test_where():
+    inp1 = np.zeros((2, INT_OVERFLOW))
+    inp1[-1, -1] = 1
+    inp2 = inp1 + 1
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out = np.where(inp1==0, inp1, inp2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[0, 0] == 0 and out[-1, -1] == 2
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[0, 0] == 1 and inp1.grad[-1, -1] == 0
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[0, 0] == 0 and inp2.grad[-1, -1] == 1
+    # one side is scalar
+    with mx.autograd.record():
+        out = np.where(inp1==0, inp1, 2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[0, 0] == 0 and out[-1, -1] == 2
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[0, 0] == 1 and inp1.grad[-1, -1] == 0
+    # both sides ar scalar
+    with mx.autograd.record():
+        out = np.where(inp1==0, 0, 2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[0, 0] == 0 and out[-1, -1] == 2
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1, -1] == 0
 
 @use_np
 def test_logical_family():
@@ -1313,6 +1443,219 @@ def test_polyval():
     assert poly.grad.shape == poly.shape
     assert poly.grad[0] == 4
 
+
+@use_np
+def test_rot90():
+    inp = np.zeros((1, 2, INT_OVERFLOW))
+    inp[-1, -1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.rot90(inp, axes=(1,2))
+        out.backward()
+    assert out.shape == (1, INT_OVERFLOW, 2)
+    assert out[0, 0, 1] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1, -1] == 1
+
+
+@use_np
+def test_squeeze():
+    inp = np.zeros((2, 1, INT_OVERFLOW))
+    inp[-1, -1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.squeeze(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, INT_OVERFLOW)
+    assert out[-1, -1] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1, -1] == 1
+
+
+@use_np
+def test_tile():
+    inp = np.array([[0, 1],[2, 3]])
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.tile(inp, (1, HALF_INT_OVERFLOW))
+        out.backward()
+    assert out.shape == (2, INT_OVERFLOW)
+    assert out[-1, -1] == 3
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == HALF_INT_OVERFLOW
+
+
+@use_np
+def test_trace():
+    N = 2**16
+    inp = np.eye(N)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.trace(inp)
+        out.backward()
+    assert out == N
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == 1 and inp.grad[-1, -1] == 1
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.trace(inp, offset=INT_OVERFLOW-2)
+        out.backward()
+    assert out == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, -2] == 1 and inp.grad[-1, -1] == 1
+
+
+@use_np
+def test_tri():
+    N = 2**16
+    data = np.tri(N)
+    assert data.shape == (N, N)
+    assert data[0, 0] == 1 and data[-1, -1] == 1
+    assert data[0, -1] == 0 and data[-1, 0] == 1
+    data = np.tri(2, INT_OVERFLOW, INT_OVERFLOW-2)
+    assert data.shape == (2, INT_OVERFLOW)
+    assert data[0, -1] == 0 and data[-1, -1] == 1
+
+
+@use_np
+def test_tril():
+    N = 2**16
+    inp = np.ones((N, N))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.tril(inp)
+        out.backward()
+    assert out.shape == (N, N)
+    assert out[-1, -1] == 1 and out[0, -1] == 0 and out[-1, 0] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1 and inp.grad[0, -1] == 0 and \
+        inp.grad[-1, 0] == 1
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.tril(inp, k=INT_OVERFLOW-2)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, -1] == 0 and out[-1, -1] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, -1] == 0 and inp.grad[-1, -1] == 1
+
+
+@use_np
+def test_triu():
+    N = 2**16
+    inp = np.ones((N, N))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.triu(inp)
+        out.backward()
+    assert out.shape == (N, N)
+    assert out[-1, -1] == 1 and out[0, -1] == 1 and out[-1, 0] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1 and inp.grad[0, -1] == 1 and \
+        inp.grad[-1, 0] == 0
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.triu(inp, k=INT_OVERFLOW-1)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, -1] == 1 and out[-1, -1] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, -1] == 1 and inp.grad[-1, -1] == 0
+
+
+@use_np
+def test_transpose():
+    inp = np.zeros((1, 2, INT_OVERFLOW))
+    inp[0, 0, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.transpose(inp, (2, 0, 1))
+        out.backward()
+    assert out.shape == (INT_OVERFLOW, 1, 2)
+    assert out[-1, 0, 0] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1, -1] == 1
+
+
+@use_np
+def test_trunc():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[0, -1], inp[1, -1] = 1.9, -1.9
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.trunc(inp)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, -1] == 1 and out[1, -1] == -1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+
+@use_np
+def test_stack():
+    inp1 = np.zeros((INT_OVERFLOW))
+    inp2 = np.ones((INT_OVERFLOW))
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out1 = np.stack([inp1, inp2])
+        out1.backward()
+    assert out1.shape == (2, INT_OVERFLOW)
+    assert out1[0, -1] == 0 and out1[1, -1] == 1
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1] == 1
+    with mx.autograd.record():
+        out2 = np.stack([inp1, inp2], axis=1)
+        out2.backward()
+    assert out2.shape == (INT_OVERFLOW, 2)
+    assert out2[-1, 0] == 0 and out2[-1, 1] == 1
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[-1] == 1
+
+
+@use_np
+def test_dstack():
+    inp1 = np.zeros((INT_OVERFLOW, 1))
+    inp2 = np.ones((INT_OVERFLOW, 1))
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out = np.dstack((inp1, inp2))
+        out.backward()
+    assert out.shape == (INT_OVERFLOW, 1, 2)
+    assert out[0, -1, 0] == 0 and out[0, -1, 1] == 1
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1, -1] == 1
+
+
+@use_np
+def test_hstack():
+    inp1 = np.zeros((INT_OVERFLOW, 1))
+    inp2 = np.ones((INT_OVERFLOW, 1))
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out1 = np.hstack((inp1, inp2))
+        out1.backward()
+    assert out1.shape == (INT_OVERFLOW, 2)
+    assert out1[-1, 0] == 0 and out1[-1, 1] == 1
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1, -1] == 1
+    with mx.autograd.record():
+        out2 = np.hstack((inp1.flatten(), inp2.flatten()))
+        out2.backward()
+    assert out2.shape == (DOUBLE_INT_OVERFLOW, )
+    assert out2[INT_OVERFLOW-1] == 0 and out2[-1] == 1
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[-1, -1] == 1
+
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
@@ -1320,6 +1663,7 @@ def test_polyval():
  |_||_\_,_|_|_|_| .__/\_, | \___/_\_\\__\___|_||_/__/_\___/_||_|
                 |_|   |__/
 '''
+
 
 @use_np
 def test_activation():
@@ -1419,23 +1763,53 @@ def test_batch_flatten():
     assert A.grad.shape == (2, 1, INT_OVERFLOW)
     assert A.grad[0][0][0] == 1
 
-# broken
+
 @use_np
-@pytest.mark.skip(reason='Does not support large tensor; to be fixed')
 def test_batch_norm():
-    A = np.ones((2, INT_OVERFLOW))
-    gamma = np.ones((2))
-    beta = np.zeros((2))
-    mov_mean = np.ones((2))
-    mov_var = np.ones((2))
-    A.attach_grad() 
+    inp = np.zeros((2, INT_OVERFLOW))
+    gamma = np.array([1.5, 2.5])
+    beta = np.array([0.3, 0.6])
+    mov_mean = np.array([0.4, 0.8])
+    mov_var = np.array([0.6, 1.2])
+    eps = 1e-5
+    inp[0, -1], inp[1, -1] = 3, 6
+    inp.attach_grad()
     with mx.autograd.record():
-        B = npx.batch_norm(A, gamma, beta, mov_mean, mov_var)
-    assert B.shape == (2, INT_OVERFLOW)
-    assert B[0][0] == 0
-    B.backward()
-    assert A.grad.shape == (2, INT_OVERFLOW)
-    assert A.grad[0][0] == 0
+        out = npx.batch_norm(inp, gamma=gamma, beta=beta, moving_mean=mov_mean,\
+            moving_var=mov_var, axis=0, eps=eps, use_global_stats=True)
+        out.backward()
+    assert out.shape == inp.shape
+    ref0 = (inp[0, -1] - mov_mean[0]) / (mov_var[0] + eps)**0.5 * gamma[0] + beta[0]
+    ref1 = (inp[1, -1] - mov_mean[1]) / (mov_var[1] + eps)**0.5 * gamma[1] + beta[1]
+    assert_almost_equal(out[0, -1], ref0, rtol=1e-3, atol=1e-5)
+    assert_almost_equal(out[1, -1], ref1, rtol=1e-3, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    grad_ref0 = gamma[0] / (mov_var[0] + eps)**0.5
+    grad_ref1 = gamma[1] / (mov_var[1] + eps)**0.5
+    assert_almost_equal(inp.grad[0, -1], grad_ref0, rtol=1e-3, atol=1e-5)
+    assert_almost_equal(inp.grad[1, -1], grad_ref1, rtol=1e-3, atol=1e-5)
+
+
+@use_np
+def test_batch_norm_mean_var():
+    N = 2**20
+    inp = np.zeros((2, INT_OVERFLOW), dtype='float64')
+    gamma = np.array([1, 1], dtype='float64')
+    beta = np.array([0, 0], dtype='float64')
+    mov_mean = np.array([0, 0], dtype='float64')
+    mov_var = np.array([1, 1], dtype='float64')
+    eps = 0
+    inp[1, -1] = N
+    with mx.autograd.record():
+        out, mean, var = npx.batch_norm(inp, gamma=gamma, beta=beta, moving_mean=mov_mean,\
+            moving_var=mov_var, axis=0, eps=eps, output_mean_var=True)
+    assert out.shape == inp.shape
+    mean_ref = float(N) / INT_OVERFLOW
+    std_ref = ((INT_OVERFLOW-1) * (mean_ref-0)**2 + (mean_ref-N)**2) / INT_OVERFLOW
+    out_ref = (N - mean_ref) / (std_ref**0.5)
+    assert_almost_equal(mean[1], mean_ref, rtol=1e-3, atol=1e-5)
+    assert_almost_equal(var[1], 1 / std_ref**0.5, rtol=1e-3, atol=1e-5)
+    assert_almost_equal(out[1, -1], out_ref, rtol=1e-3, atol=1e-5)
 
 
 @use_np
@@ -1726,6 +2100,7 @@ def test_rnn_lstm():
     npx.waitall()
 
 
+
 @use_np
 def test_ctc_loss():
     def test_ctc_loss_size_check(A, label):
@@ -1886,6 +2261,7 @@ def test_roi_pooling():
     B.backward()
     assert A.grad.shape == (1, 1, H, W)
     assert A.grad[0][0][0][0] == 1
+
 
 @use_np
 @pytest.mark.skip(reason='times out on (generally speaking) large tensors')
@@ -2560,3 +2936,162 @@ def test_dot():
     assert inp1.grad[-1, -1] == 3
     assert inp2.grad.shape == inp2.shape
     assert inp2.grad[-1, -1] == 2
+
+
+@use_np
+def test_convolution():
+    dim = 2
+    batch_size = 1
+    channel = 3
+    height = SMALL_Y
+    width = LARGE_X // 3
+    num_filter = 4
+    kernel = (3,) * dim   # => shape = (3, 3)
+
+    inp=mx.np.ones(shape=(batch_size, channel, height, width))
+    weight = mx.np.ones(shape=(num_filter, channel, kernel[0], kernel[1]))
+    bias = mx.np.array(num_filter,)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = mx.npx.convolution(data=inp, weight=weight, num_filter=num_filter, \
+                                 kernel=kernel, stride=(SMALL_Y, SMALL_Y), no_bias=True)
+    assert out.shape == (batch_size, channel + 1, 1, (width + SMALL_Y - 1)// SMALL_Y)
+    assert out[0][0][0][0] == channel * kernel[0] * kernel[1]
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0][0][0][0] == 0
+
+
+@use_np
+def test_deconvolution():
+    dim = 2
+    batch_size = 1
+    channel = 3
+    height = SMALL_Y
+    width = LARGE_X // 5
+    num_filter = 4
+    kernel = (4,) * dim   # => shape = (3, 3)
+
+    inp=mx.np.ones(shape=(batch_size, channel, 1, width))
+    weight = mx.np.ones(shape=(channel, num_filter, kernel[0], kernel[1]))
+    bias = mx.np.array(num_filter,)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = mx.npx.deconvolution(data=inp, weight=weight, num_filter=num_filter, \
+                                   kernel=kernel, no_bias=True)
+    assert out.shape == (batch_size, channel + 1, kernel[0], width + 3)
+    assert out[0][0][kernel[0]//2][kernel[1]] == channel * num_filter
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0][0][0][0] == 0
+
+
+@use_np
+def test_dropout():
+    shape = (LARGE_X, SMALL_Y)
+    inp = mx.np.ones(shape=shape)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = npx.dropout(inp, p=0.5, cudnn_off=True)
+        out.backward()
+    assert out.shape == shape
+    assert _np.count_nonzero(out[0] == 2) != 0
+    assert inp.grad.shape == shape
+    assert _np.count_nonzero(inp.grad[0] == 2) != 0
+
+
+@use_np
+def test_log_softmax():
+    LOG_SOFTMAX_VAL = -18.420681
+    ndim = 2
+    shape = (LARGE_X, SMALL_Y)
+    axis = 1
+    inp = np.ones(shape=shape)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = npx.log_softmax(inp, axis=0)
+        out.backward()
+    assert out.shape == shape
+    assert_almost_equal(out[-1][-1], LOG_SOFTMAX_VAL, atol=1e-3, rtol=1e-3)
+    assert inp.grad.shape == shape
+    assert_almost_equal(inp.grad[0][0], 0.0, atol=1e-3, rtol=1e-3)
+
+
+@use_np
+def test_relu():
+    shape = (LARGE_X, SMALL_Y)
+    inp = np.ones(shape)
+    inp[:, shape[1] // 2:shape[1]] = -1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = npx.relu(inp)
+        out.backward()
+    assert out.shape == shape
+    assert out[0][0] == 1
+    assert out[-1][-1] == 0
+    assert inp.grad.shape == shape
+    assert inp.grad[0][0] == 1
+
+
+@use_np
+def test_leaky_relu():
+    inp = -1 * mx.np.ones(shape=(LARGE_X, SMALL_Y))
+    inp.attach_grad()
+
+    def check_leaky():
+        with mx.autograd.record():
+            res = mx.npx.leaky_relu(inp, act_type="leaky", slope=0.3)
+            res.backward()
+        assert_almost_equal(res[-1][-1], 0.3 * inp[-1][-1], atol=1e-3, rtol=1e-3)
+        assert_almost_equal(inp.grad[0][-1], -0.3 * inp[-1][-1], atol=1e-3, rtol=1e-3)
+
+    def check_elu():
+        with mx.autograd.record():
+            res = mx.npx.leaky_relu(inp, act_type="elu", slope=0.3)
+            res.backward()
+        assert_almost_equal(res[-1][-1], 0.3*(_np.exp(inp[-1][-1])-1), atol=1e-3, rtol=1e-3)
+        assert_almost_equal(inp.grad[-1][0], 0.3*_np.exp(inp[-1][-1]), atol=1e-3, rtol=1e-3)
+
+    def check_selu():
+        lam = 1.0507009873554804934193349852946
+        alpha = 1.6732632423543772848170429916717
+        with mx.autograd.record():
+            res = mx.npx.leaky_relu(inp, act_type="selu")
+            res.backward()
+        assert_almost_equal(res[-1][-1], (lam * alpha * (_np.exp(inp[-1][-1])-1)), atol=1e-3, rtol=1e-3)
+        assert_almost_equal(inp.grad[0][0], 0.590423, atol=1e-3, rtol=1e-3)
+
+    check_leaky()
+    check_elu()
+    check_selu()
+
+
+@use_np
+def test_norm():
+    shape = (LARGE_X * 2, SMALL_Y // 2)
+    inp = np.ones(shape)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = npx.norm(inp, ord=2, axis=1)
+        out.backward()
+    assert out.shape == (shape[0],)
+    assert out[shape[0] - 1] == 5
+    assert inp.grad.shape == shape
+    assert_almost_equal(inp.grad[0][0], 1/5, atol=1e-3, rtol=1e-3)
+
+
+@use_np
+def test_embedding():
+    inp = np.arange(0, 4, dtype=np.int32).reshape(2, 2)
+    vec = np.ones((4, INT_OVERFLOW))
+    vec[0][INT_OVERFLOW-1] = 3
+    vec[1][INT_OVERFLOW//2] = 2
+    vec[2][1] = 2
+    vec[3][0] = 0
+    out = npx.embedding(inp, vec, 4, INT_OVERFLOW)
+    assert out[0][0][INT_OVERFLOW-1] == 3
+    assert out[0][0][0] == 1
+    assert out[0][1][INT_OVERFLOW//2] == 2
+    assert out[0][1][1] == 1
+    assert out[1][0][1] == 2
+    assert out[1][0][INT_OVERFLOW//2] == 1
+    assert out[1][1][0] == 0
+    assert out[1][1][INT_OVERFLOW-1] == 1
