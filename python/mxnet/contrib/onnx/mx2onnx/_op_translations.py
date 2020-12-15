@@ -2285,7 +2285,7 @@ def convert_layer_norm(node, **kwargs):
             make_node("Mul", [name+"_div0_out", input_nodes[1]], [name+"_mul0_out"]),
             make_node("Add", [name+"_mul0_out", input_nodes[2]], [name])
         ]
-    else: 
+    else:
         nodes += [
             make_node("Shape", [input_nodes[0]], [name+"_shape0_out"]),
             make_node("Shape", [name+"_shape0_out"], [name+"_in_dim"]),
@@ -2303,7 +2303,7 @@ def convert_layer_norm(node, **kwargs):
             make_node('Expand', [name+"gamma_exp", name+"_shape0_out"], [name+"gamma_exp1"]),
             make_node('Expand', [name+"beta_exp", name+"_shape0_out"], [name+"beta_exp1"]),
             make_node("Mul", [name+"_div0_out", name+"gamma_exp1"], [name+"_mul1_out"]),
-            make_node("Add", [name+"_mul1_out", name+"beta_exp1"], [name])
+            make_node("Add", [name+"_mul1_out", name+"beta_exp1"], [name], name=name)
         ]
     return nodes
 
@@ -2381,7 +2381,8 @@ def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
-    qkv, att = input_nodes
+    qkv = input_nodes[0]
+    att = input_nodes[1]
     num_heads = int(attrs.get('heads'))
 
     create_tensor([num_heads], name+"_const_num_heads", kwargs["initializer"])
@@ -2416,7 +2417,7 @@ def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
         make_node("MatMul", [att, name+"_reshape2_output"], [name+"_matmul_output"]),
         make_node("Reshape", [name+"_matmul_output", name+"_reshape3_shape"], [name+"_reshape3_output"]),
         make_node("Transpose", [name+"_reshape3_output"], [name+"_transpose2_output"], perm=[2, 0, 1, 3]),
-        make_node("Reshape", [name+"_transpose2_output", name+"_reshape4_shape"], [name])
+        make_node("Reshape", [name+"_transpose2_output", name+"_reshape4_shape"], [name], name=name)
     ]
     return nodes
 
