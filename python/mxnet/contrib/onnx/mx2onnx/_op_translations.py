@@ -53,7 +53,6 @@ Add new functions here with a decorator.
 """
 
 import re
-import sys
 import logging
 import numpy as np
 from .export_onnx import MXNetGraph as mx_op
