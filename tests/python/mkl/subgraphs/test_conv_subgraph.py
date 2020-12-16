@@ -15,7 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from common import *
+import copy
+import mxnet as mx
+import pytest
+from common import check_fusion, check_neg_fusion, check_quantize
+from common import CustomNormalInit, DATA_SHAPE, RELU6, TailNegBlock
+from common import DATA_SHAPE, SG_PASS_NAME, QUANTIZE_SG_PASS_NAME
+from mxnet.contrib import quantization
+from mxnet.gluon import nn
+from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
 
 def test_float64_fallback():
   class ConvWithDtype(nn.HybridBlock):

@@ -43,9 +43,6 @@ config =  {
 }
 
 DATA_SHAPE=[(64, 4, 10, 10), (4, 3, 24, 24), (1, 16, 32, 32)]
-fc_post_ops_list=['relu', 'sigmoid', 'tanh', 'softrelu',
-                  'square', 'square_root', 'abs', 'exp', 'bounded_relu']
-
 
 # Helpers
 class RELU6(nn.HybridBlock):

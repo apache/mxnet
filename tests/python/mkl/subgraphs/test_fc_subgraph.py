@@ -15,7 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from common import *
+import mxnet as mx
+import pytest
+from common import check_fusion, check_neg_fusion
+from common import CustomNormalInit, DATA_SHAPE, TailNegBlock
+from mxnet.contrib import quantization
+from mxnet.gluon import nn
+from mxnet.test_utils import assert_almost_equal_with_err
+
+fc_post_ops_list=['relu', 'sigmoid', 'tanh', 'softrelu',
+                  'square', 'square_root', 'abs', 'exp', 'bounded_relu']
 
 def test_float64_fallback():
   dtype = 'float64'
