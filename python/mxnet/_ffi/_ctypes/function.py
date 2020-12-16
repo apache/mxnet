@@ -28,9 +28,8 @@ from ...base import get_last_ffi_error, _LIB
 from ..base import c_str
 from .types import MXNetValue, TypeCode
 from .types import RETURN_SWITCH
-from ..node_generic import convert_to_node
 from ..._ctypes.ndarray import NDArrayBase
-from .object import ObjectBase, _set_class_object
+from .object import ObjectBase, PyNativeObject, _set_class_object
 from . import object as _object
 
 ObjectHandle = ctypes.c_void_p
@@ -45,6 +44,9 @@ def _make_mxnet_args(args, temp_args):
         if isinstance(arg, ObjectBase):
             values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.OBJECT_HANDLE
+        elif isinstance(arg, PyNativeObject):
+            values[i].v_handle = arg.__mxnet_object__.handle
+            type_codes[i] = TypeCode.OBJECT_HANDLE
         elif arg is None:
             values[i].v_handle = None
             type_codes[i] = TypeCode.NULL
@@ -57,8 +59,8 @@ def _make_mxnet_args(args, temp_args):
         elif isinstance(arg, str):
             values[i].v_str = c_str(arg)
             type_codes[i] = TypeCode.STR
-        elif isinstance(arg, (list, tuple)):
-            arg = convert_to_node(arg)
+        elif isinstance(arg, (list, tuple, dict)):
+            arg = _FUNC_CONVERT_TO_NODE(arg)
             values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.OBJECT_HANDLE
             temp_args.append(arg)
@@ -136,3 +138,14 @@ def __init_handle_by_constructor__(fconstructor, args):
     return handle
 
 _object.__init_by_constructor__ = __init_handle_by_constructor__
+
+_CLASS_PACKED_FUNC = None
+_FUNC_CONVERT_TO_NODE = None
+
+def _set_class_packed_func(packed_func_class):
+    global _CLASS_PACKED_FUNC
+    _CLASS_PACKED_FUNC = packed_func_class
+
+def _set_node_generic(func_convert_to_node):
+    global _FUNC_CONVERT_TO_NODE
+    _FUNC_CONVERT_TO_NODE = func_convert_to_node

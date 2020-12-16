@@ -39,6 +39,10 @@ cdef inline object make_ret_object(void* chandle):
     if tindex < len(OBJECT_TYPE):
         cls = OBJECT_TYPE[tindex]
         if cls is not None:
+            if issubclass(cls, PyNativeObject):
+                obj = _CLASS_OBJECT.__new__(_CLASS_OBJECT)
+                (<ObjectBase>obj).chandle = chandle
+                return cls.__from_mxnet_object__(cls, obj)
             obj = cls.__new__(cls)
         else:
             obj = _CLASS_OBJECT.__new__(_CLASS_OBJECT)
@@ -47,6 +51,29 @@ cdef inline object make_ret_object(void* chandle):
     (<ObjectBase>obj).chandle = chandle
     return obj
 
+class PyNativeObject:
+    """Base class of all MXNet objects that also subclass python's builtin types."""
+    __slots__ = []
+
+    def __init_mxnet_object_by_constructor__(self, fconstructor, *args):
+        """Initialize the internal mxnet_object by calling constructor function.
+
+        Parameters
+        ----------
+        fconstructor : Function
+            Constructor function.
+
+        args: list of objects
+            The arguments to the constructor
+
+        Note
+        ----
+        We have a special calling convention to call constructor functions.
+        So the return object is directly set into the object
+        """
+        obj = _CLASS_OBJECT.__new__(_CLASS_OBJECT)
+        obj.__init_handle_by_constructor__(fconstructor, *args)
+        self.__mxnet_object__ = obj
 
 cdef class ObjectBase:
     cdef void* chandle
@@ -96,3 +123,20 @@ cdef class ObjectBase:
             (<FunctionBase>fconstructor).chandle,
             kObjectHandle, args, &chandle)
         self.chandle = chandle
+
+    def same_as(self, other):
+        """Check object identity.
+
+        Parameters
+        ----------
+        other : object
+            The other object to compare against.
+
+        Returns
+        -------
+        result : bool
+             The comparison result.
+        """
+        if not isinstance(other, ObjectBase):
+            return False
+        return self.chandle == (<ObjectBase>other).chandle
