@@ -148,9 +148,6 @@ def test_onnx_export_contrib_interleaved_matmul_selfatt_qk(tmp_path, dtype):
 @pytest.mark.parametrize('no_bias', [False, True])
 @pytest.mark.parametrize('flatten', [True, False])
 def test_onnx_export_fully_connected(tmp_path, dtype, num_hidden, no_bias, flatten):
-    fc_data = mx.sym.var("data")
-    fc_weight = mx.sym.var("weight")
-    fc_bias = mx.sym.var("bias")
     M = def_model('FullyConnected', num_hidden=num_hidden, no_bias=no_bias, flatten=flatten)
     x = mx.nd.random.uniform(-0.5, 0.5, (5, 325))
     weight = mx.nd.random.uniform(0, 1, (num_hidden, 325))
