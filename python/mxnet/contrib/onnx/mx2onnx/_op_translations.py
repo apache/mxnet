@@ -1572,14 +1572,8 @@ def convert_reshape(node, **kwargs):
 
     reverse = attrs.get('reverse', 'False')
     output_shape_list = convert_string_to_list(attrs["shape"])
-    data_shape = list(kwargs['in_shape'][0])
     if reverse == 'True':
-        output_shape_list.reverse()
-        data_shape.reverse()
-        for i, dim in enumerate(output_shape_list):
-            if dim == 0:
-                output_shape_list[i] = data_shape[i]
-        output_shape_list.reverse()
+        raise NotImplementedError("the reverse option in Reshape is not supported yet.")
 
     initializer = kwargs["initializer"]
     output_shape_np = np.array(output_shape_list, dtype='int64')

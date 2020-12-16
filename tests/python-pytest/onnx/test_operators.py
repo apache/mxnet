@@ -60,7 +60,6 @@ def op_export_test(model_name, Model, inputs, tmp_path):
     model.initialize(ctx=mx.cpu(0))
     model.hybridize()
     pred_nat = model(*inputs)
-    print(pred_nat)
     onnx_file = export_to_onnx(model, model_name, inputs)
     pred_onx = onnx_rt(onnx_file, inputs)
     assert_almost_equal(pred_nat, pred_onx)
@@ -160,10 +159,9 @@ def test_onnx_export_slice_axis(tmp_path, dtype):
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32'])
 def test_onnx_export_reshape(tmp_path, dtype):
     x = mx.nd.ones((2, 3, 4, 5, 6), dtype=dtype)
-    M1 = def_model('reshape', shape=(2, 1, 1, -1, 0, 1, 0), reverse=True)
-    op_export_test('reshape_1', M1, [x], tmp_path)
-    M2 = def_model('reshape', shape=(6, 1, 0, -1))
-    op_export_test('reshape_2', M2, [x], tmp_path)
+    M = def_model('reshape', shape=(6, 1, 0, -1))
+    op_export_test('reshape', M, [x], tmp_path)
+
 
 @pytest.mark.parametrize('dtype', ['int32', 'int64'])
 def test_onnx_export_embedding(tmp_path, dtype):
