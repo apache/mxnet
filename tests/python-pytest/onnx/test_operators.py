@@ -144,7 +144,7 @@ def test_onnx_export_contrib_interleaved_matmul_selfatt_qk(tmp_path, dtype):
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
-@pytest.mark.parametrize('num_hidden', [5, 10])
+@pytest.mark.parametrize('num_hidden', [1, 5, 10, 20])
 @pytest.mark.parametrize('no_bias', [False, True])
 @pytest.mark.parametrize('flatten', [True, False])
 def test_onnx_export_fully_connected(tmp_path, dtype, num_hidden, no_bias, flatten):
