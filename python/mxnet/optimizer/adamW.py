@@ -44,7 +44,7 @@ class AdamW(Optimizer):
         w = w - lr * (m / (sqrt(v) + epsilon) + wd * w)
 
 
-    Also, we can turn of the bias correction term and the updates are as follows::
+    Also, we can turn off the bias correction term and the updates are as follows::
 
         grad = clip(grad * rescale_grad, clip_gradient) + wd * weight
         m = beta1 * m + (1 - beta1) * grad
