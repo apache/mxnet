@@ -64,7 +64,7 @@ except ImportError:
 
 def parse_helper(attrs, attrs_name, alt_value=None):
     """Helper function to parse operator attributes in required format."""
-    tuple_re = re.compile('\([0-9L|,| ]+\)')
+    tuple_re = re.compile(r'\([0-9L|,| ]+\)')
     if not attrs:
         return alt_value
     attrs_str = None if attrs.get(attrs_name) is None else str(attrs.get(attrs_name))
@@ -187,7 +187,7 @@ def create_tensor(shape_list, shape_name, initializer, dtype='int64'):
             data_type=data_type,
             dims=dims,
             vals=shape_list,
-            raw=False,
+            raw=False
         )
     )
 
@@ -2543,13 +2543,13 @@ def convert_zeros_like(node, **kwargs):
     """Map MXNet's zeros_like operator attributes to onnx's ConstantOfShape operator.
     """
     from onnx.helper import make_node, make_tensor
-    name, _, _ = get_inputs(node, kwargs)
+    name, input_nodes, _ = get_inputs(node, kwargs)
 
     # create tensor with shape of input
-    create_const_node(name+"_shape", np.array(kwargs['in_shape'][0], dtype='int64'), kwargs)
     tensor_value = make_tensor(name+"_zero", kwargs['in_type'], [1], [0])
     nodes = [
-        make_node("ConstantOfShape", [name+"_shape"], [name], value=tensor_value)
+        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
+        make_node("ConstantOfShape", [name+"_shape"], [name], name=name, value=tensor_value)
     ]
     return nodes
 
@@ -2559,7 +2559,7 @@ def convert_arange_like(node, **kwargs):
     """Map MXNet's arange_like operator attributes to onnx's Range and Reshape operators.
     """
     from onnx.helper import make_node
-    name, _, attrs = get_inputs(node, kwargs)
+    name, input_nodes, attrs = get_inputs(node, kwargs)
 
     opset_version = kwargs['opset_version']
     if opset_version < 11:
@@ -2567,32 +2567,44 @@ def convert_arange_like(node, **kwargs):
 
     input_type = kwargs['in_type']
     dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
-    in_shape = kwargs['in_shape']
-    axis = attrs.get('axis')
-
-    if axis is None:
-        # output will be same shape as input
-        output_shape = in_shape[0]
-    else:
-        # determine shape of axis
-        output_shape = [in_shape[0][int(axis)]]
-
-    start = np.array([attrs.get('start', 0.)], dtype=dtype)
-    step = np.array([attrs.get('step', 1.)], dtype=dtype)
-    repeat = np.array([attrs.get('repeat', 1)], dtype=dtype)
+    axis = attrs.get('axis', 'None')
+    start = attrs.get('start', 0.)
+    step = attrs.get('step', 1.)
+    repeat = int(attrs.get('repeat', 1))
     if repeat != 1:
         raise NotImplementedError("arange_like operator with repeat != 1 not yet implemented.")
 
-    tot_elements = np.prod(output_shape)
-    limit = np.array([start + (tot_elements * step)], dtype=dtype)
+    create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs)
+    create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs)
+    create_const_scalar_node(name+"_half_step", np.array([float(step)*0.5], dtype=dtype), kwargs)
+    create_tensor([], name+'_void', kwargs["initializer"])
+    if axis == 'None':
+        # output will be same shape as input
+        nodes = [
+            make_node('Shape', [input_nodes[0]], [name+"_shape0_out"]),
+            make_node("ReduceProd", [name+"_shape0_out"], [name+"_redprod0_out"]),
+            make_node('Reshape', [name+'_redprod0_out', name+'_void'], [name+'_reshape0_out']),
+            make_node("Cast", [name+"_reshape0_out"], [name+"_cast0_out"], to=input_type),
+            make_node("Mul", [name+"_cast0_out", name+"_step"], [name+"_mul0_out"]),
+            make_node("Add", [name+"_mul0_out", name+"_start"], [name+"_add1_out"]),
+            make_node("Sub", [name+"_add1_out", name+"_half_step"], [name+"_sub0_out"]),
+            make_node("Range", [name+"_start", name+"_sub0_out", name+"_step"], [name+"_range0_out"]),
+            make_node("Reshape", [name+"_range0_out", name+"_shape0_out"], [name], name=name)
+        ]
+    else:
+        # determine shape of axis
+        create_tensor([int(axis)], name+"_axis_start", kwargs["initializer"], dtype='int64')
+        create_tensor([int(axis)+1], name+"_axis_end", kwargs["initializer"], dtype='int64')
+        nodes = [
+            make_node('Shape', [input_nodes[0]], [name+"_shape0_out"]),
+            make_node('Slice', [name+"_shape0_out", name+"_axis_start", name+"_axis_end"], [name+"_slice0_out"]),
+            make_node("ReduceProd", [name+"_slice0_out"], [name+"_reprod0_out"]),
+            make_node('Reshape', [name+'_reprod0_out', name+'_void'], [name+'_reshape0_out']),
+            make_node("Cast", [name+"_reshape0_out"], [name+"_cast0_out"], to=input_type),
+            make_node("Mul", [name+"_cast0_out", name+"_step"], [name+"_mul0_out"]),
+            make_node("Add", [name+"_mul0_out", name+"_start"], [name+"_add1_out"]),
+            make_node("Sub", [name+"_add1_out", name+"_half_step"], [name+"_sub0_out"]),
+            make_node("Range", [name+"_start", name+"_sub0_out", name+"_step"], [name], name=name)
+        ]
 
-    # create constant inputs
-    nodes = [
-        create_const_scalar_node(name+"_start", start, kwargs),
-        create_const_scalar_node(name+"_limit", limit, kwargs),
-        create_const_scalar_node(name+"_step", step, kwargs),
-        create_const_node(name+"_shape", np.array(output_shape, dtype='int64'), kwargs),
-        make_node("Range", [name+"_start", name+"_limit", name+"_step"], [name+"_range0_out"]),
-        make_node("Reshape", [name+"_range0_out", name+"_shape"], [name])
-    ]
     return nodes
