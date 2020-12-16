@@ -1568,47 +1568,57 @@ def convert_reshape(node, **kwargs):
     Converts output shape attribute to output shape tensor
     and return multiple created nodes.
     """
+    from onnx.helper import make_node
+
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     reverse = attrs.get('reverse', 'False')
-    output_shape_list = convert_string_to_list(attrs["shape"])
-    if reverse == 'True':
-        raise NotImplementedError("the reverse option in Reshape is not supported yet.")
-
-    initializer = kwargs["initializer"]
-    output_shape_np = np.array(output_shape_list, dtype='int64')
-    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np.dtype]
-    dims = np.shape(output_shape_np)
-
-    output_shape_name = "reshape_attr_tensor" + str(kwargs["idx"])
-    tensor_node = onnx.helper.make_tensor_value_info(output_shape_name, data_type, dims)
-
-    initializer.append(
-        onnx.helper.make_tensor(
-            name=output_shape_name,
-            data_type=data_type,
-            dims=dims,
-            vals=output_shape_list,
-            raw=False,
-        )
-    )
-
-    input_nodes.append(output_shape_name)
+    targ_shape = convert_string_to_list(attrs["shape"])
 
     not_supported_shape = [-2, -3, -4]
-
-    for val in output_shape_list:
+    for val in targ_shape:
         if val in not_supported_shape:
             raise AttributeError("Reshape: Shape value not supported in ONNX", val)
 
-    reshape_node = onnx.helper.make_node(
-        "Reshape",
-        input_nodes,
-        [name],
-        name=name
-    )
+    create_tensor(targ_shape, name+'_targ_shape', kwargs['initializer'])
 
-    return [tensor_node, reshape_node]
+    nodes = []
+    if reverse == 'False':
+        nodes += [
+            make_node('Reshape', [input_nodes[0], name+'_targ_shape'], [name], name=name)
+            ]
+    else:
+        create_tensor([0], name+'_0', kwargs['initializer'])
+        create_tensor([1], name+'_1', kwargs['initializer'])
+        nodes += [
+            make_node('Shape', [name+'_targ_shape'], [name+'_targ_dim']),
+            make_node('Shape', [input_nodes[0]], [name+'_orig_shape']),
+            make_node('Shape', [name+'_orig_shape'], [name+'_orig_dim']),
+            make_node('Sub', [name+'_targ_dim', name+'_orig_dim'], [name+'_dim_diff']),
+            make_node('Abs', [name+'_dim_diff'], [name+'_pad_len']),
+            make_node('Less', [name+'_targ_dim', name+'_orig_dim'], [name+'_targ_less_orig']),
+            make_node('Less', [name+'_orig_dim', name+'_targ_dim'], [name+'_orig_less_targ']),
+            make_node('Where', [name+'_targ_less_orig', name+'_pad_len', name+'_0'],
+                      [name+'_targ_pad_len']),
+            make_node('Where', [name+'_orig_less_targ', name+'_pad_len', name+'_0'],
+                      [name+'_orig_pad_len']),
+            make_node('Concat', [name+'_targ_pad_len', name+'_0'], [name+'_targ_pads'], axis=0),
+            make_node('Concat', [name+'_orig_pad_len', name+'_0'], [name+'_orig_pads'], axis=0),
+            make_node('Pad', [name+'_targ_shape', name+'_targ_pads', name+'_1'],
+                      [name+'_targ_shape_padded'], mode='constant'),
+            make_node('Pad', [name+'_orig_shape', name+'_orig_pads', name+'_1'],
+                      [name+'_orig_shape_padded'], mode='constant'),
+            make_node('Equal', [name+'_targ_shape_padded', name+'_0'],
+                      [name+'_targ_shape_0_mask']),
+            make_node('Where', [name+'_targ_shape_0_mask', name+'_orig_shape_padded',
+                                name+'_targ_shape_padded'], [name+'_targ_shape_new']),
+            make_node('Shape', [name+'_targ_shape_new'], [name+'_targ_new_dim']),
+            make_node('Slice', [name+'_targ_shape_new', name+'_targ_pad_len',
+                                name+'_targ_new_dim'], [name+'_targ_shape_final']),
+            make_node('Reshape', [input_nodes[0], name+'_targ_shape_final'], [name], name=name)
+            ]
+
+    return nodes
 
 @mx_op.register("Cast")
 def convert_cast(node, **kwargs):

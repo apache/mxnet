@@ -156,11 +156,15 @@ def test_onnx_export_slice_axis(tmp_path, dtype):
     op_export_test('slice_axis_3', M3, [x], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32'])
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
 def test_onnx_export_reshape(tmp_path, dtype):
     x = mx.nd.ones((2, 3, 4, 5, 6), dtype=dtype)
-    M = def_model('reshape', shape=(6, 1, 0, -1))
-    op_export_test('reshape', M, [x], tmp_path)
+    M1 = def_model('reshape', shape=(6, 1, 0, -1))
+    op_export_test('reshape_1', M1, [x], tmp_path)
+    M2 = def_model('reshape', shape=(3, -1, 0, 0), reverse=True)
+    op_export_test('reshape_2', M2, [x], tmp_path)
+    M3 = def_model('reshape', shape=(5, 1, 1, 1, 1, 0 -1, 0), reverse=True)
+    op_export_test('reshape_3', M3, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['int32', 'int64'])
