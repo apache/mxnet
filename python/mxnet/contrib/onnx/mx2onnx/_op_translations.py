@@ -319,55 +319,37 @@ def convert_fully_connected(node, **kwargs):
     """Map MXNet's FullyConnected operator attributes to onnx's Gemm operator
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
-
-    initializer = kwargs["initializer"]
-
+    input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+    flatten = get_boolean_attribute_value(attrs, "flatten")
     no_bias = get_boolean_attribute_value(attrs, "no_bias")
-
-    fcnode = []
-
-    op_name = "flatten_" + str(kwargs["idx"])
-    flatten_node = onnx.helper.make_node(
-        'Flatten',
-        inputs=[input_nodes[0]],
-        outputs=[op_name],
-        name=op_name
-    )
-
-    input_nodes[0] = op_name
-    fcnode.append(flatten_node)
+    nodes = []
+    if flatten:
+        nodes.append(make_node("Flatten", [input_nodes[0]], [name+"_flatten0_out"]))
+        in_nodes = [name+"_flatten0_out", input_nodes[1]]
+    else:
+        in_nodes = [input_nodes[0], input_nodes[1]]
 
     if no_bias:
-        data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('int64')]
-        bias_name = "bias" + str(kwargs["idx"])
-        tensor_node = onnx.helper.make_tensor_value_info(bias_name, data_type, (1,))
-        initializer.append(
-            onnx.helper.make_tensor(
-                name=bias_name,
-                data_type=data_type,
-                dims=(1,),
-                vals=[0],
-                raw=False,
-            )
-        )
-        input_nodes.append(bias_name)
-        fcnode.append(tensor_node)
+        create_const_scalar_node(name+"_bias", np.array([0], dtype=dtype), kwargs)
+        in_nodes.append(name+"_bias")
+    else:
+        in_nodes.append(input_nodes[2])
 
-    node = onnx.helper.make_node(
+    nodes.append(make_node(
         "Gemm",
-        input_nodes,  # input (A, B, C) - C can be in place
-        [name],  # output
+        in_nodes,
+        [name],
         alpha=1.0,
         beta=1.0,
-        transA=False,
-        transB=True,
+        transA=0,
+        transB=1,
         name=name
-    )
+    ))
 
-    fcnode.append(node)
-
-    return fcnode
+    return nodes
 
 
 @mx_op.register("BatchNorm")
