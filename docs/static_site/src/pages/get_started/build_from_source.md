@@ -140,6 +140,18 @@ you don't have any specific requirements, MXNet recommends OpenBLAS as it
 typically outperforms ATLAS, is portable across many platforms, provides a
 LAPACK implementation and has a permissive license.
 
+Please note that since MXNet 2.0 we are forcing static link to OpenBLAS 
+`libopenblas.a`. In the case that the OpenBLAS library depends on `gfortran`,
+be sure to install it too as a dependency. For example, on Debian systems you can
+run:
+```bash
+sudo apt install gfortran
+```
+Or on Red Hat systems, run:
+```bash
+sudo yum install gcc-gfortran
+```
+
 ### Optional GPU support
 
 MXNet optionally supports [NVDIA CUDA and
