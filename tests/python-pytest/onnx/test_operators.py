@@ -205,3 +205,28 @@ def test_onnx_export_fully_connected(tmp_path, dtype, num_hidden, no_bias, flatt
     if not no_bias:
         args.append(mx.nd.random.uniform(0,1,(num_hidden,)))
     op_export_test('FullyConnected', M, args, tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('axes', [None, [1,0,2]])
+def test_onnx_export_transpose(tmp_path, dtype, axes):
+    if axes != None:
+        M = def_model('transpose', axes=axes)
+    else:
+        M = def_model('transpose')
+    x = mx.nd.array([[[1,2],[3,4]],[[5,6],[7,8]]], dtype=dtype)
+    op_export_test('transpose', M, [x], tmp_path)
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('axis', [0, 1, 2])
+def test_onnx_export_expand_dims(tmp_path, dtype, axis):
+    M = def_model('expand_dims', axis=axis)
+    x = mx.nd.random.uniform(0, 1, (2,3,4), dtype=dtype)
+    op_export_test('expand_dims', M, [x], tmp_path)
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_broadcast_add(tmp_path, dtype):
+    M = def_model('broadcast_add')
+    x = mx.nd.array([[1,1,1],[1,1,1]], dtype=dtype)
+    y = mx.nd.array([[0],[1]], dtype=dtype)
+    op_export_test('broadcast_add', M, [x, y], tmp_path)
