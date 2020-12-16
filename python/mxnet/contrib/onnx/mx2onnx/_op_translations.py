@@ -338,16 +338,9 @@ def convert_fully_connected(node, **kwargs):
     else:
         in_nodes.append(input_nodes[2])
 
-    nodes.append(make_node(
-        "Gemm",
-        in_nodes,
-        [name],
-        alpha=1.0,
-        beta=1.0,
-        transA=0,
-        transB=1,
-        name=name
-    ))
+    nodes.append(
+        make_node("Gemm", in_nodes, [name], alpha=1.0, beta=1.0, transA=0, transB=1, name=name)
+    )
 
     return nodes
 
