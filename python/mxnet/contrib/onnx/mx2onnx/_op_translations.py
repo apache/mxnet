@@ -2394,7 +2394,6 @@ def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
     create_tensor([5], name+"_const_5", kwargs["initializer"])
     create_tensor([0, 0, num_heads, 3, -1], name+"_reshape0_shape", kwargs["initializer"])
     create_tensor([0, 0, 0, 2, 0], name+"_slice_start", kwargs["initializer"])
-    create_tensor([sys.maxsize, sys.maxsize, sys.maxsize, 3, sys.maxsize], name+"_slice_end", kwargs["initializer"])
     create_tensor([0, 0, 0, -1], name+"_reshape1_shape", kwargs["initializer"])
     create_tensor([0, 0, -1], name+"_reshape4_shape", kwargs["initializer"])
 
@@ -2410,6 +2409,8 @@ def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
         make_node("Concat", [name+"_mul_out", name+"_qkv_d0", name+"_d4"], [name+"_reshape2_shape"], axis=0),
         make_node("Concat", [name+"_qkv_d1", name+"_const_num_heads", name+"_qkv_d0", name+"_d4"], \
             [name+"_reshape3_shape"], axis=0),
+        make_node("Concat", [name+"_qkv_d0", name+"_qkv_d1", name+"_qkv_d2", name+"_const_3", name+"_d4"], \
+            [name+"_slice_end"], axis=0),
         make_node("Slice", [name+"_reshape0_output", name+"_slice_start", name+"_slice_end"], [name+"_slice_output"]),
         make_node("Reshape", [name+"_slice_output", name+"_reshape1_shape"], [name+"_reshape1_output"]),
         make_node("Transpose", [name+"_reshape1_output"], [name+"_transpose0_output"], perm=[1, 2, 0, 3]),
