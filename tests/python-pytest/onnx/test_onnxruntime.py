@@ -96,6 +96,7 @@ def test_cv_model_inference_onnxruntime(tmp_path, model):
         return test_images
 
 
+    tmp_path = str(tmp_path)
     #labels = load_imgnet_labels(tmp_path)
     test_images = download_test_images(tmp_path)
     sym_file, params_file = get_gluon_cv_model(model, tmp_path)
