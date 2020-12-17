@@ -182,10 +182,20 @@ def test_onnx_export_Concat(tmp_path, dtype):
     op_export_test('Concat_1', M1, [x, y, z], tmp_path)
     op_export_test('Concat_2', M2, [y, z], tmp_path)
 
+
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'float16'])
 @pytest.mark.parametrize('shape', [(1,), (3,), (4, 5), (3, 4, 5)])
 def test_onnx_export_elemwise_add(tmp_path, dtype, shape):
     M = def_model('elemwise_add')
     x = mx.nd.random.uniform(-0.5, 0.5, shape=shape, dtype=dtype)
     y = mx.nd.random.uniform(-0.5, 0.5, shape=shape, dtype=dtype)
-    op_export_test('elmwise_add', M, [x,y], tmp_path)
+    op_export_test('elmwise_add', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float16'])
+@pytest.mark.parametrize('shape', [(1,), (3,), (4, 5), (3, 4, 5)])
+@pytest.mark.parametrize('act_type', ['tanh', 'relu', 'sigmoid', 'softrelu', 'softsign'])
+def test_onnx_export_Activation(tmp_path, dtype, shape, act_type):
+    M = def_model('Activation', act_type=act_type)
+    x = mx.nd.random.uniform(-0.5, 0.5, shape=shape, dtype=dtype)
+    op_export_test('Activation', M, [x], tmp_path)
