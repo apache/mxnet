@@ -22,6 +22,7 @@ import ctypes
 from ..base import _LIB, check_call, c_str
 
 try:
+    # pylint: disable=wrong-import-position,unused-import
     if int(os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from ._ctypes.function import _set_class_object, _set_node_generic
         from ._ctypes.object import ObjectBase as _ObjectBase

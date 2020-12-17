@@ -69,7 +69,7 @@ def convert_to_node(value):
         vlist = []
         for item in value.items():
             if (not isinstance(item[0], (_ObjectBase, NDArrayBase, PyNativeObject)) and
-                   not isinstance(item[0], string_types)):
+                    not isinstance(item[0], string_types)):
                 raise ValueError("key of map must already been a container type")
             vlist.append(item[0])
             vlist.append(convert_to_node(item[1]))
