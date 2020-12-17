@@ -17,8 +17,8 @@
 
 import mxnet as mx
 import pytest
-from common import check_fusion, check_neg_fusion
-from common import CustomNormalInit, DATA_SHAPE, TailNegBlock
+from subgraph_common import check_fusion, check_neg_fusion
+from subgraph_common import CustomNormalInit, DATA_SHAPE, TailNegBlock
 from mxnet.contrib import quantization
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal_with_err
