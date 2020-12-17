@@ -178,6 +178,8 @@ def create_const_node(input_name, value, kwargs):
     return value_node
 
 def create_tensor(shape_list, shape_name, initializer, dtype='int64'):
+    """Helper function to create a tensor value node and a
+    initializer tensor node with constant value."""
     shape_np = np.array(shape_list, dtype=dtype)
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[shape_np.dtype]
     dims = np.shape(shape_np)
