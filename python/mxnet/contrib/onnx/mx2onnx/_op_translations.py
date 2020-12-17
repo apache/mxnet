@@ -337,7 +337,7 @@ def convert_fully_connected(node, **kwargs):
         in_nodes = [input_nodes[0], input_nodes[1]]
 
     if no_bias:
-        create_const_scalar_node(name+"_bias", np.array([0], dtype=dtype), kwargs)
+        nodes.append(create_const_scalar_node(name+"_bias", np.array([0], dtype=dtype), kwargs))
         in_nodes.append(name+"_bias")
     else:
         in_nodes.append(input_nodes[2])
@@ -547,9 +547,8 @@ def convert_pad(node, **kwargs):
             return [node]
 
 
-def create_helper_trans_node(op_name, input_node, node_name):
+def create_helper_trans_node(node_name, input_node):
     """create extra transpose node for dot operator"""
-    node_name = op_name + "_" + node_name
     trans_node = onnx.helper.make_node(
         'Transpose',
         inputs=[input_node],
@@ -565,39 +564,26 @@ def convert_dot(node, **kwargs):
     MatMul and Transpose operators based on the values set for
     transpose_a, transpose_b attributes."""
     name, input_nodes, attrs = get_inputs(node, kwargs)
-    input_node_a = input_nodes[0]
-    input_node_b = input_nodes[1]
-
-    trans_a_node = None
-    trans_b_node = None
 
     trans_a = get_boolean_attribute_value(attrs, "transpose_a")
     trans_b = get_boolean_attribute_value(attrs, "transpose_b")
 
-    op_name = "transpose" + str(kwargs["idx"])
-
+    nodes = []
+    input_nodes = []
     if trans_a:
-        trans_a_node = create_helper_trans_node(op_name, input_nodes[0], 'a')
-        input_node_a = op_name+"_a"
-    if trans_b:
-        trans_b_node = create_helper_trans_node(op_name, input_nodes[1], 'b')
-        input_node_b = op_name+"_b"
-
-    matmul_node = onnx.helper.make_node(
-        'MatMul',
-        inputs=[input_node_a, input_node_b],
-        outputs=[name],
-        name=name
-    )
-
-    if not trans_a and not trans_b:
-        return [matmul_node]
-    elif trans_a and not trans_b:
-        return [trans_a_node, matmul_node]
-    elif trans_b and not trans_a:
-        return [trans_b_node, matmul_node]
+        nodes.append(create_helper_trans_node(name+"_a", input_nodes[0]))
+        input_nodes.append(name+"_a")
     else:
-        return [trans_a_node, trans_b_node, matmul_node]
+        input_nodes.append(input_nodes[0])
+
+    if trans_b:
+        nodes.append(create_helper_trans_node(name+"_b", input_nodes[1]))
+        input_nodes.append(name+"_b")
+    else:
+        input_nodes.append(input_nodes[1])
+
+    nodes.appennd(onnx.helper.make_node('MatMul', input_nodes, [name], name=name))
+    return nodes
 
 
 @mx_op.register("_linalg_gemm2")
@@ -1607,24 +1593,12 @@ def convert_cast(node, **kwargs):
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    dtype = attrs["dtype"]
-
-    # dtype can be mapped only with types from TensorProto
-    # float32 is mapped to float and float64 to double in onnx
-    # following tensorproto mapping https://github.com/onnx/onnx/blob/master/onnx/mapping.py
-    if dtype == 'float32':
-        dtype = 'float'
-    elif dtype == 'float64':
-        dtype = 'double'
-
-    node = onnx.helper.make_node(
-        "Cast",
-        input_nodes,
-        [name],
-        to=getattr(onnx.TensorProto, dtype.upper()),
-        name=name,
-    )
-    return [node]
+    dtype = attrs.get('dtype')
+    to_dtype = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
+    nodes = [
+        onnx.helper.make_node("Cast", input_nodes, [name], to=to_dtype, name=name)
+    ]
+    return nodes
 
 
 @mx_op.register("slice_axis")
@@ -2277,15 +2251,15 @@ def convert_layer_norm(node, **kwargs):
     axes = int(attrs.get('axis', -1))
     eps = attrs.get('eps', 9.99999975e-06)
 
-    create_tensor([axes], name+"_axes", kwargs["initializer"])
-    create_tensor([axes+1], name+"_axes+1", kwargs["initializer"])
-    create_tensor([], name+"_void", kwargs["initializer"])
-    create_const_scalar_node(name+'_0_s', np.int64(0), kwargs)
-    create_const_scalar_node(name+'_1_s', np.int64(1), kwargs)
-    create_const_scalar_node(name+"_2_s", np.int64(2), kwargs)
-    create_const_scalar_node(name+"_eps", np.float32(eps), kwargs)
 
     nodes = [
+        create_tensor([axes], name+"_axes", kwargs["initializer"]),
+        create_tensor([axes+1], name+"_axes+1", kwargs["initializer"]),
+        create_tensor([], name+"_void", kwargs["initializer"]),
+        create_const_scalar_node(name+'_0_s', np.int64(0), kwargs),
+        create_const_scalar_node(name+'_1_s', np.int64(1), kwargs),
+        create_const_scalar_node(name+"_2_s", np.int64(2), kwargs),
+        create_const_scalar_node(name+"_eps", np.float32(eps), kwargs),
         make_node("ReduceMean", [input_nodes[0]], [name+"_rm0_out"], axes=[axes]),
         make_node("Sub", [input_nodes[0], name+"_rm0_out"], [name+"_sub0_out"]),
         make_node("Pow", [name+"_sub0_out", name+"_2_s"], [name+"_pow0_out"]),
@@ -2298,7 +2272,7 @@ def convert_layer_norm(node, **kwargs):
     if axes == -1:
         nodes += [
             make_node("Mul", [name+"_div0_out", input_nodes[1]], [name+"_mul0_out"]),
-            make_node("Add", [name+"_mul0_out", input_nodes[2]], [name])
+            make_node("Add", [name+"_mul0_out", input_nodes[2]], [name], name=name)
         ]
     else:
         nodes += [
@@ -2399,19 +2373,19 @@ def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
     att = input_nodes[1]
     num_heads = int(attrs.get('heads'))
 
-    create_tensor([num_heads], name+"_const_num_heads", kwargs["initializer"])
-    create_tensor([0], name+"_const_0", kwargs["initializer"])
-    create_tensor([1], name+"_const_1", kwargs["initializer"])
-    create_tensor([2], name+"_const_2", kwargs["initializer"])
-    create_tensor([3], name+"_const_3", kwargs["initializer"])
-    create_tensor([4], name+"_const_4", kwargs["initializer"])
-    create_tensor([5], name+"_const_5", kwargs["initializer"])
-    create_tensor([0, 0, num_heads, 3, -1], name+"_reshape0_shape", kwargs["initializer"])
-    create_tensor([0, 0, 0, 2, 0], name+"_slice_start", kwargs["initializer"])
-    create_tensor([0, 0, 0, -1], name+"_reshape1_shape", kwargs["initializer"])
-    create_tensor([0, 0, -1], name+"_reshape4_shape", kwargs["initializer"])
 
     nodes = [
+        create_tensor([num_heads], name+"_const_num_heads", kwargs["initializer"]),
+        create_tensor([0], name+"_const_0", kwargs["initializer"]),
+        create_tensor([1], name+"_const_1", kwargs["initializer"]),
+        create_tensor([2], name+"_const_2", kwargs["initializer"]),
+        create_tensor([3], name+"_const_3", kwargs["initializer"]),
+        create_tensor([4], name+"_const_4", kwargs["initializer"]),
+        create_tensor([5], name+"_const_5", kwargs["initializer"]),
+        create_tensor([0, 0, num_heads, 3, -1], name+"_reshape0_shape", kwargs["initializer"]),
+        create_tensor([0, 0, 0, 2, 0], name+"_slice_start", kwargs["initializer"]),
+        create_tensor([0, 0, 0, -1], name+"_reshape1_shape", kwargs["initializer"]),
+        create_tensor([0, 0, -1], name+"_reshape4_shape", kwargs["initializer"]),
         make_node("Shape", [qkv], [name+"_shape_qkv"]),
         make_node("Slice", [name+"_shape_qkv", name+"_const_0", name+"_const_1"], [name+"_qkv_d0"]),
         make_node("Slice", [name+"_shape_qkv", name+"_const_1", name+"_const_2"], [name+"_qkv_d1"]),
@@ -2636,13 +2610,15 @@ def convert_arange_like(node, **kwargs):
     if repeat != 1:
         raise NotImplementedError("arange_like operator with repeat != 1 not yet implemented.")
 
-    create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs)
-    create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs)
-    create_const_scalar_node(name+"_half_step", np.array([float(step)*0.5], dtype=dtype), kwargs)
-    create_tensor([], name+'_void', kwargs["initializer"])
+    nodes = [
+        create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_half_step", np.array([float(step)*0.5], dtype=dtype), kwargs),
+        create_tensor([], name+'_void', kwargs["initializer"])
+    ]
     if axis == 'None':
         # output will be same shape as input
-        nodes = [
+        nodes += [
             make_node('Shape', [input_nodes[0]], [name+"_shape0_out"]),
             make_node("ReduceProd", [name+"_shape0_out"], [name+"_redprod0_out"]),
             make_node('Reshape', [name+'_redprod0_out', name+'_void'], [name+'_reshape0_out']),
@@ -2655,9 +2631,9 @@ def convert_arange_like(node, **kwargs):
         ]
     else:
         # determine shape of axis
-        create_tensor([int(axis)], name+"_axis_start", kwargs["initializer"], dtype='int64')
-        create_tensor([int(axis)+1], name+"_axis_end", kwargs["initializer"], dtype='int64')
-        nodes = [
+        nodes += [
+            create_tensor([int(axis)], name+"_axis_start", kwargs["initializer"], dtype='int64'),
+            create_tensor([int(axis)+1], name+"_axis_end", kwargs["initializer"], dtype='int64'),
             make_node('Shape', [input_nodes[0]], [name+"_shape0_out"]),
             make_node('Slice', [name+"_shape0_out", name+"_axis_start", name+"_axis_end"], [name+"_slice0_out"]),
             make_node("ReduceProd", [name+"_slice0_out"], [name+"_reprod0_out"]),
