@@ -181,6 +181,7 @@ def create_tensor(shape_list, shape_name, initializer, dtype='int64'):
     shape_np = np.array(shape_list, dtype=dtype)
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[shape_np.dtype]
     dims = np.shape(shape_np)
+    tensor_node = onnx.helper.make_tensor_value_info(shape_name, data_type, dims)
     initializer.append(
         onnx.helper.make_tensor(
             name=shape_name,
@@ -190,6 +191,7 @@ def create_tensor(shape_list, shape_name, initializer, dtype='int64'):
             raw=False
         )
     )
+    return tensor_node
 
 @mx_op.register("null")
 def convert_weights_and_inputs(node, **kwargs):
@@ -1555,17 +1557,18 @@ def convert_reshape(node, **kwargs):
         if val in not_supported_shape:
             raise AttributeError("Reshape: Shape value not supported in ONNX", val)
 
-    create_tensor(targ_shape, name+'_targ_shape', kwargs['initializer'])
+    nodes = [
+        create_tensor(targ_shape, name+'_targ_shape', kwargs['initializer'])
+        ]
 
-    nodes = []
     if reverse == 'False':
         nodes += [
             make_node('Reshape', [input_nodes[0], name+'_targ_shape'], [name], name=name)
             ]
     else:
-        create_tensor([0], name+'_0', kwargs['initializer'])
-        create_tensor([1], name+'_1', kwargs['initializer'])
         nodes += [
+            create_tensor([0], name+'_0', kwargs['initializer']),
+            create_tensor([1], name+'_1', kwargs['initializer']),
             make_node('Shape', [name+'_targ_shape'], [name+'_targ_dim']),
             make_node('Shape', [input_nodes[0]], [name+'_orig_shape']),
             make_node('Shape', [name+'_orig_shape'], [name+'_orig_dim']),
@@ -2300,15 +2303,14 @@ def convert_matmul_selfatt_qk(node, **kwargs):
     heads = int(attrs.get('heads'))
 
     # a, b, c, d, e are seq_len, batch_size, num_heads, 3, head_dim respectively
-    create_tensor([0], name+"_0", kwargs["initializer"])
-    create_tensor([1], name+"_1", kwargs["initializer"])
-    create_tensor([1], name+"_1_f", kwargs["initializer"], dtype='float32')
-    create_tensor([2], name+"_2", kwargs["initializer"])
-    create_tensor([3], name+"_3", kwargs["initializer"])
-    create_tensor([heads], name+"_c", kwargs["initializer"])
-    create_tensor([3], name+"_d", kwargs["initializer"])
-
     nodes = [
+        create_tensor([0], name+"_0", kwargs["initializer"]),
+        create_tensor([1], name+"_1", kwargs["initializer"]),
+        create_tensor([1], name+"_1_f", kwargs["initializer"], dtype='float32'),
+        create_tensor([2], name+"_2", kwargs["initializer"]),
+        create_tensor([3], name+"_3", kwargs["initializer"]),
+        create_tensor([heads], name+"_c", kwargs["initializer"]),
+        create_tensor([3], name+"_d", kwargs["initializer"]),
         make_node('Shape', [input_nodes[0]], [name+"_data_shape"]),
         make_node('Slice', [name+'_data_shape', name+'_0', name+'_1'], [name+"_a"]),
         make_node('Slice', [name+'_data_shape', name+'_1', name+'_2'], [name+"_b"]),
@@ -2369,14 +2371,13 @@ def convert_broadcast_axis(node, **kwargs):
     size = convert_string_to_list(attrs.get('size', '()'))
     assert len(axis) == len(size)
 
-    create_tensor([0], name+'_0', kwargs["initializer"])
-    create_tensor([1], name+'_1', kwargs["initializer"])
-    create_tensor([], name+'_void', kwargs["initializer"])
-    create_const_scalar_node(name+'_0_s', np.int64(0), kwargs)
-    create_const_scalar_node(name+'_1_s', np.int64(1), kwargs)
-
     shape_name = name+'_shape_0'
     nodes = [
+        create_tensor([0], name+'_0', kwargs["initializer"]),
+        create_tensor([1], name+'_1', kwargs["initializer"]),
+        create_tensor([], name+'_void', kwargs["initializer"]),
+        create_const_scalar_node(name+'_0_s', np.int64(0), kwargs),
+        create_const_scalar_node(name+'_1_s', np.int64(1), kwargs),
         make_node('Shape', [input_nodes[0]], [shape_name]),
         make_node('Shape', [shape_name], [name+'_in_dim']),
         make_node('Reshape', [name+'_in_dim', name+'_void'], [name+'_in_dim_s']),
@@ -2385,9 +2386,9 @@ def convert_broadcast_axis(node, **kwargs):
 
     for i, axis in enumerate(axis):
         if axis not in (0, 1):
-            create_tensor([axis], name+'_'+str(axis), kwargs["initializer"])
-        create_tensor([size[i]-1], name+'_size_'+str(i), kwargs["initializer"])
-        _ = [
+            nodes += [create_tensor([axis], name+'_'+str(axis), kwargs["initializer"])]
+        nodes += [
+            create_tensor([size[i]-1], name+'_size_'+str(i), kwargs["initializer"]),
             make_node('Equal', [name+'_range', name+'_'+str(axis)], [name+'_equal_'+str(i)]),
             make_node('Cast', [name+'_equal_'+str(i)], [name+'_cast_'+str(i)], to=int(TensorProto.INT64)),
             make_node('Mul', [name+'_size_'+str(i), name+'_cast_'+str(i)], [name+'_mul_'+str(i)]),
@@ -2395,7 +2396,6 @@ def convert_broadcast_axis(node, **kwargs):
             make_node('Mul', [name+'_add_'+str(i), shape_name], [name+'_shape_'+str(i+1)])
             ]
         shape_name = name+'_shape_'+str(i+1)
-        nodes += _
 
     nodes += [make_node('Expand', [input_nodes[0], shape_name], [name], name=name)]
 
@@ -2418,16 +2418,15 @@ def convert_sequencemask(node, **kwargs):
     if(use_sequence_length == 'False'):
         return [make_node('Identity', [input_nodes[0]], [name], name=name)]
 
-    create_tensor([], name+'_void', kwargs["initializer"])
-    create_tensor([0], name+'_0', kwargs["initializer"])
-    create_tensor([1], name+'_1', kwargs["initializer"])
-    create_tensor([2], name+'_2', kwargs["initializer"])
-    create_const_scalar_node(name+'_0_s', np.int64(0), kwargs)
-    create_const_scalar_node(name+'_1_s', np.int64(1), kwargs)
-    create_const_scalar_node(name+'_2_s', np.int64(2), kwargs)
-    create_tensor([mask_val], name+'_mask_val', kwargs["initializer"], dtype='float32')
-
     nodes = [
+        create_tensor([], name+'_void', kwargs["initializer"]),
+        create_tensor([0], name+'_0', kwargs["initializer"]),
+        create_tensor([1], name+'_1', kwargs["initializer"]),
+        create_tensor([2], name+'_2', kwargs["initializer"]),
+        create_const_scalar_node(name+'_0_s', np.int64(0), kwargs),
+        create_const_scalar_node(name+'_1_s', np.int64(1), kwargs),
+        create_const_scalar_node(name+'_2_s', np.int64(2), kwargs),
+        create_tensor([mask_val], name+'_mask_val', kwargs["initializer"], dtype='float32'),
         make_node('Shape', [input_nodes[0]], [name+'_in_shape']),
         make_node('Slice', [name+'_in_shape', name+'_0', name+'_1'], [name+'_slice_0']),
         make_node('Slice', [name+'_in_shape', name+'_1', name+'_2'], [name+'_slice_1']),
