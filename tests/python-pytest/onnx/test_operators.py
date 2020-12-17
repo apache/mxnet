@@ -253,3 +253,12 @@ def test_onnx_export_dropout(tmp_path, dtype, p):
     M = def_model('Dropout', p=p)
     x = mx.nd.array([[3,0.5,-0.5,2,7],[2,-0.4,7,3,0.2]], dtype=dtype)
     op_export_test('Dropout', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('src_dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('dst_dtype', ['bool', 'float16', 'float32', 'float64', 'int32', 'int64', 'int8', 'uint8'])
+@pytest.mark.parametrize('shape', [(2,3), (4,5,6)])
+def test_onnx_export_cast(tmp_path, src_dtype, dst_dtype, shape):
+    M = def_model('Cast', dtype=dst_dtype)
+    x = mx.nd.ones(shape, dtype=src_dtype)
+    op_export_test('Cast', M, [x], tmp_path)
