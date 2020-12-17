@@ -116,7 +116,7 @@ class MXNetGraph(object):
         return arg_params, aux_params
 
     @staticmethod
-    def get_outputs(sym, params, in_shape, in_label):
+    def get_outputs(sym, params, in_shape, in_label, in_type):
         """ Infer output shapes and return dictionary of output name to shape
 
         :param :class:`~mxnet.symbol.Symbol` sym: symbol to perform infer shape on
@@ -127,6 +127,7 @@ class MXNetGraph(object):
         :return: dictionary of output name to shape
         :rtype: dict of (str, tuple(int, ...))
         """
+        from onnx import mapping
         # remove any input listed in params from sym.list_inputs() and bind them to the input shapes provided
         # by user. Also remove in_label, which is the name of the label symbol that may have been used
         # as the label for loss during training.
@@ -146,8 +147,16 @@ class MXNetGraph(object):
                 out_names.append(name)
 
         assert len(out_shapes) == len(out_names)
+
+        # infer output types
+        args = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[in_type] for n in sym.list_inputs()}
+        arg_type, out_type, _ = sym.infer_type(**args)
+        out_types = [mapping.NP_TYPE_TO_TENSOR_TYPE[o(0).dtype] for o in out_type]
+
+        assert len(out_types) == len(out_names)
+
         # bind output shapes with output names
-        graph_outputs = {n: s for n, s in zip(out_names, out_shapes)}
+        graph_outputs = {n: { 'shape': s, 'dtype': d } for n, s, d in zip(out_names, out_shapes, out_types)}
 
         return graph_outputs
 
@@ -210,7 +219,7 @@ class MXNetGraph(object):
         index_lookup = []
 
         # Determine output shape
-        graph_outputs = MXNetGraph.get_outputs(sym, params, in_shape, output_label)
+        graph_outputs = MXNetGraph.get_outputs(sym, params, in_shape, output_label, in_type)
 
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
@@ -273,8 +282,8 @@ class MXNetGraph(object):
                                 onnx_processed_outputs.append(
                                     make_tensor_value_info(
                                         name=nodename,
-                                        elem_type=in_type,
-                                        shape=graph_outputs[nodename]
+                                        elem_type=graph_outputs[nodename]['dtype'],
+                                        shape=graph_outputs[nodename]['shape']
                                     )
                                 )
                                 if verbose:
