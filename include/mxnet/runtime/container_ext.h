@@ -28,12 +28,13 @@
 #include <mxnet/runtime/memory.h>
 #include <mxnet/runtime/object.h>
 
+#include <string_view>
+#include <string>
 #include <initializer_list>
 #include <type_traits>
 #include <utility>
 #include <vector>
 #include <unordered_map>
-#include <string_view>
 
 namespace mxnet {
 namespace runtime {
