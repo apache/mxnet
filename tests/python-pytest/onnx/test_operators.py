@@ -235,11 +235,15 @@ def test_onnx_export_broadcast_add(tmp_path, dtype):
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
-@pytest.mark.parametrize('axis', [0, 1, -1])
+@pytest.mark.parametrize('axis', [0, 1, 2, -1])
 def test_onnx_export_stack(tmp_path, dtype, axis):
     M = def_model('stack', axis=axis)
-    x = mx.nd.array([1,2,3,4], dtype=dtype)
-    y = mx.nd.array([5,6,7,8], dtype=dtype)
+    if 'int' in dtype:
+        x = mx.nd.random.randint(0, 10*9, (3,4,5), dtype=dtype)
+        y = mx.nd.random.randint(0, 10*9, (3,4,5), dtype=dtype)
+    else:
+        x = mx.nd.random.normal(0, 10*9, (3,4,5), dtype=dtype)
+        y = mx.nd.random.normal(0, 10*9, (3,4,5), dtype=dtype)
     op_export_test('stack', M, [x, y], tmp_path)
 
 
