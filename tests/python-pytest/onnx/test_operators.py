@@ -245,3 +245,51 @@ def test_onnx_export_Activation(tmp_path, dtype, shape, act_type):
     M = def_model('Activation', act_type=act_type)
     x = mx.nd.random.uniform(-0.5, 0.5, shape=shape, dtype=dtype)
     op_export_test('Activation', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('axes', [None, [1,0,2]])
+def test_onnx_export_transpose(tmp_path, dtype, axes):
+    if axes != None:
+        M = def_model('transpose', axes=axes)
+    else:
+        M = def_model('transpose')
+    x = mx.nd.array([[[1,2],[3,4]],[[5,6],[7,8]]], dtype=dtype)
+    op_export_test('transpose', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('axis', [0, 1, 2])
+def test_onnx_export_expand_dims(tmp_path, dtype, axis):
+    M = def_model('expand_dims', axis=axis)
+    x = mx.nd.random.uniform(0, 1, (2,3,4), dtype=dtype)
+    op_export_test('expand_dims', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_broadcast_add(tmp_path, dtype):
+    M = def_model('broadcast_add')
+    x = mx.nd.array([[1,1,1],[1,1,1]], dtype=dtype)
+    y = mx.nd.array([[0],[1]], dtype=dtype)
+    op_export_test('broadcast_add', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('axis', [0, 1, 2, -1])
+def test_onnx_export_stack(tmp_path, dtype, axis):
+    M = def_model('stack', axis=axis)
+    if 'int' in dtype:
+        x = mx.nd.random.randint(0, 10*9, (3,4,5), dtype=dtype)
+        y = mx.nd.random.randint(0, 10*9, (3,4,5), dtype=dtype)
+    else:
+        x = mx.nd.random.normal(0, 10*9, (3,4,5), dtype=dtype)
+        y = mx.nd.random.normal(0, 10*9, (3,4,5), dtype=dtype)
+    op_export_test('stack', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('p', [0.1, 0.2, 0.5, 0.8])
+def test_onnx_export_dropout(tmp_path, dtype, p):
+    M = def_model('Dropout', p=p)
+    x = mx.nd.array([[3,0.5,-0.5,2,7],[2,-0.4,7,3,0.2]], dtype=dtype)
+    op_export_test('Dropout', M, [x], tmp_path)
