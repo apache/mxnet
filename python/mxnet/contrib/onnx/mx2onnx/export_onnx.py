@@ -150,7 +150,7 @@ class MXNetGraph(object):
 
         # infer output types
         args = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[in_type] for n in sym.list_inputs()}
-        arg_type, out_type, _ = sym.infer_type(**args)
+        _, out_type, _ = sym.infer_type(**args)
         out_types = [mapping.NP_TYPE_TO_TENSOR_TYPE[o(0).dtype] for o in out_type]
 
         assert len(out_types) == len(out_names)
