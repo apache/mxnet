@@ -156,7 +156,7 @@ class MXNetGraph(object):
         assert len(out_types) == len(out_names)
 
         # bind output shapes with output names
-        graph_outputs = {n: { 'shape': s, 'dtype': d } for n, s, d in zip(out_names, out_shapes, out_types)}
+        graph_outputs = {n: {'shape': s, 'dtype': d} for n, s, d in zip(out_names, out_shapes, out_types)}
 
         return graph_outputs
 
