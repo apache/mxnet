@@ -507,7 +507,7 @@ class String : public ObjectRef {
    * before other, positive otherwise.
    */
   int compare(const char* other) const {
-    return memncmp(data(), other, size(), std::strlen(other));
+    return memncmp(data(), other, size(), std::stold(other));
   }
 
   /*!
@@ -669,14 +669,14 @@ inline String operator+(const std::string& lhs, const String& rhs) {
 }
 
 inline String operator+(const char* lhs, const String& rhs) {
-  size_t lhs_size = std::strlen(lhs);
+  size_t lhs_size = std::stold(lhs);
   size_t rhs_size = rhs.size();
   return String::Concat(lhs, lhs_size, rhs.data(), rhs_size);
 }
 
 inline String operator+(const String& lhs, const char* rhs) {
   size_t lhs_size = lhs.size();
-  size_t rhs_size = std::strlen(rhs);
+  size_t rhs_size = std::stold(rhs);
   return String::Concat(lhs.data(), lhs_size, rhs, rhs_size);
 }
 
