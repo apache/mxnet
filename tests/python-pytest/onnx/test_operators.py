@@ -51,7 +51,8 @@ def op_export_test(model_name, Model, inputs, tmp_path):
 
     def onnx_rt(onnx_file, inputs):
         sess = rt.InferenceSession(onnx_file)
-        input_dict = dict((sess.get_inputs()[i].name, inputs[i].asnumpy()) for i in range(len(inputs)))
+        dtype_0 = inputs[0].asnumpy().dtype
+        input_dict = dict((sess.get_inputs()[i].name, inputs[i].asnumpy().astype(dtype_0)) for i in range(len(inputs)))
         pred = sess.run(None, input_dict)[0]
         return pred
 
@@ -302,3 +303,15 @@ def test_onnx_export_cast(tmp_path, src_dtype, dst_dtype, shape):
     M = def_model('Cast', dtype=dst_dtype)
     x = mx.nd.ones(shape, dtype=src_dtype)
     op_export_test('Cast', M, [x], tmp_path)
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+def test_onnx_export_softmax(tmp_path, dtype):
+    x = mx.nd.random.uniform(0, 1, (2, 3, 4), dtype=dtype)
+    M1 = def_model('softmax')
+    op_export_test('softmax_1', M1, [x], tmp_path)
+    M2 = def_model('softmax', use_length=True, axis=0)
+    l2 = mx.nd.array([[2,0,3,1],[1,3,2,0], [0,0,0,1]], dtype=int)
+    op_export_test('softmax_2', M1, [x, l2], tmp_path)
+    M3 = def_model('softmax', use_length=True, axis=-1, temperature=0.5)
+    l3 = mx.nd.array([[2,0,1],[0,0,0]], dtype=int)
+    op_export_test('softmax_3', M1, [x, l3], tmp_path)
