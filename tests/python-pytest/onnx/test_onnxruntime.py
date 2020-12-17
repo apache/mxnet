@@ -21,11 +21,29 @@ import onnxruntime
 
 import json
 import os
+import pytest
 import shutil
-import tempfile
 
+# images that are tested and their accepted classes
+test_images = [
+    ['dog.jpg', [242,243]],
+    ['apron.jpg', [411,578,638,639,689,775]],
+    ['dolphin.jpg', [2,3,4,146,147,148,395]],
+    ['hammerheadshark.jpg', [3,4]],
+    ['lotus.jpg', [723,738,985]]
+]
 
-def test_cv_model_inference_onnxruntime():
+test_models = [
+    'mobilenet1.0', 'mobilenet0.75', 'mobilenet0.5', 'mobilenet0.25',
+    'mobilenetv2_1.0', 'mobilenetv2_0.75', 'mobilenetv2_0.5', 'mobilenetv2_0.25',
+    'resnet18_v1', 'resnet18_v2', 'resnet34_v1', 'resnet34_v2', 'resnet50_v1', 'resnet50_v2',
+    'resnet101_v1', 'resnet101_v2', 'resnet152_v1', 'resnet152_v2',
+    'squeezenet1.0', 'squeezenet1.1',
+    'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn'
+]
+
+@pytest.mark.parametrize('model', test_models)
+def test_cv_model_inference_onnxruntime(tmp_path, model):
     def get_gluon_cv_model(model_name, tmp):
         tmpfile = os.path.join(tmp, model_name)
         ctx = mx.cpu(0)
@@ -64,68 +82,40 @@ def test_cv_model_inference_onnxruntime():
         e_x = np.exp(x - np.max(x))
         return e_x / e_x.sum(axis=0)
 
-    def load_imgnet_labels():
-        mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/image_net_labels.json')
-        return np.array(json.load(open('image_net_labels.json', 'r')))
+    def load_imgnet_labels(tmpdir):
+        tmpfile = os.path.join(tmpdir, 'image_net_labels.json')
+        mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/image_net_labels.json',
+                               fname=tmpfile)
+        return np.array(json.load(open(tmpfile, 'r')))
 
-    def download_test_images():
-        test_images = [
-            ['dog.jpg',['boxer']],
-            ['apron.jpg', ['apron', 'maillot']],
-            ['dolphin.jpg', ['great white shark','grey whale']],
-            ['hammerheadshark.jpg', ['tiger shark']],
-            ['lotus.jpg', ['pinwheel','pot']]
-        ]
+    def download_test_images(tmpdir):
+        global test_images
         for f,_ in test_images:
             mx.test_utils.download('https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/images/'+f+'?raw=true',
-                                   fname=f)
+                                   fname=os.path.join(tmpdir, f))
         return test_images
 
 
-    test_models = [
-        'mobilenet1.0', 'mobilenet0.75', 'mobilenet0.5', 'mobilenet0.25',
-        'mobilenetv2_1.0', 'mobilenetv2_0.75', 'mobilenetv2_0.5', 'mobilenetv2_0.25',
-        'resnet18_v1', 'resnet18_v2', 'resnet34_v1', 'resnet34_v2', 'resnet50_v1', 'resnet50_v2',
-        'resnet101_v1', 'resnet101_v2', 'resnet152_v1', 'resnet152_v2',
-        'squeezenet1.0', 'squeezenet1.1', 
-        'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn'
-    ]
-    labels = load_imgnet_labels()
-    test_images = download_test_images()
+    tmp_path = str(tmp_path)
+    #labels = load_imgnet_labels(tmp_path)
+    test_images = download_test_images(tmp_path)
+    sym_file, params_file = get_gluon_cv_model(model, tmp_path)
+    onnx_file = export_model_to_onnx(sym_file, params_file)
 
-    for model in test_models:
-        tmpdir = tempfile.mkdtemp()
-        sym_file, params_file = get_gluon_cv_model(model, tmpdir)
-        onnx_file = export_model_to_onnx(sym_file, params_file)
-        #print("exported onnx file: ",onnx_file)
+    # create onnxruntime session using the generated onnx file
+    ses_opt = onnxruntime.SessionOptions()
+    ses_opt.log_severity_level = 3
+    session = onnxruntime.InferenceSession(onnx_file, ses_opt)
+    input_name = session.get_inputs()[0].name
 
-        # create onnxruntime session using the generated onnx file
-        ses_opt = onnxruntime.SessionOptions()
-        ses_opt.log_severity_level = 3
-        session = onnxruntime.InferenceSession(onnx_file, ses_opt)
-        input_name = session.get_inputs()[0].name
+    for img, accepted_ids in test_images:
+        img_data = normalize_image(os.path.join(tmp_path,img))
+        raw_result = session.run([], {input_name: img_data})
+        res = softmax(np.array(raw_result)).tolist()
+        class_idx = np.argmax(res)
+        assert(class_idx in accepted_ids)
 
-        for img,classes in test_images:
-            img_data = normalize_image(img)
-            raw_result = session.run([], {input_name: img_data})
-            res = softmax(np.array(raw_result)).tolist()
-            class_idx = np.argmax(res)
-            #print("Image top classification:",labels[class_idx])
-            sort_idx = np.flip(np.squeeze(np.argsort(res)))
-            #print("\tTop labels: " + ",".join(labels[sort_idx[:5]]))
-            correct_classification = False
-            for label in labels[sort_idx[:5]]:
-                for c in classes:
-                    if c in label:
-                        correct_classification = True
-            assert correct_classification == True
-
-        # cleanup
-        shutil.rmtree(tmpdir)
+    shutil.rmtree(tmp_path)
 
 
-
-
-if __name__ == "__main__":
-    test_cv_model_inference_onnxruntime()
 
