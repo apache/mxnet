@@ -117,6 +117,4 @@ def test_cv_model_inference_onnxruntime(tmp_path, model):
     shutil.rmtree(tmp_path)
 
 
-if __name__ == "__main__":
-    test_cv_model_inference_onnxruntime()
 
