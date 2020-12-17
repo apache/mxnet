@@ -243,3 +243,9 @@ def test_onnx_export_stack(tmp_path, dtype, axis):
     op_export_test('stack', M, [x, y], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('p', [0.1, 0.2, 0.5, 0.8])
+def test_onnx_export_dropout(tmp_path, dtype, p):
+    M = def_model('Dropout', p=p)
+    x = mx.nd.array([[3,0.5,-0.5,2,7],[2,-0.4,7,3,0.2]], dtype=dtype)
+    op_export_test('Dropout', M, [x], tmp_path)
