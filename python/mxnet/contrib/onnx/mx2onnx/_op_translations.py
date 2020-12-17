@@ -2298,7 +2298,7 @@ def convert_layer_norm(node, **kwargs):
     if axes == -1:
         nodes += [
             make_node("Mul", [name+"_div0_out", input_nodes[1]], [name+"_mul0_out"]),
-            make_node("Add", [name+"_mul0_out", input_nodes[2]], [name])
+            make_node("Add", [name+"_mul0_out", input_nodes[2]], [name], name=name)
         ]
     else:
         nodes += [
