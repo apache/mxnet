@@ -839,7 +839,7 @@ def convert_leakyrelu(node, **kwargs):
             create_const_scalar_node(name+"_half", np.float32(0.5), kwargs),
             make_node("Add", [name+"_erf0_out", name+"_one"], [name+"_add0_out"]),
             make_node("Mul", [input_nodes[0], name+"_add0_out"], [name+"_mul0_out"]),
-            make_node("Mul", [name+"_mul0_out", name+"_half"], [name])
+            make_node("Mul", [name+"_mul0_out", name+"_half"], [name], name=name)
         ]
         return nodes
     else:
