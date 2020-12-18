@@ -854,19 +854,14 @@ def convert_softmax(node, **kwargs):
 
     axis = int(attrs.get("axis", -1))
     temperature = attrs.get("temperature", None)
-    if not temperature:
-        temperature = 1.0
-    else:
-        temperature = float(temperature)
+    if temperature and float(temperature) != 1.0:
+        raise NotImplementedError("Temperature will be supported in onnx opset13.")
     use_length = attrs.get("use_length", None)
     input_type = kwargs["in_type"]
     data = input_nodes[0]
 
     nodes = [
-        create_tensor([temperature], name+"_temp", kwargs["initializer"], dtype="float64"),
-        make_node("Cast", [name+"_temp"], [name+"_T"], to=input_type),
-        make_node("Div", [data, name+"_T"], [name+"_div_out"]),
-        make_node("Exp", [name+"_div_out"], [name+"_exp_out"]),
+        make_node("Exp", [data], [name+"_exp_out"]),
         make_node("ReduceSum", [name+"_exp_out"], [name+"_rsum_out"], axes=[axis], keepdims=1)
     ]
     if len(input_nodes) == 1:

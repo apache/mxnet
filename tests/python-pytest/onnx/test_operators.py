@@ -306,17 +306,16 @@ def test_onnx_export_cast(tmp_path, src_dtype, dst_dtype, shape):
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
-@pytest.mark.parametrize('temperature', [0.3, 0.5, 1.0])
-def test_onnx_export_softmax(tmp_path, dtype, temperature):
+def test_onnx_export_softmax(tmp_path, dtype):
     x = mx.nd.random.uniform(0, 1, (2, 3, 4), dtype=dtype)
-    M1 = def_model('softmax', temperature=temperature)
+    M1 = def_model('softmax')
     op_export_test('softmax_1', M1, [x], tmp_path)
-    M2 = def_model('softmax', use_length=True, axis=0, temperature=temperature)
+    M2 = def_model('softmax', use_length=True, axis=0)
     l2 = mx.nd.array([[2,0,2,1],[1,1,2,1], [0,0,0,1]], dtype=int)
     op_export_test('softmax_2', M2, [x, l2], tmp_path)
-    M3 = def_model('softmax', use_length=True, axis=-1, temperature=temperature)
+    M3 = def_model('softmax', use_length=True, axis=-1)
     l3 = mx.nd.array([[2,0,4],[0,0,0]], dtype=int)
     op_export_test('softmax_3', M3, [x, l3], tmp_path)
-    M4 = def_model('softmax', use_length=True, axis=1, temperature=temperature)
+    M4 = def_model('softmax', use_length=True, axis=1)
     l4 = mx.nd.array([[2,0,3,1],[0,1,0,0]], dtype=int)
     op_export_test('softmax_4', M4, [x, l4], tmp_path)
