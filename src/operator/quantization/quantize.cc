@@ -49,6 +49,7 @@ bool QuantizeStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantize)
+.add_alias("_npx_contrib_quantize")
 .describe(R"code(Quantize a input tensor from float to `out_type`,
 with user-specified `min_range` and `max_range`.
 

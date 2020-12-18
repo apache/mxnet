@@ -77,7 +77,6 @@ option(USE_JEMALLOC "Build with Jemalloc support" OFF)
 option(USE_LIBJPEG_TURBO "Use libjpeg-turbo" OFF)
 option(USE_DIST_KVSTORE "Build with DIST_KVSTORE support" OFF)
 option(USE_PLUGINS_WARPCTC "Use WARPCTC Plugins" OFF)
-option(USE_CPP_PACKAGE "Build C++ Package" OFF)
 option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 option(USE_GPROF "Compile with gprof (profiling) flag" OFF)
 option(USE_VTUNE "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
@@ -317,6 +316,7 @@ if(USE_ASAN)
 endif()
 
 list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
+message("After choosing blas, linking to ${mxnet_LINKER_LIBS}")
 
 foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
     include_directories(${var})
@@ -444,18 +444,18 @@ elseif(UNIX)
   list(APPEND mxnet_LINKER_LIBS Threads::Threads)
 endif()
 
-
 # ---[ LAPack
 if(USE_LAPACK)
   message("USE_LAPACK is ON")
   add_definitions(-DMXNET_USE_LAPACK=1)
-  # In the CMAKE_BUILD_TYPE="Distribution" case, we link against Blas libraries
-  # that already provide lapack symbols. Thus -llapack would be wrong.
-  if (NOT MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
-    list(APPEND mxnet_LINKER_LIBS lapack)
+  if(NOT USE_LAPACKE_INTERFACE)
+    # BLAS=open case is handled in ChooseBlas.cmake
+    if(NOT MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution"
+       AND NOT BLAS STREQUAL "Open" AND NOT BLAS STREQUAL "open")
+      list(APPEND mxnet_LINKER_LIBS lapack)
+    endif()
   endif()
 endif()
-
 
 # ---[ jemalloc
 if(USE_JEMALLOC)
@@ -509,6 +509,11 @@ endif()
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
+
+if(MSVC)
+  FILE(GLOB_RECURSE TVM_BRIDGE_SOURCE "src/*/tvm_bridge.cc")
+  list(REMOVE_ITEM SOURCE ${TVM_BRIDGE_SOURCE})
+endif()
 
 if(NOT USE_INTGEMM)
   FILE(GLOB_RECURSE INTGEMM_OPERATOR_SOURCE "src/operator/contrib/intgemm/*.cc" "src/operator/contrib/intgemm/*.h")
@@ -851,9 +856,9 @@ endif()
 if(USE_MKLDNN)
     add_custom_command(TARGET mxnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/
+      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/)
+      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/)
 endif()
 
 if(USE_INTGEMM)
@@ -865,12 +870,11 @@ function(BuildTVMOP)
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
   set_target_properties(tvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
-  set_target_properties(tvm_topi PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
   set_target_properties(tvm_runtime PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endfunction()
 
 if(USE_TVM_OP)
-  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+  list(APPEND mxnet_LINKER_LIBS tvm_runtime)
   BuildTVMOP()
   find_package(Python3 REQUIRED)
   set(TVM_OP_COMPILE_OPTIONS "-o${CMAKE_CURRENT_BINARY_DIR}" "--config" "${CMAKE_CURRENT_BINARY_DIR}/tvmop.conf" "-L" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm")

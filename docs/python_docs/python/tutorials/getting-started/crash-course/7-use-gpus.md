@@ -25,7 +25,7 @@ Before you start the steps, make sure you have at least one Nvidia GPU on your m
 
 You can use the following command to view the number GPUs that are available to MXNet.
 
-```{.python .input  n=2}
+```{.python .input}
 from mxnet import np, npx, gluon, autograd
 from mxnet.gluon import nn
 import time
@@ -38,7 +38,7 @@ npx.num_gpus() #This command provides the number of GPUs MXNet can access
 
 MXNet's ndarray is very similar to NumPy's. One major difference is that MXNet's ndarray has a `context` attribute specifieing which device an array is on. By default, arrays are stored on `npx.cpu()`. To change it to the first GPU, you can use the following code, `npx.gpu()` or `npx.gpu(0)` to indicate the first GPU.
 
-```{.python .input  n=10}
+```{.python .input}
 gpu = npx.gpu() if npx.num_gpus() > 0 else npx.cpu()
 x = np.ones((3,4), ctx=gpu)
 x
@@ -48,7 +48,7 @@ If you're using a CPU, MXNet allocates data on the main memory and tries to use 
 
 Assuming there is at least two GPUs. You can create another ndarray and assign it to a different GPU. If you only have one GPU, then you will get an error trying to run this code. In the example code here, you will copy `x` to the second GPU, `npx.gpu(1)`:
 
-```{.python .input  n=11}
+```{.python .input}
 gpu_1 = npx.gpu(1) if npx.num_gpus() > 1 else npx.cpu()
 x.copyto(gpu_1)
 ```
@@ -56,13 +56,13 @@ x.copyto(gpu_1)
 MXNet requries that users explicitly move data between devices. But several operators such as `print`, and `asnumpy`, will implicitly move data to main memory.
 
 ## Choosing GPU Ids
-If you have multiple GPUs on your machine, MXNet can access each of them through 0-indexing with `npx`. As you saw before, the first GPU was accessed using `npx.gpu(0)`, and the second using `npx.gpu(1)`. This extends to however many GPUs your machine has. So if your machine has eight GPUs, the last GPU is accessed using `npx.gpu(7)`. This allows you to select which GPUs to use for operations and training. You might find it particularly useful when you want to leverage multiple GPUs while training neural networks.  
+If you have multiple GPUs on your machine, MXNet can access each of them through 0-indexing with `npx`. As you saw before, the first GPU was accessed using `npx.gpu(0)`, and the second using `npx.gpu(1)`. This extends to however many GPUs your machine has. So if your machine has eight GPUs, the last GPU is accessed using `npx.gpu(7)`. This allows you to select which GPUs to use for operations and training. You might find it particularly useful when you want to leverage multiple GPUs while training neural networks.
 
 ## Run an operation on a GPU
 
 To perform an operation on a particular GPU, you only need to guarantee that the input of an operation is already on that GPU. The output is allocated on the same GPU as well. Almost all operators in the `np` and `npx` module support running on a GPU.
 
-```{.python .input  n=21}
+```{.python .input}
 y = np.random.uniform(size=(3,4), ctx=gpu)
 x + y
 ```
@@ -73,7 +73,7 @@ Remember that if the inputs are not on the same GPU, you will get an error.
 
 To run a neural network on a GPU, you only need to copy and move the input data and parameters to the GPU. To demonstrate this you can reuse the previously defined LeafNetwork in [Training Neural Networks](6-train-nn.md). The following code example shows this.
 
-```{.python .input  n=16}
+```{.python .input}
 # The convolutional block has a convolution layer, a max pool layer and a batch normalization layer
 def conv_block(filters, kernel_size=2, stride=2, batch_norm=True):
     conv_block = nn.HybridSequential()
@@ -102,7 +102,7 @@ class LeafNetwork(nn.HybridBlock):
         self.dense1 = dense_block(100)
         self.dense2 = dense_block(10)
         self.dense3 = nn.Dense(2)
-        
+
     def forward(self, batch):
         batch = self.conv1(batch)
         batch = self.conv2(batch)
@@ -111,19 +111,19 @@ class LeafNetwork(nn.HybridBlock):
         batch = self.dense1(batch)
         batch = self.dense2(batch)
         batch = self.dense3(batch)
-        
+
         return batch
 ```
 
 Load the saved parameters onto GPU 0 directly as shown below; additionally, you could use `net.collect_params().reset_ctx(gpu)` to change the device.
 
-```{.python .input  n=20}
+```{.python .input}
 net.load_parameters('leaf_models.params', ctx=gpu)
 ```
 
 Use the following command to create input data on GPU 0. The forward function will then run on GPU 0.
 
-```{.python .input  n=22}
+```{.python .input}
 x = np.random.uniform(size=(1, 3, 128, 128), ctx=gpu)
 net(x)
 ```
@@ -167,7 +167,7 @@ validation_loader = gluon.data.DataLoader(val_dataset.transform_first(validation
 test_loader = gluon.data.DataLoader(test_dataset.transform_first(validation_transformer), batch_size=batch_size, try_nopython=True)
 ```
 
-### Define a helper function 
+### Define a helper function
 This is the same test function defined previously in the **Step 6**.
 
 ```{.python .input}
@@ -179,7 +179,7 @@ def test(val_data):
         labels = batch[1]
         outputs = model(data)
         acc.update([labels], [outputs])
-        
+
     _, accuracy = acc.get()
     return accuracy
 ```
@@ -229,19 +229,19 @@ for epoch in range(10):
             l.backward()
         trainer.step(batch_size)
 
-        # Diff 5: sum losses over all devices. Here, the float 
+        # Diff 5: sum losses over all devices. Here, the float
         # function will copy data into CPU.
         train_loss += sum([float(l.sum()) for l in losses])
         accuracy.update(label_list, outputs)
         if log_interval and (idx + 1) % log_interval == 0:
             _, acc = accuracy.get()
-     
+
             print(f"""Epoch[{epoch + 1}] Batch[{idx + 1}] Speed: {batch_size / (time.time() - btic)} samples/sec \
                   batch loss = {train_loss} | accuracy = {acc}""")
             btic = time.time()
 
     _, acc = accuracy.get()
-    
+
     acc_val = test(validation_loader)
     print(f"[Epoch {epoch + 1}] training: accuracy={acc}")
     print(f"[Epoch {epoch + 1}] time cost: {time.time() - tic}")
@@ -250,4 +250,7 @@ for epoch in range(10):
 
 ## Next steps
 
-Now that you have completed training and predicting with a neural network on GPUs, you can dive deep into other gluon packages: [GluonCV](https://cv.gluon.ai/tutorials/index.html) and [GluonNLP](https://nlp.gluon.ai) if you want to understand those better. Otherwise, this is the conclusion of the crash course.
+Now that you have completed training and predicting with a neural network on GPUs, you reached the conclusion of the crash course. Congratulations.
+If you are keen on studying more, checkout [D2L.ai](https://d2l.ai),
+[GluonCV](https://cv.gluon.ai/tutorials/index.html), [GluonNLP](https://nlp.gluon.ai),
+[GluonTS](https://ts.gluon.ai/), [AutoGluon](https://auto.gluon.ai).

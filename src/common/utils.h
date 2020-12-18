@@ -855,15 +855,6 @@ void ExecuteMonOutputCallback(
     size_t nid, const std::function<void(const char *, const char *, void *)>
                     &monitor_callback);
 
-/*!
- * \brief This is function can return the output names of a NodeEntry.
- */
-static inline std::string GetOutputName(const nnvm::NodeEntry& e) {
-  nnvm::Symbol sym;
-  sym.outputs.push_back(e);
-  return sym.ListOutputNames()[0];
-}
-
 inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
   // convert negative axes to positive values
   const int ndim = src.ndim();

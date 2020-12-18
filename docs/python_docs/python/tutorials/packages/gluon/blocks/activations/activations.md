@@ -17,7 +17,7 @@
 
 # Activation Blocks
 
-Deep neural networks are a way to express a nonlinear function with lots of parameters from input data to outputs. The nonlinearities that allow neural networks to capture complex patterns in data are referred to as activation functions. Over the course of the development of neural networks, several nonlinear activation functions have been introduced to make gradient-based deep learning tractable. 
+Deep neural networks are a way to express a nonlinear function with lots of parameters from input data to outputs. The nonlinearities that allow neural networks to capture complex patterns in data are referred to as activation functions. Over the course of the development of neural networks, several nonlinear activation functions have been introduced to make gradient-based deep learning tractable.
 
 If you are looking to answer the question, 'which activation function should I use for my neural network model?', you should probably go with *ReLU*. Unless you're trying to implement something like a gating mechanism, like in LSTMs or GRU cells, then you should opt for sigmoid and/or tanh in those cells. However, if you have a working model architecture and you're trying to improve its performance by swapping out activation functions or treating the activation function as a hyperparameter, then you may want to try hand-designed activations like SELU, SiLU, or GELU. This guide describes these activation functions and others implemented in MXNet in detail.
 
@@ -38,20 +38,20 @@ def visualize_activation(activation_fn):
     with mx.autograd.record():
         y = activation_fn(x)
     y.backward()
-    
+
     plt.figure()
     plt.plot(data, y.asnumpy())
     plt.plot(data, x.grad.asnumpy())
     activation = activation_fn.name[:-1]
     plt.legend(["{} activation".format(activation), "{} gradient".format(activation)])
-    
+
 ```
 
 ## Sigmoids
 
 ### Sigmoid
 
-The sigmoid activation function, also known as the logistic function or logit function, is perhaps the most widely known activation owing to its [long history](https://web.stanford.edu/class/psych209a/ReadingsByDate/02_06/PDPVolIChapter8.pdf) in neural network training and appearance in logistic regression and kernel methods for classification. 
+The sigmoid activation function, also known as the logistic function or logit function, is perhaps the most widely known activation owing to its [long history](https://web.stanford.edu/class/psych209a/ReadingsByDate/02_06/PDPVolIChapter8.pdf) in neural network training and appearance in logistic regression and kernel methods for classification.
 
 The sigmoid activation is a non-linear function that transforms any real valued input to a value between 0 and 1, giving it a natural probabilistic interpretation. The sigmoid takes the form of the function below.
 
@@ -67,17 +67,17 @@ visualize_activation(mx.gluon.nn.Activation('sigmoid'))
 ```
 
 
-![sigmoid activation and gradient](images/sigmoid.png)
+![sigmoid activation and gradient](/_static/sigmoid.png)
 
 
-The sigmoid activation has since fallen out of use as the preferred activation function in designing neural networks due to some of its properties, shown in the plot above, like not being zero-centered and inducing vanishing gradients, that leads to poor performance during neural network training. Vanishing gradients here refers to the tendency of the gradient of the sigmoid function to be nearly zero for most input values. 
+The sigmoid activation has since fallen out of use as the preferred activation function in designing neural networks due to some of its properties, shown in the plot above, like not being zero-centered and inducing vanishing gradients, that leads to poor performance during neural network training. Vanishing gradients here refers to the tendency of the gradient of the sigmoid function to be nearly zero for most input values.
 
 ### tanh
 The tanh, or hyperbolic tangent, activation function is also an s shaped curve albeit one whose output values range from -1 to 1. It is defined by the mathematical equation:
 
-$$ tanh(x) = \dfrac{e^x - e^{-x}}{e^x + e^{-x}}$$ 
+$$ tanh(x) = \dfrac{e^x - e^{-x}}{e^x + e^{-x}}$$
 
-tanh addresses the issues of not being zero centered associated with the sigmoid activation function but still retains the vanishing gradient problems due to the gradient being asymptotically zero for values outside a narrow range of inputs. 
+tanh addresses the issues of not being zero centered associated with the sigmoid activation function but still retains the vanishing gradient problems due to the gradient being asymptotically zero for values outside a narrow range of inputs.
 
 In fact, the tanh can be rewritten as,
 
@@ -95,7 +95,7 @@ visualize_activation(mx.gluon.nn.Activation('tanh'))
 ```
 
 
-![tanh activation and gradient](images/tanh.png)
+![tanh activation and gradient](/_static/tanh.png)
 
 
 The use of tanh as activation functions in place of the logistic function was popularized by the success of the [LeNet architecture](http://yann.lecun.com/exdb/publis/pdf/lecun-01a.pdf) and the [methods paper](http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf) by LeCun et al.
@@ -112,7 +112,7 @@ visualize_activation(mx.gluon.nn.Activation('softsign'))
 ```
 
 
-![softsign activation and gradient](images/softsign.png)
+![softsign activation and gradient](/_static/softsign.png)
 
 
 The softsign function is not a commonly used activation with most neural networks and still suffers from the vanishing gradient problem as seen in the graph above.
@@ -134,7 +134,7 @@ visualize_activation(mx.gluon.nn.Activation('relu'))
 ```
 
 
-![relu activation and gradient](images/relu.png)
+![relu activation and gradient](/_static/relu.png)
 
 
 As shown above, the ReLU activation mitigates the vanishing gradient problem associated with the sigmoid family of activations, by having a larger (infinite) range of values where its gradient is non-zero. However, one drawback of ReLU as an activation function is a phenomenon referred to as the 'Dying ReLU', where gradient-based parameter updates can happen in such a way that the gradient flowing through a ReLU unit is always zero and the connection is never activated. This can largely be addressed by ensuring that the tuning the learning rate to ensure that it's not set too large when training ReLU networks.
@@ -153,7 +153,7 @@ visualize_activation(mx.gluon.nn.Activation('softrelu'))
 ```
 
 
-![softrelu activation and gradient](images/softrelu.png)
+![softrelu activation and gradient](/_static/softrelu.png)
 
 
 ### Leaky ReLU
@@ -163,7 +163,7 @@ Leaky ReLUs are a variant of ReLU that multiply the input by a small positive pa
 $$ LeakyReLU(\alpha, x) = \begin{cases}
     x,& \text{if } x\geq 0\\
     \alpha x,              & \text{otherwise}
-\end{cases}$$ 
+\end{cases}$$
 
 where $\alpha > 0$ is small positive number. In MXNet, by default the $\alpha$ parameter is set to 0.01.
 
@@ -175,7 +175,7 @@ visualize_activation(mx.gluon.nn.LeakyReLU(0.05))
 ```
 
 
-![leakyrelu activation and gradient](images/leakyrelu.png)
+![leakyrelu activation and gradient](/_static/leakyrelu.png)
 
 
 As shown in the graph, the LeakyReLU's gradient is non-zero everywhere, in an attempt to address the ReLU's gradient being zero for all negative values.
@@ -191,14 +191,14 @@ visualize_activation(prelu)
 ```
 
 
-![prelu activation and gradient](images/prelu.png)
+![prelu activation and gradient](/_static/prelu.png)
 
 
 The activation function and activation gradient of PReLU have the same shape as LeakyRELU.
 
 ### ELU
 
-The ELU or exponential linear unit introduced by [Clevert et al](https://arxiv.org/abs/1511.07289) also addresses the vanishing gradient problem like ReLU and its variants but unlike the ReLU family, ELU allows negative values which may allow them to push mean unit activations closer to zero like batch normalization. 
+The ELU or exponential linear unit introduced by [Clevert et al](https://arxiv.org/abs/1511.07289) also addresses the vanishing gradient problem like ReLU and its variants but unlike the ReLU family, ELU allows negative values which may allow them to push mean unit activations closer to zero like batch normalization.
 
 The ELU function has the form
 
@@ -213,7 +213,7 @@ visualize_activation(mx.gluon.nn.ELU())
 ```
 
 
-![elu activation and gradient](images/elu.png)
+![elu activation and gradient](/_static/elu.png)
 
 
 ### SELU
@@ -234,7 +234,7 @@ visualize_activation(mx.gluon.nn.SELU())
 ```
 
 
-![selu activation and gradient](images/selu.png)
+![selu activation and gradient](/_static/selu.png)
 
 
 ### SiLU
@@ -252,7 +252,7 @@ visualize_activation(mx.gluon.nn.SiLU())
 ```
 
 
-![silu activation and gradient](images/silu.png)
+![silu activation and gradient](/_static/silu.png)
 
 ### GELU
 The GELU is a smooth approximation to the ReLU and was introduced in [Hendrycks et al](https://arxiv.org/abs/1606.08415). It is a common activation function in architectures such as Transformers, BERT, and GPT.
@@ -270,7 +270,7 @@ Note $\Phi(x) = \frac{1}{\sqrt{2 \pi}} \exp\left\{-\frac{x^2}{2}\right\}$ is the
 visualize_activation(mx.gluon.nn.GELU())
 ```
 
-![gelu activation and gradient](images/gelu.png)
+![gelu activation and gradient](/_static/gelu.png)
 
 ## Summary
 
@@ -286,7 +286,7 @@ visualize_activation(mx.gluon.nn.GELU())
 ## Next Steps
 
 Activations are just one component of neural network architectures. Here are a few MXNet resources to learn more about activation functions and how they they combine with other components of neural nets.
-* Learn how to create a Neural Network with these activation layers and other neural network layers in the [gluon crash course](/api/python/docs/tutorials/getting-started/crash-course/index.html).
-* Check out the guide to MXNet [gluon layers and blocks](/api/python/docs/tutorials/packages/gluon/blocks/nn.html) to learn about the other neural network layers in implemented in MXNet and how to create custom neural networks with these layers.
-* Also check out the [guide to normalization layers](/api/python/docs/tutorials/packages/gluon/training/normalization/index.html) to learn about neural network layers that normalize their inputs.
-* Finally take a look at the [Custom Layer guide](/api/python/docs/tutorials/extend/custom_layer.html) to learn how to implement your own custom activation layer.
+* Learn how to create a Neural Network with these activation layers and other neural network layers in the [Gluon crash course](../../../../getting-started/crash-course/index.ipynb).
+* Check out the guide to MXNet [gluon layers and blocks](../nn.ipynb) to learn about the other neural network layers in implemented in MXNet and how to create custom neural networks with these layers.
+* Also check out the [guide to normalization layers](../../training/normalization/index.ipynb) to learn about neural network layers that normalize their inputs.
+* Finally take a look at the [Custom Layer guide](../custom-layer.ipynb) to learn how to implement your own custom activation layer.

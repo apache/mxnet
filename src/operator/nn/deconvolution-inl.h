@@ -454,7 +454,7 @@ class DeconvolutionOp {
  private:
   inline index_t InitTemp(const mshadow::Shape<4> &ishape,
                           const mshadow::Shape<4> &oshape) {
-    const int ksize = param_.kernel.Size();
+    const index_t ksize = param_.kernel.Size();
     shape_colunit_ = mshadow::Shape2(ishape[1] * ksize,
                                      oshape[2] * oshape[3]);
     shape_dstunit_ = mshadow::Shape3(param_.num_group,

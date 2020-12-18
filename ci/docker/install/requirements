@@ -51,6 +51,4 @@ decorator==4.4.0
 # Used in examples
 boto3==1.9.229
 h5py==2.10.0
-# TODO(szha): remove once clean-up for py2 is complete
-six==1.11.0
 Pillow<6

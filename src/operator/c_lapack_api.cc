@@ -19,7 +19,7 @@
 
 #include "c_lapack_api.h"
 
-#if (MSHADOW_USE_MKL && MXNET_USE_LAPACK)
+#if (MXNET_USE_LAPACK && (MSHADOW_USE_MKL || MXNET_USE_LAPACKE_INTERFACE))
 #elif MXNET_USE_LAPACK
 #else
   // use pragma message instead of warning

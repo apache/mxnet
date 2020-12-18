@@ -21,7 +21,7 @@
 [Open Neural Network Exchange (ONNX)](https://github.com/onnx/onnx) provides an open source format for AI models. It defines an extensible computation graph model, as well as definitions of built-in operators and standard data types.
 
 In this tutorial we will:
-    
+
 - learn how to load a pre-trained .onnx model file into MXNet/Gluon
 - learn how to test this model using the sample input/output
 - learn how to test the model on custom images
@@ -29,7 +29,7 @@ In this tutorial we will:
 ## Pre-requisite
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet > 1.1.0](/get_started)
+- [MXNet > 1.1.0](https://mxnet.apache.org/get_started)
 - [onnx](https://github.com/onnx/onnx) (follow the install guide)
 - matplotlib
 
@@ -63,7 +63,7 @@ for image in images:
 mx.test_utils.download(base_url.format(utils_file), fname=utils_file)
 mx.test_utils.download(base_url.format(image_net_labels_file), fname=image_net_labels_file)
 
-from utils import * 
+from utils import *
 ```
 
 ## Downloading a model from the ONNX model zoo
@@ -72,7 +72,7 @@ We download a pre-trained model, in our case the [GoogleNet](https://arxiv.org/a
 
 
 ```{.python .input}
-base_url = "https://s3.amazonaws.com/download.onnx/models/opset_3/" 
+base_url = "https://s3.amazonaws.com/download.onnx/models/opset_3/"
 current_model = "bvlc_googlenet"
 model_folder = "model"
 archive = "{}.tar.gz".format(current_model)
@@ -121,7 +121,7 @@ We pick a context, CPU is fine for inference, switch to mx.gpu() if you want to 
 ctx = mx.cpu()
 ```
 
-We obtain the data names of the inputs to the model by using the model metadata API: 
+We obtain the data names of the inputs to the model by using the model metadata API:
 
 ```{.python .input}
 model_metadata = onnx_mxnet.get_model_metadata(onnx_path)
@@ -138,10 +138,7 @@ data_names = [inputs[0] for inputs in model_metadata.get('input_tensor_data')]
 print(data_names)
 ```
 
-
-```[u'data_0']```<!--notebook-skip-line-->
-
-And load them into a MXNet Gluon symbol block. 
+And load them into a MXNet Gluon symbol block.
 
 ```{.python .input}
 import warnings
@@ -173,7 +170,7 @@ mx.visualization.plot_network(sym,  node_attrs={"shape":"oval","fixedsize":"fals
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/network2.png?raw=true)<!--notebook-skip-line-->
+![network2](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/network2.png?raw=true)<!--notebook-skip-line-->
 
 
 
@@ -228,7 +225,7 @@ plot_predictions(image_net_images, result[:3], categories, TOP_P)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/imagenet.png?raw=true)<!--notebook-skip-line-->
+![imagenet](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/imagenet.png?raw=true)<!--notebook-skip-line-->
 
 
 **Well done!** Looks like it is doing a pretty good job at classifying pictures when the category is a ImageNet label
@@ -252,5 +249,5 @@ We show that in our next tutorial:
 
 
 - [Fine-tuning an ONNX Model using the modern imperative MXNet/Gluon](http://mxnet.apache.org/tutorials/onnx/fine_tuning_gluon.html)
-    
+
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

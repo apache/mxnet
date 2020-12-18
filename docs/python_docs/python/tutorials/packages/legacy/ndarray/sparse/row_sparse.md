@@ -95,13 +95,13 @@ In this tutorial, we will describe what the row sparse format is and how to use 
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](/get_started)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.apache.org/get_started)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
     ```
-- Basic knowledge of NDArray in MXNet. See the detailed tutorial for NDArray in [NDArray - Imperative tensor operations on CPU/GPU](https://mxnet.apache.org/tutorials/basic/ndarray.html)
-- Understanding of [automatic differentiation with autograd](http://gluon.mxnet.io/chapter01_crashcourse/autograd.html)
+- Basic knowledge of NDArray in MXNet. See the detailed tutorial for NDArray in [NDArray - Imperative tensor operations on CPU/GPU](../01-ndarray-intro.rst)
+- Understanding of [automatic differentiation with autograd](../../../autograd/index.ipynb)
 - GPUs - A section of this tutorial uses GPUs. If you don't have GPUs on your
 machine, simply set the variable `gpu_device` (set in the GPUs section of this
 tutorial) to `mx.cpu()`
@@ -554,8 +554,8 @@ sgd.update(0, weight, grad, momentum)
 ```
 
 
-Note that only [mxnet.optimizer.SGD](https://mxnet.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD), [mxnet.optimizer.Adam](https://mxnet.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam), and
-[mxnet.optimizer.AdaGrad](https://mxnet.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.AdaGrad) support sparse updates in MXNet.
+Note that only [mxnet.optimizer.SGD](../../../../../api/optimizer/index.rst#mxnet.optimizer.SGD), [mxnet.optimizer.Adam](../../../../../api/optimizer/index.rst#mxnet.optimizer.Adam), and
+[mxnet.optimizer.AdaGrad](../../../../../api/optimizer/index.rst#mxnet.optimizer.AdaGrad) support sparse updates in MXNet.
 
 ## Advanced Topics
 
@@ -578,7 +578,7 @@ except mx.MXNetError as err:
 
 ## Next
 
-[Train a Linear Regression Model with Sparse Symbols](/api/python/docs/tutorials/packages/ndarray/sparse/train.html)
+[Train a Linear Regression Model with Gluon Sparse](./train_gluon.ipynb)
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

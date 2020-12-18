@@ -315,7 +315,8 @@ size_t npy_header_blob_read_callback(void *pOpaque, mz_uint64 file_ofs, void *pB
         std::memcpy(pBuf_blob, blob->dptr_, n - npy_header_n);
     } else {
         // Read n bytes from blob
-        const void* pSrc = static_cast<const void*>(static_cast<char*>(blob->dptr_) + file_ofs);
+        const void* pSrc = static_cast<const void*>(
+            static_cast<char*>(blob->dptr_) + file_ofs - npy_header->size());
         std::memcpy(pBuf, pSrc, n);
     }
     return n;

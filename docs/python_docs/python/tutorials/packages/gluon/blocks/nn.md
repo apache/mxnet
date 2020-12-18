@@ -39,7 +39,7 @@ follows:
 ```{.python .input  n=1}
 import mxnet as mx
 from mxnet import nd
-from mxnet.gluon import nn
+from mxnet.gluon import nn, Block
 
 
 x = nd.random.uniform(shape=(2, 20))
@@ -53,7 +53,7 @@ net(x)
 
 This generates a network with a hidden layer of $256$ units, followed by a ReLU
 activation and another $10$ units governing the output. In particular, we used
-the [nn.Sequential](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Sequential)
+the [nn.Sequential](../../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Sequential)
 constructor to generate an empty network into which we then inserted both
 layers. What exactly happens inside `nn.Sequential`
 has remained rather mysterious so far. In the following we will see that this
@@ -61,7 +61,7 @@ really just constructs a block that is a container for other blocks. These
 blocks can be combined into larger artifacts, often recursively. The diagram
 below shows how:
 
-![Blocks can be used recursively to form larger artifacts](blocks.svg)
+![Blocks can be used recursively to form larger artifacts](/_static/blocks.svg)
 
 In the following we will explain the various steps needed to go from defining
 layers to defining blocks (of one or more layers):
@@ -82,11 +82,11 @@ layers to defining blocks (of one or more layers):
 
 ## A Sequential Block
 
-The [Block](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block) class is a generic component
-describing data flow. When the data flows through a sequence of blocks, each
-block applied to the output of the one before with the first block being
-applied on the input data itself, we have a special kind of block, namely the
-`Sequential` block.
+The [Block](../../../../api/gluon/block.rst#mxnet.gluon.Block) class is a
+generic component describing data flow. When the data flows through a sequence
+of blocks, each block applied to the output of the one before with the first
+block being applied on the input data itself, we have a special kind of block,
+namely the `Sequential` block.
 
 `Sequential` has helper methods to manage the sequence, with `add` being the
 main one of interest allowing you to append blocks in sequence. Once the
@@ -96,7 +96,7 @@ blocks on the input data in the order they were added.  Below, we implement a
 This may help you understand more clearly how the `Sequential` class works.
 
 ```{.python .input  n=3}
-class MySequential(nn.Block):
+class MySequential(Block):
     def __init__(self, **kwargs):
         super(MySequential, self).__init__(**kwargs)
 
@@ -173,8 +173,10 @@ initializes all of the Block-related parameters and then constructs the
 requisite layers. This attaches the coresponding layers and the required
 parameters to the class. Note that there is no need to define a backpropagation
 method in the class. The system automatically generates the `backward` method
-needed for back propagation by automatically finding the gradient (see the tutorial on [autograd](/api/python/docs/tutorials/packages/autograd/index.html)). The same
-applies to the [initialize](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block.initialize) method, which is generated automatically. Let's try
+needed for back propagation by automatically finding the gradient (see the tutorial
+on [autograd](../../autograd/index.ipynb)). The same applies to the
+[initialize](../../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Block.initialize)
+method, which is generated automatically. Let's try
 this out:
 
 ```{.python .input  n=2}
@@ -194,10 +196,10 @@ great flexibility.
 ## Coding with `Blocks`
 
 ### Blocks
-The [Sequential](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Sequential) class
+The [Sequential](../../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Sequential) class
 can make model construction easier and does not require you to define the
 `forward` method; however, directly inheriting from
-its parent class, [Block](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block), can greatly
+its parent class, [Block](../../../../api/gluon/block.rst#mxnet.gluon.Block), can greatly
 expand the flexibility of model construction. For example, implementing the
 `forward` method means you can introduce control flow in the network.
 
@@ -307,8 +309,8 @@ manifest in the form of GPU starvation when the CPUs can not provide
 instruction fast enough. We can improve this situation by deferring to a more
 performant language instead of Python when possible.
 
-Gluon does this by allowing for [Hybridization](hybridize.html). In it, the
+Gluon does this by allowing for [Hybridization](hybridize.ipynb). In it, the
 Python interpreter executes the block the first time it's invoked. The Gluon
 runtime records what is happening and the next time around it short circuits
 any calls to Python. This can accelerate things considerably in some cases but
-care needs to be taken with [control flow](/api/python/docs/tutorials/packages/autograd/index.html#Advanced:-Using-Python-control-flow).
+care needs to be taken with [control flow](../../autograd/index.ipynb#Advanced:-Using-Python-control-flow).
