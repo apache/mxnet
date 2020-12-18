@@ -853,7 +853,11 @@ def convert_softmax(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     axis = int(attrs.get("axis", -1))
-    temperature = float(attrs.get("temperature", 1.0))
+    temperature = attrs.get("temperature", None)
+    if not temperature:
+        temperature = 1.0
+    else:
+        temperature = float(temperature)
     use_length = attrs.get("use_length", None)
     input_type = kwargs["in_type"]
     data = input_nodes[0]
