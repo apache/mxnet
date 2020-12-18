@@ -71,9 +71,13 @@ def test_onnx_export_abs(tmp_path):
     op_export_test('abs', M, [x], tmp_path)
 
 
-def test_onnx_export_slice(tmp_path):
-    M = def_model('slice', begin=(0,1), end=(2,4))
-    x = mx.nd.array([[1,2,3,4],[5,6,7,8],[9,10,11,12]], dtype='float32')
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'float16', 'int32', 'int64'])
+@pytest.mark.parametrize('params', [[(0, 1), (2,3), (1, 1)],
+                                    [(None, 1), (2, None), None],
+                                    [(0, 0, 0), (None, 4, 5), (None, 1, 2)]])
+def test_onnx_export_slice(tmp_path, dtype, params):
+    M = def_model('slice', begin=params[0], end=params[1], step=params[2])
+    x = mx.nd.arange(start=0, stop=60, dtype=dtype).reshape((3, 4, 5))
     op_export_test('slice', M, [x], tmp_path)
 
 
