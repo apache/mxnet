@@ -304,7 +304,8 @@ def test_onnx_export_cast(tmp_path, src_dtype, dst_dtype, shape):
     x = mx.nd.ones(shape, dtype=src_dtype)
     op_export_test('Cast', M, [x], tmp_path)
 
-@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
 def test_onnx_export_softmax(tmp_path, dtype):
     x = mx.nd.random.uniform(0, 1, (2, 3, 4), dtype=dtype)
     M1 = def_model('softmax')
