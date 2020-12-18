@@ -124,6 +124,7 @@ def test_onnx_export_broadcast_axis(tmp_path, dtype):
     op_export_test('broadcast_axis_3', M3, [x2], tmp_path)
 
 
+#TODO: onnxruntime does not support float64 for Where
 @pytest.mark.parametrize('dtype', ['float32'])
 def test_onnx_export_SequenceMask(tmp_path, dtype):
     M1 = def_model('SequenceMask', use_sequence_length=True, axis=1, value=-5)
@@ -205,6 +206,45 @@ def test_onnx_export_fully_connected(tmp_path, dtype, num_hidden, no_bias, flatt
     if not no_bias:
         args.append(mx.nd.random.uniform(0,1,(num_hidden,)))
     op_export_test('FullyConnected', M, args, tmp_path)
+
+
+#TODO: onnxruntime does not support float64 for the relu opertors
+@pytest.mark.parametrize('dtype', ['float32', 'float16'])
+@pytest.mark.parametrize('shape', [(1,), (3,), (4, 5), (3, 4, 5)])
+@pytest.mark.parametrize('act_type', ['elu', 'leaky', 'prelu', 'selu', 'gelu'])
+def test_onnx_export_LeakyReLU(tmp_path, dtype, shape, act_type):
+    M = def_model('LeakyReLU', act_type='leaky')
+    x = mx.nd.random.uniform(-0.5, 0.5, shape=shape, dtype=dtype)
+    op_export_test('LeakyReLU', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'float16', 'int32', 'int64'])
+def test_onnx_export_Concat(tmp_path, dtype):
+    x = mx.nd.array([[1,1],[2,2]], dtype=dtype)
+    y = mx.nd.array([[3,3],[4,4],[5,5]], dtype=dtype)
+    z = mx.nd.array([[6,6],[7,7],[8,8]], dtype=dtype)
+    M1 = def_model('Concat', dim=0)
+    M2 = def_model('Concat', dim=1)
+    op_export_test('Concat_1', M1, [x, y, z], tmp_path)
+    op_export_test('Concat_2', M2, [y, z], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'float16'])
+@pytest.mark.parametrize('shape', [(1,), (3,), (4, 5), (3, 4, 5)])
+def test_onnx_export_elemwise_add(tmp_path, dtype, shape):
+    M = def_model('elemwise_add')
+    x = mx.nd.random.uniform(-0.5, 0.5, shape=shape, dtype=dtype)
+    y = mx.nd.random.uniform(-0.5, 0.5, shape=shape, dtype=dtype)
+    op_export_test('elmwise_add', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float16'])
+@pytest.mark.parametrize('shape', [(1,), (3,), (4, 5), (3, 4, 5)])
+@pytest.mark.parametrize('act_type', ['tanh', 'relu', 'sigmoid', 'softrelu', 'softsign'])
+def test_onnx_export_Activation(tmp_path, dtype, shape, act_type):
+    M = def_model('Activation', act_type=act_type)
+    x = mx.nd.random.uniform(-0.5, 0.5, shape=shape, dtype=dtype)
+    op_export_test('Activation', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
