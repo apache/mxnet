@@ -2566,10 +2566,10 @@ def convert_slice(node, **kwargs):
 
     starts = convert_string_to_list(attrs.get('begin'))
     ends = convert_string_to_list(attrs.get('end'))
-    steps = convert_string_to_list(attrs.get('step','[]'))
+    steps = convert_string_to_list(attrs.get('step', '[]'))
 
     assert len(starts) == len(ends)
-    if len(steps) == 0 or (len(steps) == 1 and steps[0] == None):
+    if len(steps) == 0 or (len(steps) == 1 and steps[0] is None):
         steps = [1 for x in starts]
     else:
         assert len(steps) == len(starts)
