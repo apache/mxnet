@@ -855,7 +855,7 @@ def convert_softmax(node, **kwargs):
     axis = int(attrs.get("axis", -1))
     temperature = attrs.get("temperature", None)
     if temperature and float(temperature) != 1.0:
-        raise NotImplementedError("Temperature are not implemented.")
+        raise NotImplementedError("Temperature is not supported for now.")
     use_length = attrs.get("use_length", None)
     input_type = kwargs["in_type"]
     data = input_nodes[0]
