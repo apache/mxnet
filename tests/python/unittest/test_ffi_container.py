@@ -19,8 +19,9 @@ import mxnet
 import numpy as _np
 from mxnet import np, npx, _api_internal
 from mxnet.ndarray import NDArray
-npx.set_np()
+from mxnet.test_utils import use_np
 
+@use_np
 def test_str_map():
     amap = mxnet._ffi.convert_to_node({"a": 2, "b": 3})
     assert "a" in amap
@@ -31,6 +32,7 @@ def test_str_map():
     assert "a" in dd
     assert "b" in dd
 
+@use_np
 def test_string():
     x = mxnet.container.String("xyz")
     assert isinstance(x, mxnet.container.String)
@@ -42,6 +44,7 @@ def test_string():
     assert x.__mxnet_object__.same_as(y.__mxnet_object__)
     assert x == y
 
+@use_np
 def test_string_adt():
     s = mxnet.container.String("xyz")
     arr = mxnet._ffi.convert_to_node([s, s])
