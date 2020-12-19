@@ -327,26 +327,50 @@ def convert_fully_connected(node, **kwargs):
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
+
     input_type = kwargs['in_type']
     dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
-    flatten = get_boolean_attribute_value(attrs, "flatten")
-    no_bias = get_boolean_attribute_value(attrs, "no_bias")
+    flatten = get_boolean_attribute_value(attrs, 'flatten')
+    no_bias = get_boolean_attribute_value(attrs, 'no_bias')
+    num_hidden = int(attrs.get('num_hidden'))
+
     nodes = []
     if flatten:
-        nodes.append(make_node("Flatten", [input_nodes[0]], [name+"_flatten0_out"]))
-        in_nodes = [name+"_flatten0_out", input_nodes[1]]
+        nodes += [
+            make_node('Flatten', [input_nodes[0]], [name+'_data_flattened'])
+            ]
     else:
-        in_nodes = [input_nodes[0], input_nodes[1]]
+        nodes += [
+            make_node('Shape', [input_nodes[0]], [name+'_orig_shape']),
+            make_node('Shape', [name+'_orig_shape'], [name+'_dim']),
+            make_node('Flatten', [input_nodes[0]], [name+'_data_flattened'], axis=-1),
+            ]
+
+    in_nodes = [name+'_data_flattened', input_nodes[1]]
 
     if no_bias:
-        nodes.append(create_const_scalar_node(name+"_bias", np.array([0], dtype=dtype), kwargs))
-        in_nodes.append(name+"_bias")
+        nodes.append(create_const_scalar_node(name+'_bias', np.array([0], dtype=dtype), kwargs))
+        in_nodes.append(name+'_bias')
     else:
         in_nodes.append(input_nodes[2])
 
-    nodes.append(
-        make_node("Gemm", in_nodes, [name], alpha=1.0, beta=1.0, transA=0, transB=1, name=name)
-    )
+    if flatten:
+        nodes += [
+            make_node('Gemm', in_nodes, [name], alpha=1.0, beta=1.0, transA=0, transB=1, name=name)
+            ]
+    else:
+        nodes += [
+            make_node('Gemm', in_nodes, [name+'_gemm'], alpha=1.0, beta=1.0, transA=0, transB=1),
+            create_tensor([0], name+'_0', kwargs['initializer']),
+            create_tensor([1], name+'_1', kwargs['initializer']),
+            create_tensor([num_hidden], name+'_num_hidden', kwargs['initializer']),
+            make_node('Sub', [name+'_dim', name+'_1'], [name+'dim_minus_1']),
+            make_node('Slice', [name+'_orig_shape', name+'_0', name+'dim_minus_1'],
+                      [name+'_shape_sliced']),
+            make_node('Concat', [name+'_shape_sliced', name+'_num_hidden'],
+                      [name+'_shape_new'], axis=0),
+            make_node('Reshape', [name+'_gemm', name+'_shape_new'], [name], name=name)
+            ]
 
     return nodes
 

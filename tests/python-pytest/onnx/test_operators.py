@@ -199,13 +199,16 @@ def test_onnx_export_embedding(tmp_path, dtype):
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
-@pytest.mark.parametrize('num_hidden', [1, 5, 10, 20])
-@pytest.mark.parametrize('no_bias', [False, True])
+@pytest.mark.parametrize('num_hidden', [1, 2, 7, 10, 20])
+@pytest.mark.parametrize('no_bias', [True, False])
 @pytest.mark.parametrize('flatten', [True, False])
 def test_onnx_export_fully_connected(tmp_path, dtype, num_hidden, no_bias, flatten):
     M = def_model('FullyConnected', num_hidden=num_hidden, no_bias=no_bias, flatten=flatten)
-    x = mx.nd.random.uniform(-0.5, 0.5, (5, 325))
-    weight = mx.nd.random.uniform(0, 1, (num_hidden, 325))
+    x = mx.nd.random.uniform(-0.5, 0.5, (3, 4, 5))
+    if (flatten):
+        weight = mx.nd.random.uniform(0, 1, (num_hidden, 4*5))
+    else:
+        weight = mx.nd.random.uniform(0, 1, (num_hidden, 5))
     args = [x, weight]
     if not no_bias:
         args.append(mx.nd.random.uniform(0,1,(num_hidden,)))
