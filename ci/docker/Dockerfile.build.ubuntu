@@ -144,7 +144,7 @@ COPY runtime_functions.sh /work/
 ####################################################################################################
 FROM base as gpu
 
-# Install TensorRT and CuDNN
+# Install TensorRT
 # Use bash as it has better support for string comparisons in if clauses
 SHELL ["/bin/bash", "-c"]
 # We need to redeclare ARG due to
@@ -169,7 +169,5 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
                            libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \
                            libnvinfer-plugin-dev=${TRT_VERSION}; \
     fi && \
-    apt-get install -y libcudnn8-dev && \
     rm -rf /var/lib/apt/lists/*
 
-ENV CUDNN_VERSION=8.0.5
