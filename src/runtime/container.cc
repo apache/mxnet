@@ -76,7 +76,7 @@ MXNET_REGISTER_GLOBAL("container._Map")
     ObjectRef v = args[i + 1];
     data.emplace(std::move(k), std::move(v));
   }
-  *rv = Map<ObjectRef, ObjectRef>(std::move(data));
+  *rv = Map<ObjectRef, ObjectRef>(data);
 });
 
 MXNET_REGISTER_GLOBAL("container._MapSize")
