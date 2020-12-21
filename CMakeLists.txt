@@ -61,6 +61,7 @@ cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
 option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
+option(USE_MKL_LAYERNORM "Use layer normalization from MKL, which is currently slower than internal.  No effect unless USE_MKL_IF_AVAILABLE is set." OFF)
 if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
   option(USE_MKLDNN "Build with MKL-DNN support" ON)
 else()
@@ -254,6 +255,9 @@ if(USE_TENSORRT)
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
+if(USE_MKL_LAYERNORM)
+  add_definitions(-DMXNET_USE_MKL_LAYERNORM=1)
+endif()
 if(USE_MKLDNN)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(MSVC)
