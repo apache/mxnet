@@ -86,7 +86,7 @@ MXNET_REGISTER_GLOBAL("_Map")
       ObjectRef v = args[i + 1];
       data.emplace(std::move(k), std::move(v));
     }
-    *ret = Map<ObjectRef, ObjectRef>(std::move(data));
+    *ret = Map<ObjectRef, ObjectRef>(data);
 });
 
 MXNET_REGISTER_GLOBAL("_echo")
