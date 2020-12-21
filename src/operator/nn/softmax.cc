@@ -201,7 +201,8 @@ NNVM_REGISTER_OP(masked_softmax)
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output"};
   })
-.set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxCompute<cpu, mxnet_op::softmax_fwd>)
+.set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxCompute<cpu, mxnet_op::softmax_fwd,
+                                     false>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto data_grad = MakeNode("_backward_masked_softmax", n->attrs.name + "_backward_data",
