@@ -256,10 +256,10 @@ void LayerNormCompute<cpu>(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx, const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
-  if (LayerNormCPU(attrs, ctx, inputs, req, outputs)) return;
 #if MSHADOW_USE_MKL == 1 && MXNET_USE_MKL_LAYERNORM == 1
   if (LayerNormComputeMKL(attrs, ctx, inputs, req, outputs)) return;
 #endif
+  if (LayerNormCPU(attrs, ctx, inputs, req, outputs)) return;
   LayerNormComputeGeneral<cpu>(attrs, ctx, inputs, req, outputs);
 }
 
