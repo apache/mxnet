@@ -314,7 +314,7 @@ def _selu(attrs, inputs, proto_obj):
 def softmax(attrs, inputs, proto_obj):
     """Softmax function."""
     if 'axis' not in attrs:
-        attrs = translation_utils._add_extra_attributes(attrs, {'axis': 1})
+        attrs = translation_utils._add_extra_attributes(attrs, {'axis': -1})
     return 'softmax', attrs, inputs
 
 def log_softmax(attrs, inputs, proto_obj):

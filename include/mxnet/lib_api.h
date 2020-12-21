@@ -919,13 +919,13 @@ class Registry {
 #define MX_TOSTRING(x) MX_STRINGIFY(x)
 
 /*! \brief declare a variable with custom name */
-#define MX_REGISTER_NAME_(Name) MXNet ## _CustomOp ## _
+#define MX_REGISTER_NAME_(Name) MXNet ## _CustomOp ## _ ## Name
 #define MX_REGISTER_DEF_(Name) mxnet::ext::CustomOp MX_REGISTER_NAME_(Name)
 
-#define MX_REGISTER_PROP_NAME_(Name) MXNet ## _CustomSubProp ## _
+#define MX_REGISTER_PROP_NAME_(Name) MXNet ## _CustomSubProp ## _ ## Name
 #define MX_REGISTER_PROP_DEF_(Name) mxnet::ext::CustomPartitioner MX_REGISTER_PROP_NAME_(Name)
 
-#define MX_REGISTER_PASS_NAME_(Name) MXNet ## _CustomPass ## _
+#define MX_REGISTER_PASS_NAME_(Name) MXNet ## _CustomPass ## _ ## Name
 #define MX_REGISTER_PASS_DEF_(Name) mxnet::ext::CustomPass MX_REGISTER_PASS_NAME_(Name)
 
 /*! \brief assign a var to a value */
