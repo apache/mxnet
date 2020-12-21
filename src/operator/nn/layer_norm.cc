@@ -206,12 +206,60 @@ bool LayerNormCPU(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+#if MSHADOW_USE_MKL == 1 && MXNET_USE_MKL_LAYERNORM == 1
+bool LayerNormComputeMKL(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
+  if (req[0] == kNullOp) return true;
+  CHECK_NE(req[0], kAddTo);
+  CHECK_EQ(inputs.size(), 3U);
+  int axis = GetRealAxis(param.axis, inputs[0].ndim());
+
+  // This optimization only applys for LayerNorm on the last dimension with dtype FP32 or FP64.
+  if (axis == (inputs[layernorm::kData].ndim() - 1) &&
+      (inputs[0].type_flag_ == kFloat32 || inputs[0].type_flag_ == kFloat64)) {
+    // Compute necessary data for the reduce operation.
+    mxnet::TShape red_src_shape, red_dst_shape;
+    BroadcastReduceShapeCompact(inputs[layernorm::kData].shape_, outputs[layernorm::kMean].shape_,
+                                &red_src_shape, &red_dst_shape);
+    const TBlob in_data = inputs[layernorm::kData].reshape(red_src_shape);
+    const TBlob mean_data = outputs[layernorm::kMean].reshape(red_dst_shape);
+    const TBlob std_data = outputs[layernorm::kStd].reshape(red_dst_shape);
+    const int outter_size = red_dst_shape.Size();
+    const int channel_size = red_src_shape.Size() / red_dst_shape.Size();
+
+    // call
+    MSHADOW_SGL_DBL_TYPE_SWITCH(in_data.type_flag_, DType, {
+      mkl_func::LayerNormLastDim(outter_size, channel_size,
+                                 in_data.dptr<DType>(),
+                                 outputs[layernorm::kOut].dptr<DType>(),
+                                 inputs[layernorm::kGamma].dptr<DType>(),
+                                 inputs[layernorm::kBeta].dptr<DType>(),
+                                 outputs[layernorm::kMean].dptr<DType>(),
+                                 outputs[layernorm::kStd].dptr<DType>(),
+                                 static_cast<DType>(param.eps));
+    });
+    return true;
+  } else {
+    // fallback
+    return false;
+  }
+}
+#endif
+
 template<>
 void LayerNormCompute<cpu>(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx, const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   if (LayerNormCPU(attrs, ctx, inputs, req, outputs)) return;
+#if MSHADOW_USE_MKL == 1 && MXNET_USE_MKL_LAYERNORM == 1
+  if (LayerNormComputeMKL(attrs, ctx, inputs, req, outputs)) return;
+#endif
   LayerNormComputeGeneral<cpu>(attrs, ctx, inputs, req, outputs);
 }
 
