@@ -774,7 +774,7 @@ class LogisticLoss(Loss):
         super(LogisticLoss, self).__init__(weight, batch_axis, **kwargs)
         self._label_format = label_format
         if self._label_format not in ["signed", "binary"]:
-            raise ValueError("label_format can only be signed or binary, recieved %s."
+            raise ValueError("label_format can only be signed or binary, received %s."
                              % label_format)
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
