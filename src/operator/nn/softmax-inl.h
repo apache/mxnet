@@ -546,7 +546,7 @@ template<bool normalize, typename OP,  bool masked_neg_inf, bool negate, typenam
 __global__ void masked_softmax_stride1_kernel(const DType *in, DType *out, bool *in_mask,
                                               const index_t M, int axis, Shape<ndim> sshape,
                                               Shape<ndim> mask_shape,
-                                              const double temperature, 
+                                              const double temperature,
                                               const int rows_per_block,
                                               const index_t total_rows,
                                               const size_t size_input_shared,
