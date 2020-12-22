@@ -5,7 +5,8 @@ plugins {
     id 'signing'
 }
 
-group = 'org.apache'
+// group = 'org.apache'
+group = 'org.bytedeco'
 version = '2.0-SNAPSHOT'
 
 repositories {
@@ -14,19 +15,31 @@ repositories {
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
 }
 
+configurations {
+    all {
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    }
+    javacppPlatform
+    javacppPlatformGpu
+}
+
 dependencies {
     api "org.bytedeco:javacpp:$javacppVersion"
     javacppPlatform "org.bytedeco:javacpp-platform:$javacppVersion"
-    javacppPlatform "org.apache:mxnet:$version:linux-x86_64"
-    javacppPlatform "org.apache:mxnet:$version:macosx-x86_64"
-    javacppPlatform "org.apache:mxnet:$version:windows-x86_64"
+    javacppPlatform "$group:mxnet:$version:linux-x86_64"
+    javacppPlatform "$group:mxnet:$version:macosx-x86_64"
+    javacppPlatform "$group:mxnet:$version:windows-x86_64"
+    javacppPlatformGpu "$group:mxnet:$version:linux-x86_64-gpu"
+//    javacppPlatformGpu "$group:mxnet:$version:macosx-x86_64-gpu"
+    javacppPlatformGpu "$group:mxnet:$version:windows-x86_64-gpu"
     testRuntimeOnly "org.bytedeco:javacpp:$javacppVersion:$javacppPlatform"
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.1'
 }
 
 tasks.withType(org.bytedeco.gradle.javacpp.BuildTask) {
-    includePath = ["$buildDir/$javacppPlatform/include"]
-    linkPath = ["$buildDir/$javacppPlatform/lib"]
+    includePath = ["$buildDir/$javacppPlatform$javacppPlatformExtension/include"]
+    linkPath = ["$buildDir/$javacppPlatform$javacppPlatformExtension/lib"]
+    preloadPath = ["$buildDir/$javacppPlatform$javacppPlatformExtension/bin"]
 }
 
 javacppBuildCommand {
@@ -104,7 +117,9 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
-            artifacts = [jar, javacppJar, javadocJar, sourcesJar] + javacppBuild.existingArtifacts(configurations.javacppPlatform)
+            artifacts = [jar, javacppJar, javadocJar, sourcesJar] +
+                        javacppBuild.existingArtifacts(configurations.javacppPlatform) +
+                        javacppBuild.existingArtifacts(configurations.javacppPlatformGpu)
             pom pomClosure
         }
         mavenJavacppPlatform(MavenPublication) {
@@ -113,6 +128,13 @@ publishing {
             artifacts = [javacppPlatformJar, javacppPlatformJavadocJar, javacppPlatformSourcesJar]
             pom pomClosure
             pom.withXml javacppBuild.xmlAction(configurations.javacppPlatform)
+        }
+        mavenJavacppPlatformGpu(MavenPublication) {
+            groupId project.group
+            artifactId project.name + "-platform-gpu"
+            artifacts = [javacppPlatformJar, javacppPlatformJavadocJar, javacppPlatformSourcesJar]
+            pom pomClosure
+            pom.withXml javacppBuild.xmlAction(configurations.javacppPlatformGpu, "-gpu")
         }
     }
     repositories {
@@ -133,5 +155,6 @@ signing {
     if (!version.endsWith('SNAPSHOT')) {
         sign publishing.publications.mavenJava
         sign publishing.publications.mavenJavacppPlatform
+        sign publishing.publications.mavenJavacppPlatformGpu
     }
 }
