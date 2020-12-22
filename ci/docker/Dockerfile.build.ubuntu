@@ -56,6 +56,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         clang-10 \
         clang-tidy-10 \
         g++ \
+        g++-7 \
         g++-8 \
         intel-mkl-2020.0-088 \
         libomp-dev \
