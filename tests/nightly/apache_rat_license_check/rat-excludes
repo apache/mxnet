@@ -13,6 +13,9 @@ target/*
 site/*
 xml/*
 
+# License files
+licenses/*
+
 # Separate licenses, refer to LICENSE in each folder or header
 
 # Sphinx themes
