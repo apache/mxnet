@@ -1264,10 +1264,10 @@ build_static_libmxnet() {
 # Tests CD PyPI packaging in CI
 ci_package_pypi() {
     set -ex
-    # copies mkldnn header files to 3rdparty/mkldnn/include/ as in CD
-    mkdir -p 3rdparty/mkldnn/include
-    cp include/mkldnn/dnnl_version.h 3rdparty/mkldnn/include/.
-    cp include/mkldnn/dnnl_config.h 3rdparty/mkldnn/include/.
+    # copies mkldnn header files to 3rdparty/mkldnn/include/oneapi/dnnl/ as in CD
+    mkdir -p 3rdparty/mkldnn/include/oneapi/dnnl
+    cp include/mkldnn/oneapi/dnnl/dnnl_version.h 3rdparty/mkldnn/include/oneapi/dnnl/.
+    cp include/mkldnn/oneapi/dnnl/dnnl_config.h 3rdparty/mkldnn/include/oneapi/dnnl/.
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     cd_package_pypi ${mxnet_variant}
     cd_integration_test_pypi
