@@ -20,6 +20,7 @@ import numpy as np
 import onnxruntime
 
 from mxnet.test_utils import assert_almost_equal
+from common import with_seed
 
 import json
 import os
@@ -45,6 +46,7 @@ test_models = [
     'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn'
 ]
 
+@with_seed()
 @pytest.mark.parametrize('model', test_models)
 def test_cv_model_inference_onnxruntime(tmp_path, model):
     def get_gluon_cv_model(model_name, tmp):
@@ -123,6 +125,7 @@ def test_cv_model_inference_onnxruntime(tmp_path, model):
         shutil.rmtree(tmp_path)
 
 
+@with_seed()
 @pytest.mark.parametrize('model', ['bert_12_768_12'])
 def test_bert_inference_onnxruntime(tmp_path, model):
     tmp_path = str(tmp_path)
