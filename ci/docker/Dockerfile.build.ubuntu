@@ -45,7 +45,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         unzip \
         pandoc \
         ## Development tools
-        cmake \
         build-essential \
         ninja-build \
         git \
