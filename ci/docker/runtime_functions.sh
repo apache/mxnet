@@ -991,6 +991,7 @@ unittest_ubuntu_python3_arm() {
 #Runs Apache RAT Check on MXNet Source for License Headers
 test_rat_check() {
     set -e
+    set -o pipefail
     pushd .
 
     cd /usr/local/src/apache-rat-0.13
