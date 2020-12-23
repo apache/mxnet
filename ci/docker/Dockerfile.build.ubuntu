@@ -45,7 +45,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         unzip \
         pandoc \
         ## Development tools
-        cmake \
         build-essential \
         ninja-build \
         git \
@@ -56,6 +55,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         clang-10 \
         clang-tidy-10 \
         g++ \
+        g++-7 \
         g++-8 \
         intel-mkl-2020.0-088 \
         libomp-dev \

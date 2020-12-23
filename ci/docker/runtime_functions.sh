@@ -314,7 +314,7 @@ build_ubuntu_cpu() {
 build_ubuntu_cpu_openblas() {
     set -ex
     cd /work/build
-    CXXFLAGS="-Wno-error=strict-overflow" cmake \
+    CXXFLAGS="-Wno-error=strict-overflow" CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_TVM_OP=ON \
@@ -331,7 +331,7 @@ build_ubuntu_cpu_openblas() {
 build_ubuntu_cpu_mkl() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=OFF \
         -DUSE_MKLDNN=OFF \
@@ -347,7 +347,7 @@ build_ubuntu_cpu_mkl() {
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE=Debug \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
@@ -364,7 +364,7 @@ build_ubuntu_cpu_cmake_debug() {
 build_ubuntu_cpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -509,7 +509,7 @@ build_ubuntu_cpu_clang100_mkldnn() {
 build_ubuntu_cpu_mkldnn() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -524,7 +524,7 @@ build_ubuntu_cpu_mkldnn() {
 build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=OFF \
         -DUSE_MKLDNN=ON \
@@ -541,6 +541,8 @@ build_ubuntu_gpu_tensorrt() {
 
     set -ex
 
+    export CC=gcc-7
+    export CXX=g++-7
     export ONNX_NAMESPACE=onnx
 
     # Build ONNX
@@ -593,7 +595,7 @@ build_ubuntu_gpu_tensorrt() {
 build_ubuntu_gpu_mkldnn() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
@@ -607,7 +609,7 @@ build_ubuntu_gpu_mkldnn() {
 build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
@@ -622,7 +624,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 build_ubuntu_gpu() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
@@ -640,7 +642,7 @@ build_ubuntu_gpu() {
 build_ubuntu_gpu_debug() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE=Debug \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
@@ -657,7 +659,7 @@ build_ubuntu_gpu_debug() {
 build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
@@ -671,7 +673,7 @@ build_ubuntu_cpu_large_tensor() {
 build_ubuntu_gpu_large_tensor() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
