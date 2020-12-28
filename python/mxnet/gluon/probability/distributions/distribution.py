@@ -180,11 +180,15 @@ class Distribution(object):
         args_string = ''
         if 'symbol' not in mode.__name__:
             for k, _ in self.arg_constraints.items():
-                v = self.__dict__[k]
-                if isinstance(v, Number):
-                    shape_v = ()
+                try:
+                    v = self.__dict__[k]
+                except KeyError:
+                    shape_v = None
                 else:
-                    shape_v = v.shape
+                    if isinstance(v, Number):
+                        shape_v = ()
+                    else:
+                        shape_v = v.shape
                 args_string += '{}: size {}'.format(k, shape_v) + ', '
         args_string += ', '.join(['F: {}'.format(mode.__name__),
                                   'event_dim: {}'.format(self.event_dim)])
