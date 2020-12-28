@@ -178,6 +178,11 @@ ifeq ($(USE_MKLDNN), 1)
 	LIB_DEP += $(MKLDNNROOT)/lib/libdnnl.a
 endif
 
+# Use MKL's layernorm implementation.  Only has an impact if MKL is compiled in.
+ifeq ($(USE_MKL_LAYERNORM), 1)
+  CFLAGS += -DMXNET_USE_MKL_LAYERNORM=1
+endif
+
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1

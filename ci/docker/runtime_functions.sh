@@ -501,6 +501,7 @@ build_ubuntu_cpu_mkl() {
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
+        USE_MKL_LAYERNORM=1           \
         USE_TVM_OP=1                  \
         USE_MKLDNN=0                  \
         USE_INTEL_PATH=/opt/intel     \
