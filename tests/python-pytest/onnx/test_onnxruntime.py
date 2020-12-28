@@ -19,6 +19,9 @@ import mxnet as mx
 import numpy as np
 import onnxruntime
 
+from mxnet.test_utils import assert_almost_equal
+from common import with_seed
+
 import json
 import os
 import pytest
@@ -30,10 +33,11 @@ test_images = [
     ['apron.jpg', [411,578,638,639,689,775]],
     ['dolphin.jpg', [2,3,4,146,147,148,395]],
     ['hammerheadshark.jpg', [3,4]],
-    ['lotus.jpg', [723,738,985]]
+    ['lotus.jpg', [716,723,738,985]]
 ]
 
 test_models = [
+    'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
     'mobilenet1.0', 'mobilenet0.75', 'mobilenet0.5', 'mobilenet0.25',
     'mobilenetv2_1.0', 'mobilenetv2_0.75', 'mobilenetv2_0.5', 'mobilenetv2_0.25',
     'resnet18_v1', 'resnet18_v2', 'resnet34_v1', 'resnet34_v2', 'resnet50_v1', 'resnet50_v2',
@@ -42,6 +46,7 @@ test_models = [
     'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn'
 ]
 
+@with_seed()
 @pytest.mark.parametrize('model', test_models)
 def test_cv_model_inference_onnxruntime(tmp_path, model):
     def get_gluon_cv_model(model_name, tmp):
@@ -97,25 +102,80 @@ def test_cv_model_inference_onnxruntime(tmp_path, model):
 
 
     tmp_path = str(tmp_path)
-    #labels = load_imgnet_labels(tmp_path)
-    test_images = download_test_images(tmp_path)
-    sym_file, params_file = get_gluon_cv_model(model, tmp_path)
-    onnx_file = export_model_to_onnx(sym_file, params_file)
+    try:
+        #labels = load_imgnet_labels(tmp_path)
+        test_images = download_test_images(tmp_path)
+        sym_file, params_file = get_gluon_cv_model(model, tmp_path)
+        onnx_file = export_model_to_onnx(sym_file, params_file)
 
-    # create onnxruntime session using the generated onnx file
-    ses_opt = onnxruntime.SessionOptions()
-    ses_opt.log_severity_level = 3
-    session = onnxruntime.InferenceSession(onnx_file, ses_opt)
-    input_name = session.get_inputs()[0].name
+        # create onnxruntime session using the generated onnx file
+        ses_opt = onnxruntime.SessionOptions()
+        ses_opt.log_severity_level = 3
+        session = onnxruntime.InferenceSession(onnx_file, ses_opt)
+        input_name = session.get_inputs()[0].name
 
-    for img, accepted_ids in test_images:
-        img_data = normalize_image(os.path.join(tmp_path,img))
-        raw_result = session.run([], {input_name: img_data})
-        res = softmax(np.array(raw_result)).tolist()
-        class_idx = np.argmax(res)
-        assert(class_idx in accepted_ids)
+        for img, accepted_ids in test_images:
+            img_data = normalize_image(os.path.join(tmp_path,img))
+            raw_result = session.run([], {input_name: img_data})
+            res = softmax(np.array(raw_result)).tolist()
+            class_idx = np.argmax(res)
+            assert(class_idx in accepted_ids)
 
-    shutil.rmtree(tmp_path)
+    finally:
+        shutil.rmtree(tmp_path)
 
+
+@with_seed()
+@pytest.mark.parametrize('model', ['bert_12_768_12'])
+def test_bert_inference_onnxruntime(tmp_path, model):
+    tmp_path = str(tmp_path)
+    try:
+        import gluonnlp as nlp
+        dataset = 'book_corpus_wiki_en_uncased'
+        ctx = mx.cpu(0)
+        model, vocab = nlp.model.get_model(
+            name=model,
+            ctx=ctx,
+            dataset_name=dataset,
+            pretrained=False,
+            use_pooler=True,
+            use_decoder=False,
+            use_classifier=False)
+        model.initialize(ctx=ctx)
+        model.hybridize(static_alloc=True)
+
+        batch = 5
+        seq_length = 16
+        # create synthetic test data
+        inputs = mx.nd.random.uniform(0, 30522, shape=(batch, seq_length), dtype='float32')
+        token_types = mx.nd.random.uniform(0, 2, shape=(batch, seq_length), dtype='float32')
+        valid_length = mx.nd.array([seq_length] * batch, dtype='float32')
+
+        seq_encoding, cls_encoding = model(inputs, token_types, valid_length)
+
+        prefix = "%s/bert" % tmp_path
+        model.export(prefix)
+        sym_file = "%s-symbol.json" % prefix
+        params_file = "%s-0000.params" % prefix
+        onnx_file = "%s.onnx" % prefix
+
+
+        input_shapes = [(batch, seq_length), (batch, seq_length), (batch,)]
+        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes, np.float32, onnx_file)
+
+
+        # create onnxruntime session using the generated onnx file
+        ses_opt = onnxruntime.SessionOptions()
+        ses_opt.log_severity_level = 3
+        session = onnxruntime.InferenceSession(onnx_file, ses_opt)
+        onnx_inputs = [inputs, token_types, valid_length]
+        input_dict = dict((session.get_inputs()[i].name, onnx_inputs[i].asnumpy()) for i in range(len(onnx_inputs)))
+        pred_onx, cls_onx = session.run(None, input_dict)
+
+        assert_almost_equal(seq_encoding, pred_onx)
+        assert_almost_equal(cls_encoding, cls_onx)
+
+    finally:
+        shutil.rmtree(tmp_path)
 
 
