@@ -2703,6 +2703,22 @@ def convert_zeros_like(node, **kwargs):
     return nodes
 
 
+@mx_op.register("ones_like")
+def convert_ones_like(node, **kwargs):
+    """Map MXNet's ones_like operator attributes to onnx's ConstantOfShape operator.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, _ = get_inputs(node, kwargs)
+
+    # create tensor with shape of input
+    tensor_value = make_tensor(name+"_one", kwargs['in_type'], [1], [1])
+    nodes = [
+        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
+        make_node("ConstantOfShape", [name+"_shape"], [name], name=name, value=tensor_value)
+    ]
+    return nodes
+
+
 @mx_op.register("_contrib_arange_like")
 def convert_arange_like(node, **kwargs):
     """Map MXNet's arange_like operator attributes to onnx's Range and Reshape operators.
