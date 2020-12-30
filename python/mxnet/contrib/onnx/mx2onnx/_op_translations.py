@@ -515,40 +515,18 @@ def convert_pad(node, **kwargs):
 
     if opset_version >= 11:
         # starting with opset 11, pads and constant_value are inputs instead of attributes
-        from onnx.helper import make_tensor, make_tensor_value_info
-        initializer = kwargs["initializer"]
-        pads_input_name = name + "_pads"
-        pads_input_type = onnx.TensorProto.INT64
-        pads_input_shape = np.shape(np.array(onnx_pad_width))
-        pads_value_node = make_tensor_value_info(pads_input_name, pads_input_type, pads_input_shape)
-        pads_tensor_node = make_tensor(pads_input_name, pads_input_type, pads_input_shape, onnx_pad_width)
-        initializer.append(pads_tensor_node)
-        input_nodes.append(pads_input_name)
+        create_const_scalar_node(name+"_pads", np.int64(onnx_pad_width), kwargs)
 
         if pad_mode == "constant":
-            const_input_name = name + "_constant"
-            const_input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[pad_value.dtype]
-            const_value_node = make_tensor_value_info(const_input_name, const_input_type, ())
-            const_tensor_node = make_tensor(const_input_name, const_input_type, (), [pad_value])
-            initializer.append(const_tensor_node)
-            input_nodes.append(const_input_name)
-            pad_node = onnx.helper.make_node(
-                "Pad",
-                input_nodes,
-                [name],
-                mode=pad_mode,
-                name=name
-            )
-            return [pads_value_node, const_value_node, pad_node]
+            create_const_scalar_node(name+"_const", pad_value, kwargs)
+            nodes = [
+                make_node("Pad", [input_nodes[0], name+"_pads", name+"_const"], [name], mode=pad_mode, name=name)
+            ]
         else:
-            pad_node = onnx.helper.make_node(
-                "Pad",
-                input_nodes,
-                [name],
-                mode=pad_mode,
-                name=name
-            )
-            return [pads_value_node, pad_node]
+            nodes = [
+                make_node("Pad", [input_nodes[0], name+"_pads"], [name], mode=pad_mode, name=name)
+            ]
+        return nodes
     else:
         if pad_mode == "constant":
             node = onnx.helper.make_node(
@@ -560,7 +538,6 @@ def convert_pad(node, **kwargs):
                 pads=onnx_pad_width,
                 name=name
             )
-            return [node]
         else:
             node = onnx.helper.make_node(
                 'Pad',
@@ -570,7 +547,7 @@ def convert_pad(node, **kwargs):
                 pads=onnx_pad_width,
                 name=name
             )
-            return [node]
+        return [node]
 
 
 def create_helper_trans_node(node_name, input_node):
