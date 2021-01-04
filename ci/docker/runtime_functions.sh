@@ -338,6 +338,7 @@ build_ubuntu_cpu_mkl() {
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_MKL_LAYERNORM=ON \
         -DUSE_BLAS=MKL \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -GNinja /work/mxnet
