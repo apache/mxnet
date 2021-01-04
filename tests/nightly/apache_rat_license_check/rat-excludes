@@ -13,6 +13,12 @@ target/*
 site/*
 xml/*
 
+# AL2 License header not a beginning of file
+doap.rdf
+
+# licenses
+licenses/*
+
 # Separate licenses, refer to LICENSE in each folder or header
 
 # Sphinx themes

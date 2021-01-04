@@ -146,7 +146,7 @@ short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
 if Features().is_enabled("MKLDNN"):
-    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
+    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/include/mkldnn'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':
     libdir, mxdir = os.path.dirname(LIB_PATH[0]), os.path.join(CURRENT_DIR, 'mxnet')

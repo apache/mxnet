@@ -168,7 +168,8 @@ This is equivalent to computing masked softmax followed by log.)code")
   [](const NodeAttrs& attrs){
     return std::vector<std::string>{"data", "mask"};
   })
-.set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxCompute<cpu, mxnet_op::log_softmax_fwd>)
+.set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxCompute<cpu, mxnet_op::log_softmax_fwd,
+                                     true>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto data_grad = MakeNode("_backward_masked_log_softmax", n->attrs.name + "_backward_data",
