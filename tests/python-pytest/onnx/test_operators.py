@@ -94,6 +94,10 @@ def test_onnx_export_zeros_like(tmp_path):
     x = mx.nd.array([[-2,-1,0],[0,50,99],[4,5,6],[7,8,9]], dtype='float32')
     op_export_test('zeros_like', M, [x], tmp_path)
 
+def test_onnx_export_ones_like(tmp_path):
+    M = def_model('ones_like')
+    x = mx.nd.array([[-2,-1,0],[0,50,99],[4,5,6],[7,8,9]], dtype='float32')
+    op_export_test('ones_like', M, [x], tmp_path)
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("axis", [None,0,1])
