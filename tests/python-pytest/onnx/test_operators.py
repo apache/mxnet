@@ -23,7 +23,7 @@ from mxnet.test_utils import assert_almost_equal
 import pytest
 import tempfile
 
-def def_model(op_name, **params):
+def def_model(op_name, dummy_input=False, **params):
     class Model(HybridBlock):
         def __init__(self, **kwargs):
             super(Model, self).__init__(**kwargs)
@@ -33,11 +33,13 @@ def def_model(op_name, **params):
             func = F
             for name in names:
                 func = getattr(func, name)
-            out = func(*inputs, **params)
-            return out
+            if dummy_input:
+                return func(**params), inputs[0]
+            else:
+                return func(*inputs, **params)
     return Model
 
-def op_export_test(model_name, Model, inputs, tmp_path):
+def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False):
     def export_to_onnx(model, model_name, inputs):
         model_path = '{}/{}'.format(tmp_path, model_name)
         model.export(model_path, epoch=0)
@@ -63,6 +65,8 @@ def op_export_test(model_name, Model, inputs, tmp_path):
     pred_nat = model(*inputs)
     onnx_file = export_to_onnx(model, model_name, inputs)
     pred_onx = onnx_rt(onnx_file, inputs)
+    if dummy_input:
+        pred_nat = pred_nat[0]
     assert_almost_equal(pred_nat, pred_onx)
 
 
@@ -108,6 +112,17 @@ def test_onnx_export_arange_like(tmp_path, dtype, axis, start, step, test_data):
     M = def_model('contrib.arange_like', axis=axis, start=start, step=step)
     x = mx.nd.array(test_data, dtype=dtype)
     op_export_test('arange_like', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("stop", [2, 50, 5000])
+@pytest.mark.parametrize("step", [0.25, 0.5, 1, 5])
+@pytest.mark.parametrize("start", [0., 1.])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_onnx_export_arange(tmp_path, dtype, start, stop, step):
+    M = def_model('arange', dummy_input=True, start=start, stop=stop, step=step, dtype=dtype)
+    x = mx.nd.array([1], dtype=dtype)
+    op_export_test('arange', M, [x], tmp_path, dummy_input=True)
+
 
 @pytest.mark.parametrize('dtype', ['float32'])
 def test_onnx_export_layernorm(tmp_path, dtype):
