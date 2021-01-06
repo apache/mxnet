@@ -2691,3 +2691,32 @@ def convert_arange_like(node, **kwargs):
         ]
 
     return nodes
+
+@mx_op.register("_arange")
+def convert_arange(node, **kwargs):
+    """Map MXNet's arange operator attributes to onnx's Range operator.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError("ONNX opset 11 or greater is required to export this operator")
+
+    input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+    start = attrs.get('start', 0.)
+    stop = attrs.get('stop')
+    step = attrs.get('step', 1.)
+    repeat = int(attrs.get('repeat', 1))
+    if repeat != 1:
+        raise NotImplementedError("arange operator with repeat != 1 not yet implemented.")
+
+    nodes = [
+        create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_stop", np.array([stop], dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs),
+        make_node("Range", [name+"_start", name+"_stop", name+"_step"], [name])
+    ]
+
+    return nodes
