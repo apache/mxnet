@@ -126,7 +126,7 @@ def test_onnx_export_arange(tmp_path, dtype, start, stop, step):
         if step == 0:
             step = 1
     M = def_model('arange', dummy_input=True, start=start, stop=stop, step=step, dtype=dtype)
-    x = mx.nd.array([1], dtype=dtype)
+    x = mx.nd.array([1], dtype='float32')
     op_export_test('arange', M, [x], tmp_path, dummy_input=True)
 
 
