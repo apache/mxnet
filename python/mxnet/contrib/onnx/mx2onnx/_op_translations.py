@@ -516,15 +516,17 @@ def convert_pad(node, **kwargs):
 
     if opset_version >= 11:
         # starting with opset 11, pads and constant_value are inputs instead of attributes
-        create_const_scalar_node(name+"_pads", np.int64(onnx_pad_width), kwargs)
+        nodes = [
+            create_const_node(name+"_pads", np.array(onnx_pad_width, dtype='int64'), kwargs)
+        ]
 
         if pad_mode == "constant":
-            create_const_scalar_node(name+"_const", pad_value, kwargs)
-            nodes = [
+            nodes += [
+                create_const_scalar_node(name+"_const", pad_value, kwargs),
                 make_node("Pad", [input_nodes[0], name+"_pads", name+"_const"], [name], mode=pad_mode, name=name)
             ]
         else:
-            nodes = [
+            nodes += [
                 make_node("Pad", [input_nodes[0], name+"_pads"], [name], mode=pad_mode, name=name)
             ]
         return nodes
@@ -1089,8 +1091,8 @@ def convert_dropout(node, **kwargs):
 
     if opset_version >= 12:
         # opset >= 12 requires the ratio to be an input
-        create_const_scalar_node(name+"_ratio0", np.float32(probability), kwargs)
         nodes = [
+            create_const_scalar_node(name+"_ratio0", np.float32(probability), kwargs),
             make_node("Dropout", [input_nodes[0], name+"_ratio0"], [name], name=name)
         ]
         return nodes
@@ -2713,10 +2715,10 @@ def convert_arange(node, **kwargs):
     if repeat != 1:
         raise NotImplementedError("arange operator with repeat != 1 not yet implemented.")
 
+    create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs)
+    create_const_scalar_node(name+"_stop", np.array([stop], dtype=dtype), kwargs)
+    create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs)
     nodes = [
-        create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs),
-        create_const_scalar_node(name+"_stop", np.array([stop], dtype=dtype), kwargs),
-        create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs),
         make_node("Range", [name+"_start", name+"_stop", name+"_step"], [name])
     ]
 
