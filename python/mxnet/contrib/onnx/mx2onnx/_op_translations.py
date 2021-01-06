@@ -1648,25 +1648,28 @@ def convert_slice_axis(node, **kwargs):
     begin = int(attrs.get("begin"))
     end = attrs.get("end", None)
 
-    nodes = []
-    create_tensor([axis], name+'_axis', kwargs["initializer"])
-    create_tensor([begin], name+'_begin', kwargs["initializer"])
+    nodes = [
+        create_tensor([axis], name+'_axis', kwargs["initializer"]),
+        create_tensor([begin], name+'_begin', kwargs["initializer"])
+    ]
     if not end or end == 'None':
         # ONNX doesn't support None for ends. Since ends=None depicts
         # length of dimension, passing dimension in this case.
-        create_tensor([axis+1], name+"_axis_plus_1", kwargs["initializer"])
         nodes += [
+            create_tensor([axis+1], name+"_axis_plus_1", kwargs["initializer"]),
             make_node('Shape', [input_nodes[0]], [name+"_data_shape"]),
             make_node('Slice', [name+'_data_shape', name+'_axis', name+'_axis_plus_1'],
                       [name+"_end"])
         ]
     else:
-        create_tensor([int(end)], name+'_end', kwargs["initializer"])
+        nodes += [
+            create_tensor([int(end)], name+'_end', kwargs["initializer"])
+        ]
 
     nodes += [
         make_node('Slice', [input_nodes[0], name+'_begin', name+'_end', name+'_axis'],
                   [name], name=name)
-        ]
+    ]
 
     return nodes
 
@@ -2225,8 +2228,8 @@ def convert_topk(node, **kwargs):
 
     opset_version = kwargs['opset_version']
     if opset_version >= 10:
-        create_const_scalar_node(name+"_k", np.int64(k), kwargs)
         nodes = [
+            create_const_scalar_node(name+"_k", np.int64(k), kwargs),
             make_node("TopK", [input_nodes[0], name+"_k"], outputs, axis=axis, name=name)
         ]
         return nodes
@@ -2444,7 +2447,7 @@ def convert_broadcast_axis(node, **kwargs):
         make_node('Shape', [shape_name], [name+'_in_dim']),
         make_node('Reshape', [name+'_in_dim', name+'_void'], [name+'_in_dim_s']),
         make_node('Range', [name+'_0_s', name+'_in_dim_s', name+'_1_s'], [name+'_range']),
-        ]
+    ]
 
     for i, axis in enumerate(axis):
         if axis not in (0, 1):
@@ -2456,7 +2459,7 @@ def convert_broadcast_axis(node, **kwargs):
             make_node('Mul', [name+'_size_'+str(i), name+'_cast_'+str(i)], [name+'_mul_'+str(i)]),
             make_node('Add', [name+'_mul_'+str(i), name+'_1'], [name+'_add_'+str(i)]),
             make_node('Mul', [name+'_add_'+str(i), shape_name], [name+'_shape_'+str(i+1)])
-            ]
+        ]
         shape_name = name+'_shape_'+str(i+1)
 
     nodes += [make_node('Expand', [input_nodes[0], shape_name], [name], name=name)]
@@ -2498,7 +2501,7 @@ def convert_sequencemask(node, **kwargs):
         make_node('Range', [name+'_0_s', name+'_in_dim_s', name+'_1_s'], [name+'_range_0']),
         make_node('Less', [name+'_range_0', name+'_2'], [name+'_less_0']),
         make_node('Where', [name+'_less_0', name+'_in_shape', name+'_1'], [name+'_shape_1'])
-        ]
+    ]
 
     if(axis == 0):
         nodes += [
@@ -2715,10 +2718,10 @@ def convert_arange(node, **kwargs):
     if repeat != 1:
         raise NotImplementedError("arange operator with repeat != 1 not yet implemented.")
 
-    create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs)
-    create_const_scalar_node(name+"_stop", np.array([stop], dtype=dtype), kwargs)
-    create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs)
     nodes = [
+        create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_stop", np.array([stop], dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs),
         make_node("Range", [name+"_start", name+"_stop", name+"_step"], [name])
     ]
 
