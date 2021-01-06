@@ -1121,9 +1121,9 @@ def convert_clip(node, **kwargs):
 
     if opset_version >= 11:
         # opset >= 11 requires min/max to be inputs
-        create_const_scalar_node(name+"_min", np.float32(a_min), kwargs)
-        create_const_scalar_node(name+"_max", np.float32(a_max), kwargs)
         nodes = [
+            create_const_scalar_node(name+"_min", np.float32(a_min), kwargs),
+            create_const_scalar_node(name+"_max", np.float32(a_max), kwargs),
             make_node("Clip", [input_nodes[0], name+"_min", name+"_max"], [name], name=name)
         ]
     else:
