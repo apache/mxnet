@@ -504,6 +504,7 @@ def convert_pad(node, **kwargs):
     """Map MXNet's pad operator attributes to onnx's Pad operator
     and return the created node.
     """
+    from onnx.helper import make_node
     opset_version = kwargs["opset_version"]
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
@@ -2697,7 +2698,7 @@ def convert_arange(node, **kwargs):
     """Map MXNet's arange operator attributes to onnx's Range operator.
     """
     from onnx.helper import make_node
-    name, input_nodes, attrs = get_inputs(node, kwargs)
+    name, _, attrs = get_inputs(node, kwargs)
 
     opset_version = kwargs['opset_version']
     if opset_version < 11:
