@@ -504,6 +504,7 @@ def convert_pad(node, **kwargs):
     """Map MXNet's pad operator attributes to onnx's Pad operator
     and return the created node.
     """
+    from onnx.helper import make_node
     opset_version = kwargs["opset_version"]
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
@@ -515,40 +516,20 @@ def convert_pad(node, **kwargs):
 
     if opset_version >= 11:
         # starting with opset 11, pads and constant_value are inputs instead of attributes
-        from onnx.helper import make_tensor, make_tensor_value_info
-        initializer = kwargs["initializer"]
-        pads_input_name = name + "_pads"
-        pads_input_type = onnx.TensorProto.INT64
-        pads_input_shape = np.shape(np.array(onnx_pad_width))
-        pads_value_node = make_tensor_value_info(pads_input_name, pads_input_type, pads_input_shape)
-        pads_tensor_node = make_tensor(pads_input_name, pads_input_type, pads_input_shape, onnx_pad_width)
-        initializer.append(pads_tensor_node)
-        input_nodes.append(pads_input_name)
+        nodes = [
+            create_const_node(name+"_pads", np.array(onnx_pad_width, dtype='int64'), kwargs)
+        ]
 
         if pad_mode == "constant":
-            const_input_name = name + "_constant"
-            const_input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[pad_value.dtype]
-            const_value_node = make_tensor_value_info(const_input_name, const_input_type, ())
-            const_tensor_node = make_tensor(const_input_name, const_input_type, (), [pad_value])
-            initializer.append(const_tensor_node)
-            input_nodes.append(const_input_name)
-            pad_node = onnx.helper.make_node(
-                "Pad",
-                input_nodes,
-                [name],
-                mode=pad_mode,
-                name=name
-            )
-            return [pads_value_node, const_value_node, pad_node]
+            nodes += [
+                create_const_scalar_node(name+"_const", pad_value, kwargs),
+                make_node("Pad", [input_nodes[0], name+"_pads", name+"_const"], [name], mode=pad_mode, name=name)
+            ]
         else:
-            pad_node = onnx.helper.make_node(
-                "Pad",
-                input_nodes,
-                [name],
-                mode=pad_mode,
-                name=name
-            )
-            return [pads_value_node, pad_node]
+            nodes += [
+                make_node("Pad", [input_nodes[0], name+"_pads"], [name], mode=pad_mode, name=name)
+            ]
+        return nodes
     else:
         if pad_mode == "constant":
             node = onnx.helper.make_node(
@@ -560,7 +541,6 @@ def convert_pad(node, **kwargs):
                 pads=onnx_pad_width,
                 name=name
             )
-            return [node]
         else:
             node = onnx.helper.make_node(
                 'Pad',
@@ -570,7 +550,7 @@ def convert_pad(node, **kwargs):
                 pads=onnx_pad_width,
                 name=name
             )
-            return [node]
+        return [node]
 
 
 def create_helper_trans_node(node_name, input_node):
@@ -1103,6 +1083,7 @@ def convert_dropout(node, **kwargs):
     """Map MXNet's Dropout operator attributes to onnx's Dropout operator
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
     opset_version = kwargs["opset_version"]
 
@@ -1110,29 +1091,13 @@ def convert_dropout(node, **kwargs):
 
     if opset_version >= 12:
         # opset >= 12 requires the ratio to be an input
-        initializer = kwargs["initializer"]
-        ratio_input_name = name + "_ratio"
-        value_node = onnx.helper.make_tensor_value_info(ratio_input_name,
-                                                        onnx.TensorProto.FLOAT, ())
-        tensor_node = onnx.helper.make_tensor(ratio_input_name, onnx.TensorProto.FLOAT,
-                                              (), [probability])
-        initializer.append(tensor_node)
-        dropout_node = onnx.helper.make_node(
-            "Dropout",
-            [input_nodes[0], ratio_input_name],
-            [name],
-            name=name
-        )
-        return [value_node, dropout_node]
+        nodes = [
+            create_const_scalar_node(name+"_ratio0", np.float32(probability), kwargs),
+            make_node("Dropout", [input_nodes[0], name+"_ratio0"], [name], name=name)
+        ]
+        return nodes
     else:
-        dropout_node = onnx.helper.make_node(
-            "Dropout",
-            input_nodes,
-            [name],
-            ratio=probability,
-            name=name
-        )
-        return [dropout_node]
+        return [make_node("Dropout", input_nodes, [name], ratio=probability, name=name)]
 
 
 @mx_op.register("Flatten")
@@ -1147,6 +1112,7 @@ def convert_clip(node, **kwargs):
     """Map MXNet's Clip operator attributes to onnx's Clip operator
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
     opset_version = kwargs["opset_version"]
 
@@ -1155,39 +1121,16 @@ def convert_clip(node, **kwargs):
 
     if opset_version >= 11:
         # opset >= 11 requires min/max to be inputs
-        initializer = kwargs["initializer"]
-        min_input_name = name + "_min"
-        max_input_name = name + "_max"
-        min_value_node = onnx.helper.make_tensor_value_info(min_input_name,
-                                                            onnx.TensorProto.FLOAT, ())
-        max_value_node = onnx.helper.make_tensor_value_info(max_input_name,
-                                                            onnx.TensorProto.FLOAT, ())
-        min_tensor_node = onnx.helper.make_tensor(min_input_name, onnx.TensorProto.FLOAT,
-                                                  (), [a_min])
-        max_tensor_node = onnx.helper.make_tensor(max_input_name, onnx.TensorProto.FLOAT,
-                                                  (), [a_max])
-        initializer.append(min_tensor_node)
-        initializer.append(max_tensor_node)
-        input_nodes.append(min_input_name)
-        input_nodes.append(max_input_name)
-        clip_node = onnx.helper.make_node(
-            "Clip",
-            input_nodes,
-            [name],
-            name=name
-        )
-        return [min_value_node, max_value_node, clip_node]
-
+        nodes = [
+            create_const_scalar_node(name+"_min", np.float32(a_min), kwargs),
+            create_const_scalar_node(name+"_max", np.float32(a_max), kwargs),
+            make_node("Clip", [input_nodes[0], name+"_min", name+"_max"], [name], name=name)
+        ]
     else:
-        clip_node = onnx.helper.make_node(
-            "Clip",
-            input_nodes,
-            [name],
-            name=name,
-            min=a_min,
-            max=a_max
-        )
-        return [clip_node]
+        nodes = [
+            make_node("Clip", input_nodes, [name], name=name, min=a_min, max=a_max)
+        ]
+    return nodes
 
 
 def scalar_op_helper(node, op_name, **kwargs):
@@ -1705,25 +1648,28 @@ def convert_slice_axis(node, **kwargs):
     begin = int(attrs.get("begin"))
     end = attrs.get("end", None)
 
-    nodes = []
-    create_tensor([axis], name+'_axis', kwargs["initializer"])
-    create_tensor([begin], name+'_begin', kwargs["initializer"])
+    nodes = [
+        create_tensor([axis], name+'_axis', kwargs["initializer"]),
+        create_tensor([begin], name+'_begin', kwargs["initializer"])
+    ]
     if not end or end == 'None':
         # ONNX doesn't support None for ends. Since ends=None depicts
         # length of dimension, passing dimension in this case.
-        create_tensor([axis+1], name+"_axis_plus_1", kwargs["initializer"])
         nodes += [
+            create_tensor([axis+1], name+"_axis_plus_1", kwargs["initializer"]),
             make_node('Shape', [input_nodes[0]], [name+"_data_shape"]),
             make_node('Slice', [name+'_data_shape', name+'_axis', name+'_axis_plus_1'],
                       [name+"_end"])
         ]
     else:
-        create_tensor([int(end)], name+'_end', kwargs["initializer"])
+        nodes += [
+            create_tensor([int(end)], name+'_end', kwargs["initializer"])
+        ]
 
     nodes += [
         make_node('Slice', [input_nodes[0], name+'_begin', name+'_end', name+'_axis'],
                   [name], name=name)
-        ]
+    ]
 
     return nodes
 
@@ -2267,52 +2213,28 @@ def convert_topk(node, **kwargs):
     """Map MXNet's topk operator attributes to onnx's TopK operator
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     axis = int(attrs.get('axis', '-1'))
     k = int(attrs.get('k', '1'))
     ret_type = attrs.get('ret_typ')
-    dtype = attrs.get('dtype')
-    outputs = [name + '_output0']
+    outputs = [name]
 
     if ret_type and ret_type == 'both':
-        if dtype and dtype == 'int64':
-            outputs.append(name + '_output1')
-        else:
-            raise NotImplementedError("ONNX expects indices to be of type int64")
+        outputs.append(name + '_output1')
     else:
         raise NotImplementedError("ONNX expects both value and indices as output")
 
     opset_version = kwargs['opset_version']
     if opset_version >= 10:
-        from onnx.helper import make_tensor, make_tensor_value_info
-        initializer = kwargs["initializer"]
-        k_input_name = name + "_k"
-        k_input_type = onnx.TensorProto.INT64
-        k_value_node = make_tensor_value_info(k_input_name, k_input_type, ())
-        k_tensor_node = make_tensor(k_input_name, k_input_type, (), k)
-        initializer.append(k_tensor_node)
-        input_nodes.append(k_input_name)
-
-        topk_node = onnx.helper.make_node(
-            "TopK",
-            input_nodes,
-            outputs,
-            axis=axis,
-            name=name
-        )
-        return [k_value_node, topk_node]
+        nodes = [
+            create_const_scalar_node(name+"_k", np.int64(k), kwargs),
+            make_node("TopK", [input_nodes[0], name+"_k"], outputs, axis=axis, name=name)
+        ]
+        return nodes
     else:
-        topk_node = onnx.helper.make_node(
-            "TopK",
-            input_nodes,
-            outputs,
-            axis=axis,
-            k=k,
-            name=name
-        )
-
-    return [topk_node]
+        return [make_node("TopK", input_nodes, outputs, axis=axis, k=k, name=name)]
 
 
 @mx_op.register("take")
@@ -2525,7 +2447,7 @@ def convert_broadcast_axis(node, **kwargs):
         make_node('Shape', [shape_name], [name+'_in_dim']),
         make_node('Reshape', [name+'_in_dim', name+'_void'], [name+'_in_dim_s']),
         make_node('Range', [name+'_0_s', name+'_in_dim_s', name+'_1_s'], [name+'_range']),
-        ]
+    ]
 
     for i, axis in enumerate(axis):
         if axis not in (0, 1):
@@ -2537,7 +2459,7 @@ def convert_broadcast_axis(node, **kwargs):
             make_node('Mul', [name+'_size_'+str(i), name+'_cast_'+str(i)], [name+'_mul_'+str(i)]),
             make_node('Add', [name+'_mul_'+str(i), name+'_1'], [name+'_add_'+str(i)]),
             make_node('Mul', [name+'_add_'+str(i), shape_name], [name+'_shape_'+str(i+1)])
-            ]
+        ]
         shape_name = name+'_shape_'+str(i+1)
 
     nodes += [make_node('Expand', [input_nodes[0], shape_name], [name], name=name)]
@@ -2579,7 +2501,7 @@ def convert_sequencemask(node, **kwargs):
         make_node('Range', [name+'_0_s', name+'_in_dim_s', name+'_1_s'], [name+'_range_0']),
         make_node('Less', [name+'_range_0', name+'_2'], [name+'_less_0']),
         make_node('Where', [name+'_less_0', name+'_in_shape', name+'_1'], [name+'_shape_1'])
-        ]
+    ]
 
     if(axis == 0):
         nodes += [
@@ -2703,6 +2625,22 @@ def convert_zeros_like(node, **kwargs):
     return nodes
 
 
+@mx_op.register("ones_like")
+def convert_ones_like(node, **kwargs):
+    """Map MXNet's ones_like operator attributes to onnx's ConstantOfShape operator.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, _ = get_inputs(node, kwargs)
+
+    # create tensor with shape of input
+    tensor_value = make_tensor(name+"_one", kwargs['in_type'], [1], [1])
+    nodes = [
+        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
+        make_node("ConstantOfShape", [name+"_shape"], [name], name=name, value=tensor_value)
+    ]
+    return nodes
+
+
 @mx_op.register("_contrib_arange_like")
 def convert_arange_like(node, **kwargs):
     """Map MXNet's arange_like operator attributes to onnx's Range and Reshape operators.
@@ -2757,5 +2695,33 @@ def convert_arange_like(node, **kwargs):
             make_node("Sub", [name+"_add1_out", name+"_half_step"], [name+"_sub0_out"]),
             make_node("Range", [name+"_start", name+"_sub0_out", name+"_step"], [name], name=name)
         ]
+
+    return nodes
+
+@mx_op.register("_arange")
+def convert_arange(node, **kwargs):
+    """Map MXNet's arange operator attributes to onnx's Range operator.
+    """
+    from onnx.helper import make_node
+    name, _, attrs = get_inputs(node, kwargs)
+
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError("ONNX opset 11 or greater is required to export this operator")
+
+    start = attrs.get('start', 0.)
+    stop = attrs.get('stop')
+    step = attrs.get('step', 1.)
+    dtype = attrs.get('dtype', 'float32')
+    repeat = int(attrs.get('repeat', 1))
+    if repeat != 1:
+        raise NotImplementedError("arange operator with repeat != 1 not yet implemented.")
+
+    nodes = [
+        create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_stop", np.array([stop], dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs),
+        make_node("Range", [name+"_start", name+"_stop", name+"_step"], [name])
+    ]
 
     return nodes
