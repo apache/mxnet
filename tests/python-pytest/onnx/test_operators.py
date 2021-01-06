@@ -117,8 +117,14 @@ def test_onnx_export_arange_like(tmp_path, dtype, axis, start, step, test_data):
 @pytest.mark.parametrize("stop", [2, 50, 5000])
 @pytest.mark.parametrize("step", [0.25, 0.5, 1, 5])
 @pytest.mark.parametrize("start", [0., 1.])
-@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("dtype", ["float32", "float64", "int32", "int64"])
 def test_onnx_export_arange(tmp_path, dtype, start, stop, step):
+    if "int" in dtype:
+        start = int(start)
+        stop = int(stop)
+        step = int(step)
+        if step == 0:
+            step = 1
     M = def_model('arange', dummy_input=True, start=start, stop=stop, step=step, dtype=dtype)
     x = mx.nd.array([1], dtype=dtype)
     op_export_test('arange', M, [x], tmp_path, dummy_input=True)
