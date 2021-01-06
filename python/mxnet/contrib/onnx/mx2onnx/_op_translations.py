@@ -2759,3 +2759,20 @@ def convert_arange_like(node, **kwargs):
         ]
 
     return nodes
+
+
+@mx_op.register("_contrib_BilinearResize2D")
+def convert_contrib_BilinearResize2D(node, **kwargs):
+    """Map MXNet's contrib_BilinearResize2D operator attributes to onnx.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    nodes = [
+        create_tensor([0, 1, 0, 1, 0, 1, 0, 1], name+'_roi', kwargs["initializer"], dtype='float32'),
+        create_tensor([1, 1, 1.5, 1.5], name+'_scale', kwargs["initializer"], dtype='float32'),
+        make_node('Resize', [input_nodes[0], name+'_roi', name+'_scale'], [name],
+                  mode='linear', coordinate_transformation_mode='align_corners', name=name)    
+        ]
+
+    return nodes
