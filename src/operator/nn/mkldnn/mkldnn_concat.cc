@@ -29,7 +29,29 @@
 namespace mxnet {
 namespace op {
 
-const mkldnn::concat &MKLDNNConcatFwd::GetFwd() const { return *fwd_; }
+MKLDNNConcatFwd::MKLDNNConcatFwd(
+    int concat_dim, const std::vector<mkldnn::memory::desc> &data_md)
+    : fwd_pd(concat_dim, data_md, CpuEngine::Get()->get_engine()) {
+  // MKL-DNN introduced padded formats since 0.15 which require more memory
+  // compared to the actual size of the tensor. Currently, MKL-DNN operators
+  // still reuse memory from memory planning, so here we need to select a
+  // format that has the expected memory size requirements (a plain format)
+
+  // When fwd_pd uses padding, impose a plain format
+  const auto dst_md = fwd_pd.dst_desc();
+  if (dst_md.data.format_kind == mkldnn_blocked &&
+      dst_md.data.format_desc.blocking.inner_nblks > 0 &&
+      !std::equal(dst_md.data.dims, dst_md.data.dims + dst_md.data.ndims,
+                  dst_md.data.padded_dims)) {
+    auto plain_dst_tag = static_cast<mkldnn::memory::format_tag>(
+        GetDefaultFormat(dst_md.data.ndims));
+    auto plain_dst_md =
+        mkldnn::memory::desc(dst_md.dims(), dst_md.data_type(), plain_dst_tag);
+    fwd_pd = mkldnn::concat::primitive_desc(plain_dst_md, concat_dim, data_md,
+                                            CpuEngine::Get()->get_engine());
+  }
+  fwd_ = std::make_shared<mkldnn::concat>(fwd_pd);
+}
 
 void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                          const std::vector<NDArray> &in_data,

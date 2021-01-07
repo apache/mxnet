@@ -40,29 +40,9 @@ class MKLDNNConcatFwd {
  public:
   mkldnn::concat::primitive_desc fwd_pd;
 
-  MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memory::desc> &data_md)
-      : fwd_pd(concat_dim, data_md, CpuEngine::Get()->get_engine()) {
-    // "MKL-DNN introduced padded formats since 0.15 which require more memory
-    // for computation compared with the actual tensor size. Currently, MKL-DNN
-    // operators are still reusing those memory from memory planning and the
-    // memory size may smaller than what MKL-DNN kernels require. So here we need
-    // select suboptimal kernel for computation according to tensor sizes."
+  MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memory::desc> &data_md);
 
-    // When fwd_pd uses a padded format, impose a plain one instead
-    const auto dst_md = fwd_pd.dst_desc();
-    if (dst_md.data.format_kind == mkldnn_blocked &&
-        dst_md.data.format_desc.blocking.inner_nblks > 0) {
-      auto plain_dst_tag = static_cast<mkldnn::memory::format_tag>(
-          GetDefaultFormat(dst_md.data.ndims));
-      auto plain_dst_md = mkldnn::memory::desc(
-          dst_md.dims(), dst_md.data_type(), plain_dst_tag);
-      fwd_pd = mkldnn::concat::primitive_desc(plain_dst_md, concat_dim, data_md,
-                                              CpuEngine::Get()->get_engine());
-    }
-    fwd_ = std::make_shared<mkldnn::concat>(fwd_pd);
-  }
-
-  const mkldnn::concat &GetFwd() const;
+  const mkldnn::concat &GetFwd() const { return *fwd_; }
 
  private:
   std::shared_ptr<mkldnn::concat> fwd_;
