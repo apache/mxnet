@@ -2767,12 +2767,39 @@ def convert_contrib_BilinearResize2D(node, **kwargs):
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError("ONNX opset 11 or greater is required to export this operator")
+    
+    height = int(attrs.get('height', 1))
+    width = int(attrs.get('width', 1))
+    
+    scale_height = float(attrs.get('scale_height', 0))
+    scale_width = float(attrs.get('scale_width', 0))
 
-    nodes = [
+    mode = attrs.get('mode', 'size')
+    if mode != 'size':
+        raise NotImplementedError('contrib_BilinearResize2D with mode other than "size" is \
+                                   not supported')
+
+    nodes = [ 
         create_tensor([0, 1, 0, 1, 0, 1, 0, 1], name+'_roi', kwargs["initializer"], dtype='float32'),
-        create_tensor([1, 1, 1.5, 1.5], name+'_scale', kwargs["initializer"], dtype='float32'),
-        make_node('Resize', [input_nodes[0], name+'_roi', name+'_scale'], [name],
-                  mode='linear', coordinate_transformation_mode='align_corners', name=name)    
         ]
+
+    if scale_height == 0:
+        nodes += [
+            create_tensor([], name+'_scales', kwargs["initializer"], dtype='float32'),
+            create_tensor([1, 1, height, width], name+'_sizes', kwargs["initializer"], dtype='int64'),
+            make_node('Resize', [input_nodes[0], name+'_roi', name+'_scales', name+'_sizes'], [name],
+                      mode='linear', coordinate_transformation_mode='align_corners', name=name)  
+            ]
+    else:
+        nodes += [
+            create_tensor([1, 1, scale_height, scale_width], name+'_scales', kwargs["initializer"],
+                          dtype='float32'),
+            make_node('Resize', [input_nodes[0], name+'_roi', name+'_scales'], [name],
+                      mode='linear', coordinate_transformation_mode='align_corners', name=name)
+            ]
 
     return nodes
