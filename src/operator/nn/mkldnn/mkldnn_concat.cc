@@ -38,7 +38,7 @@ MKLDNNConcatFwd::MKLDNNConcatFwd(
   // format that has the expected memory size requirements (a plain format)
 
   // When fwd_pd uses padding, impose a plain format
-  const auto dst_md = fwd_pd.dst_desc();
+  const auto &dst_md = fwd_pd.dst_desc();
   if (dst_md.data.format_kind == mkldnn_blocked &&
       dst_md.data.format_desc.blocking.inner_nblks > 0 &&
       !std::equal(dst_md.data.dims, dst_md.data.dims + dst_md.data.ndims,
