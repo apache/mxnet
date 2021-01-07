@@ -116,6 +116,11 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
                        &attr](const mkldnn::convolution_forward::desc &desc) {
     auto engine = CpuEngine::Get()->get_engine();
     try {
+      // MKL-DNN introduced padded formats since 0.15 which require more memory
+      // for computation compared with the actual tensor size. Currently, MKL-DNN
+      // operators are still reusing those memory from memory planning and the
+      // memory size may smaller than what MKL-DNN kernels require. So here we need
+      // select suboptimal kernel for computation according to tensor sizes.
       auto conv_pd =
           std::make_shared<mkldnn::convolution_forward::primitive_desc>(desc, attr, engine);
       while (conv_pd->dst_desc().get_size() != GetArraySize(output) ||
@@ -216,6 +221,11 @@ static std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> GetCon
                            &fwd_pd](const mkldnn::convolution_backward_data::desc &desc) {
     auto engine = CpuEngine::Get()->get_engine();
     try {
+      // MKL-DNN introduced padded formats since 0.15 which require more memory
+      // for computation compared with the actual tensor size. Currently, MKL-DNN
+      // operators are still reusing those memory from memory planning and the
+      // memory size may smaller than what MKL-DNN kernels require. So here we need
+      // select suboptimal kernel for computation according to tensor sizes.
       auto conv_pd =
           std::make_shared<mkldnn::convolution_backward_data::primitive_desc>(desc, engine, fwd_pd);
       while (conv_pd->diff_dst_desc().get_size() != GetArraySize(output) ||
@@ -299,6 +309,11 @@ static std::shared_ptr<mkldnn::convolution_backward_weights::primitive_desc> Get
                               &fwd_pd](const mkldnn::convolution_backward_weights::desc &desc) {
     auto engine = CpuEngine::Get()->get_engine();
     try {
+      // MKL-DNN introduced padded formats since 0.15 which require more memory
+      // for computation compared with the actual tensor size. Currently, MKL-DNN
+      // operators are still reusing those memory from memory planning and the
+      // memory size may smaller than what MKL-DNN kernels require. So here we need
+      // select suboptimal kernel for computation according to tensor sizes.
       auto conv_pd = std::make_shared<mkldnn::convolution_backward_weights::primitive_desc>(
           desc, engine, fwd_pd);
       while (conv_pd->diff_dst_desc().get_size() != GetArraySize(output) ||
