@@ -49,7 +49,7 @@ class MKLDNNConcatFwd {
     // select suboptimal kernel for computation according to tensor sizes."
 
     // When fwd_pd uses a padded format, impose a plain one instead
-    const auto &dst_md = fwd_pd.dst_desc();
+    const auto dst_md = fwd_pd.dst_desc();
     if (dst_md.data.format_kind == mkldnn_blocked &&
         dst_md.data.format_desc.blocking.inner_nblks > 0) {
       auto plain_dst_tag = static_cast<mkldnn::memory::format_tag>(
@@ -58,16 +58,6 @@ class MKLDNNConcatFwd {
           dst_md.dims(), dst_md.data_type(), plain_dst_tag);
       fwd_pd = mkldnn::concat::primitive_desc(plain_dst_md, concat_dim, data_md,
                                               CpuEngine::Get()->get_engine());
-      // Version that uses mkldnn to select format
-      // mkldnn adds padding only when the last of inputs needs it, otherwise
-      // it will choose a plain format
-      // auto temp = data_md;
-      // std::swap(temp.back(), temp.front());
-      // auto dummy_pd = mkldnn::concat::primitive_desc(
-      //     concat_dim, temp, CpuEngine::Get()->get_engine());
-      // fwd_pd = mkldnn::concat::primitive_desc(dummy_pd.dst_desc(), concat_dim,
-      //                                         data_md,
-      //                                         CpuEngine::Get()->get_engine());
     }
     fwd_ = std::make_shared<mkldnn::concat>(fwd_pd);
   }
