@@ -354,7 +354,7 @@ def test_onnx_export_softmax(tmp_path, dtype):
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
-@pytest.mark.parametrize('axis', [None, 0, 1, 2])
+@pytest.mark.parametrize('axis', [None, 0, 1, 2, -1, -2, -3])
 @pytest.mark.parametrize('repeats', [2, 1, 3])
 def test_onnx_export_repeat(tmp_path, dtype, axis, repeats):
     x = mx.nd.arange(0, 27, dtype=dtype).reshape((3, 3, 3))
