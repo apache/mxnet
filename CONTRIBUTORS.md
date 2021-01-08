@@ -254,6 +254,7 @@ List of Contributors
 * [Joe Evans](https://github.com/josephevans)
 * [Zhaoqi Zhu](https://github.com/zha0q1)
 * [Harshit Sharma](https://github.com/harshitshrma)
+* [Andrzej Kotlowski](https://github.com/anko-intel)
 
 Label Bot
 ---------
