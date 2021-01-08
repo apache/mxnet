@@ -2728,7 +2728,7 @@ def convert_arange(node, **kwargs):
 
 
 @mx_op.register('repeat')
-def convert_arange(node, **kwargs):
+def convert_repeat(node, **kwargs):
     """Map MXNet's repeat operator attributes to onnx's Tile operator.
     """
     from onnx.helper import make_node
