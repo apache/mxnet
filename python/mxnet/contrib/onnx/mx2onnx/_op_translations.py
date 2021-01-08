@@ -2706,14 +2706,14 @@ def convert_contrib_BilinearResize2D(node, **kwargs):
     from onnx.helper import make_node
     from onnx import TensorProto
     name, input_nodes, attrs = get_inputs(node, kwargs)
-    
+
     opset_version = kwargs['opset_version']
     if opset_version < 11:
         raise AttributeError("ONNX opset 11 or greater is required to export this operator")
-    
+
     height = int(attrs.get('height', 0))
     width = int(attrs.get('width', 0))
-    
+
     scale_height = float(attrs.get('scale_height', 0))
     scale_width = float(attrs.get('scale_width', 0))
 
@@ -2725,7 +2725,7 @@ def convert_contrib_BilinearResize2D(node, **kwargs):
         raise NotImplementedError('contrib_BilinearResize2D with mode other than "size" is \
                                    not supported')
 
-    nodes = [ 
+    nodes = [
         create_tensor([], name+'_roi', kwargs['initializer'], dtype='float32'),
         ]
 
@@ -2742,7 +2742,7 @@ def convert_contrib_BilinearResize2D(node, **kwargs):
                       to=int(TensorProto.FLOAT)),
             make_node('Div', [name+'_new_shape_f', name+'_shape_f'], [name+'_scales']),
             make_node('Resize', [input_nodes[0], name+'_roi', name+'_scales'], [name],
-                      mode='linear', coordinate_transformation_mode='align_corners', name=name)  
+                      mode='linear', coordinate_transformation_mode='align_corners', name=name)
             ]
     else:
         nodes += [
