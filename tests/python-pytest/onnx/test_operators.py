@@ -351,3 +351,12 @@ def test_onnx_export_softmax(tmp_path, dtype):
     M4 = def_model('softmax', use_length=True, axis=1)
     l4 = mx.nd.array([[2,0,3,1],[0,1,0,0]], dtype=int)
     op_export_test('softmax_4', M4, [x, l4], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('axis', [None, 0, 1, 2])
+@pytest.mark.parametrize('repeats', [2, 1, 3])
+def test_onnx_export_repeat(tmp_path, dtype, axis, repeats):
+    x = mx.nd.arange(0, 27, dtype=dtype).reshape((3, 3, 3))
+    M = def_model('repeat', axis=axis, repeats=repeats)
+    op_export_test('repeat', M, [x], tmp_path)
