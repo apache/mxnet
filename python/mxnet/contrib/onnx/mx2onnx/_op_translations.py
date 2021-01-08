@@ -2747,7 +2747,6 @@ def convert_arange(node, **kwargs):
 
     nodes = []
     if axis == 'None':
-        print('dooooo')
         nodes += [
             create_tensor([repeats], name+'_rep', kwargs['initializer']),
             create_tensor([1, repeats], name+'_repeats', kwargs['initializer']),
