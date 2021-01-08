@@ -421,3 +421,15 @@ def test_onnx_export_contrib_box_decode(tmp_path, dtype, fmt, clip):
     op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
     M2 = def_model('contrib.box_decode', format=fmt, clip=clip, std0=0.3, std1=1.4, std2=0.5, std3=1.6)
     op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+def test_onnx_export_contrib_AdaptiveAvgPooling2D(tmp_path, dtype):
+    x = mx.nd.random.uniform(0, 1, (1, 2, 3, 4), dtype=dtype)
+    M1 = def_model('contrib.AdaptiveAvgPooling2D')
+    op_export_test('contrib_AdaptiveAvgPooling2D', M1, [x], tmp_path)
+    M2 = def_model('contrib.AdaptiveAvgPooling2D', output_size=1)
+    op_export_test('contrib_AdaptiveAvgPooling2D', M2, [x], tmp_path)
+    M3 = def_model('contrib.AdaptiveAvgPooling2D', output_size=[1])
+    op_export_test('contrib_AdaptiveAvgPooling2D', M3, [x], tmp_path)
+    M4 = def_model('contrib.AdaptiveAvgPooling2D', output_size=[1,1])
+    op_export_test('contrib_AdaptiveAvgPooling2D', M4, [x], tmp_path)
