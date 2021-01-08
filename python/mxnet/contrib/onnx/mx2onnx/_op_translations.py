@@ -3039,6 +3039,6 @@ def convert_contrib_AdaptiveAvgPooling2D(node, **kwargs):
             raise NotImplementedError("_contrib_AdaptiveAvgPooling2D operator with output_size != 1 \
                                 not yet implemented.")
     nodes = [
-        make_node("GlobalAveragePool", [input_nodes[0]], [name])
+        make_node("GlobalAveragePool", [input_nodes[0]], [name], name=name)
     ]
     return nodes
