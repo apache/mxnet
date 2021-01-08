@@ -3036,7 +3036,8 @@ def convert_contrib_AdaptiveAvgPooling2D(node, **kwargs):
 
     if len(output_size) <= 2:
         if output_size[0] != 1 or (len(output_size) == 2 and output_size[1] != 1):
-            raise NotImplementedError("_contrib_AdaptiveAvgPooling2D operator with output_size != 1 not yet implemented.")
+            raise NotImplementedError("_contrib_AdaptiveAvgPooling2D operator with output_size != 1 \
+                                not yet implemented.")
     nodes = [
         make_node("GlobalAveragePool", [input_nodes[0]], [name])
     ]
