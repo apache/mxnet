@@ -654,7 +654,7 @@ class DataLoader(object):
             return same_process_iter()
 
         # multi-worker
-        t=self._iter
+        t = self._iter
         self._iter = \
             _MultiWorkerIter(self._worker_pool, self._batchify_fn, self._batch_sampler,
                              pin_memory=self._pin_memory, pin_device_id=self._pin_device_id,
