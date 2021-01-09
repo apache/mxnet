@@ -351,3 +351,10 @@ def test_onnx_export_softmax(tmp_path, dtype):
     M4 = def_model('softmax', use_length=True, axis=1)
     l4 = mx.nd.array([[2,0,3,1],[0,1,0,0]], dtype=int)
     op_export_test('softmax_4', M4, [x, l4], tmp_path)
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('axis', [0, 1, 2, 3])
+def test_onnx_export_reverse(tmp_path, dtype, axis):
+    x = mx.nd.arange(0, 120, dtype=dtype).reshape((2, 3, 4, 5))
+    M = def_model('reverse', axis=axis)
+    op_export_test('reverse', M, [x], tmp_path)
