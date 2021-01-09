@@ -628,7 +628,7 @@ class DataLoader(object):
         else:
             self._batchify_fn = batchify_fn
         if self._num_workers != 0:
-            # Old dataset will start to load and transform data only after something simillar to 
+            # Old dataset will start to load and transform data only after something simillar to
             # `for xx in train_loader:` is called,
             # Here, prefetch is performed after the data is initialized, which actually doubles the
             # prefetch count and may suffering from the inapporiate settings.
