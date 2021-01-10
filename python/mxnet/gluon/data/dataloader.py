@@ -572,14 +572,14 @@ class DataLoader(object):
         unless you are experiencing timeout and you know it's due to slow data loading.
         Sometimes full `shared_memory` will cause all workers to hang and causes timeout. In these
         cases please reduce `num_workers` or increase system `shared_memory` size instead.
-    prefetch_next_batch : bool, default True
+    prefetch_next_batch : bool, default False
         If ``True``, dataloader will prefetch data in current epoch AND next batch, which doubles
         shared_memory cost.
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
                  num_workers=0, pin_memory=False, pin_device_id=0,
-                 prefetch=None, thread_pool=False, timeout=120, prefetch_next_batch=True):
+                 prefetch=None, thread_pool=False, timeout=120, prefetch_next_batch=False):
         self._dataset = dataset
         self._pin_memory = pin_memory
         self._pin_device_id = pin_device_id
