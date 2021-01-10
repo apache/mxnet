@@ -2785,8 +2785,19 @@ def convert_repeat(node, **kwargs):
             make_node('Cast', [name+'_one_hot'], [name+'_one_hot_int'], to=int(TensorProto.INT64)),
             make_node('Mul', [name+'_repeats', name+'_one_hot_int'], [name+'_mul']),
             make_node('Add', [name+'_mul', name+'_1'], [name+'_add']),
-            make_node('Concat', [name+'_1', name+'_add'], [name+'_repeats_tensor'], axis=0),
-            make_node('Unsqueeze', [input_nodes[0]], [name+'_unsqueeze'], axes=[axis+1]),
+            make_node('Concat', [name+'_1', name+'_add'], [name+'_repeats_tensor'], axis=0)
+            ]
+        if axis == -1:
+            nodes += [
+                make_node('Concat', [name+'_shape', name+'_1'], [name+'_unsqueeze_shape'], axis=0),
+                make_node('Reshape', [input_nodes[0], name+'_unsqueeze_shape'],
+                          [name+'_unsqueeze'])
+                ]
+        else :
+            nodes += [
+                make_node('Unsqueeze', [input_nodes[0]], [name+'_unsqueeze'], axes=[axis+1])
+                ]
+        nodes += [
             make_node('Tile', [name+'_unsqueeze', name+'_repeats_tensor'], [name+'_tile']),
             make_node('Mul', [name+'_shape', name+'_add'], [name+'_new_shape']),
             make_node('Reshape', [name+'_tile', name+'_new_shape'], [name], name=name)
