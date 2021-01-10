@@ -2698,6 +2698,63 @@ def convert_arange_like(node, **kwargs):
 
     return nodes
 
+
+@mx_op.register("_contrib_BilinearResize2D")
+def convert_contrib_BilinearResize2D(node, **kwargs):
+    """Map MXNet's contrib_BilinearResize2D operator attributes to onnx.
+    """
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError("ONNX opset 11 or greater is required to export this operator")
+
+    height = int(attrs.get('height', 0))
+    width = int(attrs.get('width', 0))
+
+    scale_height = float(attrs.get('scale_height', 0))
+    scale_width = float(attrs.get('scale_width', 0))
+
+    if height * width == 0 and scale_height * scale_width == 0:
+        raise AttributeError('height, width or scale_height, scale_width cannot be 0')
+
+    mode = attrs.get('mode', 'size')
+    if mode != 'size':
+        raise NotImplementedError('contrib_BilinearResize2D with mode other than "size" is \
+                                   not supported')
+
+    nodes = [
+        create_tensor([], name+'_roi', kwargs['initializer'], dtype='float32'),
+        ]
+
+    if scale_height == 0:
+        nodes += [
+            create_tensor([0], name+'_0', kwargs['initializer']),
+            create_tensor([2], name+'_2', kwargs['initializer']),
+            create_tensor([height, width], name+'_h_w', kwargs['initializer'], dtype='int64'),
+            make_node('Shape', [input_nodes[0]], [name+'_shape']),
+            make_node('Slice', [name+'_shape', name+'_0', name+'_2'], [name+'_shape_01']),
+            make_node('Concat', [name+'_shape_01', name+'_h_w'], [name+'_new_shape'], axis=0),
+            make_node('Cast', [name+'_shape'], [name+'_shape_f'], to=int(TensorProto.FLOAT)),
+            make_node('Cast', [name+'_new_shape'], [name+'_new_shape_f'],
+                      to=int(TensorProto.FLOAT)),
+            make_node('Div', [name+'_new_shape_f', name+'_shape_f'], [name+'_scales']),
+            make_node('Resize', [input_nodes[0], name+'_roi', name+'_scales'], [name],
+                      mode='linear', coordinate_transformation_mode='align_corners', name=name)
+            ]
+    else:
+        nodes += [
+            create_tensor([1, 1, scale_height, scale_width], name+'_scales', kwargs['initializer'],
+                          dtype='float32'),
+            make_node('Resize', [input_nodes[0], name+'_roi', name+'_scales'], [name],
+                      mode='linear', coordinate_transformation_mode='align_corners', name=name)
+            ]
+
+    return nodes
+
+
 @mx_op.register("_arange")
 def convert_arange(node, **kwargs):
     """Map MXNet's arange operator attributes to onnx's Range operator.
