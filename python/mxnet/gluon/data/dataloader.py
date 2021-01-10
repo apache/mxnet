@@ -572,11 +572,14 @@ class DataLoader(object):
         unless you are experiencing timeout and you know it's due to slow data loading.
         Sometimes full `shared_memory` will cause all workers to hang and causes timeout. In these
         cases please reduce `num_workers` or increase system `shared_memory` size instead.
+    prefetch_next_batch : bool, default True
+        If ``True``, dataloader will prefetch data in current epoch AND next batch, which doubles
+        shared_memory cost.
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
                  num_workers=0, pin_memory=False, pin_device_id=0,
-                 prefetch=None, thread_pool=False, timeout=120):
+                 prefetch=None, thread_pool=False, timeout=120, prefetch_next_batch=True):
         self._dataset = dataset
         self._pin_memory = pin_memory
         self._pin_device_id = pin_device_id
@@ -627,7 +630,8 @@ class DataLoader(object):
                 self._batchify_fn = default_batchify_fn
         else:
             self._batchify_fn = batchify_fn
-        if self._num_workers != 0:
+        self._iter = None # None for not prefetch.
+        if self._num_workers != 0 and prefetch_next_batch:
             # Old dataset will start to load and transform data only after something simillar to
             # `for xx in train_loader:` is called,
             # Here, prefetch is performed after the data is initialized, which actually doubles the
@@ -635,13 +639,27 @@ class DataLoader(object):
             # The first 3~4 epoches may slower than the default iter, but the current version
             # of the dataloader leads to a faster trainnig & testing phase (~3% faster).
             # TODO: try using a workeriter that prefetch data in next epoch automatically
-            self._iter = \
-                _MultiWorkerIter(self._worker_pool, self._batchify_fn, self._batch_sampler,
-                                 pin_memory=self._pin_memory, pin_device_id=self._pin_device_id,
-                                 worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
-                                 prefetch=self._prefetch,
-                                 dataset=self._dataset if self._thread_pool else None,
-                                 data_loader=self, timeout=self._timeout)
+            self.prefetch_next_epoch()
+
+    def prefetch_next_epoch(self):
+        """Allow to prefetch data that will be used on the next epoch,
+           which is faster than do not prefetch at the cost of consumes more shared_memory.
+           No effect when `self._iter` is not `None`.
+        """
+        if self._iter is None:
+            self._iter = self.__iter__()
+
+    def take_prefetched_iter(self):
+        """take the prefetched iter, stop prefetch data in the next epoch.
+           Will always return an iter, if no prefetched iter remains,
+           it will create a new iter and return it.
+        """
+        if self._iter is None:
+            return self.__iter__()
+        else:
+            t = self._iter
+            self._iter = None
+            return t
 
     def __iter__(self):
         if self._num_workers == 0:
@@ -654,15 +672,19 @@ class DataLoader(object):
             return same_process_iter()
 
         # multi-worker
-        t = self._iter
-        self._iter = \
-            _MultiWorkerIter(self._worker_pool, self._batchify_fn, self._batch_sampler,
-                             pin_memory=self._pin_memory, pin_device_id=self._pin_device_id,
-                             worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
-                             prefetch=self._prefetch,
-                             dataset=self._dataset if self._thread_pool else None,
-                             data_loader=self, timeout=self._timeout)
-        return t
+        if self._iter is not None:
+            t = self._iter
+            self._iter = None
+            self.prefetch_next_epoch()
+            return t
+        else:
+            return \
+                _MultiWorkerIter(self._worker_pool, self._batchify_fn, self._batch_sampler,
+                                 pin_memory=self._pin_memory, pin_device_id=self._pin_device_id,
+                                 worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
+                                 prefetch=self._prefetch,
+                                 dataset=self._dataset if self._thread_pool else None,
+                                 data_loader=self, timeout=self._timeout)
 
     def __len__(self):
         return len(self._batch_sampler)
