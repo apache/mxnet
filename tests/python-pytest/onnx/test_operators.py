@@ -360,3 +360,20 @@ def test_onnx_export_repeat(tmp_path, dtype, axis, repeats):
     x = mx.nd.arange(0, 27, dtype=dtype).reshape((3, 3, 3))
     M = def_model('repeat', axis=axis, repeats=repeats)
     op_export_test('repeat', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('params', [{'height': 7, 'width': 13},
+                                    {'height': 10, 'width': 16},
+                                    {'height': 3, 'width': 5},
+                                    {'height': 2, 'width': 4},
+                                    {'scale_height': 3, 'scale_width': 2},
+                                    {'scale_height': 1.7, 'scale_width': 2.3},
+                                    {'scale_height': 0.5, 'scale_width': 0.6},
+                                    {'scale_height': 0.8, 'scale_width': 0.1},
+                                    {'scale_height': 2.5, 'scale_width': 0.5},
+                                    {'scale_height': 3, 'scale_width': 0.00001},
+                                    ])
+def test_onnx_export_contrib_BilinearResize2D(tmp_path, dtype, params):
+    x = mx.nd.arange(0, 160).reshape((2, 2, 5, 8))
+    M = def_model('contrib.BilinearResize2D', **params)
+    op_export_test('contrib_BilinearResize2D', M, [x], tmp_path)
