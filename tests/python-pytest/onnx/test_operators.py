@@ -362,6 +362,7 @@ def test_onnx_export_repeat(tmp_path, dtype, axis, repeats):
     op_export_test('repeat', M, [x], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('params', [{'height': 7, 'width': 13},
                                     {'height': 10, 'width': 16},
                                     {'height': 3, 'width': 5},
