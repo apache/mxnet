@@ -2850,7 +2850,7 @@ def convert_repeat(node, **kwargs):
                 make_node('Reshape', [input_nodes[0], name+'_unsqueeze_shape'],
                           [name+'_unsqueeze'])
                 ]
-        else :
+        else:
             nodes += [
                 make_node('Unsqueeze', [input_nodes[0]], [name+'_unsqueeze'], axes=[axis+1])
                 ]
