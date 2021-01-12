@@ -2882,3 +2882,18 @@ def convert_greater_scalar(node, **kwargs):
         make_node("Cast", [name+"_gt"], [name], to=input_type, name=name)
     ]
     return nodes
+
+
+@mx_op.register("where")
+def convert_where(node, **kwargs):
+    """Map MXNet's where operator attributes to onnx's Where
+    operator and return the created node.
+    """
+    from onnx.helper import make_node, make_tensor
+    from onnx import TensorProto
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    nodes = [
+        make_node("Cast", [input_nodes[0]], [name+"_bool"], to=int(TensorProto.BOOL)),
+        make_node("Where", [name+"_bool", input_nodes[1], input_nodes[2]], [name], name=name)
+    ]
+    return nodes
