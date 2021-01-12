@@ -2796,7 +2796,6 @@ def convert_reverse(node, **kwargs):
     # Transpose takes perm as a parameter, so we must 'pad' the input to a known dim (10 here)
     perm = [i for i in range(10)]
     perm[0], perm[axis] = axis, 0
-    print(perm)
 
     nodes = [
         create_tensor([10], name+'_10', kwargs['initializer']),
