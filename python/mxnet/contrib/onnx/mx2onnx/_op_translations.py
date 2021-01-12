@@ -2861,3 +2861,24 @@ def convert_repeat(node, **kwargs):
             ]
 
     return nodes
+
+@mx_op.register("_greater_scalar")
+def convert_greater_scalar(node, **kwargs):
+    """Map MXNet's greater_scalar operator attributes to onnx's Greater
+    operator and return the created node.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    scalar = attrs.get('scalar')
+    input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    tensor_value = make_tensor(name+"_scalar", input_type, [1], np.array([scalar], dtype=dtype))
+    nodes = [
+        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
+        make_node("ConstantOfShape", [name+"_shape"], [name+"_rhs"], value=tensor_value),
+        make_node("Greater", [input_nodes[0], name+"_rhs"], [name+"_gt"]),
+        make_node("Cast", [name+"_gt"], [name], to=input_type, name=name)
+    ]
+    return nodes
