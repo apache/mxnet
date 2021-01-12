@@ -73,7 +73,13 @@ MXNET_REGISTER_GLOBAL("container._Map")
   for (int i = 0; i < args.num_args; i += 2) {
     ObjectRef k =
         String::CanConvertFrom(args[i]) ? args[i].operator String() : args[i].operator ObjectRef();
-    ObjectRef v = args[i + 1];
+    ObjectRef v;
+    if (args[i + 1].type_code() == kNDArrayHandle) {
+      mxnet::NDArray *array = args[i + 1].operator mxnet::NDArray*();
+      v = NDArrayHandle(array);
+    } else {
+      v = args[i + 1];
+    }
     data.emplace(std::move(k), std::move(v));
   }
   *rv = Map<ObjectRef, ObjectRef>(data);
@@ -126,18 +132,6 @@ MXNET_REGISTER_GLOBAL("container._MapCount")
   const MapObj* n = static_cast<const MapObj*>(ptr);
   auto key = String::CanConvertFrom(args[1]) ? args[1].operator String()
                                              : args[1].operator ObjectRef();
-  if (String::CanConvertFrom(args[1])) {
-    std::string str = std::string(Downcast<String>(key));
-    CHECK_EQ(str, "a");
-  }
-
-  for (const auto& kv : *n) {
-    if (kv.first->IsInstance<StringObj>()) {
-      std::string str = std::string(Downcast<String>(kv.first));
-      CHECK_EQ(str, "a");
-    }
-    break;
-  }
   int64_t cnt = n->count(key);
   *rv = cnt;
 });

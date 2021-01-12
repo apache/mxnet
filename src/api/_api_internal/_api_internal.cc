@@ -64,7 +64,7 @@ MXNET_REGISTER_GLOBAL("_ADT")
         ObjectRef input = NDArrayHandle(array);
         data.push_back(input);
       } else if (args[i].type_code() != kNull) {
-        ObjectRef input = String::CanConvertFrom(args[i]) ? args[i].operator String()
+        ObjectRef input = String::CanConvertFrom(args[i]) ? args[i].operator String() 
                                                           : args[i].operator ObjectRef();
         data.push_back(input);
       } else {
@@ -81,9 +81,14 @@ MXNET_REGISTER_GLOBAL("_Map")
     std::unordered_map<ObjectRef, ObjectRef, ObjectHash, ObjectEqual> data;
     for (int i = 0; i < args.num_args; i += 2) {
       ObjectRef k =
-          String::CanConvertFrom(args[i]) ? args[i].operator String()
-                                          : args[i].operator ObjectRef();
-      ObjectRef v = args[i + 1];
+          String::CanConvertFrom(args[i]) ? args[i].operator String() : args[i].operator ObjectRef();
+      ObjectRef v;
+      if (args[i + 1].type_code() == kNDArrayHandle) {
+        mxnet::NDArray *array = args[i + 1].operator mxnet::NDArray*();
+        v = NDArrayHandle(array);
+      } else {
+        v = args[i + 1];
+      }
       data.emplace(std::move(k), std::move(v));
     }
     *ret = Map<ObjectRef, ObjectRef>(data);

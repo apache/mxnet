@@ -59,11 +59,14 @@ def test_string_adt():
 #     a_slice = a[-3:-1]
 #     assert (a_slice[0].value, a_slice[1].value) == (1, 2)
 
-# TODO make containers capable of holding NDArrays
-# def test_ndarray_container():
-#     x = np.array([1, 2, 3])
-#     y = np.array([4, 5, 6])
-#     arr = mxnet._ffi.convert_to_node([x, y])
-#     assert _np.array_equal(arr[0].asnumpy(), x.asnumpy())
-#     assert _np.array_equal(arr[1].asnumpy(), y.asnumpy())
-#     assert isinstance(arr[0], NDArray)
+@use_np
+def test_ndarray_container():
+    x = np.array([1, 2, 3])
+    y = np.array([4, 5, 6])
+    arr = mxnet._ffi.convert_to_node([x, y])
+    assert _np.array_equal(arr[0].asnumpy(), x.asnumpy())
+    assert isinstance(arr[0], NDArray)
+    amap = mxnet._ffi.convert_to_node({'x': x, 'y': y})
+    assert "x" in amap
+    assert _np.array_equal(amap["y"].asnumpy(), y.asnumpy())
+    assert isinstance(amap["y"], NDArray)
