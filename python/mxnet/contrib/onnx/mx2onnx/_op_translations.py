@@ -2870,11 +2870,18 @@ def convert_greater_scalar(node, **kwargs):
     from onnx.helper import make_node, make_tensor
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    scalar = attrs.get('scalar')
+    scalar = float(attrs.get('scalar'))
     input_type = kwargs['in_type']
     dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
 
-    tensor_value = make_tensor(name+"_scalar", input_type, [1], np.array([scalar], dtype=dtype))
+    if 'int' in str(dtype):
+        scalar = int(scalar)
+    else:
+        if dtype == 'float16':
+            # when using float16, a bug in onnx requires us to convert it as below
+            scalar = np.float16(scalar).view(dtype=np.uint16)
+
+    tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
     nodes = [
         make_node("Shape", [input_nodes[0]], [name+"_shape"]),
         make_node("ConstantOfShape", [name+"_shape"], [name+"_rhs"], value=tensor_value),
