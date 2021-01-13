@@ -658,7 +658,48 @@ class DataLoader(object):
 
 class PrefetchedDataLoader(DataLoader):
     """Prefetch data from a dataset and returns mini-batches of data.
-    The prefetch performed immeditely after its iter is consumed.
+    The prefetch performed immeditely after it yield last item from its iterator.
+    When generate multiple iterator from PrefetchedDataLoader, only the first iter
+    is the prefetched iter, and PrefetchedDataLoader will not prefetch any data
+    if its prefetched iter is not being used.
+    
+    Example:
+    >>> from mxnet.gluon.data import PrefetchedDataLoader, ArrayDataset
+    >>> train_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
+    >>> def transform_train(sample):
+    ...   if sample == 0 : print('(pre)fetching data here')
+    ...   return sample
+    ...
+    >>> train_iter = PrefetchedDataLoader(train_data.transform_first(transform_train),
+    ...                                   batch_size=1,num_workers=1)
+    (pre)fetching data here
+    >>> it = iter(train_iter) # nothing is generated since lazy-evaluation occurs
+    >>> it2 = iter(train_iter)
+    >>> it3 = iter(train_iter)
+    >>> it4 = iter(train_iter)
+    >>> _ = next(it2) # the first iter we are using is the prefetched iter.
+    >>> _ = next(it) # since the prefetched iter is cconsumed, we have to fetch data for `it`.
+    (pre)fetching data here
+    >>> _ = [None for _ in it3]
+    (pre)fetching data here
+    (pre)fetching data here
+    >>> # Here, 2 prefetches are triggered, one is fetching the first batch of `it3` and
+    >>> # another is when `it3` yield its last item, a prefetch is automatically performed.
+    >>> _ = [None for _ in it]
+    >>> # no prefetch is happened since train_loader has already prefetch data.
+    >>> _ = next(it4)
+    >>> # since the prefetch is performed, it4 become the prefetched iter.
+    >>> 
+    >>> test_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
+    >>> test_iter = PrefetchedDataLoader(test_data,
+    ...                                  batch_size=1,num_workers=1)
+    >>> for epoch in range(200):
+    ...   # there is almost no difference between it and the default DataLoader
+    ...   for data, label in train_iter:
+    ...     # training...
+    ...   for data, label in test_iter:
+    ...     # testing...
+    ...
 
     Parameters
     ----------
@@ -695,7 +736,7 @@ class PrefetchedDataLoader(DataLoader):
                     data = np.asarray(data)
                     return nd.array(data, dtype=data.dtype)
 
-    num_workers : int, default 1
+    num_workers : int, default 0
         The number of multiprocessing workers to use for data preprocessing.
     pin_memory : boolean, default False
         If ``True``, the dataloader will copy NDArrays into pinned memory
@@ -725,7 +766,7 @@ class PrefetchedDataLoader(DataLoader):
                  last_batch=None, batch_sampler=None, batchify_fn=None,
                  num_workers=1, pin_memory=False, pin_device_id=0,
                  prefetch=None, thread_pool=False, timeout=120):
-        super(PrefetchedDataLoader,self).\
+        super(PrefetchedDataLoader, self).\
             __init__(dataset, batch_size, shuffle, sampler,
                      last_batch, batch_sampler, batchify_fn,
                      num_workers if num_workers >= 1 else 1,
