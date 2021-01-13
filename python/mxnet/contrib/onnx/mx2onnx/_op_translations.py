@@ -2879,7 +2879,7 @@ def convert_greater_scalar(node, **kwargs):
     else:
         if dtype == 'float16':
             # when using float16, a bug in onnx requires us to convert it as below
-            scalar = np.float16(scalar).view(dtype=np.uint16)
+            scalar = np.float16(scalar).view(np.uint16)
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
     nodes = [
