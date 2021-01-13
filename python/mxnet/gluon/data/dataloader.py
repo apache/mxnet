@@ -18,7 +18,7 @@
 # coding: utf-8
 # pylint: disable=ungrouped-imports
 """Dataset generator."""
-__all__ = ['DataLoader']
+__all__ = ['DataLoader', 'PrefetchedDataLoader']
 
 import pickle
 import io
@@ -655,3 +655,119 @@ class DataLoader(object):
             # https://bugs.python.org/issue34172
             assert isinstance(self._worker_pool, multiprocessing.pool.Pool)
             self._worker_pool.terminate()
+
+class PrefetchedDataLoader(DataLoader):
+    """Prefetch data from a dataset and returns mini-batches of data.
+    The prefetch performed immeditely after its iter is consumed.
+
+    Parameters
+    ----------
+    dataset : Dataset
+        Source dataset. Note that numpy and mxnet arrays can be directly used
+        as a Dataset.
+    batch_size : int
+        Size of mini-batch.
+    shuffle : bool
+        Whether to shuffle the samples.
+    sampler : Sampler
+        The sampler to use. Either specify sampler or shuffle, not both.
+    last_batch : {'keep', 'discard', 'rollover'}
+        How to handle the last batch if batch_size does not evenly divide
+        `len(dataset)`.
+
+        keep - A batch with less samples than previous batches is returned.
+        discard - The last batch is discarded if its incomplete.
+        rollover - The remaining samples are rolled over to the next epoch.
+    batch_sampler : Sampler
+        A sampler that returns mini-batches. Do not specify batch_size,
+        shuffle, sampler, and last_batch if batch_sampler is specified.
+    batchify_fn : callable
+        Callback function to allow users to specify how to merge samples
+        into a batch. Defaults to `default_batchify_fn`::
+
+            def default_batchify_fn(data):
+                if isinstance(data[0], nd.NDArray):
+                    return nd.stack(*data)
+                elif isinstance(data[0], tuple):
+                    data = zip(*data)
+                    return [default_batchify_fn(i) for i in data]
+                else:
+                    data = np.asarray(data)
+                    return nd.array(data, dtype=data.dtype)
+
+    num_workers : int, default 1
+        The number of multiprocessing workers to use for data preprocessing.
+    pin_memory : boolean, default False
+        If ``True``, the dataloader will copy NDArrays into pinned memory
+        before returning them. Copying from CPU pinned memory to GPU is faster
+        than from normal CPU memory.
+    pin_device_id : int, default 0
+        The device id to use for allocating pinned memory if pin_memory is ``True``
+    prefetch : int, default is `num_workers * 2`
+        The number of prefetching batches only works if `num_workers` > 0.
+        If `prefetch` > 0, it allow worker process to prefetch certain batches before
+        acquiring data from iterators.
+        Note that using large prefetching batch will provide smoother bootstrapping performance,
+        but will consume more shared_memory. Using smaller number may forfeit the purpose of using
+        multiple worker processes, try reduce `num_workers` in this case.
+        By default it defaults to `num_workers * 2`.
+    thread_pool : bool, default False
+        If ``True``, use threading pool instead of multiprocessing pool. Using threadpool
+        can avoid shared memory usage. If `DataLoader` is more IO bounded or GIL is not a killing
+        problem, threadpool version may achieve better performance than multiprocessing.
+    timeout : int, default is 120
+        The timeout in seconds for each worker to fetch a batch data. Only modify this number
+        unless you are experiencing timeout and you know it's due to slow data loading.
+        Sometimes full `shared_memory` will cause all workers to hang and causes timeout. In these
+        cases please reduce `num_workers` or increase system `shared_memory` size instead.
+    """
+    def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
+                 last_batch=None, batch_sampler=None, batchify_fn=None,
+                 num_workers=1, pin_memory=False, pin_device_id=0,
+                 prefetch=None, thread_pool=False, timeout=120):
+        super(PrefetchedDataLoader,self).\
+            __init__(dataset, batch_size, shuffle, sampler,
+                     last_batch, batch_sampler, batchify_fn,
+                     num_workers if num_workers >= 1 else 1,
+                     pin_memory, pin_device_id, prefetch, thread_pool, timeout)
+        self._iter = None # the iter will be initialized by the prefetch step.
+        self.alive = True
+        self.prefetch()
+
+    def prefetch(self, force_refresh=False):
+        if self._iter is None:
+            self._iter = \
+                _MultiWorkerIterP(self._worker_pool, self._batchify_fn, self._batch_sampler,
+                                  pin_memory=self._pin_memory, pin_device_id=self._pin_device_id,
+                                  worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
+                                  prefetch=self._prefetch,
+                                  dataset=self._dataset if self._thread_pool else None,
+                                  data_loader=self, timeout=self._timeout, _loader=self)
+
+    def __del__(self):
+        self.alive = False
+        self._iter = None # ensure the iter is deleted.
+        super(PrefetchedDataLoader,self).__del__()
+
+    def __iter__(self):
+        assert self._iter is not None, "There should be at most ONE iter of this dataloader."
+        t = self._iter
+        self._iter = None
+        # A new iter is generated immeditely after `self._iter.__del__()` is called
+        # so it is necessary to set `self._iter` to None
+        return t
+
+class _MultiWorkerIterP(_MultiWorkerIter):
+    def __init__(self, worker_pool, batchify_fn, batch_sampler, pin_memory=False,
+                 pin_device_id=0, worker_fn=_worker_fn, prefetch=0, dataset=None,
+                 data_loader=None, timeout=120, _loader=None):
+        super(_MultiWorkerIterP,self).\
+            __init__(worker_pool, batchify_fn, batch_sampler, pin_memory,
+                     pin_device_id, worker_fn, prefetch, dataset, data_loader, timeout)
+        self._loader = _loader
+        self.alive = True
+
+    def __del__(self):
+        if self._loader.alive and self.alive:
+            self.alive = False
+            self._loader.prefetch(True)
