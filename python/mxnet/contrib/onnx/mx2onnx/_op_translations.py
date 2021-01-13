@@ -2964,7 +2964,7 @@ def convert_contrib_box_decode(node, **kwargs):
     std3 = float(attrs.get('std3', '1.'))
     clip = float(attrs.get('clip', '-1.'))
 
-    if fmt != 'center' and fmt != 'corner':
+    if fmt not in ['center', 'corner']:
         raise NotImplementedError("format must be either corner or center.")
 
     nodes = [
