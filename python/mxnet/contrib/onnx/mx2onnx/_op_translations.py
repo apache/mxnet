@@ -46,7 +46,7 @@
 
 # coding: utf-8
 # pylint: disable=too-many-locals,no-else-return,too-many-lines
-# pylint: disable=anomalous-backslash-in-string,eval-used,too-many-function-args
+# pylint: disable=anomalous-backslash-in-string,eval-used
 """
 Conversion Functions for common layers.
 Add new functions here with a decorator.
@@ -2878,7 +2878,8 @@ def convert_greater_scalar(node, **kwargs):
         scalar = int(scalar)
     else:
         if dtype == 'float16':
-            # when using float16, a bug in onnx requires us to convert it as below
+            # when using float16, we must convert it to np.uint16 view first
+            # pylint: disable=too-many-function-args
             scalar = np.float16(scalar).view(np.uint16)
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
