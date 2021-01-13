@@ -408,3 +408,16 @@ def test_onnx_export_where(tmp_path, dtype, shape):
     y = mx.nd.ones(shape, dtype=dtype)
     cond = mx.nd.random.randint(low=0, high=1, shape=shape, dtype='int32')
     op_export_test('where', M, [cond, x, y], tmp_path)
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+@pytest.mark.parametrize('fmt', ['corner', 'center'])
+@pytest.mark.parametrize('clip', [-1., 0., .5, 5.])
+def test_onnx_export_contrib_box_decode(tmp_path, dtype, fmt, clip):
+    # ensure data[0] < data[2] and data[1] < data[3] for corner format
+    mul = mx.nd.array([-1, -1, 1, 1], dtype=dtype)
+    data = mx.nd.random.uniform(0, 1, (2, 3, 4), dtype=dtype) * mul
+    anchors = mx.nd.random.uniform(0, 1, (1, 3, 4), dtype=dtype) * mul
+    M1 = def_model('contrib.box_decode', format=fmt, clip=clip)
+    op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
+    M2 = def_model('contrib.box_decode', format=fmt, clip=clip, std0=0.3, std1=1.4, std2=0.5, std3=1.6)
+    op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
