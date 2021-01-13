@@ -2874,7 +2874,7 @@ def convert_greater_scalar(node, **kwargs):
     input_type = kwargs['in_type']
     dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
 
-    if 'int' in str(dtype):
+    if str(dtype).startswith('int'):
         scalar = int(scalar)
     else:
         if dtype == 'float16':
