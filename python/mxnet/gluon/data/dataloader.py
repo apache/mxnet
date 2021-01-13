@@ -730,44 +730,18 @@ class PrefetchedDataLoader(DataLoader):
                      last_batch, batch_sampler, batchify_fn,
                      num_workers if num_workers >= 1 else 1,
                      pin_memory, pin_device_id, prefetch, thread_pool, timeout)
-        self._iter = None # the iter will be initialized by the prefetch step.
-        self.alive = True
-        self.prefetch()
-
-    def prefetch(self, force_refresh=False):
-        if self._iter is None:
-            self._iter = \
-                _MultiWorkerIterP(self._worker_pool, self._batchify_fn, self._batch_sampler,
-                                  pin_memory=self._pin_memory, pin_device_id=self._pin_device_id,
-                                  worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
-                                  prefetch=self._prefetch,
-                                  dataset=self._dataset if self._thread_pool else None,
-                                  data_loader=self, timeout=self._timeout, _loader=self)
-
-    def __del__(self):
-        self.alive = False
-        self._iter = None # ensure the iter is deleted.
-        super(PrefetchedDataLoader,self).__del__()
+        self.refresh()
 
     def __iter__(self):
-        assert self._iter is not None, "There should be at most ONE iter of this dataloader."
+        if self._iter is None:
+            self.refresh()
         t = self._iter
-        self._iter = None
-        # A new iter is generated immeditely after `self._iter.__del__()` is called
-        # so it is necessary to set `self._iter` to None
-        return t
+        self._iter = None # ensure a single iter would not using twice.
+        for item in t:
+            yield item
+        if self._iter is None: # ensure we do not waste any exist iter by mistake
+            self.refresh()
 
-class _MultiWorkerIterP(_MultiWorkerIter):
-    def __init__(self, worker_pool, batchify_fn, batch_sampler, pin_memory=False,
-                 pin_device_id=0, worker_fn=_worker_fn, prefetch=0, dataset=None,
-                 data_loader=None, timeout=120, _loader=None):
-        super(_MultiWorkerIterP,self).\
-            __init__(worker_pool, batchify_fn, batch_sampler, pin_memory,
-                     pin_device_id, worker_fn, prefetch, dataset, data_loader, timeout)
-        self._loader = _loader
-        self.alive = True
-
-    def __del__(self):
-        if self._loader.alive and self.alive:
-            self.alive = False
-            self._loader.prefetch(True)
+    def refresh(self):
+        """Refresh its iter, fetch data again from its dataset"""
+        self._iter = super(PrefetchedDataLoader, self).__iter__()
