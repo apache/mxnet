@@ -2896,7 +2896,7 @@ def convert_where(node, **kwargs):
     """Map MXNet's where operator attributes to onnx's Where
     operator and return the created node.
     """
-    from onnx.helper import make_node, make_tensor
+    from onnx.helper import make_node
     from onnx import TensorProto
     name, input_nodes, _ = get_inputs(node, kwargs)
     nodes = [
