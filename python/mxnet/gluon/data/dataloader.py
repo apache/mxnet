@@ -662,7 +662,7 @@ class PrefetchedDataLoader(DataLoader):
     When generate multiple iterator from PrefetchedDataLoader, only the first iter
     is the prefetched iter, and PrefetchedDataLoader will not prefetch any data
     if its prefetched iter is not being used.
-    
+
     Example:
     >>> from mxnet.gluon.data import PrefetchedDataLoader, ArrayDataset
     >>> train_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
@@ -689,7 +689,7 @@ class PrefetchedDataLoader(DataLoader):
     >>> # no prefetch is happened since train_loader has already prefetch data.
     >>> _ = next(it4)
     >>> # since the prefetch is performed, it4 become the prefetched iter.
-    >>> 
+    >>>
     >>> test_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
     >>> test_iter = PrefetchedDataLoader(test_data,
     ...                                  batch_size=1,num_workers=1)
