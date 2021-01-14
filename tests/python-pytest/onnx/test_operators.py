@@ -386,3 +386,25 @@ def test_onnx_export_contrib_BilinearResize2D(tmp_path, dtype, params):
     x = mx.nd.arange(0, 160).reshape((2, 2, 5, 8))
     M = def_model('contrib.BilinearResize2D', **params)
     op_export_test('contrib_BilinearResize2D', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("scalar", [0., 0.1, 0.5, 1., 5, 555.])
+def test_onnx_export_greater_scalar(tmp_path, dtype, scalar):
+    if 'int' in dtype:
+        scalar = int(scalar)
+        x = mx.nd.arange(0, 12, dtype=dtype).reshape((3, 4))
+    else:
+        x = mx.random.uniform(0, 9999, (5,10), dtype=dtype)
+    M = def_model('_internal._greater_scalar', scalar=scalar)
+    op_export_test('_internal._greater_scalar', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("shape", [(1,1), (3,3), (10,2), (20,30,40)])
+def test_onnx_export_where(tmp_path, dtype, shape):
+    M = def_model('where')
+    x = mx.nd.zeros(shape, dtype=dtype)
+    y = mx.nd.ones(shape, dtype=dtype)
+    cond = mx.nd.random.randint(low=0, high=1, shape=shape, dtype='int32')
+    op_export_test('where', M, [cond, x, y], tmp_path)
