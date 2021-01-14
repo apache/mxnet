@@ -764,13 +764,13 @@ class PrefetchedDataLoader(DataLoader):
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
-                 num_workers=1, pin_memory=False, pin_device_id=0,
+                 num_workers=0, pin_memory=False, pin_device_id=0,
                  prefetch=None, thread_pool=False, timeout=120):
         super(PrefetchedDataLoader, self).\
             __init__(dataset, batch_size, shuffle, sampler,
                      last_batch, batch_sampler, batchify_fn,
-                     num_workers if num_workers >= 1 else 1,
-                     pin_memory, pin_device_id, prefetch, thread_pool, timeout)
+                     num_workers, pin_memory, pin_device_id,
+                     prefetch, thread_pool, timeout)
         self.refresh()
 
     def __iter__(self):
