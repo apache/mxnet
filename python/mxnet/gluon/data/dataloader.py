@@ -785,4 +785,19 @@ class PrefetchedDataLoader(DataLoader):
 
     def refresh(self):
         """Refresh its iter, fetch data again from its dataset"""
-        self._iter = super(PrefetchedDataLoader, self).__iter__()
+        if self._num_workers == 0:
+            def same_process_iter():
+                for batch in self._batch_sampler:
+                    ret = self._batchify_fn([self._dataset[idx] for idx in batch])
+                    if self._pin_memory:
+                        ret = _as_in_context(ret, context.cpu_pinned(self._pin_device_id))
+                    yield ret
+            self._iter = same_process_iter()
+        else: # multi-worker
+            self._iter = \
+                _MultiWorkerIter(self._worker_pool, self._batchify_fn, self._batch_sampler,
+                                 pin_memory=self._pin_memory, pin_device_id=self._pin_device_id,
+                                 worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
+                                 prefetch=self._prefetch,
+                                 dataset=self._dataset if self._thread_pool else None,
+                                 data_loader=self, timeout=self._timeout)
