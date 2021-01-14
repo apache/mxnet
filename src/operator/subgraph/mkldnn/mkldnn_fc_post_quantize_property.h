@@ -32,6 +32,7 @@
 #include <vector>
 #include "../../nn/fully_connected-inl.h"
 #include "../../quantization/requantize-inl.h"
+#include "../../quantization/quantize_v2-inl.h"
 #include "../common.h"
 #include "mkldnn_subgraph_base-inl.h"
 
@@ -47,6 +48,8 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
     kFail = 0,
     kStart,
     kRequantize,
+    kLeakyRelu,
+    kQuantizeAgain,
     kSuccess,
   };
 
@@ -107,8 +110,20 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
       case kRequantize:
         if ((!disable_float_output) && (new_node.op() == Op::Get("_contrib_dequantize"))) {
             matched_list.push_back(&new_node);
-            status = kSuccess;
+            status = kLeakyRelu;
             return true;
+        }
+      case kLeakyRelu:
+        if ((new_node.op() == Op::Get("LeakyReLU")) && status == kLeakyRelu) {
+            matched_list.push_back(&new_node);
+            status = kQuantizeAgain;
+            return true;
+        }
+      case kQuantizeAgain:
+        if ((new_node.op() == Op::Get("_contrib_quantize_v2")) && status == kQuantizeAgain) {
+            matched_list.push_back(&new_node);
+            status = kSuccess;
+          return true;
         }
       default:
         status = kSuccess;
@@ -161,6 +176,8 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
     nnvm::ObjectPtr fc_node = nullptr;
     nnvm::ObjectPtr requantize_node = nullptr;
     nnvm::ObjectPtr dequantize_node = nullptr;
+    nnvm::ObjectPtr leaky_relu_node = nullptr;
+    nnvm::ObjectPtr quantize_again_node = nullptr;
 
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->is_variable()) return;
@@ -170,6 +187,10 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
         requantize_node = node;
       } else if (node->op() == Op::Get("_contrib_dequantize")) {
         dequantize_node = node;
+      } else if (node->op() == Op::Get("LeakyReLU")) {
+        leaky_relu_node = node;
+      } else if (node->op() == Op::Get("_contrib_quantize_v2")) {
+        quantize_again_node = node;
       }
     });
 
@@ -180,15 +201,47 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
     CHECK(requantize_param.min_calib_range.has_value());
     CHECK(requantize_param.max_calib_range.has_value());
 
+    if (leaky_relu_node != nullptr) {
+          fc_node->attrs.dict["with_eltwise"] = "True";
+      nnvm::Symbol new_sym;
+      DFSVisit(fc_node->attrs.subgraphs[0]->outputs, [&](const nnvm::ObjectPtr &node) {
+        if (node->is_variable()) return;
+        auto &op_name = node->op()->name;
+        if (op_name == "FullyConnected") {
+          leaky_relu_node->inputs.resize(1);
+          leaky_relu_node->inputs[0].node = node;
+          leaky_relu_node->inputs[0].index = 0;
+          new_sym.outputs.emplace_back(leaky_relu_node);
+          return; //exit lambda
+        }
+      });
+
+      fc_node->attrs.subgraphs.clear();
+      fc_node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
+
+      if(quantize_again_node != nullptr) {
+        fc_node->attrs.dict["enable_float_output"] = "False";
+        dequantize_node = nullptr;
+        auto const &quantize_param =
+            nnvm::get<QuantizeV2Param>(quantize_again_node->attrs.parsed);
+        fc_node->attrs.dict["min_calib_range"] =
+          std::to_string(quantize_param.min_calib_range.value());
+        fc_node->attrs.dict["max_calib_range"] =
+            std::to_string(quantize_param.max_calib_range.value());
+      }
+    } else {
+
+    
     // When only fused quantized_fullyconnected and requantize, set min/max_cablib_range,
     // When fused quantized_fullyconnected + requantize + dequantize, set dequantize flag to true.
-    if (dequantize_node != nullptr) {
-      fc_node->attrs.dict["enable_float_output"] = "True";
-    } else {
-      fc_node->attrs.dict["min_calib_range"] =
-          std::to_string(requantize_param.min_calib_range.value());
-      fc_node->attrs.dict["max_calib_range"] =
-          std::to_string(requantize_param.max_calib_range.value());
+      if (dequantize_node != nullptr) {
+        fc_node->attrs.dict["enable_float_output"] = "True";
+      } else {
+        fc_node->attrs.dict["min_calib_range"] =
+            std::to_string(requantize_param.min_calib_range.value());
+        fc_node->attrs.dict["max_calib_range"] =
+            std::to_string(requantize_param.max_calib_range.value());
+      }
     }
     fc_node->op()->attr_parser(&(fc_node->attrs));
     return fc_node;

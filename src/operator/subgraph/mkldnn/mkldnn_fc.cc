@@ -365,7 +365,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       float out_scale = 1.0f;
       if (fuse_requantize || mkldnn_param.enable_float_output) {
         float tmp_scale_ = 1.0f;
-        if (fuse_requantize) {
+        if (fuse_requantize && !mkldnn_param.with_eltwise) {
           out_scale =  GetQuantizeScale(output.dtype(), cached_min_output_, cached_max_output_);
           tmp_scale_ = out_scale / data_scale_;
         } else {
@@ -514,6 +514,15 @@ static void SgMKLDNNFCParamParser(nnvm::NodeAttrs *attrs) {
     } else if (SupportMKLDNNFCEltwiseFusion(op_name)) {
       if (op_name == "Activation") {
         const ActivationParam act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
+        full_param.eltwise_param.alg = GetMKLDNNActAlgo(act_param);
+      } else if (op_name == "LeakyReLU") {
+        const auto act_param = nnvm::get<LeakyReLUParam>(node->attrs.parsed);
+        if(full_param.mkldnn_param.min_calib_range.has_value() &&
+           full_param.mkldnn_param.max_calib_range.has_value()) {
+              full_param.eltwise_param.scale = GetQuantizeScale(mshadow::kInt8,
+                                                                full_param.mkldnn_param.min_calib_range.value(),
+                                                                full_param.mkldnn_param.max_calib_range.value());
+           }
         full_param.eltwise_param.alg = GetMKLDNNActAlgo(act_param);
       } else if (op_name == "clip") {
         const ClipParam clip_param = nnvm::get<ClipParam>(node->attrs.parsed);
