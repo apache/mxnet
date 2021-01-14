@@ -386,3 +386,63 @@ def test_onnx_export_contrib_BilinearResize2D(tmp_path, dtype, params):
     x = mx.nd.arange(0, 160).reshape((2, 2, 5, 8))
     M = def_model('contrib.BilinearResize2D', **params)
     op_export_test('contrib_BilinearResize2D', M, [x], tmp_path)
+
+
+
+@pytest.mark.parametrize('topk', [2, 3, 4])
+@pytest.mark.parametrize('valid_thresh', [0.3, 0.4, 0.8])
+@pytest.mark.parametrize('overlap_thresh', [0.4, 0.7, 1.0])
+
+#@pytest.mark.parametrize('topk', [3])
+#@pytest.mark.parametrize('valid_thresh', [0.3])
+#@pytest.mark.parametrize('overlap_thresh', [0.4])
+def test_onnx_export_contrib_box_nms_manual(tmp_path, topk, valid_thresh, overlap_thresh):
+    # Note that ONNX NMS op only supports float32
+
+    # Also note that onnxruntime's nms has slightly different implementation in handling
+    # overlaps and score ordering when certain boxes are suppressed than that of mxnet
+    # the following test tensors are manually tweaked to avoid such diferences
+    # The purpose of theses tests cases are to show that the high level conversion logic is
+    # laid out correctly
+
+    A = mx.nd.array([[
+                    [[[[0.5, 0.1, 0.1, 0.2, 0.2],
+                    [0.4, 0.1, 0.1, 0.2, 0.2],
+                    [0.7, 0.5, 0.5, 0.9, 0.9],
+                    [0.8, 0.1, 0.9, 0.11, 0.91],
+                    [0.001, 0.01, 0.01, 0.02, 0.02]]]],
+
+                    [[[[0.5, 0.1, 0.1, 0.2, 0.2],
+                    [0.4, 0.1, 0.1, 0.2, 0.2],
+                    [0.7, 0.5, 0.5, 0.9, 0.9],
+                    [0.8, 0.1, 0.9, 0.11, 0.91],
+                    [0.001, 0.01, 0.01, 0.02, 0.02]]]],
+
+                    [[[[0.4, 0.1, 0.1, 0.2, 0.2],
+                    [0.3, 0.1, 0.1, 0.2, 0.2],
+                    [0.7, 0.5, 0.5, 0.9, 0.9],
+                    [0.8, 0.1, 0.9, 0.11, 0.91],
+                    [0.001, 0.01, 0.01, 0.02, 0.02]]]],
+                    ]])
+    M = def_model('contrib.box_nms', coord_start=1, force_suppress=True,
+                  overlap_thresh=overlap_thresh, valid_thresh=valid_thresh, score_index=0,
+                  topk=topk, in_format='corner', out_format='corner')
+    op_export_test('contrib_nms_manual_coner', M, [A], tmp_path)
+    
+    B = mx.nd.array([
+                    [[[[0.7, 0.5, 0.5, 0.2, 0.2],
+                    [0.6, 0.48, 0.48, 0.2, 0.2],
+                    [0.8, 0.76, 0.76, 0.2, 0.2],
+                    [0.9, 0.7, 0.7, 0.2, 0.2],
+                    [0.001, 0.5, 0.1, 0.02, 0.02]]]],
+
+                    [[[[0.5, 0.2, 0.2, 0.2, 0.2],
+                    [0.6, 0.4, 0.4, 0.21, 0.21],
+                    [0.7, 0.5, 0.5, 0.9, 0.9],
+                    [0.8, 0.1, 0.9, 0.01, 0.01],
+                    [0.001, 0.6, 0.1, 0.02, 0.02]]]],
+                    ])
+    M = def_model('contrib.box_nms', coord_start=1, force_suppress=True,
+                  overlap_thresh=overlap_thresh, valid_thresh=valid_thresh, score_index=0,
+                  topk=topk, in_format='center', out_format='center')
+    op_export_test('contrib_nms_manual_center', M, [B], tmp_path)
