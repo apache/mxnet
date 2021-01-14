@@ -128,6 +128,7 @@ class MXNetGraph(object):
         :rtype: dict of (str, tuple(int, ...))
         """
         from onnx import mapping
+        import re
         # remove any input listed in params from sym.list_inputs() and bind them to the input shapes provided
         # by user. Also remove in_label, which is the name of the label symbol that may have been used
         # as the label for loss during training.
@@ -140,8 +141,10 @@ class MXNetGraph(object):
 
         out_names = list()
         for name in sym.list_outputs():
-            if name.endswith('_output'):
+            if re.search('.*_output$', name):
                 out_names.append(name[:-len('_output')])
+            elif re.search('.*_output[0-9]$', name):
+                out_names.append(name[:-len('_output0')])
             else:
                 logging.info("output '%s' does not end with '_output'", name)
                 out_names.append(name)

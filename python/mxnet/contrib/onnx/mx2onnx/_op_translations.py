@@ -2902,3 +2902,43 @@ def convert_repeat(node, **kwargs):
             ]
 
     return nodes
+
+
+@mx_op.register('_contrib_box_nms')
+def convert_contrib_box_nms(node, **kwargs):
+    """Map MXNet's _contrib_box_nms operator to ONNX
+    """
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError('ONNX opset 11 or greater is required to export this operator')
+
+    overlap_thresh = float(attrs.get('overlap_thresh', '0.5'))
+    valid_thresh = float(attrs.get('valid_thresh', '0.5'))
+    topk = int(attrs.get('topk', '-1'))
+    coord_start = int(attrs.get('coord_start', '2'))
+    score_start = int(attrs.get('score_start', '1'))
+    id_index = int(attrs.get('id_index', '-1'))
+    background_id = int(attrs.get('background_id', '-1'))
+    force_suppress = attrs.get('force_suppress', 'False')
+    in_format = attrs.get('in_format', 'corner')
+    out_format = attrs.get('in_format', 'corner')
+    
+    print(input_nodes)
+    nodes = [
+        #create_tensor([coord_start], name+'_cs', kwargs['initializer']),
+        #create_tensor([coord_start+4], name+'_cs_p4', kwargs['initializer']),
+        #create_tensor([-1], name+'_m1', kwargs['initializer']),
+        #make_node('Slice', [input_nodes[0], name+'_cs', name+'_cs_p4', name+'_m1'],
+        #          [name+'_slice']),
+        make_node('Identity', [input_nodes[0]], [name], name=name),
+        #make_node('Range', [name+'_cs_p4', name+'_cs', name+'_m1'], [name])
+        ]
+    print(nodes)
+    print(name)
+
+    return nodes
+
