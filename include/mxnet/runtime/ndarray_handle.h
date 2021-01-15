@@ -44,11 +44,12 @@ class NDArrayHandle : public ObjectRef {
     node->value = *value;
     data_ = std::move(node);
   }
-  MXNET_DEFINE_OBJECT_REF_METHODS(NDArrayHandle, ObjectRef, NDArrayHandleObj)
-};
   inline NDArray* getArray() const {
     return static_cast<NDArray*>(&(static_cast<NDArrayHandleObj*>(data_.get())->value));
   }
+  MXNET_DEFINE_OBJECT_REF_METHODS(NDArrayHandle, ObjectRef, NDArrayHandleObj)
+};
+
 };  // namespace mxnet
 
 #endif  // MXNET_RUNTIME_NDARRAY_HANDLE_H_
