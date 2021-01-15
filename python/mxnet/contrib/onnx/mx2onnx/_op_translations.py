@@ -2909,7 +2909,6 @@ def convert_contrib_box_nms(node, **kwargs):
     """Map MXNet's _contrib_box_nms operator to ONNX
     """
     from onnx.helper import make_node
-    from onnx import TensorProto
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     opset_version = kwargs['opset_version']
@@ -2931,7 +2930,7 @@ def convert_contrib_box_nms(node, **kwargs):
     out_format = attrs.get('out_format', 'corner')
 
     center_point_box = 0 if in_format == 'corner' else 1
-    
+
     if in_format != out_format:
         raise NotImplementedError('box_nms does not currently support in_fomat != out_format')
 
@@ -2940,6 +2939,8 @@ def convert_contrib_box_nms(node, **kwargs):
 
     if id_index != -1:
         raise NotImplementedError('box_nms does not currently support id_index != -1')
+
+    force_suppress = True
 
     nodes = [
         create_tensor([coord_start], name+'_cs', kwargs['initializer']),
@@ -2971,8 +2972,9 @@ def convert_contrib_box_nms(node, **kwargs):
                   [name+'_scores_raw']),
         make_node('Reshape', [name+'_scores_raw', name+'_scores_shape'], [name+'_scores']),
         make_node('Shape', [name+'_scores'], [name+'_scores_shape_actual']),
-        make_node('NonMaxSuppression', [name+'_boxes', name+'_scores', name+'_topk', name+'_ot',
-                  name+'_vt'], [name+'_nms'], center_point_box=center_point_box),
+        make_node('NonMaxSuppression',
+                  [name+'_boxes', name+'_scores', name+'_topk', name+'_ot', name+'_vt'],
+                  [name+'_nms'], center_point_box=center_point_box),
         make_node('Slice', [name+'_nms', name+'_0', name+'_3', name+'_m1', name+'_2'],
                   [name+'_nms_sliced']),
         make_node('GatherND', [name+'_data_3d', name+'_nms_sliced'], [name+'_candidates']),
