@@ -22,7 +22,8 @@ import sys as _sys
 
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from .._ctypes.ndarray import NDArrayBase, CachedOp
+        from .._ctypes.ndarray import NDArrayBase
+        from .._ctypes.cached_op import CachedOp
         from .._ctypes.ndarray import _imperative_invoke
         from .._global_var import _set_ndarray_class, _set_np_ndarray_class
     else:
@@ -32,7 +33,8 @@ try:
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from .._ctypes.ndarray import NDArrayBase, CachedOp
+    from .._ctypes.ndarray import NDArrayBase
+    from .._ctypes.cached_op import CachedOp
     from .._ctypes.ndarray import _imperative_invoke
     from .._global_var import _set_ndarray_class, _set_np_ndarray_class
 
