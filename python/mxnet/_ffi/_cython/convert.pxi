@@ -17,8 +17,32 @@
 
 """Acknowledgement: This file originates from incubator-tvm"""
 
-include "./base.pxi"
-include "./ndarray.pxi"
-include "./convert.pxi"
-include "./object.pxi"
-include "./function.pxi"
+from libc.stdint cimport *
+from numbers import Integral
+
+cdef extern from "mxnet/runtime/ffi_helper.h" namespace "mxnet::runtime":
+    cdef cppclass Object:
+        pass
+
+    cdef cppclass ObjectPtr[T]:
+        pass
+
+    cdef cppclass ObjectRef:
+        const Object* get() const
+
+    cdef cppclass ADT(ObjectRef):
+        ADT()
+
+    cdef cppclass ADTBuilder:
+        ADTBuilder()
+        ADTBuilder(uint32_t tag, uint32_t size)
+        void EmplaceInit(size_t idx, ObjectRef)
+        ADT Get()
+
+    cdef cppclass Integer(ObjectRef):
+        Integer()
+        Integer(int64_t)
+
+    cdef cppclass Float(ObjectRef):
+        Float()
+        Float(double)
