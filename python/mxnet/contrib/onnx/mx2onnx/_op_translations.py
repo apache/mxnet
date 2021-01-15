@@ -2208,7 +2208,7 @@ def convert_broadcast_to(node, **kwargs):
     return [tensor_node, expand_node]
 
 
-@mx_op.register("topk")
+@mx_op.register('topk')
 def convert_topk(node, **kwargs):
     """Map MXNet's topk operator attributes to onnx's TopK operator
     and return the created node.
@@ -2216,25 +2216,51 @@ def convert_topk(node, **kwargs):
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError('ONNX opset 11 or greater is required to export this operator')
+
     axis = int(attrs.get('axis', '-1'))
     k = int(attrs.get('k', '1'))
-    ret_type = attrs.get('ret_typ')
-    outputs = [name]
+    ret_type = attrs.get('ret_typ', 'indices')
+    is_ascend = int(attrs.get('is_ascend', '0'))
+    dtype = attrs.get('dtype', 'float32')
 
-    if ret_type and ret_type == 'both':
-        outputs.append(name + '_output1')
-    else:
-        raise NotImplementedError("ONNX expects both value and indices as output")
+    if ret_type == 'mask':
+        raise NotImplementedError('topk does not currently support ret_type==\'mask\'')
 
-    opset_version = kwargs['opset_version']
-    if opset_version >= 10:
-        nodes = [
-            create_const_scalar_node(name+"_k", np.int64(k), kwargs),
-            make_node("TopK", [input_nodes[0], name+"_k"], outputs, axis=axis, name=name)
+    nodes = [
+        create_tensor([k], name+'_k', kwargs['initializer']),
         ]
-        return nodes
+
+    if ret_type in ['both', 'value']:
+        if dtype == 'int64':
+            nodes += [
+                make_node('TopK', [input_nodes[0], name+'_k'], [name+'0', name+'1'], axis=axis,
+                          largest=(0 if is_ascend else 1), sorted=1),
+                ]
+        else:
+            nodes += [
+                make_node('TopK', [input_nodes[0], name+'_k'], [name+'0', name+'1_'], axis=axis,
+                          largest=(0 if is_ascend else 1), sorted=1),
+                make_node('Cast', [name+'1_'], [name+'1'],
+                          to=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)])
+                ]
     else:
-        return [make_node("TopK", input_nodes, outputs, axis=axis, k=k, name=name)]
+        if dtype == 'int64':
+            nodes += [
+                make_node('TopK', [input_nodes[0], name+'_k'], [name+'_', name], axis=axis,
+                          largest=(0 if is_ascend else 1), sorted=1),
+                ]
+        else:
+            nodes += [
+                make_node('TopK', [input_nodes[0], name+'_k'], [name+'__', name+'_'], axis=axis,
+                          largest=(0 if is_ascend else 1), sorted=1),
+                make_node('Cast', [name+'_'], [name],
+                          to=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)])
+                ]
+
+    return nodes
 
 
 @mx_op.register("take")
