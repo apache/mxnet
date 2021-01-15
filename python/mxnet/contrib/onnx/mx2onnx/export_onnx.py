@@ -144,7 +144,7 @@ class MXNetGraph(object):
             if re.search('.*_output$', name):
                 out_names.append(name[:-len('_output')])
             elif re.search('.*_output[0-9]$', name):
-                out_names.append(name[:-len('_output0')])
+                out_names.append(name[:-len('_output0')]+name[-1])
             else:
                 logging.info("output '%s' does not end with '_output'", name)
                 out_names.append(name)

@@ -2990,7 +2990,7 @@ def convert_contrib_box_nms(node, **kwargs):
         make_node('TopK', [name+'_indices', name+'_spat_dim'], [name+'_indices_sorted', name+'__'],
                   largest=0, axis=-1, sorted=1),
         make_node('Gather', [name+'_cand_padded', name+'_indices_sorted'], [name+'_gather']),
-        make_node('Reshape', [name+'_gather', name+'_shape'], [name])
+        make_node('Reshape', [name+'_gather', name+'_shape'], [name+'0'])
         ]
 
     return nodes

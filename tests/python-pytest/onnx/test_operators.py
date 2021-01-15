@@ -392,10 +392,6 @@ def test_onnx_export_contrib_BilinearResize2D(tmp_path, dtype, params):
 @pytest.mark.parametrize('topk', [2, 3, 4])
 @pytest.mark.parametrize('valid_thresh', [0.3, 0.4, 0.8])
 @pytest.mark.parametrize('overlap_thresh', [0.4, 0.7, 1.0])
-
-#@pytest.mark.parametrize('topk', [3])
-#@pytest.mark.parametrize('valid_thresh', [0.3])
-#@pytest.mark.parametrize('overlap_thresh', [0.4])
 def test_onnx_export_contrib_box_nms_manual(tmp_path, topk, valid_thresh, overlap_thresh):
     # Note that ONNX NMS op only supports float32
 
