@@ -27,6 +27,7 @@ dependencies:
 - matplotlib
 - notebook
 - pip:
+  - nbformat==5.0.8
   - nbconvert==5.6.1
   - nbsphinx==0.4.3
   - recommonmark==0.6.0
