@@ -107,28 +107,17 @@ cdef class CachedOp:
     cdef readonly object mhandle
 
     def __init__(self, sym, flags=()):
-        cdef vector[string] s_flag_keys
-        cdef vector[string] s_flag_vals
-        if flags is not None:
-            for k, v in flags:
-                s_flag_keys.push_back(c_str(k))
-                s_flag_vals.push_back(c_str(str(v)))
-        cdef vector[const char*] c_flag_keys = SVec2Ptr(s_flag_keys)
-        cdef vector[const char*] c_flag_vals = SVec2Ptr(s_flag_vals)
-
         from ..symbol.numpy._symbol import _Symbol
         self.is_np_sym = bool(isinstance(sym, _Symbol))
 
-        CALL(MXCreateCachedOp(
-            <SymbolHandle>(<unsigned long long>sym.handle.value),
-            len(flags),
-            CBeginPtr(c_flag_keys),
-            CBeginPtr(c_flag_vals),
-            &self.chandle,
-            False))
+        from api import create_cachedOp
+        flags = {key: str(value) for key, value in flags}
+        self.handle = create_cachedOp(sym.handle, len(flags), flags, False)
 
     def __del__(self):
-        CALL(MXFreeCachedOp(self.chandle))
+        # CALL(MXFreeCachedOp(self.chandle))
+        from api import free_cachedOp
+        free_cachedOp(self.handle)
 
     def get_optimized_symbol(self):
         """Get an optimized version of the symbol from the cached op.
@@ -139,13 +128,14 @@ cdef class CachedOp:
             Optimized symbol from the executor.
         """
         from ..symbol import Symbol
+        from api import get_optimized_symbol
         cdef SymbolHandle shandle
-        CALL(MXCachedOpGetOptimizedSymbol(self.chandle, &shandle))
-        ret = Symbol(_ctypes.cast(<unsigned long long>shandle, _ctypes.c_void_p))
+        ret = Symbol(get_optimized_symbol(self.handle))
         return ret
 
     def __call__(self, *args, out=None, default_ctx=None):
         """ctypes implementation of imperative invoke wrapper"""
+        from api import invoke_cachedOp
         cdef vector[NDArrayHandle] ndvars
         cdef vector[NDArrayHandle] output_vars
         cdef NDArrayHandle* p_output_vars
@@ -154,46 +144,62 @@ cdef class CachedOp:
         cdef int default_ctx_dev_id
         cdef int num_output
         cdef const int* p_output_stypes
-
-        if len(args) == 1 and args[0] is None:
-            args = []
-            assert default_ctx is not None, 'default_ctx is required if no input is provided'
-        else:
-            default_ctx = args[0].ctx if default_ctx is None else default_ctx
-        for i in args:
-            ndvars.push_back((<NDArrayBase>i).chandle)
-
-        original_output = None
-        if out is not None:
-            original_output = out
-            if isinstance(out, NDArrayBase):
-                output_vars.push_back((<NDArrayBase>out).chandle)
+        if self.is_np_sym:
+            if len(args) == 1 and args[0] is None:
+                args = []
+            outputs = invoke_cachedOp(
+                self.handle,
+                args,
+                out if isinstance(out, NDArrayBase) or out is None else (out, ),
+                default_ctx.device_typeid if default_ctx else None,
+                default_ctx.device_id if default_ctx else None
+            )
+            if out is not None:
+                return out
+            if len(outputs) == 1:
+                return outputs[0]
             else:
-                for i in out:
-                    output_vars.push_back((<NDArrayBase>i).chandle)
-
-        num_output = output_vars.size()
-        if output_vars.size() == 0:
-            p_output_vars = NULL
+                return outputs
         else:
-            p_output_vars = &output_vars[0]
+            if len(args) == 1 and args[0] is None:
+                args = []
+                assert default_ctx is not None, 'default_ctx is required if no input is provided'
+            else:
+                default_ctx = args[0].ctx if default_ctx is None else default_ctx
+            for i in args:
+                ndvars.push_back((<NDArrayBase>i).chandle)
 
-        CALL(MXInvokeCachedOp(
-            self.chandle,
-            <int>len(args),
-            &ndvars[0] if ndvars.size() != 0 else NULL,
-            <int>(default_ctx.device_typeid),
-            <int>(default_ctx.device_id),
-            &num_output,
-            &p_output_vars,
-            &p_output_stypes))
+            original_output = None
+            if out is not None:
+                original_output = out
+                if isinstance(out, NDArrayBase):
+                    output_vars.push_back((<NDArrayBase>out).chandle)
+                else:
+                    for i in out:
+                        output_vars.push_back((<NDArrayBase>i).chandle)
 
-        if original_output is not None:
-            return original_output
-        if num_output == 1:
-            return NewArray(p_output_vars[0], p_output_stypes[0], self.is_np_sym)
-        else:
-            return [NewArray(p_output_vars[i], p_output_stypes[i], self.is_np_sym) for i in range(num_output)]
+            num_output = output_vars.size()
+            if output_vars.size() == 0:
+                p_output_vars = NULL
+            else:
+                p_output_vars = &output_vars[0]
+
+            CALL(MXInvokeCachedOp(
+                self.chandle,
+                <int>len(args),
+                &ndvars[0] if ndvars.size() != 0 else NULL,
+                <int>(default_ctx.device_typeid),
+                <int>(default_ctx.device_id),
+                &num_output,
+                &p_output_vars,
+                &p_output_stypes))
+
+            if original_output is not None:
+                return original_output
+            if num_output == 1:
+                return NewArray(p_output_vars[0], p_output_stypes[0], self.is_np_sym)
+            else:
+                return [NewArray(p_output_vars[i], p_output_stypes[i], self.is_np_sym) for i in range(num_output)]
 
     def _register_op_hook(self, callback, monitor_all=False):
         cb_type = _ctypes.CFUNCTYPE(None, _ctypes.c_char_p, _ctypes.c_char_p, _ctypes.c_void_p, _ctypes.c_void_p)

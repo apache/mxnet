@@ -32,16 +32,20 @@ cdef inline int make_arg(object arg,
     """Pack arguments into c args mxnet call accept"""
     cdef unsigned long long ptr
 
-    if isinstance(arg, (list, tuple)):
-        temp_objs[0] = convert_object(arg)
-        value[0].v_handle = (<void*>(temp_objs[0].get()))
+    if isinstance(arg, (list, tuple, dict)):
+        arg = _FUNC_CONVERT_TO_NODE(arg)
+        value[0].v_handle = (<ObjectBase>arg).chandle
         tcode[0] = kObjectHandle
-    elif isinstance(arg, PyNativeObject):
-        value[0].v_handle = (<ObjectBase>(arg.__mxnet_object__)).chandle
+        temp_args.append(arg)
+    elif isinstance(arg, ObjectBase):
+        value[0].v_handle = (<ObjectBase>arg).chandle
         tcode[0] = kObjectHandle
     elif isinstance(arg, NDArrayBase):
         value[0].v_handle = <void*><size_t>(arg._get_handle())
         tcode[0] = kNDArrayHandle
+    elif isinstance(arg, PyNativeObject):
+        value[0].v_handle = (<ObjectBase>(arg.__mxnet_object__)).chandle
+        tcode[0] = kObjectHandle
     elif isinstance(arg, (int, long)):
         value[0].v_int64 = arg
         tcode[0] = kInt
@@ -56,9 +60,6 @@ cdef inline int make_arg(object arg,
     elif arg is None:
         value[0].v_handle = NULL
         tcode[0] = kNull
-    elif isinstance(arg, ObjectBase):
-        value[0].v_handle = (<ObjectBase>arg).chandle
-        tcode[0] = kObjectHandle
     elif isinstance(arg, Number):
         value[0].v_float64 = arg
         tcode[0] = kFloat

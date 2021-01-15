@@ -46,7 +46,9 @@ class NDArrayHandle : public ObjectRef {
   }
   MXNET_DEFINE_OBJECT_REF_METHODS(NDArrayHandle, ObjectRef, NDArrayHandleObj)
 };
-
+  inline NDArray* getArray() const {
+    return static_cast<NDArray*>(&(static_cast<NDArrayHandleObj*>(data_.get())->value));
+  }
 };  // namespace mxnet
 
 #endif  // MXNET_RUNTIME_NDARRAY_HANDLE_H_
