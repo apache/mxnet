@@ -3118,7 +3118,7 @@ def convert_reshape_like(node, **kwargs):
         if lhs_end >= 0:
             nodes += [
                 create_tensor([lhs_end], name+'_lhs_end', kwargs["initializer"]),
-            ]        
+            ]
         else:
             nodes += [
                 create_tensor([lhs_end], name+'_lhs_end_neg', kwargs["initializer"]),
@@ -3134,7 +3134,7 @@ def convert_reshape_like(node, **kwargs):
         if rhs_end >= 0:
             nodes += [
                 create_tensor([rhs_end], name+'_rhs_end', kwargs["initializer"]),
-            ]        
+            ]
         else:
             nodes += [
                 create_tensor([rhs_end], name+'_rhs_end_neg', kwargs["initializer"]),
@@ -3142,16 +3142,12 @@ def convert_reshape_like(node, **kwargs):
             ]
 
     nodes += [
-        make_node('Slice', [name+'_lhs_shape', name+'_0', name+'_lhs_begin'],
-                      [name+'_slice0_out']),
-        make_node('Slice', [name+'_rhs_shape', name+'_rhs_begin', name+'_rhs_end'],
-                      [name+'_slice1_out']),
+        make_node('Slice', [name+'_lhs_shape', name+'_0', name+'_lhs_begin'], [name+'_slice0_out']),
+        make_node('Slice', [name+'_rhs_shape', name+'_rhs_begin', name+'_rhs_end'], [name+'_slice1_out']),
         make_node('Concat', [name+'_slice0_out', name+'_slice1_out'], [name+'_concat0_out'], axis=0),
-        make_node('Slice', [name+'_lhs_shape', name+'_lhs_end', name+'_lhs_dim'],
-                      [name+'_slice2_out']),
+        make_node('Slice', [name+'_lhs_shape', name+'_lhs_end', name+'_lhs_dim'], [name+'_slice2_out']),
         make_node('Concat', [name+'_concat0_out', name+'_slice2_out'], [name+'_concat1_out'], axis=0),
         make_node('Reshape', [lhs, name+'_concat1_out'], [name], name=name)
     ]
 
     return nodes
-
