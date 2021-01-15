@@ -46,7 +46,7 @@ class CachedOp(object):
 
         from ..symbol.numpy._symbol import _Symbol
         self.is_np_sym = bool(isinstance(sym, _Symbol))
-        
+
         flags = {key: str(value) for key, value in flags}
         self.handle = CachedOpHandle(_api_internal.create(
             sym.handle,
@@ -135,10 +135,10 @@ class CachedOp(object):
             create_ndarray_fn = _global_var._ndarray_cls
             if num_output.value == 1:
                 return create_ndarray_fn(ctypes.cast(output_vars[0], NDArrayHandle),
-                                        stype=out_stypes[0])
+                                         stype=out_stypes[0])
             else:
                 return [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
-                                        stype=out_stypes[i]) for i in range(num_output.value)]
+                                          stype=out_stypes[i]) for i in range(num_output.value)]
 
     def _register_op_hook(self, callback, monitor_all=False):
         """Install callback for monitor.
