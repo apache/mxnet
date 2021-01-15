@@ -2925,7 +2925,6 @@ def convert_contrib_box_nms(node, **kwargs):
     score_index = int(attrs.get('score_index', '1'))
     id_index = int(attrs.get('id_index', '-1'))
     background_id = int(attrs.get('background_id', '-1'))
-    force_suppress = attrs.get('force_suppress', 'False')
     in_format = attrs.get('in_format', 'corner')
     out_format = attrs.get('out_format', 'corner')
 
@@ -2939,8 +2938,6 @@ def convert_contrib_box_nms(node, **kwargs):
 
     if id_index != -1:
         raise NotImplementedError('box_nms does not currently support id_index != -1')
-
-    force_suppress = True
 
     nodes = [
         create_tensor([coord_start], name+'_cs', kwargs['initializer']),
