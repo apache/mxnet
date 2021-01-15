@@ -2995,3 +2995,47 @@ def convert_contrib_box_nms(node, **kwargs):
 
     return nodes
 
+
+@mx_op.register("_greater_scalar")
+def convert_greater_scalar(node, **kwargs):
+    """Map MXNet's greater_scalar operator attributes to onnx's Greater
+    operator and return the created node.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    scalar = float(attrs.get('scalar'))
+    input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    if str(dtype).startswith('int'):
+        scalar = int(scalar)
+    else:
+        if dtype == 'float16':
+            # when using float16, we must convert it to np.uint16 view first
+            # pylint: disable=too-many-function-args
+            scalar = np.float16(scalar).view(np.uint16)
+
+    tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
+    nodes = [
+        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
+        make_node("ConstantOfShape", [name+"_shape"], [name+"_rhs"], value=tensor_value),
+        make_node("Greater", [input_nodes[0], name+"_rhs"], [name+"_gt"]),
+        make_node("Cast", [name+"_gt"], [name], to=input_type, name=name)
+    ]
+    return nodes
+
+
+@mx_op.register("where")
+def convert_where(node, **kwargs):
+    """Map MXNet's where operator attributes to onnx's Where
+    operator and return the created node.
+    """
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    nodes = [
+        make_node("Cast", [input_nodes[0]], [name+"_bool"], to=int(TensorProto.BOOL)),
+        make_node("Where", [name+"_bool", input_nodes[1], input_nodes[2]], [name], name=name)
+    ]
+    return nodes
