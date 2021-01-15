@@ -95,7 +95,7 @@ class CachedOp(object):
             if len(output_vars) == 1:
                 return output_vars[0]
             else:
-                return output_vars
+                return list(output_vars)
         else:
             if out is not None:
                 original_output = out

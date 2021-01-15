@@ -159,7 +159,7 @@ cdef class CachedOp:
             if len(outputs) == 1:
                 return outputs[0]
             else:
-                return outputs
+                return list(outputs)
         else:
             if len(args) == 1 and args[0] is None:
                 args = []
