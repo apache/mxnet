@@ -18,7 +18,7 @@
 # coding: utf-8
 # pylint: disable=ungrouped-imports
 """Dataset generator."""
-__all__ = ['DataLoader', 'PrefetchedDataLoader']
+__all__ = ['DataLoader']
 
 import pickle
 import io
@@ -572,11 +572,56 @@ class DataLoader(object):
         unless you are experiencing timeout and you know it's due to slow data loading.
         Sometimes full `shared_memory` will cause all workers to hang and causes timeout. In these
         cases please reduce `num_workers` or increase system `shared_memory` size instead.
+    auto_reload : bool, default is True
+        control whether prefetch data after a batch is ended.
+
+    Example:
+    >>> from mxnet.gluon.data import DataLoader, ArrayDataset
+    >>> train_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
+    >>> def transform_train(sample):
+    ...   if sample == 0 : print('(pre)fetching data here')
+    ...   return sample
+    ...
+    >>> train_iter = DataLoader(train_data.transform_first(transform_train),
+    ...                         auto_reload=False, batch_size=1,num_workers=1)
+    >>> # no prefetch is performed, the prefetch & autoload start after
+    >>> # train_iter.__iter__() is called.
+    >>> for i in train_iter:pass
+    (pre)fetching data here
+    >>> train_iter = DataLoader(train_data.transform_first(transform_train),
+    ...                         batch_size=1,num_workers=1)
+    (pre)fetching data here
+    >>> it = iter(train_iter) # nothing is generated since lazy-evaluation occurs
+    >>> it2 = iter(train_iter)
+    >>> it3 = iter(train_iter)
+    >>> it4 = iter(train_iter)
+    >>> _ = next(it2) # the first iter we are using is the prefetched iter.
+    >>> _ = next(it) # since the prefetched iter is cconsumed, we have to fetch data for `it`.
+    (pre)fetching data here
+    >>> _ = [None for _ in it3]
+    (pre)fetching data here
+    (pre)fetching data here
+    >>> # Here, 2 prefetches are triggered, one is fetching the first batch of `it3` and
+    >>> # another is when `it3` yield its last item, a prefetch is automatically performed.
+    >>> _ = [None for _ in it]
+    >>> # no prefetch is happened since train_loader has already prefetch data.
+    >>> _ = next(it4)
+    >>> # since the prefetch is performed, it4 become the prefetched iter.
+    >>>
+    >>> test_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
+    >>> test_iter = PrefetchedDataLoader(test_data,
+    ...                                  batch_size=1,num_workers=1)
+    >>> for epoch in range(200):
+    ...   # there is almost no difference between it and the default DataLoader
+    ...   for data, label in train_iter:
+    ...     # training...
+    ...   for data, label in test_iter:
+    ...     # testing...
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
                  num_workers=0, pin_memory=False, pin_device_id=0,
-                 prefetch=None, thread_pool=False, timeout=120):
+                 prefetch=None, thread_pool=False, timeout=120, auto_reload = True):
         self._dataset = dataset
         self._pin_memory = pin_memory
         self._pin_device_id = pin_device_id
@@ -627,8 +672,24 @@ class DataLoader(object):
                 self._batchify_fn = default_batchify_fn
         else:
             self._batchify_fn = batchify_fn
+        self.auto_reload = auto_reload
+        if self.auto_reload:
+            self.refresh()
+        else:
+            self._iter = None
 
     def __iter__(self):
+        if self._iter is None:
+            self.refresh()
+        t = self._iter
+        self._iter = None # ensure a single iter would not using twice.
+        for item in t:
+            yield item
+        if self._iter is None and self.auto_reload:
+            # ensure we do not waste any exist iter by mistake
+            self.refresh()
+
+    def _prefetch_iter(self):
         if self._num_workers == 0:
             def same_process_iter():
                 for batch in self._batch_sampler:
@@ -656,148 +717,10 @@ class DataLoader(object):
             assert isinstance(self._worker_pool, multiprocessing.pool.Pool)
             self._worker_pool.terminate()
 
-class PrefetchedDataLoader(DataLoader):
-    """Prefetch data from a dataset and returns mini-batches of data.
-    The prefetch performed immeditely after it yield last item from its iterator.
-    When generate multiple iterator from PrefetchedDataLoader, only the first iter
-    is the prefetched iter, and PrefetchedDataLoader will not prefetch any data
-    if its prefetched iter is not being used.
-
-    Example:
-    >>> from mxnet.gluon.data import PrefetchedDataLoader, ArrayDataset
-    >>> train_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
-    >>> def transform_train(sample):
-    ...   if sample == 0 : print('(pre)fetching data here')
-    ...   return sample
-    ...
-    >>> train_iter = PrefetchedDataLoader(train_data.transform_first(transform_train),
-    ...                                   batch_size=1,num_workers=1)
-    (pre)fetching data here
-    >>> it = iter(train_iter) # nothing is generated since lazy-evaluation occurs
-    >>> it2 = iter(train_iter)
-    >>> it3 = iter(train_iter)
-    >>> it4 = iter(train_iter)
-    >>> _ = next(it2) # the first iter we are using is the prefetched iter.
-    >>> _ = next(it) # since the prefetched iter is cconsumed, we have to fetch data for `it`.
-    (pre)fetching data here
-    >>> _ = [None for _ in it3]
-    (pre)fetching data here
-    (pre)fetching data here
-    >>> # Here, 2 prefetches are triggered, one is fetching the first batch of `it3` and
-    >>> # another is when `it3` yield its last item, a prefetch is automatically performed.
-    >>> _ = [None for _ in it]
-    >>> # no prefetch is happened since train_loader has already prefetch data.
-    >>> _ = next(it4)
-    >>> # since the prefetch is performed, it4 become the prefetched iter.
-    >>>
-    >>> test_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
-    >>> test_iter = PrefetchedDataLoader(test_data,
-    ...                                  batch_size=1,num_workers=1)
-    >>> for epoch in range(200):
-    ...   # there is almost no difference between it and the default DataLoader
-    ...   for data, label in train_iter:
-    ...     # training...
-    ...   for data, label in test_iter:
-    ...     # testing...
-    ...
-
-    Parameters
-    ----------
-    dataset : Dataset
-        Source dataset. Note that numpy and mxnet arrays can be directly used
-        as a Dataset.
-    batch_size : int
-        Size of mini-batch.
-    shuffle : bool
-        Whether to shuffle the samples.
-    sampler : Sampler
-        The sampler to use. Either specify sampler or shuffle, not both.
-    last_batch : {'keep', 'discard', 'rollover'}
-        How to handle the last batch if batch_size does not evenly divide
-        `len(dataset)`.
-
-        keep - A batch with less samples than previous batches is returned.
-        discard - The last batch is discarded if its incomplete.
-        rollover - The remaining samples are rolled over to the next epoch.
-    batch_sampler : Sampler
-        A sampler that returns mini-batches. Do not specify batch_size,
-        shuffle, sampler, and last_batch if batch_sampler is specified.
-    batchify_fn : callable
-        Callback function to allow users to specify how to merge samples
-        into a batch. Defaults to `default_batchify_fn`::
-
-            def default_batchify_fn(data):
-                if isinstance(data[0], nd.NDArray):
-                    return nd.stack(*data)
-                elif isinstance(data[0], tuple):
-                    data = zip(*data)
-                    return [default_batchify_fn(i) for i in data]
-                else:
-                    data = np.asarray(data)
-                    return nd.array(data, dtype=data.dtype)
-
-    num_workers : int, default 0
-        The number of multiprocessing workers to use for data preprocessing.
-    pin_memory : boolean, default False
-        If ``True``, the dataloader will copy NDArrays into pinned memory
-        before returning them. Copying from CPU pinned memory to GPU is faster
-        than from normal CPU memory.
-    pin_device_id : int, default 0
-        The device id to use for allocating pinned memory if pin_memory is ``True``
-    prefetch : int, default is `num_workers * 2`
-        The number of prefetching batches only works if `num_workers` > 0.
-        If `prefetch` > 0, it allow worker process to prefetch certain batches before
-        acquiring data from iterators.
-        Note that using large prefetching batch will provide smoother bootstrapping performance,
-        but will consume more shared_memory. Using smaller number may forfeit the purpose of using
-        multiple worker processes, try reduce `num_workers` in this case.
-        By default it defaults to `num_workers * 2`.
-    thread_pool : bool, default False
-        If ``True``, use threading pool instead of multiprocessing pool. Using threadpool
-        can avoid shared memory usage. If `DataLoader` is more IO bounded or GIL is not a killing
-        problem, threadpool version may achieve better performance than multiprocessing.
-    timeout : int, default is 120
-        The timeout in seconds for each worker to fetch a batch data. Only modify this number
-        unless you are experiencing timeout and you know it's due to slow data loading.
-        Sometimes full `shared_memory` will cause all workers to hang and causes timeout. In these
-        cases please reduce `num_workers` or increase system `shared_memory` size instead.
-    """
-    def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
-                 last_batch=None, batch_sampler=None, batchify_fn=None,
-                 num_workers=0, pin_memory=False, pin_device_id=0,
-                 prefetch=None, thread_pool=False, timeout=120):
-        super(PrefetchedDataLoader, self).\
-            __init__(dataset, batch_size, shuffle, sampler,
-                     last_batch, batch_sampler, batchify_fn,
-                     num_workers, pin_memory, pin_device_id,
-                     prefetch, thread_pool, timeout)
-        self.refresh()
-
-    def __iter__(self):
-        if self._iter is None:
-            self.refresh()
-        t = self._iter
-        self._iter = None # ensure a single iter would not using twice.
-        for item in t:
-            yield item
-        if self._iter is None: # ensure we do not waste any exist iter by mistake
-            self.refresh()
-
     def refresh(self):
         """Refresh its iter, fetch data again from its dataset"""
-        if self._num_workers == 0:
-            def same_process_iter():
-                for batch in self._batch_sampler:
-                    ret = self._batchify_fn([self._dataset[idx] for idx in batch])
-                    if self._pin_memory:
-                        ret = _as_in_context(ret, context.cpu_pinned(self._pin_device_id))
-                    yield ret
-            self._iter = same_process_iter()
-        else: # multi-worker
-            self._iter = \
-                _MultiWorkerIter(self._worker_pool, self._batchify_fn, self._batch_sampler,
-                                 pin_memory=self._pin_memory, pin_device_id=self._pin_device_id,
-                                 worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
-                                 prefetch=self._prefetch,
-                                 dataset=self._dataset if self._thread_pool else None,
-                                 data_loader=self, timeout=self._timeout)
+        self._iter = self._prefetch_iter()
+
+    def clean(self):
+        """Remove its prefetched iter, the prefetch step will start after call its __iter__()"""
+        self._iter = None
