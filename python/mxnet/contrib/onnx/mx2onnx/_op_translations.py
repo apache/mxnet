@@ -3073,7 +3073,7 @@ def convert_reshape_like(node, **kwargs):
     lhs_begin = int(lhs_begin)
     rhs_begin = int(rhs_begin)
 
-    # default case
+    # basic case
     if lhs_begin == 0 and lhs_end == 'None' and rhs_begin == 0 and rhs_end == 'None':
         nodes = [
             make_node('Shape', [rhs], [name+'_shape_rhs']),
@@ -3090,7 +3090,6 @@ def convert_reshape_like(node, **kwargs):
     ]
 
     if lhs_begin >= 0:
-        print('lhs_begin', lhs_begin)
         nodes += [
             create_tensor([lhs_begin], name+'_lhs_begin', kwargs["initializer"]),
         ]
