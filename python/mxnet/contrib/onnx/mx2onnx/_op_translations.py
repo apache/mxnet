@@ -179,19 +179,21 @@ def create_const_node(input_name, value, kwargs):
     initializer.append(tensor_node)
     return value_node
 
-def create_tensor(shape_list, shape_name, initializer, dtype='int64'):
+def create_tensor(tensor_list, tensor_name, initializer, dtype='int64'):
     """Helper function to create a tensor value node and a
     initializer tensor node with constant value."""
-    shape_np = np.array(shape_list, dtype=dtype)
-    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[shape_np.dtype]
-    dims = np.shape(shape_np)
-    tensor_node = onnx.helper.make_tensor_value_info(shape_name, data_type, dims)
+    tensor_np = np.array(tensor_list, dtype=dtype)
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[tensor_np.dtype]
+    dims = np.shape(tensor_np)
+    tensor_node = onnx.helper.make_tensor_value_info(tensor_name, data_type, dims)
+    if dtype == np.float16:
+        tensor_list = tensor_np.view(dtype=np.uint16).flatten().tolist()
     initializer.append(
         onnx.helper.make_tensor(
-            name=shape_name,
+            name=tensor_name,
             data_type=data_type,
             dims=dims,
-            vals=shape_list,
+            vals=tensor_list,
             raw=False
         )
     )
@@ -2945,4 +2947,28 @@ def convert_where(node, **kwargs):
         make_node("Cast", [input_nodes[0]], [name+"_bool"], to=int(TensorProto.BOOL)),
         make_node("Where", [name+"_bool", input_nodes[1], input_nodes[2]], [name], name=name)
     ]
+    return nodes
+
+
+@mx_op.register('_maximum_scalar')
+def convert_maximum_scalar(node, **kwargs):
+    """Map MXNet's _maximum_scalar
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    input_type = int(kwargs['in_type'])
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    scalar = None
+    if 'float' in str(dtype):
+        scalar = float(attrs.get('scalar', '0'))
+    else:
+        scalar = int(attrs.get('scalar', '0'))
+
+    nodes = [
+        create_tensor([scalar], name+'_scalar', kwargs['initializer'], dtype=dtype),
+        make_node('Max', [input_nodes[0], name+'_scalar'], [name], name=name)
+        ]
+
     return nodes

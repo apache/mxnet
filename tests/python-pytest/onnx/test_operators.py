@@ -408,3 +408,11 @@ def test_onnx_export_where(tmp_path, dtype, shape):
     y = mx.nd.ones(shape, dtype=dtype)
     cond = mx.nd.random.randint(low=0, high=1, shape=shape, dtype='int32')
     op_export_test('where', M, [cond, x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [(3, 4, 5), (1, 4, 1, 7)])
+def test_onnx_maximum_scalar(tmp_path, dtype, shape):
+    x = mx.random.uniform(0, 10, shape).astype(dtype)
+    M = def_model('maximum', right=5)
+    op_export_test('_maximum_scalar', M, [x], tmp_path)
