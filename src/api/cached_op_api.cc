@@ -55,11 +55,11 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
   std::vector<NDArray*> ndinputs;
   ndinputs.reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
-    const auto& temp_handle = Downcast<NDArrayHandle>(adt_inputs[i]);    
+    const auto& temp_handle = Downcast<NDArrayHandle>(adt_inputs[i]);
     ndinputs.push_back(temp_handle.getArray());
   }
 
-  ObjectRef outputs_obj = args[2];  
+  ObjectRef outputs_obj = args[2];
   std::vector<NDArray*> ndoutputs;
   ndoutputs.reserve(op->num_outputs());
   if (args[2].type_code() == kNull) {
