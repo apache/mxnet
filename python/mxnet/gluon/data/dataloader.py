@@ -676,7 +676,7 @@ class DataLoader(object):
         if self.auto_reload:
             self.refresh()
         else:
-            self._iter = None
+            self.clean() # ensure self._iter exists.
 
     def __iter__(self):
         if self._iter is None:
