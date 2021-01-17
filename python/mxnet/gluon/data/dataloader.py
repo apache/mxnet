@@ -596,7 +596,7 @@ class DataLoader(object):
     >>> it3 = iter(train_iter)
     >>> it4 = iter(train_iter)
     >>> _ = next(it2) # the first iter we are using is the prefetched iter.
-    >>> _ = next(it) # since the prefetched iter is cconsumed, we have to fetch data for `it`.
+    >>> _ = next(it) # since the prefetched iter is consumed, we have to fetch data for `it`.
     (pre)fetching data here
     >>> _ = [None for _ in it3]
     (pre)fetching data here
