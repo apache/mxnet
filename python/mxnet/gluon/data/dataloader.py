@@ -609,8 +609,7 @@ class DataLoader(object):
     >>> # since the prefetch is performed, it4 become the prefetched iter.
     >>>
     >>> test_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
-    >>> test_iter = PrefetchedDataLoader(test_data,
-    ...                                  batch_size=1,num_workers=1)
+    >>> test_iter = DataLoader(test_data, batch_size=1,num_workers=1)
     >>> for epoch in range(200):
     ...   # there is almost no difference between it and the default DataLoader
     ...   for data, label in train_iter:
