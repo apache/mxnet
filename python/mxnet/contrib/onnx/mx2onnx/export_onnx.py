@@ -141,7 +141,7 @@ class MXNetGraph(object):
 
         out_names = list()
         for name in sym.list_outputs():
-            if re.search('.*_output$', name):
+            if name.endswith('_output'):
                 out_names.append(name[:-len('_output')])
             elif re.search('.*_output[0-9]$', name):
                 out_names.append(name[:-len('_output0')]+name[-1])
@@ -219,7 +219,7 @@ class MXNetGraph(object):
         onnx_processed_nodes = []
         onnx_processed_inputs = []
         onnx_processed_outputs = []
-        index_lookup = []
+        outputs_lookup = []
 
         # Determine output shape
         graph_outputs = MXNetGraph.get_outputs(sym, params, in_shape, output_label, in_type)
@@ -249,7 +249,7 @@ class MXNetGraph(object):
                     in_type=in_type,
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
-                    index_lookup=index_lookup)
+                    outputs_lookup=outputs_lookup)
                 graph_input_idx += 1
 
             else:
@@ -263,12 +263,17 @@ class MXNetGraph(object):
                     in_type=in_type,
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
-                    index_lookup=index_lookup,
+                    outputs_lookup=outputs_lookup,
                     idx=idx,
                     opset_version=opset_version
                 )
 
             if isinstance(converted, list):
+                # Collect all the node's output names
+                node_possible_names = [name] + [name + str(i) for i in range(10)]
+                node_output_names = []
+                # Collect all the graph's output names
+                graph_output_names = []
                 # Iterate for all converted nodes
                 for converted_node in converted:
                     # If converted node is ValueInfoProto, add it in inputs
@@ -281,14 +286,10 @@ class MXNetGraph(object):
                         # therefore, check all output node names
                         node_names = list(converted_node.output)
                         for nodename in node_names:
+                            if nodename in node_possible_names:
+                                node_output_names.append(nodename)
                             if nodename in graph_outputs:
-                                onnx_processed_outputs.append(
-                                    make_tensor_value_info(
-                                        name=nodename,
-                                        elem_type=graph_outputs[nodename]['dtype'],
-                                        shape=graph_outputs[nodename]['shape']
-                                    )
-                                )
+                                graph_output_names.append(nodename)
                                 if verbose:
                                     logging.info("Output node is: %s", nodename)
                     elif isinstance(converted_node, TensorProto):
@@ -298,20 +299,23 @@ class MXNetGraph(object):
 
                     all_processed_nodes.append(converted_node)
 
-                if idx > 0:
-                    # Handling extra node added to the graph if the MXNet model was
-                    # saved to json file,
-                    # refer "output_label" initialization above for more details.
-                    # if extra node was added then prev_index to the last node is adjusted.
-                    if idx == (len(mx_graph) - 1) and \
-                            mx_graph[len(mx_graph)-2]["name"] == output_label:
-                        prev_index = index_lookup[idx - 2]
-                    else:
-                        prev_index = index_lookup[idx - 1]
+                # process node outputs (sort by alphabetical order)
+                if not node_output_names:
+                    node_output_names = [name]
+                node_output_names.sort()
+                outputs_lookup.append(node_output_names)
 
-                    index_lookup.append(prev_index+len(converted))
-                else:
-                    index_lookup.append(len(converted) - 1)
+                # process graph outputs (sort by alphabetical order)
+                graph_output_names.sort()
+                for nodename in graph_output_names:
+                    onnx_processed_outputs.append(
+                        make_tensor_value_info(
+                            name=nodename,
+                            elem_type=graph_outputs[nodename]['dtype'],
+                            shape=graph_outputs[nodename]['shape']
+                        )
+                    )
+
             else:
                 logging.info("Operator converter function should always return a list")
 

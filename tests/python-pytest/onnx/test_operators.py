@@ -425,3 +425,38 @@ def test_onnx_export_topk(tmp_path, dtype, axis, is_ascend, k, dtype_i, ret_typ)
     A = mx.random.uniform(0, 100, (4, 5, 6)).astype(dtype)
     M = def_model('topk', axis=axis, is_ascend=is_ascend, k=k, dtype=dtype_i, ret_typ=ret_typ)
     op_export_test('topk', M, [A], tmp_path)
+
+
+def test_onnx_link_op_with_multiple_outputs(tmp_path):
+    A = mx.random.uniform(0, 100, (4, 5, 6))
+    class Model1(HybridBlock):
+        def __init__(self, **kwargs):
+            super(Model1, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x):
+            out1, out2 = F.topk(x, k=3, ret_typ='both')
+            out11 = out1 ** 2
+            out22 = out2 ** 3
+            return out11, out22
+    op_export_test('link_op_with_multiple_outputs_case1', Model1, [A], tmp_path)
+
+    class Model2(HybridBlock):
+        def __init__(self, **kwargs):
+            super(Model2, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x):
+            out_ = F.topk(x, k=3, ret_typ='value')
+            out = out_ ** 3
+            return out
+    op_export_test('link_op_with_multiple_outputs_case2', Model2, [A], tmp_path)
+
+    class Model3(HybridBlock):
+        def __init__(self, **kwargs):
+            super(Model3, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x):
+            out_ = F.topk(x, k=3, ret_typ='indices')
+            out = out_ ** 3
+            return out
+    op_export_test('link_op_with_multiple_outputs_case3', Model3, [A], tmp_path)
+
