@@ -46,7 +46,7 @@ cdef inline int make_arg(object arg,
     elif isinstance(arg, PyNativeObject):
         value[0].v_handle = (<ObjectBase>(arg.__mxnet_object__)).chandle
         tcode[0] = kObjectHandle
-    elif isinstance(arg, (int, long)):
+    elif isinstance(arg, Integral):
         value[0].v_int64 = arg
         tcode[0] = kInt
     elif isinstance(arg, float):
