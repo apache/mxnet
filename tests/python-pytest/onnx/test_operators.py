@@ -342,17 +342,18 @@ def test_onnx_export_cast(tmp_path, src_dtype, dst_dtype, shape):
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
-def test_onnx_export_softmax(tmp_path, dtype):
+@pytest.mark.parametrize('temperature', [.1, 1., 10.])
+def test_onnx_export_softmax(tmp_path, dtype, temperature):
     x = mx.nd.random.uniform(0, 1, (2, 3, 4), dtype=dtype)
     M1 = def_model('softmax')
     op_export_test('softmax_1', M1, [x], tmp_path)
-    M2 = def_model('softmax', use_length=True, axis=0)
+    M2 = def_model('softmax', use_length=True, axis=0, temperature=temperature)
     l2 = mx.nd.array([[2,0,2,1],[1,1,2,1], [0,0,0,1]], dtype=int)
     op_export_test('softmax_2', M2, [x, l2], tmp_path)
-    M3 = def_model('softmax', use_length=True, axis=-1)
+    M3 = def_model('softmax', use_length=True, axis=-1, temperature=temperature)
     l3 = mx.nd.array([[2,0,4],[0,0,0]], dtype=int)
     op_export_test('softmax_3', M3, [x, l3], tmp_path)
-    M4 = def_model('softmax', use_length=True, axis=1)
+    M4 = def_model('softmax', use_length=True, axis=1, temperature=temperature)
     l4 = mx.nd.array([[2,0,3,1],[0,1,0,0]], dtype=int)
     op_export_test('softmax_4', M4, [x, l4], tmp_path)
 
@@ -460,3 +461,29 @@ def test_onnx_link_op_with_multiple_outputs(tmp_path):
             return out
     op_export_test('link_op_with_multiple_outputs_case3', Model3, [A], tmp_path)
 
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+@pytest.mark.parametrize('fmt', ['corner', 'center'])
+@pytest.mark.parametrize('clip', [-1., 0., .5, 5.])
+def test_onnx_export_contrib_box_decode(tmp_path, dtype, fmt, clip):
+    # ensure data[0] < data[2] and data[1] < data[3] for corner format
+    mul = mx.nd.array([-1, -1, 1, 1], dtype=dtype)
+    data = mx.nd.random.uniform(0, 1, (2, 3, 4), dtype=dtype) * mul
+    anchors = mx.nd.random.uniform(0, 1, (1, 3, 4), dtype=dtype) * mul
+    M1 = def_model('contrib.box_decode', format=fmt, clip=clip)
+    op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
+    M2 = def_model('contrib.box_decode', format=fmt, clip=clip, std0=0.3, std1=1.4, std2=0.5, std3=1.6)
+    op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+def test_onnx_export_contrib_AdaptiveAvgPooling2D(tmp_path, dtype):
+    x = mx.nd.random.uniform(0, 1, (1, 2, 3, 4), dtype=dtype)
+    M1 = def_model('contrib.AdaptiveAvgPooling2D')
+    op_export_test('contrib_AdaptiveAvgPooling2D', M1, [x], tmp_path)
+    M2 = def_model('contrib.AdaptiveAvgPooling2D', output_size=1)
+    op_export_test('contrib_AdaptiveAvgPooling2D', M2, [x], tmp_path)
+    M3 = def_model('contrib.AdaptiveAvgPooling2D', output_size=[1])
+    op_export_test('contrib_AdaptiveAvgPooling2D', M3, [x], tmp_path)
+    M4 = def_model('contrib.AdaptiveAvgPooling2D', output_size=[1,1])
+    op_export_test('contrib_AdaptiveAvgPooling2D', M4, [x], tmp_path)
