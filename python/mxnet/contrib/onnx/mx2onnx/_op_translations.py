@@ -186,6 +186,8 @@ def create_tensor(shape_list, shape_name, initializer, dtype='int64'):
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[shape_np.dtype]
     dims = np.shape(shape_np)
     tensor_node = onnx.helper.make_tensor_value_info(shape_name, data_type, dims)
+    if dtype == np.float16:
+        shape_list = shape_np.view(dtype=np.uint16).flatten().tolist()
     initializer.append(
         onnx.helper.make_tensor(
             name=shape_name,
@@ -859,15 +861,21 @@ def convert_softmax(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     axis = int(attrs.get("axis", -1))
-    temperature = attrs.get("temperature", None)
-    if temperature and float(temperature) != 1.0:
-        raise NotImplementedError("Temperature is not supported for now.")
-    use_length = attrs.get("use_length", None)
+    temperature = str(attrs.get("temperature", 'None'))
+    if temperature == 'None':
+        temperature = 1.
+    else:
+        temperature = float(temperature)
+
+    use_length = str(attrs.get("use_length", 'None'))
     input_type = kwargs["in_type"]
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
     data = input_nodes[0]
 
     nodes = [
-        make_node("Exp", [data], [name+"_exp_out"]),
+        create_tensor([temperature], name+"_tmp", kwargs["initializer"], dtype=dtype),
+        make_node("Div", [data, name+"_tmp"], [name+'_data']),
+        make_node("Exp", [name+'_data'], [name+"_exp_out"]),
         make_node("ReduceSum", [name+"_exp_out"], [name+"_rsum_out"], axes=[axis], keepdims=1)
     ]
     if len(input_nodes) == 1:
@@ -3022,4 +3030,23 @@ def convert_contrib_box_decode(node, **kwargs):
         make_node("Cast", [name+'concat0_out'], [name], to=input_type, name=name)
     ]
 
+    return nodes
+
+@mx_op.register("_contrib_AdaptiveAvgPooling2D")
+def convert_contrib_AdaptiveAvgPooling2D(node, **kwargs):
+    """Map MXNet's _contrib_BilinearResize2D operator attributes to onnx's operator.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    output_size = attrs.get('output_size', '1')
+    output_size = convert_string_to_list(output_size)
+
+    if len(output_size) <= 2:
+        if output_size[0] != 1 or (len(output_size) == 2 and output_size[1] != 1):
+            raise NotImplementedError("_contrib_AdaptiveAvgPooling2D operator with output_size != 1 \
+                                not yet implemented.")
+    nodes = [
+        make_node("GlobalAveragePool", [input_nodes[0]], [name], name=name)
+    ]
     return nodes
