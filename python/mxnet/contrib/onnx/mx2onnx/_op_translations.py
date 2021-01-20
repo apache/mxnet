@@ -3184,12 +3184,12 @@ def convert_gather_nd(node, **kwargs):
     """Map MXNet's gather_ND operator attributes to onnx's operator.
     """
     from onnx.helper import make_node
-    name, input_nodes, attrs = get_inputs(node, kwargs)
+    name, input_nodes, _ = get_inputs(node, kwargs)
 
     data = input_nodes[0]
     indices = input_nodes[1]
 
-    # Onnx Transpose operator takes perm as a parameter, so we need to 'pad' 
+    # Onnx Transpose operator takes perm as a parameter, so we need to 'pad'
     # the input to a known dim (10 here)
     perm = [9] + [i for i in range(1, 9)] + [0]
 
@@ -3197,7 +3197,7 @@ def convert_gather_nd(node, **kwargs):
         create_tensor([0], name+'_0', kwargs['initializer']),
         create_tensor([1], name+'_1', kwargs['initializer']),
         create_tensor([10], name+'_10', kwargs['initializer']),
-        # Generate 10-d filter 
+        # Generate 10-d filter
         make_node('Shape', [indices], [name+'_indices_shape']),
         make_node('Shape', [name+'_indices_shape'], [name+'_indices_dim']),
         make_node('Sub', [name+'_10', name+'_indices_dim'], [name+'_sub0_out']),
@@ -3208,9 +3208,9 @@ def convert_gather_nd(node, **kwargs):
         # Reshape filter to acutall dim for GatherND computation
         make_node('Sub', [name+'_indices_dim', name+'_1'], [name+'_sub1_out']),
         make_node('Slice', [name+'_indices_shape', name+'_0', name+'_sub1_out'],
-                      [name+'_slice0_out']),
+                  [name+'_slice0_out']),
         make_node('Slice', [name+'_indices_shape', name+'_sub1_out', name+'_indices_dim'],
-                      [name+'_slice1_out']),
+                  [name+'_slice1_out']),
         make_node('Concat', [name+'_slice1_out', name+'_slice0_out'], [name+'_concat1_out'], axis=0),
         make_node('Reshape', [name+'_transpose0_output', name+'_concat1_out'], [name+'_reshape0_out']),
         # Cast data type for indicies
@@ -3219,4 +3219,3 @@ def convert_gather_nd(node, **kwargs):
     ]
 
     return nodes
-
