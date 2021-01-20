@@ -299,9 +299,10 @@ class MXNetGraph(object):
 
                     all_processed_nodes.append(converted_node)
 
-                # process node outputs (sort by alphabetical order)
+                # if node_output_names is empty then we use the last returned node as output
                 if not node_output_names:
-                    node_output_names = [name]
+                    node_output_names = [converted[-1].name]
+                # process node outputs (sort by alphabetical order)
                 node_output_names.sort()
                 outputs_lookup.append(node_output_names)
 
