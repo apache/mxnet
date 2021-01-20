@@ -23,11 +23,19 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-ARG PYTHON_CMD=python3
+ARG PYTHON=python3
+ARG PIP=pip3
+ARG PYTHON_VERSION=3.7.9
 RUN apt-get update && \
-    apt-get install -y wget ${PYTHON_CMD}-dev gcc && \
-    wget https://bootstrap.pypa.io/get-pip.py && \
-    ${PYTHON_CMD} get-pip.py
+    wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz && \
+    tar -xzf Python-$PYTHON_VERSION.tgz && \
+    cd Python-$PYTHON_VERSION && \
+    ./configure --enable-shared --prefix=/usr/local && \
+    make -j $(nproc) && make install && \
+    cd .. && rm -rf ../Python-$PYTHON_VERSION* && \
+    ln -s /usr/local/bin/pip3 /usr/bin/pip && \
+    ln -s /usr/local/bin/$PYTHON /usr/local/bin/python && \
+    ${PIP} --no-cache-dir install --upgrade pip setuptools
 
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
