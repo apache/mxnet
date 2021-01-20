@@ -3177,3 +3177,46 @@ def convert_reshape_like(node, **kwargs):
     ]
 
     return nodes
+
+
+@mx_op.register("gather_nd")
+def convert_gather_nd(node, **kwargs):
+    """Map MXNet's gather_ND operator attributes to onnx's operator.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    data = input_nodes[0]
+    indices = input_nodes[1]
+
+    # Onnx Transpose operator takes perm as a parameter, so we need to 'pad' 
+    # the input to a known dim (10 here)
+    perm = [9] + [i for i in range(1, 9)] + [0]
+
+    nodes = [
+        create_tensor([0], name+'_0', kwargs['initializer']),
+        create_tensor([1], name+'_1', kwargs['initializer']),
+        create_tensor([10], name+'_10', kwargs['initializer']),
+        # Generate 10-d filter 
+        make_node('Shape', [indices], [name+'_indices_shape']),
+        make_node('Shape', [name+'_indices_shape'], [name+'_indices_dim']),
+        make_node('Sub', [name+'_10', name+'_indices_dim'], [name+'_sub0_out']),
+        make_node('Concat', [name+'_0', name+'_sub0_out'], [name+'_concat0_out'], axis=0),
+        make_node('Pad', [name+'_indices_shape', name+'_concat0_out', name+'_1'], [name+'_shape_10_dim']),
+        make_node('Reshape', [indices, name+'_shape_10_dim'], [name+'_indices_10_dim']),
+        make_node('Transpose', [name+'_indices_10_dim'], [name+'_transpose0_output'], perm=perm),
+        # Reshape filter to acutall dim for GatherND computation
+        make_node('Sub', [name+'_indices_dim', name+'_1'], [name+'_sub1_out']),
+        make_node('Slice', [name+'_indices_shape', name+'_0', name+'_sub1_out'],
+                      [name+'_slice0_out']),
+        make_node('Slice', [name+'_indices_shape', name+'_sub1_out', name+'_indices_dim'],
+                      [name+'_slice1_out']),
+        make_node('Concat', [name+'_slice1_out', name+'_slice0_out'], [name+'_concat1_out'], axis=0),
+        make_node('Reshape', [name+'_transpose0_output', name+'_concat1_out'], [name+'_reshape0_out']),
+        # Cast data type for indicies
+        make_node('Cast', [name+'_reshape0_out'], [name+'_cast0_out'], to=int(onnx.TensorProto.INT64)),
+        make_node('GatherND', [data, name+'_cast0_out'], [name], name=name),
+    ]
+
+    return nodes
+
