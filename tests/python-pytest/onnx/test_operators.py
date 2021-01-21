@@ -410,6 +410,15 @@ def test_onnx_export_where(tmp_path, dtype, shape):
     cond = mx.nd.random.randint(low=0, high=1, shape=shape, dtype='int32')
     op_export_test('where', M, [cond, x, y], tmp_path)
 
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [(3, 4, 5), (1, 4, 1, 7)])
+def test_onnx_maximum_scalar(tmp_path, dtype, shape):
+    x = mx.random.uniform(0, 10, shape).astype(dtype)
+    M = def_model('maximum', right=5)
+    op_export_test('_maximum_scalar', M, [x], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 @pytest.mark.parametrize('fmt', ['corner', 'center'])
 @pytest.mark.parametrize('clip', [-1., 0., .5, 5.])
@@ -422,6 +431,7 @@ def test_onnx_export_contrib_box_decode(tmp_path, dtype, fmt, clip):
     op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
     M2 = def_model('contrib.box_decode', format=fmt, clip=clip, std0=0.3, std1=1.4, std2=0.5, std3=1.6)
     op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
+
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 def test_onnx_export_contrib_AdaptiveAvgPooling2D(tmp_path, dtype):
@@ -452,3 +462,4 @@ def test_onnx_export_reshape_like(tmp_path, dtype):
     op_export_test('reshape_like3', M3, [x, y], tmp_path)
     M4 = def_model('reshape_like', lhs_begin=0, lhs_end=None, rhs_begin=1, rhs_end=None)
     op_export_test('reshape_like4', M4, [x, y], tmp_path)
+
