@@ -3206,16 +3206,15 @@ def convert_gather_nd(node, **kwargs):
         make_node('Reshape', [indices, name+'_shape_10_dim'], [name+'_indices_10_dim']),
         make_node('Transpose', [name+'_indices_10_dim'], [name+'_transpose0_output'], perm=perm),
         # Reshape filter to acutall dim for GatherND computation
-        make_node('Sub', [name+'_indices_dim', name+'_1'], [name+'_sub1_out']),
-        make_node('Slice', [name+'_indices_shape', name+'_0', name+'_sub1_out'],
+        make_node('Slice', [name+'_indices_shape', name+'_0', name+'_1'],
                   [name+'_slice0_out']),
-        make_node('Slice', [name+'_indices_shape', name+'_sub1_out', name+'_indices_dim'],
+        make_node('Slice', [name+'_indices_shape', name+'_1', name+'_indices_dim'],
                   [name+'_slice1_out']),
         make_node('Concat', [name+'_slice1_out', name+'_slice0_out'], [name+'_concat1_out'], axis=0),
         make_node('Reshape', [name+'_transpose0_output', name+'_concat1_out'], [name+'_reshape0_out']),
         # Cast data type for indicies
         make_node('Cast', [name+'_reshape0_out'], [name+'_cast0_out'], to=int(onnx.TensorProto.INT64)),
-        make_node('GatherND', [data, name+'_cast0_out'], [name], name=name),
+        make_node('GatherND', [data, name+'_cast0_out'], [name], name=name)
     ]
 
     return nodes

@@ -466,11 +466,14 @@ def test_onnx_export_reshape_like(tmp_path, dtype):
 
 @pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
 def test_onnx_export_gather_nd(tmp_path, dtype):
-    x1 = mx.nd.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]], dtype=dtype)
-    y1 = mx.nd.array([[0, 1], [1, 0]], dtype=dtype)
+    # y[0] == dim(x)
+    x1 = mx.random.uniform(-100, 100, (4, 5, 6, 7)).astype(dtype)
+    y1 = mx.random.randint(-4, 4, (4, 4, 4)).astype(dtype)
     M1 = def_model('gather_nd')
     op_export_test('gather_nd1', M1, [x1, y1], tmp_path)
-    x2 = mx.nd.array([[0, 1], [2, 3]], dtype=dtype)
-    y2 = mx.nd.array([[1, 1, 0], [0, 1, 0]], dtype=dtype)
+    # y[0] < dim(x)
+    x2 = mx.random.uniform(-100, 100, (4, 5, 6, 7)).astype(dtype)
+    y2 = mx.random.randint(-4, 4, (2,3,4)).astype(dtype)
     M2 = def_model('gather_nd')
     op_export_test('gather_nd2', M2, [x2, y2], tmp_path)
+
