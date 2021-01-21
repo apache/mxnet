@@ -3055,6 +3055,7 @@ def convert_contrib_AdaptiveAvgPooling2D(node, **kwargs):
 @mx_op.register('broadcast_mod')
 def convert_broadcast_mod(node, **kwargs):
     """Map MXNet's broadcast_mod operator
+    """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
     
