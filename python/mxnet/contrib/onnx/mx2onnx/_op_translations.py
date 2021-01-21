@@ -134,7 +134,7 @@ def get_inputs(node, kwargs):
     outputs_lookup = kwargs["outputs_lookup"]
     inputs = node["inputs"]
     attrs = node.get("attrs", {})
-    print(outputs_lookup)
+
     input_nodes = []
     for ip in inputs:
         input_node_name = outputs_lookup[ip[0]][ip[1]]
