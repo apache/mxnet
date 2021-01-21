@@ -644,3 +644,16 @@ def test_onnx_export_broadcast_like(tmp_path, dtype, lhs_axes, rhs_axes):
     op_export_test('broadcast_like1', M1, [x, y], tmp_path)
     M2 = def_model('broadcast_like', lhs_axes=lhs_axes, rhs_axes=rhs_axes)
     op_export_test('broadcast_like2', M2, [x, y], tmp_path)
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('transpose_a', [True, False])
+@pytest.mark.parametrize('transpose_b', [True, False])
+def test_onnx_export_batch_dot(tmp_path, dtype, transpose_a, transpose_b):
+    x1 = mx.nd.random.normal(0, 10, (2, 3, 4, 5, 6), dtype=dtype)
+    y1 = mx.nd.random.normal(0, 10, (2, 3, 4, 6, 5), dtype=dtype)
+    M1 = def_model('batch_dot')
+    op_export_test('batch_dot1', M1, [x1, y1], tmp_path)
+    x2 = mx.nd.random.normal(0, 10, (2, 3, 4, 5, 5), dtype=dtype)
+    y2 = mx.nd.random.normal(0, 10, (2, 3, 4, 5, 5), dtype=dtype)
+    M2 = def_model('batch_dot', transpose_a=transpose_a, transpose_b=transpose_b)
+    op_export_test('batch_dot2', M2, [x2, y2], tmp_path)
