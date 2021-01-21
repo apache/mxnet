@@ -462,6 +462,14 @@ def test_onnx_link_op_with_multiple_outputs(tmp_path):
     op_export_test('link_op_with_multiple_outputs_case3', Model3, [A], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [(3, 4, 5), (1, 4, 1, 7)])
+def test_onnx_maximum_scalar(tmp_path, dtype, shape):
+    x = mx.random.uniform(0, 10, shape).astype(dtype)
+    M = def_model('maximum', right=5)
+    op_export_test('_maximum_scalar', M, [x], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 @pytest.mark.parametrize('fmt', ['corner', 'center'])
 @pytest.mark.parametrize('clip', [-1., 0., .5, 5.])
@@ -487,3 +495,22 @@ def test_onnx_export_contrib_AdaptiveAvgPooling2D(tmp_path, dtype):
     op_export_test('contrib_AdaptiveAvgPooling2D', M3, [x], tmp_path)
     M4 = def_model('contrib.AdaptiveAvgPooling2D', output_size=[1,1])
     op_export_test('contrib_AdaptiveAvgPooling2D', M4, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
+def test_onnx_export_reshape_like(tmp_path, dtype):
+    if 'int' in dtype:
+        x = mx.nd.random.randint(0, 10, (2, 2, 3, 2), dtype=dtype)
+        y = mx.nd.random.randint(0, 10, (1, 4, 3, 2), dtype=dtype)
+    else:
+        x = mx.nd.random.normal(0, 10, (2, 2, 3, 2), dtype=dtype)
+        y = mx.nd.random.normal(0, 10, (1, 4, 3, 2), dtype=dtype)
+    M1 = def_model('reshape_like')
+    op_export_test('reshape_like1', M1, [x, y], tmp_path)
+    M2 = def_model('reshape_like', lhs_begin=0, lhs_end=2, rhs_begin=1, rhs_end=2)
+    op_export_test('reshape_like2', M2, [x, y], tmp_path)
+    M3 = def_model('reshape_like', lhs_begin=-4, lhs_end=-2, rhs_begin=-3, rhs_end=-2)
+    op_export_test('reshape_like3', M3, [x, y], tmp_path)
+    M4 = def_model('reshape_like', lhs_begin=0, lhs_end=None, rhs_begin=1, rhs_end=None)
+    op_export_test('reshape_like4', M4, [x, y], tmp_path)
+
