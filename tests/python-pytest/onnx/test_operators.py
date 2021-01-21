@@ -437,7 +437,7 @@ def test_onnx_export_contrib_AdaptiveAvgPooling2D(tmp_path, dtype):
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
-@pytest.mark.parametrize('shapes', [((3, 3, 3), (3)), ((4, 5, 6, 7), (7))])
+@pytest.mark.parametrize('shapes', [((3, 3, 3), (1, 3)), ((4, 5, 6, 7), (6, 7))])
 def test_onnx_export_broadcast_mod(tmp_path, dtype, shapes):
     A = mx.nd.random.uniform(-300, 300, shapes[0]).astype(dtype)
     B = mx.nd.random.uniform(-30, 30, shapes[1]).astype(dtype)
