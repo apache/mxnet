@@ -178,21 +178,21 @@ def create_const_node(input_name, value, kwargs):
     initializer.append(tensor_node)
     return value_node
 
-def create_tensor(shape_list, shape_name, initializer, dtype='int64'):
+def create_tensor(tensor_list, tensor_name, initializer, dtype='int64'):
     """Helper function to create a tensor value node and a
     initializer tensor node with constant value."""
-    shape_np = np.array(shape_list, dtype=dtype)
-    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[shape_np.dtype]
-    dims = np.shape(shape_np)
-    tensor_node = onnx.helper.make_tensor_value_info(shape_name, data_type, dims)
+    tensor_np = np.array(tensor_list, dtype=dtype)
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[tensor_np.dtype]
+    dims = np.shape(tensor_np)
+    tensor_node = onnx.helper.make_tensor_value_info(tensor_name, data_type, dims)
     if dtype == np.float16:
-        shape_list = shape_np.view(dtype=np.uint16).flatten().tolist()
+        tensor_list = tensor_np.view(dtype=np.uint16).flatten().tolist()
     initializer.append(
         onnx.helper.make_tensor(
-            name=shape_name,
+            name=tensor_name,
             data_type=data_type,
             dims=dims,
-            vals=shape_list,
+            vals=tensor_list,
             raw=False
         )
     )
@@ -2984,6 +2984,31 @@ def convert_where(node, **kwargs):
     ]
     return nodes
 
+
+@mx_op.register('_maximum_scalar')
+def convert_maximum_scalar(node, **kwargs):
+    """Map MXNet's _maximum_scalar
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    input_type = int(kwargs['in_type'])
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    scalar = None
+    if 'float' in str(dtype):
+        scalar = float(attrs.get('scalar', '0'))
+    else:
+        scalar = int(attrs.get('scalar', '0'))
+
+    nodes = [
+        create_tensor([scalar], name+'_scalar', kwargs['initializer'], dtype=dtype),
+        make_node('Max', [input_nodes[0], name+'_scalar'], [name], name=name)
+        ]
+
+    return nodes
+
+
 @mx_op.register("_contrib_box_decode")
 def convert_contrib_box_decode(node, **kwargs):
     """Map MXNet's _contrib_box_decode operator attributes to onnx's operator.
@@ -3078,4 +3103,106 @@ def convert_contrib_AdaptiveAvgPooling2D(node, **kwargs):
     nodes = [
         make_node("GlobalAveragePool", [input_nodes[0]], [name], name=name)
     ]
+
+    return nodes
+
+
+@mx_op.register("reshape_like")
+def convert_reshape_like(node, **kwargs):
+    """Map MXNet's reshape_like operator attributes to onnx's operator.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    lhs = input_nodes[0]
+    rhs = input_nodes[1]
+
+    lhs_begin = str(attrs.get('lhs_begin', '0'))
+    rhs_begin = str(attrs.get('rhs_begin', '0'))
+    lhs_end = str(attrs.get('lhs_end', 'None'))
+    rhs_end = str(attrs.get('rhs_end', 'None'))
+
+    if lhs_begin == 'None' or rhs_begin == 'None':
+        raise NotImplementedError("lhs_begin and rhs_begin should not be None.")
+
+    lhs_begin = int(lhs_begin)
+    rhs_begin = int(rhs_begin)
+
+    # basic case
+    if lhs_begin == 0 and lhs_end == 'None' and rhs_begin == 0 and rhs_end == 'None':
+        nodes = [
+            make_node('Shape', [rhs], [name+'_shape_rhs']),
+            make_node('Reshape', [lhs, name+'_shape_rhs'], [name], name=name)
+        ]
+        return nodes
+
+    nodes = [
+        create_tensor([0], name+'_0', kwargs["initializer"]),
+        make_node('Shape', [lhs], [name+'_lhs_shape']),
+        make_node('Shape', [name+'_lhs_shape'], [name+'_lhs_dim']),
+        make_node('Shape', [rhs], [name+'_rhs_shape']),
+        make_node('Shape', [name+'_rhs_shape'], [name+'_rhs_dim']),
+    ]
+
+    if lhs_begin >= 0:
+        nodes += [
+            create_tensor([lhs_begin], name+'_lhs_begin', kwargs["initializer"]),
+        ]
+    else:
+        nodes += [
+            create_tensor([lhs_begin], name+'_lhs_begin_neg', kwargs["initializer"]),
+            make_node('Add', [name+'_lhs_dim', name+'_lhs_begin_neg'], [name+'_lhs_begin']),
+        ]
+
+    if rhs_begin >= 0:
+        nodes += [
+            create_tensor([rhs_begin], name+'_rhs_begin', kwargs["initializer"]),
+        ]
+    else:
+        nodes += [
+            create_tensor([rhs_begin], name+'_rhs_begin_neg', kwargs["initializer"]),
+            make_node('Add', [name+'_rhs_dim', name+'_rhs_begin_neg'], [name+'_rhs_begin']),
+        ]
+
+    if lhs_end == 'None':
+        nodes += [
+            make_node('Add', [name+'_lhs_dim', name+'_0'], [name+'_lhs_end']),
+        ]
+    else:
+        lhs_end = int(lhs_end)
+        if lhs_end >= 0:
+            nodes += [
+                create_tensor([lhs_end], name+'_lhs_end', kwargs["initializer"]),
+            ]
+        else:
+            nodes += [
+                create_tensor([lhs_end], name+'_lhs_end_neg', kwargs["initializer"]),
+                make_node('Add', [name+'_lhs_dim', name+'_lhs_end_neg'], [name+'_lhs_end']),
+            ]
+
+    if rhs_end == 'None':
+        nodes += [
+            make_node('Add', [name+'_rhs_dim', name+'_0'], [name+'_rhs_end']),
+        ]
+    else:
+        rhs_end = int(rhs_end)
+        if rhs_end >= 0:
+            nodes += [
+                create_tensor([rhs_end], name+'_rhs_end', kwargs["initializer"]),
+            ]
+        else:
+            nodes += [
+                create_tensor([rhs_end], name+'_rhs_end_neg', kwargs["initializer"]),
+                make_node('Add', [name+'_rhs_dim', name+'_rhs_end_neg'], [name+'_rhs_end']),
+            ]
+
+    nodes += [
+        make_node('Slice', [name+'_lhs_shape', name+'_0', name+'_lhs_begin'], [name+'_slice0_out']),
+        make_node('Slice', [name+'_rhs_shape', name+'_rhs_begin', name+'_rhs_end'], [name+'_slice1_out']),
+        make_node('Concat', [name+'_slice0_out', name+'_slice1_out'], [name+'_concat0_out'], axis=0),
+        make_node('Slice', [name+'_lhs_shape', name+'_lhs_end', name+'_lhs_dim'], [name+'_slice2_out']),
+        make_node('Concat', [name+'_concat0_out', name+'_slice2_out'], [name+'_concat1_out'], axis=0),
+        make_node('Reshape', [lhs, name+'_concat1_out'], [name], name=name)
+    ]
+
     return nodes
