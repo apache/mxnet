@@ -445,3 +445,21 @@ def test_onnx_export_broadcast_mod(tmp_path, dtype, shapes):
     B[-1] = 0
     M = def_model('broadcast_mod')
     op_export_test('broadcast_mod', M, [A, B], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
+def test_onnx_export_reshape_like(tmp_path, dtype):
+    if 'int' in dtype:
+        x = mx.nd.random.randint(0, 10, (2, 2, 3, 2), dtype=dtype)
+        y = mx.nd.random.randint(0, 10, (1, 4, 3, 2), dtype=dtype)
+    else:
+        x = mx.nd.random.normal(0, 10, (2, 2, 3, 2), dtype=dtype)
+        y = mx.nd.random.normal(0, 10, (1, 4, 3, 2), dtype=dtype)
+    M1 = def_model('reshape_like')
+    op_export_test('reshape_like1', M1, [x, y], tmp_path)
+    M2 = def_model('reshape_like', lhs_begin=0, lhs_end=2, rhs_begin=1, rhs_end=2)
+    op_export_test('reshape_like2', M2, [x, y], tmp_path)
+    M3 = def_model('reshape_like', lhs_begin=-4, lhs_end=-2, rhs_begin=-3, rhs_end=-2)
+    op_export_test('reshape_like3', M3, [x, y], tmp_path)
+    M4 = def_model('reshape_like', lhs_begin=0, lhs_end=None, rhs_begin=1, rhs_end=None)
+    op_export_test('reshape_like4', M4, [x, y], tmp_path)
