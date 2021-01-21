@@ -3057,8 +3057,8 @@ def convert_broadcast_mod(node, **kwargs):
     """Map MXNet's broadcast_mod operator
     """
     from onnx.helper import make_node
-    name, input_nodes, attrs = get_inputs(node, kwargs)
-    
+    name, input_nodes, _ = get_inputs(node, kwargs)
+
     # The behavior of MXNet mod is a mixture of np.mod and np.fmod
     # note: the behavior when divison by 0 is supposed to be platform dependent
     #       but here we set the result to 0 to be consistent with MXNet
