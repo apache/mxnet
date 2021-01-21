@@ -134,7 +134,7 @@ def get_inputs(node, kwargs):
     outputs_lookup = kwargs["outputs_lookup"]
     inputs = node["inputs"]
     attrs = node.get("attrs", {})
-
+    print(outputs_lookup)
     input_nodes = []
     for ip in inputs:
         input_node_name = outputs_lookup[ip[0]][ip[1]]
@@ -2239,12 +2239,11 @@ def convert_topk(node, **kwargs):
         create_tensor([k], name+'_k', kwargs['initializer']),
         ]
 
-    if ret_type in ['both', 'value']:
+    if ret_type == 'both':
         if dtype == 'int64':
             nodes += [
-                make_node('TopK', [input_nodes[0], name+'_k'], [name+'_0', name+'1'], axis=axis,
+                make_node('TopK', [input_nodes[0], name+'_k'], [name+'0', name+'1'], axis=axis,
                           largest=(0 if is_ascend else 1), sorted=1),
-                make_node('Identity', [name+'_0'], [name+'0'])
                 ]
         else:
             nodes += [
@@ -2253,6 +2252,11 @@ def convert_topk(node, **kwargs):
                 make_node('Cast', [name+'_1_i'], [name+'1'],
                           to=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)])
                 ]
+    elif ret_type == 'value':
+        nodes += [
+            make_node('TopK', [input_nodes[0], name+'_k'], [name+'0', name+'_'], axis=axis,
+                      largest=(0 if is_ascend else 1), sorted=1),
+            ]
     else:
         if dtype == 'int64':
             nodes += [
