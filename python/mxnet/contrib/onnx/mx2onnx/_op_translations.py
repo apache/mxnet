@@ -3559,7 +3559,7 @@ def convert_broadcast_like(node, **kwargs):
 
 @mx_op.register("batch_dot")
 def convert_batch_dot(node, **kwargs):
-    """Map MXNet's gather_ND operator attributes to onnx's operator.
+    """Map MXNet's batch_dot operator attributes to onnx's operator.
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
@@ -3581,7 +3581,7 @@ def convert_batch_dot(node, **kwargs):
         create_tensor([0], name+'_0f', kwargs['initializer'], dtype=dtype),
     ]
 
-    if transpose_a in ['0', 'False']:
+    if transpose_a == 'False':
         nodes += [
             make_node('Add', [lhs, name+'_0f'], [name+'_lhs']),
         ]
@@ -3589,7 +3589,6 @@ def convert_batch_dot(node, **kwargs):
         nodes += [
             make_node('Shape', [lhs], [name+'_lhs_shape']),
             make_node('Shape', [name+'_lhs_shape'], [name+'_lhs_dim']),
-            # make_node('Sub', [name+'_lhs_dim', name+'_2'], [name+'_lhs_sub']),
             make_node('Slice', [name+'_lhs_shape', name+'_0', name+'_-2'],
                       [name+'_lhs_slice0']),
             make_node('Slice', [name+'_lhs_shape', name+'_-2', name+'_100'],
@@ -3604,7 +3603,7 @@ def convert_batch_dot(node, **kwargs):
             make_node('Reshape', [name+'_lhs_3d_transpose', name+'_lhs_concat2'], [name+'_lhs']),
         ]
 
-    if transpose_b in ['0', 'False']:
+    if transpose_b =='False':
         nodes += [
             make_node('Add', [rhs, name+'_0f'], [name+'_rhs']),
         ]
