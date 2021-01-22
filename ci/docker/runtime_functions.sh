@@ -1271,10 +1271,6 @@ ci_package_pypi() {
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     cd_package_pypi ${mxnet_variant}
     cd_integration_test_pypi
-    # testing cd docker images pipeline
-    sudo apt-get update && sudo apt-get install -y docker
-    ./cd/python/docker/python_images.sh build ${mxnet_variant}
-    ./cd/python/docker/python_images.sh test ${mxnet_variant}
 }
 
 # Packages libmxnet into wheel file
