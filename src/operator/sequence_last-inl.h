@@ -153,6 +153,10 @@ class SequenceLastOp : public Operator {
     auto d1 = in_data[seq_last::kData].size(1);
     auto dsize = in_data[seq_last::kData].Size();
 
+    if (dsize == 0) {
+      return;  // noop if any input dimension is zero-sized, out_data is of a right shape
+    }
+
     auto batch = (axis != 0) ? d0 : d1;
     auto max_seq_len = in_data[seq_last::kData].size(axis);
     auto rest_size = dsize / (d0 * d1);

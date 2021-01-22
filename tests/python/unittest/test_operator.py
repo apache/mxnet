@@ -9428,3 +9428,11 @@ def test_sldwin_selfatten_operators():
             test_sldwin_atten_op_impl(2, 128, 2, 8, 16, symmetric, d)
             test_sldwin_atten_op_impl(1, 8, 2, 4, 2, symmetric, d)
 
+def test_zero_sized_dim():
+    """Test for issue: https://github.com/apache/incubator-mxnet/issues/18938"""
+    mx.util.set_np_shape(True)  # Must be done to prevent zero-sized dimension conversion to 'unknown'
+    data = mx.nd.array(np.random.rand(1, 0, 0))
+    res = mx.nd.op.SequenceLast(data)
+    assert data.shape[1:] == res.shape
+    assert len(res) == 0
+
