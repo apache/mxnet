@@ -55,7 +55,7 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False):
         sess = rt.InferenceSession(onnx_file)
         dtype_0 = inputs[0].asnumpy().dtype
         input_dict = dict((sess.get_inputs()[i].name, inputs[i].asnumpy().astype(dtype_0)) for i in range(len(inputs)))
-        pred = sess.run(None, input_dict)[0]
+        pred = sess.run(None, input_dict)
         return pred
 
     # create a new model 
@@ -67,7 +67,11 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False):
     pred_onx = onnx_rt(onnx_file, inputs)
     if dummy_input:
         pred_nat = pred_nat[0]
-    assert_almost_equal(pred_nat, pred_onx)
+    if isinstance(pred_nat, list):
+        for i in range(len(pred_nat)):
+            assert_almost_equal(pred_nat[i], pred_onx[i])
+    else:
+        assert_almost_equal(pred_nat, pred_onx[0])
 
 
 def test_onnx_export_abs(tmp_path):
@@ -409,6 +413,53 @@ def test_onnx_export_where(tmp_path, dtype, shape):
     y = mx.nd.ones(shape, dtype=dtype)
     cond = mx.nd.random.randint(low=0, high=1, shape=shape, dtype='int32')
     op_export_test('where', M, [cond, x, y], tmp_path)
+
+
+# onnxruntime does not seem to support float64 and int32
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int64'])
+@pytest.mark.parametrize('axis', [0, 2, -1, -2, -3])
+@pytest.mark.parametrize('is_ascend', [0, 1])
+@pytest.mark.parametrize('k', [1, 4])
+@pytest.mark.parametrize('dtype_i', ['float32', 'int32', 'int64'])
+@pytest.mark.parametrize('ret_typ', ['value', 'indices', 'both'])
+def test_onnx_export_topk(tmp_path, dtype, axis, is_ascend, k, dtype_i, ret_typ):
+    A = mx.random.uniform(0, 100, (4, 5, 6)).astype(dtype)
+    M = def_model('topk', axis=axis, is_ascend=is_ascend, k=k, dtype=dtype_i, ret_typ=ret_typ)
+    op_export_test('topk', M, [A], tmp_path)
+
+
+def test_onnx_link_op_with_multiple_outputs(tmp_path):
+    A = mx.random.uniform(0, 100, (4, 5, 6))
+    class Model1(HybridBlock):
+        def __init__(self, **kwargs):
+            super(Model1, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x):
+            out1, out2 = F.topk(x, k=3, ret_typ='both')
+            out11 = out1 ** 2
+            out22 = out2 ** 3
+            return out11, out22
+    op_export_test('link_op_with_multiple_outputs_case1', Model1, [A], tmp_path)
+
+    class Model2(HybridBlock):
+        def __init__(self, **kwargs):
+            super(Model2, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x):
+            out_ = F.topk(x, k=3, ret_typ='value')
+            out = out_ ** 3
+            return out
+    op_export_test('link_op_with_multiple_outputs_case2', Model2, [A], tmp_path)
+
+    class Model3(HybridBlock):
+        def __init__(self, **kwargs):
+            super(Model3, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x):
+            out_ = F.topk(x, k=3, ret_typ='indices')
+            out = out_ ** 3
+            return out
+    op_export_test('link_op_with_multiple_outputs_case3', Model3, [A], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
