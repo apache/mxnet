@@ -497,6 +497,17 @@ def test_onnx_export_contrib_AdaptiveAvgPooling2D(tmp_path, dtype):
     op_export_test('contrib_AdaptiveAvgPooling2D', M4, [x], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
+@pytest.mark.parametrize('shapes', [((3, 3, 3), (1, 3)), ((4, 5, 6, 7), (6, 7))])
+def test_onnx_export_broadcast_mod(tmp_path, dtype, shapes):
+    A = mx.nd.random.uniform(-300, 300, shapes[0]).astype(dtype)
+    B = mx.nd.random.uniform(-30, 30, shapes[1]).astype(dtype)
+    # test when dividend is zero
+    B[-1] = 0
+    M = def_model('broadcast_mod')
+    op_export_test('broadcast_mod', M, [A, B], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
 def test_onnx_export_reshape_like(tmp_path, dtype):
     if 'int' in dtype:
