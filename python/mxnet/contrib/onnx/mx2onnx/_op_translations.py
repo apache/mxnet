@@ -3603,7 +3603,7 @@ def convert_batch_dot(node, **kwargs):
             make_node('Reshape', [name+'_lhs_3d_transpose', name+'_lhs_concat2'], [name+'_lhs']),
         ]
 
-    if transpose_b =='False':
+    if transpose_b == 'False':
         nodes += [
             make_node('Add', [rhs, name+'_0f'], [name+'_rhs']),
         ]
