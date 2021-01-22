@@ -141,7 +141,7 @@ class MXNetGraph(object):
 
         out_names = list()
         for name in sym.list_outputs():
-            if re.search('.*_output$', name):
+            if name.endswith('_output'):
                 out_names.append(name[:-len('_output')])
             elif re.search('.*_output[0-9]$', name):
                 out_names.append(name[:-len('_output0')]+name[-1])
