@@ -3317,4 +3317,3 @@ def convert_slice_like(node, **kwargs):
             ]
 
     return nodes
-
