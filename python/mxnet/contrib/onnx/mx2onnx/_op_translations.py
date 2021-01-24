@@ -186,7 +186,7 @@ def create_tensor(tensor_list, tensor_name, initializer, dtype='int64'):
     dims = np.shape(tensor_np)
     tensor_node = onnx.helper.make_tensor_value_info(tensor_name, data_type, dims)
     if dtype == np.float16:
-        tensor_list = tensor_np.view(dtype=np.uint16).flatten().tolist()
+        tensor_np = tensor_np.view(dtype=np.uint16)
     initializer.append(
         onnx.helper.make_tensor(
             name=tensor_name,
