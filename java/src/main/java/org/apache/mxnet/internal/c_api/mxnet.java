@@ -35,11 +35,16 @@ import org.bytedeco.javacpp.tools.InfoMapper;
             define = {"DMLC_USE_CXX11 1", "MSHADOW_USE_CBLAS 1", "MSHADOW_IN_CXX11 1", "MSHADOW_USE_CUDA 0", "MSHADOW_USE_F16C 0", "MXNET_USE_TVM_OP 0"},
             include = {"dlpack/dlpack.h", "mxnet/c_api.h", "mxnet/runtime/c_runtime_api.h", "nnvm/c_api.h"},
             link = "mxnet",
-            linkpath = "/usr/local/lib/"
+            linkpath = {"/usr/lib64/", "/usr/lib/", "/usr/local/lib/"},
+            preload = {"gfortran@.5", "gfortran@.4", "gfortran@.3"},
+            preloadpath = {"/usr/local/lib/gcc/10/", "/usr/local/lib/gcc/9/", "/usr/local/lib/gcc/8/",
+                           "/usr/local/lib/gcc/7/", "/usr/local/lib/gcc/6/", "/usr/local/lib/gcc/5/"}
         ),
         @Platform(
             value = "windows",
-            link = "libmxnet"
+            link = "libmxnet",
+            preload = {"libwinpthread-1", "libgcc_s_seh-1", "libgfortran-5", "libgfortran-4", "libgfortran-3", "libopenblas"},
+            preloadpath = "C:/msys64/mingw64/bin/"
         )
     },
     target = "org.apache.mxnet.internal.c_api",

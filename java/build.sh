@@ -1,11 +1,19 @@
 #!/bin/bash
 set -e
 
+if [[ -n "$MXNET_LIBRARY_PATH" ]]; then
+    echo Found MXNET_LIBRARY_PATH=$MXNET_LIBRARY_PATH
+    mkdir -p build/$PLATFORM$PLATFORM_EXTENSION/lib
+    cp -RLf ../include build/$PLATFORM$PLATFORM_EXTENSION/include
+    cp $MXNET_LIBRARY_PATH build/$PLATFORM$PLATFORM_EXTENSION/lib
+    exit 0
+fi
+
 mkdir -p build/$PLATFORM$PLATFORM_EXTENSION/cmake
 pushd build/$PLATFORM$PLATFORM_EXTENSION/cmake
 
 if [[ -d "C:/msys64" ]] && [[ -z ${OpenBLAS_home:-} ]]; then
-    export OpenBLAS_HOME=C:/msys64/mingw64/include/OpenBlas/
+    export OpenBLAS_HOME=C:/msys64/mingw64/include/OpenBLAS/
     export OpenBLAS=C:/msys64/mingw64/lib/
 fi
 

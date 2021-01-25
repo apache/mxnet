@@ -55,7 +55,18 @@ javacppBuildCompiler {
     copyLibs = true
 }
 
+task copyLicenses(type: Copy) {
+    from(["$projectDir/..", "$projectDir/../tools/dependencies/"]) {
+        include 'DISCLAIMER-WIP'
+        include 'LICENSE'
+        include 'NOTICE'
+        include 'LICENSE.binary.dependencies'
+    }
+    into "$buildDir/resources/main/META-INF"
+}
+
 jar {
+    dependsOn copyLicenses
     manifest {
         attributes 'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' ')
     }
