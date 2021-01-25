@@ -82,9 +82,9 @@ inline Tuple<Tuple<int>> BroadcastPadWidth(int ndim, runtime::ADT adt) {
     if (adt_size == 1) {
       if (ndim == 1) {
         runtime::ADT pad_adt = Downcast<runtime::ADT, ObjectRef>(adt[0]);
-        int pad_before = 
+        int pad_before =
             static_cast<int>(Downcast<runtime::Integer, ObjectRef>(pad_adt[0])->value);
-        int pad_after = 
+        int pad_after =
             static_cast<int>(Downcast<runtime::Integer, ObjectRef>(pad_adt[1])->value);
         temp.emplace_back(mxnet::Tuple<int>({pad_before}));
         temp.emplace_back(mxnet::Tuple<int>({pad_after}));
