@@ -1023,7 +1023,7 @@ nightly_test_large_tensor() {
     set -ex
     export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=100
-    pytest --forked tests/nightly/test_np_large_array.py
+    pytest -s --exitfirst --verbose --timeout=7200 tests/nightly/test_np_large_array.py
 }
 
 #Tests Model backwards compatibility on MXNet
