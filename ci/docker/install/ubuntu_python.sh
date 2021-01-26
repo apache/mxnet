@@ -27,9 +27,8 @@ apt-get install -y software-properties-common
 add-apt-repository -y ppa:deadsnakes/ppa
 apt-get update || true
 apt-get install -y python-dev python3.6-dev virtualenv wget
-ln -sf /usr/bin/python3.6 /usr/bin/python3
 
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here
 wget -nv https://bootstrap.pypa.io/get-pip.py
-python3 get-pip.py
+python3.6 get-pip.py
 pip3 install -r /work/requirements
