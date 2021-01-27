@@ -2839,6 +2839,11 @@ def convert_arange(node, **kwargs):
     step = attrs.get('step', 1.)
     dtype = attrs.get('dtype', 'float32')
     repeat = int(attrs.get('repeat', 1))
+
+    if stop == 'None':
+        stop = start
+        start = 0
+
     if repeat != 1:
         raise NotImplementedError("arange operator with repeat != 1 not yet implemented.")
 
