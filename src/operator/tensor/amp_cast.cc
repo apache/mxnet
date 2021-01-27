@@ -42,7 +42,7 @@ static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
     return;
   }
   auto data = inputs[0];
-  if (data.dtype() != mshadow::kFloat16) {
+  if (data.dtype() != mshadow::kFloat16 && outputs[0].dtype() != mshadow::kFloat16) {
     mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
     if (data.IsView() && data.IsMKLDNNData())
       data = data.Reorder2Default();
