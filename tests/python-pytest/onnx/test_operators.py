@@ -557,3 +557,14 @@ def test_onnx_export_slice_like(tmp_path, dtype, axes):
         op_export_test('slice_like_2', M, [x, y2], tmp_path)
         op_export_test('slice_like_3', M, [x, y3], tmp_path)
 
+
+@pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
+@pytest.mark.parametrize('lhs_axes', [[1, 3], [3, 1], [-2, -4], [-4, -2]])
+@pytest.mark.parametrize('rhs_axes', [[1, 3], [3, 1], [-2, -4], [-4, -2]])
+def test_onnx_export_broadcast_like(tmp_path, dtype, lhs_axes, rhs_axes):
+    x = mx.random.normal(0, 10, (2, 1, 1, 1, 6)).astype(dtype)
+    y = mx.random.normal(0, 10, (2, 3, 4, 5, 6)).astype(dtype)
+    M1 = def_model('broadcast_like')
+    op_export_test('broadcast_like1', M1, [x, y], tmp_path)
+    M2 = def_model('broadcast_like', lhs_axes=lhs_axes, rhs_axes=rhs_axes)
+    op_export_test('broadcast_like2', M2, [x, y], tmp_path)
