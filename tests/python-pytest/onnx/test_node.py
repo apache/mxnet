@@ -154,7 +154,7 @@ class TestNode(unittest.TestCase):
 
                 if mxnet_specific:
                     onnxmodelfile = onnx_mxnet.export_model(test_op, {}, [np.shape(ip) for ip in inputs],
-                                                            np.float32,
+                                                            [ip.dtype for ip in inputs],
                                                             onnx_name + ".onnx")
                     onnxmodel = load_model(onnxmodelfile)
                 else:
