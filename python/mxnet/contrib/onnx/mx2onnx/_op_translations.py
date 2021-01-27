@@ -871,6 +871,37 @@ def convert_softmax(node, **kwargs):
     dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
     data = input_nodes[0]
 
+    # use op set 11 ONNX Softmax
+    if axis == -1 and temperature == 'None':
+        nodes = []
+        if use_length == "True":
+            nodes += [
+                create_const_scalar_node(name+"_0_s", np.int64(0), kwargs),
+                create_const_scalar_node(name+"_1_s", np.int64(1), kwargs),
+                create_tensor([np.finfo(dtype).min], name+"_mask_val", kwargs["initializer"],
+                              dtype=dtype),
+                create_tensor([], name+"_void", kwargs["initializer"]),
+                create_tensor([1], name+"_1", kwargs["initializer"]),
+                make_node("Shape", [data], [name+"_shape"]),
+                make_node("Shape", [name+"_shape"], [name+"_dim"]),
+                make_node("Sub", [name+"_dim", name+"_1"], [name+"_dim_m1"]),
+                make_node("Slice", [name+"_shape", name+"_dim_m1", name+"_dim"],
+                          [name+"_dim_last_"]),
+                make_node("Reshape", [name+"_dim_last_", name+"_void"], [name+"_dim_last"]),
+                make_node("Range", [name+"_0_s", name+"_dim_last", name+"_1_s"], [name+"_range"]),
+                make_node("Cast", [input_nodes[1]], [name+"_len"], to=int(TensorProto.INT64)),
+                make_node("Unsqueeze", [name+"_len"], [name+"_len_unsqueezed"], axes=(-1,)),
+                make_node("Less", [name+"_range", name+"_len_unsqueezed"], [name+"_less"]),
+                make_node("Where", [name+'_less', data, name+"_mask_val"], [name+"_data_masked"])
+            ]
+            data = name+"_data_masked"
+
+        nodes += [
+            make_node("Softmax", [data], [name], axis=-1)
+        ]
+
+        return nodes
+
     nodes = [
         create_tensor([temperature], name+"_tmp", kwargs["initializer"], dtype=dtype),
         make_node("Div", [data, name+"_tmp"], [name+'_data']),
