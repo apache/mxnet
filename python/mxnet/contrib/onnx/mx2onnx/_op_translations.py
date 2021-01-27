@@ -186,13 +186,13 @@ def create_tensor(tensor_list, tensor_name, initializer, dtype='int64'):
     dims = np.shape(tensor_np)
     tensor_node = onnx.helper.make_tensor_value_info(tensor_name, data_type, dims)
     if dtype == np.float16:
-        tensor_list = tensor_np.view(dtype=np.uint16).flatten().tolist()
+        tensor_np = tensor_np.view(dtype=np.uint16)
     initializer.append(
         onnx.helper.make_tensor(
             name=tensor_name,
             data_type=data_type,
             dims=dims,
-            vals=tensor_list,
+            vals=tensor_np.flatten().tolist(),
             raw=False
         )
     )
@@ -3304,5 +3304,47 @@ def convert_gather_nd(node, **kwargs):
         make_node('Cast', [name+'_reshape0_out'], [name+'_cast0_out'], to=int(onnx.TensorProto.INT64)),
         make_node('GatherND', [data, name+'_cast0_out'], [name], name=name)
     ]
+
+    return nodes
+
+
+
+@mx_op.register('slice_like')
+def convert_slice_like(node, **kwargs):
+    """Map MXNet's slice_like operator to onnx Slice operator."""
+    from onnx.helper import make_node, make_tensor
+    from onnx import TensorProto
+
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    axes = convert_string_to_list(attrs.get('axes', 'None'))
+    zero = make_tensor(name+'_zero', TensorProto.INT64, [1], [0])
+
+    nodes = []
+    if axes == [None]:
+        nodes += [
+            make_node('Shape', [input_nodes[1]], [name+'_shape_1']),
+            make_node('Shape', [name+'_shape_1'], [name+'_dim_1']),
+            make_node('ConstantOfShape', [name+'_dim_1'], [name+'_starts'], value=zero),
+            make_node('Slice', [input_nodes[0], name+'_starts', name+'_shape_1'], [name])
+            ]
+    else:
+        axes = [[i] for i in axes]
+        nodes += [
+            create_tensor([0], name+'_0', kwargs['initializer']),
+            create_tensor(axes, name+'_axes_', kwargs['initializer']),
+            make_node('Shape', [input_nodes[0]], [name+'_shape_0']),
+            make_node('Shape', [input_nodes[1]], [name+'_shape_1']),
+            make_node('Shape', [name+'_shape_0'], [name+'_dim_0']),
+            make_node('Less', [name+'_axes_', name+'_0'], [name+'_less']),
+            make_node('Cast', [name+'_less'], [name+'_mask'], to=int(TensorProto.INT64)),
+            make_node('Mul', [name+'_mask', name+'_dim_0'], [name+'_mul']),
+            make_node('Add', [name+'_axes_', name+'_mul'], [name+'_axes']),
+            make_node('ConstantOfShape', [name+'_dim_0'], [name+'_starts'], value=zero),
+            make_node('GatherND', [name+'_shape_1', name+'_axes'], [name+'_gather']),
+            make_node('ScatterND', [name+'_shape_0', name+'_axes', name+'_gather'],
+                      [name+'_ends']),
+            make_node('Slice', [input_nodes[0], name+'_starts', name+'_ends'], [name])
+            ]
 
     return nodes

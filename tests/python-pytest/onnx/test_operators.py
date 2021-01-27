@@ -539,3 +539,21 @@ def test_onnx_export_gather_nd(tmp_path, dtype):
     M2 = def_model('gather_nd')
     op_export_test('gather_nd2', M2, [x2, y2], tmp_path)
 
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('axes', [None, (0, 1, 2), (-2, -3), (-2, 0)])
+def test_onnx_export_slice_like(tmp_path, dtype, axes):
+    x = mx.nd.random.uniform(0, 1, (4, 5, 6, 7)).astype(dtype)
+    if axes is None:
+        M = def_model('slice_like')
+        y = mx.nd.zeros((2, 3, 4, 5), dtype=dtype)
+        op_export_test('slice_like', M, [x, y], tmp_path)
+    else:
+        M = def_model('slice_like', axes=axes)
+        y1 = mx.nd.zeros((2, 3, 4), dtype=dtype)
+        y2 = mx.nd.zeros((2, 3, 4, 5), dtype=dtype)
+        y3 = mx.nd.zeros((2, 3, 4, 5, 6), dtype=dtype)
+        op_export_test('slice_like_1', M, [x, y1], tmp_path)
+        op_export_test('slice_like_2', M, [x, y2], tmp_path)
+        op_export_test('slice_like_3', M, [x, y3], tmp_path)
+
