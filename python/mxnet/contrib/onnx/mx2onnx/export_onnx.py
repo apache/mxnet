@@ -155,9 +155,14 @@ class MXNetGraph(object):
 
         assert len(out_shapes) == len(out_names)
 
-        # infer output types
-        args = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[in_type[i]] for i, n in enumerate(sym.list_inputs())}
-        _, out_type, _ = sym.infer_type(**args)
+        ## Infer output types
+        # Remove any input listed in params from sym.list_inputs() and bind them to the input types provided
+        # by user. Also remove in_label
+        in_dtype = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[t] for n, t in zip([n for n in sym.list_inputs()
+                    if n not in params and n != in_label], in_type)}
+        # Add params and their shape to list of inputs
+        in_dtype.update({n: v.dtype for n, v in params.items() if n in sym.list_inputs()})
+        _, out_type, _ = sym.infer_type(**in_dtype)
         out_types = [mapping.NP_TYPE_TO_TENSOR_TYPE[o(0).dtype] for o in out_type]
 
         assert len(out_types) == len(out_names)
