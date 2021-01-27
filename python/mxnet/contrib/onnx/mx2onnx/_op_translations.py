@@ -878,7 +878,7 @@ def convert_softmax(node, **kwargs):
             nodes += [
                 create_const_scalar_node(name+"_0_s", np.int64(0), kwargs),
                 create_const_scalar_node(name+"_1_s", np.int64(1), kwargs),
-                create_tensor([-10000], name+"_mask_val", kwargs["initializer"],
+                create_tensor([np.finfo(dtype).min], name+"_mask_val", kwargs["initializer"],
                               dtype=dtype),
                 create_tensor([], name+"_void", kwargs["initializer"]),
                 create_tensor([1], name+"_1", kwargs["initializer"]),
