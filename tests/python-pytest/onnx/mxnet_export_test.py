@@ -62,7 +62,7 @@ def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params=
             sym=net_sym,
             params=net_params,
             input_shape=[shape_type(data.shape)],
-            input_type=[data.dtype]
+            input_type=[data.dtype],
             onnx_file_path=onnx_file_path)
         assert export_path == onnx_file_path
         # Try importing the model to symbol
