@@ -3282,7 +3282,6 @@ def convert_upsampling(node, **kwargs):
     """Map MXNet's UpSampling operator to onnx.
     """
     from onnx.helper import make_node
-    from onnx import TensorProto
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     scale = int(attrs.get('scale', '1'))
@@ -3300,7 +3299,7 @@ def convert_upsampling(node, **kwargs):
         create_tensor([], name+'_roi', kwargs['initializer'], dtype='float32'),
         create_tensor([1, 1, scale, scale], name+'_scales', kwargs['initializer'],
                       dtype='float32'),
-        make_node('Resize', [input_nodes[0], name+'_roi', name+'_scales'], [name],mode='nearest',
+        make_node('Resize', [input_nodes[0], name+'_roi', name+'_scales'], [name], mode='nearest',
                   coordinate_transformation_mode='half_pixel')
         ]
 
