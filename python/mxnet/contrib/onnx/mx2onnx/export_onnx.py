@@ -156,7 +156,7 @@ class MXNetGraph(object):
         assert len(out_shapes) == len(out_names)
 
         # infer output types
-        args = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[in_type] for n in sym.list_inputs()}
+        args = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[in_type[i]] for i, n in enumerate(sym.list_inputs())}
         _, out_type, _ = sym.infer_type(**args)
         out_types = [mapping.NP_TYPE_TO_TENSOR_TYPE[o(0).dtype] for o in out_type]
 
@@ -256,7 +256,7 @@ class MXNetGraph(object):
                     mx_graph=mx_graph,
                     weights=weights,
                     in_shape=in_shape[graph_input_idx],
-                    in_type=in_type,
+                    in_type=in_type[graph_input_idx],
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
                     outputs_lookup=outputs_lookup)
@@ -270,7 +270,7 @@ class MXNetGraph(object):
                     mx_graph=mx_graph,
                     weights=weights,
                     in_shape=in_shape,
-                    in_type=in_type,
+                    in_type=in_type[0],
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
                     outputs_lookup=outputs_lookup,
