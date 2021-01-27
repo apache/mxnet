@@ -1738,7 +1738,7 @@ def convert_slice_channel(node, **kwargs):
         node = onnx.helper.make_node(
             "Split",
             input_nodes,
-            [name+'_output'+str(i) for i in range(num_outputs)],
+            [name+str(i) for i in range(num_outputs)],
             axis=axis,
             split=[split for _ in range(num_outputs)],
             name=name,
