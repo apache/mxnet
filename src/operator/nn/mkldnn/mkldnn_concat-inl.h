@@ -40,12 +40,9 @@ class MKLDNNConcatFwd {
  public:
   mkldnn::concat::primitive_desc fwd_pd;
 
-  MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memory::desc> &data_md)
-      : fwd_pd(concat_dim, data_md, CpuEngine::Get()->get_engine()) {
-      fwd_ = std::make_shared<mkldnn::concat>(fwd_pd);
-  }
+  MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memory::desc> &data_md);
 
-  const mkldnn::concat &GetFwd() const;
+  const mkldnn::concat &GetFwd() const { return *fwd_; }
 
  private:
   std::shared_ptr<mkldnn::concat> fwd_;

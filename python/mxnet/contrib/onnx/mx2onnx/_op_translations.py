@@ -186,13 +186,13 @@ def create_tensor(tensor_list, tensor_name, initializer, dtype='int64'):
     dims = np.shape(tensor_np)
     tensor_node = onnx.helper.make_tensor_value_info(tensor_name, data_type, dims)
     if dtype == np.float16:
-        tensor_list = tensor_np.view(dtype=np.uint16).flatten().tolist()
+        tensor_np = tensor_np.view(dtype=np.uint16)
     initializer.append(
         onnx.helper.make_tensor(
             name=tensor_name,
             data_type=data_type,
             dims=dims,
-            vals=tensor_list,
+            vals=tensor_np.flatten().tolist(),
             raw=False
         )
     )
@@ -870,6 +870,37 @@ def convert_softmax(node, **kwargs):
     input_type = kwargs["in_type"]
     dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
     data = input_nodes[0]
+
+    # use op set 11 ONNX Softmax
+    if axis == -1 and temperature == 'None':
+        nodes = []
+        if use_length == "True":
+            nodes += [
+                create_const_scalar_node(name+"_0_s", np.int64(0), kwargs),
+                create_const_scalar_node(name+"_1_s", np.int64(1), kwargs),
+                create_tensor([np.finfo(dtype).min], name+"_mask_val", kwargs["initializer"],
+                              dtype=dtype),
+                create_tensor([], name+"_void", kwargs["initializer"]),
+                create_tensor([1], name+"_1", kwargs["initializer"]),
+                make_node("Shape", [data], [name+"_shape"]),
+                make_node("Shape", [name+"_shape"], [name+"_dim"]),
+                make_node("Sub", [name+"_dim", name+"_1"], [name+"_dim_m1"]),
+                make_node("Slice", [name+"_shape", name+"_dim_m1", name+"_dim"],
+                          [name+"_dim_last_"]),
+                make_node("Reshape", [name+"_dim_last_", name+"_void"], [name+"_dim_last"]),
+                make_node("Range", [name+"_0_s", name+"_dim_last", name+"_1_s"], [name+"_range"]),
+                make_node("Cast", [input_nodes[1]], [name+"_len"], to=int(TensorProto.INT64)),
+                make_node("Unsqueeze", [name+"_len"], [name+"_len_unsqueezed"], axes=(-1,)),
+                make_node("Less", [name+"_range", name+"_len_unsqueezed"], [name+"_less"]),
+                make_node("Where", [name+'_less', data, name+"_mask_val"], [name+"_data_masked"])
+            ]
+            data = name+"_data_masked"
+
+        nodes += [
+            make_node("Softmax", [data], [name], axis=-1)
+        ]
+
+        return nodes
 
     nodes = [
         create_tensor([temperature], name+"_tmp", kwargs["initializer"], dtype=dtype),
@@ -3365,5 +3396,47 @@ def convert_gather_nd(node, **kwargs):
         make_node('Cast', [name+'_reshape0_out'], [name+'_cast0_out'], to=int(onnx.TensorProto.INT64)),
         make_node('GatherND', [data, name+'_cast0_out'], [name], name=name)
     ]
+
+    return nodes
+
+
+
+@mx_op.register('slice_like')
+def convert_slice_like(node, **kwargs):
+    """Map MXNet's slice_like operator to onnx Slice operator."""
+    from onnx.helper import make_node, make_tensor
+    from onnx import TensorProto
+
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    axes = convert_string_to_list(attrs.get('axes', 'None'))
+    zero = make_tensor(name+'_zero', TensorProto.INT64, [1], [0])
+
+    nodes = []
+    if axes == [None]:
+        nodes += [
+            make_node('Shape', [input_nodes[1]], [name+'_shape_1']),
+            make_node('Shape', [name+'_shape_1'], [name+'_dim_1']),
+            make_node('ConstantOfShape', [name+'_dim_1'], [name+'_starts'], value=zero),
+            make_node('Slice', [input_nodes[0], name+'_starts', name+'_shape_1'], [name])
+            ]
+    else:
+        axes = [[i] for i in axes]
+        nodes += [
+            create_tensor([0], name+'_0', kwargs['initializer']),
+            create_tensor(axes, name+'_axes_', kwargs['initializer']),
+            make_node('Shape', [input_nodes[0]], [name+'_shape_0']),
+            make_node('Shape', [input_nodes[1]], [name+'_shape_1']),
+            make_node('Shape', [name+'_shape_0'], [name+'_dim_0']),
+            make_node('Less', [name+'_axes_', name+'_0'], [name+'_less']),
+            make_node('Cast', [name+'_less'], [name+'_mask'], to=int(TensorProto.INT64)),
+            make_node('Mul', [name+'_mask', name+'_dim_0'], [name+'_mul']),
+            make_node('Add', [name+'_axes_', name+'_mul'], [name+'_axes']),
+            make_node('ConstantOfShape', [name+'_dim_0'], [name+'_starts'], value=zero),
+            make_node('GatherND', [name+'_shape_1', name+'_axes'], [name+'_gather']),
+            make_node('ScatterND', [name+'_shape_0', name+'_axes', name+'_gather'],
+                      [name+'_ends']),
+            make_node('Slice', [input_nodes[0], name+'_starts', name+'_ends'], [name])
+            ]
 
     return nodes

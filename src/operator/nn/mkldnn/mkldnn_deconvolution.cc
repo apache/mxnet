@@ -53,10 +53,9 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetDeconvBwd_(
     const mkldnn::engine &engine, const mkldnn::memory::dims &strides,
     const mkldnn::memory::dims &padding, const mkldnn::memory::dims &dilates) {
   // MKL-DNN introduced padded formats since 0.15 which require more memory
-  // for computation compared with the actual tensor size. Currently, MKL-DNN
-  // operators are still reusing those memory from memory planning and the
-  // memory size may smaller than what MKL-DNN kernels require. So here we need
-  // select suboptimal kernel for computation according to tensor sizes.
+  // compared to the actual size of the tensor. Currently, MKL-DNN operators
+  // still reuse memory from memory planning, so here we need to select a
+  // suboptimal kernel for computation that has the expected memory size requirements
   if (!has_bias) {
     mkldnn::convolution_forward::desc desc(
         mkldnn::prop_kind::forward_training,
@@ -117,10 +116,9 @@ GetDeconvFwdImpl(const DeconvolutionParam &param, const NDArray &data,
       std::make_shared<mkldnn::convolution_backward_data::primitive_desc>(
           desc, engine, *bwd_pd);
   // MKL-DNN introduced padded formats since 0.15 which require more memory
-  // for computation compared with the actual tensor size. Currently, MKL-DNN
-  // operators are still reusing those memory from memory planning and the
-  // memory size may smaller than what MKL-DNN kernels require. So here we need
-  // select suboptimal kernel for computation according to tensor sizes.
+  // compared to the actual size of the tensor. Currently, MKL-DNN operators
+  // still reuse memory from memory planning, so here we need to select a
+  // suboptimal kernel for computation that has the expected memory size requirements
   while (deconv_pd->diff_dst_desc().get_size() != GetMemDescSize(data_md) ||
          deconv_pd->diff_src_desc().get_size() != GetMemDescSize(out_md) ||
          deconv_pd->weights_desc().get_size() != GetMemDescSize(weight_md)) {
@@ -176,10 +174,9 @@ GetDeconvBwdWeightsImpl(
   dilate[1] = param.dilate[1] - 1;
 
   // MKL-DNN introduced padded formats since 0.15 which require more memory
-  // for computation compared with the actual tensor size. Currently, MKL-DNN
-  // operators are still reusing those memory from memory planning and the
-  // memory size may smaller than what MKL-DNN kernels require. So here we need
-  // select suboptimal kernel for computation according to tensor sizes.
+  // compared to the actual size of the tensor. Currently, MKL-DNN operators
+  // still reuse memory from memory planning, so here we need to select a
+  // suboptimal kernel for computation that has the expected memory size requirements
   if (!has_bias) {
     mkldnn::convolution_backward_weights::desc desc(
         mkldnn::algorithm::convolution_direct, out_md, weight_md, data_md,
