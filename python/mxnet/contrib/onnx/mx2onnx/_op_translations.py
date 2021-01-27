@@ -3278,7 +3278,7 @@ def convert_gather_nd(node, **kwargs):
 
 
 @mx_op.register('SwapAxis')
-def convert_reshape_like(node, **kwargs):
+def convert_swapaxis(node, **kwargs):
     """Map MXNet's SwapAxis operator
     """
     from onnx.helper import make_node
