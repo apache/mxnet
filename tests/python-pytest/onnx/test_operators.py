@@ -311,6 +311,14 @@ def test_onnx_export_broadcast_add(tmp_path, dtype):
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_broadcast_equal(tmp_path, dtype):
+    M = def_model('broadcast_equal')
+    x = mx.nd.zeros((4,5,6), dtype=dtype)
+    y = mx.nd.ones((4,5,6), dtype=dtype)
+    op_export_test('broadcast_equal', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('axis', [0, 1, 2, -1])
 def test_onnx_export_stack(tmp_path, dtype, axis):
     M = def_model('stack', axis=axis)
