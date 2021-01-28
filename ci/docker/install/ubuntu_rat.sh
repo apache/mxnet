@@ -25,10 +25,10 @@ apt-get install -y subversion maven openjdk-8-jdk openjdk-8-jre
 
 echo "download RAT"
 #svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/
-svn co http://svn.apache.org/repos/asf/creadur/rat/branches/0.12-release/
+svn co http://svn.apache.org/repos/asf/creadur/rat/tags/apache-rat-project-0.13/
 
 echo "cd into directory"
-cd 0.12-release
+cd apache-rat-project-0.13
 
 echo "mvn install"
 mvn -Dmaven.test.skip=true install

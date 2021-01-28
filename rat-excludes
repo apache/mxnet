@@ -49,6 +49,7 @@
 # are available at the path of the subcomponent.
 3rdparty
 clipboard.js
+coco.py
 
 # Licenses
 licenses/*
@@ -84,6 +85,7 @@ themes/*
 .*\.pyc
 .*\.so
 .*\.json
+.*\.ref
 .*\.txt
 .*\.svg
 .*\.lst
@@ -97,6 +99,7 @@ themes/*
 .*\.interp
 .*\.tokens
 .*\.cPickle
+.*\.names
 
 # Modules that are deleted prior to distribution
 R-package/*
@@ -106,7 +109,10 @@ R-package/*
 # Files that don't support comment
 DISCLAIMER-WIP
 MANIFEST
+Changes
 .codecov.yml
+libmxnet.sym
+libmxnet.ver
 
 # GitHub files
 CODEOWNERS
