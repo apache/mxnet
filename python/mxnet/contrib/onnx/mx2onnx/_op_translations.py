@@ -1973,7 +1973,15 @@ def convert_broadcast_equal(node, **kwargs):
     """Map MXNet's broadcast_equal operator attributes to onnx's Equal operator
     and return the created node.
     """
-    return create_basic_op_node('Equal', node, kwargs)
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_type = kwargs['in_type']
+
+    nodes = [
+        make_node("Equal", input_nodes, [name+"_equal"]),
+        make_node("Cast", [name+"_equal"], [name], name=name, to=int(input_type))
+    ]
+    return nodes
 
 
 @mx_op.register("broadcast_logical_and")
