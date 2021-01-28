@@ -158,7 +158,7 @@ class MXNetGraph(object):
         ## Infer output types
         # Remove any input listed in params from sym.list_inputs() and bind them to the input types provided
         # by user. Also remove in_label
-        in_dtype = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[t] 
+        in_dtype = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[t]
                     for n, t in zip([n for n in sym.list_inputs() if n not in params and n != in_label], in_type)}
         # Add params and their shape to list of inputs
         in_dtype.update({n: v.dtype for n, v in params.items() if n in sym.list_inputs()})
