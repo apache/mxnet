@@ -314,7 +314,7 @@ build_ubuntu_cpu() {
 build_ubuntu_cpu_openblas() {
     set -ex
     cd /work/build
-    CXXFLAGS="-Wno-error=strict-overflow" cmake \
+    CXXFLAGS="-Wno-error=strict-overflow" CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_TVM_OP=ON \
@@ -331,13 +331,14 @@ build_ubuntu_cpu_openblas() {
 build_ubuntu_cpu_mkl() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_MKL_LAYERNORM=ON \
         -DUSE_BLAS=MKL \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -GNinja /work/mxnet
@@ -347,7 +348,7 @@ build_ubuntu_cpu_mkl() {
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE=Debug \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
@@ -364,7 +365,7 @@ build_ubuntu_cpu_cmake_debug() {
 build_ubuntu_cpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -509,7 +510,7 @@ build_ubuntu_cpu_clang100_mkldnn() {
 build_ubuntu_cpu_mkldnn() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -524,7 +525,7 @@ build_ubuntu_cpu_mkldnn() {
 build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=OFF \
         -DUSE_MKLDNN=ON \
@@ -541,6 +542,8 @@ build_ubuntu_gpu_tensorrt() {
 
     set -ex
 
+    export CC=gcc-7
+    export CXX=g++-7
     export ONNX_NAMESPACE=onnx
 
     # Build ONNX
@@ -593,7 +596,7 @@ build_ubuntu_gpu_tensorrt() {
 build_ubuntu_gpu_mkldnn() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
@@ -607,7 +610,7 @@ build_ubuntu_gpu_mkldnn() {
 build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
@@ -622,7 +625,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 build_ubuntu_gpu() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
@@ -640,7 +643,7 @@ build_ubuntu_gpu() {
 build_ubuntu_gpu_debug() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE=Debug \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
@@ -657,7 +660,7 @@ build_ubuntu_gpu_debug() {
 build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
@@ -671,7 +674,7 @@ build_ubuntu_cpu_large_tensor() {
 build_ubuntu_gpu_large_tensor() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
@@ -685,10 +688,6 @@ build_ubuntu_gpu_large_tensor() {
         /work/mxnet
 
     ninja
-}
-
-build_ubuntu_blc() {
-    echo "pass"
 }
 
 # Testing
@@ -989,13 +988,14 @@ unittest_ubuntu_python3_arm() {
 #Runs Apache RAT Check on MXNet Source for License Headers
 test_rat_check() {
     set -e
+    set -o pipefail
     pushd .
 
     cd /usr/local/src/apache-rat-0.13
 
     # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
     exec 5>&1
-    OUTPUT=$(java -jar apache-rat-0.13.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet|tee >(cat - >&5))
+    OUTPUT=$(java -jar apache-rat-0.13.jar -E /work/mxnet/rat-excludes -d /work/mxnet|tee >(cat - >&5))
     ERROR_MESSAGE="Printing headers for text files without a valid license header"
 
 
@@ -1023,7 +1023,7 @@ nightly_test_large_tensor() {
     set -ex
     export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=100
-    pytest --timeout=0 --forked tests/nightly/test_np_large_array.py
+    pytest --forked tests/nightly/test_np_large_array.py
 }
 
 #Tests Model backwards compatibility on MXNet
@@ -1264,10 +1264,10 @@ build_static_libmxnet() {
 # Tests CD PyPI packaging in CI
 ci_package_pypi() {
     set -ex
-    # copies mkldnn header files to 3rdparty/mkldnn/include/ as in CD
-    mkdir -p 3rdparty/mkldnn/include
-    cp include/mkldnn/dnnl_version.h 3rdparty/mkldnn/include/.
-    cp include/mkldnn/dnnl_config.h 3rdparty/mkldnn/include/.
+    # copies mkldnn header files to 3rdparty/mkldnn/include/oneapi/dnnl/ as in CD
+    mkdir -p 3rdparty/mkldnn/include/oneapi/dnnl
+    cp include/mkldnn/oneapi/dnnl/dnnl_version.h 3rdparty/mkldnn/include/oneapi/dnnl/.
+    cp include/mkldnn/oneapi/dnnl/dnnl_config.h 3rdparty/mkldnn/include/oneapi/dnnl/.
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     cd_package_pypi ${mxnet_variant}
     cd_integration_test_pypi
@@ -1339,12 +1339,6 @@ build_static_python_cu102() {
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh
     popd
-}
-
-# broken_link_checker
-broken_link_checker() {
-    set -ex
-    ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
 
 # artifact repository unit tests
