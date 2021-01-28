@@ -947,10 +947,6 @@ build_ubuntu_gpu_large_tensor() {
     ninja
 }
 
-build_ubuntu_blc() {
-    echo "pass"
-}
-
 # Testing
 
 sanity_check() {
@@ -2102,14 +2098,7 @@ publish_scala_deploy() {
     popd
 }
 
-# broken_link_checker
-
-broken_link_checker() {
-    set -ex
-    ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
-}
-
-# artifact repository unit tets
+# artifact repository unit tests
 test_artifact_repository() {
     set -ex
     pushd .
