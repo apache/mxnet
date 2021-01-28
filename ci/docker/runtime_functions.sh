@@ -690,10 +690,6 @@ build_ubuntu_gpu_large_tensor() {
     ninja
 }
 
-build_ubuntu_blc() {
-    echo "pass"
-}
-
 # Testing
 
 sanity_check() {
@@ -1343,12 +1339,6 @@ build_static_python_cu102() {
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh
     popd
-}
-
-# broken_link_checker
-broken_link_checker() {
-    set -ex
-    ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
 
 # artifact repository unit tests
