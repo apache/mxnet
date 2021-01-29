@@ -464,7 +464,9 @@ def test_onnx_link_op_with_multiple_outputs(tmp_path):
     op_export_test('link_op_with_multiple_outputs_case3', Model3, [A], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+# opset 8 MAX only supports float types
+# opset 12 and up suppots float and int
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (1, 4, 1, 7)])
 def test_onnx_maximum_scalar(tmp_path, dtype, shape):
     x = mx.random.uniform(0, 10, shape).astype(dtype)
