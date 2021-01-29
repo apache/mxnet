@@ -1975,7 +1975,7 @@ def convert_broadcast_equal(node, **kwargs):
     and return the created node.
     """
     from onnx.helper import make_node
-    name, input_nodes, attrs = get_inputs(node, kwargs)
+    name, input_nodes, _ = get_inputs(node, kwargs)
     input_type = kwargs['in_type']
 
     nodes = [
@@ -2693,7 +2693,7 @@ def convert_zeros_like(node, **kwargs):
     from onnx.helper import make_node, make_tensor
     name, input_nodes, attrs = get_inputs(node, kwargs)
     dtype = attrs.get('dtype')
-    if dtype != None:
+    if dtype is not None:
         data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
     else:
         data_type = kwargs['in_type']
@@ -2714,7 +2714,7 @@ def convert_ones_like(node, **kwargs):
     from onnx.helper import make_node, make_tensor
     name, input_nodes, attrs = get_inputs(node, kwargs)
     dtype = attrs.get('dtype')
-    if dtype != None:
+    if dtype is not None:
         data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
     else:
         data_type = kwargs['in_type']
