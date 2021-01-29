@@ -872,14 +872,14 @@ def convert_softmax(node, **kwargs):
     data = input_nodes[0]
 
     # use op set 11 ONNX Softmax
-    if axis == -1 and temperature == 'None':
+    if axis == -1 and temperature == 1.:
         nodes = []
         if use_length == "True":
             nodes += [
                 create_const_scalar_node(name+"_0_s", np.int64(0), kwargs),
                 create_const_scalar_node(name+"_1_s", np.int64(1), kwargs),
-                create_tensor([np.finfo(dtype).min], name+"_mask_val", kwargs["initializer"],
-                              dtype=dtype),
+                # magic number, this is fp16 min
+                create_tensor([-65500.0], name+"_mask_val", kwargs["initializer"], dtype=dtype),
                 create_tensor([], name+"_void", kwargs["initializer"]),
                 create_tensor([1], name+"_1", kwargs["initializer"]),
                 make_node("Shape", [data], [name+"_shape"]),
