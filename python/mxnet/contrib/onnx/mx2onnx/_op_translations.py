@@ -871,6 +871,37 @@ def convert_softmax(node, **kwargs):
     dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
     data = input_nodes[0]
 
+    # use op set 11 ONNX Softmax
+    if axis == -1 and temperature == 'None':
+        nodes = []
+        if use_length == "True":
+            nodes += [
+                create_const_scalar_node(name+"_0_s", np.int64(0), kwargs),
+                create_const_scalar_node(name+"_1_s", np.int64(1), kwargs),
+                create_tensor([np.finfo(dtype).min], name+"_mask_val", kwargs["initializer"],
+                              dtype=dtype),
+                create_tensor([], name+"_void", kwargs["initializer"]),
+                create_tensor([1], name+"_1", kwargs["initializer"]),
+                make_node("Shape", [data], [name+"_shape"]),
+                make_node("Shape", [name+"_shape"], [name+"_dim"]),
+                make_node("Sub", [name+"_dim", name+"_1"], [name+"_dim_m1"]),
+                make_node("Slice", [name+"_shape", name+"_dim_m1", name+"_dim"],
+                          [name+"_dim_last_"]),
+                make_node("Reshape", [name+"_dim_last_", name+"_void"], [name+"_dim_last"]),
+                make_node("Range", [name+"_0_s", name+"_dim_last", name+"_1_s"], [name+"_range"]),
+                make_node("Cast", [input_nodes[1]], [name+"_len"], to=int(TensorProto.INT64)),
+                make_node("Unsqueeze", [name+"_len"], [name+"_len_unsqueezed"], axes=(-1,)),
+                make_node("Less", [name+"_range", name+"_len_unsqueezed"], [name+"_less"]),
+                make_node("Where", [name+'_less', data, name+"_mask_val"], [name+"_data_masked"])
+            ]
+            data = name+"_data_masked"
+
+        nodes += [
+            make_node("Softmax", [data], [name], axis=-1)
+        ]
+
+        return nodes
+
     nodes = [
         create_tensor([temperature], name+"_tmp", kwargs["initializer"], dtype=dtype),
         make_node("Div", [data, name+"_tmp"], [name+'_data']),
@@ -2940,6 +2971,98 @@ def convert_repeat(node, **kwargs):
 
     return nodes
 
+
+@mx_op.register('_contrib_box_nms')
+def convert_contrib_box_nms(node, **kwargs):
+    """Map MXNet's _contrib_box_nms operator to ONNX
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError('ONNX opset 11 or greater is required to export this operator')
+
+    input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    overlap_thresh = float(attrs.get('overlap_thresh', '0.5'))
+    valid_thresh = float(attrs.get('valid_thresh', '0'))
+    topk = int(attrs.get('topk', '-1'))
+    coord_start = int(attrs.get('coord_start', '2'))
+    score_index = int(attrs.get('score_index', '1'))
+    id_index = int(attrs.get('id_index', '-1'))
+    background_id = int(attrs.get('background_id', '-1'))
+    in_format = attrs.get('in_format', 'corner')
+    out_format = attrs.get('out_format', 'corner')
+
+    center_point_box = 0 if in_format == 'corner' else 1
+
+    if in_format != out_format:
+        raise NotImplementedError('box_nms does not currently support in_fomat != out_format')
+
+    if background_id != -1:
+        raise NotImplementedError('box_nms does not currently support background_id != -1')
+
+    if id_index != -1:
+        raise NotImplementedError('box_nms does not currently support id_index != -1')
+
+    nodes = [
+        create_tensor([coord_start], name+'_cs', kwargs['initializer']),
+        create_tensor([coord_start+4], name+'_cs_p4', kwargs['initializer']),
+        create_tensor([score_index], name+'_si', kwargs['initializer']),
+        create_tensor([score_index+1], name+'_si_p1', kwargs['initializer']),
+        create_tensor([topk], name+'_topk', kwargs['initializer']),
+        create_tensor([overlap_thresh], name+'_ot', kwargs['initializer'], dtype=np.float32),
+        create_tensor([valid_thresh], name+'_vt', kwargs['initializer'], dtype=np.float32),
+        create_tensor([-1], name+'_m1', kwargs['initializer']),
+        create_tensor([-1], name+'_m1_f', kwargs['initializer'], dtype=dtype),
+        create_tensor([0], name+'_0', kwargs['initializer']),
+        create_tensor([1], name+'_1', kwargs['initializer']),
+        create_tensor([2], name+'_2', kwargs['initializer']),
+        create_tensor([3], name+'_3', kwargs['initializer']),
+        create_tensor([], name+'_void', kwargs['initializer']),
+        create_tensor([0, 1, -1], name+'_scores_shape', kwargs['initializer']),
+        create_tensor([0, 0, 1, 0], name+'_pad', kwargs['initializer']),
+        create_tensor([0, -1], name+'_bat_spat_helper', kwargs['initializer']),
+        make_node('Shape', [input_nodes[0]], [name+'_shape']),
+        make_node('Shape', [name+'_shape'], [name+'_dim']),
+        make_node('Sub', [name+'_dim', name+'_2'], [name+'_dim_m2']),
+        make_node('Slice', [name+'_shape', name+'_dim_m2', name+'_dim'], [name+'_shape_last2']),
+        make_node('Concat', [name+'_m1', name+'_shape_last2'], [name+'_shape_3d'], axis=0),
+        make_node('Reshape', [input_nodes[0], name+'_shape_3d'], [name+'_data_3d']),
+        make_node('Slice', [name+'_data_3d', name+'_cs', name+'_cs_p4', name+'_m1'],
+                  [name+'_boxes']),
+        make_node('Slice', [name+'_data_3d', name+'_si', name+'_si_p1', name+'_m1'],
+                  [name+'_scores_raw']),
+        make_node('Reshape', [name+'_scores_raw', name+'_scores_shape'], [name+'_scores']),
+        make_node('Shape', [name+'_scores'], [name+'_scores_shape_actual']),
+        make_node('NonMaxSuppression',
+                  [name+'_boxes', name+'_scores', name+'_topk', name+'_ot', name+'_vt'],
+                  [name+'_nms'], center_point_box=center_point_box),
+        make_node('Slice', [name+'_nms', name+'_0', name+'_3', name+'_m1', name+'_2'],
+                  [name+'_nms_sliced']),
+        make_node('GatherND', [name+'_data_3d', name+'_nms_sliced'], [name+'_candidates']),
+        make_node('Pad', [name+'_candidates', name+'_pad', name+'_m1_f'], [name+'_cand_padded']),
+        make_node('Shape', [name+'_nms'], [name+'_nms_shape']),
+        make_node('Slice', [name+'_nms_shape', name+'_0', name+'_1'], [name+'_cand_cnt']),
+        make_node('Reshape', [name+'_cand_cnt', name+'_void'], [name+'_cc_s']),
+        make_node('Range', [name+'_0', name+'_cc_s', name+'_1'], [name+'_cand_indices']),
+        make_node('Slice', [name+'_scores_shape_actual', name+'_0', name+'_3', name+'_m1',
+                            name+'_2'], [name+'_shape_bat_spat']),
+        make_node('Slice', [name+'_shape_bat_spat', name+'_1', name+'_2'], [name+'_spat_dim']),
+        make_node('Expand', [name+'_cand_cnt', name+'_shape_bat_spat'], [name+'_base_indices']),
+        make_node('ScatterND', [name+'_base_indices', name+'_nms_sliced', name+'_cand_indices'],
+                  [name+'_indices']),
+        make_node('TopK', [name+'_indices', name+'_spat_dim'], [name+'_indices_sorted', name+'__'],
+                  largest=0, axis=-1, sorted=1),
+        make_node('Gather', [name+'_cand_padded', name+'_indices_sorted'], [name+'_gather']),
+        make_node('Reshape', [name+'_gather', name+'_shape'], [name+'0'])
+        ]
+
+    return nodes
+
+
 @mx_op.register("_greater_scalar")
 def convert_greater_scalar(node, **kwargs):
     """Map MXNet's greater_scalar operator attributes to onnx's Greater
@@ -3318,5 +3441,88 @@ def convert_swapaxis(node, **kwargs):
         make_node('Transpose', [name+'_data_padded'], [name+'_trans'], perm=perm),
         make_node('Reshape', [name+'_trans', name+'_shape_new'], [name])
         ]
+
+    return nodes
+
+
+@mx_op.register('slice_like')
+def convert_slice_like(node, **kwargs):
+    """Map MXNet's slice_like operator to onnx Slice operator."""
+    from onnx.helper import make_node, make_tensor
+    from onnx import TensorProto
+
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    axes = convert_string_to_list(attrs.get('axes', 'None'))
+    zero = make_tensor(name+'_zero', TensorProto.INT64, [1], [0])
+
+    nodes = []
+    if axes == [None]:
+        nodes += [
+            make_node('Shape', [input_nodes[1]], [name+'_shape_1']),
+            make_node('Shape', [name+'_shape_1'], [name+'_dim_1']),
+            make_node('ConstantOfShape', [name+'_dim_1'], [name+'_starts'], value=zero),
+            make_node('Slice', [input_nodes[0], name+'_starts', name+'_shape_1'], [name])
+            ]
+    else:
+        axes = [[i] for i in axes]
+        nodes += [
+            create_tensor([0], name+'_0', kwargs['initializer']),
+            create_tensor(axes, name+'_axes_', kwargs['initializer']),
+            make_node('Shape', [input_nodes[0]], [name+'_shape_0']),
+            make_node('Shape', [input_nodes[1]], [name+'_shape_1']),
+            make_node('Shape', [name+'_shape_0'], [name+'_dim_0']),
+            make_node('Less', [name+'_axes_', name+'_0'], [name+'_less']),
+            make_node('Cast', [name+'_less'], [name+'_mask'], to=int(TensorProto.INT64)),
+            make_node('Mul', [name+'_mask', name+'_dim_0'], [name+'_mul']),
+            make_node('Add', [name+'_axes_', name+'_mul'], [name+'_axes']),
+            make_node('ConstantOfShape', [name+'_dim_0'], [name+'_starts'], value=zero),
+            make_node('GatherND', [name+'_shape_1', name+'_axes'], [name+'_gather']),
+            make_node('ScatterND', [name+'_shape_0', name+'_axes', name+'_gather'],
+                      [name+'_ends']),
+            make_node('Slice', [input_nodes[0], name+'_starts', name+'_ends'], [name])
+            ]
+
+    return nodes
+
+
+@mx_op.register("broadcast_like")
+def convert_broadcast_like(node, **kwargs):
+    """Map MXNet's broadcast_like operator attributes to onnx's operator.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    lhs = input_nodes[0]
+    rhs = input_nodes[1]
+    lhs_axes = convert_string_to_list(str(attrs.get('lhs_axes', 'None')))
+    rhs_axes = convert_string_to_list(str(attrs.get('rhs_axes', 'None')))
+
+    if lhs_axes[0] is None or rhs_axes[0] is None:
+        nodes = [
+            make_node('Shape', [rhs], [name+'_rhs_shape']),
+            make_node('Expand', [lhs, name+'_rhs_shape'], [name], name=name)
+        ]
+        return nodes
+
+    lhs_axes = [[i] for i in lhs_axes]
+    rhs_axes = [[i] for i in rhs_axes]
+
+    nodes = [
+        create_tensor([0], name+'_0', kwargs['initializer']),
+        create_tensor(lhs_axes, name+'_lhs_axes', kwargs['initializer']),
+        create_tensor(rhs_axes, name+'_rhs_axes', kwargs['initializer']),
+        make_node('Shape', [lhs], [name+'_lhs_shape']),
+        make_node('Shape', [rhs], [name+'_rhs_shape']),
+        make_node('Shape', [name+'_lhs_shape'], [name+'_lhs_dim']),
+        make_node('Less', [name+'_lhs_axes', name+'_0'], [name+'_less']),
+        make_node('Cast', [name+'_less'], [name+'_mask'], to=int(onnx.TensorProto.INT64)),
+        make_node('Mul', [name+'_mask', name+'_lhs_dim'], [name+'_mul']),
+        make_node('Add', [name+'_lhs_axes', name+'_mul'], [name+'_lhs_axes_positive']),
+        make_node('GatherND', [name+'_rhs_shape', name+'_rhs_axes'], [name+'_gather']),
+        make_node('ScatterND', [name+'_lhs_shape', name+'_lhs_axes_positive', name+'_gather'],
+                  [name+'_scatter']),
+        make_node('Expand', [lhs, name+'_scatter'], [name], name=name)
+    ]
 
     return nodes
