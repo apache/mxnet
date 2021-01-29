@@ -2691,10 +2691,15 @@ def convert_zeros_like(node, **kwargs):
     """Map MXNet's zeros_like operator attributes to onnx's ConstantOfShape operator.
     """
     from onnx.helper import make_node, make_tensor
-    name, input_nodes, _ = get_inputs(node, kwargs)
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    dtype = attrs.get('dtype')
+    if dtype != None:
+        data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
+    else:
+        data_type = kwargs['in_type']
 
     # create tensor with shape of input
-    tensor_value = make_tensor(name+"_zero", kwargs['in_type'], [1], [0])
+    tensor_value = make_tensor(name+"_zero", data_type, [1], [0])
     nodes = [
         make_node("Shape", [input_nodes[0]], [name+"_shape"]),
         make_node("ConstantOfShape", [name+"_shape"], [name], name=name, value=tensor_value)
@@ -2707,10 +2712,14 @@ def convert_ones_like(node, **kwargs):
     """Map MXNet's ones_like operator attributes to onnx's ConstantOfShape operator.
     """
     from onnx.helper import make_node, make_tensor
-    name, input_nodes, _ = get_inputs(node, kwargs)
-
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    dtype = attrs.get('dtype')
+    if dtype != None:
+        data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
+    else:
+        data_type = kwargs['in_type']
     # create tensor with shape of input
-    tensor_value = make_tensor(name+"_one", kwargs['in_type'], [1], [1])
+    tensor_value = make_tensor(name+"_one", data_type, [1], [1])
     nodes = [
         make_node("Shape", [input_nodes[0]], [name+"_shape"]),
         make_node("ConstantOfShape", [name+"_shape"], [name], name=name, value=tensor_value)
@@ -3266,7 +3275,7 @@ def convert_broadcast_mod(node, **kwargs):
         make_node('Where', [name+'_mask', input_nodes[1], name+'_zero'], [name+'_adjustment']),
         make_node('Add', [name+'_mod', name+'_adjustment'], [name+'_adjusted']),
         make_node('Equal', [input_nodes[1], name+'_zero'], [name+'_mask_div_0']),
-        make_node('Where', [name+'_mask_div_0', name+'_zero', name+'_adjusted'], [name])
+        make_node('Where', [name+'_mask_div_0', name+'_zero', name+'_adjusted'], [name], name=name)
         ]
 
     return nodes
