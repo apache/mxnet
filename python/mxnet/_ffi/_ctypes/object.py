@@ -32,6 +32,7 @@ OBJECT_TYPE = {}
 _CLASS_OBJECT = None
 
 def _set_class_object(object_class):
+    """Initialize object class defined in python"""
     global _CLASS_OBJECT
     _CLASS_OBJECT = object_class
 

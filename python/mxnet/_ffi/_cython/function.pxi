@@ -93,7 +93,7 @@ cdef inline object make_ret(MXNetValue value, int tcode, tuple args):
     elif tcode == kStr:
         return py_str(value.v_str)
     elif tcode == kHandle:
-        return ctypes_handle(value.v_handle)
+        return <unsigned long long>(value.v_handle)
     raise ValueError("Unhandled type code %d" % tcode)
 
 
@@ -214,13 +214,16 @@ _CLASS_PACKED_FUNC = None
 _FUNC_CONVERT_TO_NODE = None
 
 def _set_class_object(obj_class):
+    """Initialize object class defined in cython"""
     global _CLASS_OBJECT
     _CLASS_OBJECT = obj_class
 
 def _set_class_packed_func(func_class):
+    """Initialize packed function defined in cython"""
     global _CLASS_PACKED_FUNC
     _CLASS_PACKED_FUNC = func_class
 
 def _set_node_generic(func_convert_to_node):
+    """Initialize packed function type conversion function in cython"""
     global _FUNC_CONVERT_TO_NODE
     _FUNC_CONVERT_TO_NODE = func_convert_to_node

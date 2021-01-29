@@ -97,6 +97,7 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
   for (int i = 0; i < op->num_outputs(); ++i) {
     ObjectRef out = NDArrayHandle(ndoutputs[i]);
     outputs.push_back(out);
+    delete ndoutputs[i];
   }
   *ret = runtime::ADT(0, outputs.begin(), outputs.end());
 });
@@ -135,6 +136,27 @@ MXNET_REGISTER_GLOBAL("cached_op.get_optimized_symbol")
   CachedOpPtr op = *static_cast<CachedOpPtr*>(static_cast<void*>(args[0]));
   *s = op->GetOptimizedSymbol();
   *ret = static_cast<void*>(static_cast<SymbolHandle>(s));
+});
+
+MXNET_REGISTER_GLOBAL("cached_op.register_op_hook")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  CachedOpHandle handle = static_cast<CachedOpHandle>(static_cast<void*>(args[0]));
+  CachedOpMonitorCallback callback = reinterpret_cast<CachedOpMonitorCallback>(
+    reinterpret_cast<void (*)(const char *, const char *, void *)>(static_cast<void*>(args[1])));
+  bool monitor_all = args[2];
+  CachedOpMonitorCallback callback_temp = nullptr;
+  std::function<void(const char *, const char *, void*)> clbk;
+  if (callback) {
+    callback_temp = callback;
+    clbk = [callback_temp](const char *name, const char *opr_name,
+                           void *handle) {
+      callback_temp(name, opr_name, handle);
+    };
+  } else {
+      clbk = nullptr;
+  }
+  CachedOpPtr op = *static_cast<CachedOpPtr *>(handle);
+  op->RegisterOpHook(clbk, monitor_all);
 });
 
 }  // namespace mxnet

@@ -27,8 +27,6 @@ def test_str_map():
     assert "a" in amap
     assert len(amap) == 2
     dd = dict(amap.items())
-    # TODO add attribute visitor
-    # assert amap["a"].value == 2
     assert "a" in dd
     assert "b" in dd
 
@@ -50,14 +48,6 @@ def test_string_adt():
     arr = mxnet._ffi.convert_to_node([s, s])
     assert arr[0] == s
     assert isinstance(arr[0], mxnet.container.String)
-
-# TODO add attribute visitor
-# def test_adt():
-#     a = mxnet._ffi.convert_to_node([1, 2, 3])
-#     assert len(a) == 3
-#     assert a[-1].value == 3
-#     a_slice = a[-3:-1]
-#     assert (a_slice[0].value, a_slice[1].value) == (1, 2)
 
 @use_np
 def test_ndarray_container():

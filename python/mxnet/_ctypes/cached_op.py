@@ -23,7 +23,7 @@
 import ctypes
 
 from ..base import _LIB
-from ..base import c_str_array, c_handle_array
+from ..base import c_handle_array
 from ..base import NDArrayHandle, CachedOpHandle, SymbolHandle
 from ..base import check_call
 from .. import _global_var
@@ -153,7 +153,5 @@ class CachedOp(object):
         cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_char_p, NDArrayHandle, ctypes.c_void_p)
         if callback:
             self._monitor_callback = cb_type(_monitor_callback_wrapper(callback))
-        check_call(_LIB.MXCachedOpRegisterOpHook(
-            self.handle,
-            self._monitor_callback,
-            ctypes.c_int(monitor_all)))
+        callback_ptr = ctypes.cast(self._monitor_callback, ctypes.c_void_p)
+        _api_internal.register_op_hook(self.handle, callback_ptr, monitor_all)

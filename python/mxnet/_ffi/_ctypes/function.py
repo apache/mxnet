@@ -143,9 +143,11 @@ _CLASS_PACKED_FUNC = None
 _FUNC_CONVERT_TO_NODE = None
 
 def _set_class_packed_func(packed_func_class):
+    """Initialize packed function defined in cython"""
     global _CLASS_PACKED_FUNC
     _CLASS_PACKED_FUNC = packed_func_class
 
 def _set_node_generic(func_convert_to_node):
+    """Initialize packed function type conversion function in cython"""
     global _FUNC_CONVERT_TO_NODE
     _FUNC_CONVERT_TO_NODE = func_convert_to_node
