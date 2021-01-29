@@ -620,6 +620,18 @@ def test_onnx_export_slice_like(tmp_path, dtype, axes):
         op_export_test('slice_like_3', M, [x, y3], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
+@pytest.mark.parametrize('axis', [None, 0, 2])
+@pytest.mark.parametrize('num_outputs', [2, 5])
+def test_onnx_export_slice_channel(tmp_path, dtype, axis, num_outputs):
+    x = mx.nd.zeros((10,20,30,40), dtype=dtype)
+    if axis is None:
+        M = def_model('SliceChannel', num_outputs=num_outputs)
+    else:
+        M = def_model('SliceChannel', axis=axis, num_outputs=num_outputs)
+    op_export_test('SliceChannel', M, [x], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
 @pytest.mark.parametrize('lhs_axes', [[1, 3], [3, 1], [-2, -4], [-4, -2]])
 @pytest.mark.parametrize('rhs_axes', [[1, 3], [3, 1], [-2, -4], [-4, -2]])

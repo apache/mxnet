@@ -1719,6 +1719,10 @@ def convert_slice_channel(node, **kwargs):
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError('ONNX opset 11 or greater is required to export this operator')
+
     num_outputs = int(attrs.get("num_outputs"))
     axis = int(attrs.get("axis", 1))
     squeeze_axis = int(attrs.get("squeeze_axis", 0))
@@ -1733,15 +1737,12 @@ def convert_slice_channel(node, **kwargs):
         )
         return [node]
     elif squeeze_axis == 0 and num_outputs > 1:
-        in_shape = kwargs.get('in_shape')[0]
-        split = in_shape[axis] // num_outputs
         node = onnx.helper.make_node(
             "Split",
             input_nodes,
             [name+str(i) for i in range(num_outputs)],
             axis=axis,
-            split=[split for _ in range(num_outputs)],
-            name=name,
+            name=name
         )
         return [node]
     else:
