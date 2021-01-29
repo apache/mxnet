@@ -31,4 +31,4 @@ apt-get update || true
 apt-get install -y libprotobuf-dev protobuf-compiler
 
 echo "Installing pytest, pytest-cov, protobuf, Pillow, ONNX, tabulate and onnxruntime..."
-pip3 install pytest pytest-cov protobuf==3.5.2 onnx==1.7.0 Pillow==5.0.0 tabulate==0.7.5 onnxruntime==1.4.0 gluonnlp
+pip3 install pytest pytest-cov protobuf==3.5.2 onnx==1.7.0 Pillow==5.0.0 tabulate==0.7.5 onnxruntime==1.6.0 gluonnlp
