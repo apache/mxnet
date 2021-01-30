@@ -3405,7 +3405,7 @@ def convert_upsampling(node, **kwargs):
     """Map MXNet's UpSampling operator to onnx.
     """
     from onnx.helper import make_node
-    name, input_nodes, _ = get_inputs(node, kwargs)
+    name, input_nodes, attrs = get_inputs(node, kwargs)
 
     scale = int(attrs.get('scale', '1'))
     sample_type = attrs.get('sample_type')
