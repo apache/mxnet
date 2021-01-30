@@ -3659,4 +3659,3 @@ def convert_batch_dot(node, **kwargs):
         ]
 
     return nodes
-
