@@ -1548,6 +1548,13 @@ def convert_broadcast_mul(node, **kwargs):
     """
     return create_basic_op_node('Mul', node, kwargs)
 
+@mx_op.register("broadcast_minimum")
+def convert_broadcast_min(node, **kwargs):
+    """Map MXNet's broadcast_minimum operator attributes to onnx's Min operator
+    and return the created node.
+    """
+    return create_basic_op_node('Min', node, kwargs)
+
 @mx_op.register("elemwise_div")
 def convert_elemwise_div(node, **kwargs):
     """Map MXNet's elemwise_div operator attributes to onnx's Div operator
@@ -3112,6 +3119,36 @@ def convert_greater_scalar(node, **kwargs):
         make_node("ConstantOfShape", [name+"_shape"], [name+"_rhs"], value=tensor_value),
         make_node("Greater", [input_nodes[0], name+"_rhs"], [name+"_gt"]),
         make_node("Cast", [name+"_gt"], [name], to=input_type, name=name)
+    ]
+    return nodes
+
+
+@mx_op.register("_lesser_scalar")
+def convert_lesser_scalar(node, **kwargs):
+    """Map MXNet's lesser_scalar operator attributes to onnx's Less
+    operator and return the created node.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    scalar = float(attrs.get('scalar'))
+    input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    if str(dtype).startswith('int'):
+        scalar = int(scalar)
+    else:
+        if dtype == 'float16':
+            # when using float16, we must convert it to np.uint16 view first
+            # pylint: disable=too-many-function-args
+            scalar = np.float16(scalar).view(np.uint16)
+
+    tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
+    nodes = [
+        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
+        make_node("ConstantOfShape", [name+"_shape"], [name+"_rhs"], value=tensor_value),
+        make_node("Less", [input_nodes[0], name+"_rhs"], [name+"_lt"]),
+        make_node("Cast", [name+"_lt"], [name], to=input_type, name=name)
     ]
     return nodes
 
