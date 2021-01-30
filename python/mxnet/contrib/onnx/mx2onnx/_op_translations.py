@@ -1598,6 +1598,7 @@ def convert_floor(node, **kwargs):
     """
     return create_basic_op_node('Floor', node, kwargs)
 
+
 # Changing shape and type.
 @mx_op.register("Reshape")
 def convert_reshape(node, **kwargs):
@@ -1611,6 +1612,17 @@ def convert_reshape(node, **kwargs):
 
     reverse = attrs.get('reverse', 'False')
     targ_shape = convert_string_to_list(attrs["shape"])
+
+    # In general -2, -3, -4 in the target shape are not supoorted, but there are
+    # a few special cases that we can convert to supported scenarios
+
+    # If -2 and -4 are not used, then we can just remove the -4
+    if -4 in targ_shape and -3 not in targ_shape and -2 not in targ_shape:
+        targ_shape = [i for i in targ_shape if i != -4]
+
+    if targ_shape == [-3, 0]:
+        targ_shape = [-1, 0]
+        reverse = 'True'
 
     not_supported_shape = [-2, -3, -4]
     for val in targ_shape:
