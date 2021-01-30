@@ -1628,7 +1628,8 @@ def convert_reshape(node, **kwargs):
         nodes = [
             make_node('Shape', [input_nodes[0]], [name+'_shape']),
             make_node('Split', [name+'_shape'], [name+'_dim0', name+'_dim1', name+'_dim2',
-                      name+'_dim3', name+'_dim4', name+'_dim5'], axis=0),
+                                                 name+'_dim3', name+'_dim4', name+'_dim5'],
+                      axis=0),
             make_node('Mul', [name+'_dim2', name+'_dim3'], [name+'_mul_1']),
             make_node('Mul', [name+'_dim4', name+'_dim5'], [name+'_mul_2']),
             make_node('Concat', [name+'_dim0', name+'_dim1', name+'_mul_1', name+'_mul_2'],
