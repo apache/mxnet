@@ -595,6 +595,18 @@ def test_onnx_export_gather_nd(tmp_path, dtype):
     op_export_test('gather_nd2', M2, [x2, y2], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
+@pytest.mark.parametrize('params', [((4, 5, 6), (0, 2)), ((4, 5, 6), (0, 1)),
+                                    ((1, 2, 3, 4, 1), (0, 4)),
+                                    ((4, 5, 1, 6), (0, 2))])
+def test_onnx_export_swap_axis(tmp_path, dtype, params):
+    shape = params[0]
+    dim1, dim2 = params[1]
+    x = mx.random.uniform(-100, 100, shape).astype(dtype)
+    M = def_model('SwapAxis', dim1=dim1, dim2=dim2)
+    op_export_test('SwapAxis', M, [x], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('axes', [None, (0, 1, 2), (-2, -3), (-2, 0)])
 def test_onnx_export_slice_like(tmp_path, dtype, axes):
