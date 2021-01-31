@@ -3572,21 +3572,20 @@ def convert_batch_dot(node, **kwargs):
     transpose_b = str(attrs.get('transpose_b', 'False'))
     perm = [0, 2, 1]
 
+    if transpose_a == 'False' and transpose_b == 'False':
+        nodes = [
+            make_node('MatMul', [lhs, rhs], [name]),
+        ]
+        return nodes
+
     nodes = [
         create_tensor([-2], name+'_-2', kwargs['initializer']),
         create_tensor([-1], name+'_-1', kwargs['initializer']),
         create_tensor([0], name+'_0', kwargs['initializer']),
-        create_tensor([2], name+'_2', kwargs['initializer']),
         create_tensor([100], name+'_100', kwargs['initializer']),
-        create_tensor([0], name+'_0f', kwargs['initializer'], dtype=dtype),
     ]
 
-    if transpose_a == 'False' and transpose_b == 'False':
-        nodes += [
-            make_node('MatMul', [lhs, rhs], [name]),
-        ]
-
-    elif transpose_a != 'False' and transpose_a == 'False':
+    if transpose_a != 'False' and transpose_b == 'False':
         nodes += [
             make_node('Shape', [lhs], [name+'_lhs_shape']),
             make_node('Shape', [name+'_lhs_shape'], [name+'_lhs_dim']),
