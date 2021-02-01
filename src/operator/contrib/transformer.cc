@@ -140,12 +140,12 @@ void strided_batch_sgemm(bool transA, bool transB,
 
 #if (MSHADOW_USE_MKL && INTEL_MKL_VERSION >= 20160000)
   const int GROUP_SIZE = 1;
-  MKL_INT p_m[GROUP_SIZE] = {m};
-  MKL_INT p_n[GROUP_SIZE] = {n};
-  MKL_INT p_k[GROUP_SIZE] = {k};
-  MKL_INT p_lda[GROUP_SIZE] = {lda};
-  MKL_INT p_ldb[GROUP_SIZE] = {ldb};
-  MKL_INT p_ldc[GROUP_SIZE] = {ldc};
+  MKL_INT p_m[GROUP_SIZE] = {static_cast<MKL_INT>(m)};
+  MKL_INT p_n[GROUP_SIZE] = {static_cast<MKL_INT>(n)};
+  MKL_INT p_k[GROUP_SIZE] = {static_cast<MKL_INT>(k)};
+  MKL_INT p_lda[GROUP_SIZE] = {static_cast<MKL_INT>(lda)};
+  MKL_INT p_ldb[GROUP_SIZE] = {static_cast<MKL_INT>(ldb)};
+  MKL_INT p_ldc[GROUP_SIZE] = {static_cast<MKL_INT>(ldc)};
 
   float p_alpha[GROUP_SIZE] = {alpha};
   float p_beta[GROUP_SIZE] = {beta};
@@ -153,7 +153,7 @@ void strided_batch_sgemm(bool transA, bool transB,
   CBLAS_TRANSPOSE cblas_a_trans = transA ? CblasTrans : CblasNoTrans;
   CBLAS_TRANSPOSE cblas_b_trans = transB ? CblasTrans : CblasNoTrans;
 
-  MKL_INT p_group_sizeb[GROUP_SIZE] = {batchCount};
+  MKL_INT p_group_sizeb[GROUP_SIZE] = {static_cast<MKL_INT>(batchCount)};
   CBLAS_TRANSPOSE p_transa[GROUP_SIZE] = {cblas_a_trans};
   CBLAS_TRANSPOSE p_transb[GROUP_SIZE] = {cblas_b_trans};
 
@@ -657,13 +657,13 @@ of queries, keys and values following the layout:
 
 the equivalent code would be::
 
-  tmp = mx.nd.reshape(queries_keys_values, shape=(0, 0, num_heads, 3, -1))
-  q_proj = mx.nd.transpose(tmp[:,:,:,0,:], axes=(1, 2, 0, 3))
-  q_proj = mx.nd.reshape(q_proj, shape=(-1, 0, 0), reverse=True)
-  q_proj = mx.nd.contrib.div_sqrt_dim(q_proj)
-  k_proj = mx.nd.transpose(tmp[:,:,:,1,:], axes=(1, 2, 0, 3))
-  k_proj = mx.nd.reshape(k_proj, shape=(-1, 0, 0), reverse=True)
-  output = mx.nd.batch_dot(q_proj, k_proj, transpose_b=True)
+    tmp = mx.nd.reshape(queries_keys_values, shape=(0, 0, num_heads, 3, -1))
+    q_proj = mx.nd.transpose(tmp[:,:,:,0,:], axes=(1, 2, 0, 3))
+    q_proj = mx.nd.reshape(q_proj, shape=(-1, 0, 0), reverse=True)
+    q_proj = mx.nd.contrib.div_sqrt_dim(q_proj)
+    k_proj = mx.nd.transpose(tmp[:,:,:,1,:], axes=(1, 2, 0, 3))
+    k_proj = mx.nd.reshape(k_proj, shape=(-1, 0, 0), reverse=True)
+    output = mx.nd.batch_dot(q_proj, k_proj, transpose_b=True)
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -703,13 +703,13 @@ and the attention weights following the layout:
 
 the equivalent code would be::
 
-  tmp = mx.nd.reshape(queries_keys_values, shape=(0, 0, num_heads, 3, -1))
-  v_proj = mx.nd.transpose(tmp[:,:,:,2,:], axes=(1, 2, 0, 3))
-  v_proj = mx.nd.reshape(v_proj, shape=(-1, 0, 0), reverse=True)
-  output = mx.nd.batch_dot(attention, v_proj)
-  output = mx.nd.reshape(output, shape=(-1, num_heads, 0, 0), reverse=True)
-  output = mx.nd.transpose(output, axes=(2, 0, 1, 3))
-  output = mx.nd.reshape(output, shape=(0, 0, -1))
+    tmp = mx.nd.reshape(queries_keys_values, shape=(0, 0, num_heads, 3, -1))
+    v_proj = mx.nd.transpose(tmp[:,:,:,2,:], axes=(1, 2, 0, 3))
+    v_proj = mx.nd.reshape(v_proj, shape=(-1, 0, 0), reverse=True)
+    output = mx.nd.batch_dot(attention, v_proj)
+    output = mx.nd.reshape(output, shape=(-1, num_heads, 0, 0), reverse=True)
+    output = mx.nd.transpose(output, axes=(2, 0, 1, 3))
+    output = mx.nd.reshape(output, shape=(0, 0, -1))
 
 )code" ADD_FILELINE)
 .set_num_inputs(2)
@@ -749,13 +749,13 @@ and a tensor of interleaved projections of values and keys following the layout:
 
 the equivalent code would be::
 
-  q_proj = mx.nd.transpose(queries, axes=(1, 2, 0, 3))
-  q_proj = mx.nd.reshape(q_proj, shape=(-1, 0, 0), reverse=True)
-  q_proj = mx.nd.contrib.div_sqrt_dim(q_proj)
-  tmp = mx.nd.reshape(keys_values, shape=(0, 0, num_heads, 2, -1))
-  k_proj = mx.nd.transpose(tmp[:,:,:,0,:], axes=(1, 2, 0, 3))
-  k_proj = mx.nd.reshap(k_proj, shape=(-1, 0, 0), reverse=True)
-  output = mx.nd.batch_dot(q_proj, k_proj, transpose_b=True)
+    q_proj = mx.nd.transpose(queries, axes=(1, 2, 0, 3))
+    q_proj = mx.nd.reshape(q_proj, shape=(-1, 0, 0), reverse=True)
+    q_proj = mx.nd.contrib.div_sqrt_dim(q_proj)
+    tmp = mx.nd.reshape(keys_values, shape=(0, 0, num_heads, 2, -1))
+    k_proj = mx.nd.transpose(tmp[:,:,:,0,:], axes=(1, 2, 0, 3))
+    k_proj = mx.nd.reshap(k_proj, shape=(-1, 0, 0), reverse=True)
+    output = mx.nd.batch_dot(q_proj, k_proj, transpose_b=True)
 
 )code" ADD_FILELINE)
 .set_num_inputs(2)
@@ -796,13 +796,13 @@ and the attention weights following the layout:
 
 the equivalent code would be::
 
-  tmp = mx.nd.reshape(queries_keys_values, shape=(0, 0, num_heads, 3, -1))
-  v_proj = mx.nd.transpose(tmp[:,:,:,1,:], axes=(1, 2, 0, 3))
-  v_proj = mx.nd.reshape(v_proj, shape=(-1, 0, 0), reverse=True)
-  output = mx.nd.batch_dot(attention, v_proj, transpose_b=True)
-  output = mx.nd.reshape(output, shape=(-1, num_heads, 0, 0), reverse=True)
-  output = mx.nd.transpose(output, axes=(0, 2, 1, 3))
-  output = mx.nd.reshape(output, shape=(0, 0, -1))
+    tmp = mx.nd.reshape(queries_keys_values, shape=(0, 0, num_heads, 3, -1))
+    v_proj = mx.nd.transpose(tmp[:,:,:,1,:], axes=(1, 2, 0, 3))
+    v_proj = mx.nd.reshape(v_proj, shape=(-1, 0, 0), reverse=True)
+    output = mx.nd.batch_dot(attention, v_proj, transpose_b=True)
+    output = mx.nd.reshape(output, shape=(-1, num_heads, 0, 0), reverse=True)
+    output = mx.nd.transpose(output, axes=(0, 2, 1, 3))
+    output = mx.nd.reshape(output, shape=(0, 0, -1))
 
 )code" ADD_FILELINE)
 .set_num_inputs(2)
@@ -847,14 +847,19 @@ DMLC_REGISTER_PARAMETER(SldWinAttenParam);
 NNVM_REGISTER_OP(_contrib_sldwin_atten_mask_like)
 .add_alias("_npx_sldwin_atten_mask_like")
 .describe(R"code(Compute the mask for the sliding window attention score, used in
-Longformer (https://arxiv.org/pdf/2004.05150.pdf). In this attention pattern,
+Longformer (https://arxiv.org/pdf/2004.05150.pdf).
+
+In this attention pattern,
 given a fixed window size *2w*, each token attends to *w* tokens on the left side
 if we use causal attention (setting *symmetric* to *False*),
 otherwise each token attends to *w* tokens on each side.
 
 The shapes of the inputs are:
-- *score* : (batch_size, seq_length, num_heads, w + w + 1) if symmetric is True,
-            otherwise (batch_size, seq_length, num_heads, w + 1).
+- *score* :
+
+  - (batch_size, seq_length, num_heads, w + w + 1) if symmetric is True,
+  - (batch_size, seq_length, num_heads, w + 1) otherwise.
+
 - *dilation* : (num_heads,)
 - *valid_length* : (batch_size,)
 
@@ -911,8 +916,10 @@ The shapes of the inputs are:
 - *dilation* : (num_heads,)
 
 The shape of the output is:
-- *score* : (batch_size, seq_length, num_heads, w + w + 1) if symmetric is True,
-            otherwise (batch_size, seq_length, num_heads, w + 1).
+- *score* :
+
+  - (batch_size, seq_length, num_heads, w + w + 1) if symmetric is True,
+  - (batch_size, seq_length, num_heads, w + 1) otherwise.
 
 )code" ADD_FILELINE)
 .set_num_inputs(3)
@@ -966,14 +973,19 @@ NNVM_REGISTER_OP(_backward_sldwin_atten_score)
 NNVM_REGISTER_OP(_contrib_sldwin_atten_context)
 .add_alias("_npx_sldwin_atten_context")
 .describe(R"code(Compute the context vector for sliding window attention, used in
-Longformer (https://arxiv.org/pdf/2004.05150.pdf). In this attention pattern,
+Longformer (https://arxiv.org/pdf/2004.05150.pdf).
+
+In this attention pattern,
 given a fixed window size *2w*, each token attends to *w* tokens on the left side
 if we use causal attention (setting *symmetric* to *False*),
 otherwise each token attends to *w* tokens on each side.
 
 The shapes of the inputs are:
-- *score* : (batch_size, seq_length, num_heads, w + w + 1) if symmetric is True,
-            otherwise (batch_size, seq_length, num_heads, w + 1).
+- *score* :
+
+  - (batch_size, seq_length, num_heads, w + w + 1) if symmetric is True,
+  - (batch_size, seq_length, num_heads, w + 1) otherwise
+
 - *value* : (batch_size, seq_length, num_heads, num_head_units)
 - *dilation* : (num_heads,)
 
@@ -1029,8 +1041,6 @@ NNVM_REGISTER_OP(_backward_sldwin_atten_context)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<SldWinAttenParam>)
 .set_attr<FCompute>("FCompute<cpu>", SldWinAttenContextBackward<cpu>);
-
-
 
 }  // namespace op
 }  // namespace mxnet

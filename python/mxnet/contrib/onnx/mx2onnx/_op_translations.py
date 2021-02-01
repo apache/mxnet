@@ -191,7 +191,7 @@ def convert_weights_and_inputs(node, **kwargs):
                 data_type=data_type,
                 dims=dims,
                 vals=np_arr.flatten().tolist(),
-                raw=False,
+                raw=False
             )
         )
 
@@ -478,36 +478,73 @@ def convert_pad(node, **kwargs):
     """Map MXNet's pad operator attributes to onnx's Pad operator
     and return the created node.
     """
+    opset_version = kwargs["opset_version"]
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     mxnet_pad_width = convert_string_to_list(attrs.get("pad_width"))
     onnx_pad_width = transform_padding(mxnet_pad_width)
 
     pad_mode = attrs.get("mode")
+    pad_value = np.float32(attrs.get("constant_value", 0.0))
 
-    if pad_mode == "constant":
-        pad_value = float(attrs.get("constant_value")) \
-            if "constant_value" in attrs else 0.0
-        node = onnx.helper.make_node(
-            'Pad',
-            inputs=input_nodes,
-            outputs=[name],
-            mode='constant',
-            value=pad_value,
-            pads=onnx_pad_width,
-            name=name
-        )
+    if opset_version >= 11:
+        # starting with opset 11, pads and constant_value are inputs instead of attributes
+        from onnx.helper import make_tensor, make_tensor_value_info
+        initializer = kwargs["initializer"]
+        pads_input_name = name + "_pads"
+        pads_input_type = onnx.TensorProto.INT64
+        pads_input_shape = np.shape(np.array(onnx_pad_width))
+        pads_value_node = make_tensor_value_info(pads_input_name, pads_input_type, pads_input_shape)
+        pads_tensor_node = make_tensor(pads_input_name, pads_input_type, pads_input_shape, onnx_pad_width)
+        initializer.append(pads_tensor_node)
+        input_nodes.append(pads_input_name)
+
+        if pad_mode == "constant":
+            const_input_name = name + "_constant"
+            const_input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[pad_value.dtype]
+            const_value_node = make_tensor_value_info(const_input_name, const_input_type, ())
+            const_tensor_node = make_tensor(const_input_name, const_input_type, (), [pad_value])
+            initializer.append(const_tensor_node)
+            input_nodes.append(const_input_name)
+            pad_node = onnx.helper.make_node(
+                "Pad",
+                input_nodes,
+                [name],
+                mode=pad_mode,
+                name=name
+            )
+            return [pads_value_node, const_value_node, pad_node]
+        else:
+            pad_node = onnx.helper.make_node(
+                "Pad",
+                input_nodes,
+                [name],
+                mode=pad_mode,
+                name=name
+            )
+            return [pads_value_node, pad_node]
     else:
-        node = onnx.helper.make_node(
-            'Pad',
-            inputs=input_nodes,
-            outputs=[name],
-            mode=pad_mode,
-            pads=onnx_pad_width,
-            name=name
-        )
-
-    return [node]
+        if pad_mode == "constant":
+            node = onnx.helper.make_node(
+                'Pad',
+                inputs=input_nodes,
+                outputs=[name],
+                mode='constant',
+                value=pad_value,
+                pads=onnx_pad_width,
+                name=name
+            )
+            return [node]
+        else:
+            node = onnx.helper.make_node(
+                'Pad',
+                inputs=input_nodes,
+                outputs=[name],
+                mode=pad_mode,
+                pads=onnx_pad_width,
+                name=name
+            )
+            return [node]
 
 def create_helper_tensor_node(input_vals, output_name, kwargs):
     """create extra tensor node from numpy values"""
@@ -766,6 +803,7 @@ def convert_pooling(node, **kwargs):
     MaxPool/AveragePool/GlobalMaxPool/GlobalAveragePool operators
     based on the input node's attributes and return the created node.
     """
+    opset_version = kwargs["opset_version"]
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     kernel = eval(attrs["kernel"])
@@ -777,12 +815,12 @@ def convert_pooling(node, **kwargs):
     pooling_convention = attrs.get('pooling_convention', 'valid')
     ceil_mode = False
     if pooling_convention == 'full':
-        if onnx.__version__ < "1.5.0":
+        if opset_version < 10:
             pooling_warning = "Pooling: ONNX lower than 1.5.0 doesn't support pooling_convention. " \
                               "This might lead to shape or accuracy issues. " \
                               "https://github.com/onnx/onnx/issues/549"
+            logging.warning(pooling_warning)
         ceil_mode = True
-        logging.warning(pooling_warning)
 
     pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
     pad_dims = pad_dims + pad_dims
@@ -822,7 +860,7 @@ def convert_pooling(node, **kwargs):
                 name=name
             )
         else:
-            if onnx.__version__ >= "1.5.0":
+            if opset_version >= 10:
                 node = onnx.helper.make_node(
                     pool_types[pool_type],
                     input_nodes,  # input
@@ -1353,17 +1391,35 @@ def convert_dropout(node, **kwargs):
     and return the created node.
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    opset_version = kwargs["opset_version"]
 
     probability = float(attrs.get("p", 0.5))
 
-    dropout_node = onnx.helper.make_node(
-        "Dropout",
-        input_nodes,
-        [name],
-        ratio=probability,
-        name=name
-    )
-    return [dropout_node]
+    if opset_version >= 12:
+        # opset >= 12 requires the ratio to be an input
+        initializer = kwargs["initializer"]
+        ratio_input_name = name + "_ratio"
+        value_node = onnx.helper.make_tensor_value_info(ratio_input_name,
+                                                        onnx.TensorProto.FLOAT, ())
+        tensor_node = onnx.helper.make_tensor(ratio_input_name, onnx.TensorProto.FLOAT,
+                                              (), [probability])
+        initializer.append(tensor_node)
+        dropout_node = onnx.helper.make_node(
+            "Dropout",
+            [input_nodes[0], ratio_input_name],
+            [name],
+            name=name
+        )
+        return [value_node, dropout_node]
+    else:
+        dropout_node = onnx.helper.make_node(
+            "Dropout",
+            input_nodes,
+            [name],
+            ratio=probability,
+            name=name
+        )
+        return [dropout_node]
 
 
 @mx_op.register("Flatten")
@@ -1379,19 +1435,46 @@ def convert_clip(node, **kwargs):
     and return the created node.
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    opset_version = kwargs["opset_version"]
 
-    a_min = np.float(attrs.get('a_min', -np.inf))
-    a_max = np.float(attrs.get('a_max', np.inf))
+    a_min = float(attrs.get('a_min', -np.inf))
+    a_max = float(attrs.get('a_max', np.inf))
 
-    clip_node = onnx.helper.make_node(
-        "Clip",
-        input_nodes,
-        [name],
-        name=name,
-        min=a_min,
-        max=a_max
-    )
-    return [clip_node]
+    if opset_version >= 11:
+        # opset >= 11 requires min/max to be inputs
+        initializer = kwargs["initializer"]
+        min_input_name = name + "_min"
+        max_input_name = name + "_max"
+        min_value_node = onnx.helper.make_tensor_value_info(min_input_name,
+                                                            onnx.TensorProto.FLOAT, ())
+        max_value_node = onnx.helper.make_tensor_value_info(max_input_name,
+                                                            onnx.TensorProto.FLOAT, ())
+        min_tensor_node = onnx.helper.make_tensor(min_input_name, onnx.TensorProto.FLOAT,
+                                                  (), [a_min])
+        max_tensor_node = onnx.helper.make_tensor(max_input_name, onnx.TensorProto.FLOAT,
+                                                  (), [a_max])
+        initializer.append(min_tensor_node)
+        initializer.append(max_tensor_node)
+        input_nodes.append(min_input_name)
+        input_nodes.append(max_input_name)
+        clip_node = onnx.helper.make_node(
+            "Clip",
+            input_nodes,
+            [name],
+            name=name
+        )
+        return [min_value_node, max_value_node, clip_node]
+
+    else:
+        clip_node = onnx.helper.make_node(
+            "Clip",
+            input_nodes,
+            [name],
+            name=name,
+            min=a_min,
+            max=a_max
+        )
+        return [clip_node]
 
 
 def scalar_op_helper(node, op_name, **kwargs):
@@ -2496,22 +2579,34 @@ def convert_topk(node, **kwargs):
     else:
         raise NotImplementedError("ONNX expects both value and indices as output")
 
-    export_nodes = []
+    opset_version = kwargs['opset_version']
+    if opset_version >= 10:
+        from onnx.helper import make_tensor, make_tensor_value_info
+        initializer = kwargs["initializer"]
+        k_input_name = name + "_k"
+        k_input_type = onnx.TensorProto.INT64
+        k_value_node = make_tensor_value_info(k_input_name, k_input_type, ())
+        k_tensor_node = make_tensor(k_input_name, k_input_type, (), (k, ))
+        initializer.append(k_tensor_node)
+        input_nodes.append(k_input_name)
 
-    k = np.asarray([k], dtype=np.int)
-    k_node = create_helper_tensor_node(k, name + '__k', kwargs)
-    export_nodes.extend(k_node)
-    k_node = k_node[-1].name
-
-    input_node = input_nodes[0]
-    topk_node = onnx.helper.make_node(
-        "TopK",
-        [input_node, k_node],
-        outputs,
-        axis=axis,
-        name=name
-    )
-    export_nodes.extend([topk_node])
+        topk_node = onnx.helper.make_node(
+            "TopK",
+            input_nodes,
+            outputs,
+            axis=axis,
+            name=name
+        )
+        return [k_value_node, topk_node]
+    else:
+        topk_node = onnx.helper.make_node(
+            "TopK",
+            input_nodes,
+            outputs,
+            axis=axis,
+            k=k,
+            name=name
+        )
 
     return [topk_node]
 

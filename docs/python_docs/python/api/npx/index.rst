@@ -84,6 +84,7 @@ More operators
    sigmoid
    smooth_l1
    softmax
+   log_softmax
    topk
    waitall
    load

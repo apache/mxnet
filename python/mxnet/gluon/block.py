@@ -29,13 +29,14 @@ import contextlib
 import contextvars
 
 import re
+import json
 import numpy as np
 
 from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, check_call, _LIB
 from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
     profiler as _profiler, context as _context
 from ..symbol.numpy import _symbol as np_symbol
-from ..symbol import Symbol
+from ..symbol import Symbol, fromjson
 from ..ndarray import NDArray
 from .parameter import Parameter, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
@@ -370,8 +371,10 @@ class Block:
             params = {v: k for k, v in reverse_params.items()}
 
         arg_dict = {key: val._reduce() for key, val in params.items()}
-        save_fn = _mx_npx.save if is_np_array() else ndarray.save
-        save_fn(filename, arg_dict)
+        if is_np_array():
+            _mx_npx.savez(filename, **arg_dict)
+        else:
+            ndarray.save(filename, arg_dict)
 
     def load_parameters(self, filename, ctx=None, allow_missing=False,
                         ignore_extra=False, cast_dtype=False, dtype_source='current'):
@@ -570,6 +573,143 @@ class Block:
             init.set_verbosity(verbose=verbose)
         for v in params.values():
             v.initialize(None, ctx, init, force_reinit=force_reinit)
+
+    def save(self, prefix):
+        """Save the model architecture and parameters to load again later
+
+        Saves the model architecture as a nested dictionary where each Block
+        in the model is a dictionary and its children are sub-dictionaries.
+
+        Each Block is uniquely identified by Block class name and a unique ID.
+        We save each Block's parameter UUID to restore later in order to match
+        the saved parameters.
+
+        Recursively traverses a Block's children in order (since its an
+        OrderedDict) and uses the unique ID to denote that specific Block.
+
+        Assumes that the model is created in an identical order every time.
+        If the model is not able to be recreated deterministically do not
+        use this set of APIs to save/load your model.
+
+        For HybridBlocks, the cached_graph is saved (Symbol & inputs) if
+        it has already been hybridized.
+
+        Parameters
+        ----------
+        prefix : str
+            The prefix to use in filenames for saving this model:
+            <prefix>-model.json and <prefix>-model.params
+        """
+        # create empty model structure
+        model = {}
+        def _save_cached_graphs(blk, structure, index=0):
+            # create new entry for this block
+            mdl = {}
+            # encode unique name based on block type and ID
+            name = type(blk).__name__.lower()
+            structure[name+str(index)] = mdl
+            index += 1
+            if isinstance(blk, HybridBlock):
+                if blk._cached_graph:
+                    # save in/out formats
+                    mdl['in_format'] = blk._in_format
+                    mdl['out_format'] = blk._out_format
+                    # save cached graph & input symbols
+                    syms, out = blk._cached_graph
+                    mdl_syms = []
+                    for sym in syms:
+                        mdl_syms.append(sym.tojson())
+                    mdl['inputs'] = mdl_syms
+                    mdl['symbol'] = out.tojson()
+                    mdl['hybridized'] = True
+                else:
+                    mdl['hybridized'] = False
+            # save param uuids
+            pmap = {}
+            mdl['params'] = pmap
+            pnames = list(blk.params.keys())
+            for p in pnames:
+                param = blk.params[p]
+                pmap[p] = param._uuid
+            # recursively save children
+            for child in blk._children.values():
+                index = _save_cached_graphs(child(), mdl, index)
+            # return latest index (ie. block count)
+            return index
+
+        # save top-level block
+        _save_cached_graphs(self, model)
+        # save model
+        with open(prefix+'-model.json', 'w') as fp:
+            json.dump(model, fp)
+        # save params
+        self.save_parameters('MyModel-model.params')
+
+    def load(self, prefix):
+        """Load a model saved using the `save` API
+
+        Reconfigures a model using the saved configuration. This function
+        does not regenerate the model architecture. It resets each Block's
+        parameter UUIDs as they were when saved in order to match the names of the
+        saved parameters.
+
+        This function assumes the Blocks in the model were created in the same
+        order they were when the model was saved. This is because each Block is
+        uniquely identified by Block class name and a unique ID in order (since
+        its an OrderedDict) and uses the unique ID to denote that specific Block.
+
+        Assumes that the model is created in an identical order every time.
+        If the model is not able to be recreated deterministically do not
+        use this set of APIs to save/load your model.
+
+        For HybridBlocks, the cached_graph (Symbol & inputs) and settings are
+        restored if it had been hybridized before saving.
+
+        Parameters
+        ----------
+        prefix : str
+            The prefix to use in filenames for loading this model:
+            <prefix>-model.json and <prefix>-model.params
+        """
+        # load model json from file
+        with open(prefix+'-model.json') as fp:
+            model = json.load(fp)
+
+        def _load_cached_graphs(blk, structure, index=0):
+            # get block name
+            name = type(blk).__name__.lower()
+            # lookup previous encoded name based on block type and ID
+            mdl = structure[name+str(index)]
+            index += 1
+            if isinstance(blk, HybridBlock):
+                if mdl['hybridized']:
+                    # restore in/out formats
+                    blk._in_format = mdl['in_format']
+                    blk._out_format = mdl['out_format']
+                    # get saved symbol
+                    out = fromjson(mdl['symbol'])
+                    syms = []
+                    # recreate inputs for this symbol
+                    for inp in mdl['inputs']:
+                        syms.append(fromjson(inp))
+                    # reset cached_graph and active status
+                    blk._cached_graph = (syms, out)
+                    blk._active = True
+            # reload param uuids
+            pmap = mdl['params']
+            for p, uuid in pmap.items():
+                param = blk.params[p]
+                param._uuid = uuid
+            # recursively reload children
+            for child in blk._children.values():
+                index = _load_cached_graphs(child(), mdl, index)
+            # return latest index (ie. block count)
+            return index
+
+        # load top-level block
+        _load_cached_graphs(self, model)
+        # load params
+        self.load_parameters('MyModel-model.params')
 
     def hybridize(self, active=True, **kwargs):
         """ Please refer description of HybridBlock hybridize().
@@ -913,7 +1053,7 @@ class HybridBlock(Block):
         self._monitor_all = False
         self._backend = None
         self._backend_opts = {}
-        self._partition_if_dynamic = False
+        self._partition_if_dynamic = True
         self._first_forward = True
 
     def __setattr__(self, name, value):
@@ -1062,10 +1202,6 @@ class HybridBlock(Block):
             # Partition the graph
             out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, input_shapes, **self._backend_opts)
 
-            # convert to numpy symbol if needed
-            if _mx_npx.is_np_array():
-                out = out.as_np_ndarray()
-
             #update cached graph with partitioned graph
             if update_graph:
                 self._cached_graph = data, out
@@ -1175,7 +1311,14 @@ class HybridBlock(Block):
             out = [out]
         return _regroup(out, self._out_format)
 
-    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, partition_if_dynamic=False, **kwargs):
+    def optimize_for(self, x, *args, backend=None, clear=False,
+                     partition_if_dynamic=True,
+                     static_alloc=False,
+                     static_shape=False,
+                     inline_limit=2,
+                     forward_bulk_size=None,
+                     backward_bulk_size=None,
+                     **kwargs):
         """Partitions the current HybridBlock and optimizes it for a given backend
         without executing a forward pass. Modifies the HybridBlock in-place.
 
@@ -1205,8 +1348,9 @@ class HybridBlock(Block):
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
         backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
-        clear : clears any previous optimizations
-        partition_if_dynamic : bool
+        clear : bool, default False
+            clears any previous optimizations
+        partition_if_dynamic : bool, default False
             whether to partition the graph when dynamic shape op exists
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
@@ -1214,10 +1358,22 @@ class HybridBlock(Block):
             Optimize for invariant input shapes between iterations. Must also
             set static_alloc to True. Change of input shapes is still allowed
             but slower.
+        inline_limit : optional int, default 2
+            Maximum number of operators that can be inlined.
+        forward_bulk_size : optional int, default None
+            Segment size of bulk execution during forward pass.
+        backward_bulk_size : optional int, default None
+            Segment size of bulk execution during backward pass.
+        **kwargs: The backend options, optional
+            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         """
+        self._backend = backend
+        if len(kwargs) > 0:
+            self._backend_opts = kwargs
 
-        # do hybrize API call
-        self.hybridize(True, backend, backend_opts, clear, partition_if_dynamic, **kwargs)
+        if clear or not self._active:
+            self.hybridize(True, partition_if_dynamic, static_alloc, static_shape,
+                           inline_limit, forward_bulk_size, backward_bulk_size)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
@@ -1239,6 +1395,9 @@ class HybridBlock(Block):
         # do not actually call the cached_op
 
         self._first_forward = True
+        # clear the backend
+        self._backend = None
+        self._backend_opts = None
 
     def _clear_cached_op(self):
         self._cached_graph = ()
@@ -1259,7 +1418,13 @@ class HybridBlock(Block):
             self._active = False
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, partition_if_dynamic=False, **kwargs):
+    def hybridize(self, active=True,
+                  partition_if_dynamic=True,
+                  static_alloc=False,
+                  static_shape=False,
+                  inline_limit=2,
+                  forward_bulk_size=None,
+                  backward_bulk_size=None):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1267,12 +1432,7 @@ class HybridBlock(Block):
         ----------
         active : bool, default True
             Whether to turn hybrid on or off.
-        backend : str
-            The name of backend, as registered in `SubgraphBackendRegistry`, default None
-        backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
-            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
-        clear : clears any previous optimizations
-        partition_if_dynamic : bool
+        partition_if_dynamic : bool, default False
             whether to partition the graph when dynamic shape op exists
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
@@ -1280,24 +1440,33 @@ class HybridBlock(Block):
             Optimize for invariant input shapes between iterations. Must also
             set static_alloc to True. Change of input shapes is still allowed
             but slower.
+        inline_limit : optional int, default 2
+            Maximum number of operators that can be inlined.
+        forward_bulk_size : optional int, default None
+            Segment size of bulk execution during forward pass.
+        backward_bulk_size : optional int, default None
+            Segment size of bulk execution during backward pass.
         """
-
-        self._backend = backend
-        if backend_opts is not None:
-            assert isinstance(backend_opts, dict), \
-            "HybridBlock hybridize requires backend_opts to be a dictionary."
-            self._backend_opts = backend_opts
 
         self._active = active
         self._partition_if_dynamic = partition_if_dynamic
-        self._flags = list(kwargs.items())
-        if clear:
-            self._clear_cached_op()
+        self._flags = [("static_alloc", static_alloc), ("static_shape", static_shape),
+                       ("inline_limit", inline_limit)]
+        if forward_bulk_size is not None:
+            self._flags.append(("forward_bulk_size", forward_bulk_size))
+        if backward_bulk_size is not None:
+            self._flags.append(("backward_bulk_size", backward_bulk_size))
+        self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:
             warnings.warn('"{block}" is being hybridized while still having forward hook/pre-hook. '
                           'If "{block}" is a child of HybridBlock, the hooks will not take effect.'
                           .format(block=self))
-        super(HybridBlock, self).hybridize(active, **kwargs)
+        super(HybridBlock, self).hybridize(active,
+                                           static_alloc=static_alloc,
+                                           static_shape=static_shape,
+                                           inline_limit=inline_limit,
+                                           forward_bulk_size=forward_bulk_size,
+                                           backward_bulk_size=backward_bulk_size)
 
     def cast(self, dtype):
         if self._active:
@@ -1405,12 +1574,14 @@ class HybridBlock(Block):
                                       .format(name=name), stacklevel=3)
                     else:
                         arg_dict['aux:%s'%name] = param._reduce()
-        save_fn = _mx_npx.save if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%((path if path is not None else ""), epoch)
 
         if path is not None:
-            save_fn(params_filename, arg_dict)
-            return (sym_filename, params_filename)
+            if is_np_array():
+                _mx_npx.savez(params_filename, **arg_dict)
+            else:
+                ndarray.save(params_filename, arg_dict)
+            return (sym_filename, params_filename if arg_dict else None)
 
         if remove_amp_cast:
             handle = SymbolHandle()

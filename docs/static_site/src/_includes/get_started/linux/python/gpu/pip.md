@@ -19,7 +19,7 @@ $ pip install mxnet-cu102
 
 <div class="v1-6-0">
 {% highlight bash %}
-$ pip install mxnet-cu102==1.6.0
+$ pip install mxnet-cu102==1.6.0.post0
 {% endhighlight %}
 
 </div> <!-- End of v1-6-0 -->

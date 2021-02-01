@@ -578,6 +578,8 @@ FP32_FUNCS = [
     # Neural network
     'softmax',
     'log_softmax',
+    'masked_softmax',
+    'masked_log_softmax',
     'InstanceNorm',
     'LayerNorm',
     'GroupNorm',

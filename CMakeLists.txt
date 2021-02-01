@@ -61,6 +61,7 @@ cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
 option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
+option(USE_MKL_LAYERNORM "Use layer normalization from MKL, which is currently slower than internal.  No effect unless USE_MKL_IF_AVAILABLE is set." OFF)
 if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
   option(USE_MKLDNN "Build with MKL-DNN support" ON)
 else()
@@ -77,7 +78,6 @@ option(USE_JEMALLOC "Build with Jemalloc support" OFF)
 option(USE_LIBJPEG_TURBO "Use libjpeg-turbo" OFF)
 option(USE_DIST_KVSTORE "Build with DIST_KVSTORE support" OFF)
 option(USE_PLUGINS_WARPCTC "Use WARPCTC Plugins" OFF)
-option(USE_CPP_PACKAGE "Build C++ Package" OFF)
 option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 option(USE_GPROF "Compile with gprof (profiling) flag" OFF)
 option(USE_VTUNE "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
@@ -88,7 +88,6 @@ option(USE_SIGNAL_HANDLER "Print stack traces on segfaults." ON)
 option(USE_TENSORRT "Enable inference optimization with TensorRT." OFF)
 option(USE_ASAN "Enable Clang/GCC ASAN sanitizers." OFF)
 cmake_dependent_option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF "NOT MSVC" OFF)
-option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(BUILD_EXTENSION_PATH "Path to extension to build" "")
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
@@ -179,7 +178,6 @@ add_definitions(-DDMLC_STRICT_CXX11)
 add_definitions(-DDMLC_USE_CXX14)
 add_definitions(-DMSHADOW_IN_CXX11)
 if(MSVC)
-  add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DMXNET_EXPORTS)
@@ -257,6 +255,9 @@ if(USE_TENSORRT)
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
+if(USE_MKL_LAYERNORM)
+  add_definitions(-DMXNET_USE_MKL_LAYERNORM=1)
+endif()
 if(USE_MKLDNN)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(MSVC)
@@ -306,6 +307,8 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+cmake_dependent_option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" ON "CMAKE_SIZEOF_VOID_P EQUAL 8" OFF)
+
 include(cmake/ChooseBlas.cmake)
 
 if(USE_ASAN)
@@ -317,6 +320,7 @@ if(USE_ASAN)
 endif()
 
 list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
+message("After choosing blas, linking to ${mxnet_LINKER_LIBS}")
 
 foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
     include_directories(${var})
@@ -428,6 +432,16 @@ if(USE_OPENMP)
     if(OPENMP_FOUND)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+      # Enable pragma omp simd
+      # "While the name of this switch is 'experimental', the switch itself, and
+      # the functionality it enables is fully supported and production-ready.
+      # The name reflects that it doesn’t enable any complete subset or
+      # version of an OpenMP standard."
+      # -- https://devblogs.microsoft.com/cppblog/simd-extension-to-c-openmp-in-visual-studio/
+      if(MSVC)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -openmp:experimental")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:experimental")
+      endif()
       if(NOT BLAS STREQUAL "MKL")
         # Linker flags for Intel OMP are already set in case MKL is used. Only set if not MKL
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
@@ -444,18 +458,18 @@ elseif(UNIX)
   list(APPEND mxnet_LINKER_LIBS Threads::Threads)
 endif()
 
-
 # ---[ LAPack
 if(USE_LAPACK)
   message("USE_LAPACK is ON")
   add_definitions(-DMXNET_USE_LAPACK=1)
-  # In the CMAKE_BUILD_TYPE="Distribution" case, we link against Blas libraries
-  # that already provide lapack symbols. Thus -llapack would be wrong.
-  if (NOT MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
-    list(APPEND mxnet_LINKER_LIBS lapack)
+  if(NOT USE_LAPACKE_INTERFACE)
+    # BLAS=open case is handled in ChooseBlas.cmake
+    if(NOT MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution"
+       AND NOT BLAS STREQUAL "Open" AND NOT BLAS STREQUAL "open")
+      list(APPEND mxnet_LINKER_LIBS lapack)
+    endif()
   endif()
 endif()
-
 
 # ---[ jemalloc
 if(USE_JEMALLOC)
@@ -510,6 +524,11 @@ endif()
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
+if(MSVC)
+  FILE(GLOB_RECURSE TVM_BRIDGE_SOURCE "src/*/tvm_bridge.cc")
+  list(REMOVE_ITEM SOURCE ${TVM_BRIDGE_SOURCE})
+endif()
+
 if(NOT USE_INTGEMM)
   FILE(GLOB_RECURSE INTGEMM_OPERATOR_SOURCE "src/operator/contrib/intgemm/*.cc" "src/operator/contrib/intgemm/*.h")
   list(REMOVE_ITEM SOURCE ${INTGEMM_OPERATOR_SOURCE})
@@ -527,6 +546,10 @@ FILE(GLOB_RECURSE NNVMSOURCE
 add_library(nnvm OBJECT ${NNVMSOURCE})
 set_target_properties(nnvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
+
+add_library(miniz STATIC "3rdparty/miniz/miniz.c")
+target_include_directories(miniz PUBLIC "3rdparty/miniz")
+list(APPEND mxnet_LINKER_LIBS miniz)
 
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
@@ -699,6 +722,7 @@ elseif(MSVC)
       foreach(arch ${arch_code_list})
         add_library(mxnet_${arch} SHARED ${SOURCE})
         target_link_libraries(mxnet_${arch} PUBLIC mshadow)
+        target_compile_definitions(mxnet_${arch} PRIVATE -DWIN32_LEAN_AND_MEAN)
         target_compile_options(
           mxnet_${arch}
           PRIVATE
@@ -745,6 +769,7 @@ elseif(MSVC)
       string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
       string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
       add_library(mxnet SHARED ${SOURCE})
+      target_compile_definitions(mxnet PRIVATE -DWIN32_LEAN_AND_MEAN)
       target_link_libraries(mxnet PUBLIC mshadow)
       if(MXNET_FORCE_SHARED_CRT)
         target_compile_options(
@@ -776,6 +801,7 @@ elseif(MSVC)
     endif(USE_SPLIT_ARCH_DLL)
   else()
     add_library(mxnet SHARED ${SOURCE})
+    target_compile_definitions(mxnet PRIVATE -DWIN32_LEAN_AND_MEAN)
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
 endif()
@@ -844,9 +870,9 @@ endif()
 if(USE_MKLDNN)
     add_custom_command(TARGET mxnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/
+      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/)
+      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/)
 endif()
 
 if(USE_INTGEMM)
@@ -858,12 +884,11 @@ function(BuildTVMOP)
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
   set_target_properties(tvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
-  set_target_properties(tvm_topi PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
   set_target_properties(tvm_runtime PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endfunction()
 
 if(USE_TVM_OP)
-  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+  list(APPEND mxnet_LINKER_LIBS tvm_runtime)
   BuildTVMOP()
   find_package(Python3 REQUIRED)
   set(TVM_OP_COMPILE_OPTIONS "-o${CMAKE_CURRENT_BINARY_DIR}" "--config" "${CMAKE_CURRENT_BINARY_DIR}/tvmop.conf" "-L" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm")
@@ -984,3 +1009,4 @@ if(BUILD_CYTHON_MODULES)
     message(FATAL_ERROR "No python interpreter found to build cython modules")
   endif()
 endif()
+

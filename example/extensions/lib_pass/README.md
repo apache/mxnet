@@ -69,7 +69,8 @@ sym, _, _ = mx.model.load_checkpoint('mymodel', 0)
 sym2 = sym.optimize_for("myPass")
 # Gluon flow 1
 sym_block = nn.SymbolBlock(sym, inputs)
-sym_block.hybridize(backend='myPass')
+sym_block.hybridize(static_alloc=True, static_shape=True)
+sym_block.optimize_for(x, backend='myPass')
 # Gluon flow 2
 sym_block = nn.SymbolBlock(sym, inputs)
 sym_block.optimize_for(x, backend='myPass')
@@ -83,17 +84,7 @@ APIs in MXNet are available in both Symbol and Gluon APIs. For the Symbol API, `
 sym.optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
 ```
 
-The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to use to optimize the model. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before executing the graph pass. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend APIs.
-
-For the Gluon API, `hybridize` can be called on HybridBlocks to execute a graph pass on the internal CachedOp Symbol.
-
-```python
-block.hybridize(backend=None, backend_opts=None, **kwargs)
-```
-
-The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `backend` argument is a string that identifies which pass that will be executed on the model. The `backend_opts` takes other user-specified options that will be passed to the backend APIs. The actual pass runs once just before the first the forward pass.
-
-If you just want to run a graph pass on the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
+The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to use to optimize the model. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before executing the graph pass. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend APIs (in the `kwargs`).
 
 ```python
 block.optimize_for(x, backend=None, backend_opts=None, **kwargs)
@@ -106,7 +97,7 @@ block.optimize_for(x, backend='myPass')
 block.export('optimized')
 ```
 
-But you can also use `optimize_for` in place of `hybridize` and run inference immediately after too.
+But you can also use `optimize_for` and run inference immediately after too.
 
 ```python
 block.optimize_for(x, backend='myPass')

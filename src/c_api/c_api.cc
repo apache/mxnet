@@ -58,6 +58,8 @@
 #include "../operator/subgraph/subgraph_property.h"
 #include "../common/utils.h"
 #include "../profiler/profiler.h"
+#include "../serialization/cnpy.h"
+#include "miniz.h"
 #include "nnvm/pass_functions.h"
 
 using namespace mxnet;
@@ -544,6 +546,9 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
 
   opCallCreateOpState_t callCreateOpState =
     get_func<opCallCreateOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLCREATEOPSTATE_STR));
+
+  opCallDestroyOpState_t callDestroyOpState =
+    get_func<opCallDestroyOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLDESTROYOPSTATE_STR));
 
   opCallFStatefulComp_t callFStatefulComp =
     get_func<opCallFStatefulComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFULCOMP_STR));
@@ -1172,7 +1177,13 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       << "Error custom library failed to create stateful operator '" << name_str << "'" << msgs;
 
       CustomStatefulOp* state_op = reinterpret_cast<CustomStatefulOp*>(state_op_inst);
-      return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op);
+      if (!state_op->wasCreated() && !state_op->ignore_warn)
+        LOG(INFO) << "WARNING! Custom stateful op " << state_op_inst << " was created without "
+                  << "calling CustomStatefulOp::create(). Please ensure this object was "
+                  << "allocated with 'new' since it will be destructed with 'delete'. "
+                  << "To suppress this message without calling CustomStatefulOp::create() "
+                  << "set ignore_warn to 'true' on custom stateful op instance.";
+      return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op, callDestroyOpState);
     };
 
     /* -------------- BELOW IS THE REGISTRATION FOR CUSTOM OPERATORS --------------- */
@@ -1876,10 +1887,10 @@ int MXNDArrayWaitAll() {
   API_END();
 }
 
-int MXNDArraySave(const char* fname,
-                  uint32_t num_args,
-                  NDArrayHandle* args,
-                  const char** keys) {
+int MXNDArrayLegacySave(const char* fname,
+                        uint32_t num_args,
+                        NDArrayHandle* args,
+                        const char** keys) {
   API_BEGIN();
   std::vector<NDArray> data(num_args);
   std::vector<std::string> names;
@@ -1899,6 +1910,54 @@ int MXNDArraySave(const char* fname,
   API_END();
 }
 
+int MXNDArraySave(const char* fname,
+                  uint32_t num_args,
+                  NDArrayHandle* args,
+                  const char** keys) {
+  API_BEGIN();
+
+  CHECK_NOTNULL(fname);
+
+  // We may use mz_zip_writer_init_v2 later instead of mz_zip_writer_init_file
+  // and write an adapter for DMLC stream based on pZip->m_pWrite (and
+  // pZip->m_pIO_opaque)
+  if (num_args == 1 && keys == nullptr) {
+      NDArray *array = static_cast<NDArray *>(args[0]);
+      if (array->storage_type() == kDefaultStorage) {
+          npy::save_array(fname, *array);
+      } else {
+          mz_zip_archive archive {};
+          CHECK(mz_zip_writer_init_file(&archive, fname, 0))
+              << "Failed to open archive " << fname << ": "
+              << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+          npz::save_array(&archive, "", *array);
+          CHECK(mz_zip_writer_finalize_archive(&archive))
+              << "Failed to finalize archive " << fname
+              << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+          CHECK(mz_zip_writer_end(&archive))
+              << "Failed to end archive " << fname
+              << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+      }
+  } else {
+      mz_zip_archive archive {};
+      CHECK(mz_zip_writer_init_file(&archive, fname, 0))
+          << "Failed to open archive " << fname << ": "
+          << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+      for (uint32_t i = 0; i < num_args; ++i) {
+          NDArray *array = static_cast<NDArray *>(args[i]);
+          const std::string array_key = keys == nullptr ? "arr_" + std::to_string(i) : keys[i];
+          npz::save_array(&archive, array_key, *array);
+      }
+      CHECK(mz_zip_writer_finalize_archive(&archive))
+          << "Failed to finalize archive " << fname
+          << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+      CHECK(mz_zip_writer_end(&archive))
+          << "Failed to end archive " << fname
+          << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+  }
+  API_END();
+}
+
 int MXNDArrayLoad(const char* fname,
                   uint32_t *out_size,
                   NDArrayHandle** out_arr,
@@ -1907,26 +1966,63 @@ int MXNDArrayLoad(const char* fname,
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_vec_str.clear();
   API_BEGIN();
-  std::vector<NDArray> data;
-  std::vector<std::string> &names = ret->ret_vec_str;
+
+  uint32_t magic;
   {
-    std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
-    mxnet::NDArray::Load(fi.get(), &data, &names);
+      std::unique_ptr<dmlc::Stream> strm(dmlc::Stream::Create(fname, "r"));
+      CHECK_EQ(strm->Read(&magic, sizeof(uint32_t)), sizeof(uint32_t))
+        << "Failed to read 32 bits from file.";
   }
-  ret->ret_handles.resize(data.size());
-  for (size_t i = 0; i < data.size(); ++i) {
-    NDArray *ptr = new NDArray();
-    *ptr = data[i];
-    ret->ret_handles[i] = ptr;
+
+  if (magic == 0x04034b50 || magic == 0x504b0304) {  // zip file format; assumed to be npz
+      auto[data, names] = npz::load_arrays(fname);
+      ret->ret_handles.resize(data.size());
+      for (size_t i = 0; i < data.size(); ++i) {
+          NDArray *ptr = new NDArray();
+          *ptr = data[i];
+          ret->ret_handles[i] = ptr;
+      }
+      ret->ret_vec_str.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_str[i] = names[i];
+      }
+      ret->ret_vec_charp.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_charp[i] = ret->ret_vec_str[i].c_str();
+      }
+      *out_size = static_cast<uint32_t>(data.size());
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+      *out_name_size = static_cast<uint32_t>(names.size());
+      *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
+  } else if (magic == 0x4d554e93 || magic == 0x934e554d) {  // first bytes of npy format
+      *out_size = 1;
+      ret->ret_handles.resize(1);
+      NDArray *ptr = new NDArray();
+      *ptr = npy::load_array(fname);  // Only supports local filesystem at this point in time
+      ret->ret_handles[0] = ptr;
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+  } else {
+      std::vector<NDArray> data;
+      std::vector<std::string> &names = ret->ret_vec_str;
+      {
+          std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
+          mxnet::NDArray::Load(fi.get(), &data, &names);
+      }
+      ret->ret_handles.resize(data.size());
+      for (size_t i = 0; i < data.size(); ++i) {
+          NDArray *ptr = new NDArray();
+          *ptr = data[i];
+          ret->ret_handles[i] = ptr;
+      }
+      ret->ret_vec_charp.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_charp[i] = names[i].c_str();
+      }
+      *out_size = static_cast<uint32_t>(data.size());
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+      *out_name_size = static_cast<uint32_t>(names.size());
+      *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   }
-  ret->ret_vec_charp.resize(names.size());
-  for (size_t i = 0; i < names.size(); ++i) {
-    ret->ret_vec_charp[i] = names[i].c_str();
-  }
-  *out_size = static_cast<uint32_t>(data.size());
-  *out_arr = dmlc::BeginPtr(ret->ret_handles);
-  *out_name_size = static_cast<uint32_t>(names.size());
-  *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
 }
 

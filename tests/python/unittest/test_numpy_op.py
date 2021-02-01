@@ -891,6 +891,7 @@ def test_np_max_min_error(func, shape, exception):
 @pytest.mark.parametrize('is_weighted', [True, False])
 @pytest.mark.parametrize('returned', [True, False])
 @pytest.mark.parametrize('req_a', ['null', 'add', 'write'])
+@pytest.mark.flaky
 def test_np_average(a_shape, w_shape, axes, is_weighted, req_a,
                     hybridize, returned, dtype):
     class TestAverage(HybridBlock):
@@ -7542,6 +7543,7 @@ def test_np_flipud_fliplr():
 
 
 @use_np
+@pytest.mark.flaky
 def test_np_around():
     class TestAround(HybridBlock):
         def __init__(self, decimals):
@@ -8324,7 +8326,7 @@ def test_np_pad():
         def hybrid_forward(self,F,A,**kwargs):
             return F.np.pad(A, self._pad_width, mode=self._mode, **kwargs)
 
-    shapes = [(1,5), (2,2), (2,2), (3,3), (2,3), (3,4,5)]
+    shapes = [6, (1,5), (2,2), (2,2), (3,3), (2,3), (3,4,5)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     mode = ['constant', 'reflect', 'symmetric', 'edge', 'minimum', 'maximum']
     for hybridize, shape, dtype, in itertools.product([False,True], shapes, dtypes):

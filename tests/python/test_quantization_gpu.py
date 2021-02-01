@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,15 +14,14 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+import os
+import sys
+import mxnet as mx
 
-#Author: Amol Lele
 
-#software-properties-common, curl, npm are installed in the docker container 'ubuntu_blc'
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../quantization'))
+from mxnet.test_utils import set_default_context
+from test_quantization import *
 
-echo "Invoking broken_link_checker.sh script"
-echo `pwd`
-cd tests/nightly/broken_link_checker_test
-echo `pwd`
-
-echo "Running test_broken_links.py"
-python test_broken_links.py
+set_default_context(mx.gpu(0))

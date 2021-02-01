@@ -109,8 +109,10 @@ inline bool NumpyMultinomialOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+#if MXNET_USE_CUDA
 template<typename DType>
 void CheckPvalGPU(const OpContext& ctx, DType* input, int prob_length);
+#endif
 
 template<typename DType>
 void CheckPval(DType* input, int prob_length) {
@@ -194,6 +196,7 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
     Kernel<multinomial_kernel, xpu>::Launch(
       s, num_output, num_exp, prob_length, pvals_, temp_tensor.dptr_, outputs[0].dptr<int64_t>());
   } else {
+#if MXNET_USE_CUDA
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
        if (std::is_same<xpu, cpu>::value) {
          CheckPval<DType>(inputs[0].dptr<DType>(), prob_length);
@@ -204,6 +207,14 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
         s, num_output, num_exp, prob_length,
         inputs[0].dptr<DType>(), temp_tensor.dptr_, outputs[0].dptr<int64_t>());
     });
+#else
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+        CheckPval<DType>(inputs[0].dptr<DType>(), prob_length);
+        Kernel<multinomial_kernel, xpu>::Launch(
+          s, num_output, num_exp, prob_length,
+          inputs[0].dptr<DType>(), temp_tensor.dptr_, outputs[0].dptr<int64_t>());
+      });
+#endif
   }
 }
 

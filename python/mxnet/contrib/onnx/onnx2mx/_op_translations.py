@@ -195,11 +195,24 @@ def relu(attrs, inputs, proto_obj):
 
 def pad(attrs, inputs, proto_obj):
     """ Add padding to input tensor"""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'pads'  : 'pad_width',
-                                                               'value' : 'constant_value'
-                                                              })
-    new_attrs['pad_width'] = translation_utils._pad_sequence_fix(new_attrs.get('pad_width'))
-    return 'pad', new_attrs, inputs
+    opset_version = proto_obj.opset_version
+    if 'mode' not in attrs.keys():
+        attrs['mode'] = 'constant'
+    if opset_version >= 11:
+        pads = list(proto_obj._params[inputs[1].name].asnumpy())
+        pads = tuple([int(i) for i in pads])
+        new_attrs = translation_utils._add_extra_attributes(attrs, {'pad_width': pads})
+        if len(inputs) == 3:
+            const = proto_obj._params[inputs[2].name].asnumpy()[0]
+            new_attrs = translation_utils._add_extra_attributes(new_attrs, {'constant_value': const})
+        new_attrs['pad_width'] = translation_utils._pad_sequence_fix(new_attrs.get('pad_width'))
+        return 'pad', new_attrs, inputs[0]
+    else:
+        new_attrs = translation_utils._fix_attribute_names(attrs, {'pads'  : 'pad_width',
+                                                                   'value' : 'constant_value'
+                                                                  })
+        new_attrs['pad_width'] = translation_utils._pad_sequence_fix(new_attrs.get('pad_width'))
+        return 'pad', new_attrs, inputs
 
 def matrix_multiplication(attrs, inputs, proto_obj):
     """Performs general matrix multiplication"""
@@ -322,7 +335,7 @@ def deconv(attrs, inputs, proto_obj):
     new_attrs = translation_utils._fix_bias('Deconvolution', new_attrs, len(inputs))
 
     new_attrs = translation_utils._fix_channels('Deconvolution', new_attrs, inputs, proto_obj)
-    kernel = new_attrs['kernel']
+    kernel = new_attrs['kernel'] if 'kernel' in new_attrs else []
     stride = new_attrs['stride'] if 'stride' in new_attrs else []
     padding = new_attrs['pad'] if 'pad' in new_attrs else []
     dilations = new_attrs['dilate'] if 'dilate' in new_attrs else []
@@ -412,12 +425,22 @@ def local_response_norm(attrs, inputs, proto_obj):
 def dropout(attrs, inputs, proto_obj):
     """Dropout Regularization."""
     mode = 'training'
+    opset_version = proto_obj.opset_version
     if 'is_test' in attrs and attrs['is_test'] == 0:
         mode = 'always'
-    new_attrs = translation_utils._fix_attribute_names(attrs,
-                                                       {'ratio': 'p'})
-    new_attrs = translation_utils._remove_attributes(new_attrs, ['is_test'])
+    new_attrs = translation_utils._remove_attributes(attrs, ['is_test'])
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'mode': mode})
+    if opset_version >= 12:
+        new_attrs = translation_utils._remove_attributes(new_attrs, ['seed'])
+        if len(inputs) == 2:
+            ratio_float = proto_obj._params[inputs[1].name].asnumpy()[0]
+            new_attrs = translation_utils._remove_attributes(new_attrs, ['p'])
+            new_attrs = translation_utils._add_extra_attributes(new_attrs, {'p': ratio_float})
+        elif len(inputs) == 1:
+            new_attrs = translation_utils._fix_attribute_names(new_attrs, {'ratio': 'p'})
+        return 'Dropout', new_attrs, inputs[0]
+    else:
+        new_attrs = translation_utils._fix_attribute_names(new_attrs, {'ratio': 'p'})
     return 'Dropout', new_attrs, inputs
 
 # Changing shape and type.
@@ -467,15 +490,30 @@ def _slice(attrs, inputs, proto_obj):
     """Returns a slice of the input tensor along multiple axes."""
     input_tensor_data = proto_obj.model_metadata.get('input_tensor_data')[0]
     input_shape = input_tensor_data[1]
-    new_attrs = translation_utils._fix_attribute_names(attrs,
-                                                       {'axes' : 'axis',
-                                                        'ends' : 'end',
-                                                        'starts' : 'begin'})
-    # onnx slice provides slicing on multiple axis. Adding multiple slice_axis operator
-    # for multiple axes from mxnet
-    begin = new_attrs.get('begin')
-    end = list(new_attrs.get('end'))
-    axes = new_attrs.get('axis', tuple(range(len(begin))))
+
+    if proto_obj.opset_version >= 10:
+        begin = proto_obj._params[inputs[1].name].asnumpy()
+        end = proto_obj._params[inputs[2].name].asnumpy()
+        if len(inputs) >= 4:
+            axes = list(proto_obj._params[inputs[3].name].asnumpy())
+            axes = tuple([int(i) for i in axes])
+        else:
+            axes = tuple(range(len(begin)))
+        new_attrs = translation_utils._add_extra_attributes(attrs, {'axes' : axes,
+                                                                    'begin' : begin,
+                                                                    'end' : end
+                                                                   })
+    else:
+        new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                           {'axes' : 'axis',
+                                                            'ends' : 'end',
+                                                            'starts' : 'begin'})
+        # onnx slice provides slicing on multiple axis. Adding multiple slice_axis operator
+        # for multiple axes from mxnet
+        begin = new_attrs.get('begin')
+        end = list(new_attrs.get('end'))
+        axes = new_attrs.get('axis', tuple(range(len(begin))))
+
     for i, axis in enumerate(axes):
         end[i] = None if end[i] >= input_shape[axis] else end[i]
     slice_op = symbol.slice_axis(inputs[0], axis=axes[0], begin=begin[0], end=end[0])
@@ -515,13 +553,28 @@ def flatten(attrs, inputs, proto_obj):
 
 def clip(attrs, inputs, proto_obj):
     """Clips (limits) the values in an array."""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'min' : 'a_min',
-                                                               'max' : 'a_max'})
-    if 'a_max' not in new_attrs:
-        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_max' : np.inf})
-    if 'a_min' not in new_attrs:
-        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_min' : -np.inf})
-    return 'clip', new_attrs, inputs
+    opset_version = proto_obj.opset_version
+    if opset_version >= 11:
+        if len(inputs) == 1:
+            new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_max' : np.inf,
+                                                                            'a_min' : -np.inf})
+        elif len(inputs) == 2:
+            min_float = proto_obj._params[inputs[1].name].asnumpy()
+            new_attrs = translation_utils._add_extra_attributes(attrs, {'a_min': min_float[0],
+                                                                        'a_max': np.inf})
+        elif len(inputs) == 3:
+            min_float = proto_obj._params[inputs[1].name].asnumpy()
+            max_float = proto_obj._params[inputs[2].name].asnumpy()
+            new_attrs = translation_utils._add_extra_attributes(attrs, {'a_min': min_float[0],
+                                                                        'a_max': max_float[0]})
+    else:
+        new_attrs = translation_utils._fix_attribute_names(attrs, {'min' : 'a_min',
+                                                                   'max' : 'a_max'})
+        if 'a_max' not in new_attrs:
+            new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_max' : np.inf})
+        if 'a_min' not in new_attrs:
+            new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_min' : -np.inf})
+    return 'clip', new_attrs, inputs[0]
 
 def gather(attrs, inputs, proto_obj):
     """Gather elements from an input array along the given axis."""
@@ -756,4 +809,10 @@ def topk(attrs, inputs, proto_obj):
     new_attrs = translation_utils._add_extra_attributes(attrs,
                                                         {'ret_typ': 'both',
                                                          'dtype': 'int64'})
-    return 'topk', new_attrs, inputs
+    opset_version = proto_obj.opset_version
+    if opset_version >= 10:
+        k_vals = proto_obj._params[inputs[1].name].asnumpy()
+        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'k': k_vals})
+        return 'topk', new_attrs, inputs[0]
+    else:
+        return 'topk', new_attrs, inputs

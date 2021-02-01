@@ -37,7 +37,7 @@ endif # $(NUMJOBS)
 # End number of processors detection
 
 # You can set these variables from the command line.
-SPHINXOPTS    = -j$(NPROCS) -c ../scripts --keep-going
+SPHINXOPTS    = -j$(NPROCS) -c ../scripts --keep-going -W
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build

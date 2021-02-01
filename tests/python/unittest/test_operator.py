@@ -2269,7 +2269,7 @@ def test_reshape_new(src_shape, shape_args, reverse, dst_shape):
     net = mx.sym.Variable("data")
     net = mx.sym.Reshape(net, shape=shape_args, reverse=reverse)
     js = net.tojson()
-    net = mx.sym.load_json(js)
+    net = mx.sym.fromjson(js)
     _, output_shape, __ = net.infer_shape(data=src_shape)
     assert output_shape[0] == dst_shape, \
         'Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s, ' \
@@ -2308,7 +2308,7 @@ def test_reshape_old():
     net = mx.sym.Variable("data")
     net = mx.sym.Reshape(net, target_shape=(2, 0))
     js = net.tojson()
-    net = mx.sym.load_json(js)
+    net = mx.sym.fromjson(js)
     _, output_shape, __ = net.infer_shape(data=(2, 3, 5, 5))
     assert(output_shape[0] == (2, 75))
     # Test for Flatten
@@ -2329,7 +2329,7 @@ def test_reshape_like():
         rhs = mx.sym.Variable("rhs")
         net = mx.sym.reshape_like(lhs, rhs, lhs_begin=lbeg, lhs_end=lend, rhs_begin=rbeg, rhs_end=rend)
         js = net.tojson()
-        net = mx.sym.load_json(js)
+        net = mx.sym.fromjson(js)
         _, output_shape, __ = net.infer_shape(lhs=lhs_shape, rhs=rhs_shape)
 
         assert output_shape[0] == dst_shape, \
@@ -2370,7 +2370,7 @@ def test_reshape_like():
     rhs = mx.sym.Variable("rhs")
     net = mx.sym.reshape_like(lhs, rhs)
     js = net.tojson()
-    net = mx.sym.load_json(js)
+    net = mx.sym.fromjson(js)
     _, output_shape, __ = net.infer_shape(lhs=(40, 30), rhs=(30,20,2))
     assert(output_shape[0] == (30,20,2))
 
@@ -4941,6 +4941,104 @@ def test_softmax_with_length():
                                 [np.zeros(shape), np.zeros(len_shape, dtype=np.int32)],
                                 rtol=1e-2, atol=2e-3 if dtype == np.float16 else 1e-3, dtype="asnumpy")
 
+def np_softmax(x, axis=-1, temperature=1.0, normalize=True):
+    if normalize:
+        x = x - np.max(x, axis=axis, keepdims=True)
+    x = np.exp(x / temperature)
+    x /= np.sum(x, axis=axis, keepdims=True)
+    return x
+
+def np_masked_softmax(data, mask, axis=-1, temperature=1.0, normalize=True):
+    neg = -1e18
+    if data.dtype == np.float16:
+        neg = -1e4
+    temp = np.where(mask, data, neg)
+    result = np_softmax(temp, axis=axis,
+                        temperature=temperature,
+                        normalize=normalize) * mask
+    return result
+def np_masked_softmax_grad(out, grad_out, axis=-1, temperature=1.0):
+    temp = np.sum(out * grad_out, axis=axis, keepdims=True)
+    result = out * (grad_out - temp) / temperature
+    return result
+def np_masked_log_softmax_grad(out, grad_out, mask, axis=-1, temperature=1.0):
+    grad_out = np.where(mask, grad_out, 0)
+    temp = np.sum(grad_out, axis=axis, keepdims=True)
+    result = (grad_out - np.exp(out) * temp) / temperature
+    result = np.where(mask, result, 0)
+    return result
+
+@pytest.mark.parametrize('dtype', [np.float16, np.float32, np.float64])
+@pytest.mark.parametrize('axis', [0, -1, -2, -3])
+@pytest.mark.parametrize('ndims', [3, 4, 5])
+@pytest.mark.parametrize('n_broadcast_axis', [0, 1, 2])
+@pytest.mark.parametrize('temperature', [1, 5, 9 ,11])
+@pytest.mark.parametrize('normalize', [True])
+def test_masked_softmax(dtype, axis, ndims, n_broadcast_axis, temperature, normalize):
+    n_broadcast_axis = min(n_broadcast_axis, ndims - 1)
+    shape = rand_shape_nd(ndims, dim=10)
+    mx_data = rand_ndarray(shape, dtype=dtype)
+    bcst_dims = []
+    while len(bcst_dims) < n_broadcast_axis:
+            ax = np.random.randint(0, ndims)
+            if ax not in bcst_dims :
+                bcst_dims.append(ax)
+    shape_mask = list(shape)
+    for i in bcst_dims:
+        shape_mask[i] = 1
+
+    np_data = mx_data.asnumpy()
+    np_mask = np.random.randint(0, 2, shape_mask)
+    mx_mask = mx.nd.array(np_mask, dtype=np.bool)
+    mx_grad = rand_ndarray(shape, dtype=dtype)
+    np_grad = mx_grad.asnumpy()
+
+    np_out = np_masked_softmax(np_data, np_mask, axis,
+                               temperature, normalize)
+    np_grad_out = np_masked_softmax_grad(np_out, np_grad,
+                                         axis, temperature)
+    data = mx.sym.Variable("data")
+    mask = mx.sym.Variable("mask")
+    mx_sym = mx.sym.masked_softmax(data=data, mask=mask,
+                                   temperature=temperature, axis=axis,
+                                   normalize=normalize)
+    location = {"data": mx_data, "mask": mx_mask}
+    rtol = 1e-2 if dtype == np.float16 else 1e-3
+    atol = 1e-4 if dtype == np.float16 else 1e-5
+    check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol,
+                           dtype="asnumpy", equal_nan=True)
+    check_symbolic_backward(mx_sym, location, [mx_grad],
+                            [np_grad_out, np.zeros(shape, dtype=np.bool)],
+                            rtol=1e-2, atol=2e-3 if dtype == np.float16 else 1e-3,
+                            dtype="asnumpy", equal_nan=True)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('ndims', [1, 2, 3, 4, 5])
+def test_masked_log_softmax(dtype, ndims):
+    shape = np.random.randint(1, 5, size=ndims)
+    axis = np.random.randint(0, ndims)
+    mx_data = rand_ndarray(shape, dtype=dtype)
+    np_data = mx_data.asnumpy()
+    np_mask = np.random.randint(0, 2, shape)
+    mx_mask = mx.nd.array(np_mask, dtype=np.bool)
+    mx_grad = rand_ndarray(shape, dtype=dtype)
+    np_grad = mx_grad.asnumpy()
+    np_out = np.log(np_masked_softmax(np_data, np_mask, axis)+1e-20) * np_mask
+    np_out_inf = np.where(np_mask, np_out, -np.inf)
+    np_grad_out = np_masked_log_softmax_grad(np_out, np_grad, np_mask, axis)
+    data = mx.sym.Variable("data")
+    mask = mx.sym.Variable("mask")
+    mx_sym = mx.sym.masked_log_softmax(data=data, mask=mask, axis=axis-ndims)
+    location = {"data": mx_data, "mask": mx_mask}
+    rtol = 1e-2 if dtype == np.float16 else 1e-3
+    atol = 1e-4 if dtype == np.float16 else 1e-5
+    check_symbolic_forward(mx_sym, location, [np_out_inf], rtol=rtol, atol=atol, dtype="asnumpy")
+    check_symbolic_backward(mx_sym, location, [mx_grad],
+                            [np_grad_out, np.zeros(shape, dtype=np.bool)],
+                            rtol=1e-2, atol=2e-3 if dtype == np.float16 else 1e-3,
+                            dtype="asnumpy", equal_nan=True)
+
 
 def test_pick():
     def test_pick_helper(index_type=np.int32):
@@ -5671,41 +5769,44 @@ def test_psroipooling_with_type():
                                                'psroipool_rois': 'null'}, arg_params=arg_params)
 
 
-def test_deformable_convolution():
-    for num_batch in [1, 2]:
-        for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
-            for input_height, input_width in itertools.product([5, 6], [5, 6]):
-                for dilate in [(1, 1), (2, 2)]:
-                    for grad_nodes in [['im_data'], ['offset_data'], ['weight']]:
-                        output_height = input_height
-                        output_width = input_width
-                        im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
-                        offset_data = \
-                            np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
-                            * 0.8 + 0.1
+@pytest.mark.parametrize('num_batch', [1, 2])
+@pytest.mark.parametrize('num_channel_data_deformable_group', itertools.product([4, 8], [1, 2]))
+@pytest.mark.parametrize('input_height_width', itertools.product([5, 6], [5, 6]))
+@pytest.mark.parametrize('dilate', [(1, 1), (2, 2)])
+@pytest.mark.parametrize('grad_nodes', [['im_data'], ['offset_data'], ['weight']])
+def test_deformable_convolution(num_batch, num_channel_data_deformable_group, input_height_width,
+                                dilate, grad_nodes):
+    num_channel_data, num_deformable_group = num_channel_data_deformable_group
+    input_height, input_width = input_height_width
+    output_height = input_height
+    output_width = input_width
+    im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
+    offset_data = \
+        np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
+        * 0.8 + 0.1
 
-                        weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
-                        bias = np.zeros(num_channel_data)
+    weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
+    bias = np.zeros(num_channel_data)
 
-                        im_data_var = mx.symbol.Variable(name="im_data").as_np_ndarray()
-                        offset_data_var = mx.symbol.Variable(name="offset_data").as_np_ndarray()
-                        weight_var = mx.symbol.Variable(name="weight").as_np_ndarray()
-                        bias_var = mx.symbol.Variable(name="bias").as_np_ndarray()
-                        op = mx.sym.npx.deformable_convolution(name='test_op', data=im_data_var,
-                                                               offset=offset_data_var,
-                                                               weight=weight_var, bias=bias_var,
-                                                               num_filter=num_channel_data, pad=dilate,
-                                                               kernel=(3, 3), stride=(1, 1), dilate=dilate,
-                                                               num_deformable_group=num_deformable_group)
-                        if grad_nodes[0] == 'offset_data':
-                            # wider tolerance needed for coordinate differential
-                            rtol, atol = 1.0, 1e-2
-                        else:
-                            rtol, atol = 0.05, 1e-3
-                        # By now we only have gpu implementation
-                        if default_context().device_type == 'gpu':
-                            check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
-                                                   grad_nodes=grad_nodes, ctx=mx.gpu(0), numeric_eps=1.0/64)
+    im_data_var = mx.symbol.Variable(name="im_data").as_np_ndarray()
+    offset_data_var = mx.symbol.Variable(name="offset_data").as_np_ndarray()
+    weight_var = mx.symbol.Variable(name="weight").as_np_ndarray()
+    bias_var = mx.symbol.Variable(name="bias").as_np_ndarray()
+    op = mx.sym.npx.deformable_convolution(name='test_op', data=im_data_var,
+                                           offset=offset_data_var,
+                                           weight=weight_var, bias=bias_var,
+                                           num_filter=num_channel_data, pad=dilate,
+                                           kernel=(3, 3), stride=(1, 1), dilate=dilate,
+                                           num_deformable_group=num_deformable_group)
+    if grad_nodes[0] == 'offset_data':
+        # wider tolerance needed for coordinate differential
+        rtol, atol = 1.0, 1e-2
+    else:
+        rtol, atol = 0.05, 1e-3
+    # By now we only have gpu implementation
+    if default_context().device_type == 'gpu':
+        check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
+                               grad_nodes=grad_nodes, ctx=mx.gpu(0), numeric_eps=1.0/64)
 
 
 def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w, pooled_h, sample_per_part, part_size, output_dim, num_classes, trans_std, feat_h, feat_w):
@@ -6463,8 +6564,7 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
-## TODO: test fails intermittently when cudnn on. temporarily disabled cudnn until gets fixed.
-## tracked at https://github.com/apache/incubator-mxnet/issues/14288
+@pytest.mark.flaky
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -6591,18 +6691,18 @@ def test_dropout():
     check_dropout_ratio(1.0, shape)
     check_dropout_ratio(0.75, shape)
     check_dropout_ratio(0.25, shape)
-    # check_dropout_ratio(0.5, shape, cudnn_off=False)
-    # check_dropout_ratio(0.0, shape, cudnn_off=False)
-    # check_dropout_ratio(1.0, shape, cudnn_off=False)
-    # check_dropout_ratio(0.75, shape, cudnn_off=False)
-    # check_dropout_ratio(0.25, shape, cudnn_off=False)
+    check_dropout_ratio(0.5, shape, cudnn_off=False)
+    check_dropout_ratio(0.0, shape, cudnn_off=False)
+    check_dropout_ratio(1.0, shape, cudnn_off=False)
+    check_dropout_ratio(0.75, shape, cudnn_off=False)
+    check_dropout_ratio(0.25, shape, cudnn_off=False)
 
     check_passthrough(0.5, shape)
     check_passthrough(0.0, shape)
     check_passthrough(1.0, shape)
-    # check_passthrough(0.5, shape, cudnn_off=False)
-    # check_passthrough(0.0, shape, cudnn_off=False)
-    # check_passthrough(1.0, shape, cudnn_off=False)
+    check_passthrough(0.5, shape, cudnn_off=False)
+    check_passthrough(0.0, shape, cudnn_off=False)
+    check_passthrough(1.0, shape, cudnn_off=False)
 
     nshape = (10, 10, 10, 10)
     with mx.autograd.train_mode():
@@ -6619,19 +6719,19 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
         check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
-        # check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
-        # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
 
 @pytest.mark.skip(reason="test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")

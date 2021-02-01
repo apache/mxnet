@@ -15,9 +15,34 @@
    specific language governing permissions and limitations
    under the License.
 
-mxnet.kvstore
-=============
+KVStore: Communication for Distributed Training
+===============================================
+.. currentmodule:: mxnet.kvstore
 
-.. automodule:: mxnet.kvstore
-    :members:
-    :autosummary:
+
+Horovod
+=======
+
+.. autosummary::
+   :toctree: generated/
+
+   Horovod
+
+BytePS
+======
+
+.. autosummary::
+   :toctree: generated/
+
+   BytePS
+
+
+KVStore Interface
+=================
+
+.. autosummary::
+   :toctree: generated/
+
+   KVStore
+   KVStoreBase
+   KVStoreServer

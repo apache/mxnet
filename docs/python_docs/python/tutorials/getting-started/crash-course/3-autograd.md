@@ -24,7 +24,7 @@ gradient calculations.
 
 To get started, import the `autograd` package with the following code.
 
-```python
+```{.python .input}
 from mxnet import np, npx
 from mxnet import autograd
 npx.set_np()
@@ -34,7 +34,7 @@ As an example, you could differentiate a function $f(x) = 2 x^2$ with respect to
 parameter $x$. For Autograd, you can start by assigning an initial value of $x$,
 as follows:
 
-```python
+```{.python .input}
 x = np.array([[1, 2], [3, 4]])
 x
 ```
@@ -43,7 +43,7 @@ After you compute the gradient of $f(x)$ with respect to $x$, you need a place
 to store it. In MXNet, you can tell a ndarray that you plan to store a gradient
 by invoking its `attach_grad` method, as shown in the following example.
 
-```python
+```{.python .input}
 x.attach_grad()
 ```
 
@@ -51,7 +51,7 @@ Next, define the function $y=f(x)$. To let MXNet store $y$, so that you can
 compute gradients later, use the following code to put the definition inside an
 `autograd.record()` scope.
 
-```python
+```{.python .input}
 with autograd.record():
     y = 2 * x * x
 ```
@@ -59,7 +59,7 @@ with autograd.record():
 You can invoke back propagation (backprop) by calling `y.backward()`. When $y$
 has more than one entry, `y.backward()` is equivalent to `y.sum().backward()`.
 
-```python
+```{.python .input}
 y.backward()
 ```
 
@@ -67,14 +67,14 @@ Next, verify whether this is the expected output. Note that $y=2x^2$ and
 $\frac{dy}{dx} = 4x$, which should be `[[4, 8],[12, 16]]`. Check the
 automatically computed results.
 
-```python
+```{.python .input}
 x.grad
 ```
 
 Now you get to dive into `y.backward()` by first discussing a bit on gradients. As
 alluded to earlier `y.backward()` is equivalent to `y.sum().backward()`.
 
-```python
+```{.python .input}
 with autograd.record():
     y = np.sum(2 * x * x)
 y.backward()
@@ -84,7 +84,7 @@ x.grad
 Additionally, you can only run backward once. Unless you use the flag
 `retain_graph` to be `True`.
 
-```python
+```{.python .input}
 with autograd.record():
     y = np.sum(2 * x * x)
 y.backward(retain_graph=True)
@@ -110,12 +110,14 @@ output arguments from `backward()`. You can modify the gradients in backward to
 return custom gradients. For instance, below you can return a different gradient then
 the actual derivative.
 
-```python
-class My_First_Custom_Operation(autograd.Function):
+```{.python .input}
+class MyFirstCustomOperation(autograd.Function):
     def __init__(self):
         super().__init__()
+
     def forward(self,x,y):
         return 2 * x, 2 * x * y, 2 * y
+
     def backward(self, dx, dxy, dy):
         """
         The input number of arguments must match the number of outputs from forward.
@@ -126,13 +128,13 @@ class My_First_Custom_Operation(autograd.Function):
 
 Now you can use the first custom operation you have built.
 
-```python
+```{.python .input}
 x = np.random.uniform(-1, 1, (2, 3)) 
 y = np.random.uniform(-1, 1, (2, 3))
 x.attach_grad()
 y.attach_grad()
 with autograd.record():
-    z = My_First_Custom_Operation()
+    z = MyFirstCustomOperation()
     z1, z2, z3 = z(x, y)
     out = z1 + z2 + z3 
 out.backward()
@@ -143,7 +145,7 @@ print(np.array_equiv(y.asnumpy(), y.asnumpy()))
 Alternatively, you may want to have a function which is different depending on
 if you are training or not.
 
-```python
+```{.python .input}
 def my_first_function(x):
     if autograd.is_training(): # Return something else when training
         return(4 * x)
@@ -151,7 +153,7 @@ def my_first_function(x):
         return(x)
 ```
 
-```python
+```{.python .input}
 y = my_first_function(x)
 print(np.array_equiv(y.asnumpy(), x.asnumpy()))
 with autograd.record(train_mode=False):
@@ -166,13 +168,13 @@ print(x.grad)
 
 You could create functions with `autograd.record()`.
 
-```python
+```{.python .input}
 def my_second_function(x):
     with autograd.record():
         return(2 * x)
 ```
 
-```python
+```{.python .input}
 y = my_second_function(x)
 y.backward()
 print(x.grad)
@@ -180,7 +182,7 @@ print(x.grad)
 
 You can also combine multiple functions.
 
-```python
+```{.python .input}
 y = my_second_function(x)
 with autograd.record():
     z = my_second_function(y) + 2
@@ -192,7 +194,7 @@ Additionally, MXNet records the execution trace and computes the gradient
 accordingly. The following function `f` doubles the inputs until its `norm`
 reaches 1000. Then it selects one element depending on the sum of its elements.
 
-```python
+```{.python .input}
 def f(a):
     b = a * 2
     while np.abs(b).sum() < 1000:
@@ -206,7 +208,7 @@ def f(a):
 
 In this example, you record the trace and feed in a random value.
 
-```python
+```{.python .input}
 a = np.random.uniform(size=2)
 a.attach_grad()
 with autograd.record():
@@ -219,7 +221,7 @@ The gradient with respect to `a` be will be either `[c/a[0], 0]` or `[0,
 c/a[1]]`, depending on which element from `b` is picked. You see the results of
 this example with this code:
 
-```python
+```{.python .input}
 a.grad == c / a
 ```
 
@@ -235,7 +237,7 @@ Therefore, the input up until y will no longer look like it has `x`. To
 illustrate this notice that `x.grad` and `y.grad` is not the same in the second
 example.
 
-```python
+```{.python .input}
 with autograd.record():
     y = 3 * x
     y.attach_grad()
@@ -247,7 +249,7 @@ print(y.grad)
 
 Is not the same as:
 
-```python
+```{.python .input}
 with autograd.record():
     y = 3 * x
     z = 4 * y + 2 * x
@@ -259,4 +261,4 @@ print(y.grad)
 ## Next steps
 
 Learn how to initialize weights, choose loss function, metrics and optimizers for training your neural network [Step 4: Necessary components
-to train the neural network](4-components.md).
+to train the neural network](./4-components.ipynb).

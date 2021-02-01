@@ -458,6 +458,13 @@ fixed-size items.
 
     __nonzero__ = __bool__
 
+    def __str__(self):
+        """Returns a readable string representation of the array."""
+        if self.dtype == np.dtype([('bfloat16', np.uint16)]):
+            return super(NDArray, self.astype(float)).__str__()
+        else:
+            return super(NDArray, self).__str__()
+
     def __len__(self):
         """Number of element along the first axis."""
         return self.shape[0]

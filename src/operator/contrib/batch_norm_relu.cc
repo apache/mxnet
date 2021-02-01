@@ -127,9 +127,14 @@ static bool BatchNormWithReLUType(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_MKLDNN == 1
 static inline bool SupportMKLDNNBNReLU(const NDArray &input, const BatchNormParam &param) {
-  mxnet::TShape shape = input.shape();
-  return SupportMKLDNN(input) && shape.ndim() == 4
-      && param.axis == mxnet::op::batchnormrelu::DEFAULT_AXIS;
+  if (mxnet::op::batchnorm::disable_mkl) return false;
+  const mxnet::TShape shape = input.shape();
+  const int ndim = shape.ndim();
+  if (ndim == 0 || shape.Size() == 0) return false;
+  const int dtype = input.dtype();
+  return (dtype == mshadow::kFloat32 ||
+          dtype == mshadow::kBfloat16) &&
+          SupportStorageMKLDNN(input.storage_type());
 }
 
 void BatchNormWithReLUComputeExCPU(const nnvm::NodeAttrs &attrs,

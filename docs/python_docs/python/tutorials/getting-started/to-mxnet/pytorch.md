@@ -19,7 +19,7 @@
 
 [PyTorch](https://pytorch.org/) is a popular deep learning framework due to its easy-to-understand API and its completely imperative approach. Apache MXNet includes the Gluon API which gives you the simplicity and flexibility of PyTorch and allows you to hybridize your network to leverage performance optimizations of the symbolic graph. As of April 2019, [NVidia performance benchmarks](https://developer.nvidia.com/deep-learning-performance-training-inference) show that Apache MXNet outperforms PyTorch by ~77% on training ResNet-50: 10,925 images per second vs. 6,175.
 
-In the next 10 minutes, we'll do a quick comparison between the two frameworks and show how small the learning curve can be when switching from PyTorch to Apache MXNet. 
+In the next 10 minutes, we'll do a quick comparison between the two frameworks and show how small the learning curve can be when switching from PyTorch to Apache MXNet.
 
 ## Installation
 
@@ -106,7 +106,7 @@ mx_train_data = gluon.data.DataLoader(
 
 Both frameworks allows you to download MNIST data set from their sources and specify that only training part of the data set is required.
 
-The main difference between the code snippets is that MXNet uses [transform_first](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.Dataset.transform_first) method to indicate that the data transformation is done on the first element of the data batch, the MNIST picture, rather than the second element, the label.
+The main difference between the code snippets is that MXNet uses [transform_first](../../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset.transform_first) method to indicate that the data transformation is done on the first element of the data batch, the MNIST picture, rather than the second element, the label.
 
 ### 2. Creating the model
 
@@ -143,7 +143,7 @@ We used the Sequential container to stack layers one after the other in order to
 
 * After the model structure is defined, Apache MXNet requires you to explicitly call the model initialization function.
 
-With a Sequential block, layers are executed one after the other. To have a different execution model, with PyTorch you can inherit from `nn.Module` and then customize how the `.forward()` function is executed. Similarly, in Apache MXNet you can inherit from [nn.Block](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block) to achieve similar results.
+With a Sequential block, layers are executed one after the other. To have a different execution model, with PyTorch you can inherit from `nn.Module` and then customize how the `.forward()` function is executed. Similarly, in Apache MXNet you can inherit from [gluon.Block](../../../api/gluon/block.rst#mxnet.gluon.Block) to achieve similar results.
 
 ### 3. Loss function and optimization algorithm
 
@@ -164,7 +164,7 @@ mx_trainer = gluon.Trainer(mx_net.collect_params(),
                            'sgd', {'learning_rate': 0.1})
 ```
 
-The code difference between frameworks is small. The main difference is that in Apache MXNet we use [Trainer](/api/python/docs/api/gluon/trainer.html) class, which accepts optimization algorithm as an argument. We also use [.collect_params()](/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.collect_params) method to get parameters of the network.
+The code difference between frameworks is small. The main difference is that in Apache MXNet we use [Trainer](../../../api/gluon/trainer.rst) class, which accepts optimization algorithm as an argument. We also use [.collect_params()](../../../api/gluon/block.rst#mxnet.gluon.Block.collect_params) method to get parameters of the network.
 
 ### 4. Training
 
@@ -212,13 +212,13 @@ Some of the differences in Apache MXNet when compared to PyTorch are as follows:
 
 * In Apache MXNet, you don't need to flatten the 4-D input into 2-D when feeding the data into forward pass.
 
-* In Apache MXNet, you need to perform the calculation within the [autograd.record()](/api/python/docs/api/autograd/index.html?autograd%20record#mxnet.autograd.record) scope so that it can be automatically differentiated in the backward pass.
+* In Apache MXNet, you need to perform the calculation within the [autograd.record()](../../../api/autograd/index.rst#mxnet.autograd.record) scope so that it can be automatically differentiated in the backward pass.
 
 * It is not necessary to clear the gradient every time as with PyTorch's `trainer.zero_grad()` because by default the new gradient is written in, not accumulated.
 
-* You need to specify the update step size (usually batch size) when performing [step()](/api/python/docs/api/gluon/trainer.html?#mxnet.gluon.Trainer.step) on the trainer.
+* You need to specify the update step size (usually batch size) when performing [step()](../../../api/gluon/trainer.rst#mxnet.gluon.Trainer.step) on the trainer.
 
-* You need to call [.asscalar()](/api/python/docs/api/ndarray/ndarray.html?#mxnet.ndarray.NDArray.asscalar) to turn a multidimensional array into a scalar.
+* You need to call [.asscalar()](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.asscalar) to turn a multidimensional array into a scalar.
 
 * In this sample, Apache MXNet is twice as fast as PyTorch. Though you need to be cautious with such toy comparisons.
 
@@ -230,9 +230,9 @@ As we saw above, Apache MXNet Gluon API and PyTorch have many similarities. The 
 
 While Apache MXNet Gluon API is very similar to PyTorch, there are some extra functionality that can make your code even faster.
 
-* Check out [Hybridize tutorial](/api/python/docs/tutorials/packages/gluon/blocks/hybridize.html) to learn how to write imperative code which can be converted to symbolic one.
+* Check out [Hybridize tutorial](../../packages/gluon/blocks/hybridize.ipynb) to learn how to write imperative code which can be converted to symbolic one.
 
-* Also, check out how to extend Apache MXNet with your own [custom layers](/api/python/docs/tutorials/packages/gluon/blocks/custom-layer.html?custom_layers).
+* Also, check out how to extend Apache MXNet with your own [custom layers](../../packages/gluon/blocks/custom-layer.ipynb).
 
 ## Appendix
 

@@ -66,7 +66,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/factor.png) <!--notebook-skip-line-->
+![lr factor](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/factor.png) <!--notebook-skip-line-->
 
 
 Note: the `base_lr` is used to determine the initial learning rate. It takes a default value of 0.01 since we inherit from `mx.lr_scheduler.LRScheduler`, but it can be set as a property of the schedule. We will see later in this tutorial that `base_lr` is set automatically when providing the `lr_schedule` to `Optimizer`. Also be aware that the schedules in `mx.lr_scheduler` have state (i.e. counters, etc) so calling the schedule out of order may give unexpected results.
@@ -81,7 +81,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/multifactor.png) <!--notebook-skip-line-->
+![lr multifactor](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/multifactor.png) <!--notebook-skip-line-->
 
 
 ### Polynomial Schedule
@@ -95,7 +95,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/polynomial.png) <!--notebook-skip-line-->
+![lr poly](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/polynomial.png) <!--notebook-skip-line-->
 
 
 Note: unlike `FactorScheduler`, the `base_lr` is set as an argument when instantiating the schedule.
@@ -113,7 +113,7 @@ class CosineAnnealingSchedule():
         self.min_lr = min_lr
         self.max_lr = max_lr
         self.cycle_length = cycle_length
-        
+
     def __call__(self, iteration):
         if iteration <= self.cycle_length:
             unit_cycle = (1 + math.cos(iteration * math.pi / self.cycle_length)) / 2
@@ -128,12 +128,12 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/cosine.png) <!--notebook-skip-line-->
+![lr cosine](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/cosine.png) <!--notebook-skip-line-->
 
 
 ## Using Schedules
 
-While training a simple handwritten digit classifier on the MNIST dataset, we take a look at how to use a learning rate schedule during training. Our demonstration model is a basic convolutional neural network. We start by preparing our `DataLoader` and defining the network. 
+While training a simple handwritten digit classifier on the MNIST dataset, we take a look at how to use a learning rate schedule during training. Our demonstration model is a basic convolutional neural network. We start by preparing our `DataLoader` and defining the network.
 
 As discussed above, the schedule should return a learning rate given an (1-based) iteration index.
 
@@ -169,7 +169,7 @@ def build_cnn():
     # Second fully connected layer with as many neurons as the number of classes
     net.add(nn.Dense(num_outputs))
     return net
-    
+
 net = build_cnn()
 ```
 

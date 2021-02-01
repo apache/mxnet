@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,13 +14,18 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+import os
+import sys
+import mxnet as mx
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST'] = '1'
+os.environ['MXNET_SUBGRAPH_BACKEND'] = 'NONE'
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../quantization'))
+from test_quantization import *
 
-set -ex
-apt-get update || true
-apt-get install graphviz python-opencv
-
-# sckit-learn past version 0.20 does not support python version 2 and 3.4
-pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz==0.8.4 tqdm mxboard scipy gluoncv
+if __name__ == '__main__':
+    import pytest
+    pytest.main()
+    del os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST']
+    del os.environ['MXNET_SUBGRAPH_BACKEND']
