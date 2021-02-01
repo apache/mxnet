@@ -595,6 +595,15 @@ def test_onnx_export_gather_nd(tmp_path, dtype):
     op_export_test('gather_nd2', M2, [x2, y2], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+@pytest.mark.parametrize('shape', [(3, 4, 5, 6), (1, 1, 1, 1)])
+@pytest.mark.parametrize('scale', [1, 2, 3])
+def test_onnx_export_upsampling(tmp_path, dtype, shape, scale):
+    A = mx.random.uniform(0, 1, shape).astype(dtype)
+    M = def_model('UpSampling', scale=scale, sample_type='nearest', num_args=1)
+    op_export_test('UpSampling', M, [A], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
 @pytest.mark.parametrize('params', [((4, 5, 6), (0, 2)), ((4, 5, 6), (0, 1)),
                                     ((1, 2, 3, 4, 1), (0, 4)),
