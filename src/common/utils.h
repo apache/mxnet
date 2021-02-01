@@ -977,6 +977,10 @@ inline void AlignedMemFree(void* ptr) {
 }
 
 
+inline index_t div_round(const index_t a, const index_t b) {
+  return (a + b - 1) / b;
+}
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_

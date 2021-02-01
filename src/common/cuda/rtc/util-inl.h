@@ -174,73 +174,96 @@ struct enable_if<true> {
 };
 
 template <typename T, typename U, class Enable = void>
-struct mixed_type;
+struct mixed_type_helper;
 
 template <typename T>
-struct mixed_type<T, float64, typename enable_if<!is_same<float64, T>::value>::type> {
+struct mixed_type_helper<T, float64, typename enable_if<!is_same<float64, T>::value>::type> {
   using type = float64;
 };
 
 template <typename T>
-struct mixed_type<float64, T> {
+struct mixed_type_helper<float64, T> {
   using type = float64;
 };
 
 template <typename T>
-struct mixed_type<T, float32, typename enable_if<!is_same<float64, T>::value &&
-                                                 !is_same<float32, T>::value>::type> {
+struct mixed_type_helper<T, float32, typename enable_if<!is_same<float64, T>::value &&
+                                                        !is_same<float32, T>::value>::type> {
   using type = float32;
 };
 
 template <typename T>
-struct mixed_type<float32, T, typename enable_if<!is_same<float64, T>::value>::type> {
+struct mixed_type_helper<float32, T, typename enable_if<!is_same<float64, T>::value>::type> {
   using type = float32;
 };
 
 template <typename T>
-struct mixed_type<T, float16, typename enable_if<is_same<float16, T>::value ||
-                                                 is_integral<T>::value>::type> {
+struct mixed_type_helper<T, float16, typename enable_if<is_same<float16, T>::value ||
+                                                        is_integral<T>::value>::type> {
   using type = float16;
 };
 
 template <typename T>
-struct mixed_type<float16, T, typename enable_if<is_integral<T>::value>::type> {
+struct mixed_type_helper<float16, T, typename enable_if<is_integral<T>::value>::type> {
   using type = float16;
 };
 
 template <typename T, typename U>
-struct mixed_type<T, U, typename enable_if<is_integral<T>::value &&
-                                           is_integral<U>::value &&
-                                           !is_same<U, bool_t>::value &&
-                                           sizeof(T) <= sizeof(U)>::type> {
+struct mixed_type_helper<T, U, typename enable_if<is_integral<T>::value &&
+                                                  is_integral<U>::value &&
+                                                  !is_same<U, bool_t>::value &&
+                                                  sizeof(T) <= sizeof(U)>::type> {
   using type = U;
 };
 
 template <typename T, typename U>
-struct mixed_type<U, T, typename enable_if<is_integral<T>::value &&
-                                           is_integral<U>::value &&
-                                           !is_same<U, bool_t>::value &&
-                                           sizeof(T) < sizeof(U)>::type> {
+struct mixed_type_helper<U, T, typename enable_if<is_integral<T>::value &&
+                                                  is_integral<U>::value &&
+                                                  !is_same<U, bool_t>::value &&
+                                                  sizeof(T) < sizeof(U)>::type> {
   using type = U;
 };
 
 template <typename T>
-struct mixed_type<T, bool_t, typename enable_if<is_integral<T>::value &&
-                                                sizeof(T) < sizeof(bool_t)>::type> {
+struct mixed_type_helper<T, bool_t, typename enable_if<is_integral<T>::value &&
+                                                       sizeof(T) < sizeof(bool_t)>::type> {
   using type = index_t;
 };
 
 template <typename T>
-struct mixed_type<bool_t, T, typename enable_if<is_integral<T>::value &&
-                                                sizeof(T) < sizeof(bool_t)>::type> {
+struct mixed_type_helper<bool_t, T, typename enable_if<is_integral<T>::value &&
+                                                       sizeof(T) < sizeof(bool_t)>::type> {
   using type = index_t;
 };
 
 template <typename T>
-struct mixed_type<T, bool_t, typename enable_if<is_integral<T>::value &&
-                                                sizeof(T) == sizeof(bool_t)>::type> {
+struct mixed_type_helper<T, bool_t, typename enable_if<is_integral<T>::value &&
+                                                       sizeof(T) == sizeof(bool_t)>::type> {
   using type = T;
 };
+
+template <typename... Ts>
+struct multi_mixed_type_helper;
+
+template <>
+struct multi_mixed_type_helper<> {
+    using type = void;
+};
+
+template <typename T>
+struct multi_mixed_type_helper<T> {
+    using type = T;
+};
+
+template <typename T, typename U, typename... Ts>
+struct multi_mixed_type_helper<T, U, Ts...> {
+    using type = typename mixed_type_helper<T,
+                                            typename multi_mixed_type_helper<U,
+                                                                             Ts...>::type>::type;
+};
+
+template <typename... Ts>
+using mixed_type = typename multi_mixed_type_helper<Ts...>::type;
 
 }  // namespace type_util
 )code";
@@ -254,6 +277,7 @@ enum class OpReqType {
 };
 
 constexpr int kRTCMaxThreadsPerBlock = 512;
+constexpr int warp_size = 32;
 
 namespace util {
 
@@ -375,6 +399,49 @@ __device__ inline bool isnan(volatile const long double &val) {
 template <>
 __device__ inline bool isnan(volatile const float16 &val) {
   return ::isnan(__half2float(const_cast<const float16&>(val)));
+}
+
+template <int NVALUES = warp_size, typename OP, typename T>
+__device__ inline T warp_reduce(T value, OP redfun) {
+#pragma unroll
+  for (int i = warp_size / 2; i >= 1; i /= 2) {
+    if (NVALUES > i) value = redfun(value, __shfl_down_sync(0xffffffff, value, i));
+  }
+  return value;
+}
+
+template <typename OP, typename T>
+__device__ inline T grouped_warp_reduce(T value, OP redfun, const int group_size) {
+  for (int i = 1; i < group_size; i *= 2) {
+    value = redfun(value, __shfl_down_sync(0xffffffff, value, i));
+  }
+  return value;
+}
+
+template <typename OP, typename T>
+__device__ inline T grouped_warp_allreduce(T value, OP redfun, const int group_size) {
+  value = grouped_warp_reduce(value, redfun, group_size);
+  return __shfl_sync(0xffffffff, value, 0, group_size);
+}
+
+template <typename OP, typename T>
+__device__ inline T strided_grouped_warp_reduce(T value, OP redfun, const int group_size) {
+  for (int i = warp_size / 2; i >= group_size; i /= 2) {
+    value = redfun(value, __shfl_down_sync(0xffffffff, value, i));
+  }
+  return value;
+}
+
+template <typename OP, typename T>
+__device__ inline T strided_grouped_warp_allreduce(T value, OP redfun, const int group_size) {
+  value = strided_grouped_warp_reduce(value, redfun, group_size);
+  for (int i = group_size; i < warp_size; i *= 2) {
+    T tmp = __shfl_up_sync(0xffffffff, value, i);
+    if (threadIdx.x % warp_size >= i) {
+      value = tmp;
+    }
+  }
+  return value;
 }
 
 }  // namespace util
