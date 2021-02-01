@@ -3567,7 +3567,6 @@ def convert_batch_dot(node, **kwargs):
     lhs = input_nodes[0]
     rhs = input_nodes[1]
     input_type = kwargs['in_type']
-    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
     transpose_a = str(attrs.get('transpose_a', 'False'))
     transpose_b = str(attrs.get('transpose_b', 'False'))
     perm = [0, 2, 1]
