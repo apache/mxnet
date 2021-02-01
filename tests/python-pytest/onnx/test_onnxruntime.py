@@ -161,6 +161,61 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model):
         shutil.rmtree(tmp_path)
 
 
+@pytest.mark.parametrize('model', [
+    'fcn_resnet50_ade',
+    'fcn_resnet101_ade',
+    'deeplab_resnet50_ade',
+    'deeplab_resnet101_ade',
+    # the 4 models below are failing due to an accuracy issue
+    #'deeplab_resnest50_ade',
+    #'deeplab_resnest101_ade',
+    #'deeplab_resnest200_ade',
+    #'deeplab_resnest269_ade',
+    'fcn_resnet101_coco',
+    'deeplab_resnet101_coco',
+    'fcn_resnet101_voc',
+    'deeplab_resnet101_voc',
+    'deeplab_resnet152_voc',
+    'deeplab_resnet50_citys',
+    'deeplab_resnet101_citys',
+    'deeplab_v3b_plus_wideresnet_citys'
+])
+def test_img_segmentation_model_inference_onnxruntime(tmp_path, model):
+    def normalize_image(imgfile):
+        img = mx.image.imread(imgfile).astype('float32')
+        img = mx.image.imresize(img, 480, 480)
+        x = gluoncv.data.transforms.presets.segmentation.test_transform(img, mx.cpu(0))
+        return x
+
+
+    try:
+        tmp_path = str(tmp_path)
+        M = GluonCVModel(model, (1,3,480,480), 'float32', tmp_path)
+        onnx_file = M.export_onnx()
+        # create onnxruntime session using the generated onnx file
+        ses_opt = onnxruntime.SessionOptions()
+        ses_opt.log_severity_level = 3
+        session = onnxruntime.InferenceSession(onnx_file, ses_opt)
+        input_name = session.get_inputs()[0].name
+
+        test_image_urls = [
+            'https://raw.githubusercontent.com/zhreshold/mxnet-ssd/master/data/demo/dog.jpg',
+            'https://cdn.cnn.com/cnnnext/dam/assets/201030094143-stock-rhodesian-ridgeback-super-tease.jpg'
+        ]
+
+        for img in download_test_images(test_image_urls, tmp_path):
+            img_data = normalize_image(os.path.join(tmp_path, img))
+            mx_result = M.predict(img_data)
+            onnx_result = session.run([], {input_name: img_data.asnumpy()})
+            assert(len(mx_result) == len(onnx_result))
+            for i in range(len(mx_result)):
+                assert_almost_equal(mx_result[i], onnx_result[i])
+
+    finally:
+        shutil.rmtree(tmp_path)
+
+
+
 @with_seed()
 @pytest.mark.parametrize('model', ['bert_12_768_12'])
 def test_bert_inference_onnxruntime(tmp_path, model):
