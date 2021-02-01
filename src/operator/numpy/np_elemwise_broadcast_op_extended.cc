@@ -94,7 +94,7 @@ NNVM_REGISTER_OP(_npi_gcd_scalar)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "source input")
 .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::gcd>);
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::gcd>);
 
 NNVM_REGISTER_OP(_npi_lcm)
 .set_num_inputs(2)
@@ -127,7 +127,7 @@ NNVM_REGISTER_OP(_npi_lcm_scalar)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "source input")
 .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::lcm>);
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::lcm>);
 
 NNVM_REGISTER_OP(_npi_bitwise_and)
 .set_num_inputs(2)
