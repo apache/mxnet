@@ -1052,7 +1052,7 @@ class HybridBlock(Block):
         self._callback = None
         self._monitor_all = False
         self._backend = None
-        self._backend_opts = {}
+        self._backend_opts = dict()
         self._partition_if_dynamic = True
         self._first_forward = True
 
@@ -1397,7 +1397,7 @@ class HybridBlock(Block):
         self._first_forward = True
         # clear the backend
         self._backend = None
-        self._backend_opts = None
+        self._backend_opts = dict()
 
     def _clear_cached_op(self):
         self._cached_graph = ()
