@@ -3571,14 +3571,13 @@ def convert_contrib_roialign(node, **kwargs):
     position_sensitive = attrs.get('position_sensitive', 'False')
     aligned = attrs.get('aligned', 'False')
 
-    '''
     if position_sensitive != 'False':
         raise NotImplementedError('_contrib_ROIAlign does not currently support \
                                    position_sensitive!=False')
     if aligned != 'False':
         raise NotImplementedError('_contrib_ROIAlign does not currently support \
                                    aligned!=False')
-    '''
+
     create_tensor([0], name+'_0', kwargs['initializer']),
     create_tensor([1], name+'_1', kwargs['initializer']),
     create_tensor([5], name+'_5', kwargs['initializer']),
