@@ -734,3 +734,11 @@ def test_onnx_export_sum(tmp_path, dtype, axis):
     else:
         M = def_model('sum')
     op_export_test('sum', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_broadcast_mul(tmp_path, dtype):
+    M = def_model('broadcast_mul')
+    x = mx.nd.array([[1,2,3],[4,5,6]], dtype=dtype)
+    y = mx.nd.array([[0],[3]], dtype=dtype)
+    op_export_test('broadcast_mul', M, [x, y], tmp_path)
