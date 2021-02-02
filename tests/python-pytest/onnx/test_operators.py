@@ -118,14 +118,13 @@ def test_onnx_export_arange_like(tmp_path, dtype, axis, start, step, test_data):
     op_export_test('arange_like', M, [x], tmp_path)
 
 
-@pytest.mark.parametrize("stop", [2, 50, 5000])
-@pytest.mark.parametrize("step", [0.25, 0.5, 1, 5])
-@pytest.mark.parametrize("start", [0., 1.])
+@pytest.mark.parametrize("params", [[0, 2, 1], [0, 50, 0.25], [-100, 100, 0.5], [5, None, 1], [-5, None, -1]])
 @pytest.mark.parametrize("dtype", ["float32", "float64", "int32", "int64"])
-def test_onnx_export_arange(tmp_path, dtype, start, stop, step):
+def test_onnx_export_arange(tmp_path, dtype, params):
+    start, stop, step = params[0], params[1], params[2]
     if "int" in dtype:
         start = int(start)
-        stop = int(stop)
+        stop = int(stop) if stop != None else None
         step = int(step)
         if step == 0:
             step = 1
@@ -312,6 +311,25 @@ def test_onnx_export_broadcast_add(tmp_path, dtype):
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_broadcast_equal(tmp_path, dtype):
+    M = def_model('broadcast_equal')
+    x = mx.nd.zeros((4,5,6), dtype=dtype)
+    y = mx.nd.ones((4,5,6), dtype=dtype)
+    op_export_test('broadcast_equal', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_broadcast_minimum(tmp_path, dtype):
+    M = def_model('broadcast_minimum')
+    if 'int' in dtype:
+        x = mx.nd.random.randint(0, 1000, (4, 5, 6), dtype=dtype)
+        y = mx.nd.random.randint(0, 1000, (4, 5, 6), dtype=dtype)
+    else:
+        x = mx.nd.random.uniform(0, 1000, (4, 5, 6), dtype=dtype)
+        y = mx.nd.random.uniform(0, 1000, (4, 5, 6), dtype=dtype)
+    op_export_test('broadcast_minimum', M, [x, y], tmp_path)
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('axis', [0, 1, 2, -1])
 def test_onnx_export_stack(tmp_path, dtype, axis):
     M = def_model('stack', axis=axis)
@@ -458,6 +476,18 @@ def test_onnx_export_greater_scalar(tmp_path, dtype, scalar):
         x = mx.random.uniform(0, 9999, (5,10), dtype=dtype)
     M = def_model('_internal._greater_scalar', scalar=scalar)
     op_export_test('_internal._greater_scalar', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("scalar", [0., 0.1, 0.5, 1., 5, 555.])
+def test_onnx_export_lesser_scalar(tmp_path, dtype, scalar):
+    if 'int' in dtype:
+        scalar = int(scalar)
+        x = mx.nd.arange(0, 12, dtype=dtype).reshape((3, 4))
+    else:
+        x = mx.random.uniform(0, 9999, (5,10), dtype=dtype)
+    M = def_model('_internal._lesser_scalar', scalar=scalar)
+    op_export_test('_internal._lesser_scalar', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
@@ -632,6 +662,18 @@ def test_onnx_export_slice_like(tmp_path, dtype, axes):
         op_export_test('slice_like_1', M, [x, y1], tmp_path)
         op_export_test('slice_like_2', M, [x, y2], tmp_path)
         op_export_test('slice_like_3', M, [x, y3], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
+@pytest.mark.parametrize('axis', [None, 0, 2, -1])
+@pytest.mark.parametrize('num_outputs', [2, 5])
+def test_onnx_export_slice_channel(tmp_path, dtype, axis, num_outputs):
+    x = mx.nd.zeros((10,20,30,40), dtype=dtype)
+    if axis is None:
+        M = def_model('SliceChannel', num_outputs=num_outputs)
+    else:
+        M = def_model('SliceChannel', axis=axis, num_outputs=num_outputs)
+    op_export_test('SliceChannel', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])

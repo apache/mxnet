@@ -1548,6 +1548,13 @@ def convert_broadcast_mul(node, **kwargs):
     """
     return create_basic_op_node('Mul', node, kwargs)
 
+@mx_op.register("broadcast_minimum")
+def convert_broadcast_min(node, **kwargs):
+    """Map MXNet's broadcast_minimum operator attributes to onnx's Min operator
+    and return the created node.
+    """
+    return create_basic_op_node('Min', node, kwargs)
+
 @mx_op.register("elemwise_div")
 def convert_elemwise_div(node, **kwargs):
     """Map MXNet's elemwise_div operator attributes to onnx's Div operator
@@ -1719,6 +1726,10 @@ def convert_slice_channel(node, **kwargs):
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError('ONNX opset 11 or greater is required to export this operator')
+
     num_outputs = int(attrs.get("num_outputs"))
     axis = int(attrs.get("axis", 1))
     squeeze_axis = int(attrs.get("squeeze_axis", 0))
@@ -1733,15 +1744,12 @@ def convert_slice_channel(node, **kwargs):
         )
         return [node]
     elif squeeze_axis == 0 and num_outputs > 1:
-        in_shape = kwargs.get('in_shape')[0]
-        split = in_shape[axis] // num_outputs
         node = onnx.helper.make_node(
             "Split",
             input_nodes,
-            [name+'_output'+str(i) for i in range(num_outputs)],
+            [name+str(i) for i in range(num_outputs)],
             axis=axis,
-            split=[split for _ in range(num_outputs)],
-            name=name,
+            name=name
         )
         return [node]
     else:
@@ -1973,7 +1981,15 @@ def convert_broadcast_equal(node, **kwargs):
     """Map MXNet's broadcast_equal operator attributes to onnx's Equal operator
     and return the created node.
     """
-    return create_basic_op_node('Equal', node, kwargs)
+    from onnx.helper import make_node
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_type = kwargs['in_type']
+
+    nodes = [
+        make_node("Equal", input_nodes, [name+"_equal"]),
+        make_node("Cast", [name+"_equal"], [name], name=name, to=int(input_type))
+    ]
+    return nodes
 
 
 @mx_op.register("broadcast_logical_and")
@@ -2682,10 +2698,15 @@ def convert_zeros_like(node, **kwargs):
     """Map MXNet's zeros_like operator attributes to onnx's ConstantOfShape operator.
     """
     from onnx.helper import make_node, make_tensor
-    name, input_nodes, _ = get_inputs(node, kwargs)
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    dtype = attrs.get('dtype')
+    if dtype is not None:
+        data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
+    else:
+        data_type = kwargs['in_type']
 
     # create tensor with shape of input
-    tensor_value = make_tensor(name+"_zero", kwargs['in_type'], [1], [0])
+    tensor_value = make_tensor(name+"_zero", data_type, [1], [0])
     nodes = [
         make_node("Shape", [input_nodes[0]], [name+"_shape"]),
         make_node("ConstantOfShape", [name+"_shape"], [name], name=name, value=tensor_value)
@@ -2698,10 +2719,14 @@ def convert_ones_like(node, **kwargs):
     """Map MXNet's ones_like operator attributes to onnx's ConstantOfShape operator.
     """
     from onnx.helper import make_node, make_tensor
-    name, input_nodes, _ = get_inputs(node, kwargs)
-
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    dtype = attrs.get('dtype')
+    if dtype is not None:
+        data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
+    else:
+        data_type = kwargs['in_type']
     # create tensor with shape of input
-    tensor_value = make_tensor(name+"_one", kwargs['in_type'], [1], [1])
+    tensor_value = make_tensor(name+"_one", data_type, [1], [1])
     nodes = [
         make_node("Shape", [input_nodes[0]], [name+"_shape"]),
         make_node("ConstantOfShape", [name+"_shape"], [name], name=name, value=tensor_value)
@@ -2839,6 +2864,11 @@ def convert_arange(node, **kwargs):
     step = attrs.get('step', 1.)
     dtype = attrs.get('dtype', 'float32')
     repeat = int(attrs.get('repeat', 1))
+
+    if stop == 'None':
+        stop = start
+        start = 0
+
     if repeat != 1:
         raise NotImplementedError("arange operator with repeat != 1 not yet implemented.")
 
@@ -3093,6 +3123,36 @@ def convert_greater_scalar(node, **kwargs):
     return nodes
 
 
+@mx_op.register("_lesser_scalar")
+def convert_lesser_scalar(node, **kwargs):
+    """Map MXNet's lesser_scalar operator attributes to onnx's Less
+    operator and return the created node.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    scalar = float(attrs.get('scalar'))
+    input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    if str(dtype).startswith('int'):
+        scalar = int(scalar)
+    else:
+        if dtype == 'float16':
+            # when using float16, we must convert it to np.uint16 view first
+            # pylint: disable=too-many-function-args
+            scalar = np.float16(scalar).view(np.uint16)
+
+    tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
+    nodes = [
+        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
+        make_node("ConstantOfShape", [name+"_shape"], [name+"_rhs"], value=tensor_value),
+        make_node("Less", [input_nodes[0], name+"_rhs"], [name+"_lt"]),
+        make_node("Cast", [name+"_lt"], [name], to=input_type, name=name)
+    ]
+    return nodes
+
+
 @mx_op.register("where")
 def convert_where(node, **kwargs):
     """Map MXNet's where operator attributes to onnx's Where
@@ -3252,7 +3312,7 @@ def convert_broadcast_mod(node, **kwargs):
         make_node('Where', [name+'_mask', input_nodes[1], name+'_zero'], [name+'_adjustment']),
         make_node('Add', [name+'_mod', name+'_adjustment'], [name+'_adjusted']),
         make_node('Equal', [input_nodes[1], name+'_zero'], [name+'_mask_div_0']),
-        make_node('Where', [name+'_mask_div_0', name+'_zero', name+'_adjusted'], [name])
+        make_node('Where', [name+'_mask_div_0', name+'_zero', name+'_adjusted'], [name], name=name)
         ]
 
     return nodes
