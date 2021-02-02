@@ -3146,8 +3146,7 @@ def convert_greater_scalar(node, **kwargs):
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
     nodes = [
-        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
-        make_node("ConstantOfShape", [name+"_shape"], [name+"_rhs"], value=tensor_value),
+        make_node("Constant", [], [name+"_rhs"], value=tensor_value),
         make_node("Greater", [input_nodes[0], name+"_rhs"], [name+"_gt"]),
         make_node("Cast", [name+"_gt"], [name], to=input_type, name=name)
     ]
@@ -3176,8 +3175,7 @@ def convert_lesser_scalar(node, **kwargs):
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
     nodes = [
-        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
-        make_node("ConstantOfShape", [name+"_shape"], [name+"_rhs"], value=tensor_value),
+        make_node("Constant", [], [name+"_rhs"], value=tensor_value),
         make_node("Less", [input_nodes[0], name+"_rhs"], [name+"_lt"]),
         make_node("Cast", [name+"_lt"], [name], to=input_type, name=name)
     ]
