@@ -253,6 +253,10 @@ class MXNetGraph(object):
                 graph_input_idx += 1
 
             else:
+                # If this node is not weight, then we add a prefix to the name to avoid name
+                # clashing issue in case some op nodes have the same name
+                if name not in params:
+                    node["name"] = 'op_node_' + str(idx) + '_' + node["name"]
                 # Handling graph layers
                 converted = MXNetGraph.convert_layer(
                     node,
