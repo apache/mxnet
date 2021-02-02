@@ -120,6 +120,7 @@ im2col.h
 deformable_im2col.cuh
 deformable_im2col.h
 FindCUDAToolkit.cmake
+FindBLAS.cmake
 select_compute_arch.cmake
 
 # AL2 License header not at the beginning of the file
