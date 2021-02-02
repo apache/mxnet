@@ -3742,3 +3742,27 @@ def convert_batch_dot(node, **kwargs):
         ]
 
     return nodes
+
+
+@mx_op.register("log2")
+def convert_log2(node, **kwargs):
+    """Map MXNet's log2 operator attributes to onnx's operator.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, _ = get_inputs(node, kwargs)
+
+    input_type = kwargs["in_type"]
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    ln2 = np.array([0.693147180559945309], dtype=dtype)
+    if dtype == 'float16':
+        ln2 = ln2.view(dtype=np.uint16)
+    ln2v = make_tensor(name+'_ln2', input_type, [1], ln2)
+
+    nodes = [
+        make_node('Log', [input_nodes[0]], [name+'_log']),
+        make_node('Constant', [], [name+'_ln2'], value=ln2v),
+        make_node('Div', [name+'_log', name+'_ln2'], [name], name=name)
+    ]
+
+    return nodes
