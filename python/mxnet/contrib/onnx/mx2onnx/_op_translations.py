@@ -1810,17 +1810,22 @@ def convert_squeeze(node, **kwargs):
 
     axis = attrs.get("axis", None)
     if not axis:
-        raise AttributeError("Squeeze: Missing axis attribute: ONNX currently requires axis to "
-                             "be specified for squeeze operator")
-    axis = convert_string_to_list(axis)
+        node = onnx.helper.make_node(
+            "Squeeze",
+            input_nodes,
+            [name],
+            name=name
+        )
+    else:
+        axis = convert_string_to_list(axis)
 
-    node = onnx.helper.make_node(
-        "Squeeze",
-        input_nodes,
-        [name],
-        axes=axis,
-        name=name,
-    )
+        node = onnx.helper.make_node(
+            "Squeeze",
+            input_nodes,
+            [name],
+            axes=axis,
+            name=name,
+        )
     return [node]
 
 
