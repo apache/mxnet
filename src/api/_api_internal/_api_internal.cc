@@ -95,6 +95,13 @@ MXNET_REGISTER_GLOBAL("_Map")
     *ret = Map<ObjectRef, ObjectRef>(data);
 });
 
+MXNET_REGISTER_GLOBAL("_String")
+.set_body([] (runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  std::string str = args[0].operator std::string();
+  *ret = String(std::move(str));
+});
+
 MXNET_REGISTER_GLOBAL("_echo")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   *ret = args[0];

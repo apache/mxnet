@@ -22,7 +22,6 @@ from .. import _api_internal
 from ..ndarray._internal import NDArrayBase
 from .object import _ObjectBase, PyNativeObject, _set_node_generic
 from .base import string_types
-from ..container import String
 
 def _scalar_type_inference(value):
     if hasattr(value, 'dtype'):
@@ -61,7 +60,7 @@ def convert_to_node(value):
     elif isinstance(value, float):
         return _api_internal._Float(value)
     elif isinstance(value, string_types):
-        return String(value)
+        return _api_internal._String(value)
     elif isinstance(value, (list, tuple)):
         value = [convert_to_node(x) for x in value]
         return _api_internal._ADT(*value)
