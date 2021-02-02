@@ -184,17 +184,19 @@ def test_obj_class_model_inference_onnxruntime(tmp_path, model):
     'center_net_resnet50_v1b_voc',
     'center_net_resnet101_v1b_voc',
     'center_net_resnet18_v1b_coco',
-    'center_net_resnet50_v1b_coco',
+    #'center_net_resnet50_v1b_coco',
     'center_net_resnet101_v1b_coco'
 ])
 def test_obj_detection_model_inference_onnxruntime(tmp_path, model):
     def normalize_image(imgfile):
-        x, _ = gluoncv.data.transforms.presets.center_net.load_test(imgfile, short=512)
-        return x
+        img = mx.image.imread(imgfile)
+        img, _ = mx.image.center_crop(img, size=(512, 512))
+        img, _ = gluoncv.data.transforms.presets.center_net.transform_test(img, short=512)
+        return img
 
     try:
         tmp_path = str(tmp_path)
-        M = GluonModel(model, (1,3,512,683), 'float32', tmp_path)
+        M = GluonModel(model, (1,3,512,512), 'float32', tmp_path)
         onnx_file = M.export_onnx()
         # create onnxruntime session using the generated onnx file
         ses_opt = onnxruntime.SessionOptions()
@@ -202,7 +204,16 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model):
         session = onnxruntime.InferenceSession(onnx_file, ses_opt)
         input_name = session.get_inputs()[0].name
 
-        test_image_urls = ['https://raw.githubusercontent.com/zhreshold/mxnet-ssd/master/data/demo/dog.jpg']
+        test_image_urls = [
+            'https://raw.githubusercontent.com/zhreshold/mxnet-ssd/master/data/demo/dog.jpg',
+            'https://cdn.cnn.com/cnnnext/dam/assets/201030094143-stock-rhodesian-ridgeback-super-tease.jpg',
+            'https://ai.stanford.edu/~jkrause/cars/car6.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/dog.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/apron.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/dolphin.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/hammerheadshark.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/lotus.jpg'
+        ]
 
         for img in download_test_images(test_image_urls, tmp_path):
             img_data = normalize_image(os.path.join(tmp_path, img))
@@ -238,9 +249,9 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model):
 def test_img_segmentation_model_inference_onnxruntime(tmp_path, model):
     def normalize_image(imgfile):
         img = mx.image.imread(imgfile).astype('float32')
-        img = mx.image.imresize(img, 480, 480)
-        x = gluoncv.data.transforms.presets.segmentation.test_transform(img, mx.cpu(0))
-        return x
+        img, _ = mx.image.center_crop(img, size=(480, 480))
+        img = gluoncv.data.transforms.presets.segmentation.test_transform(img, mx.cpu(0))
+        return img
 
 
     try:
@@ -255,7 +266,13 @@ def test_img_segmentation_model_inference_onnxruntime(tmp_path, model):
 
         test_image_urls = [
             'https://raw.githubusercontent.com/zhreshold/mxnet-ssd/master/data/demo/dog.jpg',
-            'https://cdn.cnn.com/cnnnext/dam/assets/201030094143-stock-rhodesian-ridgeback-super-tease.jpg'
+            'https://cdn.cnn.com/cnnnext/dam/assets/201030094143-stock-rhodesian-ridgeback-super-tease.jpg',
+            'https://ai.stanford.edu/~jkrause/cars/car6.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/dog.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/apron.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/dolphin.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/hammerheadshark.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/lotus.jpg'
         ]
 
         for img in download_test_images(test_image_urls, tmp_path):
