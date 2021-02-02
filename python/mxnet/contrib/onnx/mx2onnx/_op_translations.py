@@ -3184,6 +3184,34 @@ def convert_lesser_scalar(node, **kwargs):
     return nodes
 
 
+@mx_op.register("_equal_scalar")
+def convert_equal_scalar(node, **kwargs):
+    """Map MXNet's equal_scalar operator attributes to onnx.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    scalar = float(attrs.get('scalar'))
+    input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    if str(dtype).startswith('int'):
+        scalar = int(scalar)
+    else:
+        if dtype == 'float16':
+            # when using float16, we must convert it to np.uint16 view first
+            # pylint: disable=too-many-function-args
+            scalar = np.float16(scalar).view(np.uint16)
+
+    tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
+    nodes = [
+        make_node("Constant", [], [name+"_rhs"], value=tensor_value),
+        make_node("Equal", [input_nodes[0], name+"_rhs"], [name+"_eq"]),
+        make_node("Cast", [name+"_eq"], [name], to=input_type, name=name)
+    ]
+    return nodes
+
+
 @mx_op.register("where")
 def convert_where(node, **kwargs):
     """Map MXNet's where operator attributes to onnx's Where
