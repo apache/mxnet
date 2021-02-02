@@ -1758,7 +1758,7 @@ def convert_slice_channel(node, **kwargs):
 
     num_outputs = int(attrs.get("num_outputs"))
     axis = int(attrs.get("axis", 1))
-    squeeze_axis = int(attrs.get("squeeze_axis", 0))
+    squeeze_axis = int(attrs.get("squeeze_axis", 0) in [1, 'True'])
 
     if squeeze_axis == 1 and num_outputs == 1:
         node = onnx.helper.make_node(
