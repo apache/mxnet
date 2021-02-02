@@ -118,14 +118,13 @@ def test_onnx_export_arange_like(tmp_path, dtype, axis, start, step, test_data):
     op_export_test('arange_like', M, [x], tmp_path)
 
 
-@pytest.mark.parametrize("stop", [2, 50, 5000])
-@pytest.mark.parametrize("step", [0.25, 0.5, 1, 5])
-@pytest.mark.parametrize("start", [0., 1.])
+@pytest.mark.parametrize("params", [[0, 2, 1], [0, 50, 0.25], [-100, 100, 0.5], [5, None, 1], [-5, None, -1]])
 @pytest.mark.parametrize("dtype", ["float32", "float64", "int32", "int64"])
-def test_onnx_export_arange(tmp_path, dtype, start, stop, step):
+def test_onnx_export_arange(tmp_path, dtype, params):
+    start, stop, step = params[0], params[1], params[2]
     if "int" in dtype:
         start = int(start)
-        stop = int(stop)
+        stop = int(stop) if stop != None else None
         step = int(step)
         if step == 0:
             step = 1
@@ -214,6 +213,27 @@ def test_onnx_export_reshape(tmp_path, dtype):
     op_export_test('reshape_2', M2, [x], tmp_path)
     M3 = def_model('reshape', shape=(5, 1, 1, 1, 1, 0 -1, 0), reverse=True)
     op_export_test('reshape_3', M3, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_reshape_special_cases(tmp_path, dtype):
+    x1 = mx.nd.ones((8, 9), dtype=dtype)
+    M1 = def_model('reshape', shape=(0, -4, 1, -1))
+    op_export_test('reshape_spec_1', M1, [x1], tmp_path)
+
+    x2 = mx.nd.ones((8, 9, 10), dtype=dtype)
+
+    M2 = def_model('reshape', shape=(0, -4, 3, -1, 10))
+    op_export_test('reshape_spec_2', M2, [x2], tmp_path)
+    M3 = def_model('reshape', shape=(-4, 2, -1, 10, 9))
+    op_export_test('reshape_spec_3', M3, [x2], tmp_path)
+
+    M4 = def_model('reshape', shape=(-3, 0))
+    op_export_test('reshape_spec_4', M4, [x2], tmp_path)
+
+    x3 = mx.nd.ones((1, 2, 3, 4, 5, 6), dtype=dtype)
+    M5 = def_model('reshape', shape=(0, 0, -3, -3))
+    op_export_test('reshape_spec_5', M5, [x3], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['int32', 'int64'])
@@ -310,6 +330,25 @@ def test_onnx_export_broadcast_add(tmp_path, dtype):
     y = mx.nd.array([[0],[1]], dtype=dtype)
     op_export_test('broadcast_add', M, [x, y], tmp_path)
 
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_broadcast_equal(tmp_path, dtype):
+    M = def_model('broadcast_equal')
+    x = mx.nd.zeros((4,5,6), dtype=dtype)
+    y = mx.nd.ones((4,5,6), dtype=dtype)
+    op_export_test('broadcast_equal', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_broadcast_minimum(tmp_path, dtype):
+    M = def_model('broadcast_minimum')
+    if 'int' in dtype:
+        x = mx.nd.random.randint(0, 1000, (4, 5, 6), dtype=dtype)
+        y = mx.nd.random.randint(0, 1000, (4, 5, 6), dtype=dtype)
+    else:
+        x = mx.nd.random.uniform(0, 1000, (4, 5, 6), dtype=dtype)
+        y = mx.nd.random.uniform(0, 1000, (4, 5, 6), dtype=dtype)
+    op_export_test('broadcast_minimum', M, [x, y], tmp_path)
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('axis', [0, 1, 2, -1])
@@ -458,6 +497,18 @@ def test_onnx_export_greater_scalar(tmp_path, dtype, scalar):
         x = mx.random.uniform(0, 9999, (5,10), dtype=dtype)
     M = def_model('_internal._greater_scalar', scalar=scalar)
     op_export_test('_internal._greater_scalar', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("scalar", [0., 0.1, 0.5, 1., 5, 555.])
+def test_onnx_export_lesser_scalar(tmp_path, dtype, scalar):
+    if 'int' in dtype:
+        scalar = int(scalar)
+        x = mx.nd.arange(0, 12, dtype=dtype).reshape((3, 4))
+    else:
+        x = mx.random.uniform(0, 9999, (5,10), dtype=dtype)
+    M = def_model('_internal._lesser_scalar', scalar=scalar)
+    op_export_test('_internal._lesser_scalar', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
@@ -634,6 +685,18 @@ def test_onnx_export_slice_like(tmp_path, dtype, axes):
         op_export_test('slice_like_3', M, [x, y3], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
+@pytest.mark.parametrize('axis', [None, 0, 2, -1])
+@pytest.mark.parametrize('num_outputs', [2, 5])
+def test_onnx_export_slice_channel(tmp_path, dtype, axis, num_outputs):
+    x = mx.nd.zeros((10,20,30,40), dtype=dtype)
+    if axis is None:
+        M = def_model('SliceChannel', num_outputs=num_outputs)
+    else:
+        M = def_model('SliceChannel', axis=axis, num_outputs=num_outputs)
+    op_export_test('SliceChannel', M, [x], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
 @pytest.mark.parametrize('lhs_axes', [[1, 3], [3, 1], [-2, -4], [-4, -2]])
 @pytest.mark.parametrize('rhs_axes', [[1, 3], [3, 1], [-2, -4], [-4, -2]])
@@ -661,3 +724,17 @@ def test_onnx_export_contrib_ROIAlign(tmp_path, dtype, pooled_size, spatial_scal
     M = def_model('contrib.ROIAlign', pooled_size=pooled_size, spatial_scale=spatial_scale,
                   sample_ratio=spatial_ratio)
     op_export_test('_contrib_ROIAlign', M, [data, rois], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('transpose_a', [True, False])
+@pytest.mark.parametrize('transpose_b', [True, False])
+def test_onnx_export_batch_dot(tmp_path, dtype, transpose_a, transpose_b):
+    x1 = mx.nd.random.normal(0, 10, (2, 3, 4, 5, 6), dtype=dtype)
+    y1 = mx.nd.random.normal(0, 10, (2, 3, 4, 6, 5), dtype=dtype)
+    M1 = def_model('batch_dot')
+    op_export_test('batch_dot1', M1, [x1, y1], tmp_path)
+    x2 = mx.nd.random.normal(0, 10, (2, 3, 4, 5, 5), dtype=dtype)
+    y2 = mx.nd.random.normal(0, 10, (2, 3, 4, 5, 5), dtype=dtype)
+    M2 = def_model('batch_dot', transpose_a=transpose_a, transpose_b=transpose_b)
+    op_export_test('batch_dot2', M2, [x2, y2], tmp_path)

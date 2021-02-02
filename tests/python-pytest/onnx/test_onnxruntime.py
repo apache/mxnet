@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+import gluoncv
 import onnxruntime
 
 from mxnet.test_utils import assert_almost_equal
@@ -27,16 +28,47 @@ import os
 import pytest
 import shutil
 
-# images that are tested and their accepted classes
-test_images = [
-    ['dog.jpg', [242,243]],
-    ['apron.jpg', [411,578,638,639,689,775]],
-    ['dolphin.jpg', [2,3,4,146,147,148,395]],
-    ['hammerheadshark.jpg', [3,4]],
-    ['lotus.jpg', [716,723,738,985]]
-]
 
-test_models = [
+
+class GluonModel():
+    def __init__(self, model_name, input_shape, input_dtype, tmpdir):
+        self.model_name = model_name
+        self.input_shape = input_shape
+        self.input_dtype = input_dtype
+        self.modelpath = os.path.join(tmpdir, model_name)
+        self.ctx = mx.cpu(0)
+        self.get_model()
+        self.export()
+
+    def get_model(self):
+        self.model = mx.gluon.model_zoo.vision.get_model(self.model_name, pretrained=True, ctx=self.ctx, root=self.modelpath)
+        self.model.hybridize()
+
+    def export(self):
+        data = mx.nd.zeros(self.input_shape, dtype=self.input_dtype, ctx=self.ctx)
+        self.model.forward(data)
+        self.model.export(self.modelpath, 0)
+
+    def export_onnx(self):
+        onnx_file = self.modelpath + ".onnx"
+        mx.contrib.onnx.export_model(self.modelpath + "-symbol.json", self.modelpath + "-0000.params",
+                                     [self.input_shape], self.input_dtype, onnx_file)
+        return onnx_file
+
+    def predict(self, data):
+        return self.model(data)
+
+
+def download_test_images(image_urls, tmpdir):
+    from urllib.parse import urlparse
+    paths = []
+    for url in image_urls:
+        filename = os.path.join(tmpdir, os.path.basename(urlparse(url).path))
+        mx.test_utils.download(url, fname=filename)
+        paths.append(filename)
+    return paths
+
+@pytest.mark.parametrize('model', [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
     'mobilenet1.0', 'mobilenet0.75', 'mobilenet0.5', 'mobilenet0.25',
     'mobilenetv2_1.0', 'mobilenetv2_0.75', 'mobilenetv2_0.5', 'mobilenetv2_0.25',
@@ -44,69 +76,21 @@ test_models = [
     'resnet101_v1', 'resnet101_v2', 'resnet152_v1', 'resnet152_v2',
     'squeezenet1.0', 'squeezenet1.1',
     'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn'
-]
-
-@with_seed()
-@pytest.mark.parametrize('model', test_models)
-def test_cv_model_inference_onnxruntime(tmp_path, model):
-    def get_gluon_cv_model(model_name, tmp):
-        tmpfile = os.path.join(tmp, model_name)
-        ctx = mx.cpu(0)
-        net_fp32 = mx.gluon.model_zoo.vision.get_model(model_name, pretrained=True, ctx=ctx, root=tmp)
-        net_fp32.hybridize()
-        data = mx.nd.zeros((1,3,224,224), dtype='float32', ctx=ctx)
-        net_fp32.forward(data)
-        net_fp32.export(tmpfile, 0)
-        sym_file = tmpfile + '-symbol.json'
-        params_file = tmpfile + '-0000.params'
-        return sym_file, params_file
-
-    def export_model_to_onnx(sym_file, params_file):
-        input_shape = (1,3,224,224)
-        onnx_file = os.path.join(os.path.dirname(sym_file), "model.onnx")
-        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, [input_shape],
-                                                            np.float32, onnx_file)
-        return onnx_file
-
+])
+def test_obj_class_model_inference_onnxruntime(tmp_path, model):
     def normalize_image(imgfile):
-        image = mx.image.imread(imgfile).asnumpy()
-        image_data = np.array(image).transpose(2, 0, 1)
-        img_data = image_data.astype('float32')
-        mean_vec = np.array([0.485, 0.456, 0.406])
-        stddev_vec = np.array([0.229, 0.224, 0.225])
-        norm_img_data = np.zeros(img_data.shape).astype('float32')
+        img_data = mx.image.imread(imgfile).transpose([2, 0, 1]).astype('float32')
+        mean_vec = mx.nd.array([0.485, 0.456, 0.406])
+        stddev_vec = mx.nd.array([0.229, 0.224, 0.225])
+        norm_img_data = mx.nd.zeros(img_data.shape).astype('float32')
         for i in range(img_data.shape[0]):
             norm_img_data[i,:,:] = (img_data[i,:,:]/255 - mean_vec[i]) / stddev_vec[i]
         return norm_img_data.reshape(1, 3, 224, 224).astype('float32')
 
-    def get_prediction(model, image):
-        pass
-
-    def softmax(x):
-        x = x.reshape(-1)
-        e_x = np.exp(x - np.max(x))
-        return e_x / e_x.sum(axis=0)
-
-    def load_imgnet_labels(tmpdir):
-        tmpfile = os.path.join(tmpdir, 'image_net_labels.json')
-        mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/image_net_labels.json',
-                               fname=tmpfile)
-        return np.array(json.load(open(tmpfile, 'r')))
-
-    def download_test_images(tmpdir):
-        global test_images
-        for f,_ in test_images:
-            mx.test_utils.download('https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/images/'+f+'?raw=true',
-                                   fname=os.path.join(tmpdir, f))
-        return test_images
-
-
-    tmp_path = str(tmp_path)
     try:
-        #labels = load_imgnet_labels(tmp_path)
-        test_images = download_test_images(tmp_path)
-        sym_file, params_file = get_gluon_cv_model(model, tmp_path)
-        onnx_file = export_model_to_onnx(sym_file, params_file)
+        tmp_path = str(tmp_path)
+        M = GluonModel(model, (1,3,224,224), 'float32', tmp_path)
+        onnx_file = M.export_onnx()
 
         # create onnxruntime session using the generated onnx file
         ses_opt = onnxruntime.SessionOptions()
@@ -114,12 +98,64 @@ def test_cv_model_inference_onnxruntime(tmp_path, model):
         session = onnxruntime.InferenceSession(onnx_file, ses_opt)
         input_name = session.get_inputs()[0].name
 
-        for img, accepted_ids in test_images:
-            img_data = normalize_image(os.path.join(tmp_path,img))
-            raw_result = session.run([], {input_name: img_data})
-            res = softmax(np.array(raw_result)).tolist()
-            class_idx = np.argmax(res)
-            assert(class_idx in accepted_ids)
+        test_image_urls = [
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/dog.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/apron.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/dolphin.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/hammerheadshark.jpg',
+            'https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/images/lotus.jpg'
+        ]
+
+        for img in download_test_images(test_image_urls, tmp_path):
+            img_data = normalize_image(img)
+            mx_result = M.predict(img_data)
+            onnx_result = session.run([], {input_name: img_data.asnumpy()})[0]
+            assert_almost_equal(mx_result, onnx_result)
+
+    finally:
+        shutil.rmtree(tmp_path)
+
+
+
+class GluonCVModel(GluonModel):
+    def __init__(self, *args, **kwargs):
+        super(GluonCVModel, self).__init__(*args, **kwargs)
+    def get_model(self):
+        self.model = gluoncv.model_zoo.get_model(self.model_name, pretrained=True, ctx=self.ctx)
+        self.model.hybridize()
+
+@pytest.mark.parametrize('model', [
+    'center_net_resnet18_v1b_voc',
+    'center_net_resnet50_v1b_voc',
+    'center_net_resnet101_v1b_voc',
+    'center_net_resnet18_v1b_coco',
+    'center_net_resnet50_v1b_coco',
+    'center_net_resnet101_v1b_coco'
+])
+def test_obj_detection_model_inference_onnxruntime(tmp_path, model):
+    def normalize_image(imgfile):
+        x, _ = gluoncv.data.transforms.presets.center_net.load_test(imgfile, short=512)
+        return x
+
+    try:
+        tmp_path = str(tmp_path)
+        M = GluonCVModel(model, (1,3,512,683), 'float32', tmp_path)
+        onnx_file = M.export_onnx()
+        # create onnxruntime session using the generated onnx file
+        ses_opt = onnxruntime.SessionOptions()
+        ses_opt.log_severity_level = 3
+        session = onnxruntime.InferenceSession(onnx_file, ses_opt)
+        input_name = session.get_inputs()[0].name
+
+        test_image_urls = ['https://raw.githubusercontent.com/zhreshold/mxnet-ssd/master/data/demo/dog.jpg']
+
+        for img in download_test_images(test_image_urls, tmp_path):
+            img_data = normalize_image(os.path.join(tmp_path, img))
+            mx_class_ids, mx_scores, mx_boxes = M.predict(img_data)
+            onnx_scores, onnx_class_ids, onnx_boxes = session.run([], {input_name: img_data.asnumpy()})
+            assert_almost_equal(mx_class_ids, onnx_class_ids)
+            assert_almost_equal(mx_scores, onnx_scores)
+            assert_almost_equal(mx_boxes, onnx_boxes)
 
     finally:
         shutil.rmtree(tmp_path)
