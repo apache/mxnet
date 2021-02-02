@@ -57,7 +57,6 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
   }
 
   int args_size = args.size();
-  ObjectRef outputs_obj = args[num_inputs + 2];
   std::vector<NDArray*> ndoutputs;
   ndoutputs.reserve(op->num_outputs());
   if (args[num_inputs + 4].type_code() == kNull) {
