@@ -3027,7 +3027,7 @@ def convert_maximum_scalar(node, **kwargs):
 
     input_type = int(kwargs['in_type'])
     dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
-    
+
     scalar = None
     if 'float' in str(dtype):
         scalar = float(attrs.get('scalar', '0'))
