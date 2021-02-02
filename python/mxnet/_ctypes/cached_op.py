@@ -50,7 +50,6 @@ class CachedOp(object):
         flags = {key: str(value) for key, value in flags}
         self.handle = CachedOpHandle(_api_internal.create(
             sym.handle,
-            len(flags),
             flags,
             thread_safe
         ))

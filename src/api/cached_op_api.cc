@@ -29,18 +29,6 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_GLOBAL("_api.MapVSum")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  Object* ptr = static_cast<Object*>(args[0].value().v_handle);
-  auto* n = static_cast<const runtime::MapObj*>(ptr);
-  int all = 0;
-  for (const auto& kv : *n) {
-    runtime::Integer value = Downcast<runtime::Integer, ObjectRef>(kv.second);
-    all = all + value->value;
-  }
-  *ret = all;
-});
-
 MXNET_REGISTER_GLOBAL("cached_op.invoke")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   CachedOpPtr op_shared = *static_cast<CachedOpPtr*>(
@@ -100,10 +88,10 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
 MXNET_REGISTER_GLOBAL("cached_op.create")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(static_cast<void*>(args[0]));
-  int num_flags = args[1];
-  Object* flags_ptr = static_cast<Object*>(args[2].value().v_handle);
+  Object* flags_ptr = static_cast<Object*>(args[1].value().v_handle);
   auto* n = static_cast<const runtime::MapObj*>(flags_ptr);
-  bool thread_safe = args[3];
+  int num_flags = static_cast<int>(n->size());
+  bool thread_safe = args[2];
   std::vector<std::pair<std::string, std::string> > flags;
   flags.reserve(num_flags);
   for (const auto& kv : *n) {
