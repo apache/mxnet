@@ -104,6 +104,7 @@ _WHITE_LIST = [
                'docs/_static/js/clipboard.min.js',
                'docs/static_site/src/assets/js/clipboard.js',
                'cmake/upstream/FindCUDAToolkit.cmake',
+               'cmake/upstream/FindBLAS.cmake',
                'cmake/upstream/select_compute_arch.cmake',
 
                # This file
