@@ -83,12 +83,16 @@ class CachedOp(object):
         if self.is_np_sym:
             if len(args) == 1 and args[0] is None:
                 args = []
+            type_id = default_ctx.device_typeid if default_ctx else None
+            device_id = default_ctx.device_id if default_ctx else None
+            out = out if out and not isinstance(out, NDArrayBase) else (out, )
             output_vars = _api_internal.invoke(
                 self.handle,
-                args,
-                out if isinstance(out, NDArrayBase) or out is None else (out, ),
-                default_ctx.device_typeid if default_ctx else None,
-                default_ctx.device_id if default_ctx else None
+                len(args),
+                *args,
+                type_id,
+                device_id,
+                *out
             )
             if out is not None:
                 return out
