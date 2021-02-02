@@ -3578,9 +3578,9 @@ def convert_contrib_roialign(node, **kwargs):
         raise NotImplementedError('_contrib_ROIAlign does not currently support \
                                    aligned!=False')
 
-    create_tensor([0], name+'_0', kwargs['initializer']),
-    create_tensor([1], name+'_1', kwargs['initializer']),
-    create_tensor([5], name+'_5', kwargs['initializer']),
+    _ = create_tensor([0], name+'_0', kwargs['initializer']),
+    _ = create_tensor([1], name+'_1', kwargs['initializer']),
+    _ = create_tensor([5], name+'_5', kwargs['initializer']),
 
     nodes = [
         make_node('Slice', [input_nodes[1], name+'_1', name+'_5', name+'_1'], [name+'_rois']),
