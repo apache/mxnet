@@ -245,6 +245,8 @@ FP16_FP32_FUNCS = [
     '_npi_logistic',
     '_npi_lcm',
     '_npi_lcm_scalar',
+    '_npi_gcd',
+    '_npi_gcd_scalar',
     '_npi_linspace',
     '_npi_logical_not',
     '_npi_logical_and_scalar',

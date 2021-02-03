@@ -1704,6 +1704,52 @@ struct nanprod_grad : public mxnet_op::tunable {
 #pragma GCC diagnostic ignored "-Wint-in-bool-context"
 #pragma GCC diagnostic ignored "-Wbool-compare"
 #endif
+
+/*! \brief used for computing binary greatest common divisor */
+struct gcd : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_integral<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    // minus cases.
+    if (a < 0) {
+      a = -a;
+    }
+    if (b < 0) {
+      b = -b;
+    }
+    // handle zero-valued cases.
+    DType c;
+    if (a == 0 && b != 0) {
+      c = b;
+    } else if (b == 0 && a != 0) {
+      c = a;
+    } else if (a == 0 && b == 0) {
+      c = 0;
+    } else {
+      DType tmp;
+      if (a < b) {
+        tmp = a;
+        a = b;
+        b = tmp;
+      }
+      while (a % b != 0) {
+        a = a % b;
+        tmp = a;
+        a = b;
+        b = tmp;
+      }
+      c = b;
+    }
+    return c;
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<!is_integral<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    return DType(0.0f);
+  }
+};
+
 /*! \brief used for computing binary lowest common multiple */
 struct lcm : public mxnet_op::tunable {
   template<typename DType>
