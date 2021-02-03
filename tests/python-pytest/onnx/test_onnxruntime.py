@@ -321,9 +321,10 @@ def test_pose_estimation_model_inference_onnxruntime(tmp_path, model):
 
         test_image_urls = [
             'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/soccer.png',
+            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/soccer2.jpg',
             'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/tennis.jpg',
             'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/bikes.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/runners.jpg',
+            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/runners.jpg'
         ]
 
         for img in download_test_images(test_image_urls, tmp_path):
