@@ -512,6 +512,18 @@ def test_onnx_export_lesser_scalar(tmp_path, dtype, scalar):
 
 
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("scalar", [0., 0.1, 0.5, 1., 5, 555.])
+def test_onnx_export_equal_scalar(tmp_path, dtype, scalar):
+    if 'int' in dtype:
+        scalar = int(scalar)
+        x = mx.nd.arange(0, 12, dtype=dtype).reshape((3, 4))
+    else:
+        x = mx.random.uniform(0, 9999, (5,10), dtype=dtype)
+    M = def_model('_internal._equal_scalar', scalar=scalar)
+    op_export_test('_internal._equal_scalar', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("shape", [(1,1), (3,3), (10,2), (20,30,40)])
 def test_onnx_export_where(tmp_path, dtype, shape):
     M = def_model('where')
