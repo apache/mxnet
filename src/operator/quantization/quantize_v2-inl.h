@@ -41,6 +41,7 @@ struct QuantizeV2Param : public dmlc::Parameter<QuantizeV2Param> {
   int out_type;
   dmlc::optional<float> min_calib_range;
   dmlc::optional<float> max_calib_range;
+  dmlc::optional<bool> shifted;
   DMLC_DECLARE_PARAMETER(QuantizeV2Param) {
     DMLC_DECLARE_FIELD(out_type)
       .add_enum("auto", QuantizeOutType::kAuto)
@@ -57,6 +58,9 @@ struct QuantizeV2Param : public dmlc::Parameter<QuantizeV2Param> {
       .set_default(dmlc::optional<float>())
       .describe("The maximum scalar value in the form of float32. If present, it will be used to "
                 "quantize the fp32 data into int8 or uint8.");
+    DMLC_DECLARE_FIELD(shifted)
+      .set_default(dmlc::optional<bool>())
+      .describe("Whether quantization ouptut should be shifted.");
   }
 };
 
