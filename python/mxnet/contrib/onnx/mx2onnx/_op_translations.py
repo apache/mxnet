@@ -1743,7 +1743,7 @@ def convert_slice_channel(node, **kwargs):
 
     num_outputs = int(attrs.get("num_outputs"))
     axis = int(attrs.get("axis", 1))
-    squeeze_axis = int(attrs.get("squeeze_axis", 0))
+    squeeze_axis = int(attrs.get("squeeze_axis", 0) in [1, 'True'])
 
     if squeeze_axis == 1 and num_outputs == 1:
         node = onnx.helper.make_node(
@@ -1795,17 +1795,22 @@ def convert_squeeze(node, **kwargs):
 
     axis = attrs.get("axis", None)
     if not axis:
-        raise AttributeError("Squeeze: Missing axis attribute: ONNX currently requires axis to "
-                             "be specified for squeeze operator")
-    axis = convert_string_to_list(axis)
+        node = onnx.helper.make_node(
+            "Squeeze",
+            input_nodes,
+            [name],
+            name=name
+        )
+    else:
+        axis = convert_string_to_list(axis)
 
-    node = onnx.helper.make_node(
-        "Squeeze",
-        input_nodes,
-        [name],
-        axes=axis,
-        name=name,
-    )
+        node = onnx.helper.make_node(
+            "Squeeze",
+            input_nodes,
+            [name],
+            axes=axis,
+            name=name,
+        )
     return [node]
 
 
@@ -3126,8 +3131,7 @@ def convert_greater_scalar(node, **kwargs):
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
     nodes = [
-        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
-        make_node("ConstantOfShape", [name+"_shape"], [name+"_rhs"], value=tensor_value),
+        make_node("Constant", [], [name+"_rhs"], value=tensor_value),
         make_node("Greater", [input_nodes[0], name+"_rhs"], [name+"_gt"]),
         make_node("Cast", [name+"_gt"], [name], to=input_type, name=name)
     ]
@@ -3156,10 +3160,37 @@ def convert_lesser_scalar(node, **kwargs):
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
     nodes = [
-        make_node("Shape", [input_nodes[0]], [name+"_shape"]),
-        make_node("ConstantOfShape", [name+"_shape"], [name+"_rhs"], value=tensor_value),
+        make_node("Constant", [], [name+"_rhs"], value=tensor_value),
         make_node("Less", [input_nodes[0], name+"_rhs"], [name+"_lt"]),
         make_node("Cast", [name+"_lt"], [name], to=input_type, name=name)
+    ]
+    return nodes
+
+
+@mx_op.register("_equal_scalar")
+def convert_equal_scalar(node, **kwargs):
+    """Map MXNet's equal_scalar operator attributes to onnx.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    scalar = float(attrs.get('scalar'))
+    input_type = kwargs['in_type']
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    if str(dtype).startswith('int'):
+        scalar = int(scalar)
+    else:
+        if dtype == 'float16':
+            # when using float16, we must convert it to np.uint16 view first
+            # pylint: disable=too-many-function-args
+            scalar = np.float16(scalar).view(np.uint16)
+
+    tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
+    nodes = [
+        make_node("Constant", [], [name+"_rhs"], value=tensor_value),
+        make_node("Equal", [input_nodes[0], name+"_rhs"], [name+"_eq"]),
+        make_node("Cast", [name+"_eq"], [name], to=input_type, name=name)
     ]
     return nodes
 
@@ -3628,6 +3659,44 @@ def convert_broadcast_like(node, **kwargs):
     return nodes
 
 
+@mx_op.register('_contrib_ROIAlign')
+def convert_contrib_roialign(node, **kwargs):
+    """Map MXNet's _contrib_ROIAlign
+    """
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    pooled_size = convert_string_to_list(str(attrs.get('pooled_size')))
+    spatial_scale = float(attrs.get('spatial_scale'))
+    sample_ratio = int(attrs.get('sample_ratio', '0'))
+    position_sensitive = attrs.get('position_sensitive', 'False')
+    aligned = attrs.get('aligned', 'False')
+
+    if position_sensitive != 'False':
+        raise NotImplementedError('_contrib_ROIAlign does not currently support \
+                                   position_sensitive!=False')
+    if aligned != 'False':
+        raise NotImplementedError('_contrib_ROIAlign does not currently support \
+                                   aligned!=False')
+
+    _ = create_tensor([0], name+'_0', kwargs['initializer'])
+    _ = create_tensor([1], name+'_1', kwargs['initializer'])
+    _ = create_tensor([5], name+'_5', kwargs['initializer'])
+
+    nodes = [
+        make_node('Slice', [input_nodes[1], name+'_1', name+'_5', name+'_1'], [name+'_rois']),
+        make_node('Slice', [input_nodes[1], name+'_0', name+'_1', name+'_1'], [name+'_inds__']),
+        make_node('Squeeze', [name+'_inds__'], [name+'_inds_'], axes=(1,)),
+        make_node('Cast', [name+'_inds_'], [name+'_inds'], to=int(TensorProto.INT64)),
+        make_node('RoiAlign', [input_nodes[0], name+'_rois', name+'_inds'], [name],
+                  mode='avg', output_height=pooled_size[0], output_width=pooled_size[1],
+                  sampling_ratio=sample_ratio, spatial_scale=spatial_scale)
+    ]
+
+    return nodes
+
+
 @mx_op.register("batch_dot")
 def convert_batch_dot(node, **kwargs):
     """Map MXNet's batch_dot operator attributes to onnx's operator.
@@ -3725,5 +3794,29 @@ def convert_batch_dot(node, **kwargs):
             make_node('Reshape', [name+'_rhs_3d_transpose', name+'_rhs_concat2'], [name+'_rhs']),
             make_node('MatMul', [name+'_lhs', name+'_rhs'], [name]),
         ]
+
+    return nodes
+
+
+@mx_op.register("log2")
+def convert_log2(node, **kwargs):
+    """Map MXNet's log2 operator attributes to onnx's operator.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, _ = get_inputs(node, kwargs)
+
+    input_type = kwargs["in_type"]
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    ln2 = np.array([0.693147180559945309], dtype=dtype)
+    if dtype == 'float16':
+        ln2 = ln2.view(dtype=np.uint16)
+    ln2v = make_tensor(name+'_ln2', input_type, [1], ln2)
+
+    nodes = [
+        make_node('Log', [input_nodes[0]], [name+'_log']),
+        make_node('Constant', [], [name+'_ln2'], value=ln2v),
+        make_node('Div', [name+'_log', name+'_ln2'], [name], name=name)
+    ]
 
     return nodes

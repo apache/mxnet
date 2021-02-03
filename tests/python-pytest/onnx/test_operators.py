@@ -514,6 +514,18 @@ def test_onnx_export_lesser_scalar(tmp_path, dtype, scalar):
 
 
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("scalar", [0., 0.1, 0.5, 1., 5, 555.])
+def test_onnx_export_equal_scalar(tmp_path, dtype, scalar):
+    if 'int' in dtype:
+        scalar = int(scalar)
+        x = mx.nd.arange(0, 12, dtype=dtype).reshape((3, 4))
+    else:
+        x = mx.random.uniform(0, 9999, (5,10), dtype=dtype)
+    M = def_model('_internal._equal_scalar', scalar=scalar)
+    op_export_test('_internal._equal_scalar', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("shape", [(1,1), (3,3), (10,2), (20,30,40)])
 def test_onnx_export_where(tmp_path, dtype, shape):
     M = def_model('where')
@@ -710,6 +722,24 @@ def test_onnx_export_broadcast_like(tmp_path, dtype, lhs_axes, rhs_axes):
     M2 = def_model('broadcast_like', lhs_axes=lhs_axes, rhs_axes=rhs_axes)
     op_export_test('broadcast_like2', M2, [x, y], tmp_path)
 
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('pooled_size', [(1, 1), (3, 3), (14, 14), (5, 7)])
+@pytest.mark.parametrize('spatial_scale', [1, 0.5, 0.0625])
+@pytest.mark.parametrize('spatial_ratio', [1, 2, 3, 5])
+def test_onnx_export_contrib_ROIAlign(tmp_path, dtype, pooled_size, spatial_scale, spatial_ratio):
+    data = mx.random.uniform(0, 1, (5, 3, 128, 128)).astype(dtype)
+    rois = mx.nd.array([[0, 0, 0, 63, 63],
+                        [1, 34, 52, 25, 85],
+                        [2, 50, 50, 100, 100],
+                        [3, 0, 0, 127, 127],
+                        [4, 12, 84, 22, 94],
+                        [0, 0, 0, 1, 1]]).astype(dtype)
+    M = def_model('contrib.ROIAlign', pooled_size=pooled_size, spatial_scale=spatial_scale,
+                  sample_ratio=spatial_ratio)
+    op_export_test('_contrib_ROIAlign', M, [data, rois], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
 @pytest.mark.parametrize('transpose_a', [True, False])
 @pytest.mark.parametrize('transpose_b', [True, False])
@@ -823,3 +853,32 @@ def test_onnx_export_pooling_global(tmp_path, dtype, shape, pool_type, p_value, 
     M = def_model('Pooling', global_pool=True, pool_type=pool_type, pooling_convention='valid',
                   p_value=p_value, **kwargs)
     op_export_test('pooling_global', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+def test_onnx_export_log2(tmp_path, dtype):
+    x = mx.random.normal(0, 10, (2, 3, 4, 5)).astype(dtype)
+    M = def_model('log2')
+    op_export_test('log2', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
+@pytest.mark.parametrize('axis', [None, 1, [1,2], -1])
+def test_onnx_export_sum(tmp_path, dtype, axis):
+    if 'int' in dtype:
+        x = mx.nd.random.randint(0, 10, (5, 6, 7, 8), dtype=dtype)
+    else:
+        x = mx.nd.random.normal(0, 10, (5, 6, 7, 8), dtype=dtype)
+    if axis is not None:
+        M = def_model('sum', axis=axis)
+    else:
+        M = def_model('sum')
+    op_export_test('sum', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_broadcast_mul(tmp_path, dtype):
+    M = def_model('broadcast_mul')
+    x = mx.nd.array([[1,2,3],[4,5,6]], dtype=dtype)
+    y = mx.nd.array([[0],[3]], dtype=dtype)
+    op_export_test('broadcast_mul', M, [x, y], tmp_path)
