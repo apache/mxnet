@@ -703,9 +703,9 @@ def convert_pooling(node, **kwargs):
             'pooling_convention==\'same\'')
     if pool_type == 'sum':
         raise NotImplementedError('Pooling currently does not support pool_type==\'sum\'')
-    if pool_type == 'lp' and pooling_convention != 'valid':
+    if pool_type == 'lp' and global_pool == 'False' and pooling_convention != 'valid':
         raise NotImplementedError('Pooling currently does not support '
-            'pooling_convention!=\'valid\' when pool_type==\'lp\'')
+            'pooling_convention!=\'valid\' when pool_type==\'lp\' and global_pool==False')
     if layout != 'NCHW':
         raise NotImplementedError('Pooling currently does not support layout!=\'NCHW\'')
 
@@ -719,8 +719,6 @@ def convert_pooling(node, **kwargs):
 
     ceil_mode = 1 if pooling_convention == 'full' else 0
     count_include_pad = 1 if count_include_pad=='True' else 0
-
-    print(kwargs_, ceil_mode, count_include_pad)
 
     nodes = []
     if pool_type == 'avg' and global_pool== 'False':
@@ -736,6 +734,20 @@ def convert_pooling(node, **kwargs):
         nodes += [
             make_node('LpPool', [input_nodes[0]], [name], p=p_value, **kwargs_)
         ]
+    elif pool_type == 'avg' and global_pool == 'True':
+        nodes += [
+            make_node('GlobalAveragePool', [input_nodes[0]], [name])
+        ]
+    elif pool_type == 'max' and global_pool == 'True':
+        nodes += [
+            make_node('GlobalMaxPool', [input_nodes[0]], [name])
+        ]
+    elif pool_type == 'lp' and global_pool == 'True':
+        nodes += [
+            make_node('GlobalLpPool', [input_nodes[0]], [name], p=p_value)
+        ]
+    else:
+        raise NotImplementedError('Unknown parameter values in Pooling')
 
     return nodes
 

@@ -799,3 +799,27 @@ def test_onnx_export_pooling_lp(tmp_path, dtype, shape, p_value, kernel, stride,
                   p_value=p_value, **kwargs)
     op_export_test('pooling_lp', M, [x], tmp_path)
 
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 1, 60, 60)])
+@pytest.mark.parametrize('pool_type', ['avg', 'max', 'lp'])
+@pytest.mark.parametrize('p_value', [1, 2])
+@pytest.mark.parametrize('kernel', [(3, 3), (14, 14)])
+@pytest.mark.parametrize('stride', [None, (3, 4)])
+@pytest.mark.parametrize('pad', [None, (3, 4)])
+def test_onnx_export_pooling_global(tmp_path, dtype, shape, pool_type, p_value, kernel, stride, pad):
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    # kernel, stride, and pad should have no effect on the results
+    M = def_model('Pooling', global_pool=True, pool_type=pool_type, pooling_convention='valid',
+                  p_value=p_value, **kwargs)
+    op_export_test('pooling_global', M, [x], tmp_path)
