@@ -27,6 +27,7 @@
 #include "mkldnn_post_quantize_align_scale_property.h"
 #include "mkldnn_transformer_property.h"
 #include "mkldnn_transformer_post_quantize_property.h"
+#include "mkldnn_asym_quant_fc_property.h"
 
 namespace mxnet {
 namespace op {
@@ -42,6 +43,7 @@ MXNET_REGISTER_SUBGRAPH_BACKEND(MKLDNN_BERT_QUANTIZE)
 .set_attr("context", Context::CPU());
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_BERT_QUANTIZE, SgMKLDNNTransformerPostQuantizeProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_BERT_QUANTIZE, SgMKLDNNAsymQuantFCProperty);
 
 MXNET_REGISTER_SUBGRAPH_BACKEND(MKLDNN)
 .set_attr("enable", MKLDNNEnvSet())
