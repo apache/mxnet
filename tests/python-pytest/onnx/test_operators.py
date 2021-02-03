@@ -708,6 +708,24 @@ def test_onnx_export_broadcast_like(tmp_path, dtype, lhs_axes, rhs_axes):
     M2 = def_model('broadcast_like', lhs_axes=lhs_axes, rhs_axes=rhs_axes)
     op_export_test('broadcast_like2', M2, [x, y], tmp_path)
 
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('pooled_size', [(1, 1), (3, 3), (14, 14), (5, 7)])
+@pytest.mark.parametrize('spatial_scale', [1, 0.5, 0.0625])
+@pytest.mark.parametrize('spatial_ratio', [1, 2, 3, 5])
+def test_onnx_export_contrib_ROIAlign(tmp_path, dtype, pooled_size, spatial_scale, spatial_ratio):
+    data = mx.random.uniform(0, 1, (5, 3, 128, 128)).astype(dtype)
+    rois = mx.nd.array([[0, 0, 0, 63, 63],
+                        [1, 34, 52, 25, 85],
+                        [2, 50, 50, 100, 100],
+                        [3, 0, 0, 127, 127],
+                        [4, 12, 84, 22, 94],
+                        [0, 0, 0, 1, 1]]).astype(dtype)
+    M = def_model('contrib.ROIAlign', pooled_size=pooled_size, spatial_scale=spatial_scale,
+                  sample_ratio=spatial_ratio)
+    op_export_test('_contrib_ROIAlign', M, [data, rois], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
 @pytest.mark.parametrize('transpose_a', [True, False])
 @pytest.mark.parametrize('transpose_b', [True, False])
