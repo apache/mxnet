@@ -697,15 +697,15 @@ def convert_pooling(node, **kwargs):
     p_value = int(attrs.get('p_value', '0'))
     count_include_pad = attrs.get('count_include_pad', 'True')
     layout = attrs.get('layout', 'NCHW')
-    
+
     if pooling_convention == 'same':
         raise NotImplementedError('Pooling currently does not support '
-            'pooling_convention==\'same\'')
+                                  'pooling_convention==\'same\'')
     if pool_type == 'sum':
         raise NotImplementedError('Pooling currently does not support pool_type==\'sum\'')
     if pool_type == 'lp' and global_pool == 'False' and pooling_convention != 'valid':
         raise NotImplementedError('Pooling currently does not support '
-            'pooling_convention!=\'valid\' when pool_type==\'lp\' and global_pool==False')
+                                  'pooling_convention!=\'valid\' when pool_type==\'lp\' and global_pool==False')
     if layout != 'NCHW':
         raise NotImplementedError('Pooling currently does not support layout!=\'NCHW\'')
 
@@ -718,19 +718,19 @@ def convert_pooling(node, **kwargs):
         kwargs_['strides'] = stride
 
     ceil_mode = 1 if pooling_convention == 'full' else 0
-    count_include_pad = 1 if count_include_pad=='True' else 0
+    count_include_pad = 1 if count_include_pad == 'True' else 0
 
     nodes = []
-    if pool_type == 'avg' and global_pool== 'False':
+    if pool_type == 'avg' and global_pool == 'False':
         nodes += [
             make_node('AveragePool', [input_nodes[0]], [name], ceil_mode=ceil_mode,
                       count_include_pad=count_include_pad, **kwargs_)
         ]
-    elif pool_type == 'max' and global_pool== 'False':
+    elif pool_type == 'max' and global_pool == 'False':
         nodes += [
             make_node('MaxPool', [input_nodes[0]], [name], ceil_mode=ceil_mode, **kwargs_)
         ]
-    elif pool_type == 'lp' and global_pool== 'False':
+    elif pool_type == 'lp' and global_pool == 'False':
         nodes += [
             make_node('LpPool', [input_nodes[0]], [name], p=p_value, **kwargs_)
         ]
