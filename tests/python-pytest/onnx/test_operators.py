@@ -69,9 +69,9 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False):
         pred_nat = pred_nat[0]
     if isinstance(pred_nat, list):
         for i in range(len(pred_nat)):
-            assert_almost_equal(pred_nat[i], pred_onx[i])
+            assert_almost_equal(pred_nat[i], pred_onx[i], equal_nan=True)
     else:
-        assert_almost_equal(pred_nat, pred_onx[0])
+        assert_almost_equal(pred_nat, pred_onx[0], equal_nan=True)
 
 
 def test_onnx_export_abs(tmp_path):
@@ -750,6 +750,13 @@ def test_onnx_export_batch_dot(tmp_path, dtype, transpose_a, transpose_b):
     y2 = mx.nd.random.normal(0, 10, (2, 3, 4, 5, 5), dtype=dtype)
     M2 = def_model('batch_dot', transpose_a=transpose_a, transpose_b=transpose_b)
     op_export_test('batch_dot2', M2, [x2, y2], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+def test_onnx_export_log2(tmp_path, dtype):
+    x = mx.random.normal(0, 10, (2, 3, 4, 5)).astype(dtype)
+    M = def_model('log2')
+    op_export_test('log2', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
