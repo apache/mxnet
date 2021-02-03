@@ -194,7 +194,7 @@ cdef object make_packed_func(MXNetFunctionHandle chandle, int is_global):
     (<FunctionBase>obj).is_global = is_global
     return obj
 
-def get_global_func(name, allow_missing=False):
+def _get_global_func(name, allow_missing=False):
     cdef MXNetFunctionHandle chandle
     CALL(MXNetFuncGetGlobal(c_str(name), &chandle))
     if chandle != NULL:
