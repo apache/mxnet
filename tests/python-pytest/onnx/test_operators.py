@@ -779,3 +779,13 @@ def test_onnx_export_broadcast_mul(tmp_path, dtype):
     x = mx.nd.array([[1,2,3],[4,5,6]], dtype=dtype)
     y = mx.nd.array([[0],[3]], dtype=dtype)
     op_export_test('broadcast_mul', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('shape', [(3, 4, 5), (1, 2, 3, 2, 1)])
+@pytest.mark.parametrize('p', [0, 0.1, 0.5, 1])
+def test_onnx_export_dropout(tmp_path, dtype, shape, p):
+    x = mx.random.uniform(-100, 100, shape=shape).astype(dtype)
+    M = def_model('Dropout', p=p)
+    op_export_test('Dropuout', M, [x], tmp_path)
+
