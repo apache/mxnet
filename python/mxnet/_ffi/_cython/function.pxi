@@ -27,17 +27,11 @@ from numbers import Number, Integral
 cdef inline int make_arg(object arg,
                          MXNetValue* value,
                          int* tcode,
-                         ObjectRef* temp_objs,
                          list temp_args) except -1:
     """Pack arguments into c args mxnet call accept"""
     cdef unsigned long long ptr
 
-    if isinstance(arg, (list, tuple, dict)):
-        arg = _FUNC_CONVERT_TO_NODE(arg)
-        value[0].v_handle = (<ObjectBase>arg).chandle
-        tcode[0] = kObjectHandle
-        temp_args.append(arg)
-    elif isinstance(arg, ObjectBase):
+    if isinstance(arg, ObjectBase):
         value[0].v_handle = (<ObjectBase>arg).chandle
         tcode[0] = kObjectHandle
     elif isinstance(arg, NDArrayBase):
@@ -57,6 +51,11 @@ cdef inline int make_arg(object arg,
         value[0].v_str = tstr
         tcode[0] = kStr
         temp_args.append(tstr)
+    elif isinstance(arg, (list, tuple, dict)):
+        arg = _FUNC_CONVERT_TO_NODE(arg)
+        value[0].v_handle = (<ObjectBase>arg).chandle
+        tcode[0] = kObjectHandle
+        temp_args.append(arg)
     elif arg is None:
         value[0].v_handle = NULL
         tcode[0] = kNull
@@ -104,11 +103,10 @@ cdef inline int FuncCall3(void* chandle,
                           int* ret_tcode) except -1:
     cdef MXNetValue[3] values
     cdef int[3] tcodes
-    cdef ObjectRef[3] temp_objs
     nargs = len(args)
     temp_args = []
     for i in range(nargs):
-        make_arg(args[i], &values[i], &tcodes[i], &temp_objs[i], temp_args)
+        make_arg(args[i], &values[i], &tcodes[i], temp_args)
     CALL(MXNetFuncCall(chandle, &values[0], &tcodes[0],
                      nargs, ret_val, ret_tcode))
     return 0
@@ -126,14 +124,12 @@ cdef inline int FuncCall(void* chandle,
 
     cdef vector[MXNetValue] values
     cdef vector[int] tcodes
-    cdef vector[ObjectRef] temp_objs
     values.resize(nargs)
     tcodes.resize(nargs)
-    temp_objs.resize(nargs)
 
     temp_args = []
     for i in range(nargs):
-        make_arg(args[i], &values[i], &tcodes[i], &temp_objs[i], temp_args)
+        make_arg(args[i], &values[i], &tcodes[i], temp_args)
     CALL(MXNetFuncCall(chandle, &values[0], &tcodes[0],
                      nargs, ret_val, ret_tcode))
     return 0

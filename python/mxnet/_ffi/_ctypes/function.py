@@ -24,7 +24,7 @@ import ctypes
 from numbers import Number, Integral
 import numpy as onp
 
-from ...base import get_last_ffi_error, _LIB
+from ...base import get_last_ffi_error, _LIB, check_call
 from ..base import c_str
 from .types import MXNetValue, TypeCode
 from .types import RETURN_SWITCH
@@ -33,7 +33,25 @@ from .object import ObjectBase, PyNativeObject, _set_class_object
 from . import object as _object
 
 ObjectHandle = ctypes.c_void_p
+FunctionHandle = ctypes.c_void_p
 
+def _make_packed_func(handle, is_global):
+    """Make a packed function class"""
+    obj = _CLASS_PACKED_FUNC.__new__(_CLASS_PACKED_FUNC)
+    obj.is_global = is_global
+    obj.handle = handle
+    return obj
+
+def _get_global_func(name, allow_missing=False):
+    handle = FunctionHandle()
+    check_call(_LIB.MXNetFuncGetGlobal(c_str(name), ctypes.byref(handle)))
+    if handle.value:
+        return _make_packed_func(handle, False)
+
+    if allow_missing:
+        return None
+
+    raise ValueError("Cannot find global function %s" % name)
 
 def _make_mxnet_args(args, temp_args):
     """Pack arguments into c args mxnet call accept"""
