@@ -186,13 +186,13 @@ class TestNode(unittest.TestCase):
             if test == "Pow":
                 outsym = ipsym ** 2
             forward_op = forward_pass(outsym, None, None, ['input1'], input1)
-            converted_model = onnx_mxnet.export_model(outsym, {}, [np.shape(input1)], np.float32,
+            converted_model = onnx_mxnet.export_model(outsym, {}, [np.shape(input1)], [np.float32],
                                                       onnx_file_path=outsym.name + ".onnx")
 
             sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
-        result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
+            result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
 
-        npt.assert_almost_equal(result, forward_op)
+            npt.assert_almost_equal(result, forward_op)
 
     def test_imports(self):
         for test in import_test_cases:
@@ -212,7 +212,7 @@ class TestNode(unittest.TestCase):
             test_name, onnx_name, mx_op, attrs = test
             input_sym = mx.sym.var('data')
             outsym = mx_op(input_sym, **attrs)
-            converted_model = onnx_mxnet.export_model(outsym, {}, [input_shape], np.float32,
+            converted_model = onnx_mxnet.export_model(outsym, {}, [input_shape], [np.float32],
                                                       onnx_file_path=outsym.name + ".onnx")
             model = load_model(converted_model)
             checker.check_model(model)

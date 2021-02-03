@@ -268,6 +268,11 @@ class MXNetGraph(object):
                 graph_input_idx += 1
 
             else:
+                # Handle no input case
+                intype = 1  # Float32 in tensor type
+                if len(in_type) > 0:  
+                    intype = in_type[0]
+
                 # Handling graph layers
                 converted = MXNetGraph.convert_layer(
                     node,
@@ -275,7 +280,7 @@ class MXNetGraph(object):
                     mx_graph=mx_graph,
                     weights=weights,
                     in_shape=in_shape,
-                    in_type=in_type[0],
+                    in_type=intype,
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
                     outputs_lookup=outputs_lookup,

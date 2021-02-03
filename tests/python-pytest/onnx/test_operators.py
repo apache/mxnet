@@ -53,7 +53,7 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_
     def onnx_rt(onnx_file, inputs):
         sess = rt.InferenceSession(onnx_file)
         dtype_0 = inputs[0].asnumpy().dtype
-        input_dict = dict((sess.get_inputs()[i].name, inputs[i].asnumpy().astype(dtype_0)) for i in range(len(inputs)))
+        input_dict = dict((sess.get_inputs()[i].name, inputs[i].asnumpy()) for i in range(len(inputs)))
         pred = sess.run(None, input_dict)
         return pred
 
