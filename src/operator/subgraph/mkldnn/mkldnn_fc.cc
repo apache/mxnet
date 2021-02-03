@@ -250,34 +250,38 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
         weight_scales_[0] =
           GetQuantizeScale(cached_weight_.dtype(), cached_min_weight_, cached_max_weight_);
         if (has_bias) {
-          float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_min_bias_, cached_max_bias_);
-          float bias_int32_rescale = data_scale_ * weight_scales_[0] / bias_scale;
-          // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value
-          // of bias to INT_MAX / 2.
-          float bias_max_rescale =
-              MaxValue<int32_t>() / 2 / MaxAbs(cached_min_bias_, cached_max_bias_) / bias_scale;
-          if (bias_int32_rescale > bias_max_rescale) {
-            // avoid overflow on bias
-            bias_int32_rescale = bias_max_rescale;
-            float weight_rescale =
-              bias_int32_rescale * bias_scale / data_scale_ / weight_scales_[0];
-            int8_t *weight_ptr = weight.data().dptr<int8_t>();
-            size_t weight_size = weight.shape().Size();
-            #pragma omp parallel for num_threads(nthreads)
-            for (index_t i = 0; i < static_cast<index_t>(weight_size); ++i) {
-              weight_ptr[i] = std::round(weight_ptr[i] * weight_rescale);
+          if(cached_bias_.dtype() == mshadow::kInt8) {
+            float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_min_bias_, cached_max_bias_);
+
+            float bias_int32_rescale = data_scale_ * weight_scales_[0] / bias_scale;
+            // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value
+            // of bias to INT_MAX / 2.
+            float bias_max_rescale =
+                MaxValue<int32_t>() / 2 / MaxAbs(cached_min_bias_, cached_max_bias_) / bias_scale;
+            if (bias_int32_rescale > bias_max_rescale) {
+              // avoid overflow on bias
+              bias_int32_rescale = bias_max_rescale;
+              float weight_rescale =
+                bias_int32_rescale * bias_scale / data_scale_ / weight_scales_[0];
+              int8_t *weight_ptr = weight.data().dptr<int8_t>();
+              size_t weight_size = weight.shape().Size();
+              #pragma omp parallel for num_threads(nthreads)
+              for (index_t i = 0; i < static_cast<index_t>(weight_size); ++i) {
+                weight_ptr[i] = std::round(weight_ptr[i] * weight_rescale);
+              }
+              weight_scales_[0] *= weight_rescale;
             }
-            weight_scales_[0] *= weight_rescale;
-          }
-          NDArray bias = in_data[fullc::kBias];
-          cached_bias_ =
-              NDArray(bias.storage_type(), bias.shape(), bias.ctx(), true, mshadow::kInt32);
-          int8_t *bias_ptr = bias.data().dptr<int8_t>();
-          int32_t *quantized_bias_ptr = cached_bias_.data().dptr<int32_t>();
-          size_t bias_size = bias.shape().Size();
-          #pragma omp parallel for num_threads(nthreads)
-          for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
-            quantized_bias_ptr[i] = std::round(bias_ptr[i] * bias_int32_rescale);
+            NDArray bias = in_data[fullc::kBias];
+            cached_bias_ =
+                NDArray(bias.storage_type(), bias.shape(), bias.ctx(), true, mshadow::kInt32);
+            int8_t *bias_ptr = bias.data().dptr<int8_t>();
+            int32_t *quantized_bias_ptr = cached_bias_.data().dptr<int32_t>();
+            size_t bias_size = bias.shape().Size();
+
+            #pragma omp parallel for num_threads(nthreads)
+            for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
+              quantized_bias_ptr[i] = std::round(bias_ptr[i] * bias_int32_rescale);
+            }
           }
         }
       }
@@ -510,16 +514,21 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
           in_types->at(0) == mshadow::kUint8)
         << "QuantizedFullyConnected only supports int8/uint8 input, while "
         << in_types->at(0) << " is given.";
-    for (size_t i = 1; i < in_types->size(); ++i) {
-      if (channel_wise) {
+    if(channel_wise) {
+      for (size_t i = 1; i < in_types->size(); ++i) {
         TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
-      } else {
-        if (i < base_num_inputs) {
-          TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kInt8);
-        } else {
+      }
+    } else {
+        TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kInt8);
+        if (!full_param.default_param.no_bias) {
+            CHECK(in_types->at(2) ==  mshadow::kInt8 ||
+                  in_types->at(2) == mshadow::kInt32)
+                << "QuantizedFullyConnected only supports int8/int32 bias, while "
+                << in_types->at(2) << " is given.";
+        }
+        for (size_t i = base_num_inputs; i < in_types->size(); ++i) {
           TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
         }
-      }
     }
 
     if (full_param.mkldnn_param.enable_float_output) {
