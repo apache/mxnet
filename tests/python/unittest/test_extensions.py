@@ -214,5 +214,3 @@ def test_external_op():
         mx.nd.min_ex()
     except:
         raise MXNetError('Operator not loaded successfully')
-
-test_subgraph()
