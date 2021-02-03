@@ -270,7 +270,7 @@ class MXNetGraph(object):
             else:
                 # Handle no input case
                 intype = 1  # Float32 in tensor type
-                if len(in_type) > 0:  
+                if len(in_type) > 0:
                     intype = in_type[0]
 
                 # Handling graph layers
