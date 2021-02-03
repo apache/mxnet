@@ -182,11 +182,17 @@ def test_subgraph():
     sym_filename, params_filename = sym_block3.export('optimized')
     assert sym_filename == 'optimized-symbol.json'
     assert params_filename is None
+
+    # Test with additional input to subgraph op
+    sym_block3.optimize_for(a_data, b_data, backend="addInputPass")
+    out5 = sym_block3(a_data, b_data)
+
+    # Reload exported block
     sym_block4 = nn.SymbolBlock.imports(sym_filename, ['a','b'], params_filename)
 
-    out5 = sym_block4(a_data, b_data)
+    out6 = sym_block4(a_data, b_data)
     # check that result matches one executed by MXNet
-    assert_almost_equal(out[0].asnumpy(), out5[0].asnumpy(), rtol=1e-3, atol=1e-3)
+    assert_almost_equal(out[0].asnumpy(), out6[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
 @pytest.mark.skipif(check_platform(['x86_64']), reason="not all machine types supported")
 @pytest.mark.skipif(is_cd_run(), reason="continuous delivery run - ignoring test")

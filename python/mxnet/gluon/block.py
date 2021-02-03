@@ -1397,7 +1397,7 @@ class HybridBlock(Block):
         self._first_forward = True
         # clear the backend
         self._backend = None
-        self._backend_opts = None
+        self._backend_opts = {}
 
     def _clear_cached_op(self):
         self._cached_graph = ()
