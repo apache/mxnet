@@ -39,7 +39,7 @@ def def_model(op_name, dummy_input=False, **params):
                 return func(*inputs, **params)
     return Model
 
-def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False):
+def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_map=None):
     def export_to_onnx(model, model_name, inputs):
         model_path = '{}/{}'.format(tmp_path, model_name)
         model.export(model_path, epoch=0)
@@ -69,9 +69,11 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False):
         pred_nat = pred_nat[0]
     if isinstance(pred_nat, list):
         for i in range(len(pred_nat)):
-            assert_almost_equal(pred_nat[i], pred_onx[i])
+            pred_onx = onnx_map(pred_onx[i]) if onnx_map else pred_onx[i]
+            assert_almost_equal(pred_nat[i], pred_onx)
     else:
-        assert_almost_equal(pred_nat, pred_onx[0])
+        pred_onx = onnx_map(pred_onx[0]) if onnx_map else pred_onx[0]
+        assert_almost_equal(pred_nat, pred_onx)
 
 
 def test_onnx_export_abs(tmp_path):
@@ -720,3 +722,80 @@ def test_onnx_export_batch_dot(tmp_path, dtype, transpose_a, transpose_b):
     y2 = mx.nd.random.normal(0, 10, (2, 3, 4, 5, 5), dtype=dtype)
     M2 = def_model('batch_dot', transpose_a=transpose_a, transpose_b=transpose_b)
     op_export_test('batch_dot2', M2, [x2, y2], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 1, 60, 60)])
+@pytest.mark.parametrize('count_include_pad', [True, False])
+@pytest.mark.parametrize('pooling_convention', ['full', 'valid'])
+@pytest.mark.parametrize('kernel', [(3, 3), (4, 5), (14, 14)])
+@pytest.mark.parametrize('stride', [None, (1, 1), (2, 2), (3, 4), (4, 5)])
+@pytest.mark.parametrize('pad', [None, (1, 1), (3, 4), (4, 5)])
+def test_onnx_export_pooling_avg(tmp_path, dtype, shape, count_include_pad, pooling_convention,
+                                 kernel, stride, pad):
+    # mxnet and onnxruntime has different implementation of count_include_pad on the left column
+    # and bottom row
+    if pooling_convention == 'full' and count_include_pad == True:
+        return
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    M = def_model('Pooling', count_include_pad=count_include_pad, pool_type='avg',
+                  pooling_convention=pooling_convention, **kwargs)
+    # Note here we use np.nan_to_num to map the onnx output because onnxruntime AveragePool will
+    # output NaN in some edge cases where mxnet outputs 0
+    op_export_test('pooling_avg', M, [x], tmp_path, onnx_map=np.nan_to_num)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 1, 60, 60)])
+@pytest.mark.parametrize('pooling_convention', ['full', 'valid'])
+@pytest.mark.parametrize('kernel', [(3, 3), (4, 5), (14, 14)])
+@pytest.mark.parametrize('stride', [None, (1, 1), (2, 2), (3, 4), (4, 5)])
+@pytest.mark.parametrize('pad', [None, (1, 1), (3, 4), (4, 5)])
+def test_onnx_export_pooling_max(tmp_path, dtype, shape, pooling_convention, kernel, stride, pad):
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    M = def_model('Pooling', pool_type='max', pooling_convention=pooling_convention, **kwargs)
+    op_export_test('pooling_max', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 1, 60, 60)])
+@pytest.mark.parametrize('p_value', [1, 2])
+@pytest.mark.parametrize('kernel', [(3, 3), (4, 5), (14, 14)])
+@pytest.mark.parametrize('stride', [None, (1, 1), (2, 2), (3, 4), (4, 5)])
+@pytest.mark.parametrize('pad', [None, (1, 1), (3, 4), (4, 5)])
+def test_onnx_export_pooling_lp(tmp_path, dtype, shape, p_value, kernel, stride, pad):
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    M = def_model('Pooling', pool_type='lp', pooling_convention='valid',
+                  p_value=p_value, **kwargs)
+    op_export_test('pooling_lp', M, [x], tmp_path)
+

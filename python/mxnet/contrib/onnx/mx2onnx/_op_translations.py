@@ -679,12 +679,67 @@ def convert_linalg_gemm2(node, **kwargs):
         return [trans_a_node, trans_b_node, matmul_node]
 
 
-@mx_op.register("Pooling")
+@mx_op.register('Pooling')
 def convert_pooling(node, **kwargs):
     """Map MXNet's Pooling operator attributes to onnx's
     MaxPool/AveragePool/GlobalMaxPool/GlobalAveragePool operators
-    based on the input node's attributes and return the created node.
     """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    kernel = convert_string_to_list(attrs.get('kernel', '()'))
+    pool_type = attrs.get('pool_type', 'max')
+    global_pool = attrs.get('global_pool', 'False')
+    _ = attrs.get('cudnn_off', 'False')
+    pooling_convention = attrs.get('pooling_convention', 'valid')
+    stride = convert_string_to_list(attrs.get('stride', '(1, 1)'))
+    pad = convert_string_to_list(attrs.get('pad', '()'))
+    p_value = int(attrs.get('p_value', '0'))
+    count_include_pad = attrs.get('count_include_pad', 'True')
+    layout = attrs.get('layout', 'NCHW')
+    
+    if pooling_convention == 'same':
+        raise NotImplementedError('Pooling currently does not support '
+            'pooling_convention==\'same\'')
+    if pool_type == 'sum':
+        raise NotImplementedError('Pooling currently does not support pool_type==\'sum\'')
+    if pool_type == 'lp' and pooling_convention != 'valid':
+        raise NotImplementedError('Pooling currently does not support '
+            'pooling_convention!=\'valid\' when pool_type==\'lp\'')
+    if layout != 'NCHW':
+        raise NotImplementedError('Pooling currently does not support layout!=\'NCHW\'')
+
+    kwargs_ = {}
+    if kernel:
+        kwargs_['kernel_shape'] = tuple(kernel)
+    if pad:
+        kwargs_['pads'] = tuple(pad) + tuple(pad)
+    if stride:
+        kwargs_['strides'] = stride
+
+    ceil_mode = 1 if pooling_convention == 'full' else 0
+    count_include_pad = 1 if count_include_pad=='True' else 0
+
+    print(kwargs_, ceil_mode, count_include_pad)
+
+    nodes = []
+    if pool_type == 'avg' and global_pool== 'False':
+        nodes += [
+            make_node('AveragePool', [input_nodes[0]], [name], ceil_mode=ceil_mode,
+                      count_include_pad=count_include_pad, **kwargs_)
+        ]
+    elif pool_type == 'max' and global_pool== 'False':
+        nodes += [
+            make_node('MaxPool', [input_nodes[0]], [name], ceil_mode=ceil_mode, **kwargs_)
+        ]
+    elif pool_type == 'lp' and global_pool== 'False':
+        nodes += [
+            make_node('LpPool', [input_nodes[0]], [name], p=p_value, **kwargs_)
+        ]
+
+    return nodes
+
+    '''
     opset_version = kwargs["opset_version"]
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
@@ -751,7 +806,8 @@ def convert_pooling(node, **kwargs):
                     pads=pad_dims,
                     strides=stride,
                     name=name,
-                    ceil_mode=ceil_mode
+                    ceil_mode=ceil_mode,
+                    count_include_pad = 1
                 )
             else:
                 node = onnx.helper.make_node(
@@ -765,6 +821,7 @@ def convert_pooling(node, **kwargs):
                 )
 
     return [node]
+    '''
 
 
 @mx_op.register("exp")
