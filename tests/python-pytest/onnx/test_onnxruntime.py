@@ -286,6 +286,56 @@ def test_img_segmentation_model_inference_onnxruntime(tmp_path, model):
     finally:
         shutil.rmtree(tmp_path)
 
+@pytest.mark.parametrize('model', [
+    'simple_pose_resnet18_v1b',
+    'simple_pose_resnet50_v1b',
+    'simple_pose_resnet50_v1d',
+    'simple_pose_resnet101_v1b',
+    'simple_pose_resnet101_v1d',
+    'simple_pose_resnet152_v1b',
+    'simple_pose_resnet152_v1d',
+    #'mobile_pose_resnet18_v1b',
+    #'mobile_pose_resnet50_v1b',
+    #'mobile_pose_mobilenet1.0',
+    #'mobile_pose_mobilenetv2_1.0',
+    #'mobile_pose_mobilenetv3_large',
+    #'mobile_pose_mobilenetv3_small',
+    #'alpha_pose_resnet101_v1b_coco',
+])
+def test_pose_estimation_model_inference_onnxruntime(tmp_path, model):
+    def normalize_image(imgfile):
+        img = mx.image.imread(imgfile).astype('float32')
+        img, _ = mx.image.center_crop(img, size=(512, 512))
+        img = gluoncv.data.transforms.presets.segmentation.test_transform(img, mx.cpu(0))
+        return img
+
+    try:
+        tmp_path = str(tmp_path)
+        M = GluonModel(model, (1,3,512,512), 'float32', tmp_path)
+        onnx_file = M.export_onnx()
+        # create onnxruntime session using the generated onnx file
+        ses_opt = onnxruntime.SessionOptions()
+        ses_opt.log_severity_level = 3
+        session = onnxruntime.InferenceSession(onnx_file, ses_opt)
+        input_name = session.get_inputs()[0].name
+
+        test_image_urls = [
+            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/soccer.png',
+            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/tennis.jpg',
+            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/bikes.jpg',
+            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/runners.jpg',
+        ]
+
+        for img in download_test_images(test_image_urls, tmp_path):
+            img_data = normalize_image(os.path.join(tmp_path, img))
+            mx_result = M.predict(img_data)
+            onnx_result = session.run([], {input_name: img_data.asnumpy()})
+            assert(len(mx_result) == len(onnx_result))
+            for i in range(len(mx_result)):
+                assert_almost_equal(mx_result[i], onnx_result[i])
+
+    finally:
+        shutil.rmtree(tmp_path)
 
 
 @with_seed()
