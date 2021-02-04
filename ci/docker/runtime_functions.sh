@@ -1283,7 +1283,7 @@ integrationtest_ubuntu_cpu_onnx() {
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_models.py
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_node.py
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_operators.py
-    pytest -n 4 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py
 }
 
 integrationtest_ubuntu_gpu_python() {
