@@ -1514,43 +1514,38 @@ def convert_slice_axis(node, **kwargs):
     return [node]
 
 
-@mx_op.register("SliceChannel")
+@mx_op.register('SliceChannel')
 def convert_slice_channel(node, **kwargs):
     """Map MXNet's SliceChannel operator attributes to onnx's Squeeze or Split
     operator based on squeeze_axis attribute
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    num_outputs = int(attrs.get("num_outputs"))
-    axis = int(attrs.get("axis", 1))
-    squeeze_axis = int(attrs.get("squeeze_axis", 0))
+    num_outputs = int(attrs.get('num_outputs'))
+    axis = int(attrs.get('axis', 1))
+    squeeze_axis = attrs.get('squeeze_axis', 'False')
 
-    if squeeze_axis == 1 and num_outputs == 1:
-        node = onnx.helper.make_node(
-            "Squeeze",
-            input_nodes,
-            [name],
-            axes=[axis],
-            name=name,
-        )
-        return [node]
-    elif squeeze_axis == 0 and num_outputs > 1:
-        in_shape = kwargs.get('in_shape')[0]
-        split = in_shape[axis] // num_outputs
-        node = onnx.helper.make_node(
-            "Split",
-            input_nodes,
-            [name+'_output'+str(i) for i in range(num_outputs)],
-            axis=axis,
-            split=[split for _ in range(num_outputs)],
-            name=name,
-        )
-        return [node]
+    create_tensor([axis], name+'_axis', kwargs['initializer'])
+    create_tensor([axis+1], name+'axis_p1', kwargs['initializer'])
+
+    if squeeze_axis == 'True':
+        nodes += [
+            make_node('Split', [input_nodes[0]], [name+str(i)+'_' for i in range(num_outputs)],
+                      axis=axis)
+        ]
+        for i in range(num_outputs):
+            nodes += [
+                make_node('Squeeze', [name+str(i)+'_'], [name+str(i)], axes=[axis])
+            ]
     else:
-        raise NotImplementedError("SliceChannel operator with num_outputs>1 and"
-                                  "squeeze_axis true is not implemented.")
+        nodes += [
+            make_node('Split', [input_nodes[0]], [name+str(i) for i in range(num_outputs)],
+                      axis=axis)
+        ]
 
+    return nodes
 
 @mx_op.register("expand_dims")
 def convert_expand_dims(node, **kwargs):
