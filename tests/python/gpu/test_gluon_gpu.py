@@ -20,9 +20,10 @@ import sys
 import os
 import tempfile
 import time
+import random
 import mxnet as mx
 import multiprocessing as mp
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray, environment
 import mxnet.ndarray as nd
 import numpy as np
 import math
@@ -30,7 +31,7 @@ from mxnet import autograd
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, run_in_spawned_process
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, run_in_spawned_process, random_seed
 from test_gluon import *
 from test_loss import *
 from test_gluon_rnn import *
@@ -50,10 +51,9 @@ def check_rnn_layer(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    # atol of 1e-6 required, as exposed by seed 2124685726
-    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c)
 
 
 @with_seed()
@@ -70,9 +70,9 @@ def check_rnn_layer_w_rand_inputs(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c)
 
 
 @with_seed()
@@ -481,6 +481,13 @@ def test_large_models():
     # This in the past has given cudnnFind() trouble when it needed to allocate similar I/O's
     # from the area carved out by the MXNET_GPU_MEM_POOL_RESERVE setting (by default 5%).
     (free_mem_bytes, total_mem_bytes) = mx.context.gpu_memory_info(ctx.device_id)
+    # This test needs to be 'qualified' for use with each new larger memory size
+    largest_supported_total_mem_GB = 32
+    if (total_mem_bytes > largest_supported_total_mem_GB * 1024 * 1024 * 1024):
+        sys.stderr.write(
+        ' bypassing test due to too-large global memory of size {} ... '.format(total_mem_bytes))
+        return
+
     start_size = tensor_size(0.20 * total_mem_bytes)
     num_trials = 10
     sys.stderr.write(
@@ -549,9 +556,9 @@ def _test_bulking(test_bulking_func):
         time_per_iteration = mp.Manager().Value('d', 0.0)
 
         if not run_in_spawned_process(test_bulking_func,
-                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': seg_sizes[0],
-                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': seg_sizes[1],
-                                       'MXNET_EXEC_BULK_EXEC_TRAIN': seg_sizes[2]},
+                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': str(seg_sizes[0]),
+                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': str(seg_sizes[1]),
+                                       'MXNET_EXEC_BULK_EXEC_TRAIN': str(seg_sizes[2])},
                                       time_per_iteration):
             # skip test since the python version can't run it properly.  Warning msg was logged.
             return
@@ -625,15 +632,126 @@ def test_gemms_true_fp16():
     net.cast('float16')
     net.initialize(ctx=ctx)
     net.weight.set_data(weights)
-    ref_results = net(input)
 
-    os.environ["MXNET_FC_TRUE_FP16"] = "1"
-    results_trueFP16 = net(input)
+    with environment('MXNET_FC_TRUE_FP16', '0'):
+      ref_results = net(input)
+
+    with environment('MXNET_FC_TRUE_FP16', '1'):
+      results_trueFP16 = net(input)
+
     atol = 1e-2
     rtol = 1e-2
     assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
                         atol=atol, rtol=rtol)
-    os.environ["MXNET_FC_TRUE_FP16"] = "0"
+
+@with_seed()
+def test_cuda_graphs():
+    class GraphTester(gluon.HybridBlock):
+        def __init__(self, function_to_test, **kwargs):
+            super(GraphTester, self).__init__(**kwargs)
+            with self.name_scope():
+                self.f = function_to_test()
+
+        def hybrid_forward(self, F, *args):
+            # We need to isolate the operation to be fully inside the graph
+            # in order for graphs usage to be possible
+            copied_args = [F.identity(a) for a in args]
+            outputs = self.f(*copied_args)
+            if isinstance(outputs, (list, tuple)):
+                return [F.identity(o) for o in outputs]
+            else:
+                return F.identity(outputs)
+
+    class TestDesc:
+        def __init__(self, name, f, num_inputs=1, input_dim=4):
+            self.name = name
+            self.f = f
+            self.num_inputs = num_inputs
+            self.input_dim = input_dim
+
+        def generate_inputs(self):
+            shape = tuple(np.random.randint(4, 11, size=self.input_dim))
+            ret = [mx.random.uniform(shape=shape) for _ in range(self.num_inputs)]
+            for r in ret:
+                r.attach_grad()
+            return ret
+
+    tested_ops = [
+            TestDesc('add', lambda: (lambda x, y: x + y), num_inputs = 2),
+            TestDesc('add_scalar', lambda: (lambda x: x + 0.5)),
+            TestDesc('Conv', lambda: mx.gluon.nn.Conv2D(channels=32, kernel_size=(1,1))),
+            TestDesc('ConvTranspose', lambda: mx.gluon.nn.Conv2DTranspose(channels=32, kernel_size=(1,1))),
+            TestDesc('Dense', lambda: mx.gluon.nn.Dense(units=128)),
+            TestDesc('Activation', lambda: mx.gluon.nn.Activation('tanh')),
+            #TestDesc('Dropout', lambda: mx.gluon.nn.Dropout(0.5)),
+            TestDesc('Flatten', lambda: mx.gluon.nn.Flatten()),
+            TestDesc('MaxPool', lambda: mx.gluon.nn.MaxPool2D()),
+            TestDesc('AvgPool', lambda: mx.gluon.nn.AvgPool2D()),
+            TestDesc('GlobalMaxPool', lambda: mx.gluon.nn.GlobalMaxPool2D()),
+            TestDesc('GlobalAvgPool', lambda: mx.gluon.nn.GlobalAvgPool2D()),
+            TestDesc('ReflectionPad2D', lambda: mx.gluon.nn.ReflectionPad2D()),
+            TestDesc('BatchNorm', lambda: mx.gluon.nn.BatchNorm()),
+            TestDesc('InstanceNorm', lambda: mx.gluon.nn.InstanceNorm()),
+            TestDesc('LayerNorm', lambda: mx.gluon.nn.LayerNorm()),
+            TestDesc('LeakyReLU', lambda: mx.gluon.nn.LeakyReLU(0.1)),
+            TestDesc('PReLU', lambda: mx.gluon.nn.PReLU()),
+            TestDesc('ELU', lambda: mx.gluon.nn.ELU()),
+            TestDesc('SELU', lambda: mx.gluon.nn.SELU()),
+            TestDesc('Swish', lambda: mx.gluon.nn.Swish()),
+        ]
+
+    N = 10
+
+    with environment({'MXNET_ENABLE_CUDA_GRAPHS': '1',
+                      'MXNET_USE_FUSION': '0'}):
+        for test_desc in tested_ops:
+            print("Testing ", test_desc.name)
+            inputs = test_desc.generate_inputs()
+            inputsg = [i.copy() for i in inputs]
+            for i in inputsg:
+                i.attach_grad()
+            seed = random.randint(0, 10000)
+            net = GraphTester(test_desc.f)
+            netg = GraphTester(test_desc.f)
+
+            # initialize parameters
+            net.initialize()
+            netg.initialize()
+
+            net(*inputs)
+
+            for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
+                p2.set_data(p1.data())
+
+            netg.hybridize(static_alloc=True, static_shape=True)
+
+            print("Testing inference mode")
+            with random_seed(seed):
+                for _ in range(N):
+                    assert_almost_equal(net(*inputs), netg(*inputsg))
+
+            mx.nd.waitall()
+            print("Testing training mode")
+            for _ in range(N):
+                with random_seed(seed):
+                    with mx.autograd.record():
+                        out = net(*inputs)
+                    out.backward()
+
+                with random_seed(seed):
+                    with mx.autograd.record():
+                        outg = netg(*inputsg)
+                    outg.backward()
+
+                assert_almost_equal(out, outg)
+                for i, ig in zip(inputs, inputsg):
+                    assert_almost_equal(i.grad, ig.grad)
+
+                for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
+                    assert_almost_equal(p1.data(), p2.data())
+                    if p1.grad_req != 'null':
+                        assert_almost_equal(p1.grad(), p2.grad())
+            mx.nd.waitall()
 
 
 if __name__ == '__main__':

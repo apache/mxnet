@@ -14,6 +14,28 @@ body {
     outline: none;
  }
 
+.mdl-layout__content header.mdl-layout__drawer {
+    display: none;
+}
+
+.mdl-layout__container {
+    height: calc(100% - 76px);
+    margin-top: 76px;
+}
+.mdl-layout__header {
+    position: fixed;
+    transition: transform 0.5s;
+}
+.mdl-layout--fixed-drawer>.mdl-layout__content {
+    margin-left: 300px;    
+}
+
+@media screen and (max-width: 1024px) {
+    .mdl-layout--fixed-drawer>.mdl-layout__content {
+        margin-left:0
+    }
+}
+
 h1, h2, h3, h4, h5, h6, blockquote, span.mdl-layout-title,
 a.download > code.download {
     font-family: $body_font_family;

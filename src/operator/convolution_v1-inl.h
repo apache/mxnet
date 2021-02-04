@@ -70,12 +70,12 @@ struct ConvolutionV1Param : public dmlc::Parameter<ConvolutionV1Param> {
     .describe("convolution dilate: (h, w) or (d, h, w)");
     DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, 0))
     .describe("pad for convolution: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
+    DMLC_DECLARE_FIELD(num_filter).set_lower_bound(1)
     .describe("convolution filter(channel) number");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
     .describe("Number of group partitions. Equivalent to slicing input into num_group\n    "
               "partitions, apply convolution on each, then concatenate the results");
-    DMLC_DECLARE_FIELD(workspace).set_default(1024).set_range(0, 8192)
+    DMLC_DECLARE_FIELD(workspace).set_default(1024).set_lower_bound(0)
     .describe("Maximum temporary workspace allowed for convolution (MB)."
               "This parameter determines the effective batch size of the convolution "
               "kernel, which may be smaller than the given batch size. "

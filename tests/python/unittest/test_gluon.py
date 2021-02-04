@@ -17,19 +17,21 @@
 
 import os
 import tempfile
-import gc
 
 import mxnet as mx
 from mxnet import gluon
+from mxnet import init
 from mxnet.gluon import nn
 from mxnet.base import py_str, MXNetError
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, default_context
 from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
 import mxnet.numpy as _mx_np
 from common import (setup_module, with_seed, assertRaises, teardown,
-                    assert_raises_cudnn_not_satisfied)
+                    assert_raises_cudnn_not_satisfied, environment)
+import mxnet.ndarray.sparse as mxsps
+import scipy.sparse as sps
 import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
@@ -897,7 +899,7 @@ def test_sync_batchnorm():
                             input2grad.asnumpy(), atol=atol, rtol=rtol)
 
     cfgs = [(1, False)]
-    num_gpus = mx.context.num_gpus()
+    num_gpus = 0 if default_context().device_type != 'gpu' else mx.context.num_gpus()
     batch_size = 24
     for i in range(1, num_gpus + 1):
         if batch_size % i == 0:
@@ -1694,21 +1696,12 @@ def test_zero_grad():
         for type in [testedTypes] + testedTypes:
             _test_multi_reset(np.random.randint(1, 50), type, ctx)
 
-    # Saving value of environment variable, if it was defined
-    envVarKey = 'MXNET_STORAGE_FALLBACK_LOG_VERBOSE'
-    envVarValue = os.environ[envVarKey] if envVarKey in os.environ else None
-    # Changing value of environment variable
-    os.environ[envVarKey] = '0'
-    for type in ['float16', 'float32', 'float64']:
-        for embType in ['float32', 'float64']:
-            for sparse in [True, False]:
-                _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
+    with environment('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
+        for type in ['float16', 'float32', 'float64']:
+            for embType in ['float32', 'float64']:
+                for sparse in [True, False]:
+                    _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
 
-    # Remove or restore the value of environment variable
-    if envVarValue is None:
-        del os.environ[envVarKey]
-    else:
-        os.environ[envVarKey] = envVarValue
 
 def check_hybrid_static_memory(**kwargs):
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
@@ -2028,10 +2021,6 @@ def test_share_inputs_outputs():
             res = t(d1)
             assert_almost_equal(res.asnumpy(), d1.asnumpy())
 
-    param = deepcopy(params[2])
-    param['param_indices'] = (1)
-    param['data_indices'] = (0)
-    params.append(param)
     # Test the case that inputs and outputs of a backward graph share NDArrays.
     for param in params:
         t = TestIOBackward()
@@ -2185,6 +2174,40 @@ def test_batchnorm_16c():
             x = mx.nd.random.uniform(-1.0, 1.0, shape=shape)
             net = Net(chn_list[i], 1, 1)
             check_layer_forward_withinput(net, x)
+
+
+@with_seed()
+def test_batchnorm_chnls():
+    chn_list = [1024, 512, 256, 128, 64, 45, 32, 16, 3]
+    class Net(gluon.HybridBlock):
+        def __init__(self,
+                     chn_num,
+                     norm_kwargs=None,
+                     in_channels=3,
+                     **kwargs):
+            super(Net, self).__init__(**kwargs)
+            self.in_channels = in_channels
+            self.conv1 = gluon.nn.Conv3D(
+                    in_channels=self.in_channels,
+                    channels=chn_num,
+                    kernel_size=(1, 7, 7),
+                    strides=(1, 2, 2),
+                    padding=(0, 3, 3),
+                    use_bias=False,
+                    )
+            self.bn1 = gluon.nn.BatchNorm(in_channels=chn_num, **({} if norm_kwargs is None else norm_kwargs))
+
+        def hybrid_forward(self, F, x):
+            """Hybrid forward of R2+1D net"""
+            conv = self.conv1(x)
+            out = self.bn1(conv)
+            return out
+
+    for i in range(len(chn_list)):
+        net = Net(chn_list[i])
+        net.initialize(init=init.Constant(1))
+        x = mx.nd.zeros((1, 3, 8, 160, 160))
+        net(x).asnumpy()
 
 
 @with_seed()
@@ -3239,43 +3262,14 @@ def test_reqs_switching_training_inference():
 
     mx.test_utils.assert_almost_equal(grad1, grad2)
 
-def test_no_memory_leak_in_gluon():
-    # Collect all other garbage prior to this test. Otherwise the test may fail
-    # due to unrelated memory leaks.
-    gc.collect()
 
-    gc_flags = gc.get_debug()
-    gc.set_debug(gc.DEBUG_SAVEALL)
-    net = mx.gluon.nn.Dense(10, in_units=10)
-    net.initialize()
-    del net
-    gc.collect()
-    gc.set_debug(gc_flags)  # reset gc flags
+def test_split_and_load():
+    ctx_list = (mx.cpu(0), mx.cpu(0))
+    csr_arr = mxsps.csr_matrix(sps.coo_matrix(([2.0], ([99], [999]))).tocsr(), ctx=mx.cpu(0))
+    arr_list = gluon.utils.split_and_load(csr_arr, ctx_list)
+    assert hasattr(arr_list[0], 'indices')
+    assert isinstance(arr_list[0], mxsps.CSRNDArray)
 
-    # Check for leaked NDArrays
-    seen = set()
-    def has_array(element):
-        try:
-            if element in seen:
-                return False
-            seen.add(element)
-        except TypeError:  # unhashable
-            pass
-
-        if isinstance(element, mx.nd._internal.NDArrayBase):
-            return True
-        elif hasattr(element, '__dict__'):
-            return any(has_array(x) for x in vars(element))
-        elif isinstance(element, dict):
-            return any(has_array(x) for x in element.items())
-        else:
-            try:
-                return any(has_array(x) for x in element)
-            except (TypeError, KeyError):
-                return False
-
-    assert not any(has_array(x) for x in gc.garbage), 'Found leaked NDArrays due to reference cycles'
-    del gc.garbage[:]
 
 if __name__ == '__main__':
     import nose

@@ -74,7 +74,7 @@ def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params=
         # Confirm network outputs are the same
         imported_net_output = _force_list(imported_net(data))
         for out, imp_out in zip(output, imported_net_output):
-            mx.test_utils.assert_almost_equal(out, imp_out)
+            mx.test_utils.assert_almost_equal(out, imp_out, atol=1e-5, rtol=1e-5)
 
 
 class TestExport(unittest.TestCase):

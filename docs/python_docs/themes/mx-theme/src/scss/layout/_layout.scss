@@ -25,14 +25,9 @@
     )
 );
 
-.mdl-layout {
-    margin-top: 76px;
-}
-
-
 .document {
     width: 100%;
-    margin: 0 auto;
+    margin: 84px auto;
     display: flex;
 
     @media (min-width: $xl-breakpoint) {

@@ -31,6 +31,7 @@ from mxnet.test_utils import *
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
+import itertools
 
 
 def test_mkldnn_model():
@@ -254,6 +255,28 @@ def test_flatten_slice_after_conv():
     print(p[0])
 
 
+def test_mkldnn_sum_with_mkldnn_layout():
+
+    x_shape = (32, 3, 224, 224)
+    x_npy = np.ones(x_shape)
+    w_shape = (32, 3, 3, 3)
+    w_npy = np.ones(w_shape)
+
+    x = mx.sym.Variable("x")
+    w = mx.sym.Variable("w")
+    z = mx.symbol.Convolution(data=x, weight=w, num_filter=32, kernel=(3, 3))
+    num_inputs = [2, 3, 4, 5]
+    for i in num_inputs:
+        inputs = []
+        for n in range(i):
+            inputs.append(z)
+        y = mx.sym.add_n(*inputs) # (only MKLDNN data input)
+        exe = y.simple_bind(ctx=mx.cpu(), x=x_shape, w=w_shape)
+        out = exe.forward(is_train=False, x=x_npy, w=np.ones(w_shape))[0]
+        #conv with kernel (3,3) on ones should give result=27
+        single_cov = 27.0
+        assert_almost_equal(out[0].asnumpy()[0, 0, 0], single_cov*i)
+
 def test_mkldnn_sum_inplace_with_cpu_layout():
 
     x_shape = (32, 3, 224, 224)
@@ -263,7 +286,7 @@ def test_mkldnn_sum_inplace_with_cpu_layout():
     x = mx.sym.Variable("x")
     y = mx.sym.Variable("y")
     z = mx.symbol.Convolution(data=x, num_filter=32, kernel=(3, 3))
-    z = mx.sym.add_n(z, y)
+    z = mx.sym.add_n(z, y) # (MKLDNN data, cpu data)
     exe = z.simple_bind(ctx=mx.cpu(), x=x_shape, y=y_shape)
     out = exe.forward(is_train=False, x=x_npy, y=y_npy)[0]
     assert_almost_equal(out[0].asnumpy()[0, 0, 0], 1.0)
@@ -272,7 +295,7 @@ def test_mkldnn_sum_inplace_with_cpu_layout():
 @with_seed()
 def test_batchnorm():
     def check_batchnorm_training(stype):
-        for shape in [(2, 3), (2, 3, 2, 2)]:
+        for shape in [(2, 3), (2, 4), (2, 3, 2, 2), (2, 4, 2, 2)]:
             data_tmp = np.random.normal(-0.1, 0.1, size=shape)
             s = shape[1],
             gamma = np.ones(s)
@@ -669,6 +692,38 @@ def test_concat():
     for stype in stypes:
         check_concat_training(stype)
 
+
+@with_seed()
+def test_concat_blocked():
+    ctx = mx.cpu()
+    axis = 1
+    filters = 32  # must be a power of 2 and >= 16
+    kernel = (3, 3)
+    for in_dim_size in range(1, 17):  # check cases with and without padding
+        in_shape = (1, in_dim_size, 64, 64)
+        in_data = mx.nd.random.uniform(-1, 1, in_shape, ctx=ctx)
+        conv_weights = mx.nd.random.uniform(-1, 1, (filters, in_shape[1], kernel[0], kernel[1]), ctx=ctx)
+
+        def calc_output_of_layer(layer):
+            ex = layer.simple_bind(ctx, x=in_shape)
+            in_data.copyto(ex.arg_arrays[0])
+            conv_weights.copyto(ex.arg_arrays[1])
+            return ex.forward()[0].asnumpy()
+
+        x = mx.sym.Variable('x')
+        w = mx.sym.Variable('w')
+        # convolution, so a blocked format is selected
+        conv = mx.sym.Convolution(data=x, weight=w, num_filter=filters, kernel=kernel, pad=(1, 1), no_bias=True)
+        conc = mx.sym.concat(conv, x, dim=axis)
+
+        # first calculate the output of the convolution to determine ref_out
+        conv_out = calc_output_of_layer(conv)
+        ref_out = np.concatenate((conv_out, in_data.asnumpy()), axis=axis)
+
+        out = calc_output_of_layer(conc)
+        assert_almost_equal(out, ref_out)
+
+
 @with_seed()
 def test_elemwise_add():
     def ref_add(a, b):
@@ -701,6 +756,36 @@ def test_elemwise_add():
     stypes = ['row_sparse', 'default']
     for stype in stypes:
         check_elemwise_add_training(stype)
+
+
+@with_seed()
+def test_rnn():
+    SEQ_LENGTH = [2**10, 2**5]
+    STATE_SIZE = [1, 2]
+    BATCH_SIZE = [4]
+    INPUT_SIZE = [4]
+    def batch_check(seq_length, state_size, batch_size, input_size):
+        modes_params = [('rnn_relu', mx.np.random.normal(0, 1, ((input_size + state_size + 2)*state_size),)),
+                        ('rnn_tanh', mx.np.random.normal(0, 1, ((input_size + state_size + 2)*state_size),)),
+                        ('gru', mx.np.random.normal(0, 1, ((input_size + state_size + 2)*state_size*3),))
+                        ]
+        for m, p in modes_params:
+            data = mx.np.random.normal(0, 1, (seq_length, batch_size, input_size))
+            state = mx.np.random.normal(0, 1, (1, batch_size, state_size))
+            data.attach_grad()
+            state.attach_grad()
+
+            with mx.autograd.record():
+                y = mx.npx.rnn(data=data, parameters=p, mode=m, \
+                               state=state, state_size=state_size, num_layers=1)
+            assert y.shape == (seq_length, batch_size, state_size)
+            assert type(y[0]).__name__ == 'ndarray'
+            y.backward()
+            assert state.shape == (1, batch_size, state_size)
+            assert type(state[0]).__name__ == 'ndarray'
+
+    for sl, ss, bs, in_s in itertools.product(SEQ_LENGTH, STATE_SIZE, BATCH_SIZE, INPUT_SIZE): 
+        batch_check(sl, ss, bs, in_s)
 
 if __name__ == '__main__':
     import nose

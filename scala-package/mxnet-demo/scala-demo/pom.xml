@@ -35,7 +35,7 @@
                 </repository>
             </repositories>
             <properties>
-                <mxnet.version>[1.7.0-SNAPSHOT, )</mxnet.version>
+                <mxnet.version>[1.9.0-SNAPSHOT, )</mxnet.version>
             </properties>
         </profile>
         <profile>
@@ -65,7 +65,7 @@
 
     <properties>
         <mxnet.scalaprofile>2.11</mxnet.scalaprofile>
-        <mxnet.version>[1.4.0, )</mxnet.version>
+        <mxnet.version>[1.9.0, )</mxnet.version>
         <scala.version>2.11.8</scala.version>
     </properties>
 

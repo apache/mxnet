@@ -29,7 +29,7 @@ from ._export_helper import load_module
 
 
 def export_model(sym, params, input_shape, input_type=np.float32,
-                 onnx_file_path='model.onnx', verbose=False):
+                 onnx_file_path='model.onnx', verbose=False, opset_version=None):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
     Operator support and coverage -
@@ -63,11 +63,15 @@ def export_model(sym, params, input_shape, input_type=np.float32,
 
     try:
         from onnx import helper, mapping
+        from onnx.defs import onnx_opset_version
     except ImportError:
         raise ImportError("Onnx and protobuf need to be installed. "
                           + "Instructions to install - https://github.com/onnx/onnx")
 
     converter = MXNetGraph()
+    if opset_version is None:
+        # default is to use latest opset version the onnx package supports
+        opset_version = onnx_opset_version()
 
     data_format = np.dtype(input_type)
     # if input parameters are strings(file paths), load files and create symbol parameter objects
@@ -76,11 +80,11 @@ def export_model(sym, params, input_shape, input_type=np.float32,
         sym_obj, params_obj = load_module(sym, params)
         onnx_graph = converter.create_onnx_graph_proto(sym_obj, params_obj, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
-                                                       verbose=verbose)
+                                                       verbose=verbose, opset_version=opset_version)
     elif isinstance(sym, symbol.Symbol) and isinstance(params, dict):
         onnx_graph = converter.create_onnx_graph_proto(sym, params, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
-                                                       verbose=verbose)
+                                                       verbose=verbose, opset_version=opset_version)
     else:
         raise ValueError("Input sym and params should either be files or objects")
 

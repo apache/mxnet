@@ -73,7 +73,7 @@
 /*! \brief major version */
 #define MXNET_MAJOR 1
 /*! \brief minor version */
-#define MXNET_MINOR 7
+#define MXNET_MINOR 9
 /*! \brief patch version */
 #define MXNET_PATCH 0
 /*! \brief mxnet version */
@@ -551,7 +551,7 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 #define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
 
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 1 || MXNET_USE_INTGEMM == 1
 constexpr size_t kMKLDNNAlign = 64;
 #endif
 

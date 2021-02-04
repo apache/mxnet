@@ -280,6 +280,14 @@ void linalg_batch_det_backward_helper(const Tensor<xpu, 3, DType>& LU,
                                       const DType zero_det,
                                       const mxnet::OpContext& ctx);
 
+#ifdef __CUDACC__
+#if CUDA_VERSION < 11000
+#define VERSION_ADJUSTED_TF32_MATH CUBLAS_DEFAULT_MATH
+#else
+#define VERSION_ADJUSTED_TF32_MATH CUBLAS_TF32_TENSOR_OP_MATH
+#endif
+#endif  // __CUDACC__
+
 #include "linalg_impl.h"
 
 #endif  // MXNET_OPERATOR_LINALG_H_

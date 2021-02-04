@@ -31,6 +31,7 @@
 
 #include "./exec_pass.h"
 #include "./graph_executor.h"
+#include "./cuda_graphs.h"
 #include "../profiler/profiler.h"
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
@@ -84,7 +85,8 @@ void GraphExecutor::Forward(bool is_train) {
 void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
   size_t sstep = static_cast<size_t>(step);
   if (sstep >= num_forward_nodes_) {
-    *step_left = 0; return;
+    *step_left = 0;
+    return;
   }
   RunOps(is_train, sstep, sstep + 1);
   *step_left = static_cast<int>(num_forward_nodes_ - sstep - 1);
@@ -166,11 +168,12 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_tra
 }
 
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
-  nnvm::Symbol s; s.outputs = graph_.outputs;
+  nnvm::Symbol s;
+  s.outputs = graph_.outputs;
   s.Print(os);
   // message to be backward compatible with the memonger
   size_t total_bytes = graph_.GetAttr<size_t>("storage_allocated_bytes");
-  os << "Total " << (total_bytes >> 20UL) <<" MB allocated\n";
+  os << "Total " << (total_bytes >> 20UL) << " MB allocated\n";
   os << "Total " << 11 << " TempSpace resource requested\n";
 }
 
@@ -337,7 +340,8 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
     g = exec::EliminateCommonExpr(std::move(g));
   need_grad_ = false;
   for (OpReqType req : grad_req_types) {
-    if (req != kNullOp) need_grad_ = true;
+    if (req != kNullOp)
+      need_grad_ = true;
   }
   if (!need_grad_) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
@@ -1005,10 +1009,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
     common::CopyGraph(&unoptimized_graph, g, false);
 
     if (common::CheckForInputNameDuplicates(unoptimized_graph.indexed_graph())) {
-      g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
-      g = FusePointwiseForward(std::move(g));
-      g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
-      g = FusePointwiseBackward(std::move(g));
+      g = exec::FusePointwise(std::move(g), num_forward_outputs_);
       // Check the topological order of inputs
       const auto &original_inputs = unoptimized_graph.indexed_graph().input_nodes();
       const auto &new_inputs = g.indexed_graph().input_nodes();
@@ -1312,12 +1313,12 @@ void GraphExecutor::InitCachedOps() {
       // call on complete only if it is async op
       if (!is_async) {
         if (is_gpu) {
-        #if MXNET_USE_CUDA
+#if MXNET_USE_CUDA
           // Wait GPU kernel to finish.
           ctx.get_stream<gpu>()->Wait();
-        #else
+#else
           LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-        #endif
+#endif
         }
         on_complete();
       }
@@ -1607,21 +1608,31 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     opr_names += inode.source->op()->name + ",";
   }
 
-  if (pctx == nullptr) return ret;
+  if (pctx == nullptr)
+    return ret;
   ret.ctx = *pctx;
   Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
 
   bool is_gpu = pctx->dev_mask() == gpu::kDevMask;
+
+#if CUDA_GRAPHS_AVAILABLE
+  // Provide initialized `cuda_graphs_exec`, which when captured
+  // by exec_fun, acts like a static variable inside the mutable closure.
+  cuda_graphs::CudaGraphsExec cuda_graphs_exec(exec_list, is_gpu, opr_names.c_str());
+  auto exec_fun = [cuda_graphs_exec, exec_list, is_gpu] (
+      RunContext rctx, Engine::CallbackOnComplete on_complete) mutable {
+    // Run all opr in the sub-graph with CUDA graphs executor if possible
+    cuda_graphs_exec.RunAll(exec_list, rctx, is_gpu);
+#else
   auto exec_fun = [exec_list, is_gpu] (
-      RunContext ctx, Engine::CallbackOnComplete on_complete) {
+      RunContext rctx, Engine::CallbackOnComplete on_complete) {
     // Run all opr in the sub-graph
-    for (auto &exec : exec_list) {
-      exec->Run(ctx, is_gpu);
-    }
+    OpExecutor::RunAll(exec_list, rctx, is_gpu);
+#endif
     if (is_gpu) {
 #if MXNET_USE_CUDA
       // Wait GPU kernel to finish.
-      ctx.get_stream<gpu>()->Wait();
+      rctx.get_stream<gpu>()->Wait();
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
@@ -1992,6 +2003,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                    default_ctx, group2ctx, &tmp_in_arg_ctxes, &tmp_arg_grad_ctxes,
                                    &tmp_grad_req_types, &tmp_aux_state_ctxes, verbose);
       // Subgraph cannot be recreated from unoptimized symbol
+      delete exec;
       exec = new exec::GraphExecutor(symbol);
       exec->Init(symbol.Copy(), default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
                  tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map,
@@ -2063,6 +2075,7 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
                                    &tmp_arg_grad_store, &tmp_grad_req_type, &tmp_aux_states,
                                    verbose);
       // Subgraph cannot be recreated from unoptimized symbol
+      delete exec;
       exec = new exec::GraphExecutor(symbol);
     }
   }

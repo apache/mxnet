@@ -21,7 +21,7 @@ import os
 import mxnet as mx
 import numpy as np
 import unittest
-from mxnet.test_utils import assert_almost_equal, default_context, EnvManager
+from mxnet.test_utils import assert_almost_equal, default_context, environment
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown
@@ -97,11 +97,11 @@ def test_rsp_push_pull():
         check_rsp_pull(kv, [mx.gpu(i//2) for i in range(4)], sparse_pull, use_slice=True)
         check_rsp_pull(kv, [mx.cpu(i) for i in range(4)], sparse_pull, use_slice=True)
 
-    envs = ["","1"]
-    key  = "MXNET_KVSTORE_USETREE"
+    envs = [None, '1']
+    key  = 'MXNET_KVSTORE_USETREE'
     for val in envs:
-        with EnvManager(key, val):
-            if val is "1":
+        with environment(key, val):
+            if val is '1':
                 sparse_pull = False
             else:
                 sparse_pull = True

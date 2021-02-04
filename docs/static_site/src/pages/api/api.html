@@ -173,6 +173,18 @@ docs:
         </ul>
     </div>
 </div>
+<div class="docs-dev-guide">
+  <div class="wrapper">
+      <h2>Developer Guide</h2>
+      <ul>
+        {%- for p in site.pages -%}
+          {%- if p.category == 'Developer Guide' -%}
+            <li><a href="{{p.url | relative_url}}">{{p.title}}</a></li>
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+  </div>
+</div>
 <div class="docs-faq">
     <div class="wrapper">
         <h2>FAQ</h2>

@@ -29,6 +29,10 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_powerd)
+.set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+    [](const NodeAttrs&, const bool) {
+      return false;
+    })
 .set_attr<FCompute>("FCompute<gpu>", NumpyPowerForward<gpu>);
 
 }  // namespace op

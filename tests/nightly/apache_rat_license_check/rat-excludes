@@ -13,6 +13,9 @@ target/*
 site/*
 xml/*
 
+# License files
+licenses/*
+
 # Separate licenses, refer to LICENSE in each folder or header
 
 # Sphinx themes
@@ -35,6 +38,7 @@ ctc_include/*
 dlpack/*
 dmlc-core/*
 googletest/*
+intgemm/*
 mkldnn/*
 nvidia_cub/*
 onnx-tensorrt/*

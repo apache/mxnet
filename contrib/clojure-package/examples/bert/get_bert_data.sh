@@ -28,5 +28,5 @@ if [ ! -d "$data_path" ]; then
   curl https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/BertQA/static_bert_qa-symbol.json -o $data_path/static_bert_qa-symbol.json
   curl https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/BertQA/static_bert_base_net-symbol.json -o $data_path/static_bert_base_net-symbol.json
   curl https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/BertQA/static_bert_base_net-0000.params -o $data_path/static_bert_base_net-0000.params
-  curl https://raw.githubusercontent.com/dmlc/gluon-nlp/master/docs/examples/sentence_embedding/dev.tsv -o $data_path/dev.tsv
+  curl https://raw.githubusercontent.com/dmlc/gluon-nlp/d75185ec7eb1eb082ee92992be8677666aaf7ec7/docs/examples/sentence_embedding/dev.tsv -o $data_path/dev.tsv
 fi

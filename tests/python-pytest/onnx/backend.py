@@ -26,6 +26,7 @@ import numpy as np
 try:
     from onnx import helper, TensorProto, mapping
     from onnx.backend.base import Backend
+    from onnx.defs import onnx_opset_version
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed. Instructions to"
                       + " install - https://github.com/onnx/onnx#installation")
@@ -57,13 +58,16 @@ class MXNetBackend(Backend):
         params = {}
         params.update(arg_params)
         params.update(aux_params)
+        # use the latest opset version supported by the onnx library
+        opset_version = onnx_opset_version()
         # exporting to onnx graph proto format
         converter = MXNetGraph()
         graph_proto = converter.create_onnx_graph_proto(sym, params, in_shape=input_shape,
-                                                        in_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')])
+                                                        in_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
+                                                        opset_version=opset_version)
 
         # importing back to MXNET for verifying result.
-        sym, arg_params, aux_params = graph.from_onnx(graph_proto)
+        sym, arg_params, aux_params = graph.from_onnx(graph_proto, opset_version)
 
         return sym, arg_params, aux_params
 
@@ -95,8 +99,11 @@ class MXNetBackend(Backend):
         else:
             raise NotImplementedError("ONNX tests are run only for CPU context.")
 
+        # determine opset version model uses
+        model_opset_version = max([x.version for x in model.opset_import])
+
         if backend == 'mxnet':
-            sym, arg_params, aux_params = graph.from_onnx(model.graph)
+            sym, arg_params, aux_params = graph.from_onnx(model.graph, model_opset_version)
             if operation == 'export':
                 metadata = graph.get_graph_metadata(model.graph)
                 input_data = metadata['input_tensor_data']
@@ -107,7 +114,7 @@ class MXNetBackend(Backend):
             return MXNetBackendRep(sym, arg_params, aux_params, device)
         elif backend == 'gluon':
             if operation == 'import':
-                net = graph.graph_to_gluon(model.graph, ctx)
+                net = graph.graph_to_gluon(model.graph, ctx, model_opset_version)
                 return GluonBackendRep(net, device)
             elif operation == 'export':
                 raise NotImplementedError("Gluon->ONNX export not implemented.")

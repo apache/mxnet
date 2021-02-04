@@ -23,7 +23,6 @@ __all__ = ['init', 'init_trainer', 'scale_loss', 'unscale', 'convert_model',
            'list_widest_type_cast', 'list_loss_output_functions', 'list_lp16_use_fp32_params',
            'convert_symbol']
 
-from types import MethodType
 from array import array
 import ctypes
 import logging
@@ -341,21 +340,6 @@ def init_trainer(optimizer_or_trainer):
     if isinstance(optimizer_or_trainer, trainer.Trainer):
         optimizer_or_trainer._amp_loss_scaler = loss_scaler
         optimizer_or_trainer._amp_original_scale = optimizer_or_trainer._scale
-        skip_update = optimizer_or_trainer._amp_loss_scaler.wait_and_update
-        optimizer_or_trainer._optimizer.old_update_multi_precision = \
-                optimizer_or_trainer._optimizer.update_multi_precision
-        def new_update_multi_precision(self, index, weight, grad, state):
-            if not skip_update():
-                self.old_update_multi_precision(index, weight, grad, state)
-        optimizer_or_trainer._optimizer.update_multi_precision = \
-            MethodType(new_update_multi_precision, optimizer_or_trainer._optimizer)
-        launch_check_overflow = optimizer_or_trainer._amp_loss_scaler.launch_check_overflow
-        optimizer_or_trainer._old_update = optimizer_or_trainer._update
-        def new_update(self, ignore_stale_grad=False):
-            launch_check_overflow(self._params)
-            self._old_update(ignore_stale_grad)
-        optimizer_or_trainer._update = MethodType(new_update, optimizer_or_trainer)
-
     elif isinstance(optimizer_or_trainer, opt.Optimizer):
         # TODO(ptredak): make it work with the optimizer
         raise TypeError("AMP is currently only compatible with Gluon Trainer")

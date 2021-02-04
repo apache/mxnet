@@ -25,7 +25,7 @@ import mxnet as mx
 import numpy as np
 from common import assertRaises, models, TemporaryDirectory
 from mxnet.base import NotImplementedForSymbol
-from mxnet.test_utils import discard_stderr, rand_shape_nd, use_np
+from mxnet.test_utils import discard_stderr, rand_shape_nd, use_np, environment
 from mxnet.util import np_shape
 import pickle as pkl
 
@@ -272,36 +272,6 @@ def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False, equal_nan=False):
                                     grad_req='null' if skip_grad else 'write',
                                     equal_nan=equal_nan)
 
-def test_load_000800():
-    with mx.AttrScope(ctx_group='stage1'):
-        data = mx.symbol.Variable('data', lr_mult=0.2)
-        weight = mx.sym.Variable(name='fc1_weight', lr_mult=1.2)
-        fc1  = mx.symbol.FullyConnected(data = data, weight=weight, name='fc1', num_hidden=128, wd_mult=0.3)
-        act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
-
-    set_stage1 = set(act1.list_arguments())
-    with mx.AttrScope(ctx_group='stage2'):
-        fc2  = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64, lr_mult=0.01)
-        act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
-        fc3  = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
-        fc3 = mx.symbol.BatchNorm(fc3, name='batchnorm0')
-        sym1  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
-
-    curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    sym2 = mx.sym.load(os.path.join(curr_path, 'save_000800.json'))
-
-    attr1 = sym1.attr_dict()
-    attr2 = sym2.attr_dict()
-    for k, v1 in attr1.items():
-        assert k in attr2, k
-        v2 = attr2[k]
-        for kk, vv1 in v1.items():
-            if kk.startswith('__') and kk.endswith('__'):
-                assert kk in v2 and v2[kk] == vv1, k + str(v1) + str(v2)
-
-    check_symbol_consistency(sym1, sym2,
-        {'ctx': mx.cpu(0), 'group2ctx': {'stage1' : mx.cpu(1), 'stage2' : mx.cpu(2)}, 'data': (1,200)})
-
 
 def test_blockgrad():
     a = mx.sym.Variable('a')
@@ -419,15 +389,6 @@ def test_gen_atomic_symbol_multiple_outputs():
 
 
 def test_eliminate_common_expr():
-    if not sys.platform.startswith('linux'):
-        logging.info("Bypass the CSE test on non-Linux OS as setting env variables during test does not work on Windows")
-        return
-    def set_back_env_var(var_name, old_env_var):
-        if old_env_var is None:
-            os.environ.pop(var_name)
-        else:
-            os.environ[var_name] = old_env_var
-
     # helper function to test a single model
     def check_cse_on_symbol(sym, expected_savings, check_data, **kwargs):
         inputs = sym.list_inputs()
@@ -440,41 +401,36 @@ def test_eliminate_common_expr():
                 'float32' : 1e-7,
                 'float64' : 1e-7,
                 }
-        env_var_name = 'MXNET_ELIMINATE_COMMON_EXPR'
-        old_env_var = os.environ.get(env_var_name, None)
-        try:
-            for dtype in ['float16', 'float32', 'float64']:
-                data = {inp : kwargs[inp].astype(dtype) for inp in inputs}
-                for grad_req in ['write', 'add']:
-                    type_dict = {inp : dtype for inp in inputs}
-                    os.environ[env_var_name] = '0'
+        for dtype in ['float16', 'float32', 'float64']:
+            data = {inp : kwargs[inp].astype(dtype) for inp in inputs}
+            for grad_req in ['write', 'add']:
+                type_dict = {inp : dtype for inp in inputs}
+                with environment({'MXNET_ELIMINATE_COMMON_EXPR': '0'}):
                     orig_exec = sym.simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
                                                 type_dict=type_dict, **shapes)
-                    os.environ[env_var_name] = '1'
+                with environment({'MXNET_ELIMINATE_COMMON_EXPR': '1'}):
                     cse_exec = sym.simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
                                                type_dict=type_dict, **shapes)
-                    fwd_orig = orig_exec.forward(is_train=True, **data)
-                    out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
-                    orig_exec.backward(out_grads=out_grads)
-                    fwd_cse = cse_exec.forward(is_train=True, **data)
-                    cse_exec.backward(out_grads=out_grads)
-                    if check_data:
-                        for orig, cse in zip(fwd_orig, fwd_cse):
-                            np.testing.assert_allclose(orig.asnumpy(), cse.asnumpy(),
-                                                       rtol=rtol[dtype], atol=atol[dtype])
-                        for orig, cse in zip(orig_exec.grad_arrays, cse_exec.grad_arrays):
-                            if orig is None and cse is None:
-                                continue
-                            assert orig is not None
-                            assert cse is not None
-                            np.testing.assert_allclose(orig.asnumpy(), cse.asnumpy(),
-                                                       rtol=rtol[dtype], atol=atol[dtype])
-                    orig_sym_internals = orig_exec.get_optimized_symbol().get_internals()
-                    cse_sym_internals = cse_exec.get_optimized_symbol().get_internals()
-                    # test that the graph has been simplified as expected
-                    assert (len(cse_sym_internals) + expected_savings) == len(orig_sym_internals)
-        finally:
-            set_back_env_var(env_var_name, old_env_var)
+                fwd_orig = orig_exec.forward(is_train=True, **data)
+                out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
+                orig_exec.backward(out_grads=out_grads)
+                fwd_cse = cse_exec.forward(is_train=True, **data)
+                cse_exec.backward(out_grads=out_grads)
+                if check_data:
+                    for orig, cse in zip(fwd_orig, fwd_cse):
+                        np.testing.assert_allclose(orig.asnumpy(), cse.asnumpy(),
+                                                   rtol=rtol[dtype], atol=atol[dtype])
+                    for orig, cse in zip(orig_exec.grad_arrays, cse_exec.grad_arrays):
+                        if orig is None and cse is None:
+                            continue
+                        assert orig is not None
+                        assert cse is not None
+                        np.testing.assert_allclose(orig.asnumpy(), cse.asnumpy(),
+                                                   rtol=rtol[dtype], atol=atol[dtype])
+                orig_sym_internals = orig_exec.get_optimized_symbol().get_internals()
+                cse_sym_internals = cse_exec.get_optimized_symbol().get_internals()
+                # test that the graph has been simplified as expected
+                assert (len(cse_sym_internals) + expected_savings) == len(orig_sym_internals)
 
     a = mx.sym.Variable('a')
     b = mx.sym.Variable('b')
@@ -484,9 +440,7 @@ def test_eliminate_common_expr():
     arr2 = mx.random.uniform(shape=shape)
     arr3 = mx.random.uniform(shape=shape)
 
-    check_cse_on_symbol((a+5) + (a+5), expected_savings=1, check_data=True, a=arr1, b=arr2)
     check_cse_on_symbol((a+1) + (a+2), expected_savings=0, check_data=True, a=arr1, b=arr2)
-    check_cse_on_symbol((1+a) + (a+1), expected_savings=1, check_data=True, a=arr1, b=arr2)
     check_cse_on_symbol((a+b) + (a+b), expected_savings=1, check_data=True, a=arr1, b=arr2)
     check_cse_on_symbol(((a+b)+c) +((a+b)+c), expected_savings=2, check_data=True,
                                                                   a=arr1, b=arr2, c=arr3)

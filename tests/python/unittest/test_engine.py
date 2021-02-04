@@ -19,7 +19,7 @@ import nose
 import mxnet as mx
 import os
 import unittest
-from mxnet.test_utils import EnvManager
+from mxnet.test_utils import environment
 
 def test_bulk():
     with mx.engine.bulk(10):
@@ -42,7 +42,7 @@ def test_engine_openmp_after_fork():
     With GOMP the child always has the same number when calling omp_get_max_threads, with LLVM OMP
     the child respects the number of max threads set in the parent.
     """
-    with EnvManager('OMP_NUM_THREADS', '42'):
+    with environment('OMP_NUM_THREADS', '42'):
         r, w = os.pipe()
         pid = os.fork()
         if pid:

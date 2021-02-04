@@ -504,10 +504,10 @@ def test_multilamb():
     opt1 = PyLAMB
     opt2 = mx.optimizer.LAMB
 
-    # shapes as Bert-large
-    dims_x = [1024, 4096, 1024, 1024]
-    dims_y = [1, 1, 1024, 4096]
-    dims_occurrences = [9, 1, 4, 2]
+    dims_x = [1024, 4096, 1024]
+    dims_y = [1, 1, 1024]
+    dims_occurrences = [2, 1, 2]
+
     nlayers = 4 # 24
     # extra_dims_x=[30522, 512, 30522]
     # extra_dims_y=[1, 1024, 1024]

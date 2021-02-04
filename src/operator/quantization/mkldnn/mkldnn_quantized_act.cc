@@ -24,7 +24,7 @@
 */
 #if MXNET_USE_MKLDNN == 1
 
-#include "../../nn/mkldnn/mkldnn_act-inl.h"
+#include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../quantization_utils.h"
 
 namespace mxnet {

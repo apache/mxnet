@@ -32,25 +32,35 @@ fi
 apt-get update || true
 
 case ${CUDA_VERSION} in
+	11\.0*)
+		export libcudnn_package="libcudnn8"
+		export libcudnn_version="${CUDNN_VERSION}-1+cuda11.0"
+		export libcudnn_dev_version="${CUDNN_VERSION}-1+cuda11.0"
+		;;
 	10\.2*)
-		export libcudnn7_version="${CUDNN_VERSION}-1+cuda10.2"
-		export libcudnn7_dev_version="${CUDNN_VERSION}-1+cuda10.2"
+		export libcudnn_package="libcudnn8"
+		export libcudnn_version="${CUDNN_VERSION}-1+cuda10.2"
+		export libcudnn_dev_version="${CUDNN_VERSION}-1+cuda10.2"
 		;;
 	10\.1*)
-		export libcudnn7_version="${CUDNN_VERSION}-1+cuda10.1"
-		export libcudnn7_dev_version="${CUDNN_VERSION}-1+cuda10.1"
+		export libcudnn_package="libcudnn7"
+		export libcudnn_version="${CUDNN_VERSION}-1+cuda10.1"
+		export libcudnn_dev_version="${CUDNN_VERSION}-1+cuda10.1"
 		;;
 	10\.0*)
-		export libcudnn7_version="${CUDNN_VERSION}-1+cuda10.0"
-		export libcudnn7_dev_version="${CUDNN_VERSION}-1+cuda10.0"
+		export libcudnn_package="libcudnn7"
+		export libcudnn_version="${CUDNN_VERSION}-1+cuda10.0"
+		export libcudnn_dev_version="${CUDNN_VERSION}-1+cuda10.0"
 		;;
 	9\.0*)
-		export libcudnn7_version="${CUDNN_VERSION}-1+cuda9.0"
-		export libcudnn7_dev_version="${CUDNN_VERSION}-1+cuda9.0"
+		export libcudnn_package="libcudnn7"
+		export libcudnn_version="${CUDNN_VERSION}-1+cuda9.0"
+		export libcudnn_dev_version="${CUDNN_VERSION}-1+cuda9.0"
 		;;
 	9\.2*)
-		export libcudnn7_version="${CUDNN_VERSION}-1+cuda9.2"
-		export libcudnn7_dev_version="${CUDNN_VERSION}-1+cuda9.2"
+		export libcudnn_package="libcudnn7"
+		export libcudnn_version="${CUDNN_VERSION}-1+cuda9.2"
+		export libcudnn_dev_version="${CUDNN_VERSION}-1+cuda9.2"
 		;;
 	*)
 		echo "Unsupported CUDA version ${CUDA_VERSION}"
@@ -58,5 +68,5 @@ case ${CUDA_VERSION} in
 		;;
 esac
 
-apt-get install -y --allow-downgrades libcudnn7=${libcudnn7_version} libcudnn7-dev=${libcudnn7_dev_version}
+apt-get install -y --allow-downgrades ${libcudnn_package}=${libcudnn_version} ${libcudnn_package}-dev=${libcudnn_dev_version}
 

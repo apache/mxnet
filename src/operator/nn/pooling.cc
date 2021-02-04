@@ -95,10 +95,14 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                          mxnet::ShapeVector *out_shape) {
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 1U);
+  const mxnet::TShape &dshape = (*in_shape)[0];
+  if (!mxnet::ndim_is_known(dshape)) {
+    return false;
+  }
   if (param.pool_type == pool_enum::kLpPooling) {
     CHECK(param.p_value.has_value());
   }
-  const mxnet::TShape &dshape = (*in_shape)[0];
+
   if (param.pooling_convention == pool_enum::kSame) {
     CHECK_EQ(dshape.ndim(), 3U)
       << "Pooling: Input data should be 3D in (batch, channel, x)"
@@ -114,7 +118,6 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       << "Pooling: Input data should be  3D in (batch, channel, x)"
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";
-  if (!mxnet::ndim_is_known(dshape)) return false;
   int layout = param.GetLayout(dshape.ndim());
   if (param.global_pool) {
     mxnet::TShape oshape = dshape;

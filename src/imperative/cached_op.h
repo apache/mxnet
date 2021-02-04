@@ -238,10 +238,7 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
     common::CopyGraph(&unoptimized_graph, *full_graph, false);
 
     if (common::CheckForInputNameDuplicates(unoptimized_graph.indexed_graph())) {
-      full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
-      *full_graph = exec::FusePointwiseForward(std::move(*full_graph));
-      full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
-      *full_graph = exec::FusePointwiseBackward(std::move(*full_graph));
+      *full_graph = exec::FusePointwise(*full_graph, num_forward_outputs);
       // Check the topological order of inputs
       const auto &original_inputs = unoptimized_graph.indexed_graph().input_nodes();
       const auto &new_inputs = full_graph->indexed_graph().input_nodes();

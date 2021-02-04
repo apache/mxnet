@@ -157,6 +157,14 @@ struct LaTrianParam : public dmlc::Parameter<LaTrianParam> {
   }
 };
 
+// check if any dim will overflow 32-bit int
+inline void check_large_dim(std::vector<dim_t> dims) {
+  for (dim_t dim : dims) {
+    CHECK_LE(dim, INT_MAX)
+      << "Large matrix dimensions (>= 2^31) are not supported";
+  }
+}
+
 // Common function for shape inference for matrix mult and matrix mac.
 inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
                                    mxnet::ShapeVector* in_attrs,
@@ -181,6 +189,11 @@ inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
     const int ndim((*in_attrs)[0].ndim()), axis(axis_param < 0 ? ndim + axis_param : axis_param);
     CHECK(axis >= 0 && axis < ndim-1)
       << "Invalid row axis (" << axis_param << ")";
+    // Check if input matrix dims are too large
+    check_large_dim({(*in_attrs)[0][axis],
+                     (*in_attrs)[0][ndim-1],
+                     (*in_attrs)[1][axis],
+                     (*in_attrs)[1][ndim-1]});
     std::vector<int> oshape(ndim);
     for ( int i = 0; i < ndim-1; ++i ) {
       if (i != axis) {
@@ -225,6 +238,10 @@ inline bool LaTriangMatrixMultOpShape(const nnvm::NodeAttrs& attrs,
         << "Shapes of inputs 0, 1 must be the same, except on last two dimensions";
       oshape[i] = (*in_attrs)[0][i];
     }
+    // Check if the input matrix dims are too large; it suffices to check the second
+    // input only because the first is square whose size is bounded by memory
+    check_large_dim({(*in_attrs)[1][ndim-1],
+                     (*in_attrs)[1][ndim-2]});
     if ( param.rightside ) {
       // We compute B * A where A is the first and B the second input.
       CHECK_EQ((*in_attrs)[0][ndim-2], (*in_attrs)[1][ndim-1])
@@ -341,6 +358,9 @@ inline bool LaSyrkShape(const nnvm::NodeAttrs& attrs,
   bool transpose = nnvm::get<LaSyrkParam>(attrs.parsed).transpose;
   const int ndim = in_attr.ndim();
   if ( ndim >= 2 ) {
+    // Check if input matrix dims are too large
+    check_large_dim({in_attr[ndim-1],
+                     in_attr[ndim-2]});
     // Forward shape inference.
     std::vector<int> oshape(ndim);
     for ( int i = 0; i < ndim-2; ++i ) {
@@ -371,6 +391,9 @@ inline bool LaLQFactShape(const nnvm::NodeAttrs& attrs,
     const int ndim(in_a.ndim());
     CHECK_LE(in_a[ndim-2], in_a[ndim-1])
       << "Input A shape wrong: Last dimension must be >= than second to last";
+    // Check if the last dimension is too large; it suffices to check the last dim
+    // only since the second to last dim <= last dim
+    check_large_dim({in_a[ndim-1]});
     // Q must have same shape as A
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_a);
     std::vector<int> oshape_l(ndim);
@@ -475,6 +498,8 @@ inline bool LaEigFactShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& in_a = (*in_attrs)[0];
   const mxnet::TShape& out_u = (*out_attrs)[0];
   const mxnet::TShape& out_l = (*out_attrs)[1];
+  CHECK_LE(in_a.Size(), INT_MAX)
+    << "Large tensors are not supported by Linear Algebra operator syevd";
   if ( in_a.ndim() >= 2 ) {
     // Forward shape inference.
     const int ndim(in_a.ndim());

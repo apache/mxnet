@@ -31,6 +31,7 @@
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph.h>
 #include <nnvm/graph_attr_types.h>
+#include <utility>
 #include <vector>
 #include <memory>
 #include <string>
@@ -86,6 +87,13 @@ class OpExecutor {
   std::vector<OpReqType> req;
   /*! \brief runtime op context, contains allocated resources */
   OpContext op_ctx;
+  /*! \brief attributes of the node */
+  NodeAttrs attrs;
+  /*! \brief dispatch mode of the executor */
+  DispatchMode dispatch_mode;
+
+  explicit OpExecutor(NodeAttrs  attrs, DispatchMode dispatch_mode) :
+    attrs(std::move(attrs)), dispatch_mode(dispatch_mode) {}
   /*! \brief virtual destructor */
   virtual ~OpExecutor() {}
   /*!
@@ -100,6 +108,16 @@ class OpExecutor {
    * \param rctx The runtime context passed in by environment.
    */
   virtual void Run(RunContext rctx, bool is_gpu) = 0;
+  /*!
+   * \brief run the operators of a vector of execs, given runtime context on device.
+   *  This function call does not synchronize the stream.
+   * \param rctx The runtime context passed in by environment.
+   */
+  static void RunAll(const std::vector<std::shared_ptr<OpExecutor> > &execs,
+                     RunContext rctx, bool is_gpu) {
+    for (auto &exec : execs)
+      exec->Run(rctx, is_gpu);
+  }
   /*! \return the execution type */
   virtual ExecType exec_type() const = 0;
   /*! \return return engine variable for operator states */
@@ -204,22 +222,14 @@ Graph DetectInplaceAddTo(Graph g);
 Graph EliminateCommonExpr(Graph && g);
 
 /*!
- * \brief Fuse pointwise operations in the forward pass.
+ * \brief Fuse pointwise operations in the graph.
  *
  * \param g input graph (needs to be entire graph, not just forward part)
+ * \param num_forward_outputs number of outputs in the graph produced by the forward pass
  *
- * \return graph with fused pointwise operations in the forward pass
+ * \return copy of the graph with fused pointwise operations
  */
-Graph FusePointwiseForward(Graph&& g);
-
-/*!
- * \brief Fuse pointwise operations in the backward pass.
- *
- * \param g input graph (needs to be entire graph, not just forward part)
- *
- * \return graph with fused pointwise operations in the backward pass
- */
-Graph FusePointwiseBackward(Graph&& g);
+Graph FusePointwise(const Graph& g, const size_t num_forward_outputs);
 
 /*!
  * \brief Issue a one-time warning that fusion is not possible for this platform or build.

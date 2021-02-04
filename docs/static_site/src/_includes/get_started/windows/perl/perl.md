@@ -1,1 +1,0 @@
-Refer to the [Perl section of the MXNet Windows installation guide](/get_started/windows_setup.html#install-the-mxnet-package-for-perl).
