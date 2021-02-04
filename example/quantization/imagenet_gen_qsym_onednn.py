@@ -29,7 +29,8 @@ from mxnet.gluon.data import DataLoader
 from mxnet.gluon.data.vision import transforms
 from mxnet.gluon.model_zoo.vision import get_model
 
-sys.path.append('../..')
+SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, '..', '..')))
 from tools.rec2idx import IndexCreator
 
 
