@@ -1253,13 +1253,12 @@ integrationtest_ubuntu_cpu_onnx() {
     export PYTHONPATH=./python/
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    #tests/python-pytest/onnx/backend_test.py
     COV_ARG="--cov=./ --cov-report=xml --cov-append"
     pytest $COV_ARG --verbose tests/python-pytest/onnx/mxnet_export_test.py
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_models.py
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_node.py
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_operators.py
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py
+    pytest -n 12 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py
 }
 
 integrationtest_ubuntu_gpu_python() {
