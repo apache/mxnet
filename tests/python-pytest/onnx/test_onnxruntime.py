@@ -140,7 +140,9 @@ def download_test_images(image_urls, tmpdir):
 ])
 def test_obj_class_model_inference_onnxruntime(tmp_path, model):
     def normalize_image(imgfile):
-        img_data = mx.image.imread(imgfile).transpose([2, 0, 1]).astype('float32')
+        img_data = mx.image.imread(imgfile)
+        img_data = mx.image.imresize(img_data, 224, 224)
+        img_data = img_data.transpose([2, 0, 1]).astype('float32')
         mean_vec = mx.nd.array([0.485, 0.456, 0.406])
         stddev_vec = mx.nd.array([0.229, 0.224, 0.225])
         norm_img_data = mx.nd.zeros(img_data.shape).astype('float32')
@@ -160,11 +162,16 @@ def test_obj_class_model_inference_onnxruntime(tmp_path, model):
         input_name = session.get_inputs()[0].name
 
         test_image_urls = [
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/dog.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/apron.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/dolphin.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/hammerheadshark.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/lotus.jpg'
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/bikers.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/car.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/dancer.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/duck.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/flower.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/runners.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/shark.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/soccer2.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/tree.jpg',
         ]
 
         for img in download_test_images(test_image_urls, tmp_path):
@@ -205,18 +212,18 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model):
         input_name = session.get_inputs()[0].name
 
         test_image_urls = [
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/dog2.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/dog3.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/car6.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/dog.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/apron.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/dolphin.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/hammerheadshark.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/lotus.jpg'
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/car.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/duck.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/flower.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/runners.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/shark.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/soccer2.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/tree.jpg',
         ]
 
         for img in download_test_images(test_image_urls, tmp_path):
-            img_data = normalize_image(os.path.join(tmp_path, img))
+            img_data = normalize_image(img)
             mx_class_ids, mx_scores, mx_boxes = M.predict(img_data)
             onnx_scores, onnx_class_ids, onnx_boxes = session.run([], {input_name: img_data.asnumpy()})
             assert_almost_equal(mx_class_ids, onnx_class_ids)
@@ -265,18 +272,20 @@ def test_img_segmentation_model_inference_onnxruntime(tmp_path, model):
         input_name = session.get_inputs()[0].name
 
         test_image_urls = [
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/dog2.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/dog3.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/car6.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/dog.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/apron.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/dolphin.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/hammerheadshark.jpg',
-            'https://raw.githubusercontent.com/apache/incubator-mxnet-ci/master/test-data/images/lotus.jpg'
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/bikers.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/car.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/dancer.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/duck.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/flower.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/runners.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/shark.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/soccer2.jpg',
+            'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/tree.jpg',
         ]
 
         for img in download_test_images(test_image_urls, tmp_path):
-            img_data = normalize_image(os.path.join(tmp_path, img))
+            img_data = normalize_image(img)
             mx_result = M.predict(img_data)
             onnx_result = session.run([], {input_name: img_data.asnumpy()})
             assert(len(mx_result) == len(onnx_result))
