@@ -69,11 +69,11 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_
         pred_nat = pred_nat[0]
     if isinstance(pred_nat, list):
         for i in range(len(pred_nat)):
-            pred_onx = onnx_map(pred_onx[i]) if onnx_map else pred_onx[i]
-            assert_almost_equal(pred_nat[i], pred_onx)
+            pred_onx_i = onnx_map(pred_onx[i]) if onnx_map else pred_onx[i]
+            assert_almost_equal(pred_nat[i], pred_onx_i, equal_nan=True)
     else:
         pred_onx = onnx_map(pred_onx[0]) if onnx_map else pred_onx[0]
-        assert_almost_equal(pred_nat, pred_onx)
+        assert_almost_equal(pred_nat, pred_onx, equal_nan=True)
 
 
 def test_onnx_export_abs(tmp_path):
