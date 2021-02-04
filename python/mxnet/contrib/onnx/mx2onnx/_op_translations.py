@@ -229,34 +229,45 @@ def convert_weights_and_inputs(node, **kwargs):
         return [tval_node]
 
 
-@mx_op.register("Convolution")
+@mx_op.register('Convolution')
 def convert_convolution(node, **kwargs):
     """Map MXNet's convolution operator attributes to onnx's Conv operator
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    kernel_dims = list(parse_helper(attrs, "kernel"))
-    stride_dims = list(parse_helper(attrs, "stride", [1, 1]))
-    pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
-    num_group = int(attrs.get("num_group", 1))
-    dilations = list(parse_helper(attrs, "dilate", [1, 1]))
+    kernel = convert_string_to_list(attrs.get('kernel', '()'))
+    stride = convert_string_to_list(attrs.get('stride', '(1, 1)'))
+    dilate = convert_string_to_list(attrs.get('dilate', '(1, 1)'))
+    pad = convert_string_to_list(attrs.get('pad', '(0, 0)'))
+    num_group = int(attrs.get('num_group', 1))
+    no_bias = attrs.get('no_bias', 'False')
+    layout = attrs.get('layout', 'NCHW')
 
-    pad_dims = pad_dims + pad_dims
+    if layout != 'NCHW':
+        raise NotImplementedError('Pooling currently does not support layout!=\'NCHW\'')
 
-    conv_node = onnx.helper.make_node(
-        "Conv",
-        inputs=input_nodes,
-        outputs=[name],
-        kernel_shape=kernel_dims,
-        strides=stride_dims,
-        dilations=dilations,
-        pads=pad_dims,
-        group=num_group,
-        name=name
-    )
+    if no_bias == 'True':
+        assert len(input_nodes) == 2, 'Convolution takes 2 input if no_bias==True'
+    else:
+        assert len(input_nodes) == 3, 'Convolution takes 3 input if no_bias==False'
 
-    return [conv_node]
+    kwargs_ = {}
+    if kernel:
+        kwargs_['kernel_shape'] = tuple(kernel)
+    if pad:
+        kwargs_['pads'] = tuple(pad) + tuple(pad)
+    if stride:
+        kwargs_['strides'] = stride
+    if dilate:
+        kwargs_['dilations'] = dilate
+
+    nodes = [
+        make_node('Conv', input_nodes, [name], group=num_group, **kwargs_)
+    ]
+
+    return nodes
 
 
 @mx_op.register("Deconvolution")
@@ -679,92 +690,77 @@ def convert_linalg_gemm2(node, **kwargs):
         return [trans_a_node, trans_b_node, matmul_node]
 
 
-@mx_op.register("Pooling")
+@mx_op.register('Pooling')
 def convert_pooling(node, **kwargs):
     """Map MXNet's Pooling operator attributes to onnx's
     MaxPool/AveragePool/GlobalMaxPool/GlobalAveragePool operators
-    based on the input node's attributes and return the created node.
     """
-    opset_version = kwargs["opset_version"]
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    kernel = eval(attrs["kernel"])
-    pool_type = attrs["pool_type"] if attrs.get("pool_type") else "max"
-    stride = eval(attrs["stride"]) if attrs.get("stride") else (1, 1)
-    global_pool = get_boolean_attribute_value(attrs, "global_pool")
-    p_value = attrs.get('p_value', 'None')
-
+    kernel = convert_string_to_list(attrs.get('kernel', '()'))
+    pool_type = attrs.get('pool_type', 'max')
+    global_pool = attrs.get('global_pool', 'False')
+    _ = attrs.get('cudnn_off', 'False')
     pooling_convention = attrs.get('pooling_convention', 'valid')
-    ceil_mode = False
-    if pooling_convention == 'full':
-        if opset_version < 10:
-            pooling_warning = "Pooling: ONNX lower than 1.5.0 doesn't support pooling_convention. " \
-                              "This might lead to shape or accuracy issues. " \
-                              "https://github.com/onnx/onnx/issues/549"
-            logging.warning(pooling_warning)
-        ceil_mode = True
+    stride = convert_string_to_list(attrs.get('stride', '(1, 1)'))
+    pad = convert_string_to_list(attrs.get('pad', '()'))
+    p_value = int(attrs.get('p_value', '0'))
+    count_include_pad = attrs.get('count_include_pad', 'True')
+    layout = attrs.get('layout', 'NCHW')
 
-    pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
-    pad_dims = pad_dims + pad_dims
-    pool_types = {"max": "MaxPool", "avg": "AveragePool", "lp": "LpPool"}
-    global_pool_types = {"max": "GlobalMaxPool", "avg": "GlobalAveragePool",
-                         "lp": "GlobalLpPool"}
+    if pooling_convention == 'same':
+        raise NotImplementedError('Pooling currently does not support '
+                                  'pooling_convention==\'same\'')
+    if pool_type == 'sum':
+        raise NotImplementedError('Pooling currently does not support pool_type==\'sum\'')
+    if pool_type == 'lp' and global_pool == 'False' and pooling_convention != 'valid':
+        raise NotImplementedError('Pooling currently does not support '
+                                  'pooling_convention!=\'valid\' when pool_type==\'lp\' and global_pool==False')
+    if layout != 'NCHW':
+        raise NotImplementedError('Pooling currently does not support layout!=\'NCHW\'')
 
-    if pool_type == 'lp' and p_value == 'None':
-        raise AttributeError('ONNX requires a p value for LpPool and GlobalLpPool')
+    kwargs_ = {}
+    if kernel:
+        kwargs_['kernel_shape'] = tuple(kernel)
+    if pad:
+        kwargs_['pads'] = tuple(pad) + tuple(pad)
+    if stride:
+        kwargs_['strides'] = stride
 
-    if global_pool:
-        if pool_type == 'lp':
-            node = onnx.helper.make_node(
-                global_pool_types[pool_type],
-                input_nodes,  # input
-                [name],
-                p=int(p_value),
-                name=name
-            )
-        else:
-            node = onnx.helper.make_node(
-                global_pool_types[pool_type],
-                input_nodes,  # input
-                [name],
-                name=name
-            )
+    ceil_mode = 1 if pooling_convention == 'full' else 0
+    count_include_pad = 1 if count_include_pad == 'True' else 0
+
+    nodes = []
+    if pool_type == 'avg' and global_pool == 'False':
+        nodes += [
+            make_node('AveragePool', [input_nodes[0]], [name], ceil_mode=ceil_mode,
+                      count_include_pad=count_include_pad, **kwargs_)
+        ]
+    elif pool_type == 'max' and global_pool == 'False':
+        nodes += [
+            make_node('MaxPool', [input_nodes[0]], [name], ceil_mode=ceil_mode, **kwargs_)
+        ]
+    elif pool_type == 'lp' and global_pool == 'False':
+        nodes += [
+            make_node('LpPool', [input_nodes[0]], [name], p=p_value, **kwargs_)
+        ]
+    elif pool_type == 'avg' and global_pool == 'True':
+        nodes += [
+            make_node('GlobalAveragePool', [input_nodes[0]], [name])
+        ]
+    elif pool_type == 'max' and global_pool == 'True':
+        nodes += [
+            make_node('GlobalMaxPool', [input_nodes[0]], [name])
+        ]
+    elif pool_type == 'lp' and global_pool == 'True':
+        nodes += [
+            make_node('GlobalLpPool', [input_nodes[0]], [name], p=p_value)
+        ]
     else:
-        if pool_type == 'lp':
-            node = onnx.helper.make_node(
-                pool_types[pool_type],
-                input_nodes,  # input
-                [name],
-                p=int(p_value),
-                kernel_shape=kernel,
-                pads=pad_dims,
-                strides=stride,
-                name=name
-            )
-        else:
-            if opset_version >= 10:
-                node = onnx.helper.make_node(
-                    pool_types[pool_type],
-                    input_nodes,  # input
-                    [name],
-                    kernel_shape=kernel,
-                    pads=pad_dims,
-                    strides=stride,
-                    name=name,
-                    ceil_mode=ceil_mode
-                )
-            else:
-                node = onnx.helper.make_node(
-                    pool_types[pool_type],
-                    input_nodes,  # input
-                    [name],
-                    kernel_shape=kernel,
-                    pads=pad_dims,
-                    strides=stride,
-                    name=name
-                )
+        raise NotImplementedError('Unknown parameter values in Pooling')
 
-    return [node]
+    return nodes
 
 
 @mx_op.register("exp")
