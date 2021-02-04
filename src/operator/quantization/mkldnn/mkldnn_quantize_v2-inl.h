@@ -109,15 +109,21 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
 
     // Write output min/max
     auto out_type = GetQuantizeOutputType(param_);
-    if (out_type == mshadow::kUint8) {
+    bool shifted = param_.shifted.has_value() ? param_.shifted.value() : false;
+    float max_abs = MaxAbs(data_min, data_max);
+    if (shifted) {
+      quantized_range = kInt8Range;
+      out_type = mshadow::kUint8;
+      *outputs[1].data().dptr<float>() = data_min + max_abs;
+      *outputs[2].data().dptr<float>() = 2*max_abs;
+    } else if (out_type == mshadow::kUint8) {
       quantized_range = kUint8Range;
       *outputs[1].data().dptr<float>() = data_min;
       *outputs[2].data().dptr<float>() = data_max;
     } else if (out_type == mshadow::kInt8) {
-      float real_range = MaxAbs(data_min, data_max);
       quantized_range = kInt8Range;
-      *outputs[1].data().dptr<float>() = -real_range;
-      *outputs[2].data().dptr<float>() = real_range;
+      *outputs[1].data().dptr<float>() = -max_abs;
+      *outputs[2].data().dptr<float>() = max_abs;
     } else {
       LOG(FATAL) << "mkldnn quantize op only supports int8 and uint8 as output type";
     }
@@ -128,9 +134,14 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
       float real_range = MaxAbs(data_min, data_max);
       float scale = quantized_range / real_range;
       mkldnn::primitive_attr attr;
-      const int mask = 0;
-      std::vector<float> scales = {scale};
-      attr.set_output_scales(mask, scales);
+      if (shifted) {
+        float shift = 128;
+        attr.set_rnn_data_qparams(scale, shift);
+      } else {
+        const int mask = 0;
+        std::vector<float> scales = {scale};
+        attr.set_output_scales(mask, scales);
+      }
       mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
       auto i_desc = i_mem->get_desc();
       size_t i_ndim = in_buffer.shape().ndim();
