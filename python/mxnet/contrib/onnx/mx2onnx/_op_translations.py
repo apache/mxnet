@@ -229,34 +229,45 @@ def convert_weights_and_inputs(node, **kwargs):
         return [tval_node]
 
 
-@mx_op.register("Convolution")
+@mx_op.register('Convolution')
 def convert_convolution(node, **kwargs):
     """Map MXNet's convolution operator attributes to onnx's Conv operator
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    kernel_dims = list(parse_helper(attrs, "kernel"))
-    stride_dims = list(parse_helper(attrs, "stride", [1, 1]))
-    pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
-    num_group = int(attrs.get("num_group", 1))
-    dilations = list(parse_helper(attrs, "dilate", [1, 1]))
+    kernel = convert_string_to_list(attrs.get('kernel', '()'))
+    stride = convert_string_to_list(attrs.get('stride', '(1, 1)'))
+    dilate = convert_string_to_list(attrs.get('dilate', '(1, 1)'))
+    pad = convert_string_to_list(attrs.get('pad', '(0, 0)'))
+    num_group = int(attrs.get('num_group', 1))
+    no_bias = attrs.get('no_bias', 'False')
+    layout = attrs.get('layout', 'NCHW')
 
-    pad_dims = pad_dims + pad_dims
+    if layout != 'NCHW':
+        raise NotImplementedError('Pooling currently does not support layout!=\'NCHW\'')
 
-    conv_node = onnx.helper.make_node(
-        "Conv",
-        inputs=input_nodes,
-        outputs=[name],
-        kernel_shape=kernel_dims,
-        strides=stride_dims,
-        dilations=dilations,
-        pads=pad_dims,
-        group=num_group,
-        name=name
-    )
+    if no_bias == 'True':
+        assert len(input_nodes) == 2, 'Convolution takes 2 input if no_bias==True'
+    else:
+        assert len(input_nodes) == 3, 'Convolution takes 3 input if no_bias==False'
 
-    return [conv_node]
+    kwargs_ = {}
+    if kernel:
+        kwargs_['kernel_shape'] = tuple(kernel)
+    if pad:
+        kwargs_['pads'] = tuple(pad) + tuple(pad)
+    if stride:
+        kwargs_['strides'] = stride
+    if dilate:
+        kwargs_['dilations'] = dilate
+
+    nodes = [
+        make_node('Conv', input_nodes, [name], group=num_group,  **kwargs_)
+    ]
+
+    return nodes
 
 
 @mx_op.register("Deconvolution")
