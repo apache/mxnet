@@ -264,7 +264,7 @@ def convert_convolution(node, **kwargs):
         kwargs_['dilations'] = dilate
 
     nodes = [
-        make_node('Conv', input_nodes, [name], group=num_group,  **kwargs_)
+        make_node('Conv', input_nodes, [name], group=num_group, **kwargs_)
     ]
 
     return nodes
