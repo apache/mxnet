@@ -1122,9 +1122,8 @@ def convert_dropout(node, **kwargs):
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
-    opset_version = kwargs["opset_version"]
 
-    probability = float(attrs.get("p", 0.5))
+    _ = float(attrs.get("p", 0.5))
     axes = convert_string_to_list((attrs.get("axes", "None")))
     mode = attrs.get('mode', 'training')
 
