@@ -74,7 +74,7 @@ def export_model(sym, params, input_shape, input_type=np.float32,
         opset_version = onnx_opset_version()
 
     if not isinstance(input_type, list):
-        input_type = [input_type for _ in range(len(input_shapes))]
+        input_type = [input_type for _ in range(len(input_shape))]
     input_dtype = [mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(inp_type)] for inp_type in input_type]
     # if input parameters are strings(file paths), load files and create symbol parameter objects
     if isinstance(sym, string_types) and isinstance(params, string_types):
