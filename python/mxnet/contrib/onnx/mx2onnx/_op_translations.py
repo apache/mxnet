@@ -229,34 +229,45 @@ def convert_weights_and_inputs(node, **kwargs):
         return [tval_node]
 
 
-@mx_op.register("Convolution")
+@mx_op.register('Convolution')
 def convert_convolution(node, **kwargs):
     """Map MXNet's convolution operator attributes to onnx's Conv operator
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    kernel_dims = list(parse_helper(attrs, "kernel"))
-    stride_dims = list(parse_helper(attrs, "stride", [1, 1]))
-    pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
-    num_group = int(attrs.get("num_group", 1))
-    dilations = list(parse_helper(attrs, "dilate", [1, 1]))
+    kernel = convert_string_to_list(attrs.get('kernel', '()'))
+    stride = convert_string_to_list(attrs.get('stride', '(1, 1)'))
+    dilate = convert_string_to_list(attrs.get('dilate', '(1, 1)'))
+    pad = convert_string_to_list(attrs.get('pad', '(0, 0)'))
+    num_group = int(attrs.get('num_group', 1))
+    no_bias = attrs.get('no_bias', 'False')
+    layout = attrs.get('layout', 'NCHW')
 
-    pad_dims = pad_dims + pad_dims
+    if layout != 'NCHW':
+        raise NotImplementedError('Pooling currently does not support layout!=\'NCHW\'')
 
-    conv_node = onnx.helper.make_node(
-        "Conv",
-        inputs=input_nodes,
-        outputs=[name],
-        kernel_shape=kernel_dims,
-        strides=stride_dims,
-        dilations=dilations,
-        pads=pad_dims,
-        group=num_group,
-        name=name
-    )
+    if no_bias == 'True':
+        assert len(input_nodes) == 2, 'Convolution takes 2 input if no_bias==True'
+    else:
+        assert len(input_nodes) == 3, 'Convolution takes 3 input if no_bias==False'
 
-    return [conv_node]
+    kwargs_ = {}
+    if kernel:
+        kwargs_['kernel_shape'] = tuple(kernel)
+    if pad:
+        kwargs_['pads'] = tuple(pad) + tuple(pad)
+    if stride:
+        kwargs_['strides'] = stride
+    if dilate:
+        kwargs_['dilations'] = dilate
+
+    nodes = [
+        make_node('Conv', input_nodes, [name], group=num_group, **kwargs_)
+    ]
+
+    return nodes
 
 
 @mx_op.register("Deconvolution")
@@ -385,6 +396,10 @@ def convert_batchnorm(node, **kwargs):
 
     momentum = float(attrs.get("momentum", 0.9))
     eps = float(attrs.get("eps", 0.001))
+    axis = int(attrs.get("axis", 1))
+
+    if axis != 1:
+        raise NotImplementedError("batchnorm axis != 1 is currently not supported.")
 
     bn_node = onnx.helper.make_node(
         "BatchNormalization",
@@ -679,92 +694,77 @@ def convert_linalg_gemm2(node, **kwargs):
         return [trans_a_node, trans_b_node, matmul_node]
 
 
-@mx_op.register("Pooling")
+@mx_op.register('Pooling')
 def convert_pooling(node, **kwargs):
     """Map MXNet's Pooling operator attributes to onnx's
     MaxPool/AveragePool/GlobalMaxPool/GlobalAveragePool operators
-    based on the input node's attributes and return the created node.
     """
-    opset_version = kwargs["opset_version"]
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    kernel = eval(attrs["kernel"])
-    pool_type = attrs["pool_type"] if attrs.get("pool_type") else "max"
-    stride = eval(attrs["stride"]) if attrs.get("stride") else (1, 1)
-    global_pool = get_boolean_attribute_value(attrs, "global_pool")
-    p_value = attrs.get('p_value', 'None')
-
+    kernel = convert_string_to_list(attrs.get('kernel', '()'))
+    pool_type = attrs.get('pool_type', 'max')
+    global_pool = attrs.get('global_pool', 'False')
+    _ = attrs.get('cudnn_off', 'False')
     pooling_convention = attrs.get('pooling_convention', 'valid')
-    ceil_mode = False
-    if pooling_convention == 'full':
-        if opset_version < 10:
-            pooling_warning = "Pooling: ONNX lower than 1.5.0 doesn't support pooling_convention. " \
-                              "This might lead to shape or accuracy issues. " \
-                              "https://github.com/onnx/onnx/issues/549"
-            logging.warning(pooling_warning)
-        ceil_mode = True
+    stride = convert_string_to_list(attrs.get('stride', '(1, 1)'))
+    pad = convert_string_to_list(attrs.get('pad', '()'))
+    p_value = int(attrs.get('p_value', '0'))
+    count_include_pad = attrs.get('count_include_pad', 'True')
+    layout = attrs.get('layout', 'NCHW')
 
-    pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
-    pad_dims = pad_dims + pad_dims
-    pool_types = {"max": "MaxPool", "avg": "AveragePool", "lp": "LpPool"}
-    global_pool_types = {"max": "GlobalMaxPool", "avg": "GlobalAveragePool",
-                         "lp": "GlobalLpPool"}
+    if pooling_convention == 'same':
+        raise NotImplementedError('Pooling currently does not support '
+                                  'pooling_convention==\'same\'')
+    if pool_type == 'sum':
+        raise NotImplementedError('Pooling currently does not support pool_type==\'sum\'')
+    if pool_type == 'lp' and global_pool == 'False' and pooling_convention != 'valid':
+        raise NotImplementedError('Pooling currently does not support '
+                                  'pooling_convention!=\'valid\' when pool_type==\'lp\' and global_pool==False')
+    if layout != 'NCHW':
+        raise NotImplementedError('Pooling currently does not support layout!=\'NCHW\'')
 
-    if pool_type == 'lp' and p_value == 'None':
-        raise AttributeError('ONNX requires a p value for LpPool and GlobalLpPool')
+    kwargs_ = {}
+    if kernel:
+        kwargs_['kernel_shape'] = tuple(kernel)
+    if pad:
+        kwargs_['pads'] = tuple(pad) + tuple(pad)
+    if stride:
+        kwargs_['strides'] = stride
 
-    if global_pool:
-        if pool_type == 'lp':
-            node = onnx.helper.make_node(
-                global_pool_types[pool_type],
-                input_nodes,  # input
-                [name],
-                p=int(p_value),
-                name=name
-            )
-        else:
-            node = onnx.helper.make_node(
-                global_pool_types[pool_type],
-                input_nodes,  # input
-                [name],
-                name=name
-            )
+    ceil_mode = 1 if pooling_convention == 'full' else 0
+    count_include_pad = 1 if count_include_pad == 'True' else 0
+
+    nodes = []
+    if pool_type == 'avg' and global_pool == 'False':
+        nodes += [
+            make_node('AveragePool', [input_nodes[0]], [name], ceil_mode=ceil_mode,
+                      count_include_pad=count_include_pad, **kwargs_)
+        ]
+    elif pool_type == 'max' and global_pool == 'False':
+        nodes += [
+            make_node('MaxPool', [input_nodes[0]], [name], ceil_mode=ceil_mode, **kwargs_)
+        ]
+    elif pool_type == 'lp' and global_pool == 'False':
+        nodes += [
+            make_node('LpPool', [input_nodes[0]], [name], p=p_value, **kwargs_)
+        ]
+    elif pool_type == 'avg' and global_pool == 'True':
+        nodes += [
+            make_node('GlobalAveragePool', [input_nodes[0]], [name])
+        ]
+    elif pool_type == 'max' and global_pool == 'True':
+        nodes += [
+            make_node('GlobalMaxPool', [input_nodes[0]], [name])
+        ]
+    elif pool_type == 'lp' and global_pool == 'True':
+        nodes += [
+            make_node('GlobalLpPool', [input_nodes[0]], [name], p=p_value)
+        ]
     else:
-        if pool_type == 'lp':
-            node = onnx.helper.make_node(
-                pool_types[pool_type],
-                input_nodes,  # input
-                [name],
-                p=int(p_value),
-                kernel_shape=kernel,
-                pads=pad_dims,
-                strides=stride,
-                name=name
-            )
-        else:
-            if opset_version >= 10:
-                node = onnx.helper.make_node(
-                    pool_types[pool_type],
-                    input_nodes,  # input
-                    [name],
-                    kernel_shape=kernel,
-                    pads=pad_dims,
-                    strides=stride,
-                    name=name,
-                    ceil_mode=ceil_mode
-                )
-            else:
-                node = onnx.helper.make_node(
-                    pool_types[pool_type],
-                    input_nodes,  # input
-                    [name],
-                    kernel_shape=kernel,
-                    pads=pad_dims,
-                    strides=stride,
-                    name=name
-                )
+        raise NotImplementedError('Unknown parameter values in Pooling')
 
-    return [node]
+    return nodes
 
 
 @mx_op.register("exp")
@@ -872,14 +872,14 @@ def convert_softmax(node, **kwargs):
     data = input_nodes[0]
 
     # use op set 11 ONNX Softmax
-    if axis == -1 and temperature == 'None':
+    if axis == -1 and temperature == 1.:
         nodes = []
         if use_length == "True":
             nodes += [
                 create_const_scalar_node(name+"_0_s", np.int64(0), kwargs),
                 create_const_scalar_node(name+"_1_s", np.int64(1), kwargs),
-                create_tensor([np.finfo(dtype).min], name+"_mask_val", kwargs["initializer"],
-                              dtype=dtype),
+                # magic number, this is fp16 min
+                create_tensor([-65500.0], name+"_mask_val", kwargs["initializer"], dtype=dtype),
                 create_tensor([], name+"_void", kwargs["initializer"]),
                 create_tensor([1], name+"_1", kwargs["initializer"]),
                 make_node("Shape", [data], [name+"_shape"]),
@@ -1623,9 +1623,17 @@ def convert_reshape(node, **kwargs):
     # In general -2, -3, -4 in the target shape are not supoorted, but there are
     # a few special cases that we can convert to supported scenarios
 
-    # If -2 and -3 are not used, then we can just remove the -4
+    # If -2 and -3 are not used and there is no 0 to the right of -4, then we can just remove -4
     if -4 in targ_shape and -3 not in targ_shape and -2 not in targ_shape and reverse != 'True':
-        targ_shape = [i for i in targ_shape if i != -4]
+        if 0 not in targ_shape:
+            targ_shape = [i for i in targ_shape if i != -4]
+        else:
+            # index of first -4
+            ind_4 = targ_shape.index(-4)
+            # index of last 0
+            ind0 = len(targ_shape) - 1 - targ_shape[::-1].index(0)
+            if ind_4 > ind0:
+                targ_shape = [i for i in targ_shape if i != -4]
 
     if targ_shape == [-3, 0] and reverse != 'True':
         targ_shape = [-1, 0]
@@ -1644,6 +1652,32 @@ def convert_reshape(node, **kwargs):
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
         return nodes
+
+    if targ_shape == [0, -4, -1, 4, 0, 0] and reverse != 'True':
+        create_tensor([4], name+'_4', kwargs['initializer'])
+        nodes = [
+            make_node('Shape', [input_nodes[0]], [name+'_shape']),
+            make_node('Split', [name+'_shape'], [name+'_dim0', name+'_dim1', name+'_dim2',
+                                                 name+'_dim3'], axis=0),
+            make_node('Div', [name+'_dim1', name+'_4'], [name+'_div']),
+            make_node('Concat', [name+'_dim0', name+'_div', name+'_4', name+'_dim2', name+'_dim3'],
+                      [name+'_shape_new'], axis=0),
+            make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
+        ]
+        return nodes
+
+    if targ_shape == [0, 0, -4, 2, 2, 0, 0] and reverse != 'True':
+        create_tensor([2], name+'_2', kwargs['initializer'])
+        nodes = [
+            make_node('Shape', [input_nodes[0]], [name+'_shape']),
+            make_node('Split', [name+'_shape'], [name+'_dim0', name+'_dim1', name+'_dim2',
+                                                 name+'_dim3', name+'_dim4'], axis=0),
+            make_node('Concat', [name+'_dim0', name+'_dim1', name+'_2', name+'_2',
+                                 name+'_dim3', name+'_dim4'], [name+'_shape_new'], axis=0),
+            make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
+        ]
+        return nodes
+
 
     not_supported_shape = [-2, -3, -4]
     for val in targ_shape:
@@ -2380,6 +2414,8 @@ def convert_layer_norm(node, **kwargs):
     axes = int(attrs.get('axis', -1))
     eps = attrs.get('eps', 9.99999975e-06)
 
+    input_type = int(kwargs['in_type'])
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
 
     nodes = [
         create_tensor([axes], name+"_axes", kwargs["initializer"]),
@@ -2387,7 +2423,7 @@ def convert_layer_norm(node, **kwargs):
         create_tensor([], name+"_void", kwargs["initializer"]),
         create_const_scalar_node(name+'_0_s', np.int64(0), kwargs),
         create_const_scalar_node(name+'_1_s', np.int64(1), kwargs),
-        create_const_scalar_node(name+"_2_s", np.int64(2), kwargs),
+        create_const_scalar_node(name+"_2_s", np.array(2, dtype=dtype), kwargs),
         create_const_scalar_node(name+"_eps", np.float32(eps), kwargs),
         make_node("ReduceMean", [input_nodes[0]], [name+"_rm0_out"], axes=[axes]),
         make_node("Sub", [input_nodes[0], name+"_rm0_out"], [name+"_sub0_out"]),

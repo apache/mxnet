@@ -41,25 +41,29 @@ static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
   if (req[0] == kWriteInplace) {
     return;
   }
-  mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
   auto data = inputs[0];
-  if (data.IsView() && data.IsMKLDNNData())
-    data = data.Reorder2Default();
-  const auto i_mem = data.GetMKLDNNData();
-  const size_t i_ndim = data.shape().ndim();
-  mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
-  for (size_t i = 0; i < i_ndim; i++) {
-    i_dims[i] = static_cast<int>(data.shape()[i]);
+  if (data.dtype() != mshadow::kFloat16 && outputs[0].dtype() != mshadow::kFloat16) {
+    mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+    if (data.IsView() && data.IsMKLDNNData())
+      data = data.Reorder2Default();
+    const auto i_mem = data.GetMKLDNNData();
+    const size_t i_ndim = data.shape().ndim();
+    mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
+    for (size_t i = 0; i < i_ndim; i++) {
+      i_dims[i] = static_cast<int>(data.shape()[i]);
+    }
+    const auto o_desc =
+        mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[0].dtype()),
+                            static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(i_ndim)));
+    const auto out_mem = CreateMKLDNNMem(outputs[0], o_desc, req[0]);
+    mkldnn_args_map_t reorder_args;
+    reorder_args[MKLDNN_ARG_SRC] = *i_mem;
+    reorder_args[MKLDNN_ARG_DST] = *out_mem.second;
+    MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(*i_mem, *out_mem.second), reorder_args);
+    MKLDNNStream::Get()->Submit();
+    return;
   }
-  const auto o_desc =
-      mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[0].dtype()),
-                           static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(i_ndim)));
-  const auto out_mem = CreateMKLDNNMem(outputs[0], o_desc, req[0]);
-  mkldnn_args_map_t reorder_args;
-  reorder_args[MKLDNN_ARG_SRC] = *i_mem;
-  reorder_args[MKLDNN_ARG_DST] = *out_mem.second;
-  MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(*i_mem, *out_mem.second), reorder_args);
-  MKLDNNStream::Get()->Submit();
+  FallBackCompute(AMPCastCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 inline static bool AMPCastStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,

@@ -39,7 +39,7 @@ def def_model(op_name, dummy_input=False, **params):
                 return func(*inputs, **params)
     return Model
 
-def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False):
+def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_map=None):
     def export_to_onnx(model, model_name, inputs):
         model_path = '{}/{}'.format(tmp_path, model_name)
         model.export(model_path, epoch=0)
@@ -69,9 +69,11 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False):
         pred_nat = pred_nat[0]
     if isinstance(pred_nat, list):
         for i in range(len(pred_nat)):
-            assert_almost_equal(pred_nat[i], pred_onx[i], equal_nan=True)
+            pred_onx_i = onnx_map(pred_onx[i]) if onnx_map else pred_onx[i]
+            assert_almost_equal(pred_nat[i], pred_onx_i, equal_nan=True)
     else:
-        assert_almost_equal(pred_nat, pred_onx[0], equal_nan=True)
+        pred_onx = onnx_map(pred_onx[0]) if onnx_map else pred_onx[0]
+        assert_almost_equal(pred_nat, pred_onx, equal_nan=True)
 
 
 def test_onnx_export_abs(tmp_path):
@@ -235,6 +237,14 @@ def test_onnx_export_reshape_special_cases(tmp_path, dtype):
     M5 = def_model('reshape', shape=(0, 0, -3, -3))
     op_export_test('reshape_spec_5', M5, [x3], tmp_path)
 
+    x4 = mx.nd.ones((5, 8, 6, 7), dtype=dtype)
+    M6 = def_model('reshape', shape=(0, -4, -1, 4, 0, 0))
+    op_export_test('reshape_spec_6', M6, [x4], tmp_path)
+
+    x5 = mx.nd.ones((2, 3, 4, 5, 6), dtype=dtype)
+    M7 = def_model('reshape', shape=(0, 0, -4, 2, 2, 0, 0))
+    op_export_test('reshape_spec_7', M7, [x5], tmp_path)
+
 
 @pytest.mark.parametrize('dtype', ['int32', 'int64'])
 def test_onnx_export_embedding(tmp_path, dtype):
@@ -381,19 +391,21 @@ def test_onnx_export_cast(tmp_path, src_dtype, dst_dtype, shape):
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
-@pytest.mark.parametrize('temperature', [.1, 1., 10.])
+@pytest.mark.parametrize('temperature', [None, .1, 1., 10.])
 def test_onnx_export_softmax(tmp_path, dtype, temperature):
-    x = mx.nd.random.uniform(0, 1, (2, 3, 4), dtype=dtype)
+    x = mx.nd.random.uniform(0, 1, (4, 5, 6), dtype=dtype)
     M1 = def_model('softmax')
     op_export_test('softmax_1', M1, [x], tmp_path)
     M2 = def_model('softmax', use_length=True, axis=0, temperature=temperature)
-    l2 = mx.nd.array([[2,0,2,1],[1,1,2,1], [0,0,0,1]], dtype=int)
+    l2 = mx.random.uniform(0, 4, (5, 6)).astype('int32')
     op_export_test('softmax_2', M2, [x, l2], tmp_path)
     M3 = def_model('softmax', use_length=True, axis=-1, temperature=temperature)
-    l3 = mx.nd.array([[2,0,4],[0,0,0]], dtype=int)
+    # note that the axis==-1 case uses negative value masking + ONNX softmax
+    # when valid_len==0 the masked values will NOT be 0
+    l3 = mx.random.uniform(1, 6, (4, 5)).astype('int32')
     op_export_test('softmax_3', M3, [x, l3], tmp_path)
     M4 = def_model('softmax', use_length=True, axis=1, temperature=temperature)
-    l4 = mx.nd.array([[2,0,3,1],[0,1,0,0]], dtype=int)
+    l4 = mx.random.uniform(0, 5, (4, 6)).astype('int32')
     op_export_test('softmax_4', M4, [x, l4], tmp_path)
 
 
@@ -580,7 +592,9 @@ def test_onnx_link_op_with_multiple_outputs(tmp_path):
     op_export_test('link_op_with_multiple_outputs_case3', Model3, [A], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+# opset 8 MAX only supports float types
+# opset 12 and up suppots float and int
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (1, 4, 1, 7)])
 def test_onnx_maximum_scalar(tmp_path, dtype, shape):
     x = mx.random.uniform(0, 10, shape).astype(dtype)
@@ -752,6 +766,107 @@ def test_onnx_export_batch_dot(tmp_path, dtype, transpose_a, transpose_b):
     op_export_test('batch_dot2', M2, [x2, y2], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 1, 60, 60)])
+@pytest.mark.parametrize('count_include_pad', [True, False])
+@pytest.mark.parametrize('pooling_convention', ['full', 'valid'])
+@pytest.mark.parametrize('kernel', [(3, 3), (4, 5), (14, 14)])
+@pytest.mark.parametrize('stride', [None, (1, 1), (2, 2), (3, 4), (4, 5)])
+@pytest.mark.parametrize('pad', [None, (1, 1), (3, 4), (4, 5)])
+def test_onnx_export_pooling_avg(tmp_path, dtype, shape, count_include_pad, pooling_convention,
+                                 kernel, stride, pad):
+    # mxnet and onnxruntime has different implementation of count_include_pad on the left column
+    # and bottom row
+    if pooling_convention == 'full' and count_include_pad == True:
+        return
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    M = def_model('Pooling', count_include_pad=count_include_pad, pool_type='avg',
+                  pooling_convention=pooling_convention, **kwargs)
+    # Note here we use np.nan_to_num to map the onnx output because onnxruntime AveragePool will
+    # output NaN in some edge cases where mxnet outputs 0
+    op_export_test('pooling_avg', M, [x], tmp_path, onnx_map=np.nan_to_num)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 1, 60, 60)])
+@pytest.mark.parametrize('pooling_convention', ['full', 'valid'])
+@pytest.mark.parametrize('kernel', [(3, 3), (4, 5), (14, 14)])
+@pytest.mark.parametrize('stride', [None, (1, 1), (2, 2), (3, 4), (4, 5)])
+@pytest.mark.parametrize('pad', [None, (1, 1), (3, 4), (4, 5)])
+def test_onnx_export_pooling_max(tmp_path, dtype, shape, pooling_convention, kernel, stride, pad):
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    M = def_model('Pooling', pool_type='max', pooling_convention=pooling_convention, **kwargs)
+    op_export_test('pooling_max', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 1, 60, 60)])
+@pytest.mark.parametrize('p_value', [1, 2])
+@pytest.mark.parametrize('kernel', [(3, 3), (4, 5), (14, 14)])
+@pytest.mark.parametrize('stride', [None, (1, 1), (2, 2), (3, 4), (4, 5)])
+@pytest.mark.parametrize('pad', [None, (1, 1), (3, 4), (4, 5)])
+def test_onnx_export_pooling_lp(tmp_path, dtype, shape, p_value, kernel, stride, pad):
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    M = def_model('Pooling', pool_type='lp', pooling_convention='valid',
+                  p_value=p_value, **kwargs)
+    op_export_test('pooling_lp', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 1, 60, 60)])
+@pytest.mark.parametrize('pool_type', ['avg', 'max', 'lp'])
+@pytest.mark.parametrize('p_value', [1, 2])
+@pytest.mark.parametrize('kernel', [(3, 3), (14, 14)])
+@pytest.mark.parametrize('stride', [None, (3, 4)])
+@pytest.mark.parametrize('pad', [None, (3, 4)])
+def test_onnx_export_pooling_global(tmp_path, dtype, shape, pool_type, p_value, kernel, stride, pad):
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    # kernel, stride, and pad should have no effect on the results
+    M = def_model('Pooling', global_pool=True, pool_type=pool_type, pooling_convention='valid',
+                  p_value=p_value, **kwargs)
+    op_export_test('pooling_global', M, [x], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 def test_onnx_export_log2(tmp_path, dtype):
     x = mx.random.normal(0, 10, (2, 3, 4, 5)).astype(dtype)
@@ -789,3 +904,47 @@ def test_onnx_export_dropout(tmp_path, dtype, shape, p):
     M = def_model('Dropout', p=p)
     op_export_test('Dropuout', M, [x], tmp_path)
 
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 6, 60, 60)])
+@pytest.mark.parametrize('num_filter', [2, 4, 32])
+@pytest.mark.parametrize('num_group', [1, 2])
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('kernel', [(3, 3), (4, 5), (14, 14)])
+@pytest.mark.parametrize('stride', [None, (1, 1), (2, 2), (3, 4), (4, 5)])
+@pytest.mark.parametrize('pad', [None, (1, 1), (3, 4), (4, 5)])
+@pytest.mark.parametrize('dilate', [None, (1, 1)])
+def test_onnx_export_convolution(tmp_path, dtype, shape, num_filter, num_group, no_bias,
+                                 kernel, stride, pad, dilate):
+    if shape[1] % num_group:
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    w_shape = (num_filter,) + (shape[1] // num_group,) + kernel
+    w = mx.random.uniform(0, 1, w_shape, dtype=dtype)
+    b_shape = (num_filter)
+    b = mx.random.uniform(0, 1, b_shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    if dilate:
+        kwargs['dilate'] = dilate
+    M = def_model('Convolution', num_filter=num_filter, num_group=num_group,  no_bias=no_bias,
+                  **kwargs)
+    inputs = [x, w] if no_bias else [x, w, b]
+    op_export_test('convolution', M, inputs, tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('momentum', [0.9, 0.5, 0.1])
+def test_onnx_export_batchnorm(tmp_path, dtype, momentum):
+    x = mx.nd.random.normal(0, 10, (2, 3, 4, 5)).astype(dtype)
+    gamma = mx.nd.random.normal(0, 10, (3)).astype(dtype)
+    beta = mx.nd.random.normal(0, 10, (3)).astype(dtype)
+    moving_mean = mx.nd.random.normal(0, 10, (3)).astype(dtype)
+    moving_var = mx.nd.abs(mx.nd.random.normal(0, 10, (3))).astype(dtype)
+    M = def_model('BatchNorm', eps=1e-5, momentum=momentum, fix_gamma=False, use_global_stats=False)
+    op_export_test('BatchNorm1', M, [x, gamma, beta, moving_mean, moving_var], tmp_path)
