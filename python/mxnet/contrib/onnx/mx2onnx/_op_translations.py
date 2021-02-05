@@ -868,14 +868,14 @@ def convert_softmax(node, **kwargs):
     data = input_nodes[0]
 
     # use op set 11 ONNX Softmax
-    if axis == -1 and temperature == 'None':
+    if axis == -1 and temperature == 1.:
         nodes = []
         if use_length == "True":
             nodes += [
                 create_const_scalar_node(name+"_0_s", np.int64(0), kwargs),
                 create_const_scalar_node(name+"_1_s", np.int64(1), kwargs),
-                create_tensor([np.finfo(dtype).min], name+"_mask_val", kwargs["initializer"],
-                              dtype=dtype),
+                # magic number, this is fp16 min
+                create_tensor([-65500.0], name+"_mask_val", kwargs["initializer"], dtype=dtype),
                 create_tensor([], name+"_void", kwargs["initializer"]),
                 create_tensor([1], name+"_1", kwargs["initializer"]),
                 make_node("Shape", [data], [name+"_shape"]),
@@ -2410,6 +2410,8 @@ def convert_layer_norm(node, **kwargs):
     axes = int(attrs.get('axis', -1))
     eps = attrs.get('eps', 9.99999975e-06)
 
+    input_type = int(kwargs['in_type'])
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
 
     nodes = [
         create_tensor([axes], name+"_axes", kwargs["initializer"]),
@@ -2417,7 +2419,7 @@ def convert_layer_norm(node, **kwargs):
         create_tensor([], name+"_void", kwargs["initializer"]),
         create_const_scalar_node(name+'_0_s', np.int64(0), kwargs),
         create_const_scalar_node(name+'_1_s', np.int64(1), kwargs),
-        create_const_scalar_node(name+"_2_s", np.int64(2), kwargs),
+        create_const_scalar_node(name+"_2_s", np.array(2, dtype=dtype), kwargs),
         create_const_scalar_node(name+"_eps", np.float32(eps), kwargs),
         make_node("ReduceMean", [input_nodes[0]], [name+"_rm0_out"], axes=[axes]),
         make_node("Sub", [input_nodes[0], name+"_rm0_out"], [name+"_sub0_out"]),

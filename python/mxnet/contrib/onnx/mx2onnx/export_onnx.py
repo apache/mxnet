@@ -224,9 +224,15 @@ class MXNetGraph(object):
         # Determine output shape
         graph_outputs = MXNetGraph.get_outputs(sym, params, in_shape, output_label, in_type)
 
+        appeared_names = set()
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
             op = node["op"]
+            # check if the current node has the same name as nodes before
+            if node["name"] in appeared_names:
+                node["name"] = 'idx_' + str(idx) + '_' + node["name"]
+            else:
+                appeared_names.add(node["name"])
             name = node["name"]
             if verbose:
                 logging.info("Converting idx: %d, op: %s, name: %s", idx, op, name)
