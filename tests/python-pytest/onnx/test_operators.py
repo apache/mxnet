@@ -1139,3 +1139,15 @@ def test_onnx_export_tile(tmp_path, dtype, reps):
     x = mx.nd.random.normal(0, 100, (5, 6)).astype(dtype)
     M = def_model('tile', reps=reps)
     op_export_test('tile', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
+@pytest.mark.parametrize('axis', [-3, -2, -1, 0, 1, 2])
+@pytest.mark.parametrize('mode', ['clip', 'wrap'])
+def test_onnx_export_take(tmp_path, dtype, axis, mode):
+    x = mx.nd.random.normal(0, 10, (3, 4, 5)).astype(dtype)
+    y = mx.random.randint(-100, 100, (6, 7)).astype(dtype)
+    M1 = def_model('take')
+    op_export_test('take1', M1, [x, y], tmp_path)
+    M2 = def_model('take', axis=axis, mode=mode)
+    op_export_test('take2', M2, [x, y], tmp_path)
