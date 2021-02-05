@@ -191,23 +191,25 @@ def test_bert_inference_onnxruntime(tmp_path, model):
     'vgg16_bn',
     'vgg19',
     'vgg19_bn',
-    'xception'
+    'xception',
+    'inceptionv3'
 ])
 def test_obj_class_model_inference_onnxruntime(tmp_path, model):
+    inlen = 299 if 'inceptionv3' == model else 224
     def normalize_image(imgfile):
         img_data = mx.image.imread(imgfile)
-        img_data = mx.image.imresize(img_data, 224, 224)
+        img_data = mx.image.imresize(img_data, inlen, inlen)
         img_data = img_data.transpose([2, 0, 1]).astype('float32')
         mean_vec = mx.nd.array([0.485, 0.456, 0.406])
         stddev_vec = mx.nd.array([0.229, 0.224, 0.225])
         norm_img_data = mx.nd.zeros(img_data.shape).astype('float32')
         for i in range(img_data.shape[0]):
             norm_img_data[i,:,:] = (img_data[i,:,:]/255 - mean_vec[i]) / stddev_vec[i]
-        return norm_img_data.reshape(1, 3, 224, 224).astype('float32')
+        return norm_img_data.reshape(1, 3, inlen, inlen).astype('float32')
 
     try:
         tmp_path = str(tmp_path)
-        M = GluonModel(model, (1,3,224,224), 'float32', tmp_path)
+        M = GluonModel(model, (1,3,inlen,inlen), 'float32', tmp_path)
         onnx_file = M.export_onnx()
 
         # create onnxruntime session using the generated onnx file
