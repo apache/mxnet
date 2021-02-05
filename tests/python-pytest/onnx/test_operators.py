@@ -391,19 +391,21 @@ def test_onnx_export_cast(tmp_path, src_dtype, dst_dtype, shape):
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
-@pytest.mark.parametrize('temperature', [.1, 1., 10.])
+@pytest.mark.parametrize('temperature', [None, .1, 1., 10.])
 def test_onnx_export_softmax(tmp_path, dtype, temperature):
-    x = mx.nd.random.uniform(0, 1, (2, 3, 4), dtype=dtype)
+    x = mx.nd.random.uniform(0, 1, (4, 5, 6), dtype=dtype)
     M1 = def_model('softmax')
     op_export_test('softmax_1', M1, [x], tmp_path)
     M2 = def_model('softmax', use_length=True, axis=0, temperature=temperature)
-    l2 = mx.nd.array([[2,0,2,1],[1,1,2,1], [0,0,0,1]], dtype=int)
+    l2 = mx.random.uniform(0, 4, (5, 6)).astype('int32')
     op_export_test('softmax_2', M2, [x, l2], tmp_path)
     M3 = def_model('softmax', use_length=True, axis=-1, temperature=temperature)
-    l3 = mx.nd.array([[2,0,4],[0,0,0]], dtype=int)
+    # note that the axis==-1 case uses negative value masking + ONNX softmax
+    # when valid_len==0 the masked values will NOT be 0
+    l3 = mx.random.uniform(1, 6, (4, 5)).astype('int32')
     op_export_test('softmax_3', M3, [x, l3], tmp_path)
     M4 = def_model('softmax', use_length=True, axis=1, temperature=temperature)
-    l4 = mx.nd.array([[2,0,3,1],[0,1,0,0]], dtype=int)
+    l4 = mx.random.uniform(0, 5, (4, 6)).astype('int32')
     op_export_test('softmax_4', M4, [x, l4], tmp_path)
 
 
@@ -590,7 +592,9 @@ def test_onnx_link_op_with_multiple_outputs(tmp_path):
     op_export_test('link_op_with_multiple_outputs_case3', Model3, [A], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+# opset 8 MAX only supports float types
+# opset 12 and up suppots float and int
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (1, 4, 1, 7)])
 def test_onnx_maximum_scalar(tmp_path, dtype, shape):
     x = mx.random.uniform(0, 10, shape).astype(dtype)
@@ -936,3 +940,15 @@ def test_onnx_export_slice_channel(tmp_path, dtype, num_outputs, axis, squeeze_a
     M = def_model('SliceChannel', num_outputs=num_outputs, axis=axis, squeeze_axis=squeeze_axis)
     x = mx.random.uniform(0, 1, shape, dtype=dtype)
     op_export_test('slice_channel', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('momentum', [0.9, 0.5, 0.1])
+def test_onnx_export_batchnorm(tmp_path, dtype, momentum):
+    x = mx.nd.random.normal(0, 10, (2, 3, 4, 5)).astype(dtype)
+    gamma = mx.nd.random.normal(0, 10, (3)).astype(dtype)
+    beta = mx.nd.random.normal(0, 10, (3)).astype(dtype)
+    moving_mean = mx.nd.random.normal(0, 10, (3)).astype(dtype)
+    moving_var = mx.nd.abs(mx.nd.random.normal(0, 10, (3))).astype(dtype)
+    M = def_model('BatchNorm', eps=1e-5, momentum=momentum, fix_gamma=False, use_global_stats=False)
+    op_export_test('BatchNorm1', M, [x, gamma, beta, moving_mean, moving_var], tmp_path)
