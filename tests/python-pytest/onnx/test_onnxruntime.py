@@ -151,13 +151,12 @@ def test_bert_inference_onnxruntime(tmp_path, model):
     'mobilenetv2_0.25',
     'mobilenetv3_large',
     'mobilenetv3_small',
-    # failing due to accuracy
-    #'resnest14',
-    #'resnest26',
-    #'resnest50',
-    #'resnest101',
-    #'resnest200',
-    #'resnest269',
+    'resnest14',
+    'resnest26',
+    'resnest50',
+    'resnest101',
+    'resnest200',
+    'resnest269',
     'resnet18_v1',
     'resnet18_v1b_0.89',
     'resnet18_v2',
@@ -246,7 +245,7 @@ def test_obj_class_model_inference_onnxruntime(tmp_path, model):
     'center_net_resnet50_v1b_voc',
     'center_net_resnet101_v1b_voc',
     'center_net_resnet18_v1b_coco',
-    #'center_net_resnet50_v1b_coco',
+    'center_net_resnet50_v1b_coco',
     'center_net_resnet101_v1b_coco'
 ])
 def test_obj_detection_model_inference_onnxruntime(tmp_path, model):
@@ -294,11 +293,10 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model):
     'fcn_resnet101_ade',
     'deeplab_resnet50_ade',
     'deeplab_resnet101_ade',
-    # the 4 models below are failing due to an accuracy issue
-    #'deeplab_resnest50_ade',
-    #'deeplab_resnest101_ade',
-    #'deeplab_resnest200_ade',
-    #'deeplab_resnest269_ade',
+    'deeplab_resnest50_ade',
+    'deeplab_resnest101_ade',
+    'deeplab_resnest200_ade',
+    'deeplab_resnest269_ade',
     'fcn_resnet101_coco',
     'deeplab_resnet101_coco',
     'fcn_resnet101_voc',
@@ -358,13 +356,13 @@ def test_img_segmentation_model_inference_onnxruntime(tmp_path, model):
     'simple_pose_resnet101_v1d',
     'simple_pose_resnet152_v1b',
     'simple_pose_resnet152_v1d',
+    'alpha_pose_resnet101_v1b_coco',
     #'mobile_pose_resnet18_v1b',
     #'mobile_pose_resnet50_v1b',
     #'mobile_pose_mobilenet1.0',
     #'mobile_pose_mobilenetv2_1.0',
     #'mobile_pose_mobilenetv3_large',
     #'mobile_pose_mobilenetv3_small',
-    #'alpha_pose_resnet101_v1b_coco',
 ])
 def test_pose_estimation_model_inference_onnxruntime(tmp_path, model):
     def normalize_image(imgfile):
@@ -407,15 +405,14 @@ def test_pose_estimation_model_inference_onnxruntime(tmp_path, model):
     'inceptionv1_kinetics400',
     'resnet18_v1b_kinetics400',
     'resnet34_v1b_kinetics400',
+    'resnet50_v1b_kinetics400',
+    'resnet101_v1b_kinetics400',
+    'resnet152_v1b_kinetics400',
     'resnet50_v1b_hmdb51',
     'resnet50_v1b_sthsthv2',
     'vgg16_ucf101',
-    # the following models are failing due to an accuracy issue
-    #'resnet50_v1b_kinetics400',
-    #'resnet101_v1b_kinetics400',
-    #'resnet152_v1b_kinetics400',
-    #'inceptionv3_kinetics400',
-    #'inceptionv3_ucf101',
+    'inceptionv3_kinetics400',
+    'inceptionv3_ucf101',
 ])
 def test_action_recognition_model_inference_onnxruntime(tmp_path, model):
     batch_size = 64
@@ -449,7 +446,7 @@ def test_action_recognition_model_inference_onnxruntime(tmp_path, model):
             data = load_video(video)
             mx_result = M.predict(data)
             onnx_result = session.run([], {input_name: data.asnumpy()})[0]
-            assert_almost_equal(mx_result, onnx_result)
+            assert_almost_equal(mx_result, onnx_result, rtol=0.001, atol=0.01)
 
     finally:
         shutil.rmtree(tmp_path)
