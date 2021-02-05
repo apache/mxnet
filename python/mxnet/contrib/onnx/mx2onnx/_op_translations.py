@@ -396,6 +396,10 @@ def convert_batchnorm(node, **kwargs):
 
     momentum = float(attrs.get("momentum", 0.9))
     eps = float(attrs.get("eps", 0.001))
+    axis = int(attrs.get("axis", 1))
+
+    if axis != 1:
+        raise NotImplementedError("batchnorm axis != 1 is currently not supported.")
 
     bn_node = onnx.helper.make_node(
         "BatchNormalization",

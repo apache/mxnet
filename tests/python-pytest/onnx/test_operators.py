@@ -927,3 +927,15 @@ def test_onnx_export_convolution(tmp_path, dtype, shape, num_filter, num_group, 
                   **kwargs)
     inputs = [x, w] if no_bias else [x, w, b]
     op_export_test('convolution', M, inputs, tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('momentum', [0.9, 0.5, 0.1])
+def test_onnx_export_batchnorm(tmp_path, dtype, momentum):
+    x = mx.nd.random.normal(0, 10, (2, 3, 4, 5)).astype(dtype)
+    gamma = mx.nd.random.normal(0, 10, (3)).astype(dtype)
+    beta = mx.nd.random.normal(0, 10, (3)).astype(dtype)
+    moving_mean = mx.nd.random.normal(0, 10, (3)).astype(dtype)
+    moving_var = mx.nd.abs(mx.nd.random.normal(0, 10, (3))).astype(dtype)
+    M = def_model('BatchNorm', eps=1e-5, momentum=momentum, fix_gamma=False, use_global_stats=False)
+    op_export_test('BatchNorm1', M, [x, gamma, beta, moving_mean, moving_var], tmp_path)
