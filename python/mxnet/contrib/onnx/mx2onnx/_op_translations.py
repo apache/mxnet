@@ -3092,7 +3092,6 @@ def convert_contrib_box_nms(node, **kwargs):
         raise NotImplementedError('box_nms does not currently support background_id != -1')
 
     if id_index != -1 or force_suppress == 'False':
-        import logging
         logging.warning('box_nms: id_idex != -1 or/and force_suppress == False detected. '
                         'However, due to ONNX limitations, boxes of different categories will NOT '
                         'be exempted from suppression. This might lead to different behavior than '
