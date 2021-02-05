@@ -1124,7 +1124,7 @@ def convert_dropout(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     _ = float(attrs.get("p", 0.5))
-    axes = convert_string_to_list(attrs.get("axes", "None"))
+    _ = convert_string_to_list(attrs.get("axes", "None"))
     mode = attrs.get('mode', 'training')
 
     if mode != 'training':
