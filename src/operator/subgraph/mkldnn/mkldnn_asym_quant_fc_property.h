@@ -48,10 +48,23 @@ class SgMKLDNNAsymQuantFCSelector : public SubgraphSelector {
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
     if ((n.op() && n.op() == Op::Get("_contrib_quantize_v2")) &&
         (new_node.op() && new_node.op() == Op::Get("_sg_mkldnn_fully_connected"))) {
+      found = true;
       return true;
     }
     return false;
   }
+
+  std::vector<nnvm::Node *> Filter(
+      const std::vector<nnvm::Node *> &candidates) override {
+    if (!found) {
+      return std::vector<nnvm::Node *>(0);
+    } else {
+      return candidates;
+    }
+  }
+
+ private:
+  bool found = false;
 };
 
 class SgMKLDNNAsymQuantFCProperty : public SubgraphProperty {
