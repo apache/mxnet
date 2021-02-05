@@ -136,7 +136,7 @@ class TestModel(unittest.TestCase):
                 onnx_file = os.path.join(dir_path, new_model_name)
 
                 logging.info("Translating converted model from mxnet to ONNX")
-                converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], [np.float32], onnx_file)
+                converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file)
 
                 sym, arg_params, aux_params, actual_result, metadata = get_model_results(converted_model_path)
 

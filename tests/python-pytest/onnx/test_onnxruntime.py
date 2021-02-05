@@ -52,7 +52,7 @@ class GluonModel():
     def export_onnx(self):
         onnx_file = self.modelpath + ".onnx"
         mx.contrib.onnx.export_model(self.modelpath + "-symbol.json", self.modelpath + "-0000.params",
-                                     [self.input_shape], [self.input_dtype], onnx_file)
+                                     [self.input_shape], self.input_dtype, onnx_file)
         return onnx_file
 
     def predict(self, data):
