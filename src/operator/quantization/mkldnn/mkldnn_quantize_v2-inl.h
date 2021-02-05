@@ -109,7 +109,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
 
     // Write output min/max
     auto out_type = GetQuantizeOutputType(param_);
-    bool shifted = param_.shifted.has_value() ? param_.shifted.value() : false;
+    bool shifted = param_.shifted.has_value() && param_.shifted.value();
     float max_abs = MaxAbs(data_min, data_max);
     if (shifted) {
       quantized_range = kInt8Range;
@@ -134,13 +134,13 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
       float real_range = MaxAbs(data_min, data_max);
       float scale = quantized_range / real_range;
       mkldnn::primitive_attr attr;
+      const int mask = 0;
+      std::vector<float> scales = {scale};
+      attr.set_output_scales(mask, scales);
       if (shifted) {
-        float shift = 128;
-        attr.set_rnn_data_qparams(scale, shift);
-      } else {
-        const int mask = 0;
-        std::vector<float> scales = {scale};
-        attr.set_output_scales(mask, scales);
+        dnnl::post_ops po;
+        po.append_sum(1.f);
+        attr.set_post_ops(po);
       }
       mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
       auto i_desc = i_mem->get_desc();
@@ -163,6 +163,9 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     args_[MKLDNN_ARG_TO] = *o_mem.second;
     MKLDNNStream::Get()->RegisterPrimArgs(*fwd_pd_, args_);
     CommitOutput(outputs[0], o_mem);
+    if (shifted) {
+      std::memset(o_mem.second->get_data_handle(), 128, outputs[0].shape().Size());
+    }
     MKLDNNStream::Get()->Submit();
   }
 }
