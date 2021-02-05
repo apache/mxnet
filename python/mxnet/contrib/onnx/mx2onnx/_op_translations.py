@@ -1791,7 +1791,7 @@ def convert_slice_channel(node, **kwargs):
     create_tensor([axis+1], name+'axis_p1', kwargs['initializer'])
 
     nodes = []
-    if squeeze_axis == 'True':
+    if squeeze_axis in ['True', '1']:
         nodes += [
             make_node('Split', [input_nodes[0]], [name+str(i)+'_' for i in range(num_outputs)],
                       axis=axis)

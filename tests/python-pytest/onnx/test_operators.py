@@ -928,7 +928,7 @@ def test_onnx_export_convolution(tmp_path, dtype, shape, num_filter, num_group, 
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 @pytest.mark.parametrize('num_outputs', [1, 3, 9])
 @pytest.mark.parametrize('axis', [1, 2, -1, -2])
-@pytest.mark.parametrize('squeeze_axis', [True, False])
+@pytest.mark.parametrize('squeeze_axis', [True, False, 0, 1])
 def test_onnx_export_slice_channel(tmp_path, dtype, num_outputs, axis, squeeze_axis):
     shape = (3, 9, 18)
     if squeeze_axis and shape[axis] != num_outputs:
