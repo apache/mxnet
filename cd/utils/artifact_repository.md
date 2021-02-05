@@ -53,7 +53,7 @@ If not set, derived through the value of sys.platform (https://docs.python.org/3
 
 **Variant**
 
-Manually configured through the --variant argument. The current variants are: cpu, native, cu100, cu101, cu102 and cu110.
+Manually configured through the --variant argument. The current variants are: cpu, native, cu100, cu101, cu102, cu110 and cu112.
 
 As long as the tool is being run from the MXNet code base, the runtime feature detection tool (https://github.com/larroy/mxnet/blob/dd432b7f241c9da2c96bcb877c2dc84e6a1f74d4/docs/api/python/libinfo/libinfo.md) can be used to detect whether the library has been compiled with MKL (library has MKL-DNN feature enabled) and/or CUDA support (compiled with CUDA feature enabled).
 

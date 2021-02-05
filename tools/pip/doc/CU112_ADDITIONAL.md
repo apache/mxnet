@@ -17,13 +17,14 @@
 
 Prerequisites
 -------------
-This package supports Linux, Mac OSX, and Windows platforms. You may also want to check:
-- [mxnet-cu112](https://pypi.python.org/pypi/mxnet-cu112/) with CUDA-11.2 support.
+This package supports Linux and Windows platforms. You may also want to check:
 - [mxnet-cu110](https://pypi.python.org/pypi/mxnet-cu110/) with CUDA-11.0 support.
 - [mxnet-cu102](https://pypi.python.org/pypi/mxnet-cu102/) with CUDA-10.2 support.
 - [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101/) with CUDA-10.1 support.
-- [mxnet-cu100](https://pypi.python.org/pypi/mxnet-cu100/) with CUDA-10.0 support.
+- [mxnet](https://pypi.python.org/pypi/mxnet/).
 - [mxnet-native](https://pypi.python.org/pypi/mxnet-native/) CPU variant without MKLDNN.
+
+To download CUDA, check [CUDA download](https://developer.nvidia.com/cuda-downloads). For more instructions, check [CUDA Toolkit online documentation](http://docs.nvidia.com/cuda/index.html).
 
 To use this package on Linux you need the `libquadmath.so.0` shared library. On
 Debian based systems, including Ubuntu, run `sudo apt install libquadmath0` to
@@ -37,7 +38,7 @@ To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other version
 
 Installation
 ------------
-To install, use:
+To install:
 ```bash
-pip install mxnet
+pip install mxnet-cu112
 ```

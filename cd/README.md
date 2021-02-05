@@ -25,7 +25,7 @@ MXNet aims to support a variety of frontends, e.g. Python, Java, Perl, R, etc. a
 
 The CD process is driven by the [CD pipeline job](Jenkinsfile_cd_pipeline), which orchestrates the order in which the artifacts are delivered. For instance, first publish the libmxnet library before publishing the pip package. It does this by triggering the [release job](Jenkinsfile_release_job) with a specific set of parameters for each delivery channel. The release job executes the specific release pipeline for a delivery channel across all MXNet *variants*.
 
-A variant is a specific environment or features for which MXNet is compiled. For instance CPU, GPU with CUDA v10.1, CUDA v10.2 with MKL-DNN support, etc. 
+A variant is a specific environment or features for which MXNet is compiled. For instance CPU, GPU with CUDA v10.1, CUDA v10.2 with MKL-DNN support, etc.
 
 Currently, below variants are supported. All of these variants except native have MKL-DNN backend enabled.
 
@@ -35,6 +35,7 @@ Currently, below variants are supported. All of these variants except native hav
 * *cu101*: CUDA 10.1
 * *cu102*: CUDA 10.2
 * *cu110*: CUDA 11.0
+* *cu112*: CUDA 11.2
 
 *For more on variants, see [here](https://github.com/apache/incubator-mxnet/issues/8671)*
 
@@ -120,7 +121,7 @@ The "first mile" of the CD process is posting the mxnet binaries to the [artifac
 
 ##### Timeout
 
-We shouldn't set global timeouts for the pipelines. Rather, the `step` being executed should be rapped with a `timeout` function (as in the pipeline example above). The `max_time` is a global variable set at the [release job](Jenkinsfile_release_job) level. 
+We shouldn't set global timeouts for the pipelines. Rather, the `step` being executed should be rapped with a `timeout` function (as in the pipeline example above). The `max_time` is a global variable set at the [release job](Jenkinsfile_release_job) level.
 
 ##### Node of execution
 
