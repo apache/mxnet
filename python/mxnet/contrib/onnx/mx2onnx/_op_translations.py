@@ -3887,9 +3887,7 @@ def convert_argsort(node, **kwargs):
 
     axis = int(attrs.get('axis', '-1'))
     is_ascend = attrs.get('is_ascend', 'True')
-    print(is_ascend)
     is_ascend = True if is_ascend in ['True', '1'] else False
-    print(is_ascend)
     dtype = attrs.get('dtype', 'float32')
 
     create_tensor([axis], name+'_axis', kwargs['initializer'])
