@@ -548,13 +548,16 @@ def test_onnx_export_where(tmp_path, dtype, shape):
 # onnxruntime does not seem to support float64 and int32
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'int64'])
 @pytest.mark.parametrize('axis', [0, 2, -1, -2, -3])
-@pytest.mark.parametrize('is_ascend', [0, 1])
+@pytest.mark.parametrize('is_ascend', [True, False, 0, 1, None])
 @pytest.mark.parametrize('k', [1, 4])
 @pytest.mark.parametrize('dtype_i', ['float32', 'int32', 'int64'])
 @pytest.mark.parametrize('ret_typ', ['value', 'indices', 'both'])
 def test_onnx_export_topk(tmp_path, dtype, axis, is_ascend, k, dtype_i, ret_typ):
     A = mx.random.uniform(0, 100, (4, 5, 6)).astype(dtype)
-    M = def_model('topk', axis=axis, is_ascend=is_ascend, k=k, dtype=dtype_i, ret_typ=ret_typ)
+    kwargs = {}
+    if is_ascend is not None:
+        kwargs['is_ascend'] = is_ascend
+    M = def_model('topk', axis=axis, k=k, dtype=dtype_i, ret_typ=ret_typ, **kwargs)
     op_export_test('topk', M, [A], tmp_path)
 
 
@@ -939,3 +942,17 @@ def test_onnx_export_batchnorm(tmp_path, dtype, momentum):
     moving_var = mx.nd.abs(mx.nd.random.normal(0, 10, (3))).astype(dtype)
     M = def_model('BatchNorm', eps=1e-5, momentum=momentum, fix_gamma=False, use_global_stats=False)
     op_export_test('BatchNorm1', M, [x, gamma, beta, moving_mean, moving_var], tmp_path)
+
+
+# onnxruntime does not seem to support float64 and int32
+@pytest.mark.parametrize('dtype', ['float32', 'int64'])
+@pytest.mark.parametrize('axis', [0, 2, -1, -2, -3])
+@pytest.mark.parametrize('is_ascend', [True, False, 0, 1, None])
+@pytest.mark.parametrize('dtype_i', ['float32', 'int32', 'int64'])
+def test_onnx_export_argsort(tmp_path, dtype, axis, is_ascend, dtype_i):
+    A = mx.random.uniform(0, 100, (4, 5, 6)).astype(dtype)
+    kwargs = {}
+    if is_ascend is not None:
+        kwargs['is_ascend'] = is_ascend
+    M = def_model('argsort', axis=axis, dtype=dtype_i, **kwargs)
+    op_export_test('argsort', M, [A], tmp_path)

@@ -2341,7 +2341,8 @@ def convert_topk(node, **kwargs):
     axis = int(attrs.get('axis', '-1'))
     k = int(attrs.get('k', '1'))
     ret_type = attrs.get('ret_typ', 'indices')
-    is_ascend = int(attrs.get('is_ascend', '0'))
+    is_ascend = attrs.get('is_ascend', 'False')
+    is_ascend = True if is_ascend in ['1', 'True'] else False
     dtype = attrs.get('dtype', 'float32')
 
     if ret_type == 'mask':
@@ -2355,30 +2356,30 @@ def convert_topk(node, **kwargs):
         if dtype == 'int64':
             nodes += [
                 make_node('TopK', [input_nodes[0], name+'_k'], [name+'0', name+'1'], axis=axis,
-                          largest=(0 if is_ascend else 1), sorted=1),
+                          largest=(not is_ascend), sorted=1),
                 ]
         else:
             nodes += [
                 make_node('TopK', [input_nodes[0], name+'_k'], [name+'0', name+'_1_i'], axis=axis,
-                          largest=(0 if is_ascend else 1), sorted=1),
+                          largest=(not is_ascend), sorted=1),
                 make_node('Cast', [name+'_1_i'], [name+'1'],
                           to=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)])
                 ]
     elif ret_type == 'value':
         nodes += [
             make_node('TopK', [input_nodes[0], name+'_k'], [name+'0', name+'_'], axis=axis,
-                      largest=(0 if is_ascend else 1), sorted=1),
+                      largest=(not is_ascend), sorted=1),
             ]
     else:
         if dtype == 'int64':
             nodes += [
                 make_node('TopK', [input_nodes[0], name+'_k'], [name+'_', name], axis=axis,
-                          largest=(0 if is_ascend else 1), sorted=1),
+                          largest=(not is_ascend), sorted=1),
                 ]
         else:
             nodes += [
                 make_node('TopK', [input_nodes[0], name+'_k'], [name+'__', name+'_tmp'], axis=axis,
-                          largest=(0 if is_ascend else 1), sorted=1),
+                          largest=(not is_ascend), sorted=1),
                 make_node('Cast', [name+'_tmp'], [name],
                           to=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)])
                 ]
@@ -3869,5 +3870,44 @@ def convert_log2(node, **kwargs):
         make_node('Constant', [], [name+'_ln2'], value=ln2v),
         make_node('Div', [name+'_log', name+'_ln2'], [name], name=name)
     ]
+
+    return nodes
+
+
+@mx_op.register('argsort')
+def convert_argsort(node, **kwargs):
+    """Map MXNet's argsort operator attributes to onnx's TopK operator
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    opset_version = kwargs['opset_version']
+    if opset_version < 11:
+        raise AttributeError('ONNX opset 11 or greater is required to export this operator')
+
+    axis = int(attrs.get('axis', '-1'))
+    is_ascend = attrs.get('is_ascend', 'True')
+    print(is_ascend)
+    is_ascend = True if is_ascend in ['True', '1'] else False
+    print(is_ascend)
+    dtype = attrs.get('dtype', 'float32')
+
+    create_tensor([axis], name+'_axis', kwargs['initializer'])
+    nodes = [
+        make_node('Shape', [input_nodes[0]], [name+'_shape']),
+        make_node('Gather', [name+'_shape', name+'_axis'], [name+'_k'])
+    ]
+    if dtype == 'int64':
+        nodes += [
+            make_node('TopK', [input_nodes[0], name+'_k'], [name+'_', name], axis=axis,
+                      largest=(not is_ascend), sorted=1),
+        ]
+    else:
+        nodes += [
+            make_node('TopK', [input_nodes[0], name+'_k'], [name+'_', name+'_temp'], axis=axis,
+                      largest=(not is_ascend), sorted=1),
+            make_node('Cast', [name+'_temp'], [name],
+                      to=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)])
+        ]
 
     return nodes
