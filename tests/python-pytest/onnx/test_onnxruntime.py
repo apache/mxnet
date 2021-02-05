@@ -190,7 +190,8 @@ def test_bert_inference_onnxruntime(tmp_path, model):
     'vgg16',
     'vgg16_bn',
     'vgg19',
-    'vgg19_bn'
+    'vgg19_bn',
+    'xception'
 ])
 def test_obj_class_model_inference_onnxruntime(tmp_path, model):
     def normalize_image(imgfile):
