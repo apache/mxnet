@@ -1748,13 +1748,17 @@ def convert_slice_axis(node, **kwargs):
     begin = int(attrs.get("begin"))
     end = attrs.get("end", None)
 
-    nodes = [make_node('Shape', [input_nodes[0]], [name+"_data_shape"])]
+    nodes = []
     create_tensor([axis], name+'_axis', kwargs["initializer"])
     create_tensor([begin], name+'_begin', kwargs["initializer"])
     if not end or end == 'None':
         # ONNX doesn't support None for ends. Since ends=None depicts
         # length of dimension, passing dimension in this case.
-        if axis == -1: # corner case when end = None and axis = -1
+        nodes += [
+            make_node('Shape', [input_nodes[0]], [name+"_data_shape"])
+        ]
+        # corner case when end = None and axis = -1
+        if axis == -1: 
             create_tensor([-1], name+'_-1', kwargs["initializer"])
             nodes += [
                 make_node('Shape', [name+'_data_shape'], [name+'_data_dim']),
