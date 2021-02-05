@@ -1758,7 +1758,7 @@ def convert_slice_axis(node, **kwargs):
             make_node('Shape', [input_nodes[0]], [name+"_data_shape"])
         ]
         # corner case when end = None and axis = -1
-        if axis == -1: 
+        if axis == -1:
             create_tensor([-1], name+'_-1', kwargs["initializer"])
             nodes += [
                 make_node('Shape', [name+'_data_shape'], [name+'_data_dim']),
