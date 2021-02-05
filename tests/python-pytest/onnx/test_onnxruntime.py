@@ -246,7 +246,24 @@ def test_obj_class_model_inference_onnxruntime(tmp_path, model):
     'center_net_resnet101_v1b_voc',
     'center_net_resnet18_v1b_coco',
     'center_net_resnet50_v1b_coco',
-    'center_net_resnet101_v1b_coco'
+    'center_net_resnet101_v1b_coco',
+    # the following models are failing due to onnxruntime errors
+    #'ssd_300_vgg16_atrous_voc',
+    #'ssd_512_vgg16_atrous_voc',
+    #'ssd_512_resnet50_v1_voc',
+    #'ssd_512_mobilenet1.0_voc',
+    #'faster_rcnn_resnet50_v1b_voc',
+    #'yolo3_darknet53_voc',
+    #'yolo3_mobilenet1.0_voc',
+    #'ssd_300_vgg16_atrous_coco',
+    #'ssd_512_vgg16_atrous_coco',
+    #'ssd_300_resnet34_v1b_coco',
+    #'ssd_512_resnet50_v1_coco',
+    #'ssd_512_mobilenet1.0_coco',
+    #'faster_rcnn_resnet50_v1b_coco',
+    #'faster_rcnn_resnet101_v1d_coco',
+    #'yolo3_darknet53_coco',
+    #'yolo3_mobilenet1.0_coco',
 ])
 def test_obj_detection_model_inference_onnxruntime(tmp_path, model):
     def normalize_image(imgfile):
