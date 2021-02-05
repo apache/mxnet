@@ -1127,8 +1127,6 @@ def convert_dropout(node, **kwargs):
     axes = convert_string_to_list(attrs.get("axes", "None"))
     mode = attrs.get('mode', 'training')
 
-    if axes != [None]:
-        raise NotImplementedError("Dropout does not currently support axes")
     if mode != 'training':
         raise NotImplementedError("Dropout does not currently support mode!=\'training\'")
 
