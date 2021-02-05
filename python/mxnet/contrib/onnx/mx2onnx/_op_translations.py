@@ -2418,7 +2418,7 @@ def convert_take(node, **kwargs):
         make_node('Shape', [data], [name+'_data_shape']),
     ]
 
-    # cornor case
+    # corner case
     if axis == -1:
         nodes += [
             make_node('Shape', [name+'_data_shape'], [name+'_data_dim']),
