@@ -36,6 +36,7 @@ class SgMKLDNNAsymQuantFCSelector : public SubgraphSelector {
 
   bool Select(const nnvm::Node &n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() == Op::Get("_contrib_quantize_v2")) {
+      found = false;
       return true;
     }
     return false;
