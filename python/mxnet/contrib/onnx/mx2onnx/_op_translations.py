@@ -2342,7 +2342,7 @@ def convert_topk(node, **kwargs):
     k = int(attrs.get('k', '1'))
     ret_type = attrs.get('ret_typ', 'indices')
     is_ascend = attrs.get('is_ascend', 'False')
-    is_ascend = True if is_ascend in ['1', 'True'] else False
+    is_ascend = is_ascend in ['1', 'True']
     dtype = attrs.get('dtype', 'float32')
 
     if ret_type == 'mask':
@@ -3887,7 +3887,7 @@ def convert_argsort(node, **kwargs):
 
     axis = int(attrs.get('axis', '-1'))
     is_ascend = attrs.get('is_ascend', 'True')
-    is_ascend = True if is_ascend in ['True', '1'] else False
+    is_ascend = is_ascend in ['True', '1']
     dtype = attrs.get('dtype', 'float32')
 
     create_tensor([axis], name+'_axis', kwargs['initializer'])
