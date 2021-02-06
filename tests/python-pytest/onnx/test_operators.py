@@ -929,6 +929,19 @@ def test_onnx_export_convolution(tmp_path, dtype, shape, num_filter, num_group, 
     op_export_test('convolution', M, inputs, tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+@pytest.mark.parametrize('num_outputs', [1, 3, 9])
+@pytest.mark.parametrize('axis', [1, 2, -1, -2])
+@pytest.mark.parametrize('squeeze_axis', [True, False, 0, 1])
+def test_onnx_export_slice_channel(tmp_path, dtype, num_outputs, axis, squeeze_axis):
+    shape = (3, 9, 18)
+    if squeeze_axis and shape[axis] != num_outputs:
+        return
+    M = def_model('SliceChannel', num_outputs=num_outputs, axis=axis, squeeze_axis=squeeze_axis)
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    op_export_test('slice_channel', M, [x], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
 @pytest.mark.parametrize('momentum', [0.9, 0.5, 0.1])
 def test_onnx_export_batchnorm(tmp_path, dtype, momentum):
