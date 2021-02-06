@@ -238,15 +238,16 @@ def convert_convolution(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     kernel = convert_string_to_list(attrs.get('kernel', '()'))
-    stride = convert_string_to_list(attrs.get('stride', '(1, 1)'))
-    dilate = convert_string_to_list(attrs.get('dilate', '(1, 1)'))
-    pad = convert_string_to_list(attrs.get('pad', '(0, 0)'))
+    stride = convert_string_to_list(attrs.get('stride', '()'))
+    dilate = convert_string_to_list(attrs.get('dilate', '()'))
+    pad = convert_string_to_list(attrs.get('pad', '()'))
     num_group = int(attrs.get('num_group', 1))
     no_bias = attrs.get('no_bias', 'False')
     layout = attrs.get('layout', 'NCHW')
 
-    if layout != 'NCHW':
-        raise NotImplementedError('Pooling currently does not support layout!=\'NCHW\'')
+    if layout not in ['NCHW', 'NCDHW']:
+        raise NotImplementedError('Convolution currently does not support layout not in '
+                                  '[\'NCHW\', \'NCDHW\']')
 
     if no_bias == 'True':
         assert len(input_nodes) == 2, 'Convolution takes 2 input if no_bias==True'
@@ -707,7 +708,7 @@ def convert_pooling(node, **kwargs):
     global_pool = attrs.get('global_pool', 'False')
     _ = attrs.get('cudnn_off', 'False')
     pooling_convention = attrs.get('pooling_convention', 'valid')
-    stride = convert_string_to_list(attrs.get('stride', '(1, 1)'))
+    stride = convert_string_to_list(attrs.get('stride', '()'))
     pad = convert_string_to_list(attrs.get('pad', '()'))
     p_value = int(attrs.get('p_value', '0'))
     count_include_pad = attrs.get('count_include_pad', 'True')
@@ -721,8 +722,10 @@ def convert_pooling(node, **kwargs):
     if pool_type == 'lp' and global_pool == 'False' and pooling_convention != 'valid':
         raise NotImplementedError('Pooling currently does not support '
                                   'pooling_convention!=\'valid\' when pool_type==\'lp\' and global_pool==False')
-    if layout != 'NCHW':
-        raise NotImplementedError('Pooling currently does not support layout!=\'NCHW\'')
+
+    if layout not in ['NCHW', 'NCDHW']:
+        raise NotImplementedError('Pooling currently does not support layout not in '
+                                  '[\'NCHW\', \'NCDHW\']')
 
     kwargs_ = {}
     if kernel:
