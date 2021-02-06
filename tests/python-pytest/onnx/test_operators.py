@@ -201,9 +201,11 @@ def test_onnx_export_slice_axis(tmp_path, dtype):
     M1 = def_model('slice_axis', axis=0, begin=1, end=3)
     M2 = def_model('slice_axis', axis=0, begin=1, end=None)
     M3 = def_model('slice_axis', axis=1, begin=-3, end=-1)
+    M4 = def_model('slice_axis', axis=-1, begin=-3, end=None)
     op_export_test('slice_axis_1', M1, [x], tmp_path)
     op_export_test('slice_axis_2', M2, [x], tmp_path)
     op_export_test('slice_axis_3', M3, [x], tmp_path)
+    op_export_test('slice_axis_4', M4, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
