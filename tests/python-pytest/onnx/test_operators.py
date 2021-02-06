@@ -39,7 +39,7 @@ def def_model(op_name, dummy_input=False, **params):
                 return func(*inputs, **params)
     return Model
 
-def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_map=None):
+def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_map=None, mx_map=None):
     def export_to_onnx(model, model_name, inputs):
         model_path = '{}/{}'.format(tmp_path, model_name)
         model.export(model_path, epoch=0)
@@ -62,18 +62,20 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_
     model = Model()
     model.initialize(ctx=mx.cpu(0))
     model.hybridize()
-    pred_nat = model(*inputs)
+    pred_mx = model(*inputs)
     onnx_file = export_to_onnx(model, model_name, inputs)
     pred_onx = onnx_rt(onnx_file, inputs)
     if dummy_input:
-        pred_nat = pred_nat[0]
-    if isinstance(pred_nat, list):
-        for i in range(len(pred_nat)):
+        pred_mx = pred_mx[0]
+    if isinstance(pred_mx, list):
+        for i in range(len(pred_mx)):
             pred_onx_i = onnx_map(pred_onx[i]) if onnx_map else pred_onx[i]
-            assert_almost_equal(pred_nat[i], pred_onx_i, equal_nan=True)
+            pred_mx_i = mx_map(pred_mx[i]) if mx_map else pred_mx[i]
+            assert_almost_equal(pred_onx_i, pred_mx_i, equal_nan=True)
     else:
         pred_onx = onnx_map(pred_onx[0]) if onnx_map else pred_onx[0]
-        assert_almost_equal(pred_nat, pred_onx, equal_nan=True)
+        pred_mx = mx_map(pred_mx) if mx_map else pred_mx
+        assert_almost_equal(pred_onx, pred_mx, equal_nan=True)
 
 
 def test_onnx_export_abs(tmp_path):
@@ -785,7 +787,7 @@ def test_onnx_export_pooling_avg(tmp_path, dtype, shape, count_include_pad, pool
     if pooling_convention == 'full' and count_include_pad == True:
         return
     # onnxruntime requires that pad is smaller than kernel
-    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+    if pad and (pad[0] >= kernel[0] or pad[1] >= kernel[1]):
         return
     x = mx.random.uniform(0, 1, shape, dtype=dtype)
     kwargs = {}
@@ -796,10 +798,44 @@ def test_onnx_export_pooling_avg(tmp_path, dtype, shape, count_include_pad, pool
     if pad:
         kwargs['pad'] = pad
     M = def_model('Pooling', count_include_pad=count_include_pad, pool_type='avg',
-                  pooling_convention=pooling_convention, **kwargs)
+                  pooling_convention=pooling_convention, layout='NCHW', **kwargs)
     # Note here we use np.nan_to_num to map the onnx output because onnxruntime AveragePool will
     # output NaN in some edge cases where mxnet outputs 0
     op_export_test('pooling_avg', M, [x], tmp_path, onnx_map=np.nan_to_num)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 16, 16, 16), (1, 1, 10, 18, 18)])
+@pytest.mark.parametrize('count_include_pad', [True, False])
+@pytest.mark.parametrize('pooling_convention', ['full', 'valid'])
+@pytest.mark.parametrize('kernel', [(1, 1, 1), (3, 3, 3), (1, 7, 7)])
+@pytest.mark.parametrize('stride', [None, (1, 1, 1), (1, 2, 3)])
+@pytest.mark.parametrize('pad', [None, (0, 1, 1), (1, 2, 3)])
+def test_onnx_export_pooling_avg_3d(tmp_path, dtype, shape, count_include_pad, pooling_convention,
+                                    kernel, stride, pad):
+    # mxnet and onnxruntime has different implementation of count_include_pad on the left column
+    # and bottom row
+    if pooling_convention == 'full' and count_include_pad == True:
+        return
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and (pad[0] >= kernel[0] or pad[1] >= kernel[1] or pad[2] >= kernel[2]):
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    M = def_model('Pooling', count_include_pad=count_include_pad, pool_type='avg',
+                  pooling_convention=pooling_convention, layout='NCDHW', **kwargs)
+    # Note here we use np.nan_to_num to map the onnx output because onnxruntime AveragePool will
+    # output NaN in some edge cases where mxnet outputs 0
+    def mx_nan_to_num(a):
+        return np.nan_to_num(a.asnumpy())
+    op_export_test('pooling_avg_3d', M, [x], tmp_path, onnx_map=np.nan_to_num, mx_map=mx_nan_to_num)
+
 
 
 @pytest.mark.parametrize('dtype', ['float32'])
@@ -810,7 +846,7 @@ def test_onnx_export_pooling_avg(tmp_path, dtype, shape, count_include_pad, pool
 @pytest.mark.parametrize('pad', [None, (1, 1), (3, 4), (4, 5)])
 def test_onnx_export_pooling_max(tmp_path, dtype, shape, pooling_convention, kernel, stride, pad):
     # onnxruntime requires that pad is smaller than kernel
-    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+    if pad and (pad[0] >= kernel[0] or pad[1] >= kernel[1]):
         return
     x = mx.random.uniform(0, 1, shape, dtype=dtype)
     kwargs = {}
@@ -820,8 +856,32 @@ def test_onnx_export_pooling_max(tmp_path, dtype, shape, pooling_convention, ker
         kwargs['stride'] = stride
     if pad:
         kwargs['pad'] = pad
-    M = def_model('Pooling', pool_type='max', pooling_convention=pooling_convention, **kwargs)
+    M = def_model('Pooling', pool_type='max', pooling_convention=pooling_convention,
+                  layout='NCHW', **kwargs)
     op_export_test('pooling_max', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 16, 16, 16), (1, 1, 10, 18, 18)])
+@pytest.mark.parametrize('pooling_convention', ['full', 'valid'])
+@pytest.mark.parametrize('kernel', [(1, 1, 1), (3, 3, 3), (1, 7, 7)])
+@pytest.mark.parametrize('stride', [None, (1, 1, 1), (1, 2, 3)])
+@pytest.mark.parametrize('pad', [None, (0, 1, 1), (1, 2, 3)])
+def test_onnx_export_pooling_max_3d(tmp_path, dtype, shape, pooling_convention, kernel, stride, pad):
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and (pad[0] >= kernel[0] or pad[1] >= kernel[1] or pad[2] >= kernel[2]):
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    M = def_model('Pooling', pool_type='max', pooling_convention=pooling_convention,
+                  layout='NCDHW', **kwargs)
+    op_export_test('pooling_max_3d', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32'])
@@ -832,7 +892,7 @@ def test_onnx_export_pooling_max(tmp_path, dtype, shape, pooling_convention, ker
 @pytest.mark.parametrize('pad', [None, (1, 1), (3, 4), (4, 5)])
 def test_onnx_export_pooling_lp(tmp_path, dtype, shape, p_value, kernel, stride, pad):
     # onnxruntime requires that pad is smaller than kernel
-    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+    if pad and (pad[0] >= kernel[0] or pad[1] >= kernel[1]):
         return
     x = mx.random.uniform(0, 1, shape, dtype=dtype)
     kwargs = {}
@@ -843,8 +903,31 @@ def test_onnx_export_pooling_lp(tmp_path, dtype, shape, p_value, kernel, stride,
     if pad:
         kwargs['pad'] = pad
     M = def_model('Pooling', pool_type='lp', pooling_convention='valid',
-                  p_value=p_value, **kwargs)
+                  p_value=p_value, layout='NCHW', **kwargs)
     op_export_test('pooling_lp', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 16, 16, 16), (1, 1, 10, 18, 18)])
+@pytest.mark.parametrize('p_value', [1, 2])
+@pytest.mark.parametrize('kernel', [(1, 1, 1), (3, 3, 3), (1, 7, 7)])
+@pytest.mark.parametrize('stride', [None, (1, 1, 1), (1, 2, 3)])
+@pytest.mark.parametrize('pad', [None, (0, 1, 1), (1, 2, 3)])
+def test_onnx_export_pooling_lp_3d(tmp_path, dtype, shape, p_value, kernel, stride, pad):
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and (pad[0] >= kernel[0] or pad[1] >= kernel[1] or pad[2] >= kernel[2]):
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    M = def_model('Pooling', pool_type='lp', pooling_convention='valid',
+                  p_value=p_value, layout='NCDHW', **kwargs)
+    op_export_test('pooling_lp_3d', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32'])
@@ -856,7 +939,7 @@ def test_onnx_export_pooling_lp(tmp_path, dtype, shape, p_value, kernel, stride,
 @pytest.mark.parametrize('pad', [None, (3, 4)])
 def test_onnx_export_pooling_global(tmp_path, dtype, shape, pool_type, p_value, kernel, stride, pad):
     # onnxruntime requires that pad is smaller than kernel
-    if pad and pad[0] >= kernel[0] and pad[1] >= kernel[1]:
+    if pad and (pad[0] >= kernel[0] or pad[1] >= kernel[1]):
         return
     x = mx.random.uniform(0, 1, shape, dtype=dtype)
     kwargs = {}
@@ -868,8 +951,33 @@ def test_onnx_export_pooling_global(tmp_path, dtype, shape, pool_type, p_value, 
         kwargs['pad'] = pad
     # kernel, stride, and pad should have no effect on the results
     M = def_model('Pooling', global_pool=True, pool_type=pool_type, pooling_convention='valid',
-                  p_value=p_value, **kwargs)
+                  p_value=p_value, layout='NCHW', **kwargs)
     op_export_test('pooling_global', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 3, 16, 16, 16), (1, 1, 10, 18, 18)])
+@pytest.mark.parametrize('pool_type', ['avg', 'max', 'lp'])
+@pytest.mark.parametrize('p_value', [1, 2])
+@pytest.mark.parametrize('kernel', [(1, 1, 1), (3, 3, 3)])
+@pytest.mark.parametrize('stride', [None, (1, 1, 1)])
+@pytest.mark.parametrize('pad', [None, (0, 1, 1)])
+def test_onnx_export_pooling_global_3d(tmp_path, dtype, shape, pool_type, p_value, kernel, stride, pad):
+    # onnxruntime requires that pad is smaller than kernel
+    if pad and (pad[0] >= kernel[0] or pad[1] >= kernel[1] or pad[2] >= kernel[2]):
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    # kernel, stride, and pad should have no effect on the results
+    M = def_model('Pooling', global_pool=True, pool_type=pool_type, pooling_convention='valid',
+                  p_value=p_value, layout='NCDHW', **kwargs)
+    op_export_test('pooling_global_3d', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
@@ -929,7 +1037,40 @@ def test_onnx_export_convolution(tmp_path, dtype, shape, num_filter, num_group, 
     if dilate:
         kwargs['dilate'] = dilate
     M = def_model('Convolution', num_filter=num_filter, num_group=num_group,  no_bias=no_bias,
-                  **kwargs)
+                  layout='NCHW', **kwargs)
+    inputs = [x, w] if no_bias else [x, w, b]
+    op_export_test('convolution', M, inputs, tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('shape', [(1, 4, 16, 16, 16), (1, 3, 10, 18, 18)])
+@pytest.mark.parametrize('num_filter', [2, 4, 32])
+@pytest.mark.parametrize('num_group', [1, 2])
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('kernel', [(3, 3, 3), (1, 1, 1), (1, 7, 7)])
+@pytest.mark.parametrize('stride', [None, (1, 1, 1), (1, 2, 3)])
+@pytest.mark.parametrize('pad', [None, (0, 1, 1), (1, 2, 3)])
+@pytest.mark.parametrize('dilate', [None, [2, 2, 2]])
+def test_onnx_export_convolution_3D(tmp_path, dtype, shape, num_filter, num_group, no_bias,
+                                 kernel, stride, pad, dilate):
+    if shape[1] % num_group:
+        return
+    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    w_shape = (num_filter,) + (shape[1] // num_group,) + kernel
+    w = mx.random.uniform(0, 1, w_shape, dtype=dtype)
+    b_shape = (num_filter)
+    b = mx.random.uniform(0, 1, b_shape, dtype=dtype)
+    kwargs = {}
+    if kernel:
+        kwargs['kernel'] = kernel
+    if stride:
+        kwargs['stride'] = stride
+    if pad:
+        kwargs['pad'] = pad
+    if dilate:
+        kwargs['dilate'] = dilate
+    M = def_model('Convolution', num_filter=num_filter, num_group=num_group,  no_bias=no_bias,
+                  layout='NCDHW', **kwargs)
     inputs = [x, w] if no_bias else [x, w, b]
     op_export_test('convolution', M, inputs, tmp_path)
 
