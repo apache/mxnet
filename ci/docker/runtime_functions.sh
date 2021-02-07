@@ -1406,7 +1406,7 @@ nightly_test_rat_check() {
 
     # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
     exec 5>&1
-    OUTPUT=$(java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/rat-excludes -d /work/mxnet|tee >(cat - >&5))
+    OUTPUT=$(java -jar apache-rat-0.13.jar -E /work/mxnet/rat-excludes -d /work/mxnet|tee >(cat - >&5))
     ERROR_MESSAGE="Printing headers for text files without a valid license header"
 
 
