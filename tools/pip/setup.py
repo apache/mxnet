@@ -105,6 +105,7 @@ shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/tvm/nnvm/include
                 os.path.join(CURRENT_DIR, 'mxnet/include/nnvm'))
 
 # copy cc file for mxnet extensions
+os.mkdir(os.path.join(CURRENT_DIR, 'mxnet/src'))
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/src/lib_api.cc'),
             os.path.join(CURRENT_DIR, 'mxnet/src'))
 
