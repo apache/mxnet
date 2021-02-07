@@ -97,6 +97,11 @@ class SequenceMaskOp : public Operator {
     auto d0 = in_data[seq_mask::kData].size(0);
     auto d1 = in_data[seq_mask::kData].size(1);
     auto dsize = in_data[seq_mask::kData].Size();
+
+    if (dsize == 0) {
+      return;  // noop if any input dimension is zero-sized, out_data is of a right shape
+    }
+
     auto rest_size = dsize / (d0 * d1);
 
     Shape<3> s3 = Shape3(d0, d1, rest_size);
