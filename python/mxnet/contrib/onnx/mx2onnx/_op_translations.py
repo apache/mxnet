@@ -1125,19 +1125,19 @@ def convert_dropout(node, **kwargs):
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
-    opset_version = kwargs["opset_version"]
 
-    probability = float(attrs.get("p", 0.5))
+    _ = float(attrs.get("p", 0.5))
+    _ = convert_string_to_list(attrs.get("axes", "None"))
+    mode = attrs.get('mode', 'training')
 
-    if opset_version >= 12:
-        # opset >= 12 requires the ratio to be an input
-        nodes = [
-            create_const_scalar_node(name+"_ratio0", np.float32(probability), kwargs),
-            make_node("Dropout", [input_nodes[0], name+"_ratio0"], [name], name=name)
-        ]
-        return nodes
-    else:
-        return [make_node("Dropout", input_nodes, [name], ratio=probability, name=name)]
+    if mode != 'training':
+        raise NotImplementedError("Dropout does not currently support mode!=\'training\'")
+
+    nodes = [
+        make_node('Identity', [input_nodes[0]], [name])
+    ]
+
+    return nodes
 
 
 @mx_op.register("Flatten")
