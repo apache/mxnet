@@ -731,20 +731,20 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-template<typename DType>
 struct linspace_fwd {
+  template<typename DType,
+           typename std::enable_if<!std::is_integral<DType>::value, bool>::type = true>
   MSHADOW_XINLINE static void Map(index_t i, double start, double stop, double step,
                                   int req, DType* out) {
     KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
   }
-};
 
-// Round towards -infinity for int type
-template<>
-struct linspace_fwd<int> {
+  //Floor for int dtype
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, bool>::type = true>
   MSHADOW_XINLINE static void Map(index_t i, double start, double stop, double step,
-                                  int req, int* out) {
-     KERNEL_ASSIGN(out[i], req, static_cast<int>(std::floor(start + step * i)));
+                                  int req, DType* out) {
+    KERNEL_ASSIGN(out[i], req, static_cast<DType>(std::floor(start + step * i)));
   }
 };
 
@@ -760,7 +760,7 @@ void LinspaceCompute(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       index_t step_num = param.endpoint ? param.num - 1 : param.num;
       double step = step_num > 0 ? (param.stop - param.start) / step_num : 0.0f;
-      Kernel<linspace_fwd<DType>, xpu>::Launch(s,
+      Kernel<linspace_fwd, xpu>::Launch(s,
                                         outputs[0].Size(),
                                         param.start,
                                         param.stop,
