@@ -50,13 +50,13 @@ $(MKLDNN_LIBFILE):
 	cmake $(MKLDNN_SUBMODDIR) $(mkldnn_FLAGS)
 	$(MAKE) -C $(MKLDNN_BUILDDIR) VERBOSE=1
 	$(MAKE) -C $(MKLDNN_BUILDDIR) install
-	cp $(MKLDNN_BUILDDIR)/include/oneapi/dnnl/dnnl_version.h $(MXNET_INCLDIR)/mkldnn/oneapi/dnnl/.
-	cp $(MKLDNN_BUILDDIR)/include/oneapi/dnnl/dnnl_config.h $(MXNET_INCLDIR)/mkldnn/oneapi/dnnl/.
+	cp $(MKLDNN_BUILDDIR)/include/dnnl_version.h $(MXNET_INCLDIR)/mkldnn/.
+	cp $(MKLDNN_BUILDDIR)/include/dnnl_config.h $(MXNET_INCLDIR)/mkldnn/.
 
 mkldnn_clean:
 	$(RM) -r 3rdparty/mkldnn/build
-	$(RM) -r include/mkldnn/oneapi/dnnl/dnnl_version.h
-	$(RM) -r include/mkldnn/oneapi/dnnl/dnnl_config.h
+	$(RM) -r include/mkldnn/dnnl_version.h
+	$(RM) -r include/mkldnn/dnnl_config.h
 
 ifeq ($(USE_MKLDNN), 1)
 mkldnn: mkldnn_build
