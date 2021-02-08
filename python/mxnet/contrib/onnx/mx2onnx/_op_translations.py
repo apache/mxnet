@@ -2268,10 +2268,10 @@ def convert_tile(node, **kwargs):
     data = input_nodes[0]
     reps = convert_string_to_list(attrs["reps"])
 
-    create_tensor([0], name+'_0', kwargs['initializer']),
-    create_tensor([1], name+'_1', kwargs['initializer']),
-    create_tensor(reps, name+'_reps', kwargs['initializer'], dtype='int64'),
-    create_tensor([len(reps)], name+'_reps_len', kwargs['initializer']),
+    create_tensor([0], name+'_0', kwargs['initializer'])
+    create_tensor([1], name+'_1', kwargs['initializer'])
+    create_tensor(reps, name+'_reps', kwargs['initializer'], dtype='int64')
+    create_tensor([len(reps)], name+'_reps_len', kwargs['initializer'])
 
     nodes = [
         make_node('Shape', [data], [name+'_data_shape']),
