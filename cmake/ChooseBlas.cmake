@@ -17,12 +17,19 @@
 
 set(BLAS "Open" CACHE STRING "Selected BLAS library")
 set_property(CACHE BLAS PROPERTY STRINGS "Atlas;Open;MKL")
+# ---[ Root folders
+set(INTEL_HOME_ROOT "$ENV{HOME}/intel" CACHE PATH "Folder contains user-installed intel libs")
+set(INTEL_OPT_ROOT "/opt/intel" CACHE PATH "Folder contains root-installed intel libs")
 
 if(DEFINED USE_BLAS)
   set(BLAS "${USE_BLAS}")
 else()
-  if(USE_MKL_IF_AVAILABLE)
-    set(BLAS "MKL")
+  if (USE_MKL_IF_AVAILABLE)
+    # Setting up BLAS_mkl_MKLROOT for non-Ubuntu 20.04 OSes
+    find_path(BLAS_mkl_MKLROOT mkl PATHS $ENV{MKLROOT} ${INTEL_HOME_ROOT} ${INTEL_OPT_ROOT})
+    if(NOT BLAS_mkl_MKLROOT STREQUAL "BLAS_mkl_MKLROOT-NOTFOUND")
+      set(BLAS "MKL")
+    endif()
   endif()
 endif()
 
@@ -116,10 +123,6 @@ set(FORTRAN_DIR \\\"\$\{CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES\}\\\")
     endif()
   endif()
 elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
-  # ---[ Root folders
-  set(INTEL_HOME_ROOT "$ENV{HOME}/intel" CACHE PATH "Folder contains user-installed intel libs")
-  set(INTEL_OPT_ROOT "/opt/intel" CACHE PATH "Folder contains root-installed intel libs")
-
   # ---[ MKL Options
   if(UNIX)
     # Single dynamic library interface leads to conflicts between intel omp and llvm omp
