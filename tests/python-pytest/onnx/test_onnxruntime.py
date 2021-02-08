@@ -377,12 +377,12 @@ def test_img_segmentation_model_inference_onnxruntime(tmp_path, model):
     'simple_pose_resnet152_v1b',
     'simple_pose_resnet152_v1d',
     'alpha_pose_resnet101_v1b_coco',
-    #'mobile_pose_resnet18_v1b',
-    #'mobile_pose_resnet50_v1b',
-    #'mobile_pose_mobilenet1.0',
-    #'mobile_pose_mobilenetv2_1.0',
-    #'mobile_pose_mobilenetv3_large',
-    #'mobile_pose_mobilenetv3_small',
+    'mobile_pose_resnet18_v1b',
+    'mobile_pose_resnet50_v1b',
+    'mobile_pose_mobilenet1.0',
+    'mobile_pose_mobilenetv2_1.0',
+    'mobile_pose_mobilenetv3_large',
+    'mobile_pose_mobilenetv3_small',
 ])
 def test_pose_estimation_model_inference_onnxruntime(tmp_path, model):
     def normalize_image(imgfile):
