@@ -815,9 +815,9 @@ endif()
 if(USE_MKLDNN)
     add_custom_command(TARGET mxnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/
+      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/)
+      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/)
 endif()
 
 if(USE_INTGEMM)
