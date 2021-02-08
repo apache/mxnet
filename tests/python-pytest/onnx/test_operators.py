@@ -1121,3 +1121,11 @@ def test_onnx_export_argsort(tmp_path, dtype, axis, is_ascend, dtype_i):
         kwargs['is_ascend'] = is_ascend
     M = def_model('argsort', axis=axis, dtype=dtype_i, **kwargs)
     op_export_test('argsort', M, [A], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
+@pytest.mark.parametrize('reps', [(2, 3), (2, ), (2, 3, 4)])
+def test_onnx_export_tile(tmp_path, dtype, reps):
+    x = mx.nd.random.normal(0, 100, (5, 6)).astype(dtype)
+    M = def_model('tile', reps=reps)
+    op_export_test('tile', M, [x], tmp_path)
