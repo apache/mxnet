@@ -739,7 +739,7 @@ struct linspace_fwd {
     KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
   }
 
-  //Floor for int dtype
+  // Floor for int dtype
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, bool>::type = true>
   MSHADOW_XINLINE static void Map(index_t i, double start, double stop, double step,
