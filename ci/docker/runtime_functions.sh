@@ -1258,7 +1258,60 @@ integrationtest_ubuntu_cpu_onnx() {
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_models.py
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_node.py
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_operators.py
-    pytest -n 24 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py
+}
+
+integrationtest_ubuntu_cpu_onnx_export_nlp_models() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pytest -n 8 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_bert_inference_onnxruntime
+}
+
+integrationtest_ubuntu_cpu_onnx_export_obj_class_models() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pytest -n 8 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime
+}
+
+integrationtest_ubuntu_cpu_onnx_export_obj_det_models() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pytest -n 8 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_detection_model_inference_onnxruntime
+}
+
+integrationtest_ubuntu_cpu_onnx_export_img_seg_models() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pytest -n 8 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_img_segmentation_model_inference_onnxruntime
+}
+
+integrationtest_ubuntu_cpu_onnx_export_pose_est_models() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pytest -n 8 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_pose_estimation_model_inference_onnxruntime
+}
+
+integrationtest_ubuntu_cpu_onnx_export_act_rec_models() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pytest -n 8 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_action_recognition_model_inference_onnxruntime
 }
 
 integrationtest_ubuntu_gpu_python() {
