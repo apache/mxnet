@@ -1681,6 +1681,30 @@ def convert_reshape(node, **kwargs):
         ]
         return nodes
 
+    if targ_shape == [-4, 1, -1, 0, 0, 0] and reverse != 'True':
+        create_tensor([1], name+'_1', kwargs['initializer'])
+        create_tensor([-1], name+'_m1', kwargs['initializer'])
+        nodes = [
+            make_node('Shape', [input_nodes[0]], [name+'_shape']),
+            make_node('Split', [name+'_shape'], [name+'_dim0', name+'_dim1', name+'_dim2',
+                                                 name+'_dim3'], axis=0),
+            make_node('Concat', [name+'_1', name+'_m1', name+'_dim1', name+'_dim2', name+'_dim3'],
+                      [name+'_shape_new'], axis=0),
+            make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
+        ]
+        return nodes
+
+    if targ_shape == [-4, 1, 1000, 0, 0] and reverse != 'True':
+        create_tensor([1], name+'_1', kwargs['initializer'])
+        create_tensor([1000], name+'_1000', kwargs['initializer'])
+        nodes = [
+            make_node('Shape', [input_nodes[0]], [name+'_shape']),
+            make_node('Split', [name+'_shape'], [name+'_dim0', name+'_dim1', name+'_dim2'], axis=0),
+            make_node('Concat', [name+'_1', name+'_1000', name+'_dim1', name+'_dim2'],
+                      [name+'_shape_new'], axis=0),
+            make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
+        ]
+        return nodes
 
     not_supported_shape = [-2, -3, -4]
     for val in targ_shape:
