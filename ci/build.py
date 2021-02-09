@@ -147,9 +147,6 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     image_id = _get_local_image_id(docker_tag=tag)
     if not image_id:
         raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
-    # now that we've built the container, push it to our docker cache if DOCKER_ECR_CACHE is defined
-    if 'DOCKER_ECR_REGISTRY' in os.environ:
-        push_docker_cache(registry, tag, image_id)
     return image_id
 
 
@@ -290,9 +287,6 @@ def load_docker_cache(tag, docker_registry) -> None:
     if docker_registry:
         # noinspection PyBroadException
         try:
-            if "dkr.ecr" in docker_registry:
-                # we need to get credentials to login to ECR
-                os.system("$(aws ecr get-login --region ${DOCKER_ECR_REGION} --no-include-email)")
             import docker_cache
             logging.info('Docker cache download is enabled from registry %s', docker_registry)
             docker_cache.load_docker_cache(registry=docker_registry, docker_tag=tag)
@@ -306,9 +300,6 @@ def push_docker_cache(registry, tag, image_id) -> None:
     if registry:
         # noinspection PyBroadException
         try:
-            if "dkr.ecr" in registry:
-                # we need to get credentials to login to ECR
-                os.system("$(aws ecr get-login --region ${DOCKER_ECR_REGION} --no-include-email)")
             import docker_cache
             logging.info('Docker cache upload is enabled to registry %s', registry)
             docker_cache._upload_image(registry, tag, image_id)

@@ -96,6 +96,14 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
         # Error handling is done by returning the errorous platform name. This is necessary due to
         # Parallel being unable to handle exceptions
 
+def _ecr_login(registry):
+    """
+    Use the AWS CLI to get credentials to login to ECR.
+    """
+    # extract region from registry
+    region = registry.split(".")[3]
+    logging.info("Logging into ECR region %s using aws-cli..", region)
+    os.system("$(aws ecr get-login --region "+region+" --no-include-email)")
 
 def _upload_image(registry, docker_tag, image_id) -> None:
     """
@@ -105,6 +113,10 @@ def _upload_image(registry, docker_tag, image_id) -> None:
     :param image_id: Image id
     :return: None
     """
+
+    if "dkr.ecr" in registry:
+        _ecr_login(registry)
+
     # We don't have to retag the image since it is already in the right format
     logging.info('Uploading %s (%s) to %s', docker_tag, image_id, registry)
     push_cmd = ['docker', 'push', docker_tag]
@@ -124,6 +136,9 @@ def load_docker_cache(registry, docker_tag) -> None:
     if not registry:
         return
     assert docker_tag
+
+    if "dkr.ecr" in registry:
+        _ecr_login(registry)
 
     logging.info('Loading Docker cache for %s from %s', docker_tag, registry)
     pull_cmd = ['docker', 'pull', docker_tag]
