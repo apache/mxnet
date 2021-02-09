@@ -37,33 +37,22 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
   // was called with thread_safe=true
   CachedOp* op = dynamic_cast<CachedOp*>(op_shared.get());
 
-  int num_inputs = args[1];
+  int args_size = args.size();
   std::vector<NDArray*> ndinputs;
-  ndinputs.reserve(num_inputs);
-  for (int i = 2; i < num_inputs + 2; ++i) {
+  ndinputs.reserve(args_size - 3);
+  for (int i = 1; i < args_size - 2; ++i) {
     ndinputs.push_back(args[i].operator mxnet::NDArray*());
   }
 
-  int args_size = args.size();
   std::vector<NDArray*> ndoutputs;
   ndoutputs.reserve(op->num_outputs());
-  if (args[num_inputs + 4].type_code() == kNull) {
-    for (int i = 0; i < op->num_outputs(); ++i) ndoutputs.push_back(new NDArray());
-  } else {
-    int array_size = args_size - num_inputs - 4;
-    CHECK_EQ(array_size, op->num_outputs())
-        << "CachedOp expects " << op->num_outputs() << " outputs, but "
-        << array_size << " was given.";
-    for (int i = num_inputs + 4; i < array_size; ++i) {
-      ndoutputs.push_back(args[i].operator mxnet::NDArray*());
-    }
-  }
+  for (int i = 0; i < op->num_outputs(); ++i) ndoutputs.push_back(new NDArray());
 
   int default_dev_type;
   int default_dev_id;
-  if (args[num_inputs + 2].type_code() != kNull) {
-    default_dev_type = args[num_inputs + 2];
-    default_dev_id = args[num_inputs + 3];
+  if (args[args_size - 2].type_code() != kNull) {
+    default_dev_type = args[args_size - 2];
+    default_dev_id = args[args_size - 1];
   } else {
     const Context &ctx = ndinputs[0]->ctx();
     default_dev_type = ctx.dev_type;

@@ -75,12 +75,10 @@ cdef inline int make_arg(object arg,
     return 0
 
 
-cdef inline object make_ret(MXNetValue value, int tcode, tuple args):
+cdef inline object make_ret(MXNetValue value, int tcode):
     """convert result to return value."""
     if tcode == kNDArrayHandle:
         return c_make_array(value.v_handle)
-    elif tcode == kPyArg:
-        return args[value.v_int64]
     elif tcode == kNull:
         return None
     elif tcode == kObjectHandle:
@@ -186,7 +184,10 @@ cdef class FunctionBase:
         cdef MXNetValue ret_val
         cdef int ret_tcode
         FuncCall(self.chandle, args, &ret_val, &ret_tcode)
-        return make_ret(ret_val, ret_tcode, args)
+        if ret_tcode == kPyArg:
+            return args[ret_val.v_int64]
+        else:
+            return make_ret(ret_val, ret_tcode)
 
 cdef object make_packed_func(MXNetFunctionHandle chandle, int is_global):
     obj = _CLASS_PACKED_FUNC.__new__(_CLASS_PACKED_FUNC)
