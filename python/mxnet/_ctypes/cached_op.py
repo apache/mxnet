@@ -85,8 +85,8 @@ class CachedOp(object):
                 type_id,
                 device_id
             )
-            if len(output_vars) == 1:
-                return output_vars[0]
+            if isinstance(output_vars, NDArrayBase):
+                return output_vars
             else:
                 return list(output_vars)
         else:

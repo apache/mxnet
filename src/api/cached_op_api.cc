@@ -64,14 +64,18 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
                                 default_dev_id);
   op->Forward(op_shared, ndinputs, ndoutputs, ctx);
 
-  std::vector<ObjectRef> outputs;
-  outputs.reserve(op->num_outputs());
-  for (int i = 0; i < op->num_outputs(); ++i) {
-    ObjectRef out = NDArrayHandle(ndoutputs[i]);
-    outputs.push_back(out);
-    delete ndoutputs[i];
+  if (op->num_outputs() == 1) {
+    *ret = ndoutputs[0];
+  } else {
+    std::vector<ObjectRef> outputs;
+    outputs.reserve(op->num_outputs());
+    for (int i = 0; i < op->num_outputs(); ++i) {
+      ObjectRef out = NDArrayHandle(ndoutputs[i]);
+      outputs.push_back(out);
+      delete ndoutputs[i];
+    }
+    *ret = runtime::ADT(0, outputs.begin(), outputs.end());
   }
-  *ret = runtime::ADT(0, outputs.begin(), outputs.end());
 });
 
 MXNET_REGISTER_GLOBAL("cached_op.create")
