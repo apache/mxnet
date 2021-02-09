@@ -141,7 +141,7 @@ suppress_warnings = [
 # -- Options for HTML output ---------------------------------------------------
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ['../../themes/mx-theme']
+# html_theme_path = ['../../themes/mx-theme']
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
@@ -154,7 +154,6 @@ html_theme_options = {
     'primary_color': 'blue',
     'accent_color': 'deep_orange',
     'show_footer': True,
-    'relative_url': os.environ.get('SPHINX_RELATIVE_URL', '/')
 }
 
 

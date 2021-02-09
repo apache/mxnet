@@ -28,3 +28,4 @@ breathe==4.13.1
 mock==3.0.5
 awscli==1.16.266
 autodocsumm==0.1.12
+mxtheme==0.3.14
