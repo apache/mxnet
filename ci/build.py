@@ -54,17 +54,41 @@ def get_platforms(path: str = get_dockerfiles_path()) -> List[str]:
     platforms = list(map(lambda x: os.path.split(x)[1], sorted(files)))
     return platforms
 
+def _find_copied_files(dockerfile):
+    """
+    Creates a list of files copied into given dockerfile.
+    """
+    copied_files = []
+    basedir = os.path.dirname(dockerfile)
+    with open(dockerfile, "r") as f:
+        for line in f.readlines():
+            if line.startswith("COPY "):
+                copied_files.append(os.path.join(basedir, line.split(" ")[1]))
+    return copied_files
+
+def _hash_file(ctx, filename):
+    """
+    Add contents of passed file into passed hash context.
+    """
+    bufsiz = 16384
+    with open(filename,"rb") as f:
+        while True:
+            d = f.read(bufsiz)
+            if not d:
+                break
+            ctx.update(d)
 
 def get_docker_tag(platform: str, registry: str) -> str:
     """:return: docker tag to be used for the container"""
     platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
         registry = "mxnet_local"
-    dockerfile_hash = 'unk'
-    with open(get_dockerfile(platform),"rb") as f:
-        bytes = f.read()
-        dockerfile_hash = hashlib.sha256(bytes).hexdigest()[:12]
-    return "{0}:{1}-{2}".format(registry, platform, dockerfile_hash)
+    dockerfile = get_dockerfile(platform)
+    sha256 = hashlib.sha256()
+    _hash_file(sha256, dockerfile)
+    for f in _find_copied_files(dockerfile):
+        _hash_file(sha256, f)
+    return "{0}:{1}-{2}".format(registry, platform, sha256.hexdigest()[:12])
 
 
 def get_dockerfile(platform: str, path=get_dockerfiles_path()) -> str:
