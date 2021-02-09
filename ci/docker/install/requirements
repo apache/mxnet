@@ -30,5 +30,5 @@ numpy>1.16.0,<1.19.0  # Restrict numpy version to < 1.19.0 due to https://github
 pylint==2.3.1  # pylint and astroid need to be aligned
 astroid==2.3.3  # pylint and astroid need to be aligned
 requests<2.19.0,>=2.18.4
-scipy==1.2.1
-setuptools<50
+scipy
+setuptools
