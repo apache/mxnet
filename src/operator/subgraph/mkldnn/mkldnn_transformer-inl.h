@@ -77,7 +77,6 @@ class MKLDNNInterleavedMatMulSelfAttQKOp {
   MKLDNNInterleavedMatMulParam param_;
   mkldnn_args_map_t args_;
   std::shared_ptr<dnnl::matmul> fwd_;
-  std::shared_ptr<dnnl::reorder> apply_mask_;
   std::shared_ptr<dnnl::memory> cached_data1_mem_;
   std::shared_ptr<dnnl::memory> cached_data2_mem_;
   std::shared_ptr<dnnl::memory> cached_out_mem_;

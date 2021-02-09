@@ -201,10 +201,10 @@ void MKLDNNInterleavedMatMulSelfAttQKOp::Forward(
     if (param_.with_mask) {
       const int mask_index = param_.quantized ? 3 : 1;
       cached_mask_mem_ = std::make_shared<dnnl::memory>(dst_md, engine, inputs[mask_index].data().dptr<float>());
-      apply_mask_ = std::make_shared<dnnl::reorder>(*cached_mask_mem_, *cached_out_mem_);
+      args_[DNNL_ARG_ATTR_MULTIPLE_POST_OP(0) | DNNL_ARG_SRC_1] = *cached_mask_mem_;
 
       dnnl::post_ops post_op;
-      post_op.append_sum(1);
+      post_op.append_binary(dnnl::algorithm::binary_add, dst_md);
       attr.set_post_ops(post_op);
     }
     attr.set_output_scales(0, {out_scale});
@@ -229,10 +229,6 @@ void MKLDNNInterleavedMatMulSelfAttQKOp::Forward(
     MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
       cached_out_mem_->set_data_handle(reinterpret_cast<void*>(outputs[0].data().dptr<DType>()));
     });
-  }
-
-  if (param_.with_mask) {
-    MKLDNNStream::Get()->RegisterPrimArgs(*apply_mask_, {{DNNL_ARG_FROM, *cached_mask_mem_}, {DNNL_ARG_TO, *cached_out_mem_}});
   }
 
   MKLDNNStream::Get()->RegisterPrimArgs(*fwd_, args_);
