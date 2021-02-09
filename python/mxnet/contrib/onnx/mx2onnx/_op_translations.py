@@ -47,6 +47,7 @@
 # coding: utf-8
 # pylint: disable=too-many-locals,no-else-return,too-many-lines
 # pylint: disable=anomalous-backslash-in-string,eval-used
+# pylint: disable=too-many-function-args
 """
 Conversion Functions for common layers.
 Add new functions here with a decorator.
@@ -3188,7 +3189,6 @@ def convert_greater_scalar(node, **kwargs):
     else:
         if dtype == 'float16':
             # when using float16, we must convert it to np.uint16 view first
-            # pylint: disable=too-many-function-args
             scalar = np.float16(scalar).view(np.uint16)
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
@@ -3217,7 +3217,6 @@ def convert_lesser_scalar(node, **kwargs):
     else:
         if dtype == 'float16':
             # when using float16, we must convert it to np.uint16 view first
-            # pylint: disable=too-many-function-args
             scalar = np.float16(scalar).view(np.uint16)
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
@@ -3245,7 +3244,6 @@ def convert_equal_scalar(node, **kwargs):
     else:
         if dtype == 'float16':
             # when using float16, we must convert it to np.uint16 view first
-            # pylint: disable=too-many-function-args
             scalar = np.float16(scalar).view(np.uint16)
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
