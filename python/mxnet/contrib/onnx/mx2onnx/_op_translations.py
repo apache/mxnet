@@ -47,6 +47,7 @@
 # coding: utf-8
 # pylint: disable=too-many-locals,no-else-return,too-many-lines
 # pylint: disable=anomalous-backslash-in-string,eval-used
+# pylint: disable=too-many-function-args
 """
 Conversion Functions for common layers.
 Add new functions here with a decorator.
@@ -162,7 +163,7 @@ def create_const_scalar_node(input_name, value, kwargs):
     initializer = kwargs["initializer"]
     input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
     value_node = make_tensor_value_info(input_name, input_type, ())
-    tensor_node = make_tensor(input_name, input_type, (), (value,))
+    tensor_node = make_tensor(input_name, input_type, (), ([value]))
     initializer.append(tensor_node)
     return value_node
 
@@ -362,7 +363,7 @@ def convert_fully_connected(node, **kwargs):
     in_nodes = [name+'_data_flattened', input_nodes[1]]
 
     if no_bias:
-        nodes.append(create_const_scalar_node(name+'_bias', np.array([0], dtype=dtype), kwargs))
+        nodes.append(create_const_scalar_node(name+'_bias', np.int32(0).astype(dtype), kwargs))
         in_nodes.append(name+'_bias')
     else:
         in_nodes.append(input_nodes[2])
@@ -2430,7 +2431,7 @@ def convert_layer_norm(node, **kwargs):
         create_tensor([], name+"_void", kwargs["initializer"]),
         create_const_scalar_node(name+'_0_s', np.int64(0), kwargs),
         create_const_scalar_node(name+'_1_s', np.int64(1), kwargs),
-        create_const_scalar_node(name+"_2_s", np.array(2, dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_2_s", np.int64(2).astype(dtype), kwargs),
         create_const_scalar_node(name+"_eps", np.float32(eps), kwargs),
         make_node("ReduceMean", [input_nodes[0]], [name+"_rm0_out"], axes=[axes]),
         make_node("Sub", [input_nodes[0], name+"_rm0_out"], [name+"_sub0_out"]),
@@ -2829,9 +2830,9 @@ def convert_arange_like(node, **kwargs):
         raise NotImplementedError("arange_like operator with repeat != 1 not yet implemented.")
 
     nodes = [
-        create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs),
-        create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs),
-        create_const_scalar_node(name+"_half_step", np.array([float(step)*0.5], dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_start", np.dtype(dtype).type(start), kwargs),
+        create_const_scalar_node(name+"_step", np.dtype(dtype).type(step), kwargs),
+        create_const_scalar_node(name+"_half_step", np.dtype(dtype).type(float(step)*0.5), kwargs),
         create_tensor([], name+'_void', kwargs["initializer"])
     ]
     if axis == 'None':
@@ -2947,9 +2948,9 @@ def convert_arange(node, **kwargs):
         raise NotImplementedError("arange operator with repeat != 1 not yet implemented.")
 
     nodes = [
-        create_const_scalar_node(name+"_start", np.array([start], dtype=dtype), kwargs),
-        create_const_scalar_node(name+"_stop", np.array([stop], dtype=dtype), kwargs),
-        create_const_scalar_node(name+"_step", np.array([step], dtype=dtype), kwargs),
+        create_const_scalar_node(name+"_start", np.dtype(dtype).type(start), kwargs),
+        create_const_scalar_node(name+"_stop", np.dtype(dtype).type(stop), kwargs),
+        create_const_scalar_node(name+"_step", np.dtype(dtype).type(step), kwargs),
         make_node("Range", [name+"_start", name+"_stop", name+"_step"], [name], name=name)
     ]
 
@@ -2977,7 +2978,7 @@ def convert_reverse(node, **kwargs):
         create_tensor([axis], name+'_axis', kwargs['initializer']),
         create_tensor([axis+1], name+'_axis_p1', kwargs['initializer']),
         create_tensor([], name+'_void', kwargs['initializer']),
-        create_const_scalar_node(name+'_m1_s', np.array([-1], dtype='int64'), kwargs),
+        create_const_scalar_node(name+'_m1_s', np.int64(-1), kwargs),
         make_node('Shape', [input_nodes[0]], [name+'_shape']),
         make_node('Shape', [name+'_shape'], [name+'_dim']),
         make_node('Sub', [name+'_10', name+'_dim'], [name+'_sub']),
@@ -3188,7 +3189,6 @@ def convert_greater_scalar(node, **kwargs):
     else:
         if dtype == 'float16':
             # when using float16, we must convert it to np.uint16 view first
-            # pylint: disable=too-many-function-args
             scalar = np.float16(scalar).view(np.uint16)
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
@@ -3217,7 +3217,6 @@ def convert_lesser_scalar(node, **kwargs):
     else:
         if dtype == 'float16':
             # when using float16, we must convert it to np.uint16 view first
-            # pylint: disable=too-many-function-args
             scalar = np.float16(scalar).view(np.uint16)
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])
@@ -3245,7 +3244,6 @@ def convert_equal_scalar(node, **kwargs):
     else:
         if dtype == 'float16':
             # when using float16, we must convert it to np.uint16 view first
-            # pylint: disable=too-many-function-args
             scalar = np.float16(scalar).view(np.uint16)
 
     tensor_value = make_tensor(name+"_scalar", input_type, [1], [scalar])

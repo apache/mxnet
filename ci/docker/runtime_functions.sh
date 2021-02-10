@@ -1077,7 +1077,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist nvidia-dali-cuda100==0.24
     wget -nc http://data.mxnet.io/data/val_256_q90.rec
-    python3.6 tests/python/tensorrt/rec2idx.py val_256_q90.rec val_256_q90.idx
+    python3 tests/python/tensorrt/rec2idx.py val_256_q90.rec val_256_q90.idx
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
     rm val_256_q90*
 }
