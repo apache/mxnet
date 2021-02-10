@@ -1211,13 +1211,13 @@ def test_unix_onnx_cpu_nlp_export_tests() {
     }]
 }
 
-def test_unix_onnx_cpu_obj_class_export_tests() {
-    return ['Onnx CPU - Obj Class Export Tests': {
+def test_unix_onnx_cpu_cv_export_tests1() {
+    return ['Onnx CPU - CV Model Export Tests 1': {
       node(NODE_LINUX_CPU) {
         ws('workspace/it-onnx-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_lib)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx_export_obj_class_models', false)
+            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx_export_cv_models1', false)
             utils.publish_test_coverage()
           }
         }
@@ -1225,55 +1225,13 @@ def test_unix_onnx_cpu_obj_class_export_tests() {
     }]
 }
 
-def test_unix_onnx_cpu_obj_det_export_tests() {
-    return ['Onnx CPU - Obj Det Export Tests': {
+def test_unix_onnx_cpu_cv_export_tests2() {
+    return ['Onnx CPU - CV Model Export Tests 2': {
       node(NODE_LINUX_CPU) {
         ws('workspace/it-onnx-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_lib)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx_export_obj_det_models', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_onnx_cpu_img_seg_export_tests() {
-    return ['Onnx CPU - Img Seg Export Tests': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/it-onnx-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx_export_img_seg_models', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_onnx_cpu_pose_est_export_tests() {
-    return ['Onnx CPU - Pose Est Export Tests': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/it-onnx-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx_export_pose_est_models', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_onnx_cpu_act_rec_export_tests() {
-    return ['Onnx CPU - Act Rec Export Tests': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/it-onnx-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx_export_act_rec_models', false)
+            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx_export_cv_models2', false)
             utils.publish_test_coverage()
           }
         }
