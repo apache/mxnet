@@ -1286,6 +1286,14 @@ integrationtest_ubuntu_cpu_onnx_export_cv_models2() {
     COV_ARG="--cov=./ --cov-report=xml --cov-append"
     pytest -n 4 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_detection_model_inference_onnxruntime
     pytest -n 4 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_img_segmentation_model_inference_onnxruntime
+}
+
+integrationtest_ubuntu_cpu_onnx_export_cv_models3() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
     pytest -n 4 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_pose_estimation_model_inference_onnxruntime
     pytest -n 4 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_action_recognition_model_inference_onnxruntime
 }

@@ -1239,6 +1239,20 @@ def test_unix_onnx_cpu_cv_export_tests2() {
     }]
 }
 
+def test_unix_onnx_cpu_cv_export_tests3() {
+    return ['Onnx CPU - CV Model Export Tests 3': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/it-onnx-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('cpu', mx_lib)
+            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx_export_cv_models3', false)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_distributed_kvstore_cpu() {
     return ['dist-kvstore tests CPU': {
       node(NODE_LINUX_CPU) {
