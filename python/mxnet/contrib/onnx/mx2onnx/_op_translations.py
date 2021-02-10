@@ -2830,9 +2830,9 @@ def convert_arange_like(node, **kwargs):
         raise NotImplementedError("arange_like operator with repeat != 1 not yet implemented.")
 
     nodes = [
-        create_const_scalar_node(name+"_start", np.float32(start).astype(dtype), kwargs),
-        create_const_scalar_node(name+"_step", np.float32(step).astype(dtype), kwargs),
-        create_const_scalar_node(name+"_half_step", np.float32(float(step)*0.5).astype(dtype), kwargs),
+        create_const_scalar_node(name+"_start", np.dtype(dtype).type(start), kwargs),
+        create_const_scalar_node(name+"_step", np.dtype(dtype).type(step), kwargs),
+        create_const_scalar_node(name+"_half_step", np.dtype(dtype).type(float(step)*0.5), kwargs),
         create_tensor([], name+'_void', kwargs["initializer"])
     ]
     if axis == 'None':
@@ -2948,9 +2948,9 @@ def convert_arange(node, **kwargs):
         raise NotImplementedError("arange operator with repeat != 1 not yet implemented.")
 
     nodes = [
-        create_const_scalar_node(name+"_start", np.float32(start).astype(dtype), kwargs),
-        create_const_scalar_node(name+"_stop", np.float32(stop).astype(dtype), kwargs),
-        create_const_scalar_node(name+"_step", np.float32(step).astype(dtype), kwargs),
+        create_const_scalar_node(name+"_start", np.dtype(dtype).type(start), kwargs),
+        create_const_scalar_node(name+"_stop", np.dtype(dtype).type(stop), kwargs),
+        create_const_scalar_node(name+"_step", np.dtype(dtype).type(step), kwargs),
         make_node("Range", [name+"_start", name+"_stop", name+"_step"], [name], name=name)
     ]
 
