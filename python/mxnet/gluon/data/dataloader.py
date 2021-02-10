@@ -572,55 +572,11 @@ class DataLoader(object):
         unless you are experiencing timeout and you know it's due to slow data loading.
         Sometimes full `shared_memory` will cause all workers to hang and causes timeout. In these
         cases please reduce `num_workers` or increase system `shared_memory` size instead.
-    auto_reload : bool, default is True
-        control whether prefetch data after a batch is ended.
-
-    Example:
-    >>> from mxnet.gluon.data import DataLoader, ArrayDataset
-    >>> train_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
-    >>> def transform_train(sample):
-    ...   if sample == 0 : print('(pre)fetching data here')
-    ...   return sample
-    ...
-    >>> train_iter = DataLoader(train_data.transform_first(transform_train),
-    ...                         auto_reload=False, batch_size=1,num_workers=1)
-    >>> # no prefetch is performed, the prefetch & autoload start after
-    >>> # train_iter.__iter__() is called.
-    >>> for i in train_iter:pass
-    (pre)fetching data here
-    >>> train_iter = DataLoader(train_data.transform_first(transform_train),
-    ...                         batch_size=1,num_workers=1)
-    (pre)fetching data here
-    >>> it = iter(train_iter) # nothing is generated since lazy-evaluation occurs
-    >>> it2 = iter(train_iter)
-    >>> it3 = iter(train_iter)
-    >>> it4 = iter(train_iter)
-    >>> _ = next(it2) # the first iter we are using is the prefetched iter.
-    >>> _ = next(it) # since the prefetched iter is consumed, we have to fetch data for `it`.
-    (pre)fetching data here
-    >>> _ = [None for _ in it3]
-    (pre)fetching data here
-    (pre)fetching data here
-    >>> # Here, 2 prefetches are triggered, one is fetching the first batch of `it3` and
-    >>> # another is when `it3` yield its last item, a prefetch is automatically performed.
-    >>> _ = [None for _ in it]
-    >>> # no prefetch is happened since train_loader has already prefetch data.
-    >>> _ = next(it4)
-    >>> # since the prefetch is performed, it4 become the prefetched iter.
-    >>>
-    >>> test_data = ArrayDataset([i for i in range(10)],[9-i for i in range(10)])
-    >>> test_iter = DataLoader(test_data, batch_size=1,num_workers=1)
-    >>> for epoch in range(200):
-    ...   # there is almost no difference between it and the default DataLoader
-    ...   for data, label in train_iter:
-    ...     # training...
-    ...   for data, label in test_iter:
-    ...     # testing...
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
                  num_workers=0, pin_memory=False, pin_device_id=0,
-                 prefetch=None, thread_pool=False, timeout=120, auto_reload=False):
+                 prefetch=None, thread_pool=False, timeout=120):
         self._dataset = dataset
         self._pin_memory = pin_memory
         self._pin_device_id = pin_device_id
@@ -671,24 +627,8 @@ class DataLoader(object):
                 self._batchify_fn = default_batchify_fn
         else:
             self._batchify_fn = batchify_fn
-        self.auto_reload = auto_reload
-        if self.auto_reload:
-            self.refresh()
-        else:
-            self.clean() # ensure self._iter exists.
 
     def __iter__(self):
-        if self._iter is None:
-            self.refresh()
-        t = self._iter
-        self._iter = None # ensure a single iter would not using twice.
-        for item in t:
-            yield item
-        if self._iter is None and self.auto_reload:
-            # ensure we do not waste any exist iter by mistake
-            self.refresh()
-
-    def _prefetch_iter(self):
         if self._num_workers == 0:
             def same_process_iter():
                 for batch in self._batch_sampler:
@@ -715,11 +655,3 @@ class DataLoader(object):
             # https://bugs.python.org/issue34172
             assert isinstance(self._worker_pool, multiprocessing.pool.Pool)
             self._worker_pool.terminate()
-
-    def refresh(self):
-        """Refresh its iter, fetch data again from its dataset"""
-        self._iter = self._prefetch_iter()
-
-    def clean(self):
-        """Remove its prefetched iter, the prefetch step will start after call its __iter__()"""
-        self._iter = None
