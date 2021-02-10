@@ -295,19 +295,6 @@ def load_docker_cache(tag, docker_registry) -> None:
     else:
         logging.info('Distributed docker cache disabled')
 
-def push_docker_cache(registry, tag, image_id) -> None:
-    """Uploads tagged container to given docker registry"""
-    if registry:
-        # noinspection PyBroadException
-        try:
-            import docker_cache
-            logging.info('Docker cache upload is enabled to registry %s', registry)
-            docker_cache._upload_image(registry, tag, image_id)
-        except Exception:
-            logging.exception('Unable to push image to Docker cache...')
-    else:
-        logging.info('Distributed docker cache disabled')
-
 
 def log_environment():
     instance_info = ec2_instance_info()
