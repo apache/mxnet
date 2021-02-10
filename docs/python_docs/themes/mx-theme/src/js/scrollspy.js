@@ -42,6 +42,21 @@ export default class ScrollSpy {
             }, 1);
         });
 
+        this.scrollElement.addEventListener("click", (e) => {
+            const target = e.target;
+            if (target.tagName !== "A") return;
+            window.onclickToc = true;
+            for (let i = 0, max = this.nav.length; i < max; i++) {
+                const navElement = this.nav[i];
+                if (navElement.href === target.href) {
+                    navElement.classList.add(this.className);
+                    navElement.classList.add('mdl-color-text--primary');
+                } else {
+                    navElement.classList.remove(this.className);
+                    navElement.classList.remove('mdl-color-text--primary');
+                }
+            }
+        });
     }
 
     getContents(contentSelector) {
@@ -72,15 +87,21 @@ export default class ScrollSpy {
 
     isView(element) {
         const scrollTop = this.scrollElement.scrollTop;
-        const calcBotom = scrollTop + this.offsetTop;
+        const subHeaderRect = document.querySelector(".mdl-layout__header-row").getBoundingClientRect();
+        const headerHeight = subHeaderRect.top + subHeaderRect.height;
+        const scrollBottom = scrollTop + window.innerHeight - headerHeight;
         const rect = element.getBoundingClientRect();
         const elementTop = rect.top + scrollTop;
         const elementBottom = elementTop + element.offsetHeight;
 
-        return elementTop <= calcBotom + this.offsetTop && elementBottom > scrollTop + this.offsetTop;
+        return elementTop < scrollBottom - 30 && elementBottom > scrollTop + headerHeight + 30;
     }
 
     toggleNavClass(elements) {
+        if (window.onclickToc) {
+            window.onclickToc = false;
+            return;
+          }
         let maxDepth = 0;
         let maxDepthElement = $();
 

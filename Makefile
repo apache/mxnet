@@ -86,6 +86,25 @@ ifeq ($(USE_MKLDNN), 1)
 	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
 endif
 
+ifndef USE_INTGEMM
+ifeq ($(UNAME_P), x86_64)
+	COMPILER := $(shell $(CXX) --version |head -n 1 |cut -d " " -f 1)
+	COMPILER_VERSION := $(shell $(CXX) -dumpversion |cut -d . -f 1)
+	ifeq ($(COMPILER), clang)
+		USE_INTGEMM=1
+	endif
+	ifeq ($(COMPILER), Apple)
+		USE_INTGEMM=1
+	endif
+	# If it's not clang and not Apple clang, it's probably gcc and we need at least 5.
+	# gcc --version gives the name of the program it was called with, which makes it hard to detect.
+	COMPILER_VERSION_GE_5 := $(shell expr $(COMPILER_VERSION) \>= 5)
+	ifeq ($(COMPILER_VERSION_GE_5), 1)
+		USE_INTGEMM=1
+	endif
+endif
+endif
+
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
@@ -157,6 +176,11 @@ ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
 	CFLAGS += -I$(MKLDNNROOT)/include
 	LIB_DEP += $(MKLDNNROOT)/lib/libdnnl.a
+endif
+
+# Use MKL's layernorm implementation.  Only has an impact if MKL is compiled in.
+ifeq ($(USE_MKL_LAYERNORM), 1)
+  CFLAGS += -DMXNET_USE_MKL_LAYERNORM=1
 endif
 
 # setup opencv
@@ -429,7 +453,7 @@ endif
 # be JIT-compiled by the updated driver from the included PTX.
 ifeq ($(USE_CUDA), 1)
 ifeq ($(CUDA_ARCH),)
-	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70 75
+	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70 75 80
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
 	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
@@ -463,6 +487,46 @@ endif
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages extension_libs
 
 SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
+
+ifeq ($(USE_INTGEMM), 1)
+	ifndef INTGEMM_PATH
+		INTGEMM_PATH = build/3rdparty/intgemm
+	endif
+	CFLAGS += -DMXNET_USE_INTGEMM=1
+	LIB_DEP += $(INTGEMM_PATH)/libintgemm.a
+
+# Download intgemm if it isn't already
+$(INTGEMM_PATH):
+	@mkdir -p $(INTGEMM_PATH)
+	rm -rf $(INTGEMM_PATH)
+	git clone https://github.com/kpu/intgemm $(INTGEMM_PATH)
+	cd $(INTGEMM_PATH) && git checkout -q 4172dcc209e6793dd920dec9cf9c9fc81605bd9d
+
+$(INTGEMM_PATH)/compile_test_avx512bw.cc: $(INTGEMM_PATH)
+	@
+$(INTGEMM_PATH)/compile_test_avx512vnni.cc: $(INTGEMM_PATH)
+	@
+$(INTGEMM_PATH)/intgemm/intgemm.cc: $(INTGEMM_PATH)
+	@
+
+# Compiler tests for AVX512BW and AVX512VNNI.
+$(INTGEMM_PATH)/intgemm/intgemm_config.h: $(INTGEMM_PATH)/compile_test_avx512bw.cc $(INTGEMM_PATH)/compile_test_avx512vnni.cc
+	echo '#pragma once' >$(INTGEMM_PATH)/intgemm/intgemm_config.h
+	$(CXX) $(CFLAGS) $(INTGEMM_PATH)/compile_test_avx512bw.cc 2>/dev/null && echo \#define INTGEMM_COMPILER_SUPPORTS_AVX512BW >>$(INTGEMM_PATH)/intgemm/intgemm_config.h || echo Your compiler is missing AVX512BW support
+	$(CXX) $(CFLAGS) $(INTGEMM_PATH)/compile_test_avx512vnni.cc 2>/dev/null && echo \#define INTGEMM_COMPILER_SUPPORTS_AVX512VNNI >>$(INTGEMM_PATH)/intgemm/intgemm_config.h || echo Your compiler is missing AVX512VNNI support
+
+$(INTGEMM_PATH)/intgemm/intgemm.o: $(INTGEMM_PATH)/intgemm/intgemm_config.h $(INTGEMM_PATH)/intgemm/intgemm.cc $(wildcard $(INTGEMM_PATH)/intgemm/*.h $(INTGEMM_PATH)/intgemm/*/*.h)
+	$(CXX) $(CFLAGS) -I$(INTGEMM_PATH) -std=c++11 -c $(INTGEMM_PATH)/intgemm/intgemm.cc -o $@
+
+$(INTGEMM_PATH)/libintgemm.a: $(INTGEMM_PATH)/intgemm/intgemm.o
+	@mkdir -p $(@D)
+	ar crv $@ $(filter %.o, $?)
+else
+	#If we're not using intgemm, remove the operators from src.
+	INTGEMM_OPS := $(wildcard src/operator/contrib/intgemm/*.cc)
+	SRC := $(filter-out $(INTGEMM_OPS),$(SRC))
+endif
+
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
@@ -514,7 +578,11 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 
 ifeq ($(USE_CUDA), 1)
-	CFLAGS += -I$(ROOTDIR)/3rdparty/nvidia_cub
+	CUDA_VERSION_MAJOR := $(shell $(NVCC) --version | grep "release" | awk '{print $$6}' | cut -c2- | cut -d '.' -f1)
+	ifeq ($(shell test $(CUDA_VERSION_MAJOR) -lt 11; echo $$?), 0)
+		CFLAGS += -I$(ROOTDIR)/3rdparty/nvidia_cub -DCUB_IGNORE_DEPRECATED_CPP_DIALECT
+	endif
+
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcufft
 	ifeq ($(ENABLE_CUDA_RTC), 1)
@@ -555,6 +623,13 @@ endif
 
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
+
+ifeq ($(USE_INTGEMM), 1)
+# Enforce a dependency on $(INTGEMM_PATH)/intgemm/intgemm_config.h which is a generated header based on compiler support.
+build/src/operator/contrib/intgemm/%.o: src/operator/contrib/intgemm/%.cc $(INTGEMM_PATH)/intgemm/intgemm_config.h | mkldnn
+	@mkdir -p $(@D)
+	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -I$(INTGEMM_PATH) -Isrc/operator -c $< -o $@
+endif
 
 build/src/%.o: src/%.cc | mkldnn
 	@mkdir -p $(@D)
@@ -677,28 +752,28 @@ extension_libs: $(EXT_LIBS)
 
 build/libcustomop_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc src/lib_api.cc -o $@ -I include
 build/libcustomop_gpu_lib.so:
 	@mkdir -p $(@D)
-	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
+	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu src/lib_api.cc -o $@ -I include
 build/libsubgraph_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc src/lib_api.cc -o $@ -I include
 build/libtransposecsr_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposecsr_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposecsr_lib.cc src/lib_api.cc -o $@ -I include
 build/libtransposerowsp_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposerowsp_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposerowsp_lib.cc src/lib_api.cc -o $@ -I include
 build/libcustomop_gpu_lib.so:
 	@mkdir -p $(@D)
-	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
+	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu src/lib_api.cc -o $@ -I include
 build/libsubgraph_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc src/lib_api.cc -o $@ -I include
 build/libpass_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_pass/pass_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_pass/pass_lib.cc src/lib_api.cc -o $@ -I include
 
 # Cython build
 cython:

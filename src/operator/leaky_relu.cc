@@ -90,6 +90,7 @@ static void LeakyReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
                                   const std::vector<NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<NDArray>& outputs) {
+  if (inputs[0].shape().Size() == 0U) return;
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   size_t expected = param.act_type == leakyrelu::kPReLU ? 2 : 1;
   CHECK_EQ(inputs.size(), expected);
@@ -107,6 +108,7 @@ void LeakyReLUGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const std::vector<NDArray>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<NDArray>& outputs) {
+  if (inputs[0].shape().Size() == 0U) return;
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   if (SupportMKLDNNLeakyRelu(param, inputs[0])) {
     std::vector<NDArray> in_data{inputs[0], inputs[1]};

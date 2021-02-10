@@ -261,12 +261,40 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           const auto& var_name = g[node_id].source->attrs.name;
           const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
           load_index[node_id] = 0;
-          auto parse_tuple = [](const std::string& input, const std::string def) {
+          auto parse_tuple = [ndim](const std::string& input, const std::string& def) {
             std::string out = input;
-            replaceString(&out, "(", "{");
-            replaceString(&out, ")", "}");
-            replaceString(&out, "None", def);
             replaceString(&out, " ", "");
+            if (out[0] == '(') {
+              replaceString(&out, "(", "{");
+              replaceString(&out, ")", "}");
+              // First check if out is ()
+              int n_entries = out.size() != 2;
+              for (size_t i = 1; i < out.size() - 1; ++i) {
+                if (out[i] == ',') {
+                  ++n_entries;
+                }
+              }
+              if (n_entries != ndim) {
+                out.pop_back();
+                for (int i = n_entries; i < ndim; ++i) {
+                  out += "," + def;
+                }
+                out += "}";
+              }
+            } else {
+              out = "{" + std::move(out);
+              for (int i = 1; i < ndim; ++i) {
+                out += "," + def;
+              }
+              out += "}";
+            }
+            replaceString(&out, "None", def);
+            return out;
+          };
+          auto parse_int = [](const std::string& input, const std::string& def) {
+            std::string out = input;
+            replaceString(&out, " ", "");
+            replaceString(&out, "None", def);
             return out;
           };
           auto build_tuple = [ndim](int axis, const std::string str, const std::string def) {
@@ -279,11 +307,11 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             }
             std::string tuple = "{";
             for (int i = 0; i < axis; i++) {
-                tuple = tuple + def + ",";
+                tuple += def + ",";
             }
             tuple += str;
             for (int i = axis + 1; i < ndim; i++) {
-                tuple = tuple + "," + def;
+                tuple += "," + def;
             }
             tuple += "}";
             return tuple;
@@ -294,12 +322,6 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
               return true;
             }
             return false;
-          };
-          auto build_string_axis = [ndim](int axis) {
-            if (axis < 0) {
-                axis = ndim + axis;
-            }
-            return std::to_string(axis);
           };
           auto build_string_end = [i, ndim, var_name](std::string* code) {
             std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
@@ -323,12 +345,15 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             }
             end = extra_var_name;
           } else {
-            begin = parse_tuple(source->attrs.dict.at("begin"), "0");
-            end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
             if (op_name == "slice_axis") {
+              begin = parse_int(source->attrs.dict.at("begin"), "0");
+              end = parse_int(source->attrs.dict.at("end"), "INT_MAX");
               int axis = std::stoi(source->attrs.dict.at("axis"));
               begin = build_tuple(axis, begin, "0");
               end = build_tuple(axis, end, "INT_MAX");
+            } else {
+              begin = parse_tuple(source->attrs.dict.at("begin"), "0");
+              end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
             }
             if (check_shapes) {
               if (check_tuple(begin) && check_tuple(end)) {

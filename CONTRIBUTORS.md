@@ -251,6 +251,10 @@ List of Contributors
 * [Piljae Chae](https://github.com/IHateMint)
 * [Oliver Kowalke](https://github.com/olk)
 * [Connor Goggins](https://github.com/connorgoggins)
+* [Joe Evans](https://github.com/josephevans)
+* [Zhaoqi Zhu](https://github.com/zha0q1)
+* [Harshit Sharma](https://github.com/harshitshrma)
+* [Andrzej Kotlowski](https://github.com/anko-intel)
 
 Label Bot
 ---------

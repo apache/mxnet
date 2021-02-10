@@ -28,9 +28,9 @@ export mxnet_variant=${1:?"Please specify the mxnet variant"}
 # and CD unpacks it to a directory called cd_misc
 # Nov. 2019 Update: With v1.1, MKL-DNN is renaming to DNNL. Hence changing the prefix of file name.
 if [ -f "cd_misc/dnnl_version.h" ]; then
-  mkdir -p 3rdparty/mkldnn/build/install/include
-  cp cd_misc/dnnl_version.h 3rdparty/mkldnn/build/install/include/.
-  cp cd_misc/dnnl_config.h 3rdparty/mkldnn/build/install/include/.
+  mkdir -p 3rdparty/mkldnn/include/oneapi/dnnl
+  cp cd_misc/dnnl_version.h 3rdparty/mkldnn/include/oneapi/dnnl/.
+  cp cd_misc/dnnl_config.h 3rdparty/mkldnn/include/oneapi/dnnl/.
 fi
 
 # Create wheel workspace

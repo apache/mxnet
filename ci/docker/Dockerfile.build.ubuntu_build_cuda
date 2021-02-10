@@ -36,7 +36,6 @@ COPY install/ubuntu_scala.sh /work/
 COPY install/sbt.gpg /work/
 RUN /work/ubuntu_scala.sh
 COPY install/ubuntu_r.sh /work/
-COPY install/r.gpg /work/
 RUN /work/ubuntu_r.sh
 COPY install/ubuntu_perl.sh /work/
 RUN /work/ubuntu_perl.sh

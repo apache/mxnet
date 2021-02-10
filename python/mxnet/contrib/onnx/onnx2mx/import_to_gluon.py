@@ -49,5 +49,6 @@ def import_to_gluon(model_file, ctx):
         raise ImportError("Onnx and protobuf need to be installed. Instructions to"
                           + " install - https://github.com/onnx/onnx#installation")
     model_proto = onnx.load_model(model_file)
-    net = graph.graph_to_gluon(model_proto.graph, ctx)
+    model_opset_version = max([x.version for x in model_proto.opset_import])
+    net = graph.graph_to_gluon(model_proto.graph, ctx, model_opset_version)
     return net

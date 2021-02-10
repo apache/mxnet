@@ -53,7 +53,7 @@
 }
 
 .mdl-layout__header-row {
-    height: 84px !important;
+    height: 80px !important;
 }
 
 .mdl-shadow--2dp {
@@ -203,4 +203,8 @@ p {
     float: right;
     margin: 4px;
     cursor: pointer;
+}
+
+.scrollUp {
+    transform: translateY(-80px);
 }

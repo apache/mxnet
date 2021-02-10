@@ -335,6 +335,7 @@ void LeakyReLUCompute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx, const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
+  if (inputs[0].Size() == 0U) return;
   const LeakyReLUParam &param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   const std::vector<TBlob> no_use_but_adapt_origin_api;
   size_t expected = param.act_type == leakyrelu::kPReLU ? 2 : 1;
@@ -352,6 +353,7 @@ void LeakyReLUGradCompute(const nnvm::NodeAttrs& attrs,
                           const std::vector<TBlob>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<TBlob>& outputs) {
+  if (inputs[0].Size() == 0U) return;
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   const std::vector<TBlob> no_use_but_adapt_origin_api;
   // inputs: out_grad, input_data, input_gamma, output, output_mask

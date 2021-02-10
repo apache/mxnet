@@ -31,15 +31,18 @@ import sys
 import tempfile
 import time
 import zipfile
+import requests
 from distutils.dir_util import copy_tree
 from enum import Enum
-from subprocess import check_call
+from subprocess import check_call, call
 
 from util import *
 
 KNOWN_VCVARS = {
+    # https://gitlab.kitware.com/cmake/cmake/issues/18920
     'VS 2015': r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\x86_amd64\vcvarsx86_amd64.bat',
-    'VS 2017': r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsx86_amd64.bat'
+    'VS 2017': r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsx86_amd64.bat',
+    'VS 2019': r'C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat',
 }
 
 
@@ -54,6 +57,8 @@ class BuildFlavour(Enum):
 
 CMAKE_FLAGS = {
     'WIN_CPU': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
@@ -67,6 +72,8 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
@@ -80,6 +87,8 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN_MKL': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
@@ -93,6 +102,8 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKL': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
@@ -106,6 +117,8 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
         '-DENABLE_CUDA_RTC=ON '
@@ -115,11 +128,12 @@ CMAKE_FLAGS = {
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DMXNET_CUDA_ARCH="5.2" '
-        '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
         '-DUSE_MKL_IF_AVAILABLE=OFF '
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU_MKLDNN': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
         '-DENABLE_CUDA_RTC=ON '
@@ -130,7 +144,6 @@ CMAKE_FLAGS = {
         '-DUSE_DIST_KVSTORE=OFF '
         '-DMXNET_CUDA_ARCH="5.2" '
         '-DUSE_MKLDNN=ON '
-        '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
         '-DCMAKE_BUILD_TYPE=Release')
 
 }
@@ -140,39 +153,50 @@ def windows_build(args):
     logging.info("Using vcvars environment:\n{}".format(args.vcvars))
 
     path = args.output
-    os.makedirs(path, exist_ok=True)
 
     mxnet_root = get_mxnet_root()
     logging.info("Found MXNet root: {}".format(mxnet_root))
 
-    url = 'https://github.com/Kitware/CMake/releases/download/v3.16.1/cmake-3.16.1-win64-x64.zip'
-    with tempfile.TemporaryDirectory() as tmpdir:
-        cmake_file_path = download_file(url, tmpdir)
-        with zipfile.ZipFile(cmake_file_path, 'r') as zip_ref:
-            # Create $tmpdir\cmake-3.16.1-win64-x64\bin\cmake.exe
-            zip_ref.extractall(tmpdir)
+    # cuda thrust / CUB + VS 2019 is flaky: try multiple times if fail
+    MAXIMUM_TRY = 5
+    build_try = 0
+
+    while build_try < MAXIMUM_TRY:
+        if os.path.exists(path):
+            shutil.rmtree(path)
+        os.makedirs(path, exist_ok=True)
 
         with remember_cwd():
             os.chdir(path)
-            cmd = "\"{}\" && {} -G \"NMake Makefiles JOM\" {} {}".format(
-                args.vcvars,
-                os.path.join(tmpdir, 'cmake-3.16.1-win64-x64', 'bin', 'cmake.exe'),
-                CMAKE_FLAGS[args.flavour], mxnet_root)
+            env = os.environ.copy()
+            if 'GPU' in args.flavour:
+                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2'
+            cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
+                                                         CMAKE_FLAGS[args.flavour],
+                                                         mxnet_root)
             logging.info("Generating project with CMake:\n{}".format(cmd))
-            check_call(cmd, shell=True)
+            check_call(cmd, shell=True, env=env)
 
-            cmd = "\"{}\" && jom".format(args.vcvars)
-            logging.info("Building with jom:\n{}".format(cmd))
+            cmd = "\"{}\" && ninja".format(args.vcvars)
+            logging.info("Building:\n{}".format(cmd))
 
             t0 = int(time.time())
-            check_call(cmd, shell=True)
+            ret = call(cmd, shell=True)
 
-            logging.info(
-                "Build flavour: {} complete in directory: \"{}\"".format(
-                    args.flavour, os.path.abspath(path)))
-            logging.info("Build took {}".format(
-                datetime.timedelta(seconds=int(time.time() - t0))))
-    windows_package(args)
+
+            if ret != 0:
+                build_try += 1
+                logging.info("{} build(s) have failed".format(build_try))
+            else:
+                logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
+                logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
+                break
+
+    if ret == 0:
+        windows_package(args)
+    else:
+        logging.info("Build failed")
+        sys.exit(1)
 
 
 def windows_package(args):
@@ -233,7 +257,7 @@ def main():
 
     parser.add_argument("--vcvars",
         help="vcvars batch file location, typically inside vs studio install dir",
-        default=KNOWN_VCVARS['VS 2015'],
+        default=KNOWN_VCVARS['VS 2019'],
         type=str)
 
     parser.add_argument("--arch",
@@ -258,7 +282,7 @@ def main():
         if 'OpenCV_DIR' not in os.environ:
             os.environ["OpenCV_DIR"] = "C:\\Program Files\\OpenCV-v3.4.1\\build"
         if 'CUDA_PATH' not in os.environ:
-            os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2"
+            os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2"
         if 'MKL_ROOT' not in os.environ:
             os.environ["MKL_ROOT"] = "C:\\Program Files (x86)\\IntelSWTools\\compilers_and_libraries\\windows\\mkl"
         windows_build(args)

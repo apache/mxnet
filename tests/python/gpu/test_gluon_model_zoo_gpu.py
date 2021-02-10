@@ -91,7 +91,7 @@ def test_inference():
             max_val = np.max(np.abs(cpu_out.asnumpy()))
             gpu_max_val = np.max(np.abs(gpu_out.asnumpy()))
             eprint(model_name + ": CPU " + str(max_val) + ", GPU " + str(gpu_max_val))
-            assert_almost_equal(cpu_out / max_val, gpu_out / gpu_max_val, rtol=1e-3, atol=1e-3)
+            assert_almost_equal(cpu_out / max_val, gpu_out / gpu_max_val)
 
 def get_nn_model(name):
     if "densenet" in name:

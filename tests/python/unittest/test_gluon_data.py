@@ -158,10 +158,11 @@ class Dataset(gluon.data.Dataset):
 def test_multi_worker():
     data = Dataset()
     for thread_pool in [True, False]:
-        loader = gluon.data.DataLoader(data, batch_size=1, num_workers=5, thread_pool=thread_pool)
-        for i, batch in enumerate(loader):
-            assert (batch.asnumpy() == i).all()
-
+        for auto_reload in [True, False]:
+            loader = gluon.data.DataLoader(data, batch_size=1, num_workers=5,
+                                           thread_pool=thread_pool,auto_reload=auto_reload)
+            for i, batch in enumerate(loader):
+                assert (batch.asnumpy() == i).all()
 
 @with_seed()
 def test_multi_worker_shape():
@@ -250,6 +251,7 @@ def _batchify(data):
         nd.array(y_lens, ctx=context.Context('cpu_shared', 0)))
 
 @with_seed()
+@unittest.skip("skipping flaky test - see https://github.com/apache/incubator-mxnet/issues/19877")
 def test_multi_worker_forked_data_loader():
     data = _Dummy(False)
     loader = DataLoader(data, batch_size=40, batchify_fn=_batchify, num_workers=2)
@@ -264,6 +266,7 @@ def test_multi_worker_forked_data_loader():
             pass
 
 @with_seed()
+@unittest.skip("skipping flaky test - see https://github.com/apache/incubator-mxnet/issues/19877")
 def test_multi_worker_dataloader_release_pool():
     # will trigger too many open file if pool is not released properly
     if os.name == 'nt':
@@ -278,11 +281,11 @@ def test_multi_worker_dataloader_release_pool():
         del D
 
 
+@with_seed()
 def test_dataloader_context():
     X = np.random.uniform(size=(10, 20))
     dataset = gluon.data.ArrayDataset(X)
     default_dev_id = 0
-    custom_dev_id = 1
 
     # use non-pinned memory
     loader1 = gluon.data.DataLoader(dataset, 8)
@@ -294,11 +297,15 @@ def test_dataloader_context():
     for _, x in enumerate(loader2):
         assert x.context == context.cpu_pinned(default_dev_id)
 
-    # use pinned memory with custom device id
-    loader3 = gluon.data.DataLoader(dataset, 8, pin_memory=True,
-                                    pin_device_id=custom_dev_id)
-    for _, x in enumerate(loader3):
-        assert x.context == context.cpu_pinned(custom_dev_id)
+    if mx.context.num_gpus() <= 1:
+        print('Bypassing custom_dev_id pinned mem test on system with < 2 gpus.')
+    else:
+        custom_dev_id = 1
+        # use pinned memory with custom device id
+        loader3 = gluon.data.DataLoader(dataset, 8, pin_memory=True,
+                                        pin_device_id=custom_dev_id)
+        for _, x in enumerate(loader3):
+            assert x.context == context.cpu_pinned(custom_dev_id)
 
 def batchify(a):
     return a

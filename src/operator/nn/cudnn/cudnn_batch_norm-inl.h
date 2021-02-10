@@ -260,15 +260,27 @@ class CuDNNBatchNormOp {
 
  private:
   void Init(const TBlob &in_data) {
-    if (in_data.ndim() == 4) {
-      for (int i = 0; i < 4; ++i)
-        shape_[i] = in_data.shape_[i];
+    CHECK_GE(param_.axis, 0);
+    CHECK_LT(param_.axis, in_data.ndim());
+    if (param_.axis == 1) {
+      if (in_data.ndim() == 4) {
+        for (int i = 0; i < 4; ++i)
+          shape_[i] = in_data.shape_[i];
+      } else {
+        // when in_data.ndim() != 4
+        shape_[0] = in_data.shape_[0];
+        shape_[1] = in_data.ndim() > 1 ? in_data.shape_[1] : 1;
+        shape_[2] = 1;
+        shape_[3] = static_cast<dim_t>(in_data.shape_.ProdShape(2,
+              in_data.ndim()));
+      }
     } else {
-      // when in_data.ndim() != 4
-      shape_[0] = in_data.shape_[0];
-      shape_[1] = in_data.ndim() > 1 ? in_data.shape_[1] : 1;
+      // reshape to (N, C, 1, D), C is the `param_.axis` dimension
+      shape_[0] = static_cast<dim_t>(in_data.shape_.ProdShape(0, param_.axis));
+      shape_[1] = in_data.shape_[param_.axis];
       shape_[2] = 1;
-      shape_[3] = in_data.shape_.ProdShape(2, in_data.ndim());
+      shape_[3] = static_cast<dim_t>(in_data.shape_.ProdShape(param_.axis + 1,
+            in_data.ndim()));
     }
 
     CUDNN_CALL(cudnnSetTensor4dDescriptor(io_desc_,

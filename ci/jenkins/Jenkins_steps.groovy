@@ -34,7 +34,7 @@ mx_cmake_lib_cython = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/l
 mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-mx_tensorrt_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
+mx_tensorrt_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, lib/libnvonnxparser.so*, lib/libonnx_proto.so, lib/libonnx.so'
 mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_capi = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, libsample_lib.so, lib/libmkldnn.so.1, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so, build/tests/cpp/mxnet_unit_tests'
 mx_lib_cpp_examples_no_tvm_op = 'lib/libmxnet.so, lib/libmxnet.a, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
@@ -143,7 +143,7 @@ def compile_unix_int64_cpu() {
 
 def compile_unix_int64_gpu() {
     return ['GPU: USE_INT64_TENSOR_SIZE': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/build-gpu-int64') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
@@ -239,6 +239,20 @@ def compile_unix_full_gpu() {
     }]
 }
 
+def compile_unix_full_gpu_cu110() {
+    return ['GPU: CUDA11.0+cuDNN8': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_build_cuda110', 'build_ubuntu_gpu_cuda110_cudnn8', false)
+            utils.pack_lib('gpu_cu110', mx_lib_cpp_examples)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_full_gpu_mkldnn_cpp_test() {
     return ['GPU: CUDA10.1+cuDNN7+MKLDNN+CPPTEST': {
       node(NODE_LINUX_CPU) {
@@ -247,20 +261,6 @@ def compile_unix_full_gpu_mkldnn_cpp_test() {
             utils.init_git()
             utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test', false)
             utils.pack_lib('gpu_mkldnn_cpp_test', mx_lib_cpp_capi)
-          }
-        }
-      }
-    }]
-}
-
-def compile_unix_full_gpu_no_tvm_op() {
-    return ['GPU: CUDA10.1+cuDNN7 TVM_OP OFF': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-gpu-no-tvm-op') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op', false)
-            utils.pack_lib('gpu_no_tvm_op', mx_lib_cpp_examples_no_tvm_op)
           }
         }
       }
@@ -289,19 +289,6 @@ def compile_unix_cmake_gpu() {
             utils.init_git()
             utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake', false)
             utils.pack_lib('cmake_gpu', mx_cmake_lib_cython)
-          }
-        }
-      }
-    }]
-}
-
-def compile_unix_cmake_gpu_no_tvm_op() {
-    return ['GPU: CMake TVM_OP OFF': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cmake-gpu-no-tvm-op') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake_no_tvm_op', false)
           }
         }
       }
@@ -750,7 +737,7 @@ def test_unix_python3_mkl_cpu() {
 
 def test_unix_python3_gpu() {
     return ['Python3: GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-gpu') {
           try {
             utils.unpack_and_init('gpu', mx_lib_cython)
@@ -764,13 +751,13 @@ def test_unix_python3_gpu() {
     }]
 }
 
-def test_unix_python3_gpu_no_tvm_op() {
-    return ['Python3: GPU TVM_OP OFF': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/ut-python3-gpu-no-tvm-op') {
+def test_unix_python3_gpu_cu110() {
+    return ['Python3+CUDA11.0: GPU': {
+      node(NODE_LINUX_GPU_G4) {
+        ws('workspace/ut-python3-gpu') {
           try {
-            utils.unpack_and_init('gpu_no_tvm_op', mx_lib_cpp_examples_no_tvm_op)
-            python3_gpu_ut_cython('ubuntu_gpu_cu101')
+            utils.unpack_and_init('gpu_cu110', mx_lib_cython)
+            python3_gpu_ut_cython('ubuntu_gpu_cu110')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
@@ -788,6 +775,24 @@ def test_unix_python3_quantize_gpu() {
             try {
               utils.unpack_and_init('gpu', mx_lib)
               utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_python3_quantization_gpu', true)
+              utils.publish_test_coverage()
+            } finally {
+              utils.collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python3_quantize_gpu.xml')
+            }
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_quantize_gpu_cu110() {
+    return ['Python3+CUDA11.0: Quantize GPU': {
+      node(NODE_LINUX_GPU_P3) {
+        ws('workspace/ut-python3-quantize-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            try {
+              utils.unpack_and_init('gpu_cu110', mx_lib)
+              utils.docker_run('ubuntu_gpu_cu110', 'unittest_ubuntu_python3_quantization_gpu', true)
               utils.publish_test_coverage()
             } finally {
               utils.collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python3_quantize_gpu.xml')
@@ -866,7 +871,7 @@ def test_unix_python3_mkldnn_mkl_cpu() {
 
 def test_unix_python3_mkldnn_gpu() {
     return ['Python3: MKLDNN-GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-mkldnn-gpu') {
           try {
             utils.unpack_and_init('mkldnn_gpu', mx_mkldnn_lib)
@@ -882,7 +887,7 @@ def test_unix_python3_mkldnn_gpu() {
 
 def test_unix_python3_mkldnn_nocudnn_gpu() {
     return ['Python3: MKLDNN-GPU-NOCUDNN': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
           try {
             utils.unpack_and_init('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
@@ -916,7 +921,7 @@ def test_unix_python3_tensorrt_gpu() {
 
 def test_unix_python3_integration_gpu() {
     return ['Python Integration GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
@@ -944,8 +949,8 @@ def test_unix_caffe_gpu() {
 }
 
 def test_unix_cpp_package_gpu() {
-    return ['cpp-package GPU': {
-      node(NODE_LINUX_GPU) {
+    return ['cpp-package GPU Makefile': {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib_cpp_examples)
@@ -958,8 +963,8 @@ def test_unix_cpp_package_gpu() {
 }
 
 def test_unix_capi_cpp_package() {
-    return ['capi-cpp-package GPU': {
-      node(NODE_LINUX_GPU) {
+    return ['capi-cpp-package GPU Makefile': {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-capi-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu_mkldnn_cpp_test', mx_lib_cpp_capi)
@@ -1000,8 +1005,8 @@ def test_unix_scala_mkldnn_cpu(){
 }
 
 def test_unix_scala_gpu() {
-    return ['Scala: GPU': {
-      node(NODE_LINUX_GPU) {
+    return ['Scala: GPU Makefile': {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-scala-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
@@ -1084,7 +1089,7 @@ def test_unix_perl_cpu() {
 
 def test_unix_cpp_gpu() {
     return ['Cpp: GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-cpp-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cmake_gpu', mx_cmake_lib)
@@ -1125,8 +1130,8 @@ def test_unix_cpp_cpu() {
 }
 
 def test_unix_perl_gpu() {
-    return ['Perl: GPU': {
-      node(NODE_LINUX_GPU) {
+    return ['Perl: GPU Makefile': {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-perl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
@@ -1140,7 +1145,7 @@ def test_unix_perl_gpu() {
 
 def test_unix_r_gpu() {
     return ['R: GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-r-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
@@ -1208,7 +1213,7 @@ def test_unix_distributed_kvstore_cpu() {
 
 def test_unix_distributed_kvstore_gpu() {
     return ['dist-kvstore tests GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
@@ -1582,6 +1587,55 @@ def docs_jekyll() {
     }]
 }
 
+// This is for building the full website
+// Assumes you have run all of the docs generation functions
+def docs_full_website() {
+    return ['Build artifacts full_website.tgz': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+
+            unstash 'jekyll-artifacts'
+            unstash 'c-artifacts'
+            unstash 'python-artifacts'
+            unstash 'r-artifacts'
+            unstash 'julia-artifacts'
+            unstash 'scala-artifacts'
+            unstash 'java-artifacts'
+            unstash 'clojure-artifacts'
+
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
+            utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
+          }
+        }
+      }
+    }]
+}
+
+// This is for uploading website artifacts to S3 bucket
+// Assumes you have run docs_full_website function
+def docs_upload_s3() {
+    return ['Upload artifacts to s3 bucket': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            if(env.FOLDER_NAME) {
+              utils.unpack_and_init('full_website', 'docs/_build/full_website.tgz')
+
+              utils.docker_run('ubuntu_cpu', "push_docs ${env.FOLDER_NAME}", false)
+
+              archiveArtifacts 'docs/_build/versions.zip'
+            } else {
+              sh 'echo Can not find website version for release. Please specify env var FOLDER_NAME in Jenkins pipeline'
+              sh 'exit 1'
+            }
+
+          }
+        }
+      }
+    }]
+}
 
 // This is for publishing the full website
 // Assumes you have run all of the docs generation functions

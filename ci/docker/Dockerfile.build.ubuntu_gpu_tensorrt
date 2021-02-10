@@ -18,7 +18,7 @@
 #
 # Dockerfile to run MXNet on Ubuntu 16.04 for CPU
 
-FROM nvidia/cuda:10.0-devel
+FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
 
 WORKDIR /work/deps
 
@@ -36,12 +36,8 @@ ARG USER_ID=0
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
-ENV CUDNN_VERSION=7.5.0.56
-COPY install/ubuntu_cudnn.sh /work/
-RUN /work/ubuntu_cudnn.sh
-
 COPY runtime_functions.sh /work/
 
 WORKDIR /work/mxnet
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
-ENV CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.0/targets/x86_64-linux/include/
+ENV CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.2/targets/x86_64-linux/include/

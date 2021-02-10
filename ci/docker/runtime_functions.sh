@@ -501,6 +501,7 @@ build_ubuntu_cpu_mkl() {
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
+        USE_MKL_LAYERNORM=1           \
         USE_TVM_OP=1                  \
         USE_MKLDNN=0                  \
         USE_INTEL_PATH=/opt/intel     \
@@ -517,7 +518,7 @@ build_ubuntu_cpu_cmake_debug() {
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
-        -DPython3_EXECUTABLE=/usr/bin/python3 \
+        -DPython3_EXECUTABLE=python3 \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
@@ -538,7 +539,7 @@ build_ubuntu_cpu_cmake_no_tvm_op() {
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
-        -DPython3_EXECUTABLE=/usr/bin/python3 \
+        -DPython3_EXECUTABLE=python3 \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
@@ -708,42 +709,11 @@ build_ubuntu_gpu_tensorrt() {
 
     build_ccache_wrappers
 
-    # Build ONNX
-    pushd .
-    echo "Installing ONNX."
-    cd 3rdparty/onnx-tensorrt/third_party/onnx
-    rm -rf build
-    mkdir -p build
-    cd build
-    cmake \
-        -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
-        -DBUILD_SHARED_LIBS=ON ..\
-        -G Ninja
-    ninja -j 1 -v onnx/onnx.proto
-    ninja -j 1 -v
-    export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
-    export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
-    popd
-
-    # Build ONNX-TensorRT
-    pushd .
-    cd 3rdparty/onnx-tensorrt/
-    mkdir -p build
-    cd build
-    cmake ..
-    make -j$(nproc)
-    export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
-    popd
-
-    mkdir -p /work/mxnet/lib/
-    cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser_runtime.so.0 /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
-
     cd /work/build
     cmake -DUSE_CUDA=1                            \
           -DUSE_CUDNN=1                           \
           -DUSE_OPENCV=1                          \
+          -DONNX_NAMESPACE=onnx                   \
           -DUSE_TENSORRT=1                        \
           -DUSE_OPENMP=0                          \
           -DUSE_MKLDNN=0                          \
@@ -753,6 +723,10 @@ build_ubuntu_gpu_tensorrt() {
           /work/mxnet
 
     ninja
+
+    mkdir -p /work/mxnet/lib/
+    cp 3rdparty/onnx-tensorrt/third_party/onnx/*.so /work/mxnet/lib/
+    cp -L 3rdparty/onnx-tensorrt/libnvonnxparser.so* /work/mxnet/lib/
 }
 
 build_ubuntu_gpu_mkldnn() {
@@ -767,7 +741,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
-        USE_TVM_OP=1                              \
+        USE_TVM_OP=0                              \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
@@ -784,7 +758,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=0                               \
-        USE_TVM_OP=1                              \
+        USE_TVM_OP=0                              \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
@@ -799,10 +773,31 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
-        USE_TVM_OP=1                              \
+        USE_TVM_OP=0                              \
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
+        -j$(nproc)
+    make cython PYTHON=python3
+}
+
+build_ubuntu_gpu_cuda110_cudnn8() {
+    set -ex
+    build_ccache_wrappers
+    local CUDA_ARCH="-gencode=arch=compute_52,code=sm_52 \
+        -gencode=arch=compute_70,code=sm_70 \
+        -gencode=arch=compute_80,code=sm_80"
+    make \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=0                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_TVM_OP=0                              \
+        USE_CPP_PACKAGE=1                         \
+        USE_DIST_KVSTORE=1                        \
+        CUDA_ARCH="$CUDA_ARCH"                    \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
     make cython PYTHON=python3
@@ -824,26 +819,6 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
     make test USE_CPP_PACKAGE=1 -j$(nproc)
-    make cython PYTHON=python3
-}
-
-build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
-    set -ex
-    build_ccache_wrappers
-    make \
-        DEV=1                                     \
-        USE_BLAS=openblas                         \
-        USE_MKLDNN=0                              \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_TVM_OP=0                              \
-        USE_CPP_PACKAGE=1                         \
-        USE_DIST_KVSTORE=1                        \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
-
     make cython PYTHON=python3
 }
 
@@ -874,8 +849,8 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
-        -DUSE_TVM_OP=1                          \
-        -DPython3_EXECUTABLE=/usr/bin/python3   \
+        -DUSE_TVM_OP=0                          \
+        -DPython3_EXECUTABLE=python3            \
         -DUSE_MKLML_MKL=1                       \
         -DCMAKE_BUILD_TYPE=Release              \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
@@ -893,8 +868,8 @@ build_ubuntu_gpu_cmake() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=ON                         \
-        -DPython3_EXECUTABLE=/usr/bin/python3   \
+        -DUSE_TVM_OP=OFF                        \
+        -DPython3_EXECUTABLE=python3            \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=OFF                        \
@@ -916,8 +891,8 @@ build_ubuntu_gpu_cmake_no_rtc() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=ON                         \
-        -DPython3_EXECUTABLE=/usr/bin/python3   \
+        -DUSE_TVM_OP=OFF                        \
+        -DPython3_EXECUTABLE=python3            \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=ON                         \
@@ -926,29 +901,6 @@ build_ubuntu_gpu_cmake_no_rtc() {
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DBUILD_CYTHON_MODULES=1                \
         -DENABLE_CUDA_RTC=OFF                   \
-        -G Ninja                                \
-        /work/mxnet
-
-    ninja
-}
-
-build_ubuntu_gpu_cmake_no_tvm_op() {
-    set -ex
-    cd /work/build
-    build_ccache_wrappers
-    cmake \
-        -DUSE_SIGNAL_HANDLER=ON                 \
-        -DUSE_CUDA=ON                           \
-        -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=OFF                        \
-        -DPython3_EXECUTABLE=/usr/bin/python3   \
-        -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=OFF                        \
-        -DUSE_DIST_KVSTORE=ON                   \
-        -DCMAKE_BUILD_TYPE=Release              \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DBUILD_CYTHON_MODULES=1                \
         -G Ninja                                \
         /work/mxnet
 
@@ -980,8 +932,8 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=ON                         \
-        -DPython3_EXECUTABLE=/usr/bin/python3   \
+        -DUSE_TVM_OP=OFF                        \
+        -DPython3_EXECUTABLE=python3            \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=OFF                        \
@@ -1123,8 +1075,11 @@ unittest_ubuntu_tensorrt_gpu() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    tests/python/tensorrt/lenet5_train.py
+    pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist nvidia-dali-cuda100==0.24
+    wget -nc http://data.mxnet.io/data/val_256_q90.rec
+    python3 tests/python/tensorrt/rec2idx.py val_256_q90.rec val_256_q90.idx
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
+    rm val_256_q90*
 }
 
 # quantization gpu currently only runs on P3 instances
@@ -1136,6 +1091,18 @@ unittest_ubuntu_python3_quantization_gpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
+}
+
+unittest_ubuntu_python3_quantization_gpu_cu110() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export CUDNN_VERSION=${CUDNN_VERSION:-8.0.33}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
@@ -1197,7 +1164,6 @@ unittest_ubuntu_minimal_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
-    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make -f R-package/Makefile rpkg \
@@ -1226,7 +1192,6 @@ unittest_ubuntu_gpu_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
-    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make -f R-package/Makefile rpkg \
@@ -1284,13 +1249,16 @@ unittest_centos7_gpu() {
 }
 
 integrationtest_ubuntu_cpu_onnx() {
-	set -ex
-	export PYTHONPATH=./python/
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-	tests/python-pytest/onnx/backend_test.py
-	pytest tests/python-pytest/onnx/mxnet_export_test.py
-	pytest tests/python-pytest/onnx/test_models.py
-	pytest tests/python-pytest/onnx/test_node.py
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/mxnet_export_test.py
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_models.py
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_node.py
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_operators.py
+    pytest -n 24 $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py
 }
 
 integrationtest_ubuntu_gpu_python() {
@@ -1926,6 +1894,27 @@ build_docs_beta() {
     api_folder='html/api'
     mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
     GZIP=-9 tar -zcvf beta_website.tgz -C html .
+    popd
+}
+
+push_docs() {
+    folder_name=$1
+    set -ex
+    pip3 install --user awscli
+    export PATH=~/.local/bin:$PATH
+    pushd docs/_build
+    wget https://mxnet-website-static-artifacts.s3.us-east-2.amazonaws.com/versions.zip && unzip versions.zip && rm versions.zip
+    mkdir $folder_name && tar -xzf full_website.tgz -C $folder_name --strip-components 1
+    # check if folder_name already exists in versions
+    pushd versions
+    if [ -d "$folder_name" ]; then
+        echo "Folder $folder_name already exists in versions. Please double check the FOLDER_NAME variable in Jenkens pipeline"
+        exit 1
+    fi
+    popd
+    mv $folder_name versions
+    zip -r9 versions.zip versions/.
+    aws s3 cp versions.zip s3://mxnet-website-static-artifacts --acl public-read
     popd
 }
 

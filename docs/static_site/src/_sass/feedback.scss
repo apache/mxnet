@@ -1,0 +1,39 @@
+.feedback-container {
+  text-align: center;
+}
+
+.feedback-answer-container {
+  display: inline-block;
+}
+
+.feedback-question {
+  display: inline-block;
+  padding: 0.5em 1em 0.5em 1em;
+}
+
+.feedback-answer {
+  display: inline-block;
+  padding: 0.5em 1em 0.5em 1em;
+  color: #048ccc;
+  cursor: pointer;
+}
+
+.feedback-answer:hover {
+  color: #ffffff;
+  background-color: #048ccc;
+}
+
+.feedback-thank-you {
+  display: none;
+  padding: 0.5em 1em 0.5em 1em;
+}
+
+.feedback-hr-top {
+  margin: 1em;
+  margin-top: 50px;
+}
+
+.feedback-hr-bottom {
+  margin: 1em;
+  margin-bottom: 30px;
+}

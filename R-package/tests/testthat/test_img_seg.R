@@ -154,12 +154,11 @@ test_that("UNET", {
   train.y.array <- train.y
   dim(train.y.array) <- c(IMG_SIZE, IMG_SIZE, 1, 30)
   
-  devices <- mx.ctx.default()
   mx.set.seed(0)
   
   net <- get_unet()
   
   model <- mx.model.FeedForward.create(net, X = train.array, y = train.y.array, 
-    ctx = devices, num.round = 2, initializer = mx.init.normal(sqrt(2/576)), 
+    ctx = mx.ctx.default(), num.round = 2, initializer = mx.init.normal(sqrt(2/576)),
     learning.rate = 0.05, momentum = 0.99, array.batch.size = 2)
 })

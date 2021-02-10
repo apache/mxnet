@@ -23,7 +23,7 @@ from itertools import product
 from functools import partial
 from numpy.testing import assert_allclose
 import unittest
-from mxnet.test_utils import almost_equal, assert_almost_equal
+from mxnet.test_utils import almost_equal, assert_almost_equal, effective_dtype
 from common import assert_raises_cudnn_not_satisfied, with_seed
 
 
@@ -445,13 +445,13 @@ def check_rnn_forward(layer, inputs, deterministic=True):
         out.backward()
 
     if isinstance(inputs, mx.nd.NDArray):
-        input_grads = inputs.grad.asnumpy()
+        input_grads = inputs.grad
     else:
         input_grads = np.stack([x.grad.asnumpy() for x in inputs], axis=1)
 
     if deterministic:
-        mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
-        mx.test_utils.assert_almost_equal(np_dx, input_grads, rtol=1e-3, atol=1e-5)
+        mx.test_utils.assert_almost_equal(np_out, out)
+        mx.test_utils.assert_almost_equal(np_dx, input_grads)
 
 
 def test_rnn_cells():
@@ -746,6 +746,9 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, num_layers, l
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_lstm_layer():
+    if effective_dtype(mx.nd.array([1.,])) == np.float16:
+        print('Skipping test: effective dtype for this context is float16.')
+        return
     input_sizes = [8]
     hidden_sizes = [8, 16]
     num_layers = [1, 2, 3, 4]
@@ -758,6 +761,9 @@ def test_fused_lstm_layer():
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_gru_layer():
+    if effective_dtype(mx.nd.array([1.,])) == np.float16:
+        print('Skipping test: effective dtype for this context is float16.')
+        return
     input_sizes = [8]
     hidden_sizes = [8, 16]
     num_layers = [1, 2, 3, 4]

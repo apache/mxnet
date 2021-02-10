@@ -48,5 +48,8 @@ layout: page
     </div>
     <div class="col-9">
         {{ content }}
+        {%- if page.feedback == true and jekyll.environment == "production" -%}
+            {%- include feedback.html -%}
+        {%- endif -%}
     </div>
 </div>

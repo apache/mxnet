@@ -22,9 +22,11 @@
  * \file naive_engine.cc
  * \brief Implementation of NaiveEngine
  */
-#include <vector>
 #include <atomic>
+#include <future>
+#include <memory>
 #include <thread>
+#include <vector>
 #include "./engine_impl.h"
 #include "../profiler/profiler.h"
 #include "./openmp.h"
@@ -156,9 +158,10 @@ class NaiveEngine final : public Engine {
                  int priority = 0,
                  const char* opr_name = nullptr,
                  bool wait = false) override {
-    bool req_completed = false;
+    std::promise<void> promise;
+    std::future<void> future = promise.get_future();
     CallbackOnComplete callback = CreateCallback(
-        NaiveEngine::OnComplete, &req_completed);
+        NaiveEngine::OnComplete, &promise);
     profiler::Profiler *profiler = profiler::Profiler::Get();
     auto opr_deleter = [this](NaiveOpr* p) {
       this->DeleteOperator(p);
@@ -199,12 +202,11 @@ class NaiveEngine final : public Engine {
     } else {
       exec_fun(RunContext{exec_ctx, &cpu_stream_, nullptr, false}, callback);
     }
+    future.wait();
     // increment mutable var version
     for (auto var : mutable_vars) {
       ++var->version_;
     }
-    CHECK(req_completed)
-        << "NaiveEngine only support synchronize Push so far";
     if (profiling) {
       opr->opr_profile->stop();
     }
@@ -236,8 +238,7 @@ class NaiveEngine final : public Engine {
   // callback to oncomplete
   static void OnComplete(Engine *engine, void *param,
                          const dmlc::Error* error) {
-    bool *req_completed = static_cast<bool*>(param);
-    *req_completed = true;
+    static_cast<std::promise<void>*>(param)->set_value();
   }
   /*! \brief whether it is during shutdown phase*/
   std::atomic<bool> shutdown_phase_{false};

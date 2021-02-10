@@ -18,16 +18,16 @@
 all: gemm_lib relu_lib transposecsr_lib transposerowsp_lib
 
 gemm_lib:
-	g++ -shared -fPIC -std=c++11 gemm_lib.cc -o libgemm_lib.so -I ../../../include/mxnet
+	g++ -shared -fPIC -std=c++11 gemm_lib.cc ../../../src/lib_api.cc -o libgemm_lib.so -I ../../../include
 
 relu_lib:
-	nvcc -shared -std=c++11 -Xcompiler -fPIC relu_lib.cu -o librelu_lib.so -I ../../../include/mxnet
+	nvcc -shared -std=c++11 -Xcompiler -fPIC relu_lib.cu ../../../src/lib_api.cc -o librelu_lib.so -I ../../../include
 
 transposecsr_lib:
-	g++ -shared -fPIC -std=c++11 transposecsr_lib.cc -o libtransposecsr_lib.so -I ../../../include/mxnet
+	g++ -shared -fPIC -std=c++11 transposecsr_lib.cc ../../../src/lib_api.cc -o libtransposecsr_lib.so -I ../../../include
 
 transposerowsp_lib:
-	g++ -shared -fPIC -std=c++11 transposerowsp_lib.cc -o libtransposerowsp_lib.so -I ../../../include/mxnet
+	g++ -shared -fPIC -std=c++11 transposerowsp_lib.cc ../../../src/lib_api.cc -o libtransposerowsp_lib.so -I ../../../include
 
 clean:
 	rm -rf libgemm_lib.so librelu_lib.so libtransposecsr_lib.so libtransposerowsp_lib.so

@@ -428,6 +428,11 @@ class Trainer(object):
         self._update(ignore_stale_grad)
 
     def _update(self, ignore_stale_grad=False):
+        loss_scaler = getattr(self, '_amp_loss_scaler', None)
+        if loss_scaler is not None:
+            if loss_scaler.has_overflow(self._params):
+                return  # skip on overflow
+
         updates = [[] for _ in self._updaters]
 
         for i, param in enumerate(self._params):

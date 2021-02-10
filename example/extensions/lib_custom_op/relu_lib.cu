@@ -24,7 +24,9 @@
  */
 
 #include <iostream>
-#include "lib_api.h"
+#include "mxnet/lib_api.h"
+
+using namespace mxnet::ext;
 
 #define NumThreadPerBlock 256 // mxnet recommended cuda thread number per block
 
@@ -166,12 +168,18 @@ class MyStatefulReluGPU : public CustomStatefulOp {
 };
 
 MXReturnValue createOpStateCPU(const std::unordered_map<std::string, std::string>& attrs,
+                               const MXContext& ctx,
+                               const std::vector<std::vector<unsigned int> >& in_shapes,
+                               const std::vector<int> in_types,
                                CustomStatefulOp** op_inst) {
   *op_inst = new MyStatefulReluCPU(attrs);
   return MX_SUCCESS;
 }
 
 MXReturnValue createOpStateGPU(const std::unordered_map<std::string, std::string>& attrs,
+                               const MXContext& ctx,
+                               const std::vector<std::vector<unsigned int> >& in_shapes,
+                               const std::vector<int> in_types,
                                CustomStatefulOp** op_inst) {
   *op_inst = new MyStatefulReluGPU(attrs);
   return MX_SUCCESS;
@@ -259,11 +267,11 @@ REGISTER_OP(my_noisy_relu)
 .setBackward(backwardGPU, "gpu");
 
 MXReturnValue initialize(int version) {
-  if (version >= 10700) {
+  if (version >= 10900) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {
-    std::cout << "MXNet version " << version << " not supported" << std::endl;
+    MX_ERROR_MSG << "MXNet version " << version << " not supported";
     return MX_FAIL;
   }
 }

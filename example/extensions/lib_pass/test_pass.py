@@ -48,32 +48,15 @@ d = mx.sym.exp(c)
 sym = mx.sym.log(d)
 
 def test_model(pass_name):
+    args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))}
     # execute in MXNet
     print('-------------------------------')
     print('Testing regular MXNet execution')
-    exe = sym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-    out = exe.forward()
+    inputs = [a,b]
+    sym_block = nn.SymbolBlock(sym, inputs)
+    sym_block.initialize()
+    out = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     print(out)
-
-    # Symbol optimize_for
-    # with propogating shapes/types
-    print('-------------------------------')
-    print('Testing pass "%s" with shapes/types' % pass_name)
-    arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
-    aux = []
-    mysym2 = sym.optimize_for(pass_name,arg_array,aux)
-    print(mysym2.tojson())
-    exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-    out2 = exe2.forward()
-    print(out2)
-
-    # without propogating shapes/types
-    print('-------------------------------')
-    print('Testing pass "%s" without shapes/types' % pass_name)
-    mysym3 = sym.optimize_for(pass_name, myOpt='yello')
-    exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-    out3 = exe3.forward()
-    print(out3)
 
     # Gluon Hybridize
     print('-------------------------------')
@@ -95,4 +78,3 @@ def test_model(pass_name):
     sym_block2.export('modified')
 
 test_model('myPass')
-test_model('jsonPass')

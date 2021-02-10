@@ -1517,7 +1517,12 @@ fixed-size items.
                                            c_array(ctypes.c_int64, shape),
                                            reverse,
                                            ctypes.byref(handle)))
-        return self.__class__(handle=handle, writable=self.writable)
+        res = self.__class__(handle=handle, writable=self.writable)
+
+        # Array size should not change
+        if np.prod(res.shape) != np.prod(self.shape):
+            raise ValueError('Cannot reshape array of size {} into shape {}'.format(np.prod(self.shape), shape))
+        return res
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.

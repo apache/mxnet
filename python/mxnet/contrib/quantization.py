@@ -893,8 +893,8 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
             dshapes = calib_data.provide_data
         else:
             calib_data, dshapes = _as_data_iter(calib_data)
-    if not data_shapes:
-        data_shapes = dshapes
+        if not data_shapes:
+            data_shapes = dshapes
     if not data_shapes:
         raise ValueError('data_shapes required')
     data_nd = []

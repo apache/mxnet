@@ -23,11 +23,22 @@
 # the following environment variables:
 # PATH, CPLUS_INCLUDE_PATH, C_INCLUDE_PATH, LIBRARY_PATH, LD_LIBRARY_PATH, NVCC
 
+set -e
+
 VARIANT=$1
 DEPS_PATH=$2
 
 >&2 echo "Setting CUDA versions for $VARIANT"
-if [[ $VARIANT == cu102* ]]; then
+if [[ $VARIANT == cu110* ]]; then
+    CUDA_VERSION='11.0.221-1'
+    CUDA_PATCH_VERSION='11.2.0.252-1'
+    CUDA_LIBS_VERSION='10.2.1.245-1'
+    CUDA_SOLVER_VERSION='10.6.0.245-1'
+    CUDA_NVTX_VERSION='11.0.167-1'
+    LIBCUDA_VERSION='450.36.06-0ubuntu1'
+    LIBCUDNN_VERSION='8.0.4.30-1+cuda11.0'
+    LIBNCCL_VERSION='2.7.8-1+cuda11.0'
+elif [[ $VARIANT == cu102* ]]; then
     CUDA_VERSION='10.2.89-1'
     CUDA_PATCH_VERSION='10.2.2.89-1'
     LIBCUDA_VERSION='440.33.01-0ubuntu1'
@@ -86,7 +97,7 @@ if [[ $VARIANT == cu* ]]; then
     os_name=$(cat /etc/*release | grep '^ID=' | sed 's/^.*=//g')
     os_version=$(cat /etc/*release | grep VERSION_ID | sed 's/^.*"\([0-9]*\)\.\([0-9]*\)"/\1\2/g')
     os_id="${os_name}${os_version}"
-    if [[ $CUDA_MAJOR_DASH == 9-* ]] || [[ $CUDA_MAJOR_DASH == 10-* ]]; then
+    if [[ $CUDA_MAJOR_DASH == 9-* ]] || [[ $CUDA_MAJOR_DASH == 10-* ]] || [[ $CUDA_MAJOR_DASH == 11-* ]]; then
         os_id="ubuntu1604"
     fi
     export PATH=/usr/lib/binutils-2.26/bin/:${PATH}:$DEPS_PATH/usr/local/cuda-$CUDA_MAJOR_VERSION/bin
@@ -98,7 +109,31 @@ if [[ $VARIANT == cu* ]]; then
 fi
 
 # list of debs to download from nvidia
-if [[ $VARIANT == cu102* ]]; then
+if [[ $VARIANT == cu110* ]]; then
+    cuda_files=( \
+      "libcublas-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
+      "libcublas-dev-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
+      "cuda-cudart-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
+      "cuda-cudart-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
+      "libcurand-${CUDA_MAJOR_DASH}_${CUDA_LIBS_VERSION}_amd64.deb" \
+      "libcurand-dev-${CUDA_MAJOR_DASH}_${CUDA_LIBS_VERSION}_amd64.deb" \
+      "libcufft-${CUDA_MAJOR_DASH}_${CUDA_LIBS_VERSION}_amd64.deb" \
+      "libcufft-dev-${CUDA_MAJOR_DASH}_${CUDA_LIBS_VERSION}_amd64.deb" \
+      "cuda-nvrtc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
+      "cuda-nvrtc-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
+      "libcusolver-${CUDA_MAJOR_DASH}_${CUDA_SOLVER_VERSION}_amd64.deb" \
+      "libcusolver-dev-${CUDA_MAJOR_DASH}_${CUDA_SOLVER_VERSION}_amd64.deb" \
+      "cuda-nvcc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
+      "cuda-nvtx-${CUDA_MAJOR_DASH}_${CUDA_NVTX_VERSION}_amd64.deb" \
+      "libcuda1-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
+      "cuda-nvprof-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
+      "nvidia-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
+    )
+    ml_files=( \
+      "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
+      "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
+    )
+elif [[ $VARIANT == cu102* ]]; then
     cuda_files=( \
       "cuda-core-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "libcublas10_${CUDA_PATCH_VERSION}_amd64.deb" \
@@ -312,11 +347,17 @@ if [[ ! -d $DEPS_PATH/usr/local/cuda-${CUDA_MAJOR_VERSION} ]]; then
         rm package.deb
     done
 
-    mkdir -p ${prefix}/include
-    mkdir -p ${prefix}/lib
-    cp ${prefix}/usr/include/x86_64-linux-gnu/cudnn_v${LIBCUDNN_MAJOR}.h ${prefix}/include/cudnn.h
-    ln -s libcudnn_static_v${LIBCUDNN_MAJOR}.a ${prefix}/usr/lib/x86_64-linux-gnu/libcudnn.a
-    cp ${prefix}/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/*.a ${prefix}/lib/
-    cp ${prefix}/usr/include/nccl.h ${prefix}/include/nccl.h
-    ln -s libnccl_static.a ${prefix}/usr/lib/x86_64-linux-gnu/libnccl.a
+    mkdir -p ${prefix}/include ${prefix}/lib ${prefix}/usr/lib/x86_64-linux-gnu
+    if [[ $LIBCUDNN_MAJOR == 8 ]]; then
+        for h in ${prefix}/usr/include/x86_64-linux-gnu/cudnn_*_v8.h; do
+            newfile=$(basename $h | sed 's/_v8//')
+            cp $h ${prefix}/include/$newfile
+        done
+    fi
+    cp -f ${prefix}/usr/include/x86_64-linux-gnu/cudnn_v${LIBCUDNN_MAJOR}.h ${prefix}/include/cudnn.h
+    ln -sf libcudnn_static_v${LIBCUDNN_MAJOR}.a ${prefix}/usr/lib/x86_64-linux-gnu/libcudnn.a
+    cp -f ${prefix}/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/*.a ${prefix}/lib/
+    cp -f ${prefix}/usr/include/nccl.h ${prefix}/include/nccl.h
+    ln -sf libnccl_static.a ${prefix}/usr/lib/x86_64-linux-gnu/libnccl.a
 fi
+

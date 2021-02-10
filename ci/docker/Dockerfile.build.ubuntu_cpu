@@ -40,7 +40,6 @@ COPY install/ubuntu_clojure.sh /work/
 RUN /work/ubuntu_clojure.sh
 
 COPY install/ubuntu_r.sh /work/
-COPY install/r.gpg /work/
 RUN /work/ubuntu_r.sh
 
 COPY install/ubuntu_perl.sh /work/
