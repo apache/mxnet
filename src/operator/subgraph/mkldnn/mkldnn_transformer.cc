@@ -512,9 +512,7 @@ void MKLDNNInterleavedMatMulSelfAttValAttOp::Forward(
     attr.set_output_scales(0, {out_scale});
 
     if (param_.shifted_output.has_value() && param_.shifted_output.value()) {
-      dnnl::post_ops ops;
-      ops.append_eltwise(1.f, dnnl::algorithm::eltwise_linear, 1.f, 128.f);
-      attr.set_post_ops(ops);
+      attr.set_zero_points(DNNL_ARG_DST, 0, {128});
     }
 
     auto matmul_d = dnnl::matmul::desc(src1_md, src2_md, dst_md);
