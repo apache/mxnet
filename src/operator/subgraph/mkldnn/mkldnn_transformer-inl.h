@@ -32,6 +32,7 @@ struct MKLDNNInterleavedMatMulParam : public dmlc::Parameter<MKLDNNInterleavedMa
   bool with_mask;
   dmlc::optional<float> min_calib_range;
   dmlc::optional<float> max_calib_range;
+  dmlc::optional<bool> shifted_output;
   DMLC_DECLARE_PARAMETER(MKLDNNInterleavedMatMulParam) {
     DMLC_DECLARE_FIELD(heads)
     .describe("Set number of heads");
@@ -51,6 +52,9 @@ struct MKLDNNInterleavedMatMulParam : public dmlc::Parameter<MKLDNNInterleavedMa
     .describe("The maximum scalar value in the form of float32 obtained "
               "through calibration. If present, it will be used to by "
               "quantized InterleavedMatMul op to calculate primitive scale");
+    DMLC_DECLARE_FIELD(shifted_output)
+    .set_default(dmlc::optional<bool>())
+    .describe("Whether quantized output should be shifted to u8.");
   }
 };
 

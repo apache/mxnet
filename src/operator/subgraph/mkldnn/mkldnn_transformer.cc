@@ -369,7 +369,9 @@ static bool MKLDNNInterleavedMatMulSelfAttValAttInferType(const nnvm::NodeAttrs 
     if (param.enable_float_output) {
       TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
     } else {
-      if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
+      if (param.shifted_output.has_value() && param.shifted_output.value()) {
+        TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kUint8);
+      } else if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
         TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt8);
       } else {
         TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt32);
@@ -487,7 +489,11 @@ void MKLDNNInterleavedMatMulSelfAttValAttOp::Forward(
         cached_max_output_ = param_.max_calib_range.value();
 
         out_scale = GetQuantizeScale(mshadow::kInt8, cached_min_output_, cached_max_output_)  / (qkv_scale * att_scale);
-        dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::s8, dnnl::memory::format_tag::bac);
+        if (param_.shifted_output.has_value() && param_.shifted_output.value()) {
+          dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::u8, dnnl::memory::format_tag::bac);
+        } else {
+          dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::s8, dnnl::memory::format_tag::bac);
+        }
       } else if (param_.enable_float_output) {
         out_scale = 1.0f / (qkv_scale * att_scale);
         dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::f32, dnnl::memory::format_tag::bac);
@@ -504,6 +510,13 @@ void MKLDNNInterleavedMatMulSelfAttValAttOp::Forward(
 
     dnnl::primitive_attr attr;
     attr.set_output_scales(0, {out_scale});
+
+    if (param_.shifted_output.has_value() && param_.shifted_output.value()) {
+      dnnl::post_ops ops;
+      ops.append_eltwise(1.f, dnnl::algorithm::eltwise_linear, 1.f, 128.f);
+      attr.set_post_ops(ops);
+    }
+
     auto matmul_d = dnnl::matmul::desc(src1_md, src2_md, dst_md);
     auto matmul_pd = dnnl::matmul::primitive_desc(matmul_d, attr, engine);
 
@@ -541,8 +554,14 @@ void MKLDNNInterleavedMatMulSelfAttValAttOp::Forward(
     float* min_output = outputs[1].data().dptr<float>();
     float* max_output = outputs[2].data().dptr<float>();
 
-    *min_output = cached_min_output_;
-    *max_output = cached_max_output_;
+    if (param_.shifted_output.has_value() && param_.shifted_output.value()) {
+      float max_abs = MaxAbs(cached_min_output_, cached_max_output_);
+      *min_output = cached_min_output_ + max_abs;
+      *max_output = 2*max_abs;
+    } else {
+      *min_output = cached_min_output_;
+      *max_output = cached_max_output_;
+    }
   }
 }
 
