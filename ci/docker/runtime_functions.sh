@@ -1258,44 +1258,15 @@ integrationtest_ubuntu_cpu_onnx() {
     pytest $COV_ARG --verbose tests/python-pytest/onnx/mxnet_export_test.py
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_models.py
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_node.py
-}
-
-integrationtest_ubuntu_cpu_onnx_export_nlp_models() {
-    set -ex
-    export PYTHONPATH=./python/
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    COV_ARG="--cov=./ --cov-report=xml --cov-append"
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_bert_inference_onnxruntime
-}
-
-integrationtest_ubuntu_cpu_onnx_export_cv_models1() {
-    set -ex
-    export PYTHONPATH=./python/
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    COV_ARG="--cov=./ --cov-report=xml --cov-append"
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime
-}
-
-integrationtest_ubuntu_cpu_onnx_export_cv_models2() {
-    set -ex
-    export PYTHONPATH=./python/
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    COV_ARG="--cov=./ --cov-report=xml --cov-append"
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_detection_model_inference_onnxruntime
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_img_segmentation_model_inference_onnxruntime
-}
-
-integrationtest_ubuntu_cpu_onnx_export_cv_models3() {
-    set -ex
-    export PYTHONPATH=./python/
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    COV_ARG="--cov=./ --cov-report=xml --cov-append"
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_pose_estimation_model_inference_onnxruntime
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_action_recognition_model_inference_onnxruntime
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime[mobilenetv3_large]
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime[resnest200]
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime[resnet50_v2]
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime[vgg19_bn]
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_detection_model_inference_onnxruntime[center_net_resnet101_v1b_voc]
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_img_segmentation_model_inference_onnxruntime[deeplab_resnet50_citys]
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_pose_estimation_model_inference_onnxruntime[mobile_pose_mobilenet1.0]
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_action_recognition_model_inference_onnxruntime[inceptionv3_kinetics400]
 }
 
 integrationtest_ubuntu_gpu_python() {
@@ -1622,6 +1593,20 @@ nightly_estimator() {
     export PYTHONPATH=/work/mxnet/python/
     nosetests test_estimator_cnn.py
     nosetests test_sentiment_rnn.py
+}
+
+nightly_onnx_tests() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_bert_inference_onnxruntime
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_detection_model_inference_onnxruntime
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_img_segmentation_model_inference_onnxruntime
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_pose_estimation_model_inference_onnxruntime
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_action_recognition_model_inference_onnxruntime
 }
 
 # For testing PRs
