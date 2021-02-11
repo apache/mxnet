@@ -26,9 +26,9 @@ apt-get update || true
 apt-get install -y software-properties-common
 add-apt-repository -y ppa:deadsnakes/ppa
 apt-get update || true
-apt-get install -y python3.7-dev python3.7-distutils virtualenv wget
+apt-get install -y python3.6-dev python3.6-distutils virtualenv wget
 # setup symlink in /usr/local/bin to override python3 version
-ln -sf /usr/bin/python3.7 /usr/local/bin/python3
+ln -sf /usr/bin/python3.6 /usr/local/bin/python3
 
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here
 wget -nv https://bootstrap.pypa.io/get-pip.py
