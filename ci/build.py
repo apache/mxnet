@@ -97,7 +97,7 @@ def get_dockerfile(platform: str, path=get_dockerfiles_path()) -> str:
 
 
 def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
-                 cache_intermediate: bool) -> str:
+                 cache_intermediate: bool=False) -> str:
     """
     Build a container for the given platform
     :param platform: Platform
