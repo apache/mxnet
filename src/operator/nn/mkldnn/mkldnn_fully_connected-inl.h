@@ -44,6 +44,7 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
   dmlc::optional<int32_t> shift_value;
+  dmlc::optional<bool> shifted_output;
   dmlc::optional<bool> channel_wise_quantize;
 
   DMLC_DECLARE_PARAMETER(MKLDNNFCParam) {
@@ -66,6 +67,9 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
     DMLC_DECLARE_FIELD(shift_value)
     .set_default(dmlc::optional<int32_t>())
     .describe("Shift value of FC input to be compensated by recalculating bias.");
+    DMLC_DECLARE_FIELD(shifted_output)
+    .set_default(dmlc::optional<bool>())
+    .describe("Whether quantized output should be shifted to u8.");
     DMLC_DECLARE_FIELD(channel_wise_quantize)
     .set_default(dmlc::optional<bool>())
     .describe("Whether support channel-wise-quantize for weight.");
