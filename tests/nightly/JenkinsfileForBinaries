@@ -93,6 +93,14 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator', true)
         }
       }
+    },
+    'ONNX: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/onnx-test-cpu') {
+          utils.unpack_and_init('cpu_int64', mx_cmake_lib)
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_onnx_tests', false)
+        }
+      }
     }
   }
 }
