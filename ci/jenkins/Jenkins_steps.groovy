@@ -1184,7 +1184,7 @@ def test_unix_julia10_cpu() {
 }
 
 def test_unix_onnx_cpu() {
-    return ['Onnx CPU': {
+    return ['Onnx CPU - Unit Tests': {
       node(NODE_LINUX_CPU) {
         ws('workspace/it-onnx-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
