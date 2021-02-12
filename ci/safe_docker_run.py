@@ -27,6 +27,7 @@ import atexit
 import logging
 import os
 import random
+import requests
 import signal
 import sys
 import time
@@ -119,13 +120,21 @@ class SafeDockerClient:
         ret = 0
         try:
             # Race condition:
-            # add a random sleep to (a) give docker time to flush disk buffer after pulling image
-            # and (b) minimize race conditions between jenkins runs on same host
-            time.sleep(random.randint(2,10))
             # If the call to docker_client.containers.run is interrupted, it is possible that
             # the container won't be cleaned up. We avoid this by temporarily masking the signals.
             signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM})
-            container = self._add_container(self._docker_client.containers.run(*args, **kwargs))
+            attempts = 0
+            while True:
+                time.sleep(random.uniform(2,10))
+                try:
+                    container = self._docker_client.containers.run(*args, **kwargs)
+                    break
+                except requests.exceptions.ReadTimeout:
+                    attempts += 1
+                    if attempts >= 3:
+                        raise
+                    logging.info("Start container call timed out, retrying %d more time(s)...", 3 - attempts)
+            container = self._add_container(container)
             signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT, signal.SIGTERM})
             logging.info("Started container: %s", self._trim_container_id(container.id))
             stream = container.logs(stream=True, stdout=True, stderr=True)
