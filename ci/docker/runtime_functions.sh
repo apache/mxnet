@@ -1601,12 +1601,7 @@ nightly_onnx_tests() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     COV_ARG="--cov=./ --cov-report=xml --cov-append"
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_bert_inference_onnxruntime
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_detection_model_inference_onnxruntime
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_img_segmentation_model_inference_onnxruntime
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_pose_estimation_model_inference_onnxruntime
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_action_recognition_model_inference_onnxruntime
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py
 }
 
 # For testing PRs
