@@ -28,6 +28,7 @@ import argparse
 import logging
 import os
 import subprocess
+import re
 import sys
 from typing import *
 
@@ -84,7 +85,7 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     logging.debug('Building %s as %s', platform, docker_tag)
     try:
         # Increase the number of retries for building the cache.
-        image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry, num_retries=10, no_cache=False)
+        image_id = build_util.build_docker(platform=platform, registry=registry, num_retries=10, no_cache=False)
         logging.info('Built %s as %s', docker_tag, image_id)
 
         # Push cache to registry
@@ -96,15 +97,33 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
         # Error handling is done by returning the errorous platform name. This is necessary due to
         # Parallel being unable to handle exceptions
 
+ECR_LOGGED_IN = False
+def _ecr_login(registry):
+    """
+    Use the AWS CLI to get credentials to login to ECR.
+    """
+    # extract region from registry
+    global ECR_LOGGED_IN
+    if ECR_LOGGED_IN:
+        return
+    regionMatch = re.match(r'.*?\.dkr\.ecr\.([a-z]+\-[a-z]+\-\d+)\.amazonaws\.com', registry)
+    assert(regionMatch)
+    region = regionMatch.group(1)
+    logging.info("Logging into ECR region %s using aws-cli..", region)
+    os.system("$(aws ecr get-login --region "+region+" --no-include-email)")
+    ECR_LOGGED_IN = True
 
 def _upload_image(registry, docker_tag, image_id) -> None:
     """
-    Upload the passed image by id, tag it with docker tag and upload to S3 bucket
+    Upload the passed image by id, tag it with docker tag and upload to docker registry.
     :param registry: Docker registry name
     :param docker_tag: Docker tag
     :param image_id: Image id
     :return: None
     """
+    if "dkr.ecr" in registry:
+        _ecr_login(registry)
+
     # We don't have to retag the image since it is already in the right format
     logging.info('Uploading %s (%s) to %s', docker_tag, image_id, registry)
     push_cmd = ['docker', 'push', docker_tag]
@@ -124,6 +143,9 @@ def load_docker_cache(registry, docker_tag) -> None:
     if not registry:
         return
     assert docker_tag
+
+    if "dkr.ecr" in registry:
+        _ecr_login(registry)
 
     logging.info('Loading Docker cache for %s from %s', docker_tag, registry)
     pull_cmd = ['docker', 'pull', docker_tag]
@@ -185,15 +207,19 @@ def main() -> int:
 
     platforms = build_util.get_platforms()
 
-    secret_name = os.environ['DOCKERHUB_SECRET_NAME']
-    endpoint_url = os.environ['DOCKERHUB_SECRET_ENDPOINT_URL']
-    region_name = os.environ['DOCKERHUB_SECRET_ENDPOINT_REGION']
-
-    try:
-        login_dockerhub(secret_name, endpoint_url, region_name)
+    if "dkr.ecr" in args.docker_registry:
+        _ecr_login(args.docker_registry)
         return build_save_containers(platforms=platforms, registry=args.docker_registry, load_cache=True)
-    finally:
-        logout_dockerhub()
+    else:
+        secret_name = os.environ['DOCKERHUB_SECRET_NAME']
+        endpoint_url = os.environ['DOCKERHUB_SECRET_ENDPOINT_URL']
+        region_name = os.environ['DOCKERHUB_SECRET_ENDPOINT_REGION']
+
+        try:
+            login_dockerhub(secret_name, endpoint_url, region_name)
+            return build_save_containers(platforms=platforms, registry=args.docker_registry, load_cache=True)
+        finally:
+            logout_dockerhub()
 
 
 if __name__ == '__main__':

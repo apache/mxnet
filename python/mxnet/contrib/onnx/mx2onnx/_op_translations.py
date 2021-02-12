@@ -787,10 +787,10 @@ def convert_copy(node, **kwargs):
 
 @mx_op.register("identity")
 def convert_identity(node, **kwargs):
-    """Map MXNet's identity operator attributes to onnx's ConstantFill operator
+    """Map MXNet's identity operator attributes to onnx's Identity operator
     and return the created node.
     """
-    return create_basic_op_node('ConstantFill', node, kwargs)
+    return create_basic_op_node('Identity', node, kwargs)
 
 @mx_op.register("InstanceNorm")
 def convert_instancenorm(node, **kwargs):
@@ -1017,12 +1017,12 @@ def convert_logistic_regression_output(node, **kwargs):
 @mx_op.register("BlockGrad")
 def convert_blockgrad(node, **kwargs):
     """ Skip operator  """
-    return create_basic_op_node('ConstantFill', node, kwargs)
+    return create_basic_op_node('Identity', node, kwargs)
 
 @mx_op.register("MakeLoss")
 def convert_makeloss(node, **kwargs):
     """ Skip operator  """
-    return create_basic_op_node('ConstantFill', node, kwargs)
+    return create_basic_op_node('Identity', node, kwargs)
 
 @mx_op.register("Concat")
 def convert_concat(node, **kwargs):

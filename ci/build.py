@@ -27,6 +27,8 @@ __version__ = '0.3'
 
 import argparse
 import glob
+import hashlib
+import os
 import pprint
 import re
 import shutil
@@ -52,13 +54,41 @@ def get_platforms(path: str = get_dockerfiles_path()) -> List[str]:
     platforms = list(map(lambda x: os.path.split(x)[1], sorted(files)))
     return platforms
 
+def _find_copied_files(dockerfile):
+    """
+    Creates a list of files copied into given dockerfile.
+    """
+    copied_files = []
+    basedir = os.path.dirname(dockerfile)
+    with open(dockerfile, "r") as f:
+        for line in f.readlines():
+            if line.startswith("COPY "):
+                copied_files.append(os.path.join(basedir, line.split(" ")[1]))
+    return copied_files
+
+def _hash_file(ctx, filename):
+    """
+    Add contents of passed file into passed hash context.
+    """
+    bufsiz = 16384
+    with open(filename,"rb") as f:
+        while True:
+            d = f.read(bufsiz)
+            if not d:
+                break
+            ctx.update(d)
 
 def get_docker_tag(platform: str, registry: str) -> str:
     """:return: docker tag to be used for the container"""
     platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
         registry = "mxnet_local"
-    return "{0}/{1}".format(registry, platform)
+    dockerfile = get_dockerfile(platform)
+    sha256 = hashlib.sha256()
+    _hash_file(sha256, dockerfile)
+    for f in _find_copied_files(dockerfile):
+        _hash_file(sha256, f)
+    return "{0}:{1}-{2}".format(registry, platform, sha256.hexdigest()[:12])
 
 
 def get_dockerfile(platform: str, path=get_dockerfiles_path()) -> str:
@@ -67,7 +97,7 @@ def get_dockerfile(platform: str, path=get_dockerfiles_path()) -> str:
 
 
 def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
-                 cache_intermediate: bool) -> str:
+                 cache_intermediate: bool=False) -> str:
     """
     Build a container for the given platform
     :param platform: Platform
@@ -406,7 +436,8 @@ def main() -> int:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
             build_docker(platform, registry=args.docker_registry,
-                         num_retries=args.docker_build_retries, no_cache=args.no_cache)
+                         num_retries=args.docker_build_retries, no_cache=args.no_cache,
+                         cache_intermediate=args.cache_intermediate)
             if args.build_only:
                 continue
             shutil.rmtree(buildir(), ignore_errors=True)
