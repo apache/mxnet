@@ -3294,7 +3294,7 @@ def convert_maximum_scalar(node, **kwargs):
     return nodes
 
 @mx_op.register('_minimum_scalar')
-def convert_maximum_scalar(node, **kwargs):
+def convert_minimum_scalar(node, **kwargs):
     """Map MXNet's _minimum_scalar
     """
     from onnx.helper import make_node
