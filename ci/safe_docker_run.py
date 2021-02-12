@@ -26,8 +26,10 @@ import argparse
 import atexit
 import logging
 import os
+import random
 import signal
 import sys
+import time
 from functools import reduce
 from itertools import chain
 from typing import Dict, Any
@@ -120,7 +122,17 @@ class SafeDockerClient:
             # If the call to docker_client.containers.run is interrupted, it is possible that
             # the container won't be cleaned up. We avoid this by temporarily masking the signals.
             signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM})
-            container = self._add_container(self._docker_client.containers.run(*args, **kwargs))
+            attempts = 0
+            while True:
+                time.sleep(random.randint(5,30))
+                try:
+                    container = self._docker_client.containers.run(*args, **kwargs)
+                    break
+                except:
+                    attempts += 1
+                    if attempts >= 3:
+                        raise
+            container = self._add_container(container)
             signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT, signal.SIGTERM})
             logging.info("Started container: %s", self._trim_container_id(container.id))
             stream = container.logs(stream=True, stdout=True, stderr=True)
