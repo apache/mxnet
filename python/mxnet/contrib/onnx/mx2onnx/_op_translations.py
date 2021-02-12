@@ -3293,6 +3293,28 @@ def convert_maximum_scalar(node, **kwargs):
 
     return nodes
 
+@mx_op.register('_minimum_scalar')
+def convert_maximum_scalar(node, **kwargs):
+    """Map MXNet's _minimum_scalar
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    input_type = int(kwargs['in_type'])
+    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+
+    scalar = None
+    if 'float' in str(dtype):
+        scalar = float(attrs.get('scalar', '0'))
+    else:
+        scalar = int(attrs.get('scalar', '0'))
+
+    nodes = [
+        create_tensor([scalar], name+'_scalar', kwargs['initializer'], dtype=dtype),
+        make_node('Min', [input_nodes[0], name+'_scalar'], [name], name=name)
+    ]
+
+    return nodes
 
 @mx_op.register("_contrib_box_decode")
 def convert_contrib_box_decode(node, **kwargs):

@@ -609,6 +609,16 @@ def test_onnx_maximum_scalar(tmp_path, dtype, shape):
     op_export_test('_maximum_scalar', M, [x], tmp_path)
 
 
+# opset 8 Min only supports float types
+# opset 12 and up suppots float and int
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('shape', [(3, 4, 5), (1, 4, 1, 7)])
+def test_onnx_minimum_scalar(tmp_path, dtype, shape):
+    x = mx.random.uniform(0, 10, shape).astype(dtype)
+    M = def_model('minimum', right=5)
+    op_export_test('_minimum_scalar', M, [x], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 @pytest.mark.parametrize('fmt', ['corner', 'center'])
 @pytest.mark.parametrize('clip', [-1., 0., .5, 5.])
