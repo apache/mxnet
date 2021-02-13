@@ -216,7 +216,6 @@ def container_run(platform: str,
     docker_cmd_list = [
         "docker",
         'run',
-        "--gpus all" if nvidia_runtime else "",
         "--cap-add", "SYS_PTRACE", # Required by ASAN
         '--rm',
         '--shm-size={}'.format(shared_memory_size),
@@ -233,8 +232,10 @@ def container_run(platform: str,
         '-e', "CCACHE_DIR={}".format(environment['CCACHE_DIR']),
         # a container-scoped log, useful for ccache verification.
         '-e', "CCACHE_LOGFILE={}".format(environment['CCACHE_LOGFILE']),
-        '-ti',
-        tag]
+        '-ti']
+    if nvidia_runtime:
+        docker_cmd_list += ["--gpus", "all"]
+    docker_cmd_list += [tag]
     docker_cmd_list.extend(command)
     docker_cmd = ' \\\n\t'.join(docker_cmd_list)
     logging.info("Running %s in container %s", command, tag)
