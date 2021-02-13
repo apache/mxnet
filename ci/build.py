@@ -242,7 +242,7 @@ def container_run(platform: str,
     logging.info("Executing command:\n%s\n", docker_cmd)
 
     if not dry_run:
-        subprocess.run(docker_cmd_list, stdout=sys.stdout, stderr=subprocess.STDOUT, check=True)
+        subprocess.run(docker_cmd_list, stdout=sys.stdout, stderr=sys.stderr, check=True)
 
     return 0
 
