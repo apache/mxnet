@@ -213,9 +213,7 @@ def container_run(platform: str,
     logging.info("Using ccache directory: %s", local_ccache_dir)
 
     # Build docker command
-    docker_cmd_list = [
-        "docker",
-        'run',
+    docker_arg_list = [
         "--cap-add", "SYS_PTRACE", # Required by ASAN
         '--rm',
         '--shm-size={}'.format(shared_memory_size),
@@ -233,16 +231,25 @@ def container_run(platform: str,
         # a container-scoped log, useful for ccache verification.
         '-e', "CCACHE_LOGFILE={}".format(environment['CCACHE_LOGFILE']),
     ]
-    if nvidia_runtime:
-        docker_cmd_list += ["--gpus", "all"]
-    docker_cmd_list += [tag]
-    docker_cmd_list.extend(command)
-    docker_cmd = ' \\\n\t'.join(docker_cmd_list)
-    logging.info("Running %s in container %s", command, tag)
-    logging.info("Executing command:\n%s\n", docker_cmd)
+    docker_arg_list += [tag]
+    docker_arg_list.extend(command)
+
+    def docker_run_cmd(cmd):
+        logging.info("Running %s in container %s", command, tag)
+        logging.info("Executing command:\n%s\n", ' \\\n\t'.join(cmd))
+        subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stderr, check=True)
 
     if not dry_run:
-        subprocess.run(docker_cmd_list, stdout=sys.stdout, stderr=sys.stderr, check=True)
+        if not nvidia_runtime:
+            docker_run_cmd(['docker', 'run'] + docker_arg_list)
+        else:
+            try:
+                docker_run_cmd(['docker', 'run', '--gpus', 'all'] + docker_arg_list)
+            except subprocess.CalledProcessError as e:
+                if e.returncode == 125:
+                    docker_run_cmd(['docker', 'run', '--runtime', 'nvidia'] + docker_arg_list)
+                else:
+                    raise
 
     return 0
 
