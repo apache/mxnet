@@ -59,18 +59,21 @@ def _make_mxnet_args(args, temp_args):
     values = (MXNetValue * num_args)()
     type_codes = (ctypes.c_int * num_args)()
     for i, arg in enumerate(args):
-        if isinstance(arg, ObjectBase):
+        if isinstance(arg, NDArrayBase):
             values[i].v_handle = arg.handle
-            type_codes[i] = TypeCode.OBJECT_HANDLE
-        elif isinstance(arg, PyNativeObject):
-            values[i].v_handle = arg.__mxnet_object__.handle
+            type_codes[i] = TypeCode.NDARRAYHANDLE
+        elif isinstance(arg, Integral):
+            values[i].v_int64 = arg
+            type_codes[i] = TypeCode.INT
+        elif isinstance(arg, ObjectBase):
+            values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.OBJECT_HANDLE
         elif arg is None:
             values[i].v_handle = None
             type_codes[i] = TypeCode.NULL
-        elif isinstance(arg, Integral):
-            values[i].v_int64 = arg
-            type_codes[i] = TypeCode.INT
+        elif isinstance(arg, PyNativeObject):
+            values[i].v_handle = arg.__mxnet_object__.handle
+            type_codes[i] = TypeCode.OBJECT_HANDLE
         elif isinstance(arg, Number):
             values[i].v_float64 = arg
             type_codes[i] = TypeCode.FLOAT
@@ -82,9 +85,6 @@ def _make_mxnet_args(args, temp_args):
             values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.OBJECT_HANDLE
             temp_args.append(arg)
-        elif isinstance(arg, NDArrayBase):
-            values[i].v_handle = arg.handle
-            type_codes[i] = TypeCode.NDARRAYHANDLE
         elif isinstance(arg, ctypes.c_void_p):
             values[i].v_handle = arg
             type_codes[i] = TypeCode.HANDLE

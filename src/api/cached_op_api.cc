@@ -41,7 +41,7 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
   std::vector<NDArray*> ndinputs;
   ndinputs.reserve(args_size - 3);
   for (int i = 1; i < args_size - 2; ++i) {
-    ndinputs.push_back(args[i].operator mxnet::NDArray*());
+    ndinputs.push_back(static_cast<mxnet::NDArray*>(args[i]));
   }
 
   std::vector<NDArray*> ndoutputs;

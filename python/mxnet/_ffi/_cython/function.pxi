@@ -31,21 +31,21 @@ cdef inline int make_arg(object arg,
     """Pack arguments into c args mxnet call accept"""
     cdef unsigned long long ptr
 
-    if isinstance(arg, ObjectBase):
-        value[0].v_handle = (<ObjectBase>arg).chandle
-        tcode[0] = kObjectHandle
-    elif isinstance(arg, NDArrayBase):
+    if isinstance(arg, NDArrayBase):
         value[0].v_handle = <void*><size_t>(arg._get_handle())
         tcode[0] = kNDArrayHandle
-    elif isinstance(arg, PyNativeObject):
-        value[0].v_handle = (<ObjectBase>(arg.__mxnet_object__)).chandle
-        tcode[0] = kObjectHandle
     elif isinstance(arg, Integral):
         value[0].v_int64 = arg
         tcode[0] = kInt
+    elif isinstance(arg, ObjectBase):
+        value[0].v_handle = (<ObjectBase>arg).chandle
+        tcode[0] = kObjectHandle
     elif isinstance(arg, float):
         value[0].v_float64 = arg
         tcode[0] = kFloat
+    elif isinstance(arg, PyNativeObject):
+        value[0].v_handle = (<ObjectBase>(arg.__mxnet_object__)).chandle
+        tcode[0] = kObjectHandle
     elif isinstance(arg, str):
         tstr = c_str(arg)
         value[0].v_str = tstr
