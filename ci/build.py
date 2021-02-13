@@ -232,7 +232,7 @@ def container_run(platform: str,
         '-e', "CCACHE_DIR={}".format(environment['CCACHE_DIR']),
         # a container-scoped log, useful for ccache verification.
         '-e', "CCACHE_LOGFILE={}".format(environment['CCACHE_LOGFILE']),
-        '-ti']
+    ]
     if nvidia_runtime:
         docker_cmd_list += ["--gpus", "all"]
     docker_cmd_list += [tag]
@@ -242,7 +242,7 @@ def container_run(platform: str,
     logging.info("Executing command:\n%s\n", docker_cmd)
 
     if not dry_run:
-        check_call(docker_cmd_list)
+        subprocess.run(docker_cmd_list, stdout=sys.stdout, stderr=subprocess.STDOUT, check=True)
 
     return 0
 
