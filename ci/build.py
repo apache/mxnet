@@ -195,6 +195,14 @@ def container_run(platform: str,
                   environment: Dict[str, str],
                   dry_run: bool = False) -> int:
     """Run command in a container"""
+    # set default environment variables
+    environment.update({
+        'CCACHE_MAXSIZE': '500G',
+        'CCACHE_TEMPDIR': '/tmp/ccache',  # temp dir should be local and not shared
+        'CCACHE_DIR': '/work/ccache',  # this path is inside the container as /work/ccache is mounted
+        'CCACHE_LOGFILE': '/tmp/ccache.log',  # a container-scoped log, useful for ccache verification.
+    })
+    environment.update({k: os.environ[k] for k in ['CCACHE_MAXSIZE'] if k in os.environ})
 
     tag = get_docker_tag(platform=platform, registry=docker_registry)
     mx_root = get_mxnet_root()
