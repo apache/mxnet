@@ -52,6 +52,7 @@ apt-get install -y \
     sudo \
     unzip \
     vim-nox \
+    default-jdk \
     wget
 
 # Use libturbojpeg package as it is correctly compiled with -fPIC flag

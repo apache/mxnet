@@ -748,6 +748,26 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
     op_code_gen_func : function
         Function for creating op functions for `ndarray` and `symbol` modules.
     """
+    license_lines = [
+        '# Licensed to the Apache Software Foundation (ASF) under one',
+        '# or more contributor license agreements.  See the NOTICE file',
+        '# distributed with this work for additional information',
+        '# regarding copyright ownership.  The ASF licenses this file',
+        '# to you under the Apache License, Version 2.0 (the',
+        '# "License"); you may not use this file except in compliance',
+        '# with the License.  You may obtain a copy of the License at',
+        '#',
+        '#   http://www.apache.org/licenses/LICENSE-2.0',
+        '#',
+        '# Unless required by applicable law or agreed to in writing,',
+        '# software distributed under the License is distributed on an',
+        '# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY',
+        '# KIND, either express or implied.  See the License for the',
+        '# specific language governing permissions and limitations',
+        '# under the License.',
+        '',
+    ]
+    license_str = os.linesep.join(license_lines)
     def get_module_file(module_name):
         """Return the generated module file based on module name."""
         path = os.path.dirname(__file__)
@@ -760,6 +780,7 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
                         'ndarray': ['from ._internal import NDArrayBase',
                                     'from ..base import _Null']}
         module_file.write('# coding: utf-8')
+        module_file.write(license_str)
         module_file.write('# File content is auto-generated. Do not modify.' + os.linesep)
         module_file.write('# pylint: skip-file' + os.linesep)
         module_file.write(os.linesep.join(dependencies[module_name.split('.')[1]]))

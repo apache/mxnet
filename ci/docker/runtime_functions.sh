@@ -1407,13 +1407,14 @@ unittest_ubuntu_python3_arm() {
 #Runs Apache RAT Check on MXNet Source for License Headers
 nightly_test_rat_check() {
     set -e
+    set -o pipefail
     pushd .
 
-    cd /work/deps/0.12-release/apache-rat/target
+    cd /work/deps/apache-rat-project-0.13/apache-rat/target
 
     # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
     exec 5>&1
-    OUTPUT=$(java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet|tee >(cat - >&5))
+    OUTPUT=$(java -jar apache-rat-0.13.jar -E /work/mxnet/rat-excludes -d /work/mxnet|tee >(cat - >&5))
     ERROR_MESSAGE="Printing headers for text files without a valid license header"
 
 

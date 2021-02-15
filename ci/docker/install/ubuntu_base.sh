@@ -37,4 +37,5 @@ apt-get install -y \
     gnupg \
     gnupg2 \
     gnupg-agent \
+    default-jdk \
     wget
