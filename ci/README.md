@@ -118,3 +118,8 @@ How to test this is working propperly: On the console you can hit ^C while a con
 (not just building) and see that the container is stopped by running `docker ps` on another
 terminal. In Jenkins this has been tested by stopping the job which has containers running and
 verifying that the container stops shortly afterwards by running docker ps.
+
+
+
+
+
