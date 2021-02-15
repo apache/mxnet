@@ -103,6 +103,7 @@ shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/tvm/nnvm/include
                 os.path.join(CURRENT_DIR, 'mxnet/include/nnvm'))
 
 # copy cc file for mxnet extensions
+os.mkdir(os.path.join(CURRENT_DIR, 'mxnet/src'))
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/src/lib_api.cc'),
             os.path.join(CURRENT_DIR, 'mxnet/src'))
 
@@ -130,7 +131,9 @@ libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
 else:
-    if variant.startswith('CU110'):
+    if variant.startswith('CU112'):
+        libraries.append('CUDA-11.2')
+    elif variant.startswith('CU110'):
         libraries.append('CUDA-11.0')
     elif variant.startswith('CU102'):
         libraries.append('CUDA-10.2')

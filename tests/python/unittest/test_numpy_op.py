@@ -3021,6 +3021,7 @@ def test_np_binary_funcs():
                       [[_np.float16, _np.float32, _np.float64], [_np.int32]]),
         'power': (1.0, 3.0, [lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2],
                              [lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)]),
+        'gcd': (-100, 100, [None], None, [[_np.int32]]),
         'lcm': (-100, 100, [None], None, [[_np.int32]]),
         'bitwise_and': (-100, 100, [None], None, [[_np.int32]]),
         'bitwise_xor': (-100, 100, [None], None, [[_np.int32]]),

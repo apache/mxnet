@@ -742,18 +742,16 @@ class Block:
                 if g.stype == 'row_sparse':
                     ndarray.zeros_like(g, out=g)
                 else:
-                    arrays[g.ctx].append(g)
+                    if is_np_array():
+                        arrays[g.ctx].append(g.as_nd_ndarray())
+                    else:
+                        arrays[g.ctx].append(g)
 
         if len(arrays) == 0:
             return
 
-        if is_np_array():
-            for arr in arrays.values():
-                for ele in arr:
-                    ele[()] = 0
-        else:
-            for arr in arrays.values():
-                ndarray.reset_arrays(*arr, num_arrays=len(arr))
+        for arr in arrays.values():
+            ndarray.reset_arrays(*arr, num_arrays=len(arr))
 
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
@@ -1397,7 +1395,7 @@ class HybridBlock(Block):
         self._first_forward = True
         # clear the backend
         self._backend = None
-        self._backend_opts = None
+        self._backend_opts = {}
 
     def _clear_cached_op(self):
         self._cached_graph = ()

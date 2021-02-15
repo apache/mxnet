@@ -71,6 +71,16 @@ services:
         BASE_IMAGE: nvidia/cuda:11.0-cudnn8-devel-centos7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu110:latest
+  centos7_gpu_cu112:
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu112:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      target: base
+      args:
+        BASE_IMAGE: nvidia/cuda:11.2.0-cudnn8-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu112:latest
   ###################################################################################################
   # Dockerfile.build.ubuntu based images. On Ubuntu we test more recent
   # toolchain and dependency versions compared to CentOS7. We attempt to update

@@ -31,6 +31,9 @@ namespace op {
 NNVM_REGISTER_OP(_npi_copysign)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"copysign"});
 
+NNVM_REGISTER_OP(_npi_gcd)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"gcd"});
+
 NNVM_REGISTER_OP(_npi_lcm)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"lcm"});
 
@@ -81,6 +84,9 @@ NNVM_REGISTER_OP(_npi_rarctan2_scalar)
 
 NNVM_REGISTER_OP(_backward_npi_rarctan2_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"rarctan2_grad"});
+
+NNVM_REGISTER_OP(_npi_gcd_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"gcd"});
 
 NNVM_REGISTER_OP(_npi_lcm_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"lcm"});

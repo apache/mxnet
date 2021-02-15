@@ -907,6 +907,22 @@ def test_lcm():
 
 
 @use_np
+def test_gcd():
+    inp1 = np.ones((2, INT_OVERFLOW), dtype='int32')
+    inp2 = np.ones((2, INT_OVERFLOW), dtype='int32')
+    inp1[-1, -1] = 12
+    inp2[-1, -1] = 20
+    inp1.attach_grad()
+    with mx.autograd.record():
+        out = np.gcd(inp1, inp2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[-1, -1] == 4
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1, -1] == 0
+
+
+@use_np
 def test_log_family():
     def batch_check(funcs, exp):
         inp.attach_grad()

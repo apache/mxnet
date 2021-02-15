@@ -881,12 +881,12 @@ integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/
 	export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=100
+	export DMLC_LOG_STACK_TRACE_DEPTH=100
 	python3 tests/python/unittest/onnx/backend_test.py
-	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/mxnet_export_test.py
-	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_models.py
-	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_node.py
-	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_onnxruntime.py
+	#OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/mxnet_export_test.py
+	#OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_models.py
+	#OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_node.py
+	#OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_onnxruntime.py
 }
 
 integrationtest_ubuntu_cpu_dist_kvstore() {
@@ -1023,7 +1023,7 @@ nightly_test_large_tensor() {
     set -ex
     export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=100
-    pytest --forked tests/nightly/test_np_large_array.py
+    pytest -s --exitfirst --verbose --timeout=7200 tests/nightly/test_np_large_array.py
 }
 
 #Tests Model backwards compatibility on MXNet

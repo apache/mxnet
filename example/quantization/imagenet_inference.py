@@ -33,7 +33,7 @@ def download_dataset(dataset_url, dataset_dir, logger=None):
 
 
 def score(symblock, data, ctx, max_num_examples, skip_num_batches, logger=None):
-    metrics = [gluon.metric.create('acc')],
+    metrics = [gluon.metric.create('acc'),
                gluon.metric.create('top_k_accuracy', top_k=5)]
 
     # make sure that fp32 inference works on the same images as calibrated quantized model

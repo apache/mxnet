@@ -136,6 +136,11 @@ class SequenceReverseOp : public Operator {
     auto max_seq_len = in_data[seq_reverse::kData].size(0);
     auto n = in_data[seq_reverse::kData].size(1);
     auto total_size = in_data[seq_reverse::kData].Size();
+
+    if (total_size == 0) {
+      return;  // noop if any input dimension is zero-sized, out_data is of a right shape
+    }
+
     auto rest_dim = static_cast<int>(total_size / n / max_seq_len);
 
     Shape<3> s3 = Shape3(max_seq_len, n, rest_dim);
