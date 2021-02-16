@@ -314,33 +314,6 @@ def main() -> int:
             logging.critical("Execution of %s failed with status: %d", command, ret)
             return ret
 
-    elif args.all:
-        platforms = get_platforms()
-        platforms = [platform for platform in platforms if 'build.' in platform]
-        logging.info("Building for all architectures: %s", platforms)
-        logging.info("Artifacts will be produced in the build/ directory.")
-        for platform in platforms:
-            tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-            build_docker(platform, registry=args.docker_registry,
-                         num_retries=args.docker_build_retries, no_cache=args.no_cache,
-                         cache_intermediate=args.cache_intermediate)
-            if args.build_only:
-                continue
-            shutil.rmtree(buildir(), ignore_errors=True)
-            build_platform = "build_{}".format(platform)
-            plat_buildir = os.path.abspath(os.path.join(get_mxnet_root(), '..',
-                                                        "mxnet_{}".format(build_platform)))
-            if os.path.exists(plat_buildir):
-                logging.warning("%s already exists, skipping", plat_buildir)
-                continue
-            command = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
-            container_run(
-                platform=platform, nvidia_runtime=args.nvidiadocker,
-                shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, environment=environment)
-            shutil.move(buildir(), plat_buildir)
-            logging.info("Built files left in: %s", plat_buildir)
     else:
         parser.print_help()
         list_platforms()
