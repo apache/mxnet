@@ -74,27 +74,32 @@ class CachedOp(object):
         """ctypes implementation of imperative invoke wrapper"""
         # New FFI only supports numpy ndarray
         default_ctx = kwargs.pop('default_ctx', None)
+        out = kwargs.pop('out', None)
+        if kwargs:
+            raise TypeError(
+                "CachedOp.__call__ got unexpected keyword argument(s): " + \
+                ', '.join(kwargs.keys()))
         if self.is_np_sym:
             if len(args) == 1 and args[0] is None:
                 args = []
             type_id = default_ctx.device_typeid if default_ctx else None
             device_id = default_ctx.device_id if default_ctx else None
+            out_arg = out if out and not isinstance(out, NDArrayBase) else (out, )
             output_vars = _api_internal.invoke(
                 self.handle,
+                len(args),
                 *args,
                 type_id,
-                device_id
+                device_id,
+                *out_arg
             )
+            if out is not None:
+                return out
             if isinstance(output_vars, NDArrayBase):
                 return output_vars
             else:
                 return list(output_vars)
         else:
-            out = kwargs.pop('out', None)
-            if kwargs:
-                raise TypeError(
-                    "CachedOp.__call__ got unexpected keyword argument(s): " + \
-                    ', '.join(kwargs.keys()))
             if out is not None:
                 original_output = out
                 if isinstance(out, NDArrayBase):
