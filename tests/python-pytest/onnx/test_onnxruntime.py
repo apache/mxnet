@@ -555,8 +555,6 @@ def test_action_recognition_model_inference_onnxruntime(tmp_path, model, act_rec
     finally:
         shutil.rmtree(tmp_path)
 
-
-
 @with_seed()
 @pytest.mark.parametrize('model', ['bert_12_768_12'])
 def test_bert_inference_onnxruntime(tmp_path, model):
