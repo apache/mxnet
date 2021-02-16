@@ -31,8 +31,6 @@ Currently, below variants are supported. All of these variants except native hav
 
 * *cpu*: CPU
 * *native*: CPU without MKL-DNN
-* *cu90*: CUDA 9.0
-* *cu92*: CUDA 9.2
 * *cu100*: CUDA 10
 * *cu101*: CUDA 10.1
 * *cu102*: CUDA 10.2
