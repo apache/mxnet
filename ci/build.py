@@ -34,7 +34,6 @@ from typing import *
 
 import yaml
 
-from safe_docker_run import SafeDockerClient
 from util import *
 
 
@@ -104,8 +103,7 @@ def default_ccache_dir() -> str:
     return os.path.join(os.path.expanduser("~"), ".ccache")
 
 
-def container_run(docker_client: SafeDockerClient,
-                  platform: str,
+def container_run(platform: str,
                   nvidia_runtime: bool,
                   docker_registry: str,
                   shared_memory_size: str,
@@ -114,17 +112,12 @@ def container_run(docker_client: SafeDockerClient,
                   environment: Dict[str, str],
                   dry_run: bool = False) -> int:
     """Run command in a container"""
-    container_wait_s = 600
-    #
-    # Environment setup
-    #
+    # set default environment variables
     environment.update({
         'CCACHE_MAXSIZE': '500G',
         'CCACHE_TEMPDIR': '/tmp/ccache',  # temp dir should be local and not shared
-        'CCACHE_DIR': '/work/ccache',  # this path is inside the container as /work/ccache is
-                                       # mounted
-        'CCACHE_LOGFILE': '/tmp/ccache.log',  # a container-scoped log, useful for ccache
-                                              # verification.
+        'CCACHE_DIR': '/work/ccache',  # this path is inside the container as /work/ccache is mounted
+        'CCACHE_LOGFILE': '/tmp/ccache.log',  # a container-scoped log, useful for ccache verification.
     })
     environment.update({k: os.environ[k] for k in ['CCACHE_MAXSIZE'] if k in os.environ})
 
@@ -136,13 +129,9 @@ def container_run(docker_client: SafeDockerClient,
     os.makedirs(local_ccache_dir, exist_ok=True)
     logging.info("Using ccache directory: %s", local_ccache_dir)
 
-    # Equivalent command
-    docker_cmd_list = [
-        "docker",
-        'run',
-        "--gpus all" if nvidia_runtime else "",
-        "--cap-add",
-        "SYS_PTRACE", # Required by ASAN
+    # Build docker command
+    docker_arg_list = [
+        "--cap-add", "SYS_PTRACE", # Required by ASAN
         '--rm',
         '--shm-size={}'.format(shared_memory_size),
         # mount mxnet root
@@ -158,40 +147,27 @@ def container_run(docker_client: SafeDockerClient,
         '-e', "CCACHE_DIR={}".format(environment['CCACHE_DIR']),
         # a container-scoped log, useful for ccache verification.
         '-e', "CCACHE_LOGFILE={}".format(environment['CCACHE_LOGFILE']),
-        '-ti',
-        tag]
-    docker_cmd_list.extend(command)
-    docker_cmd = ' \\\n\t'.join(docker_cmd_list)
-    logging.info("Running %s in container %s", command, tag)
-    logging.info("Executing the equivalent of:\n%s\n", docker_cmd)
+    ]
+    docker_arg_list += [tag]
+    docker_arg_list.extend(command)
+
+    def docker_run_cmd(cmd):
+        logging.info("Running %s in container %s", command, tag)
+        logging.info("Executing command:\n%s\n", ' \\\n\t'.join(cmd))
+        subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stderr, check=True)
 
     if not dry_run:
-        #############################
-        #
-        signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM})
-        # noinspection PyShadowingNames
-        runtime = None
-        if nvidia_runtime:
-            # noinspection PyShadowingNames
-            # runc is default (docker info | grep -i runtime)
-            runtime = 'nvidia'
+        if not nvidia_runtime:
+            docker_run_cmd(['docker', 'run'] + docker_arg_list)
+        else:
+            try:
+                docker_run_cmd(['docker', 'run', '--gpus', 'all'] + docker_arg_list)
+            except subprocess.CalledProcessError as e:
+                if e.returncode == 125:
+                    docker_run_cmd(['docker', 'run', '--runtime', 'nvidia'] + docker_arg_list)
+                else:
+                    raise
 
-        return docker_client.run(
-            tag,
-            runtime=runtime,
-            command=command,
-            shm_size=shared_memory_size,
-            user='{}:{}'.format(os.getuid(), os.getgid()),
-            cap_add='SYS_PTRACE',
-            volumes={
-                mx_root:
-                    {'bind': '/work/mxnet', 'mode': 'rw'},
-                local_build_folder:
-                    {'bind': '/work/build', 'mode': 'rw'},
-                local_ccache_dir:
-                    {'bind': '/work/ccache', 'mode': 'rw'},
-            },
-            environment=environment)
     return 0
 
 
@@ -292,8 +268,6 @@ def main() -> int:
     args = parser.parse_args()
 
     command = list(chain.from_iterable(args.command))
-    docker_client = SafeDockerClient()
-
     environment = dict([(e.split('=')[:2] if '=' in e else (e, os.environ[e]))
                         for e in args.environment])
 
@@ -318,13 +292,13 @@ def main() -> int:
         ret = 0
         if command:
             ret = container_run(
-                docker_client=docker_client, platform=platform, nvidia_runtime=args.nvidiadocker,
+                platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
                 local_ccache_dir=args.ccache_dir, environment=environment)
         elif args.print_docker_run:
             command = []
             ret = container_run(
-                docker_client=docker_client, platform=platform, nvidia_runtime=args.nvidiadocker,
+                platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
                 local_ccache_dir=args.ccache_dir, dry_run=True, environment=environment)
         else:
@@ -332,7 +306,7 @@ def main() -> int:
             command = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(command))
             ret = container_run(
-                docker_client=docker_client, platform=platform, nvidia_runtime=args.nvidiadocker,
+                platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
                 local_ccache_dir=args.ccache_dir, environment=environment)
 
@@ -340,7 +314,33 @@ def main() -> int:
             logging.critical("Execution of %s failed with status: %d", command, ret)
             return ret
 
-
+    elif args.all:
+        platforms = get_platforms()
+        platforms = [platform for platform in platforms if 'build.' in platform]
+        logging.info("Building for all architectures: %s", platforms)
+        logging.info("Artifacts will be produced in the build/ directory.")
+        for platform in platforms:
+            tag = get_docker_tag(platform=platform, registry=args.docker_registry)
+            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
+            build_docker(platform, registry=args.docker_registry,
+                         num_retries=args.docker_build_retries, no_cache=args.no_cache,
+                         cache_intermediate=args.cache_intermediate)
+            if args.build_only:
+                continue
+            shutil.rmtree(buildir(), ignore_errors=True)
+            build_platform = "build_{}".format(platform)
+            plat_buildir = os.path.abspath(os.path.join(get_mxnet_root(), '..',
+                                                        "mxnet_{}".format(build_platform)))
+            if os.path.exists(plat_buildir):
+                logging.warning("%s already exists, skipping", plat_buildir)
+                continue
+            command = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
+            container_run(
+                platform=platform, nvidia_runtime=args.nvidiadocker,
+                shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
+                local_ccache_dir=args.ccache_dir, environment=environment)
+            shutil.move(buildir(), plat_buildir)
+            logging.info("Built files left in: %s", plat_buildir)
     else:
         parser.print_help()
         list_platforms()
