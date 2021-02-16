@@ -36,7 +36,7 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
   // CachedOp* points to CachedOpThreadSafe object if CreateCachedOpEX
   // was called with thread_safe=true
   CachedOp* op = dynamic_cast<CachedOp*>(op_shared.get());
-  
+
   int num_inputs = args[1];
   int args_size = args.size();
   std::vector<NDArray*> ndinputs;
@@ -49,7 +49,7 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
   ndoutputs.reserve(op->num_outputs());
   if (args[num_inputs + 4].type_code() == kNull) {
     for (int i = 0; i < op->num_outputs(); ++i) ndoutputs.push_back(new NDArray());
-  } else {	
+  } else {
     int array_size = args_size - num_inputs - 4;
     CHECK_EQ(array_size, op->num_outputs())
         << "CachedOp expects " << op->num_outputs() << " outputs, but "
