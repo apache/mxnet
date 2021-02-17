@@ -399,56 +399,26 @@ endif()
 
 # ---[ OpenMP
 if(USE_OPENMP)
-  function(load_omp)
-    # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
-    set(OPENMP_STANDALONE_BUILD TRUE)
-    set(LIBOMP_ENABLE_SHARED TRUE)
-    set(CMAKE_BUILD_TYPE Release)
-    set(OPENMP_ENABLE_LIBOMPTARGET OFF CACHE BOOL "LLVM OpenMP offloading support")  # Requires CMP0077 CMake 3.13
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
-    # Disable warnings
-    target_compile_options(omp PRIVATE
-      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:-w>
-      $<$<CXX_COMPILER_ID:MSVC>:/w>)
-  endfunction()
-
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
-     AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
-     AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution"
-     AND NOT BLAS STREQUAL "MKL"
-     AND NOT MSVC
-     AND NOT CMAKE_CROSSCOMPILING)
-    load_omp()
-    list(APPEND mxnet_LINKER_LIBS omp)
-    set_target_properties(omp PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
-    if(UNIX)
-      list(APPEND mxnet_LINKER_LIBS pthread)
-    endif()
+  find_package(OpenMP REQUIRED)
+  if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    add_definitions(-DMXNET_USE_OPENMP=1)
-  else()
-    find_package(OpenMP REQUIRED)
-    if(OPENMP_FOUND)
-      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-      # Enable pragma omp simd
-      # "While the name of this switch is 'experimental', the switch itself, and
-      # the functionality it enables is fully supported and production-ready.
-      # The name reflects that it doesn’t enable any complete subset or
-      # version of an OpenMP standard."
-      # -- https://devblogs.microsoft.com/cppblog/simd-extension-to-c-openmp-in-visual-studio/
-      if(MSVC)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -openmp:experimental")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:experimental")
-      endif()
-      if(NOT BLAS STREQUAL "MKL")
-        # Linker flags for Intel OMP are already set in case MKL is used. Only set if not MKL
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-      endif()
-      add_definitions(-DMXNET_USE_OPENMP=1)
+    # Enable pragma omp simd
+    # "While the name of this switch is 'experimental', the switch itself, and
+    # the functionality it enables is fully supported and production-ready.
+    # The name reflects that it doesn’t enable any complete subset or
+    # version of an OpenMP standard."
+    # -- https://devblogs.microsoft.com/cppblog/simd-extension-to-c-openmp-in-visual-studio/
+    if(MSVC)
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -openmp:experimental")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:experimental")
     endif()
+    if(NOT BLAS STREQUAL "MKL")
+      # Linker flags for Intel OMP are already set in case MKL is used. Only set if not MKL
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+    endif()
+    add_definitions(-DMXNET_USE_OPENMP=1)
   endif()
 elseif(UNIX)
   # Prefer compiler pthread flag. This is the recommended way, but not backwards
