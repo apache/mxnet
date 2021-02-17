@@ -122,6 +122,7 @@ def get_graphs():
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.flaky
 def test_subgraph_exe1(sym, subgraph_backend, op_names):
     """Use the partitioned sym to _simple_bind an executor and compare the outputs
     with those of the original executor"""
