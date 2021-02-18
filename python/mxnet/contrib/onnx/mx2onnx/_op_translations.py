@@ -159,7 +159,7 @@ def create_basic_op_node(op_name, node, kwargs):
 def create_const_scalar_node(input_name, value, kwargs):
     """Helper function to create a tensor value node and a
     initializer tensor node with constant value."""
-    from onnx.helper import make_tensor, make_tensor_value_info
+    from onnx.helper import make_tensor
     initializer = kwargs["initializer"]
     input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
     tensor_node = make_tensor(input_name, input_type, (), ([value]))
@@ -168,7 +168,7 @@ def create_const_scalar_node(input_name, value, kwargs):
 def create_const_node(input_name, value, kwargs):
     """Helper function to create a tensor value node and a
     initializer tensor node with constant value."""
-    from onnx.helper import make_tensor, make_tensor_value_info
+    from onnx.helper import make_tensor
     initializer = kwargs["initializer"]
     input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
     input_shape = value.shape
@@ -874,8 +874,8 @@ def convert_softmax(node, **kwargs):
             # magic number, this is fp16 min
             create_tensor([-65500.0], name+"_mask_val", kwargs["initializer"], dtype=dtype)
             create_tensor([1], name+"_1", kwargs["initializer"])
-            create_const_scalar_node(name+"_0_s", np.int64(0), kwargs),
-            create_const_scalar_node(name+"_1_s", np.int64(1), kwargs),
+            create_const_scalar_node(name+"_0_s", np.int64(0), kwargs)
+            create_const_scalar_node(name+"_1_s", np.int64(1), kwargs)
             nodes += [
                 make_node("Shape", [data], [name+"_shape"]),
                 make_node("Shape", [name+"_shape"], [name+"_dim"]),
@@ -2487,7 +2487,7 @@ def convert_layer_norm(node, **kwargs):
     create_const_scalar_node(name+'_1_s', np.int64(1), kwargs)
     create_const_scalar_node(name+"_2_s", np.int64(2).astype(dtype), kwargs)
     create_const_scalar_node(name+"_eps", np.float32(eps), kwargs)
-    
+
     nodes = [
         make_node("ReduceMean", [input_nodes[0]], [name+"_rm0_out"], axes=[axes]),
         make_node("Sub", [input_nodes[0], name+"_rm0_out"], [name+"_sub0_out"]),
@@ -2654,7 +2654,7 @@ def convert_broadcast_axis(node, **kwargs):
     assert len(axis) == len(size)
 
     shape_name = name+'_shape_0'
-    
+
     create_tensor([0], name+'_0', kwargs["initializer"])
     create_tensor([1], name+'_1', kwargs["initializer"])
     create_const_scalar_node(name+'_0_s', np.int64(0), kwargs)
@@ -2822,7 +2822,7 @@ def convert_slice(node, **kwargs):
     create_tensor(starts, name+'_starts', kwargs['initializer'])
     create_tensor(ends, name+'_ends', kwargs['initializer'])
     create_tensor(steps, name+'_steps', kwargs['initializer'])
-    
+
     nodes = [
         make_node('Range', [name+'_0_s', name+'_len_s', name+'_1_s'], [name+'_axes']),
         make_node("Slice", [input_nodes[0], name+'_starts', name+'_ends', name+'_axes',
@@ -2896,7 +2896,7 @@ def convert_arange_like(node, **kwargs):
     create_const_scalar_node(name+"_start", np.dtype(dtype).type(start), kwargs)
     create_const_scalar_node(name+"_step", np.dtype(dtype).type(step), kwargs)
     create_const_scalar_node(name+"_half_step", np.dtype(dtype).type(float(step)*0.5), kwargs)
-    
+
     nodes = []
     if axis == 'None':
         # output will be same shape as input
@@ -2956,7 +2956,7 @@ def convert_contrib_BilinearResize2D(node, **kwargs):
         raise NotImplementedError('contrib_BilinearResize2D with mode other than "size" is \
                                    not supported')
 
-    create_tensor([], name+'_roi', kwargs['initializer'], dtype='float32'),
+    create_tensor([], name+'_roi', kwargs['initializer'], dtype='float32')
 
     nodes = []
     if scale_height == 0:
@@ -3012,7 +3012,7 @@ def convert_arange(node, **kwargs):
     create_const_scalar_node(name+"_start", np.dtype(dtype).type(start), kwargs)
     create_const_scalar_node(name+"_stop", np.dtype(dtype).type(stop), kwargs)
     create_const_scalar_node(name+"_step", np.dtype(dtype).type(step), kwargs)
-    
+
     nodes = [
         make_node("Range", [name+"_start", name+"_stop", name+"_step"], [name], name=name)
     ]
@@ -3099,8 +3099,8 @@ def convert_repeat(node, **kwargs):
         create_tensor([1], name+'_1', kwargs['initializer'])
         create_tensor([0], name+'_0', kwargs['initializer'])
         create_tensor([axis], name+'_axis', kwargs['initializer'])
-        create_const_scalar_node(name+"_0_s", np.int64(0), kwargs),
-        create_const_scalar_node(name+"_1_s", np.int64(1), kwargs),
+        create_const_scalar_node(name+"_0_s", np.int64(0), kwargs)
+        create_const_scalar_node(name+"_1_s", np.int64(1), kwargs)
         nodes += [
             make_node('Shape', [input_nodes[0]], [name+'_shape']),
             make_node('Shape', [name+'_shape'], [name+'_dim']),
@@ -3547,7 +3547,7 @@ def convert_reshape_like(node, **kwargs):
     ]
 
     if lhs_begin >= 0:
-        create_tensor([lhs_begin], name+'_lhs_begin', kwargs["initializer"]),
+        create_tensor([lhs_begin], name+'_lhs_begin', kwargs["initializer"])
     else:
         create_tensor([lhs_begin], name+'_lhs_begin_neg', kwargs["initializer"])
         nodes += [
@@ -3555,7 +3555,7 @@ def convert_reshape_like(node, **kwargs):
         ]
 
     if rhs_begin >= 0:
-        create_tensor([rhs_begin], name+'_rhs_begin', kwargs["initializer"]),
+        create_tensor([rhs_begin], name+'_rhs_begin', kwargs["initializer"])
     else:
         create_tensor([rhs_begin], name+'_rhs_begin_neg', kwargs["initializer"])
         nodes += [
@@ -3569,7 +3569,7 @@ def convert_reshape_like(node, **kwargs):
     else:
         lhs_end = int(lhs_end)
         if lhs_end >= 0:
-            create_tensor([lhs_end], name+'_lhs_end', kwargs["initializer"]),
+            create_tensor([lhs_end], name+'_lhs_end', kwargs["initializer"])
         else:
             create_tensor([lhs_end], name+'_lhs_end_neg', kwargs["initializer"])
             nodes += [
@@ -3784,7 +3784,7 @@ def convert_broadcast_like(node, **kwargs):
     create_tensor([0], name+'_0', kwargs['initializer'])
     create_tensor(lhs_axes, name+'_lhs_axes', kwargs['initializer'])
     create_tensor(rhs_axes, name+'_rhs_axes', kwargs['initializer'])
-    
+
     nodes = [
         make_node('Shape', [lhs], [name+'_lhs_shape']),
         make_node('Shape', [rhs], [name+'_rhs_shape']),
