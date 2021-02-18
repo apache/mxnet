@@ -162,10 +162,10 @@ def create_const_scalar_node(input_name, value, kwargs):
     from onnx.helper import make_tensor, make_tensor_value_info
     initializer = kwargs["initializer"]
     input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
-    value_node = make_tensor_value_info(input_name, input_type, ())
+    #value_node = make_tensor_value_info(input_name, input_type, ())
     tensor_node = make_tensor(input_name, input_type, (), ([value]))
     initializer.append(tensor_node)
-    return value_node
+    #return value_node
 
 def create_const_node(input_name, value, kwargs):
     """Helper function to create a tensor value node and a
@@ -534,10 +534,8 @@ def convert_pad(node, **kwargs):
 
     if opset_version >= 11:
         # starting with opset 11, pads and constant_value are inputs instead of attributes
-        nodes = [
-            create_const_node(name+"_pads", np.array(onnx_pad_width, dtype='int64'), kwargs)
-        ]
-
+        create_const_node(name+"_pads", np.array(onnx_pad_width, dtype='int64'), kwargs)
+        nodes = []
         if pad_mode == "constant":
             create_const_scalar_node(name+"_const", pad_value, kwargs)
             nodes += [
