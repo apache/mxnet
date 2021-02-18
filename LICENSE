@@ -277,7 +277,6 @@
     2-clause BSD license
     =======================================================================================
 
-    3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
     3rdparty/dmlc-core/include/dmlc/concurrentqueue.h
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindEigen3.cmake  (Copy of the License available at licenses/BSD2)
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindPythonLibsNew.cmake
@@ -303,7 +302,7 @@
     src/operator/contrib/nn/modulated_deformable_im2col.cuh
 
     =======================================================================================
-    Apache-2.0 license + zlib license
+    2-clause BSD license + zlib license
     =======================================================================================
 
     3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
