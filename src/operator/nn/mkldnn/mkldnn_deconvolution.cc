@@ -22,7 +22,7 @@
  * \brief
  */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include "../deconvolution-inl.h"
 #include "./mkldnn_base-inl.h"
@@ -525,4 +525,4 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs &attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

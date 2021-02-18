@@ -292,7 +292,7 @@ if(USE_MKLDNN)
   load_mkldnn()
   include_directories(3rdparty/mkldnn/include)
   include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
-  add_definitions(-DMXNET_USE_MKLDNN=1)
+  add_definitions(-DMXNET_USE_ONEDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
   set_target_properties(dnnl PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()

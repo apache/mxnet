@@ -23,7 +23,7 @@
  *  \author Da Zheng
  */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <mkldnn_types.h>
 #include <cmath>
@@ -417,4 +417,4 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   }
 }
 
-#endif  // MXNET_USE_MKLDNN  == 1
+#endif  // MXNET_USE_ONEDNN  == 1

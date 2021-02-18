@@ -807,7 +807,7 @@ static void AssertEqual(const std::vector<NDArray *> &in_arrs,
       tmp1.WaitToRead();
       tmp2.WaitToRead();
     }
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     tmp1 = tmp1.Reorder2Default();
     tmp2 = tmp2.Reorder2Default();
 #endif

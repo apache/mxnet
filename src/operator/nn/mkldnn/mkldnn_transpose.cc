@@ -23,7 +23,7 @@
  * \author Tao Lv
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <mkldnn.hpp>
 #include "../../tensor/matrix_op-inl.h"

@@ -16,7 +16,7 @@
 # under the License.
 
 
-CFLAGS=-std=c++17 -g -Wno-unknown-pragmas -Wall -DMXNET_USE_CUDA=1 -DMXNET_USE_CUDNN=1 -DMXNET_USE_MKLDNN=1
+CFLAGS=-std=c++17 -g -Wno-unknown-pragmas -Wall -DMXNET_USE_CUDA=1 -DMXNET_USE_CUDNN=1 -DMXNET_USE_ONEDNN=1
 
 export MXNET_ROOT = `pwd`/../..
 
