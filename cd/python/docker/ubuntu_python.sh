@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,23 +16,21 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Python MXNet Dockerfile
 
-# NOTE: Assumes wheel_build directory is the context root when building
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
-ARG BASE_IMAGE
-FROM ${BASE_IMAGE}
+set -ex
+# install libraries for mxnet's python package on ubuntu
+apt-get update || true
+apt-get install -y software-properties-common
+add-apt-repository -y ppa:deadsnakes/ppa
+apt-get update || true
+apt-get install -y python3.7-dev python3.7-distutils virtualenv wget
+# setup symlink in /usr/local/bin to override python3 version
+ln -sf /usr/bin/python3.7 /usr/local/bin/python3
 
-COPY ./ubuntu_python.sh /work/
-RUN /work/ubuntu_python.sh
-
-ARG MXNET_COMMIT_ID
-ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
-
-RUN mkdir -p /mxnet
-COPY dist/*.whl /mxnet/.
-
-WORKDIR /mxnet
-RUN WHEEL_FILE=$(ls -t /mxnet | head -n 1) && pip install ${WHEEL_FILE} && rm -f ${WHEEL_FILE}
-
+# the version of the pip shipped with ubuntu may be too lower, install a recent version here
+wget -nv https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py
+pip3 install -r /work/requirements
