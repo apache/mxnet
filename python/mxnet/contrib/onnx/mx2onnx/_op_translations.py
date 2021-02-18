@@ -352,18 +352,18 @@ def convert_fully_connected(node, **kwargs):
     if flatten:
         nodes += [
             make_node('Flatten', [input_nodes[0]], [name+'_data_flattened'])
-            ]
+        ]
     else:
         nodes += [
             make_node('Shape', [input_nodes[0]], [name+'_orig_shape']),
             make_node('Shape', [name+'_orig_shape'], [name+'_dim']),
             make_node('Flatten', [input_nodes[0]], [name+'_data_flattened'], axis=-1),
-            ]
+        ]
 
     in_nodes = [name+'_data_flattened', input_nodes[1]]
 
     if no_bias:
-        nodes.append(create_const_scalar_node(name+'_bias', np.int32(0).astype(dtype), kwargs))
+        create_const_scalar_node(name+'_bias', np.int32(0).astype(dtype), kwargs)
         in_nodes.append(name+'_bias')
     else:
         in_nodes.append(input_nodes[2])
@@ -371,7 +371,7 @@ def convert_fully_connected(node, **kwargs):
     if flatten:
         nodes += [
             make_node('Gemm', in_nodes, [name], alpha=1.0, beta=1.0, transA=0, transB=1, name=name)
-            ]
+        ]
     else:
         create_tensor([0], name+'_0', kwargs['initializer'])
         create_tensor([1], name+'_1', kwargs['initializer'])
@@ -384,7 +384,7 @@ def convert_fully_connected(node, **kwargs):
             make_node('Concat', [name+'_shape_sliced', name+'_num_hidden'],
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [name+'_gemm', name+'_shape_new'], [name], name=name)
-            ]
+        ]
 
     return nodes
 
@@ -539,8 +539,8 @@ def convert_pad(node, **kwargs):
         ]
 
         if pad_mode == "constant":
+            create_const_scalar_node(name+"_const", pad_value, kwargs)
             nodes += [
-                create_const_scalar_node(name+"_const", pad_value, kwargs),
                 make_node("Pad", [input_nodes[0], name+"_pads", name+"_const"], [name], mode=pad_mode, name=name)
             ]
         else:
@@ -832,12 +832,12 @@ def convert_leakyrelu(node, **kwargs):
             name=name)
     elif act_type in ('gelu'):
         sqrt2 = np.float32(1.4142135623730951)
+        create_const_scalar_node(name+"_sqrt2", sqrt2, kwargs)
+        create_const_scalar_node(name+"_one", np.float32(1.0), kwargs)
+        create_const_scalar_node(name+"_half", np.float32(0.5), kwargs)
         nodes = [
-            create_const_scalar_node(name+"_sqrt2", sqrt2, kwargs),
             make_node("Div", [input_nodes[0], name+"_sqrt2"], [name+"_div0_out"]),
             make_node("Erf", [name+"_div0_out"], [name+"_erf0_out"]),
-            create_const_scalar_node(name+"_one", np.float32(1.0), kwargs),
-            create_const_scalar_node(name+"_half", np.float32(0.5), kwargs),
             make_node("Add", [name+"_erf0_out", name+"_one"], [name+"_add0_out"]),
             make_node("Mul", [input_nodes[0], name+"_add0_out"], [name+"_mul0_out"]),
             make_node("Mul", [name+"_mul0_out", name+"_half"], [name], name=name)
@@ -1159,9 +1159,9 @@ def convert_clip(node, **kwargs):
 
     if opset_version >= 11:
         # opset >= 11 requires min/max to be inputs
+        create_const_scalar_node(name+"_min", np.float32(a_min), kwargs)
+        create_const_scalar_node(name+"_max", np.float32(a_max), kwargs)
         nodes = [
-            create_const_scalar_node(name+"_min", np.float32(a_min), kwargs),
-            create_const_scalar_node(name+"_max", np.float32(a_max), kwargs),
             make_node("Clip", [input_nodes[0], name+"_min", name+"_max"], [name], name=name)
         ]
     else:
