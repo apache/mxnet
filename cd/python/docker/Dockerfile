@@ -23,11 +23,8 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-ARG PYTHON_CMD=python3
-RUN apt-get update && \
-    apt-get install -y wget ${PYTHON_CMD}-dev gcc && \
-    wget https://bootstrap.pypa.io/get-pip.py && \
-    ${PYTHON_CMD} get-pip.py
+COPY ../../../ci/docker/install/ubuntu_python.sh /work/
+RUN /work/ubuntu_python.sh
 
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
