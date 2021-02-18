@@ -23,8 +23,15 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-COPY ./ubuntu_python.sh /work/
-RUN /work/ubuntu_python.sh
+RUN apt-get update || true
+RUN apt-get install -y software-properties-common
+RUN add-apt-repository -y ppa:deadsnakes/ppa
+RUN apt-get update || true
+RUN apt-get install -y python3.7-dev python3.7-distutils virtualenv wget
+RUN ln -sf /usr/bin/python3.7 /usr/local/bin/python3
+
+RUN wget -nv https://bootstrap.pypa.io/get-pip.py
+RUN python3 get-pip.py
 
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
