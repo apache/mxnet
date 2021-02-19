@@ -51,6 +51,9 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
                        full_param.eltwise_param.alpha,
                        full_param.eltwise_param.beta);
   }
+  if (full_param.mkldnn_param.with_sum) {
+    ops.append_sum(full_param.mkldnn_param.sum_scale);
+  }
   attr.set_post_ops(ops);
 
   if (full_param.mkldnn_param.quantized && full_param.output_scales.size()) {
