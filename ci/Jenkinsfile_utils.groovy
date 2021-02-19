@@ -112,20 +112,7 @@ def get_git_commit_hash() {
 }
 
 def publish_test_coverage() {
-    // CodeCovs auto detection has trouble with our CIs PR validation due the merging strategy
-    git_commit_hash = get_git_commit_hash()
-
-    if (env.CHANGE_ID) {
-      // PR execution
-      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${git_commit_hash} -P ${env.CHANGE_ID}"
-    } else {
-      // Branch execution
-      codecovArgs = "-B ${env.BRANCH_NAME} -C ${git_commit_hash}"
-    }
-
-    // To make sure we never fail because test coverage reporting is not available
-    // Fall back to our own copy of the bash helper if it failed to download the public version
-    sh "(curl --retry 10 -s https://codecov.io/bash | bash -s - ${codecovArgs}) || (curl --retry 10 -s https://s3-us-west-2.amazonaws.com/mxnet-ci-prod-slave-data/codecov-bash.txt | bash -s - ${codecovArgs}) || true"
+    sh "curl -s https://codecov.io/bash | bash"
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {
