@@ -38,7 +38,7 @@ case ${CUDA_VERSION} in
 		export libcudnn_dev_version="${CUDNN_VERSION}-1+cuda11.0"
 		;;
 	10\.2*)
-		export libcudnn_package="libcudnn8"
+		export libcudnn_package="libcudnn7"
 		export libcudnn_version="${CUDNN_VERSION}-1+cuda10.2"
 		export libcudnn_dev_version="${CUDNN_VERSION}-1+cuda10.2"
 		;;
