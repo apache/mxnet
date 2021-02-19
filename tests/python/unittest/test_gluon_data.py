@@ -141,6 +141,7 @@ def test_image_folder_dataset():
     assert len(dataset.items) == 16
 
 @with_seed()
+@unittest.skip("skipping flaky test - see https://github.com/apache/incubator-mxnet/issues/19877")
 def test_list_dataset():
     for num_worker in range(0, 3):
         data = mx.gluon.data.DataLoader([([1,2], 0), ([3, 4], 1)], batch_size=1, num_workers=num_worker)
