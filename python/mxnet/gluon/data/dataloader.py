@@ -651,6 +651,10 @@ class DataLoader(object):
         self._num_workers = num_workers if num_workers >= 0 else 0
         self._worker_pool = None
         self._prefetch = max(0, int(prefetch) if prefetch is not None else 2 * self._num_workers)
+        nd.waitall()
+        import gc
+        gc.collect()
+        nd.waitall()
         if self._num_workers > 0:
             if self._thread_pool:
                 self._worker_pool = ThreadPool(self._num_workers,
