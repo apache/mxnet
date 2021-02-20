@@ -74,7 +74,7 @@ def get_environment(mxnet_variant) {
 // to run a step
 def get_jenkins_node_label(mxnet_variant) {
   if (mxnet_variant.startsWith('cu')) {
-    return NODE_LINUX_GPU
+    return NODE_LINUX_GPU_G4
   }
   return NODE_LINUX_CPU
 }
