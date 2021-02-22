@@ -59,8 +59,7 @@ pipeline {
             linux_gpu: 'restricted-mxnetlinux-gpu',
             linux_gpu_p3: 'restricted-mxnetlinux-gpu-p3',
             windows_cpu: 'restricted-mxnetwindows-cpu',
-            windows_gpu: 'restricted-mxnetwindows-gpu',
-            linux_gpu_g4: 'mxnetlinux-gpu-g4'
+            windows_gpu: 'restricted-mxnetwindows-gpu'
           )
 
           // Skip Jenkins state update jobs
