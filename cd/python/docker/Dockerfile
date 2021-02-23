@@ -27,7 +27,7 @@ ARG PYTHON=python3
 ARG PIP=pip3
 ARG PYTHON_VERSION=3.7.9
 RUN apt-get update && \
-    apt-get install -y wget ${PYTHON}-dev gcc && \
+    apt-get install -y wget gcc && \
     wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz && \
     tar -xzf Python-$PYTHON_VERSION.tgz && \
     cd Python-$PYTHON_VERSION && \
