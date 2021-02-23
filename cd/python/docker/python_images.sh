@@ -40,7 +40,7 @@ image_name="${repository}:${main_tag}"
 resources_path='cd/python/docker'
 
 if [ ! -z "${RELEASE_DOCKERHUB_REPOSITORY}" ]; then
-    image_name="${RELEASE_DOCKERHUB_REPOSITORY}/${image_name}"
+    image_name="${RELEASE_DOCKERHUB_REPOSITORY}-${image_name}"
 fi
 
 build() {
@@ -68,7 +68,7 @@ push() {
 
     # The secret name env var is set in the Jenkins configuration
     # Manage Jenkins -> Configure System
-    python3 ${ci_utils}/docker_login.py --secret-name "${RELEASE_DOCKERHUB_SECRET_NAME}"
+    python3 ${ci_utils}/ecr_login.py --docker-registry ${DOCKER_ECR_PUBLIC_REGISTRY}
 
     # Push image
     docker push "${image_name}"
