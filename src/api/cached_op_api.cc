@@ -31,8 +31,7 @@ namespace mxnet {
 
 MXNET_REGISTER_GLOBAL("cached_op.invoke")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  CachedOpPtr op_shared = *static_cast<CachedOpPtr*>(
-    static_cast<CachedOpHandle>(static_cast<void*>(args[0])));
+  CachedOpPtr op_shared = *static_cast<CachedOpPtr*>(args[0].value().v_handle);
   // CachedOp* points to CachedOpThreadSafe object if CreateCachedOpEX
   // was called with thread_safe=true
   CachedOp* op = dynamic_cast<CachedOp*>(op_shared.get());
@@ -91,7 +90,7 @@ MXNET_REGISTER_GLOBAL("cached_op.invoke")
 
 MXNET_REGISTER_GLOBAL("cached_op.create")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(static_cast<void*>(args[0]));
+  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(args[0].value().v_handle);
   Object* flags_ptr = static_cast<Object*>(args[1].value().v_handle);
   auto* n = static_cast<const runtime::MapObj*>(flags_ptr);
   int num_flags = static_cast<int>(n->size());
@@ -113,23 +112,23 @@ MXNET_REGISTER_GLOBAL("cached_op.create")
 
 MXNET_REGISTER_GLOBAL("cached_op.free")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  CachedOpPtr* g = static_cast<CachedOpPtr*>(static_cast<void*>(args[0]));
+  CachedOpPtr* g = static_cast<CachedOpPtr*>(args[0].value().v_handle);
   delete g;
 });
 
 MXNET_REGISTER_GLOBAL("cached_op.get_optimized_symbol")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   auto s = new nnvm::Symbol();
-  CachedOpPtr op = *static_cast<CachedOpPtr*>(static_cast<void*>(args[0]));
+  CachedOpPtr op = *static_cast<CachedOpPtr*>(args[0].value().v_handle);
   *s = op->GetOptimizedSymbol();
   *ret = static_cast<void*>(static_cast<SymbolHandle>(s));
 });
 
 MXNET_REGISTER_GLOBAL("cached_op.register_op_hook")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  CachedOpHandle handle = static_cast<CachedOpHandle>(static_cast<void*>(args[0]));
+  CachedOpHandle handle = static_cast<CachedOpHandle>(args[0].value().v_handle);
   CachedOpMonitorCallback callback = reinterpret_cast<CachedOpMonitorCallback>(
-    reinterpret_cast<void (*)(const char *, const char *, void *)>(static_cast<void*>(args[1])));
+    reinterpret_cast<void (*)(const char *, const char *, void *)>(args[1].value().v_handle));
   bool monitor_all = args[2];
   CachedOpMonitorCallback callback_temp = nullptr;
   std::function<void(const char *, const char *, void*)> clbk;
