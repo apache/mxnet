@@ -81,7 +81,7 @@ CMAKE_FLAGS = {
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DUSE_MKL_IF_AVAILABLE=ON '
-        '-DUSE_MKLDNN=ON '
+        '-DUSE_ONEDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN_MKL': (
@@ -95,7 +95,7 @@ CMAKE_FLAGS = {
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DUSE_MKL_IF_AVAILABLE=ON '
-        '-DUSE_MKLDNN=ON '
+        '-DUSE_ONEDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKL': (
@@ -109,7 +109,7 @@ CMAKE_FLAGS = {
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DUSE_MKL_IF_AVAILABLE=ON '
-        '-DUSE_MKLDNN=OFF '
+        '-DUSE_ONEDNN=OFF '
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': (
@@ -137,7 +137,7 @@ CMAKE_FLAGS = {
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DMXNET_CUDA_ARCH="5.2" '
-        '-DUSE_MKLDNN=ON '
+        '-DUSE_ONEDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
 }

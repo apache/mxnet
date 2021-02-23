@@ -327,7 +327,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 * MXNET_MKLDNN_ENABLED
   - Values: 0, 1 ```(default=1)```
   - Flag to enable or disable MKLDNN accelerator. On by default.
-  - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
+  - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_ONEDNN=1```)
 
 * MXNET_MKLDNN_CACHE_NUM
   - Values: Int ```(default=-1)```

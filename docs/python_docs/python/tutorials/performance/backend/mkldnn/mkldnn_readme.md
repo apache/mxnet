@@ -62,18 +62,18 @@ To achieve better performance, the Intel OpenMP and llvm OpenMP are recommended 
 ```
 # build with llvm OpenMP and Intel MKL/openblas
 mkdir build && cd build
-cmake -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=ON -DUSE_MKLDNN=ON -DUSE_OPENMP=ON -DUSE_OPENCV=ON ..
+cmake -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=ON -DUSE_ONEDNN=ON -DUSE_OPENMP=ON -DUSE_OPENCV=ON ..
 make -j $(nproc)
 ```
 
 ```
 # build with Intel MKL and Intel OpenMP
-make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=mkl USE_INTEL_PATH=/opt/intel
+make -j $(nproc) USE_OPENCV=1 USE_ONEDNN=1 USE_BLAS=mkl USE_INTEL_PATH=/opt/intel
 ```
 
 ```
 # build with openblas and GNU OpenMP(sub-optimal performance)
-make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=openblas
+make -j $(nproc) USE_OPENCV=1 USE_ONEDNN=1 USE_BLAS=openblas
 ```
 
 <h2 id="2">MacOS</h2>
@@ -110,7 +110,7 @@ cd incubator-mxnet
 ### Build MXNet with MKL-DNN
 
 ```
-LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew --prefix llvm)/bin/clang CXX=$(brew --prefix llvm)/bin/clang++ USE_OPENCV=1 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple
+LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew --prefix llvm)/bin/clang CXX=$(brew --prefix llvm)/bin/clang++ USE_OPENCV=1 USE_OPENMP=1 USE_ONEDNN=1 USE_BLAS=apple
 ```
 
 <h2 id="3">Windows</h2>
@@ -136,17 +136,17 @@ After you have installed all of the required dependencies, build the MXNet sourc
 git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd C:\incubator-mxent
 ```
-2. Enable Intel MKL-DNN by -DUSE_MKLDNN=1. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build```. Make sure to specify the architecture in the
+2. Enable Intel MKL-DNN by -DUSE_ONEDNN=1. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build```. Make sure to specify the architecture in the
 command:
 ```
 >mkdir build
 >cd build
->cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release
+>cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_ONEDNN=1 -DCMAKE_BUILD_TYPE=Release
 ```
 3. Enable Intel MKL-DNN and Intel MKL as BLAS library by the command:
 ```
 >"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64
->cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release
+>cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_ONEDNN=1 -DCMAKE_BUILD_TYPE=Release
 ```
 4. After the CMake successfully completed, in Visual Studio, open the solution file ```.sln``` and compile it, or compile the MXNet source code by using following command:
 ```r
@@ -161,7 +161,7 @@ msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 User can follow the same steps of Visual Studio 2015 to build MXNET with MKL-DNN, but change the version related command, for example,```C:\opencv\build\x64\vc15\bin``` and build command is as below:
 
 ```
->cmake -G "Visual Studio 15 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release
+>cmake -G "Visual Studio 15 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_ONEDNN=1 -DCMAKE_BUILD_TYPE=Release
 
 ```
 

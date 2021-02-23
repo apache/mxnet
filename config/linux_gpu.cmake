@@ -69,7 +69,7 @@ set(OPENCV_ROOT "" CACHE BOOL "OpenCV install path. Supports autodetection.")
 set(USE_OPENMP ON CACHE BOOL "Build with Openmp support")
 
 set(USE_MKL_IF_AVAILABLE ON CACHE BOOL "Use Intel MKL if found")
-set(USE_MKLDNN ON CACHE BOOL "Build with MKL-DNN support")
+set(USE_ONEDNN ON CACHE BOOL "Build with MKL-DNN support")
 
 set(USE_LAPACK ON CACHE BOOL "Build with lapack support")
 

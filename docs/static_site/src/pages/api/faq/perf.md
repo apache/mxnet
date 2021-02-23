@@ -49,7 +49,7 @@ When using Intel Xeon CPUs for training and inference, the `mxnet-mkl` package i
 $ pip install mxnet-mkl [--pre]
 ```
 
-Or build MXNet from source code with `USE_MKLDNN=1`. For Linux users, `USE_MKLDNN=1` will be turned on by default.
+Or build MXNet from source code with `USE_ONEDNN=1`. For Linux users, `USE_ONEDNN=1` will be turned on by default.
 
 We also find that setting the following environment variables can help:
 
