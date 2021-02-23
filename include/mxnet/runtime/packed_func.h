@@ -518,12 +518,6 @@ class MXNetArgValue : public MXNetPODValue_ {
       MXNET_CHECK_TYPE_CODE(type_code_, kStr);
       return std::string(value_.v_str);
     }
-    // } else if (type_code_ == kStr) {
-    //   return std::string(value_.v_str);
-    // } else {
-    //   CHECK(IsObjectRef<tvm::runtime::String>());
-    //   return AsObjectRef<tvm::runtime::String>().operator std::string();
-    // }
   }
   operator DLDataType() const {
     if (type_code_ == kStr) {
