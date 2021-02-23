@@ -650,6 +650,10 @@ class DataLoader(object):
                 pin_device_id=self._pin_device_id,
                 prefetch=self._prefetch, **mx_iter_args)
         else:
+            nd.waitall()
+            import gc
+            gc.collect()
+            nd.waitall()
             if self._num_workers > 0:
                 if self._thread_pool:
                     self._worker_pool = ThreadPool(self._num_workers,
