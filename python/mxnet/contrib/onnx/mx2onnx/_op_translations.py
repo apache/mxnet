@@ -4020,3 +4020,22 @@ def convert_one_hot(node, **kwargs):
     ]
 
     return nodes
+
+@mx_op.register('_random_uniform_like')
+def convert_one_hot(node, **kwargs):
+    """Map MXNet's random_uniform_like operator attributes to onnx's RandomUniformLike operator
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    low = float(attrs.get('low', 0.))
+    high = float(attrs.get('high', 1.))
+    dtype = attrs.get('dtype', 'float32')
+
+    nodes = [
+        make_node('RandomUniformLike', [input_nodes[0]], [name], name=name, 
+                  dtype=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)],
+                  low=low, high=high)
+    ]
+
+    return nodes
