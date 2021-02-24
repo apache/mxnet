@@ -4030,4 +4030,3 @@ def convert_sequece_reverse(node, **kwargs):
         ]
 
     return nodes
-
