@@ -1168,3 +1168,17 @@ def test_onnx_export_take_raise(tmp_path, dtype, axis):
     y = mx.random.randint(0, 3, (6, 7)).astype(dtype)
     M = def_model('take', axis=axis, mode='raise')
     op_export_test('take', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
+@pytest.mark.parametrize('params', [((6, 5, 4), [1, 2, 4, 5, 6]),
+                                     ((7, 3, 5), [1, 7, 4]),
+                                     ((3, 2, 1), [1, 2])])
+def test_onnx_export_sequence_reverse(tmp_path, dtype, params):
+    x = mx.nd.random.uniform(0, 10, params[0]).astype(dtype)
+    M1 = def_model('SequenceReverse')
+    op_export_test('SequenceReverse1', M1, [x], tmp_path)
+    seq_len = mx.nd.array(params[1])
+    M1 = def_model('SequenceReverse', use_sequence_length=True)
+    op_export_test('SequenceReverse1', M1, [x, seq_len], tmp_path)
+
