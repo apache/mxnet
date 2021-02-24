@@ -1168,3 +1168,12 @@ def test_onnx_export_take_raise(tmp_path, dtype, axis):
     y = mx.random.randint(0, 3, (6, 7)).astype(dtype)
     M = def_model('take', axis=axis, mode='raise')
     op_export_test('take', M, [x, y], tmp_path)
+
+
+# onnxruntime currently only supports float32 and int64
+@pytest.mark.parametrize("dtype", ["float32", "int64"])
+@pytest.mark.parametrize("depth", [1, 3, 5, 10])
+def test_onnx_export_one_hot(tmp_path, dtype, depth):
+    M = def_model('one_hot', depth=depth, dtype=dtype)
+    x = mx.random.randint(0, 10, (depth * depth)).astype('int64')
+    op_export_test('one_hot', M, [x], tmp_path)

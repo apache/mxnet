@@ -3999,3 +3999,24 @@ def convert_argsort(node, **kwargs):
         ]
 
     return nodes
+
+
+@mx_op.register('one_hot')
+def convert_one_hot(node, **kwargs):
+    """Map MXNet's one_hot operator attributes to onnx's OneHot operator
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    depth = int(attrs.get('depth'))
+    on_value = float(attrs.get('on_value', 1.))
+    off_value = float(attrs.get('off_value', 0.))
+    dtype = attrs.get('dtype', 'float32')
+
+    create_tensor([off_value, on_value], name+'_values', kwargs['initializer'], dtype=dtype)
+    create_tensor([depth], name+'_depth', kwargs['initializer'])
+    nodes = [
+        make_node('OneHot', [input_nodes[0], name+'_depth', name+'_values'], [name], name=name)
+    ]
+
+    return nodes
