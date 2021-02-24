@@ -2837,7 +2837,6 @@ def convert_zeros(node, **kwargs):
     """Map MXNet's zeros operator attributes to onnx's ConstantOfShape operator.
     """
     from onnx.helper import make_node, make_tensor
-    from onnx.mapping import NP_TYPE_TO_TENSOR_TYPE
     name, _, attrs = get_inputs(node, kwargs)
     dtype = attrs.get('dtype')
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
@@ -2855,7 +2854,6 @@ def convert_ones(node, **kwargs):
     """Map MXNet's ones operator attributes to onnx's ConstantOfShape operator.
     """
     from onnx.helper import make_node, make_tensor
-    from onnx.mapping import NP_TYPE_TO_TENSOR_TYPE
     name, _, attrs = get_inputs(node, kwargs)
     dtype = attrs.get('dtype')
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
