@@ -100,6 +100,19 @@ def test_onnx_export_stack(tmp_path):
     y = mx.nd.array([3, 4], dtype='float32')
     op_export_test('stack', M, [x, y], tmp_path)
 
+@pytest.mark.parametrize("dtype", [None, "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("shape", [(1), (1,2), (2,3,4), (5,6,7)])
+def test_onnx_export_zeros(tmp_path, dtype, shape):
+    M = def_model('zeros', shape=shape, dtype=dtype, dummy_input=True)
+    x = mx.nd.array([1])
+    op_export_test('zeros', M, [x], tmp_path, dummy_input=True)
+
+@pytest.mark.parametrize("dtype", [None, "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("shape", [(1), (1,2), (2,3,4), (5,6,7)])
+def test_onnx_export_ones(tmp_path, dtype, shape):
+    M = def_model('ones', shape=shape, dtype=dtype, dummy_input=True)
+    x = mx.nd.array([0])
+    op_export_test('ones', M, [x], tmp_path, dummy_input=True)
 
 def test_onnx_export_zeros_like(tmp_path):
     M = def_model('zeros_like')
@@ -1181,4 +1194,3 @@ def test_onnx_export_sequence_reverse(tmp_path, dtype, params):
     seq_len = mx.nd.array(params[1])
     M1 = def_model('SequenceReverse', use_sequence_length=True)
     op_export_test('SequenceReverse1', M1, [x, seq_len], tmp_path)
-
