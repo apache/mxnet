@@ -3573,6 +3573,7 @@ def test_np_swapaxes():
 
 @with_seed()
 @use_np
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_delete():
     class TestDelete(HybridBlock):
         def __init__(self, obj, axis=None):
