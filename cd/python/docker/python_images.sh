@@ -39,8 +39,8 @@ image_name="${repository}:${main_tag}"
 
 resources_path='cd/python/docker'
 
-if [ ! -z "${RELEASE_DOCKERHUB_REPOSITORY}" ]; then
-    image_name="${RELEASE_DOCKERHUB_REPOSITORY}-${image_name}"
+if [ ! -z "${RELEASE_PUBLIC_ECR_REPOSITORY}" ]; then
+    image_name="${RELEASE_PUBLIC_ECR_REPOSITORY}/${image_name}"
 fi
 
 build() {
@@ -60,8 +60,8 @@ test() {
 }
 
 push() {
-    if [ -z "${RELEASE_DOCKERHUB_REPOSITORY}" ]; then
-        echo "Cannot publish image without RELEASE_DOCKERHUB_REPOSITORY environment variable being set."
+    if [ -z "${RELEASE_PUBLIC_ECR_REPOSITORY}" ]; then
+        echo "Cannot publish image without RELEASE_PUBLIC_ECR_REPOSITORY environment variable being set."
         exit 1
     fi
 
