@@ -24,7 +24,7 @@ ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 RUN apt-get update && \
-    apt-get install -y software-properties-common wget && \
+    apt-get install -y software-properties-common && \
     add-apt-repository -y ppa:deadsnakes/ppa && \
     apt-get update && \
     apt-get install -y python3.7-dev python3.7-distutils virtualenv wget && \
