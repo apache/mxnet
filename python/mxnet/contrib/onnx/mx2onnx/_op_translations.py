@@ -4002,7 +4002,7 @@ def convert_argsort(node, **kwargs):
 
 
 @mx_op.register('SequenceReverse')
-def convert_sequece_reverse(node, **kwargs):
+def convert_sequence_reverse(node, **kwargs):
     """Map MXNet's SequenceReverse op
     """
     from onnx.helper import make_node
