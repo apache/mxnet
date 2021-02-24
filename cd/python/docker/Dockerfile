@@ -23,36 +23,14 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-ARG PYTHON=python3
-ARG PIP=pip3
-ARG PYTHON_VERSION=3.7.10
-ARG OPENSSL_VERSION=1.1.1g
-
-ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib"
-
 RUN apt-get update && \
-    apt-get install -y build-essential wget zlib1g-dev
-
-# install OpenSSL
-RUN wget -q -c https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz && \
-    tar -xzf openssl-${OPENSSL_VERSION}.tar.gz && \
-    cd openssl-${OPENSSL_VERSION} && \
-    ./config && make -j $(nproc) && make install && \
-    ldconfig && \
-    cd .. && rm -rf openssl-* && \
-    rmdir /usr/local/ssl/certs && \
-    ln -s /etc/ssl/certs /usr/local/ssl/certs
-
-# install python
-RUN wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz && \
-    tar -xzf Python-$PYTHON_VERSION.tgz && \
-    cd Python-$PYTHON_VERSION && \
-    ./configure --enable-shared --prefix=/usr/local && \
-    make -j $(nproc) && make install && \
-    cd .. && rm -rf ../Python-$PYTHON_VERSION* && \
-    ln -s /usr/local/bin/pip3 /usr/bin/pip && \
-    ln -s /usr/local/bin/$PYTHON /usr/local/bin/python && \
-    ${PIP} --no-cache-dir install --upgrade pip setuptools
+    apt-get install -y software-properties-common wget && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y python3.7-dev python3.7-distutils virtualenv wget && \
+    ln -sf /usr/bin/python3.7 /usr/local/bin/python3 && \
+    wget -nv https://bootstrap.pypa.io/get-pip.py && \
+    python3 get-pip.py
 
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
@@ -61,5 +39,5 @@ RUN mkdir -p /mxnet
 COPY dist/*.whl /mxnet/.
 
 WORKDIR /mxnet
-RUN WHEEL_FILE=$(ls -t /mxnet | head -n 1) && ${PIP} install ${WHEEL_FILE} && rm -f ${WHEEL_FILE}
+RUN WHEEL_FILE=$(ls -t /mxnet | head -n 1) && pip install ${WHEEL_FILE} && rm -f ${WHEEL_FILE}
 
