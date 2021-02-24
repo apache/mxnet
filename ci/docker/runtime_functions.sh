@@ -706,7 +706,7 @@ sanity_license() {
 
 sanity_cpp() {
     set -ex
-    3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests --exclude_path src/operator/contrib/ctc_include include/mkldnn
+    3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests --exclude_path src/operator/contrib/ctc_include include/onednn
 }
 
 sanity_python() {
@@ -1264,10 +1264,10 @@ build_static_libmxnet() {
 # Tests CD PyPI packaging in CI
 ci_package_pypi() {
     set -ex
-    # copies mkldnn header files to 3rdparty/mkldnn/include/oneapi/dnnl/ as in CD
-    mkdir -p 3rdparty/mkldnn/include/oneapi/dnnl
-    cp include/mkldnn/oneapi/dnnl/dnnl_version.h 3rdparty/mkldnn/include/oneapi/dnnl/.
-    cp include/mkldnn/oneapi/dnnl/dnnl_config.h 3rdparty/mkldnn/include/oneapi/dnnl/.
+    # copies onednn header files to 3rdparty/onednn/include/oneapi/dnnl/ as in CD
+    mkdir -p 3rdparty/onednn/include/oneapi/dnnl
+    cp include/onednn/oneapi/dnnl/dnnl_version.h 3rdparty/onednn/include/oneapi/dnnl/.
+    cp include/onednn/oneapi/dnnl/dnnl_config.h 3rdparty/onednn/include/oneapi/dnnl/.
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     cd_package_pypi ${mxnet_variant}
     cd_integration_test_pypi

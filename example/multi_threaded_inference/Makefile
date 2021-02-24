@@ -28,17 +28,17 @@ ifndef USE_CUDA_PATH
 endif
 
 ifndef MKLDNN_BUILD_DIR
-    export MKLDNN_BUILD_DIR = $(MXNET_ROOT)/3rdparty/mkldnn/build
+    export MKLDNN_BUILD_DIR = $(MXNET_ROOT)/3rdparty/onednn/build
     # Cmake build path by default
     # Uncomment below line for CMake build
-    #export MKLDNN_BUILD_DIR = $(MXNET_ROOT)/build/3rdparty/mkldnn
+    #export MKLDNN_BUILD_DIR = $(MXNET_ROOT)/build/3rdparty/onednn
 endif
 
 ifndef MKLDNN_INCLUDE_DIR
-    export MKLDNN_INCLUDE_DIR = $(MXNET_ROOT)/3rdparty/mkldnn/include
+    export MKLDNN_INCLUDE_DIR = $(MXNET_ROOT)/3rdparty/onednn/include
     # Cmake build path by default
     # Uncomment below line for CMake build
-    #export MKLDNN_INCLUDE_DIR = $(MXNET_ROOT)/3rdparty/mkldnn/include
+    #export MKLDNN_INCLUDE_DIR = $(MXNET_ROOT)/3rdparty/onednn/include
 endif
 
 CFLAGS += -I$(MXNET_ROOT)/include -I$(USE_CUDA_PATH)/include -I$(MKLDNN_INCLUDE_DIR) -I$(MKLDNN_BUILD_DIR)/include

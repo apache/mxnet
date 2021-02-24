@@ -286,12 +286,12 @@ if(USE_ONEDNN)
       set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
     endif()
 
-    set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/mkldnn")
-    add_subdirectory(3rdparty/mkldnn)
+    set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/onednn")
+    add_subdirectory(3rdparty/onednn)
   endfunction()
   load_onednn()
-  include_directories(3rdparty/mkldnn/include)
-  include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
+  include_directories(3rdparty/onednn/include)
+  include_directories(${PROJECT_BINARY_DIR}/3rdparty/onednn/include)
   add_definitions(-DMXNET_USE_ONEDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
   set_target_properties(dnnl PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
@@ -840,9 +840,9 @@ endif()
 if(USE_ONEDNN)
     add_custom_command(TARGET mxnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/
+      ${CMAKE_BINARY_DIR}/3rdparty/onednn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/onednn/oneapi/dnnl/
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/)
+      ${CMAKE_BINARY_DIR}/3rdparty/onednn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/onednn/oneapi/dnnl/)
 endif()
 
 if(USE_INTGEMM)

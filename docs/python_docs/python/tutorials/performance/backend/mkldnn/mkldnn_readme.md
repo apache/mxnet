@@ -152,7 +152,7 @@ command:
 ```r
 msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 ```
-   These commands produce mxnet library called ```libmxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder. Also ```libmkldnn.dll``` with be in the ```./build/3rdparty/mkldnn/src/Release/```
+   These commands produce mxnet library called ```libmxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder. Also ```libmkldnn.dll``` with be in the ```./build/3rdparty/onednn/src/Release/```
 
 5. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml*.dll`, `libiomp5.dll`, `libopenblas*.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading MXNet.
 

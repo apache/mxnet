@@ -31,7 +31,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#include "../../../3rdparty/mkldnn/include/mkldnn_types.h"
+#include "../../../3rdparty/onednn/include/mkldnn_types.h"
 #include "../../../3rdparty/googletest/googletest/include/gtest/gtest.h"
 #include "../../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 
