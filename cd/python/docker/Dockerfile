@@ -25,10 +25,13 @@ FROM ${BASE_IMAGE}
 
 ARG PYTHON=python3
 ARG PIP=pip3
-ARG PYTHON_VERSION=3.7.9
+ARG PYTHON_VERSION=3.7.10
+
 RUN apt-get update && \
-    apt-get install -y wget build-essential zlib1g-dev gcc && \
-    wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz && \
+    apt-get install -y wget build-essential zlib1g-dev gcc
+
+# install python
+RUN wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz && \
     tar -xzf Python-$PYTHON_VERSION.tgz && \
     cd Python-$PYTHON_VERSION && \
     ./configure --enable-shared --prefix=/usr/local && \
@@ -45,5 +48,5 @@ RUN mkdir -p /mxnet
 COPY dist/*.whl /mxnet/.
 
 WORKDIR /mxnet
-RUN WHEEL_FILE=$(ls -t /mxnet | head -n 1) && pip install ${WHEEL_FILE} && rm -f ${WHEEL_FILE}
+RUN WHEEL_FILE=$(ls -t /mxnet | head -n 1) && ${PIP} install ${WHEEL_FILE} && rm -f ${WHEEL_FILE}
 
