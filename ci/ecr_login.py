@@ -52,9 +52,7 @@ def _ecr_login(registry):
     global ECR_LOGGED_IN
     if ECR_LOGGED_IN:
         return
-    regionMatch = re.match(r'.*?\.dkr\.ecr\.([a-z]+\-[a-z]+\-\d+)\.amazonaws\.com', registry)
-    assert(regionMatch)
-    region = regionMatch.group(1)
+    region = 'us-west-2'
     logging.info("Logging into ECR region %s using aws-cli..", region)
     os.system("$(aws ecr get-login --region "+region+" --no-include-email)")
     ECR_LOGGED_IN = True
