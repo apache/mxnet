@@ -26,11 +26,22 @@ FROM ${BASE_IMAGE}
 ARG PYTHON=python3
 ARG PIP=pip3
 ARG PYTHON_VERSION=3.7.10
+ARG OPENSSL_VERSION=1.1.1g
 
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib"
 
 RUN apt-get update && \
     apt-get install -y build-essential wget zlib1g-dev
+
+# install OpenSSL
+RUN wget -q -c https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz && \
+    tar -xzf openssl-${OPENSSL_VERSION}.tar.gz && \
+    cd openssl-${OPENSSL_VERSION} && \
+    ./config && make -j $(nproc) && make install && \
+    ldconfig && \
+    cd .. && rm -rf openssl-* && \
+    rmdir /usr/local/ssl/certs && \
+    ln -s /etc/ssl/certs /usr/local/ssl/certs
 
 # install python
 RUN wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz && \
