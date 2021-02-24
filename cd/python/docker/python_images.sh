@@ -65,9 +65,7 @@ push() {
         exit 1
     fi
 
-    # The secret name env var is set in the Jenkins configuration
-    # Manage Jenkins -> Configure System
-    python3 ${ci_utils}/ecr_login.py --docker-registry ${DOCKER_ECR_PUBLIC_REGISTRY}
+    $(aws ecr get-login --region us-west-2 --no-include-email)
 
     # Push image
     docker push "${image_name}"
