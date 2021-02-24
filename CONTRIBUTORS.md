@@ -288,6 +288,7 @@ List of Contributors
 * [Joe Evans](https://github.com/josephevans)
 * [Nikolay Ulmasov](https://github.com/r3stl355)
 * [Paweł Głomski](https://github.com/PawelGlomski-Intel)
+* [Bartosz Kuncer](https://github.com/bartekkuncer)
 
 Label Bot
 ---------
