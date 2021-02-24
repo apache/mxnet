@@ -27,8 +27,10 @@ ARG PYTHON=python3
 ARG PIP=pip3
 ARG PYTHON_VERSION=3.7.10
 
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib"
+
 RUN apt-get update && \
-    apt-get install -y wget build-essential zlib1g-dev gcc
+    apt-get install -y build-essential wget zlib1g-dev
 
 # install python
 RUN wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz && \
