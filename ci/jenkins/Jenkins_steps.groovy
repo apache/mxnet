@@ -259,7 +259,7 @@ def compile_unix_cmake_mkldnn_gpu() {
         ws('workspace/build-cmake-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake_mkldnn', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_cmake_mkldnn', false)
             utils.pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
           }
         }
@@ -727,23 +727,7 @@ def test_unix_python3_gpu() {
         ws('workspace/ut-python3-gpu') {
           try {
             utils.unpack_and_init('gpu', mx_lib_cython)
-            python3_gpu_ut_cython('ubuntu_gpu_cu101')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_python3_gpu_cu110() {
-    return ['Python3+CUDA11.0: GPU': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/ut-python3-gpu') {
-          try {
-            utils.unpack_and_init('gpu_cu110', mx_lib_cython)
-            python3_gpu_ut_cython('ubuntu_gpu_cu110')
+            python3_gpu_ut_cython('ubuntu_gpu_cu111')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
@@ -760,7 +744,7 @@ def test_unix_python3_quantize_gpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
               utils.unpack_and_init('gpu', mx_lib)
-              utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_python3_quantization_gpu', true)
+              utils.docker_run('ubuntu_gpu_cu111', 'unittest_ubuntu_python3_quantization_gpu', true)
               utils.publish_test_coverage()
             } finally {
               utils.collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python3_quantize_gpu.xml')
@@ -861,7 +845,7 @@ def test_unix_python3_mkldnn_gpu() {
         ws('workspace/ut-python3-mkldnn-gpu') {
           try {
             utils.unpack_and_init('mkldnn_gpu', mx_mkldnn_lib)
-            python3_gpu_ut('ubuntu_gpu_cu101')
+            python3_gpu_ut('ubuntu_gpu_cu111')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_mkldnn_gpu.xml')
@@ -877,7 +861,7 @@ def test_unix_python3_mkldnn_nocudnn_gpu() {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
           try {
             utils.unpack_and_init('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
-            python3_gpu_ut_nocudnn('ubuntu_gpu_cu101')
+            python3_gpu_ut_nocudnn('ubuntu_gpu_cu111')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_mkldnn_gpu_nocudnn.xml')
@@ -911,7 +895,7 @@ def test_unix_python3_integration_gpu() {
         ws('workspace/it-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_python', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_gpu_python', true)
             utils.publish_test_coverage()
           }
         }
@@ -926,7 +910,7 @@ def test_unix_caffe_gpu() {
             timeout(time: max_time, unit: 'MINUTES') {
                 utils.init_git()
                 utils.unpack_lib('gpu', mx_lib)
-                utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_caffe', true)
+                utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_gpu_caffe', true)
                 utils.publish_test_coverage()
             }
             }
@@ -940,7 +924,7 @@ def test_unix_cpp_package_gpu() {
         ws('workspace/it-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib_cpp_examples)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_cpp_package', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_gpu_cpp_package', true)
             utils.publish_test_coverage()
           }
         }
@@ -954,7 +938,7 @@ def test_unix_capi_cpp_package() {
         ws('workspace/it-capi-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu_mkldnn_cpp_test', mx_lib_cpp_capi)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_capi_cpp_package', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_gpu_capi_cpp_package', true)
             utils.publish_test_coverage()
           }
         }
@@ -996,7 +980,7 @@ def test_unix_scala_gpu() {
         ws('workspace/ut-scala-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_scala', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_gpu_scala', true)
             utils.publish_test_coverage()
           }
         }
@@ -1079,7 +1063,7 @@ def test_unix_cpp_gpu() {
         ws('workspace/ut-cpp-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cmake_gpu', mx_cmake_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'unittest_cpp', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'unittest_cpp', true)
             utils.publish_test_coverage()
           }
         }
@@ -1093,7 +1077,7 @@ def test_unix_cpp_mkldnn_gpu() {
         ws('workspace/ut-cpp-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'unittest_cpp', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'unittest_cpp', true)
             utils.publish_test_coverage()
           }
         }
@@ -1121,7 +1105,7 @@ def test_unix_perl_gpu() {
         ws('workspace/ut-perl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_cpugpu_perl', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'unittest_ubuntu_cpugpu_perl', true)
             utils.publish_test_coverage()
           }
         }
@@ -1135,7 +1119,7 @@ def test_unix_r_gpu() {
         ws('workspace/ut-r-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_gpu_R', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'unittest_ubuntu_gpu_R', true)
             utils.publish_test_coverage()
           }
         }
@@ -1203,7 +1187,7 @@ def test_unix_distributed_kvstore_gpu() {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
             utils.publish_test_coverage()
           }
         }
