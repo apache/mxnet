@@ -65,7 +65,8 @@ push() {
         exit 1
     fi
 
-    $(aws ecr get-login --region us-west-2 --no-include-email)
+    # Retrieve an authentication token and authenticate Docker client to registry
+    aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/w6z5f7h2
 
     # Push image
     docker push "${image_name}"
