@@ -141,10 +141,9 @@ class MXNetGraph(object):
 
         out_names = list()
         for name in sym.list_outputs():
-            # handel special cases for RNN operator
-            if name.endswith('_state_output'):
+            if name.endswith('_state_output'): # handel special cases for RNN operator
                 out_names.append(name[:-len('_state_output')]+'1')
-            elif name.endswith('_statecell_output'):
+            elif name.endswith('_statecell_output'): # handel special cases for RNN operator
                 out_names.append(name[:-len('_statecell_output')]+'2')
             elif name.endswith('_output'):
                 out_names.append(name[:-len('_output')])

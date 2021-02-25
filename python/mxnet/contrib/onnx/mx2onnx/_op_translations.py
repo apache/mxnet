@@ -4075,12 +4075,11 @@ def convert_RNN(node, **kwargs):
     from onnx import TensorProto
 
     name, input_nodes, attrs = get_inputs(node, kwargs)
-    input_type = kwargs['in_type']
 
     mode = str(attrs.get('mode'))
     if mode != 'lstm':
         raise NotImplementedError('Currently RNN onnx export only supports lstm mode')
-    
+
     bidirectional = str(attrs.get('bidirectional', 'False'))
     if bidirectional != 'False':
         raise NotImplementedError('Currently RNN onnx export only supports bidirectional is False')
@@ -4121,14 +4120,11 @@ def convert_RNN(node, **kwargs):
 
     nodes = [
         make_node('Shape', [data], [name+'_shape']),
-        make_node('Slice', [name+'_shape', name+'_0', name+'_1'], [name+'_seq_length']),
-        make_node('Slice', [name+'_shape', name+'_1', name+'_2'], [name+'_batch_size']),
-        make_node('Slice', [name+'_shape', name+'_2', name+'_3'], [name+'_input_size']),
+        make_node('Split', [name+'_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size']),
         # get W
         make_node('Mul', [name+'_4*state_size', name+'_input_size'], [name+'_mul0']),
         make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_']),
-        make_node('Concat', [name+'_1', name+'_4*state_size', name+'_input_size'],
-                      [name+'_W_shape'], axis=0),
+        make_node('Concat', [name+'_1', name+'_4*state_size', name+'_input_size'], [name+'_W_shape'], axis=0),
         make_node('Reshape', [name+'_W_', name+'_W_shape'], [name+'_W']),
         # get R
         make_node('Add', [name+'_mul0', name+'_4*state_size^2'], [name+'_add0']),
@@ -4145,12 +4141,14 @@ def convert_RNN(node, **kwargs):
 
     if state_outputs == 'False':
         nodes += [
-            make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c], [name+'_out'], hidden_size=state_size),
+            make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c],
+                [name+'_out'], hidden_size=state_size),
             make_node('Squeeze', [name+'_out'], [name], axes=[1]),
         ]
     else:
         nodes += [
-            make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c], [name+'0_', name+'1', name+'2'], hidden_size=state_size),
+            make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c],
+                [name+'0_', name+'1', name+'2'], hidden_size=state_size),
             make_node('Squeeze', [name+'0_'], [name], axes=[1]),
         ]
 
