@@ -144,9 +144,9 @@ class TestArtifactRepositoryTool(unittest.TestCase):
         cuda_version = get_cuda_version()
         self.assertEqual(cuda_version, '100')
 
-        mock.return_value = b'Cuda compilation tools, release 9.2, V9.2.148'
+        mock.return_value = b'Cuda compilation tools, release 11.0, V11.0.148'
         cuda_version = get_cuda_version()
-        self.assertEqual(cuda_version, '92')
+        self.assertEqual(cuda_version, '110')
 
     @patch('artifact_repository.check_output')
     def test_get_cuda_version_not_found(self, mock):
