@@ -1772,7 +1772,7 @@ def sanity_rat_license() {
       node(NODE_LINUX_CPU) {
         ws('workspace/sanity-rat') {
           utils.init_git()
-          utils.docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
+          utils.docker_run('ubuntu_cpu', 'test_rat_check', false)
         }
       }
     }]

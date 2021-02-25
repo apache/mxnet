@@ -1291,7 +1291,7 @@ unittest_ubuntu_python3_arm() {
 # Functions that run the nightly Tests:
 
 #Runs Apache RAT Check on MXNet Source for License Headers
-nightly_test_rat_check() {
+test_rat_check() {
     set -e
     set -o pipefail
     pushd .
