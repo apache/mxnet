@@ -55,10 +55,19 @@ pipeline {
       steps {
         script {
           stage("Build") {
-            cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)
+            cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Build libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)
           }
           stage("Releases") {
-            cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Release Python Docker Images", "python/docker", params.MXNET_VARIANTS)
+            cd_utils.error_checked_parallel([
+              "PyPI Release": {
+                echo "Building PyPI Release"
+                cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Release PyPI Packages", "python/pypi", params.MXNET_VARIANTS)
+              },
+              "Python Docker Release": {
+                echo "Building Python Docker Release"
+                cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Release Python Docker Images", "python/docker", params.MXNET_VARIANTS)
+              }
+            ])
           }
         }
       }

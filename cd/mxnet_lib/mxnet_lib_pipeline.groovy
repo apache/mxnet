@@ -32,6 +32,19 @@ def get_pipeline(mxnet_variant, build_fn) {
         }
       }
 
+      stage('Test') {
+        def tests = [:]
+        tests["${mxnet_variant}: Python 3"] = {
+          stage("${mxnet_variant}: Python 3") {
+            timeout(time: max_time, unit: 'MINUTES') {
+              unittest_py3(mxnet_variant)
+            }
+          }
+        }
+
+        parallel tests
+      }
+
       stage('Push') {
         timeout(time: max_time, unit: 'MINUTES') {
           push(mxnet_variant)

@@ -91,6 +91,7 @@ pipeline {
           // Add new job types here
           def valid_job_types = [
             "mxnet_lib/static",
+            "python/pypi",
             "python/docker"
           ]
 
