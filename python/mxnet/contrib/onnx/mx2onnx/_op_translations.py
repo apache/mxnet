@@ -4142,13 +4142,13 @@ def convert_RNN(node, **kwargs):
     if state_outputs == 'False':
         nodes += [
             make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c],
-                [name+'_out'], hidden_size=state_size),
+                      [name+'_out'], hidden_size=state_size),
             make_node('Squeeze', [name+'_out'], [name], axes=[1]),
         ]
     else:
         nodes += [
             make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c],
-                [name+'0_', name+'1', name+'2'], hidden_size=state_size),
+                      [name+'0_', name+'1', name+'2'], hidden_size=state_size),
             make_node('Squeeze', [name+'0_'], [name], axes=[1]),
         ]
 
