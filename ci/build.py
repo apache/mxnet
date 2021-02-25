@@ -184,8 +184,6 @@ def load_docker_cache(platform, tag, docker_registry) -> None:
     if docker_registry:
         env = os.environ.copy()
         env["DOCKER_CACHE_REGISTRY"] = docker_registry
-        if 'dkr.ecr' in docker_registry and 'DOCKER_ECR_REGION' in os.environ:
-            os.system("$(aws ecr get-login --region "+os.environ['DOCKER_ECR_REGION']+" --no-include-email)")
         cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', platform]
         logging.info("Running command: 'DOCKER_CACHE_REGISTRY=%s %s'", docker_registry, ' '.join(cmd))
         check_call(cmd, env=env)
@@ -276,6 +274,11 @@ def main() -> int:
     command = list(chain.from_iterable(args.command))
     environment = dict([(e.split('=')[:2] if '=' in e else (e, os.environ[e]))
                         for e in args.environment])
+
+    if 'dkr.ecr' in args.docker_registry and 'DOCKER_ECR_REGION' in os.environ:
+        os.system("$(aws ecr get-login --region "+os.environ['DOCKER_ECR_REGION']+" --no-include-email)")
+        if 'CHANGE_TARGET' in os.environ and os.environ['CHANGE_TARGET'] != 'master':
+            args.docker_registry += "_" + os.environ['CHANGE_TARGET']
 
     if args.list:
         print(list_platforms())
