@@ -35,11 +35,10 @@ def get_pipeline(mxnet_variant) {
 }
 
 def get_environment(mxnet_variant) {
-  def environment = "ubuntu_cpu"
   if (mxnet_variant.startsWith('cu')) {
-    environment = "ubuntu_gpu_${mxnet_variant}".replace("mkl", "")
+    return "centos7_gpu_${mxnet_variant}"
   }
-  return environment
+  return "centos7_cpu"
 }
 
 def build(mxnet_variant) {
@@ -59,7 +58,7 @@ def test(mxnet_variant) {
     // test wheel file
     def environment = get_environment(mxnet_variant)
     def nvidia_docker = mxnet_variant.startsWith('cu')
-    ci_utils.docker_run(environment, "cd_integration_test_pypi python3 ${nvidia_docker}", nvidia_docker)
+    ci_utils.docker_run(environment, "cd_integration_test_pypi ${nvidia_docker}", nvidia_docker)
   }
 }
 

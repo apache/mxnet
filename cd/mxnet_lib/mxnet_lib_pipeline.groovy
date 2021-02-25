@@ -77,9 +77,9 @@ def get_stash(mxnet_variant) {
 def get_environment(mxnet_variant) {
   if (mxnet_variant.startsWith("cu")) {
     // Remove 'mkl' suffix from variant to properly format test environment
-    return "ubuntu_gpu_${mxnet_variant.replace('mkl', '')}"
+    return "centos7_gpu_${mxnet_variant}"
   }
-  return "ubuntu_cpu"
+  return "centos7_cpu"
 }
 
 // Returns the variant appropriate jenkins node test in which

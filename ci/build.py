@@ -18,85 +18,39 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Multi arch dockerized build tool.
+"""Multi arch dockerized build tool."""
 
-"""
-
-__author__ = 'Marco de Abreu, Kellen Sunderland, Anton Chernov, Pedro Larroy'
-__version__ = '0.3'
+__author__ = 'Marco de Abreu, Kellen Sunderland, Anton Chernov, Pedro Larroy, Leonard Lausen'
+__version__ = '0.4'
 
 import argparse
-import glob
-import hashlib
-import os
 import pprint
-import re
-import shutil
+import os
 import signal
 import subprocess
 from itertools import chain
-from subprocess import check_call, check_output
+from subprocess import check_call
 from typing import *
+
+import yaml
 
 from util import *
 
 
-def get_dockerfiles_path():
-    return "docker"
-
-
-def get_platforms(path: str = get_dockerfiles_path()) -> List[str]:
-    """Get a list of architectures given our dockerfiles"""
-    dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
-    dockerfiles = list(filter(lambda x: x[-1] != '~', dockerfiles))
-    files = list(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
-    platforms = list(map(lambda x: os.path.split(x)[1], sorted(files)))
-    return platforms
-
-def _find_copied_files(dockerfile):
-    """
-    Creates a list of files copied into given dockerfile.
-    """
-    copied_files = []
-    basedir = os.path.dirname(dockerfile)
-    with open(dockerfile, "r") as f:
-        for line in f.readlines():
-            if line.startswith("COPY "):
-                copied_files.append(os.path.join(basedir, line.split(" ")[1]))
-    return copied_files
-
-def _hash_file(ctx, filename):
-    """
-    Add contents of passed file into passed hash context.
-    """
-    bufsiz = 16384
-    with open(filename,"rb") as f:
-        while True:
-            d = f.read(bufsiz)
-            if not d:
-                break
-            ctx.update(d)
+def get_platforms() -> List[str]:
+    """Get a list of architectures declared in docker-compose.yml"""
+    with open("docker/docker-compose.yml", "r") as f:
+        compose_config = yaml.load(f.read(), yaml.SafeLoader)
+    return list(compose_config["services"].keys())
 
 def get_docker_tag(platform: str, registry: str) -> str:
     """:return: docker tag to be used for the container"""
-    platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
-    if not registry:
-        registry = "mxnet_local"
-    dockerfile = get_dockerfile(platform)
-    sha256 = hashlib.sha256()
-    _hash_file(sha256, dockerfile)
-    for f in _find_copied_files(dockerfile):
-        _hash_file(sha256, f)
-    return "{0}:{1}-{2}".format(registry, platform, sha256.hexdigest()[:12])
-
-
-def get_dockerfile(platform: str, path=get_dockerfiles_path()) -> str:
-    platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
-    return os.path.join(path, "Dockerfile.{0}".format(platform))
-
+    with open("docker/docker-compose.yml", "r") as f:
+        compose_config = yaml.load(f.read(), yaml.SafeLoader)
+        return compose_config["services"][platform]["image"].replace('${DOCKER_CACHE_REGISTRY}', registry)
 
 def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
-                 cache_intermediate: bool=False) -> str:
+                 cache_intermediate: bool = False) -> str:
     """
     Build a container for the given platform
     :param platform: Platform
@@ -105,62 +59,25 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     :param no_cache: pass no-cache to docker to rebuild the images
     :return: Id of the top level image
     """
-    tag = get_docker_tag(platform=platform, registry=registry)
-    logging.info("Building docker container tagged '%s'", tag)
-    #
+    logging.info('Building docker container \'%s\' based on ci/docker/docker-compose.yml', platform)
     # We add a user with the same group as the executing non-root user so files created in the
     # container match permissions of the local user. Same for the group.
-    #
-    # These variables are used in the docker files to create user and group with these ids.
-    # see: docker/install/ubuntu_adduser.sh
-    #
-    # cache-from is needed so we use the cached images tagged from the remote via
-    # docker pull see: docker_cache.load_docker_cache
-    #
-    # This also prevents using local layers for caching: https://github.com/moby/moby/issues/33002
-    # So to use local caching, we should omit the cache-from by using --no-dockerhub-cache argument to this
-    # script.
-    #
-    # This doesn't work with multi head docker files.
-    #
-    cmd = ["docker", "build",
-           "-f", get_dockerfile(platform),
+    cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'build',
            "--build-arg", "USER_ID={}".format(os.getuid()),
            "--build-arg", "GROUP_ID={}".format(os.getgid())]
-    if no_cache:
-        cmd.append("--no-cache")
     if cache_intermediate:
-        cmd.append("--rm=false")
-    elif registry:
-        cmd.extend(["--cache-from", tag])
-    cmd.extend(["-t", tag, get_dockerfiles_path()])
+        cmd.append('--no-rm')
+    cmd.append(platform)
+
+    env = os.environ.copy()
+    env["DOCKER_CACHE_REGISTRY"] = registry
 
     @retry(subprocess.CalledProcessError, tries=num_retries)
-    def run_cmd():
+    def run_cmd(env=None):
         logging.info("Running command: '%s'", ' '.join(cmd))
-        check_call(cmd)
+        check_call(cmd, env=env)
 
-    run_cmd()
-    # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
-    # check_call would have failed
-    image_id = _get_local_image_id(docker_tag=tag)
-    if not image_id:
-        raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
-    return image_id
-
-
-def _get_local_image_id(docker_tag):
-    """
-    Get the image id of the local docker layer with the passed tag
-    :param docker_tag: docker tag
-    :return: Image id as string or None if tag does not exist
-    """
-    cmd = ["docker", "images", "-q", docker_tag]
-    image_id_b = check_output(cmd)
-    image_id = image_id_b.decode('utf-8').strip()
-    if not image_id:
-        raise RuntimeError('Unable to find docker image id matching with tag {}'.format(docker_tag))
-    return image_id
+    run_cmd(env=env)
 
 
 def buildir() -> str:
@@ -258,16 +175,14 @@ def list_platforms() -> str:
     return "\nSupported platforms:\n{}".format('\n'.join(get_platforms()))
 
 
-def load_docker_cache(tag, docker_registry) -> None:
+def load_docker_cache(platform, tag, docker_registry) -> None:
     """Imports tagged container from the given docker registry"""
     if docker_registry:
-        # noinspection PyBroadException
-        try:
-            import docker_cache
-            logging.info('Docker cache download is enabled from registry %s', docker_registry)
-            docker_cache.load_docker_cache(registry=docker_registry, docker_tag=tag)
-        except Exception:
-            logging.exception('Unable to retrieve Docker cache. Continue without...')
+        env = os.environ.copy()
+        env["DOCKER_CACHE_REGISTRY"] = docker_registry
+        cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', platform]
+        logging.info("Running command: 'DOCKER_CACHE_REGISTRY=%s %s'", docker_registry, ' '.join(cmd))
+        check_call(cmd, env=env)
     else:
         logging.info('Distributed docker cache disabled')
 
@@ -289,9 +204,9 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description="""Utility for building and testing MXNet on docker
     containers""", epilog="")
-    parser.add_argument("-p", "--platform",
-                        help="platform",
-                        type=str)
+    parser.add_argument("-p", "--platform", type=str, help= \
+                        "Platform. See ci/docker/docker-compose.yml for list of supported " \
+                        "platforms (services).")
 
     parser.add_argument("-b", "--build-only",
                         help="Only build the container, don't build the project",
@@ -299,10 +214,6 @@ def main() -> int:
 
     parser.add_argument("-R", "--run-only",
                         help="Only run the container, don't rebuild the container",
-                        action='store_true')
-
-    parser.add_argument("-a", "--all",
-                        help="build for all platforms",
                         action='store_true')
 
     parser.add_argument("-n", "--nvidiadocker",
@@ -332,6 +243,9 @@ def main() -> int:
                         default=1,
                         type=int)
 
+    parser.add_argument("--no-pull", action="store_true",
+                        help="Don't pull from dockerhub registry to initialize cache.")
+
     parser.add_argument("--no-cache", action="store_true",
                         help="passes --no-cache to docker build")
 
@@ -353,8 +267,7 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    command = list(chain(*args.command))
-
+    command = list(chain.from_iterable(args.command))
     environment = dict([(e.split('=')[:2] if '=' in e else (e, os.environ[e]))
                         for e in args.environment])
 
@@ -363,12 +276,11 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-        if args.docker_registry:
-            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
+        if args.docker_registry and not args.no_pull:
+            load_docker_cache(platform=platform, tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
-            build_docker(platform=platform, registry=args.docker_registry,
-                         num_retries=args.docker_build_retries, no_cache=args.no_cache,
-                         cache_intermediate=args.cache_intermediate)
+            build_docker(platform=platform, registry=args.docker_registry, num_retries=args.docker_build_retries,
+                         no_cache=args.no_cache, cache_intermediate=args.cache_intermediate)
         else:
             logging.info("Skipping docker build step.")
 
@@ -401,34 +313,6 @@ def main() -> int:
         if ret != 0:
             logging.critical("Execution of %s failed with status: %d", command, ret)
             return ret
-
-    elif args.all:
-        platforms = get_platforms()
-        platforms = [platform for platform in platforms if 'build.' in platform]
-        logging.info("Building for all architectures: %s", platforms)
-        logging.info("Artifacts will be produced in the build/ directory.")
-        for platform in platforms:
-            tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-            build_docker(platform, registry=args.docker_registry,
-                         num_retries=args.docker_build_retries, no_cache=args.no_cache,
-                         cache_intermediate=args.cache_intermediate)
-            if args.build_only:
-                continue
-            shutil.rmtree(buildir(), ignore_errors=True)
-            build_platform = "build_{}".format(platform)
-            plat_buildir = os.path.abspath(os.path.join(get_mxnet_root(), '..',
-                                                        "mxnet_{}".format(build_platform)))
-            if os.path.exists(plat_buildir):
-                logging.warning("%s already exists, skipping", plat_buildir)
-                continue
-            command = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
-            container_run(
-                platform=platform, nvidia_runtime=args.nvidiadocker,
-                shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, environment=environment)
-            shutil.move(buildir(), plat_buildir)
-            logging.info("Built files left in: %s", plat_buildir)
 
     else:
         parser.print_help()

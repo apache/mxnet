@@ -60,56 +60,6 @@ EOF
     fi
 }
 
-build_ccache_wrappers() {
-    set -ex
-
-    if [ -z ${CC+x} ]; then
-        echo "No \$CC set, defaulting to gcc";
-        export CC=gcc
-    fi
-     if [ -z ${CXX+x} ]; then
-       echo "No \$CXX set, defaulting to g++";
-       export CXX=g++
-    fi
-
-    # Recommended by CCache: https://ccache.samba.org/manual.html#_run_modes
-    # Add to the beginning of path to ensure this redirection is picked up instead
-    # of the original ones. Especially CUDA/NVCC appends itself to the beginning of the
-    # path and thus this redirect is ignored. This change fixes this problem
-    # This hacky approach with symbolic links is required because underlying build
-    # systems of our submodules ignore our CMake settings. If they use Makefile,
-    # we can't influence them at all in general and NVCC also prefers to hardcode their
-    # compiler instead of respecting the settings. Thus, we take this brutal approach
-    # and just redirect everything of this installer has been called.
-    # In future, we could do these links during image build time of the container.
-    # But in the beginning, we'll make this opt-in. In future, loads of processes like
-    # the scala make step or numpy compilation and other pip package generations
-    # could be heavily sped up by using ccache as well.
-    mkdir -p /tmp/ccache-redirects
-    export PATH=/tmp/ccache-redirects:$PATH
-    CCACHE=`which ccache`
-    ln -sf $CCACHE /tmp/ccache-redirects/gcc
-    ln -sf $CCACHE /tmp/ccache-redirects/gcc-8
-    ln -sf $CCACHE /tmp/ccache-redirects/g++
-    ln -sf $CCACHE /tmp/ccache-redirects/g++-8
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-3.9
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-3.9
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-5.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-5.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-6.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-6.0
-    #Doesn't work: https://github.com/ccache/ccache/issues/373
-    # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
-    # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
-    # export NVCC="/tmp/ccache-redirects/nvcc"
-
-    # Uncomment if you would like to debug CCache hit rates.
-    # You can monitor using tail -f ccache-log
-    #export CCACHE_LOGFILE=/work/mxnet/ccache-log
-    #export CCACHE_LOGFILE=/tmp/ccache-log
-    #export CCACHE_DEBUG=1
-}
-
 build_wheel() {
 
     set -ex
@@ -142,9 +92,6 @@ build_wheel() {
     popd
 }
 
-# Build commands: Every platform in docker/Dockerfile.build.<platform> should have a corresponding
-# function here with the same suffix:
-
 gather_licenses() {
     mkdir -p licenses
 
@@ -156,8 +103,6 @@ gather_licenses() {
 
 build_ubuntu_cpu_release() {
     set -ex
-
-    build_ccache_wrappers
 
     make  \
         DEV=0                         \
@@ -172,8 +117,6 @@ build_ubuntu_cpu_release() {
 build_ubuntu_cpu_mkldnn_release() {
     set -ex
 
-    build_ccache_wrappers
-
     make  \
         DEV=0                         \
         ENABLE_TESTCOVERAGE=0         \
@@ -186,8 +129,6 @@ build_ubuntu_cpu_mkldnn_release() {
 
 build_ubuntu_gpu_release() {
     set -ex
-    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
-    # build_ccache_wrappers
 
     make \
         DEV=0                                     \
@@ -205,8 +146,6 @@ build_ubuntu_gpu_release() {
 
 build_ubuntu_gpu_mkldnn_release() {
     set -ex
-    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
-    # build_ccache_wrappers
 
     make \
         DEV=0                                     \
@@ -224,7 +163,7 @@ build_ubuntu_gpu_mkldnn_release() {
 
 # Compiles the dynamic mxnet library
 # Parameters:
-# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu100, cu101, cu102, cu110, cu112, etc.
+# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu101, cu102, etc.
 build_dynamic_libmxnet() {
     set -ex
 
@@ -233,17 +172,31 @@ build_dynamic_libmxnet() {
     # relevant licenses will be placed in the licenses directory
     gather_licenses
 
+    cd /work/build
+    source /opt/rh/devtoolset-8/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     if [[ ${mxnet_variant} = "cpu" ]]; then
-        build_ubuntu_cpu_release
-    elif [[ ${mxnet_variant} = "mkl" ]]; then
-        build_ubuntu_cpu_mkldnn_release
+        cmake -DUSE_MKL_IF_AVAILABLE=OFF \
+            -DUSE_MKLDNN=ON \
+            -DUSE_CUDA=OFF \
+            -G Ninja /work/mxnet
+    elif [[ ${mxnet_variant} = "native" ]]; then
+        cmake -DUSE_MKL_IF_AVAILABLE=OFF \
+            -DUSE_MKLDNN=OFF \
+            -DUSE_CUDA=OFF \
+            -G Ninja /work/mxnet
     elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
-        build_ubuntu_gpu_release
-    elif [[ ${mxnet_variant} =~ cu[0-9]+mkl$ ]]; then
-        build_ubuntu_gpu_mkldnn_release
+        cmake -DUSE_MKL_IF_AVAILABLE=OFF \
+            -DUSE_MKLDNN=ON \
+            -DUSE_DIST_KVSTORE=ON \
+            -DUSE_CUDA=ON \
+            -G Ninja /work/mxnet
     else
         echo "Error: Unrecognized mxnet variant '${mxnet_variant}'"
+        exit 1
     fi
+    ninja
 }
 
 build_jetson() {
@@ -253,12 +206,9 @@ build_jetson() {
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="5.2" \
-        -DENABLE_CUDA_RTC=OFF \
-        -DSUPPORT_F16C=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
         -DUSE_LAPACK=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
@@ -272,53 +222,34 @@ build_jetson() {
 
 build_armv6() {
     set -ex
-    pushd .
     cd /work/build
-
-    # Lapack functionality will be included and statically linked to openblas.
-    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
-    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
-    # to be linked additionally.
 
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
-    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
-        -Dmxnet_LINKER_LIBS=-latomic \
         -G Ninja /work/mxnet
 
     ninja
     build_wheel
-    popd
 }
 
 build_armv7() {
     set -ex
-    pushd .
     cd /work/build
 
-    # Lapack functionality will be included and statically linked to openblas.
-    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
-    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
-    # to be linked additionally.
-
-    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
-        -DCMAKE_CROSSCOMPILING=ON \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
@@ -327,36 +258,21 @@ build_armv7() {
 
     ninja
     build_wheel
-    popd
 }
 
 build_armv8() {
-    set -ex
-    pushd .
     cd /work/build
-
-    # Lapack functionality will be included and statically linked to openblas.
-    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
-    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
-    # to be linked additionally.
-
-    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
-        -DCMAKE_CROSSCOMPILING=ON \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
-        -DUSE_SIGNAL_HANDLER=ON \
+        -DUSE_LAPACK=OFF \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_LAPACK=OFF \
-        -DBUILD_CPP_EXAMPLES=OFF \
         -G Ninja /work/mxnet
-
     ninja
     build_wheel
-    popd
 }
 
 
@@ -367,19 +283,16 @@ build_armv8() {
 build_android_armv7() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
+    # ANDROID_ABI and ANDROID_STL are options of the CMAKE_TOOLCHAIN_FILE
+    # provided by Android NDK
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DANDROID_ABI="armeabi-v7a" \
         -DANDROID_STL="c++_shared" \
-        -DANDROID=ON \
         -DUSE_CUDA=OFF \
-        -DUSE_SSE=OFF \
-        -DSUPPORT_F16C=OFF \
         -DUSE_LAPACK=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
@@ -388,13 +301,13 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
+    # ANDROID_ABI and ANDROID_STL are options of the CMAKE_TOOLCHAIN_FILE
+    # provided by Android NDK
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DANDROID_ABI="arm64-v8a" \
         -DANDROID_STL="c++_shared" \
-        -DANDROID=ON \
         -DUSE_CUDA=OFF \
-        -DUSE_SSE=OFF \
         -DUSE_LAPACK=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
@@ -406,69 +319,54 @@ build_android_armv8() {
 
 build_centos7_cpu() {
     set -ex
-    cd /work/mxnet
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    build_ccache_wrappers
-    make \
-        DEV=1 \
-        USE_LAPACK=1 \
-        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
-        USE_BLAS=openblas \
-        USE_MKLDNN=0 \
-        USE_DIST_KVSTORE=1 \
-        USE_SIGNAL_HANDLER=1 \
-        -j$(nproc)
-}
-
-build_amzn_linux_cpu() {
     cd /work/build
-    build_ccache_wrappers
+    source /opt/rh/devtoolset-7/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     cmake \
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=ON\
-        -DUSE_OPENMP=ON\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_DIST_KVSTORE=ON\
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_DIST_KVSTORE=ON \
+        -DUSE_CUDA=OFF \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -DUSE_INT64_TENSOR_SIZE=OFF \
         -G Ninja /work/mxnet
     ninja
 }
 
 build_centos7_mkldnn() {
     set -ex
-    cd /work/mxnet
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    build_ccache_wrappers
-    make \
-        DEV=1 \
-        USE_LAPACK=1 \
-        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
-        USE_BLAS=openblas \
-        USE_SIGNAL_HANDLER=1 \
-        -j$(nproc)
+    cd /work/build
+    source /opt/rh/devtoolset-7/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
+    cmake \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_INT64_TENSOR_SIZE=OFF \
+        -G Ninja /work/mxnet
+    ninja
 }
 
 build_centos7_gpu() {
     set -ex
-    cd /work/mxnet
-    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
-    build_ccache_wrappers
-    make \
-        DEV=1                                     \
-        USE_LAPACK=1                              \
-        USE_LAPACK_PATH=/usr/lib64/liblapack.so   \
-        USE_BLAS=openblas                         \
-        USE_MKLDNN=0                              \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_DIST_KVSTORE=1                        \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        -j$(nproc)
+    cd /work/build
+    source /opt/rh/devtoolset-7/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=ON \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DUSE_DIST_KVSTORE=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -DUSE_INT64_TENSOR_SIZE=OFF \
+        -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu() {
@@ -477,89 +375,77 @@ build_ubuntu_cpu() {
 
 build_ubuntu_cpu_openblas() {
     set -ex
-    export CC="gcc"
-    export CXX="g++"
-    build_ccache_wrappers
-    make \
-        DEV=1                         \
-        USE_TVM_OP=1                  \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
-        USE_DIST_KVSTORE=1            \
-        USE_LIBJPEG_TURBO=1           \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
-    make cython PYTHON=python3
+    cd /work/build
+    CXXFLAGS="-Wno-error=strict-overflow" CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_DIST_KVSTORE=ON \
+        -DBUILD_CYTHON_MODULES=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_mkl() {
     set -ex
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    make \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=mkl                  \
-        USE_MKL_LAYERNORM=1           \
-        USE_TVM_OP=1                  \
-        USE_MKLDNN=0                  \
-        USE_INTEL_PATH=/opt/intel     \
-        USE_DIST_KVSTORE=1            \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=OFF \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_MKL_LAYERNORM=ON \
+        -DUSE_BLAS=MKL \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_cmake_debug() {
     set -ex
-    pushd .
     cd /work/build
-    build_ccache_wrappers
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
-        -DPython3_EXECUTABLE=python3 \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
         -DUSE_SIGNAL_HANDLER=ON \
-        -DCMAKE_BUILD_TYPE=Debug \
         -G Ninja \
         /work/mxnet
-
     ninja
-    popd
 }
 
 build_ubuntu_cpu_cmake_no_tvm_op() {
     set -ex
-    pushd .
     cd /work/build
-    build_ccache_wrappers
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
-        -DPython3_EXECUTABLE=python3 \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
         -G Ninja \
         /work/mxnet
 
     ninja
-    popd
 }
 
 build_ubuntu_cpu_cmake_asan() {
     set -ex
 
-    pushd .
     cd /work/build
-    export CXX=g++-8
-    export CC=gcc-8
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -570,22 +456,14 @@ build_ubuntu_cpu_cmake_asan() {
         -DUSE_GPERFTOOLS=OFF \
         -DUSE_JEMALLOC=OFF \
         -DUSE_ASAN=ON \
-        -DUSE_CPP_PACKAGE=ON \
-        -DMXNET_USE_CPU=ON \
         /work/mxnet
     make -j $(nproc) mxnet
-    # Disable leak detection but enable ASAN to link with ASAN but not fail with build tooling.
-    ASAN_OPTIONS=detect_leaks=0 \
-    LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
-    make -j $(nproc) mlp_cpu
-    popd
 }
 
 build_ubuntu_cpu_clang39() {
     set -ex
     export CXX=clang++-3.9
     export CC=clang-3.9
-    build_ccache_wrappers
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
@@ -600,8 +478,6 @@ build_ubuntu_cpu_clang60() {
 
     export CXX=clang++-6.0
     export CC=clang-6.0
-
-    build_ccache_wrappers
 
     make  \
         USE_CPP_PACKAGE=1             \
@@ -621,7 +497,6 @@ build_ubuntu_cpu_clang_tidy() {
 
     pushd .
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_MKLDNN=OFF \
@@ -644,8 +519,6 @@ build_ubuntu_cpu_clang39_mkldnn() {
     export CXX=clang++-3.9
     export CC=clang-3.9
 
-    build_ccache_wrappers
-
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
@@ -660,8 +533,6 @@ build_ubuntu_cpu_clang60_mkldnn() {
     export CXX=clang++-6.0
     export CC=clang-6.0
 
-    build_ccache_wrappers
-
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
@@ -672,85 +543,106 @@ build_ubuntu_cpu_clang60_mkldnn() {
 
 build_ubuntu_cpu_mkldnn() {
     set -ex
-
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_TVM_OP=1                  \
-        USE_BLAS=openblas             \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
-
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_TVM_OP=1                  \
-        USE_BLAS=mkl                  \
-        USE_SIGNAL_HANDLER=1          \
-        USE_INTEL_PATH=/opt/intel/    \
-        -j$(nproc)
-}
-
-build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda101_cudnn7
+    cd /work/build
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=OFF \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_BLAS=MKL \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_gpu_tensorrt() {
 
     set -ex
 
-    build_ccache_wrappers
+    export CC=gcc-7
+    export CXX=g++-7
+    export ONNX_NAMESPACE=onnx
+
+    # Build ONNX
+    pushd .
+    echo "Installing ONNX."
+    cd 3rdparty/onnx-tensorrt/third_party/onnx
+    rm -rf build
+    mkdir -p build
+    cd build
+    cmake -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
+    make -j$(nproc)
+    export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
+    export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
+    export CXXFLAGS=-I`pwd`
+
+    popd
+
+    # Build ONNX-TensorRT
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.2/targets/x86_64-linux/include/
+    pushd .
+    cd 3rdparty/onnx-tensorrt/
+    mkdir -p build
+    cd build
+    cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
+    make -j$(nproc)
+    export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
+    popd
+
+    mkdir -p /work/mxnet/lib/
+    cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
+    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so /work/mxnet/lib/
 
     cd /work/build
     cmake -DUSE_CUDA=1                            \
           -DUSE_CUDNN=1                           \
           -DUSE_OPENCV=1                          \
-          -DONNX_NAMESPACE=onnx                   \
           -DUSE_TENSORRT=1                        \
           -DUSE_OPENMP=0                          \
           -DUSE_MKLDNN=0                          \
+          -DUSE_NVML=OFF                          \
           -DUSE_MKL_IF_AVAILABLE=OFF              \
           -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
           -G Ninja                                \
           /work/mxnet
 
     ninja
-
-    mkdir -p /work/mxnet/lib/
-    cp 3rdparty/onnx-tensorrt/third_party/onnx/*.so /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/libnvonnxparser.so* /work/mxnet/lib/
 }
 
 build_ubuntu_gpu_mkldnn() {
     set -ex
-
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                                     \
-        USE_CPP_PACKAGE=1                         \
-        USE_BLAS=openblas                         \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_TVM_OP=0                              \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
+    cd /work/build
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
-
-    build_ccache_wrappers
 
     make  \
         DEV=1                                     \
@@ -766,7 +658,6 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 
 build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
-    build_ccache_wrappers
     make \
         USE_BLAS=openblas                         \
         USE_MKLDNN=0                              \
@@ -784,7 +675,6 @@ build_ubuntu_gpu_cuda101_cudnn7() {
 
 build_ubuntu_gpu_cuda110_cudnn8() {
     set -ex
-    build_ccache_wrappers
     local CUDA_ARCH="-gencode=arch=compute_52,code=sm_52 \
         -gencode=arch=compute_70,code=sm_70 \
         -gencode=arch=compute_80,code=sm_80"
@@ -805,7 +695,6 @@ build_ubuntu_gpu_cuda110_cudnn8() {
 
 build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
     set -ex
-    build_ccache_wrappers
     make \
         USE_BLAS=openblas                         \
         USE_MKLDNN=1                              \
@@ -825,7 +714,6 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
 build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
-    build_ccache_wrappers
     make -C amalgamation/ clean
     make -C amalgamation/     \
         USE_BLAS=openblas
@@ -834,7 +722,6 @@ build_ubuntu_amalgamation() {
 build_ubuntu_amalgamation_min() {
     set -ex
     # Amalgamation can not be run with -j nproc
-    build_ccache_wrappers
     make -C amalgamation/ clean
     make -C amalgamation/     \
         USE_BLAS=openblas     \
@@ -844,7 +731,6 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=1                            \
@@ -863,7 +749,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -886,7 +771,6 @@ build_ubuntu_gpu_cmake() {
 build_ubuntu_gpu_cmake_no_rtc() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -910,7 +794,6 @@ build_ubuntu_gpu_cmake_no_rtc() {
 build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
@@ -927,7 +810,6 @@ build_ubuntu_cpu_large_tensor() {
 build_ubuntu_gpu_large_tensor() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -951,6 +833,7 @@ build_ubuntu_gpu_large_tensor() {
 
 sanity_check() {
     set -ex
+    source /opt/rh/rh-python35/enable
     tools/license_header.py check
     make cpplint rcpplint jnilint
     make pylint
@@ -1064,6 +947,9 @@ unittest_ubuntu_python3_gpu_nocudnn() {
 
 unittest_ubuntu_tensorrt_gpu() {
     set -ex
+    if [ -f /etc/redhat-release ]; then
+        source /opt/rh/rh-python35/enable
+    fi
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
@@ -1106,6 +992,8 @@ unittest_ubuntu_python3_quantization_gpu_cu110() {
 
 unittest_centos7_cpu_scala() {
     set -ex
+    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-maven35/enable
     cd /work/mxnet
     scala_prepare
     cd scala-package
@@ -1145,7 +1033,6 @@ unittest_ubuntu_cpu_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
-    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make -f R-package/Makefile rpkg \
@@ -1231,17 +1118,19 @@ unittest_ubuntu_cpu_julia10() {
 
 unittest_centos7_cpu() {
     set -ex
+    source /opt/rh/rh-python35/enable
     cd /work/mxnet
-    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
-    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
+    python -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    python -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
 }
 
 unittest_centos7_gpu() {
     set -ex
+    source /opt/rh/rh-python35/enable
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+    python3 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 integrationtest_ubuntu_cpu_onnx() {
@@ -1619,9 +1508,6 @@ deploy_docs() {
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     # End Julia setup
 
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-
     build_python_docs
 
     popd
@@ -1640,7 +1526,6 @@ build_ubuntu_cpu_docs() {
     set -ex
     export CC="gcc"
     export CXX="g++"
-    build_ccache_wrappers
     make \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -1906,8 +1791,8 @@ build_docs() {
 build_docs_beta() {
     pushd docs/_build
     tar -xzf jekyll-artifacts.tgz
-    api_folder='html/api'
-    mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
+    python_doc_folder="html/versions/$BRANCH/api/python/docs"
+    mkdir -p $python_doc_folder && tar -xzf python-artifacts.tgz --directory $python_doc_folder
     GZIP=-9 tar -zcvf beta_website.tgz -C html .
     popd
 }
@@ -1973,15 +1858,35 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
+    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
+}
+
+# Tests CD PyPI packaging in CI
+ci_package_pypi() {
+    set -ex
+    # copies mkldnn header files to 3rdparty/mkldnn/include/oneapi/dnnl/ as in CD
+    mkdir -p 3rdparty/mkldnn/include/oneapi/dnnl
+    cp include/mkldnn/oneapi/dnnl/dnnl_version.h 3rdparty/mkldnn/include/oneapi/dnnl/.
+    cp include/mkldnn/oneapi/dnnl/dnnl_config.h 3rdparty/mkldnn/include/oneapi/dnnl/.
+    local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    cd_package_pypi ${mxnet_variant}
+    cd_integration_test_pypi
 }
 
 # Packages libmxnet into wheel file
 cd_package_pypi() {
     set -ex
     pushd .
+    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
     popd
@@ -1990,43 +1895,32 @@ cd_package_pypi() {
 # Sanity checks wheel file
 cd_integration_test_pypi() {
     set -ex
-    local python_cmd=${1:?"This function requires a python command as the first argument"}
-    local gpu_enabled=${2:-"false"}
-
-    local test_conv_params=''
-    local mnist_params=''
-
-    local pip_cmd='pip3'
-
-    if [ "${gpu_enabled}" = "true" ]; then
-        mnist_params="--gpu 0"
-        test_conv_params="--gpu"
-    fi
+    source /opt/rh/rh-python36/enable
 
     # install mxnet wheel package
-    ${pip_cmd} install --user ./wheel_build/dist/*.whl
+    pip3 install --user ./wheel_build/dist/*.whl
 
     # execute tests
-    ${python_cmd} /work/mxnet/tests/python/train/test_conv.py ${test_conv_params}
-    ${python_cmd} /work/mxnet/example/image-classification/train_mnist.py ${mnist_params}
+    # TODO: Add tests (18549)
 }
 
 # Publishes wheel to PyPI
 cd_pypi_publish() {
     set -ex
     pip3 install --user twine
-    ./cd/python/pypi/pypi_publish.py `readlink -f wheel_build/dist/*.whl`
+    python3 ./cd/python/pypi/pypi_publish.py `readlink -f wheel_build/dist/*.whl`
 }
 
 cd_s3_publish() {
     set -ex
-    pip3 install --user awscli
+    pip3 install --upgrade --user awscli
     filepath=$(readlink -f wheel_build/dist/*.whl)
     filename=$(basename $filepath)
     variant=$(echo $filename | cut -d'-' -f1 | cut -d'_' -f2 -s)
     if [ -z "${variant}" ]; then
         variant="cpu"
     fi
+    export PATH=/usr/local/bin:$PATH
     aws s3 cp ${filepath} s3://apache-mxnet/dist/python/${variant}/${filename} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822
 }
 
@@ -2036,6 +1930,7 @@ build_static_scala_cpu() {
     scala_prepare
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
     export mxnet_variant=cpu
+    source /opt/rh/rh-maven35/enable
     ./ci/publish/scala/build.sh
     popd
 }
@@ -2044,6 +1939,10 @@ build_static_python_cpu() {
     set -ex
     pushd .
     export mxnet_variant=cpu
+    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh
     popd
 }
@@ -2052,6 +1951,22 @@ build_static_python_cu101() {
     set -ex
     pushd .
     export mxnet_variant=cu101
+    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
+    ./ci/publish/python/build.sh
+    popd
+}
+
+build_static_python_cu102() {
+    set -ex
+    pushd .
+    export mxnet_variant=cu102
+    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh
     popd
 }
@@ -2103,7 +2018,7 @@ test_artifact_repository() {
     set -ex
     pushd .
     cd cd/utils/
-    pytest test_artifact_repository.py
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 test_artifact_repository.py
     popd
 }
 

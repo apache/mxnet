@@ -16,17 +16,31 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to build and run MXNet on Ubuntu 14.04 for CPU
+# Dockerfile to test MXNet on Ubuntu 20.04 ARM
 
-FROM ubuntu:14.04
+ARG BASE_IMAGE
+FROM $BASE_IMAGE
 
-WORKDIR /work/deps
+WORKDIR /usr/local
 
-COPY install/ubuntu_base.sh /work/
-RUN /work/ubuntu_base.sh
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-numpy \
+    python3-scipy \
+    python3-requests \
+ && rm -rf /var/lib/apt/lists/*
 
-COPY install/ubuntu_scala.sh /work/
-RUN /work/ubuntu_scala.sh
+
+# Python dependencies
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir \
+    pytest==6.1.2 \
+    pytest-env==0.6.2 \
+    pytest-cov==2.10.1 \
+    pytest-xdist==2.1.0 \
+    pytest-timeout==1.4.2 \
+    mock==2.0.0
 
 ARG USER_ID=0
 ARG GROUP_ID=0
@@ -34,6 +48,4 @@ COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
-
 WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
