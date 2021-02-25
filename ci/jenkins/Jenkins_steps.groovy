@@ -300,7 +300,7 @@ def compile_unix_tensorrt_gpu() {
         ws('workspace/build-tensorrt') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
+            utils.docker_run('ubuntu_tensorrt_cu111', 'build_ubuntu_gpu_tensorrt', false)
             utils.pack_lib('tensorrt', mx_tensorrt_lib)
           }
         }
