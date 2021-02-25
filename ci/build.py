@@ -274,8 +274,6 @@ def main() -> int:
 
     if 'dkr.ecr' in args.docker_registry and 'DOCKER_ECR_REGION' in os.environ:
         os.system("$(aws ecr get-login --region "+os.environ['DOCKER_ECR_REGION']+" --no-include-email)")
-        if 'CHANGE_TARGET' in os.environ and os.environ['CHANGE_TARGET'] != 'master':
-            args.docker_registry += "_" + os.environ['CHANGE_TARGET']
 
     if args.list:
         print(list_platforms())
