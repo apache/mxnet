@@ -716,7 +716,7 @@ build_ubuntu_amalgamation() {
     # Amalgamation can not be run with -j nproc
     make -C amalgamation/ clean
     make -C amalgamation/     \
-        USE_BLAS=openblas
+        USE_BLAS=openblas PYTHON=python3
 }
 
 build_ubuntu_amalgamation_min() {
@@ -725,7 +725,7 @@ build_ubuntu_amalgamation_min() {
     make -C amalgamation/ clean
     make -C amalgamation/     \
         USE_BLAS=openblas     \
-        MIN=1
+        MIN=1 PYTHON=python3
 }
 
 build_ubuntu_gpu_cmake_mkldnn() {
