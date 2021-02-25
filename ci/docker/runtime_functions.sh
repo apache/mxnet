@@ -460,85 +460,69 @@ build_ubuntu_cpu_cmake_asan() {
     make -j $(nproc) mxnet
 }
 
-build_ubuntu_cpu_clang39() {
+build_ubuntu_cpu_clang6() {
     set -ex
-    export CXX=clang++-3.9
-    export CC=clang-3.9
-    make \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
-        USE_OPENMP=0                  \
-        USE_DIST_KVSTORE=1            \
-        -j$(nproc)
+    cd /work/build
+    CXX=clang++-6.0 CC=clang-6.0 cmake \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_DIST_KVSTORE=ON \
+        -G Ninja /work/mxnet
+    ninja
 }
 
-build_ubuntu_cpu_clang60() {
+build_ubuntu_cpu_clang100() {
     set -ex
-
-    export CXX=clang++-6.0
-    export CC=clang-6.0
-
-    make  \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
-        USE_OPENMP=1                  \
-        USE_DIST_KVSTORE=1            \
-        -j$(nproc)
+    cd /work/build
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_MKL_IF_AVAILABLE=OFF \
+       -DUSE_MKLDNN=OFF \
+       -DUSE_CUDA=OFF \
+       -DUSE_OPENMP=ON \
+       -DUSE_DIST_KVSTORE=ON \
+       -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_clang_tidy() {
     set -ex
-
-    export CXX=clang++-6.0
-    export CC=clang-6.0
-    export CLANG_TIDY=/usr/lib/llvm-6.0/share/clang/run-clang-tidy.py
-
-    pushd .
     cd /work/build
-    cmake \
-        -DUSE_CUDA=OFF \
-        -DUSE_MKLDNN=OFF \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_OPENCV=ON \
-        -DCMAKE_BUILD_TYPE=Debug \
-        -G Ninja \
-        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-        /work/mxnet
-
+    # TODO(leezu) USE_OPENMP=OFF 3rdparty/dmlc-core/CMakeLists.txt:79 broken?
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_MKL_IF_AVAILABLE=OFF \
+       -DUSE_MKLDNN=OFF \
+       -DUSE_CUDA=OFF \
+       -DUSE_OPENMP=OFF \
+       -DCMAKE_BUILD_TYPE=Debug \
+       -DUSE_DIST_KVSTORE=ON \
+       -DCMAKE_CXX_CLANG_TIDY=clang-tidy-10 \
+       -G Ninja /work/mxnet
     ninja
-    cd /work/mxnet
-    $CLANG_TIDY -p /work/build -j $(nproc) -clang-tidy-binary clang-tidy-6.0 /work/mxnet/src
-    popd
 }
 
-build_ubuntu_cpu_clang39_mkldnn() {
+build_ubuntu_cpu_clang6_mkldnn() {
     set -ex
-
-    export CXX=clang++-3.9
-    export CC=clang-3.9
-
-    make \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_OPENMP=0                  \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    CXX=clang++-6.0 CC=clang-6.0 cmake \
+       -DUSE_MKL_IF_AVAILABLE=OFF \
+       -DUSE_MKLDNN=ON \
+       -DUSE_CUDA=OFF \
+       -DUSE_OPENMP=OFF \
+       -G Ninja /work/mxnet
+    ninja
 }
 
-build_ubuntu_cpu_clang60_mkldnn() {
+build_ubuntu_cpu_clang100_mkldnn() {
     set -ex
-
-    export CXX=clang++-6.0
-    export CC=clang-6.0
-
-    make \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_OPENMP=1                  \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_MKL_IF_AVAILABLE=OFF \
+       -DUSE_MKLDNN=ON \
+       -DUSE_CUDA=OFF \
+       -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_mkldnn() {

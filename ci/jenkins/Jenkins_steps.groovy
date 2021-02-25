@@ -350,26 +350,27 @@ def compile_centos7_gpu() {
     }]
 }
 
-def compile_unix_clang_3_9_cpu() {
-    return ['CPU: Clang 3.9': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-clang39') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang39', false)
-          }
-        }
-      }
-    }]
-}
-
 def compile_unix_clang_6_cpu() {
     return ['CPU: Clang 6': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-clang60') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang6', false)
+          }
+        }
+      }
+    }]
+}
+
+// TODO(leezu) delete once DUSE_DIST_KVSTORE=ON builds in -WError build
+def compile_unix_clang_10_cpu() {
+    return ['CPU: Clang 10': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-clang100') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang100', false)
           }
         }
       }
@@ -389,28 +390,27 @@ def compile_unix_clang_tidy_cpu() {
     }]
 }
 
-def compile_unix_clang_3_9_mkldnn_cpu() {
-    return ['CPU: Clang 3.9 MKLDNN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-mkldnn-clang39') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang39_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang3', mx_mkldnn_lib)
-          }
-        }
-      }
-    }]
-}
-
 def compile_unix_clang_6_mkldnn_cpu() {
     return ['CPU: Clang 6 MKLDNN': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-mkldnn-clang60') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang6', mx_mkldnn_lib)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang6_mkldnn', false)
+          }
+        }
+      }
+    }]
+}
+
+// TODO(leezu) delete once DUSE_DIST_KVSTORE=ON builds in -WError build
+def compile_unix_clang_10_mkldnn_cpu() {
+    return ['CPU: Clang 10 MKLDNN': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-mkldnn-clang100') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang100_mkldnn', false)
           }
         }
       }

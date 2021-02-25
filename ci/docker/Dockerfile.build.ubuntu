@@ -64,13 +64,14 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         g++-7 \
         g++-8 \
         intel-mkl${INTEL_MKL} \
-        libomp-dev \
         ## Dependencies
         libgomp1 \
         libturbojpeg0-dev \
+        libopenblas-dev \
         libcurl4-openssl-dev \
         libatlas-base-dev \
         libzmq3-dev \
+        liblapack-dev \
         libopencv-dev \
         libxml2-dev \
         # BytePS
@@ -87,30 +88,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         autoconf \
         gperf \
         libb2-dev \
-        libzstd-dev \
-        gfortran && \
+        libzstd-dev && \
     rm -rf /var/lib/apt/lists/*
-
-# Build OpenBLAS from source
-RUN export LIBRARY_PATH=$LIBRARY_PATH:/usr/lib/gcc/x86_64-linux-gnu/7/ && \
-    mkdir ~/openblas && \
-    cd ~/openblas && \
-    OPENBLAS_VERSION=0.3.10 && \
-    wget \
-        https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.zip \
-        -O openblas.zip && \
-    unzip -q openblas.zip -d . && \
-    cd OpenBLAS-${OPENBLAS_VERSION} && \
-    CXX="clang++-6.0 -fPIC" CC="clang-6.0 -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 \
-        USE_OPENMP=0 INTERFACE64=1 BINARY=64 && \
-    make PREFIX=/usr/local/openblas-clang install && \
-    cd .. && \
-    rm -rf OpenBLAS-${OPENBLAS_VERSION} && \
-    unzip -q openblas.zip -d . && \
-    cd OpenBLAS-${OPENBLAS_VERSION} && \
-    CXX="g++ -fPIC" CC="gcc -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 \
-        USE_OPENMP=1 INTERFACE64=1 BINARY=64 && \
-    make PREFIX=/usr/local install
 
 # ccache 3.7.9 has fixes for caching nvcc outputs
 RUN cd /usr/local/src && \
