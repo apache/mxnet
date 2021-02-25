@@ -985,6 +985,10 @@ cd_unittest_ubuntu() {
     # fi
 
     if [[ ${mxnet_variant} = cu* ]]; then
+        # update the cuda compatibity package because cd host uses nvidia driver 460
+        sudo apt-get install -y cuda-compat-11-2
+        ln -sfn /usr/local/cuda-11.2 /usr/local/cuda
+
         $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/gpu
 
         # Adding these here as CI doesn't test all CUDA environments
@@ -1082,6 +1086,11 @@ unittest_ubuntu_tensorrt_gpu() {
 # need to separte it from unittest_ubuntu_python3_gpu()
 unittest_ubuntu_python3_quantization_gpu() {
     set -ex
+
+    # update the cuda compatibity package because cd host uses nvidia driver 460
+    sudo apt-get install -y cuda-compat-11-2
+    ln -sfn /usr/local/cuda-11.2 /usr/local/cuda
+
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
