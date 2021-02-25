@@ -1295,7 +1295,7 @@ test_rat_check() {
     set -o pipefail
     pushd .
 
-    cd /work/deps/apache-rat-project-0.13/apache-rat/target
+    cd /usr/local/src/apache-rat-0.13
 
     # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
     exec 5>&1
