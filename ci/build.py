@@ -48,9 +48,6 @@ def get_docker_tag(platform: str, registry: str) -> str:
     with open("docker/docker-compose.yml", "r") as f:
         compose_config = yaml.load(f.read(), yaml.SafeLoader)
         tag = compose_config["services"][platform]["image"].replace('${DOCKER_CACHE_REGISTRY}', registry)
-        # append branch name to tag if not master
-        if 'CHANGE_TARGET' in os.environ and os.environ['CHANGE_TARGET'] != 'master':
-            tag += "_" + os.environ['CHANGE_TARGET']
         return tag
 
 def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
