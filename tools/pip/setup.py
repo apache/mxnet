@@ -137,7 +137,9 @@ libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
 else:
-    if variant.startswith('CU110'):
+    if variant.startswith('CU112'):
+        libraries.append('CUDA-11.2')
+    elif variant.startswith('CU110'):
         libraries.append('CUDA-11.0')
     elif variant.startswith('CU102'):
         libraries.append('CUDA-10.2')
@@ -145,18 +147,10 @@ else:
         libraries.append('CUDA-10.1')
     elif variant.startswith('CU100'):
         libraries.append('CUDA-10.0')
-    elif variant.startswith('CU92'):
-        libraries.append('CUDA-9.2')
-    elif variant.startswith('CU91'):
-        libraries.append('CUDA-9.1')
-    elif variant.startswith('CU90'):
-        libraries.append('CUDA-9.0')
-    elif variant.startswith('CU80'):
-        libraries.append('CUDA-8.0')
-    elif variant.startswith('CU75'):
-        libraries.append('CUDA-7.5')
-    if variant.endswith('MKL'):
-        libraries.append('MKLDNN')
+
+from mxnet.runtime import Features
+if Features().is_enabled("MKLDNN"):
+    libraries.append('MKLDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 
