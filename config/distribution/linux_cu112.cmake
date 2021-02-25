@@ -30,5 +30,5 @@ set(USE_TVM_OP OFF CACHE BOOL "Enable use of TVM operator build system.")
 set(USE_SSE ON CACHE BOOL "Build with x86 SSE instruction support")
 set(USE_F16C OFF CACHE BOOL "Build with x86 F16C instruction support")
 
-set(CUDACXX "/usr/local/cuda-9.0/bin/nvcc" CACHE STRING "Cuda compiler")
-set(MXNET_CUDA_ARCH "3.0;5.0;6.0;7.0;7.2" CACHE STRING "Cuda architectures")
+set(CUDACXX "/usr/local/cuda-11.2/bin/nvcc" CACHE STRING "Cuda compiler")
+set(MXNET_CUDA_ARCH "5.0;6.0;7.0;8.0;8.6" CACHE STRING "Cuda architectures")
