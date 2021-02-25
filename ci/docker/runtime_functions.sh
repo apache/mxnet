@@ -640,21 +640,22 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda101_cudnn7() {
+build_ubuntu_gpu() {
     set -ex
-    make \
-        USE_BLAS=openblas                         \
-        USE_MKLDNN=0                              \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_TVM_OP=0                              \
-        USE_CPP_PACKAGE=1                         \
-        USE_DIST_KVSTORE=1                        \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
-    make cython PYTHON=python3
+    cd /work/build
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_CUDA=ON \
+        -DUSE_NVML=OFF \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DUSE_CUDNN=ON \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_DIST_KVSTORE=ON \
+        -DBUILD_CYTHON_MODULES=ON \
+        -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
+        -G Ninja /work/mxnet
+    ninja
 }
 
 build_ubuntu_gpu_cuda110_cudnn8() {
@@ -931,7 +932,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
 unittest_ubuntu_tensorrt_gpu() {
     set -ex
     if [ -f /etc/redhat-release ]; then
-        source /opt/rh/rh-python35/enable
+        source /opt/rh/rh-python36/enable
     fi
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
@@ -1101,7 +1102,7 @@ unittest_ubuntu_cpu_julia10() {
 
 unittest_centos7_cpu() {
     set -ex
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     cd /work/mxnet
     python -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     python -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
@@ -1109,7 +1110,7 @@ unittest_centos7_cpu() {
 
 unittest_centos7_gpu() {
     set -ex
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
