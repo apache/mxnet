@@ -4064,3 +4064,94 @@ def convert_sequence_reverse(node, **kwargs):
         ]
 
     return nodes
+
+
+@mx_op.register("RNN")
+def convert_RNN(node, **kwargs):
+    """Map MXNet's RNN operator attributes to onnx's operators
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    from onnx import TensorProto
+
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_type = kwargs['in_type']
+
+    mode = str(attrs.get('mode'))
+    if mode != 'lstm':
+        raise NotImplementedError('Currently RNN onnx export only supports lstm mode')
+    
+    bidirectional = str(attrs.get('bidirectional', 'False'))
+    if bidirectional != 'False':
+        raise NotImplementedError('Currently RNN onnx export only supports bidirectional is False')
+
+    num_layers = int(attrs.get('num_layers', '1'))
+    if num_layers != 1:
+        raise NotImplementedError('Currently RNN onnx export only supports num_layers equals to 1')
+
+    p = float(attrs.get('p', '0'))
+    if p != 0:
+        raise NotImplementedError('Currently RNN onnx export only supports p equals to 0')
+
+    use_sequence_length = str(attrs.get('use_sequence_length', 'False'))
+    if use_sequence_length != 'False':
+        raise NotImplementedError('Currently RNN onnx export only supports use_sequence_length equals to False')
+
+    projection_size = str(attrs.get('projection_size', 'None'))
+    if projection_size != 'None':
+        raise NotImplementedError('Currently RNN onnx export only supports projection_size equals to None')
+
+    state_size = int(attrs.get('state_size'))
+    state_outputs = str(attrs.get('state_outputs', 'False'))
+
+    data = input_nodes[0]
+    param = input_nodes[1]
+    initial_h = input_nodes[2]
+    initial_c = input_nodes[3]
+
+    create_tensor([0], name+'_0', kwargs['initializer'])
+    create_tensor([1], name+'_1', kwargs['initializer'])
+    create_tensor([2], name+'_2', kwargs['initializer'])
+    create_tensor([3], name+'_3', kwargs['initializer'])
+    create_tensor([4*state_size], name+'_4*state_size', kwargs['initializer'])
+    create_tensor([8*state_size], name+'_8*state_size', kwargs['initializer'])
+    create_tensor([4*state_size*state_size], name+'_4*state_size^2', kwargs['initializer'])
+    create_tensor([1, 4*state_size, state_size], name+'_R_shape', kwargs['initializer'])
+    create_tensor([1, 8*state_size], name+'_B_shape', kwargs['initializer'])
+
+    nodes = [
+        make_node('Shape', [data], [name+'_shape']),
+        make_node('Slice', [name+'_shape', name+'_0', name+'_1'], [name+'_seq_length']),
+        make_node('Slice', [name+'_shape', name+'_1', name+'_2'], [name+'_batch_size']),
+        make_node('Slice', [name+'_shape', name+'_2', name+'_3'], [name+'_input_size']),
+        # get W
+        make_node('Mul', [name+'_4*state_size', name+'_input_size'], [name+'_mul0']),
+        make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_']),
+        make_node('Concat', [name+'_1', name+'_4*state_size', name+'_input_size'],
+                      [name+'_W_shape'], axis=0),
+        make_node('Reshape', [name+'_W_', name+'_W_shape'], [name+'_W']),
+        # get R
+        make_node('Add', [name+'_mul0', name+'_4*state_size^2'], [name+'_add0']),
+        make_node('Slice', [param, name+'_mul0', name+'_add0'], [name+'_R_']),
+        make_node('Reshape', [name+'_R_', name+'_R_shape'], [name+'_R']),
+        # get B
+        make_node('Add', [name+'_add0', name+'_8*state_size'], [name+'_add1']),
+        make_node('Slice', [param, name+'_add0', name+'_add1'], [name+'_B_']),
+        make_node('Reshape', [name+'_B_', name+'_B_shape'], [name+'_B']),
+        # get seq_len
+        make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
+        make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
+    ]
+
+    if state_outputs == 'False':
+        nodes += [
+            make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c], [name+'_out'], hidden_size=state_size),
+            make_node('Squeeze', [name+'_out'], [name], axes=[1]),
+        ]
+    else:
+        nodes += [
+            make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c], [name+'0_', name+'1', name+'2'], hidden_size=state_size),
+            make_node('Squeeze', [name+'0_'], [name], axes=[1]),
+        ]
+
+    return nodes
