@@ -147,7 +147,7 @@ def compile_unix_int64_gpu() {
         ws('workspace/build-gpu-int64') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_large_tensor', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_large_tensor', false)
             utils.pack_lib('ubuntu_gpu_int64', mx_cmake_lib)
           }
         }
@@ -203,7 +203,7 @@ def compile_unix_mkldnn_gpu() {
         ws('workspace/build-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_mkldnn', false)
             utils.pack_lib('mkldnn_gpu', mx_mkldnn_lib)
           }
         }
@@ -217,7 +217,7 @@ def compile_unix_mkldnn_nocudnn_gpu() {
          ws('workspace/build-mkldnn-gpu-nocudnn') {
            timeout(time: max_time, unit: 'MINUTES') {
              utils.init_git()
-             utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn_nocudnn', false)
+             utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_mkldnn_nocudnn', false)
              utils.pack_lib('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
            }
          }
@@ -226,12 +226,12 @@ def compile_unix_mkldnn_nocudnn_gpu() {
 }
 
 def compile_unix_full_gpu() {
-    return ['GPU: CUDA10.1+cuDNN7': {
+    return ['GPU: CUDA+cuDNN': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda101_cudnn7', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu', false)
             utils.pack_lib('gpu', mx_lib_cpp_examples)
           }
         }
@@ -239,27 +239,13 @@ def compile_unix_full_gpu() {
     }]
 }
 
-def compile_unix_full_gpu_cu110() {
-    return ['GPU: CUDA11.0+cuDNN8': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_build_cuda110', 'build_ubuntu_gpu_cuda110_cudnn8', false)
-            utils.pack_lib('gpu_cu110', mx_lib_cpp_examples)
-          }
-        }
-      }
-    }]
-}
-
 def compile_unix_full_gpu_mkldnn_cpp_test() {
-    return ['GPU: CUDA10.1+cuDNN7+MKLDNN+CPPTEST': {
+    return ['GPU: CUDA+cuDNN+MKLDNN+CPPTEST': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu-mkldnn-cpp') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_cuda_cudnn_mkldnn_cpp_test', false)
             utils.pack_lib('gpu_mkldnn_cpp_test', mx_lib_cpp_capi)
           }
         }
@@ -287,7 +273,7 @@ def compile_unix_cmake_gpu() {
         ws('workspace/build-cmake-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_cmake', false)
             utils.pack_lib('cmake_gpu', mx_cmake_lib_cython)
           }
         }
@@ -301,7 +287,7 @@ def compile_unix_cmake_gpu_no_rtc() {
             ws('workspace/build-cmake-gpu-no-rtc') {
                 timeout(time: max_time, unit: 'MINUTES') {
                     utils.init_git()
-                    utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake_no_rtc', false)
+                    utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_cmake_no_rtc', false)
                 }
             }
         }
@@ -356,7 +342,7 @@ def compile_centos7_gpu() {
         ws('workspace/build-centos7-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu', 'build_centos7_gpu', false)
+            utils.docker_run('centos7_gpu_cu102', 'build_centos7_gpu', false)
             utils.pack_lib('centos7_gpu', mx_lib)
           }
         }

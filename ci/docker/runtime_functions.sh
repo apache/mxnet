@@ -693,7 +693,7 @@ build_ubuntu_gpu_cuda110_cudnn8() {
     make cython PYTHON=python3
 }
 
-build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
+build_ubuntu_gpu_cuda_cudnn_mkldnn_cpp_test() {
     set -ex
     make \
         USE_BLAS=openblas                         \
