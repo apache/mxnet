@@ -691,6 +691,7 @@ build_ubuntu_gpu_cuda_cudnn_mkldnn_cpp_test() {
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
+        PYTHON=python3                            \
         -j$(nproc)
     make test USE_CPP_PACKAGE=1 -j$(nproc)
     make cython PYTHON=python3
