@@ -38,7 +38,7 @@ core_logic: {
         timeout(time: total_timeout, unit: 'MINUTES') {
           utils.init_git()
           sh "$(aws ecr get-login --region ${env.DOCKER_ECR_REGION} --no-include-email)"
-          sh "export DOCKER_CACHE_REGISTRY="${env.DOCKER_CACHE_REGISTRY}_${env.CHANGE_TARGET}" && cd ci && docker-compose -f docker/docker-compose.yml pull && docker-compose -f docker/docker-compose.yml build --parallel && COMPOSE_HTTP_TIMEOUT=600 docker-compose -f docker/docker-compose.yml push"
+          sh "export DOCKER_CACHE_REGISTRY=${env.DOCKER_CACHE_REGISTRY}_${env.CHANGE_TARGET} && cd ci && docker-compose -f docker/docker-compose.yml pull && docker-compose -f docker/docker-compose.yml build --parallel && COMPOSE_HTTP_TIMEOUT=600 docker-compose -f docker/docker-compose.yml push"
         }
       }
     }
