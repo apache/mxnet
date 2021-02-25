@@ -55,7 +55,7 @@ pipeline {
       steps {
         script {
           stage("Build") {
-            cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Build libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)
+            cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Build libmxnet", "mxnet_lib", params.MXNET_VARIANTS)
           }
           stage("Releases") {
             cd_utils.error_checked_parallel([
