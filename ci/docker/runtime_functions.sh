@@ -833,7 +833,6 @@ build_ubuntu_gpu_large_tensor() {
 
 sanity_check() {
     set -ex
-    source /opt/rh/rh-python35/enable
     tools/license_header.py check
     make cpplint rcpplint jnilint
     make pylint
