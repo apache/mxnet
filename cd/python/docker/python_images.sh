@@ -23,7 +23,7 @@
 
 set -xe
 
-usage="Usage: python_images.sh <build|test|publish> MXNET-VARIANT"
+usage="Usage: python_images.sh <build|test|push> MXNET-VARIANT"
 
 command=${1:?$usage}
 mxnet_variant=${2:?$usage}
@@ -74,7 +74,7 @@ push() {
     # Iterate over remaining tags, if any
     for ((i=1;i<${#docker_tags[@]};i++)); do
         local docker_tag="${docker_tags[${i}]}"
-        local latest_image_name="${RELEASE_DOCKERHUB_REPOSITORY}/${repository}:${docker_tag}_py3"
+        local latest_image_name="${RELEASE_PUBLIC_ECR_REPOSITORY}/${repository}:${docker_tag}_py3"
 
         docker tag "${image_name}" "${latest_image_name}"
         docker push "${latest_image_name}"
