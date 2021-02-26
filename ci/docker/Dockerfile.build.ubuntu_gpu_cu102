@@ -71,7 +71,7 @@ RUN /work/ubuntu_cudnn.sh
 
 # update the cuda compatibity package because cd host uses nvidia driver 460
 RUN apt-get update && apt-get install -y cuda-compat-11-2
-Run ln -sfn /usr/local/cuda-11.2 /usr/local/cuda
+RUN ln -sfn /usr/local/cuda-11.2 /usr/local/cuda
 
 # Always last
 ARG USER_ID=0
