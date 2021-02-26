@@ -54,7 +54,7 @@ pipeline {
     stage("MXNet Release") {
       steps {
         script {
-          stage("Build") {
+          stage("Build libmxnet") {
             cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Build libmxnet", "mxnet_lib", params.MXNET_VARIANTS)
           }
           stage("Releases") {
