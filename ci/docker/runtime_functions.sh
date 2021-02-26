@@ -497,7 +497,7 @@ build_ubuntu_cpu_clang_tidy() {
        -DUSE_OPENMP=OFF \
        -DCMAKE_BUILD_TYPE=Debug \
        -DUSE_DIST_KVSTORE=ON \
-       -DCMAKE_CXX_CLANG_TIDY=clang-tidy-10 \
+       -DCMAKE_CXX_CLANG_TIDY=clang-tidy-6.0 \
        -G Ninja /work/mxnet
     ninja
 }
