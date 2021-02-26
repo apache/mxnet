@@ -1231,8 +1231,8 @@ push_docs() {
     wget https://mxnet-website-static-artifacts.s3.us-east-2.amazonaws.com/versions.zip -O versions-backup.zip
     aws s3 cp versions-backup.zip s3://mxnet-website-static-artifacts --acl public-read
 
-    zip -r9 versions-test.zip versions/.
-    aws s3 cp versions-test.zip s3://mxnet-website-static-artifacts --acl public-read
+    zip -r9 versions.zip versions/.
+    aws s3 cp versions.zip s3://mxnet-website-static-artifacts --acl public-read
     popd
 }
 
