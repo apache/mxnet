@@ -4974,6 +4974,7 @@ def np_masked_log_softmax_grad(out, grad_out, mask, axis=-1, temperature=1.0):
 @pytest.mark.parametrize('n_broadcast_axis', [0, 1, 2])
 @pytest.mark.parametrize('temperature', [1, 5, 9 ,11])
 @pytest.mark.parametrize('normalize', [True])
+@pytest.mark.flaky
 def test_masked_softmax(dtype, axis, ndims, n_broadcast_axis, temperature, normalize):
     n_broadcast_axis = min(n_broadcast_axis, ndims - 1)
     shape = rand_shape_nd(ndims, dim=10)
