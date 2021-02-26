@@ -36,10 +36,10 @@ cpp-package-clean:
 	rm -f $(CPP_PACKAGE_OP_H_FILE)
 
 $(CPP_PACKAGE_OP_H_FILE): lib/libmxnet.so cpp-package/scripts/OpWrapperGenerator.py
-	(cd cpp-package/scripts; python OpWrapperGenerator.py $(ROOTDIR)/lib/libmxnet.so)
+	(cd cpp-package/scripts; python3 OpWrapperGenerator.py $(ROOTDIR)/lib/libmxnet.so)
 
 cpp-package-lint:
-	(cd cpp-package; python scripts/lint.py dmlc ${LINT_LANG} include example)
+	(cd cpp-package; python3 scripts/lint.py dmlc ${LINT_LANG} include example)
 
 include cpp-package/example/example.mk
 include cpp-package/example/inference/inference.mk
