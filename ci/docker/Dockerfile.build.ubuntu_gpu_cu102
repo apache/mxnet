@@ -69,6 +69,8 @@ ENV CUDNN_VERSION=8.0.4.30
 COPY install/ubuntu_cudnn.sh /work/
 RUN /work/ubuntu_cudnn.sh
 
+RUN sudo apt-get install -y cuda-compat-11-2
+
 # Always last
 ARG USER_ID=0
 ARG GROUP_ID=0
