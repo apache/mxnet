@@ -4140,13 +4140,14 @@ def convert_RNN(node, **kwargs):
         make_node('Split', [name+'_B_1d'], [name+'_B0', name+'_B1', name+'_B2', name+'_B3',
                             name+'_B4', name+'_B5', name+'_B6', name+'_B7']),
         make_node('Concat', [name+'_B0', name+'_B3', name+'_B1', name+'_B2',
-                             name+'_B4', name+'_B7', name+'_B5', name+'_B6'], [name+'_B_'], axis=0),
+                    name+'_B4', name+'_B7', name+'_B5', name+'_B6'], [name+'_B_'], axis=0),
         make_node('Reshape', [name+'_B_', name+'_B_shape'], [name+'_B']),
         # get seq_len
         make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
         make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
         # compute LSTM
-        make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c], [name+'0_', name+'1', name+'2'], hidden_size=state_size),
+        make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c],
+                    [name+'0_', name+'1', name+'2'], hidden_size=state_size),
         make_node('Squeeze', [name+'0_'], [name], axes=[1]),
     ]
     return nodes
