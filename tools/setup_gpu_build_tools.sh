@@ -30,7 +30,7 @@ DEPS_PATH=$2
 
 >&2 echo "Setting CUDA versions for $VARIANT"
 if [[ $VARIANT == cu112* ]]; then
-    CUDA_VERSION='11.2.135-1'
+    CUDA_VERSION='11.2.67-1'
     CUDA_PATCH_VERSION='11.4.1.1026-1'
     CUDA_LIBS_VERSION='10.2.3.135-1'
     CUDA_SOLVER_VERSION='11.1.0.135-1'
@@ -155,8 +155,8 @@ elif [[ $VARIANT == cu110* ]]; then
       "libcurand-dev-${CUDA_MAJOR_DASH}_${CUDA_LIBS_VERSION}_amd64.deb" \
       "libcufft-${CUDA_MAJOR_DASH}_${CUDA_LIBS_VERSION}_amd64.deb" \
       "libcufft-dev-${CUDA_MAJOR_DASH}_${CUDA_LIBS_VERSION}_amd64.deb" \
-      "cuda-nvrtc-${CUDA_MAJOR_DASH}_${CUDA_NVRTC_VERSION}_amd64.deb" \
-      "cuda-nvrtc-dev-${CUDA_MAJOR_DASH}_${CUDA_NVRTC_VERSION}_amd64.deb" \
+      "cuda-nvrtc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
+      "cuda-nvrtc-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "libcusolver-${CUDA_MAJOR_DASH}_${CUDA_SOLVER_VERSION}_amd64.deb" \
       "libcusolver-dev-${CUDA_MAJOR_DASH}_${CUDA_SOLVER_VERSION}_amd64.deb" \
       "cuda-nvcc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
