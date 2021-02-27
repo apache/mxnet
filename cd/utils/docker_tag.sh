@@ -21,7 +21,7 @@
 
 mxnet_variant=${1:?"Please specify the mxnet variant as the first parameter"}
 is_release=${RELEASE_BUILD:-false}
-version=${VERSION:-nightly}
+version=${VERSION:-nightly_v1.x}
 
 # The docker tags will be in the form <version>_<hardware>(_mkl)
 # Eg. nightly_cpu, 1.4.0_cpu_mkl, nightly_gpu_cu80_mkl, etc.
