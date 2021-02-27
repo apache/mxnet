@@ -23,9 +23,6 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-# Install test dependencies
-RUN pip install nose
-
 ARG USER_ID=1001
 ARG GROUP_ID=1001
 
