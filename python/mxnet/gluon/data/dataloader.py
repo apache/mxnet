@@ -623,6 +623,7 @@ class DataLoader(object):
         self._num_workers = num_workers if num_workers >= 0 else 0
         self._worker_pool = None
         self._prefetch = max(0, int(prefetch) if prefetch is not None else 2 * self._num_workers)
+        self._iter = None # prefetched iter, vaild only nopython mode is disabled.
         if batchify_fn is None:
             if num_workers > 0:
                 self._batchify_fn = _batchify.Stack(use_shared_mem=True)
@@ -667,11 +668,23 @@ class DataLoader(object):
                         initargs=[self._dataset, is_np_shape(), is_np_array()])
                     # resume keyboard interupt signal in main process
                     signal.signal(signal.SIGINT, original_sigint_handler)
+                self._refresh()
 
     def __iter__(self):
         if self._mx_iter is not None:
             return iter(self._mx_iter)
+        # enable prefetch with nopython mode `off`.
+        if self._iter is None:
+            self.refresh()
+        t = self._iter
+        self._iter = None # ensure a single iter would not using twice.
+        for item in t:
+            yield item
+        if self._iter is None:
+            # ensure we do not waste any exist iter by mistake
+            self.refresh()
 
+    def _prefetch_iter(self):
         if self._num_workers == 0:
             def same_process_iter():
                 for batch in self._batch_sampler:
@@ -688,6 +701,11 @@ class DataLoader(object):
                                 prefetch=self._prefetch,
                                 dataset=self._dataset if self._thread_pool else None,
                                 data_loader=self, timeout=self._timeout)
+
+    def refresh(self):
+        """Refresh its iter, fetch data again. Only valid without nopython mode"""
+        self._iter = self._prefetch_iter()
+            
 
     def __len__(self):
         return len(self._batch_sampler)
