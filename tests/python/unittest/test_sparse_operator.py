@@ -18,7 +18,7 @@
 from mxnet.test_utils import *
 from mxnet.base import MXNetError
 import pytest
-from common import setup_module, with_seed, teardown_module, assertRaises
+from common import assertRaises
 import random
 import warnings
 
@@ -154,7 +154,6 @@ def gen_rsp_random_indices(shape, density=.5, force_indices=None):
 def all_zero(var):
     return 0
 
-@with_seed()
 @pytest.mark.skip(reason="https://github.com/apache/incubator-mxnet/issues/18740")
 def test_elemwise_binary_ops():
     # skip testing on GPU because only CPU ops are implemented
@@ -521,7 +520,6 @@ def test_elemwise_binary_ops():
                                                           ograd_density=ograd_density)
 
 
-@with_seed()
 def test_elemwise_csr_same_zeros():
     # Zeroes
     a = mx.nd.sparse.zeros('csr', (1,1))
@@ -696,8 +694,8 @@ def check_sparse_mathematical_core(name, stype,
         assert_almost_equal(arr_grad, input_grad, equal_nan=True)
 
 
-@with_seed()
 @pytest.mark.serial
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18829')
 def test_sparse_mathematical_core():
     def util_sign(a):
         if np.isclose(a, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):
@@ -1162,7 +1160,6 @@ def test_sparse_mathematical_core():
 
 
 
-@with_seed()
 @pytest.mark.serial
 def test_elemwise_add_ex():
     def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
@@ -1193,7 +1190,6 @@ def test_elemwise_add_ex():
                               lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
 
-@with_seed()
 @pytest.mark.serial
 def test_cast_storage_ex():
     def check_cast_storage(shape, density, from_stype, to_stype, check_numeric_grad=True):
@@ -1249,7 +1245,6 @@ def test_cast_storage_ex():
                                check_numeric_grad=False)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_dot():
     def test_infer_forward_stype(lhs_shape, rhs_shape, lhs_density, rhs_density, trans_a, trans_b):
@@ -1380,7 +1375,6 @@ def test_sparse_dot():
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), False, 40)
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_dot_determinism():
     def check_dot_determinism(lhs_stype, rhs_stype, lhs_density, rhs_density, transpose_a, transpose_b, forward_stype):
@@ -1410,7 +1404,6 @@ def test_sparse_dot_determinism():
     check_dot_determinism('csr', 'default', 0.1, 1.0, True, False, 'default')
 
 
-@with_seed()
 def test_sparse_slice():
     def check_csr_slice(shape, slice_input):
         storage_type = 'csr'
@@ -1426,7 +1419,6 @@ def test_sparse_slice():
     check_csr_slice(shape, False)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_retain():
     def check_sparse_retain(shape, density, index_type=np.int64):
@@ -1460,7 +1452,6 @@ def test_sparse_retain():
             check_sparse_retain(shape_3d, density, itype)
 
 
-@with_seed()
 def test_sparse_unary_with_numerics():
     def check_sparse_simple(name, stype, mxnet_func, forward_numpy_call,
                             backward_numpy_call, output_grad_stype=None,
@@ -1538,7 +1529,6 @@ def test_sparse_unary_with_numerics():
                           backward_is_use_output=True)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
@@ -1552,7 +1542,6 @@ def test_sparse_nd_zeros():
     check_sparse_nd_zeros('default', shape)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_nd_zeros_like():
     def check_sparse_nd_zeros_like(stype, shape):
@@ -1565,7 +1554,6 @@ def test_sparse_nd_zeros_like():
     check_sparse_nd_zeros_like('csr', shape)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_axis_operations():
     def test_variations(func_name):
@@ -1597,7 +1585,6 @@ def test_sparse_axis_operations():
     test_fallback(mx.nd.mean, axis=0, keepdims=True, exclude=True)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_square_sum():
     dim0 = 30
@@ -1658,8 +1645,8 @@ def test_sparse_square_sum():
                                        atol=1e-2, rtol=0.1)
 
 
-@with_seed()
 @pytest.mark.serial
+@pytest.mark.flaky
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):
@@ -1709,7 +1696,6 @@ def test_sparse_storage_fallback():
             check_concat(shape, lhs, rhs)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stypes, shape, n):
@@ -1754,7 +1740,6 @@ def test_sparse_elementwise_sum():
             check_sparse_elementwise_sum_with_shape(stypes, shape, test_len+1)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_embedding():
     ''' test sparse embedding operator '''
@@ -1805,7 +1790,6 @@ def test_sparse_embedding():
     for sparse_grad in sparse_grads:
         check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad)
 
-@with_seed()
 def test_sparse_broadcast_add_sub():
     def check_broadcast_add(mx_lhs, mx_rhs, np_lhs, np_rhs, dtype):
         assert_almost_equal(mx.nd.sparse.add(mx_lhs, mx_rhs).asnumpy(), np.add(np_lhs, np_rhs), atol=1e-4)
@@ -1830,7 +1814,6 @@ def test_sparse_broadcast_add_sub():
             check_broadcast_add(mx_rhs, mx_lhs, np_rhs, np_lhs, np.float32)
             check_broadcast_sub(mx_rhs, mx_lhs, np_rhs, np_lhs, np.float32)
 
-@with_seed()
 def test_sparse_broadcast_mul_div():
     def check_broadcast_mul(mx_lhs, mx_rhs, np_lhs, np_rhs, dtype):
         assert_almost_equal(mx.nd.sparse.multiply(mx_lhs, mx_rhs).asnumpy(), np.multiply(np_lhs, np_rhs), atol=1e-4)
@@ -1853,153 +1836,6 @@ def test_sparse_broadcast_mul_div():
             check_broadcast_mul(mx_lhs, mx_rhs, np_lhs, np_rhs, np.float32)
             check_broadcast_div(mx_lhs, mx_rhs, np_lhs, np_rhs, np.float32)
 
-@with_seed()
-def test_scatter_ops():
-    def csr_get_seen_points(name, csr_array, verbose=False):
-        """Get a unique list of points int he CSR array as well as a
-        corresponding parallel list of points and values"""
-        seen_points = set()
-        seen_point_list = list()
-        values = list()
-        row_count = csr_array.shape[0]
-        row_pointers = csr_array.indptr.asnumpy()
-        col_indexes  = csr_array.indices.asnumpy()
-        data = csr_array.data.asnumpy()
-        for row in range(row_count):
-            start_pos = row_pointers[row]
-            end_pos = row_pointers[row + 1]
-            for col_index in range(start_pos, end_pos):
-                col = col_indexes[col_index]
-                val = data[col_index]
-                if verbose is True:
-                    print("{}: (row, col = ({}, {}) = {}".format(name, row, col, val))
-                seen_points.add((row, col))
-                seen_point_list.append((row, col))
-                values.append(val)
-        return seen_points, values, seen_point_list
-
-    def check_scatter_ops(name, shape, lhs_stype, rhs_stype, forward_mxnet_call, forward_numpy_call,
-                          density=0.25, rhs_is_scalar=False, verbose=False):
-        lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
-        if rhs_is_scalar is False:
-            rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
-
-        if verbose is True:
-            print(name)
-
-        if lhs_stype != 'default':
-            lhs_nd = create_sparse_array_zd(
-                shape, lhs_stype, density=density,
-                rsp_indices=gen_rsp_random_indices(
-                    shape,
-                    density=density,
-                    force_indices=[(shape[0]/2)]  # force at least one overlap
-                ))
-        else:
-            lhs_nd = rand_ndarray(shape, 'default')
-
-        if rhs_is_scalar is False:
-            if rhs_stype != 'default':
-                rhs_nd = create_sparse_array_zd(
-                    shape, rhs_stype, density=density,
-                    rsp_indices=gen_rsp_random_indices(
-                        shape,
-                        density=density,
-                        force_indices=[(shape[0]/2)]  # force at least one overlap
-                    ))
-            else:
-                rhs_nd = rand_ndarray(shape, 'default')
-        else:
-            rhs_nd = 9
-            rhs = rhs_nd
-
-        lhs_np = lhs_nd.asnumpy()
-        rhs_np = rhs_nd if rhs_is_scalar is True else rhs_nd.asnumpy()
-
-        if verbose is True:
-            print("lhs = {}".format(lhs_np))
-            print("rhs = {}".format(rhs_np))
-
-        out_np = forward_numpy_call(lhs_np, rhs_np)
-
-        if verbose is True:
-            print("Numpy: out_np = {}".format(out_np))
-
-        location = {'lhs': lhs_nd, 'rhs': rhs_nd}
-
-        out = forward_mxnet_call(lhs, rhs)
-        exe_test = out._bind(default_context(), args=location)
-        exe_test.forward(is_train=False)
-        out_nd = exe_test.outputs[0]
-
-        if verbose is True:
-            print("Sym: out_nd = {}".format(out_nd.asnumpy()))
-
-        # For row_sparse, check that rows only exist for rows that are
-        # either int lhs or rhs, and if they exist, they should equal
-        # the numpy values
-        if lhs_stype == 'default':
-            almost_equal(out_nd.asnumpy(), out_np, equal_nan=True)
-        elif lhs_stype == 'row_sparse':
-            seen_rows = set()
-            indices = lhs_nd.indices.asnumpy()
-            for i in range(len(indices)):
-                seen_rows.add(indices[i])
-            assert len(out_nd.indices.asnumpy()) == len(seen_rows)
-            out_nd_np = out_nd.asnumpy()
-            for row in seen_rows:
-                row_nd = out_nd_np[row]
-                row_np = out_np[row]
-                almost_equal(row_nd, row_np, equal_nan=True)
-        elif lhs_stype == 'csr' and rhs_is_scalar is False:
-            almost_equal(out_nd.asnumpy(), out_np, equal_nan=True)
-        else:
-            assert rhs_is_scalar
-            lhs_seen_points, _, _ = csr_get_seen_points("lhs", lhs_nd, verbose)
-            if rhs_is_scalar is False:
-                rhs_seen_points, _, _ = csr_get_seen_points("rhs", rhs_nd, verbose)
-            else:
-                rhs_seen_points = set()
-            input_seen_points = lhs_seen_points.union(rhs_seen_points)
-            out_seen_pounts, out_values, seen_point_list = csr_get_seen_points("out_nd", out_nd, verbose)
-            # Some may have been zero
-            assert len(out_seen_pounts) <= len(input_seen_points)
-            out_nd_np = out_nd.asnumpy()
-            val_index = 0
-            for row_col in seen_point_list:
-                row = row_col[0]
-                col = row_col[1]
-                val = out_values[val_index]
-                val_np = out_nd_np[row, col]
-                almost_equal(val, val_np, equal_nan=True)
-                val_index += 1
-
-    shape = (10, 5)
-
-    for lhs_stype in ['row_sparse', 'default', 'csr']:
-        for rhs_stype in ['row_sparse', 'default', 'csr']:
-            print("op: {}, lhs_stype: {}, rhs_stype: {}".format('_scatter_elemwise_div',
-                                                                lhs_stype, rhs_stype))
-            check_scatter_ops('_scatter_elemwise_div', shape, lhs_stype, rhs_stype,
-                              lambda l, r: mx.sym._internal._scatter_elemwise_div(l, r),
-                              lambda l, r: l / r,
-                              verbose=False)
-
-    for lhs_stype in ['row_sparse', 'default', 'csr']:
-        print("op: {}, lhs_stype: {}".format('_scatter_plus', lhs_stype))
-        check_scatter_ops('_scatter_plus', shape, lhs_stype, 'scalar',
-                          lambda l, r: mx.sym._internal._scatter_plus_scalar(l, r),
-                          lambda l, r: l + r,
-                          rhs_is_scalar=True, verbose=False)
-
-        print("op: {}, lhs_stype: {}".format('_scatter_minus', lhs_stype))
-        check_scatter_ops('_scatter_minus', shape, lhs_stype, 'scalar',
-                          lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
-                          lambda l, r: l + r,
-                          rhs_is_scalar=True, verbose=False, density=0.5)
-
-
-@with_seed()
 def test_batchnorm_fallback():
     # same test as test_operator.test_batchnorm_training, but tests fallback logic of batchnorm
     stype = 'row_sparse'
@@ -2070,7 +1906,6 @@ def test_batchnorm_fallback():
             check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-3, rtol=0.2, atol=0.01)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_mkldnn_sparse():
     # This test is trying to create a race condition describedd in
@@ -2087,7 +1922,6 @@ def test_mkldnn_sparse():
     print(res1 - fc_res.asnumpy())
     almost_equal(res1, fc_res.asnumpy())
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_nd_where():
     def get_forward_expected_output(condition, x, y):
@@ -2185,7 +2019,6 @@ def test_sparse_nd_where():
     test_where_helper((5, 9))
     test_where_numeric_gradient((5, 9))
 
-@with_seed()
 @pytest.mark.serial
 def test_sparse_quadratic_function():
     def f(x, a, b, c):

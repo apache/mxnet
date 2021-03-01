@@ -276,7 +276,12 @@ class MXCallbackList(ctypes.Structure):
 def _load_lib():
     """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
-    lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
+    if sys.version_info >= (3, 8) and os.name == "nt":
+        # use LOAD_WITH_ALTERED_SEARCH_PATH, For simplicity, let's just fill the numbers.
+        # pylint: disable=E1123
+        lib = ctypes.CDLL(lib_path[0], winmode=0x00000008)
+    else:
+        lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
     return lib
@@ -309,7 +314,6 @@ RtcHandle = ctypes.c_void_p
 CudaModuleHandle = ctypes.c_void_p
 CudaKernelHandle = ctypes.c_void_p
 ProfileHandle = ctypes.c_void_p
-DLPackHandle = ctypes.c_void_p
 
 
 #----------------------------
@@ -686,6 +690,26 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
     op_code_gen_func : function
         Function for creating op functions for `ndarray` and `symbol` modules.
     """
+    license_lines = [
+        '# Licensed to the Apache Software Foundation (ASF) under one',
+        '# or more contributor license agreements.  See the NOTICE file',
+        '# distributed with this work for additional information',
+        '# regarding copyright ownership.  The ASF licenses this file',
+        '# to you under the Apache License, Version 2.0 (the',
+        '# "License"); you may not use this file except in compliance',
+        '# with the License.  You may obtain a copy of the License at',
+        '#',
+        '#   http://www.apache.org/licenses/LICENSE-2.0',
+        '#',
+        '# Unless required by applicable law or agreed to in writing,',
+        '# software distributed under the License is distributed on an',
+        '# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY',
+        '# KIND, either express or implied.  See the License for the',
+        '# specific language governing permissions and limitations',
+        '# under the License.',
+        '',
+    ]
+    license_str = os.linesep.join(license_lines)
     def get_module_file(module_name):
         """Return the generated module file based on module name."""
         path = os.path.dirname(__file__)
@@ -698,6 +722,7 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
                         'ndarray': ['from ._internal import NDArrayBase',
                                     'from ..base import _Null']}
         module_file.write('# coding: utf-8')
+        module_file.write(license_str)
         module_file.write('# File content is auto-generated. Do not modify.' + os.linesep)
         module_file.write('# pylint: skip-file' + os.linesep)
         module_file.write(os.linesep.join(dependencies[module_name.split('.')[1]]))

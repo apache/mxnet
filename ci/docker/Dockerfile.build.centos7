@@ -53,26 +53,37 @@ RUN yum -y check-update || true && \
         protobuf-devel \
         # CentOS Software Collections https://www.softwarecollections.org
         devtoolset-7 \
+        devtoolset-8 \
         rh-python36 \
         rh-maven35 \
         # Libraries
         # Provide clbas headerfiles
         atlas-devel \
-        openblas-devel \
-        lapack-devel \
         opencv-devel \
         openssl-devel \
         zeromq-devel \
         # Build-dependencies for ccache 3.7.9
         gperf \
         libb2-devel \
-        libzstd-devel && \
-    yum clean all && \
-    # Centos 7 only provides ninja-build
-    ln -s /usr/bin/ninja-build /usr/bin/ninja
+        libzstd-devel \
+        # Required by openblas build
+        gcc-gfortran && \
+    yum clean all
 
-# Make GCC7, Python 3.5 and Maven 3.3 Software Collections available by default
-# during build and runtime of this container
+# Build OpenBLAS from source
+RUN mkdir ~/openblas && \
+    cd ~/openblas && \
+    OPENBLAS_VERSION=0.3.10 && \
+    wget \
+        https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.zip \
+        -O openblas.zip && \
+    unzip -q openblas.zip -d . && \
+    cd OpenBLAS-${OPENBLAS_VERSION} && \
+    CXX="g++ -fPIC" CC="gcc -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 && \
+    make PREFIX=/usr/local install
+
+# Make Python 3.6 and Maven 3.3 Software Collections available by default during
+# the following build steps in this Dockerfile
 SHELL [ "/usr/bin/scl", "enable", "devtoolset-7", "rh-python36", "rh-maven35" ]
 
 # Install minimum required cmake version
@@ -92,32 +103,6 @@ RUN cd /usr/local/src && \
     make install && \
     cd /usr/local/src && \
     rm -rf ccache
-
-# NCCL is missing on CentOS7 images https://gitlab.com/nvidia/container-images/cuda/-/issues/68
-# Install manually if this is a GPU image; different Cuda versions require different NCCL versions
-# https://wiki.bash-hackers.org/syntax/pe#search_and_replace
-# We need to redeclare ARG due to
-# https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
-ARG BASE_IMAGE
-RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
-    if [[ "$BASE_IMAGE" == *"nvidia/cuda"* ]]; then \
-        if [[ ${SHORT_CUDA_VERSION} == 9.2 ]]; then \
-            export NCCL_VERSION=2.4.8; \
-        elif [[ ${SHORT_CUDA_VERSION} == 10.* ]]; then \
-            export NCCL_VERSION=2.6.4; \
-        else \
-            echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.centos7"; \
-            exit 1; \
-        fi && \
-        curl -fsSL https://developer.download.nvidia.com/compute/machine-learning/repos/rhel7/x86_64/nvidia-machine-learning-repo-rhel7-1.0.0-1.x86_64.rpm -O && \
-        rpm -i nvidia-machine-learning-repo-rhel7-1.0.0-1.x86_64.rpm && \
-        yum -y check-update || true && \
-        yum -y install \
-            libnccl-${NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} \
-            libnccl-devel-${NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} \
-            libnccl-static-${NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} && \
-        yum clean all; \
-    fi
 
 # Fix the en_DK.UTF-8 locale to test locale invariance
 RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8

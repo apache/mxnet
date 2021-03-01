@@ -32,7 +32,7 @@ from ..ndarray import NDArray
 
 __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'invert', 'delete',
            'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod',
-           'power', 'bitwise_not', 'trace', 'transpose',
+           'power', 'bitwise_not', 'trace', 'transpose', 'copy', 'moveaxis', 'reshape', 'dot',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'insert', 'fabs',
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'matmul',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
@@ -44,7 +44,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'max', 'min', 'amax', 'amin', 'logical_and', 'logical_or', 'logical_xor',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
-           'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
+           'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'gcd',
            'tril', 'triu', 'tri', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'cross', 'kron',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
@@ -708,7 +708,7 @@ def take(a, indices, axis=None, mode='raise', out=None):
         raise NotImplementedError(
             "function take does not support mode '{}'".format(mode))
     if axis is None:
-        return _api_internal.take(_npi.reshape(a, -1), indices, 0, mode, out)
+        return _api_internal.take(reshape(a, -1), indices, 0, mode, out)
     else:
         return _api_internal.take(a, indices, axis, mode, out)
 # pylint: enable=redefined-outer-name
@@ -854,7 +854,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
         result array or scalar
     """
     from ...numpy import ndarray
-    from ..ndarray import from_numpy  # pylint: disable=unused-import
+    from ...numpy_extension import from_numpy  # pylint: disable=unused-import
     if isinstance(lhs, numeric_types):
         if isinstance(rhs, numeric_types):
             return fn_scalar(lhs, rhs, out=out)
@@ -1620,7 +1620,7 @@ def argsort(a, axis=-1, kind=None, order=None):
     if order is not None:
         raise NotImplementedError("order not supported here")
 
-    return _npi.argsort(data=a, axis=axis, is_ascend=True, dtype='int64')
+    return _api_internal.argsort(a, axis, True, 'int64')
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1664,8 +1664,69 @@ def sort(a, axis=-1, kind=None, order=None):
     """
     if order is not None:
         raise NotImplementedError("order not supported here")
-    return _npi.sort(data=a, axis=axis, is_ascend=True)
+    return _api_internal.sort(a, axis, True)
 
+@set_module('mxnet.ndarray.numpy')
+def dot(a, b, out=None):
+    """
+    Dot product of two arrays. Specifically,
+
+    - If both `a` and `b` are 1-D arrays, it is inner product of vectors
+
+    - If both `a` and `b` are 2-D arrays, it is matrix multiplication,
+
+    - If either `a` or `b` is 0-D (scalar), it is equivalent to :func:`multiply`
+      and using ``np.multiply(a, b)`` or ``a * b`` is preferred.
+
+    - If `a` is an N-D array and `b` is a 1-D array, it is a sum product over
+      the last axis of `a` and `b`.
+
+    - If `a` is an N-D array and `b` is a 2-D array, it is a
+      sum product over the last axis of `a` and the second-to-last axis of `b`::
+
+        dot(a, b)[i,j,k] = sum(a[i,j,:] * b[:,k])
+
+    Parameters
+    ----------
+    a : ndarray
+        First argument.
+    b : ndarray
+        Second argument.
+
+    out : ndarray, optional
+        Output argument. It must have the same shape and type as the expected output.
+
+    Returns
+    -------
+    output : ndarray
+        Returns the dot product of `a` and `b`.  If `a` and `b` are both
+        scalars or both 1-D arrays then a scalar is returned; otherwise
+        an array is returned.
+        If `out` is given, then it is returned
+
+    Examples
+    --------
+    >>> a = np.array(3)
+    >>> b = np.array(4)
+    >>> np.dot(a, b)
+    array(12.)
+
+    For 2-D arrays it is the matrix product:
+
+    >>> a = np.array([[1, 0], [0, 1]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.dot(a, b)
+    array([[4., 1.],
+           [2., 2.]])
+
+    >>> a = np.arange(3*4*5*6).reshape((3,4,5,6))
+    >>> b = np.arange(5*6)[::-1].reshape((6,5))
+    >>> np.dot(a, b)[2,3,2,2]
+    array(29884.)
+    >>> np.sum(a[2,3,2,:] * b[:,2])
+    array(29884.)
+    """
+    return _api_internal.dot(a, b, out)
 
 @set_module('mxnet.ndarray.numpy')
 def tensordot(a, b, axes=2):
@@ -2018,6 +2079,46 @@ def expand_dims(a, axis):
         the input array.
     """
     return _api_internal.expand_dims(a, axis)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def gcd(x1, x2, out=None, **kwargs):
+    """
+    Returns the greatest common divisor of ``|x1|`` and ``|x2|``
+
+    Parameters
+    ----------
+    x1, x2 : ndarrays or scalar values
+        The arrays for computing greatest common divisor. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which may be the shape of
+        one or the other).
+
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The greatest common divisor of the absolute value of the inputs
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    See Also
+    --------
+    lcm : The lowest common multiple
+
+    Examples
+    --------
+    >>> np.gcd(12, 20)
+    4
+    >>> np.gcd(np.arange(6, dtype=int), 20)
+    array([20,  1,  2,  1,  4,  5], dtype=int64)
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.gcd(x1, x2, out=out)
+    return _api_internal.gcd(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4581,7 +4682,7 @@ def vstack(arrays, out=None):
         return [arr for arr in arrays]
 
     arrays = get_list(arrays)
-    return _npi.vstack(*arrays)
+    return _api_internal.vstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4626,7 +4727,7 @@ def row_stack(arrays):
         return [arr for arr in arrays]
 
     arrays = get_list(arrays)
-    return _npi.vstack(*arrays)
+    return _api_internal.vstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5837,7 +5938,7 @@ def ravel(x, order='C'):
     if isinstance(x, numeric_types):
         return _np.reshape(x, -1)
     elif isinstance(x, NDArray):
-        return _npi.reshape(x, -1)
+        return reshape(x, -1)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
@@ -8049,7 +8150,7 @@ def shares_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `may_share_memory` in MXNet DeepNumPy
+    - Actually it is same as `may_share_memory` in MXNet np
     """
     return _api_internal.share_memory(a, b).item()
 
@@ -8090,7 +8191,7 @@ def may_share_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `shares_memory` in MXNet DeepNumPy
+    - Actually it is same as `shares_memory` in MXNet np
     """
     return _api_internal.share_memory(a, b).item()
 
@@ -8457,7 +8558,7 @@ def squeeze(x, axis=None):
     """
     return _api_internal.squeeze(x, axis)
 
-
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
 def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
     """
@@ -9374,6 +9475,143 @@ def cumsum(a, axis=None, dtype=None, out=None):
     """
     return _api_internal.cumsum(a, axis, dtype, out)
 
+@set_module('mxnet.ndarray.numpy')
+def reshape(a, newshape, reverse=False, order='C'):
+    """
+    Gives a new shape to an array without changing its data.
+    This function always returns a copy of the input array if
+    ``out`` is not provided.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array to be reshaped.
+
+    newshape : int or tuple of ints
+        The new shape should be compatible with the original shape. If
+        an integer, then the result will be a 1-D array of that length.
+        One shape dimension can be -1. In this case, the value is
+        inferred from the length of the array and remaining dimensions.
+
+    order : {'C'}, optional
+        Read the elements of `a` using this index order, and place the
+        elements into the reshaped array using this index order.  'C'
+        means to read / write the elements using C-like index order,
+        with the last axis index changing fastest, back to the first
+        axis index changing slowest. Other order types such as 'F'/'A'
+        may be added in the future.
+
+    Returns
+    -------
+    reshaped_array : ndarray
+        It will be always a copy of the original array. This behavior is different
+        from the official NumPy ``reshape`` operator where views of the original array may be
+        generated.
+
+    See Also
+    --------
+    ndarray.reshape : Equivalent method.
+
+    Examples
+    --------
+    >>> a = np.arange(6).reshape((3, 2))
+    >>> a
+    array([[0., 1.],
+           [2., 3.],
+           [4., 5.]])
+
+    >>> np.reshape(a, (2, 3)) # C-like index ordering
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+
+    >>> np.reshape(np.ravel(a), (2, 3)) # equivalent to C ravel then C reshape
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+
+    >>> a = np.array([[1,2,3], [4,5,6]])
+    >>> np.reshape(a, 6)
+    array([1., 2., 3., 4., 5., 6.])
+
+    >>> np.reshape(a, (3,-1))       # the unspecified value is inferred to be 2
+    array([[1., 2.],
+           [3., 4.],
+           [5., 6.]])
+    """
+    return _api_internal.reshape(a, newshape, reverse, order)
+
+@set_module('mxnet.ndarray.numpy')
+def moveaxis(a, source, destination):
+    """Move axes of an array to new positions.
+    Other axes remain in their original order.
+
+    Parameters
+    ----------
+    a : ndarray
+        The array whose axes should be reordered.
+    source : int or sequence of int
+        Original positions of the axes to move. These must be unique.
+    destination : int or sequence of int
+        Destination positions for each of the original axes. These must also be
+        unique.
+
+    Returns
+    -------
+    result : ndarray
+        Array with moved axes. This array is a view of the input array.
+
+    See Also
+    --------
+        transpose: Permute the dimensions of an array.
+        swapaxes: Interchange two axes of an array.
+
+    Examples
+    --------
+    >>> x = np.zeros((3, 4, 5))
+    >>> np.moveaxis(x, 0, -1).shape
+    (4, 5, 3)
+    >>> np.moveaxis(x, -1, 0).shape
+    (5, 3, 4)
+    These all achieve the same result:
+    >>> np.transpose(x).shape
+    (5, 4, 3)
+    >>> np.swapaxes(x, 0, -1).shape
+    (5, 4, 3)
+    >>> np.moveaxis(x, [0, 1], [-1, -2]).shape
+    (5, 4, 3)
+    >>> np.moveaxis(x, [0, 1, 2], [-1, -2, -3]).shape
+    (5, 4, 3)
+    """
+    return _api_internal.moveaxis(a, source, destination)
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.ndarray.numpy')
+def copy(a):
+    """
+    Return an array copy of the given object.
+
+    Parameters
+    ----------
+    a :
+        Input array.
+
+    Returns
+    -------
+    arr : ndarray
+        Array interpretation of a.
+
+    -----
+    Examples
+    --------
+    >>> x = np.array([1, 2, 3])
+    >>> y = x
+    >>> z = np.copy(x)
+    >>> x[0] = 10
+    >>> x[0] == y[0]
+        True
+    >>> x[0] == z[0]
+        False
+    """
+    return _api_internal.copy(a)
 
 @set_module('mxnet.ndarray.numpy')
 def rollaxis(a, axis, start=0):

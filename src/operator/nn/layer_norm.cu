@@ -339,7 +339,7 @@ void LayerNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK(axis >= 0 && axis < inputs[0].ndim()) << "Channel axis out of range: " << param.axis;
   if (axis == inputs[0].ndim() - 1) {
     // Try to use the accelerated CUDA kernels
-    bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+    bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
     if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
       common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LayerNorm with float16 inputs. "
                       "See https://mxnet.apache.org/api/faq/env_var "
@@ -733,7 +733,7 @@ void LayerNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK(axis >= 0 && axis < inputs[0].ndim()) << "Channel axis out of range: " << param.axis;
   if (axis == inputs[0].ndim() - 1) {
     // Use the accelerated CUDA kernels
-    bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+    bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
     if (safe_acc) {
       return LayerNormGradGPUContig<true>(param, ctx, inputs, req, outputs);
     } else {

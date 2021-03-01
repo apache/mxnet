@@ -24,4 +24,4 @@ apt-get update && apt-get install -y python3-dev
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here
 cd /tmp && wget https://bootstrap.pypa.io/get-pip.py && python3 get-pip.py
 
-pip3 install pylint numpy requests Pillow pytest==5.3.2 pytest-env==0.6.2 pytest-cov==2.8.1 pytest-xdist==1.31.0
+pip3 install pylint numpy requests Pillow pytest==6.1.2 pytest-env==0.6.2 pytest-cov==2.10.1 pytest-xdist==2.1.0

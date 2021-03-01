@@ -326,6 +326,7 @@ DMLC_REGISTER_PARAMETER(ConcatParam);
     [](const NodeAttrs& attrs) { \
   const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed); \
   std::vector<std::string> ret; \
+  ret.reserve(params.num_args); \
   for (int i = 0; i < params.num_args; ++i) { \
     ret.push_back(std::string("arg") + std::to_string(i)); \
   } \

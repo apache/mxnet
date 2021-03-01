@@ -79,7 +79,7 @@ MXNET_REGISTER_API("_npi.tile")
   } else {
   param.reps = Tuple<int>(args[1].operator ObjectRef());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::TileParam>(&attrs);
   int num_outputs = 0;

@@ -38,7 +38,7 @@ def _monitor_callback_wrapper(callback):
 
 class NDArrayBase(object):
     """Base data structure for ndarray"""
-    __slots__ = ["handle", "writable"]
+    __slots__ = ["handle", "writable", "_alive"]
     # pylint: disable= no-member
 
     def __init__(self, handle, writable=True):
@@ -53,9 +53,11 @@ class NDArrayBase(object):
             assert isinstance(handle, NDArrayHandle)
         self.handle = handle
         self.writable = writable
+        self._alive = True
 
     def __del__(self):
         check_call(_LIB.MXNDArrayFree(self.handle))
+        self._alive = False
 
     def __reduce__(self):
         return (_global_var._ndarray_cls, (None,), self.__getstate__())
@@ -79,7 +81,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op, output_is_list
     # a handle's stype in _ndarray_cls
     out_stypes = ctypes.POINTER(ctypes.c_int)()
 
-    check_call(_LIB.MXImperativeInvokeEx(
+    check_call(_LIB.MXImperativeInvoke(
         ctypes.c_void_p(handle),
         ctypes.c_int(len(ndargs)),
         c_handle_array(ndargs),
@@ -105,19 +107,20 @@ class CachedOp(object):
     """Cached operator handle."""
     __slots__ = ["handle", "is_np_sym", "_monitor_callback"]
 
-    def __init__(self, sym, flags=()):
+    def __init__(self, sym, flags=(), thread_safe=False):
         self.handle = CachedOpHandle()
         self._monitor_callback = None
 
         from ..symbol.numpy._symbol import _Symbol
         self.is_np_sym = bool(isinstance(sym, _Symbol))
 
-        check_call(_LIB.MXCreateCachedOpEx(
+        check_call(_LIB.MXCreateCachedOp(
             sym.handle,
             len(flags),
             c_str_array([key for key, _ in flags]),
             c_str_array([str(val) for _, val in flags]),
-            ctypes.byref(self.handle)))
+            ctypes.byref(self.handle),
+            ctypes.c_bool(thread_safe)))
 
     def __del__(self):
         check_call(_LIB.MXFreeCachedOp(self.handle))
@@ -167,7 +170,7 @@ class CachedOp(object):
         else:
             default_ctx = args[0].ctx if default_ctx is None else default_ctx
 
-        check_call(_LIB.MXInvokeCachedOpEx(
+        check_call(_LIB.MXInvokeCachedOp(
             self.handle,
             ctypes.c_int(len(args)),
             c_handle_array(args),

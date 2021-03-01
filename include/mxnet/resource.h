@@ -196,13 +196,14 @@ struct Resource {
    *
    * \param dropout_desc  reference to previously created cuDNN dropout descriptor.
    * \param stream  the stream of returning tensor.
+   * \param dropout the ratio of inputs to keep.
    * \param name    the name of the operator requesting the resource.
    * \return the mshadow tensor requested.
    */
   void get_cudnn_dropout_desc(
       cudnnDropoutDescriptor_t *dropout_desc,
       mshadow::Stream<gpu> *stream,
-      const float dropout, uint64_t seed,
+      const float dropout,
       const std::string &name = MXNET_RESOURCE_DEFAULT_NAME_FARG("cudnn_dropout_state")) const;
 #endif  // MXNET_USE_CUDNN == 1
 

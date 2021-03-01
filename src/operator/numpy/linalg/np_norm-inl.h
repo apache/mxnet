@@ -273,7 +273,7 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
     const_cast<std::vector<TBlob>&>(outputs)[0] = outputs[0].reshape(small);
   }
-  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
   if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LpNorm with float16 inputs. "
                     "See https://mxnet.apache.org/api/faq/env_var "
@@ -531,7 +531,7 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
     if (param.flag == 2) {  // nuclear norm
       ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::identity>(
         ctx, eigen, req, outputs, reduced_shape);
-    } else if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+    } else if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true)) {
       if (ord == 2) {
         ReduceAxesComputeImpl<xpu, mshadow::red::maximum, true, false, mshadow_op::abs>(
           ctx, eigen, req, outputs, reduced_shape);

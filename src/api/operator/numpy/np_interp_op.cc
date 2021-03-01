@@ -53,7 +53,7 @@ MXNET_REGISTER_API("_npi.interp")
     param.x_scalar = args[2].operator double();
     param.x_is_scalar = true;
     attrs.op = op;
-    attrs.parsed = std::move(param);
+    attrs.parsed = param;
     SetAttrDict<op::NumpyInterpParam>(&attrs);
     NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
     int num_inputs = 2;
@@ -64,7 +64,7 @@ MXNET_REGISTER_API("_npi.interp")
     param.x_scalar = 0.0;
     param.x_is_scalar = false;
     attrs.op = op;
-    attrs.parsed = std::move(param);
+    attrs.parsed = param;
     SetAttrDict<op::NumpyInterpParam>(&attrs);
     NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*(),
                          args[2].operator mxnet::NDArray*()};

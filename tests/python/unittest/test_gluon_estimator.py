@@ -144,7 +144,9 @@ def test_initializer():
                         context=ctx)
         assert 'Network already fully initialized' in str(w[-1].message)
     # net partially initialized, fine tuning use case
-    net = gluon.model_zoo.vision.resnet18_v1(pretrained=True, ctx=ctx)
+    net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
+    net.features.initialize(ctx=ctx)
+    net.features(mx.nd.zeros((1, 3, 224, 224)))
     net.output = gluon.nn.Dense(10) #last layer not initialized
     est = Estimator(net, loss=loss, train_metrics=acc, context=ctx)
     dataset =  gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))

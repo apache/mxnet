@@ -22,14 +22,12 @@ import mxnet as mx
 import copy
 from mxnet.test_utils import *
 import pytest
-from common import setup_module, with_seed, teardown_module
 from mxnet.gluon.model_zoo.vision import get_model
 
 def make_subgraph(subg, *args):
     js = subg.tojson()
     return subg
 
-@with_seed()
 @pytest.mark.serial
 def test_make_subgraph():
     def make_subgraph1(stype):

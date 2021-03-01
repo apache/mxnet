@@ -20,7 +20,7 @@ import mxnet as mx
 import numpy as np
 import scipy.ndimage
 from mxnet.test_utils import *
-from common import assertRaises, with_seed, xfail_when_nonstandard_decimal_separator
+from common import xfail_when_nonstandard_decimal_separator
 import shutil
 import tempfile
 import unittest
@@ -110,7 +110,7 @@ def _test_imageiter_last_batch(imageiter_list, assert_data_shape):
 
 
 class TestImage(unittest.TestCase):
-    IMAGES_URL = "http://data.mxnet.io/data/test_images.tar.gz"
+    IMAGES_URL = "https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz"
 
     def setUp(self):
         self.IMAGES_DIR = tempfile.mkdtemp()
@@ -171,7 +171,6 @@ class TestImage(unittest.TestCase):
         assert mx.image.scale_down((360, 1000), (480, 500)) == (360, 375)
         assert mx.image.scale_down((300, 400), (0, 0)) == (0, 0)
 
-    @with_seed()
     def test_resize_short(self):
         try:
             import cv2
@@ -193,7 +192,6 @@ class TestImage(unittest.TestCase):
                     mx_resized = mx.image.resize_short(mx_img, new_size, interp)
                     assert_almost_equal(mx_resized.asnumpy()[:, :, (2, 1, 0)], cv_resized, atol=3)
 
-    @with_seed()
     def test_imresize(self):
         try:
             import cv2
@@ -252,7 +250,6 @@ class TestImage(unittest.TestCase):
                 ]
                 _test_imageiter_last_batch(imageiter_list, (2, 3, 224, 224))
 
-    @with_seed()
     def test_copyMakeBorder(self):
         try:
             import cv2
@@ -277,7 +274,6 @@ class TestImage(unittest.TestCase):
                 mx.image.copyMakeBorder(mx_img, top, bot, left, right, type=type_val, values=val, out=out_img)
                 assert_almost_equal(out_img.asnumpy(), cv_border)
 
-    @with_seed()
     def test_augmenters(self):
         # ColorNormalizeAug
         mean = np.random.rand(3) * 255
@@ -352,7 +348,6 @@ class TestImage(unittest.TestCase):
         for batch in det_iter:
             pass
 
-    @with_seed()
     def test_random_size_crop(self):
         # test aspect ratio within bounds
         width = np.random.randint(100, 500)
@@ -367,7 +362,6 @@ class TestImage(unittest.TestCase):
             'ration of new width and height out of the bound{}/{}={}'.format(new_w, new_h, float(new_w)/new_h)
 
     @xfail_when_nonstandard_decimal_separator
-    @with_seed()
     def test_imrotate(self):
         # test correctness
         xlin = np.expand_dims(np.linspace(0, 0.5, 30), axis=1)
@@ -410,13 +404,15 @@ class TestImage(unittest.TestCase):
         img_in = mx.nd.random.uniform(0, 1, (5, 3, 30, 60), dtype=np.float32)
         nd_rots = mx.nd.array([1, 2, 3, 4, 5], dtype=np.float32)
         args={'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': True, 'zoom_out': True}
-        self.assertRaises(ValueError, mx.image.imrotate, **args)
+        with pytest.raises(ValueError):
+            mx.image.imrotate(**args)
 
         # single image exception - zoom_in=zoom_out=True
         img_in = mx.nd.random.uniform(0, 1, (3, 30, 60), dtype=np.float32)
         nd_rots = 11
         args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': True, 'zoom_out': True}
-        self.assertRaises(ValueError, mx.image.imrotate, **args)
+        with pytest.raises(ValueError):
+            mx.image.imrotate(**args)
 
         # batch of images with scalar rotation
         img_in = mx.nd.stack(nd_img, nd_img, nd_img)
@@ -431,9 +427,9 @@ class TestImage(unittest.TestCase):
         img_in = mx.nd.random.uniform(0, 1, (3, 30, 60), dtype=np.float32)
         nd_rots = mx.nd.array([1, 2, 3, 4, 5], dtype=np.float32)
         args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': False, 'zoom_out': False}
-        self.assertRaises(TypeError, mx.image.imrotate, **args)
+        with pytest.raises(TypeError):
+            mx.image.imrotate(**args)
 
-    @with_seed()
     def test_random_rotate(self):
         angle_limits = [-5., 5.]
         src_single_image = mx.nd.random.uniform(0, 1, (3, 30, 60),

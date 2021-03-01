@@ -50,6 +50,7 @@ using NodeInput = std::pair<const Node*, uint32_t>;
  */
 std::vector<NodeInput> ConvertInputs(const std::vector<nnvm::NodeEntry>& inputs) {
   std::vector<NodeInput> ret;
+  ret.reserve(inputs.size());
   for (const auto& entry : inputs) {
     ret.emplace_back(entry.node.get(), entry.index);
   }
@@ -87,7 +88,15 @@ bool NodeEqual(const Node* n, const Node* m) {
   // to be eligible
   static auto& resource_request = Op::GetAttr<FResourceRequest>("FResourceRequest");
   static auto& resource_request_ex = Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
-  if (resource_request.get(n->op(), nullptr) != nullptr) return false;
+  const auto fresource_request = resource_request.get(n->op(), nullptr);
+  if (fresource_request != nullptr) {
+    const auto& requests = fresource_request(n->attrs);
+    for (const auto& req : requests) {
+      if (req.type != ResourceRequest::kTempSpace) {
+        return false;
+      }
+    }
+  }
   if (resource_request_ex.get(n->op(), nullptr) != nullptr) return false;
 
   return true;
@@ -184,10 +193,10 @@ void EliminateCommonNodes(Graph* g,
   // insert Copy nodes as appropriate
   const Op* copy_op = Op::Get("_copy");
   nnvm::NodeEntryMap<size_t> unique_outputs;
-  for (size_t i = 0; i < g->outputs.size(); ++i) {
-    auto kv = unique_outputs.find(g->outputs[i]);
+  for (auto & output : g->outputs) {
+    auto kv = unique_outputs.find(output);
     if (kv == unique_outputs.end()) {
-      unique_outputs.emplace(g->outputs[i], 0);
+      unique_outputs.emplace(output, 0);
     } else {
       ObjectPtr copy_node = Node::Create();
       std::ostringstream os;
@@ -196,7 +205,7 @@ void EliminateCommonNodes(Graph* g,
       copy_node->attrs.op = copy_op;
       copy_node->attrs.name = os.str();
       copy_node->inputs.emplace_back(kv->first);
-      g->outputs[i] = nnvm::NodeEntry{copy_node, 0, 0};
+      output = nnvm::NodeEntry{copy_node, 0, 0};
     }
   }
 }

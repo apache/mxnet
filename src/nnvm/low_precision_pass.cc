@@ -134,11 +134,10 @@ static bool CheckConditionalFP32(
       auto it_params = it->second;
       // For each param name, iterate through param values to check
       // if the provided param name is equal to any of the values
-      for (auto it_param = it_params.begin(); it_param != it_params.end();
-           it_param++) {
-        auto param_key = node->attrs.dict.find(it_param->first);
+      for (auto & it_param : it_params) {
+        auto param_key = node->attrs.dict.find(it_param.first);
         if (param_key != node->attrs.dict.end()) {
-          auto it_param_vals = it_param->second;
+          auto it_param_vals = it_param.second;
           if (std::find(it_param_vals.begin(), it_param_vals.end(),
                         param_key->second) != it_param_vals.end()) {
             return true;
@@ -282,13 +281,13 @@ Graph ReducePrecision(Graph &&src) {
           << "can't handle the widest_dtype_ops with mutable inputs.";
       int out_dtype = target_dtype;
       bool have_unknown_dtype = false;
-      for (size_t i = 0; i < node->inputs.size(); ++i) {
+      for (auto & input : node->inputs) {
         // Try to infer output dtype based on input dtype
-        if (!mirror_target_dtype_map.count(node->inputs[i])
-            && !mirror_fp32_map.count(node->inputs[i])) {
+        if (!mirror_target_dtype_map.count(input)
+            && !mirror_fp32_map.count(input)) {
           have_unknown_dtype = true;
           break;
-        } else if (mirror_fp32_map.count(node->inputs[i])) {
+        } else if (mirror_fp32_map.count(input)) {
           out_dtype = mshadow::kFloat32;
         }
       }

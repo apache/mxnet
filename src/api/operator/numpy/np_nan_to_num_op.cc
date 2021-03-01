@@ -53,7 +53,7 @@ MXNET_REGISTER_API("_npi.nan_to_num")
     param.neginf = args[4].operator double();
   }
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyNanToNumParam>(&attrs);
 

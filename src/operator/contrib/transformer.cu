@@ -30,7 +30,7 @@
 
 #include <mxnet/base.h>
 #include "./transformer-inl.h"
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -681,6 +681,22 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_encdec_valatt)
 // relu
 NNVM_REGISTER_OP(_contrib_div_sqrt_dim)
 .set_attr<FCompute>("FCompute<gpu>", DivSqrtDimForward_<gpu>);
+
+
+NNVM_REGISTER_OP(_contrib_sldwin_atten_mask_like)
+.set_attr<FCompute>("FCompute<gpu>", SldWinAttenMaskLikeForward<gpu>);
+
+NNVM_REGISTER_OP(_contrib_sldwin_atten_score)
+.set_attr<FCompute>("FCompute<gpu>", SldWinAttenScoreForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_sldwin_atten_score)
+.set_attr<FCompute>("FCompute<gpu>", SldWinAttenScoreBackward<gpu>);
+
+NNVM_REGISTER_OP(_contrib_sldwin_atten_context)
+.set_attr<FCompute>("FCompute<gpu>", SldWinAttenContextForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_sldwin_atten_context)
+.set_attr<FCompute>("FCompute<gpu>", SldWinAttenContextBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

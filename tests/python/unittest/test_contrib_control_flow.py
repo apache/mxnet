@@ -25,10 +25,8 @@ from collections import defaultdict
 from mxnet.test_utils import *
 from mxnet.base import _as_list
 from mxnet.attribute import AttrScope
-from common import with_seed
 
 
-@with_seed()
 def test_while_loop_simple_forward():
 
     class _TestBlock(gluon.HybridBlock):
@@ -251,7 +249,6 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
         assert_almost_equal(imp_grad, sym_grad, rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
 @pytest.mark.skip(reason="Bug in while loop op, tracked at incubator-mxnet/issues/18575")
 def test_while_loop_for_foreach():
 
@@ -793,7 +790,6 @@ def test_while_loop_for_foreach():
     )
 
 
-@with_seed()
 def test_while_loop_nested():
 
     def _to_np_list(arrays):
@@ -988,7 +984,6 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
         assert_almost_equal(imp_grad, sym_grad, rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
 def test_cond():
     # whether there are free variables in three graphs
     # whether these three graphs contain input_vars
@@ -1112,7 +1107,6 @@ def check_contrib_rnn(cell_type, num_states):
                     rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
 def test_contrib_rnn():
     cell_types = [(gluon.rnn.RNNCell, 1), (gluon.rnn.LSTMCell, 2),
             (gluon.rnn.GRUCell, 1)]
@@ -1120,7 +1114,7 @@ def test_contrib_rnn():
         check_contrib_rnn(cell_type, num_states)
 
 
-@with_seed()
+@pytest.mark.garbage_expected
 def test_foreach():
     v3 = mx.sym.var("v0")
     v4 = mx.sym.var("v1")
@@ -1141,7 +1135,7 @@ def test_foreach():
         out.extend(states)
         out = mx.sym.Group(out)
         js_1 = out.tojson()
-        out = mx.sym.load_json(js_1)
+        out = mx.sym.fromjson(js_1)
         js_2 = out.tojson()
         assert js_1 == js_2
         arr_grads = []
@@ -1440,7 +1434,6 @@ def test_foreach():
     verify_foreach(step17, [v3, v4], [v5], [], arrs, states, [], out_grads, False)
 
 
-@with_seed()
 def test_foreach_nested():
     # Test nested foreach.
     def step_in(in1, states):
@@ -1464,7 +1457,7 @@ def test_foreach_nested():
     out = mx.sym.broadcast_add(out, states[0])
 
     js_1 = out.tojson()
-    out = mx.sym.load_json(js_1)
+    out = mx.sym.fromjson(js_1)
     js_2 = out.tojson()
     assert js_1 == js_2
 
@@ -1494,7 +1487,6 @@ def test_foreach_nested():
     assert_almost_equal(state.grad.asnumpy(), state_grad.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
 def test_cut_subgraph_foreach():
     class TestLayer(gluon.HybridBlock):
         def __init__(self):
@@ -1529,7 +1521,6 @@ def test_cut_subgraph_foreach():
     assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
 def test_uniq_name():
     class ForeachLayer1(gluon.HybridBlock):
         def __init__(self):
@@ -1615,7 +1606,6 @@ def test_uniq_name():
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
 
 
-@with_seed()
 def test_cut_subgraph_while_loop():
     class TestLayer(gluon.HybridBlock):
         def __init__(self):
@@ -1649,7 +1639,6 @@ def test_cut_subgraph_while_loop():
     assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
 def test_cut_subgraph_cond():
     class TestLayer(gluon.HybridBlock):
         def __init__(self):

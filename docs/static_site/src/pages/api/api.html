@@ -21,55 +21,6 @@ docs:
   tutorial_link: /api/python/docs/tutorials
   icon: /assets/img/python_logo.svg
   tag: python
-- title: Scala
-  guide_link: /api/scala.html
-  api_link: /api/scala/docs/api
-  tutorial_link: /api/scala/docs/tutorials
-  description:
-  icon: /assets/img/scala_logo.svg
-  tag: scala
-- title: Java
-  guide_link: /api/java.html
-  api_link: /api/java/docs/api
-  tutorial_link: /api/java/docs/tutorials
-  description:
-  icon: /assets/img/java_logo.svg
-  tag: java
-- title: Clojure
-  guide_link: /api/clojure
-  api_link: /api/clojure/docs/api
-  tutorial_link: /api/clojure/docs/tutorials
-  description:
-  icon: /assets/img/clojure_logo.svg
-  tag: clojure
-- title: C/C++
-  guide_link: /api/cpp
-  api_link: /api/cpp/docs/api
-  tutorial_link: /api/cpp/docs/tutorials
-  description:
-  icon: /assets/img/cpp_logo.svg
-  tag: cpp
-- title: Julia
-  guide_link: /api/julia
-  api_link: /api/julia/docs/api
-  tutorial_link: /api/julia/docs/api/#tutorials
-  description:
-  icon: /assets/img/julia_logo.svg
-  tag: julia
-- title: R
-  guide_link: /api/r
-  api_link: /api/r/docs/api/R-package/build/mxnet-r-reference-manual.pdf
-  tutorial_link: /api/r/docs/tutorials
-  description:
-  icon: /assets/img/R_logo.svg
-  tag: r
-- title: Perl
-  guide_link: /api/perl
-  api_link: https://metacpan.org/release/AI-MXNet
-  tutorial_link: /api/perl/docs/tutorials
-  description:
-  icon: /assets/img/perl_logo.svg
-  tag: perl
 ---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
@@ -123,26 +74,11 @@ docs:
 {%- endfor -%}
 <h2>Other Bindings</h2>
 <div class="row">
-{%- for doc in page.docs -%}
-  {%- if doc.tag != 'python' -%}
-  <div class="col-4">
-      <div class="docs-card">
-          <div class="docs-logo-container">
-              <img class="docs-logo-image" src="{{doc.icon | relative_url}}">
-          </div>
-          <div class="docs-action-btn">
-            <a href="{{doc.guide_link | relative_url}}"> <img src="{{'assets/img/compass.svg' | relative_url}}" class="docs-logo-docs">{{doc.title}} Guide  <span class="span-accented">›</span></a>
-          </div>
-          <div class="docs-action-btn">
-            <a href="{{doc.tutorial_link | relative_url}}"> <img src="{{'assets/img/video-tutorial.svg' | relative_url}}" class="docs-logo-docs">{{doc.title}} Tutorials  <span class="span-accented">›</span></a>
-          </div>
-          <div class="docs-action-btn">
-            <a href="{{doc.api_link | relative_url}}"> <img src="{{'assets/img/api.svg' | relative_url}}" class="docs-logo-docs">{{doc.title}} API Reference  <span class="span-accented">›</span></a>
-          </div>
-      </div>
+  <div class="language-binding-banner">
+    <h4>Call for Contribution</h4>
+    The Clojure, Java, Julia, R, and Scala language bindings of <a href="/versions/{{site.versions[1]}}/api">MXNet v1.x</a> were removed in v2.x due to some <a href="https://github.com/apache/incubator-mxnet/issues/17676">C APIs being deprecated</a> and the bindings rely on the deprecated APIs. You can still use these language bindings in v1.x.
+    MXNet's new C APIs in v2.x can be used to reestablish your preferred language binding. Your contribution is welcome!
   </div>
-  {%- endif -%}
-{%- endfor -%}
 </div>
 </div> <!-- closing outer wrapper -->
 <div class="docs-architecture">

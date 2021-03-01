@@ -64,7 +64,7 @@ non-virtualized platforms:
 
 ```
 ./build.py -p armv7
-./build.py -p test.armv7 /work/runtime_functions.sh unittest_ubuntu_python3_armv7
+./build.py -p test.armv7 /work/runtime_functions.sh unittest_ubuntu_python3_arm
 ```
 
 For the test step to succeed, you must run Linux kernel 4.8 or later and have qemu installed.

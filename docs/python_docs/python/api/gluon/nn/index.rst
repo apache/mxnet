@@ -14,7 +14,7 @@
    KIND, either express or implied.  See the License for the
    specific language governing permissions and limitations
    under the License.
-   
+
 gluon.nn
 ========
 
@@ -29,7 +29,6 @@ two modules:
     :nosignatures:
 
     mxnet.gluon.nn
-    mxnet.gluon.contrib.nn
 
 
 We group all layers in these two modules according to their categories.
@@ -38,15 +37,24 @@ We group all layers in these two modules according to their categories.
 
 
 
-Sequential containers
+Sequential Containers
 ---------------------
-
 
 .. autosummary::
     :nosignatures:
 
     nn.Sequential
     nn.HybridSequential
+
+
+Concatenation Containers
+------------------------
+
+.. autosummary::
+    :nosignatures:
+
+    nn.Concatenate
+    nn.HybridConcatenate
 
 
 Basic Layers
@@ -61,6 +69,7 @@ Basic Layers
     nn.Flatten
     nn.Lambda
     nn.HybridLambda
+    nn.Identity
 
 Convolutional Layers
 --------------------
@@ -74,6 +83,18 @@ Convolutional Layers
     nn.Conv1DTranspose
     nn.Conv2DTranspose
     nn.Conv3DTranspose
+    nn.DeformableConvolution
+    nn.ModulatedDeformableConvolution
+
+Pixel Shuffle Layers
+--------------------
+
+.. autosummary::
+    :nosignatures:
+
+    nn.PixelShuffle1D
+    nn.PixelShuffle2D
+    nn.PixelShuffle3D
 
 Pooling Layers
 --------------
@@ -104,6 +125,7 @@ Normalization Layers
     nn.BatchNorm
     nn.InstanceNorm
     nn.LayerNorm
+    nn.SyncBatchNorm
 
 Embedding Layers
 ----------------
@@ -125,6 +147,8 @@ Advanced Activation Layers
     nn.ELU
     nn.SELU
     nn.Swish
+    nn.SiLU
+    nn.GELU
 
 API Reference
 -------------

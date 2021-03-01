@@ -23,21 +23,21 @@
 
 Gradients are fundamental to the process of training neural networks, and tell us how to change the parameters of the network to improve its performance.
 
-![auto-gradient](http://mxnet.incubator.apache.org/api/python/docs/_static/autograd_images/autograd_gradient.png)
+![auto-gradient](/_static/autograd_gradient.png)
 
 ### Long Answer:
 
 Under the hood, neural networks are composed of operators (e.g. sums, products, convolutions, etc) some of which use parameters (e.g. the weights in convolution kernels) for their computation, and it's our job to find the optimal values for these parameters. Gradients lead us to the solution!
 
-Gradients tell us how much a given variable increases or decreases when we change a variable it depends on. What we're interested in is the effect of changing a each parameter on the performance of the network. We usually define performance using a loss metric that we try to minimize, i.e. a metric that tells us how bad the predictions of a network are given ground truth. As an example, for regression we might try to minimize the [L2 loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.L2Loss) (also known as the Euclidean distance) between our predictions and true values, and for classification we minimize the [cross entropy loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.SoftmaxCrossEntropyLoss).
+Gradients tell us how much a given variable increases or decreases when we change a variable it depends on. What we're interested in is the effect of changing a each parameter on the performance of the network. We usually define performance using a loss metric that we try to minimize, i.e. a metric that tells us how bad the predictions of a network are given ground truth. As an example, for regression we might try to minimize the [L2 loss](../../../api/gluon/loss/index.rst#mxnet.gluon.loss.L2Loss) (also known as the Euclidean distance) between our predictions and true values, and for classification we minimize the [cross entropy loss](../../../api/gluon/loss/index.rst#mxnet.gluon.loss.SoftmaxCrossEntropyLoss).
 
-Assuming we've calculated the gradient of each parameter with respect to the loss (details in next section), we can then use an optimizer such as [stochastic gradient descent](https://en.wikipedia.org/wiki/Stochastic_gradient_descent) to shift the parameters slightly in the *opposite direction* of the gradient. See [Optimizers](/api/python/docs/api/optimizer/index.html) for more information on these methods. We repeat the process of calculating gradients and updating parameters over and over again, until the parameters of the network start to stabilize and converge to a good solution.
+Assuming we've calculated the gradient of each parameter with respect to the loss (details in next section), we can then use an optimizer such as [stochastic gradient descent](https://en.wikipedia.org/wiki/Stochastic_gradient_descent) to shift the parameters slightly in the *opposite direction* of the gradient. See [Optimizers](../../../api/optimizer/index.rst) for more information on these methods. We repeat the process of calculating gradients and updating parameters over and over again, until the parameters of the network start to stabilize and converge to a good solution.
 
 ## How do we calculate gradients?
 
 ### Short Answer:
 
-We differentiate. [MXNet Gluon](/api/python/docs/tutorials/packages/gluon/index.html) uses Reverse Mode Automatic Differentiation (`autograd`) to backprogate gradients from the loss metric to the network parameters.
+We differentiate. [MXNet Gluon](../gluon/index.ipynb) uses Reverse Mode Automatic Differentiation (`autograd`) to backprogate gradients from the loss metric to the network parameters.
 
 ![forward-backward](http://mxnet.incubator.apache.org/api/python/docs/_static/autograd_images/autograd_forward_backward.png)
 
@@ -159,7 +159,7 @@ print('is_training:', is_training, output)
 
 We called `dropout` while `autograd` was recording this time, so our network was in training mode and we see dropout of the input this time. Since the probability of dropout was 50%, the output is automatically scaled by 1/0.5=2 to preserve the average activation.
 
-We can force some operators to behave as they would during training, even in inference mode. One example is setting `mode='always'` on the [Dropout](/api/python/ndarray/ndarray.html#mxnet.ndarray.Dropout) operator, but this usage is uncommon.
+We can force some operators to behave as they would during training, even in inference mode. One example is setting `mode='always'` on the [Dropout](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.Dropout) operator, but this usage is uncommon.
 
 ## Advanced: Skipping the calculation of parameter gradients
 
@@ -196,7 +196,7 @@ print(x.grad)
 
 ## Advanced: Using Python control flow
 
-As mentioned before, one of the main advantages of `autograd` is the ability to automatically calculate gradients of dynamic graphs (i.e. graphs where the operators could be different on every forward pass). One example of this would be applying a tree structured recurrent network to parse a sentence using its parse tree. And we can use Python control flow operators to create a dynamic flow that depends on the data, rather than using [MXNet's control flow operators](/api/python/docs/tutorials/packages/autograd/index.html#Advanced:-Using-Python-control-flow).
+As mentioned before, one of the main advantages of `autograd` is the ability to automatically calculate gradients of dynamic graphs (i.e. graphs where the operators could be different on every forward pass). One example of this would be applying a tree structured recurrent network to parse a sentence using its parse tree. And we can use Python control flow operators to create a dynamic flow that depends on the data, rather than using MXNet's control flow operators.
 
 We'll write a function as a toy example of a dynamic network. We'll add an `if` condition and a loop with a variable number of iterations, both of which will depend on the input data. Although these can now be used in static graphs (with conditional operators) it's still much more natural to use native control flow.
 

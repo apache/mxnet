@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+
+#   http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from ..base import get_last_ffi_error
 
 from libcpp.vector cimport vector
@@ -97,30 +114,31 @@ cdef extern from "mxnet/c_api.h":
     int MXSymbolSetAttr(SymbolHandle symbol,
                         const char* key,
                         const char* value);
-    int MXImperativeInvokeEx(OpHandle creator,
-                             int num_inputs,
-                             NDArrayHandle *inputs,
-                             int *num_outputs,
-                             NDArrayHandle **outputs,
-                             int num_params,
-                             const char **param_keys,
-                             const char **param_vals,
-                             const int **out_stypes);
-    int MXNDArrayFree(NDArrayHandle handle);
-    int MXCreateCachedOpEx(SymbolHandle handle,
-                            int num_flags,
-                            const char** keys,
-                            const char** vals,
-                            CachedOpHandle *out);
-    int MXFreeCachedOp(CachedOpHandle handle);
-    int MXInvokeCachedOpEx(CachedOpHandle handle,
+    int MXImperativeInvoke(OpHandle creator,
                            int num_inputs,
                            NDArrayHandle *inputs,
-                           int default_ctx_type,
-                           int default_ctx_dev_id,
                            int *num_outputs,
                            NDArrayHandle **outputs,
+                           int num_params,
+                           const char **param_keys,
+                           const char **param_vals,
                            const int **out_stypes);
+    int MXNDArrayFree(NDArrayHandle handle);
+    int MXCreateCachedOp(SymbolHandle handle,
+                          int num_flags,
+                          const char** keys,
+                          const char** vals,
+                          CachedOpHandle *out,
+                          _bool thread_safe);
+    int MXFreeCachedOp(CachedOpHandle handle);
+    int MXInvokeCachedOp(CachedOpHandle handle,
+                         int num_inputs,
+                         NDArrayHandle *inputs,
+                         int default_ctx_type,
+                         int default_ctx_dev_id,
+                         int *num_outputs,
+                         NDArrayHandle **outputs,
+                         const int **out_stypes);
     int MXCachedOpRegisterOpHook(NDArrayHandle handle,
                                  CachedOpMonitorCallback callback,
                                  _bool monitor_all);

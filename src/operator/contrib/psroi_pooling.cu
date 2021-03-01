@@ -30,7 +30,7 @@
 #include <mshadow/cuda/reduce.cuh>
 #include <algorithm>
 #include <vector>
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 #include "../mxnet_op.h"
 
 #define PSROIPOOLING_CUDA_CHECK(condition) \

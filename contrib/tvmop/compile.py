@@ -125,23 +125,27 @@ if __name__ == "__main__":
                         help="Path which stores the config file")
     arguments = parser.parse_args()
 
-    func_list_llvm = []
-    func_list_cuda = []
+    mod_llvm = tvm.IRModule({})
+    mod_cuda = tvm.IRModule({})
+    has_cuda = False
 
     # TODO: attach instruction features to the library, e.g., avx-512, etc.
     for operator_def in __OP_DEF__:
         for sch, args, name in operator_def.invoke_all():
             name = operator_def.get_op_name(name, args)
-            if tvm.module.enabled(get_target(operator_def.target)):
-                func_list = func_list_llvm if operator_def.target == "cpu" else func_list_cuda
+            if tvm.runtime.module.enabled(get_target(operator_def.target)):
                 func_lower = tvm.lower(sch, args,
                                        name=name,
                                        binds=operator_def.get_binds(args))
-                func_list.append(func_lower)
+                if operator_def.target == "cpu":
+                    mod = mod_llvm.update(func_lower)
+                else:
+                    has_cuda = True
+                    mod_cuda.update(func_lower)
 
-    lowered_funcs = {get_target("cpu"): func_list_llvm}
-    if len(func_list_cuda) > 0:
-        lowered_funcs[get_target("cuda")] = func_list_cuda
+    lowered_funcs = {get_target("cpu"): mod_llvm}
+    if has_cuda > 0:
+        lowered_funcs[get_target("cuda")] = mod_cuda
         cuda_arch = get_cuda_arch(arguments.cuda_arch)
         if cuda_arch is None:
             logging.info('No cuda arch specified. TVM will try to detect it from the build platform.')
@@ -152,6 +156,8 @@ if __name__ == "__main__":
     # we create libtvmop.o first, which gives us chance to link tvm_runtime together with the libtvmop
     # to allow mxnet find external helper functions in libtvm_runtime
     func_binary.save(arguments.target_path + "/libtvmop.o")
+    if len(func_binary.imported_modules):
+        func_binary.imported_modules[0].save(arguments.target_path + "/libtvmop.cubin")
     ld_path = arguments.target_path if arguments.ld_path is None else arguments.ld_path
     create_shared(arguments.target_path + "/libtvmop.so",
                   arguments.target_path + "/libtvmop.o",

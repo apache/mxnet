@@ -37,40 +37,16 @@ and maintain the resources for precisely the amount of time needed.
 In this document, we provide a step-by-step guide that will teach you
 how to set up an AWS cluster with _MXNet_. We show how to:
 
-- [Use Amazon S3 to host data](#use-amazon-s3-to-host-data)
-- [Set up an EC2 GPU instance with all dependencies installed](#set-up-an-ec2-gpu-instance)
+- [Use Pre-installed EC2 GPU Instance](#use-pre-installed-ec2-gpu-instance)
 - [Build and run MXNet on a single computer](#build-and-run-mxnet-on-a-gpu-instance)
 - [Set up an EC2 GPU cluster for distributed training](#set-up-an-ec2-gpu-cluster-for-distributed-training)
-
-### Use Amazon S3 to Host Data
-
-Amazon S3 provides distributed data storage which proves especially convenient for hosting large datasets.
-To use S3, you need [AWS credentials](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html),
-including an `ACCESS_KEY_ID` and a `SECRET_ACCESS_KEY`.
-
-To use _MXNet_ with S3, set the environment variables `AWS_ACCESS_KEY_ID` and
-`AWS_SECRET_ACCESS_KEY` by adding the following two lines in
-`~/.bashrc` (replacing the strings with the correct ones):
-
-```bash
-export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
-export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-```
-
-There are several ways to upload data to S3. One simple way is to use
-[s3cmd](https://s3tools.org/s3cmd). For example:
-
-```bash
-wget http://data.mxnet.io/mxnet/data/mnist.zip
-unzip mnist.zip && s3cmd put t*-ubyte s3://dmlc/mnist/
-```
 
 ### Use Pre-installed EC2 GPU Instance
 The [Deep Learning AMIs](https://aws.amazon.com/marketplace/search/results?x=0&y=0&searchTerms=Deep+Learning+AMI)
 are a series of images supported and maintained by Amazon Web Services for use
 on Amazon Elastic Compute Cloud (Amazon EC2) and contain the latest MXNet release.
 
-Now you can launch _MXNet_ directly on an EC2 GPU instance.  
+Now you can launch _MXNet_ directly on an EC2 GPU instance.
 You can also use [Jupyter](https://jupyter.org) notebook on EC2 machine.
 Here is a [good tutorial](https://github.com/dmlc/mxnet-notebooks)
 on how to connect to a Jupyter notebook running on an EC2 instance.
@@ -81,7 +57,7 @@ on how to connect to a Jupyter notebook running on an EC2 instance.
 provide a foundational image with NVIDIA CUDA, cuDNN, GPU drivers, Intel
 MKL-DNN, Docker and Nvidia-Docker, etc. for deploying your own custom deep
 learning environment. You may follow the [MXNet Build From Source
-instructions](<https://mxnet.apache.org/get_started/build_from_source easily on
+instructions](https://mxnet.apache.org/get_started/build_from_source) easily on
 the Deep Learning Base AMIs.
 
 ### Set Up an EC2 GPU Cluster for Distributed Training
@@ -146,7 +122,7 @@ Put all of the record files into a folder, and point the data path to the folder
 
 #### Use YARN and SGE
 Although using SSH can be simple when you don't have a cluster scheduling framework,
-_MXNet_ is designed to be portable to various platforms.  
+_MXNet_ is designed to be portable to various platforms.
 We provide scripts available in [tracker](https://github.com/dmlc/dmlc-core/tree/master/tracker)
 to allow running on other cluster frameworks, including Hadoop (YARN) and SGE.
 We welcome contributions from the community of examples of running _MXNet_ on your favorite distributed platform.

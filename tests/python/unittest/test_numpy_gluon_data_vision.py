@@ -15,10 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: skip-file
-from __future__ import absolute_import
-from __future__ import division
-
 import os
 from collections import namedtuple
 from uuid import uuid4
@@ -26,14 +22,13 @@ import numpy as _np
 import mxnet as mx
 from mxnet import gluon, autograd, np, npx
 from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency, same, check_symbolic_backward
-from common import assertRaises, setup_module, with_seed, teardown_module, \
-    xfail_when_nonstandard_decimal_separator
+from common import assertRaises, xfail_when_nonstandard_decimal_separator
 import random
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
 from mxnet import image
+import pytest
 
-@with_seed()
 @use_np
 def test_to_tensor():
     # 3D Input
@@ -63,7 +58,6 @@ def test_to_tensor():
     assert same(out_nd.asnumpy(), np.transpose(np.ones(data_in.shape, dtype=np.float32), (2, 0, 1)))
 
 
-@with_seed()
 @use_np
 def test_normalize():
     # 3D Input
@@ -98,7 +92,6 @@ def test_normalize():
     assertRaises(MXNetError, normalize_transformer, invalid_data_in)
 
 
-@with_seed()
 @use_np
 def test_resize():
     def _test_resize_with_diff_type(dtype):
@@ -136,7 +129,6 @@ def test_resize():
         _test_resize_with_diff_type(dtype)
 
 
-@with_seed()
 @use_np
 def test_crop_resize():
     def _test_crop_resize_with_diff_type(dtype):
@@ -199,7 +191,6 @@ def test_crop_resize():
             test_crop_backward(data_in, test_case)
 
 
-@with_seed()
 @use_np
 def test_flip_left_right():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
@@ -208,7 +199,6 @@ def test_flip_left_right():
     assert_almost_equal(flip_in, data_trans.asnumpy())
 
 
-@with_seed()
 @use_np
 def test_flip_top_bottom():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
@@ -217,7 +207,6 @@ def test_flip_top_bottom():
     assert_almost_equal(flip_in, data_trans.asnumpy())
 
 
-@with_seed()
 @use_np
 def test_transformer():
     from mxnet.gluon.data.vision import transforms
@@ -241,21 +230,18 @@ def test_transformer():
 
     transform(mx.np.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
-@with_seed()
 @use_np
 def test_random_crop():
     x = mx.np.ones((245, 480, 3), dtype='uint8')
     y = mx.npx.image.random_crop(x, width=100, height=100)
     assert y.shape == (100, 100, 3)
 
-@with_seed()
 @use_np
 def test_random_resize_crop():
     x = mx.np.ones((245, 480, 3), dtype='uint8')
     y = mx.npx.image.random_resized_crop(x, width=100, height=100)
     assert y.shape == (100, 100, 3)
 
-@with_seed()
 @use_np
 def test_hybrid_transformer():
     from mxnet.gluon.data.vision import transforms
@@ -278,7 +264,6 @@ def test_hybrid_transformer():
     transform(mx.np.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 @use_np
 def test_rotate():
     transformer = transforms.Rotate(10.)
@@ -314,7 +299,6 @@ def test_rotate():
         assert_almost_equal(ans.asnumpy(), expected_result.asnumpy(), atol=1e-6)
 
 
-@with_seed()
 @use_np
 def test_random_rotation():
     # test exceptions for probability input outside of [0,1]
@@ -335,26 +319,28 @@ def test_random_rotation():
     assert_almost_equal(data.asnumpy(), transformer(data).asnumpy())
 
 
-@with_seed()
 @use_np
 def test_random_transforms():
     from mxnet.gluon.data.vision import transforms
 
     tmp_t = transforms.Compose([transforms.Resize(300), transforms.RandomResizedCrop(224)])
-    transform = transforms.Compose([transforms.RandomApply(tmp_t, 0.5)])
+    counter = 0
+    def transform_fn(x):
+        nonlocal counter
+        counter += 1
+        return x
+    transform = transforms.Compose([transforms.RandomApply(transform_fn, 0.5)])
 
     img = mx.np.ones((10, 10, 3), dtype='uint8')
-    iteration = 1000
+    iteration = 10000
     num_apply = 0
     for _ in range(iteration):
         out = transform(img)
-        if out.shape[0] == 224:
-            num_apply += 1
-    assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
+    assert counter == pytest.approx(5000, 1e-1)
 
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 @use_np
+@pytest.mark.flaky
 def test_random_gray():
     from mxnet.gluon.data.vision import transforms
 
@@ -381,7 +367,6 @@ def test_random_gray():
             num_apply += 1
     assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
 
-@with_seed()
 @use_np
 def test_bbox_random_flip():
     from mxnet.gluon.contrib.data.vision.transforms.bbox import ImageBboxRandomFlipLeftRight
@@ -398,7 +383,6 @@ def test_bbox_random_flip():
             num_apply += 1
     assert_almost_equal(np.array([num_apply])/float(iteration), 0.5, 0.5)
 
-@with_seed()
 @use_np
 def test_bbox_crop():
     from mxnet.gluon.contrib.data.vision.transforms.bbox import ImageBboxCrop

@@ -31,6 +31,7 @@ cdef class NDArrayBase:
     # handle for symbolic operator.
     cdef NDArrayHandle chandle
     cdef int cwritable
+    cdef public bint _alive
 
     cdef _set_handle(self, handle):
         cdef unsigned long long ptr
@@ -58,9 +59,11 @@ cdef class NDArrayBase:
     def __init__(self, handle, writable=True):
         self._set_handle(handle)
         self.cwritable = writable
+        self._alive = True
 
     def __dealloc__(self):
         CALL(MXNDArrayFree(self.chandle))
+        self._alive = False
 
     def __reduce__(self):
         return (_global_var._ndarray_cls, (None,), self.__getstate__())
@@ -116,12 +119,13 @@ cdef class CachedOp:
         from ..symbol.numpy._symbol import _Symbol
         self.is_np_sym = bool(isinstance(sym, _Symbol))
 
-        CALL(MXCreateCachedOpEx(
+        CALL(MXCreateCachedOp(
             <SymbolHandle>(<unsigned long long>sym.handle.value),
             len(flags),
             CBeginPtr(c_flag_keys),
             CBeginPtr(c_flag_vals),
-            &self.chandle))
+            &self.chandle,
+            False))
 
     def __del__(self):
         CALL(MXFreeCachedOp(self.chandle))
@@ -174,7 +178,7 @@ cdef class CachedOp:
         else:
             p_output_vars = &output_vars[0]
 
-        CALL(MXInvokeCachedOpEx(
+        CALL(MXInvokeCachedOp(
             self.chandle,
             <int>len(args),
             &ndvars[0] if ndvars.size() != 0 else NULL,
@@ -239,7 +243,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op=0, output_is_li
     cdef vector[const char*] param_keys = SVec2Ptr(ckeys)
     cdef vector[const char*] param_vals = SVec2Ptr(cvals)
 
-    CALL(MXImperativeInvokeEx(
+    CALL(MXImperativeInvoke(
         chandle,
         <int>ndvars.size(),
         &ndvars[0] if ndvars.size() != 0 else NULL,

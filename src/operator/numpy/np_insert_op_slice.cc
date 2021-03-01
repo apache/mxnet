@@ -74,10 +74,10 @@ bool NumpyInsertSliceShape(const nnvm::NodeAttrs& attrs,
     axis += (axis < 0) ? arrshape.ndim() : 0;
   }
 
-  int seq_cnt = -1;
-  int N = arrshape[axis];
-  int step = param.step.value();
-  int stop, start;
+  index_t seq_cnt = -1;
+  index_t N = arrshape[axis];
+  index_t step = param.step.value();
+  index_t stop, start;
   if (param.stop.has_value()) {
     stop = param.stop.value();
     stop += (stop < 0) ? N : 0;
@@ -103,7 +103,7 @@ bool NumpyInsertSliceShape(const nnvm::NodeAttrs& attrs,
 
   mxnet::TShape newshape(arrshape);
   mxnet::TShape val_newshape(arrshape.ndim(), -1);
-  int numnew = 0;  // amount of new column insert to 'arr' in 'axis'
+  size_t numnew = 0;  // amount of new column insert to 'arr' in 'axis'
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
   for (int i = valshape.ndim() - 1, j = arrshape.ndim() - 1; i >= 0 || j >= 0; --i, --j) {

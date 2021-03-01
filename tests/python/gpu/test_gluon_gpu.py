@@ -15,13 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
 import sys
 import os
 import time
 import mxnet as mx
 import multiprocessing as mp
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray, environment
 import mxnet.ndarray as nd
 import numpy as np
 import math
@@ -30,9 +29,10 @@ import pytest
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, run_in_spawned_process
+from common import assert_raises_cudnn_not_satisfied, run_in_spawned_process
 from test_gluon import *
 from test_loss import *
+from test_numpy_loss import *
 from test_gluon_rnn import *
 
 set_default_context(mx.gpu(0))
@@ -55,7 +55,6 @@ def check_rnn_layer(layer):
         assert_almost_equal(g, c)
 
 
-@with_seed()
 def check_rnn_layer_w_rand_inputs(layer):
     layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     x = mx.nd.uniform(shape=(10, 16, 30))
@@ -74,7 +73,6 @@ def check_rnn_layer_w_rand_inputs(layer):
         assert_almost_equal(g, c)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 def test_lstmp():
     hidden_size, projection_size = 3, 2
@@ -92,9 +90,9 @@ def test_lstmp():
     weights = {k: rand_ndarray(v) for k, v in shapes.items()}
     lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
                                 input_size=input_size)
-    lstm_cell = gluon.contrib.rnn.LSTMPCell(hidden_size=hidden_size,
-                                            projection_size=projection_size,
-                                            input_size=input_size)
+    lstm_cell = gluon.rnn.LSTMPCell(hidden_size=hidden_size,
+                                    projection_size=projection_size,
+                                    input_size=input_size)
     lstm_layer.initialize(ctx=ctx)
     lstm_cell.initialize(ctx=ctx)
     layer_params = lstm_layer.collect_params()
@@ -128,8 +126,8 @@ def test_lstmp():
     lstm_layer.load_parameters('gpu_tmp.params')
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
+@pytest.mark.flaky
 def test_lstm_clip():
     hidden_size, projection_size = 4096, 2048
     batch_size, seq_len = 32, 80
@@ -153,7 +151,6 @@ def test_lstm_clip():
     assert not np.isnan(cell_states).any()
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnn_layer():
     check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
@@ -278,24 +275,20 @@ def check_layer_bidirectional_varseqlen(size, in_size):
                             rtol=1e-2, atol=1e-6)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_layer_bidirectional():
     check_layer_bidirectional(7, 5, 0)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 def test_layer_bidirectional_proj():
     check_layer_bidirectional(7, 5, 3)
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 def test_layer_bidirectional_varseqlength():
     check_layer_bidirectional_varseqlen(7, 5)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnn_layer_begin_state_type():
     fake_data = nd.random.uniform(shape=(3, 5, 7), dtype='float16')
@@ -328,7 +321,6 @@ def test_gluon_ctc_consistency():
     assert_almost_equal(cpu_data.grad, gpu_data.grad, atol=1e-3, rtol=1e-3)
 
 
-@with_seed()
 def test_global_norm_clip_multi_device():
     for check_isfinite in [True, False]:
         x1 = mx.nd.ones((3, 3), ctx=mx.gpu(0))
@@ -350,9 +342,9 @@ def test_global_norm_clip_multi_device():
 def _check_batchnorm_result(input, num_devices=1, cuda=False):
     from mxnet.gluon.utils import split_and_load
     def _find_bn(module):
-        if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+        if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.nn.SyncBatchNorm)):
             return module
-        elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+        elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.nn.SyncBatchNorm)):
             return module.module
 
         raise RuntimeError('BN not found')
@@ -375,7 +367,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
     nch = input.shape[1]
     bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
-    bn2 = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
+    bn2 = mx.gluon.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
 
     bn1.initialize(ctx=ctx_list[0])
     bn2.initialize(ctx=ctx_list)
@@ -409,7 +401,6 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
     input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
     assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
 
-@with_seed()
 def test_sync_batchnorm():
     def get_num_devices():
         for i in range(100):
@@ -426,7 +417,6 @@ def test_sync_batchnorm():
         _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
 
-@with_seed()
 def test_symbol_block_fp16(tmpdir):
     # Test case to verify if initializing the SymbolBlock from a model with params
     # other than fp32 param dtype.
@@ -460,7 +450,6 @@ def test_symbol_block_fp16(tmpdir):
     assert np.dtype(net_fp16.params[name].dtype) == np.dtype(np.float16)
 
 
-@with_seed()
 @pytest.mark.serial
 def test_large_models():
     ctx = default_context()
@@ -558,9 +547,9 @@ def _test_bulking(test_bulking_func):
         time_per_iteration = mp.Manager().Value('d', 0.0)
 
         if not run_in_spawned_process(test_bulking_func,
-                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': seg_sizes[0],
-                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': seg_sizes[1],
-                                       'MXNET_EXEC_BULK_EXEC_TRAIN': seg_sizes[2]},
+                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': str(seg_sizes[0]),
+                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': str(seg_sizes[1]),
+                                       'MXNET_EXEC_BULK_EXEC_TRAIN': str(seg_sizes[2])},
                                       time_per_iteration):
             # skip test since the python version can't run it properly.  Warning msg was logged.
             return
@@ -585,13 +574,11 @@ def _test_bulking(test_bulking_func):
         'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
         .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
-@with_seed()
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
 def test_bulking_gluon_gpu():
     _test_bulking(_test_bulking_in_process)
 
 
-@with_seed()
 def test_hybridblock_mix_ctx_raise():
     class FooHybrid(gluon.HybridBlock):
         def hybrid_forward(self, F, a, b):
@@ -605,7 +592,6 @@ def test_hybridblock_mix_ctx_raise():
     pytest.raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.gpu()),
                                                  mx.nd.ones((10,), ctx=mx.cpu())))
 
-@with_seed()
 def test_symbol_block_symbolic_bn_fp16_cast():
     with mx.gpu(0):
         net = mx.gluon.nn.HybridSequential()
@@ -624,7 +610,6 @@ def test_symbol_block_symbolic_bn_fp16_cast():
         y1 = net(x)
         assert np.dtype(y1.dtype).name == 'float16'
 
-@with_seed()
 def test_gemms_true_fp16():
     ctx = mx.gpu(0)
     input = mx.nd.random.uniform(shape=(1, 512), dtype='float16', ctx=ctx)
@@ -634,13 +619,42 @@ def test_gemms_true_fp16():
     net.cast('float16')
     net.initialize(ctx=ctx)
     net.weight.set_data(weights)
-    ref_results = net(input)
 
-    os.environ["MXNET_FC_TRUE_FP16"] = "1"
-    results_trueFP16 = net(input)
+    with environment('MXNET_FC_TRUE_FP16', '0'):
+      ref_results = net(input)
+
+    with environment('MXNET_FC_TRUE_FP16', '1'):
+      results_trueFP16 = net(input)
+
     atol = 1e-2
     rtol = 1e-2
     assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
                         atol=atol, rtol=rtol)
-    os.environ["MXNET_FC_TRUE_FP16"] = "0"
+
+def test_cudnn_dropout_reproducibility():
+    d = nn.Dropout(0.5)
+    d.initialize()
+    a = mx.random.uniform(shape=(100,100))
+    b = a.copy()
+    a.attach_grad()
+    b.attach_grad()
+    seed = np.random.randint(0, 100000)
+    N = 10
+    mx.random.seed(seed)
+    out1 = []
+    for _ in range(N):
+        with autograd.record():
+            out1.append(d(a))
+    out1[0].backward()
+    mx.random.seed(seed)
+    out2 = []
+    for _ in range(N):
+        with autograd.record():
+            out2.append(d(b))
+    out2[0].backward()
+
+    for first, second in zip(out1, out2):
+        assert_almost_equal(first, second)
+
+    assert_almost_equal(a.grad, b.grad)
 

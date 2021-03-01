@@ -43,9 +43,10 @@ from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
 from ..util import is_np_shape
-from ..profiler import _current_scope as _profiler_scope
+from ..profiler import scope as _profiler_scope
+from ..profiler import _current_scope as _current_profiler_scope
 
-__all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
+__all__ = ["Symbol", "var", "Variable", "Group", "load", "fromjson",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
            "ones", "full", "arange", "linspace", "histogram", "split_v2"]
 
@@ -72,12 +73,15 @@ class Symbol(SymbolBase):
 
     def __repr__(self):
         """Gets a string representation of the symbol."""
-        name = self.name
-        if name is None:
-            name = ', '.join([i.name for i in self])
-            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        if self._alive:
+            name = self.name
+            if name is None:
+                name = ', '.join([i.name for i in self])
+                return '<%s group [%s]>' % (self.__class__.__name__, name)
+            else:
+                return '<%s %s>' % (self.__class__.__name__, name)
         else:
-            return '<%s %s>' % (self.__class__.__name__, name)
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __iter__(self):
         """Returns a generator object of symbol.
@@ -1242,9 +1246,9 @@ class Symbol(SymbolBase):
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             if partial:
-                infer_func = _LIB.MXSymbolInferShapePartialEx64
+                infer_func = _LIB.MXSymbolInferShapePartial64
             else:
-                infer_func = _LIB.MXSymbolInferShapeEx64
+                infer_func = _LIB.MXSymbolInferShape64
             check_call(infer_func(
                 self.handle,
                 mx_uint(len(indptr) - 1),
@@ -1271,9 +1275,9 @@ class Symbol(SymbolBase):
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
             if partial:
-                infer_func = _LIB.MXSymbolInferShapePartialEx
+                infer_func = _LIB.MXSymbolInferShapePartial
             else:
-                infer_func = _LIB.MXSymbolInferShapeEx
+                infer_func = _LIB.MXSymbolInferShape
             check_call(infer_func(
                 self.handle,
                 mx_uint(len(indptr) - 1),
@@ -1396,7 +1400,7 @@ class Symbol(SymbolBase):
 
         See Also
         --------
-        symbol.load_json : Used to load symbol from JSON string.
+        symbol.fromjson : Used to load symbol from JSON string.
         """
         json_str = ctypes.c_char_p()
         if remove_amp_cast:
@@ -1475,50 +1479,44 @@ class Symbol(SymbolBase):
     # pylint: disable=too-many-locals
     def optimize_for(self, backend, args=None, aux=None, ctx=None,
                      shape_dict=None, type_dict=None, stype_dict=None, skip_infer=False, **kwargs):
-        """Partitions current symbol and optimizes it for a given backend,
-        returns new partitioned symbol.
+        r"""Partitions current symbol and optimizes it for a given backend.
+
+        The backend must have registered the partitioning graph pass in
+        ``SubgraphBackendRegistry``.
 
         Parameters
         ----------
         backend : str
-            The name of backend, as registered in `SubgraphBackendRegistry`
-
+            The name of backend, as registered in ``SubgraphBackendRegistry``
         args : dict of str to NDArray, optional
             Input arguments to the symbol, required to infer shapes/types before partitioning
-            - If type is a dict of str to `NDArray`, then it maps the name of arguments
-              to the corresponding `NDArray`. Non defined arguments' `NDArray`s don't have to be
-              specified in the dict.
-
+            If type is a dict of str to NDArray, then it maps the names of arguments
+            to the corresponding NDArray. Undefined arguments' NDArrays
+            don't have to be specified in the dict.
         aux : dict of str to NDArray, optional
             Input auxiliary arguments to the symbol
-            - If type is a dict of str to `NDArray`, then it maps the name of arguments
-              to the corresponding `NDArray`.
-
+            If type is a dict of str to :class:`NDArray`, then it maps the name of arguments
+            to the corresponding :class:`NDArray`.
         ctx : Context, optional
             Device context, used to infer stypes
-
-        shape_dict  : Dict of str->tuple, optional
+        shape_dict : Dict of str->tuple, optional
             Input shape dictionary.
-            Used iff input NDArray is not in `args`.
-
-        type_dict  : Dict of str->numpy.dtype, optional
+            Used iff input :class:`NDArray` is not in ``args``.
+        type_dict : Dict of str->numpy.dtype, optional
             Input type dictionary.
-            Used iff input NDArray is not in `args`.
-
+            Used iff input :class:`NDArray` is not in ``args``.
         stype_dict  : Dict of str->str, optional
             Input storage type dictionary.
-            Used iff input NDArray is not in `args`.
-
+            Used iff input :class:`NDArray` is not in ``args``.
         skip_infer : bool, optional
             If True, the optimization skips the shape, type and storage type inference pass.
-
         kwargs : optional arguments
-            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
+            Passed on to ``PrePartition`` and ``PostPartition`` functions of ``SubgraphProperty``
 
         Returns
         -------
         out : SymbolHandle
-            The created symbol for target backend.
+            A symbol with the partitioned graph for target backend.
         """
         out = SymbolHandle()
         assert isinstance(backend, str)
@@ -1782,15 +1780,16 @@ class Symbol(SymbolBase):
                     index = aux_names.index(name)
                     aux_states[index] = aux_states[index].totype(stype)
 
-        if grad_req == 'null':
-            args_grad = None
-        elif isinstance(grad_req, dict):
-            args_grad = {}
-            for i, name in enumerate(arg_names):
-                if grad_req[name] != 'null':
-                    args_grad[name] = args[i].copy()
-        else:
-            args_grad = [x.copy() for x in args]
+        with _profiler_scope("symbol:arg_grad:"):
+            if grad_req == 'null':
+                args_grad = None
+            elif isinstance(grad_req, dict):
+                args_grad = {}
+                for i, name in enumerate(arg_names):
+                    if grad_req[name] != 'null':
+                        args_grad[name] = args[i].copy()
+            else:
+                args_grad = [x.copy() for x in args]
         return Executor(self, ctx, args, args_grad, grad_req, aux_states)
 
     def _bind(self, ctx, args, args_grad=None, grad_req='write',
@@ -2654,6 +2653,15 @@ class Symbol(SymbolBase):
     def backward(self):
         raise NotImplementedForSymbol(self.backward, None)
 
+
+    def has_dynamic_shape_op(self):
+        """Check if any dynamic shape op is present in the symbol.
+        """
+        has_dynamic_shape = ctypes.c_bool(False)
+        check_call(_LIB.MXCheckDynamicShapeOp(self.handle,
+                                              ctypes.byref(has_dynamic_shape)))
+        return has_dynamic_shape.value
+
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         init=None, stype=None, profiler_scope=None, **kwargs):
     """Creates a symbolic variable with specified name.
@@ -2728,7 +2736,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if profiler_scope is not None:
         attr['__profiler_scope__'] = profiler_scope
     else:
-        attr['__profiler_scope__'] = _profiler_scope.get()
+        attr['__profiler_scope__'] = _current_profiler_scope.get()
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)
@@ -2813,7 +2821,7 @@ def load(fname):
     return Symbol(handle)
 
 
-def load_json(json_str):
+def fromjson(json_str):
     """Loads symbol from json string.
 
     Parameters
@@ -3200,8 +3208,6 @@ def linspace(start, stop, num, endpoint=True, name=None, dtype=None):
     endpoint : bool
         If True, stop is the last sample. Otherwise, it is not included.
         The default is True.
-    ctx : Context, optional
-        Device context. Default context is the current default context.
     dtype : str or numpy.dtype, optional
         The data type of the `NDArray`. The default datatype is `np.float32`.
 

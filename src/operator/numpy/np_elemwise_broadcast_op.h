@@ -412,12 +412,10 @@ void NumpyBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
 
     MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
       if (need_bc) {
-        BROADCAST_NDIM_SWITCH(new_oshape.ndim(), ndim, {
-          workspace_size_l = ReduceWorkspaceSize<ndim, OType>(
-            s, new_lshape, req[0], new_oshape, new_lshape, new_rshape);
-          workspace_size_r = ReduceWorkspaceSize<ndim, OType>(
-            s, new_rshape, req[1], new_oshape, new_lshape, new_rshape);
-        });
+          workspace_size_l = ReduceWorkspaceSize(
+            s, new_lshape, req[0], new_oshape, new_lshape, new_rshape, sizeof(OType));
+          workspace_size_r = ReduceWorkspaceSize(
+            s, new_rshape, req[1], new_oshape, new_lshape, new_rshape, sizeof(OType));
       }
       size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
       size_t cast_tensor_size = tensor_size * sizeof(OType);

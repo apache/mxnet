@@ -222,12 +222,6 @@ def load_frombuffer(buf):
 def save(fname, data):
     """Saves a list of arrays or a dict of str->array to file.
 
-    Examples of filenames:
-
-    - ``/path/to/file``
-    - ``s3://my-bucket/path/to/file`` (if compiled with AWS S3 supports)
-    - ``hdfs://path/to/file`` (if compiled with HDFS supports)
-
     Parameters
     ----------
     fname : str
@@ -274,7 +268,4 @@ def save(fname, data):
     else:
         raise ValueError("data needs to either be a NDArray, dict of str, NDArray pairs "
                          "or a list of NDarrays.")
-    check_call(_LIB.MXNDArraySave(c_str(fname),
-                                  mx_uint(len(handles)),
-                                  handles,
-                                  keys))
+    check_call(_LIB.MXNDArrayLegacySave(c_str(fname), mx_uint(len(handles)), handles, keys))

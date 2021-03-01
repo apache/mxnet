@@ -35,39 +35,42 @@ DMLC_REGISTER_PARAMETER(ResizeParam);
 
 NNVM_REGISTER_OP(_image_resize)
 .add_alias("_npx__image_resize")
-.describe(R"code(Resize an image NDArray of shape (H x W x C) or (N x H x W x C) 
-to the given size
-Example:
-    .. code-block:: python
-        image = mx.nd.random.uniform(0, 255, (4, 2, 3)).astype(dtype=np.uint8)
-        mx.nd.image.resize(image, (3, 3))
-            [[[124 111 197]
-              [158  80 155]
-              [193  50 112]]
+.describe(R"code(Resize an image NDArray of shape (H x W x C) or (N x H x W x C)
+to the given size. Example:
 
-             [[110 100 113]
-              [134 165 148]
-              [157 231 182]]
+.. code-block:: python
 
-             [[202 176 134]
-              [174 191 149]
-              [147 207 164]]]
-            <NDArray 3x3x3 @cpu(0)>
-        image = mx.nd.random.uniform(0, 255, (2, 4, 2, 3)).astype(dtype=np.uint8)
-        mx.nd.image.resize(image, (2, 2))            
-            [[[[ 59 133  80]
-               [187 114 153]]
+    image = mx.nd.random.uniform(0, 255, (4, 2, 3)).astype(dtype=np.uint8)
+    mx.nd.image.resize(image, (3, 3))
+        [[[124 111 197]
+          [158  80 155]
+          [193  50 112]]
 
-              [[ 38 142  39]
-               [207 131 124]]]
+         [[110 100 113]
+          [134 165 148]
+          [157 231 182]]
+
+         [[202 176 134]
+          [174 191 149]
+          [147 207 164]]]
+        <NDArray 3x3x3 @cpu(0)>
+
+    image = mx.nd.random.uniform(0, 255, (2, 4, 2, 3)).astype(dtype=np.uint8)
+    mx.nd.image.resize(image, (2, 2))
+        [[[[ 59 133  80]
+           [187 114 153]]
+
+          [[ 38 142  39]
+           [207 131 124]]]
 
 
-              [[[117 125 136]
-               [191 166 150]]
+          [[[117 125 136]
+           [191 166 150]]
 
-              [[129  63 113]
-               [182 109  48]]]]
-            <NDArray 2x2x2x3 @cpu(0)>
+          [[129  63 113]
+           [182 109  48]]]]
+        <NDArray 2x2x2x3 @cpu(0)>
+
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)

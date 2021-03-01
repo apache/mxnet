@@ -59,7 +59,7 @@ $(document).ready(function () {
   const cleanPrompt = function (line, prompts) {
     let res = line;
     for (let i = 0; i < prompts.length; i++) {
-      let reg = new RegExp("(?<=^\\s*)" + prompts[i]);
+      let reg = new RegExp("(?:^\\s*)" + prompts[i]);
       if (reg.test(res)) {
         res = res.replace(reg, "");
         break;

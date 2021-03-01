@@ -78,12 +78,12 @@ struct NumpyInterpParam : public dmlc::Parameter<NumpyInterpParam> {
 };
 
 struct interp {
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   double* out,
                                   const double* x,
                                   const double* xp,
                                   const double* fp,
-                                  const int dsize,
+                                  const size_t dsize,
                                   const double left,
                                   const double right,
                                   const bool has_left,
@@ -99,11 +99,11 @@ struct interp {
     } else if (x_value < xp_low) {
       out[i] = lval;
     } else {
-      int imin = 0;
-      int imax = dsize;
-      int imid;
+      index_t imin = 0;
+      index_t imax = static_cast<index_t>(dsize);
+      index_t imid;
       while (imin < imax) {
-        imid = static_cast<int>((imax + imin) / 2);
+        imid = static_cast<index_t>((imax + imin) / 2);
         if (x_value >= xp[imid]) {
           imin = imid + 1;
         } else {
@@ -111,7 +111,7 @@ struct interp {
         }
       }  // biserction search
 
-      int j = imin;
+      index_t j = imin;
       if (j == dsize) {
         out[i] = fp[dsize-1];
       } else if (x_value == xp[j-1]) {
@@ -130,20 +130,20 @@ struct interp {
 };
 
 struct interp_period {
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   double* out,
                                   const double* x,
                                   const double* xp,
                                   const double* fp,
                                   const index_t* idx,
-                                  const int dsize,
+                                  const size_t dsize,
                                   const double period) {
     double x_value = x[i];
-    int imin = 0;
-    int imax = dsize;
-    int imid;
+    index_t imin = 0;
+    index_t imax = static_cast<index_t>(dsize);
+    index_t imid;
     while (imin < imax) {
-      imid = static_cast<int>((imax + imin) / 2);
+      imid = static_cast<index_t>((imax + imin) / 2);
       if (x_value >= xp[idx[imid]]) {
         imin = imid + 1;
       } else {
@@ -151,7 +151,7 @@ struct interp_period {
       }
     }  // biserction search
 
-    int j = imin;
+    index_t j = imin;
     double xp_below, xp_above;
     double fp1, fp2;
     if (j == 0) {

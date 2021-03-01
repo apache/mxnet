@@ -81,6 +81,7 @@ TBlob PrependAxes(const TBlob& src, const int dst_ndim) {
 
 struct TVMBinaryBroadcastCompute {
   const char* func;
+  std::string OP;
   void operator()(const nnvm::NodeAttrs& attrs,
                   const mxnet::OpContext& ctx,
                   const std::vector<TBlob>& inputs,
@@ -95,6 +96,87 @@ struct TVMBinaryBroadcastCompute {
     std::vector<TBlob> tblobs = {inputs[0], inputs[1], outputs[0]};
     std::vector<int> type_codes;
     std::vector<TVMValue> values;
+
+    const TBlob& a = inputs[0];
+    const TBlob& b = inputs[1];
+
+#if MXNET_USE_CUDA
+
+    if (a.type_flag_ != b.type_flag_) {
+      BinaryBroadcastRTCCompute mixedTypeCompute{OP};
+      mixedTypeCompute(attrs, ctx, inputs, req, outputs);
+      return;
+    }
+
+#endif  // MXNET_USE_CUDA
+
+    const int ondim = outputs[0].shape_.ndim();
+    const size_t num_args = inputs.size() + outputs.size();
+    type_codes.resize(num_args);
+    values.resize(num_args);
+    for (size_t i = 0; i < num_args; ++i) {
+      tblobs[i] = PrependAxes(tblobs[i], ondim);
+      type_codes[i] = kTVMDLTensorHandle;
+      values[i].v_handle = const_cast<DLTensor*>(&(tblobs[i].dltensor()));
+    }
+    tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], tblobs.size());
+    tvm::runtime::TVMOpModule::Get()->CallEx(func, ctx, tblobs, tvm_args);
+#else
+    LOG(FATAL) << "Please add USE_TVM_OP=1 as a compile flag for compiling MXNet source code "
+                  "to enable TVM-generated kernels for operator " << func;
+#endif  // MXNET_USE_TVM_OP
+  }
+};
+
+template<typename xpu, typename OP>
+struct GetBinaryBroadcastCompute {
+  const char* func;
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const mxnet::OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+#if MXNET_USE_TVM_OP
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor
+
+    // prepare tblobs and TVMArgs
+    std::vector<TBlob> tblobs = {inputs[0], inputs[1], outputs[0]};
+    std::vector<int> type_codes;
+    std::vector<TVMValue> values;
+
+    const TBlob& a = inputs[0];
+    const TBlob& b = inputs[1];
+    if (a.type_flag_ != b.type_flag_) {
+      if (outputs[0].shape_.Size() == 0U) return;
+      mxnet::TShape new_lshape, new_rshape, new_oshape;
+      const TBlob& lhs = inputs[0];
+      const TBlob& rhs = inputs[1];
+      const TBlob& out = outputs[0];
+      int ndim = BinaryBroadcastShapeCompact(lhs.shape_, rhs.shape_, out.shape_,
+                                            &new_lshape, &new_rshape, &new_oshape);
+      if (!ndim) {
+        ElemwiseBinaryOp::ComputeLogic<xpu, OP>(attrs, ctx, inputs, req, outputs);
+      } else {
+        if (req[0] == kNullOp) return;
+        mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+        MSHADOW_TYPE_SWITCH_WITH_BOOL(lhs.type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_WITH_BOOL(rhs.type_flag_, EType, {
+            BROADCAST_NDIM_SWITCH(ndim, NDim, {
+              mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
+              mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
+              mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
+              mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, OP>, xpu>::
+              template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
+                                lhs.dptr<DType>(), rhs.dptr<EType>(),
+                                out.dptr<bool>());
+            });
+          });
+        });
+      }
+      return;
+    }
 
     const int ondim = outputs[0].shape_.ndim();
     const size_t num_args = inputs.size() + outputs.size();
@@ -146,13 +228,14 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(logical_xor);
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(name)                          \
   NNVM_REGISTER_OP(_npi_##name)                                                    \
-  .set_attr<FCompute>("FCompute<cpu>", TVMBinaryBroadcastCompute{func_##name##_cpu})
+  .set_attr<FCompute>("FCompute<cpu>", GetBinaryBroadcastCompute<cpu,              \
+                      mshadow_op::np_##name>{func_##name##_cpu})
 
 #if MXNET_USE_CUDA
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(name)                          \
   NNVM_REGISTER_OP(_npi_##name)                                                    \
-  .set_attr<FCompute>("FCompute<gpu>", TVMBinaryBroadcastCompute{func_##name##_gpu})
+  .set_attr<FCompute>("FCompute<gpu>", TVMBinaryBroadcastCompute{func_##name##_gpu, "np_" #name})\
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(not_equal);

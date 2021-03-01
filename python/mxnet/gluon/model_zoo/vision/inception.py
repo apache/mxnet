@@ -25,7 +25,6 @@ import os
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ...contrib.nn import HybridConcurrent
 from .... import base
 
 # Helpers
@@ -52,7 +51,7 @@ def _make_branch(use_pool, *conv_settings):
     return out
 
 def _make_A(pool_features):
-    out = HybridConcurrent(axis=1)
+    out = nn.HybridConcatenate(axis=1)
     out.add(_make_branch(None,
                          (64, 1, None, None)))
     out.add(_make_branch(None,
@@ -67,7 +66,7 @@ def _make_A(pool_features):
     return out
 
 def _make_B():
-    out = HybridConcurrent(axis=1)
+    out = nn.HybridConcatenate(axis=1)
     out.add(_make_branch(None,
                          (384, 3, 2, None)))
     out.add(_make_branch(None,
@@ -78,7 +77,7 @@ def _make_B():
     return out
 
 def _make_C(channels_7x7):
-    out = HybridConcurrent(axis=1)
+    out = nn.HybridConcatenate(axis=1)
     out.add(_make_branch(None,
                          (192, 1, None, None)))
     out.add(_make_branch(None,
@@ -96,7 +95,7 @@ def _make_C(channels_7x7):
     return out
 
 def _make_D():
-    out = HybridConcurrent(axis=1)
+    out = nn.HybridConcatenate(axis=1)
     out.add(_make_branch(None,
                          (192, 1, None, None),
                          (320, 3, 2, None)))
@@ -109,7 +108,7 @@ def _make_D():
     return out
 
 def _make_E():
-    out = HybridConcurrent(axis=1)
+    out = nn.HybridConcatenate(axis=1)
     out.add(_make_branch(None,
                          (320, 1, None, None)))
 
@@ -117,7 +116,7 @@ def _make_E():
     out.add(branch_3x3)
     branch_3x3.add(_make_branch(None,
                                 (384, 1, None, None)))
-    branch_3x3_split = HybridConcurrent(axis=1)
+    branch_3x3_split = nn.HybridConcatenate(axis=1)
     branch_3x3_split.add(_make_branch(None,
                                       (384, (1, 3), None, (0, 1))))
     branch_3x3_split.add(_make_branch(None,
@@ -129,7 +128,7 @@ def _make_E():
     branch_3x3dbl.add(_make_branch(None,
                                    (448, 1, None, None),
                                    (384, 3, None, 1)))
-    branch_3x3dbl_split = HybridConcurrent(axis=1)
+    branch_3x3dbl_split = nn.HybridConcatenate(axis=1)
     branch_3x3dbl.add(branch_3x3dbl_split)
     branch_3x3dbl_split.add(_make_branch(None,
                                          (384, (1, 3), None, (0, 1))))

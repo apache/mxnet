@@ -39,11 +39,17 @@ namespace tvm {
 namespace runtime {
 
 void TVMOpModule::Load(const std::string &filepath) {
-  static const PackedFunc *f_load = Registry::Get("module._LoadFromFile");
+  static const PackedFunc *f_load = Registry::Get("runtime.ModuleLoadFromFile");
   std::lock_guard<std::mutex> lock(mutex_);
   Module module = (*f_load)(filepath, "");
   module_ptr_ = std::make_shared<Module>();
   *module_ptr_ = module;
+}
+
+void TVMOpModule::Import(const TVMOpModule& module) {
+  CHECK(module_ptr_ != nullptr) << "module_ptr_ is not initialized.";
+  std::lock_guard<std::mutex> lock(mutex_);
+  module_ptr_->Import(*(module.module_ptr_));
 }
 
 PackedFunc GetFunction(const std::shared_ptr<Module> &module,

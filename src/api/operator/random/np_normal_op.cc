@@ -65,19 +65,19 @@ MXNET_REGISTER_API("_npi.normal")
     }
   }
   if (args[2].type_code() == kNull) {
-    param.size = dmlc::optional<mxnet::Tuple<int>>();
+    param.size = dmlc::optional<mxnet::Tuple<index_t>>();
   } else if (args[2].type_code() == kDLInt ||
              args[2].type_code() == kDLFloat) {
-    param.size = Tuple<int>(1, args[2].operator int64_t());
+    param.size = Tuple<index_t>(1, args[2].operator int64_t());
   } else {
-    param.size = Tuple<int>(args[2].operator ObjectRef());
+    param.size = Tuple<index_t>(args[2].operator ObjectRef());
   }
   if (args[4].type_code() == kNull) {
     param.dtype = mxnet::common::GetDefaultDtype();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();

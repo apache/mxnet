@@ -249,6 +249,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'degrees',
     'hypot',
     'lcm',
+    'gcd',
     # 'ldexp',
     'subtract',
     'multiply',

@@ -16,12 +16,13 @@
 # under the License.
 
 import os
+import sys
 import ctypes
 import mxnet as mx
 from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array, c_str, mx_real_t
 from mxnet.symbol import Symbol
 import numpy as np
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, environment
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet import nd
@@ -87,6 +88,18 @@ def network_structure_7():
     ret = ret1 + ret2
     return (ret, ['data'], [(1,)])
 
+def network_structure_8():
+    # in this graph, two nodes in the subgraph consume the same input, and
+    # and two nodes outside the subgraph consume a single output from the subgraph
+    data = mx.sym.Variable('data', shape=(1,))
+    sin1 = mx.sym.sin(data)
+    sin2 = mx.sym.sin(data)
+    plus = sin1 + sin2
+    ret1 = mx.sym.cos(plus)
+    ret2 = mx.sym.cos(plus)
+    ret = ret1 - ret2
+    return (ret, ['data'], [(1,)])
+
 def get_graphs():
     return [
             (network_structure_1(), ['Convolution']),
@@ -104,11 +117,13 @@ def get_graphs():
             (network_structure_6(), [mx.sym.sin.__name__]),
             (network_structure_6(), [mx.sym.Convolution.__name__]),
             (network_structure_6(), [mx.sym.sin.__name__, mx.sym.Convolution.__name__]),
-            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus'])
+            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus']),
+            (network_structure_8(), ['sin', 'elemwise_add'])
             ]
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe1(sym, subgraph_backend, op_names):
     """Use the partitioned sym to _simple_bind an executor and compare the outputs
     with those of the original executor"""
@@ -141,14 +156,11 @@ def test_subgraph_exe1(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe2(sym, subgraph_backend, op_names):
     """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in _simple_bind
     and compare results of the partitioned sym and the original sym."""
     def get_executor(sym, subgraph_backend=None, op_names=None, original_exec=None):
-        if subgraph_backend is not None:
-            os.environ['MXNET_SUBGRAPH_BACKEND'] = subgraph_backend
-            check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
-                                                         c_str_array(op_names)))
         exe = sym._simple_bind(ctx=mx.current_context(), grad_req='null')
         input_names = sym.list_inputs()
         for name in input_names:
@@ -160,14 +172,14 @@ def test_subgraph_exe2(sym, subgraph_backend, op_names):
                 exe.aux_dict[name][:] = mx.nd.random.uniform(shape=exe.aux_dict[name].shape)\
                     if original_exec is None else original_exec.aux_dict[name]
         exe.forward()
-        if subgraph_backend is not None:
-            check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
-            del os.environ['MXNET_SUBGRAPH_BACKEND']
         return exe
     sym, _, _ = sym
-
     original_exec = get_executor(sym)
-    partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
+    with environment('MXNET_SUBGRAPH_BACKEND', subgraph_backend):
+        check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                     c_str_array(op_names)))
+        partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
+        check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
     outputs1 = original_exec.outputs
     outputs2 = partitioned_exec.outputs
     assert len(outputs1) == len(outputs2)
@@ -176,6 +188,7 @@ def test_subgraph_exe2(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe3(sym, subgraph_backend, op_names):
     """Use the partitioned sym to bind an executor and compare the outputs
     with those of the original executor"""
@@ -206,14 +219,11 @@ def test_subgraph_exe3(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe4(sym, subgraph_backend, op_names):
     """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in bind
     and compare results of the partitioned sym and the original sym."""
     def get_executor(sym, subgraph_backend=None, op_names=None, original_exec=None):
-        if subgraph_backend is not None:
-            os.environ['MXNET_SUBGRAPH_BACKEND'] = subgraph_backend
-            check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
-                                                         c_str_array(op_names)))
         arg_shapes, _, aux_shapes = sym.infer_shape()
         if subgraph_backend is None:
             arg_array = [mx.nd.random.uniform(shape=shape) for shape in arg_shapes]
@@ -226,14 +236,15 @@ def test_subgraph_exe4(sym, subgraph_backend, op_names):
                        aux_states=aux_array if subgraph_backend is None else original_exec.aux_arrays,
                        grad_req='null')
         exe.forward()
-        if subgraph_backend is not None:
-            check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
-            del os.environ['MXNET_SUBGRAPH_BACKEND']
         return exe
 
     sym, _, _ = sym
     original_exec = get_executor(sym)
-    partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
+    with environment('MXNET_SUBGRAPH_BACKEND', subgraph_backend):
+        check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                     c_str_array(op_names)))
+        partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
+        check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
     outputs1 = original_exec.outputs
     outputs2 = partitioned_exec.outputs
     assert len(outputs1) == len(outputs2)
@@ -260,6 +271,7 @@ def copy_inputs_between_executors(exe1, exe2, input_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe5(sym, subgraph_backend, op_names):
     """Call optimize_for to trigger graph partitioning without infer shapes/types before,
     then _simple_bind and compare results of the partitioned sym and the original sym."""
@@ -289,6 +301,7 @@ def test_subgraph_exe5(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe6(sym, subgraph_backend, op_names):
     """Call optimize_for to trigger graph partitioning with shapes/types, then _simple_bind
     and compare results of the partitioned sym and the original sym."""
@@ -318,6 +331,7 @@ def test_subgraph_exe6(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe7(sym, subgraph_backend, op_names):
     """Call optimize_for to trigger graph partitioning without infer shapes/types before,
     then bind and compare results of the partitioned sym and the original sym."""
@@ -347,6 +361,7 @@ def test_subgraph_exe7(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe8(sym, subgraph_backend, op_names):
     """Call optimize_for to infer shapes, types and dtypes followed by graph partitioning,
     then bind and compare results of the partitioned sym and the original sym."""
@@ -378,7 +393,40 @@ def test_subgraph_exe8(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
-def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
+def test_subgraph_exe9(sym, subgraph_backend, op_names):
+    """Call optimize_for to infer shapes, types and dtypes followed by graph partitioning and
+    dedup subgraph, then bind and compare results of the partitioned sym and the original sym."""
+    # bind
+    sym, _, _ = sym
+    arg_shapes, _, aux_shapes = sym.infer_shape()
+    arg_names = sym.list_arguments()
+    aux_names = sym.list_auxiliary_states()
+    arg_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(arg_names,arg_shapes)}
+    aux_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(aux_names,aux_shapes)}
+    exe1 = sym._bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe1.forward()
+
+    # infer shape/type before partition before bind
+    check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                   c_str_array(op_names)))
+    part_sym = sym.optimize_for(subgraph_backend, arg_dict, aux_dict, dedup_subgraph=True)
+    check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
+
+    exe2 = part_sym._bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe2.forward()
+
+    # compare outputs
+    outputs1 = exe1.outputs
+    outputs2 = exe2.outputs
+    assert len(outputs1) == len(outputs2)
+    for i in range(len(outputs1)):
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+
+@pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
+@pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
+def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmp_path):
     """Call hybridize() to partition the graph, and then compare results of the partitioned
     sym and the original sym. Here do an inference before hybridizing with the subgraph_backend
     which means we'll pass shapes/types"""
@@ -391,17 +439,14 @@ def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
     sym_block.hybridize()
     outputs1 = sym_block(*x)
 
-    _, json_path = tempfile.mkstemp(suffix='-symbol.json', dir=str(tmpdir))
-    export_path = json_path.replace('-symbol.json', '')
-    params_path = export_path + '-0000.params'
-    sym_block.export(export_path)
+    sym_filename, params_filename = sym_block.export(str(tmp_path / 'sym-block'))
 
     # load model and partition
-    sym_block = nn.SymbolBlock.imports(json_path,sym[1], params_path,
+    sym_block = nn.SymbolBlock.imports(sym_filename, sym[1], params_filename,
                                        ctx=mx.current_context())
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
-                                                c_str_array(op_names)))
-    sym_block.hybridize(backend=subgraph_backend)
+                                                   c_str_array(op_names)))
+    sym_block.optimize_for(*x, backend=subgraph_backend)
     outputs2 = sym_block(*x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
@@ -413,7 +458,7 @@ def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridSequential.
 @pytest.mark.serial
 def test_subgraph_backend_gluon_ext1(tmpdir):
-    def get_net():
+    def get_net():  
         net = nn.HybridSequential()  # Here we use the class HybridSequential.
         net.add(nn.Dense(256, activation='relu'),
                 nn.Dense(128, activation='relu'),
@@ -435,7 +480,7 @@ def test_subgraph_backend_gluon_ext1(tmpdir):
     op_names = ['FullyConnected']
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
-    net.hybridize(backend = subgraph_backend)
+    net.optimize_for(x, backend = subgraph_backend)
     outputs2 = net(x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
@@ -473,7 +518,7 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
     op_names = ['FullyConnected']
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
-    net.hybridize(backend = subgraph_backend)
+    net.optimize_for(x, backend = subgraph_backend)
     outputs2 = net(x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
@@ -482,3 +527,24 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
+
+if __name__ == "__main__":
+    import datetime
+    tmpdir = datetime.datetime.now().strftime('mylogfile_%H_%M_%S_%f_%d_%m_%Y.log')
+    os.mkdir(tmpdir)
+    subgraph_backends = ['default', 'default_v2']
+    graphs = get_graphs()
+    for subgraph_backend in subgraph_backends:
+        for sym,op_names in graphs:
+            test_subgraph_exe1(sym, subgraph_backend, op_names)
+            test_subgraph_exe2(sym, subgraph_backend, op_names)
+            test_subgraph_exe3(sym, subgraph_backend, op_names)
+            test_subgraph_exe4(sym, subgraph_backend, op_names)
+            test_subgraph_exe5(sym, subgraph_backend, op_names)
+            test_subgraph_exe6(sym, subgraph_backend, op_names)
+            test_subgraph_exe7(sym, subgraph_backend, op_names)
+            test_subgraph_exe8(sym, subgraph_backend, op_names)
+            test_subgraph_exe9(sym, subgraph_backend, op_names)
+            test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir)
+            test_subgraph_backend_gluon_ext1(tmpdir)
+            test_subgraph_backend_gluon_ext2(tmpdir)

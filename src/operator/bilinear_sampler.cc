@@ -24,6 +24,8 @@
  * \author Xu Dong
 */
 
+#include <cmath>
+
 #include "./bilinear_sampler-inl.h"
 
 namespace mshadow {
@@ -48,8 +50,10 @@ inline void BilinearSamplerForward(const Tensor<cpu, 4, DType> &output,
           index_t grid_index = n * o_h * o_w * 2 + h * o_w + w;
           DType y_real = (*(grid + grid_index + o_h * o_w) + 1) * (i_h - 1) / 2;
           DType x_real = (*(grid + grid_index) + 1) * (i_w - 1) / 2;
-          int top_left_y = static_cast<int>(floor(y_real));
-          int top_left_x = static_cast<int>(floor(x_real));
+          // NOLINTNEXTLINE
+          int top_left_y = static_cast<int>(std::floor(y_real));
+          // NOLINTNEXTLINE
+          int top_left_x = static_cast<int>(std::floor(x_real));
           DType top_left_y_w = 1.0 - (y_real - top_left_y);
           DType top_left_x_w = 1.0 - (x_real - top_left_x);
           int data_index = n * i_c * i_h * i_w + c * i_h * i_w +
@@ -100,8 +104,10 @@ inline void BilinearSamplerBackward(const Tensor<cpu, 4, DType> &gdata,
           index_t grid_src_index = n * o_h * o_w * 2 + h * o_w + w;
           DType y_real = (*(grid_src + grid_src_index + o_h * o_w) + 1) * (i_h - 1) / 2;
           DType x_real = (*(grid_src + grid_src_index) + 1) * (i_w - 1) / 2;
-          int top_left_y = static_cast<int>(floor(y_real));
-          int top_left_x = static_cast<int>(floor(x_real));
+          // NOLINTNEXTLINE
+          int top_left_y = static_cast<int>(std::floor(y_real));
+          // NOLINTNEXTLINE
+          int top_left_x = static_cast<int>(std::floor(x_real));
           DType top_left_y_w = 1.0 - (y_real - top_left_y);
           DType top_left_x_w = 1.0 - (x_real - top_left_x);
           for (index_t c = 0; c < static_cast<index_t>(o_c); ++c) {

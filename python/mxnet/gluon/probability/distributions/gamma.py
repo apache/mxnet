@@ -77,10 +77,10 @@ class Gamma(ExponentialFamily):
         return new_instance
 
     def sample(self, size=None):
-        return self.F.np.random.gamma(self.shape, self.scale, size)
+        return self.F.np.random.gamma(self.shape, 1, size) * self.scale
 
     def sample_n(self, size=None):
-        return self.F.np.random.gamma(self.shape, self.scale, sample_n_shape_converter(size))
+        return self.F.np.random.gamma(self.shape, 1, sample_n_shape_converter(size)) * self.scale
 
     @property
     def mean(self):

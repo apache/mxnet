@@ -20,7 +20,7 @@ import mxnet as mx
 import numpy as np
 import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
-from common import setup_module, with_seed, assertRaises, teardown_module
+from common import assertRaises
 from mxnet.base import py_str, MXNetError
 import pytest
 
@@ -52,7 +52,6 @@ def check_diff_to_scalar(A, x):
     assert(np.sum(np.abs((A - x).asnumpy())) == 0)
 
 
-@with_seed()
 def test_single_kv_pair():
     """single key-value pair push & pull"""
     def check_single_kv_pair(kv, key, stype):
@@ -66,7 +65,6 @@ def test_single_kv_pair():
         check_single_kv_pair(init_kv(), 3, stype)
         check_single_kv_pair(init_kv_with_str(), 'a', stype)
 
-@with_seed()
 def test_row_sparse_pull():
     kv = init_kv_with_str('row_sparse')
     kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
@@ -95,7 +93,6 @@ def test_row_sparse_pull():
     check_row_sparse_pull(kv, 1)
     check_row_sparse_pull(kv, 4)
 
-@with_seed()
 def test_init():
     """test init"""
     def check_init(kv, key):
@@ -107,7 +104,6 @@ def test_init():
     check_init(mx.kv.create(), 3)
     check_init(mx.kv.create(), 'a')
 
-@with_seed()
 def test_pull():
     """test pull"""
     def check_pull(kv):
@@ -124,7 +120,6 @@ def test_pull():
     check_pull(mx.kv.create('device'))
     check_pull(mx.kv.create())
 
-@with_seed()
 def test_list_kv_pair():
     """list key-value pair push & pull"""
     def check_list_kv_pair(kv, key, stype):
@@ -141,7 +136,6 @@ def test_list_kv_pair():
 
 
 @pytest.mark.skip(reason='Skipped due to segfault. Tracked in #18098')
-@with_seed()
 def test_aggregator():
     """aggregate value on muliple devices"""
 
@@ -176,7 +170,6 @@ def test_aggregator():
         check_aggregator(init_kv_with_str(), 'a', str_keys, stype)
 
 
-@with_seed()
 @pytest.mark.skip(reason='Skipped due to segfault. Tracked in #18098')
 def test_sparse_aggregator():
     """aggregate sparse ndarray on muliple devices"""
@@ -238,7 +231,6 @@ def str_updater(key, recv, local):
     assert(isinstance(key, str))
     local += recv
 
-@with_seed()
 def test_updater(dev='cpu'):
     """updater"""
 
@@ -281,13 +273,11 @@ def test_updater(dev='cpu'):
         str_kv._set_updater(str_updater)
         check_updater(str_kv, 'a', str_keys, stype)
 
-@with_seed()
 def test_get_type():
     kvtype = 'local_allreduce_cpu'
     kv = mx.kv.create(kvtype)
     assert kv.type == kvtype
 
-@with_seed()
 def test_invalid_pull():
     def check_ignored_pull_single(kv, key):
         dns_val = (mx.nd.ones(shape) * 2)

@@ -43,7 +43,7 @@ MXNET_REGISTER_API("_npi.einsum")
   // param.optimize
   param.optimize = args[args_size - 1].operator int();
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyEinsumParam>(&attrs);
 

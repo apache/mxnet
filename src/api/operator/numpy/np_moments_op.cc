@@ -65,7 +65,7 @@ MXNET_REGISTER_API("_npi.std")
     param.keepdims = args[4].operator bool();
   }
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
 
   SetAttrDict<op::NumpyMomentsParam>(&attrs);
 
@@ -120,7 +120,7 @@ MXNET_REGISTER_API("_npi.var")
     param.keepdims = args[4].operator bool();
   }
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
 
   SetAttrDict<op::NumpyMomentsParam>(&attrs);
 
@@ -168,7 +168,7 @@ MXNET_REGISTER_API("_npi.average")
     << "weighted cannot be None";
   param.weighted = args[4].operator bool();
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
 
   SetAttrDict<op::NumpyWeightedAverageParam>(&attrs);
 

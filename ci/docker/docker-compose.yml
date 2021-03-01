@@ -41,26 +41,6 @@ services:
         BASE_IMAGE: centos:7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.centos7_cpu:latest
-  centos7_gpu_cu92:
-    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu92:latest
-    build:
-      context: .
-      dockerfile: Dockerfile.build.centos7
-      target: base
-      args:
-        BASE_IMAGE: nvidia/cuda:9.2-cudnn7-devel-centos7
-      cache_from:
-        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu92:latest
-  centos7_gpu_cu100:
-    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu100:latest
-    build:
-      context: .
-      dockerfile: Dockerfile.build.centos7
-      target: base
-      args:
-        BASE_IMAGE: nvidia/cuda:10.0-cudnn7-devel-centos7
-      cache_from:
-        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu100:latest
   centos7_gpu_cu101:
     image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu101:latest
     build:
@@ -81,6 +61,26 @@ services:
         BASE_IMAGE: nvidia/cuda:10.2-cudnn7-devel-centos7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu102:latest
+  centos7_gpu_cu110:
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu110:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      target: base
+      args:
+        BASE_IMAGE: nvidia/cuda:11.0-cudnn8-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu110:latest
+  centos7_gpu_cu112:
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu112:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      target: base
+      args:
+        BASE_IMAGE: nvidia/cuda:11.2.0-cudnn8-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu112:latest
   ###################################################################################################
   # Dockerfile.build.ubuntu based images. On Ubuntu we test more recent
   # toolchain and dependency versions compared to CentOS7. We attempt to update
@@ -95,29 +95,29 @@ services:
       dockerfile: Dockerfile.build.ubuntu
       target: base
       args:
-        BASE_IMAGE: ubuntu:18.04
+        BASE_IMAGE: ubuntu:20.04
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu:latest
-  ubuntu_gpu_cu101:
-    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu101:latest
+  ubuntu_tensorrt_cu111:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_tensorrt_cu111:latest
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu
       target: gpu
       args:
-        BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+        BASE_IMAGE: nvidia/cuda:11.1-cudnn8-devel-ubuntu18.04
       cache_from:
-        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu101:latest
-  ubuntu_build_cuda:
-    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_build_cuda:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_tensorrt_cu111:latest
+  ubuntu_gpu_cu111:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu111:latest
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu
-      target: gpuwithcudaruntimelibs
+      target: gpu
       args:
-        BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+        BASE_IMAGE: nvidia/cuda:11.1-cudnn8-devel-ubuntu20.04
       cache_from:
-        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_build_cuda:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu111:latest
   ###################################################################################################
   # Dockerfile.build.android based images used for testing cross-compilation for plain ARM
   ###################################################################################################
@@ -206,3 +206,20 @@ services:
         BASE_IMAGE: nvidia/cuda:9.2-cudnn7-devel-centos7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/publish.test.centos7_gpu:latest
+  ###################################################################################################
+  # Miscellaneous containers
+  ###################################################################################################
+  jetson:
+    image: ${DOCKER_CACHE_REGISTRY}/build.jetson:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.jetson
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.jetson:latest
+  ubuntu_cpu_jekyll:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu_jekyll:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu_cpu_jekyll
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu_jekyll:latest

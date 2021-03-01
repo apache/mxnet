@@ -21,8 +21,8 @@
 # See docker-compose.yml for supported BASE_IMAGE ARGs and targets.
 
 ####################################################################################################
-# The Dockerfile uses a dynamic BASE_IMAGE (for example ubuntu:18.04
-# nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04 etc).
+# The Dockerfile uses a dynamic BASE_IMAGE (for example ubuntu:20.04
+# nvidia/cuda:11.1-cudnn8-devel-ubuntu20.04 etc).
 # On top of BASE_IMAGE we install all dependencies shared by all MXNet build
 # environments into a "base" target. At the end of this file, we can specialize
 # "base" for specific usecases. The target built by docker can be selected via
@@ -33,13 +33,16 @@ FROM $BASE_IMAGE AS base
 
 WORKDIR /work/deps
 
+SHELL ["/bin/bash", "-c"]
 RUN export DEBIAN_FRONTEND=noninteractive && \
+    export OS_RELEASE="$(cat /etc/os-release)" && \
     apt-get update && \
     apt-get install -y wget software-properties-common && \
-    wget -qO - http://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
-    wget -qO - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB | apt-key add - && \
-    apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main" &&  \
-    apt-add-repository "deb https://apt.repos.intel.com/mkl all main" &&  \
+    if [[ ${OS_RELEASE} == *"Bionic"* ]]; then \
+        wget -qO - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB | apt-key add -; \
+        apt-add-repository "deb https://apt.repos.intel.com/mkl all main"; \
+        INTEL_MKL="-2020.0-088"; \
+    fi && \
     apt-get update && \
     apt-get install -y \
         ## Utilities
@@ -52,25 +55,24 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         git \
         protobuf-compiler \
         libprotobuf-dev \
+        default-jdk \
         clang-6.0 \
-        clang-tidy-6.0 \
         python-yaml \
         clang-10 \
+        clang-tidy-10 \
         g++ \
+        g++-7 \
         g++-8 \
-        intel-mkl-2020.0-088 \
+        intel-mkl${INTEL_MKL} \
+        libomp-dev \
         ## Dependencies
         libgomp1 \
         libturbojpeg0-dev \
-        libopenblas-dev \
         libcurl4-openssl-dev \
         libatlas-base-dev \
         libzmq3-dev \
-        liblapack-dev \
         libopencv-dev \
-        # Caffe
-        caffe-cpu \
-        libcaffe-cpu-dev \
+        libxml2-dev \
         # BytePS
         numactl \
         libnuma-dev \
@@ -78,29 +80,37 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         # Python
         python3 \
         python3-pip \
-        python3-nose \
-        python3-nose-timer \
-        # Scala
-        openjdk-8-jdk \
-        openjdk-8-jre \
-        maven \
-        scala \
-        # Clojure
-        clojure \
-        leiningen \
-        # R
-        r-base-core \
-        r-cran-devtools \
-        libcairo2-dev \
-        libxml2-dev \
         ## Documentation
         doxygen \
         pandoc \
         ## Build-dependencies for ccache 3.7.9
+        autoconf \
         gperf \
         libb2-dev \
-        libzstd-dev && \
+        libzstd-dev \
+        gfortran && \
     rm -rf /var/lib/apt/lists/*
+
+# Build OpenBLAS from source
+RUN export LIBRARY_PATH=$LIBRARY_PATH:/usr/lib/gcc/x86_64-linux-gnu/7/ && \
+    mkdir ~/openblas && \
+    cd ~/openblas && \
+    OPENBLAS_VERSION=0.3.10 && \
+    wget \
+        https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.zip \
+        -O openblas.zip && \
+    unzip -q openblas.zip -d . && \
+    cd OpenBLAS-${OPENBLAS_VERSION} && \
+    CXX="clang++-6.0 -fPIC" CC="clang-6.0 -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 \
+        USE_OPENMP=0 INTERFACE64=1 BINARY=64 && \
+    make PREFIX=/usr/local/openblas-clang install && \
+    cd .. && \
+    rm -rf OpenBLAS-${OPENBLAS_VERSION} && \
+    unzip -q openblas.zip -d . && \
+    cd OpenBLAS-${OPENBLAS_VERSION} && \
+    CXX="g++ -fPIC" CC="gcc -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 \
+        USE_OPENMP=1 INTERFACE64=1 BINARY=64 && \
+    make PREFIX=/usr/local install
 
 # ccache 3.7.9 has fixes for caching nvcc outputs
 RUN cd /usr/local/src && \
@@ -114,21 +124,16 @@ RUN cd /usr/local/src && \
     cd /usr/local/src && \
     rm -rf ccache
 
+# RAT License Checker tool
+RUN cd /usr/local/src && \
+    wget https://archive.apache.org/dist/creadur/apache-rat-0.13/apache-rat-0.13-bin.tar.gz && \
+    tar xf apache-rat-0.13-bin.tar.gz
+
 # Python & cmake
 COPY install/requirements /work/
-RUN python3 -m pip install cmake==3.16.6 && \
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install cmake==3.16.6 && \
     python3 -m pip install -r /work/requirements
-
-# Only OpenJDK 8 supported at this time..
-RUN update-java-alternatives -s java-1.8.0-openjdk-amd64
-
-# julia not available on 18.04
-COPY install/ubuntu_julia.sh /work/
-RUN /work/ubuntu_julia.sh
-
-# MXNetJS nightly needs emscripten for wasm
-COPY install/ubuntu_emscripten.sh /work/
-RUN /work/ubuntu_emscripten.sh
 
 ARG USER_ID=0
 COPY install/docker_filepermissions.sh /work/
@@ -144,22 +149,31 @@ COPY runtime_functions.sh /work/
 # The target built by docker can be selected via "--target" option or docker-compose.yml
 ####################################################################################################
 FROM base as gpu
-# Install Thrust 1.9.8 to be shipped with Cuda 11.
-# Fixes https://github.com/thrust/thrust/issues/1072 for Clang 10
-# This file can be deleted when using Cuda 11 on CI
-RUN cd /usr/local && \
-    git clone https://github.com/thrust/thrust.git && \
-    cd thrust && \
-    git checkout 1.9.8
 
-
-FROM gpu as gpuwithcudaruntimelibs
-# Special case because the CPP-Package requires the CUDA runtime libs
-# and not only stubs (which are provided by the base image)
-# This prevents usage of this image for actual GPU tests with Docker.
-# This is a bug in CPP-Package and should be fixed.
-RUN export DEBIAN_FRONTEND=noninteractive && \
+# Install TensorRT
+# Use bash as it has better support for string comparisons in if clauses
+SHELL ["/bin/bash", "-c"]
+# We need to redeclare ARG due to
+# https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
+ARG BASE_IMAGE
+RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
+    export OS_RELEASE="$(cat /etc/os-release)" && \
     apt-get update && \
-    apt install -y  --no-install-recommends \
-        cuda-10-1 && \
+    if [[ ${OS_RELEASE} == *"Bionic"* ]]; then \
+        if [ ${SHORT_CUDA_VERSION} = 11.0 ]; then \
+            TRT_VERSION="7.2.0-1+cuda11.0"; \
+            TRT_MAJOR_VERSION=7; \
+        elif [ ${SHORT_CUDA_VERSION} = 11.1 ]; then \
+            TRT_VERSION="7.2.1-1+cuda11.1"; \
+            TRT_MAJOR_VERSION=7; \
+        else \
+            echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
+            exit 1; \
+        fi; \
+        apt-get install -y libnvinfer${TRT_MAJOR_VERSION}=${TRT_VERSION} \
+                           libnvinfer-dev=${TRT_VERSION} \
+                           libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \
+                           libnvinfer-plugin-dev=${TRT_VERSION}; \
+    fi && \
     rm -rf /var/lib/apt/lists/*
+

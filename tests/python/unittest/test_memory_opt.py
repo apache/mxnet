@@ -19,40 +19,12 @@
 import mxnet as mx
 import os
 import sys
-
+from common import with_environment
+from mxnet.test_utils import environment
 
 num_hidden = 4096
 
-
-def memory_opt_env_check(test_func):
-    # This decorator checks for th
-    def test_memory_opt_wrapper():
-        # Whether the underlying OS is Windows or not. Windows does not support
-        # setting environment variblae on the fly. In other words, statement
-        #
-        #     os.environ["MXNET_MEMORY_OPT"] = '1'
-        #
-        # will have NO effect because the C++ backend still sees
-        # `os.environ["MXNET_MEMORY_OPT"]` as NULL pointer.
-        #
-        # \sa test_operator.py:test_norm
-        is_windows = sys.platform.startswith('win')
-        do_memory_opt = True
-        if is_windows:
-            if "MXNET_MEMORY_OPT" not in os.environ:
-                do_memory_opt = False
-            else:
-                do_memory_opt = os.environ["MXNET_MEMORY_OPT"] == '1'
-        else:
-            os.environ["MXNET_MEMORY_OPT"] = '1'
-
-        if do_memory_opt:
-            test_func()
-            os.environ["MXNET_MEMORY_OPT"] = '0'
-    return test_memory_opt_wrapper
-
-
-@memory_opt_env_check
+@with_environment('MXNET_MEMORY_OPT', '1')
 def test_rnn_cell():
     # x →→→ + →→→ tanh ⇒⇒⇒
     #       ↑
@@ -70,7 +42,7 @@ def test_rnn_cell():
     exec = z._simple_bind(mx.cpu(), 'write', x=(num_hidden,), y=(num_hidden,))
 
 
-@memory_opt_env_check
+@with_environment('MXNET_MEMORY_OPT', '1')
 def test_mlp_attn():
     # x →→→ + →→→ tanh ⇒⇒⇒
     #       ↑ + →→→ tanh ⇒⇒⇒
@@ -93,7 +65,7 @@ def test_mlp_attn():
     exec = z._simple_bind(mx.cpu(), 'write', **in_arg_shapes)
 
 
-@memory_opt_env_check
+@with_environment('MXNET_MEMORY_OPT', '1')
 def test_fc():
     # x →→→ tanh ⇒⇒⇒ tanh  ⇒⇒⇒ FC
     #            →→→ tanh_ →→→

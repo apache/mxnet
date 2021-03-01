@@ -31,6 +31,7 @@ cdef class SymbolBase:
     """Symbol is symbolic graph."""
     # handle for symbolic operator.
     cdef SymbolHandle chandle
+    cdef public bint _alive
 
     cdef _set_handle(self, handle):
         cdef unsigned long long ptr
@@ -51,9 +52,11 @@ cdef class SymbolBase:
 
     def __init__(self, handle):
         self._set_handle(handle)
+        self._alive = True
 
     def __dealloc__(self):
         CALL(NNSymbolFree(self.chandle))
+        self._alive = False
 
     def _set_attr(self, **kwargs):
         """Set the attribute of the symbol.

@@ -60,10 +60,10 @@ inline void ShiftAxes(Tuple<int>* axes_summed, const int ndim) {
 /**
  * Gets matrix dimensions of a and b after transpose and reshape.
  */
-inline void GetMatrixDimensions(int* ad1,
-                                int* ad2,
-                                int* bd1,
-                                int* bd2,
+inline void GetMatrixDimensions(index_t* ad1,
+                                index_t* ad2,
+                                index_t* bd1,
+                                index_t* bd2,
                                 const mxnet::Tuple<int>& a_axes_remained,
                                 const mxnet::Tuple<int>& a_axes_summed,
                                 const mxnet::Tuple<int>& b_axes_remained,
@@ -157,10 +157,10 @@ void MatrixDot(const OpContext& ctx,
                const TBlob& b,
                const TBlob& out,
                const OpReqType req,
-               const int ad1,
-               const int ad2,
-               const int bd1,
-               const int bd2,
+               const index_t ad1,
+               const index_t ad2,
+               const index_t bd1,
+               const index_t bd2,
                const bool aT = false,
                const bool bT = false) {
   using namespace mshadow;
@@ -198,7 +198,7 @@ void MatrixDot(const OpContext& ctx,
 template<int req>
 struct scalar_mul_kernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType* tensor, const DType *scalar) {
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType* tensor, const DType *scalar) {
     KERNEL_ASSIGN(out[i], req, tensor[i] * scalar[0]);
   }
 };
@@ -266,7 +266,7 @@ void TensordotImpl(const Tuple<int>& a_axes_summed,
       GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
                        &b_axes, a_shape, b_shape);
 
-      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      index_t ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
       GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
                           b_axes_remained, b_axes_summed, a_shape, b_shape);
 
@@ -435,7 +435,7 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
       GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
                       &b_axes, a_shape, b_shape);
 
-      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      index_t ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
       GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
                           b_axes_remained, b_axes_summed, a_shape, b_shape);
 
@@ -476,7 +476,10 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
                                     mxnet::TShape(a_T_axes.begin(), a_T_axes.end()));
       mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, b_res2,
                                     mxnet::TShape(b_T_axes.begin(), b_T_axes.end()));
-
+      mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, grad_a, a_res,
+                                    mxnet::TShape(a_axes.begin(), a_axes.end()));
+      mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, grad_b, b_res,
+                                    mxnet::TShape(b_axes.begin(), b_axes.end()));
       MatrixDot<xpu>(ctx, a_res2, out_grad, b_res, req[1], ad2, ad1, ad1, bd2);
       MatrixDot<xpu>(ctx, out_grad, b_res2, a_res, req[0], ad1, bd2, bd2, bd1);
 
@@ -653,7 +656,7 @@ void TensordotIntAxesImpl(const int axes,
       GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
                       &b_axes, a_shape, b_shape);
 
-      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      index_t ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
       GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
                           b_axes_remained, b_axes_summed, a_shape, b_shape);
       MatrixDot<xpu>(ctx, a, b, out, req, ad1, ad2, bd1, bd2);
@@ -746,7 +749,7 @@ void TensordotIntAxesBackwardImpl(const int axes,
       GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
                       &b_axes, a_shape, b_shape);
 
-      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      index_t ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
       GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
                           b_axes_remained, b_axes_summed, a_shape, b_shape);
 

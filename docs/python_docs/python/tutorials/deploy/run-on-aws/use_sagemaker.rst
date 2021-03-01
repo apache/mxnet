@@ -18,7 +18,7 @@
 Run on Amazon SageMaker
 -----------------------
 
-This chapter will give a high level overview about Amazon SageMaker,
+This chapter will give a high level overview about running MXNet on Amazon SageMaker,
 in-depth tutorials can be found on the `Sagemaker
 website <https://docs.aws.amazon.com/sagemaker/latest/dg/whatis.html>`__.
 
@@ -29,16 +29,7 @@ charged by time. Within this notebook you can `fetch, explore and
 prepare training
 data <https://docs.aws.amazon.com/sagemaker/latest/dg/how-it-works-notebooks-instances.html>`__.
 
-::
-
-    import mxnet as mx
-    import sagemaker
-    mx.test_utils.get_cifar10() # Downloads Cifar-10 dataset to ./data
-    sagemaker_session = sagemaker.Session()
-    inputs = sagemaker_session.upload_data(path='data/cifar',
-                                           key_prefix='data/cifar10')
-
-Once the data is ready, you can easily launch training via the SageMaker
+With your own data on the notebook instance, you can easily launch training via the SageMaker
 SDK. So there is no need to manually configure and log into EC2
 instances. You can either bring your own model or use SageMaker's
 `built-in
@@ -51,11 +42,11 @@ instance:
 ::
 
     from sagemaker.mxnet import MXNet as MXNetEstimator
-    estimator = MXNetEstimator(entry_point='train.py', 
+    estimator = MXNetEstimator(entry_point='train.py',
                                role=sagemaker.get_execution_role(),
-                               train_instance_count=1, 
+                               train_instance_count=1,
                                train_instance_type='local',
-                               hyperparameters={'batch_size': 1024, 
+                               hyperparameters={'batch_size': 1024,
                                                 'epochs': 30})
     estimator.fit(inputs)
 

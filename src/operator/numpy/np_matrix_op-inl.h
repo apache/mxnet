@@ -61,6 +61,11 @@ struct NumpyVstackParam : public dmlc::Parameter<NumpyVstackParam> {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be vstacked.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s;
+    num_args_s << num_args;
+    (*dict)["num_args"] = num_args_s.str();
+  }
 };
 
 struct NumpyColumnStackParam : public dmlc::Parameter<NumpyColumnStackParam> {
@@ -125,6 +130,15 @@ struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
                   " back to the first axis index changing slowest."
                   " Note that currently only C-like order is"
                   " supported");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream newshape_s, reverse_s, order_s;
+    newshape_s << newshape;
+    reverse_s << reverse;
+    order_s << order;
+    (*dict)["newshape"] = newshape_s.str();
+    (*dict)["reverse"] = reverse_s.str();
+    (*dict)["order"] = order_s.str();
   }
 };
 
@@ -303,9 +317,9 @@ void NumpyVstackBackward(const nnvm::NodeAttrs& attrs,
 }
 
 struct NumpyTrilindicesParam : public dmlc::Parameter<NumpyTrilindicesParam> {
-  int n;
-  int k;
-  int m;
+  index_t n;
+  index_t k;
+  index_t m;
   DMLC_DECLARE_PARAMETER(NumpyTrilindicesParam) {
     DMLC_DECLARE_FIELD(n)
       .describe("The row dimension of the arrays for which"
@@ -332,8 +346,8 @@ struct NumpyTrilindicesParam : public dmlc::Parameter<NumpyTrilindicesParam> {
 template<int req>
 struct TrilindicesOpForwardImpl {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data0, DType* out_data1,
-                                  int* data, int length) {
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data0, DType* out_data1,
+                                  index_t* data, index_t length) {
     KERNEL_ASSIGN(out_data0[i], req, data[i]);
     KERNEL_ASSIGN(out_data1[i], req, data[i + length]);
   }
@@ -357,22 +371,22 @@ void TrilindicesOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& out_data1 = outputs[1];
 
   CHECK_EQ(out_data0.shape_[0], out_data1.shape_[0]);
-  int length = out_data0.shape_[0];
+  index_t length = out_data0.shape_[0];
 
-  std::vector<int> indices_cpu(2 * length, 0);
-  size_t total_temp_size = 2 * length * sizeof(int);
+  std::vector<index_t> indices_cpu(2 * length, 0);
+  size_t total_temp_size = 2 * length * sizeof(index_t);
   Tensor<xpu, 1, char> temp_space =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(total_temp_size), s);
-  int* indices = reinterpret_cast<int*>(temp_space.dptr_);
+  index_t* indices = reinterpret_cast<index_t*>(temp_space.dptr_);
 
-  int n = param.n;
-  int m = param.m;
-  int k = param.k;
+  index_t n = param.n;
+  index_t m = param.m;
+  index_t k = param.k;
 
-  int end = k;
-  int idx = 0;
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j <= std::min(end, m - 1); j++) {
+  index_t end = k;
+  index_t idx = 0;
+  for (index_t i = 0; i < n; i++) {
+    for (index_t j = 0; j <= std::min(end, m - 1); j++) {
       indices_cpu[idx] = i;
       indices_cpu[idx + length] = j;
       idx++;
@@ -383,14 +397,14 @@ void TrilindicesOpForward(const nnvm::NodeAttrs& attrs,
   if (ctx.run_ctx.ctx.dev_mask() == gpu::kDevMask) {
   #if MXNET_USE_CUDA
     cudaMemcpyAsync(indices, indices_cpu.data(),
-                    indices_cpu.size() * sizeof(int),
+                    indices_cpu.size() * sizeof(index_t),
                     cudaMemcpyHostToDevice,
                     Stream<gpu>::GetStream(ctx.get_stream<gpu>()));
   #else
     LOG(FATAL) << "Illegal attempt to use GPU in a CPU-only build";
   #endif
   } else {
-    std::memcpy(indices, indices_cpu.data(), indices_cpu.size() * sizeof(int));
+    std::memcpy(indices, indices_cpu.data(), indices_cpu.size() * sizeof(index_t));
   }
 
   MSHADOW_IDX_TYPE_SWITCH(out_data0.type_flag_, DType, {
@@ -429,9 +443,9 @@ struct NumpyRollParam : public dmlc::Parameter<NumpyRollParam> {
 template<int req>
 struct RollAxisNone_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
-                                  const int size, const int shift) {
-    int new_index = i - shift < 0 ? i - shift + size : i - shift;
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
+                                  const index_t size, const index_t shift) {
+    index_t new_index = i - shift < 0 ? i - shift + size : i - shift;
     KERNEL_ASSIGN(out_data[i], req, in_data[new_index]);
   }
 };
@@ -439,7 +453,7 @@ struct RollAxisNone_forward {
 template<int req>
 struct RollAxis_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
                                   const size_t* new_index) {
     KERNEL_ASSIGN(out_data[i], req, in_data[new_index[i]]);
   }
@@ -448,7 +462,7 @@ struct RollAxis_forward {
 inline void RollDfs(const std::vector<std::vector<size_t>>& new_axes,
                     const std::vector<size_t>& value,
                     std::vector<size_t>* new_index,
-                    int index, int ndim, int mid) {
+                    index_t index, int ndim, index_t mid) {
   for (int a : new_axes[index]) {
     if (index == ndim - 1) {
       std::vector<size_t>& out = (*new_index);
@@ -473,12 +487,12 @@ void NumpyRollCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   if (inputs[0].Size() == 0U) return;
   const NumpyRollParam& param = nnvm::get<NumpyRollParam>(attrs.parsed);
-  const index_t ndim(inputs[0].shape_.ndim());
+  const int ndim(inputs[0].shape_.ndim());
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  std::vector<int> shifts(ndim, 0);
+  std::vector<index_t> shifts(ndim, 0);
   index_t input_size = inputs[0].Size();
   if (!param.axis.has_value()) {
-    int shift = param.shift.value()[0];
+    index_t shift = param.shift.value()[0];
     shift = shift % input_size;
     if (shift < 0) {
       shift += inputs[0].shape_.Size();
@@ -519,7 +533,7 @@ void NumpyRollCompute(const nnvm::NodeAttrs& attrs,
     }
     // keep shift in a legal range
     for (int i = 0; i < ndim; ++i) {
-      int trans_shift = shifts[i] % inputs[0].shape_[i];
+      index_t trans_shift = shifts[i] % inputs[0].shape_[i];
       if (trans_shift < 0) {
         trans_shift = shifts[i] + inputs[0].shape_[i];
       }
@@ -530,15 +544,15 @@ void NumpyRollCompute(const nnvm::NodeAttrs& attrs,
     std::vector<size_t> new_index;
     std::vector<size_t> temp;
     std::vector<size_t> value(ndim, 0);
-    int mid_val = 1;
+    index_t mid_val = 1;
     for (int i = 0; i < ndim; ++i) {
       if (shifts[i] != 0) {
-        for (int j = 0; j < inputs[0].shape_[i]; ++j) {
-          int new_axis = (j + inputs[0].shape_[i] - shifts[i]) % inputs[0].shape_[i];
+        for (index_t j = 0; j < inputs[0].shape_[i]; ++j) {
+          index_t new_axis = (j + inputs[0].shape_[i] - shifts[i]) % inputs[0].shape_[i];
           temp.push_back(new_axis);
         }
       } else {
-        for (int j = 0; j < inputs[0].shape_[i]; ++j) {
+        for (index_t j = 0; j < inputs[0].shape_[i]; ++j) {
           temp.push_back(j);
         }
       }
@@ -698,6 +712,13 @@ struct NumpyMoveaxisParam : public dmlc::Parameter<NumpyMoveaxisParam> {
     DMLC_DECLARE_FIELD(destination)
     .describe("Destination positions for each of the original axes. "
               "These must also be unique.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream source_s, destination_s;
+    source_s << source;
+    destination_s << destination;
+    (*dict)["source"] = source_s.str();
+    (*dict)["destination"] = destination_s.str();
   }
 };
 
@@ -1229,7 +1250,7 @@ void NumpyConcatenateBackward(const nnvm::NodeAttrs& attrs,
 }
 
 struct NumpyDiagParam : public dmlc::Parameter<NumpyDiagParam> {
-  int k;
+  index_t k;
   DMLC_DECLARE_PARAMETER(NumpyDiagParam) {
     DMLC_DECLARE_FIELD(k).set_default(0)
       .describe("Diagonal in question. The default is 0. "
@@ -1244,7 +1265,7 @@ struct NumpyDiagParam : public dmlc::Parameter<NumpyDiagParam> {
 };
 
 inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape &ishape,
-                                        const int k) {
+                                        const index_t k) {
   CHECK_LE(ishape.ndim(), 2) << "Input must be 1- or 2-d";
 
   if (ishape.ndim() == 1) {
@@ -1323,7 +1344,7 @@ template <int req, bool back>
 struct diag_gen {
   template <typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  mshadow::Shape<2> oshape, int k) {
+                                  mshadow::Shape<2> oshape, index_t k) {
     using namespace mxnet_op;
 
     auto j = unravel(i, oshape);
@@ -1346,7 +1367,7 @@ void NumpyDiagOpImpl(const TBlob &in_data,
                      const mxnet::TShape &ishape,
                      const mxnet::TShape &oshape,
                      index_t dsize,
-                     const int &k,
+                     const index_t &k,
                      mxnet_op::Stream<xpu> *s,
                      const OpReqType &req) {
   using namespace mxnet_op;
@@ -1434,7 +1455,7 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
 }
 
 struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
-  int offset;
+  index_t offset;
   int axis1;
   int axis2;
   DMLC_DECLARE_PARAMETER(NumpyDiagonalParam) {
@@ -1464,7 +1485,7 @@ struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
   }
 };
 
-inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const int k,
+inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const index_t k,
                                             const int axis1, const int axis2) {
   int x1 = CheckAxis(axis1, ishape.ndim());
   int x2 = CheckAxis(axis2, ishape.ndim());
@@ -1588,7 +1609,7 @@ void NumpyDiagonalOpImpl(const TBlob& in_data,
 
   if (x1 == maxx) std::swap(stride1, stride2);
   index_t offset;
-  int k = param.offset;
+  index_t k = param.offset;
   if (k > 0) {
     offset = stride2 * k;
   } else if (k < 0) {

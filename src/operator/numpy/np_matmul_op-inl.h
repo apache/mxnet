@@ -108,7 +108,7 @@ struct SumByShape {
    * \note in_size >= out_size
    */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* output, DType* input,
+  MSHADOW_XINLINE static void Map(index_t i, DType* output, DType* input,
                                   size_t in_size, size_t out_size,
                                   const int req){
     // i is the global position in flattened output

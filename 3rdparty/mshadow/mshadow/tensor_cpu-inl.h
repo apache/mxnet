@@ -539,6 +539,39 @@ inline void AddTakeGrad(Tensor<cpu, 2, DType> dst,
   }
 }
 
+// safe accumulation
+template<bool clip, typename IndexType, typename DType, typename AType>
+inline void AddTakeGrad(Tensor<cpu, 2, DType> dst,
+                        Tensor<cpu, 2, AType> temp,
+                        const Tensor<cpu, 1, IndexType>& index,
+                        const Tensor<cpu, 2, DType> &src) {
+  const index_t K = dst.shape_[0];
+  const index_t C = dst.shape_[1];
+  for (index_t j = 0; j < K; ++j) {
+    for (index_t i = 0; i < C; ++i) {
+      temp[j][i] = dst[j][i];
+    }
+  }
+  for (index_t y = 0; y < index.size(0); ++y) {
+    index_t j = index[y];
+    if (clip) {
+      if (j <= 0) j = 0;
+      else if (j >= K) j = K - 1;
+    } else {
+      j %= K;
+      if (j < 0) j += K;
+    }
+    for (index_t i = 0; i < C; ++i) {
+      temp[j][i] += src[y][i];
+    }
+  }
+  for (index_t j = 0; j < K; ++j) {
+    for (index_t i = 0; i < C; ++i) {
+      dst[j][i] = temp[j][i];
+    }
+  }
+}
+
 template<typename IndexType, typename DType>
 inline void AddTakeGradLargeBatch(Tensor<cpu, 2, DType> dst,
                                   const Tensor<cpu, 1, IndexType>& sorted,

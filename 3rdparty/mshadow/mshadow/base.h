@@ -124,6 +124,13 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 /*!
+ * \brief use CUTENSOR support, must ensure that the cutensor include path is correct
+ */
+#ifndef MSHADOW_USE_CUTENSOR
+  #define MSHADOW_USE_CUTENSOR 0
+#endif
+
+/*!
  * \brief use CUSOLVER support
  */
 #ifndef MSHADOW_USE_CUSOLVER
@@ -170,6 +177,12 @@ extern "C" {
     #include <cblas.h>
 }
 #elif MSHADOW_USE_MKL
+  #if MSHADOW_INT64_TENSOR_SIZE == 1
+    // Define MKL_INT here to use exactly the same 64bits integer type definitions.
+    // If MKL_INT will not be defined here, the mkl header defines it as long long int.
+    #define MKL_INT int64_t
+    #define MKL_UINT uint64_t
+  #endif
   #include <mkl_blas.h>
   #include <mkl_cblas.h>
   #include <mkl_vsl.h>
@@ -185,6 +198,10 @@ extern "C" {
 
 #if MSHADOW_USE_CUDNN == 1
   #include <cudnn.h>
+#endif
+
+#if MSHADOW_USE_CUTENSOR == 1
+  #include <cutensor.h>
 #endif
 
 #if MSHADOW_USE_CUSOLVER == 1
@@ -272,7 +289,6 @@ extern "C" {
   }
 
 #include "./half.h"
-#include "./half2.h"
 #include "./bfloat.h"
 #define MSHADOW_HALF_BF_OPERATOR(RTYPE, OP)                                               \
   MSHADOW_XINLINE RTYPE operator OP(mshadow::half::half_t a, mshadow::bfloat::bf16_t b) { \
@@ -319,6 +335,14 @@ const float kPi = 3.1415926f;
 #else
   /*! \brief openmp index for linux */
   typedef index_t openmp_index_t;
+#endif
+
+
+#if (MSHADOW_USE_MKL && MXNET_USE_LAPACK) || MXNET_USE_ILP64_LAPACKE
+  // lapack_index_t could be replaced by index_t and removed when all blas library support large tensor
+  typedef index_t lapack_index_t;
+#else
+  typedef int lapack_index_t;
 #endif
 
 /*! \brief float point type that will be used in default by mshadow */
@@ -387,11 +411,6 @@ struct DataType<half::half_t> {
 #endif
 };
 template<>
-struct DataType<half::half2_t> {
-  static const int kFlag = kFloat16;
-  static const int kLanes = 2;
-};
-template<>
 struct DataType<bfloat::bf16_t> {
   static const int kFlag = kBfloat16;
   static const int kLanes = 1;
@@ -452,6 +471,9 @@ struct DataType<bool> {
 
 /*! \brief type enum value for default real type */
 const int default_type_flag = DataType<default_real_t>::kFlag;
+
+/*! \brief TypeFlag value for type of indexes */
+const int index_type_flag = DataType<lapack_index_t>::kFlag;
 
 /*! layout flag */
 enum LayoutFlag {
@@ -1143,48 +1165,6 @@ struct minimum {
     LOG(FATAL) << "Unknown type enum " << type;     \
   }
 #endif
-
-#define MSHADOW_TYPE_SWITCH_WITH_HALF2(type, DType, ...)  \
-  switch (type) {                                         \
-  case mshadow::kFloat32:                                 \
-    {                                                     \
-      typedef float DType;                                \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  case mshadow::kFloat64:                                 \
-    {                                                     \
-      typedef double DType;                               \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  case mshadow::kFloat16:                                 \
-    {                                                     \
-      typedef mshadow::half::half2_t DType;               \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  case mshadow::kUint8:                                   \
-    {                                                     \
-      typedef uint8_t DType;                              \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  case mshadow::kInt32:                                   \
-    {                                                     \
-      typedef int32_t DType;                              \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  case mshadow::kInt64:                                   \
-    {                                                     \
-      typedef int64_t DType;                              \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  default:                                                \
-    LOG(FATAL) << "Unknown type enum " << type;           \
-  }
 
 #define MSHADOW_SGL_DBL_TYPE_SWITCH(type, DType, ...)  \
   switch (type) {                                      \

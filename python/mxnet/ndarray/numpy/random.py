@@ -21,7 +21,6 @@ from ...util import is_np_default_dtype
 from ...context import current_context
 from . import _internal as _npi
 from . import _api_internal
-from ..ndarray import NDArray
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
@@ -331,14 +330,11 @@ def multinomial(n, pvals, size=None):
     >>> np.random.multinomial(100, [1.0 / 3, 2.0 / 3])
     array([32, 68])
     """
-    if isinstance(pvals, NDArray):
-        return _npi.multinomial(pvals, pvals=None, n=n, size=size)
-    else:
-        if isinstance(pvals, np.ndarray):
-            raise ValueError('numpy ndarray is not supported!')
-        if any(isinstance(i, list) for i in pvals):
-            raise ValueError('object too deep for desired array')
-        return _npi.multinomial(n=n, pvals=pvals, size=size)
+    if isinstance(pvals, np.ndarray):
+        raise ValueError('numpy ndarray is not supported!')
+    if any(isinstance(i, list) for i in pvals):
+        raise ValueError('object too deep for desired array')
+    return _api_internal.multinomial(n, pvals, size)
 
 
 def rayleigh(scale=1.0, size=None, ctx=None, out=None):
@@ -390,7 +386,7 @@ def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
 
     This operator is a little different from the one in official NumPy.
     The official NumPy operator only accepts 1-D ndarray as mean and 2-D ndarray as cov,
-    whereas the operator in DeepNumPy supports batch operation and auto-broadcasting.
+    whereas the operator in MXNet np supports batch operation and auto-broadcasting.
 
     Both `mean` and `cov` may have any number of leading dimensions, which correspond
     to a batch shape. They are not necessarily assumed to have the same batch shape,

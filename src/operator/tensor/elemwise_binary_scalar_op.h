@@ -266,17 +266,17 @@ class BinaryScalarOp : public UnaryOp {
   }
 
  public:
-  template<typename xpu, typename OP>
-  static void Compute(const nnvm::NodeAttrs &attrs,
-                      const OpContext &ctx,
-                      const std::vector<TBlob> &inputs,
-                      const std::vector<OpReqType> &req,
-                      const std::vector<TBlob> &outputs) {
+  template<typename OP>
+  static void Compute_(const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       mshadow::Stream<cpu>* s,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
     DCHECK_EQ(inputs.size(), 1);
     DCHECK_EQ(outputs.size(), 1);
     using namespace mshadow;
     using namespace mshadow::expr;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
     TBlob temp_tblob;
     const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
     bool scalar_is_int = param.is_int;
@@ -284,18 +284,28 @@ class BinaryScalarOp : public UnaryOp {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       if ((common::is_int(inputs[0].type_flag_) && !scalar_is_int) ||
           (inputs[0].type_flag_ == kBool)) {
-        Tensor<xpu, 1, DType> temp_tensor =
-            ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(inputs[0].Size()), s);
+        Tensor<cpu, 1, DType> temp_tensor =
+            ctx.requested[0].get_space_typed<cpu, 1, DType>(Shape1(inputs[0].Size()), s);
         temp_tblob = TBlob(temp_tensor);
-        CastCompute<xpu>(attrs, ctx, {inputs[0]}, {kWriteTo}, {temp_tblob});
+        CastCompute<cpu>(attrs, ctx, {inputs[0]}, {kWriteTo}, {temp_tblob});
       } else {
         temp_tblob = inputs[0];
       }
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(
           s, inputs[0].Size(), outputs[0].dptr<DType>(), temp_tblob.dptr<DType>(), DType(alpha));
       });
     });
+  }
+
+  template<typename xpu, typename OP>
+  static void Compute(const nnvm::NodeAttrs &attrs,
+                      const OpContext &ctx,
+                      const std::vector<TBlob> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<TBlob> &outputs) {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    Compute_<OP>(attrs, ctx, s, inputs, req, outputs);
   }
 
   template<typename xpu, typename OP>
@@ -401,6 +411,27 @@ class BinaryScalarOp : public UnaryOp {
     }
   }
 
+  template<typename OP>
+  static void Backward_(const nnvm::NodeAttrs &attrs,
+                        mshadow::Stream<cpu>* s,
+                        const std::vector<TBlob> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<TBlob> &outputs) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
+    const double alpha = param.scalar;
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet::op::mxnet_op::Kernel<mxnet::op::mxnet_op::op_with_req<
+          mxnet::op::mxnet_op::backward_grad_tuned<OP>, Req>, cpu>::
+          Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                 inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
+                 DType(alpha));
+      });
+    });
+  }
+
   template<typename xpu, typename OP>
   static void Backward(const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,
@@ -410,17 +441,7 @@ class BinaryScalarOp : public UnaryOp {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
-    const double alpha = param.scalar;
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet::op::mxnet_op::Kernel<mxnet::op::mxnet_op::op_with_req<
-          mxnet::op::mxnet_op::backward_grad_tuned<OP>, Req>, xpu>::
-          Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                 inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
-                 DType(alpha));
-      });
-    });
+    Backward_<OP>(attrs, s, inputs, req, outputs);
   }
 };
 
@@ -442,6 +463,38 @@ class BinaryScalarOp : public UnaryOp {
   .add_argument("data", "NDArray-or-Symbol", "source input")              \
   .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
+#if MXNET_USE_CUDA
+
+struct BinaryScalarRTCCompute {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<NDArray>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<NDArray>& outputs);
+};
+
+struct BinaryScalarRTCBackward {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+#endif
+
 }  // namespace op
 }  // namespace mxnet
+
+
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_SCALAR_OP_H_

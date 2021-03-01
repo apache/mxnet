@@ -31,15 +31,15 @@ In this tutorial we will:
 ## Pre-requisite
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet > 1.1.0](/get_started)
+- [MXNet > 1.1.0](https://mxnet.apache.org/get_started)
 - [onnx](https://github.com/onnx/onnx)
 - matplotlib
 
 We recommend that you have first followed this tutorial:
-- [Inference using an ONNX model on MXNet Gluon](/api/python/docs/tutorials/packages/onnx/inference_on_onnx_model.html)
+- [Inference using an ONNX model on MXNet Gluon](./inference_on_onnx_model.ipynb)
 
 
-```python
+```{.python .input}
 import json
 import logging
 import multiprocessing
@@ -64,7 +64,7 @@ import numpy as np
 These are images and a vizualisation script:
 
 
-```python
+```{.python .input}
 image_folder = "images"
 utils_file = "utils.py" # contain utils function to plot nice visualization
 images = ['wrench.jpg', 'dolphin.jpg', 'lotus.jpg']
@@ -83,7 +83,7 @@ from utils import *
 We download a pre-trained model, in our case the [GoogleNet](https://arxiv.org/abs/1409.4842) model, trained on [ImageNet](http://www.image-net.org/) from the [ONNX model zoo](https://github.com/onnx/models). The model comes packaged in an archive `tar.gz` file containing an `model.onnx` model file.
 
 
-```python
+```{.python .input}
 base_url = "https://s3.amazonaws.com/download.onnx/models/opset_3/"
 current_model = "bvlc_googlenet"
 model_folder = "model"
@@ -112,7 +112,7 @@ The [Caltech101 dataset](http://www.vision.caltech.edu/Image_Datasets/Caltech101
 Based Vision. 2004*
 
 
-```python
+```{.python .input}
 data_folder = "data"
 dataset_name = "101_ObjectCategories"
 archive_file = "{}.tar.gz".format(dataset_name)
@@ -129,7 +129,7 @@ if not os.path.isfile(archive_path):
 ```
 
 
-```python
+```{.python .input}
 training_path = os.path.join(data_folder, dataset_name)
 testing_path = os.path.join(data_folder, "{}_test".format(dataset_name))
 ```
@@ -139,7 +139,7 @@ testing_path = os.path.join(data_folder, "{}_test".format(dataset_name))
 We need to transform the images to a format accepted by the network
 
 
-```python
+```{.python .input}
 EDGE = 224
 SIZE = (EDGE, EDGE)
 BATCH_SIZE = 32
@@ -152,7 +152,7 @@ We transform the dataset images using the following operations:
 - transpose the channels to be (3,224,224)
 
 
-```python
+```{.python .input}
 def transform(image, label):
     resized = mx.image.resize_short(image, EDGE)
     cropped, crop_info = mx.image.center_crop(resized, SIZE)
@@ -172,7 +172,7 @@ ____image4
 ```
 
 
-```python
+```{.python .input}
 dataset_train = ImageFolderDataset(root=training_path)
 dataset_test = ImageFolderDataset(root=testing_path)
 ```
@@ -180,7 +180,7 @@ dataset_test = ImageFolderDataset(root=testing_path)
 We use several worker processes, which means the dataloading and pre-processing is going to be distributed across multiple processes. This will help preventing our GPU from starving and waiting for the data to be copied across
 
 
-```python
+```{.python .input}
 dataloader_train = DataLoader(dataset_train.transform(transform, lazy=False), batch_size=BATCH_SIZE, last_batch='rollover',
                               shuffle=True, num_workers=NUM_WORKERS)
 dataloader_test = DataLoader(dataset_test.transform(transform, lazy=False), batch_size=BATCH_SIZE, last_batch='rollover',
@@ -193,7 +193,7 @@ print("Train dataset: {} images, Test dataset: {} images".format(len(dataset_tra
 
 
 
-```python
+```{.python .input}
 categories = dataset_train.synsets
 NUM_CLASSES = len(categories)
 BATCH_SIZE = 32
@@ -202,7 +202,7 @@ BATCH_SIZE = 32
 Let's plot the 1000th image to test the dataset
 
 
-```python
+```{.python .input}
 N = 1000
 plt.imshow((transform(dataset_train[N][0], 0)[0].asnumpy().transpose((1,2,0))))
 plt.axis('off')
@@ -214,7 +214,7 @@ print(categories[dataset_train[N][1]])
 
 
 
-![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/motorbike.png?raw=true)<!--notebook-skip-line-->
+![onnx motorbike](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/motorbike.png?raw=true)<!--notebook-skip-line-->
 
 
 ## Fine-Tuning the ONNX model
@@ -224,14 +224,14 @@ print(categories[dataset_train[N][1]])
 Load the ONNX model
 
 
-```python
+```{.python .input}
 sym, arg_params, aux_params = onnx_mxnet.import_model(onnx_path)
 ```
 
 This function get the output of a given layer
 
 
-```python
+```{.python .input}
 def get_layer_output(symbol, arg_params, aux_params, layer_name):
     all_layers = symbol.get_internals()
     net = all_layers[layer_name+'_output']
@@ -244,7 +244,7 @@ def get_layer_output(symbol, arg_params, aux_params, layer_name):
 Here we print the different layers of the network to make it easier to pick the right one
 
 
-```python
+```{.python .input}
 sym.get_internals()
 ```
 
@@ -258,7 +258,7 @@ sym.get_internals()
 We get the network until the output of the `flatten0` layer
 
 
-```python
+```{.python .input}
 new_sym, new_arg_params, new_aux_params = get_layer_output(sym, arg_params, aux_params, 'flatten0')
 ```
 
@@ -271,14 +271,14 @@ We can now take advantage of the features and pattern detection knowledge that o
 We pick a context, fine-tuning on CPU will be **WAY** slower.
 
 
-```python
+```{.python .input}
 ctx = mx.gpu() if mx.context.num_gpus() > 0 else mx.cpu()
 ```
 
 We create a symbol block that is going to hold all our pre-trained layers, and assign the weights of the different pre-trained layers to the newly created SymbolBlock
 
 
-```python
+```{.python .input}
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -296,7 +296,7 @@ for param in new_aux_params:
 We create the new dense layer with the right new number of classes (101) and initialize the weights
 
 
-```python
+```{.python .input}
 dense_layer = gluon.nn.Dense(NUM_CLASSES)
 dense_layer.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
 ```
@@ -304,7 +304,7 @@ dense_layer.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
 We add the SymbolBlock and the new dense layer to a HybridSequential network
 
 
-```python
+```{.python .input}
 net = gluon.nn.HybridSequential()
 net.add(pre_trained)
 net.add(dense_layer)
@@ -314,7 +314,7 @@ net.add(dense_layer)
 Softmax cross entropy for multi-class classification
 
 
-```python
+```{.python .input}
 softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
 ```
 
@@ -322,7 +322,7 @@ softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
 Initialize trainer with common training parameters
 
 
-```python
+```{.python .input}
 LEARNING_RATE = 0.0005
 WDECAY = 0.00001
 MOMENTUM = 0.9
@@ -331,7 +331,7 @@ MOMENTUM = 0.9
 The trainer will retrain and fine-tune the entire network. If we use `dense_layer` instead of `net` in the cell below, the gradient updates would only be applied to the new last dense layer. Essentially we would be using the pre-trained network as a featurizer.
 
 
-```python
+```{.python .input}
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'learning_rate': LEARNING_RATE,
                          'wd':WDECAY,
@@ -343,7 +343,7 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd',
 We measure the accuracy in a non-blocking way, using `nd.array` to take care of the parallelisation that MXNet and Gluon offers.
 
 
-```python
+```{.python .input}
  def evaluate_accuracy_gluon(data_iterator, net):
     num_instance = 0
     sum_metric = nd.zeros(1,ctx=ctx, dtype=np.int32)
@@ -359,7 +359,7 @@ We measure the accuracy in a non-blocking way, using `nd.array` to take care of 
 ```
 
 
-```python
+```{.python .input}
 %%time
 print("Untrained network Test Accuracy: {0:.4f}".format(evaluate_accuracy_gluon(dataloader_test, net)))
 ```
@@ -371,7 +371,7 @@ print("Untrained network Test Accuracy: {0:.4f}".format(evaluate_accuracy_gluon(
 ### Training loop
 
 
-```python
+```{.python .input}
 val_accuracy = 0
 for epoch in range(5):
     for i, (data, label) in enumerate(dataloader_train):
@@ -407,20 +407,20 @@ In the previous tutorial, we saw that the network trained on ImageNet couldn't c
 Let's see if our network fine-tuned on Caltech101 is up for the task:
 
 
-```python
+```{.python .input}
 # Number of predictions to show
 TOP_P = 3
 ```
 
 
-```python
+```{.python .input}
 # Convert img to format expected by the network
 def transform(img):
     return nd.array(np.expand_dims(np.transpose(img, (2,0,1)),axis=0).astype(np.float32), ctx=ctx)
 ```
 
 
-```python
+```{.python .input}
 # Load and transform the test images
 caltech101_images_test = [plt.imread(os.path.join(image_folder, "{}".format(img))) for img in images]
 caltech101_images_transformed = [transform(img) for img in caltech101_images_test]
@@ -429,7 +429,7 @@ caltech101_images_transformed = [transform(img) for img in caltech101_images_tes
 Helper function to run batches of data
 
 
-```python
+```{.python .input}
 def run_batch(net, data):
     results = []
     for batch in data:
@@ -439,17 +439,17 @@ def run_batch(net, data):
 ```
 
 
-```python
+```{.python .input}
 result = run_batch(net, caltech101_images_transformed)
 ```
 
 
-```python
+```{.python .input}
 plot_predictions(caltech101_images_test, result, categories, TOP_P)
 ```
 
 
-![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/caltech101_correct.png?raw=true)<!--notebook-skip-line-->
+![onnx caltech101 correct](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/onnx/caltech101_correct.png?raw=true)<!--notebook-skip-line-->
 
 
 **Great!** The network classified these images correctly after being fine-tuned on a dataset that contains images of `wrench`, `dolphin` and `lotus`

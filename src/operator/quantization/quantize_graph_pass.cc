@@ -27,6 +27,7 @@
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
 #include <queue>
+#include <stack>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -41,6 +42,24 @@ using nnvm::Node;
 using nnvm::ObjectPtr;
 using nnvm::NodeEntry;
 using nnvm::Graph;
+
+static inline std::string GetOutputName(const nnvm::Node* node, int index) {
+  // Map where Key is Op and Value is function registered by FListOutputNames
+  static const auto& flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+  std::vector<std::string> output_names;
+
+  // If operator has registered FListOutputNames function
+  // get names by calling it with passed node attributes as argument
+  // else return output index as a string
+  if (flist_outputs.count(node->op())) {
+    output_names = flist_outputs[node->op()](node->attrs);
+    CHECK_GT(output_names.size(), index);
+    return output_names[index];
+  }
+
+  CHECK_GT(node->num_outputs(), index);
+  return std::to_string(index);
+}
 
 static inline size_t GetNumOutputs(ObjectPtr node) {
   // Get NumOutputs, check if current node has NumVisibleOutputs function, if yes, return
@@ -225,8 +244,8 @@ static void MarkQuantizedNodes(const Graph& src,
     while (!task_queue.empty()) {
       const auto& node = task_queue.front();
       task_queue.pop();
-      for (size_t i = 0; i < node->inputs.size(); ++i) {
-        const auto& input = node->inputs[i].node;
+      for (auto & i : node->inputs) {
+        const auto& input = i.node;
         auto it = support_quantize_nodes.find(input);
         if (it != support_quantize_nodes.end()) {
           it->second = it->second | kFromInput;
@@ -243,8 +262,7 @@ static void MarkQuantizedNodes(const Graph& src,
       const auto& node = task_queue.front();
       task_queue.pop();
       const auto& outputs = node_output_map[node];
-      for (size_t i = 0; i < outputs.size(); ++i) {
-        const auto& output = outputs[i];
+      for (const auto & output : outputs) {
         auto it = support_quantize_nodes.find(output);
         if (it != support_quantize_nodes.end()) {
           it->second = it->second | kFromOutput;
@@ -266,7 +284,6 @@ static void MarkQuantizedNodes(const Graph& src,
 }
 
 Graph QuantizeGraph(Graph &&src) {
-  static const auto& flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   static const auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   static const auto& avoid_quantize_input_map =
       Op::GetAttr<mxnet::FAvoidQuantizeInput>("FAvoidQuantizeInput");
@@ -323,18 +340,17 @@ Graph QuantizeGraph(Graph &&src) {
             // Or the output name is not ending with 'output', just put the output name here
             // to better align with calibration phase. No need to change name to weights/bias.
             std::string suffix = "";
+            std::string new_name = e.node->attrs.name;
+
             if (mirror_node->op() != nullptr) {
-              auto list_output_names_func = flist_outputs.get(e.node->op(), nullptr);
-              if (list_output_names_func != nullptr) {
-                std::vector<std::string> names = list_output_names_func(e.node->attrs);
-                suffix = "_" + names[e.index];
-              } else {
-                suffix = "_" + std::to_string(e.index);
-              }
+              std::string name = GetOutputName(e.node.get(), e.index);
+              suffix = "_" + name;
+            } else if (!offline_params.count(new_name)) {
+              new_name = node->attrs.name + "_" + e.node->attrs.name;
             }
 
             ObjectPtr quantize_node = InsertNode("_contrib_quantize_v2",
-              e.node->attrs.name + suffix + "_quantize", new_node, mirror_entry);
+              new_name + suffix + "_quantize", new_node, mirror_entry);
             quantize_node->attrs.dict["out_type"] = quantized_dtype;
             quantize_node->op()->attr_parser(&(quantize_node->attrs));
             mirror_entry_map[e] = NodeEntry{quantize_node, 0, e.version};
@@ -487,22 +503,42 @@ Graph QuantizeGraph(Graph &&src) {
       Op::GetAttr<mxnet::FNeedCalibrateInput>("FNeedCalibrateInput");
   static const auto& need_calib_output_map =
       Op::GetAttr<mxnet::FNeedCalibrateOutput>("FNeedCalibrateOutput");
+
+  std::stack<std::string> calib_variables;
   std::vector<std::string> calib_nodes;
   DFSVisit(ret.outputs, [&](const ObjectPtr& node) {
+    if (node->op() && !calib_variables.empty()) {
+      if (reverse_mirror_map.count(node)) {
+          const std::string& var_name = calib_variables.top();
+          const auto& fp32_in_node = reverse_mirror_map[node];
+          for (const auto &input_node : fp32_in_node->inputs) {
+            if (var_name == input_node.node->attrs.name) {
+              calib_nodes.push_back(fp32_in_node->attrs.name + "_" + var_name);
+              calib_variables.pop();
+              break;
+            }
+          }
+      }
+    }
     if (need_calib_input_map.count(node->op())) {
       const auto calib_idx = need_calib_input_map[node->op()](node->attrs);
       for (const auto &idx : calib_idx) {
         if (reverse_mirror_map.count(node)) {
-          calib_nodes.push_back(common::GetOutputName(
-              {reverse_mirror_map[node], node->inputs[idx].index, node->inputs[idx].version}));
+          const auto& fp32_in_node = reverse_mirror_map[node];
+          std::string name = GetOutputName(fp32_in_node.get(), node->inputs[idx].index);
+          calib_nodes.push_back(fp32_in_node->attrs.name + "_" + name);
         } else {
           const auto& e = node->inputs[idx];
           if (e.node->is_variable()) {
-            calib_nodes.push_back(e.node->attrs.name);
+            // monitor callback join operator name and variable name as observable node,
+            // utilize fact that we're using DFS and put variable name on stack to
+            // find operator node name for this variable node
+            calib_variables.emplace(e.node->attrs.name);
           } else {
             if (reverse_mirror_map.count(e.node)) {
               const auto& fp32_in_node = reverse_mirror_map.at(e.node);
-              calib_nodes.push_back(common::GetOutputName({fp32_in_node, e.index, e.version}));
+              std::string name = GetOutputName(fp32_in_node.get(), e.index);
+              calib_nodes.push_back(fp32_in_node->attrs.name + "_" + name);
             } else {
               LOG(FATAL) << "Can't find calibration node for " << node->attrs.name;
             }
@@ -513,10 +549,12 @@ Graph QuantizeGraph(Graph &&src) {
       const auto calib_idx = need_calib_output_map[node->op()](node->attrs);
       for (const auto& idx : calib_idx) {
         if (reverse_mirror_map.count(node)) {
-          calib_nodes.push_back(
-              common::GetOutputName({reverse_mirror_map[node], static_cast<uint32_t>(idx), 0}));
+          const auto& fp32_in_node = reverse_mirror_map[node];
+          std::string name = GetOutputName(fp32_in_node.get(), static_cast<uint32_t>(idx));
+          calib_nodes.push_back(fp32_in_node->attrs.name + "_" + name);
         } else {
-          calib_nodes.push_back(common::GetOutputName({node, static_cast<uint32_t>(idx), 0}));
+          std::string name = GetOutputName(node.get(), static_cast<uint32_t>(idx));
+          calib_nodes.push_back(node->attrs.name + "_" + name);
         }
       }
     }
@@ -528,12 +566,22 @@ Graph QuantizeGraph(Graph &&src) {
 static inline void SetCalibTableForEntry(
     const NodeEntry& e, const ObjectPtr& node,
     const std::unordered_map<std::string, std::pair<float, float>>& calib_table) {
-  std::string out_data_name = common::GetOutputName(e);
+  std::string out_name = GetOutputName(e.node.get(), e.index);
+  std::string full_node_name = e.node->attrs.name;
+
+  if (!e.node->is_variable()) {
+    full_node_name += "_" + out_name;
+  } else {
+    const std::string suffix = "_quantize";
+    full_node_name = node->attrs.name;
+    full_node_name = std::string(full_node_name.begin(), full_node_name.end() - suffix.size());
+  }
+
   const std::string prefix = "quantized_";
   if (e.node->attrs.name.rfind(prefix, 0) == 0) {
-    out_data_name = out_data_name.substr(prefix.size());
+    full_node_name = full_node_name.substr(prefix.size());
   }
-  const auto calib_table_iter = calib_table.find(out_data_name);
+  const auto calib_table_iter = calib_table.find(full_node_name);
   static int verbose = dmlc::GetEnv("MXNET_QUANTIZATION_VERBOSE", 0);
   if (calib_table_iter != calib_table.end()) {
     if (verbose) {

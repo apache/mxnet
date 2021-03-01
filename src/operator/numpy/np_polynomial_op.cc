@@ -22,7 +22,7 @@
  * \file np_polynomial_op.cc
 */
 
-#include <math.h>
+#include <cmath>
 #include "np_polynomial_op-inl.h"
 
 namespace mxnet {
@@ -31,7 +31,7 @@ namespace op {
 template<int req>
 struct polyval_backward_x {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType* p_dptr, const DType* x_dptr,
+  MSHADOW_XINLINE static void Map(index_t i, const DType* p_dptr, const DType* x_dptr,
                                   DType* igrad_x_dptr, const DType* ograd_dptr,
                                   const index_t p_size) {
     DType igrad_x = 0;
@@ -47,13 +47,14 @@ struct polyval_backward_x {
 template<int req>
 struct polyval_backward_p {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType* p_dptr, const DType* x_dptr,
+  MSHADOW_XINLINE static void Map(index_t i, const DType* p_dptr, const DType* x_dptr,
                                   DType* igrad_p_dptr, const DType* ograd_dptr,
                                   const index_t p_size, const index_t x_size) {
     DType igrad_p = 0;
     index_t j = x_size - 1;
     while (j >= 0) {
-        igrad_p += pow(x_dptr[j], p_size - i - 1) * ograd_dptr[j];
+        igrad_p += pow(x_dptr[j], static_cast<DType>(p_size) -
+                                  static_cast<DType>(i + 1)) * ograd_dptr[j];
         j--;
     }
     KERNEL_ASSIGN(igrad_p_dptr[i], req, igrad_p);

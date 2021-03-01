@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#include <memory>
 #include <unordered_set>
 #include <iostream>
 #include "./imperative_utils.h"
@@ -87,8 +88,7 @@ CachedOp::CachedOp(
   SetRefCounts(&fwd_graph_, full_graph_);
 }
 
-CachedOp::~CachedOp() {
-}
+CachedOp::~CachedOp() = default;
 
 std::vector<nnvm::NodeEntry> CachedOp::Gradient(
     const nnvm::ObjectPtr& node,
@@ -611,6 +611,34 @@ void CachedOp::StaticRunOps(
   }
 }
 
+#define INIT_DETACHED(x, y)   if (!y->is_none()) x->InitDetached(y)
+
+static void PrepareOutputs(const nnvm::Graph& g, const Context& default_ctx,
+                           const std::vector<NDArray*> &outputs,
+                           std::vector<NDArray*> *pArrays, bool detach) {
+  using namespace nnvm;
+  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
+  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+
+  const auto& idx = g.indexed_graph();
+  auto &arrays = *pArrays;
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    const auto eid = idx.entry_id(idx.outputs()[i]);
+    // An input and an output may share the same array.
+    if (detach)
+      INIT_DETACHED(outputs[i], arrays[eid]);
+
+    arrays[eid] = outputs[i];
+    if (arrays[eid]->is_none())
+      arrays[eid]->ReInit(static_cast<NDArrayStorageType>(stypes[eid]),
+                          shapes[eid], default_ctx, dtypes[eid]);
+    const nnvm::NodeAttrs& attrs = idx[idx.outputs()[i].node_id].source->attrs;
+    outputs[i]->AssignStorageInfo(common::NodeAttrsGetProfilerScope(attrs),
+                                  attrs.name);
+  }
+}
+
 OpStatePtr CachedOp::StaticForward(
     const Context& default_ctx,
     const std::vector<NDArray*>& inputs,
@@ -669,24 +697,7 @@ OpStatePtr CachedOp::StaticForward(
     StaticInitExec(state_ptr, recording, false);
   }
 
-  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    auto eid = idx.entry_id(idx.outputs()[i]);
-    // An input and an output may share the same array.
-    if (!arrays[eid]->is_none())
-      *outputs[i] = arrays[eid]->Detach();
-    arrays[eid] = outputs[i];
-    if (!outputs[i]->is_none()) continue;
-    *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                          shapes[eid], default_ctx, true, dtypes[eid]);
-    const nnvm::NodeAttrs& attrs = idx[idx.outputs()[i].node_id].source->attrs;
-    outputs[i]->AssignStorageInfo(common::NodeAttrsGetProfilerScope(attrs),
-                                  attrs.name);
-  }
-
+  PrepareOutputs(g, default_ctx, outputs, &arrays, true);
   StaticRunOps(default_ctx, g, state_ptr, arrays, 0, idx.num_nodes());
 
   return recording ? state_ptr : OpStatePtr();
@@ -878,10 +889,9 @@ void CachedOp::DynamicBackward(
   }
   for (size_t i = 0, j = num_forward_outputs; i < reqs.size(); ++i) {
     if (reqs[i] == kNullOp) continue;
-    auto eid = idx.entry_id(idx.outputs()[j++]);
+    const auto eid = idx.entry_id(idx.outputs()[j++]);
     // An input and an output may share the same array.
-    if (!arrays[eid]->is_none())
-      *outputs[i] = arrays[eid]->Detach();
+    INIT_DETACHED(outputs[i], arrays[eid]);
     arrays[eid] = outputs[i];
   }
 
@@ -968,8 +978,7 @@ void CachedOp::StaticBackward(
         match = false;
         state.array_reqs[eid] = reqs[iter->second];
         // An input and an output may share the same array.
-        if (!arrays[eid]->is_none())
-          *outputs[iter->second] = arrays[eid]->Detach();
+        INIT_DETACHED(outputs[iter->second], arrays[eid]);
         *arrays[eid] = *outputs[iter->second];
         state.dynamic_entries[eid] = false;
       }
@@ -982,8 +991,7 @@ void CachedOp::StaticBackward(
       auto eid = idx.entry_id(entry);
       state.array_reqs[eid] = reqs[iter->second];
       // An input and an output may share the same array.
-      if (!arrays[eid]->is_none())
-        *outputs[iter->second] = arrays[eid]->Detach();
+      INIT_DETACHED(outputs[iter->second], arrays[eid]);
       arrays[eid] = outputs[iter->second];
     }
   } else {
@@ -993,8 +1001,7 @@ void CachedOp::StaticBackward(
       auto eid = idx.entry_id(entry);
       state.array_reqs[eid] = reqs[i];
       // An input and an output may share the same array.
-      if (!arrays[eid]->is_none())
-        *outputs[i] = arrays[eid]->Detach();
+      INIT_DETACHED(outputs[i], arrays[eid]);
       arrays[eid] = outputs[i];
     }
   }
@@ -1286,7 +1293,7 @@ void CachedOpParamParser(nnvm::NodeAttrs* attrs) {
     std::vector<std::pair<std::string, std::string> > flags;
     for (const auto& attr : attrs->dict)
       flags.emplace_back(attr.first, attr.second);
-    attrs->parsed = CachedOpPtr(new CachedOp(sym, flags));
+    attrs->parsed = std::make_shared<CachedOp>(sym, flags);
   }
 }
 

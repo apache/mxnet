@@ -23,7 +23,7 @@
  */
 
 #include "np_polynomial_op-inl.h"
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 
 namespace mxnet {
 namespace op {

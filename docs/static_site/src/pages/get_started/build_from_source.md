@@ -74,13 +74,13 @@ sudo apt-get install -y build-essential git ninja-build ccache libopenblas-dev l
 sudo yum install epel-release centos-release-scl
 sudo yum install git make ninja-build automake autoconf libtool protobuf-compiler protobuf-devel \
     atlas-devel openblas-devel lapack-devel opencv-devel openssl-devel zeromq-devel python3 \ 
-    devtoolset-7
+    devtoolset-8
 source /opt/rh/devtoolset-7/enable
 ```
-Here `devtoolset-7` refers to the [Developer Toolset
-7](https://www.softwarecollections.org/en/scls/rhscl/devtoolset-7/) created by
+Here `devtoolset-8` refers to the [Developer Toolset
+8](https://www.softwarecollections.org/en/scls/rhscl/devtoolset-8/) created by
 Red Hat for developers working on CentOS or Red Hat Enterprise Linux platform
-and providing the GNU Compiler Collection 7.
+and providing the GNU Compiler Collection 9.
 
 ### macOS
 ```bash
@@ -139,6 +139,18 @@ Apple Accelerate and MKL are proprietary. ATLAS and OpenBLAS are Open Source. If
 you don't have any specific requirements, MXNet recommends OpenBLAS as it
 typically outperforms ATLAS, is portable across many platforms, provides a
 LAPACK implementation and has a permissive license.
+
+Please note that since MXNet 2.0 we are forcing static link to OpenBLAS
+`libopenblas.a` on non-Windows systems. In the case that the OpenBLAS library depends
+on `gfortran`, be sure to install it too as a dependency. For example, on Debian
+systems you can run:
+```bash
+sudo apt install gfortran
+```
+Or on Red Hat systems, run:
+```bash
+sudo yum install gcc-gfortran
+```
 
 ### Optional GPU support
 

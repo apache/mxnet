@@ -55,7 +55,7 @@ inline bool NumpyPolyvalShape(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct polyval_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType* out_data,
                                   const DType* p_data,
                                   const DType* x_data,

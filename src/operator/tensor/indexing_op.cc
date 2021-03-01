@@ -328,7 +328,7 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
         }
       } else {
         mshadow::Shape<10> in_strides;
-        int stride = 1;
+        index_t stride = 1;
         for (int i = arrshape.ndim() - 1; i >= 0; stride *= arrshape[i], --i) {
           in_strides[i] = stride;
         }
@@ -455,7 +455,7 @@ void GatherNDCheckBoundCPU(mshadow::Stream<cpu> *s, const DType* idx_ptr, index_
   using namespace mxnet_op;
   Kernel<set_zero, cpu>::Launch(s, M, is_valid_dim_ptr);
   Kernel<is_valid_check_gather_nd, cpu>::Launch(s, M, is_valid_dim_ptr, idx_ptr, N, mshape);
-  for (int m = 0; m < M; m++) {
+  for (index_t m = 0; m < M; m++) {
     if (is_valid_dim_ptr[m] > mshape[m] - 1 || is_valid_dim_ptr[m] < - mshape[m]) {
       LOG(FATAL)<< "IndexError: index " << is_valid_dim_ptr[m] << " is out of bounds for axis "
         << m << " with size " << mshape[m];
@@ -476,12 +476,12 @@ void GatherNDForwardCPU(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
   const mxnet::TShape& dshape = inputs[0].shape_;
   const mxnet::TShape& ishape = inputs[1].shape_;
-  int M = ishape[0];
-  int N = ishape.Size() / M;
-  int K = dshape.ProdShape(M, dshape.ndim());
+  index_t M = ishape[0];
+  index_t N = ishape.Size() / M;
+  index_t K = dshape.ProdShape(M, dshape.ndim());
   mshadow::Shape<10> strides;
   mshadow::Shape<10> mshape;
-  for (int i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) {
+  for (index_t i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) {
     strides[i] = stride;
     mshape[i] = dshape[i];
   }

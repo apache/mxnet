@@ -1143,6 +1143,32 @@ def get_all_registered_operators():
     return mx_registered_operator_names
 
 
+def get_all_registered_operators_grouped():
+    """Get all registered MXNet operator names, grouped by 'original' operator.
+
+    Returns
+    -------
+    names : a dictionary, mapping op name to the list of all its aliases (including the original).
+    """
+    ret = {}
+    for aname in get_all_registered_operators():
+        op_handle = OpHandle()
+        check_call(_LIB.NNGetOpHandle(c_str(aname), ctypes.byref(op_handle)))
+        name = ctypes.c_char_p()
+        desc = ctypes.c_char_p()
+        num_args = mx_uint()
+        arg_names = ctypes.POINTER(ctypes.c_char_p)()
+        arg_types = ctypes.POINTER(ctypes.c_char_p)()
+        arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+        ret_types = ctypes.POINTER(ctypes.c_char_p)()
+        check_call(_LIB.NNGetOpInfo(op_handle, ctypes.byref(name), ctypes.byref(desc),
+                                    ctypes.byref(num_args), ctypes.byref(arg_names),
+                                    ctypes.byref(arg_types), ctypes.byref(arg_descs),
+                                    ctypes.byref(ret_types)))
+        ret.setdefault(py_str(name.value), []).append(aname)
+    return ret
+
+
 OperatorArguments = collections.namedtuple('OperatorArguments', ['narg', 'names', 'types'])
 
 

@@ -19,11 +19,9 @@ import mxnet as mx
 import numpy as _np
 from mxnet.test_utils import same, rand_shape_nd
 from mxnet.runtime import Features
-from common import with_seed
 
 _features = Features()
 
-@with_seed()
 def test_tvm_broadcast_add():
     if _features.is_enabled("TVM_OP"):
         configs = [

@@ -62,7 +62,7 @@ inline static void _npi_tensordot(runtime::MXNetArgs args,
     param.b_axes_summed = Tuple<int>(adt[1]);
   }
   attrs.op = op;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::TensordotParam>(&attrs);
   int num_outputs = 0;
   int num_inputs = 2;

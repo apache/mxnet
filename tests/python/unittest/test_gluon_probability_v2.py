@@ -26,7 +26,6 @@ from mxnet.gluon.probability import StochasticBlock, StochasticSequential
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import use_np, assert_almost_equal
 
-from common import with_seed
 from numpy.testing import assert_array_equal
 import pytest
 import scipy.stats as ss
@@ -72,7 +71,6 @@ def test_mgp_getF():
         getF(sym.ones((2, 2)), nd.ones((2, 2)))
 
 
-@with_seed()
 @use_np
 def test_gluon_uniform():
     class TestUniform(HybridBlock):
@@ -143,7 +141,6 @@ def test_gluon_uniform():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_normal():
     class TestNormal(HybridBlock):
@@ -213,7 +210,6 @@ def test_gluon_normal():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_laplace():
     class TestLaplace(HybridBlock):
@@ -283,7 +279,6 @@ def test_gluon_laplace():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_cauchy():
     class TestCauchy(HybridBlock):
@@ -341,7 +336,7 @@ def test_gluon_cauchy():
     for shape, hybridize in itertools.product(shapes, [True, False]):
         loc = np.random.uniform(-1, 1, shape)
         scale = np.random.uniform(0.5, 1.5, shape)
-        samples = np.random.uniform(size=shape)
+        samples = np.random.uniform(size=shape, low=1e-4, high=1.0-1e-4)
         net = TestCauchy("icdf")
         if hybridize:
             net.hybridize()
@@ -365,7 +360,6 @@ def test_gluon_cauchy():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_half_cauchy():
     class TestHalfCauchy(HybridBlock):
@@ -427,7 +421,6 @@ def test_gluon_half_cauchy():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_poisson():
     class TestPoisson(HybridBlock):
@@ -462,7 +455,6 @@ def test_gluon_poisson():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_geometric():
     class TestGeometric(HybridBlock):
@@ -522,7 +514,6 @@ def test_gluon_geometric():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_negative_binomial():
     class TestNegativeBinomial(HybridBlock):
@@ -540,7 +531,7 @@ def test_gluon_negative_binomial():
     # Test log_prob
     for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
         n = np.random.randint(1, 10, size=shape).astype('float32')
-        prob = np.random.uniform(low=0.1, size=shape)
+        prob = np.random.uniform(low=0.2, high=0.6, size=shape)
         sample = np.random.randint(0, 10, size=shape).astype('float32')
         param = prob
         if use_logit:
@@ -559,7 +550,7 @@ def test_gluon_negative_binomial():
         for func in ['mean', 'variance']:
             for use_logit in [True, False]:
                 n = np.random.randint(1, 10, size=shape).astype('float32')
-                prob = np.random.uniform(low=0.1, size=shape)
+                prob = np.random.uniform(low=0.2, high=0.6, size=shape)
                 net = TestNegativeBinomial(func, use_logit)
                 param = prob
                 if use_logit:
@@ -576,7 +567,6 @@ def test_gluon_negative_binomial():
                                     rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_exponential():
     class TestExponential(HybridBlock):
@@ -637,7 +627,6 @@ def test_gluon_exponential():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_weibull():
     class TestWeibull(HybridBlock):
@@ -707,7 +696,6 @@ def test_gluon_weibull():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_pareto():
     class TestPareto(HybridBlock):
@@ -776,7 +764,6 @@ def test_gluon_pareto():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_gamma():
     class TestGamma(HybridBlock):
@@ -825,7 +812,6 @@ def test_gluon_gamma():
                                 rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_dirichlet():
     class TestDirichlet(HybridBlock):
@@ -837,7 +823,7 @@ def test_gluon_dirichlet():
             dirichlet = mgp.Dirichlet(alpha, validate_args=True)
             return _distribution_method_invoker(dirichlet, self._func, *args)
 
-    event_shapes = [2, 5, 10]
+    event_shapes = [2, 4, 6]
     batch_shapes = [None, (2, 3)]
 
     # Test sampling
@@ -845,7 +831,7 @@ def test_gluon_dirichlet():
         for hybridize in [True, False]:
             desired_shape = (
                 batch_shape if batch_shape is not None else ()) + (event_shape,)
-            alpha = np.random.uniform(size=desired_shape)
+            alpha = np.random.uniform(1.0, 5.0, size=desired_shape)
             net = TestDirichlet("sample")
             if hybridize:
                 net.hybridize()
@@ -862,9 +848,9 @@ def test_gluon_dirichlet():
         for hybridize in [True, False]:
             desired_shape = (
                 batch_shape if batch_shape is not None else ()) + (event_shape,)
-            alpha = np.random.uniform(size=desired_shape)
+            alpha = np.random.uniform(1.0, 5.0, size=desired_shape)
             np_samples = _np.random.dirichlet(
-                [1 / event_shape] * event_shape, size=batch_shape)
+                [10.0 / event_shape] * event_shape, size=batch_shape)
             net = TestDirichlet("log_prob")
             if hybridize:
                 net.hybridize()
@@ -879,7 +865,7 @@ def test_gluon_dirichlet():
             for func in ['mean', 'variance', 'entropy']:
                 desired_shape = (
                     batch_shape if batch_shape is not None else ()) + (event_shape,)
-                alpha = np.random.uniform(size=desired_shape)
+                alpha = np.random.uniform(1.0, 5.0, desired_shape)
                 net = TestDirichlet(func)
                 if hybridize:
                     net.hybridize()
@@ -895,7 +881,6 @@ def test_gluon_dirichlet():
                                     rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_beta():
     class TestBeta(HybridBlock):
@@ -943,7 +928,6 @@ def test_gluon_beta():
                                 rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_fisher_snedecor():
     class TestFisherSnedecor(HybridBlock):
@@ -989,7 +973,6 @@ def test_gluon_fisher_snedecor():
                                 rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_student_t():
     class TestT(HybridBlock):
@@ -1039,7 +1022,6 @@ def test_gluon_student_t():
                                 rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_gumbel():
     class TestGumbel(HybridBlock):
@@ -1109,7 +1091,6 @@ def test_gluon_gumbel():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_multinomial():
     class TestMultinomial(HybridBlock):
@@ -1201,7 +1182,6 @@ def test_gluon_multinomial():
             assert mx_out.shape == desired_shape
 
 
-@with_seed()
 @use_np
 def test_gluon_binomial():
     class TestBinomial(HybridBlock):
@@ -1280,7 +1260,6 @@ def test_gluon_binomial():
                                     rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_bernoulli():
     class TestBernoulli(HybridBlock):
@@ -1341,7 +1320,6 @@ def test_gluon_bernoulli():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_relaxed_bernoulli():
     class TestRelaxedBernoulli(HybridBlock):
@@ -1392,7 +1370,6 @@ def test_relaxed_bernoulli():
         assert mx_out.shape == desired_shape
 
 
-@with_seed()
 @use_np
 def test_gluon_categorical():
     class TestCategorical(HybridBlock):
@@ -1502,7 +1479,6 @@ def test_gluon_categorical():
             assert mx_out.shape == desired_shape
 
 
-@with_seed()
 @use_np
 def test_gluon_one_hot_categorical():
     def one_hot(a, num_classes):
@@ -1584,7 +1560,6 @@ def test_gluon_one_hot_categorical():
                 desired_shape + (event_shape,)
 
 
-@with_seed()
 @use_np
 def test_relaxed_one_hot_categorical():
     class TestRelaxedOneHotCategorical(HybridBlock):
@@ -1653,7 +1628,6 @@ def test_relaxed_one_hot_categorical():
             assert mx_out.shape == desired_shape
 
 
-@with_seed()
 @use_np
 def test_gluon_mvn():
     class TestMVN(HybridBlock):
@@ -1772,7 +1746,6 @@ def test_gluon_mvn():
                                     rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_gluon_half_normal():
     class TestHalfNormal(HybridBlock):
@@ -1834,7 +1807,6 @@ def test_gluon_half_normal():
                             rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_affine_transform():
     r"""
@@ -1898,7 +1870,6 @@ def test_affine_transform():
         assert mx_out.shape == expected_shape
 
 
-@with_seed()
 @use_np
 def test_compose_transform():
     class TestComposeTransform(HybridBlock):
@@ -2010,7 +1981,6 @@ def test_independent():
                 assert mx_out.shape == batch_shape
 
 
-@with_seed()
 @use_np
 def test_gluon_kl():
     def _test_zero_kl(p, shape):
@@ -2205,7 +2175,6 @@ def test_gluon_kl():
 
 
 @pytest.mark.garbage_expected
-@with_seed()
 @use_np
 def test_gluon_stochastic_block():
     class dummyBlock(StochasticBlock):
@@ -2238,7 +2207,6 @@ def test_gluon_stochastic_block():
             net.export('dummyBlock', epoch=0)
 
 
-@with_seed()
 @use_np
 def test_gluon_stochastic_block_exception():
     class problemBlock(StochasticBlock):
@@ -2262,7 +2230,6 @@ def test_gluon_stochastic_block_exception():
 
 
 @pytest.mark.garbage_expected
-@with_seed()
 @use_np
 def test_gluon_stochastic_sequential():
     class normalBlock(HybridBlock):
@@ -2317,7 +2284,6 @@ def test_gluon_stochastic_sequential():
             mx_out = net(initial_value).asnumpy()
 
 
-@with_seed()
 @use_np
 def test_gluon_domain_map():
     class TestDomainMap(HybridBlock):

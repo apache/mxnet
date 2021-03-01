@@ -84,7 +84,7 @@ void InvokeOperator(const nnvm::IndexedGraph& idx,
   std::vector<uint32_t> &ref_count = *p_ref_count;
 
   const nnvm::IndexedGraph::Node& node = idx[node_idx];
-  if (node.source->op() == bwd_cached_op) {
+  if (node.source->op() == bwd_cached_op && node.source->attrs.name == "_cachedop_backward") {
     const auto& cached_op = dmlc::get<CachedOpPtr>(node.source->attrs.parsed);
     nnvm::Node* fwd_node = node.source->control_deps[0].get();
     auto fwd_node_id = idx.node_id(fwd_node);
@@ -108,16 +108,15 @@ void InvokeOperator(const nnvm::IndexedGraph& idx,
     invoke(OpStatePtr());
   }
   for (const auto& j : node.inputs) {
-    size_t eid = idx.entry_id(j);
-    --ref_count[eid];
-    if (ref_count[eid] == 0) {
-      *arrays[eid] = NDArray();
+    const size_t eid = idx.entry_id(j);
+    if (--ref_count[eid] == 0) {
+      arrays[eid]->ReInit();
     }
   }
   for (size_t j = 0; j < ndoutputs.size(); ++j) {
-    size_t eid = idx.entry_id(node_idx, j);
+    const size_t eid = idx.entry_id(node_idx, j);
     if (ref_count[eid] == 0) {
-      *arrays[eid] = NDArray();
+      arrays[eid]->ReInit();
     }
   }
 }

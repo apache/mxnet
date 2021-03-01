@@ -23,8 +23,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from common import with_seed, assert_raises_cudnn_not_satisfied, \
-    xfail_when_nonstandard_decimal_separator
+from common import assert_raises_cudnn_not_satisfied, xfail_when_nonstandard_decimal_separator
 import unittest
 
 def test_box_nms_op():
@@ -354,7 +353,6 @@ def test_box_decode_op():
     assert_allclose(Y.asnumpy(), np.array([[[-0.0562755, -0.00865743, 0.26227552, 0.42465743], \
         [0.13240421, 0.17859563, 0.93759584, 1.1174043 ]]]), atol=1e-5, rtol=1e-5)
 
-@with_seed()
 def test_op_mrcnn_mask_target():
     if default_context().device_type != 'gpu':
         return
@@ -411,38 +409,51 @@ def test_op_mrcnn_mask_target():
     assert_almost_equal(mask_targets.asnumpy(), gt_mask_targets.asnumpy())
     assert_almost_equal(mask_cls.asnumpy(), gt_mask_cls.asnumpy())
 
-@with_seed()
-def test_modulated_deformable_convolution():
-    for num_batch in [1, 2]:
-        for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
-            for input_height, input_width in itertools.product([5, 6], [5, 6]):
-                for dilate in [(1, 1), (2, 2)]:
-                    for grad_nodes in [['im_data'], ['offset_data'], ['weight']]:
-                        output_height = input_height
-                        output_width = input_width
-                        im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
-                        offset_data = \
-                            np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
-                            * 0.8 + 0.1
-                        mask_data = np.random.rand(num_batch, num_deformable_group * 3 * 3, output_height, output_width)
-                        mask_data = 0.5 * (1 + np.tanh(0.5 * mask_data)) # sigmoid
-                        weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
-                        bias = np.zeros(num_channel_data)
+def test_dynamic_reshape():
+    def dynamic_reshape_testcases(src_shape, shape_arg, dst_shape):
+        data = mx.sym.Variable('data')
+        shape = mx.sym.Variable('shape')
+        net = mx.sym.contrib.dynamic_reshape(data, shape)
+        js = net.tojson()
+        net = mx.sym.fromjson(js)
+        dat_npy = np.random.rand(*src_shape)
+        grad_npy = np.random.rand(*dst_shape)
+        args = {
+            'data': mx.nd.array(dat_npy),
+            'shape': mx.nd.array(shape_arg)
+            }
+        args_grad = {
+            'data': mx.nd.empty(src_shape)
+        }
+        exe = net._bind(default_context(), args, args_grad)
+        exe.forward(is_train=True)
+        assert np.square(exe.outputs[0].asnumpy() - dat_npy.reshape(dst_shape)).mean() < 1E-7
+        exe.backward(out_grads=mx.nd.array(grad_npy))
+        assert np.square(exe.grad_dict['data'].asnumpy() - grad_npy.reshape(src_shape)).mean() < 1E-7
 
-                        im_data_var = mx.symbol.Variable(name="im_data")
-                        offset_data_var = mx.symbol.Variable(name="offset_data")
-                        mask_data_var = mx.symbol.Variable(name="mask_data")
-                        weight_var = mx.symbol.Variable(name="weight")
-                        bias_var = mx.symbol.Variable(name="bias")
-                        op = mx.sym.contrib.ModulatedDeformableConvolution(name='test_op', data=im_data_var,
-                                                                           offset=offset_data_var, mask=mask_data_var,
-                                                                           weight=weight_var, bias=bias_var,
-                                                                           num_filter=num_channel_data, pad=dilate,
-                                                                           kernel=(3, 3), stride=(1, 1), dilate=dilate,
-                                                                           num_deformable_group=num_deformable_group)
-                        if grad_nodes[0] == 'offset_data':
-                            # wider tolerance needed for coordinate differential
-                            rtol, atol = 1.0, 1e-2
-                        else:
-                            rtol, atol = 0.05, 1e-3
+        # test ndarray
+        X = mx.nd.random.uniform(shape=src_shape)
+        Y = mx.contrib.nd.dynamic_reshape(X, mx.nd.array(shape_arg))
+        assert_array_equal(Y.shape, dst_shape)
 
+    test_cases = [
+        [(2, 3, 5, 5),  (0, -1),           (2, 75)],
+        [(2, 3, 5, 5),  (0, 0, -1),        (2, 3, 25)],
+        [(5, 3, 4, 5),  (0, -1, 0),        (5, 15, 4)],
+        [(2, 3, 5, 4),  (-1, 0, 0),        (8, 3, 5)],
+        [(2, 3, 5, 5),  (0, 0, 0, 0),      (2, 3, 5, 5)],
+        [(2, 4, 5, 3),  (-1, 2, 2, 1),     (30, 2, 2, 1)],
+        [(2, 3, 5, 6),  (-2,),             (2, 3, 5, 6)],
+        [(2, 3, 5, 6),  (6, 1, -2),        (6, 1, 5, 6)],
+        [(2, 3, 5, 6),  (-3, -3),          (6, 30)],
+        [(2, 3, 5, 6),  (-3, -1),          (6, 30)],
+        [(64,),         (-4, 16, 4),       (16, 4)],
+        [(64,),         (-4, 16, -1),      (16, 4)],
+        [(64, 1, 2, 3), (-4, 16, -1, -2),  (16, 4, 1, 2, 3)]]
+
+    for test_case in test_cases:
+        dynamic_reshape_testcases(*test_case)
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()

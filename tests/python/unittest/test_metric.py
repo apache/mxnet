@@ -22,7 +22,7 @@ import scipy
 from scipy.stats import pearsonr
 import json
 import math
-from common import with_seed, xfail_when_nonstandard_decimal_separator
+from common import xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 
 def check_metric(metric, *args, **kwargs):
@@ -39,19 +39,25 @@ def test_metrics():
     check_metric('perplexity', axis=-1)
     check_metric('pearsonr')
     check_metric('pcc')
-    check_metric('nll_loss')
+    check_metric('ce')
     check_metric('loss')
     composite = mx.gluon.metric.create(['acc', 'f1'])
     check_metric(composite)
 
-def test_nll_loss():
-    metric = mx.gluon.metric.create('nll_loss')
+def test_ce():
+    metric = mx.gluon.metric.create('ce')
     pred = mx.nd.array([[0.2, 0.3, 0.5], [0.6, 0.1, 0.3]])
     label = mx.nd.array([2, 1])
     metric.update([label], [pred])
     _, loss = metric.get()
     expected_loss = -(np.log(pred[0][2].asscalar()) + np.log(pred[1][1].asscalar())) / 2
     assert loss == expected_loss
+    metric = mx.gluon.metric.create('ce', from_logits=True)
+    pred = mx.nd.log(pred)
+    metric.update([label], [pred])
+    _, loss = metric.get()
+    np.testing.assert_almost_equal(loss, expected_loss)
+
 
 def test_acc():
     pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
@@ -159,7 +165,7 @@ def test_multiclass_f1():
     macroF1.update([label11, label12], [pred11, pred12])
     assert microF1.num_inst == 6
     assert macroF1.num_inst == 6
-    
+
     # from sklearn.metrics import f1_score
     # overall_pred = [0, 1, 2, 0, 1, 2]
     # overall_label = [0, 2, 1, 0, 0, 1]
@@ -167,7 +173,7 @@ def test_multiclass_f1():
     fmicro = 0.3333333333333333 #f1_score(overall_label, overall_pred, average="micro")
     np.testing.assert_almost_equal(microF1.get()[1], fmicro)
     np.testing.assert_almost_equal(macroF1.get()[1], fmacro)
-    
+
 @xfail_when_nonstandard_decimal_separator
 def test_multilabel_f1():
     microF1 = mx.gluon.metric.create("f1", class_type="multilabel", average="micro")
@@ -183,7 +189,7 @@ def test_multilabel_f1():
     macroF1.update([label], [pred])
     microF1.update([label], [pred])
     assert macroF1.get()[1] == 0.5 # one class is 1.0, the other is 0. (divided by 0)
-    np.testing.assert_almost_equal(microF1.get()[1], 2.0 / 3)  
+    np.testing.assert_almost_equal(microF1.get()[1], 2.0 / 3)
     macroF1.reset()
     microF1.reset()
 
@@ -209,7 +215,7 @@ def test_mcc():
     microMCC = mx.gluon.metric.create("mcc")
 
     assert np.isnan(microMCC.get()[1])
-    
+
     # check divide by zero
     pred = mx.nd.array([[0.9, 0.1],
                         [0.8, 0.2]])

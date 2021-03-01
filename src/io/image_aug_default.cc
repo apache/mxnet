@@ -205,7 +205,7 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultAugParams() {
 class DefaultImageAugmenter : public ImageAugmenter {
  public:
   // contructor
-  DefaultImageAugmenter() {}
+  DefaultImageAugmenter() = default;
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     kwargs_left = param_.InitAllowUnknown(kwargs);

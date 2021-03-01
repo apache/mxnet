@@ -58,11 +58,11 @@ def check_leak_ndarray(request):
             if element in seen:
                 return False
             seen.add(element)
-        except (TypeError, ValueError):  # unhashable
+        except (TypeError, ValueError, NotImplementedError):  # unhashable
             pass
 
         if isinstance(element, mx.nd._internal.NDArrayBase):
-            return True
+            return element._alive  # We only care about catching NDArray's that haven't been freed in the backend yet
         elif isinstance(element, mx.sym._internal.SymbolBase):
             return False
         elif hasattr(element, '__dict__'):

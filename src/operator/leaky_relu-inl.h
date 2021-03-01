@@ -254,13 +254,21 @@ class LeakyReLUOp : public Operator {
                                                          &new_rshape,
                                                          &new_oshape) != 0;
         if (!need_bc) {
+#if !defined(__CUDACC__)
           ElemwiseBinaryOp::BackwardUseIn<xpu,
                                           mshadow_op::xelu_grad,
                                           mshadow_op::prelu_grad>(
             nnvm::NodeAttrs(), ctx, {out_grad[leakyrelu::kOut],
                                      in_data[leakyrelu::kData],
                                      in_data[leakyrelu::kGamma]}, req, in_grad);
+#else
+          ElemwiseBinaryRTCBwdUseIn {"xelu_grad", "prelu_grad"}(
+            nnvm::NodeAttrs(), ctx, {out_grad[leakyrelu::kOut],
+                                     in_data[leakyrelu::kData],
+                                     in_data[leakyrelu::kGamma]}, req, in_grad);
+#endif  // !defined(__CUDACC__)
         } else {
+#if !defined(__CUDACC__)
           BROADCAST_NDIM_SWITCH(new_oshape.ndim(), NDim, {
             BinaryBroadcastBackwardUseInImpl<xpu, NDim, DType,
               mshadow_op::xelu_grad, mshadow_op::prelu_grad>(
@@ -269,6 +277,16 @@ class LeakyReLUOp : public Operator {
                       in_data[leakyrelu::kGamma]}, req, in_grad,
                 new_lshape, new_rshape, new_oshape);
           });
+#else
+          std::vector<TBlob> new_in_grad(2);
+          new_in_grad[leakyrelu::kData] = in_grad[leakyrelu::kData];
+          new_in_grad[leakyrelu::kGamma] = in_grad[leakyrelu::kGamma].reshape(gshape);
+          BinaryBroadcastRTCBackwardUseIn {"xelu_grad", "prelu_grad"}(
+              nnvm::NodeAttrs(), ctx, {out_grad[leakyrelu::kOut],
+                                       in_data[leakyrelu::kData],
+                                       in_data[leakyrelu::kGamma]},
+                req, new_in_grad);
+#endif  // !defined(__CUDACC__)
         }
         break;
       }
@@ -335,6 +353,7 @@ void LeakyReLUCompute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx, const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
+  if (inputs[0].Size() == 0U) return;
   const LeakyReLUParam &param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   const std::vector<TBlob> no_use_but_adapt_origin_api;
   size_t expected = param.act_type == leakyrelu::kPReLU ? 2 : 1;
@@ -352,6 +371,7 @@ void LeakyReLUGradCompute(const nnvm::NodeAttrs& attrs,
                           const std::vector<TBlob>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<TBlob>& outputs) {
+  if (inputs[0].Size() == 0U) return;
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   const std::vector<TBlob> no_use_but_adapt_origin_api;
   // inputs: out_grad, input_data, input_gamma, output, output_mask

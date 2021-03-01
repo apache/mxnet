@@ -20,7 +20,7 @@
 
 Setting the learning rate for stochastic gradient descent (SGD) is crucially important when training neural network because it controls both the speed of convergence and the ultimate performance of the network. Set the learning too low and you could be twiddling your thumbs for quite some time as the parameters update very slowly. Set it too high and the updates will skip over optimal solutions, or worse the optimizer might not converge at all!
 
-Leslie Smith from the U.S. Naval Research Laboratory presented a method for finding a good learning rate in a paper called ["Cyclical Learning Rates for Training Neural Networks"](https://arxiv.org/abs/1506.01186). We implement this method in MXNet (with the Gluon API) and create a 'Learning Rate Finder' which you can use while training your own networks. We take a look at the central idea of the paper, cyclical learning rate schedules, in the ['Advanced Learning Rate Schedules'](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules_advanced.html) tutorial.
+Leslie Smith from the U.S. Naval Research Laboratory presented a method for finding a good learning rate in a paper called ["Cyclical Learning Rates for Training Neural Networks"](https://arxiv.org/abs/1506.01186). We implement this method in MXNet (with the Gluon API) and create a 'Learning Rate Finder' which you can use while training your own networks. We take a look at the central idea of the paper, cyclical learning rate schedules, in the ['Advanced Learning Rate Schedules'](./learning_rate_schedules_advanced.ipynb) tutorial.
 
 ## Simple Idea
 
@@ -41,7 +41,7 @@ As expected, for very small learning rates we don't see much change in the loss 
 Usually, our unit of work is an epoch (a full pass through the dataset) and the learning rate would typically be held constant throughout the epoch. With the Learning Rate Finder (and cyclical learning rate schedules) we are required to vary the learning rate every iteration. As such we structure our training code so that a single iteration can be run with a given learning rate. You can implement Learner as you wish. Just initialize the network, define the loss and trainer in `__init__` and keep your training logic for a single batch in `iteration`.
 
 
-```python
+```{.python .input}
 import mxnet as mx
 
 # Set seed for reproducibility
@@ -96,7 +96,7 @@ class Learner():
 We also adjust our `DataLoader` so that it continuously provides batches of data and doesn't stop after a single epoch. We can then call `iteration` as many times as required for the loss to diverge as part of the Learning Rate Finder process. We implement a custom `BatchSampler` for this, that keeps returning random indices of samples to be included in the next batch. We use the CIFAR-10 dataset for image classification to test our Learning Rate Finder.
 
 
-```python
+```{.python .input}
 from mxnet.gluon.data.vision import transforms
 
 transform = transforms.Compose([
@@ -133,7 +133,7 @@ data_loader = mx.gluon.data.DataLoader(dataset, batch_sampler=batch_sampler)
 With preparation complete, we're ready to write our Learning Rate Finder that wraps the `Learner` we defined above. We implement a `find` method for the procedure, and `plot` for the visualization. Starting with a very low learning rate as defined by `lr_start` we train one iteration at a time and keep multiplying the learning rate by `lr_multiplier`. We analyse the loss and continue until it diverges according to `LRFinderStoppingCriteria` (which is defined later on). You may also notice that we save the parameters and state of the optimizer before the process and restore afterwards. This is so the Learning Rate Finder process doesn't impact the state of the model, and can be used at any point during training.
 
 
-```python
+```{.python .input}
 from matplotlib import pyplot as plt
 
 class LRFinder():
@@ -197,7 +197,7 @@ class LRFinder():
 You can define the `LRFinderStoppingCriteria` as you wish, but empirical testing suggests using a smoothed average gives a more consistent stopping rule (see `smoothing`). We stop when the smoothed average of the loss exceeds twice the initial loss, assuming there have been a minimum number of iterations (see `min_iter`).
 
 
-```python
+```{.python .input}
 class LRFinderStoppingCriteria():
     def __init__(self, smoothing=0.3, min_iter=20):
         """
@@ -230,7 +230,7 @@ class LRFinderStoppingCriteria():
 Using a Pre-activation ResNet-18 from the Gluon model zoo, we instantiate our Learner and fire up our Learning Rate Finder!
 
 
-```python
+```{.python .input}
 ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
@@ -246,7 +246,7 @@ lr_finder.plot()
 As discussed before, we should select a learning rate where the loss is falling (i.e. from 0.001 to 0.05) but before the loss starts to diverge (i.e. 0.1). We prefer higher learning rates where possible, so we select an initial learning rate of 0.05. Just as a test, we will run 500 epochs using this learning rate and evaluate the loss on the final batch. As we're working with a single batch of 128 samples, the variance of the loss estimates will be reasonably high, but it will give us a general idea. We save the initialized parameters for a later comparison with other learning rates.
 
 
-```python
+```{.python .input}
 learner.net.save_parameters("net.params")
 lr = 0.05
 
@@ -272,7 +272,7 @@ We see a sizable drop in the loss from approx. 2.7 to 1.2.
 And now we have a baseline, let's see what happens when we train with a learning rate that's higher than advisable at 0.5.
 
 
-```python
+```{.python .input}
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
 learner.net.load_parameters("net.params", ctx=ctx)
@@ -300,7 +300,7 @@ We still observe a fall in the loss but aren't able to reach as low as before.
 And lastly, we see how the model trains with a more conservative learning rate of 0.005.
 
 
-```python
+```{.python .input}
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
 learner.net.load_parameters("net.params", ctx=ctx)
@@ -327,6 +327,6 @@ Although we get quite similar results to when we set the learning rate at 0.05 (
 
 ## Wrap Up
 
-Give Learning Rate Finder a try on your current projects, and experiment with the different learning rate schedules found in the [basic learning rate tutorial](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules.html) and the [advanced learning rate tutorial](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules_advanced.html).
+Give Learning Rate Finder a try on your current projects, and experiment with the different learning rate schedules found in the [basic learning rate tutorial](./learning_rate_schedules.ipynb) and the [advanced learning rate tutorial](./learning_rate_schedules_advanced.ipynb).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

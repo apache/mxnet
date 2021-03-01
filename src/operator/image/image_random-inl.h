@@ -552,7 +552,9 @@ void FlipImpl(const mxnet::TShape &shape, DType *src, DType *dst) {
   for (int i = axis+1; i < shape.ndim(); ++i) tail *= shape[i];
 
   for (int i = 0; i < head; ++i) {
-    for (int j = 0; j < (mid >> 1); ++j) {
+    // if inplace flip, skip the mid point in axis, otherwise copy is required
+    int mid2 = (src == dst) ? mid >> 1 : (mid + 1) >> 1;
+    for (int j = 0; j < mid2; ++j) {
       int idx1 = (i*mid + j) * tail;
       int idx2 = idx1 + (mid-(j << 1)-1) * tail;
       for (int k = 0; k < tail; ++k, ++idx1, ++idx2) {
@@ -858,7 +860,8 @@ inline void HLS2RGBConvert(const float& src_h,
 
     if (h < 0) {
       do { h += 6; } while (h < 0);
-    } else if (h >= 6) {
+    }
+    if (h >= 6) {  // h + 6 >= 6 holds true for some h < 0
       do { h -= 6; } while (h >= 6);
     }
 

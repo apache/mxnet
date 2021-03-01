@@ -35,7 +35,7 @@
 #include "../engine/openmp.h"
 
 #ifdef __CUDACC__
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #endif  // __CUDACC__
 
 namespace mxnet {
@@ -223,6 +223,52 @@ inline int get_num_threads<cpu>(const int N) {
   case mshadow::kInt8:                                     \
     LOG(FATAL) << "This operation does not "               \
                   "support int8 or uint8";                 \
+    break;                                                 \
+  case mshadow::kInt32:                                    \
+    {                                                      \
+      typedef int32_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt64:                                    \
+    {                                                      \
+      typedef int64_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  default:                                                 \
+    LOG(FATAL) << "Unknown type enum " << type;            \
+  }
+
+#define MXNET_NO_BFLOAT16_TYPE_SWITCH(type, DType, ...)     \
+  switch (type) {                                          \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    {                                                      \
+      typedef mshadow::half::half_t DType;                 \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kBfloat16:                                 \
+    LOG(FATAL) << "This operation does not "               \
+                  "support bfloat16";                      \
+    break;                                                 \
+  case mshadow::kInt8:                                     \
+    {                                                      \
+      typedef int32_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
     break;                                                 \
   case mshadow::kInt32:                                    \
     {                                                      \

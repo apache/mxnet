@@ -320,17 +320,18 @@ class DataLoaderV1(object):
         The sampler to use. Either specify sampler or shuffle, not both.
     last_batch : {'keep', 'discard', 'rollover'}
         How to handle the last batch if batch_size does not evenly divide
-        `len(dataset)`.
-
-        keep - A batch with less samples than previous batches is returned.
-        discard - The last batch is discarded if its incomplete.
-        rollover - The remaining samples are rolled over to the next epoch.
+        `len(dataset)`:
+        - ``keep`` - A batch with less samples than previous batches is returned.
+        - ``discard`` - The last batch is discarded if its incomplete.
+        - ``rollover`` - The remaining samples are rolled over to the next epoch.
     batch_sampler : Sampler
         A sampler that returns mini-batches. Do not specify batch_size,
         shuffle, sampler, and last_batch if batch_sampler is specified.
     batchify_fn : callable
         Callback function to allow users to specify how to merge samples
-        into a batch. Defaults to `default_batchify_fn`::
+        into a batch. Defaults to ``default_batchify_fn``.
+
+        .. code-block:: python
 
             def default_batchify_fn(data):
                 if isinstance(data[0], nd.NDArray):
@@ -526,7 +527,7 @@ class DataLoader(object):
         The sampler to use. Either specify sampler or shuffle, not both.
     last_batch : {'keep', 'discard', 'rollover'}
         How to handle the last batch if batch_size does not evenly divide
-        `len(dataset)`.
+        ``len(dataset)``.
 
         keep - A batch with less samples than previous batches is returned.
         discard - The last batch is discarded if its incomplete.
@@ -536,7 +537,21 @@ class DataLoader(object):
         shuffle, sampler, and last_batch if batch_sampler is specified.
     batchify_fn : callable
         Callback function to allow users to specify how to merge samples
-        into a batch. Defaults to `gluon.data.batchify.Stack()`::
+        into a batch. Defaults to `gluon.data.batchify.Stack()`.
+
+        .. code-block:: python
+
+            def default_batchify_fn(data):
+                if isinstance(data[0], nd.NDArray):
+                    return nd.stack(*data)
+                elif isinstance(data[0], np.ndarray):
+                    return np.stack(*data)
+                elif isinstance(data[0], tuple):
+                    data = zip(*data)
+                    return [default_batchify_fn(i) for i in data]
+                else:
+                    data = np.asarray(data)
+                    return np.ndarray(data, dtype=data.dtype)
 
     num_workers : int, default 0
         The number of multiprocessing workers to use for data preprocessing.
@@ -635,6 +650,10 @@ class DataLoader(object):
                 pin_device_id=self._pin_device_id,
                 prefetch=self._prefetch, **mx_iter_args)
         else:
+            nd.waitall()
+            import gc
+            gc.collect()
+            nd.waitall()
             if self._num_workers > 0:
                 if self._thread_pool:
                     self._worker_pool = ThreadPool(self._num_workers,

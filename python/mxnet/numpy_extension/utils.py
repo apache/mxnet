@@ -20,77 +20,109 @@
 
 
 import ctypes
-from .. util import is_np_array, is_np_shape
-from .. base import _LIB, check_call, string_types, c_str_array, DLPackHandle
-from .. base import c_handle_array, c_str, mx_uint, NDArrayHandle, py_str
-from ..numpy import ndarray
+from ..util import is_np_array, is_np_shape
+from ..base import _LIB, check_call, string_types, c_str_array
+from ..base import c_handle_array, c_str, mx_uint, NDArrayHandle, py_str
+from ..dlpack import ndarray_to_dlpack_for_read, ndarray_to_dlpack_for_write
+from ..dlpack import ndarray_from_dlpack, ndarray_from_numpy
+from ..numpy import ndarray, array
+from ..ndarray import NDArray
 
-__all__ = ['save', 'load', 'to_dlpack_for_read', 'to_dlpack_for_write', 'from_dlpack']
-
-PyCapsuleDestructor = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-_c_str_dltensor = c_str('dltensor')
-_c_str_used_dltensor = c_str('used_dltensor')
-
-def _dlpack_deleter(pycapsule):
-    pycapsule = ctypes.c_void_p(pycapsule)
-    if ctypes.pythonapi.PyCapsule_IsValid(pycapsule, _c_str_dltensor):
-        ptr = ctypes.c_void_p(
-            ctypes.pythonapi.PyCapsule_GetPointer(pycapsule, _c_str_dltensor))
-        check_call(_LIB.MXNDArrayCallDLPackDeleter(ptr))
-
-_c_dlpack_deleter = PyCapsuleDestructor(_dlpack_deleter)
+__all__ = ['save', 'savez', 'load', 'to_dlpack_for_read', 'to_dlpack_for_write',
+           'from_dlpack', 'from_numpy']
 
 def save(file, arr):
-    """Saves a list of `ndarray`s or a dict of `str`->`ndarray` to file.
-
-    Examples of filenames:
-
-    - ``/path/to/file``
-    - ``s3://my-bucket/path/to/file`` (if compiled with AWS S3 supports)
-    - ``hdfs://path/to/file`` (if compiled with HDFS supports)
+    """Save an array to a binary file in NumPy ``.npy`` format.
 
     Parameters
     ----------
     file : str
-        Filename to which the data is saved.
-    arr : `ndarray` or list of `ndarray`s or dict of `str` to `ndarray`
-        The data to be saved.
+        File or filename to which the data is saved.  If file is a file-object,
+        then the filename is unchanged.
+    arr : ndarray
+        Array data to be saved. Sparse formats are not supported. Please use
+        savez function to save sparse arrays.
+
+    See Also
+    --------
+    savez : Save several arrays into a ``.npz`` archive
 
     Notes
     -----
-    This function can only be called within numpy semantics, i.e., `npx.is_np_shape()`
-    and `npx.is_np_array()` must both return true.
+    For a description of the ``.npy`` format, see :py:mod:`numpy.lib.format`.
     """
-    if not (is_np_shape() and is_np_array()):
-        raise ValueError('Cannot save `mxnet.numpy.ndarray` in legacy mode. Please activate'
-                         ' numpy semantics by calling `npx.set_np()` in the global scope'
-                         ' before calling this function.')
-    if isinstance(arr, ndarray):
-        arr = [arr]
-    if isinstance(arr, dict):
-        str_keys = arr.keys()
-        nd_vals = arr.values()
-        if any(not isinstance(k, string_types) for k in str_keys) or \
-                any(not isinstance(v, ndarray) for v in nd_vals):
-            raise TypeError('Only accepts dict str->ndarray or list of ndarrays')
-        keys = c_str_array(str_keys)
-        handles = c_handle_array(nd_vals)
-    elif isinstance(arr, list):
-        if any(not isinstance(v, ndarray) for v in arr):
-            raise TypeError('Only accepts dict str->ndarray or list of ndarrays')
-        keys = None
-        handles = c_handle_array(arr)
-    else:
-        raise ValueError("data needs to either be a ndarray, dict of (str, ndarray) pairs "
-                         "or a list of ndarrays.")
-    check_call(_LIB.MXNDArraySave(c_str(file),
-                                  mx_uint(len(handles)),
-                                  handles,
-                                  keys))
+    if not isinstance(arr, NDArray):
+        raise ValueError("data needs to either be a MXNet ndarray")
+    arr = [arr]
+    keys = None
+    handles = c_handle_array(arr)
+    check_call(_LIB.MXNDArraySave(c_str(file), mx_uint(len(handles)), handles, keys))
+
+
+def savez(file, *args, **kwds):
+    """Save several arrays into a single file in uncompressed ``.npz`` format.
+
+    If arguments are passed in with no keywords, the corresponding variable
+    names, in the ``.npz`` file, are 'arr_0', 'arr_1', etc. If keyword
+    arguments are given, the corresponding variable names, in the ``.npz``
+    file will match the keyword names.
+
+    Parameters
+    ----------
+    file : str
+        Either the filename (string) or an open file (file-like object)
+        where the data will be saved.
+    args : Arguments, optional
+        Arrays to save to the file. Since it is not possible for Python to
+        know the names of the arrays outside `savez`, the arrays will be saved
+        with names "arr_0", "arr_1", and so on. These arguments can be any
+        expression.
+    kwds : Keyword arguments, optional
+        Arrays to save to the file. Arrays will be saved in the file with the
+        keyword names.
+
+    Returns
+    -------
+    None
+
+    See Also
+    --------
+    save : Save a single array to a binary file in NumPy format.
+
+    Notes
+    -----
+    The ``.npz`` file format is a zipped archive of files named after the
+    variables they contain.  The archive is not compressed and each file
+    in the archive contains one variable in ``.npy`` format. For a
+    description of the ``.npy`` format, see :py:mod:`numpy.lib.format`.
+
+    When opening the saved ``.npz`` file with `load` a dictionary object
+    mapping file-names to the arrays themselves.
+
+    When saving dictionaries, the dictionary keys become filenames
+    inside the ZIP archive. Therefore, keys should be valid filenames.
+    E.g., avoid keys that begin with ``/`` or contain ``.``.
+    """
+
+    if len(args):
+        for i, arg in enumerate(args):
+            name = 'arr_{}'.format(str(i))
+            assert name not in kwds, 'Naming conflict between arg {} and kwargs.'.format(str(i))
+            kwds[name] = arg
+
+    str_keys = kwds.keys()
+    nd_vals = kwds.values()
+    if any(not isinstance(k, string_types) for k in str_keys) or \
+            any(not isinstance(v, NDArray) for v in nd_vals):
+        raise TypeError('Only accepts dict str->ndarray or list of ndarrays')
+
+    keys = c_str_array(str_keys)
+    handles = c_handle_array(nd_vals)
+    check_call(_LIB.MXNDArraySave(c_str(file), mx_uint(len(handles)), handles, keys))
 
 
 def load(file):
-    """Loads an array from file.
+    """Load arrays from ``.npy``, ``.npz`` or legacy MXNet file format.
 
     See more details in ``save``.
 
@@ -125,16 +157,17 @@ def load(file):
                                   ctypes.byref(out_name_size),
                                   ctypes.byref(names)))
     if out_name_size.value == 0:
-        return [ndarray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+        if out_size.value != 1:
+            return [ndarray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+        return ndarray(NDArrayHandle(handles[0]))
     else:
         assert out_name_size.value == out_size.value
         return dict(
             (py_str(names[i]), ndarray(NDArrayHandle(handles[i])))
             for i in range(out_size.value))
 
-
-def from_dlpack(dlpack):
-    """Returns a np.ndarray backed by a dlpack tensor.
+from_dlpack = ndarray_from_dlpack(ndarray)
+from_dlpack_doc = """Returns a np.ndarray backed by a dlpack tensor.
 
     Parameters
     ----------
@@ -168,21 +201,36 @@ def from_dlpack(dlpack):
     array([[2., 2., 2.],
            [2., 2., 2.]])
     """
-    handle = NDArrayHandle()
-    dlpack = ctypes.py_object(dlpack)
-    assert ctypes.pythonapi.PyCapsule_IsValid(dlpack, _c_str_dltensor), ValueError(
-        'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
-    dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
-    check_call(_LIB.MXNDArrayFromDLPackEx(dlpack_handle, False, ctypes.byref(handle)))
-    # Rename PyCapsule (DLPack)
-    ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
-    # delete the deleter of the old dlpack
-    ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
-    return ndarray(handle=handle)
+from_dlpack.__doc__ = from_dlpack_doc
 
-def to_dlpack_for_read(data):
-    """Returns a reference view of np.ndarray that represents as DLManagedTensor until
-       all previous write operations on the current array are finished.
+
+from_numpy = ndarray_from_numpy(ndarray, array)
+from_numpy_doc = """Returns an MXNet's np.ndarray backed by numpy's ndarray.
+    When `zero_copy` is set to be true,
+    this API consumes numpy's ndarray and produces MXNet's np.ndarray
+    without having to copy the content. In this case, we disallow
+    users to modify the given numpy ndarray, and it is suggested
+    not to read the numpy ndarray as well for internal correctness.
+
+    Parameters
+    ----------
+    ndarray: np.ndarray
+        input data
+    zero_copy: bool
+        Whether we use DLPack's zero-copy conversion to convert to MXNet's
+        np.ndarray.
+        This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+
+    Returns
+    -------
+    np.ndarray
+        a np.ndarray backed by a dlpack tensor
+    """
+from_numpy.__doc__ = from_numpy_doc
+
+to_dlpack_for_read = ndarray_to_dlpack_for_read()
+to_dlpack_for_read_doc = """Returns a reference view of np.ndarray that represents
+as DLManagedTensor until all previous write operations on the current array are finished.
 
     Parameters
     ----------
@@ -205,14 +253,11 @@ def to_dlpack_for_read(data):
     array([[1., 1., 1.],
            [1., 1., 1.]])
     """
-    data.wait_to_read()
-    dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
+to_dlpack_for_read.__doc__ = to_dlpack_for_read_doc
 
-def to_dlpack_for_write(data):
-    """Returns a reference view of ndarray that represents as DLManagedTensor until
-       all previous read/write operations on the current array are finished.
+to_dlpack_for_write = ndarray_to_dlpack_for_write()
+to_dlpack_for_write_doc = """Returns a reference view of ndarray that represents
+as DLManagedTensor until all previous read/write operations on the current array are finished.
 
     Parameters
     ----------
@@ -236,7 +281,4 @@ def to_dlpack_for_write(data):
     array([[2., 2., 2.],
            [2., 2., 2.]])
     """
-    check_call(_LIB.MXNDArrayWaitToWrite(data.handle))
-    dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
+to_dlpack_for_write.__doc__ = to_dlpack_for_write_doc

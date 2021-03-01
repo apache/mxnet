@@ -32,7 +32,7 @@
 #include <vector>
 #include <functional>
 #include <utility>
-#include "../../../common/cuda_utils.h"
+#include "../../../common/cuda/utils.h"
 #include "../convolution-inl.h"
 #include "../deconvolution-inl.h"
 namespace mxnet {

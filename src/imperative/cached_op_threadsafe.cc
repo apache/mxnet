@@ -250,7 +250,7 @@ void CachedOpThreadSafeParamParser(nnvm::NodeAttrs* attrs) {
     throw dmlc::ParamError(os.str());
   }
 }
-CachedOpThreadSafe::~CachedOpThreadSafe() {}
+CachedOpThreadSafe::~CachedOpThreadSafe() = default;
 
 NNVM_REGISTER_OP(_CachedOpThreadSafe)
 .set_num_inputs([](const NodeAttrs& attrs) {

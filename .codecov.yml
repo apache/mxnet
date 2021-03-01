@@ -1,4 +1,5 @@
 # Codecov.io configuration file
+# See https://docs.codecov.io/docs/codecovyml-reference
 codecov:
   notify:
     require_ci_to_pass: yes
@@ -6,7 +7,7 @@ codecov:
 coverage:
   status:
     project: off
-    patch: off
+    patch: on
   precision: 2
   round: down
   range: "70...100"
@@ -20,7 +21,6 @@ parsers:
       macro: no
 
 ignore:
- - "cpp-package/example/**/*"
  - "tests/**/*"
 
 # Disable comments for now to gather data in the background

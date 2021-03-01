@@ -634,8 +634,8 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
       const TBlob in_data = inputs[0].reshape(src_shape);
       const TBlob out_data = outputs[0].reshape(dst_shape);
       BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-            s, out_data.shape_, req[0], in_data.shape_);
+        size_t workspace_size = broadcast::ReduceWorkspaceSize(
+            s, out_data.shape_, req[0], in_data.shape_, sizeof(OType));
         Tensor<xpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
         broadcast::Reduce<reducer, NDim, DType, OP, safe_acc>(
@@ -667,8 +667,8 @@ void ReduceAxesComputeBoolImpl(const OpContext& ctx,
       const TBlob in_data = inputs[0].reshape(src_shape);
       const TBlob out_data = outputs[0].reshape(dst_shape);
       BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-            s, out_data.shape_, req[0], in_data.shape_);
+        size_t workspace_size = broadcast::ReduceWorkspaceSize(
+            s, out_data.shape_, req[0], in_data.shape_, sizeof(OType));
         Tensor<xpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
         broadcast::ReduceBool<reducer, NDim, DType, OP>(
@@ -1480,7 +1480,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
-  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
   if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LpNorm with float16 inputs. "
                     "See https://mxnet.apache.org/api/faq/env_var "
@@ -1630,10 +1630,10 @@ template<int ndim, bool clip = true>
 struct pick {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* a,
-                                  const IType *idx, index_t M, int stride,
+                                  const IType *idx, index_t M, index_t stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
-    using namespace broadcast;
+    using namespace mxnet_op;
     index_t j = static_cast<index_t>(idx[i]);
     if (clip) {
       if (j <= 0) j = 0;
@@ -1652,10 +1652,10 @@ template<int ndim, bool clip = true>
 struct pick_grad {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* igrad, const DType* ograd,
-                                  const IType *idx, index_t M, int stride,
+                                  const IType *idx, index_t M, index_t stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
-    using namespace broadcast;
+    using namespace mxnet_op;
     index_t j = static_cast<index_t>(idx[i]);
     if (clip) {
       if (j <= 0) j = 0;
@@ -1717,7 +1717,7 @@ void PickOpForward(const nnvm::NodeAttrs& attrs,
 
   const mxnet::TShape& ishape = inputs[0].shape_;
   index_t axis = CheckAxis(param.axis.value(), ishape.ndim());
-  int leading = 1, trailing = 1, M = ishape[axis];
+  index_t leading = 1, trailing = 1, M = ishape[axis];
   for (index_t i = 0; i < axis; ++i) leading *= ishape[i];
   for (index_t i = axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];
 
@@ -1764,7 +1764,7 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
 
   const mxnet::TShape& ishape = outputs[0].shape_;
   const index_t axis = CheckAxis(param.axis.value(), ishape.ndim());
-  int leading = 1, trailing = 1, M = ishape[axis];
+  index_t leading = 1, trailing = 1, M = ishape[axis];
   for (index_t i = 0; i < axis; ++i) leading *= ishape[i];
   for (index_t i = axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];
 

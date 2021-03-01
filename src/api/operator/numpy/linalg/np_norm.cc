@@ -44,7 +44,7 @@ MXNET_REGISTER_API("_npi.norm")
   param.flag = args[4].operator int();
 
   attrs.op = op;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::NumpyNormParam>(&attrs);
 
   // inputs

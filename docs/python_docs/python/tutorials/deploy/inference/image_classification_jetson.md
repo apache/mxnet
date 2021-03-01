@@ -73,7 +73,7 @@ And we are done. You can test the installation now by importing mxnet from pytho
 
 We are now ready to run a pre-trained model and run inference on a Jetson module. In this tutorial we are using ResNet-50 model trained on Imagenet dataset. We run the following classification script with either cpu/gpu context using python3.
 
-```python
+```{.python .input}
 from mxnet import gluon
 import mxnet as mx
 

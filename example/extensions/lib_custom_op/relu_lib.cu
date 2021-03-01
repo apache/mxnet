@@ -24,45 +24,14 @@
  */
 
 #include <iostream>
-#include "lib_api.h"
+#include "relu_lib.h"
 
-#define NumThreadPerBlock 256 // mxnet recommended cuda thread number per block
+using namespace mxnet::ext;
 
 __global__ void relu_gpu_forward(float *out, float *in, int64_t N) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid < N)
     out[tid] = in[tid] > 0 ? in[tid] : 0;
-}
-
-__global__ void relu_gpu_backward(float *ingrad, float *outgrad, float *indata, int64_t N) {
-  int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  if (tid < N)
-    ingrad[tid] = indata[tid] > 0 ? 1 * outgrad[tid] : 0;
-}
-
-MXReturnValue forwardCPU(const std::unordered_map<std::string, std::string>& attrs,
-                         std::vector<MXTensor>* inputs,
-                         std::vector<MXTensor>* outputs,
-                         const OpResource& res) {
-  float* in_data = inputs->at(0).data<float>();
-  float* out_data = outputs->at(0).data<float>();
-  for (int i=0; i<inputs->at(0).size(); i++) {
-    out_data[i] = in_data[i] > 0 ? in_data[i] : 0;
-  }
-  return MX_SUCCESS;
-}
-
-MXReturnValue backwardCPU(const std::unordered_map<std::string, std::string>& attrs,
-                          std::vector<MXTensor>* inputs,
-                          std::vector<MXTensor>* outputs,
-                          const OpResource& res) {
-  float* out_grad = inputs->at(0).data<float>();
-  float* in_data = inputs->at(1).data<float>();
-  float* in_grad = outputs->at(0).data<float>();
-  for (int i=0; i<inputs->at(1).size(); i++) {
-    in_grad[i] = in_data[i] > 0 ? 1 * out_grad[i] : 0;
-  }
-  return MX_SUCCESS;
 }
 
 MXReturnValue forwardGPU(const std::unordered_map<std::string, std::string>& attrs,
@@ -81,6 +50,12 @@ MXReturnValue forwardGPU(const std::unordered_map<std::string, std::string>& att
   return MX_SUCCESS;
 }
 
+__global__ void relu_gpu_backward(float *ingrad, float *outgrad, float *indata, int64_t N) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (tid < N)
+    ingrad[tid] = indata[tid] > 0 ? 1 * outgrad[tid] : 0;
+}
+
 MXReturnValue backwardGPU(const std::unordered_map<std::string, std::string>& attrs,
                           std::vector<MXTensor>* inputs,
                           std::vector<MXTensor>* outputs,
@@ -97,102 +72,6 @@ MXReturnValue backwardGPU(const std::unordered_map<std::string, std::string>& at
   return MX_SUCCESS;
 }
 
-MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& attrs,
-                         int* num_in, int* num_out) {
-  *num_in = 1;
-  *num_out = 1;
-  return MX_SUCCESS;
-}
-
-MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attrs,
-                        std::vector<int>* intypes,
-                        std::vector<int>* outtypes) {
-  outtypes->at(0) = intypes->at(0);
-  return MX_SUCCESS;
-}
-
-MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& attrs,
-                         std::vector<std::vector<unsigned int>>* inshapes,
-                         std::vector<std::vector<unsigned int>>* outshapes) {
-  outshapes->at(0) = inshapes->at(0);
-  return MX_SUCCESS;
-}
-
-REGISTER_OP(my_relu)
-.setParseAttrs(parseAttrs)
-.setInferType(inferType)
-.setInferShape(inferShape)
-.setForward(forwardCPU, "cpu")
-.setForward(forwardGPU, "gpu")
-.setBackward(backwardCPU, "cpu")
-.setBackward(backwardGPU, "gpu");
-
-class MyStatefulReluCPU : public CustomStatefulOp {
-  public:
-    explicit MyStatefulReluCPU(const std::unordered_map<std::string, std::string>& attrs)
-      : attrs_(attrs) {}
-    MXReturnValue Forward(std::vector<MXTensor>* inputs,
-                          std::vector<MXTensor>* outputs,
-                          const OpResource& op_res) {
-      return forwardCPU(attrs_, inputs, outputs, op_res);
-    }
-    MXReturnValue Backward(std::vector<MXTensor>* inputs,
-                           std::vector<MXTensor>* outputs,
-                           const OpResource& op_res) {
-      return backwardCPU(attrs_, inputs, outputs, op_res);
-    }
-    ~MyStatefulReluCPU() {}
-  private:
-    const std::unordered_map<std::string, std::string> attrs_;
-};
-
-class MyStatefulReluGPU : public CustomStatefulOp {
-  public:
-    explicit MyStatefulReluGPU(const std::unordered_map<std::string, std::string>& attrs)
-      : attrs_(attrs) {}
-    MXReturnValue Forward(std::vector<MXTensor>* inputs,
-                          std::vector<MXTensor>* outputs,
-                          const OpResource& op_res) {
-      return forwardGPU(attrs_, inputs, outputs, op_res);
-    }
-    MXReturnValue Backward(std::vector<MXTensor>* inputs,
-                           std::vector<MXTensor>* outputs,
-                           const OpResource& op_res) {
-      return backwardGPU(attrs_, inputs, outputs, op_res);
-    }
-    ~MyStatefulReluGPU() {}
-  private:
-    const std::unordered_map<std::string, std::string> attrs_;
-};
-
-MXReturnValue createOpStateCPU(const std::unordered_map<std::string, std::string>& attrs,
-                               CustomStatefulOp** op_inst) {
-  *op_inst = new MyStatefulReluCPU(attrs);
-  return MX_SUCCESS;
-}
-
-MXReturnValue createOpStateGPU(const std::unordered_map<std::string, std::string>& attrs,
-                               CustomStatefulOp** op_inst) {
-  *op_inst = new MyStatefulReluGPU(attrs);
-  return MX_SUCCESS;
-}
-
-REGISTER_OP(my_state_relu)
-.setParseAttrs(parseAttrs)
-.setInferType(inferType)
-.setInferShape(inferShape)
-.setCreateOpState(createOpStateCPU, "cpu")
-.setCreateOpState(createOpStateGPU, "gpu");
-
-/*
- * Below is noisy ReLU operator example
- * noisy ReLU is made from ReLU extended to include Gaussian noise
- * forward - add Gaussian noise generated from normal distribution to each unit
- * backward - gradient doesn't need to change since noise is constant
- */
-
-#define NumRandomPerThread 64 // mxnet recommended random numbers generated per thread
-
 __global__ void noisy_relu_gpu_forward(float *out, float *in, int64_t N, mx_gpu_rand_t* states, int step) {
     // the launcher logic ensures tid less than NumGPURandomStates
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -205,23 +84,6 @@ __global__ void noisy_relu_gpu_forward(float *out, float *in, int64_t N, mx_gpu_
         float noise = curand_normal(&thread_state);
         out[i] = in[i] + noise > 0 ? in[i] + noise : 0;
     }
-}
-
-MXReturnValue noisyForwardCPU(const std::unordered_map<std::string, std::string>& attrs,
-                              std::vector<MXTensor>* inputs,
-                              std::vector<MXTensor>* outputs,
-                              const OpResource& res) {
-  float* in_data = inputs->at(0).data<float>();
-  float* out_data = outputs->at(0).data<float>();
-
-  mx_cpu_rand_t* states = res.get_cpu_rand_states();
-  std::normal_distribution<float> dist_normal;
-
-  for (int i=0; i<inputs->at(0).size(); ++i) {
-    float noise = dist_normal(*states);
-    out_data[i] = in_data[i] + noise > 0 ? in_data[i] + noise : 0;
-  }
-  return MX_SUCCESS;
 }
 
 MXReturnValue noisyForwardGPU(const std::unordered_map<std::string, std::string>& attrs,
@@ -247,23 +109,4 @@ MXReturnValue noisyForwardGPU(const std::unordered_map<std::string, std::string>
                                 out_data, in_data, N, res.get_gpu_rand_states(), step);
 
   return MX_SUCCESS;
-}
-
-REGISTER_OP(my_noisy_relu)
-.setParseAttrs(parseAttrs)
-.setInferType(inferType)
-.setInferShape(inferShape)
-.setForward(noisyForwardCPU, "cpu")
-.setForward(noisyForwardGPU, "gpu")
-.setBackward(backwardCPU, "cpu")
-.setBackward(backwardGPU, "gpu");
-
-MXReturnValue initialize(int version) {
-  if (version >= 10700) {
-    std::cout << "MXNet version " << version << " supported" << std::endl;
-    return MX_SUCCESS;
-  } else {
-    std::cout << "MXNet version " << version << " not supported" << std::endl;
-    return MX_FAIL;
-  }
 }

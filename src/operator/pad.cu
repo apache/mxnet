@@ -25,7 +25,7 @@
 */
 #include <algorithm>
 #include "./pad-inl.h"
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 
 namespace mshadow {
 namespace cuda {

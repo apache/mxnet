@@ -22,9 +22,11 @@
  * \file naive_engine.cc
  * \brief Implementation of NaiveEngine
  */
-#include <vector>
 #include <atomic>
+#include <future>
+#include <memory>
 #include <thread>
+#include <vector>
 #include "./engine_impl.h"
 #include "../profiler/profiler.h"
 #include "./openmp.h"
@@ -67,24 +69,23 @@ class NaiveEngine final : public Engine {
     objpool_var_ref_ = common::ObjectPool<NaiveVar>::_GetSharedRef();
   }
   // virtual destructor
-  virtual ~NaiveEngine() {
 #if MXNET_USE_CUDA
+  ~NaiveEngine() override {
     LOG(INFO) << "Engine shutdown";
     for (size_t i = 0; i < streams_.size(); ++i) {
       if (streams_[i] != nullptr) {
-        // Catch exception for CUDA driver shutdown
-        MSHADOW_CATCH_ERROR(mshadow::DeleteStream(streams_[i]));
         streams_[i] = nullptr;
       }
     }
     for (size_t i = 0; i < aux_streams_.size(); ++i) {
       if (aux_streams_[i] != nullptr) {
-        delete aux_streams_[i];
         aux_streams_[i] = nullptr;
       }
     }
-#endif
   }
+#else
+  ~NaiveEngine() override = default;
+#endif
 
   void Stop() override {
   }
@@ -125,10 +126,10 @@ class NaiveEngine final : public Engine {
         if (opr->profiling) {
           std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
           if (profiler->AggregateEnabled()) {
-            attrs.reset(new profiler::ProfileOperator::Attributes());
+            attrs = std::make_unique<profiler::ProfileOperator::Attributes>();
           }
-          opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name.c_str(),
-                                                               attrs.release()));
+          opr->opr_profile = std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(),
+                                                               attrs.release());
           opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
         }
         opr->fn(ctx, on_complete);
@@ -156,9 +157,10 @@ class NaiveEngine final : public Engine {
                  int priority = 0,
                  const char* opr_name = nullptr,
                  bool wait = false) override {
-    bool req_completed = false;
+    std::promise<void> promise;
+    std::future<void> future = promise.get_future();
     CallbackOnComplete callback = CreateCallback(
-        NaiveEngine::OnComplete, &req_completed);
+        NaiveEngine::OnComplete, &promise);
     profiler::Profiler *profiler = profiler::Profiler::Get();
     auto opr_deleter = [this](NaiveOpr* p) {
       this->DeleteOperator(p);
@@ -175,9 +177,10 @@ class NaiveEngine final : public Engine {
       opr->profiling = profiling;
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
       if (profiler->AggregateEnabled()) {
-        attrs.reset(new profiler::ProfileOperator::Attributes());
+        attrs = std::make_unique<profiler::ProfileOperator::Attributes>();
       }
-      opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name.c_str(), attrs.release()));
+      opr->opr_profile = std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(),
+                                                                     attrs.release());
       opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
     }
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
@@ -200,12 +203,11 @@ class NaiveEngine final : public Engine {
     } else {
       exec_fun(RunContext{exec_ctx, &cpu_stream_, nullptr, false}, callback);
     }
+    future.wait();
     // increment mutable var version
     for (auto var : mutable_vars) {
       ++var->version_;
     }
-    CHECK(req_completed)
-        << "NaiveEngine only support synchronize Push so far";
     if (profiling) {
       opr->opr_profile->stop();
     }
@@ -237,8 +239,7 @@ class NaiveEngine final : public Engine {
   // callback to oncomplete
   static void OnComplete(Engine *engine, void *param,
                          const dmlc::Error* error) {
-    bool *req_completed = static_cast<bool*>(param);
-    *req_completed = true;
+    static_cast<std::promise<void>*>(param)->set_value();
   }
   /*! \brief whether it is during shutdown phase*/
   std::atomic<bool> shutdown_phase_{false};

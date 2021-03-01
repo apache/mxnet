@@ -130,11 +130,11 @@ MXNET_C_API
 =================
 Name                          Total Count        Time (ms)    Min Time (ms)    Max Time (ms)    Avg Time (ms)
 ----                          -----------        ---------    -------------    -------------    -------------
-MXImperativeInvokeEx                    2           0.3360           0.0990           0.2370           0.1680
+MXImperativeInvoke                      2           0.3360           0.0990           0.2370           0.1680
 MXNet C API Calls                      17           0.2320           0.2160           0.2320           0.0080
 MXNDArraySyncCopyFromCPU                1           0.1750           0.1750           0.1750           0.1750
-MXNDArrayCreateEx                       1           0.1050           0.1050           0.1050           0.1050
-MXNDArrayGetShapeEx                    11           0.0210           0.0000           0.0160           0.0019
+MXNDArrayCreate                         1           0.1050           0.1050           0.1050           0.1050
+MXNDArrayGetShape                      11           0.0210           0.0000           0.0160           0.0019
 MXNDArrayWaitAll                        1           0.0200           0.0200           0.0200           0.0200
 MXNDArrayGetDType                       1           0.0010           0.0010           0.0010           0.0010
 MXNet C API Concurrency                34           0.0000           0.0000           0.0010           0.0000
@@ -157,8 +157,8 @@ The profiling data has captured info about interesting functions that have execu
 
 |**Function Name**	|**Description**	|
 |---	|---	|
-|**MXImperativeInvokeEx**	| invokes an operator to perform the computation |
-|**MXNDArrayCreateEx**	| creates  an ndarray	|
+|**MXImperativeInvoke**	| invokes an operator to perform the computation |
+|**MXNDArrayCreate**	| creates  an ndarray	|
 | **MXNDArrayGetDType**	| returns  the data type of the ndarray |
 | **MXNDArrayGetShape**	| returns  the shape of the ndarray (as a tuple where each element is the size of a  dimension) |
 | **MXNDArraySyncCopyFromCPU** | called when data is initially residing outside of an MXNet data structure (ie.  numpy.ndarry rather than mxnet.numpy.ndarray). Data is copied into the MXNet  data structure   |
@@ -201,7 +201,7 @@ In the following list, #1 uses regular numpy functions to initialize data. MXNet
 ![dev_guide_profilling_3.png](/assets/img/dev_guide_profilling_3.png)
 Here, the four red arrows show the important events in this sequence.
 
-1. First, the `MXNDArrayCreateEx` is called to physically  allocate space to store the data and other necessary attributes in the `ndarray` class.
+1. First, the `MXNDArrayCreate` is called to physically  allocate space to store the data and other necessary attributes in the `ndarray` class.
 2. Then some support functions are called (`MXNDArrayGetShape,` `MXNDArrayGetDType`) while initialing the data structure.
 3. Finally the data is copied from the non-MXNet ndarray into the newly prepared MXNet ndarray by the `MXNDArraySyncCopyFromCPU`  function.
 
@@ -210,9 +210,9 @@ Next, #3 (in our code example) begins the computing process to produce our outpu
 ![dev_guide_profilling_4.png](/assets/img/dev_guide_profilling_4.png)
 Here you can see that the following sequence of events happen:
 
-1. `MXImperativeInvokeEx` is called the first time to launch the diagonal operator from #3 (in our code example).
+1. `MXImperativeInvoke` is called the first time to launch the diagonal operator from #3 (in our code example).
 2. Soon after that the actual **`diag`**  operator begins executing in another thread.
-3. While that is happening, our main thread moves on and calls `MXImperativeInvokeEx` again to launch the **`sum`**  operator. Just like before, this returns without actually executing the operator  and continues.
+3. While that is happening, our main thread moves on and calls `MXImperativeInvoke` again to launch the **`sum`**  operator. Just like before, this returns without actually executing the operator  and continues.
 4. Lastly, the `MXNDArrayWaitAll` is called as the main thread has progressed to #4 in our app. It will wait here while all the  computation finishes.
 
 Next lets look at a view of the part of the timeline zoomed to the actual operator execution.
@@ -274,6 +274,6 @@ The first red box is the first run, and the 2nd smaller one is the 2nd run. Firs
 
 
 ![dev_guide_profilling_7.png](/assets/img/dev_guide_profilling_7.png)
-We still have the same sequence of events at the beginning to initialize the MXNet ndarray (`MXNDArrayCreateEx`, `MXNDArrayGetShape`, `MXNDArrayGetDType`, `MXNDArraySyncCopyFromCPU`). Then the **`diag`** operator runs, followed by the **`sum`** operator, and finally the `waitall`. When you look at this, be careful about the assumptions that you make. In this version of the timeline, it appears that the operator executes after the `MXImperativeInvokeEx` runs, and seems to imply an inherent ordering. But realize that there is no dependency between the **`diag`** operator finishing and the next **`MXImperativeInvokeEx`** launching the **`sum`** operator. In this case, it just-so-happens that the **`diag`** operator finishes so quickly that it appears that way. But in reality the main thread is launching the operators and not waiting for them to finish. Lastly, keep in mind that in this case by the time we hit the **`MXNDArrayWaitAll`** everything is already done and we return immediately, but in other circumstances it may sit here waiting for everything to finish (like we saw earlier in the first run). 
+We still have the same sequence of events at the beginning to initialize the MXNet ndarray (`MXNDArrayCreate`, `MXNDArrayGetShape`, `MXNDArrayGetDType`, `MXNDArraySyncCopyFromCPU`). Then the **`diag`** operator runs, followed by the **`sum`** operator, and finally the `waitall`. When you look at this, be careful about the assumptions that you make. In this version of the timeline, it appears that the operator executes after the `MXImperativeInvoke` runs, and seems to imply an inherent ordering. But realize that there is no dependency between the **`diag`** operator finishing and the next **`MXImperativeInvoke`** launching the **`sum`** operator. In this case, it just-so-happens that the **`diag`** operator finishes so quickly that it appears that way. But in reality the main thread is launching the operators and not waiting for them to finish. Lastly, keep in mind that in this case by the time we hit the **`MXNDArrayWaitAll`** everything is already done and we return immediately, but in other circumstances it may sit here waiting for everything to finish (like we saw earlier in the first run). 
 
 

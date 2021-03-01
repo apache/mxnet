@@ -24,6 +24,8 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
+
+#include <utility>
 #include "./operator_common.h"
 #include "./elemwise_op_common.h"
 #include "../imperative/imperative_utils.h"
@@ -65,7 +67,7 @@ class ForeachState: public LoopState {
   ForeachParam params;
   int num_iterations;
 
-  ForeachState(const nnvm::Symbol &g, const ForeachParam &params) : LoopState(g) {
+  ForeachState(const nnvm::Symbol &g, const ForeachParam &params) : LoopState(g, false) {
     this->params = params;
   }
 };
@@ -648,9 +650,9 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
     const_cast<NDArray &>(outputs[i]).SetShapeFromChunk();
   }
   if (state.n_iterations == 0) {
-    for (size_t i = 0; i < outputs.size(); ++i) {
-      if (!shape_is_known(outputs[i].shape())) {
-        const_cast<NDArray &>(outputs[i]).ReshapeAndAlloc({1});
+    for (const auto & output : outputs) {
+      if (!shape_is_known(output.shape())) {
+        const_cast<NDArray &>(output).ReshapeAndAlloc({1});
       }
     }
   }
@@ -865,11 +867,11 @@ class CondState {
   LoopState else_branch;
   int branch_selection;  // 1 if then branch; 0 if else branch; -1 if undefined
 
-  CondState(const CondParam &params,
+  CondState(CondParam params,
             const nnvm::Symbol &cond,
             const nnvm::Symbol &then_sym,
             const nnvm::Symbol &else_sym):
-            params(params),
+            params(std::move(params)),
             cond_op(LoopState::MakeSharedOp(cond)),
             then_branch(then_sym),
             else_branch(else_sym),

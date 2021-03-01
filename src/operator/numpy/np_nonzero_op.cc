@@ -88,17 +88,16 @@ void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
     const_cast<NDArray &>(out).Init(s);
     return;
   }
-  std::vector<int32_t> prefix_sum(in_size, 0);
+  std::vector<index_t> prefix_sum(in_size, 0);
   size_t valid_num = 0;
   // Calculate prefix sum
   MSHADOW_TYPE_SWITCH_WITH_BOOL(in.dtype(), DType, {
     DType* in_dptr = in.data().dptr<DType>();
     for (size_t i = 0; i < in_size; i++) {
-      prefix_sum[i] = (i == 0) ? 0 : prefix_sum[i - 1];
-      prefix_sum[i] += (in_dptr[i]) ? 1 : 0;
+      valid_num += (in_dptr[i] != 0);
+      prefix_sum[i] = valid_num;
     }
   });
-  valid_num = prefix_sum[in_size - 1];
   // set the output shape forcefully
   mxnet::TShape s(2, in.shape().ndim());
   s[0] = valid_num;

@@ -187,8 +187,8 @@ void linalg_syevd(const Tensor<xpu, 2, DType>& A,
 
 // This function determines the amount of workspace needed for linalg_syevd
 // which is returned as number of elements of type DType.
-template<typename xpu, typename DType>
-int linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
+template<typename xpu, typename DType, typename IndexT = typename LapackIndex<xpu>::IndexT>
+IndexT linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
                                  const Tensor<xpu, 1, DType>& L,
                                  Stream<xpu> *s = 0);
 
@@ -208,7 +208,7 @@ void linalg_gesvd(const Tensor<xpu, 2, DType>& UT,
 // This function determines the amount of workspace needed for linalg_gesvd
 // which is returned as number of elements of type DType.
 template<typename xpu, typename DType>
-int linalg_gesvd_workspace_query(const Tensor<xpu, 2, DType>& UT,
+size_t linalg_gesvd_workspace_query(const Tensor<xpu, 2, DType>& UT,
                                  const Tensor<xpu, 1, DType>& L,
                                  const Tensor<xpu, 2, DType>& V,
                                  Stream<xpu>* s = 0);
@@ -224,13 +224,13 @@ int linalg_gesvd_workspace_query(const Tensor<xpu, 2, DType>& UT,
 //   don't throw error when A is non-invertible matrix.
 template<typename xpu, typename DType>
 void linalg_getrf(const Tensor<xpu, 2, DType>& A,
-                  const Tensor<xpu, 1, int>& pivot,
+                  const Tensor<xpu, 1, lapack_index_t>& pivot,
                   bool check_singular,
                   Stream<xpu> *s = 0);
 
-template<typename xpu, typename DType>
+template<typename xpu, typename DType, typename IndexT>
 void linalg_batch_getrf(const Tensor<xpu, 3, DType>& A,
-                        const Tensor<xpu, 2, int>& pivot,
+                        const Tensor<xpu, 2, IndexT>& pivot,
                         bool check_singular,
                         Stream<xpu> *s = 0);
 
@@ -244,24 +244,24 @@ void linalg_batch_getrf(const Tensor<xpu, 3, DType>& A,
 // - LU is also the output parameter (overwritten by inverse(A))
 template<typename xpu, typename DType>
 void linalg_getri(const Tensor<xpu, 2, DType>& LU,
-                  const Tensor<xpu, 1, int>& pivot, \
+                  const Tensor<xpu, 1, lapack_index_t>& pivot, \
                   const Tensor<xpu, 1, DType>& work,
                   Stream<xpu> *s = 0);
 
 // Note that this function only implements GPU version with "getriBatched" in cuBLAS.
 // Unlike lapack routines in cpu, it is computed out-of-place, so the final matrix
 // inverse is stored in A.
-template<typename xpu, typename DType>
+template<typename xpu, typename DType, typename IndexT>
 void linalg_batch_getri(const Tensor<xpu, 3, DType>& A,
                         const Tensor<xpu, 3, DType>& LU,
-                        const Tensor<xpu, 2, int>& pivot,
+                        const Tensor<xpu, 2, IndexT>& pivot,
                         Stream<xpu> *s = 0);
 
 //////////////////////////////// INVERSE ////////////////////////////////////////////
 
 // CPU/GPU-versions of matrix inverse combining LAPACK function "getrf" and "getri"
 // Note that A = inverse(B)
-template<typename xpu, typename DType>
+template<typename xpu, typename DType, typename IndexT = typename LapackIndex<xpu>::IndexT>
 void linalg_batch_inverse(const Tensor<xpu, 3, DType>& A,
                           const Tensor<xpu, 3, DType>& B,
                           const mxnet::OpContext& ctx);
@@ -272,9 +272,9 @@ void linalg_batch_inverse(const Tensor<xpu, 3, DType>& A,
 
 // Helper function in determinant backward computation: compute matrix inverse
 // from LU and pivot using temp workspace, the result is stored back to LU
-template<typename xpu, typename DType>
+template<typename xpu, typename DType, typename IndexT>
 void linalg_batch_det_backward_helper(const Tensor<xpu, 3, DType>& LU,
-                                      const Tensor<xpu, 2, int>& pivot,
+                                      const Tensor<xpu, 2, IndexT>& pivot,
                                       const Tensor<xpu, 1, DType>& det,
                                       const Tensor<xpu, 3, DType>& temp,
                                       const DType zero_det,

@@ -27,7 +27,7 @@
  */
 #include "./rroi_align-inl.h"
 #include <mshadow/tensor.h>
-#include "math.h"
+#include <cmath>
 
 using std::max;
 using std::min;

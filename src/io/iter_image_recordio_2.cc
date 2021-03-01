@@ -33,6 +33,7 @@
 #include <dmlc/omp.h>
 #include <dmlc/common.h>
 #include <dmlc/timer.h>
+#include <memory>
 #include <type_traits>
 #if MXNET_USE_LIBJPEG_TURBO
 #include <turbojpeg.h>
@@ -55,7 +56,7 @@ class ImageRecordIOParser2 {
   inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs);
 
   // set record to the head
-  inline void BeforeFirst(void) {
+  inline void BeforeFirst() {
     if (batch_param_.round_batch == 0 || !overflow) {
       n_parsed_ = 0;
       return source_->BeforeFirst();
@@ -79,7 +80,7 @@ class ImageRecordIOParser2 {
 #endif
   inline size_t ParseChunk(DType* data_dptr, real_t* label_dptr, const size_t current_size,
     dmlc::InputSplit::Blob * chunk);
-  inline void CreateMeanImg(void);
+  inline void CreateMeanImg();
 
   // magic number to seed prng
   static const int kRandMagic = 111;
@@ -169,8 +170,8 @@ inline void ImageRecordIOParser2<DType>::Init(
     prnds_.emplace_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
   }
   if (param_.path_imglist.length() != 0) {
-    label_map_.reset(new ImageLabelMap(param_.path_imglist.c_str(),
-      param_.label_width, !param_.verbose));
+    label_map_ = std::make_unique<ImageLabelMap>(param_.path_imglist.c_str(),
+      param_.label_width, !param_.verbose);
   }
   CHECK(param_.path_imgrec.length() != 0)
       << "ImageRecordIter2: must specify image_rec";
@@ -665,7 +666,7 @@ inline size_t ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t* 
 
 // create mean image.
 template<typename DType>
-inline void ImageRecordIOParser2<DType>::CreateMeanImg(void) {
+inline void ImageRecordIOParser2<DType>::CreateMeanImg() {
     if (param_.verbose) {
       LOG(INFO) << "Cannot find " << normalize_param_.mean_img
                 << ": create mean image, this will take some time...";
@@ -677,8 +678,7 @@ inline void ImageRecordIOParser2<DType>::CreateMeanImg(void) {
       inst_order_.clear();
       // Parse chunk w/o putting anything in out
       ParseChunk(nullptr, nullptr, batch_param_.batch_size, &chunk);
-      for (size_t i = 0; i < inst_order_.size(); ++i) {
-        std::pair<size_t, size_t> place = inst_order_[i];
+      for (auto place : inst_order_) {
         mshadow::Tensor<cpu, 3> outimg =
           temp_[place.first][place.second].data[0].template get<cpu, 3, real_t>();
         if (imcnt == 0) {
@@ -714,13 +714,13 @@ inline void ImageRecordIOParser2<DType>::CreateMeanImg(void) {
 template<typename DType = real_t>
 class ImageRecordIter2 : public IIterator<DataBatch> {
  public:
-    ImageRecordIter2() : out_(nullptr) { }
+    ImageRecordIter2()  = default;
 
-    virtual ~ImageRecordIter2(void) {
+    ~ImageRecordIter2() override {
       iter_.Destroy();
     }
 
-    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
       prefetch_param_.InitAllowUnknown(kwargs);
       parser_.Init(kwargs);
       // maximum prefetch threaded iter internal size
@@ -737,12 +737,12 @@ class ImageRecordIter2 : public IIterator<DataBatch> {
           [this]() { parser_.BeforeFirst(); });
     }
 
-    virtual void BeforeFirst(void) {
+    void BeforeFirst() override {
       iter_.BeforeFirst();
     }
 
     // From iter_prefetcher.h
-    virtual bool Next(void) {
+    bool Next() override {
       if (out_ != nullptr) {
         recycle_queue_.push(out_); out_ = nullptr;
       }
@@ -759,7 +759,7 @@ class ImageRecordIter2 : public IIterator<DataBatch> {
       return iter_.Next(&out_);
     }
 
-    virtual const DataBatch &Value(void) const {
+    const DataBatch &Value() const override {
       return *out_;
     }
 
@@ -769,7 +769,7 @@ class ImageRecordIter2 : public IIterator<DataBatch> {
     /*! \brief Parameters */
     PrefetcherParam prefetch_param_;
     /*! \brief output data */
-    DataBatch *out_;
+    DataBatch *out_{nullptr};
     /*! \brief queue to be recycled */
     std::queue<DataBatch*> recycle_queue_;
     /* \brief parser */
@@ -784,19 +784,19 @@ class ImageRecordIter2CPU : public IIterator<DataBatch> {
     var_ = Engine::Get()->NewVariable();
   }
 
-  virtual ~ImageRecordIter2CPU(void) {
+  ~ImageRecordIter2CPU() override {
     Engine::Get()->DeleteVariable([](mxnet::RunContext ctx) {}, Context::CPU(), var_);
     delete out_;
   }
 
-  virtual void Init(const std::vector<std::pair<std::string, std::string>>& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string>>& kwargs) override {
     parser_.Init(kwargs);
   }
 
-  virtual void BeforeFirst(void) { parser_.BeforeFirst(); }
+  void BeforeFirst() override { parser_.BeforeFirst(); }
 
   // From iter_prefetcher.h
-  virtual bool Next(void) {
+  bool Next() override {
     bool result = false;
     const auto engine = Engine::Get();
     engine->PushSync(
@@ -808,7 +808,7 @@ class ImageRecordIter2CPU : public IIterator<DataBatch> {
     return result;
   }
 
-  virtual const DataBatch& Value(void) const { return *out_; }
+  const DataBatch& Value() const override { return *out_; }
 
  private:
   /*! \brief Backend thread */
@@ -824,7 +824,7 @@ class ImageRecordIter2CPU : public IIterator<DataBatch> {
 
 class ImageRecordIter2Wrapper : public IIterator<DataBatch> {
  public:
-  ~ImageRecordIter2Wrapper(void) override {
+  ~ImageRecordIter2Wrapper() override {
     if (record_iter_) delete record_iter_;
   }
   void Init(const std::vector<std::pair<std::string, std::string>>& kwargs) override {
@@ -869,14 +869,14 @@ class ImageRecordIter2Wrapper : public IIterator<DataBatch> {
     record_iter_->Init(kwargs);
     }
 
-    void BeforeFirst(void) override {
+    void BeforeFirst() override {
       record_iter_->BeforeFirst();
     }
 
     // From iter_prefetcher.h
-    bool Next(void) override { return record_iter_->Next(); }
+    bool Next() override { return record_iter_->Next(); }
 
-    const DataBatch &Value(void) const override {
+    const DataBatch &Value() const override {
       return record_iter_->Value();
     }
 

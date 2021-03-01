@@ -126,11 +126,10 @@ COMMANDS = OrderedDict([
     ('[Docker] Build the Jekyll website - outputs to "docs/static_site/build/html/"',
         "ci/build.py --platform ubuntu_cpu_jekyll /work/runtime_functions.sh build_jekyll_docs"),
     ('[Docker] Build the Python API docs - outputs to "docs/python_docs/python/build/_build/html/"',
-        "ci/build.py --platform ubuntu_cpu_python /work/runtime_functions.sh build_python_docs"),
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_python_docs"),
     ('[Docker] sanity_check. Check for linting and code formatting and licenses.',
     [
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh sanity_check",
-        "ci/build.py --platform ubuntu_rat /work/runtime_functions.sh nightly_test_rat_check",
     ]),
     ('[Docker] Python3 CPU unittests',
     [

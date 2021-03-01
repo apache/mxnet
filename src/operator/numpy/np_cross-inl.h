@@ -90,8 +90,8 @@ struct NumpyCrossParam : public dmlc::Parameter<NumpyCrossParam> {
 
 struct CrossInAssign {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType *in_ptr, DType *out_ptr,
-                                  const int stride, const int index, const int msize) {
+  MSHADOW_XINLINE static void Map(index_t i, const DType *in_ptr, DType *out_ptr,
+                                  const index_t stride, const index_t index, const size_t msize) {
     if (index < stride && i * stride + index < msize) {
       out_ptr[i] = in_ptr[i * stride + index];
     }
@@ -101,9 +101,9 @@ struct CrossInAssign {
 template<int req>
 struct CrossOutAssign {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType *in_ptr, DType *out_ptr,
-                                  const int positive, const int stride,
-                                  const int index, const int msize) {
+  MSHADOW_XINLINE static void Map(index_t i, const DType *in_ptr, DType *out_ptr,
+                                  const int positive, const index_t stride,
+                                  const index_t index, const size_t msize) {
     if (index < stride && i * stride + index < msize) {
       KERNEL_ASSIGN(out_ptr[i * stride + index], req, positive == 1 ? in_ptr[i] : -in_ptr[i]);
     }
@@ -113,7 +113,7 @@ struct CrossOutAssign {
 template<int req>
 struct ResAssign {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType *in_data, DType *out_data) {
+  MSHADOW_XINLINE static void Map(index_t i, const DType *in_data, DType *out_data) {
     KERNEL_ASSIGN(out_data[i], req, in_data[i]);
   }
 };
@@ -153,7 +153,7 @@ inline mxnet::TShape GetMoveaxisShape(const Tuple<int>& moveaxis_index,
   const int ndim = org_shape.ndim();
   if (ndim == 0) { return mxnet::TShape(0, 0); }
   CHECK_EQ(moveaxis_index.ndim(), org_shape.ndim()) << "moveaxis index dismatch original shape.";
-  std::vector<int> moveaxis_shape_vec(ndim, -1);
+  std::vector<size_t> moveaxis_shape_vec(ndim, -1);
   for (int i = 0; i < ndim; ++i) {
     moveaxis_shape_vec[i] = org_shape[moveaxis_index[i]];
   }
@@ -390,8 +390,13 @@ struct NumpyCrossForwardImpl {
       mxnet_op::Kernel<CrossInAssign, xpu>::Launch(s, bw_data.Size(), b_data.dptr<DType>(),
                                                    bw_data.dptr<DType>(), b_data.size(b_ndim - 1),
                                                    b_index_vec[i], b_data.Size());
+#if !defined(__CUDACC__)
       BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { aw_data, bw_data },
                                                        { kWriteTo }, { cw_data_vec[idx] });
+#else
+      BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { aw_data, bw_data },
+                                        { kWriteTo }, { cw_data_vec[idx] });
+#endif  // !defined(__CUDACC__)
       MXNET_ASSIGN_REQ_SWITCH(req_vec[i], req_type, {
         mxnet_op::Kernel<CrossOutAssign<req_type>, xpu>::Launch(s, cw_data_vec[idx].Size(),
                                                                 cw_data_vec[idx].dptr<DType>(),
@@ -493,18 +498,30 @@ struct NumpyCrossForwardImpl<xpu, DType, 2, 2> {
     mxnet_op::Kernel<CrossInAssign, xpu>::Launch(s, bw_data.Size(), b_data.dptr<DType>(),
                                                  bw_data.dptr<DType>(), b_data.size(b_ndim - 1),
                                                  1, b_data.Size());
+#if !defined(__CUDACC__)
     BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { aw_data, bw_data },
                                                      { req[0] }, { c });
+#else
+    BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { aw_data, bw_data },
+                                      { req[0] }, { c });
+#endif  // !defined(__CUDACC__)
     mxnet_op::Kernel<CrossInAssign, xpu>::Launch(s, aw_data.Size(), a_data.dptr<DType>(),
                                                  aw_data.dptr<DType>(), a_data.size(a_ndim - 1),
                                                  1, a_data.Size());
     mxnet_op::Kernel<CrossInAssign, xpu>::Launch(s, bw_data.Size(), b_data.dptr<DType>(),
                                                  bw_data.dptr<DType>(), b_data.size(b_ndim - 1),
                                                  0, b_data.Size());
+#if !defined(__CUDACC__)
     BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { aw_data, bw_data },
                                                      { kWriteTo }, { cw_data });
     BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx, { c, cw_data },
                                                        { kWriteTo }, { c });
+#else
+    BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { aw_data, bw_data },
+                                      { kWriteTo }, { cw_data });
+    BinaryBroadcastRTCCompute {"sub"}(attrs, ctx, { c, cw_data },
+                                      { kWriteTo }, { c });
+#endif  // !defined(__CUDACC__)
   }
 };
 
@@ -659,10 +676,9 @@ struct ReduceImplWrap {
     size_t ws_reduce = 0U;
     std::vector<int> reduce_axis = GetReduceAxis(out_move_shape, in_move_shape);
     if (reduce_axis.empty() || req == kNullOp) { return 0U; }
-    SUM_NDIM_SWITCH(out_shape.ndim(), NDim, {
-      ws_reduce = broadcast::ReduceWorkspaceSize<NDim, DType>(ctx.get_stream<xpu>(),
-                                                              out_shape, req, in_shape);
-    });
+    ws_reduce = broadcast::ReduceWorkspaceSize(ctx.get_stream<xpu>(),
+                                               out_shape, req, in_shape,
+                                               sizeof(DType));
     return ws_reduce;
   }
 
@@ -1196,8 +1212,13 @@ struct NumpyCrossBackwardImpl<xpu, DType, 2, 2> {
                                                  b_move_data.size(b_ndim - 1),
                                                  1, b_move_data.Size());
     // cw_data = grad_c_move * b_move_data[..., 1].
+#if !defined(__CUDACC__)
     BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { grad_c, bw_data },
                                                      { kWriteTo }, { cw_data });
+#else
+    BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { grad_c, bw_data },
+                                      { kWriteTo }, { cw_data });
+#endif  // !defined(__CUDACC__)
     // Copy cw_data to grad_move_data[..., 0].
     mxnet_op::Kernel<CrossOutAssign<kWriteTo>, xpu>::Launch(s, cw_data.Size(),
                                                             cw_data.dptr<DType>(),
@@ -1211,8 +1232,13 @@ struct NumpyCrossBackwardImpl<xpu, DType, 2, 2> {
                                                  b_move_data.size(b_ndim - 1),
                                                  0, b_move_data.Size());
     // cw_data = grad_c_move * b_move_data[..., 0].
+#if !defined(__CUDACC__)
     BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { grad_c, bw_data },
                                                      { kWriteTo }, { cw_data });
+#else
+    BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { grad_c, bw_data },
+                                      { kWriteTo }, { cw_data });
+#endif  // !defined(__CUDACC__)
     // Copy -cw_data to grad_move_data[..., 1].
     mxnet_op::Kernel<CrossOutAssign<kWriteTo>, xpu>::Launch(s, cw_data.Size(),
                                                             cw_data.dptr<DType>(),
@@ -1257,8 +1283,13 @@ struct NumpyCrossBackwardImpl<xpu, DType, 2, 2> {
                                                  a_move_data.size(a_ndim - 1),
                                                  1, a_move_data.Size());
     // cw_data = grad_c_move * a_move_data[..., 1].
+#if !defined(__CUDACC__)
     BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { grad_c, aw_data },
                                                      { kWriteTo }, { cw_data });
+#else
+    BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { grad_c, aw_data },
+                                      { kWriteTo }, { cw_data });
+#endif  // !defined(__CUDACC__)
     // Copy -cw_data to grad_move_data[..., 0].
     mxnet_op::Kernel<CrossOutAssign<kWriteTo>, xpu>::Launch(s, cw_data.Size(),
                                                             cw_data.dptr<DType>(),
@@ -1272,8 +1303,13 @@ struct NumpyCrossBackwardImpl<xpu, DType, 2, 2> {
                                                  a_move_data.size(a_ndim - 1),
                                                  0, a_move_data.Size());
     // cw_data = grad_c_move * a_move_data[..., 0].
+#if !defined(__CUDACC__)
     BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { grad_c, aw_data },
                                                      { kWriteTo }, { cw_data });
+#else
+    BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { grad_c, aw_data },
+                                      { kWriteTo }, { cw_data });
+#endif  // !defined(__CUDACC__)
     // Copy cw_data to grad_move_data[..., 1].
     mxnet_op::Kernel<CrossOutAssign<kWriteTo>, xpu>::Launch(s, cw_data.Size(),
                                                             cw_data.dptr<DType>(),

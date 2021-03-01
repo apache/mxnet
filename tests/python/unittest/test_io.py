@@ -34,6 +34,12 @@ from common import assertRaises
 import pytest
 from itertools import zip_longest
 
+@pytest.fixture(scope="session")
+def cifar10(tmpdir_factory):
+    path = str(tmpdir_factory.mktemp('cifar'))
+    get_cifar10(path)
+    return path
+
 
 def test_MNISTIter(tmpdir):
     # prepare data
@@ -66,12 +72,10 @@ def test_MNISTIter(tmpdir):
     assert(sum(label_0 - label_1) == 0)
     mx.nd.waitall()
 
-def test_Cifar10Rec(tmpdir):
-    path = str(tmpdir)
-    get_cifar10(path)
+def test_Cifar10Rec(cifar10):
     dataiter = mx.io.ImageRecordIter(
-        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
-        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         rand_crop=False,
         and_mirror=False,
         shuffle=False,
@@ -92,12 +96,10 @@ def test_Cifar10Rec(tmpdir):
         assert(labelcount[i] == 5000)
 
 @pytest.mark.parametrize('inter_method', [0,1,2,3,4,9,10])
-def test_inter_methods_in_augmenter(inter_method, tmpdir):
-    path = str(tmpdir)
-    get_cifar10(path)
+def test_inter_methods_in_augmenter(inter_method, cifar10):
     dataiter = mx.io.ImageRecordIter(
-        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
-        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         max_rotate_angle=45,
         data_shape=(3, 28, 28),
         batch_size=100,
@@ -105,13 +107,11 @@ def test_inter_methods_in_augmenter(inter_method, tmpdir):
     for batch in dataiter:
         pass
 
-def test_image_iter_exception(tmpdir):
+def test_image_iter_exception(cifar10):
     with pytest.raises(MXNetError):
-        path = str(tmpdir)
-        get_cifar10(path)
         dataiter = mx.io.ImageRecordIter(
-            path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
-            mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+            path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+            mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
             rand_crop=False,
             and_mirror=False,
             shuffle=False,
@@ -449,9 +449,7 @@ def test_CSVIter(tmpdir):
     for dtype in ['int32', 'int64', 'float32']:
         check_CSVIter_synthetic(dtype=dtype)
 
-def test_ImageRecordIter_seed_augmentation(tmpdir):
-    path = str(tmpdir)
-    get_cifar10(path)
+def test_ImageRecordIter_seed_augmentation(cifar10):
     seed_aug = 3
 
     def assert_dataiter_items_equals(dataiter1, dataiter2):
@@ -500,8 +498,8 @@ def test_ImageRecordIter_seed_augmentation(tmpdir):
 
     # check whether to get constant images after fixing seed_aug
     dataiter1 = mx.io.ImageRecordIter(
-        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
-        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
@@ -517,8 +515,8 @@ def test_ImageRecordIter_seed_augmentation(tmpdir):
         seed_aug=seed_aug)
 
     dataiter2 = mx.io.ImageRecordIter(
-        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
-        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
@@ -538,8 +536,8 @@ def test_ImageRecordIter_seed_augmentation(tmpdir):
     # check whether to get different images after change seed_aug
     dataiter1.reset()
     dataiter2 = mx.io.ImageRecordIter(
-        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
-        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
@@ -558,16 +556,16 @@ def test_ImageRecordIter_seed_augmentation(tmpdir):
 
     # check whether seed_aug changes the iterator behavior
     dataiter1 = mx.io.ImageRecordIter(
-        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
-        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
         seed_aug=seed_aug)
 
     dataiter2 = mx.io.ImageRecordIter(
-        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
-        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,

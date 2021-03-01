@@ -44,7 +44,7 @@ MXNET_REGISTER_API("_npi.argmax")
   // param.keepdims
   param.keepdims = args[2].operator bool();
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::ReduceAxisParam>(&attrs);
   // inputs
@@ -77,7 +77,7 @@ MXNET_REGISTER_API("_npi.argmin")
   // param.keepdims
   param.keepdims = args[2].operator bool();
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::ReduceAxisParam>(&attrs);
   // inputs

@@ -19,7 +19,6 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon.model_zoo.vision import get_model
 import sys
-from common import setup_module, with_seed, teardown_module
 import multiprocessing
 import pytest
 
@@ -28,7 +27,6 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
-@with_seed()
 @pytest.mark.parametrize('model_name', [
     'resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
     'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
@@ -41,7 +39,7 @@ def eprint(*args, **kwargs):
     'mobilenetv2_1.0', 'mobilenetv2_0.75', 'mobilenetv2_0.5', 'mobilenetv2_0.25'
 ])
 def test_models(model_name):
-    pretrained_to_test = set(['vgg19_bn'])
+    pretrained_to_test = set(['mobilenetv2_0.25'])
 
     test_pretrain = model_name in pretrained_to_test
     model = get_model(model_name, pretrained=test_pretrain, root='model/')
@@ -56,7 +54,6 @@ def parallel_download(model_name):
     model = get_model(model_name, pretrained=True, root='./parallel_download')
     print(type(model))
 
-@with_seed()
 @pytest.mark.skip(reason='MXNet is not yet safe for forking. Tracked in #17782.')
 def test_parallel_download():
     processes = []

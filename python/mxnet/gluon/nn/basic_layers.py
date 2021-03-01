@@ -19,15 +19,17 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
-           'BatchNorm', 'BatchNormReLU', 'InstanceNorm', 'LayerNorm', 'GroupNorm',
-           'Flatten', 'Lambda', 'HybridLambda']
+           'BatchNorm', 'SyncBatchNorm', 'BatchNormReLU', 'InstanceNorm', 'LayerNorm', 'GroupNorm',
+           'Flatten', 'Lambda', 'HybridLambda', 'Concatenate', 'HybridConcatenate', 'Identity']
 import warnings
+import uuid
+import inspect
 import numpy as np
 
 from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
-from ... import ndarray as nd, symbol as sym
+from ... import ndarray as nd, np as mxnp, symbol as sym, context, _deferred_compute as dc
 from ...util import is_np_array
 from ..parameter import Parameter
 
@@ -110,14 +112,40 @@ class HybridSequential(HybridBlock):
         net.hybridize()
     """
     def __init__(self):
-        super(HybridSequential, self).__init__()
+        super().__init__()
         self._layers = []
+        self._v2_checked = False
 
     def add(self, *blocks):
         """Adds block on top of the stack."""
         for block in blocks:
             self._layers.append(block)
             self.register_child(block)
+
+    def __call__(self, *args, **kwargs):
+        if self._active  and not self._v2_checked and not dc.is_deferred_compute():
+            # If any of the child Blocks implements the Gluon 2 interface, the
+            # container must not pass a Symbol to them
+            if any(inspect.unwrap(chld().hybrid_forward.__func__) is
+                   HybridBlock.hybrid_forward for chld in self._children.values()):
+                self._v2 = True
+                self._v2_checked = True
+                self.forward = self._forward
+
+        return super().__call__(*args, **kwargs)
+
+
+    def _forward(self, x, *args):
+        for block in self._children.values():
+            x = block()(x, *args)
+            args = []
+            if isinstance(x, (tuple, list)):
+                args = x[1:]
+                x = x[0]
+        if args:
+            x = tuple([x] + list(args))
+        return x
+
 
     def hybrid_forward(self, F, x, *args):
         for block in self._children.values():
@@ -154,15 +182,11 @@ class Dense(HybridBlock):
     r"""Just your regular densely-connected NN layer.
 
     `Dense` implements the operation:
-    `output = activation(dot(input, weight) + bias)`
+    `output = activation(dot(input, weight.T) + bias)`
     where `activation` is the element-wise activation function
     passed as the `activation` argument, `weight` is a weights matrix
     created by the layer, and `bias` is a bias vector created by the layer
     (only applicable if `use_bias` is `True`).
-
-    .. note::
-        the input must be a tensor with rank 2. Use `flatten` to convert it
-        to rank 2 manually if necessary.
 
     Parameters
     ----------
@@ -944,3 +968,186 @@ class HybridLambda(HybridBlock):
     def __repr__(self):
         return '{name}({function})'.format(name=self.__class__.__name__,
                                            function=self._func_name)
+
+
+class Concatenate(Sequential):
+    """Lays `Block` s concurrently.
+
+    This block feeds its input to all children blocks, and
+    produce the output by concatenating all the children blocks' outputs
+    on the specified axis.
+
+    Example::
+
+        net = Concatenate()
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
+        net.add(Identity())
+
+    Parameters
+    ----------
+    axis : int, default -1
+        The axis on which to concatenate the outputs.
+    """
+    def __init__(self, axis=-1):
+        super(Concatenate, self).__init__()
+        self.axis = axis
+
+    def forward(self, x):
+        out = []
+        for block in self._children.values():
+            out.append(block()(x))
+        if is_np_array():
+            out = np.concatenate(out, axis=self.axis)
+        else:
+            out = nd.concat(*out, dim=self.axis)
+        return out
+
+
+class HybridConcatenate(HybridSequential):
+    """Lays `HybridBlock` s concurrently.
+
+    This block feeds its input to all children blocks, and
+    produce the output by concatenating all the children blocks' outputs
+    on the specified axis.
+
+    Example::
+
+        net = HybridConcatenate()
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
+        net.add(Identity())
+
+    Parameters
+    ----------
+    axis : int, default -1
+        The axis on which to concatenate the outputs.
+    """
+    def __init__(self, axis=-1):
+        super().__init__()
+        self.axis = axis
+
+    def _forward(self, x):
+        out = []
+        for block in self._children.values():
+            out.append(block()(x))
+        if is_np_array():
+            out = mxnp.concatenate(out, axis=self.axis)
+        else:
+            out = nd.concat(*out, dim=self.axis)
+        return out
+
+    def hybrid_forward(self, F, x):
+        out = []
+        for block in self._children.values():
+            out.append(block()(x))
+        if is_np_array():
+            out = F.np.concatenate(out, axis=self.axis)
+        else:
+            out = F.concat(*out, dim=self.axis)
+        return out
+
+
+class Identity(HybridBlock):
+    """Block that passes through the input directly.
+
+    This block can be used in conjunction with HybridConcatenate
+    block for residual connection.
+
+    Example::
+
+        net = HybridConcatenate()
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
+        net.add(Identity())
+    """
+    def __init__(self):
+        super(Identity, self).__init__()
+
+    def hybrid_forward(self, F, x):
+        return x
+
+
+class SyncBatchNorm(BatchNorm):
+    """Cross-GPU Synchronized Batch normalization (SyncBN)
+
+    Standard BN [1]_ implementation only normalize the data within each device.
+    SyncBN normalizes the input within the whole mini-batch.
+    We follow the implementation described in the paper [2]_.
+
+    Note: Current implementation of SyncBN does not support FP16 training.
+    For FP16 inference, use standard nn.BatchNorm instead of SyncBN.
+
+    Parameters
+    ----------
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+    num_devices : int, default number of visible GPUs
+    momentum: float, default 0.9
+        Momentum for the moving average.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    use_global_stats: bool, default False
+        If True, use global moving statistics instead of local batch-norm. This will force
+        change batch-norm into a scale shift operator.
+        If False, use local batch-norm.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    running_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the running mean.
+    running_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the running variance.
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+
+    Reference:
+        .. [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating \
+          deep network training by reducing internal covariate shift." *ICML 2015*
+        .. [2] Hang Zhang, Kristin Dana, Jianping Shi, Zhongyue Zhang, Xiaogang Wang, \
+          Ambrish Tyagi, and Amit Agrawal. "Context Encoding for Semantic Segmentation." *CVPR 2018*
+    """
+    def __init__(self, in_channels=0, num_devices=None, momentum=0.9, epsilon=1e-5,
+                 center=True, scale=True, use_global_stats=False, beta_initializer='zeros',
+                 gamma_initializer='ones', running_mean_initializer='zeros',
+                 running_variance_initializer='ones', **kwargs):
+        super(SyncBatchNorm, self).__init__(
+            axis=1, momentum=momentum, epsilon=epsilon,
+            center=center, scale=scale,
+            use_global_stats=use_global_stats,
+            beta_initializer=beta_initializer,
+            gamma_initializer=gamma_initializer,
+            running_mean_initializer=running_mean_initializer,
+            running_variance_initializer=running_variance_initializer,
+            in_channels=in_channels, **kwargs)
+        num_devices = self._get_num_devices() if num_devices is None else num_devices
+        self._kwargs = {'eps': epsilon, 'momentum': momentum,
+                        'fix_gamma': not scale, 'use_global_stats': use_global_stats,
+                        'ndev': num_devices, 'key': uuid.uuid4()}
+
+    def _get_num_devices(self):
+        warnings.warn("Caution using SyncBatchNorm: "
+                      "if not using all the GPUs, please mannually set num_devices",
+                      UserWarning)
+        num_devices = context.num_gpus()
+        num_devices = num_devices if num_devices > 0 else 1
+        return num_devices
+
+    def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
+        return F.contrib.SyncBatchNorm(x, gamma, beta, running_mean, running_var,
+                                       name='fwd', **self._kwargs)

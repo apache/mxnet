@@ -48,10 +48,9 @@ opt = parser.parse_args()
 # define network
 
 net = nn.Sequential()
-with net.name_scope():
-    net.add(nn.Dense(128, activation='relu'))
-    net.add(nn.Dense(64, activation='relu'))
-    net.add(nn.Dense(10))
+net.add(nn.Dense(128, activation='relu'))
+net.add(nn.Dense(64, activation='relu'))
+net.add(nn.Dense(10))
 
 # data
 

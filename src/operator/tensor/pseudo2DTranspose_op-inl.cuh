@@ -32,7 +32,7 @@
 #include <mshadow/base.h>
 #include <algorithm>
 #include <utility>
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 
 
 namespace mxnet {

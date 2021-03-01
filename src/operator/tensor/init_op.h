@@ -325,7 +325,7 @@ inline void RangeParamParser(nnvm::NodeAttrs* attrs) {
 struct LinspaceParam : public dmlc::Parameter<LinspaceParam> {
   double start;
   double stop;
-  int num;
+  index_t num;
   bool endpoint;
   std::string ctx;
   int dtype;
@@ -749,7 +749,7 @@ void LinspaceCompute(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const LinspaceParam& param = nnvm::get<LinspaceParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      int step_num = param.endpoint ? param.num - 1 : param.num;
+      index_t step_num = param.endpoint ? param.num - 1 : param.num;
       double step = step_num > 0 ? (param.stop - param.start) / step_num : 0.0f;
       Kernel<linspace_fwd, xpu>::Launch(s,
                                         outputs[0].Size(),

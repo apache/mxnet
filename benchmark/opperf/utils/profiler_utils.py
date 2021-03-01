@@ -117,7 +117,7 @@ def parse_profiler_dump(operator_name, profiler_dump):
     MXNDArrayFree                          49           1.1220           0.0170           0.0360           0.0229
     MXAutogradBackwardEx                   50          11.5460           0.1980           0.3360           0.2309
     MXNet C API Calls                     399           1.9990           1.6010           1.9990           0.1990
-    MXImperativeInvokeEx                   50           4.4810           0.0700           0.1330           0.0896
+    MXImperativeInvoke                     50           4.4810           0.0700           0.1330           0.0896
     MXNDArrayWaitAll                       50         769.0570          14.0200          24.5030          15.3811
     MXAutogradSetIsTraining               100           0.0190           0.0000           0.0010           0.0002
     MXAutogradSetIsRecording              100           0.0400           0.0000           0.0010           0.0004

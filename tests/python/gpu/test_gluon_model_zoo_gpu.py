@@ -28,7 +28,6 @@ import unittest
 import pytest
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown_module
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -36,9 +35,8 @@ def eprint(*args, **kwargs):
 VAL_DATA='data/val-5k-256.rec'
 def download_data():
     return mx.test_utils.download(
-        'http://data.mxnet.io/data/val-5k-256.rec', VAL_DATA)
+        'https://repo.mxnet.io/gluon/dataset/test/val-5k-256-9e70d85e0.rec', VAL_DATA)
 
-@with_seed()
 @pytest.mark.serial
 @pytest.mark.parametrize('model_name', ['resnet50_v1', 'vgg19_bn', 'alexnet', 'densenet201', 'squeezenet1.0', 'mobilenet0.25'])
 def test_inference(model_name):
@@ -100,7 +98,6 @@ def get_nn_model(name):
 # Seed 1521019752 produced a failure on the Py2 MKLDNN-GPU CI runner
 # on 2/16/2018 that was not reproducible.  Problem could be timing related or
 # based on non-deterministic algo selection.
-@with_seed()
 @pytest.mark.serial
 def test_training():
     # We use network models without dropout for testing.

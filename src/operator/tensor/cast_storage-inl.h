@@ -30,7 +30,7 @@
 #include <algorithm>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
-#include "../../src/operator/tensor/init_op.h"
+#include "./init_op.h"
 #ifdef __CUDACC__
 #include "./cast_storage-inl.cuh"
 #endif  // __CUDACC__

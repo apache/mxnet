@@ -18,11 +18,10 @@
 # pylint: skip-file
 import mxnet as mx
 import numpy as np
-from common import models, with_seed
+from common import models
 from mxnet import autograd
 from mxnet.test_utils import assert_almost_equal
 
-@with_seed()
 def test_infer_multiout_op():
     data = mx.nd.arange(16, dtype=np.float64).reshape((4, 4))
     data.attach_grad()
@@ -33,7 +32,6 @@ def test_infer_multiout_op():
     assert data.grad.dtype == np.float64
     mx.nd.waitall()
 
-@with_seed()
 def test_infer_multiout_op2():
     def test_func(a):
         q, l = mx.nd.linalg.gelqf(a)

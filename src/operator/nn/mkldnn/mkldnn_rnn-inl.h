@@ -473,6 +473,11 @@ inline bool SupportMKLDNNRnn(const int input_dtype) {
   return false;
 }
 
+inline bool SupportMKLDNNRnn(const RNNParam &param, const int input_dtype) {
+  if (param.use_sequence_length) return false;
+  return SupportMKLDNNRnn(input_dtype);
+}
+
 }  // namespace op
 }  // namespace mxnet
 

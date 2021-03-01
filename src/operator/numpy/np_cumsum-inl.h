@@ -101,11 +101,11 @@ void CumsumForwardImpl(const OpContext& ctx,
         ((axis.value() >= -out.shape_.ndim()) && axis.value() < out.shape_.ndim()))
     << "axis value " << axis.value() << " out of range";
 
-  int middle = axis.has_value() ? out.shape_[axis.value()] : out.Size();
+  size_t middle = axis.has_value() ? out.shape_[axis.value()] : out.Size();
   if (middle == 0 || out.Size() == 0) return;
-  int trailing = 1;
+  size_t trailing = 1;
   if (axis.has_value()) {
-    for (int i = axis.value() + 1; i < out.shape_.ndim(); ++i) {
+    for (index_t i = axis.value() + 1; i < out.shape_.ndim(); ++i) {
       trailing *= out.shape_[i];
     }
   }
@@ -161,11 +161,11 @@ void CumsumBackwardImpl(const OpContext& ctx,
                         const dmlc::optional<int>& axis) {
   using namespace mshadow;
   using namespace mxnet_op;
-  int middle = axis.has_value() ? igrad.shape_[axis.value()] : igrad.Size();
+  size_t middle = axis.has_value() ? igrad.shape_[axis.value()] : igrad.Size();
   if (middle == 0 || igrad.Size() == 0) return;
-  int trailing = 1;
+  size_t trailing = 1;
   if (axis.has_value()) {
-    for (int i = axis.value() + 1; i < igrad.shape_.ndim(); ++i) {
+    for (index_t i = axis.value() + 1; i < igrad.shape_.ndim(); ++i) {
       trailing *= igrad.shape_[i];
     }
   }

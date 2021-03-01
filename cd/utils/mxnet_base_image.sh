@@ -21,23 +21,23 @@
 mxnet_variant=${1:?"Please specify the mxnet variant as the first parameter"}
 
 case ${mxnet_variant} in
-    cu92*)
-    echo "nvidia/cuda:9.2-cudnn7-runtime-ubuntu16.04"
-    ;;
-    cu100*)
-    echo "nvidia/cuda:10.0-cudnn7-runtime-ubuntu16.04"
-    ;;
     cu101*)
-    echo "nvidia/cuda:10.1-cudnn7-runtime-ubuntu16.04"
+    echo "nvidia/cuda:10.1-cudnn7-runtime-ubuntu18.04"
     ;;
     cu102*)
-    echo "nvidia/cuda:10.2-cudnn7-runtime-ubuntu16.04"
+    echo "nvidia/cuda:10.2-cudnn7-runtime-ubuntu18.04"
+    ;;
+    cu110*)
+    echo "nvidia/cuda:11.0-cudnn8-runtime-ubuntu18.04"
+    ;;
+    cu112*)
+    echo "nvidia/cuda:11.2.1-cudnn8-runtime-ubuntu18.04"
     ;;
     cpu)
-    echo "ubuntu:16.04"
+    echo "ubuntu:18.04"
     ;;
     native)
-    echo "ubuntu:16.04"
+    echo "ubuntu:18.04"
     ;;
     *)
     echo "Error: Unrecognized mxnet-variant: '${mxnet_variant}'"

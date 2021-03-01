@@ -426,6 +426,11 @@ class EinsumOp {
     this->optimize = optimize;
     this->subscripts = subscripts;
   }
+  bool operator==(const EinsumOp& other) const {
+    return this->num_args == other.num_args &&
+           !this->subscripts.compare(other.subscripts) &&
+           this->optimize == other.optimize;
+  }
 };  // class EinsumOp
 
 template<int dimension, int req, bool back, typename AType>

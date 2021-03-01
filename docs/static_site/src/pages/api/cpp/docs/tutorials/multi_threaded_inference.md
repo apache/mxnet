@@ -50,12 +50,12 @@ for MXNet users to do multi-threaded inference.
  * \brief create cached operator, allows to choose thread_safe version
  * of cachedop
  */
-MXNET_DLL int MXCreateCachedOpEX(SymbolHandle handle,
-                                 int num_flags,
-                                 const char** keys,
-                                 const char** vals,
-                                 CachedOpHandle *out,
-                                 bool thread_safe DEFAULT(false));
+MXNET_DLL int MXCreateCachedOp(SymbolHandle handle,
+                               int num_flags,
+                               const char** keys,
+                               const char** vals,
+                               CachedOpHandle *out,
+                               bool thread_safe DEFAULT(false));
 ```
 
 ## Multithreaded inference in MXNet with C API and CPP Package
@@ -135,8 +135,8 @@ The above code loads params and copies input data and params to specific context
 [https://github.com/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L207-L233](multi_threaded_inference.cc#L207-233)
 
 The above code prepares `flag_key_cstrs` and `flag_val_cstrs` to be passed the Cached op.
-The C API call is made with `MXCreateCachedOpEX`. This will lead to creation of thread safe cached
-op since the `thread_safe` (which is the last parameter to `MXCreateCachedOpEX`) is set to
+The C API call is made with `MXCreateCachedOp`. This will lead to creation of thread safe cached
+op since the `thread_safe` (which is the last parameter to `MXCreateCachedOp`) is set to
 true. When this is set to false, it will invoke CachedOp instead of CachedOpThreadSafe.
 
 
@@ -146,7 +146,7 @@ true. When this is set to false, it will invoke CachedOp instead of CachedOpThre
 
 The above creates the lambda function taking the thread number as the argument.
 If `random_sleep` is set it will sleep for a random number (secs) generated between 0 to 5 seconds.
-Following this, it invokes `MXInvokeCachedOpEx`(from the hdl it determines whether to invoke cached op threadsafe version or not).
+Following this, it invokes `MXInvokeCachedOp`(from the hdl it determines whether to invoke cached op threadsafe version or not).
 When this is set to false, it will invoke CachedOp instead of CachedOpThreadSafe.
 
 ### Step 5: Spawn multiple threads and wait for all threads to complete
@@ -179,7 +179,7 @@ The above code outputs results for different threads and cleans up the thread sa
 6. Bulking of ops is not supported.
 7. This only supports inference use cases currently, training use cases are not supported.
 8. Graph rewrites with subgraph API currently not supported.
-9. There is currently no frontend API support to run multi threaded inference. Users can use CreateCachedOpEX and InvokeCachedOp in combination with
+9. There is currently no frontend API support to run multi threaded inference. Users can use CreateCachedOp and InvokeCachedOp in combination with
 the CPP frontend to run multi-threaded inference as of today.
 10. Multi threaded inference with threaded engine with Module/Symbolic API and C Predict API are not currently supported.
 11. Exception thrown with `wait_to_read` in individual threads can cause issues. Calling invoke from each thread and calling WaitAll after thread joins should still work fine.

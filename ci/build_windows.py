@@ -61,7 +61,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -76,7 +75,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -91,7 +89,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
@@ -106,7 +103,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
@@ -121,7 +117,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
-        '-DENABLE_CUDA_RTC=ON '
         '-DUSE_OPENCV=ON  '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -136,7 +131,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
-        '-DENABLE_CUDA_RTC=ON '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -157,22 +151,8 @@ def windows_build(args):
     mxnet_root = get_mxnet_root()
     logging.info("Found MXNet root: {}".format(mxnet_root))
 
-    if 'GPU' in args.flavour:
-        # Get Thrust version to be shipped in Cuda 11, due to flakyness of
-        # older Thrust versions with MSVC 19 compiler
-        with remember_cwd():
-            tmpdirname = tempfile.mkdtemp()
-            os.chdir(tmpdirname)
-            r = requests.get('https://github.com/thrust/thrust/archive/1.9.8.zip', allow_redirects=True)
-            with open('thrust.zip', 'wb') as f:
-                f.write(r.content)
-            with zipfile.ZipFile('thrust.zip', 'r') as zip_ref:
-                zip_ref.extractall('.')
-            thrust_path = os.path.join(tmpdirname, "thrust-1.9.8")
-
-
     # cuda thrust / CUB + VS 2019 is flaky: try multiple times if fail
-    MAXIMUM_TRY = 5
+    MAXIMUM_TRY = 1
     build_try = 0
 
     while build_try < MAXIMUM_TRY:
@@ -184,8 +164,7 @@ def windows_build(args):
             os.chdir(path)
             env = os.environ.copy()
             if 'GPU' in args.flavour:
-                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
-                env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
+                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2'
             cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
                                                          CMAKE_FLAGS[args.flavour],
                                                          mxnet_root)
@@ -298,8 +277,8 @@ def main():
             os.environ["OpenCV_DIR"] = "C:\\Program Files\\OpenCV-v3.4.1\\build"
         if 'CUDA_PATH' not in os.environ:
             os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2"
-        if 'MKL_ROOT' not in os.environ:
-            os.environ["MKL_ROOT"] = "C:\\Program Files (x86)\\IntelSWTools\\compilers_and_libraries\\windows\\mkl"
+        if 'MKLROOT' not in os.environ:
+            os.environ["MKLROOT"] = "C:\\Program Files (x86)\\IntelSWTools\\compilers_and_libraries\\windows\\mkl"
         windows_build(args)
 
     elif system == 'Linux' or system == 'Darwin':

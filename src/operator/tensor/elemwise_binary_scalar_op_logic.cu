@@ -28,37 +28,37 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_equal_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::eq>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::LogicComputeEx<gpu, mshadow_op::eq>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"equal"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarRTCCompute{"equal"});
 
 NNVM_REGISTER_OP(_not_equal_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::ne>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::LogicComputeEx<gpu, mshadow_op::ne>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"not_equal"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarRTCCompute{"not_equal"});
 
 NNVM_REGISTER_OP(_greater_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::gt>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::LogicComputeEx<gpu, mshadow_op::gt>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"greater"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarRTCCompute{"greater"});
 
 NNVM_REGISTER_OP(_greater_equal_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::ge>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::LogicComputeEx<gpu, mshadow_op::ge>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"greater_equal"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarRTCCompute{"greater_equal"});
 
 NNVM_REGISTER_OP(_lesser_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::lt>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::LogicComputeEx<gpu, mshadow_op::lt>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"less"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarRTCCompute{"less"});
 
 NNVM_REGISTER_OP(_lesser_equal_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::le>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::LogicComputeEx<gpu, mshadow_op::le>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"less_equal"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarRTCCompute{"less_equal"});
 
 NNVM_REGISTER_OP(_logical_and_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::logical_and>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"logical_and"});
 
 NNVM_REGISTER_OP(_logical_or_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::logical_or>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"logical_or"});
 
 NNVM_REGISTER_OP(_logical_xor_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::logical_xor>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"logical_xor"});
 
 }  // namespace op
 }  // namespace mxnet

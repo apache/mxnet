@@ -154,7 +154,7 @@ struct QuantizedSumInitKernelWithBias {
                                   const float *max_out, const float *min_bias,
                                   const float *max_bias) {
     typedef int32_t T1;
-    typedef int8_t  T2;
+    using T2 = int8_t;
     using mshadow::red::limits::MinValue;
     using mshadow::red::limits::MaxValue;
     float float_for_one_out_quant  =

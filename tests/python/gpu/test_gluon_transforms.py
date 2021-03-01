@@ -27,22 +27,19 @@ from mxnet.test_utils import assert_almost_equal, set_default_context
 from mxnet.test_utils import almost_equal, same
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import assertRaises, setup_module, with_seed, teardown_module
+from common import assertRaises
 from test_gluon_data_vision import test_to_tensor, test_normalize, test_crop_resize
 
 set_default_context(mx.gpu(0))
 
-@with_seed()
 def test_normalize_gpu():
     test_normalize()
 
 
-@with_seed()
 def test_to_tensor_gpu():
     test_to_tensor()
 
 
-@with_seed()
 def test_resize_gpu():
     # Test with normal case 3D input float type
     data_in_3d = nd.random.uniform(0, 255, (300, 300, 3))
@@ -89,6 +86,5 @@ def test_resize_gpu():
                             w1lambda*x[b][h1+h1p][w1+w1p][c])
         return y
 
-@with_seed()
 def test_crop_resize_gpu():
     test_crop_resize()

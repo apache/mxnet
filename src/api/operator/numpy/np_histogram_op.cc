@@ -49,7 +49,7 @@ MXNET_REGISTER_API("_npi.histogram")
     param.range = Obj2Tuple<double, Float>(args[3].operator ObjectRef());
   }
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::HistogramParam>(&attrs);
 

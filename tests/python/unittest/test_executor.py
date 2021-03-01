@@ -17,8 +17,7 @@
 
 import numpy as np
 import mxnet as mx
-from common import setup_module, with_seed, teardown_module
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, environment
 
 
 def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
@@ -72,49 +71,39 @@ def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
     assert_almost_equal(rhs_grad.asnumpy(), rhs_grad2, rtol=1e-5, atol=1e-5)
 
 
-@with_seed()
 def test_bind():
-    def check_bind(disable_bulk_exec):
-        if disable_bulk_exec:
-            prev_bulk_inf_val = mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_INFERENCE", "0", "1")
-            prev_bulk_train_val = mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", "0", "1")
+    for enable_bulking in ['0', '1']:
+        with environment({'MXNET_EXEC_BULK_EXEC_INFERENCE': enable_bulking,
+                          'MXNET_EXEC_BULK_EXEC_TRAIN': enable_bulking}):
+            nrepeat = 10
+            maxdim = 4
+            for repeat in range(nrepeat):
+                for dim in range(1, maxdim):
+                    check_bind_with_uniform(lambda x, y: x + y,
+                                            lambda g, x, y: (g, g),
+                                            dim)
+                    check_bind_with_uniform(lambda x, y: x - y,
+                                            lambda g, x, y: (g, -g),
+                                            dim)
+                    check_bind_with_uniform(lambda x, y: x * y,
+                                            lambda g, x, y: (y * g, x * g),
+                                            dim)
+                    check_bind_with_uniform(lambda x, y: x / y,
+                                            lambda g, x, y: (g / y, -x * g/ (y**2)),
+                                            dim)
 
-        nrepeat = 10
-        maxdim = 4
-        for repeat in range(nrepeat):
-            for dim in range(1, maxdim):
-                check_bind_with_uniform(lambda x, y: x + y,
-                                        lambda g, x, y: (g, g),
-                                        dim)
-                check_bind_with_uniform(lambda x, y: x - y,
-                                        lambda g, x, y: (g, -g),
-                                        dim)
-                check_bind_with_uniform(lambda x, y: x * y,
-                                        lambda g, x, y: (y * g, x * g),
-                                        dim)
-                check_bind_with_uniform(lambda x, y: x / y,
-                                        lambda g, x, y: (g / y, -x * g/ (y**2)),
-                                        dim)
-
-                check_bind_with_uniform(lambda x, y: np.maximum(x, y),
-                                        lambda g, x, y: (g * (x>=y), g * (y>x)),
-                                        dim,
-                                        sf=mx.symbol.maximum)
-                check_bind_with_uniform(lambda x, y: np.minimum(x, y),
-                                        lambda g, x, y: (g * (x<=y), g * (y<x)),
-                                        dim,
-                                        sf=mx.symbol.minimum)
-        if disable_bulk_exec:
-           mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_INFERENCE", prev_bulk_inf_val)
-           mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", prev_bulk_train_val)
-
-    check_bind(True)
-    check_bind(False)
+                    check_bind_with_uniform(lambda x, y: np.maximum(x, y),
+                                            lambda g, x, y: (g * (x>=y), g * (y>x)),
+                                            dim,
+                                            sf=mx.symbol.maximum)
+                    check_bind_with_uniform(lambda x, y: np.minimum(x, y),
+                                            lambda g, x, y: (g * (x<=y), g * (y<x)),
+                                            dim,
+                                            sf=mx.symbol.minimum)
 
 
 # @roywei: Removing fixed seed as flakiness in this test is fixed
 # tracked at https://github.com/apache/incubator-mxnet/issues/11686
-@with_seed()
 def test_dot():
     nrepeat = 10
     maxdim = 4
@@ -136,7 +125,6 @@ def test_dot():
                                 sf = mx.symbol.dot)
 
 
-@with_seed()
 def test_reshape():
     x = mx.sym.Variable('x')
     y = mx.sym.FullyConnected(x, num_hidden=4)
@@ -160,7 +148,6 @@ def test_reshape():
     # weight ndarray is shared between exe and new_exe
     assert np.all(exe.arg_arrays[1].asnumpy() == 1)
 
-@with_seed()
 def test_cached_op_init():
     def check_init(static_alloc, static_shape):
         out = mx.sym.zeros((3,3))

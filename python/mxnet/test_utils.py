@@ -24,6 +24,7 @@ import traceback
 import numbers
 import sys
 import os
+import platform
 import errno
 import logging
 import bz2
@@ -48,7 +49,7 @@ from .context import current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
-from .util import use_np, use_np_default_dtype  # pylint: disable=unused-import
+from .util import use_np, use_np_default_dtype, getenv, setenv  # pylint: disable=unused-import
 from .runtime import Features
 from .numpy_extension import get_cuda_compute_capability
 
@@ -375,6 +376,11 @@ def assign_each2(input1, input2, function):
             it_out.iternext()
 
     return output
+
+def create_2d_np_tensor(rows, columns, dtype=np.int64):
+    inp = mx.np.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    inp = mx.np.broadcast_to(inp, shape=(inp.shape[0], columns))
+    return inp
 
 # For testing Large Tensors having total size > 2^32 elements
 def create_2d_tensor(rows, columns, dtype=np.int64):
@@ -750,8 +756,6 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
         The relative threshold. Default threshold will be used if set to ``None``.
     atol : None or float or dict of dtype -> float
         The absolute threshold. Default threshold will be used if set to ``None``.
-    threshold : None or float
-        The checking threshold. Default threshold will be used if set to ``None``.
     etol : None or float
         The error rate threshold. If etol is float, return true if error_rate < etol even if
         any error is found.
@@ -1513,7 +1517,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         Provided ideal result to be compared against
     equal_nan : bool, optional, defaults to False
         Should nans be treated as equal in the comparison
-    use_unifrom: bool
+    use_uniform: bool
         Optional, When flag set to true,
         random input data generated follows uniform distribution,
         not normal distribution
@@ -1763,10 +1767,15 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
 def get_mnist(path='data'):
     """Download and load the MNIST dataset
 
+    Parameters
+    ----------
+    path : str
+        Path in which to save the files.
+
     Returns
     -------
     dict
-        A dict containing the data
+        A dict containing the data.
     """
     def read_data(label_url, image_url):
         if not os.path.isdir(path):
@@ -1781,25 +1790,13 @@ def get_mnist(path='data'):
         return (label, image)
 
     # changed to mxnet.io for more stable hosting
-    # path = 'http://yann.lecun.com/exdb/mnist/'
-    url_path = 'http://data.mxnet.io/data/mnist/'
+    url_path = 'https://repo.mxnet.io/gluon/dataset/mnist/'
     (train_lbl, train_img) = read_data(
         url_path+'train-labels-idx1-ubyte.gz', url_path+'train-images-idx3-ubyte.gz')
     (test_lbl, test_img) = read_data(
         url_path+'t10k-labels-idx1-ubyte.gz', url_path+'t10k-images-idx3-ubyte.gz')
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
-
-def get_mnist_pkl(path='data'):
-    """Downloads MNIST dataset as a pkl.gz into a directory in the current directory
-    with the name `data`
-    """
-    if not os.path.isdir(path):
-        os.makedirs(path)
-    if not os.path.exists(os.path.join(path, 'mnist.pkl.gz')):
-        mx.gluon.utils.download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
-                                sha1_hash='0b07d663e8a02d51849faa39e226ed19d7b7ed23',
-                                path=path)
 
 def get_mnist_ubyte(path='data'):
     """Downloads ubyte version of the MNIST dataset into a directory in the current directory
@@ -1810,12 +1807,13 @@ def get_mnist_ubyte(path='data'):
     files = ['train-images-idx3-ubyte', 'train-labels-idx1-ubyte',
              't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte']
     if not all(os.path.exists(os.path.join(path, f)) for f in files):
-        url = 'http://data.mxnet.io/mxnet/data/mnist.zip'
-        sha1 = '74fc763958b9d6e04eb32717f80355bf895f0561'
-        zip_file_path = mx.gluon.utils.download(url, path=path, sha1_hash=sha1,
-                                                verify_ssl=False)
-        with zipfile.ZipFile(zip_file_path) as zf:
-            zf.extractall(path)
+        get_mnist(path)
+        for f in files:
+            ubyte_file_path = os.path.join(path, f)
+            zip_file_path = ubyte_file_path + '.gz'
+            with gzip.GzipFile(zip_file_path) as zf:
+                with open(ubyte_file_path, 'wb') as ubyte_file:
+                    ubyte_file.write(zf.read())
 
 def get_cifar10(path='data'):
     """Downloads CIFAR10 dataset into a directory in the current directory with the name `data`,
@@ -1827,23 +1825,23 @@ def get_cifar10(path='data'):
             (not os.path.exists(os.path.join(path, 'cifar', 'test.rec'))) or \
             (not os.path.exists(os.path.join(path, 'cifar', 'train.lst'))) or \
             (not os.path.exists(os.path.join(path, 'cifar', 'test.lst'))):
-        url = 'http://data.mxnet.io/mxnet/data/cifar10.zip'
+        url = 'https://repo.mxnet.io/gluon/dataset/cifar10/cifar10-b9ac2870.zip'
         sha1 = 'b9ac287012f2dad9dfb49d8271c39ecdd7db376c'
         zip_file_path = mx.gluon.utils.download(url, path=path, sha1_hash=sha1,
                                                 verify_ssl=False)
         with zipfile.ZipFile(zip_file_path) as zf:
             zf.extractall(path)
 
-def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
+def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0, path='data'):
     """Returns training and validation iterators for MNIST dataset
     """
 
-    get_mnist_ubyte()
+    get_mnist_ubyte(path)
     flat = len(input_shape) != 3
 
     train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
+        image=os.path.join(path, "train-images-idx3-ubyte"),
+        label=os.path.join(path, "train-labels-idx1-ubyte"),
         input_shape=input_shape,
         batch_size=batch_size,
         shuffle=True,
@@ -1852,8 +1850,8 @@ def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
         part_index=part_index)
 
     val_dataiter = mx.io.MNISTIter(
-        image="data/t10k-images-idx3-ubyte",
-        label="data/t10k-labels-idx1-ubyte",
+        image=os.path.join(path, "t10k-images-idx3-ubyte"),
+        label=os.path.join(path, "t10k-labels-idx1-ubyte"),
         input_shape=input_shape,
         batch_size=batch_size,
         flat=flat,
@@ -1861,31 +1859,6 @@ def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
         part_index=part_index)
 
     return (train_dataiter, val_dataiter)
-
-def get_zip_data(data_dir, url, data_origin_name):
-    """Download and extract zip data.
-
-    Parameters
-    ----------
-
-    data_dir : str
-        Absolute or relative path of the directory name to store zip files
-    url : str
-        URL to download data from
-    data_origin_name : str
-        Name of the downloaded zip file
-
-    Examples
-    --------
-    >>> get_zip_data("data_dir",
-                     "http://files.grouplens.org/datasets/movielens/ml-10m.zip",
-                     "ml-10m.zip")
-    """
-    data_origin_name = os.path.join(data_dir, data_origin_name)
-    if not os.path.exists(data_origin_name):
-        download(url, dirname=data_dir, overwrite=False)
-        zip_file = zipfile.ZipFile(data_origin_name)
-        zip_file.extractall(path=data_dir)
 
 def get_bz2_data(data_dir, data_name, url, data_origin_name):
     """Download and extract bz2 data.
@@ -1920,27 +1893,6 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
             bz_file.close()
         os.remove(data_origin_name)
 
-def set_env_var(key, val, default_val=""):
-    """Set environment variable
-
-    Parameters
-    ----------
-
-    key : str
-        Env var to set
-    val : str
-        New value assigned to the env var
-    default_val : str, optional
-        Default value returned if the env var doesn't exist
-
-    Returns
-    -------
-    str
-        The value of env var before it is set to the new value
-    """
-    prev_val = os.environ.get(key, default_val)
-    os.environ[key] = val
-    return prev_val
 
 def same_array(array1, array2):
     """Check whether two NDArrays sharing the same memory block
@@ -1965,9 +1917,11 @@ def same_array(array1, array2):
     array1[:] -= 1
     return same(array1.asnumpy(), array2.asnumpy())
 
+
 @contextmanager
 def discard_stderr():
-    """Discards error output of a routine if invoked as:
+    """
+    Discards error output of a routine if invoked as:
 
     with discard_stderr():
         ...
@@ -2400,22 +2354,79 @@ def same_symbol_structure(sym1, sym2):
     return True
 
 
-class EnvManager(object):
-    """Environment variable setter and unsetter via with idiom"""
-    def __init__(self, key, val):
-        self._key = key
-        self._next_val = val
-        self._prev_val = None
+@contextmanager
+def environment(*args):
+    """
+    Environment variable setter and unsetter via `with` idiom.
 
-    def __enter__(self):
-        self._prev_val = os.environ.get(self._key)
-        os.environ[self._key] = self._next_val
+    Takes a specification of env var names and desired values and adds those
+    settings to the environment in advance of running the body of the `with`
+    statement.  The original environment state is restored afterwards, even
+    if exceptions are raised in the `with` body.
 
-    def __exit__(self, ptype, value, trace):
-        if self._prev_val:
-            os.environ[self._key] = self._prev_val
-        else:
-            del os.environ[self._key]
+    Parameters
+    ----------
+    args:
+        if 2 args are passed:
+            name, desired_value strings of the single env var to update, or
+        if 1 arg is passed:
+            a dict of name:desired_value for env var's to update
+
+    """
+
+    # On Linux, env var changes made through python's os.environ are seen
+    # by the backend.  On Windows though, the C runtime gets a snapshot
+    # of the environment that cannot be altered by os.environ.  Here we
+    # check, using a wrapped version of the backend's getenv(), that
+    # the desired env var value is seen by the backend, and otherwise use
+    # a wrapped setenv() to establish that value in the backend.
+
+    # Also on Windows, a set env var can never have the value '', since
+    # the command 'set FOO= ' is used to unset the variable.  Perhaps
+    # as a result, the wrapped dmlc::GetEnv() routine returns the same
+    # value for unset variables and those set to ''.  As a result, we
+    # ignore discrepancy.
+    def validate_backend_setting(name, value, can_use_setenv=True):
+        backend_value = getenv(name)
+        if value == backend_value or \
+           value == '' and backend_value is None and platform.system() == 'Windows':
+            return
+        if not can_use_setenv:
+            raise RuntimeError('Could not set env var {}={} within C Runtime'.format(name, value))
+        setenv(name, value)
+        validate_backend_setting(name, value, can_use_setenv=False)
+
+    # Core routine to alter environment from a dict of env_var_name, env_var_value pairs
+    def set_environ(env_var_dict):
+        for env_var_name, env_var_value in env_var_dict.items():
+            if env_var_value is None:
+                os.environ.pop(env_var_name, None)
+            else:
+                os.environ[env_var_name] = env_var_value
+            validate_backend_setting(env_var_name, env_var_value)
+
+    # Create env_var name:value dict from the two calling methods of this routine
+    if len(args) == 1 and isinstance(args[0], dict):
+        env_vars = args[0]
+    else:
+        assert len(args) == 2, 'Expecting one dict arg or two args: env var name and value'
+        env_vars = {args[0]: args[1]}
+
+    # Take a snapshot of the existing environment variable state
+    # for those variables to be changed.  get() return None for unset keys.
+    snapshot = {x: os.environ.get(x) for x in env_vars.keys()}
+
+    # Alter the environment per the env_vars dict
+    set_environ(env_vars)
+
+    # Now run the wrapped code
+    try:
+        yield
+    finally:
+        # the backend engines may still be referencing the changed env var state
+        mx.nd.waitall()
+        # reinstate original env_var state per the snapshot taken earlier
+        set_environ(snapshot)
 
 
 def collapse_sum_like(a, shape):

@@ -77,7 +77,7 @@ def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
         source_str = [t.lower() for t in source_str]
 
     if counter_to_update is None:
-        return collections.Counter(source_str)
+        return collections.Counter(source_str)  # pylint: disable=too-many-function-args
     else:
         counter_to_update.update(source_str)
         return counter_to_update

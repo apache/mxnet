@@ -29,4 +29,6 @@ recursive-include mxnet *_LICENSE
 recursive-include mxnet *.h
 recursive-include mxnet *.hpp
 recursive-include mxnet *.cuh
+recursive-include mxnet *.cc
+recursive-include mxnet *.cpp
 recursive-include dmlc_tracker *.py

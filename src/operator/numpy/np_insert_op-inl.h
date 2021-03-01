@@ -40,26 +40,26 @@ namespace op {
 
 struct NumpyInsertParam : public dmlc::Parameter<NumpyInsertParam> {
   dmlc::optional<double> val;
-  dmlc::optional<int> start;
-  dmlc::optional<int> stop;
-  dmlc::optional<int> step;
-  dmlc::optional<int> int_ind;
+  dmlc::optional<index_t> start;
+  dmlc::optional<index_t> stop;
+  dmlc::optional<index_t> step;
+  dmlc::optional<index_t> int_ind;
   dmlc::optional<int> axis;
   DMLC_DECLARE_PARAMETER(NumpyInsertParam) {
     DMLC_DECLARE_FIELD(val)
     .set_default(dmlc::optional<double>())
     .describe("A scaler to be inserted into 'array'");
     DMLC_DECLARE_FIELD(start)
-    .set_default(dmlc::optional<int>())
+    .set_default(dmlc::optional<index_t>())
     .describe("If 'obj' is slice, 'start' is one of it's arguments.");
     DMLC_DECLARE_FIELD(stop)
-    .set_default(dmlc::optional<int>())
+    .set_default(dmlc::optional<index_t>())
     .describe("If 'obj' is slice, 'stop' is one of it's arguments.");
     DMLC_DECLARE_FIELD(step)
-    .set_default(dmlc::optional<int>())
+    .set_default(dmlc::optional<index_t>())
     .describe("If 'obj' is slice, 'step' is one of it's arguments.");
     DMLC_DECLARE_FIELD(int_ind)
-    .set_default(dmlc::optional<int>())
+    .set_default(dmlc::optional<index_t>())
     .describe("If 'obj' is int, 'int_ind' is the index before which"
               "'values' is inserted");
     DMLC_DECLARE_FIELD(axis)
@@ -103,22 +103,22 @@ struct NumpyInsertParam : public dmlc::Parameter<NumpyInsertParam> {
 template<int ndim>
 struct InsertSingleIndexKernel {
   template<typename DType, typename VType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
                                   const VType* in_val, const DType* in_arr,
                                   const mshadow::Shape<ndim> outshape,
                                   const mshadow::Shape<ndim> valshape,
-                                  const int index, const int numnew,
+                                  const index_t index, const size_t numnew,
                                   const mshadow::Shape<ndim> val_stride,
                                   const mshadow::Shape<ndim> old_val_stride,
                                   const mshadow::Shape<ndim> arr_stride,
                                   const mshadow::Shape<ndim> out_stride,
-                                  const int axis, bool moveaxis, const int req) {
+                                  const index_t axis, bool moveaxis, const int req) {
     // i is the global flattened index in the output
     // out_idx: i -> position in output's shape
     mshadow::Shape<ndim> out_idx = mxnet_op::unravel(i, outshape);
-    int64_t dest_idx;
+    index_t dest_idx;
     if (out_idx[axis] >= index && out_idx[axis] < index + numnew) {  // from 'value'
-      int idx_val = out_idx[axis] - index;
+      index_t idx_val = out_idx[axis] - index;
       // val_idx: i -> position in values's shape
       mshadow::Shape<ndim> val_idx(out_idx);
       val_idx[axis] = idx_val;
@@ -141,7 +141,7 @@ struct InsertSingleIndexKernel {
       }
       KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(in_val[dest_idx]));
     } else {  // from 'arr'
-      int idx_arr = (out_idx[axis] < index) ?
+      index_t idx_arr = (out_idx[axis] < index) ?
                      out_idx[axis] : out_idx[axis] - numnew;
       // arr_idx: i -> position in arr's shape
       mshadow::Shape<ndim> arr_idx(out_idx);
@@ -152,11 +152,11 @@ struct InsertSingleIndexKernel {
   }
 
   template<typename DType, typename VType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
                                   const VType* in_val, const DType* in_arr,
                                   const mshadow::Shape<ndim> outshape,
                                   const mshadow::Shape<ndim> valshape,
-                                  const int N, const int64_t* in_obj, const int numnew,
+                                  const index_t N, const int64_t* in_obj, const size_t numnew,
                                   const mshadow::Shape<ndim> val_stride,
                                   const mshadow::Shape<ndim> old_val_stride,
                                   const mshadow::Shape<ndim> arr_stride,
@@ -165,10 +165,10 @@ struct InsertSingleIndexKernel {
     // i is the global flattened index in the output
     // out_idx: i -> position in output's shape
     mshadow::Shape<ndim> out_idx = mxnet_op::unravel(i, outshape);
-    int64_t dest_idx;
-    int64_t index = in_obj[0];
-    if (static_cast<int64_t>(index) < 0) {
-      index += static_cast<int64_t>(N);
+    index_t dest_idx;
+    index_t index = in_obj[0];
+    if (static_cast<index_t>(index) < 0) {
+      index += static_cast<index_t>(N);
     }
     if (out_idx[axis] >= index && out_idx[axis] < index + numnew) {  // from 'value'
       int idx_val = out_idx[axis] - index;
@@ -221,23 +221,23 @@ struct InsertSingleIndexKernel {
 template<int ndim>
 struct InsertSeqIndicesKernel {
   template<typename DType, typename VType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
                                   const VType* in_val, const DType* in_arr,
                                   const mshadow::Shape<ndim> outshape,
                                   const mshadow::Shape<ndim> valshape,
-                                  const int* is_insert,
-                                  const int* origin_idx,
+                                  const index_t* is_insert,
+                                  const index_t* origin_idx,
                                   const mshadow::Shape<ndim> val_stride,
                                   const mshadow::Shape<ndim> arr_stride,
                                   const mshadow::Shape<ndim> out_stride,
-                                  const int axis, const int req) {
+                                  const index_t axis, const int req) {
     // i is the global flattened index in the output
     // out_idx: i -> position in output's shape
     mshadow::Shape<ndim> out_idx = mxnet_op::unravel(i, outshape);
-    int64_t dest_idx;
+    index_t dest_idx;
     if (is_insert[out_idx[axis]]) {
       // the data of output[i] is from 'values'
-      int idx_val = origin_idx[out_idx[axis]];
+      index_t idx_val = origin_idx[out_idx[axis]];
       // insert_idx: i -> position in insert's shape
       mshadow::Shape<ndim> insert_idx(out_idx);
       insert_idx[axis] = idx_val;
@@ -263,39 +263,39 @@ struct InsertSeqIndicesKernel {
 };
 
 struct ObjToIndices {
-  MSHADOW_XINLINE static void Map(int i, int64_t* indices,
+  MSHADOW_XINLINE static void Map(index_t i, int64_t* indices,
                                   int N, const int64_t* obj) {
     indices[i] = obj[i];
     if (indices[i] < 0) {
-      indices[i] += static_cast<int64_t>(N);
+      indices[i] += static_cast<index_t>(N);
     }
   }
 };
 
 struct IndicesModify {
-  MSHADOW_XINLINE static void Map(int i, int64_t* indices, const int* order) {
+  MSHADOW_XINLINE static void Map(index_t i, int64_t* indices, const index_t* order) {
     indices[order[i]] += i;
   }
 };
 
 struct SetIsInsert {
-  MSHADOW_XINLINE static void Map(int i, int64_t* indices, int* is_insert) {
-    is_insert[static_cast<int>(indices[i])] = 1;
+  MSHADOW_XINLINE static void Map(index_t i, int64_t* indices, index_t* is_insert) {
+    is_insert[static_cast<index_t>(indices[i])] = 1;
   }
 };
 
 struct SetOriginValuesIdx {
-  MSHADOW_XINLINE static void Map(int i, const int64_t* indices, int* origin_idx) {
-    origin_idx[static_cast<int>(indices[i])] = i;
+  MSHADOW_XINLINE static void Map(index_t i, const int64_t* indices, index_t* origin_idx) {
+    origin_idx[static_cast<index_t>(indices[i])] = i;
   }
 };
 
 struct SetOriginArrIdx {
-  MSHADOW_XINLINE static void Map(int i, const int* is_insert,
-                         int* origin_idx) {
+  MSHADOW_XINLINE static void Map(index_t i, const index_t* is_insert,
+                         index_t* origin_idx) {
     if (!is_insert[i]) {
-      int cnt = 0;
-      for (int j = 0; j < i; ++j) {
+      index_t cnt = 0;
+      for (index_t j = 0; j < i; ++j) {
         if (is_insert[j] == 0) {
           cnt++;
         }
@@ -315,7 +315,7 @@ void InsertScalerImpl(mshadow::Stream<xpu> *s, const TBlob& output,
                       const mshadow::Shape<ndim>& k_outshape,
                       const mshadow::Shape<ndim>& k_valshape,
                       const int dtype, const int vtype, const int req,
-                      const int axis, const int index, const int numnew,
+                      const int axis, const index_t index, const size_t numnew,
                       const size_t len, const bool moveaxis) {
   using namespace mshadow;
   using namespace mxnet_op;
@@ -341,8 +341,8 @@ void InsertSizeOneTensorImpl(mshadow::Stream<xpu> *s, const TBlob& output,
                              const mshadow::Shape<ndim>& k_outshape,
                              const mshadow::Shape<ndim>& k_valshape,
                              const int dtype, const int vtype, const int req,
-                             const int axis, const TBlob& index, const int numnew,
-                             const int N, const size_t len, const bool moveaxis) {
+                             const int axis, const TBlob& index, const size_t numnew,
+                             const index_t N, const size_t len, const bool moveaxis) {
   using namespace mshadow;
   using namespace mxnet_op;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
@@ -365,7 +365,7 @@ void InsertSequenceImpl(mshadow::Stream<xpu> *s, const TBlob& output,
                         const mshadow::Shape<ndim>& out_strides,
                         const mshadow::Shape<ndim>& k_outshape,
                         const mshadow::Shape<ndim>& k_valshape,
-                        const int* is_insert, const int* origin_idx,
+                        const index_t* is_insert, const index_t* origin_idx,
                         const int dtype, const int vtype, const int req,
                         const int axis, const size_t len) {
   using namespace mshadow;

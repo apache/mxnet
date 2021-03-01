@@ -29,7 +29,7 @@
 #include <array>
 #include <string>
 #include <mutex>
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 
 namespace mxnet {
 namespace engine {

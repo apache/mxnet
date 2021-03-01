@@ -68,8 +68,8 @@ bool BooleanMaskBackStorageType(const nnvm::NodeAttrs& attrs,
   for (int &attr : *out_attrs) {
     attr = kDefaultStorage;
   }
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    out_attrs->at(i) = kDefaultStorage;
+  for (int & out_attr : *out_attrs)
+    out_attr = kDefaultStorage;
   *dispatch_mode = DispatchMode::kFComputeEx;
   return true;
 }

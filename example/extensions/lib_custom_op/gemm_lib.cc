@@ -24,7 +24,10 @@
  */
 
 #include <iostream>
-#include "lib_api.h"
+#include <utility>
+#include "mxnet/lib_api.h"
+
+using namespace mxnet::ext;
 
 // main matrix multiplication routine
 void gemm(const float* A, const float* B, float* C,
@@ -127,12 +130,12 @@ MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attr
                         std::vector<int> *outtypes) {
   // validate inputs
   if (intypes->size() != 2) {
-    std::cout << "Expected 2 inputs to inferType" << std::endl;
+    MX_ERROR_MSG << "Expected 2 inputs to inferType";
     return MX_FAIL;
   }
   for (unsigned i = 0; i < intypes->size(); i++) {
     if (intypes->at(i) != kFloat32) {
-      std::cout << "Expected input " << i << " to have float32 type" << std::endl;
+      MX_ERROR_MSG << "Expected input " << i << " to have float32 type";
       return MX_FAIL;
     }
   }
@@ -146,11 +149,11 @@ MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& att
                          std::vector<std::vector<unsigned int>>* outshapes) {
   // validate inputs
   if (inshapes->size() != 2) {
-    std::cout << "Expected 2 inputs to inferShape" << std::endl;
+    MX_ERROR_MSG << "Expected 2 inputs to inferShape";
     return MX_FAIL;
   }
   if (inshapes->at(0).size() != 2 || inshapes->at(1).size() != 2) {
-    std::cout << "Expected 2D matrices for both inputs to inferShape" << std::endl;
+    MX_ERROR_MSG << "Expected 2D matrices for both inputs to inferShape";
     return MX_FAIL;
   }
 
@@ -159,7 +162,7 @@ MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& att
   unsigned kk = inshapes->at(1)[0];
   unsigned m = inshapes->at(1)[1];
   if (k != kk) {
-    std::cout << "Exected first input axis 1 equals to second input axis 0" << std::endl;
+    MX_ERROR_MSG << "Exected first input axis 1 equals to second input axis 0";
     return MX_FAIL;
   }
 
@@ -179,23 +182,25 @@ REGISTER_OP(my_gemm)
 class MyStatefulGemm : public CustomStatefulOp {
  public:
   explicit MyStatefulGemm(int count,
-                          const std::unordered_map<std::string, std::string>& attrs)
-    : count(count), attrs_(attrs) {}
+                          std::unordered_map<std::string, std::string>  attrs)
+    : count(count), attrs_(std::move(attrs)) {}
 
+  ~MyStatefulGemm() override {
+    std::cout << "Info: destructing MyStatefulGemm" << std::endl;
+  }
+  
   MXReturnValue Forward(std::vector<MXTensor>* inputs,
                         std::vector<MXTensor>* outputs,
-                        const OpResource& op_res) {
+                        const OpResource& op_res) override {
     std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
     return forward(attrs_, inputs, outputs, op_res);
   }
 
   MXReturnValue Backward(std::vector<MXTensor>* inputs,
                          std::vector<MXTensor>* outputs,
-                         const OpResource& op_res) {
+                         const OpResource& op_res) override {
     return backward(attrs_, inputs, outputs, op_res);
   }
-
-  ~MyStatefulGemm() {}
 
  private:
   int count;
@@ -203,11 +208,14 @@ class MyStatefulGemm : public CustomStatefulOp {
 };
 
 MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
+                            const MXContext& ctx,
+                            const std::vector<std::vector<unsigned int> >& in_shapes,
+                            const std::vector<int> in_types,
                             CustomStatefulOp** op_inst) {
   // testing passing of keyword arguments
   int count = attrs.count("test_kw") > 0 ? std::stoi(attrs.at("test_kw")) : 0;
   // creating stateful operator instance
-  *op_inst = new MyStatefulGemm(count, attrs);
+  *op_inst = CustomStatefulOp::create<MyStatefulGemm>(count, attrs);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }
@@ -230,7 +238,7 @@ MXReturnValue initialize(int version) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {
-    std::cout << "MXNet version " << version << " not supported" << std::endl;
+    MX_ERROR_MSG << "MXNet version " << version << " not supported";
     return MX_FAIL;
   }
 }

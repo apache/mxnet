@@ -31,7 +31,7 @@ needs_sphinx = '1.5.6'
 # General information about the project.
 project = u'Apache MXNet'
 author = u'%s developers' % project
-copyright = u'2015-2019, %s' % author
+copyright = u'2015-2020, %s' % author
 github_doc_root = 'https://github.com/apache/incubator-mxnet/tree/master/docs/'
 doc_root = 'https://mxnet.apache.org/'
 
@@ -54,11 +54,8 @@ extensions = [
     # 'sphinxcontrib.fulltoc',
     'nbsphinx',
     'IPython.sphinxext.ipython_console_highlighting',
-    # 'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
-    # 'sphinx.ext.mathjax',
-    # 'sphinx.ext.viewcode',
     'breathe',
 #    'mxdoc'
     'autodocsumm',
@@ -66,7 +63,11 @@ extensions = [
 
 doctest_global_setup = '''
 import mxnet as mx
+from mxnet import np, npx
 '''
+
+autosummary_generate = True
+numpydoc_show_class_members = False
 
 autodoc_member_order = 'alphabetical'
 
@@ -120,7 +121,7 @@ exclude_patterns = ['templates',
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
-#add_module_names = True
+add_module_names = False
 
 # If true, sectionauthor and moduleauthor directives will be shown in the
 # output. They are ignored by default.
@@ -236,6 +237,16 @@ nbsphinx_execute = 'never'
 
 # let the source file format to be xxx.ipynb instead of xxx.ipynb.txt
 html_sourcelink_suffix = ''
+
+html_context = {
+    'display_github': True,
+    'github_user': 'apache',
+    'github_repo': 'mxnet',
+    'github_version': 'master',
+    'conf_py_path': '/docs/python_docs/python/',
+    'last_updated': False,
+    'commit': True
+}
 
 def setup(app):
     app.add_transform(AutoStructify)

@@ -15,13 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=undefined-all-variable, not-callable, cell-var-from-loop
 """Operators that fallback to official NumPy implementation."""
 
-
+import sys
+from functools import wraps
 import numpy as onp
 
-
-__all__ = [
+fallbacks = [
     '__version__',
     '_NoValue',
     'allclose',
@@ -38,6 +39,7 @@ __all__ = [
     'correlate',
     'count_nonzero',
     'cov',
+    'cumprod',
     'digitize',
     'divmod',
     'dtype',
@@ -69,11 +71,15 @@ __all__ = [
     'nanpercentile',
     'nanprod',
     'nanquantile',
+    'nanstd',
+    'nansum',
+    'nanvar',
     'ndim',
     'npv',
+    'packbits',
     'partition',
     'piecewise',
-    'packbits',
+    'pmt',
     'poly',
     'polyadd',
     'polydiv',
@@ -107,90 +113,30 @@ __all__ = [
     'vander',
 ]
 
-__version__ = onp.__version__
-_NoValue = onp._NoValue
-allclose = onp.allclose
-alltrue = onp.alltrue
-apply_along_axis = onp.apply_along_axis
-apply_over_axes = onp.apply_over_axes
-argpartition = onp.argpartition
-argwhere = onp.argwhere
-array_equal = onp.array_equal
-array_equiv = onp.array_equiv
-choose = onp.choose
-compress = onp.compress
-corrcoef = onp.corrcoef
-correlate = onp.correlate
-count_nonzero = onp.count_nonzero
-cov = onp.cov
-digitize = onp.digitize
-divmod = onp.divmod
-dtype = onp.dtype
-extract = onp.extract
-float_power = onp.float_power
-frexp = onp.frexp
-heaviside = onp.heaviside
-histogram2d = onp.histogram2d
-histogram_bin_edges = onp.histogram_bin_edges
-histogramdd = onp.histogramdd
-i0 = onp.i0
-in1d = onp.in1d
-intersect1d = onp.intersect1d
-isclose = onp.isclose
-isin = onp.isin
-ix_ = onp.ix_
-lexsort = onp.lexsort
-min_scalar_type = onp.min_scalar_type
-mirr = onp.mirr
-modf = onp.modf
-msort = onp.msort
-nanargmax = onp.nanargmax
-nanargmin = onp.nanargmin
-nancumprod = onp.nancumprod
-nancumsum = onp.nancumsum
-nanmax = onp.nanmax
-nanmedian = onp.nanmedian
-nanmin = onp.nanmin
-nanpercentile = onp.nanpercentile
-nanprod = onp.nanprod
-nanquantile = onp.nanquantile
-nanstd = onp.nanstd
-nansum = onp.nansum
-nanvar = onp.nanvar
-ndim = onp.ndim
-npv = onp.npv
-partition = onp.partition
-packbits = onp.packbits
-piecewise = onp.piecewise
-pmt = onp.pmt
-poly = onp.poly
-polyadd = onp.polyadd
-polydiv = onp.polydiv
-polyfit = onp.polyfit
-polyint = onp.polyint
-polymul = onp.polymul
-polysub = onp.polysub
-positive = onp.positive
-ppmt = onp.ppmt
-promote_types = onp.promote_types
-ptp = onp.ptp
-pv = onp.pv
-rate = onp.rate
-real = onp.real
-result_type = onp.result_type
-roots = onp.roots
-searchsorted = onp.searchsorted
-select = onp.select
-setdiff1d = onp.setdiff1d
-setxor1d = onp.setxor1d
-signbit = onp.signbit
-size = onp.size
-spacing = onp.spacing
-take_along_axis = onp.take_along_axis
-trapz = onp.trapz
-tril_indices_from = onp.tril_indices_from
-trim_zeros = onp.trim_zeros
-union1d = onp.union1d
-unpackbits = onp.unpackbits
-unwrap = onp.unwrap
-vander = onp.vander
+fallback_mod = sys.modules[__name__]
+
+def get_func(obj, doc):
+    """Get new numpy function with object and doc"""
+    @wraps(obj)
+    def wrapper(*args, **kwargs):
+        return obj(*args, **kwargs)
+    wrapper.__doc__ = doc
+    return wrapper
+
+for obj_name in fallbacks:
+    onp_obj = getattr(onp, obj_name)
+    if callable(onp_obj):
+        new_fn_doc = onp_obj.__doc__
+        if obj_name in {'divmod', 'float_power', 'frexp', 'heaviside', 'modf', 'signbit', 'spacing'}:
+            # remove reference of kwargs doc and the reference to ufuncs
+            new_fn_doc = new_fn_doc.replace("**kwargs\n    For other keyword-only arguments, see the"
+                                            + "\n    :ref:`ufunc docs <ufuncs.kwargs>`.", '')
+        elif obj_name == 'trapz':
+            # remove unused reference
+            new_fn_doc = new_fn_doc.replace(
+                '.. [1] Wikipedia page: https://en.wikipedia.org/wiki/Trapezoidal_rule', '')
+        setattr(fallback_mod, obj_name, get_func(onp_obj, new_fn_doc))
+    else:
+        setattr(fallback_mod, obj_name, onp_obj)
+
+__all__ = fallbacks

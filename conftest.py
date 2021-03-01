@@ -24,11 +24,18 @@ instantiated before lower-scoped fixtures (such as ``function``).
 """
 
 import logging
-import gc
 import os
 import random
 
 import pytest
+
+
+def pytest_configure(config):
+    # Load the user's locale settings to verify that MXNet works correctly when the C locale is set
+    # to anything other than the default value. Please see #16134 for an example of a bug caused by
+    # incorrect handling of C locales.
+    import locale
+    locale.setlocale(locale.LC_ALL, "")
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -36,9 +43,38 @@ def pytest_sessionfinish(session, exitstatus):
         session.exitstatus = 0
 
 
-# * Random seed setup
-def pytest_configure():
-    """Pytest configuration hook to help reproduce test segfaults
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Make test outcome available to fixture.
+
+    https://docs.pytest.org/en/latest/example/simple.html#making-test-result-information-available-in-fixtures
+    """
+    # execute all other hooks to obtain the report object
+    outcome = yield
+    rep = outcome.get_result()
+
+    # set a report attribute for each phase of a call, which can
+    # be "setup", "call", "teardown"
+    setattr(item, "rep_" + rep.when, rep)
+
+
+@pytest.fixture(scope='module', autouse=True)
+def module_scope_waitall(request):
+    """A module scope fixture to issue waitall() operations between test modules."""
+    yield
+
+    try:
+        import mxnet as mx
+        mx.npx.waitall()
+    except:
+        # Use print() as module level fixture logging.warning messages never
+        # shown to users. https://github.com/pytest-dev/pytest/issues/7819
+        print('Unable to import numpy/mxnet. Skip mx.npx.waitall().')
+
+
+@pytest.fixture(scope='module', autouse=True)
+def module_scope_seed(request):
+    """Module scope fixture to help reproduce test segfaults
 
     Sets and outputs rng seeds.
 
@@ -83,17 +119,17 @@ def pytest_configure():
     4. When finished debugging the segfault, remember to unset any exported MXNET_ seed
        variables in the environment to return to non-deterministic testing (a good thing).
     """
-
     module_seed_str = os.getenv('MXNET_MODULE_SEED')
     if module_seed_str is None:
         seed = random.randint(0, 2**31-1)
     else:
         seed = int(module_seed_str)
-        logging.warning('*** module-level seed is set: '
-                        'all tests running deterministically ***')
-    logging.info('Setting module np/mx/python random seeds, '
-                 'use MXNET_MODULE_SEED={} to reproduce.'.format(seed))
-
+        # Use print() as module level fixture logging.warning messages never
+        # shown to users. https://github.com/pytest-dev/pytest/issues/7819
+        print('*** module-level seed is set: all tests running deterministically ***')
+    print('Setting module np/mx/python random seeds, '
+                    'use MXNET_MODULE_SEED={} to reproduce.'.format(seed))
+    old_state = random.getstate()
     random.seed(seed)
     try:
         import numpy as np
@@ -101,33 +137,20 @@ def pytest_configure():
         np.random.seed(seed)
         mx.random.seed(seed)
     except:
-        logging.warning('Unable to import numpy/mxnet. Skipping conftest.')
+        # Use print() as module level fixture logging.warning messages never
+        # shown to users. https://github.com/pytest-dev/pytest/issues/7819
+        print('Unable to import numpy/mxnet. Skip setting module-level seed.')
 
     # The MXNET_TEST_SEED environment variable will override MXNET_MODULE_SEED for tests with
     #  the 'with_seed()' decoration.  Inform the user of this once here at the module level.
     if os.getenv('MXNET_TEST_SEED') is not None:
-        logging.warning('*** test-level seed set: all "@with_seed()" '
-                        'tests run deterministically ***')
+        # Use print() as module level fixture logging.warning messages never
+        # shown to users. https://github.com/pytest-dev/pytest/issues/7819
+        print('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
 
-    # Load the user's locale settings to verify that MXNet works correctly when the C locale is set
-    # to anything other than the default value. Please see #16134 for an example of a bug caused by
-    # incorrect handling of C locales.
-    import locale
-    locale.setlocale(locale.LC_ALL, "")
+    yield  # run all tests in the module
 
-@pytest.hookimpl(tryfirst=True, hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    """Make test outcome available to fixture.
-
-    https://docs.pytest.org/en/latest/example/simple.html#making-test-result-information-available-in-fixtures
-    """
-    # execute all other hooks to obtain the report object
-    outcome = yield
-    rep = outcome.get_result()
-
-    # set a report attribute for each phase of a call, which can
-    # be "setup", "call", "teardown"
-    setattr(item, "rep_" + rep.when, rep)
+    random.setstate(old_state)
 
 
 @pytest.fixture(scope='function', autouse=True)
@@ -171,20 +194,17 @@ def function_scope_seed(request):
         seed = int(env_seed_str)
     else:
         seed = random.randint(0, 2**31-1)
-
+    old_state = random.getstate()
     random.seed(seed)
     try:
         import numpy as np
         import mxnet as mx
-        post_test_state = np.random.get_state()
         np.random.seed(seed)
         mx.random.seed(seed)
     except:
-        logging.warning('Unable to import numpy/mxnet. Skipping seeding for numpy/mxnet.')
-        np = None
+        logging.warning('Unable to import numpy/mxnet. Skip setting function-level seed.')
 
-    seed_message = ('np/mx/python random seeds are set to '
-                    '{}, use MXNET_TEST_SEED={} to reproduce.')
+    seed_message = 'Setting np/mx/python random seeds to {}. Use MXNET_TEST_SEED={} to reproduce.'
     seed_message = seed_message.format(seed, seed)
 
     # Always log seed on DEBUG log level. This makes sure we can find out the
@@ -194,39 +214,14 @@ def function_scope_seed(request):
 
     yield  # run the test
 
-    try:
-        import mxnet as mx
-        mx.nd.waitall()
-    except:
-        logging.warning('Unable to import mxnet. Skipping for mxnet engine.')
-
     if request.node.rep_setup.failed:
-        logging.info("Setting up a test failed: {}", request.node.nodeid)
+        logging.error("Setting up a test failed: {}", request.node.nodeid)
     elif request.node.rep_call.outcome == 'failed':
-        # Either request.node.rep_setup.failed or request.node.rep_setup.passed
-        # should be True
+        # Either request.node.rep_setup.failed or request.node.rep_setup.passed should be True
         assert request.node.rep_setup.passed
-        # On failure also log seed on INFO log level
-        logging.info(seed_message)
+        # On failure also log seed on WARNING log level
+        error_message = 'Error seen with seeded test, use MXNET_TEST_SEED={} to reproduce'
+        error_message = error_message.format(seed)
+        logging.warning(error_message)
 
-    if np:
-        np.random.set_state(post_test_state)
-
-
-# * Shared test fixtures
-@pytest.fixture(params=[True, False])
-def hybridize(request):
-    return request.param
-
-@pytest.fixture(autouse=True)
-def doctest(doctest_namespace):
-    try:
-        import numpy as np
-        import mxnet as mx
-        doctest_namespace['np'] = np
-        doctest_namespace['mx'] = mx
-        doctest_namespace['gluon'] = mx.gluon
-    except:
-        logging.warning('Unable to import numpy/mxnet. Skipping conftest.')
-    import doctest
-    doctest.ELLIPSIS_MARKER = '-etc-'
+    random.setstate(old_state)

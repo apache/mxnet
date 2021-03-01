@@ -24,7 +24,6 @@ import numpy as np
 import random
 from mxnet import gluon
 import platform
-from common import setup_module, with_seed, teardown_module
 from mxnet.gluon.data import DataLoader
 import mxnet.ndarray as nd
 from mxnet import context
@@ -32,7 +31,6 @@ from mxnet.gluon.data.dataset import Dataset
 from mxnet.gluon.data.dataset import ArrayDataset
 import pytest
 
-@with_seed()
 def test_array_dataset():
     X = np.random.uniform(size=(10, 20))
     Y = np.random.uniform(size=(10,))
@@ -52,7 +50,7 @@ def test_array_dataset():
 def prepare_record(tmpdir_factory):
     test_images = tmpdir_factory.mktemp("test_images")
     test_images_tar = test_images.join("test_images.tar.gz")
-    gluon.utils.download("http://data.mxnet.io/data/test_images.tar.gz", str(test_images_tar))
+    gluon.utils.download("https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz", str(test_images_tar))
     tarfile.open(test_images_tar).extractall(str(test_images))
     imgs = os.listdir(str(test_images.join("test_images")))
     record = mx.recordio.MXIndexedRecordIO(str(test_images.join("test.idx")), str(test_images.join("test.rec")), 'w')
@@ -64,7 +62,6 @@ def prepare_record(tmpdir_factory):
     return str(test_images.join('test.rec'))
 
 
-@with_seed()
 def test_recordimage_dataset(prepare_record):
     recfile = prepare_record
     fn = lambda x, y : (x, y)
@@ -75,7 +72,6 @@ def test_recordimage_dataset(prepare_record):
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
-@with_seed()
 def test_recordimage_dataset_handle(prepare_record):
     recfile = prepare_record
     class TmpTransform(mx.gluon.HybridBlock):
@@ -97,7 +93,6 @@ def _dataset_transform_first_fn(x):
     """Named transform function since lambda function cannot be pickled."""
     return x
 
-@with_seed()
 def test_recordimage_dataset_with_data_loader_multiworker(prepare_record):
     recfile = prepare_record
     dataset = gluon.data.vision.ImageRecordDataset(recfile)
@@ -123,7 +118,6 @@ def test_recordimage_dataset_with_data_loader_multiworker(prepare_record):
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
-@with_seed()
 def test_sampler():
     seq_sampler = gluon.data.SequentialSampler(10)
     assert list(seq_sampler) == list(range(10))
@@ -136,7 +130,6 @@ def test_sampler():
     rand_batch_keep = gluon.data.BatchSampler(rand_sampler, 3, 'keep')
     assert sorted(sum(list(rand_batch_keep), [])) == list(range(10))
 
-@with_seed()
 def test_datasets(tmpdir):
     p = tmpdir.mkdir("test_datasets")
     assert len(gluon.data.vision.MNIST(root=str(p.join('mnist')))) == 60000
@@ -149,7 +142,6 @@ def test_datasets(tmpdir):
     assert len(gluon.data.vision.CIFAR100(root=str(p.join('cifar100')), fine_label=True)) == 50000
     assert len(gluon.data.vision.CIFAR100(root=str(p.join('cifar100')), train=False)) == 10000
 
-@with_seed()
 def test_datasets_handles(tmpdir):
     p = tmpdir.mkdir("test_datasets_handles")
     assert len(gluon.data.vision.MNIST(root=str(p.join('mnist'))).__mx_handle__()) == 60000
@@ -162,13 +154,11 @@ def test_datasets_handles(tmpdir):
     assert len(gluon.data.vision.CIFAR100(root=str(p.join('cifar100')), fine_label=True).__mx_handle__()) == 50000
     assert len(gluon.data.vision.CIFAR100(root=str(p.join('cifar100')), train=False).__mx_handle__()) == 10000
 
-@with_seed()
 def test_image_folder_dataset(prepare_record):
     dataset = gluon.data.vision.ImageFolderDataset(os.path.dirname(prepare_record))
     assert dataset.synsets == ['test_images']
     assert len(dataset.items) == 16
 
-@with_seed()
 def test_image_folder_dataset_handle(prepare_record):
     dataset = gluon.data.vision.ImageFolderDataset(os.path.dirname(prepare_record))
     hd = dataset.__mx_handle__()
@@ -176,7 +166,6 @@ def test_image_folder_dataset_handle(prepare_record):
     assert (hd[1][0] == dataset[1][0]).asnumpy().all()
     assert hd[5][1] == dataset[5][1]
 
-@with_seed()
 def test_image_list_dataset(prepare_record):
     root = os.path.join(os.path.dirname(prepare_record), 'test_images')
     imlist = os.listdir(root)
@@ -200,7 +189,6 @@ def test_image_list_dataset(prepare_record):
         assert len(img.shape) == 3
         assert label == 0
 
-@with_seed()
 def test_image_list_dataset_handle(prepare_record):
     root = os.path.join(os.path.dirname(prepare_record), 'test_images')
     imlist = os.listdir(root)
@@ -224,7 +212,6 @@ def test_image_list_dataset_handle(prepare_record):
         assert len(img.shape) == 3
         assert label == 0
 
-@with_seed()
 @pytest.mark.garbage_expected
 def test_list_dataset():
     for num_worker in range(0, 3):
@@ -239,7 +226,6 @@ class _Dataset(gluon.data.Dataset):
     def __getitem__(self, key):
         return mx.nd.full((10,), key)
 
-@with_seed()
 @pytest.mark.garbage_expected
 def test_multi_worker():
     data = _Dataset()
@@ -249,7 +235,6 @@ def test_multi_worker():
             assert (batch.asnumpy() == i).all()
 
 
-@with_seed()
 def test_multi_worker_shape():
     for thread_pool in [True, False]:
         batch_size = 1024
@@ -335,7 +320,6 @@ def _batchify(data):
         nd.array(labels, dtype=labels.dtype, ctx=context.Context('cpu_shared', 0)),
         nd.array(y_lens, ctx=context.Context('cpu_shared', 0)))
 
-@with_seed()
 def test_multi_worker_forked_data_loader():
     data = _Dummy(False)
     loader = DataLoader(data, batch_size=40, batchify_fn=_batchify, num_workers=2)
@@ -349,7 +333,6 @@ def test_multi_worker_forked_data_loader():
         for i, data in enumerate(loader):
             pass
 
-@with_seed()
 def test_multi_worker_dataloader_release_pool():
     # will trigger too many open file if pool is not released properly
     if os.name == 'nt':
@@ -364,7 +347,6 @@ def test_multi_worker_dataloader_release_pool():
         del the_iter
         del D
 
-@with_seed()
 def test_dataloader_context():
     X = np.random.uniform(size=(10, 20))
     dataset = gluon.data.ArrayDataset(X)
@@ -612,3 +594,9 @@ def test_batchify_group():
                          [[ 4.,  5.,  6., -1.], [-1., -1., -1., -1.]],
                          [[ 9., 10., -1., -1.], [-1., -1., -1., -1.]]])
     assert mx.test_utils.almost_equal(d[1].asnumpy(), expected)
+
+def test_sampler():
+    interval_sampler = mx.gluon.data.IntervalSampler(10, 3)
+    assert sorted(list(interval_sampler)) == list(range(10))
+    interval_sampler = mx.gluon.data.IntervalSampler(10, 3, rollover=False)
+    assert list(interval_sampler) == [0, 3, 6, 9]

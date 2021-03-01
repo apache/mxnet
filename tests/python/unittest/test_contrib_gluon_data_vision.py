@@ -19,7 +19,6 @@ import mxnet as mx
 import numpy as np
 import scipy.ndimage
 from mxnet.test_utils import *
-from common import assertRaises, with_seed, setup_module, teardown_module
 import shutil
 import tempfile
 import unittest
@@ -51,7 +50,7 @@ def _generate_objects():
 
 
 class TestImage(unittest.TestCase):
-    IMAGES_URL = "http://data.mxnet.io/data/test_images.tar.gz"
+    IMAGES_URL = "https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz"
 
     def setUp(self):
         self.IMAGES_DIR = tempfile.mkdtemp()
@@ -63,7 +62,6 @@ class TestImage(unittest.TestCase):
             print("cleanup {}".format(self.IMAGES_DIR))
             shutil.rmtree(self.IMAGES_DIR)
 
-    @with_seed()
     def test_imageiter(self):
         im_list = [[np.random.randint(0, 5), x] for x in self.IMAGES]
         os.makedirs('./data', exist_ok=True)
@@ -96,7 +94,6 @@ class TestImage(unittest.TestCase):
                     for batch in it:
                         pass
 
-    @with_seed()
     def test_image_bbox_iter(self):
         im_list = [_generate_objects() + [x] for x in self.IMAGES]
         det_iter = mx.gluon.contrib.data.vision.ImageBboxDataLoader(2, (3, 300, 300), imglist=im_list, path_root='')
@@ -133,7 +130,6 @@ class TestImage(unittest.TestCase):
         ]
 
 
-    @with_seed()
     def test_bbox_augmenters(self):
         # only test if all augmenters will work
         # TODO(Joshua Zhang): verify the augmenter outputs
@@ -146,3 +142,4 @@ class TestImage(unittest.TestCase):
             max_attempts=50)
         for batch in det_iter:
             pass
+        mx.nd.waitall()

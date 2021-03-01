@@ -30,7 +30,7 @@ This tutorial shows how to get started with mixed precision training using AMP f
 For demonstration purposes we will use synthetic data loader.
 
 
-```python
+```{.python .input}
 import os
 import logging
 import warnings
@@ -61,7 +61,7 @@ smoothl1_metric = mx.metric.Loss('SmoothL1')
 ```
 
 
-```python
+```{.python .input}
 class SyntheticDataLoader(object):
     def __init__(self, data_shape, batch_size):
         super(SyntheticDataLoader, self).__init__()
@@ -90,7 +90,7 @@ train_data = SyntheticDataLoader(data_shape, batch_size)
 ```
 
 
-```python
+```{.python .input}
 def get_network():
     # SSD with RN50 backbone
     net_name = 'ssd_512_resnet50_v1_coco'
@@ -108,7 +108,7 @@ def get_network():
 First, let us create the network.
 
 
-```python
+```{.python .input}
 net = get_network()
 net.hybridize(static_alloc=True, static_shape=True)
 ```
@@ -118,14 +118,14 @@ net.hybridize(static_alloc=True, static_shape=True)
 Next, we need to create a Gluon Trainer.
 
 
-```python
+```{.python .input}
 trainer = gluon.Trainer(
     net.collect_params(), 'sgd',
     {'learning_rate': lr, 'wd': wd, 'momentum': momentum})
 ```
 
 
-```python
+```{.python .input}
 mbox_loss = gcv.loss.SSDMultiBoxLoss()
 
 for epoch in range(1):
@@ -176,8 +176,8 @@ INFO:root:[Epoch 0][Batch 199], Speed: 58.422 samples/sec, CrossEntropy=0.396, S
 In order to start using AMP, we need to import and initialize it. This has to happen before we create the network.
 
 
-```python
-from mxnet.contrib import amp
+```{.python .input}
+from mxnet import amp
 
 amp.init()
 ```
@@ -190,7 +190,7 @@ INFO:root:Using AMP
 After that, we can create the network exactly the same way we did in FP32 training.
 
 
-```python
+```{.python .input}
 net = get_network()
 net.hybridize(static_alloc=True, static_shape=True)
 ```
@@ -198,7 +198,7 @@ net.hybridize(static_alloc=True, static_shape=True)
 For some models that may be enough to start training in mixed precision, but the full FP16 recipe recommends using dynamic loss scaling to guard against over- and underflows of FP16 values. Therefore, as a next step, we create a trainer and initialize it with support for AMP's dynamic loss scaling. Currently, support for dynamic loss scaling is limited to trainers created with `update_on_kvstore=False` option, and so we add it to our trainer initialization.
 
 
-```python
+```{.python .input}
 trainer = gluon.Trainer(
     net.collect_params(), 'sgd',
     {'learning_rate': lr, 'wd': wd, 'momentum': momentum},
@@ -212,7 +212,7 @@ amp.init_trainer(trainer)
 The last step is to apply the dynamic loss scaling during the training loop and . We can achieve that using the `amp.scale_loss` function.
 
 
-```python
+```{.python .input}
 mbox_loss = gcv.loss.SSDMultiBoxLoss()
 
 for epoch in range(1):
@@ -266,7 +266,7 @@ Below, we demonstrate for a gluon model:
 - Conversion from FP32 model to mixed precision model.
 - Run inference on the mixed precision model.
 
-```python
+```{.python .input}
 with mx.Context(mx.gpu(0)):
     # Below is an example of converting a gluon hybrid block to a mixed precision block
     with warnings.catch_warnings(record=True) as w:

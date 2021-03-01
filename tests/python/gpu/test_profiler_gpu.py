@@ -15,9 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import csv
 import os
 import sys
 
+import numpy as np
 import mxnet as mx
 mx.test_utils.set_default_context(mx.gpu(0))
 
@@ -27,32 +29,29 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 # They will be detected by test framework, as long as the current file has a different filename
 from test_profiler import *
 
-# Test seen to crash pytest worker during development of https://github.com/apache/incubator-mxnet/pull/18694
-del test_aggregate_duplication
-
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_gpu_memory_profiler_symbolic():
-    iter_num = 5
-
-    enable_profiler('test_profiler.json', False, False)
+    enable_profiler('test_profiler.json')
     profiler.set_state('run')
 
     with profiler.scope("tensordot"):
         A = mx.sym.Variable('A')
         B = mx.sym.Variable('B')
-        C = mx.symbol.dot(A, B, name='dot')
+        C = mx.symbol.dot(A, B, name="dot")
 
-    executor = C._simple_bind(mx.gpu(), 'write', A=(4096, 4096), B=(4096, 4096))
+    executor = C._simple_bind(mx.gpu(), 'write', A=(1024, 2048), B=(2048, 4096))
 
-    a = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
-    b = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
+    with profiler.scope("init"):
+        a = mx.random.uniform(-1.0, 1.0, shape=(1024, 2048))
+        b = mx.random.uniform(-1.0, 1.0, shape=(2048, 4096))
 
     a.copyto(executor.arg_dict['A'])
     b.copyto(executor.arg_dict['B'])
 
-    for i in range(iter_num):
-        executor.forward()
-        c = executor.outputs[0]
-        mx.nd.waitall()
+    executor.forward()
+    executor.backward()
+    c = executor.outputs[0]
+    mx.nd.waitall()
     profiler.set_state('stop')
     profiler.dump(True)
 
@@ -62,41 +61,57 @@ def test_gpu_memory_profiler_symbolic():
             {'Attribute Name' : 'tensordot:in_arg:B',
              'Requested Size' : str(4 * b.size)},
             {'Attribute Name' : 'tensordot:dot',
-             'Requested Size' : str(4 * c.size)}]
+             'Requested Size' : str(4 * c.size)},
+            {'Attribute Name' : 'tensordot:dot_backward',
+             'Requested Size' : str(4 * a.size)},
+            {'Attribute Name' : 'tensordot:dot_backward',
+             'Requested Size' : str(4 * b.size)},
+            {'Attribute Name' : 'init:_random_uniform',
+             'Requested Size' : str(4 * a.size)},
+            {'Attribute Name' : 'init:_random_uniform',
+             'Requested Size' : str(4 * b.size)}]
 
     # Sample gpu_memory_profile.csv:
     # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
-    # "<unk>:_zeros","67108864","0","67108864","0"
-    # "<unk>:_zeros","67108864","0","67108864","0"
-    # "tensordot:dot","67108864","0","67108864","1"
-    # "tensordot:dot","67108864","0","67108864","1"
-    # "tensordot:in_arg:A","67108864","0","67108864","0"
-    # "tensordot:in_arg:B","67108864","0","67108864","0"
-    # "nvml_amend","1074790400","0","1074790400","0"
+    # <unk>:_head_grad_0,16777216,0,16777216,0
+    # init:_random_uniform,33554432,0,33554432,1
+    # init:_random_uniform,8388608,0,8388608,1
+    # resource:temp_space (sample_op.h +365),8,0,4096,0
+    # symbol:arg_grad:unknown,8388608,0,8388608,0
+    # symbol:arg_grad:unknown,33554432,0,33554432,0
+    # tensordot:dot,16777216,0,16777216,0
+    # tensordot:dot_backward,8388608,0,8388608,0
+    # tensordot:dot_backward,33554432,0,33554432,0
+    # tensordot:in_arg:A,8388608,0,8388608,0
+    # tensordot:in_arg:B,33554432,0,33554432,0
 
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
+        for row in csv_reader:
+            print(",".join(list(row.values())))
         for expected_alloc_entry in expected_alloc_entries:
             csv_file.seek(0)
             entry_found = False
             for row in csv_reader:
-                if row['Attribute Name'] == expected_alloc_entry['Attribute Name']:
-                    assert row['Requested Size'] == expected_alloc_entry['Requested Size'], \
-                           "requested size={} is not equal to the expected size={}" \
-                           .format(row['Requested Size'],
-                                   expected_alloc_entry['Requested Size'])
+                if row['Attribute Name'] == expected_alloc_entry['Attribute Name'] and \
+                   row['Requested Size'] == expected_alloc_entry['Requested Size']:
                     entry_found = True
                     break
             assert entry_found, \
-                   "Entry for attr_name={} has not been found" \
-                   .format(expected_alloc_entry['Attribute Name'])
+                    "Entry for (attr_name={}, alloc_size={}) has not been found" \
+                    .format(expected_alloc_entry['Attribute Name'],
+                            expected_alloc_entry['Requested Size'])
+        # Make sure that there is no unknown allocation entry.
+        csv_file.seek(0)
+        for row in csv_reader:
+            if row['Attribute Name'] == "<unk>:unknown" or \
+               row['Attribute Name'] == "<unk>:":
+                assert False, "Unknown allocation entry has been encountered"
 
 
-@pytest.mark.skipif(is_cd_run(), reason="flaky test - open issue #18564")
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_gpu_memory_profiler_gluon():
-    enable_profiler(profile_filename='test_profiler.json',
-                    run=True, continuous_dump=True)
+    enable_profiler(profile_filename='test_profiler.json')
     profiler.set_state('run')
 
     model = nn.HybridSequential()
@@ -117,28 +132,55 @@ def test_gpu_memory_profiler_gluon():
     profiler.set_state('stop')
     profiler.dump(True)
 
+    # Sample gpu_memory_profile.csv:
+    # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
+    # <unk>:in_arg:data,640,0,4096,0
+    # hybridsequential:activation0:hybridsequential_activation0_fwd,2048,0,4096,0
+    # hybridsequential:activation0:hybridsequential_activation0_fwd_backward,8192,0,8192,0
+    # hybridsequential:activation0:hybridsequential_activation0_fwd_head_grad,2048,0,4096,0
+    # hybridsequential:dense0:activation0:hybridsequential_dense0_activation0_fwd,8192,0,8192,0
+    # hybridsequential:dense0:arg_grad:bias,512,0,4096,0
+    # hybridsequential:dense0:arg_grad:weight,5120,0,8192,0
+    # hybridsequential:dense0:hybridsequential_dense0_fwd,8192,0,8192,0
+    # hybridsequential:dense0:in_arg:bias,512,0,4096,0
+    # hybridsequential:dense0:in_arg:weight,5120,0,8192,0
+    # hybridsequential:dense1:activation0:hybridsequential_dense1_activation0_fwd,4096,0,4096,0
+    # hybridsequential:dense1:arg_grad:bias,256,0,4096,0
+    # hybridsequential:dense1:arg_grad:weight,32768,0,32768,0
+    # hybridsequential:dense1:hybridsequential_dense1_fwd,4096,0,4096,0
+    # hybridsequential:dense1:in_arg:bias,256,0,4096,0
+    # hybridsequential:dense1:in_arg:weight,32768,0,32768,0
+    # hybridsequential:dense2:arg_grad:bias,128,0,4096,0
+    # hybridsequential:dense2:arg_grad:weight,8192,0,8192,0
+    # hybridsequential:dense2:hybridsequential_dense2_fwd_backward,4096,0,4096,1
+    # hybridsequential:dense2:in_arg:bias,128,0,4096,0
+    # hybridsequential:dense2:in_arg:weight,8192,0,8192,0
+    # hybridsequential:dropout0:hybridsequential_dropout0_fwd,8192,0,8192,0
+    # hybridsequential:dropout0:hybridsequential_dropout0_fwd,8192,0,8192,0
+    # resource:cudnn_dropout_state (dropout-inl.h +256),1474560,0,1474560,0
+    # resource:temp_space (fully_connected-inl.h +316),15360,0,16384,0
+
     # We are only checking for weight parameters here, also making sure that
     # there is no unknown entries in the memory profile.
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         for row in csv_reader:
             print(",".join(list(row.values())))
-        for scope in ['in_arg', 'arg_grad']:
-            for key, nd in model.collect_params().items():
-                expected_arg_name = "%s:%s:" % (model.name, scope) + nd.name
-                expected_arg_size = str(4 * np.prod(nd.shape))
-                csv_file.seek(0)
-                entry_found = False
-                for row in csv_reader:
-                    if row['Attribute Name'] == expected_arg_name:
-                        assert row['Requested Size'] == expected_arg_size, \
-                            "requested size={} is not equal to the expected size={}" \
-                            .format(row['Requested Size'], expected_arg_size)
-                        entry_found = True
-                        break
-                assert entry_found, \
-                    "Entry for attr_name={} has not been found" \
-                    .format(expected_arg_name)
+        for param in model.collect_params().values():
+            expected_arg_name = "%sin_arg:" % param.var().attr('__profiler_scope__') + \
+                                param.name
+            expected_arg_size = str(4 * np.prod(param.shape))
+            csv_file.seek(0)
+            entry_found = False
+            for row in csv_reader:
+                if row['Attribute Name'] == expected_arg_name and \
+                   row['Requested Size'] == expected_arg_size:
+                    entry_found = True
+                    break
+            assert entry_found, \
+                    "Entry for (attr_name={}, alloc_size={}) has not been found" \
+                        .format(expected_arg_name,
+                                expected_arg_size)
         # Make sure that there is no unknown allocation entry.
         csv_file.seek(0)
         for row in csv_reader:

@@ -81,13 +81,13 @@ void NumpyInsertScalarCompute(const nnvm::NodeAttrs& attrs,
     axis += (axis < 0) ? arr.shape_.ndim() : 0;
   }
 
-  int N = arr.shape_[axis];
-  int numnew = 0;  // numnew = output.shape[axis] - arr.shape[axis]
-  int index = 0;  // save modified index, because index may be negative integer
+  index_t N = arr.shape_[axis];
+  size_t numnew = 0;  // numnew = output.shape[axis] - arr.shape[axis]
+  index_t index = 0;  // save modified index, because index may be negative integer
   mxnet::TShape val_newshape(arr.shape_.ndim(), -1);
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
-  for (int i = values.shape_.ndim() - 1, j = arr.shape_.ndim() - 1;
+  for (index_t i = values.shape_.ndim() - 1, j = arr.shape_.ndim() - 1;
         i >= 0 || j >= 0;
         --i, --j) {
     if (i >= 0 && j >= 0) {

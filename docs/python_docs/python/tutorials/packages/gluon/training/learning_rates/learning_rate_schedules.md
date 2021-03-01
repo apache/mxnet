@@ -28,7 +28,7 @@ Schedules define how the learning rate changes over time and are typically speci
 In this tutorial, we visualize the schedules defined in `mx.lr_scheduler`, show how to implement custom schedules and see an example of using a schedule while training models. Since schedules are passed to `mx.optimizer.Optimizer` classes, these methods work with both Module and Gluon APIs.
 
 
-```python
+```{.python .input}
 from __future__ import print_function
 import math
 import matplotlib.pyplot as plt
@@ -39,7 +39,7 @@ import numpy as np
 %matplotlib inline
 ```
 
-```python
+```{.python .input}
 def plot_schedule(schedule_fn, iterations=1500):
     # Iteration count starting at 1
     iterations = [i+1 for i in range(iterations)]
@@ -59,14 +59,14 @@ In this section, we take a look at the schedules in `mx.lr_scheduler`. All of th
 One of the most commonly used learning rate schedules is called stepwise decay, where the learning rate is reduced by a factor at certain intervals. MXNet implements a `FactorScheduler` for equally spaced intervals, and `MultiFactorScheduler` for greater control. We start with an example of halving the learning rate every 250 iterations. More precisely, the learning rate will be multiplied by `factor` _after_ the `step` index and multiples thereafter. So in the example below the learning rate of the 250th iteration will be 1 and the 251st iteration will be 0.5.
 
 
-```python
+```{.python .input}
 schedule = mx.lr_scheduler.FactorScheduler(step=250, factor=0.5)
 schedule.base_lr = 1
 plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/factor.png) <!--notebook-skip-line-->
+![lr factor](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/factor.png) <!--notebook-skip-line-->
 
 
 Note: the `base_lr` is used to determine the initial learning rate. It takes a default value of 0.01 since we inherit from `mx.lr_scheduler.LRScheduler`, but it can be set as a property of the schedule. We will see later in this tutorial that `base_lr` is set automatically when providing the `lr_schedule` to `Optimizer`. Also be aware that the schedules in `mx.lr_scheduler` have state (i.e. counters, etc) so calling the schedule out of order may give unexpected results.
@@ -74,14 +74,14 @@ Note: the `base_lr` is used to determine the initial learning rate. It takes a d
 We can define non-uniform intervals with `MultiFactorScheduler` and in the example below we halve the learning rate _after_ the 250th, 750th (i.e. a step length of 500 iterations) and 900th (a step length of 150 iterations). As before, the learning rate of the 250th iteration will be 1 and the 251th iteration will be 0.5.
 
 
-```python
+```{.python .input}
 schedule = mx.lr_scheduler.MultiFactorScheduler(step=[250, 750, 900], factor=0.5)
 schedule.base_lr = 1
 plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/multifactor.png) <!--notebook-skip-line-->
+![lr multifactor](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/multifactor.png) <!--notebook-skip-line-->
 
 
 ### Polynomial Schedule
@@ -89,13 +89,13 @@ plot_schedule(schedule)
 Stepwise schedules and the discontinuities they introduce may sometimes lead to instability in the optimization, so in some cases smoother schedules are preferred. `PolyScheduler` gives a smooth decay using a polynomial function and reaches a learning rate of 0 after `max_update` iterations. In the example below, we have a quadratic function (`pwr=2`) that falls from 0.998 at iteration 1 to 0 at iteration 1000. After this the learning rate stays at 0, so nothing will be learnt from `max_update` iterations onwards.
 
 
-```python
+```{.python .input}
 schedule = mx.lr_scheduler.PolyScheduler(max_update=1000, base_lr=1, pwr=2)
 plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/polynomial.png) <!--notebook-skip-line-->
+![lr poly](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/polynomial.png) <!--notebook-skip-line-->
 
 
 Note: unlike `FactorScheduler`, the `base_lr` is set as an argument when instantiating the schedule.
@@ -107,13 +107,13 @@ And we don't evaluate at `iteration=0` (to get `base_lr`) since we are working w
 You can implement your own custom schedule with a function or callable class, that takes an integer denoting the iteration index (starting at 1) and returns a float representing the learning rate to be used for that iteration. We implement the Cosine Annealing Schedule in the example below as a callable class (see `__call__` method).
 
 
-```python
+```{.python .input}
 class CosineAnnealingSchedule():
     def __init__(self, min_lr, max_lr, cycle_length):
         self.min_lr = min_lr
         self.max_lr = max_lr
         self.cycle_length = cycle_length
-        
+
     def __call__(self, iteration):
         if iteration <= self.cycle_length:
             unit_cycle = (1 + math.cos(iteration * math.pi / self.cycle_length)) / 2
@@ -128,17 +128,17 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/cosine.png) <!--notebook-skip-line-->
+![lr cosine](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/cosine.png) <!--notebook-skip-line-->
 
 
 ## Using Schedules
 
-While training a simple handwritten digit classifier on the MNIST dataset, we take a look at how to use a learning rate schedule during training. Our demonstration model is a basic convolutional neural network. We start by preparing our `DataLoader` and defining the network. 
+While training a simple handwritten digit classifier on the MNIST dataset, we take a look at how to use a learning rate schedule during training. Our demonstration model is a basic convolutional neural network. We start by preparing our `DataLoader` and defining the network.
 
 As discussed above, the schedule should return a learning rate given an (1-based) iteration index.
 
 
-```python
+```{.python .input}
 # Use GPU if one exists, else use CPU
 ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
 
@@ -169,14 +169,14 @@ def build_cnn():
     # Second fully connected layer with as many neurons as the number of classes
     net.add(nn.Dense(num_outputs))
     return net
-    
+
 net = build_cnn()
 ```
 
 We then initialize our network (technically deferred until we pass the first batch) and define the loss.
 
 
-```python
+```{.python .input}
 # Initialize the parameters with Xavier initializer
 net.initialize(mx.init.Xavier(), ctx=ctx)
 # Use cross entropy loss
@@ -186,7 +186,7 @@ softmax_cross_entropy = mx.gluon.loss.SoftmaxCrossEntropyLoss()
 We're now ready to create our schedule, and in this example we opt for a stepwise decay schedule using `MultiFactorScheduler`. Since we're only training a demonstration model for a limited number of epochs (10 in total) we will exaggerate the schedule and drop the learning rate by 90% after the 4th, 7th and 9th epochs. We call these steps, and the drop occurs _after_ the step index. Schedules are defined for iterations (i.e. training batches), so we must represent our steps in iterations too.
 
 
-```python
+```{.python .input}
 steps_epochs = [4, 7, 9]
 # assuming we keep partial batches, see `last_batch` parameter of DataLoader
 iterations_per_epoch = math.ceil(len(train_dataset) / batch_size)
@@ -201,26 +201,26 @@ Learning rate drops after iterations: [3752, 6566, 8442]
 ```
 
 
-```python
+```{.python .input}
 schedule = mx.lr_scheduler.MultiFactorScheduler(step=steps_iterations, factor=0.1)
 ```
 
 **We create our `Optimizer` and pass the schedule via the `lr_scheduler` parameter.** In this example we're using Stochastic Gradient Descent.
 
 
-```python
+```{.python .input}
 sgd_optimizer = mx.optimizer.SGD(learning_rate=0.03, lr_scheduler=schedule)
 ```
 
 And we use this optimizer (with schedule) in our `Trainer` and train for 10 epochs. Alternatively, we could have set the `optimizer` to the string `sgd`, and pass a dictionary of the optimizer parameters directly to the trainer using `optimizer_params`.
 
 
-```python
+```{.python .input}
 trainer = mx.gluon.Trainer(params=net.collect_params(), optimizer=sgd_optimizer)
 ```
 
 
-```python
+```{.python .input}
 num_epochs = 10
 # epoch and batch counts starting at 1
 for epoch in range(1, num_epochs+1):
@@ -277,7 +277,7 @@ When using the method above you don't need to manually keep track of iteration c
 We replicate the example above, but now keep track of the `iteration_idx`, call the schedule and set the learning rate appropriately using `set_learning_rate`. We also use `schedule.base_lr` to set the initial learning rate for the schedule since we are calling the schedule directly and not using it as part of the `Optimizer`.
 
 
-```python
+```{.python .input}
 net = build_cnn()
 net.initialize(mx.init.Xavier(), ctx=ctx)
 

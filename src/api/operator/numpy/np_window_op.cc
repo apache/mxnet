@@ -45,7 +45,7 @@ inline static void SetNumpyWindowsParam(runtime::MXNetArgs args,
   } else {
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyWindowsParam>(&attrs);
   if (args[2].type_code() != kNull) {

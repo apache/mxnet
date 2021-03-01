@@ -17,6 +17,7 @@
 
 import functools
 import operator
+import tempfile
 
 import numpy as np
 
@@ -306,8 +307,7 @@ def test_dc_dynamic_shape():
     def f(a, *, nd):
         return [mx.nd.np.flatnonzero(a)]
 
-    # Skip GraphExecutor test due to https://github.com/apache/incubator-mxnet/issues/17810
-    for mode in ('imperative', 'imperativewithnondccompute'):
+    for mode in ('imperative', 'imperativewithnondccompute', 'symbolic', 'all'):
         _assert_dc(_dc_simple_setup, f, mode=mode, numpy=True)
 
 
@@ -338,10 +338,6 @@ def test_dc_tuple_indexing():
 
 
 def test_dc_simple_boolean_indexing():
-    if mx.test_utils.default_context() == mx.gpu(0) and mx.runtime.Features().is_enabled("TVM_OP"):
-        # Skip due to https://github.com/apache/incubator-mxnet/issues/17886
-        return
-
     def setup(*, nd):
         assert nd is mx.np
         x = mx.np.array([[0, 1], [1, 1], [2, 2]])
@@ -350,10 +346,6 @@ def test_dc_simple_boolean_indexing():
     def f(a, idx, *, nd):
         assert nd is mx.np
         return [a[idx].reshape((2, 2))]
-
-    # Skip GraphExecutor test due to https://github.com/apache/incubator-mxnet/issues/17810
-    for mode in ('imperative', 'imperativewithnondccompute'):
-        _assert_dc(setup, f, mode=mode)
 
 
 def test_dc_list_indexing_error():
@@ -379,7 +371,7 @@ def test_dc_numpy_indexing_error():
 ###############################################################################
 # Gluon
 ###############################################################################
-def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autograd=True):
+def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autograd=True, ctx=None):
     """Compare results of deferred compute and normal imperative mode.
 
     Parameters
@@ -397,9 +389,14 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
         Wrap in autograd
 
     """
+
     nd = mx.np if numpy else mx.nd
 
-    xs = setup(nd=nd)
+    if ctx is None:
+        ctx = mx.context.current_context()
+    with ctx:
+        xs = setup(nd=nd)
+
     ys = net(*xs)
     ys_np = [y.asnumpy() for y in ys]
 
@@ -423,6 +420,8 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
 
     _all_same(ys_np, ys_hybrid_np)
 
+    with tempfile.TemporaryDirectory() as root:
+        net.export(root)
 
 def _dc_gluon_simple_setup(shape=(8, 10), *, nd):
     return [nd.ones(shape=shape, ctx=mx.context.current_context())]
@@ -439,13 +438,35 @@ def test_dc_hybridblock():
             assert x.shape[1] == 10  # due to in_units=10 above
             return self.dense(x) + self.weight.data(x.context)
 
+    if mx.context.current_context() == mx.cpu(0):  # CPU tests
+        contexts = [mx.cpu(0), mx.cpu(1)]
+    else:  # Use default context, GPU tests
+        contexts = [mx.context.current_context()]
+    for ctx in contexts:
+        net = MyBlock()
+        net.initialize(ctx=contexts)
+        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False, ctx=ctx)
+        with mx.util.np_shape(True), mx.util.np_array(True):
+            net = MyBlock()
+            net.initialize(ctx=contexts)
+            _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True, ctx=ctx)
+
+
+def test_dc_hybridblock_wrapped():
+    @mx.util.use_np
+    class MyBlock(mx.gluon.HybridBlock):
+        def __init__(self):
+            super().__init__()
+            self.dense = mx.gluon.nn.Dense(units=10, in_units=10)
+            self.weight = mx.gluon.Parameter('weight', shape=(10, ))
+
+        def forward(self, x):
+            assert x.shape[1] == 10  # due to in_units=10 above
+            return self.dense(x) + self.weight.data(x.context)
+
     net = MyBlock()
     net.initialize()
-    _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False)
-    with mx.util.np_array(True):
-        net = MyBlock()
-        net.initialize()
-        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
+    _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
 
 
 def test_dc_hybridblock_deferred_init_no_infer_shape_error():
@@ -481,17 +502,13 @@ def test_dc_hybridblock_deferred_init():
     net = MyBlock()
     net.initialize()
     _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False)
-    with mx.util.np_array(True):
+    with mx.util.np_shape(True), mx.util.np_array(True):
         net = MyBlock()
         net.initialize()
         _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
 
 
 def test_dc_hybridblock_dynamic_shape():
-    if mx.test_utils.default_context() == mx.gpu(0) and mx.runtime.Features().is_enabled("TVM_OP"):
-        # Skip due to https://github.com/apache/incubator-mxnet/issues/17886
-        return
-
     class MyBlock(mx.gluon.HybridBlock):
         def __init__(self):
             super().__init__()
@@ -505,11 +522,28 @@ def test_dc_hybridblock_dynamic_shape():
         x = mx.np.array([[0, 1], [1, 1], [2, 2]])
         return [x, x < 2]
 
-    with mx.util.np_array(True):
+    with mx.util.np_shape(True), mx.util.np_array(True):
         net = MyBlock()
         net.initialize()
         _assert_dc_gluon(setup, net, numpy=True)
 
+def test_dc_hybridblock_graph_partition():
+    class MyBlock(mx.gluon.HybridBlock):
+        def __init__(self):
+            super().__init__()
+            self.dense = mx.gluon.nn.Dense(units=4)
+
+        def forward(self, x, idx):
+            return mx.nd.sum(mx.nd.sum(mx.nd.contrib.boolean_mask(self.dense(x), idx)))
+
+    def setup(*, nd):
+        x = mx.nd.array([[0, 1], [2, 3], [4, 5], [6, 7]])
+        idx = mx.nd.array([1, 1, 1, 1])
+        return [x, idx]
+
+    net = MyBlock()
+    net.initialize()
+    _assert_dc_gluon(setup, net, numpy=False, autograd=False)
 
 def test_dc_hybridblock_symbolblock_error():
     model = mx.gluon.nn.HybridSequential()
@@ -544,3 +578,33 @@ def test_dc_hybridblock_symbolblock_error():
     net.hybridize()
     with pytest.raises(RuntimeError):
         out_hybrid = net(data)  # Raises RuntimeError
+
+
+def test_indexing_shape_change():
+    class ConcatBlock(mx.gluon.nn.HybridBlock):
+        def forward(self, inputs):
+            return mx.np.concatenate([
+                inputs,
+                mx.np.pad(inputs[:,1:], ((0,0), (0,1))),
+            ])
+
+    net = ConcatBlock()
+    net.hybridize()
+    net(mx.np.random.uniform(size=(8, 16)))
+    net(mx.np.random.uniform(size=(8, 8)))
+
+
+def test_indexing_empty_shape():
+    @mx.util.use_np
+    class TestModel(mx.gluon.HybridBlock):
+        def forward(self, x):
+            return x[0]
+
+    net = TestModel()
+    net.hybridize()
+    try:
+        mx.npx.set_np()
+        net(mx.np.zeros((2, 2, 4, 0, 128)))
+        net(mx.np.zeros((2, 2, 4, 2, 128)))  # test indexing after input shape change
+    finally:
+        mx.npx.reset_np()

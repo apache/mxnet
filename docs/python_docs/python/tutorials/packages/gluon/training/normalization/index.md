@@ -41,7 +41,7 @@ Warning: You should calculate the normalization means and standard deviations us
 
 When using pre-trained models from the [Gluon Model Zoo](https://mxnet.apache.org/api/python/gluon/model_zoo.html) you'll usually see the normalization statistics used for training (i.e. statistics from step 1). You'll want to use these statistics to normalize your own input data for fine-tuning or inference with these models. Using `transforms.Normalize` is one way of applying the normalization, and this should be used in the `Dataset`.
 
-```python
+```{.python .input}
 import mxnet as mx
 from mxnet.gluon.data.vision.transforms import Normalize
 
@@ -65,9 +65,9 @@ Advanced: all of the following methods begin by normalizing certain input distri
 
 ## Batch Normalization
 
-Figure 1: `BatchNorm` on NCHW data | Figure 2: `BatchNorm` on NTC data 
-- | - 
-![](imgs/NCHW_BN.png) | ![](imgs/NTC_BN.png)
+Figure 1: `BatchNorm` on NCHW data | Figure 2: `BatchNorm` on NTC data
+- | -
+![normalization nchw bn](/_static/NCHW_BN.png) | ![normalization ntc bn](/_static/NTC_BN.png)
 (e.g. batch of images) using the default of `axis=1` | (e.g. batch of sequences) overriding the default with `axis=2` (or `axis=-1`)
 
 One of the most popular normalization techniques is Batch Normalization, usually called BatchNorm for short. We normalize the activations **across all samples in a batch** for each of the channels independently. See Figure 1. We calculate two batch (or local) statistics for every channel to perform the normalization: the mean and variance of the activations in that channel for all samples in a batch. And we use these to shift and scale respectively.
@@ -81,7 +81,7 @@ Warning: it seems that `BatchNorm` is better suited to convolutional networks (C
 As an example, we'll apply `BatchNorm` to a batch of 2 samples, each with 2 channels, and both height and width of 2 (in NCHW format).
 
 
-```python
+```{.python .input}
 data = mx.nd.arange(start=0, stop=2*2*2*2).reshape(2, 2, 2, 2)
 print(data)
 ```
@@ -89,14 +89,14 @@ print(data)
 With MXNet Gluon we can apply batch normalization with the `mx.gluon.nn.BatchNorm` block. It can be created and used just like any other MXNet Gluon block (such as `Conv2D`). Its input will typically be unnormalized activations from the previous layer, and the output will be the normalized activations ready for the next layer. Since we're using data in NCHW format we can use the default axis.
 
 
-```python
+```{.python .input}
 net = mx.gluon.nn.BatchNorm()
 ```
 
 We still need to initialize the block because it has a number of trainable parameters, as we'll see later on.
 
 
-```python
+```{.python .input}
 net.initialize()
 ```
 
@@ -107,7 +107,7 @@ Remember: `BatchNorm` runs differently during training and inference. When train
 Warning: `BatchNorm` assumes the channel dimension is the 2nd in order (i.e. `axis=1`). You need to ensure your data has a channel dimension, and change the `axis` parameter of `BatchNorm` if it's not the 2nd dimension. A batch of greyscale images of shape `(100,32,32)` would not work, since the 2nd dimension is height and not channel. You'd need to add a channel dimension using `data.expand_dims(1)` in this case to give shape `(100,1,32,32)`.
 
 
-```python
+```{.python .input}
 with mx.autograd.record():
     output = net(data)
     loss = output.abs()
@@ -118,7 +118,7 @@ print(output)
 We can immediately see the activations have been scaled down and centered around zero. Activations are the same for each channel, because each channel was normalized independently. We can do a quick sanity check on these results, by manually calculating the batch mean and variance for each channel.
 
 
-```python
+```{.python .input}
 batch_means = data.mean(axis=1, exclude=True)
 batch_vars = (data - batch_means.reshape(1, -1, 1, 1)).square().mean(axis=1, exclude=True)
 print('batch_means:', batch_means.asnumpy())
@@ -128,7 +128,7 @@ print('batch_vars:', batch_vars.asnumpy())
 And use these to scale the first entry in `data`, to confirm the `BatchNorm` calculation of `-1.324` was correct.
 
 
-```python
+```{.python .input}
 print("manually calculated:", ((data[0][0][0][0] - batch_means[0])/batch_vars[0].sqrt()).asnumpy())
 print("automatically calculated:", output[0][0][0][0].asnumpy())
 ```
@@ -141,7 +141,7 @@ Advanced: when using a pre-trained model inside another model (e.g. a pre-traine
 
 After a single step (specifically after the `backward` call) we can see the `running_mean` and `running_var` have been updated.
 
-```python
+```{.python .input}
 print('running_mean:', net.running_mean.data().asnumpy())
 print('running_var:', net.running_var.data().asnumpy())
 ```
@@ -149,7 +149,7 @@ print('running_var:', net.running_var.data().asnumpy())
 You should notice though that these running statistics do not match the batch statistics we just calculated. And instead they are just 10% of the value we'd expect. We see this because of the exponential average process, and because the `momentum` parameter of `BatchNorm` is equal to 0.9 : i.e. 10% of the new value, 90% of the old value (which was initialized to 0). Over time the running statistics will converge to the statistics of the input distribution, while still being flexible enough to adjust to shifts in the input distribution. Using the same batch another 100 times (which wouldn't happen in practice), we can see the running statistics converge to the batch statsitics calculated before.
 
 
-```python
+```{.python .input}
 for i in range(100):
     with mx.autograd.record():
         output = net(data)
@@ -168,7 +168,7 @@ Advanced: Sometimes used for input normalization, you can prevent `beta` shiftin
 We haven't updated these parameters yet, so they should still be as initialized. You can see the default for `beta` is 0 (i.e. not shift) and `gamma` is 1 (i.e. not scale), so the initial behaviour is to keep the distribution unit normalized.
 
 
-```python
+```{.python .input}
 print('beta:', net.beta.data().asnumpy())
 print('gamma:', net.gamma.data().asnumpy())
 ```
@@ -176,7 +176,7 @@ print('gamma:', net.gamma.data().asnumpy())
 We can also check the gradient on these parameters. Since we were finding the gradient of the sum of absolute values, we would expect the gradient of `gamma` to be equal to the number of points in the data (i.e. 16). So to minimize the loss we'd decrease the value of `gamma`, which would happen as part of a `trainer.step`.
 
 
-```python
+```{.python .input}
 print('beta gradient:', net.beta.grad().asnumpy())
 print('gamma gradient:', net.gamma.grad().asnumpy())
 ```
@@ -186,7 +186,7 @@ print('gamma gradient:', net.gamma.grad().asnumpy())
 When it comes to inference, `BatchNorm` uses the global statistics that were calculated during training. Since we're using the same batch of data over and over again (and our global running statistics have converged), we get a very similar result to using training mode. `beta` and `gamma` are also applied by default (unless explicitly removed).
 
 
-```python
+```{.python .input}
 output = net(data)
 print(output)
 ```
@@ -203,15 +203,15 @@ Warning: currently MXNet Gluon's implementation of `LayerNorm` is applied along 
 
 Remember: `LayerNorm` is intended to be used with data in NTC format so the default normalization axis is set to -1 (corresponding to C for channel). Change this to `axis=1` if you need to apply `LayerNorm` to data in NCHW format.
 
-Figure 3: `LayerNorm` on NCHW data | Figure 4: `LayerNorm` on NTC data 
-- | - 
-![](imgs/NCHW_LN.png) | ![](imgs/NTC_LN.png)
+Figure 3: `LayerNorm` on NCHW data | Figure 4: `LayerNorm` on NTC data
+- | -
+![normalization nchw ln](/_static/NCHW_LN.png) | ![normalization ntc ln](/_static/NTC_LN.png)
 (e.g. batch of images) overriding the default with `axis=1` | (e.g. batch of sequences) using the default of `axis=-1`
 
 As an example, we'll apply `LayerNorm` to a batch of 2 samples, each with 4 time steps and 2 channels (in NTC format).
 
 
-```python
+```{.python .input}
 data = mx.nd.arange(start=0, stop=2*4*2).reshape(2, 4, 2)
 print(data)
 ```
@@ -219,7 +219,7 @@ print(data)
 With MXNet Gluon we can apply layer normalization with the `mx.gluon.nn.LayerNorm` block. We need to call `initialize` because `LayerNorm` has two learnable parameters by default: `beta` and `gamma` that are used for post normalization shifting and scaling of each channel.
 
 
-```python
+```{.python .input}
 net = mx.gluon.nn.LayerNorm()
 net.initialize()
 output = net(data)
@@ -231,7 +231,7 @@ We can see that normalization has been applied across all channels for each time
 We can also check the parameters `beta` and `gamma` and see that they are per channel (i.e. 2 of each in this example).
 
 
-```python
+```{.python .input}
 print('beta:', net.beta.data().asnumpy())
 print('gamma:', net.gamma.data().asnumpy())
 ```
@@ -242,15 +242,15 @@ Another less common normalization technique is called `InstanceNorm`, which can 
 
 Watch out: `InstanceNorm` is better suited to convolutional networks (CNNs) than recurrent networks (RNNs). We expect the input distribution to the recurrent cell to change over time, so normalization over time doesn't work well. LayerNorm is better suited for this case.
 
-Figure 3: `InstanceNorm` on NCHW data | Figure 4: `InstanceNorm` on NTC data 
-- | - 
-![](imgs/NCHW_IN.png) | ![](imgs/NTC_IN.png)
+Figure 3: `InstanceNorm` on NCHW data | Figure 4: `InstanceNorm` on NTC data
+- | -
+![normalization nchw in](/_static/NCHW_IN.png) | ![normalization ntc in](/_static/NTC_IN.png)
 (e.g. batch of images) using the default `axis=1` | (e.g. batch of sequences) overiding the default with `axis=2` (or `axis=-1` equivalently)
 
 As an example, we'll apply `InstanceNorm` to a batch of 2 samples, each with 2 channels, and both height and width of 2 (in NCHW format).
 
 
-```python
+```{.python .input}
 data = mx.nd.arange(start=0, stop=2*2*2*2).reshape(2, 2, 2, 2)
 print(data)
 ```
@@ -258,7 +258,7 @@ print(data)
 With MXNet Gluon we can apply instance normalization with the `mx.gluon.nn.InstanceNorm` block. We need to call `initialize` because InstanceNorm has two learnable parameters by default: `beta` and `gamma` that are used for post normalization shifting and scaling of each channel.
 
 
-```python
+```{.python .input}
 net = mx.gluon.nn.InstanceNorm()
 net.initialize()
 output = net(data)
@@ -268,7 +268,7 @@ print(output)
 We can also check the parameters `beta` and `gamma` and see that they are per channel (i.e. 2 of each in this example).
 
 
-```python
+```{.python .input}
 print('beta:', net.beta.data().asnumpy())
 print('gamma:', net.gamma.data().asnumpy())
 ```

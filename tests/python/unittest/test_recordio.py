@@ -21,9 +21,7 @@ import mxnet as mx
 import numpy as np
 import random
 import string
-from common import setup_module, with_seed, teardown_module
 
-@with_seed()
 def test_recordio(tmpdir):
     frec = tmpdir.join('rec')
     N = 255
@@ -38,7 +36,6 @@ def test_recordio(tmpdir):
         res = reader.read()
         assert res == bytes(str(chr(i)), 'utf-8')
 
-@with_seed()
 def test_indexed_recordio(tmpdir):
     fidx = tmpdir.join('idx')
     frec = tmpdir.join('rec')
@@ -57,7 +54,6 @@ def test_indexed_recordio(tmpdir):
         res = reader.read_idx(i)
         assert res == bytes(str(chr(i)), 'utf-8')
 
-@with_seed()
 def test_recordio_pack_label():
     N = 255
 

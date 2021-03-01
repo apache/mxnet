@@ -178,14 +178,19 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
     void *ret = nullptr;
     auto e = contextHelper_->Malloc(&ret, roundSize);
     if (e) {
-      const std::string err(
+      // retry in case of fragmentation
+      ReleaseAllNoLock(false);
+      e = contextHelper_->Malloc(&ret, roundSize);
+      if (e) {
+        const std::string err(
 #if MXNET_USE_CUDA
-      dev_type_ == Context::kGPU?
-         cudaGetErrorString(static_cast<cudaError_t>(e)) :
+        dev_type_ == Context::kGPU?
+           cudaGetErrorString(static_cast<cudaError_t>(e)) :
 #endif
-         std::strerror(errno));
+           std::strerror(errno));
 
-      LOG(FATAL) << "Memory allocation failed " << err;
+        LOG(FATAL) << "Memory allocation failed " << err;
+      }
     }
 
     UNSET_DEVICE(device_store);

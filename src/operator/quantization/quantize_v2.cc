@@ -64,6 +64,7 @@ static OpStatePtr CreateQuantizeV2State(const nnvm::NodeAttrs& attrs, Context ct
 }
 
 NNVM_REGISTER_OP(_contrib_quantize_v2)
+.add_alias("_npx_contrib_quantize_v2")
 .describe(R"code(Quantize a input tensor from float to `out_type`,
 with user-specified `min_calib_range` and `max_calib_range` or the input range collected at runtime.
 

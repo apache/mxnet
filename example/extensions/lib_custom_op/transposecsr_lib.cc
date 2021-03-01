@@ -24,7 +24,10 @@
  */
 
 #include <iostream>
-#include "lib_api.h"
+#include <utility>
+#include "mxnet/lib_api.h"
+
+using namespace mxnet::ext;
 
 void transpose(MXTensor& src, MXTensor& dst, const OpResource& res) {
   MXSparse* A = src.data<MXSparse>();
@@ -70,11 +73,11 @@ MXReturnValue forward(const std::unordered_map<std::string, std::string>& attrs,
   // The data types and storage types of inputs and outputs should be the same.  
   if(inputs->at(0).dtype != outputs->at(0).dtype ||
      inputs->at(0).stype != outputs->at(0).stype) {
-    std::cout << "Error! Expected all inputs and outputs to be the same type." 
-              << "Found input storage type:" << inputs->at(0).stype
-              << " Found output storage type:" << outputs->at(0).stype
-              << " Found input data type:" << inputs->at(0).dtype
-              << " Found output data type:" << outputs->at(0).dtype << std::endl;
+    MX_ERROR_MSG << "Error! Expected all inputs and outputs to be the same type." 
+                 << "Found input storage type:" << inputs->at(0).stype
+                 << " Found output storage type:" << outputs->at(0).stype
+                 << " Found input data type:" << inputs->at(0).dtype
+                 << " Found output data type:" << outputs->at(0).dtype;
     return MX_FAIL;
   }
 
@@ -101,11 +104,11 @@ MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attr
                         std::vector<int>* outtypes) {
   // validate inputs
   if (intypes->size() != 1) {
-    std::cout << "Expected 1 inputs to inferType" << std::endl;
+    MX_ERROR_MSG << "Expected 1 inputs to inferType";
     return MX_FAIL;
   }
   if (intypes->at(0) != kFloat32) {
-    std::cout << "Expected input to have float32 type" << std::endl;
+    MX_ERROR_MSG << "Expected input to have float32 type";
     return MX_FAIL;
   }
 
@@ -117,7 +120,7 @@ MXReturnValue inferSType(const std::unordered_map<std::string, std::string>& att
                          std::vector<int>* instypes,
                          std::vector<int>* outstypes) {
   if (instypes->at(0) != kCSRStorage) {
-    std::cout << "Expected storage type is kCSRStorage" << std::endl;
+    MX_ERROR_MSG << "Expected storage type is kCSRStorage";
     return MX_FAIL;
   }
   outstypes->at(0) = instypes->at(0);
@@ -129,7 +132,7 @@ MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& att
                          std::vector<std::vector<unsigned int>>* outshapes) {
   // validate inputs
   if (inshapes->size() != 1) {
-    std::cout << "Expected 1 inputs to inferShape" << std::endl;
+    MX_ERROR_MSG << "Expected 1 inputs to inferShape";
     return MX_FAIL;
   }
 
@@ -151,19 +154,19 @@ REGISTER_OP(my_transposecsr)
 class MyStatefulTransposeCSR : public CustomStatefulOp {
   public:
     explicit MyStatefulTransposeCSR(int count,
-                                    const std::unordered_map<std::string, std::string>& attrs)
-      : count(count), attrs_(attrs) {}
+                                    std::unordered_map<std::string, std::string>  attrs)
+      : count(count), attrs_(std::move(attrs)) {}
 
     MXReturnValue Forward(std::vector<MXTensor>* inputs,
                           std::vector<MXTensor>* outputs,
-                          const OpResource& op_res) {
+                          const OpResource& op_res) override {
       std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
       return forward(attrs_, inputs, outputs, op_res);
     }
 
     MXReturnValue Backward(std::vector<MXTensor>* inputs,
                            std::vector<MXTensor>* outputs,
-                           const OpResource& op_res) {
+                           const OpResource& op_res) override {
       return backward(attrs_, inputs, outputs, op_res);
     }
 
@@ -173,6 +176,9 @@ class MyStatefulTransposeCSR : public CustomStatefulOp {
 };
 
 MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
+                            const MXContext& ctx,
+                            const std::vector<std::vector<unsigned int> >& in_shapes,
+                            const std::vector<int> in_types,
                             CustomStatefulOp** op_inst) {
   // testing passing of keyword arguments
   int count = attrs.count("test_kw") > 0 ? std::stoi(attrs.at("test_kw")) : 0;
@@ -194,7 +200,7 @@ MXReturnValue initialize(int version) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {
-    std::cout << "MXNet version " << version << " not supported" << std::endl;
+    MX_ERROR_MSG << "MXNet version " << version << " not supported";
     return MX_FAIL;
   }
 }

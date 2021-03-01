@@ -467,7 +467,7 @@ inline bool DetType(const nnvm::NodeAttrs& attrs,
     TYPE_ASSIGN_CHECK(*out_type, i, dtype);  /* sign or det or logdet */
   }
   TYPE_ASSIGN_CHECK(*out_type, onum, dtype);  /* LU */
-  TYPE_ASSIGN_CHECK(*out_type, onum + 1, kInt32);  /* pivot */
+  TYPE_ASSIGN_CHECK(*out_type, onum + 1, index_type_flag); /* pivot */
   return true;
 }
 
@@ -812,7 +812,7 @@ void LaOpBackwSyevd(const nnvm::NodeAttrs& attrs,
 }
 
 
-template<typename xpu, typename DType, int onum, typename laop>
+template<typename xpu, typename DType, int onum, typename laop, typename IndexT>
 struct LaOpDetForwardCaller {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
@@ -821,8 +821,8 @@ struct LaOpDetForwardCaller {
       CHECK(false) << "no specialized LaOpDetForward defined for template parameters";
   }
 };
-template<typename xpu, typename DType, typename laop>
-struct LaOpDetForwardCaller<xpu, DType, 1, laop> {
+template<typename xpu, typename DType, typename laop, typename IndexT>
+struct LaOpDetForwardCaller<xpu, DType, 1, laop, IndexT> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
@@ -831,11 +831,11 @@ struct LaOpDetForwardCaller<xpu, DType, 1, laop> {
     laop::op(inputs[0].FlatToKD<xpu, 3, DType>(s),
              outputs[0].FlatToKD<xpu, 1, DType>(s),
              outputs[1].FlatToKD<xpu, 3, DType>(s),
-             outputs[2].FlatToKD<xpu, 2, int>(s), ctx, attrs);
+             outputs[2].FlatToKD<xpu, 2, IndexT>(s), ctx, attrs);
   }
 };
-template<typename xpu, typename DType, typename laop>
-struct LaOpDetForwardCaller<xpu, DType, 2, laop> {
+template<typename xpu, typename DType, typename laop, typename IndexT>
+struct LaOpDetForwardCaller<xpu, DType, 2, laop, IndexT> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
@@ -845,7 +845,7 @@ struct LaOpDetForwardCaller<xpu, DType, 2, laop> {
              outputs[0].FlatToKD<xpu, 1, DType>(s),
              outputs[1].FlatToKD<xpu, 1, DType>(s),
              outputs[2].FlatToKD<xpu, 3, DType>(s),
-             outputs[3].FlatToKD<xpu, 2, int>(s), ctx, attrs);
+             outputs[3].FlatToKD<xpu, 2, IndexT>(s), ctx, attrs);
   }
 };
 template<typename xpu, int onum, typename laop>
@@ -855,14 +855,15 @@ void LaOpDetForward(const nnvm::NodeAttrs& attrs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
   using namespace mshadow;
+  using IndexT = lapack_index_t;
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), onum + 2);
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-    LaOpDetForwardCaller<xpu, OType, onum, laop>::op(inputs, outputs, attrs, ctx);
+    LaOpDetForwardCaller<xpu, OType, onum, laop, IndexT>::op(inputs, outputs, attrs, ctx);
   });
 }
 
-template<typename xpu, typename DType, int onum, typename laop>
+template<typename xpu, typename DType, int onum, typename laop, typename IndexT>
 struct LaOpDetBackwardCaller {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
@@ -871,8 +872,8 @@ struct LaOpDetBackwardCaller {
       CHECK(false) << "no specialized LaOpDetBackward defined for template parameters";
   }
 };
-template<typename xpu, typename DType, typename laop>
-struct LaOpDetBackwardCaller<xpu, DType, 1, laop> {
+template<typename xpu, typename DType, typename laop, typename IndexT>
+struct LaOpDetBackwardCaller<xpu, DType, 1, laop, IndexT> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
@@ -881,12 +882,12 @@ struct LaOpDetBackwardCaller<xpu, DType, 1, laop> {
     laop::op(inputs[0].FlatToKD<xpu, 1, DType>(s),
              inputs[1].FlatToKD<xpu, 1, DType>(s),
              inputs[2].FlatToKD<xpu, 3, DType>(s),
-             inputs[3].FlatToKD<xpu, 2, int>(s),
+             inputs[3].FlatToKD<xpu, 2, IndexT>(s),
              outputs[0].FlatToKD<xpu, 3, DType>(s), ctx, attrs);
   }
 };
-template<typename xpu, typename DType, typename laop>
-struct LaOpDetBackwardCaller<xpu, DType, 2, laop> {
+template<typename xpu, typename DType, typename laop, typename IndexT>
+struct LaOpDetBackwardCaller<xpu, DType, 2, laop, IndexT> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
@@ -896,7 +897,7 @@ struct LaOpDetBackwardCaller<xpu, DType, 2, laop> {
              inputs[1].FlatToKD<xpu, 1, DType>(s),
              inputs[2].FlatToKD<xpu, 1, DType>(s),
              inputs[3].FlatToKD<xpu, 3, DType>(s),
-             inputs[4].FlatToKD<xpu, 2, int>(s),
+             inputs[4].FlatToKD<xpu, 2, IndexT>(s),
              outputs[0].FlatToKD<xpu, 3, DType>(s), ctx, attrs);
   }
 };
@@ -907,6 +908,7 @@ void LaOpDetBackward(const nnvm::NodeAttrs& attrs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
+  using IndexT = lapack_index_t;
   if (outputs[0].shape_.Size() == 0U) {
     return;
   }
@@ -921,7 +923,7 @@ void LaOpDetBackward(const nnvm::NodeAttrs& attrs,
                              .get_space_typed<xpu, 1, OType>(Shape1(outputs[i].Size()), s).dptr_;
       }
     }
-    LaOpDetBackwardCaller<xpu, OType, onum, laop>::op(inputs, tspace, attrs, ctx);
+    LaOpDetBackwardCaller<xpu, OType, onum, laop, IndexT>::op(inputs, tspace, attrs, ctx);
     for ( size_t i = 0; i < outputs.size(); ++i ) {
       if ( req[i] == kAddTo ) {
         Tensor<xpu, 1, OType> out = outputs[i].FlatTo1D<xpu, OType>(s);

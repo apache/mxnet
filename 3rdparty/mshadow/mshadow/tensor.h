@@ -50,6 +50,17 @@ struct gpu {
   /*! \brief device flag number, identifies this device */
   static const int kDevMask = 1 << 1;
 };
+
+template <typename xpu>
+struct LapackIndex {
+    using IndexT = lapack_index_t;
+};
+
+template <>
+struct LapackIndex <gpu> {
+    using IndexT = int;
+};
+
 template<int ndim>
 struct Shape;
 
@@ -97,7 +108,10 @@ struct Shape {
    * \return the corresponding dimension size
    */
   MSHADOW_XINLINE const index_t &operator[](int idx) const {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
     return shape_[idx];
+#pragma GCC diagnostic pop
   }
   /*!
    * \return whether two shape equals
@@ -848,6 +862,19 @@ inline void AddTakeGrad(Tensor<cpu, 2, DType> dst,
  * \param index index to take
  * \param src source output
  */
+template<bool clip = true, typename IndexType, typename DType, typename AType>
+inline void AddTakeGrad(Tensor<cpu, 2, DType> dst,
+                        Tensor<cpu, 2, AType> temp,
+                        const Tensor<cpu, 1, IndexType>& index,
+                        const Tensor<cpu, 2, DType> &src);
+/*!
+ * \brief CPU/GPU: Gradient accumulate of embedding matrix with safe accumulation.
+                   dst[index[i]] += src[i]
+ * \param dst destination
+ * \temp temporal storage for safe accumulation
+ * \param index index to take
+ * \param src source output
+ */
 template<bool clip = true, typename IndexType, typename DType>
 inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
                         const Tensor<gpu, 1, IndexType>& index,
@@ -859,6 +886,19 @@ inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
  * \param dst destination
  * \param sorted the sorted indices
  * \param index original index of the sorted indices
+ * \param src source output
+ */
+template<bool clip = true, typename IndexType, typename DType, typename AType>
+inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
+                        Tensor<gpu, 2, AType> temp,
+                        const Tensor<gpu, 1, IndexType>& index,
+                        const Tensor<gpu, 2, DType> &src);
+/*!
+ * \brief CPU/GPU: Gradient accumulate of embedding matrix with safe accumulation.
+                   dst[index[i]] += src[i]
+ * \param dst destination
+ * \temp temporal storage for safe accumulation
+ * \param index index to take
  * \param src source output
  */
 template<typename IndexType, typename DType>

@@ -16,9 +16,14 @@
    under the License.
 
 data.vision
-============
+===========
 
-.. automodule:: mxnet.gluon.data.vision
+.. currentmodule:: mxnet.gluon.data.vision
+
+.. autosummary::
+    :nosignatures:
+
+    mxnet.gluon.data.vision
 
 Datasets
 ^^^^^^^^
@@ -26,7 +31,7 @@ Datasets
 .. autosummary::
     :nosignatures:
 
-    mxnet.gluon.data.vision.datasets
+    datasets
 
 
 Data transformations
@@ -36,7 +41,7 @@ Data transformations
 .. autosummary::
     :nosignatures:
 
-    mxnet.gluon.data.vision.transforms
+    transforms
 
 
 API Reference

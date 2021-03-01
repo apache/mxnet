@@ -74,6 +74,36 @@ def _reshape_like(F, x, y):
     return F.reshape_like(x, y)
 
 
+def _batch_mean(F, loss, batch_axis):
+    """Return mean on the specified batch axis, not keeping the axis"""
+    if is_np_array():
+        if F is ndarray:
+            axes = list(range(loss.ndim))
+            del axes[batch_axis]
+            return F.np.mean(loss, axis=axes)
+        else:
+            assert batch_axis == 0, 'Currently, we have not supported the "exclude" ' \
+                                    'flag in mean. So we only support batch_axis=0.'
+            return F.npx.batch_flatten(loss).mean(axis=1)
+    else:
+        return F.mean(loss, axis=batch_axis, exclude=True)
+
+def _batch_sum(F, loss, batch_axis):
+    """Return sum on the specified batch axis, not keeping the axis"""
+    if is_np_array():
+        if F is ndarray:
+            axes = list(range(loss.ndim))
+            del axes[batch_axis]
+            return F.np.sum(loss, axis=axes)
+        else:
+            assert batch_axis == 0, 'Currently, we have not supported the "exclude" ' \
+                                    'flag in mean. So we only support batch_axis=0.'
+            return F.npx.batch_flatten(loss).sum(axis=1)
+    else:
+        return F.sum(loss, axis=batch_axis, exclude=True)
+
+
+
 class Loss(HybridBlock):
     """Base class for loss.
 
@@ -142,16 +172,11 @@ class L2Loss(Loss):
         super(L2Loss, self).__init__(weight, batch_axis, **kwargs)
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
+        square_fn = F.np.square if is_np_array() else F.square
         label = _reshape_like(F, label, pred)
-        loss = F.np.square(label - pred) if is_np_array() else F.square(label - pred)
+        loss = square_fn(label - pred)
         loss = _apply_weighting(F, loss, self._weight / 2, sample_weight)
-        if is_np_array():
-            if F is ndarray:
-                return F.np.mean(loss, axis=tuple(range(1, loss.ndim)))
-            else:
-                return F.npx.batch_flatten(loss).mean(axis=1)
-        else:
-            return F.mean(loss, axis=self._batch_axis, exclude=True)
+        return _batch_mean(F, loss, self._batch_axis)
 
 
 class L1Loss(Loss):
@@ -187,16 +212,11 @@ class L1Loss(Loss):
         super(L1Loss, self).__init__(weight, batch_axis, **kwargs)
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
+        abs_fn = F.np.abs if is_np_array() else F.abs
         label = _reshape_like(F, label, pred)
-        loss = F.np.abs(label - pred) if is_np_array() else F.abs(label - pred)
+        loss = abs_fn(label - pred)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        if is_np_array():
-            if F is ndarray:
-                return F.np.mean(loss, axis=tuple(range(1, loss.ndim)))
-            else:
-                return F.npx.batch_flatten(loss).mean(axis=1)
-        else:
-            return F.mean(loss, axis=self._batch_axis, exclude=True)
+        return _batch_mean(F, loss, self._batch_axis)
 
 
 class SigmoidBinaryCrossEntropyLoss(Loss):
@@ -262,7 +282,6 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
         self._from_sigmoid = from_sigmoid
 
     def hybrid_forward(self, F, pred, label, sample_weight=None, pos_weight=None):
-        label = _reshape_like(F, label, pred)
         if is_np_array():
             relu_fn = F.npx.relu
             act_fn = F.npx.activation
@@ -275,6 +294,7 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
             abs_fn = F.abs
             mul_fn = F.broadcast_mul
             log_fn = F.log
+        label = _reshape_like(F, label, pred)
         if not self._from_sigmoid:
             if pos_weight is None:
                 # We use the stable formula: max(x, 0) - x * z + log(1 + exp(-abs(x)))
@@ -295,13 +315,7 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
                 loss = -(mul_fn(log_fn(pred + eps) * label, pos_weight)
                          + log_fn(1. - pred + eps) * (1. - label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        if is_np_array():
-            if F is ndarray:
-                return F.np.mean(loss, axis=tuple(range(1, loss.ndim)))
-            else:
-                return F.npx.batch_flatten(loss).mean(axis=1)
-        else:
-            return F.mean(loss, axis=self._batch_axis, exclude=True)
+        return _batch_mean(F, loss, self._batch_axis)
 
 
 SigmoidBCELoss = SigmoidBinaryCrossEntropyLoss
@@ -360,7 +374,7 @@ class SoftmaxCrossEntropyLoss(Loss):
           `sparse_label` is False, `label`'s shape must be the same as `pred`
           and values should be floats in the range `[0, 1]`.
         - **sample_weight**: element-wise weighting tensor. Must be broadcastable
-          to the same shape as label. For example, if label has shape (64, 10)
+          to the same shape as pred. For example, if pred has shape (64, 10)
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
 
@@ -379,26 +393,20 @@ class SoftmaxCrossEntropyLoss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         if is_np_array():
-            log_softmax = F.npx.log_softmax
-            pick = F.npx.pick
+            log_softmax_fn = F.npx.log_softmax
+            pick_fn = F.npx.pick
         else:
-            log_softmax = F.log_softmax
-            pick = F.pick
+            log_softmax_fn = F.log_softmax
+            pick_fn = F.pick
         if not self._from_logits:
-            pred = log_softmax(pred, self._axis)
+            pred = log_softmax_fn(pred, self._axis)
         if self._sparse_label:
-            loss = -pick(pred, label, axis=self._axis, keepdims=True)
+            loss = -pick_fn(pred, label, axis=self._axis, keepdims=True)
         else:
             label = _reshape_like(F, label, pred)
             loss = -(pred * label).sum(axis=self._axis, keepdims=True)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        if is_np_array():
-            if F is ndarray:
-                return loss.mean(axis=tuple(range(1, loss.ndim)))
-            else:
-                return F.npx.batch_flatten(loss).mean(axis=1)
-        else:
-            return loss.mean(axis=self._batch_axis, exclude=True)
+        return _batch_mean(F, loss, self._batch_axis)
 
 
 SoftmaxCELoss = SoftmaxCrossEntropyLoss
@@ -472,11 +480,17 @@ class KLDivLoss(Loss):
         self._axis = axis
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
+        if is_np_array():
+            log_softmax_fn = F.npx.log_softmax
+            log_fn = F.np.log
+        else:
+            log_softmax_fn = F.log_softmax
+            log_fn = F.log
         if not self._from_logits:
-            pred = F.log_softmax(pred, self._axis)
-        loss = label * (F.log(label + 1e-12) - pred)
+            pred = log_softmax_fn(pred, self._axis)
+        loss = label * (log_fn(label + 1e-12) - pred)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.sum(loss, axis=self._batch_axis, exclude=True)
+        return _batch_mean(F, loss, self._batch_axis)
 
 
 class CTCLoss(Loss):
@@ -549,14 +563,20 @@ class CTCLoss(Loss):
 
     def hybrid_forward(self, F, pred, label,
                        pred_lengths=None, label_lengths=None, sample_weight=None):
+        if is_np_array():
+            swapaxes_fn = F.np.swapaxes
+            ctc_fn = F.npx.ctc_loss
+        else:
+            swapaxes_fn = F.swapaxes
+            ctc_fn = F.ctc_loss
         if self._layout == 'NTC':
-            pred = F.swapaxes(pred, 0, 1)
+            pred = swapaxes_fn(pred, 0, 1)
         if self._batch_axis == 1:
-            label = F.swapaxes(label, 0, 1)
-        loss = F.CTCLoss(pred, label, pred_lengths, label_lengths,
-                         use_data_lengths=pred_lengths is not None,
-                         use_label_lengths=label_lengths is not None,
-                         blank_label='last')
+            label = swapaxes_fn(label, 0, 1)
+        loss = ctc_fn(pred, label, pred_lengths, label_lengths,
+                      use_data_lengths=pred_lengths is not None,
+                      use_label_lengths=label_lengths is not None,
+                      blank_label='last')
         return _apply_weighting(F, loss, self._weight, sample_weight)
 
 
@@ -602,12 +622,20 @@ class HuberLoss(Loss):
         self._rho = rho
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
+        if is_np_array():
+            abs_fn = F.np.abs
+            where_fn = F.np.where
+            square_fn = F.np.square
+        else:
+            abs_fn = F.abs
+            where_fn = F.where
+            square_fn = F.square
         label = _reshape_like(F, label, pred)
-        loss = F.abs(label - pred)
-        loss = F.where(loss > self._rho, loss - 0.5 * self._rho,
-                       (0.5 / self._rho) * F.square(loss))
+        loss = abs_fn(label - pred)
+        loss = where_fn(loss > self._rho, loss - 0.5 * self._rho,
+                        (0.5 / self._rho) * square_fn(loss))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        return _batch_mean(F, loss, self._batch_axis)
 
 
 class HingeLoss(Loss):
@@ -649,10 +677,11 @@ class HingeLoss(Loss):
         self._margin = margin
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
+        relu_fn = F.npx.relu if is_np_array() else F.relu
         label = _reshape_like(F, label, pred)
-        loss = F.relu(self._margin - pred * label)
+        loss = relu_fn(self._margin - pred * label)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        return _batch_mean(F, loss, self._batch_axis)
 
 
 class SquaredHingeLoss(Loss):
@@ -694,10 +723,16 @@ class SquaredHingeLoss(Loss):
         self._margin = margin
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
+        if is_np_array():
+            relu_fn = F.npx.relu
+            square_fn = F.np.square
+        else:
+            relu_fn = F.relu
+            square_fn = F.square
         label = _reshape_like(F, label, pred)
-        loss = F.square(F.relu(self._margin - pred * label))
+        loss = square_fn(relu_fn(self._margin - pred * label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        return _batch_mean(F, loss, self._batch_axis)
 
 
 class LogisticLoss(Loss):
@@ -739,18 +774,26 @@ class LogisticLoss(Loss):
         super(LogisticLoss, self).__init__(weight, batch_axis, **kwargs)
         self._label_format = label_format
         if self._label_format not in ["signed", "binary"]:
-            raise ValueError("label_format can only be signed or binary, recieved %s."
+            raise ValueError("label_format can only be signed or binary, received %s."
                              % label_format)
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
+        if is_np_array():
+            relu_fn = F.npx.relu
+            act_fn = F.npx.activation
+            abs_fn = F.np.abs
+        else:
+            relu_fn = F.relu
+            act_fn = F.Activation
+            abs_fn = F.abs
         label = _reshape_like(F, label, pred)
         if self._label_format == 'signed':
             label = (label + 1.0) / 2.0  # Transform label to be either 0 or 1
         # Use a stable formula in computation
-        loss = F.relu(pred) - pred * label + \
-            F.Activation(-F.abs(pred), act_type='softrelu')
+        loss = relu_fn(pred) - pred * label + \
+            act_fn(-abs_fn(pred), act_type='softrelu')
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        return _batch_mean(F, loss, self._batch_axis)
 
 
 class TripletLoss(Loss):
@@ -790,13 +833,18 @@ class TripletLoss(Loss):
         super(TripletLoss, self).__init__(weight, batch_axis, **kwargs)
         self._margin = margin
 
-    def hybrid_forward(self, F, pred, positive, negative):
+    def hybrid_forward(self, F, pred, positive, negative, sample_weight=None):
+        if is_np_array():
+            relu_fn = F.npx.relu
+            square_fn = F.np.square
+        else:
+            relu_fn = F.relu
+            square_fn = F.square
         positive = _reshape_like(F, positive, pred)
         negative = _reshape_like(F, negative, pred)
-        loss = F.sum(F.square(positive - pred) - F.square(negative - pred),
-                     axis=self._batch_axis, exclude=True)
-        loss = F.relu(loss + self._margin)
-        return _apply_weighting(F, loss, self._weight, None)
+        loss = _batch_sum(F, square_fn(positive - pred) - square_fn(negative - pred), self._batch_axis)
+        loss = relu_fn(loss + self._margin)
+        return _apply_weighting(F, loss, self._weight, sample_weight)
 
 
 class PoissonNLLLoss(Loss):
@@ -845,20 +893,26 @@ class PoissonNLLLoss(Loss):
         self._compute_full = compute_full
 
     def hybrid_forward(self, F, pred, target, sample_weight=None, epsilon=1e-08):
+        if is_np_array():
+            exp_fn = F.np.exp
+            log_fn = F.np.log
+        else:
+            exp_fn = F.exp
+            log_fn = F.log
         target = _reshape_like(F, target, pred)
         if self._from_logits:
-            loss = F.exp(pred) - target * pred
+            loss = exp_fn(pred) - target * pred
         else:
-            loss = pred - target * F.log(pred + epsilon)
+            loss = pred - target * log_fn(pred + epsilon)
         if self._compute_full:
             # Using numpy's pi value
             stirling_factor = target * \
-                F.log(target) - target + 0.5 * F.log(2 * target * np.pi)
+                log_fn(target) - target + 0.5 * log_fn(2 * target * np.pi)
             target_gt_1 = target > 1
-            stirling_factor *= target_gt_1
-            loss += stirling_factor
+            stirling_factor = stirling_factor * target_gt_1
+            loss = loss + stirling_factor
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss)
+        return _batch_mean(F, loss, self._batch_axis)
 
 
 class CosineEmbeddingLoss(Loss):
@@ -902,33 +956,42 @@ class CosineEmbeddingLoss(Loss):
         self._margin = margin
 
     def hybrid_forward(self, F, input1, input2, label, sample_weight=None):
-        input1 = _reshape_like(F, input1, input2)
-        label = label.reshape((-1, 1))
-        cos_sim = self._cosine_similarity(F, input1, input2)
-        y_1 = label == 1
-        y_minus_1 = label == -1
-        cos_sim_a = (1 - cos_sim) * y_1
-
-        if F is ndarray:
-            z_array = F.array([0])
+        if is_np_array():
+            where_fn = F.np.where
+            clip_fn = F.np.clip
         else:
-            z_array = F.zeros((1, 1))
-        cos_sim_b = F.broadcast_maximum(
-            z_array, y_minus_1 * (cos_sim - self._margin), axis=1)
-        loss = cos_sim_a + cos_sim_b
+            where_fn = F.where
+            clip_fn = F.clip
+
+        input1 = _reshape_like(F, input1, input2)
+        cos_sim = self._cosine_similarity(F, input1, input2)
+        label = _reshape_like(F, label, cos_sim)
+        loss = where_fn(label == 1,
+                        1 - cos_sim,
+                        clip_fn(cos_sim - self._margin, 0, 1 - self._margin))
+
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return loss
+        return _batch_mean(F, loss, self._batch_axis)
 
     def _cosine_similarity(self, F, x, y, axis=-1):
-        # Calculates the cosine similarity between 2 vectors
-        x_norm = F.norm(x, axis=axis).reshape((-1, 1))
-        y_norm = F.norm(y, axis=axis).reshape((-1, 1))
-        x_dot_y = F.sum(x * y, axis=axis).reshape((-1, 1))
-        if F is ndarray:
-            eps_arr = F.array([1e-12])
+        if is_np_array():
+            reshape_fn = F.npx.reshape
+            norm_fn = F.npx.norm
+            sum_fn = F.np.sum
+            full_fn = F.np.full
+            max_fn = F.np.maximum
         else:
-            eps_arr = F.full((1, 1), 1e-12)
-        return (x_dot_y / F.broadcast_maximum(x_norm * y_norm, eps_arr))
+            reshape_fn = F.reshape
+            norm_fn = F.norm
+            sum_fn = F.sum
+            full_fn = F.full
+            max_fn = F.broadcast_maximum
+        # Calculates the cosine similarity between 2 vectors
+        x_norm = reshape_fn(norm_fn(x, axis=axis), (-1, 1))
+        y_norm = reshape_fn(norm_fn(y, axis=axis), (-1, 1))
+        x_dot_y = reshape_fn(sum_fn(x * y, axis=axis), (-1, 1))
+        eps_arr = full_fn((1, 1), 1e-12)
+        return (x_dot_y / max_fn(x_norm * y_norm, eps_arr))
 
 
 class SDMLLoss(Loss):
@@ -970,20 +1033,23 @@ class SDMLLoss(Loss):
     def __init__(self, smoothing_parameter=0.3, weight=1., batch_axis=0, **kwargs):
         super(SDMLLoss, self).__init__(weight, batch_axis, **kwargs)
         self.kl_loss = KLDivLoss(from_logits=True)
-        self.smoothing_parameter = smoothing_parameter # Smoothing probability mass
+        # Smoothing probability mass
+        self.smoothing_parameter = smoothing_parameter
 
-    def _compute_distances(self, x1, x2):
+    def _compute_distances(self, F, x1, x2):
         """
         This function computes the euclidean distance between every vector
         in the two batches in input.
         """
+        if is_np_array():
+            expand_dims_fn = F.np.expand_dims
+        else:
+            expand_dims_fn = F.expand_dims
 
-        # extracting sizes expecting [batch_size, dim]
-        assert x1.shape == x2.shape
-        batch_size, dim = x1.shape
-        # expanding both tensor form [batch_size, dim] to [batch_size, batch_size, dim]
-        x1_ = x1.expand_dims(1).broadcast_to([batch_size, batch_size, dim])
-        x2_ = x2.expand_dims(0).broadcast_to([batch_size, batch_size, dim])
+        # expanding x1 form [batch_size, dim] to [batch_size, 1, dim]
+        # and x2 to [1, batch_size, dim]
+        x1_ = expand_dims_fn(x1, 1)
+        x2_ = expand_dims_fn(x2, 0)
         # pointwise squared differences
         squared_diffs = (x1_ - x2_)**2
         # sum of squared differences distance
@@ -1014,8 +1080,7 @@ class SDMLLoss(Loss):
         labels = gold * (1 - self.smoothing_parameter) + (1 - gold) * self.smoothing_parameter / (batch_size - 1)
         return labels
 
-
-    def _loss(self, F, x1, x2):
+    def hybrid_forward(self, F, x1, x2):
         """
         the function computes the kl divergence between the negative distances
         (internally it compute a softmax casting into probabilities) and the
@@ -1033,15 +1098,16 @@ class SDMLLoss(Loss):
         learn to predict french president comparing it with all the other
         vectors in batch 2
         """
+        assert F is ndarray, 'SDMLLoss does not support symbolic '
+        if is_np_array():
+            log_softmax_fn = F.npx.log_softmax
+        else:
+            log_softmax_fn = F.log_softmax
         batch_size = x1.shape[0]
         labels = self._compute_labels(F, batch_size)
-        distances = self._compute_distances(x1, x2)
-        log_probabilities = F.log_softmax(-distances, axis=1)
+        distances = self._compute_distances(F, x1, x2)
+        log_probabilities = log_softmax_fn(-distances, axis=1)
         # multiply for the number of labels to obtain the correct loss (gluon kl_loss averages instead of sum)
         # PR#18423:multiply for the number of labels should multiply x1.shape[1] rather than x1.shape[0])
         # After PR#18423, it is no need to multiply it anymore.
         return self.kl_loss(log_probabilities, labels.as_in_context(distances.context))
-
-
-    def hybrid_forward(self, F, x1, x2):
-        return self._loss(F, x1, x2)

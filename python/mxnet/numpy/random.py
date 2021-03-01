@@ -18,13 +18,15 @@
 """Namespace for ops used in imperative programming."""
 
 from ..ndarray import numpy as _mx_nd_np
+from ..random import seed
 
 
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
            "logistic", "gumbel", "f",
            "laplace",
            "shuffle", "randn", "gamma", "beta", "chisquare", "exponential", "lognormal",
-           "weibull", "pareto", "power", "rayleigh"]
+           "weibull", "pareto", "power", "rayleigh",
+           "seed"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -143,7 +145,6 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     Samples are distributed according to a normal distribution parametrized
     by *loc* (mean) and *scale* (standard deviation).
 
-
     Parameters
     ----------
     loc : float, optional
@@ -167,7 +168,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     Returns
     -------
     out : ndarray
-        Drawn samples from the parameterized normal distribution.
+        Drawn samples from the parameterized `normal distribution` [1]_.
 
     Notes
     -----
@@ -210,8 +211,8 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
 def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     r"""Draw samples from a log-normal distribution.
 
-    Draw samples from a log-normal distribution with specified mean,
-    standard deviation, and array shape.  Note that the mean and standard
+    Draw samples from a `log-normal distribution` [1]_ with specified mean,
+    standard deviation, and array shape. Note that the mean and standard
     deviation are not the values for the distribution itself, but of the
     underlying normal distribution it is derived from.
 
@@ -242,10 +243,12 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     Notes
     -----
     A variable `x` has a log-normal distribution if `log(x)` is normally
-    distributed.  The probability density function for the log-normal
-    distribution is:
+    distributed.  The `probability density function for the log-normal
+    distribution` [2]_ is:
+
     .. math:: p(x) = \frac{1}{\sigma x \sqrt{2\pi}}
                     e^{(-\frac{(ln(x)-\mu)^2}{2\sigma^2})}
+
     where :math:`\mu` is the mean and :math:`\sigma` is the standard
     deviation of the normally distributed logarithm of the variable.
     A log-normal distribution results if a random variable is the *product*
@@ -257,11 +260,11 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     References
     ----------
     .. [1] Limpert, E., Stahel, W. A., and Abbt, M., "Log-normal
-        Distributions across the Sciences: Keys and Clues,"
-        BioScience, Vol. 51, No. 5, May, 2001.
-        https://stat.ethz.ch/~stahel/lognormal/bioscience.pdf
+           Distributions across the Sciences: Keys and Clues,"
+           BioScience, Vol. 51, No. 5, May, 2001.
+           https://stat.ethz.ch/~stahel/lognormal/bioscience.pdf
     .. [2] Reiss, R.D. and Thomas, M., "Statistical Analysis of Extreme
-        Values," Basel: Birkhauser Verlag, 2001, pp. 31-32.
+           Values," Basel: Birkhauser Verlag, 2001, pp. 31-32.
 
     Examples
     --------
@@ -274,8 +277,10 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
 
 def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from a logistic distribution.
+
     Samples are drawn from a logistic distribution with specified
     parameters, loc (location or mean, also median), and scale (>0).
+
     Parameters
     ----------
     loc : float or array_like of floats, optional
@@ -292,10 +297,12 @@ def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
         Device context of output, default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized logistic distribution.
+
     Examples
     --------
     Draw samples from the distribution:
@@ -315,8 +322,10 @@ def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
 
 def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from a Gumbel distribution.
+
     Draw samples from a Gumbel distribution with specified location and
     scale.
+
     Parameters
     ----------
     loc : float or array_like of floats, optional
@@ -333,10 +342,12 @@ def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
         Device context of output, default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized Gumbel distribution.
+
     Examples
     --------
     Draw samples from the distribution:
@@ -430,7 +441,7 @@ def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
 
     This operator is a little different from the one in official NumPy.
     The official NumPy operator only accepts 1-D ndarray as mean and 2-D ndarray as cov,
-    whereas the operator in DeepNumPy supports batch operation and auto-broadcasting.
+    whereas the operator in MXNet np supports batch operation and auto-broadcasting.
 
     Both `mean` and `cov` may have any number of leading dimensions, which correspond
     to a batch shape. They are not necessarily assumed to have the same batch shape,
@@ -549,8 +560,10 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
 
 def rayleigh(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from a Rayleigh distribution.
+
     The :math:`\chi` and Weibull distributions are generalizations of the
     Rayleigh.
+
     Parameters
     ----------
     scale : float, optional
@@ -564,6 +577,7 @@ def rayleigh(scale=1.0, size=None, ctx=None, out=None):
         Device context of output, default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
@@ -577,15 +591,18 @@ def rand(*size, **kwargs):
 
     Create an array of the given shape and populate it with random
     samples from a uniform distribution over [0, 1).
+
     Parameters
     ----------
     d0, d1, ..., dn : int, optional
         The dimensions of the returned array, should be all positive.
         If no argument is given a single Python float is returned.
+
     Returns
     -------
     out : ndarray
        Random values.
+
     Examples
     --------
     >>> np.random.rand(3,2)
@@ -601,6 +618,7 @@ def rand(*size, **kwargs):
 
 def exponential(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from an exponential distribution.
+
     Parameters
     ----------
     scale : float or array_like of floats
@@ -615,6 +633,7 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         Device context of output, default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
@@ -626,6 +645,7 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
 def weibull(a, size=None, ctx=None, out=None):
     r"""Draw samples from a 1-parameter Weibull distribution with given parameter a
     via inversion.
+
     Parameters
     ----------
     a : float or array_like of floats
@@ -635,10 +655,12 @@ def weibull(a, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``a`` is a scalar. Otherwise,
         ``np.array(a).size`` samples are drawn.
+
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the 1-parameter Weibull distribution.
+
     Examples
     --------
     >>> np.random.weibull(a=5)
@@ -664,6 +686,7 @@ def weibull(a, size=None, ctx=None, out=None):
 
 def pareto(a, size=None, ctx=None, out=None):
     r"""Draw samples from a Pareto II or Lomax distribution with specified shape a.
+
     Parameters
     ----------
     a : float or array_like of floats
@@ -673,10 +696,12 @@ def pareto(a, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``a`` is a scalar. Otherwise,
         ``np.array(a).size`` samples are drawn.
+
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the Pareto distribution.
+
     Examples
     --------
     >>> np.random.pareto(a=5)
@@ -695,6 +720,7 @@ def pareto(a, size=None, ctx=None, out=None):
 
 def power(a, size=None, ctx=None, out=None):
     r"""Draw samples in [0, 1] from a power distribution with given parameter a.
+
     Parameters
     ----------
     a : float or array_like of floats
@@ -704,10 +730,12 @@ def power(a, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``a`` is a scalar. Otherwise,
         ``np.array(a).size`` samples are drawn.
+
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the power distribution.
+
     Examples
     --------
     >>> np.random.power(a=5)
@@ -737,10 +765,6 @@ def shuffle(x):
     x: ndarray
         The array or list to be shuffled.
 
-    Returns
-    -------
-    None
-
     Examples
     --------
     >>> arr = np.arange(10)
@@ -767,6 +791,10 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     `shape` (sometimes designated "k") and `scale` (sometimes designated
     "theta"), where both parameters are > 0.
 
+    The Gamma distribution is often used to model the times to failure of
+    electronic components, and arises naturally in processes for which the
+    waiting times between Poisson distributed events are relevant.
+
     Parameters
     ----------
     shape : float or array_like of floats
@@ -788,10 +816,6 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized gamma distribution.
-
-    The Gamma distribution is often used to model the times to failure of
-    electronic components, and arises naturally in processes for which the
-    waiting times between Poisson distributed events are relevant.
     """
     return _mx_nd_np.random.gamma(shape, scale, size, dtype, ctx, out)
 
@@ -832,8 +856,9 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         Device context of output. Default is current context.
 
     Notes
-    -------
-    To use this  operator with scalars as input, please run ``npx.set_np()`` first.
+    -----
+    To use this operator with scalars as input, please run
+    ``npx.set_np()`` first.
 
     Returns
     -------
@@ -906,10 +931,7 @@ def f(dfnum, dfden, size=None, ctx=None):
 
 
 def chisquare(df, size=None, dtype=None, ctx=None):
-    r"""
-    chisquare(df, size=None, dtype=None, ctx=None)
-
-    Draw samples from a chi-square distribution.
+    r"""Draw samples from a chi-square distribution.
 
     When `df` independent random variables, each with standard normal
     distributions (mean 0, variance 1), are squared and summed, the
@@ -933,7 +955,7 @@ def chisquare(df, size=None, dtype=None, ctx=None):
     Returns
     -------
     out : ndarray or scalar
-        Drawn samples from the parameterized chi-square distribution.
+        Drawn samples from the parameterized `chi-square distribution` [1]_.
 
     Raises
     ------

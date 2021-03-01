@@ -34,9 +34,11 @@ import operator
 from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
-from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
-from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle, mx_int, mx_int64
+from ..base import c_array, c_array_buf, c_handle_array, mx_real_t
+from ..base import mx_uint, NDArrayHandle, check_call, mx_int, mx_int64
 from ..base import ctypes2buffer
+from ..dlpack import ndarray_to_dlpack_for_read, ndarray_to_dlpack_for_write
+from ..dlpack import ndarray_from_dlpack, ndarray_from_numpy
 from ..runtime import Features
 from ..context import Context, current_context
 from ..util import is_np_array
@@ -70,8 +72,27 @@ _DTYPE_NP_TO_MX = {
     np.int8: 5,
     np.int64: 6,
     np.bool_: 7,
+    np.int16: 8,
+    np.uint16 : 9,
+    np.uint32 : 10,
+    np.uint64 : 11,
     np.dtype([('bfloat16', np.uint16)]): 12,
 }
+
+def _register_platform_dependent_mx_dtype():
+    """Register platform dependent types to the fixed size counterparts."""
+    kind_map = {'i': 'int', 'u': 'uint', 'f': 'float'}
+    for np_type in [
+            np.byte, np.ubyte, np.short, np.ushort, np.intc, np.uintc, np.int_,
+            np.uint, np.longlong, np.ulonglong, np.half, np.float16, np.single,
+            np.double, np.longdouble]:
+        dtype = np.dtype(np_type)
+        kind, size = dtype.kind, dtype.itemsize
+        bits = size * 8
+        fixed_dtype = getattr(np, kind_map[kind]+str(bits))
+        if fixed_dtype in _DTYPE_NP_TO_MX:
+            _DTYPE_NP_TO_MX[np_type] = _DTYPE_NP_TO_MX[fixed_dtype]
+_register_platform_dependent_mx_dtype()
 
 _DTYPE_MX_TO_NP = {
     -1: None,
@@ -83,6 +104,10 @@ _DTYPE_MX_TO_NP = {
     5: np.int8,
     6: np.int64,
     7: np.bool_,
+    8: np.int16,
+    9: np.uint16,
+    10: np.uint32,
+    11: np.uint64,
     12: np.dtype([('bfloat16', np.uint16)]),
 }
 
@@ -158,7 +183,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
             dtype_type = np.dtype(dtype)
         else:
             dtype_type = np.dtype(dtype).type
-        check_call(_LIB.MXNDArrayCreateEx64(
+        check_call(_LIB.MXNDArrayCreate64(
             c_array_buf(mx_int64, native_array('q', shape)),
             ctypes.c_int(len(shape)),
             ctypes.c_int(ctx.device_typeid),
@@ -180,7 +205,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
             dtype_type = np.dtype(dtype)
         else:
             dtype_type = np.dtype(dtype).type
-        check_call(_LIB.MXNDArrayCreateEx(
+        check_call(_LIB.MXNDArrayCreate(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),
             ctypes.c_int(ctx.device_typeid),
@@ -193,7 +218,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
 
 def _new_from_shared_mem(shared_pid, shared_id, shape, dtype):
     hdl = NDArrayHandle()
-    check_call(_LIB.MXNDArrayCreateFromSharedMemEx(
+    check_call(_LIB.MXNDArrayCreateFromSharedMem(
         ctypes.c_int(shared_pid),
         ctypes.c_int(shared_id),
         c_array(mx_int, shape),
@@ -257,10 +282,13 @@ fixed-size items.
 
     def __repr__(self):
         """Returns a string representation of the array."""
-        shape_info = 'x'.join(['%d' % x for x in self.shape])
-        return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
-                                      self.__class__.__name__,
-                                      shape_info, self.ctx)
+        if self._alive:
+            shape_info = 'x'.join(['%d' % x for x in self.shape])
+            return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
+                                          self.__class__.__name__,
+                                          shape_info, self.ctx)
+        else:
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __reduce__(self):
         return NDArray, (None,), self.__getstate__()
@@ -429,6 +457,13 @@ fixed-size items.
                              "is ambiguous.")
 
     __nonzero__ = __bool__
+
+    def __str__(self):
+        """Returns a readable string representation of the array."""
+        if self.dtype == np.dtype([('bfloat16', np.uint16)]):
+            return super(NDArray, self.astype(float)).__str__()
+        else:
+            return super(NDArray, self).__str__()
 
     def __len__(self):
         """Number of element along the first axis."""
@@ -1521,7 +1556,12 @@ fixed-size items.
                                            c_array(ctypes.c_int64, shape),
                                            reverse,
                                            ctypes.byref(handle)))
-        return self.__class__(handle=handle, writable=self.writable)
+        res = self.__class__(handle=handle, writable=self.writable)
+
+        # Array size should not change
+        if np.prod(res.shape) != np.prod(self.shape):
+            raise ValueError('Cannot reshape array of size {} into shape {}'.format(np.prod(self.shape), shape))
+        return res
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -2401,11 +2441,11 @@ fixed-size items.
         ndim = mx_int()
         if _int64_enabled():
             pdata = ctypes.POINTER(mx_int64)()
-            check_call(_LIB.MXNDArrayGetShapeEx64(
+            check_call(_LIB.MXNDArrayGetShape64(
                 self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         else:
             pdata = ctypes.POINTER(mx_int)()
-            check_call(_LIB.MXNDArrayGetShapeEx(
+            check_call(_LIB.MXNDArrayGetShape(
                 self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         if ndim.value == -1:
             return None
@@ -4914,84 +4954,8 @@ def split_v2(ary, indices_or_sections, axis=0, squeeze_axis=False):
         raise ValueError('indices_or_sections must either int or tuple of ints')
     return _internal._split_v2(ary, indices, axis, squeeze_axis)
 
-PyCapsuleDestructor = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-_c_str_dltensor = c_str('dltensor')
-_c_str_used_dltensor = c_str('used_dltensor')
-
-def _dlpack_deleter(pycapsule):
-    pycapsule = ctypes.c_void_p(pycapsule)
-    if ctypes.pythonapi.PyCapsule_IsValid(pycapsule, _c_str_dltensor):
-        ptr = ctypes.c_void_p(
-            ctypes.pythonapi.PyCapsule_GetPointer(pycapsule, _c_str_dltensor))
-        check_call(_LIB.MXNDArrayCallDLPackDeleter(ptr))
-
-_c_dlpack_deleter = PyCapsuleDestructor(_dlpack_deleter)
-
-def to_dlpack_for_read(data):
-    """Returns a reference view of NDArray that represents as DLManagedTensor until
-       all previous write operations on the current array are finished.
-
-    Parameters
-    ----------
-    data: NDArray
-        input data.
-
-    Returns
-    -------
-    PyCapsule (the pointer of DLManagedTensor)
-        a reference view of NDArray that represents as DLManagedTensor.
-
-    Examples
-    --------
-    >>> x = mx.nd.ones((2,3))
-    >>> y = mx.nd.to_dlpack_for_read(x)
-    >>> type(y)
-    <class 'PyCapsule'>
-    >>> z = mx.nd.from_dlpack(y)
-    >>> z
-    [[1. 1. 1.]
-     [1. 1. 1.]]
-    <NDArray 2x3 @cpu(0)>
-    """
-    data.wait_to_read()
-    dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
-
-def to_dlpack_for_write(data):
-    """Returns a reference view of NDArray that represents as DLManagedTensor until
-       all previous read/write operations on the current array are finished.
-
-    Parameters
-    ----------
-    data: NDArray
-        input data.
-
-    Returns
-    -------
-    PyCapsule (the pointer of DLManagedTensor)
-        a reference view of NDArray that represents as DLManagedTensor.
-
-    Examples
-    --------
-    >>> x = mx.nd.ones((2,3))
-    >>> w = mx.nd.to_dlpack_for_write(x)
-    >>> type(w)
-    <class 'PyCapsule'>
-    >>> u = mx.nd.from_dlpack(w)
-    >>> u += 1
-    >>> x
-    [[2. 2. 2.]
-     [2. 2. 2.]]
-    <NDArray 2x3 @cpu(0)>
-    """
-    check_call(_LIB.MXNDArrayWaitToWrite(data.handle))
-    dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
-
-def from_dlpack(dlpack):
-    """Returns a NDArray backed by a dlpack tensor.
+from_dlpack = ndarray_from_dlpack(NDArray)
+from_dlpack_doc = """Returns a NDArray backed by a dlpack tensor.
 
     Parameters
     ----------
@@ -5027,70 +4991,10 @@ def from_dlpack(dlpack):
      [2. 2. 2.]]
     <NDArray 2x3 @cpu(0)>
     """
-    handle = NDArrayHandle()
-    dlpack = ctypes.py_object(dlpack)
-    assert ctypes.pythonapi.PyCapsule_IsValid(dlpack, _c_str_dltensor), ValueError(
-        'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
-    dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
-    check_call(_LIB.MXNDArrayFromDLPackEx(dlpack_handle, False, ctypes.byref(handle)))
-    # Rename PyCapsule (DLPack)
-    ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
-    # delete the deleter of the old dlpack
-    ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
-    return NDArray(handle=handle)
+from_dlpack.__doc__ = from_dlpack_doc
 
-class DLContext(ctypes.Structure):
-    _fields_ = [("device_type", ctypes.c_int),
-                ("device_id", ctypes.c_int)]
-
-
-class DLDataType(ctypes.Structure):
-    _fields_ = [("type_code", ctypes.c_uint8),
-                ("bits", ctypes.c_uint8),
-                ("lanes", ctypes.c_uint16)]
-    TYPE_MAP = {
-        "int32": (0, 32, 1),
-        "int64": (0, 64, 1),
-        "bool": (1, 1, 1),
-        "uint8": (1, 8, 1),
-        "uint32": (1, 32, 1),
-        "uint64": (1, 64, 1),
-        'float16': (2, 16, 1),
-        "float32": (2, 32, 1),
-        "float64": (2, 64, 1),
-    }
-
-
-class DLTensor(ctypes.Structure):
-    _fields_ = [("data", ctypes.c_void_p),
-                ("ctx", DLContext),
-                ("ndim", ctypes.c_int),
-                ("dtype", DLDataType),
-                ("shape", ctypes.POINTER(ctypes.c_int64)),
-                ("strides", ctypes.POINTER(ctypes.c_int64)),
-                ("byte_offset", ctypes.c_uint64)]
-
-class DLManagedTensor(ctypes.Structure):
-    pass
-
-
-DeleterFunc = ctypes.CFUNCTYPE(None, ctypes.POINTER(DLManagedTensor))
-
-
-DLManagedTensor._fields_ = [("dl_tensor", DLTensor),           # pylint: disable=protected-access
-                            ("manager_ctx", ctypes.c_void_p),
-                            ("deleter", DeleterFunc)]
-
-
-@DeleterFunc
-def dl_managed_tensor_deleter(dl_managed_tensor_handle):
-    void_p = dl_managed_tensor_handle.contents.manager_ctx
-    pyobj = ctypes.cast(void_p, ctypes.py_object)
-    ctypes.pythonapi.Py_DecRef(pyobj)
-
-
-def from_numpy(ndarray, zero_copy=True, array_cls=NDArray):
-    """Returns an MXNet's ndarray backed by numpy's ndarray.
+from_numpy = ndarray_from_numpy(NDArray, array)
+from_numpy_doc = """Returns an MXNet's NDArray backed by numpy's ndarray.
     When `zero_copy` is set to be true,
     this API consumes numpy's ndarray and produces MXNet's ndarray
     without having to copy the content. In this case, we disallow
@@ -5099,55 +5003,73 @@ def from_numpy(ndarray, zero_copy=True, array_cls=NDArray):
 
     Parameters
     ----------
-    ndarray: numpy.ndarray
+    ndarray: NDArray
         input data
     zero_copy: bool
         Whether we use DLPack's zero-copy conversion to convert to MXNet's NDArray.
         This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
-    array_cls: ndarray class type
-        The class type of the output array.
 
     Returns
     -------
     NDArray
         a NDArray backed by a dlpack tensor
+"""
+from_numpy.__doc__ = from_numpy_doc
 
-    """
 
-    def _make_manager_ctx(obj):
-        pyobj = ctypes.py_object(obj)
-        void_p = ctypes.c_void_p.from_buffer(pyobj)
-        ctypes.pythonapi.Py_IncRef(pyobj)
-        return void_p
+to_dlpack_for_read = ndarray_to_dlpack_for_read()
+to_dlpack_for_read_doc = """Returns a reference view of NDArray that represents as DLManagedTensor until
+all previous write operations on the current array are finished.
 
-    def _make_dl_tensor(array):
-        if str(array.dtype) not in DLDataType.TYPE_MAP:
-            raise ValueError(str(array.dtype) + " is not supported.")
-        dl_tensor = DLTensor()
-        dl_tensor.data = array.ctypes.data_as(ctypes.c_void_p)
-        dl_tensor.ctx = DLContext(1, 0)
-        dl_tensor.ndim = array.ndim
-        dl_tensor.dtype = DLDataType.TYPE_MAP[str(array.dtype)]
-        dl_tensor.shape = array.ctypes.shape_as(ctypes.c_int64)
-        dl_tensor.strides = None
-        dl_tensor.byte_offset = 0
-        return dl_tensor
+Parameters
+----------
+data: NDArray
+    input data.
 
-    def _make_dl_managed_tensor(array):
-        c_obj = DLManagedTensor()
-        c_obj.dl_tensor = _make_dl_tensor(array)
-        c_obj.manager_ctx = _make_manager_ctx(array)
-        c_obj.deleter = dl_managed_tensor_deleter
-        return c_obj
+Returns
+-------
+PyCapsule (the pointer of DLManagedTensor)
+    a reference view of NDArray that represents as DLManagedTensor.
 
-    if not zero_copy:
-        return array(ndarray, dtype=ndarray.dtype)
+Examples
+--------
+>>> x = mx.nd.ones((2,3))
+>>> y = mx.nd.to_dlpack_for_read(x)
+>>> type(y)
+<class 'PyCapsule'>
+>>> z = mx.nd.from_dlpack(y)
+>>> z
+[[1. 1. 1.]
+ [1. 1. 1.]]
+<NDArray 2x3 @cpu(0)>
+"""
+to_dlpack_for_read.__doc__ = to_dlpack_for_read_doc
 
-    if not ndarray.flags['C_CONTIGUOUS']:
-        raise ValueError("Only c-contiguous arrays are supported for zero-copy")
+to_dlpack_for_write = ndarray_to_dlpack_for_write()
+to_dlpack_for_write_doc = """Returns a reference view of NDArray that represents as
+DLManagedTensor until all previous read/write operations on the current array are finished.
 
-    ndarray.flags['WRITEABLE'] = False
-    c_obj = _make_dl_managed_tensor(ndarray)
-    handle = NDArrayHandle()
-    check_call(_LIB.MXNDArrayFromDLPackEx(ctypes.byref(c_obj), True, ctypes.byref(handle)))
-    return array_cls(handle=handle)
+Parameters
+----------
+data: NDArray
+    input data.
+
+Returns
+-------
+PyCapsule : the pointer of DLManagedTensor
+    a reference view of NDArray that represents as DLManagedTensor.
+
+Examples
+--------
+>>> x = mx.nd.ones((2,3))
+>>> w = mx.nd.to_dlpack_for_write(x)
+>>> type(w)
+<class 'PyCapsule'>
+>>> u = mx.nd.from_dlpack(w)
+>>> u += 1
+>>> x
+[[2. 2. 2.]
+ [2. 2. 2.]]
+<NDArray 2x3 @cpu(0)>
+"""
+to_dlpack_for_write.__doc__ = to_dlpack_for_write_doc

@@ -400,10 +400,13 @@ class Parameter(object):
         ctx = context.cpu()
         if self._stype == 'default':
             block = self.list_data()
-            if is_np_array():
-                data = sum([w.copyto(ctx) for w in block]) / len(block)
+            if len(block) > 1:
+                if is_np_array():
+                    data = sum([w.copyto(ctx) for w in block]) / len(block)
+                else:
+                    data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
             else:
-                data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
+                data = self.data().copyto(ctx)
         else:
             # fetch all rows for 'row_sparse' param
             all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
@@ -644,8 +647,8 @@ class Parameter(object):
         """Returns a symbol representing this parameter."""
         if self._var is None:
             if self._var_name is None:  # _var_name is set manually in SymbolBlock.import
-                self._var_name = self._uuid
-
+                # The variable name is required by the storage profiler.
+                self._var_name = self._uuid.replace('-', '_') + '_' + self._name
             self._var = symbol.var(self._var_name, shape=self.shape, dtype=self.dtype,
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
                                    init=self.init, stype=self._stype)
@@ -662,6 +665,7 @@ class Parameter(object):
             The new data type.
         """
         self._dtype = dtype
+        self._var = None  # Clear Symbol Variable as it caches the dtype
         if self._data is None:
             return
         with autograd.pause():

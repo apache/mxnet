@@ -47,12 +47,12 @@ struct NumpyNormalParam : public dmlc::Parameter<NumpyNormalParam> {
   dmlc::optional<float> scale;
   std::string ctx;
   int dtype;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   DMLC_DECLARE_PARAMETER(NumpyNormalParam) {
     DMLC_DECLARE_FIELD(loc);
     DMLC_DECLARE_FIELD(scale);
     DMLC_DECLARE_FIELD(size)
-        .set_default(dmlc::optional<mxnet::Tuple<int>>())
+        .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
         .describe(
             "Output shape. If the given shape is, "
             "e.g., (m, n, k), then m * n * k samples are drawn. "
@@ -261,10 +261,10 @@ inline void NormalReparamBackwardImpl(const OpContext& ctx,
   const TBlob rhs = inputs[3].reshape(new_rshape);
   const TBlob samples = inputs[4].reshape(new_oshape);
   const TBlob noise = inputs[5].reshape(new_oshape);
-  size_t workspace_size_l = ReduceWorkspaceSize<ndim, DType>(
-      s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_, rhs.shape_);
-  size_t workspace_size_r = ReduceWorkspaceSize<ndim, DType>(
-      s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_, rhs.shape_);
+  size_t workspace_size_l = ReduceWorkspaceSize(
+      s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_, rhs.shape_, sizeof(DType));
+  size_t workspace_size_r = ReduceWorkspaceSize(
+      s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_, rhs.shape_, sizeof(DType));
   size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
   Tensor<xpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
@@ -294,7 +294,7 @@ inline void ScalarNormalReparamBackwardImpl(const OpContext& ctx,
   const TBlob samples = inputs[3].reshape(new_oshape);
   const TBlob noise = inputs[4].reshape(new_oshape);
   size_t workspace_size =
-      ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
+      ReduceWorkspaceSize(s, igrad.shape_, req[0], ograd.shape_, sizeof(DType));
   Tensor<xpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   if (loc_is_tensor) {

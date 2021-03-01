@@ -18,7 +18,7 @@
 all: pass_lib
 
 pass_lib:
-	g++ -shared -fPIC -std=c++11 pass_lib.cc -o libpass_lib.so -I ../../../include/mxnet
+	g++ -shared -fPIC -std=c++11 pass_lib.cc ../../../src/lib_api.cc -o libpass_lib.so -I ../../../include
 
 clean:
 	rm -rf libpass_lib.so

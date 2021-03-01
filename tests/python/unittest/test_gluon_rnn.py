@@ -23,8 +23,8 @@ from itertools import product
 from functools import partial
 from numpy.testing import assert_allclose
 import pytest
-from mxnet.test_utils import almost_equal, assert_almost_equal
-from common import assert_raises_cudnn_not_satisfied, with_seed, retry
+from mxnet.test_utils import almost_equal, assert_almost_equal, default_context
+from common import assert_raises_cudnn_not_satisfied, retry
 
 
 def check_rnn_states(fused_states, stack_states, num_layers, bidirectional=False, is_lstm=True):
@@ -76,7 +76,6 @@ def test_lstm():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 @pytest.mark.serial
 def test_lstmp():
@@ -93,8 +92,8 @@ def test_lstmp():
 
         stack_layer = mx.gluon.rnn.HybridSequentialRNNCell()
         for i in range(num_layers):
-            stack_layer.add(gluon.contrib.rnn.LSTMPCell(hidden_size,
-                                                        projection_size=projection_size))
+            stack_layer.add(gluon.rnn.LSTMPCell(hidden_size,
+                                                projection_size=projection_size))
         fused_layer.initialize()
         stack_layer.initialize()
 
@@ -125,10 +124,10 @@ def test_lstmp():
         stack_layer = mx.gluon.rnn.HybridSequentialRNNCell()
         for i in range(num_layers):
             stack_layer.add(
-                gluon.rnn.BidirectionalCell(gluon.contrib.rnn.LSTMPCell(hidden_size,
-                                                                        projection_size=projection_size),
-                                            gluon.contrib.rnn.LSTMPCell(hidden_size,
-                                                                        projection_size=projection_size)))
+                gluon.rnn.BidirectionalCell(gluon.rnn.LSTMPCell(hidden_size,
+                                                                projection_size=projection_size),
+                                            gluon.rnn.LSTMPCell(hidden_size,
+                                                                projection_size=projection_size)))
         fused_layer.initialize()
         stack_layer.initialize()
 
@@ -338,7 +337,6 @@ def test_bidirectional():
 
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@with_seed()
 @pytest.mark.serial
 def test_layer_bidirectional():
     class RefBiLSTM(gluon.Block):
@@ -760,7 +758,6 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, num_layers, l
     check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=True)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_lstm_layer():
     input_sizes = [8]
@@ -772,7 +769,6 @@ def test_fused_lstm_layer():
         check_rnn_bidir_layer_gradients('lstm', input_size, hidden_size, num_layers, loss)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_gru_layer():
     input_sizes = [8]
@@ -784,7 +780,6 @@ def test_fused_gru_layer():
         check_rnn_bidir_layer_gradients('gru', input_size, hidden_size, num_layers, loss)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_rnnrelu_layer():
     input_sizes = [8]
@@ -796,7 +791,6 @@ def test_fused_rnnrelu_layer():
         check_rnn_bidir_layer_gradients('rnn_relu', input_size, hidden_size, num_layers, loss)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_rnntanh_layer():
     input_sizes = [8]
@@ -817,7 +811,7 @@ def test_rnn_unroll_variant_length():
         cell_list.append(gluon.rnn.BidirectionalCell(
                          l_cell=base_cell_class(20),
                          r_cell=base_cell_class(20)))
-        cell_list.append(gluon.contrib.rnn.VariationalDropoutCell(base_cell=base_cell_class(20)))
+        cell_list.append(gluon.rnn.VariationalDropoutCell(base_cell=base_cell_class(20)))
     stack_res_rnn_cell = gluon.rnn.SequentialRNNCell()
     stack_res_rnn_cell.add(gluon.rnn.ResidualCell(base_cell=gluon.rnn.RNNCell(20)))
     stack_res_rnn_cell.add(gluon.rnn.ResidualCell(base_cell=gluon.rnn.RNNCell(20)))
@@ -912,3 +906,217 @@ def test_bidirectional_unroll_valid_length():
 
     _check_bidirectional_unroll_valid_length(1)
     _check_bidirectional_unroll_valid_length(3)
+
+
+def check_rnn_cell(cell, in_shape=(10, 50), out_shape=(10, 100), begin_state=None):
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+    outputs, _ = cell.unroll(3, inputs, begin_state=begin_state)
+    outputs = mx.sym.Group(outputs)
+    assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight',
+                                                    'i2h_bias', 'i2h_weight']
+    assert outputs.list_outputs() == [type(cell).__name__.lower() + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=in_shape,
+                                           rnn_t1_data=in_shape,
+                                           rnn_t2_data=in_shape)
+    assert outs == [out_shape] * 3
+
+
+def check_rnn_forward(layer, inputs):
+    inputs.attach_grad()
+    layer.initialize()
+    with mx.autograd.record():
+        layer.unroll(3, inputs, merge_outputs=True)[0].backward()
+        mx.autograd.backward(layer.unroll(3, inputs, merge_outputs=False)[0])
+    mx.nd.waitall()
+
+
+def test_rnn_cells():
+    check_rnn_forward(gluon.rnn.Conv1DLSTMCell((5, 7), 10, (3,), (3,)),
+                      mx.nd.ones((8, 3, 5, 7)))
+    check_rnn_forward(gluon.rnn.Conv1DRNNCell((5, 7), 10, (3,), (3,)),
+                      mx.nd.ones((8, 3, 5, 7)))
+    check_rnn_forward(gluon.rnn.Conv1DGRUCell((5, 7), 10, (3,), (3,)),
+                      mx.nd.ones((8, 3, 5, 7)))
+
+    net = mx.gluon.rnn.SequentialRNNCell()
+    net.add(gluon.rnn.Conv1DLSTMCell((5, 7), 10, (3,), (3,)))
+    net.add(gluon.rnn.Conv1DRNNCell((10, 5), 11, (3,), (3,)))
+    net.add(gluon.rnn.Conv1DGRUCell((11, 3), 12, (3,), (3,)))
+    check_rnn_forward(net, mx.nd.ones((8, 3, 5, 7)))
+
+
+def test_convrnn():
+    cell = gluon.rnn.Conv1DRNNCell((10, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 50), out_shape=(1, 100, 48))
+
+    cell = gluon.rnn.Conv2DRNNCell((10, 20, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 50), out_shape=(1, 100, 18, 48))
+
+    cell = gluon.rnn.Conv3DRNNCell((10, 20, 30, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
+
+
+def test_convlstm():
+    cell = gluon.rnn.Conv1DLSTMCell((10, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 50), out_shape=(1, 100, 48))
+
+    cell = gluon.rnn.Conv2DLSTMCell((10, 20, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 50), out_shape=(1, 100, 18, 48))
+
+    cell = gluon.rnn.Conv3DLSTMCell((10, 20, 30, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
+
+
+def test_convgru():
+    cell = gluon.rnn.Conv1DGRUCell((10, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 50), out_shape=(1, 100, 48))
+
+    cell = gluon.rnn.Conv2DGRUCell((10, 20, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 50), out_shape=(1, 100, 18, 48))
+
+    cell = gluon.rnn.Conv3DGRUCell((10, 20, 30, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
+
+
+def test_conv_fill_shape():
+    cell = gluon.rnn.Conv1DLSTMCell((0, 7), 10, (3,), (3,))
+    cell.hybridize()
+    check_rnn_forward(cell, mx.nd.ones((8, 3, 5, 7)))
+    assert cell.i2h_weight.shape[1] == 5, cell.i2h_weight.shape[1]
+
+
+def test_lstmp():
+    nhid = 100
+    nproj = 64
+    cell = gluon.rnn.LSTMPCell(nhid, nproj)
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+    outputs, _ = cell.unroll(3, inputs)
+    outputs = mx.sym.Group(outputs)
+    expected_params = ['h2h_bias', 'h2h_weight', 'h2r_weight', 'i2h_bias', 'i2h_weight']
+    expected_outputs = [type(cell).__name__.lower() + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
+    assert sorted(cell.collect_params().keys()) == expected_params
+    assert outputs.list_outputs() == expected_outputs, outputs.list_outputs()
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+    assert outs == [(10, nproj), (10, nproj), (10, nproj)]
+
+
+def test_vardrop():
+    def check_vardrop(drop_inputs, drop_states, drop_outputs):
+        cell = gluon.rnn.VariationalDropoutCell(mx.gluon.rnn.RNNCell(100),
+                                                drop_outputs=drop_outputs,
+                                                drop_states=drop_states,
+                                                drop_inputs=drop_inputs)
+        cell.initialize(init='xavier')
+        input_data = mx.nd.random_uniform(shape=(10, 3, 50), ctx=mx.context.current_context())
+        with mx.autograd.record():
+            outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
+            mx.nd.waitall()
+            outputs2, _ = cell.unroll(3, input_data, merge_outputs=True)
+        assert not almost_equal(outputs1.asnumpy(), outputs2.asnumpy())
+
+        inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+        outputs, _ = cell.unroll(3, inputs, merge_outputs=False)
+        outputs = mx.sym.Group(outputs)
+
+        args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+        assert outs == [(10, 100), (10, 100), (10, 100)]
+
+        cell.reset()
+        cell.hybridize()
+        with mx.autograd.record():
+            outputs3, _ = cell.unroll(3, input_data, merge_outputs=True)
+            mx.nd.waitall()
+            outputs4, _ = cell.unroll(3, input_data, merge_outputs=True)
+        assert not almost_equal(outputs3.asnumpy(), outputs4.asnumpy())
+        assert not almost_equal(outputs1.asnumpy(), outputs3.asnumpy())
+
+    check_vardrop(0.5, 0.5, 0.5)
+    check_vardrop(0.5, 0, 0.5)
+
+
+@pytest.mark.parametrize('cell_type,num_states', [
+    (gluon.rnn.RNNCell, 1),
+    (gluon.rnn.LSTMCell, 2),
+    (gluon.rnn.GRUCell, 1)
+])
+@pytest.mark.parametrize('layout', ['NTC', 'TNC'])
+def test_unroll(cell_type, num_states, layout):
+    class RNNLayer(gluon.HybridBlock):
+        def __init__(self, cell_type, hidden_size, layout):
+            super(RNNLayer, self).__init__()
+            self.cell = cell_type(hidden_size)
+            self.layout = layout
+
+        def hybrid_forward(self, F, inputs, states, valid_length):
+            if isinstance(valid_length, list) and len(valid_length) == 0:
+                valid_length = None
+            return gluon.rnn.rnn_cell.dynamic_unroll(self.cell, inputs, states,
+                                                     valid_length=valid_length,
+                                                     layout=self.layout)
+    batch_size = 20
+    input_size = 50
+    hidden_size = 30
+    seq_len = 10
+    ctx = default_context()
+    if layout == 'TNC':
+        rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size), ctx=ctx)
+    elif layout == 'NTC':
+        rnn_data = mx.nd.normal(loc=0, scale=1, shape=(batch_size, seq_len, input_size), ctx=ctx)
+    else:
+        print("Wrong layout")
+        return
+    valid_length = mx.nd.round(mx.nd.random.uniform(low=1, high=10, shape=(batch_size), ctx=ctx))
+    state_shape = (batch_size, hidden_size)
+    states = [mx.nd.normal(loc=0, scale=1, shape=state_shape, ctx=ctx) for i in range(num_states)]
+
+    cell = cell_type(hidden_size)
+    cell.initialize(ctx=default_context())
+    if layout == 'TNC':
+        cell(rnn_data[0], states)
+    else:
+        cell(rnn_data[:,0,:], states)
+    params1 = cell.collect_params()
+    orig_params1 = copy.deepcopy(params1)
+
+    trainer = gluon.Trainer(params1, 'sgd', {'learning_rate' : 0.03})
+    with mx.autograd.record():
+        res1, states1 = cell.unroll(seq_len, rnn_data, states, valid_length=valid_length,
+                                    layout=layout, merge_outputs=True)
+    res1.backward()
+    trainer.step(batch_size)
+
+    configs = [
+            lambda layer: None,
+            lambda layer: layer.hybridize(),
+            lambda layer: layer.hybridize({'inline_limit': 0}),
+            lambda layer: layer.hybridize({'static_alloc': True}),
+            lambda layer: layer.hybridize({'static_alloc': True, 'static_shape': True}) ]
+    # We can't pass None to a hybrid block, but it accepts an empty list.
+    # so we use an empty list to represent valid_length if it's None.
+    if valid_length is None:
+        valid_length = []
+    for config in configs:
+        layer = RNNLayer(cell_type, hidden_size, layout)
+        layer.initialize(ctx=default_context())
+        config(layer)
+        res2, states2 = layer(rnn_data, states, valid_length)
+        params2 = layer.collect_params()
+        for key, val in orig_params1.items():
+            params2['cell.' + key].set_data(copy.deepcopy(val.data()))
+
+        trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
+        with mx.autograd.record():
+            res2, states2 = layer(rnn_data, states, valid_length)
+        assert_almost_equal(res1, res2, rtol=0.001, atol=0.0001)
+        assert len(states1) == len(states2)
+        for i in range(len(states1)):
+            assert_almost_equal(states1[i], states2[i], rtol=0.001, atol=0.0001)
+        res2.backward()
+        trainer.step(batch_size)
+
+        for key, val in params1.items():
+            weight1 = val.data()
+            weight2 = params2['cell.' + key].data()
+            assert_almost_equal(weight1, weight2, rtol=0.001, atol=0.0001)

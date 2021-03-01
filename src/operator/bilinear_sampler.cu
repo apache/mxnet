@@ -26,7 +26,7 @@
 
 #include "./bilinear_sampler-inl.h"
 #include <algorithm>
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #if MXNET_USE_CUDNN == 1
 #include "./cudnn_bilinear_sampler-inl.h"
 #endif  // MXNET_USE_CUDNN

@@ -55,17 +55,15 @@ inline bool LstsqOpType(const nnvm::NodeAttrs& attrs,
   CHECK(b_type == mshadow::kFloat32 || b_type == mshadow::kFloat64)
     << "lstsq operation only supports 32-bit and 64-bit floating point";
 
-  if (mshadow::kFloat32 == a_type && mshadow::kFloat32 == b_type) {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*out_attrs, 1, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*out_attrs, 2, mshadow::kInt32);
-    TYPE_ASSIGN_CHECK(*out_attrs, 3, mshadow::kFloat32);
-  } else {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat64);
-    TYPE_ASSIGN_CHECK(*out_attrs, 1, mshadow::kFloat64);
-    TYPE_ASSIGN_CHECK(*out_attrs, 2, mshadow::kInt32);
-    TYPE_ASSIGN_CHECK(*out_attrs, 3, mshadow::kFloat64);
-  }
+  const mshadow::TypeFlag floatFlag =
+    (mshadow::kFloat32 == a_type && mshadow::kFloat32 == b_type) ?
+    mshadow::kFloat32 :
+    mshadow::kFloat64;
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, floatFlag);
+  TYPE_ASSIGN_CHECK(*out_attrs, 1, floatFlag);
+  TYPE_ASSIGN_CHECK(*out_attrs, 2, index_type_flag);
+  TYPE_ASSIGN_CHECK(*out_attrs, 3, floatFlag);
+
   return out_attrs->at(0) != -1 &&
          out_attrs->at(1) != -1 &&
          out_attrs->at(2) != -1 &&

@@ -21,7 +21,7 @@ import functools
 import inspect
 import threading
 
-from .base import _LIB, check_call
+from .base import _LIB, check_call, c_str, py_str
 
 
 _np_ufunc_default_kwargs = {
@@ -235,7 +235,8 @@ def use_np_shape(func):
     `func` is a class, it ensures that all the methods, static functions, and properties
     of the class are executed with the NumPy shape semantics.
 
-    Example::
+    .. code-block:: python
+
         import mxnet as mx
         @mx.use_np_shape
         def scalar_one():
@@ -263,10 +264,10 @@ def use_np_shape(func):
                 print("Is value property in np_shape semantics? {}!".format(str(np.is_np_shape())))
                 return self._scalar.asnumpy().item()
 
-
         print("Is global scope of np_shape activated? {}!".format(str(np.is_np_shape())))
         scalar_tensor = ScalarTensor()
         print(scalar_tensor)
+
 
     Parameters
     ----------
@@ -411,10 +412,10 @@ def use_np_array(func):
     For example, at the time when a parameter is created in a `Block`, an `mxnet.numpy.ndarray`
     is created if it's decorated with this decorator.
 
-    Example::
+    .. code-block:: python
+
         import mxnet as mx
         from mxnet import gluon, np
-
 
         class TestHybridBlock1(gluon.HybridBlock):
             def __init__(self):
@@ -424,7 +425,6 @@ def use_np_array(func):
             def hybrid_forward(self, F, x, w):
                 return F.dot(x, w)
 
-
         x = mx.nd.ones((2, 2))
         net1 = TestHybridBlock1()
         net1.initialize()
@@ -432,7 +432,6 @@ def use_np_array(func):
         for _, v in net1.collect_params().items():
             assert type(v.data()) is mx.nd.NDArray
         assert type(out) is mx.nd.NDArray
-
 
         @np.use_np_array
         class TestHybridBlock2(gluon.HybridBlock):
@@ -442,7 +441,6 @@ def use_np_array(func):
 
             def hybrid_forward(self, F, x, w):
                 return F.np.dot(x, w)
-
 
         x = np.ones((2, 2))
         net2 = TestHybridBlock2()
@@ -488,16 +486,16 @@ def use_np_array(func):
 
 def use_np(func):
     """A convenience decorator for wrapping user provided functions and classes in the scope of
-    both NumPy-shape and NumPy-array semantics, which means that (1) empty tuples `()` and tuples
-    with zeros, such as `(0, 1)`, `(1, 0, 2)`, will be treated as scalar tensors' shapes and
+    both NumPy-shape and NumPy-array semantics, which means that ``(1)`` empty tuples ``()`` and
+    tuples with zeros, such as ``(0, 1)``, ``(1, 0, 2)``, will be treated as scalar tensors' shapes and
     zero-size tensors' shapes in shape inference functions of operators, instead of as unknown
-    in legacy mode; (2) ndarrays of type `mxnet.numpy.ndarray` should be created instead of
-    `mx.nd.NDArray`.
+    in legacy mode; (2) ndarrays of type :class:`mxnet.numpy.ndarray` should be created instead of
+    :class:`mx.nd.NDArray`.
 
-    Example::
+    .. code-block:: python
+
         import mxnet as mx
         from mxnet import gluon, np
-
 
         class TestHybridBlock1(gluon.HybridBlock):
             def __init__(self):
@@ -507,7 +505,6 @@ def use_np(func):
             def hybrid_forward(self, F, x, w):
                 return F.dot(x, w) + F.ones((1,))
 
-
         x = mx.nd.ones((2, 2))
         net1 = TestHybridBlock1()
         net1.initialize()
@@ -515,7 +512,6 @@ def use_np(func):
         for _, v in net1.collect_params().items():
             assert type(v.data()) is mx.nd.NDArray
         assert type(out) is mx.nd.NDArray
-
 
         @np.use_np
         class TestHybridBlock2(gluon.HybridBlock):
@@ -526,7 +522,6 @@ def use_np(func):
             def hybrid_forward(self, F, x, w):
                 return F.np.dot(x, w) + F.np.ones(())
 
-
         x = np.ones((2, 2))
         net2 = TestHybridBlock2()
         net2.initialize()
@@ -536,10 +531,11 @@ def use_np(func):
             assert type(v.data()) is np.ndarray
         assert type(out) is np.ndarray
 
+
     Parameters
     ----------
     func : a user-provided callable function or class to be scoped by the
-    NumPy-shape and NumPy-array semantics.
+        NumPy-shape and NumPy-array semantics.
 
     Returns
     -------
@@ -913,6 +909,7 @@ def get_cuda_compute_capability(ctx):
                            .format(ret, error_str.value.decode()))
     return cc_major.value * 10 + cc_minor.value
 
+
 def default_array(source_array, ctx=None, dtype=None):
     """Creates an array from any object exposing the default(nd or np) array interface.
 
@@ -1008,7 +1005,8 @@ def use_np_default_dtype(func):
     When`func` is a class, it ensures that all the methods, static functions, and properties
     of the class are executed with the NumPy-default_dtype semantics.
 
-    Example:
+    .. code-block:: python
+
         import mxnet as mx
         @mx.use_np_default_dtype
         def float64_one():
@@ -1036,10 +1034,10 @@ def use_np_default_dtype(func):
                 print("Is value property in np_dafault_dtype semantics? {}!".format(str(np.is_np_default_dtype())))
                 return self._data.asnumpy()
 
-
         print("Is global scope of np_default_dtype activated? {}!".format(str(np.is_np_default_dtype())))
         float64_tensor = Float64Tensor()
         print(float64_tensor)
+
 
     Parameters
     ----------
@@ -1144,3 +1142,35 @@ def set_np_default_dtype(is_np_default_dtype=True):  # pylint: disable=redefined
     prev = ctypes.c_bool()
     check_call(_LIB.MXSetIsNumpyDefaultDtype(ctypes.c_bool(is_np_default_dtype), ctypes.byref(prev)))
     return prev.value
+
+
+def getenv(name):
+    """Get the setting of an environment variable from the C Runtime.
+
+    Parameters
+    ----------
+    name : string type
+        The environment variable name
+
+    Returns
+    -------
+    value : string
+        The value of the environment variable, or None if not set
+    """
+    ret = ctypes.c_char_p()
+    check_call(_LIB.MXGetEnv(c_str(name), ctypes.byref(ret)))
+    return None if ret.value is None else py_str(ret.value)
+
+
+def setenv(name, value):
+    """Set an environment variable in the C Runtime.
+
+    Parameters
+    ----------
+    name : string type
+        The environment variable name
+    value : string type
+        The desired value to set the environment value to
+    """
+    passed_value = None if value is None else c_str(value)
+    check_call(_LIB.MXSetEnv(c_str(name), passed_value))

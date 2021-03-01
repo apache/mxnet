@@ -377,7 +377,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Set ```MXNET_SUBGRAPH_BACKEND=NONE``` to disable subgraph backend.
 
 * MXNET_SAFE_ACCUMULATION
-  - Values: Values: 0(false) or 1(true) ```(default=0)```
+  - Values: Values: 0(false) or 1(true) ```(default=1)```
   - If this variable is set, the accumulation will enter the safe mode, meaning accumulation is done in a data type of higher precision than
     the input data type, leading to more accurate accumulation results with a possible performance loss and backward compatibility loss.
     For example, when the variable is set to 1(true), if the input data type is float16, then the accumulation will be done
@@ -390,10 +390,10 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - It works in Symbolic execution as well as in Gluon models hybridized with ```static_alloc=True``` option.
   - Only applies to MXNet that has been compiled with CUDA (```pip install mxnet-cuXX``` or built from source with ```USE_CUDA=1```) and running on GPU.
 
-* MXNET_FUSION_VERBOSE
+* MXNET_RTC_VERBOSE
   - Values: 0(false) or 1(true) ```(default=0)```
-  - Only applies to MXNet that has been compiled with CUDA and when ```MXNET_USE_FUSION``` option is enabled.
-  - If this variable is set, MXNet will print the code for fused operators that it generated.
+  - Only applies to MXNet that has been compiled with CUDA.
+  - If this variable is set, MXNet will print the code for operators compiled at runtime.
 
 * MXNET_ELIMINATE_COMMON_EXPR
   - Values: 0(false) or 1(true) ```(default=1)```

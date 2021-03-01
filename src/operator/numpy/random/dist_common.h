@@ -56,11 +56,12 @@ inline int FillShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape,
   *new_oshape = mxnet::TShape(odim, 1);
   int bl = oshape.ndim() - lshape.ndim();
   int br = oshape.ndim() - rshape.ndim();
-  int j = 0, lprod = 1, rprod = 1, oprod = 1;
+  int j = 0;
+  dim_t lprod = 1, rprod = 1, oprod = 1;
   for (int i = 0; i < oshape.ndim(); ++i) {
-    int l = 1;
-    int r = 1;
-    int o = oshape[i];
+    dim_t l = 1;
+    dim_t r = 1;
+    dim_t o = oshape[i];
     if (i >= bl) l = lshape[i - bl];
     if (i >= br) r = rshape[i - br];
     if ((lprod != rprod || lprod != oprod || l != r || l != o) &&
@@ -99,7 +100,7 @@ inline void CheckBroadcastable(const mxnet::TShape &from,
   const int bl = to.ndim() - from.ndim();
   const int br = 0;
   for (int i = 0; i < to.ndim(); ++i) {
-    int l = 1, r = 1;
+    dim_t l = 1, r = 1;
     if (i >= bl) l = from[i - bl];
     if (i >= br) r = to[i - br];
     if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r)) continue;
@@ -121,7 +122,7 @@ inline void InferBroadcastShape(const mxnet::TShape &lhs,
   const int bl = out.ndim() - lhs.ndim();
   const int br = out.ndim() - rhs.ndim();
   for (int i = 0; i < out.ndim(); ++i) {
-    int l = 1, r = 1;
+    dim_t l = 1, r = 1;
     if (i >= bl) l = lhs[i - bl];
     if (i >= br) r = rhs[i - br];
     if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r)) continue;
@@ -154,8 +155,8 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
   std::vector<dim_t> oshape_vec;
   if (param.size.has_value()) {
     // Size declared.
-    const mxnet::Tuple<int> &size = param.size.value();
-    int head = size[0];
+    const auto &size = param.size.value();
+    index_t head = size[0];
     if (head == -2) {
       concat_mode = true;
     } else {
@@ -213,7 +214,7 @@ inline bool UnaryDistOpShape(const nnvm::NodeAttrs &attrs,
   if (param.size.has_value()) {
     // Size declared.
     std::vector<dim_t> oshape_vec;
-    const mxnet::Tuple<int> &size = param.size.value();
+    const auto &size = param.size.value();
     for (int i = 0; i < size.ndim(); ++i) {
       oshape_vec.emplace_back(size[i]);
     }
@@ -259,7 +260,7 @@ inline bool TwoparamsDistOpConcatShape(const nnvm::NodeAttrs &attrs,
   if (param.size.has_value()) {
     // Size declared.
     std::vector<dim_t> oshape_vec;
-    const mxnet::Tuple<int> &size = param.size.value();
+    const auto &size = param.size.value();
     for (int i = 0; i < size.ndim(); ++i) {
       oshape_vec.emplace_back(size[i]);
     }

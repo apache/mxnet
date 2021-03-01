@@ -32,8 +32,7 @@ NNVM_REGISTER_OP(_npi_true_divide)
 .set_attr<FCompute>("FCompute<gpu>", TrueDivideBroadcastCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_div)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::div_grad,
-                                                              mshadow_op::div_rgrad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"div_grad", "div_rgrad"});
 
 NNVM_REGISTER_OP(_npi_true_divide_scalar)
 .set_attr<FCompute>("FCompute<gpu>", TrueDivideScalarCompute<gpu, mshadow_op::true_divide>);

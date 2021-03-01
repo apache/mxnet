@@ -24,7 +24,8 @@
 #
 #  $ cp config/linux_gpu.cmake config.cmake
 #
-#  Next modify the according entries, and then compile by
+#  Next modify the entries in the config.cmake like MXNET_CUDA_ARCH to set the specific
+#  GPU architecture, and then compile by
 #
 #  $ mkdir build; cd build
 #  $ cmake ..
@@ -40,17 +41,21 @@
 #---------------------------------------------
 set(USE_CUDA ON CACHE BOOL "Build with CUDA support")
 set(USE_CUDNN ON CACHE BOOL "Build with cudnn support, if found")
+set(USE_CUTENSOR ON CACHE BOOL "Build with cutensor support, if found")
 
 # Target NVIDIA GPU achitecture.
-# Valid options are "Auto" for autodetection, "All" for all available
-# architectures or a list of architectures by compute capability number, such as
-# "7.0" or "7.0;7.5" as well as name, such as "Volta" or "Volta;Turing".
+# Valid options are:
+#   - "Auto" for autodetection, will try and discover which GPU architecture to use by
+#            looking at the available GPUs on the machine that you're building on
+#   - "All" for all available GPU architectures supported by the version of CUDA installed
+#   - "specific GPU architectures" by giving the compute capability number such as
+#            "7.0" or "7.0;7.5" (ie. sm_70 or sm_75) or you can specify the name like:
+#            "Volta" or "Volta;Turing", be sure not to use quotes (ie. just set to 7.0)
 # The value specified here is passed to cmake's CUDA_SELECT_NVCC_ARCH_FLAGS to
 # obtain the compilation flags for nvcc.
 #
 # When compiling on a machine without GPU, autodetection will fail and you
-# should instead specify the target architecture manually to avoid excessive
-# compilation times.
+# should instead specify the target architecture manually.
 set(MXNET_CUDA_ARCH "Auto" CACHE STRING "Target NVIDIA GPU achitecture")
 
 #---------------------------------------------
@@ -120,10 +125,10 @@ set(USE_CPP_PACKAGE OFF CACHE BOOL "Build C++ Package")
 # This will cause performance degradation reported in issue #14496
 # Set to 1 for large tensor with tensor size greater than INT32_MAX i.e. 2147483647
 # Note: the size of each dimension is still bounded by INT32_MAX
-set(USE_INT64_TENSOR_SIZE OFF CACHE BOOL "Use int64_t to represent the total number of elements in a tensor")
+set(USE_INT64_TENSOR_SIZE ON CACHE BOOL "Use int64_t to represent the total number of elements in a tensor")
 
 # Other GPU features
 set(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 set(NCCL_ROOT "" CACHE BOOL "NCCL install path. Supports autodetection.")
-set(ENABLE_CUDA_RTC ON CACHE BOOL "Build with CUDA runtime compilation support")
+set(USE_NVML OFF CACHE BOOL "Build with NVML support")
 set(USE_NVTX ON CACHE BOOL "Build with NVTX support")

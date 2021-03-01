@@ -175,8 +175,6 @@ def foreach(body, data, init_states):
         The input data.
     init_states: an NDArray or nested lists of NDArrays.
         The initial values of the loop states.
-    name: string.
-        The name of the operator.
 
     Returns
     -------
@@ -528,7 +526,7 @@ def isnan(data):
 
     Parameters
     ----------
-    input : NDArray
+    data : NDArray
         An N-D NDArray.
 
     Returns

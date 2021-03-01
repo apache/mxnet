@@ -46,12 +46,12 @@ struct NumpyBernoulliParam : public dmlc::Parameter<NumpyBernoulliParam> {
   std::string ctx;
   int dtype;
   bool is_logit;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   DMLC_DECLARE_PARAMETER(NumpyBernoulliParam) {
     DMLC_DECLARE_FIELD(prob);
     DMLC_DECLARE_FIELD(logit);
     DMLC_DECLARE_FIELD(size)
-        .set_default(dmlc::optional<mxnet::Tuple<int>>())
+        .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
         .describe(
             "Output shape. If the given shape is, "
             "e.g., (m, n, k), then m * n * k samples are drawn. "

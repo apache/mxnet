@@ -28,7 +28,7 @@ ifeq ($(NUMJOBS),)
 ifeq ($(OS),Linux)
   NPROCS := $(shell grep -c ^processor /proc/cpuinfo)
 else ifeq ($(OS),Darwin)
-  NPROCS := $(shell system_profiler | awk '/Number of CPUs/ {print $$4}{next;}')
+  NPROCS := $(shell sysctl -n hw.physicalcpu)
 endif # $(OS)
 
 else
@@ -37,7 +37,7 @@ endif # $(NUMJOBS)
 # End number of processors detection
 
 # You can set these variables from the command line.
-SPHINXOPTS    = -j$(NPROCS) -c ../scripts
+SPHINXOPTS    = -j$(NPROCS) -c ../scripts --keep-going -W
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build

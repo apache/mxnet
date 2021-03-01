@@ -28,6 +28,7 @@
 #include <mutex>
 #include <memory>
 #include <functional>
+#include <unordered_map>
 #include <utility>
 #include "dmlc/base.h"
 #include "dmlc/logging.h"
@@ -57,6 +58,8 @@
 #include "../operator/subgraph/subgraph_property.h"
 #include "../common/utils.h"
 #include "../profiler/profiler.h"
+#include "../serialization/cnpy.h"
+#include "miniz.h"
 #include "nnvm/pass_functions.h"
 
 using namespace mxnet;
@@ -98,21 +101,41 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 
 // NOTE: return value is added in API_END
 
+std::string getExtensionMsgs(mxnet::ext::msgSize_t msgSize,
+                             mxnet::ext::msgGet_t msgGet) {
+  std::string str;
+  if (msgSize() > 0) {
+    str = "\nExtension Traceback:\n";
+    for (int i = 0; i < msgSize(); i++) {
+      const char* tmp;
+      msgGet(i, &tmp);
+      // format: [i] message
+      str += std::string("\t[") + std::to_string(i) + std::string("] ")
+        + std::string(tmp) + std::string("\n");
+    }
+  }
+  return str;
+}
+
 /*!
  * \brief Common compute function dispatcher for forward/backward and stateful forward/backward
  * state_ptr will be nullptr for regular ops; fcomp_fp is nullptr for stateful ops
  */
 void CustomFComputeDispatcher(const std::string op_name,
-                              const opCallFComp_t callFComp,
-                              const fcomp_t fcomp_fp,
+                              const mxnet::ext::opCallFComp_t callFComp,
+                              const mxnet::ext::fcomp_t fcomp_fp,
                               const nnvm::NodeAttrs* attrs,
-                              const opCallFStatefulComp_t callFStatefulComp,
+                              const mxnet::ext::opCallFStatefulComp_t callFStatefulComp,
                               int stateful_forward_flag,
                               const OpStatePtr* state_ptr,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
                               const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& outputs) {
+                              const std::vector<NDArray>& outputs,
+                              mxnet::ext::msgSize_t msgSize,
+                              mxnet::ext::msgGet_t msgGet) {
+  using namespace mxnet::ext;
+
   std::vector<void*> in_data, out_data;
   std::vector<const int64_t*> in_shapes, out_shapes;
   std::vector<int> in_dims, out_dims;
@@ -236,13 +259,13 @@ void CustomFComputeDispatcher(const std::string op_name,
     return static_cast<void*>((*cpualloc)(size));
   };
 
-  typedef decltype(gpu_alloc) alloc_type_gpu;
+  using alloc_type_gpu = decltype(gpu_alloc);
   auto gpu_malloc = [](void* _gpu_alloc, int size) {
     alloc_type_gpu* gpualloc = static_cast<alloc_type_gpu*>(_gpu_alloc);
     return static_cast<void*>((*gpualloc)(size));
   };
 
-  typedef decltype(sparse_alloc) alloc_type_sparse;
+  using alloc_type_sparse = decltype(sparse_alloc);
   auto sparse_malloc = [](void* _sparse_alloc, int index, int indices_len, int idxptr_len,
                            void** data, int64_t** indices, int64_t** indptr) {
     alloc_type_sparse* sparsealloc = static_cast<alloc_type_sparse*>(_sparse_alloc);
@@ -281,47 +304,225 @@ void CustomFComputeDispatcher(const std::string op_name,
     }
 
     // call fcompute function
-    CHECK(callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                    in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
-                    in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
-                    out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
-                    out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
-                    cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-                    sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
-                    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
-                    in_indices_shapes.data(), out_indices_shapes.data(),
-                    in_indptr_shapes.data(), out_indptr_shapes.data(),
-                    rng_cpu_states, rng_gpu_states))
-      << "Error calling FCompute for custom operator '" << op_name << "'";
+    int retval = callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                           in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
+                           in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
+                           out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
+                           out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
+                           out_data.size(),
+                           cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
+                           sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
+                           in_indices.data(), out_indices.data(), in_indptr.data(),
+                           out_indptr.data(),
+                           in_indices_shapes.data(), out_indices_shapes.data(),
+                           in_indptr_shapes.data(), out_indptr_shapes.data(),
+                           rng_cpu_states, rng_gpu_states);
+    std::string msgs = getExtensionMsgs(msgSize, msgGet);
+    CHECK(retval) << "Error calling FCompute for custom operator '" << op_name << "'" << msgs;
   }
 
   if (state_ptr != nullptr) {
     // retrieve op state object created from CreateOpState
     CustomStatefulOpWrapper& op = state_ptr->get_state<CustomStatefulOpWrapper>();
     CustomStatefulOp* state_op_inst = op.get_instance();
+    std::string msgs = getExtensionMsgs(msgSize, msgGet);
     CHECK(state_op_inst != nullptr)
-      << "Error custom stateful operator is null for operator '" << op_name << "'";
+      << "Error custom stateful operator is null for operator '" << op_name << "'" << msgs;
 
     // call fcompute function
-    CHECK(callFStatefulComp(stateful_forward_flag, state_op_inst,
-                            in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
-                            in_verIDs.data(), in_dev_type.data(), in_dev_id.data(),
-                            in_data.size(),
-                            out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
-                            out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
-                            out_data.size(),
-                            cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-                            sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
-                            in_indices.data(), out_indices.data(),
-                            in_indptr.data(), out_indptr.data(),
-                            in_indices_shapes.data(), out_indices_shapes.data(),
-                            in_indptr_shapes.data(), out_indptr_shapes.data(),
-                            rng_cpu_states, rng_gpu_states))
-      << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
+    int retval = callFStatefulComp(stateful_forward_flag, state_op_inst,
+                                   in_shapes.data(), in_dims.data(), in_data.data(),
+                                   in_types.data(),
+                                   in_verIDs.data(), in_dev_type.data(), in_dev_id.data(),
+                                   in_data.size(),
+                                   out_shapes.data(), out_dims.data(), out_data.data(),
+                                   out_types.data(),
+                                   out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
+                                   out_data.size(),
+                                   cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
+                                   sparse_malloc, &sparse_alloc, in_stypes.data(),
+                                   out_stypes.data(), in_indices.data(), out_indices.data(),
+                                   in_indptr.data(), out_indptr.data(),
+                                   in_indices_shapes.data(), out_indices_shapes.data(),
+                                   in_indptr_shapes.data(), out_indptr_shapes.data(),
+                                   rng_cpu_states, rng_gpu_states);
+    msgs = getExtensionMsgs(msgSize, msgGet);
+    CHECK(retval) << "Error calling FStatefulCompute for custom operator '" << op_name << "'"
+                  << msgs;
   }
 }
 
-void registerOperators(void *lib, int verbose) {
+template <typename RescReq, typename AttrParser, typename NumInputs, typename NumOutputs,
+          typename NumInOuts,
+          typename InferType, typename InferShape, typename InferSType, typename MutateInputs,
+          typename SubgraphNumInputs, typename SubgraphInferType, typename SubgraphInferShape,
+          typename SubgraphInferSType, typename CreateOpState, typename GradReg>
+void registerOp(const char* name, const std::string& name_str, bool isSubgraphOp,
+                RescReq resc_req, AttrParser attr_parser, NumInputs num_inputs,
+                NumOutputs num_outputs, NumInOuts num_inouts, InferType infer_type,
+                InferShape infer_shape, InferSType infer_storage_type,
+                MutateInputs mutate_inputs, SubgraphNumInputs num_subgraph_inputs,
+                SubgraphInferType infer_subgraph_type, SubgraphInferShape infer_subgraph_shape,
+                SubgraphInferSType infer_subgraph_storage_type, CreateOpState create_opstate,
+                GradReg grad_reg, mxnet::ext::mutateInputs_t mutate_fp,
+                const std::unordered_map<std::string, mxnet::ext::createOpState_t> &createop_map,
+                const std::unordered_map<std::string, mxnet::ext::fcomp_t> &forward_ctx_map,
+                const std::unordered_map<std::string, mxnet::ext::fcomp_t> &backward_ctx_map,
+                mxnet::ext::opCallFComp_t callFComp,
+                mxnet::ext::opCallFStatefulComp_t callFStatefulComp,
+                mxnet::ext::msgSize_t msgSize,
+                mxnet::ext::msgGet_t msgGet) {
+  using namespace mxnet::ext;
+
+  // check if operator is already registered
+  const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
+  nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
+  int plevel = 10;
+  if (regOpPtr != nullptr) {
+    // overwrite registration of existing op with custom op
+    regOp.arguments.clear();
+    // set attribute with higher plevel (11) to allow re-registering once
+    // TODO(samskalicky): enable constant overwriting of registertion multiple times
+    plevel++;
+  }
+  // define supported resources for both subgraph ops and regular ops
+  regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
+  if (!isSubgraphOp) {
+    regOp.set_attr_parser(attr_parser);
+    regOp.set_num_inputs(num_inputs);
+    regOp.set_num_outputs(num_outputs);
+    regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
+    regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
+    regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
+    // optionally add fmutate inputs if user specified a function
+    if (mutate_fp != nullptr)
+      regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
+  } else {
+    using namespace mxnet::op;
+    regOp.set_num_inputs(num_subgraph_inputs);
+    regOp.set_num_outputs(DefaultSubgraphOpNumOutputs);
+    regOp.set_attr<nnvm::FInferType>("FInferType", infer_subgraph_type, plevel);
+    regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_subgraph_shape, plevel);
+    regOp.set_attr<FInferStorageType>("FInferStorageType",
+                                      infer_subgraph_storage_type, plevel);
+    regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+                                        DefaultSubgraphOpMutableInputs, plevel);
+  }
+  // optionally add stateful forward
+  if (createop_map.size() != 0) {
+    regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
+    auto fstate_forward = [=](const OpStatePtr& state_ptr,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+      CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
+                               callFStatefulComp, 1, &state_ptr, ctx, inputs, req, outputs,
+                               msgSize, msgGet);
+    };
+    if (createop_map.count("cpu") > 0)
+      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_forward, plevel);
+    if (createop_map.count("gpu") > 0)
+      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_forward, plevel);
+  } else {
+    auto forward_lambda = [=](const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+      if (ctx.run_ctx.ctx.dev_mask() == Context::kCPU) {
+        CHECK_GT(forward_ctx_map.count("cpu"), 0);
+        fcomp_t fcomp = forward_ctx_map.at("cpu");
+        CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
+                                 nullptr, 0, nullptr, ctx, inputs, req, outputs, msgSize, msgGet);
+      } else if (ctx.run_ctx.ctx.dev_mask() == Context::kGPU) {
+        CHECK_GT(forward_ctx_map.count("gpu"), 0);
+        fcomp_t fcomp = forward_ctx_map.at("gpu");
+        CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
+                                 nullptr, 0, nullptr, ctx, inputs, req, outputs, msgSize, msgGet);
+      }
+    };
+    if (forward_ctx_map.count("cpu") > 0)
+      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
+    if (forward_ctx_map.count("gpu") > 0)
+      regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_lambda, plevel);
+  }
+  // optionally add fgradient if user specified a function, or for stateful ops
+  if (backward_ctx_map.size() != 0 || createop_map.size() != 0) {
+    std::string grad_name = "_backward_" + name_str;
+    nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
+    regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
+    gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, plevel);
+    gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
+    gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
+
+    if (!isSubgraphOp) {
+      // register attr parser and standard functions for non-subgraph ops
+      gradOp.set_attr_parser(attr_parser);
+      gradOp.set_num_inputs(num_inouts);
+      gradOp.set_num_outputs(num_inputs);
+    } else {
+      // for subgraph ops use special functions that do not invoke attr_parser
+      using namespace mxnet::op;
+      auto grad_inouts = [=](const nnvm::NodeAttrs& attrs) {
+        // for backward passes, inputs + outputs + input gradients (one for each output)
+        uint32_t cnt = num_subgraph_inputs(attrs);
+        cnt += 2 * DefaultSubgraphOpNumOutputs(attrs);
+        return cnt;
+      };
+      gradOp.set_num_inputs(grad_inouts);
+      gradOp.set_num_outputs(num_subgraph_inputs);
+    }
+
+    if (createop_map.size() != 0) {
+      // for stateful operators
+      gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
+      auto fstate_backward = [=](const OpStatePtr& state_ptr,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
+        CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
+                                 callFStatefulComp, 0, &state_ptr, ctx, inputs, req, outputs,
+                                 msgSize, msgGet);
+      };
+      gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_backward, plevel);
+      gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_backward, plevel);
+    } else {
+      // for stateless operators
+      if (backward_ctx_map.count("cpu") > 0) {
+        fcomp_t fcomp_back_cpu = backward_ctx_map.at("cpu");
+        auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs) {
+          CustomFComputeDispatcher(name_str, callFComp, fcomp_back_cpu, &attrs,
+                                   nullptr, 0, nullptr, ctx, inputs, req, outputs, msgSize, msgGet);
+        };
+        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
+      }
+      if (backward_ctx_map.count("gpu") > 0) {
+        fcomp_t fcomp_back_gpu = backward_ctx_map.at("gpu");
+        auto backward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs) {
+          CustomFComputeDispatcher(name_str, callFComp, fcomp_back_gpu, &attrs,
+                                   nullptr, 0, nullptr, ctx, inputs, req, outputs, msgSize, msgGet);
+        };
+        gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);
+      }
+    }
+    }
+  regOp.add_argument("data", "NDArray[]", "Source inputs");
+}
+
+void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
+                       mxnet::ext::msgGet_t msgGet) {
+  using namespace mxnet::ext;
+
   // get C type interface functions
   opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
 
@@ -345,6 +546,9 @@ void registerOperators(void *lib, int verbose) {
 
   opCallCreateOpState_t callCreateOpState =
     get_func<opCallCreateOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLCREATEOPSTATE_STR));
+
+  opCallDestroyOpState_t callDestroyOpState =
+    get_func<opCallDestroyOpState_t>(lib, const_cast<char*>(MXLIB_OPCALLDESTROYOPSTATE_STR));
 
   opCallFStatefulComp_t callFStatefulComp =
     get_func<opCallFStatefulComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFULCOMP_STR));
@@ -447,9 +651,10 @@ void registerOperators(void *lib, int verbose) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           &num_in, &num_out))
-      << "Error calling ParseAttrs for custom operator '" << name_str << "'";
+      int retval = callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                  &num_in, &num_out);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling ParseAttrs for custom operator '" << name_str << "'" << msgs;
 
       // return type void
     };
@@ -465,11 +670,31 @@ void registerOperators(void *lib, int verbose) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           &num_in, &num_out))
-      << "Error calling ParseAttrs::num_inputs for custom operator '" << name_str << "'";
+      int retval = callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                  &num_in, &num_out);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling ParseAttrs::num_inputs for custom operator '" << name_str
+      << "'" << msgs;
 
-      return num_in;
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      return num_in + extra_inputs;
+    };
+
+    // lambda function to call parse attributes and return the number of inputs for subgraph ops
+    auto num_subgraph_inputs = [=](const NodeAttrs& attrs) {
+      // get number of inputs for subgraph
+      int num_in = mxnet::op::DefaultSubgraphOpNumInputs(attrs);
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      return num_in + extra_inputs;
     };
 
     // lambda function to call parse attributes and return the number of outputs
@@ -483,9 +708,11 @@ void registerOperators(void *lib, int verbose) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           &num_in, &num_out))
-      << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
+      int retval = callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                  &num_in, &num_out);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str
+      << "'" << msgs;
 
       return num_out;
     };
@@ -502,11 +729,19 @@ void registerOperators(void *lib, int verbose) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           &num_in, &num_out))
-      << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
+      int retval = callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                  &num_in, &num_out);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str
+      << "'" << msgs;
       // for backward passes, inputs + outputs + input gradients (one for each output)
-      return num_in + 2 * num_out;
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      return num_in + extra_inputs + 2 * num_out;
     };
 
     // lambda function to call infer shape
@@ -520,17 +755,24 @@ void registerOperators(void *lib, int verbose) {
         attr_vals.push_back(kv.second.c_str());
       }
 
-      std::vector<uint32_t*> inshapes(in_shape->size());
-      std::vector<int> indims(in_shape->size());
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+      int num_inputs = in_shape->size() - extra_inputs;
+
+      std::vector<uint32_t*> inshapes(num_inputs);
+      std::vector<int> indims(num_inputs);
 
       // determine amount of memory needed to store all the input shapes
       size_t buff_size = 0;
-      for (const auto& i : *in_shape) buff_size += i.ndim();
+      for (size_t i = 0; i < num_inputs; ++i)
+        buff_size += (*in_shape)[i].ndim();
 
       // copy input shapes from ShapeVector to raw memory layout
       std::vector<uint32_t> inbuff(buff_size);
       uint32_t *ptr = inbuff.data();
-      for (size_t i = 0; i < in_shape->size(); ++i) {
+      for (size_t i = 0; i < num_inputs; ++i) {
         inshapes[i] = ptr;
         indims[i] = (*in_shape)[i].ndim();
         for (int j = 0; j < (*in_shape)[i].ndim(); ++j, ++ptr) {
@@ -545,23 +787,24 @@ void registerOperators(void *lib, int verbose) {
       uint32_t** outshapes = nullptr;
       int* outdims = nullptr;
 
-      CHECK(callInferShape(shape_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           inshapes.data(), indims.data(), in_shape->size(),
-                           &mod_inshapes, &mod_indims,
-                           &outshapes, &outdims, out_shape->size()))
-      << "Error calling InferShape for custom operator '" << name_str << "'";
+      int retval = callInferShape(shape_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                  inshapes.data(), indims.data(), num_inputs,
+                                  &mod_inshapes, &mod_indims,
+                                  &outshapes, &outdims, out_shape->size());
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling InferShape for custom operator '" << name_str << "'" << msgs;
 
-      std::vector<uint32_t*> in_shapes(in_shape->size());
+      std::vector<uint32_t*> in_shapes(num_inputs);
       // determine amount of memory needed to store all the modified input shapes
       buff_size = 0;
-      for (unsigned i = 0; i < in_shape->size(); i++) {
+      for (unsigned i = 0; i < num_inputs; i++) {
         buff_size += mod_indims[i];
       }
 
       // copy modified input shapes from custom op memory to MXNet memory
       std::vector<uint32_t> mod_inbuff(buff_size);
       ptr = mod_inbuff.data();
-      for (unsigned i = 0; i < in_shape->size(); ++i) {
+      for (unsigned i = 0; i < num_inputs; ++i) {
         in_shapes[i] = ptr;
         for (int j = 0; j < mod_indims[i]; ++j, ++ptr) {
           *ptr = static_cast<uint32_t>(mod_inshapes[i][j]);
@@ -569,7 +812,7 @@ void registerOperators(void *lib, int verbose) {
       }
 
       // assign modified input shapes to ShapeVector
-      for (unsigned i = 0; i < in_shape->size(); ++i) {
+      for (unsigned i = 0; i < num_inputs; ++i) {
         SHAPE_ASSIGN_CHECK(*in_shape, i,
                            mxnet::TShape(in_shapes[i], in_shapes[i]+mod_indims[i]));
       }
@@ -599,7 +842,7 @@ void registerOperators(void *lib, int verbose) {
 
       // free memory used by custom op to allocate shapes/dims
       callFree(mod_indims);
-      for (unsigned i = 0; i < in_shape->size(); i++) {
+      for (unsigned i = 0; i < num_inputs; i++) {
         callFree(mod_inshapes[i]);
       }
       callFree(mod_inshapes);
@@ -613,6 +856,34 @@ void registerOperators(void *lib, int verbose) {
       return true;
     };
 
+    // lambda function to call infer shape for subgraph ops
+    auto infer_subgraph_shape = [=] (const nnvm::NodeAttrs& attrs,
+                            mxnet::ShapeVector *in_shape,
+                            mxnet::ShapeVector *out_shape) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto &kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      auto in_first = in_shape->begin();
+      auto in_last  = in_first + in_shape->size() - extra_inputs;
+      mxnet::ShapeVector *sg_in_shapes = new mxnet::ShapeVector(in_first, in_last);
+      bool res = mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+
+      // assign modified input shapes to ShapeVector
+      for (unsigned i = 0; i < sg_in_shapes->size(); ++i) {
+        SHAPE_ASSIGN_CHECK(*in_shape, i, sg_in_shapes->at(i));
+      }
+      return res;
+    };
+
     // lambda function to call infer type
     auto infer_type = [=] (const nnvm::NodeAttrs& attrs,
                             std::vector<int> *in_type,
@@ -624,19 +895,26 @@ void registerOperators(void *lib, int verbose) {
         attr_vals.push_back(kv.second.c_str());
       }
 
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+      int num_inputs = in_type->size() - extra_inputs;
+
       // copy input types from in_type
       std::vector<int> intypes(*in_type);
 
       // output types will be populated by inferType function
       std::vector<int> outtypes(out_type->size());
 
-      CHECK(callInferType(type_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           intypes.data(), in_type->size(),
-                           outtypes.data(), out_type->size()))
-      << "Error calling InferType for custom operator '" << name_str << "'";
+      int retval = callInferType(type_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                 intypes.data(), num_inputs,
+                                 outtypes.data(), out_type->size());
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling InferType for custom operator '" << name_str << "'" << msgs;
 
       // copy and assign modified input types from custom op to MXNet memory
-      for (size_t i = 0; i < in_type->size(); i++) {
+      for (size_t i = 0; i < num_inputs; i++) {
         TYPE_ASSIGN_CHECK(*in_type, i, intypes[i]);
       }
       // copy and assign output types from custom op to MXNet memory
@@ -645,6 +923,34 @@ void registerOperators(void *lib, int verbose) {
       }
 
       return true;
+    };
+
+    // lambda function to call infer type for subgraph ops
+    auto infer_subgraph_type = [=] (const nnvm::NodeAttrs& attrs,
+                                    std::vector<int> *in_type,
+                                    std::vector<int> *out_type) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto &kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      auto in_first = in_type->begin();
+      auto in_last  = in_first + in_type->size() - extra_inputs;
+      std::vector<int> *sg_in_types = new std::vector<int>(in_first, in_last);
+
+      bool res = mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
+      // copy and assign modified input types
+      for (size_t i = 0; i < sg_in_types->size(); i++) {
+        TYPE_ASSIGN_CHECK(*in_type, i, sg_in_types->at(i));
+      }
+      return res;
     };
 
     // lambda function to convert from external mutate_inputs to internal MXNet types
@@ -661,9 +967,11 @@ void registerOperators(void *lib, int verbose) {
       int indices_size = 0;
 
       // call mutate inputs function
-      CHECK(callMutateInputs(mutate_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                      &mutate_indices, &indices_size))
-      << "Error calling MutateInputs for custom operator '" << name_str << "'";
+      int retval = callMutateInputs(mutate_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                    &mutate_indices, &indices_size);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling MutateInputs for custom operator '" << name_str << "'"
+      << msgs;
 
       std::vector<uint32_t> mutate_indices_list(indices_size);
       for (int i=0; i < indices_size; i++) {
@@ -680,7 +988,7 @@ void registerOperators(void *lib, int verbose) {
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
       if (stype_fp == nullptr) {
-        // InferSType is not defineid in customized lib.
+        // InferSType is not defined in customized lib.
         CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
         << "Error input tensors are not dense for custom operator '" << name_str << "'";
         // set outputs as dense
@@ -690,22 +998,31 @@ void registerOperators(void *lib, int verbose) {
         // InferSType is defined in customized lib.
         // convert attributes to vector of char*
         std::vector<const char*> attr_keys, attr_vals;
-        for (auto kv : attrs.dict) {
+        for (const auto& kv : attrs.dict) {
           attr_keys.push_back(kv.first.c_str());
           attr_vals.push_back(kv.second.c_str());
         }
+
+        // get extra inputs, if exists
+        int extra_inputs = 0;
+        if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+          extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+        int num_inputs = in_stypes->size() - extra_inputs;
+
         // copy input types from in_stype
         std::vector<int> instypes(*in_stypes);
 
         // output types will be populated by inferType function
         std::vector<int> outstypes(out_stypes->size());
-        CHECK(callInferSType(stype_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                             instypes.data(), in_stypes->size(),
-                             outstypes.data(), out_stypes->size()))
-        << "Error calling InferSType for custom operator '" << name_str << "'";
+        int retval = callInferSType(stype_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                    instypes.data(), num_inputs,
+                                    outstypes.data(), out_stypes->size());
+        std::string msgs = getExtensionMsgs(msgSize, msgGet);
+        CHECK(retval) << "Error calling InferSType for custom operator '" << name_str << "'"
+        << msgs;
 
         // copy and assign modified input storage types from custom op to MXNet memory.
-        for (size_t i = 0; i < in_stypes->size(); i++) {
+        for (size_t i = 0; i < num_inputs; i++) {
           STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, instypes[i]);
         }
         // copy and assign output storage types from custom op to MXNet memory.
@@ -718,6 +1035,30 @@ void registerOperators(void *lib, int verbose) {
       }
     };
 
+    // lambda function to set storage types for subgraph ops
+    auto infer_subgraph_storage_type = [=](const nnvm::NodeAttrs& attrs,
+                                           const int dev_mask,
+                                           DispatchMode* dispatch_mode,
+                                           std::vector<int>* in_stypes,
+                                           std::vector<int>* out_stypes) {
+        // get extra inputs, if exists
+        int extra_inputs = 0;
+        if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+          extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+        auto in_first = in_stypes->begin();
+        auto in_last  = in_first + in_stypes->size() - extra_inputs;
+        std::vector<int> *sg_in_stypes = new std::vector<int>(in_first, in_last);
+
+        bool res = mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
+                                                           sg_in_stypes, out_stypes);
+        // copy and assign modified input storage types
+        for (size_t i = 0; i < sg_in_stypes->size(); i++) {
+          STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, sg_in_stypes->at(i));
+        }
+        return res;
+    };
+
     // FGradient register lambda
     auto grad_reg = [=](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // create node for gradient
@@ -727,7 +1068,7 @@ void registerOperators(void *lib, int verbose) {
       p->attrs.name = n->attrs.name + "_backward";
       // copy attributes and subgraphs
       p->attrs.dict = n->attrs.dict;
-      for (auto s : n->attrs.subgraphs)
+      for (const auto& s : n->attrs.subgraphs)
         p->attrs.subgraphs.push_back(s);
       // set control dependency and attr parser
       p->control_deps.emplace_back(n);
@@ -773,6 +1114,28 @@ void registerOperators(void *lib, int verbose) {
         attr_vals.push_back(kv.second.c_str());
       }
 
+      // string repr of supported context for custom library, currently only "cpu" and "gpu"
+      const char* ctx_str = ctx.dev_mask() == Context::kCPU ? "cpu" : "gpu";
+
+      std::vector<uint32_t*> inshapes(in_shapes.size());
+      std::vector<int> indims(in_shapes.size());
+
+      // determine amount of memory needed to store all the input shapes
+      size_t buff_size = 0;
+      for (const auto & in_shape : in_shapes)
+        buff_size += in_shape.ndim();
+
+      // copy input shapes to raw memory layout
+      std::vector<uint32_t> inbuff(buff_size);
+      uint32_t *ptr = inbuff.data();
+      for (size_t i = 0; i < in_shapes.size(); ++i) {
+        inshapes[i] = ptr;
+        indims[i] = in_shapes[i].ndim();
+        for (int j = 0; j < in_shapes[i].ndim(); ++j, ++ptr) {
+          *ptr = static_cast<uint32_t>(in_shapes[i][j]);
+        }
+      }
+
       // convert subgraph symbol from node attributes to char*
       std::string subgraph_json;
       if (!attrs.subgraphs.empty()) {
@@ -790,171 +1153,54 @@ void registerOperators(void *lib, int verbose) {
       if (ctx.dev_mask() == Context::kCPU) {
         CHECK(createop_map.count("cpu") > 0)
           << "CPU CreateOpState not implemented for '" << name_str << "'";
-        CHECK(callCreateOpState(createop_map.at("cpu"), attr_keys.data(), attr_vals.data(),
-                                attr_keys.size(), &state_op_inst))
-          << "Error calling CreateOpState CPU for custom operator '" << name_str << "'";
+        int retval = callCreateOpState(createop_map.at("cpu"), attr_keys.data(), attr_vals.data(),
+                                       attr_keys.size(), ctx_str, ctx.real_dev_id(),
+                                       inshapes.data(), indims.data(),
+                                       in_shapes.size(), in_types.data(), &state_op_inst);
+        std::string msgs = getExtensionMsgs(msgSize, msgGet);
+        CHECK(retval) << "Error calling CreateOpState CPU for custom operator '" << name_str << "'"
+                      << msgs;
       } else if (ctx.dev_mask() == Context::kGPU) {
         CHECK(createop_map.count("gpu") > 0)
           << "GPU CreateOpState not implemented for '" << name_str << "'";
-        CHECK(callCreateOpState(createop_map.at("gpu"), attr_keys.data(), attr_vals.data(),
-                                attr_keys.size(), &state_op_inst))
-          << "Error calling CreateOpState GPU for custom operator '" << name_str << "'";
+        int retval = callCreateOpState(createop_map.at("gpu"), attr_keys.data(), attr_vals.data(),
+                                       attr_keys.size(), ctx_str, ctx.real_dev_id(),
+                                       inshapes.data(), indims.data(),
+                                       in_shapes.size(), in_types.data(), &state_op_inst);
+        std::string msgs = getExtensionMsgs(msgSize, msgGet);
+        CHECK(retval) << "Error calling CreateOpState GPU for custom operator '" << name_str << "'"
+        << msgs;
       }
 
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
       CHECK(state_op_inst != nullptr)
-        << "Error custom library failed to create stateful operator '" << name_str << "'";
+      << "Error custom library failed to create stateful operator '" << name_str << "'" << msgs;
 
       CustomStatefulOp* state_op = reinterpret_cast<CustomStatefulOp*>(state_op_inst);
-      return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op);
+      if (!state_op->wasCreated() && !state_op->ignore_warn)
+        LOG(INFO) << "WARNING! Custom stateful op " << state_op_inst << " was created without "
+                  << "calling CustomStatefulOp::create(). Please ensure this object was "
+                  << "allocated with 'new' since it will be destructed with 'delete'. "
+                  << "To suppress this message without calling CustomStatefulOp::create() "
+                  << "set ignore_warn to 'true' on custom stateful op instance.";
+      return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op, callDestroyOpState);
     };
 
     /* -------------- BELOW IS THE REGISTRATION FOR CUSTOM OPERATORS --------------- */
 
-    // check if operator is already registered
-    const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
-    nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
-    int plevel = 10;
-    if (regOpPtr != nullptr) {
-      // overwrite registration of existing op with custom op
-      regOp.arguments.clear();
-      // set attribute with higher plevel (11) to allow re-registering once
-      // TODO(samskalicky): enable constant overwriting of registertion multiple times
-      plevel++;
-    }
-    // define supported resources for both subgraph ops and regular ops
-    regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
-    if (!isSubgraphOp) {
-      regOp.set_attr_parser(attr_parser);
-      regOp.set_num_inputs(num_inputs);
-      regOp.set_num_outputs(num_outputs);
-      regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
-      regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
-      regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
-      // optionally add fmutate inputs if user specified a function
-      if (mutate_fp != nullptr)
-        regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
-    } else {
-      using namespace mxnet::op;
-      regOp.set_num_inputs(DefaultSubgraphOpNumInputs);
-      regOp.set_num_outputs(DefaultSubgraphOpNumOutputs);
-      regOp.set_attr<nnvm::FInferType>("FInferType", DefaultSubgraphOpType, plevel);
-      regOp.set_attr<mxnet::FInferShape>("FInferShape", DefaultSubgraphOpShape, plevel);
-      regOp.set_attr<FInferStorageType>("FInferStorageType",
-                                        DefaultSubgraphOpStorageType, plevel);
-      regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs",
-                                          DefaultSubgraphOpMutableInputs, plevel);
-    }
-    // optionally add stateful forward
-    if (createop_map.size() != 0) {
-      regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
-      auto fstate_forward = [=](const OpStatePtr& state_ptr,
-                                const OpContext& ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs) {
-        CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
-                                 callFStatefulComp, 1, &state_ptr, ctx, inputs, req, outputs);
-      };
-      if (createop_map.count("cpu") > 0)
-        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_forward, plevel);
-      if (createop_map.count("gpu") > 0)
-        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_forward, plevel);
-    } else {
-      auto forward_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs) {
-        if (ctx.run_ctx.ctx.dev_mask() == Context::kCPU) {
-          CHECK_GT(forward_ctx_map.count("cpu"), 0);
-          fcomp_t fcomp = forward_ctx_map.at("cpu");
-          CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
-                                   nullptr, 0, nullptr, ctx, inputs, req, outputs);
-        } else if (ctx.run_ctx.ctx.dev_mask() == Context::kGPU) {
-          CHECK_GT(forward_ctx_map.count("gpu"), 0);
-          fcomp_t fcomp = forward_ctx_map.at("gpu");
-          CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
-                                   nullptr, 0, nullptr, ctx, inputs, req, outputs);
-        }
-      };
-      if (forward_ctx_map.count("cpu") > 0)
-        regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
-      if (forward_ctx_map.count("gpu") > 0)
-        regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_lambda, plevel);
-    }
-    // optionally add fgradient if user specified a function, or for stateful ops
-    if (backward_ctx_map.size() != 0 || createop_map.size() != 0) {
-      std::string grad_name = "_backward_" + name_str;
-      nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
-      regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
-      gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, plevel);
-      gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
-      gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
-
-      if (!isSubgraphOp) {
-        // register attr parser and standard functions for non-subgraph ops
-        gradOp.set_attr_parser(attr_parser);
-        gradOp.set_num_inputs(num_inouts);
-        gradOp.set_num_outputs(num_inputs);
-      } else {
-        // for subgraph ops use special functions that do not invoke attr_parser
-        using namespace mxnet::op;
-        auto grad_inouts = [=](const nnvm::NodeAttrs& attrs) {
-          // for backward passes, inputs + outputs + input gradients (one for each output)
-          uint32_t cnt = DefaultSubgraphOpNumInputs(attrs);
-          cnt += 2 * DefaultSubgraphOpNumOutputs(attrs);
-          return cnt;
-        };
-        gradOp.set_num_inputs(grad_inouts);
-        gradOp.set_num_outputs(DefaultSubgraphOpNumInputs);
-      }
-
-      if (createop_map.size() != 0) {
-        // for stateful operators
-        gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
-        auto fstate_backward = [=](const OpStatePtr& state_ptr,
-                                   const OpContext& ctx,
-                                   const std::vector<NDArray>& inputs,
-                                   const std::vector<OpReqType>& req,
-                                   const std::vector<NDArray>& outputs) {
-          CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
-                                   callFStatefulComp, 0, &state_ptr, ctx, inputs, req, outputs);
-        };
-        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_backward, plevel);
-        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_backward, plevel);
-      } else {
-        // for stateless operators
-        if (backward_ctx_map.count("cpu") > 0) {
-          fcomp_t fcomp_back_cpu = backward_ctx_map.at("cpu");
-          auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                         const OpContext& ctx,
-                                         const std::vector<NDArray>& inputs,
-                                         const std::vector<OpReqType>& req,
-                                         const std::vector<NDArray>& outputs) {
-            CustomFComputeDispatcher(name_str, callFComp, fcomp_back_cpu, &attrs,
-                                     nullptr, 0, nullptr, ctx, inputs, req, outputs);
-          };
-          gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
-        }
-        if (backward_ctx_map.count("gpu") > 0) {
-          fcomp_t fcomp_back_gpu = backward_ctx_map.at("gpu");
-          auto backward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                         const OpContext& ctx,
-                                         const std::vector<NDArray>& inputs,
-                                         const std::vector<OpReqType>& req,
-                                         const std::vector<NDArray>& outputs) {
-            CustomFComputeDispatcher(name_str, callFComp, fcomp_back_gpu, &attrs,
-                                     nullptr, 0, nullptr, ctx, inputs, req, outputs);
-          };
-          gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);
-        }
-      }
-    }
-    regOp.add_argument("data", "NDArray[]", "Source inputs");
+    registerOp(name, name_str, isSubgraphOp, resc_req, attr_parser, num_inputs, num_outputs,
+               num_inouts, infer_type, infer_shape, infer_storage_type, mutate_inputs,
+               num_subgraph_inputs, infer_subgraph_type, infer_subgraph_shape,
+               infer_subgraph_storage_type, create_opstate, grad_reg, mutate_fp,
+               createop_map, forward_ctx_map, backward_ctx_map, callFComp, callFStatefulComp,
+               msgSize, msgGet);
   }
 }
 
-void registerPartitioners(void *lib, int verbose) {
+void registerPartitioners(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
+                       mxnet::ext::msgGet_t msgGet) {
+  using namespace mxnet::ext;
+
   // get C type interface functions
   opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
 
@@ -1036,7 +1282,10 @@ void registerPartitioners(void *lib, int verbose) {
   }
 }
 
-void registerPasses(void *lib, int verbose) {
+void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
+                       mxnet::ext::msgGet_t msgGet) {
+  using namespace mxnet::ext;
+
   // get C type interface functions
   opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
 
@@ -1068,8 +1317,8 @@ void registerPasses(void *lib, int verbose) {
       // get pass name
       const char* pass_name = g.GetAttr<const char*>("pass_name");
       // get options
-      const std::vector<std::pair<std::string, std::string>>& options_map =
-            g.GetAttr<const std::vector<std::pair<std::string, std::string>>>("options_map");
+      const std::unordered_map<std::string, std::string>& options_map =
+            g.GetAttr<const std::unordered_map<std::string, std::string>>("options_map");
       // convert options_map_ to char* to pass to backend library
       std::vector<const char*> opt_keys, opt_vals;
       for (auto& kv : options_map) {
@@ -1139,50 +1388,54 @@ void registerPasses(void *lib, int verbose) {
 
       // convert input args
       for (size_t i=0; i < in_arg_names.size(); i++) {
-        arg_names.push_back(in_arg_names[i].c_str());
-        const NDArray &in_arg = *(in_args_ptr[i]);
+        if (in_args_ptr[i] != nullptr) {
+          arg_names.push_back(in_arg_names[i].c_str());
+          const NDArray &in_arg = *(in_args_ptr[i]);
 
 #if MXNET_USE_MKLDNN == 1
-        // reorder data if in MKLDNN format
-        if (in_arg.IsMKLDNNData()) {
-          in_arg.Reorder2DefaultAsync();
-          in_arg.WaitToRead();
-        }
+          // reorder data if in MKLDNN format
+          if (in_arg.IsMKLDNNData()) {
+            in_arg.Reorder2DefaultAsync();
+            in_arg.WaitToRead();
+          }
 #endif
 
-        // pull out parts of NDArray to send to backend
-        arg_data.push_back(in_arg.data().dptr_);
-        arg_shapes.push_back(in_arg.shape().data());
-        arg_dims.push_back(in_arg.shape().ndim());
-        arg_types.push_back(in_arg.dtype());
-        arg_verIDs.push_back(in_arg.version());
-        const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-        arg_dev_type.push_back(arg_ctx_str);
-        arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+          // pull out parts of NDArray to send to backend
+          arg_data.push_back(in_arg.data().dptr_);
+          arg_shapes.push_back(in_arg.shape().data());
+          arg_dims.push_back(in_arg.shape().ndim());
+          arg_types.push_back(in_arg.dtype());
+          arg_verIDs.push_back(in_arg.version());
+          const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+          arg_dev_type.push_back(arg_ctx_str);
+          arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+        }
       }
 
       // convert input aux
       for (size_t i=0; i < in_aux_names.size(); i++) {
-        aux_names.push_back(in_aux_names[i].c_str());
-        const auto &in_aux = *(in_aux_ptr[i]);
+        if (in_aux_ptr[i] != nullptr) {
+          aux_names.push_back(in_aux_names[i].c_str());
+          const auto &in_aux = *(in_aux_ptr[i]);
 
 #if MXNET_USE_MKLDNN == 1
-        // reorder data if in MKLDNN format
-        if (in_aux.IsMKLDNNData()) {
-          in_aux.Reorder2DefaultAsync();
-          in_aux.WaitToRead();
-        }
+          // reorder data if in MKLDNN format
+          if (in_aux.IsMKLDNNData()) {
+            in_aux.Reorder2DefaultAsync();
+            in_aux.WaitToRead();
+          }
 #endif
 
-        // pull out parts of NDArray to send to backend
-        aux_data.push_back(in_aux.data().dptr_);
-        aux_shapes.push_back(in_aux.shape().data());
-        aux_dims.push_back(in_aux.shape().ndim());
-        aux_types.push_back(in_aux.dtype());
-        aux_verIDs.push_back(in_aux.version());
-        const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-        aux_dev_type.push_back(aux_ctx_str);
-        aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+          // pull out parts of NDArray to send to backend
+          aux_data.push_back(in_aux.data().dptr_);
+          aux_shapes.push_back(in_aux.shape().data());
+          aux_dims.push_back(in_aux.shape().ndim());
+          aux_types.push_back(in_aux.dtype());
+          aux_verIDs.push_back(in_aux.version());
+          const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+          aux_dev_type.push_back(aux_ctx_str);
+          aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+        }
       }
 
       // convert graph to string
@@ -1195,7 +1448,7 @@ void registerPasses(void *lib, int verbose) {
       // this temp workspace holds memory allocated by custom library via OpResource
       auto ndarray_alloc = [&](const mxnet::TShape &shape, Context ctx, int dtype,
                                std::string name, bool isArg) {
-        NDArray* arr = new NDArray(shape, ctx, dtype);
+        NDArray* arr = new NDArray(shape, ctx, false, dtype);
         if (isArg) {
           new_args.push_back(arr);
           new_arg_names.push_back(name);
@@ -1209,7 +1462,7 @@ void registerPasses(void *lib, int verbose) {
       // create no-capture lambda so that we can cast it to function pointer
       // lambda with captures cannot be cast to function pointer and pass to lib_api.h
       // this needs to be a lambda function so that we can do the decltype cast
-      typedef decltype(ndarray_alloc) alloc_type_ndarray;
+      using alloc_type_ndarray = decltype(ndarray_alloc);
       auto ndarray_malloc = [](const void* _ndarray_alloc, const int64_t* shapes, int num_shapes,
                                const char* dev_str, int dev_id, int dtype, const char* name,
                                int isArg, void** data) {
@@ -1231,17 +1484,18 @@ void registerPasses(void *lib, int verbose) {
       };
 
       char* out_json;
-      CHECK(callGraphPass(pass_fp, in_json.c_str(), &out_json, opt_keys.data(),
-                          opt_vals.data(), opt_keys.size(), pass_name,
-                          arg_names.data(), arg_names.size(), arg_data.data(),
-                          arg_shapes.data(), arg_dims.data(), arg_types.data(),
-                          arg_verIDs.data(), arg_dev_type.data(),
-                          arg_dev_id.data(), aux_names.data(), aux_names.size(),
-                          aux_data.data(), aux_shapes.data(), aux_dims.data(),
-                          aux_types.data(), aux_verIDs.data(),
-                          aux_dev_type.data(), aux_dev_id.data(),
-                          ndarray_malloc, &ndarray_alloc))
-      << "Error calling graph pass for '" << pass_name << "'";
+      int retval = callGraphPass(pass_fp, in_json.c_str(), &out_json, opt_keys.data(),
+                                 opt_vals.data(), opt_keys.size(), pass_name,
+                                 arg_names.data(), arg_names.size(), arg_data.data(),
+                                 arg_shapes.data(), arg_dims.data(), arg_types.data(),
+                                 arg_verIDs.data(), arg_dev_type.data(),
+                                 arg_dev_id.data(), aux_names.data(), aux_names.size(),
+                                 aux_data.data(), aux_shapes.data(), aux_dims.data(),
+                                 aux_types.data(), aux_verIDs.data(),
+                                 aux_dev_type.data(), aux_dev_id.data(),
+                                 ndarray_malloc, &ndarray_alloc);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling graph pass for '" << pass_name << "'" << msgs;
 
       std::string out_string(out_json);
       nnvm::Graph out_graph = nnvm::pass::LoadJSON(out_string);
@@ -1265,28 +1519,38 @@ void registerPasses(void *lib, int verbose) {
  * \brief Loads dynamic custom library and initializes it
  * \param path library path
  */
-int MXLoadLib(const char *path, unsigned verbose) {
+int MXLoadLib(const char *path, unsigned verbose, void** lib) {
   API_BEGIN();
-  void *lib = LibraryInitializer::Get()->lib_load(path);
-  if (!lib)
+  *lib = LibraryInitializer::Get()->lib_load(path);
+  if (!*lib)
     LOG(FATAL) << "Unable to load library";
 
   // check that library and MXNet use same version of library API
-  opVersion_t opVersion = get_func<opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
+  mxnet::ext::opVersion_t opVersion =
+    get_func<mxnet::ext::opVersion_t>(*lib, const_cast<char*>(MXLIB_OPVERSION_STR));
   int libVersion =  opVersion();
   if (MX_LIBRARY_VERSION != libVersion)
     LOG(FATAL) << "Library version (" << libVersion << ") does not match MXNet version ("
                << MX_LIBRARY_VERSION << ")";
 
+  // get error messaging APIs
+  mxnet::ext::msgSize_t msgSize =
+    get_func<mxnet::ext::msgSize_t>(*lib, const_cast<char*>(MXLIB_MSGSIZE_STR));
+  mxnet::ext::msgGet_t msgGet =
+    get_func<mxnet::ext::msgGet_t>(*lib, const_cast<char*>(MXLIB_MSGGET_STR));
+
   // initialize library by passing MXNet version
-  initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
-  if (!initialize(static_cast<int>(MXNET_VERSION)))
-    LOG(FATAL) << "Library failed to initialize";
+  mxnet::ext::initialize_t initialize =
+    get_func<mxnet::ext::initialize_t>(*lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
+  if (!initialize(static_cast<int>(MXNET_VERSION))) {
+    std::string msgs = getExtensionMsgs(msgSize, msgGet);
+    LOG(FATAL) << "Library failed to initialize" << msgs;
+  }
 
   // find ops, partitioners, and passes in library
-  registerOperators(lib, verbose);
-  registerPartitioners(lib, verbose);
-  registerPasses(lib, verbose);
+  registerOperators(*lib, verbose, msgSize, msgGet);
+  registerPartitioners(*lib, verbose, msgSize, msgGet);
+  registerPasses(*lib, verbose, msgSize, msgGet);
   API_END();
 }
 
@@ -1298,6 +1562,17 @@ int MXLibInfoFeatures(const struct LibFeature **lib_features, size_t *size) {
   *size = lib_info->getFeatures().size();
   API_END();
 }
+
+int MXLibInfoCompiledWithCXX11ABI(int* result) {
+  API_BEGIN();
+#ifdef _GLIBCXX_USE_CXX11_ABI
+  *result = _GLIBCXX_USE_CXX11_ABI;
+#else
+  *result = -1;
+#endif
+  API_END();
+}
+
 
 int MXRandomSeed(int seed) {
   API_BEGIN();
@@ -1365,6 +1640,15 @@ int MXGetVersion(int *out) {
 int MXLoadTVMOp(const char *libpath) {
   API_BEGIN();
   tvm::runtime::TVMOpModule::Get()->Load(libpath);
+  tvm::runtime::TVMOpModule *global_module =  tvm::runtime::TVMOpModule::Get();
+  global_module->Load(libpath);
+#if MXNET_USE_CUDA
+  std::string libpathstr(libpath);
+  std::string cubinpath = libpathstr.substr(0, libpathstr.size() - 11) + "libtvmop.cubin";
+  tvm::runtime::TVMOpModule cubin_module;
+  cubin_module.Load(cubinpath);
+  global_module->Import(cubin_module);
+#endif
   API_END();
 }
 
@@ -1420,41 +1704,25 @@ void CreateNDArray(const DataType* shape,
   *out = nd;
 }
 
-int MXNDArrayCreate(const uint32_t *shape,
-                    uint32_t ndim,
-                    int dev_type,
-                    int dev_id,
-                    int delay_alloc,
-                    NDArrayHandle *out) {
-  API_BEGIN();
-  NDArray* nd = new NDArray(mxnet::TShape(shape, shape + ndim),
-                            Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
-                            delay_alloc != 0);
-  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
-                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
-  *out = nd;
-  API_END();
-}
-
-int MXNDArrayCreateEx64(const int64_t *shape,
-                        int ndim,
-                        int dev_type,
-                        int dev_id,
-                        int delay_alloc,
-                        int dtype,
-                        NDArrayHandle *out) {
-  API_BEGIN();
-  CreateNDArray<int64_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
-  API_END();
-}
-
-int MXNDArrayCreateEx(const uint32_t *shape,
-                      uint32_t ndim,
+int MXNDArrayCreate64(const int64_t *shape,
+                      int ndim,
                       int dev_type,
                       int dev_id,
                       int delay_alloc,
                       int dtype,
                       NDArrayHandle *out) {
+  API_BEGIN();
+  CreateNDArray<int64_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  API_END();
+}
+
+int MXNDArrayCreate(const uint32_t *shape,
+                    uint32_t ndim,
+                    int dev_type,
+                    int dev_id,
+                    int delay_alloc,
+                    int dtype,
+                    NDArrayHandle *out) {
   API_BEGIN();
   CreateNDArray<uint32_t>(shape, static_cast<int>(ndim), dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
@@ -1619,10 +1887,10 @@ int MXNDArrayWaitAll() {
   API_END();
 }
 
-int MXNDArraySave(const char* fname,
-                  uint32_t num_args,
-                  NDArrayHandle* args,
-                  const char** keys) {
+int MXNDArrayLegacySave(const char* fname,
+                        uint32_t num_args,
+                        NDArrayHandle* args,
+                        const char** keys) {
   API_BEGIN();
   std::vector<NDArray> data(num_args);
   std::vector<std::string> names;
@@ -1642,6 +1910,54 @@ int MXNDArraySave(const char* fname,
   API_END();
 }
 
+int MXNDArraySave(const char* fname,
+                  uint32_t num_args,
+                  NDArrayHandle* args,
+                  const char** keys) {
+  API_BEGIN();
+
+  CHECK_NOTNULL(fname);
+
+  // We may use mz_zip_writer_init_v2 later instead of mz_zip_writer_init_file
+  // and write an adapter for DMLC stream based on pZip->m_pWrite (and
+  // pZip->m_pIO_opaque)
+  if (num_args == 1 && keys == nullptr) {
+      NDArray *array = static_cast<NDArray *>(args[0]);
+      if (array->storage_type() == kDefaultStorage) {
+          npy::save_array(fname, *array);
+      } else {
+          mz_zip_archive archive {};
+          CHECK(mz_zip_writer_init_file(&archive, fname, 0))
+              << "Failed to open archive " << fname << ": "
+              << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+          npz::save_array(&archive, "", *array);
+          CHECK(mz_zip_writer_finalize_archive(&archive))
+              << "Failed to finalize archive " << fname
+              << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+          CHECK(mz_zip_writer_end(&archive))
+              << "Failed to end archive " << fname
+              << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+      }
+  } else {
+      mz_zip_archive archive {};
+      CHECK(mz_zip_writer_init_file(&archive, fname, 0))
+          << "Failed to open archive " << fname << ": "
+          << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+      for (uint32_t i = 0; i < num_args; ++i) {
+          NDArray *array = static_cast<NDArray *>(args[i]);
+          const std::string array_key = keys == nullptr ? "arr_" + std::to_string(i) : keys[i];
+          npz::save_array(&archive, array_key, *array);
+      }
+      CHECK(mz_zip_writer_finalize_archive(&archive))
+          << "Failed to finalize archive " << fname
+          << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+      CHECK(mz_zip_writer_end(&archive))
+          << "Failed to end archive " << fname
+          << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
+  }
+  API_END();
+}
+
 int MXNDArrayLoad(const char* fname,
                   uint32_t *out_size,
                   NDArrayHandle** out_arr,
@@ -1650,26 +1966,63 @@ int MXNDArrayLoad(const char* fname,
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   ret->ret_vec_str.clear();
   API_BEGIN();
-  std::vector<NDArray> data;
-  std::vector<std::string> &names = ret->ret_vec_str;
+
+  uint32_t magic;
   {
-    std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
-    mxnet::NDArray::Load(fi.get(), &data, &names);
+      std::unique_ptr<dmlc::Stream> strm(dmlc::Stream::Create(fname, "r"));
+      CHECK_EQ(strm->Read(&magic, sizeof(uint32_t)), sizeof(uint32_t))
+        << "Failed to read 32 bits from file.";
   }
-  ret->ret_handles.resize(data.size());
-  for (size_t i = 0; i < data.size(); ++i) {
-    NDArray *ptr = new NDArray();
-    *ptr = data[i];
-    ret->ret_handles[i] = ptr;
+
+  if (magic == 0x04034b50 || magic == 0x504b0304) {  // zip file format; assumed to be npz
+      auto[data, names] = npz::load_arrays(fname);
+      ret->ret_handles.resize(data.size());
+      for (size_t i = 0; i < data.size(); ++i) {
+          NDArray *ptr = new NDArray();
+          *ptr = data[i];
+          ret->ret_handles[i] = ptr;
+      }
+      ret->ret_vec_str.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_str[i] = names[i];
+      }
+      ret->ret_vec_charp.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_charp[i] = ret->ret_vec_str[i].c_str();
+      }
+      *out_size = static_cast<uint32_t>(data.size());
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+      *out_name_size = static_cast<uint32_t>(names.size());
+      *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
+  } else if (magic == 0x4d554e93 || magic == 0x934e554d) {  // first bytes of npy format
+      *out_size = 1;
+      ret->ret_handles.resize(1);
+      NDArray *ptr = new NDArray();
+      *ptr = npy::load_array(fname);  // Only supports local filesystem at this point in time
+      ret->ret_handles[0] = ptr;
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+  } else {
+      std::vector<NDArray> data;
+      std::vector<std::string> &names = ret->ret_vec_str;
+      {
+          std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(fname, "r"));
+          mxnet::NDArray::Load(fi.get(), &data, &names);
+      }
+      ret->ret_handles.resize(data.size());
+      for (size_t i = 0; i < data.size(); ++i) {
+          NDArray *ptr = new NDArray();
+          *ptr = data[i];
+          ret->ret_handles[i] = ptr;
+      }
+      ret->ret_vec_charp.resize(names.size());
+      for (size_t i = 0; i < names.size(); ++i) {
+          ret->ret_vec_charp[i] = names[i].c_str();
+      }
+      *out_size = static_cast<uint32_t>(data.size());
+      *out_arr = dmlc::BeginPtr(ret->ret_handles);
+      *out_name_size = static_cast<uint32_t>(names.size());
+      *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   }
-  ret->ret_vec_charp.resize(names.size());
-  for (size_t i = 0; i < names.size(); ++i) {
-    ret->ret_vec_charp[i] = names[i].c_str();
-  }
-  *out_size = static_cast<uint32_t>(data.size());
-  *out_arr = dmlc::BeginPtr(ret->ret_handles);
-  *out_name_size = static_cast<uint32_t>(names.size());
-  *out_names = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
 }
 
@@ -1823,25 +2176,6 @@ int MXNDArrayGetStorageType(NDArrayHandle handle,
   API_END();
 }
 
-int MXNDArrayGetShape(NDArrayHandle handle,
-                      uint32_t *out_dim,
-                      const uint32_t **out_pdata) {
-  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
-  API_BEGIN();
-  NDArray *arr = static_cast<NDArray*>(handle);
-  if (!arr->is_none()) {
-    const mxnet::TShape &s = arr->shape();
-    *out_dim = s.ndim();
-    std::vector<uint32_t>& buffer = ret->arg_shape_buffer;
-    buffer.resize(s.ndim());
-    nnvm::ShapeTypeCast(s.begin(), s.end(), buffer.data());
-    *out_pdata = buffer.data();
-  } else {
-    *out_dim = 0;
-  }
-  API_END();
-}
-
 template<typename dtype>
 inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim,
                      MXAPIThreadLocalEntry<dtype>* ret) {
@@ -1881,18 +2215,18 @@ inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim
   }
 }
 
-int MXNDArrayGetShapeEx(NDArrayHandle handle,
-                        int *out_dim,
-                        const int **out_pdata) {
+int MXNDArrayGetShape(NDArrayHandle handle,
+                      int *out_dim,
+                      const int **out_pdata) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   GetShape<int>(handle, out_pdata, out_dim, ret);
   API_END();
 }
 
-int MXNDArrayGetShapeEx64(NDArrayHandle handle,
-                          int *out_dim,
-                          const int64_t **out_pdata) {
+int MXNDArrayGetShape64(NDArrayHandle handle,
+                        int *out_dim,
+                        const int64_t **out_pdata) {
   MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
   API_BEGIN();
   GetShape<int64_t>(handle, out_pdata, out_dim, ret);
@@ -1926,13 +2260,8 @@ int MXNDArrayToDLPack(NDArrayHandle handle,
 }
 
 int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                        const bool transient_handle,
                         NDArrayHandle *out_handle) {
-  return MXNDArrayFromDLPackEx(dlpack, false, out_handle);
-}
-
-int MXNDArrayFromDLPackEx(DLManagedTensorHandle dlpack,
-                          const bool transient_handle,
-                          NDArrayHandle *out_handle) {
   API_BEGIN();
   *out_handle = new NDArray(NDArray::FromDLPack(
               static_cast<DLManagedTensor*>(dlpack),
@@ -2094,21 +2423,6 @@ int MXFuncDescribe(FunctionHandle fun,
 int MXFuncInvoke(FunctionHandle fun,
                  NDArrayHandle *use_vars,
                  float *scalar_args,
-                 NDArrayHandle *mutate_vars) {
-  API_BEGIN();
-  auto *f = static_cast<const NDArrayFunctionReg*>(fun);
-  f->body((NDArray**)(use_vars),  //  NOLINT(*)
-          scalar_args,
-          (NDArray**)(mutate_vars),  //  NOLINT(*)
-          0,
-          nullptr,
-          nullptr);
-  API_END();
-}
-
-int MXFuncInvokeEx(FunctionHandle fun,
-                 NDArrayHandle *use_vars,
-                 float *scalar_args,
                  NDArrayHandle *mutate_vars,
                  int num_params,
                  char **param_keys,
@@ -2160,7 +2474,7 @@ int MXDataIterCreateIter(DataIterCreator creator,
   iter = e->body();
   std::vector<std::pair<std::string, std::string> > kwargs;
   for (uint32_t i = 0; i < num_param; ++i) {
-    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+    kwargs.emplace_back(std::string(keys[i]), std::string(vals[i]));
   }
   iter->Init(kwargs);
   *out = iter;
@@ -2287,7 +2601,7 @@ int MXDatasetCreateDataset(DatasetCreator handle,
   DatasetReg *e = static_cast<DatasetReg *>(handle);
   std::vector<std::pair<std::string, std::string> > kwargs;
   for (uint32_t i = 0; i < num_param; ++i) {
-    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+    kwargs.emplace_back(std::string(keys[i]), std::string(vals[i]));
   }
   dataset = e->body(kwargs);
   *out = new std::shared_ptr<Dataset>(dataset);
@@ -2304,7 +2618,7 @@ int MXDatasetGetDatasetInfo(DatasetCreator creator,
   DatasetReg *e = static_cast<DatasetReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions,
-                                 NULL);
+                                 nullptr);
 }
 
 int MXDatasetFree(DatasetHandle handle) {
@@ -2375,7 +2689,7 @@ int MXBatchifyFunctionCreateFunction(BatchifyFunctionCreator handle,
   BatchifyFunctionReg *e = static_cast<BatchifyFunctionReg *>(handle);
   std::vector<std::pair<std::string, std::string> > kwargs;
   for (uint32_t i = 0; i < num_param; ++i) {
-    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+    kwargs.emplace_back(std::string(keys[i]), std::string(vals[i]));
   }
   bf = e->body(kwargs);
   *out = new BatchifyFunctionPtr(bf);
@@ -2392,7 +2706,7 @@ int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
   BatchifyFunctionReg *e = static_cast<BatchifyFunctionReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions,
-                                 NULL);
+                                 nullptr);
 }
 int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
                              int batch_size,
@@ -3030,24 +3344,24 @@ int MXRtcCudaModuleCreate(const char* source, int num_options,
                           const char** options, int num_exports,
                           const char** exports, CudaModuleHandle *out) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   std::vector<std::string> str_opts;
   for (int i = 0; i < num_options; ++i) str_opts.emplace_back(options[i]);
   std::vector<std::string> str_exports;
   for (int i = 0; i < num_exports; ++i) str_exports.emplace_back(exports[i]);
   *out = new rtc::CudaModule(source, str_opts, str_exports);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
 
 int MXRtcCudaModuleFree(CudaModuleHandle handle) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   delete reinterpret_cast<rtc::CudaModule*>(handle);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
@@ -3056,7 +3370,7 @@ int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name, int num_arg
                           int* is_ndarray, int* is_const, int* arg_types,
                           CudaKernelHandle *out) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   auto module = reinterpret_cast<rtc::CudaModule*>(handle);
   std::vector<rtc::CudaModule::ArgType> signature;
   for (int i = 0; i < num_args; ++i) {
@@ -3067,17 +3381,17 @@ int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name, int num_arg
   auto kernel = module->GetKernel(name, signature);
   *out = new std::shared_ptr<rtc::CudaModule::Kernel>(kernel);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
 
 int MXRtcCudaKernelFree(CudaKernelHandle handle) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   delete reinterpret_cast<std::shared_ptr<rtc::CudaModule::Kernel>*>(handle);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
@@ -3088,7 +3402,7 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
                         uint32_t block_dim_y, uint32_t block_dim_z,
                         uint32_t shared_mem) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   auto kernel = reinterpret_cast<std::shared_ptr<rtc::CudaModule::Kernel>*>(handle);
   const auto& signature = (*kernel)->signature();
   std::vector<dmlc::any> any_args;
@@ -3104,7 +3418,7 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
   (*kernel)->Launch(Context::GPU(dev_id), any_args, grid_dim_x, grid_dim_y,
                     grid_dim_z, block_dim_x, block_dim_y, block_dim_z, shared_mem);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
@@ -3129,8 +3443,8 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
   API_END();
 }
 
-int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const uint32_t *shape,
-                                 uint32_t ndim, int dtype, NDArrayHandle *out) {
+int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const int *shape,
+                                 int ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
   NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
   nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
@@ -3139,18 +3453,8 @@ int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const uint32_t *
   API_END();
 }
 
-int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *shape,
-                                   int ndim, int dtype, NDArrayHandle *out) {
-  API_BEGIN();
-  NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
-  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
-                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
-  *out = nd;
-  API_END();
-}
-
-typedef Engine::VarHandle VarHandle;
-typedef Engine::CallbackOnComplete CallbackOnComplete;
+using VarHandle = Engine::VarHandle;
+using CallbackOnComplete = Engine::CallbackOnComplete;
 
 void AssertValidNumberVars(int num_const_vars, int num_mutable_vars) {
   CHECK_GE(num_const_vars, 0) << "Non-negative number of const vars expected.";

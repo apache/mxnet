@@ -31,6 +31,7 @@
 #include <utility>
 #include <algorithm>
 #include <climits>
+#include <string>
 #include "./cast_storage-inl.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
@@ -45,69 +46,117 @@
 namespace mxnet {
 namespace op {
 
+namespace {
+
+/*! \brief Infer the output storage geometry
+ * \return boolean signifying whether the proper storage geometry was initialized
+ */
+template<int n_in, int n_out>
+bool InitStorageGeometry(const nnvm::NodeAttrs& attrs,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), static_cast<size_t>(n_in))
+    << " in operator " << attrs.name;
+  CHECK_EQ(outputs.size(), static_cast<size_t>(n_out))
+    << " in operator " << attrs.name;
+  static_assert(n_in > 0 && n_out > 0, "Invalid input and/or output count values");
+  const mxnet::TShape& isshape = inputs[0].storage_shape();
+  if (!shape_is_none(isshape)) {
+    NDArray *output = nullptr;
+    for (size_t i = 0, n = inputs.size(); i < n; ++i) {
+      const NDArray &input = inputs[i];
+      if (i < n_out) {
+        output = const_cast<NDArray *>(&outputs[i]);
+      }
+      CHECK_EQ(output->shape(), inputs[i].shape());
+      CHECK_EQ(output->storage_type(), input.storage_type());
+      CHECK_EQ(output->aux_shapes().size(), input.aux_shapes().size());
+      mxnet::ShapeVector aux_shapes;
+      const size_t aux_shape_count = input.aux_shapes().size();
+      aux_shapes.reserve(aux_shape_count);
+      for (size_t j = 0; j < aux_shape_count; ++j) {
+        aux_shapes.emplace_back(input.aux_shape(j));
+      }
+      output->CheckAndAlloc(aux_shapes);
+      DCHECK_EQ(output->storage_shape(), input.storage_shape());
+    }
+    return true;
+  }
+  if (isshape.ndim() > 0 && !isshape.Size()
+    && inputs[0].storage_type() != kDefaultStorage) {
+    return true;  // 0% density
+  } else {
+    CHECK(false);  // implement when necessary
+  }
+  return false;
+}
+
+/*! \brief Copy blob data */
+template<typename xpu>
+void inline CopyBlob(mshadow::Stream<xpu> *s,
+                            const TBlob *dest_blob,
+                            const OpReqType reqi,
+                            const TBlob& src_blob) {
+  CHECK_EQ(src_blob.type_flag_, dest_blob->type_flag_);
+  CHECK_EQ(src_blob.shape_, dest_blob->shape_);
+  MSHADOW_TYPE_SWITCH(src_blob.type_flag_, DType, {
+    // Check if the pointers are the same (in-place operation needs no copy)
+    if (reqi != kNullOp && src_blob.dptr<DType>() != dest_blob->dptr<DType>()) {
+      mshadow::Copy(dest_blob->FlatTo1D<xpu, DType>(s), src_blob.FlatTo1D<xpu, DType>(s), s);
+    }
+  });
+}
+
+/*! \brief Allocate geometry-related blob data for sparse tensors
+ * \param dest Destination sparse NDArray
+ * \param clone_from sparse NDArray from which to clone storage attributes
+ */
+void inline AllocateGeometry(const NDArray *dest,
+                             const OpReqType req,
+                             const NDArray* clone_from = nullptr) {
+  if (req != kNullOp) {
+    if (clone_from) {
+      const mxnet::TShape& ishape = clone_from->storage_shape();
+      dest->CheckAndAllocData(ishape);
+      CHECK_EQ(dest->storage_type(), clone_from->storage_type());
+      for (size_t i = 0, n = clone_from->aux_shapes().size(); i < n; ++i) {
+        dest->CheckAndAllocAuxData(i, clone_from->aux_shape(i));
+      }
+      DCHECK_EQ(dest->aux_shapes().size(), clone_from->aux_shapes().size());
+    } else {
+      for (size_t i = 0, n = dest->aux_shapes().size(); i < n; ++i) {
+        dest->CheckAndAllocAuxData(i, dest->aux_shape(i));
+      }
+      dest->CheckAndAllocData(dest->storage_shape());
+    }
+  }
+}
+
+/*! \brief Copy the geometry-related blobs (row sparse indexes, etc.) */
+template<typename xpu>
+inline void CopyGeometryBlobs(mshadow::Stream<xpu> *s,
+                                     const NDArray *dest,
+                                     const OpReqType reqi,
+                                     const NDArray &src) {
+  CHECK_EQ(src.aux_shapes().size(), dest->aux_shapes().size());
+  // My assumption is that the geometry blobs are not large enough to justify an omp loop here,
+  // since the thread synchronization calls for each fork will take longer
+  // than copying a few floats
+  for (size_t i = 0, n = src.aux_shapes().size(); i < n; ++i) {
+    const TBlob src_blob = src.aux_data(i);
+    const TBlob dest_blob = dest->aux_data(i);
+    CopyBlob<xpu>(s, &dest_blob, reqi, src_blob);
+  }
+}
+
+}  // namespace
+
 class OpBase {
  protected:
   /*! \brief simple kernel to set to a scalar value of arbitrary type */
   template<int req>
   using set_to_scalar = mxnet_op::op_with_req<mshadow_op::identity, req>;
 
-  /*! \brief Copy blob data */
-  template<typename xpu>
-  static void inline CopyBlob(mshadow::Stream<xpu> *s,
-                              const TBlob *dest_blob,
-                              const OpReqType reqi,
-                              const TBlob& src_blob) {
-    CHECK_EQ(src_blob.type_flag_, dest_blob->type_flag_);
-    CHECK_EQ(src_blob.shape_, dest_blob->shape_);
-    MSHADOW_TYPE_SWITCH(src_blob.type_flag_, DType, {
-      // Check if the pointers are the same (in-place operation needs no copy)
-      if (reqi != kNullOp && src_blob.dptr<DType>() != dest_blob->dptr<DType>()) {
-        mshadow::Copy(dest_blob->FlatTo1D<xpu, DType>(s), src_blob.FlatTo1D<xpu, DType>(s), s);
-      }
-    });
-  }
-
-  /*! \brief Allocate geometry-related blob data for sparse tensors
-   * \param dest Destination sparse NDArray
-   * \param clone_from sparse NDArray from which to clone storage attributes
-   */
-  static void AllocateGeometry(const NDArray *dest,
-                               const OpReqType req,
-                               const NDArray* clone_from = nullptr) {
-    if (req != kNullOp) {
-      if (clone_from) {
-        const mxnet::TShape& ishape = clone_from->storage_shape();
-        dest->CheckAndAllocData(ishape);
-        CHECK_EQ(dest->storage_type(), clone_from->storage_type());
-        for (size_t i = 0, n = clone_from->aux_shapes().size(); i < n; ++i) {
-          dest->CheckAndAllocAuxData(i, clone_from->aux_shape(i));
-        }
-        DCHECK_EQ(dest->aux_shapes().size(), clone_from->aux_shapes().size());
-      } else {
-        for (size_t i = 0, n = dest->aux_shapes().size(); i < n; ++i) {
-          dest->CheckAndAllocAuxData(i, dest->aux_shape(i));
-        }
-        dest->CheckAndAllocData(dest->storage_shape());
-      }
-    }
-  }
-
-  /*! \brief Copy the geometry-related blobs (row sparse indexes, etc.) */
-  template<typename xpu>
-  static inline void CopyGeometryBlobs(mshadow::Stream<xpu> *s,
-                                       const NDArray *dest,
-                                       const OpReqType reqi,
-                                       const NDArray &src) {
-    CHECK_EQ(src.aux_shapes().size(), dest->aux_shapes().size());
-    // My assumption is that the geometry blobs are not large enough to justify an omp loop here,
-    // since the thread synchronization calls for each fork will take longer
-    // than copying a few floats
-    for (size_t i = 0, n = src.aux_shapes().size(); i < n; ++i) {
-      const TBlob src_blob = src.aux_data(i);
-      const TBlob dest_blob = dest->aux_data(i);
-      CopyBlob<xpu>(s, &dest_blob, reqi, src_blob);
-    }
-  }
 
   /*! \brief Generic copy NDArray */
   template<typename xpu>
@@ -172,49 +221,6 @@ class OpBase {
 
 /*! \brief Unary operator class */
 class UnaryOp : public OpBase {
-  /*! \brief Infer the output storage geometry
-   * \return boolean signifying whether the proper storage geometry was initialized
-   */
-  template<int n_in, int n_out>
-  static bool InitStorageGeometry(const nnvm::NodeAttrs& attrs,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<NDArray>& outputs) {
-    CHECK_EQ(inputs.size(), static_cast<size_t>(n_in))
-      << " in operator " << attrs.name;
-    CHECK_EQ(outputs.size(), static_cast<size_t>(n_out))
-      << " in operator " << attrs.name;
-    static_assert(n_in > 0 && n_out > 0, "Invalid input and/or output count values");
-    const mxnet::TShape& isshape = inputs[0].storage_shape();
-    if (!shape_is_none(isshape)) {
-      NDArray *output = nullptr;
-      for (size_t i = 0, n = inputs.size(); i < n; ++i) {
-        const NDArray &input = inputs[i];
-        if (i < n_out) {
-          output = const_cast<NDArray *>(&outputs[i]);
-        }
-        CHECK_EQ(output->shape(), inputs[i].shape());
-        CHECK_EQ(output->storage_type(), input.storage_type());
-        CHECK_EQ(output->aux_shapes().size(), input.aux_shapes().size());
-        mxnet::ShapeVector aux_shapes;
-        const size_t aux_shape_count = input.aux_shapes().size();
-        aux_shapes.reserve(aux_shape_count);
-        for (size_t j = 0; j < aux_shape_count; ++j) {
-          aux_shapes.emplace_back(input.aux_shape(j));
-        }
-        output->CheckAndAlloc(aux_shapes);
-        DCHECK_EQ(output->storage_shape(), input.storage_shape());
-      }
-      return true;
-    }
-    if (isshape.ndim() > 0 && !isshape.Size()
-      && inputs[0].storage_type() != kDefaultStorage) {
-      return true;  // 0% density
-    } else {
-      CHECK(false);  // implement when necessary
-    }
-    return false;
-  }
-
  public:
   /*! \brief Map NDArray vectors to TBlob vectors and pass to compute function */
   template<typename xpu, typename FComputer>
@@ -224,7 +230,7 @@ class UnaryOp : public OpBase {
                                    const std::vector<OpReqType> &req,
                                    const std::vector<NDArray> &outputs,
                                    FComputer computer) {
-    UnaryOp::template InitStorageGeometry<1, 1>(attrs, inputs, outputs);
+    InitStorageGeometry<1, 1>(attrs, inputs, outputs);
     CHECK_EQ(inputs.size(), outputs.size());  // need to figure out what to do for binary type
     CHECK_NE(outputs[0].storage_type(), kDefaultStorage);
     CHECK_EQ(inputs[0].storage_type(), outputs[0].storage_type());
@@ -236,6 +242,22 @@ class UnaryOp : public OpBase {
     }
   }
 
+  template<typename OP>
+  static void Compute_(const nnvm::NodeAttrs& attrs,
+                       mshadow::Stream<cpu>* s,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        if (inputs[0].Size() != 0) {
+          mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(
+            s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
+        }
+      });
+    });
+  }
+
   template<typename xpu, typename OP>
   static void Compute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
@@ -243,14 +265,7 @@ class UnaryOp : public OpBase {
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        if (inputs[0].Size() != 0) {
-          mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
-            s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
-        }
-      });
-    });
+    Compute_<OP>(attrs, s, inputs, req, outputs);
   }
 
   template<typename xpu, typename OP>
@@ -319,7 +334,8 @@ class UnaryOp : public OpBase {
                         const std::vector<NDArray>& outputs) {
     CHECK_EQ(inputs.size(), 1U);
     CHECK_EQ(outputs.size(), 1U);
-    CHECK_NE(inputs[0].storage_type(), kDefaultStorage);
+    CHECK_NE(inputs[0].storage_type(), kDefaultStorage)
+      << "Operation requires a sparse input storage type";
     CHECK_NE(outputs[0].storage_type(), kDefaultStorage)
       << "Operation requires a sparse output storage type";
     if (inputs[0].storage_shape().Size()) {
@@ -360,7 +376,7 @@ class UnaryOp : public OpBase {
     CHECK_EQ(outputs.size(), 1U)
       << "Invalid output, only one output is allowed";
     CHECK_NE(inputs[0].storage_type(), kDefaultStorage)
-      << "Operation requires a sparse output storage type";
+      << "Operation requires a sparse input storage type";
     CHECK_NE(outputs[0].storage_type(), kDefaultStorage)
       << "Operation requires a sparse output storage type";
     if (inputs[0].storage_shape().Size()) {
@@ -368,23 +384,6 @@ class UnaryOp : public OpBase {
     }
   }
 #endif
-
-  template<typename xpu, typename op>
-  static void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
-                               const OpContext &ctx,
-                               const std::vector<TBlob> &inputs,
-                               const std::vector<OpReqType> &req,
-                               const std::vector<TBlob> &outputs) {
-    using namespace mshadow;
-    using namespace mxnet_op;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    CHECK_EQ(inputs.size(), 1U);
-    CHECK_EQ(outputs.size(), 1U);
-    MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
-      Kernel<op, xpu>::Launch(s, outputs[0].Size(),
-                              outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
-    });
-  }
 
   template<typename xpu>
   static void IdentityCompute(const nnvm::NodeAttrs& attrs,
@@ -637,7 +636,7 @@ struct AroundParam : public dmlc::Parameter<AroundParam> {
 template<int req>
 struct around_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
                                   const int decimals) {
     int d = 0;
     DType temp = in_data[i];
@@ -654,9 +653,9 @@ struct around_forward {
     roundtemp = (DType)round(static_cast<double>(temp));
     // If temp is x.5 and roundtemp is odd number, decrease or increase roundtemp by 1.
     // For example, in numpy, around(0.5) should be 0 but in c, round(0.5) is 1.
-    if (roundtemp - temp == 0.5 && (static_cast<int>(roundtemp)) % 2 != 0) {
+    if (roundtemp - temp == 0.5 && (static_cast<index_t>(roundtemp)) % 2 != 0) {
       roundtemp -= 1;
-    } else if (temp - roundtemp == 0.5 && (static_cast<int>(roundtemp)) % 2 != 0) {
+    } else if (temp - roundtemp == 0.5 && (static_cast<index_t>(roundtemp)) % 2 != 0) {
       roundtemp += 1;
     }
     while (d != 0) {
@@ -750,7 +749,7 @@ struct NumpyNanToNumParam : public dmlc::Parameter<NumpyNanToNumParam> {
 template<int req>
 struct nan_to_num_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType* out_data,
                                   const DType* in_data,
                                   const DType nan,
@@ -811,7 +810,7 @@ void NumpyNanToNumOpForward(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct nan_to_num_backward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType* in_grad,
                                   const DType* out_grad,
                                   const DType* in_data) {
@@ -914,6 +913,36 @@ void NumpyNanToNumOpBackward(const nnvm::NodeAttrs& attrs,
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$)        \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)
+
+#if MXNET_USE_CUDA
+
+struct UnaryRTCCompute {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<NDArray>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<NDArray>& outputs);
+};
+
+struct UnaryBwdInOutRTCCompute {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+#endif  // MXNET_USE_CUDA
 
 }  // namespace op
 }  // namespace mxnet

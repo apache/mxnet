@@ -22,7 +22,7 @@
 
 #if MXNET_USE_CUDA
 #include <cuda_runtime.h>
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #include "../profiler/storage_profiler.h"
 typedef  mxnet::common::cuda::DeviceStore CudaDeviceStore;
 #endif  // MXNET_USE_CUDA
@@ -42,6 +42,7 @@ typedef  mxnet::common::cuda::DeviceStore CudaDeviceStore;
 #endif  // _WIN32
 
 #include <tuple>
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace storage {
@@ -110,10 +111,22 @@ class ContextHelperCPU : public ContextHelper {
   }
 
   int Malloc(void **ppNtr, size_t size) const override {
-    return (*ppNtr = std::malloc(size))? 0 : -1;
+    bool success = mxnet::common::AlignedMemAlloc(ppNtr, size, alignment_);
+    return success ? 0 : -1;
   }
 
-  void Free(void *dptr) const override                  { std::free(dptr); }
+  void Free(void *dptr) const override {
+    mxnet::common::AlignedMemFree(dptr);
+  }
+
+ private:
+#if MXNET_USE_MKLDNN == 1 || MXNET_USE_INTGEMM == 1
+  // MKLDNN requires special alignment. 64 is used by the MKLDNN library in
+  // memory allocation.
+  static constexpr size_t alignment_ = kMKLDNNAlign;
+#else
+  static constexpr size_t alignment_ = 16;
+#endif
 };
 
 #if MXNET_USE_CUDA
@@ -155,7 +168,6 @@ class ContextHelperPinned : public ContextHelperGPU {
 #else
 typedef  ContextHelperCPU ContextHelperPinned;
 #endif
-
 }  // namespace storage
 }  // namespace mxnet
 

@@ -59,12 +59,12 @@ MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
 
 /* Compute coordinates from flattened index given shape */
 template<int ndim>
-MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(const int idx,
+MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(const index_t idx,
                                               const index_t* shape) {
   mshadow::Shape<ndim> ret;
   #pragma unroll
-  for (int i = ndim-1, j = idx; i >=0; --i) {
-    auto tmp = j / shape[i];
+  for (index_t i = ndim-1, j = idx; i >=0; --i) {
+    index_t tmp = j / shape[i];
     ret[i] = j - tmp*shape[i];
     j = tmp;
   }
@@ -158,13 +158,13 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
 inline mxnet::TShape NumpyPadShapeImpl(const mxnet::TShape& ishape,
                                        const mxnet::Tuple<Tuple<int>> pad_width) {
   if (ishape.ndim() == 1) {
-    auto s = ishape[0] + pad_width[0][0] + pad_width[1][0];
+    index_t s = ishape[0] + pad_width[0][0] + pad_width[1][0];
     return mxnet::TShape({s});
   } else if (ishape.ndim() >= 2) {
     int i;
     mxnet::TShape oshape(ishape.ndim(), -1);
     for (i = ishape.ndim() - 1; i >=0; i--) {
-      int base = ishape[i];
+      index_t base = ishape[i];
       base = base + pad_width[i][0] + pad_width[i][1];
       oshape[i] = base;
     }
@@ -231,7 +231,7 @@ struct pad_copy {
       for (m = 0; m < ndim; m++) {
         indexshape[m] = indexshape[m] - indexwidth[m * 2];
       }
-      int l = rravel<ndim>(j, ishape);
+      index_t l = rravel<ndim>(j, ishape);
       KERNEL_ASSIGN(out[i], req, a[l]);
     } else {
       return;
@@ -274,11 +274,11 @@ struct symmetric_pad {
     }
     if (indexshape[index] < indexwidth[index * 2]) {
     // we need to do the assignment
-      int distance = indexwidth[index * 2] - indexshape[index];
-      int total = ishape[index];
+      index_t distance = indexwidth[index * 2] - indexshape[index];
+      index_t total = ishape[index];
       // the round of this element
-      int round = (distance - 1) / total;
-      int position = distance % total;
+      index_t round = (distance - 1) / total;
+      index_t position = distance % total;
       if (position == 0) {
         position = ishape[index];
       }
@@ -287,13 +287,13 @@ struct symmetric_pad {
       } else {
         indexshape[index] = indexwidth[index * 2] + ishape[index] - 1 - (position - 1);
       }
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     } else if (indexshape[index] >= (indexwidth[index * 2]+ishape[index])) {
-      int distance = (indexshape[index]+1) - (indexwidth[index * 2]+ishape[index]);
-      int total = ishape[index];
-      int position = distance % total;
-      int round = (distance - 1) / total;
+      index_t distance = (indexshape[index]+1) - (indexwidth[index * 2]+ishape[index]);
+      index_t total = ishape[index];
+      index_t position = distance % total;
+      index_t round = (distance - 1) / total;
       if (position == 0) {
         position = ishape[index];
       }
@@ -302,7 +302,7 @@ struct symmetric_pad {
       } else {
         indexshape[index] = indexwidth[index * 2] + position - 1;
       }
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     }
   }
@@ -345,11 +345,11 @@ struct edge_pad {
     if (indexshape[index] < indexwidth[index * 2]) {
     // we need to do the assignment
       indexshape[index] = indexwidth[index * 2];
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     } else if (indexshape[index] >= (indexwidth[index * 2]+ishape[index])) {
       indexshape[index] = indexwidth[index * 2] + ishape[index] - 1;
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     }
   }
@@ -391,42 +391,42 @@ struct reflect_pad {
     }
     if (indexshape[index] < indexwidth[index * 2]) {
       // we need to do the assignment
-      int distance = indexwidth[index * 2] - indexshape[index];
-      int total = ishape[index];
+      index_t distance = indexwidth[index * 2] - indexshape[index];
+      index_t total = ishape[index];
       if (total == 1) {
         indexshape[index] = indexwidth[index * 2];
-        int l = rravel<ndim>(j, oshape);
+        index_t l = rravel<ndim>(j, oshape);
         KERNEL_ASSIGN(out[i], req, out[l]);
         return;
       }
-      int round = (distance - 1) / (total - 1);
+      index_t round = (distance - 1) / (total - 1);
       if (round % 2 == 0) {
-        int position = (distance + round) % total;
+        index_t position = (distance + round) % total;
         indexshape[index] = indexwidth[index * 2] + position;
       } else {
-        int position = (distance + round) % total;
+        index_t position = (distance + round) % total;
         indexshape[index] = indexwidth[index * 2] + ishape[index] - 1 - (position);
       }
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     } else if (indexshape[index] >= (indexwidth[index * 2] + ishape[index])) {
-      int distance = (indexshape[index]+1) - (indexwidth[index * 2] + ishape[index]);
-      int total = ishape[index];
+      index_t distance = (indexshape[index]+1) - (indexwidth[index * 2] + ishape[index]);
+      index_t total = ishape[index];
       if (total == 1) {
         indexshape[index] = indexwidth[index * 2];
-        int l = rravel<ndim>(j, oshape);
+        index_t l = rravel<ndim>(j, oshape);
         KERNEL_ASSIGN(out[i], req, out[l]);
         return;
       }
-      int round = (distance - 1) / (total - 1);
+      index_t round = (distance - 1) / (total - 1);
       if (round % 2 == 0) {
-        int position = (distance + round) % total;
+        index_t position = (distance + round) % total;
         indexshape[index] = indexwidth[index * 2] + ishape[index] - 1 - (position);
       } else {
-        int position = (distance + round) % total;
+        index_t position = (distance + round) % total;
         indexshape[index] = indexwidth[index * 2] + position;
       }
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
   }
   }
@@ -470,8 +470,8 @@ struct max_pad {
     if (indexshape[index] < indexwidth[index * 2] ||
         indexshape[index] >= indexwidth[index * 2] + ishape[index]) {
       indexshape[index] = indexwidth[index * 2];
-      int l = rravel<ndim>(j, oshape);
-      int max_count = 0;
+      index_t l = rravel<ndim>(j, oshape);
+      index_t max_count = 0;
       auto max_value = out[l];
       for (max_count = 0; max_count < ishape[index]; max_count++) {
         indexshape[index] = indexwidth[index * 2] + max_count;
@@ -522,8 +522,8 @@ struct min_pad {
     if (indexshape[index] < indexwidth[index * 2] ||
         indexshape[index] >= (indexwidth[index * 2] + ishape[index])) {
       indexshape[index] = indexwidth[index * 2];
-      int l = rravel<ndim>(j, oshape);
-      int min_count = 0;
+      index_t l = rravel<ndim>(j, oshape);
+      index_t min_count = 0;
       auto min_value = out[l];
       for (min_count = 0; min_count < ishape[index]; min_count++) {
         indexshape[index] = indexwidth[index * 2] + min_count;
@@ -540,13 +540,22 @@ struct min_pad {
   }
 };
 
-
-template <typename xpu, int req>
+template <typename xpu, int req, int ndim>
 struct pad_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a){
-    using namespace mxnet_op;
-    KERNEL_ASSIGN(out[i], req, 1);
+template<typename DType>
+MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
+                                const index_t* ishape,
+                                const index_t* oshape,
+                                mshadow::Shape<ndim*2> width) {
+    auto j = uunravel<ndim>(i, oshape);
+    size_t m;
+    index_t* indexwidth = width.shape_;
+    index_t* indexshape = j.shape_;
+    for (m = 0; m < ndim; m++) {
+      indexshape[m] = indexshape[m] + indexwidth[m * 2];
+    }
+    index_t l = rravel<ndim>(j, ishape);
+    KERNEL_ASSIGN(out[i], req, a[l]);
   }
 };
 
@@ -720,19 +729,42 @@ void NumpyPadOpImpl(const TBlob& in_data,
 template<typename xpu>
 void NumpyPadOpBackImpl(const TBlob& in_data,
                         const TBlob& out_data,
+                        index_t* ishape,
+                        index_t* oshape,
                         index_t dsize,
+                        const NumpyPadParam& param,
                         const std::vector<OpReqType>& req,
                         mxnet_op::Stream<xpu> *s) {
-  using namespace mxnet_op;
-  using namespace mshadow;
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(out_data.type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<pad_grad<xpu, req_type>, xpu>::Launch(
-        s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>());
-    });
-  });
+    using namespace mxnet_op;
+    using namespace mshadow;
+    int mode = param.mode;
+    int ndim = in_data.ndim();
+    if (mode != 0) {
+        LOG(FATAL) << "Other modes are not supported. ";
+    }
+    MXNET_NDIM_SWITCH(ndim, NDim, {
+      mshadow::Shape<NDim*2> width;
+      int dimcounter = 0;
+      index_t* odptr = reinterpret_cast<index_t*>(oshape);
+      if (ndim == 1) {
+        width[0] = param.pad_width[0][0];
+        width[1] = param.pad_width[1][0];
+      } else {
+        for (dimcounter = 0; dimcounter < NDim; dimcounter++) {
+          width[dimcounter*2] = param.pad_width[dimcounter][0];
+          width[dimcounter*2 + 1] = param.pad_width[dimcounter][1];
+        }
+      }
+      index_t* idptr = reinterpret_cast<index_t*>(ishape);
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(out_data.type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+          Kernel<pad_grad<xpu, req_type, NDim>, xpu>::Launch(
+            s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
+            idptr, odptr, width);
+        });
+      });
+    })
 }
-
 
 template<typename xpu>
 void NumpyPadOpForward(const nnvm::NodeAttrs& attrs,
@@ -746,7 +778,8 @@ void NumpyPadOpForward(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(inputs.size(), 1U);
     CHECK_EQ(outputs.size(), 1U);
     CHECK_EQ(req.size(), 1U);
-    CHECK_EQ(req[0], kWriteTo);
+    CHECK(req[0] != kNullOp);
+    CHECK(req[0] != kWriteInplace);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TBlob& in_data = inputs[0];
     const TBlob& out_data = outputs[0];
@@ -792,15 +825,51 @@ void NumpyPadOpBackward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
-  using namespace mshadow;
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob& in_data = inputs[0];
-  const TBlob& out_data = outputs[0];
-  NumpyPadOpBackImpl<xpu>(in_data, out_data,
-                          out_data.Size(), req, s);
+  MXNET_NDIM_SWITCH(inputs[0].ndim(), NDim, {
+    using namespace mxnet_op;
+    using namespace mshadow;
+    CHECK_EQ(inputs.size(), 1U);
+    CHECK_EQ(outputs.size(), 1U);
+    CHECK_EQ(req.size(), 1U);
+    CHECK(req[0] != kNullOp);
+    CHECK(req[0] != kWriteInplace);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const TBlob& in_data = inputs[0];
+    const TBlob& out_data = outputs[0];
+    size_t ts = in_data.ndim();
+    size_t count;
+    mshadow::Shape<NDim> inshape;
+    for (count = 0; count < ts; count++) {
+      inshape[count] = static_cast<index_t>((in_data.shape_)[count]);
+    }
+
+    Tensor<xpu, 1, index_t> tsp = ctx.requested[0].
+                                  get_space_typed<xpu, 1, index_t>(Shape1(2*ts), s);
+    Tensor<cpu, 1, index_t> ta(reinterpret_cast<index_t*>(inshape.shape_),
+                               Shape1(ts), ctx.get_stream<cpu>());
+    Tensor<xpu, 1, index_t> ti(reinterpret_cast<index_t*>(tsp.dptr_),
+                               Shape1(ts), ctx.get_stream<xpu>());
+    mshadow::Copy(ti, ta, ctx.get_stream<xpu>());
+
+    mshadow::Shape<NDim> outshape;
+    for (count = 0; count < ts; count++) {
+      outshape[count] = static_cast<index_t>((out_data.shape_)[count]);
+    }
+    index_t* wcp = tsp.dptr_;
+    wcp += ts;
+    Tensor<cpu, 1, index_t> tb(reinterpret_cast<index_t*>(outshape.shape_),
+                               Shape1(ts), ctx.get_stream<cpu>());
+    Tensor<xpu, 1, index_t> to(reinterpret_cast<index_t*>(wcp), Shape1(ts),
+                               ctx.get_stream<xpu>());
+    mshadow::Copy(to, tb, ctx.get_stream<xpu>());
+    const NumpyPadParam& param = nnvm::get<NumpyPadParam>(attrs.parsed);
+
+    index_t* wt = reinterpret_cast<index_t*>(to.dptr_);
+    index_t* wi = reinterpret_cast<index_t*>(ti.dptr_);
+
+    NumpyPadOpBackImpl<xpu>(in_data, out_data, wi,
+                            wt, out_data.Size(), param, req, s);
+  })
 }
 
 }  // namespace op

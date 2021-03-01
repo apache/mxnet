@@ -23,7 +23,7 @@ Given the importance of learning rate and the learning rate schedule for trainin
 See the "Learning Rate Schedules" tutorial for a more basic overview of learning rates, and an example of how to use them while training your own models.
 
 
-```python
+```{.python .input}
 %matplotlib inline
 import copy
 import math
@@ -32,7 +32,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 ```
 
-```python
+```{.python .input}
 def plot_schedule(schedule_fn, iterations=1500):
     # Iteration count starting at 1
     iterations = [i+1 for i in range(iterations)]
@@ -54,7 +54,7 @@ We look at "warm-up" in more detail later in the tutorial, but this could be vie
 One adjustment proposed by [Jeremy Howard, Sebastian Ruder (2018)](https://arxiv.org/abs/1801.06146) was to change the ratio between the increasing and decreasing stages, instead of the 50:50 split. Changing the increasing fraction (`inc_fraction!=0.5`) leads to a **"slanted triangular"** schedule. Using `inc_fraction<0.5` tends to give better results.
 
 
-```python
+```{.python .input}
 class TriangularSchedule():
     def __init__(self, min_lr, max_lr, cycle_length, inc_fraction=0.5):
         """
@@ -82,13 +82,13 @@ class TriangularSchedule():
 We look an example of a slanted triangular schedule that increases from a learning rate of 1 to 2, and back to 1 over 1000 iterations. Since we set `inc_fraction=0.2`, 200 iterations are used for the increasing stage, and 800 for the decreasing stage. After this, the schedule stays at the lower bound indefinitely.
 
 
-```python
+```{.python .input}
 schedule = TriangularSchedule(min_lr=1, max_lr=2, cycle_length=1000, inc_fraction=0.2)
 plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_triangular.png) <!--notebook-skip-line-->
+![lr adv triangular](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_triangular.png) <!--notebook-skip-line-->
 
 
 ### Cosine
@@ -96,7 +96,7 @@ plot_schedule(schedule)
 Continuing with the idea that smooth decay profiles give improved performance over stepwise decay, [Ilya Loshchilov, Frank Hutter (2016)](https://arxiv.org/abs/1608.03983) used **"cosine annealing"** schedules to good effect. As with triangular schedules, the original idea was that this should be used as part of a cyclical schedule, but we begin by implementing the cosine annealing component before the full Stochastic Gradient Descent with Warm Restarts (SGDR) method later in the tutorial.
 
 
-```python
+```{.python .input}
 class CosineAnnealingSchedule():
     def __init__(self, min_lr, max_lr, cycle_length):
         """
@@ -120,13 +120,13 @@ class CosineAnnealingSchedule():
 We look at an example of a cosine annealing schedule that smoothing decreases from a learning rate of 2 to 1 across 1000 iterations. After this, the schedule stays at the lower bound indefinietly.
 
 
-```python
+```{.python .input}
 schedule = CosineAnnealingSchedule(min_lr=1, max_lr=2, cycle_length=1000)
 plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cosine.png) <!--notebook-skip-line-->
+![lr adv cosine](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cosine.png) <!--notebook-skip-line-->
 
 
 ## Custom Schedule Modifiers
@@ -140,7 +140,7 @@ Unlike the schedules above and those implemented in `mx.lr_scheduler`, these cla
 Using the idea of linear warm-up of the learning rate proposed in ["Accurate, Large Minibatch SGD: Training ImageNet in 1 Hour" by Priya Goyal et al. (2017)](https://arxiv.org/abs/1706.02677), we implement a wrapper class that adds warm-up to an existing schedule. Going from `start_lr` to the initial learning rate of the `schedule` over `length` iterations, this adjustment is useful when training with large batch sizes.
 
 
-```python
+```{.python .input}
 class LinearWarmUp():
     def __init__(self, schedule, start_lr, length):
         """
@@ -164,7 +164,7 @@ class LinearWarmUp():
 As an example, we add a linear warm-up of the learning rate (from 0 to 1 over 250 iterations) to a stepwise decay schedule. We first create the `MultiFactorScheduler` (and set the `base_lr`) and then pass it to `LinearWarmUp` to add the warm-up at the start. We can use `LinearWarmUp` with any other schedule including `CosineAnnealingSchedule`.
 
 
-```python
+```{.python .input}
 schedule = mx.lr_scheduler.MultiFactorScheduler(step=[250, 750, 900], factor=0.5)
 schedule.base_lr = 1
 schedule = LinearWarmUp(schedule, start_lr=0, length=250)
@@ -172,7 +172,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_warmup.png) <!--notebook-skip-line-->
+![lr adv warmup](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_warmup.png) <!--notebook-skip-line-->
 
 
 ### Cool-Down
@@ -180,7 +180,7 @@ plot_schedule(schedule)
 Similarly, we could add a linear cool-down period to our schedule and this is used in the "1-Cycle" schedule proposed by [Leslie N. Smith, Nicholay Topin (2017)](https://arxiv.org/abs/1708.07120) to train neural networks very quickly in certain circumstances (coined "super-convergence"). We reduce the learning rate from its value at `start_idx` of `schedule` to `finish_lr` over a period of `length`, and then maintain `finish_lr` thereafter.
 
 
-```python
+```{.python .input}
 class LinearCoolDown():
     def __init__(self, schedule, finish_lr, start_idx, length):
         """
@@ -209,7 +209,7 @@ class LinearCoolDown():
 As an example, we apply learning rate cool-down to a `MultiFactorScheduler`. Starting the cool-down at iteration 1000, we reduce the learning rate linearly from 0.125 to 0.001 over 500 iterations, and hold the learning rate at 0.001 after this.
 
 
-```python
+```{.python .input}
 schedule = mx.lr_scheduler.MultiFactorScheduler(step=[250, 750, 900], factor=0.5)
 schedule.base_lr = 1
 schedule = LinearCoolDown(schedule, finish_lr=0.001, start_idx=1000, length=500)
@@ -217,7 +217,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cooldown.png) <!--notebook-skip-line-->
+![lr adv cooldown](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cooldown.png) <!--notebook-skip-line-->
 
 
 #### 1-Cycle: for "Super-Convergence"
@@ -225,7 +225,7 @@ plot_schedule(schedule)
 So we can implement the "1-Cycle" schedule proposed by [Leslie N. Smith, Nicholay Topin (2017)](https://arxiv.org/abs/1708.07120) we use a single and symmetric cycle of the triangular schedule above (i.e. `inc_fraction=0.5`), followed by a cool-down period of `cooldown_length` iterations.
 
 
-```python
+```{.python .input}
 class OneCycleSchedule():
     def __init__(self, start_lr, max_lr, cycle_length, cooldown_length=0, finish_lr=None):
         """
@@ -251,13 +251,13 @@ class OneCycleSchedule():
 As an example, we linearly increase and then decrease the learning rate from 0.1 to 0.5 and back over 500 iterations (i.e. single triangular cycle), before reducing the learning rate further to 0.001 over the next 750 iterations (i.e. cool-down).
 
 
-```python
+```{.python .input}
 schedule = OneCycleSchedule(start_lr=0.1, max_lr=0.5, cycle_length=500, cooldown_length=750, finish_lr=0.001)
 plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_onecycle.png) <!--notebook-skip-line-->
+![lr adv onecycle](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_onecycle.png) <!--notebook-skip-line-->
 
 
 ### Cyclical
@@ -265,7 +265,7 @@ plot_schedule(schedule)
 Originally proposed by [Leslie N. Smith (2015)](https://arxiv.org/abs/1506.01186), the idea of cyclically increasing and decreasing the learning rate has been shown to give faster convergence and more optimal solutions. We implement a wrapper class that loops existing cycle-based schedules such as `TriangularSchedule` and `CosineAnnealingSchedule` to provide infinitely repeating schedules. We pass the schedule class (rather than an instance) because one feature of the `CyclicalSchedule` is to vary the `cycle_length` over time as seen in [Ilya Loshchilov, Frank Hutter (2016)](https://arxiv.org/abs/1608.03983) using `cycle_length_decay`. Another feature is the ability to decay the cycle magnitude over time with `cycle_magnitude_decay`.
 
 
-```python
+```{.python .input}
 class CyclicalSchedule():
     def __init__(self, schedule_class, cycle_length, cycle_length_decay=1, cycle_magnitude_decay=1, **kwargs):
         """
@@ -298,26 +298,26 @@ class CyclicalSchedule():
 As an example, we implement the triangular cyclical schedule presented in ["Cyclical Learning Rates for Training Neural Networks" by Leslie N. Smith (2015)](https://arxiv.org/abs/1506.01186). We use slightly different terminology to the paper here because we use `cycle_length` that is twice the 'stepsize' used in the paper. We repeat cycles, each with a length of 500 iterations and lower and upper learning rate bounds of 0.5 and 2 respectively.
 
 
-```python
+```{.python .input}
 schedule = CyclicalSchedule(TriangularSchedule, min_lr=0.5, max_lr=2, cycle_length=500)
 plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cyclical.png) <!--notebook-skip-line-->
+![lr adv cyclical](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cyclical.png) <!--notebook-skip-line-->
 
 
 And lastly, we implement the scheduled used in ["SGDR: Stochastic Gradient Descent with Warm Restarts" by Ilya Loshchilov, Frank Hutter (2016)](https://arxiv.org/abs/1608.03983). We repeat cosine annealing schedules, but each time we halve the magnitude and double the cycle length.
 
 
-```python
+```{.python .input}
 schedule = CyclicalSchedule(CosineAnnealingSchedule, min_lr=0.01, max_lr=2,
                             cycle_length=250, cycle_length_decay=2, cycle_magnitude_decay=0.5)
 plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_sgdr.png) <!--notebook-skip-line-->
+![lr adv sgdr](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_sgdr.png) <!--notebook-skip-line-->
 
 
 **_Want to learn more?_** Checkout the "Learning Rate Schedules" tutorial for a more basic overview of learning rates found in `mx.lr_scheduler`, and an example of how to use them while training your own models.

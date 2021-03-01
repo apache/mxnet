@@ -18,7 +18,12 @@
 gluon.data
 ==========
 
-.. automodule:: mxnet.gluon.data
+.. currentmodule:: mxnet.gluon.data
+
+.. autosummary::
+    :nosignatures:
+
+    mxnet.gluon.data
 
 Datasets
 --------
@@ -39,6 +44,7 @@ Sampling
    SequentialSampler
    RandomSampler
    BatchSampler
+   IntervalSampler
 
 DataLoader
 ----------

@@ -168,8 +168,8 @@ Graph Gradient(Graph src) {
   // information is needed in later stages to determine whether putting a node
   // on the mirror path can be beneficial or not.
   using mxnet::ShapeVector;
-  ShapeVector in_arg_shapes = std::move(src.GetAttr<ShapeVector>("in_arg_shapes"));
-  DTypeVector in_arg_dtypes = std::move(src.GetAttr<DTypeVector>("in_arg_dtypes"));
+  ShapeVector in_arg_shapes = src.GetAttr<ShapeVector>("in_arg_shapes");
+  DTypeVector in_arg_dtypes = src.GetAttr<DTypeVector>("in_arg_dtypes");
   src = mxnet::exec::InferShape(std::move(src), std::move(in_arg_shapes), "__shape__");
   src = mxnet::exec::InferType(std::move(src), std::move(in_arg_dtypes), "__dtype__");
   CHECK(src.GetAttr<size_t>("shape_num_unknown_nodes") == 0U);
@@ -583,8 +583,7 @@ Graph BuildGradientGraph(
     // gather all the output gradient entries and apply the aggregation function
     out_agg_grads.clear();
     auto& out_grad_vec = output_grads.at(src_fwd_node.get());
-    for (uint32_t i = 0; i < out_grad_vec.size(); ++i) {
-      GradEntry& e = out_grad_vec[i];
+    for (auto & e : out_grad_vec) {
       e.sum = agg_fun(std::move(e.grads));
       out_agg_grads.push_back(e.sum);
     }
@@ -698,7 +697,7 @@ Graph BuildGradientGraph(
 
 // register pass
 NNVM_REGISTER_PASS(MXGradient)
-.describe("Return a gradient graph of src.attrs[\"ys\"] wrt src.attrs[\"xs\"]")
+.describe(R"(Return a gradient graph of src.attrs["ys"] wrt src.attrs["xs"])")
 .set_body(Gradient)
 .set_change_graph(true)
 .depend_graph_attr("grad_ys")

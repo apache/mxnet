@@ -32,6 +32,7 @@ def find_lib_path(prefix='libmxnet'):
     """
     lib_from_env = os.environ.get('MXNET_LIBRARY_PATH')
     if lib_from_env:
+        lib_from_env = lib_from_env.replace('libmxnet', prefix)
         if os.path.isfile(lib_from_env):
             if not os.path.isabs(lib_from_env):
                 logging.warning("MXNET_LIBRARY_PATH should be an absolute path, instead of: %s",

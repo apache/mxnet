@@ -28,10 +28,12 @@
 
 namespace mxnet {
 namespace op {
-template <>
-Operator* CreateOp<gpu>(InstanceNormParam param, int dtype) {
-  return new InstanceNormOp<gpu>(param);
-}
+
+NNVM_REGISTER_OP(InstanceNorm)
+.set_attr<FCompute>("FCompute<gpu>", InstanceNormForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_instance_norm)
+.set_attr<FCompute>("FCompute<gpu>", InstanceNormBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -49,12 +49,12 @@ namespace op {
 class CustomContainOpSelector: public SubgraphSelector {
  public:
   explicit CustomContainOpSelector(std::unordered_map<std::string, int> supported_nodes,
-                                   void* sel_inst, partCallSelect_t callSelect,
-                                   partCallSelectInput_t callSelectInput,
-                                   partCallSelectOutput_t callSelectOutput,
-                                   partCallFilter_t callFilter,
-                                   partCallReset_t callReset,
-                                   opCallFree_t callFree,
+                                   void* sel_inst, mxnet::ext::partCallSelect_t callSelect,
+                                   mxnet::ext::partCallSelectInput_t callSelectInput,
+                                   mxnet::ext::partCallSelectOutput_t callSelectOutput,
+                                   mxnet::ext::partCallFilter_t callFilter,
+                                   mxnet::ext::partCallReset_t callReset,
+                                   mxnet::ext::opCallFree_t callFree,
                                    std::unordered_map<const nnvm::Node*, unsigned> node2id) :
   supported_nodes_(supported_nodes), sel_inst_(sel_inst), callSelect_(callSelect),
     callSelectInput_(callSelectInput), callSelectOutput_(callSelectOutput),
@@ -123,12 +123,12 @@ class CustomContainOpSelector: public SubgraphSelector {
 
   std::unordered_map<std::string, int> supported_nodes_;
   void* sel_inst_;
-  partCallSelect_t callSelect_;
-  partCallSelectInput_t callSelectInput_;
-  partCallSelectOutput_t callSelectOutput_;
-  partCallFilter_t callFilter_;
-  partCallReset_t callReset_;
-  opCallFree_t callFree_;
+  mxnet::ext::partCallSelect_t callSelect_;
+  mxnet::ext::partCallSelectInput_t callSelectInput_;
+  mxnet::ext::partCallSelectOutput_t callSelectOutput_;
+  mxnet::ext::partCallFilter_t callFilter_;
+  mxnet::ext::partCallReset_t callReset_;
+  mxnet::ext::opCallFree_t callFree_;
   std::unordered_map<const nnvm::Node*, unsigned> node2id_;
 };
 
@@ -155,18 +155,18 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     review_subgraph_(nullptr),
     subgraph_op_name("error") {}
   CustomSubgraphProperty(std::string subgraph_prop_name,
-                         partCallSupportedOps_t call_supported_ops,
-                         supportedOps_t supported_ops,
-                         partCallCreateSelector_t call_create_selector,
-                         createSelector_t create_selector,
-                         partCallSelect_t callSelect,
-                         partCallSelectInput_t callSelectInput,
-                         partCallSelectOutput_t callSelectOutput,
-                         partCallFilter_t callFilter,
-                         partCallReset_t callReset,
-                         partCallReviewSubgraph_t call_review_subgraph,
-                         reviewSubgraph_t review_subgraph,
-                         opCallFree_t call_free,
+                         mxnet::ext::partCallSupportedOps_t call_supported_ops,
+                         mxnet::ext::supportedOps_t supported_ops,
+                         mxnet::ext::partCallCreateSelector_t call_create_selector,
+                         mxnet::ext::createSelector_t create_selector,
+                         mxnet::ext::partCallSelect_t callSelect,
+                         mxnet::ext::partCallSelectInput_t callSelectInput,
+                         mxnet::ext::partCallSelectOutput_t callSelectOutput,
+                         mxnet::ext::partCallFilter_t callFilter,
+                         mxnet::ext::partCallReset_t callReset,
+                         mxnet::ext::partCallReviewSubgraph_t call_review_subgraph,
+                         mxnet::ext::reviewSubgraph_t review_subgraph,
+                         mxnet::ext::opCallFree_t call_free,
                          std::string op_name) :
       subgraph_prop(subgraph_prop_name),
       call_supported_ops_(call_supported_ops),
@@ -189,7 +189,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   }
 
   void PrePartition(const nnvm::Graph& g,
-    const std::vector<std::pair<std::string, std::string>>& options_map) {
+    const std::unordered_map<std::string, std::string>& options_map) {
     // clear supported_nodes to remove state from previous calls
     supported_nodes.clear();
     // get input args and arg names
@@ -208,26 +208,28 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     arg_dev_type.clear();
     arg_dev_id.clear();
     for (size_t i=0; i < in_arg_names.size(); i++) {
-      arg_names.push_back(in_arg_names[i].c_str());
-      const NDArray &in_arg = *(in_args_ptr[i]);
+      if (in_args_ptr[i] != nullptr) {
+        arg_names.push_back(in_arg_names[i].c_str());
+        const NDArray &in_arg = *(in_args_ptr[i]);
 
 #if MXNET_USE_MKLDNN == 1
-      // reorder data if in MKLDNN format
-      if (in_arg.IsMKLDNNData()) {
-        in_arg.Reorder2DefaultAsync();
-        in_arg.WaitToRead();
-      }
+        // reorder data if in MKLDNN format
+        if (in_arg.IsMKLDNNData()) {
+          in_arg.Reorder2DefaultAsync();
+          in_arg.WaitToRead();
+        }
 #endif
 
-      // pull out parts of NDArray to send to backend
-      arg_data.push_back(in_arg.data().dptr_);
-      arg_shapes.push_back(in_arg.shape().data());
-      arg_dims.push_back(in_arg.shape().ndim());
-      arg_types.push_back(in_arg.dtype());
-      arg_verIDs.push_back(in_arg.version());
-      const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-      arg_dev_type.push_back(arg_ctx_str);
-      arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+        // pull out parts of NDArray to send to backend
+        arg_data.push_back(in_arg.data().dptr_);
+        arg_shapes.push_back(in_arg.shape().data());
+        arg_dims.push_back(in_arg.shape().ndim());
+        arg_types.push_back(in_arg.dtype());
+        arg_verIDs.push_back(in_arg.version());
+        const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+        arg_dev_type.push_back(arg_ctx_str);
+        arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+      }
     }
 
     // convert input aux
@@ -240,26 +242,28 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     aux_dev_type.clear();
     aux_dev_id.clear();
     for (size_t i=0; i < in_aux_names.size(); i++) {
-      aux_names.push_back(in_aux_names[i].c_str());
-      const auto &in_aux = *(in_aux_ptr[i]);
+      if (in_aux_ptr[i] != nullptr) {
+        aux_names.push_back(in_aux_names[i].c_str());
+        const auto &in_aux = *(in_aux_ptr[i]);
 
 #if MXNET_USE_MKLDNN == 1
-      // reorder data if in MKLDNN format
-      if (in_aux.IsMKLDNNData()) {
-        in_aux.Reorder2DefaultAsync();
-        in_aux.WaitToRead();
-      }
+        // reorder data if in MKLDNN format
+        if (in_aux.IsMKLDNNData()) {
+          in_aux.Reorder2DefaultAsync();
+          in_aux.WaitToRead();
+        }
 #endif
 
-      // pull out parts of NDArray to send to backend
-      aux_data.push_back(in_aux.data().dptr_);
-      aux_shapes.push_back(in_aux.shape().data());
-      aux_dims.push_back(in_aux.shape().ndim());
-      aux_types.push_back(in_aux.dtype());
-      aux_verIDs.push_back(in_aux.version());
-      const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-      aux_dev_type.push_back(aux_ctx_str);
-      aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+        // pull out parts of NDArray to send to backend
+        aux_data.push_back(in_aux.data().dptr_);
+        aux_shapes.push_back(in_aux.shape().data());
+        aux_dims.push_back(in_aux.shape().ndim());
+        aux_types.push_back(in_aux.dtype());
+        aux_verIDs.push_back(in_aux.version());
+        const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+        aux_dev_type.push_back(aux_ctx_str);
+        aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+      }
     }
 
     // remove all graph attrs, some cannot be saved to json
@@ -285,13 +289,17 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         for (unsigned oid = 0; oid < node->num_outputs(); oid++) {
           const uint32_t out_entry_id = indexed_graph.entry_id(nid, oid);
           mxnet::TShape& shape = shapes[out_entry_id];
-          ss << shape;
+          if (shape.ndim() == -1)
+            ss << "[None]";
+          else
+            ss << shape;
           if (oid < node->num_outputs()-1) ss << ",";
         }
         ss << "]";
         node->attrs.dict[MX_STR_SHAPE] = ss.str();
       }
     }
+
     // set dtype attrs for each node in the graph
     if (g.HasAttr("dtype")) {
       std::vector<int> dtypes = g.GetAttr<std::vector<int> >("dtype");
@@ -319,9 +327,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     opt_vals_.clear();
     options_map_.clear();
     // store options in map in subgraph property to re-use later for reviewSubgraph
-    for (auto& kv : options_map) {
-      options_map_.push_back(kv);
-    }
+    options_map_.insert(options_map.begin(), options_map.end());
+
     // convert options_map_ to char* to pass to backend library
     for (auto& kv : options_map_) {
       opt_keys_.push_back(kv.first.c_str());
@@ -429,7 +436,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
           if (e.node->attrs.dict.count(MX_STR_SHAPE) > 0) {
             std::string& shape = e.node->attrs.dict[MX_STR_SHAPE];
             // add this shape to the list
-            ss << getShapeAt(shape, e.index);
+            ss << mxnet::ext::getShapeAt(shape, e.index);
           }
           if (i < sym.outputs.size()-1)
             ss << ",";
@@ -446,7 +453,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
           if (e.node->attrs.dict.count(MX_STR_DTYPE) > 0) {
             std::string& dtype = e.node->attrs.dict[MX_STR_DTYPE];
             // add this dtype to the list
-            ss << getDtypeAt(dtype, e.index);
+            ss << mxnet::ext::getDtypeAt(dtype, e.index);
           }
           if (i < sym.outputs.size()-1)
             ss << ",";
@@ -489,7 +496,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         // get dtype string from other node
         std::string& dtype = orig.node->attrs.dict[MX_STR_DTYPE];
         std::stringstream ss;
-        ss << "[" << getDtypeAt(dtype, orig.index) << "]";
+        ss << "[" << mxnet::ext::getDtypeAt(dtype, orig.index) << "]";
         e->node->attrs.dict[MX_STR_DTYPE] = ss.str();
       }
 
@@ -498,7 +505,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         std::string& shape = orig.node->attrs.dict[MX_STR_SHAPE];
         // create new shape string for this node
         std::stringstream ss;
-        ss << "[" << getShapeAt(shape, orig.index) << "]";
+        ss << "[" << mxnet::ext::getShapeAt(shape, orig.index) << "]";
         e->node->attrs.dict[MX_STR_SHAPE] = ss.str();
       }
     }
@@ -512,21 +519,21 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   }
 
   std::string subgraph_prop;
-  partCallSupportedOps_t call_supported_ops_;
-  supportedOps_t supported_ops_;
-  partCallCreateSelector_t call_create_selector_;
-  createSelector_t create_selector_;
-  partCallSelect_t callSelect_;
-  partCallSelectInput_t callSelectInput_;
-  partCallSelectOutput_t callSelectOutput_;
-  partCallFilter_t callFilter_;
-  partCallReset_t callReset_;
-  partCallReviewSubgraph_t call_review_subgraph_;
-  reviewSubgraph_t review_subgraph_;
-  opCallFree_t call_free_;
+  mxnet::ext::partCallSupportedOps_t call_supported_ops_;
+  mxnet::ext::supportedOps_t supported_ops_;
+  mxnet::ext::partCallCreateSelector_t call_create_selector_;
+  mxnet::ext::createSelector_t create_selector_;
+  mxnet::ext::partCallSelect_t callSelect_;
+  mxnet::ext::partCallSelectInput_t callSelectInput_;
+  mxnet::ext::partCallSelectOutput_t callSelectOutput_;
+  mxnet::ext::partCallFilter_t callFilter_;
+  mxnet::ext::partCallReset_t callReset_;
+  mxnet::ext::partCallReviewSubgraph_t call_review_subgraph_;
+  mxnet::ext::reviewSubgraph_t review_subgraph_;
+  mxnet::ext::opCallFree_t call_free_;
   std::unordered_map<std::string, int> supported_nodes;
   std::string subgraph_op_name;
-  std::vector<std::pair<std::string, std::string>> options_map_;
+  std::unordered_map<std::string, std::string> options_map_;
   std::vector<const char*> opt_keys_, opt_vals_;
   std::vector<std::string> in_arg_names, in_aux_names;
   NDArray **in_args_ptr;

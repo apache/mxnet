@@ -238,7 +238,7 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
 struct LogspaceParam : public dmlc::Parameter<LogspaceParam> {
   double start;
   double stop;
-  int num;
+  index_t num;
   bool endpoint;
   double base;
   std::string ctx;
@@ -302,7 +302,7 @@ void LogspaceCompute(const nnvm::NodeAttrs& attrs,
   const LogspaceParam& param = nnvm::get<LogspaceParam>(attrs.parsed);
   if (param.num == 0) return;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      int step_num = param.endpoint ? param.num - 1 : param.num;
+      index_t step_num = param.endpoint ? param.num - 1 : param.num;
       double step = step_num > 0 ? (param.stop - param.start) / step_num : 0.0f;
       Kernel<logspace_fwd, xpu>::Launch(s, outputs[0].Size(), param.start, param.stop, param.base,
           step, req[0], outputs[0].dptr<DType>());

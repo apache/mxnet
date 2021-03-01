@@ -110,10 +110,14 @@ inline bool RepeatsOpShape(const nnvm::NodeAttrs& attrs,
         shape[i] = ishape[i];
       }
     }
+    CHECK_LT(shape.Size(), INT32_MAX) << "ValueError: np.repeat does not support large"
+      << " input tensors (containing >= 2^31 elements).";
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
   } else {  // If axis is not input by user, return a flat 1D array of size = repeats
     repeats = param.repeats.value().ndim() == 1 ? ishape.Size() * repeats : repeats;
     mxnet::TShape shape(1, repeats);
+    CHECK_LT(shape.Size(), INT32_MAX) << "ValueError: np.repeat does not support large"
+      << " input tensors (containing >= 2^31 elements).";
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
   }
   return shape_is_known(out_attrs->at(0));

@@ -46,11 +46,11 @@ MXNET_REGISTER_API("_npi.gumbel")
   nnvm::NodeAttrs attrs;
   attrs.op = op;
   if (args[2].type_code() == kDLInt) {
-      param.size = Tuple<int>(1, args[2].operator int64_t());
+      param.size = Tuple<index_t>(1, args[2].operator int64_t());
   } else if (args[2].type_code() == kNull) {
-      param.size = dmlc::optional<mxnet::Tuple<int>>();
+      param.size = dmlc::optional<mxnet::Tuple<index_t>>();
   } else {
-      param.size = Tuple<int>(args[2].operator ObjectRef());
+      param.size = Tuple<index_t>(args[2].operator ObjectRef());
   }
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
@@ -82,7 +82,7 @@ MXNET_REGISTER_API("_npi.gumbel")
     }
     num_inputs = 1;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::NumpyLocationScaleParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(),
                           &num_outputs, outputs);
@@ -101,11 +101,11 @@ MXNET_REGISTER_API("_npi.logistic")
   nnvm::NodeAttrs attrs;
   attrs.op = op;
   if (args[2].type_code() == kDLInt) {
-      param.size = Tuple<int>(1, args[2].operator int64_t());
+      param.size = Tuple<index_t>(1, args[2].operator int64_t());
   } else if (args[2].type_code() == kNull) {
       param.size = dmlc::nullopt;
   } else {
-      param.size = Tuple<int>(args[2].operator ObjectRef());
+      param.size = Tuple<index_t>(args[2].operator ObjectRef());
   }
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
@@ -137,7 +137,7 @@ MXNET_REGISTER_API("_npi.logistic")
     }
     num_inputs = 1;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::NumpyLocationScaleParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(),
                           &num_outputs, outputs);

@@ -23,21 +23,22 @@
 utils = load('ci/Jenkinsfile_utils.groovy')
 
 // mxnet libraries
-mx_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_lib_cython = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, python/mxnet/_cy3/*.so, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_ffi/_cy3/*.so'
+mx_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_lib_cython = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so, python/mxnet/_cy3/*.so, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_ffi/_cy3/*.so'
 
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_cmake_lib_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_lib_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_cmake_lib_cython = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib_debug = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/tests/mxnet_unit_tests'
-mx_mkldnn_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/openmp/runtime/src/libomp.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so'
+mx_mkldnn_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/openmp/runtime/src/libomp.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so'
 mx_tensorrt_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/openmp/runtime/src/libomp.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
-mx_lib_cpp_examples = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/openmp/runtime/src/libomp.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
+mx_lib_cpp_examples = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/openmp/runtime/src/libomp.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_examples_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_cd_lib = 'lib/libmxnet.so, licenses/*, lib/libgfortran.so.4, lib/libquadmath.so.0, lib/libopenblas.so.0, include/mkldnn/dnnl_version.h, include/mkldnn/dnnl_config.h'
+mx_cd_lib = 'lib/libmxnet.so, licenses/*, lib/libgfortran.so.*, lib/libopenblas.so.0, include/mkldnn/oneapi/dnnl/dnnl_version.h, include/mkldnn/oneapi/dnnl/dnnl_config.h'
+
 
 // Python unittest for CPU
 // Python 3
@@ -138,7 +139,7 @@ def compile_unix_int64_gpu(lib_name) {
         ws('workspace/build-gpu-int64') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_large_tensor', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_large_tensor', false)
             utils.pack_lib(lib_name, mx_cmake_lib)
           }
         }
@@ -194,7 +195,7 @@ def compile_unix_mkldnn_gpu(lib_name) {
         ws('workspace/build-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_mkldnn', false)
             utils.pack_lib(lib_name, mx_mkldnn_lib)
           }
         }
@@ -208,7 +209,7 @@ def compile_unix_mkldnn_nocudnn_gpu(lib_name) {
          ws('workspace/build-mkldnn-gpu-nocudnn') {
            timeout(time: max_time, unit: 'MINUTES') {
              utils.init_git()
-             utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn_nocudnn', false)
+             utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_mkldnn_nocudnn', false)
              utils.pack_lib(lib_name, mx_mkldnn_lib)
            }
          }
@@ -217,12 +218,12 @@ def compile_unix_mkldnn_nocudnn_gpu(lib_name) {
 }
 
 def compile_unix_full_gpu(lib_name) {
-    return ['GPU: CUDA10.1+cuDNN7': {
+    return ['GPU: CUDA+cuDNN': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda101_cudnn7', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu', false)
             utils.pack_lib(lib_name, mx_lib_cpp_examples)
           }
         }
@@ -231,41 +232,13 @@ def compile_unix_full_gpu(lib_name) {
 }
 
 def compile_unix_full_gpu_debug(lib_name) {
-    return ['GPU: CUDA10.1+cuDNN7, debug': {
+    return ['GPU: CUDA+cuDNN, debug': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda101_cudnn7_debug', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_debug', false)
             utils.pack_lib(lib_name, mx_lib_cpp_examples)
-          }
-        }
-      }
-    }]
-}
-
-def compile_unix_cmake_gpu(lib_name) {
-    return ['GPU: CMake': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cmake-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake', false)
-            utils.pack_lib(lib_name, mx_cmake_lib_cython)
-          }
-        }
-      }
-    }]
-}
-
-def compile_unix_cmake_gpu_no_rtc(lib_name) {
-    return ['GPU: CMake CUDA RTC OFF': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cmake-gpu-no-rtc') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake_no_rtc', false)
-            utils.pack_lib(lib_name, mx_cmake_lib)
           }
         }
       }
@@ -278,7 +251,7 @@ def compile_unix_tensorrt_gpu(lib_name) {
         ws('workspace/build-tensorrt') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
+            utils.docker_run('ubuntu_tensorrt_cu111', 'build_ubuntu_gpu_tensorrt', false)
             utils.pack_lib(lib_name, mx_tensorrt_lib)
           }
         }
@@ -293,7 +266,7 @@ def compile_centos7_cpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib(lib_name, mx_lib, true)
+            utils.pack_lib(lib_name, mx_lib)
           }
         }
       }
@@ -319,7 +292,7 @@ def compile_centos7_gpu(lib_name) {
         ws('workspace/build-centos7-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu_cu92', 'build_centos7_gpu', false)
+            utils.docker_run('centos7_gpu_cu102', 'build_centos7_gpu', false)
             utils.pack_lib(lib_name, mx_lib)
           }
         }
@@ -523,7 +496,7 @@ def compile_unix_clang10_cuda_werror(lib_name) {
         ws('workspace/build-cpu-clang10') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_clang10_werror', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_clang10_werror', false)
             utils.pack_lib(lib_name, mx_lib)
           }
         }
@@ -648,7 +621,7 @@ def compile_static_python_gpu() {
         ws('workspace/ut-publish-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu_cu92', 'build_static_python_cu92')
+            utils.docker_run('centos7_gpu_cu102', 'build_static_python_cu102')
           }
         }
     }
@@ -709,7 +682,7 @@ def test_unix_python3_gpu(lib_name) {
         ws('workspace/ut-python3-gpu') {
           try {
             utils.unpack_and_init(lib_name, mx_lib_cython)
-            python3_gpu_ut_cython('ubuntu_gpu_cu101')
+            python3_gpu_ut_cython('ubuntu_gpu_cu111')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_gpu.xml')
@@ -791,7 +764,7 @@ def test_unix_python3_mkldnn_gpu(lib_name) {
         ws('workspace/ut-python3-mkldnn-gpu') {
           try {
             utils.unpack_and_init(lib_name, mx_mkldnn_lib)
-            python3_gpu_ut('ubuntu_gpu_cu101')
+            python3_gpu_ut('ubuntu_gpu_cu111')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_mkldnn_gpu.xml')
@@ -807,7 +780,7 @@ def test_unix_python3_mkldnn_nocudnn_gpu(lib_name) {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
           try {
             utils.unpack_and_init(lib_name, mx_mkldnn_lib)
-            python3_gpu_ut_nocudnn('ubuntu_gpu_cu101')
+            python3_gpu_ut_nocudnn('ubuntu_gpu_cu111')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_mkldnn_gpu_nocudnn.xml')
@@ -851,7 +824,7 @@ def test_unix_byteps_gpu(lib_name) {
         ws('workspace/it-byteps') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_byteps', true, '32768m')
+            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_gpu_byteps', true, '32768m')
             utils.publish_test_coverage()
           }
         }
@@ -865,7 +838,7 @@ def test_unix_distributed_kvstore_gpu(lib_name) {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
             utils.publish_test_coverage()
           }
         }
@@ -879,7 +852,7 @@ def test_centos7_python3_cpu(lib_name) {
         ws('workspace/build-centos7-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
-              utils.unpack_and_init(lib_name, mx_lib, true)
+              utils.unpack_and_init(lib_name, mx_lib)
               utils.docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
               utils.publish_test_coverage()
             } finally {
@@ -925,7 +898,7 @@ def test_centos7_python3_gpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
               utils.unpack_and_init(lib_name, mx_lib)
-              utils.docker_run('centos7_gpu_cu92', 'unittest_centos7_gpu', true)
+              utils.docker_run('centos7_gpu_cu102', 'unittest_centos7_gpu', true)
               utils.publish_test_coverage()
             } finally {
               utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_centos7_gpu.xml')
@@ -1044,22 +1017,6 @@ def test_qemu_armv8_cpu(lib_name) {
     }]
 }
 
-// This creates the MXNet binary needed for generating different docs sets
-def compile_unix_lite(lib_name) {
-    return ['MXNet lib': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_docs', false)
-            utils.pack_lib(lib_name, mx_lib, false)
-          }
-        }
-      }
-    }]
-}
-
-
 def should_pack_website() {
   if (env.BRANCH_NAME) {
     if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
@@ -1081,7 +1038,7 @@ def docs_python(lib_name) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib, false)
-            utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
+            utils.docker_run('ubuntu_cpu', 'build_python_docs', false)
             if (should_pack_website()) {
               utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
             }
@@ -1228,7 +1185,7 @@ def sanity_rat_license() {
       node(NODE_LINUX_CPU) {
         ws('workspace/sanity-rat') {
           utils.init_git()
-          utils.docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
+          utils.docker_run('ubuntu_cpu', 'test_rat_check', false)
         }
       }
     }]
@@ -1250,7 +1207,6 @@ def misc_test_docker_cache_build() {
     node(NODE_LINUX_CPU) {
       ws('workspace/docker_cache') {
         utils.init_git()
-        sh "python3 ./ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} --no-publish"
         sh "cd ci && docker-compose -f docker/docker-compose.yml pull && docker-compose -f docker/docker-compose.yml build --parallel"
       }
     }

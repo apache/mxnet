@@ -20,7 +20,6 @@
 
 ## Overview
 MXNet Gluon API comes with a lot of great features, and it can provide you everything you need: from experimentation to deploying the model. In this tutorial, we will walk you through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.
-This tutorial covers training and inference in Python, please continue to [C++ inference part](/api/cpp/docs/tutorials/cpp_inference) after you finish.
 
 Let's say you need to build a service that provides flower species recognition. A common problem is that you don't have enough data to train a good model. In such cases, a technique called Transfer Learning can be used to make a more robust model.
 In Transfer Learning we make use of a pre-trained model that solves a related task, and was trained on a very large standard dataset, such as ImageNet. ImageNet is from a different domain, but we can utilize the knowledge in this pre-trained model to perform the new task at hand.
@@ -44,7 +43,7 @@ We will use the [Oxford 102 Category Flower Dataset](http://www.robots.ox.ac.uk/
 We have prepared a utility file to help you download and organize your data into train, test, and validation sets. Run the following Python code to download and prepare the data:
 
 
-```python
+```{.python .input}
 import mxnet as mx
 data_util_file = "oxford_102_flower_dataset.py"
 base_url = "https://raw.githubusercontent.com/apache/incubator-mxnet/master/docs/tutorial_utils/data/{}?raw=true"
@@ -65,7 +64,7 @@ Now your data will be organized into train, test, and validation sets, images be
 Now let's first import necessary packages:
 
 
-```python
+```{.python .input}
 import math
 import os
 import time
@@ -77,10 +76,10 @@ from mxnet.gluon.data.vision import transforms
 from mxnet.gluon.model_zoo.vision import resnet50_v2
 ```
 
-Next, we define the hyper-parameters that we will use for fine-tuning. We will use the [MXNet learning rate scheduler](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules.html) to adjust learning rates during training.
+Next, we define the hyper-parameters that we will use for fine-tuning. We will use the [MXNet learning rate scheduler](../packages/gluon/training/learning_rates/learning_rate_schedules.ipynb) to adjust learning rates during training.
 Here we set the `epochs` to 1 for quick demonstration, please change to 40 for actual training.
 
-```python
+```{.python .input}
 classes = 102
 epochs = 1
 lr = 0.001
@@ -99,16 +98,16 @@ ctx = [mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()]
 batch_size = per_device_batch_size * max(num_gpus, 1)
 ```
 
-Now we will apply data augmentations on training images. This makes minor alterations on the training images, and our model will consider them as distinct images. This can be very useful for fine-tuning on a relatively small dataset, and it will help improve the model. We can use the Gluon [DataSet API](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.Dataset), [DataLoader API](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.DataLoader), and [Transform API](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.Dataset.transform) to load the images and apply the following data augmentations:
+Now we will apply data augmentations on training images. This makes minor alterations on the training images, and our model will consider them as distinct images. This can be very useful for fine-tuning on a relatively small dataset, and it will help improve the model. We can use the Gluon [DataSet API](../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset), [DataLoader API](../../api/gluon/data/index.rst#mxnet.gluon.data.DataLoader), and [Transform API](../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset.transform) to load the images and apply the following data augmentations:
 1. Randomly crop the image and resize it to 224x224
 2. Randomly flip the image horizontally
 3. Randomly jitter color and add noise
 4. Transpose the data from `[height, width, num_channels]` to `[num_channels, height, width]`, and map values from [0, 255] to [0, 1]
 5. Normalize with the mean and standard deviation from the ImageNet dataset.
 
-For validation and inference, we only need to apply step 1, 4, and 5. We also need to save the mean and standard deviation values for [inference using C++](/api/cpp/docs/tutorials/cpp_inference).
+For validation and inference, we only need to apply step 1, 4, and 5. We also need to save the mean and standard deviation values for inference using other language bindings.
 
-```python
+```{.python .input}
 jitter_param = 0.4
 lighting_param = 0.1
 
@@ -161,11 +160,11 @@ test_data = gluon.data.DataLoader(
 
 We will use pre-trained ResNet50_v2 model which was pre-trained on the [ImageNet Dataset](http://www.image-net.org/) with 1000 classes. To match the classes in the Flower dataset, we must redefine the last softmax (output) layer to be 102, then initialize the parameters.
 
-Before we go to training, one unique Gluon feature you should be aware of is hybridization. It allows you to convert your imperative code to a static symbolic graph, which is much more efficient to execute. There are two main benefits of hybridizing your model: better performance and easier serialization for deployment. The best part is that it's as simple as just calling `net.hybridize()`. To know more about Gluon hybridization, please follow the [hybridization tutorial](/api/python/docs/tutorials/packages/gluon/blocks/hybridize.html).
+Before we go to training, one unique Gluon feature you should be aware of is hybridization. It allows you to convert your imperative code to a static symbolic graph, which is much more efficient to execute. There are two main benefits of hybridizing your model: better performance and easier serialization for deployment. The best part is that it's as simple as just calling `net.hybridize()`. To know more about Gluon hybridization, please follow the [hybridization tutorial](../packages/gluon/blocks/hybridize.rst).
 
 
 
-```python
+```{.python .input}
 # load pre-trained resnet50_v2 from model zoo
 finetune_net = resnet50_v2(pretrained=True, ctx=ctx)
 
@@ -195,7 +194,7 @@ Now let's define the test metrics and start fine-tuning.
 
 
 
-```python
+```{.python .input}
 def test(net, val_data, ctx):
     metric = mx.metric.Accuracy()
     for i, (data, label) in enumerate(val_data):
@@ -254,7 +253,7 @@ We now have a trained our custom model. This can be serialized into model files 
 
 
 
-```python
+```{.python .input}
 finetune_net.export("flower-recognition", epoch=epochs)
 
 ```
@@ -263,17 +262,13 @@ finetune_net.export("flower-recognition", epoch=epochs)
 
 ## What's next
 
-You can continue to the [next tutorial](/api/cpp/docs/tutorials/cpp_inference) on how to load the model we just trained and run inference using MXNet C++ API.
-
-You can also find more ways to run inference and deploy your models here:
-1. [Java Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
-2. [Scala Inference examples](/api/scala/docs/tutorials/infer)
-4. [MXNet Model Server Examples](https://github.com/awslabs/mxnet-model-server/tree/master/examples)
+You can find more ways to run inference and deploy your models here:
+1. [MXNet Model Server Examples](https://github.com/awslabs/mxnet-model-server/tree/master/examples)
 
 ## References
 
 1. [Transfer Learning for Oxford102 Flower Dataset](https://github.com/Arsey/keras-transfer-learning-for-oxford102)
 2. [Gluon book on fine-tuning](https://www.d2l.ai/chapter_computer-vision/fine-tuning.html)
-3. [Gluon CV transfer learning tutorial](https://gluon-cv.mxnet.io/build/examples_classification/transfer_learning_minc.html)
+3. [Gluon CV transfer learning tutorial](https://cv.gluon.ai/build/examples_classification/transfer_learning_minc.html)
 4. [Gluon crash course](https://gluon-crash-course.mxnet.io/)
 5. [Gluon CPP inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)

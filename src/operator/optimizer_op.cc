@@ -389,6 +389,7 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
     const MultiSGDMomParam& param = dmlc::get<MultiSGDMomParam>(attrs.parsed);
+    ret.reserve(param.num_weights);
     for (int i = 0; i < param.num_weights; ++i) {
       ret.push_back(i * 3 + 2);
     }
@@ -432,6 +433,7 @@ It updates the weights using::
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
     const MultiSGDParam& param = dmlc::get<MultiSGDParam>(attrs.parsed);
+    ret.reserve(param.num_weights);
     for (int i = 0; i < param.num_weights; ++i) {
       ret.push_back(i * 3 + 2);
     }

@@ -139,11 +139,12 @@ struct SVDWrapper {
                  const TBlob& v, const mxnet::TShape& vt_shape,
                  const TBlob& work, const OpContext& ctx) {
     Stream<xpu> *s_xpu = ctx.get_stream<xpu>();
+    using IndexT = typename LapackIndex<xpu>::IndexT;
     const mxnet::TShape& a_shape = a.shape_;
     const mxnet::TShape& ut_axis = GetTransAxis(u.shape_);
     const int a_ndim = a.ndim();
-    const int nrow = a_shape[a_ndim - 2];
-    const int ncol = a_shape[a_ndim - 1];
+    const IndexT nrow = a_shape[a_ndim - 2];
+    const IndexT ncol = a_shape[a_ndim - 1];
     if (nrow > ncol) {
       const_cast<TBlob&>(u) = u.reshape(ut_shape);
       const_cast<TBlob&>(v) = v.reshape(vt_shape);
@@ -219,7 +220,7 @@ struct WSQ {
       std::vector<DType> s_vec(s_shape1.Size(), 0);
       std::vector<DType> v_vec(v_shape2.Size(), 0);
       // Get workspace size in linalg_gesdd.
-      workspace_size += linalg_gesdd_workspace_query(
+      workspace_size += linalg_gesdd_workspace_query<xpu, DType, lapack_index_t>(
         a.shape_[a_ndim - 2], a.shape_[a_ndim - 1],
         TBlob(u_vec.data(), u_shape2, a.dev_mask(), a.dev_id()).get<xpu, 2, DType>(s),
         TBlob(s_vec.data(), s_shape1, a.dev_mask(), a.dev_id()).get<xpu, 1, DType>(s),
@@ -359,6 +360,14 @@ void MatrixRankNoneTolForward(const nnvm::NodeAttrs& attrs,
   MatrixRankNoneTolForwardImpl<xpu>(a, rank, attrs, ctx, req);
 }
 
+// Windows has issues with #ifdefs inside MSHADOW_TYPE_SWITCH
+#ifndef __CUDACC__
+#define NP_LINALG_MATRIX_RANK_BROADCAST(OP, RTCOP) \
+  mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::OP>
+#else
+#define NP_LINALG_MATRIX_RANK_BROADCAST(OP, RTCOP) mxnet::op::BinaryBroadcastRTCCompute {#RTCOP}
+#endif
+
 template<typename xpu>
 void MatrixRankForwardImpl(const TBlob& a,
                            const TBlob& tol,
@@ -410,9 +419,9 @@ void MatrixRankForwardImpl(const TBlob& a,
       if (new_tol_data.dptr<DType>() != tol.dptr<DType>()) {
         Copy(new_tol_data.FlatTo1D<xpu, DType>(s), tol.FlatTo1D<xpu, DType>(s), s);
       }
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::gt>(attrs, ctx,
-                                                                 {s_data, new_tol_data},
-                                                                 {kWriteTo}, {broadcast_data});
+      NP_LINALG_MATRIX_RANK_BROADCAST(gt, greater)(attrs, ctx,
+                                                   {s_data, new_tol_data},
+                                                   {kWriteTo}, {broadcast_data});
       // Step5: Calculate rank.
       const int b_ndim  = broadcast_shape.ndim();
       const int data_size = broadcast_data.size(b_ndim - 1);
@@ -424,6 +433,8 @@ void MatrixRankForwardImpl(const TBlob& a,
     });
   });
 }
+
+#undef NP_LINALG_MATRIX_RANK_BROADCAST
 
 template<typename xpu>
 void MatrixRankForward(const nnvm::NodeAttrs& attrs,

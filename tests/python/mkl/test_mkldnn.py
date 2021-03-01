@@ -29,9 +29,9 @@ from mxnet.gluon import nn
 from mxnet.test_utils import *
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
-from common import with_seed
+import itertools
 
-@with_seed(1234)
+@pytest.mark.seed(1234)
 def test_mkldnn_ndarray_slice():
     ctx = mx.cpu()
     net = gluon.nn.HybridSequential()
@@ -43,7 +43,7 @@ def test_mkldnn_ndarray_slice():
     # trigger computation on ndarray slice
     assert_almost_equal(y[0].asnumpy()[0, 0, 0], np.array(0.056331709))
 
-@with_seed(1234)
+@pytest.mark.seed(1234)
 def test_mkldnn_engine_threading():
     net = gluon.nn.HybridSequential()
     net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
@@ -68,7 +68,6 @@ def test_mkldnn_engine_threading():
         assert_almost_equal(y[0, 0, 0, 0], np.array(0.056331709))
         break
 
-@with_seed()
 def test_mkldnn_reshape():
     def test_reshape_after_conv(dst_shape):
         shape = (1,1,4,4)
@@ -100,7 +99,6 @@ def test_mkldnn_reshape():
         test_reshape_after_conv(test_case)
 
 
-@with_seed()
 def test_reshape_before_conv():
     class Net(gluon.HybridBlock):
         """
@@ -133,7 +131,6 @@ def test_reshape_before_conv():
     assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
-@with_seed()
 def test_slice_before_conv():
     class Net(gluon.HybridBlock):
         """
@@ -166,7 +163,6 @@ def test_slice_before_conv():
     assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
-@with_seed()
 def test_slice_reshape_before_conv():
     class Net(gluon.HybridBlock):
         """
@@ -199,7 +195,6 @@ def test_slice_reshape_before_conv():
     assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
-@with_seed()
 def test_flatten_slice_after_conv():
     data = mx.symbol.Variable('data')
     weight = mx.symbol.Variable('weight')
@@ -219,6 +214,28 @@ def test_flatten_slice_after_conv():
     print(p[0])
 
 
+def test_mkldnn_sum_with_mkldnn_layout():
+
+    x_shape = (32, 3, 224, 224)
+    x_npy = np.ones(x_shape, dtype='float32')
+    w_shape = (32, 3, 3, 3)
+    w_npy = np.ones(w_shape, dtype='float32')
+
+    x = mx.sym.Variable("x")
+    w = mx.sym.Variable("w")
+    z = mx.symbol.Convolution(data=x, weight=w, num_filter=32, kernel=(3, 3))
+    num_inputs = [2, 3, 4, 5]
+    for i in num_inputs:
+        inputs = []
+        for n in range(i):
+            inputs.append(z)
+        y = mx.sym.add_n(*inputs) # (only MKLDNN data input)
+        exe = y._simple_bind(ctx=mx.cpu(), x=x_shape, w=w_shape)
+        out = exe.forward(is_train=False, x=x_npy, w=np.ones(w_shape))[0]
+        #conv with kernel (3,3) on ones should give result=27
+        single_cov = 27.0
+        assert_almost_equal(out[0].asnumpy()[0, 0, 0], single_cov*i)
+
 def test_mkldnn_sum_inplace_with_cpu_layout():
     x_shape = (32, 3, 224, 224)
     x_npy = np.ones(x_shape, dtype='float32')
@@ -227,16 +244,15 @@ def test_mkldnn_sum_inplace_with_cpu_layout():
     x = mx.sym.Variable("x")
     y = mx.sym.Variable("y")
     z = mx.symbol.Convolution(data=x, num_filter=32, kernel=(3, 3))
-    z = mx.sym.add_n(z, y)
+    z = mx.sym.add_n(z, y) # (MKLDNN data, cpu data)
     exe = z._simple_bind(ctx=mx.cpu(), x=x_shape, y=y_shape)
     out = exe.forward(is_train=False, x=x_npy, y=y_npy)[0]
     assert_almost_equal(out[0].asnumpy()[0, 0, 0], 1.0)
 
 
-@with_seed()
 def test_batchnorm():
     def check_batchnorm_training(stype):
-        for shape in [(2, 3), (2, 3, 2, 2)]:
+        for shape in [(2, 3), (2, 4), (2, 3, 2, 2), (2, 4, 2, 2)]:
             data_tmp = np.random.normal(-0.1, 0.1, size=shape)
             s = shape[1],
             gamma = np.ones(s)
@@ -259,7 +275,6 @@ def test_batchnorm():
     for stype in stypes:
         check_batchnorm_training(stype)
 
-@with_seed()
 def test_batchnorm_relu_fusion():
     def check_batchnorm_relu_fusion(shape):
         x = mx.sym.Variable('x')
@@ -319,7 +334,6 @@ def test_batchnorm_relu_fusion():
     check_batchnorm_relu_fusion_gluon((1, 3, 224, 224))
     check_batchnorm_relu_fusion_gluon((8, 3, 224, 224))
 
-@with_seed()
 def test_softmax():
     def check_softmax_training(stype):
         for shape in [(2, 3), (2, 3, 2, 2)]:
@@ -336,7 +350,6 @@ def test_softmax():
         check_softmax_training(stype)
 
 
-@with_seed()
 def test_pooling():
     def check_pooling_training(stype):
         for shape in [(3, 3, 10), (3, 3, 20, 20), (3, 3, 10, 20, 20)]:
@@ -359,7 +372,6 @@ def test_pooling():
         check_pooling_training(stype)
 
 
-@with_seed()
 def test_activation():
     def check_activation_training(stype):
         for shape in [(2, 3, 3), (2, 3, 2, 2)]:
@@ -380,7 +392,6 @@ def test_activation():
         check_activation_training(stype)
 
 
-@with_seed()
 def test_convolution():
     def check_convolution_training(stype):
         for shape in [(3, 3, 10), (3, 3, 10, 10), (3, 3, 10, 10, 10)]:
@@ -408,7 +419,6 @@ def test_convolution():
         check_convolution_training(stype)
 
 
-@with_seed()
 @pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/12579")
 def test_Deconvolution():
     def check_Deconvolution_training(stype):
@@ -434,7 +444,6 @@ def test_Deconvolution():
         check_Deconvolution_training(stype)
 
 
-@with_seed()
 def test_LRN():
     def check_LRN_training(stype):
         for shape in [(3, 4, 5, 5)]:
@@ -450,7 +459,6 @@ def test_LRN():
         check_LRN_training(stype)
 
 
-@with_seed()
 def test_fullyconnected():
     def check_fullyconnected_training(stype):
         data_shape = rand_shape_nd(2)
@@ -483,7 +491,6 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
-@with_seed()
 def test_non_mkldnn_fcomputeex():
     # test special case where MKLDNN formatted NDArray feeds into non-mkldnn fcomputeex operator
     # conv is example where MKLDNN NDArray is created from regular NDArrays
@@ -527,7 +534,6 @@ def test_non_mkldnn_fcomputeex():
     exec1 = custom._bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
     exec1.forward()[0].wait_to_read()
 
-@with_seed()
 def test_conv_transpose():
     axes = [(0,2,1,3), (0,2,3,1), (1,2,3,0), (3,2,1,0)]
     a = np.random.rand(10, 16, 50, 50)
@@ -544,7 +550,6 @@ def test_conv_transpose():
 
 
 # This test case is contributed by @awsbillz in https://github.com/apache/incubator-mxnet/issues/14766
-@with_seed()
 def test_reshape_transpose_6d():
     class Reshape2D(gluon.HybridBlock):
         def __init__(self, factor):
@@ -579,7 +584,6 @@ def test_reshape_transpose_6d():
     output = net(data)
     a = output.asnumpy()
 
-@with_seed()
 def test_concat():
     def ref_concat(a, b, axis):
       return np.concatenate((a, b), axis=axis)
@@ -614,7 +618,6 @@ def test_concat():
     for stype in stypes:
         check_concat_training(stype)
 
-@with_seed()
 def test_elemwise_add():
     def ref_add(a, b):
       return np.add(a, b)
@@ -647,3 +650,30 @@ def test_elemwise_add():
     for stype in stypes:
         check_elemwise_add_training(stype)
 
+def test_rnn():
+    SEQ_LENGTH = [2**10, 2**5]
+    STATE_SIZE = [1, 2]
+    BATCH_SIZE = [4]
+    INPUT_SIZE = [4]
+    def batch_check(seq_length, state_size, batch_size, input_size):
+        modes_params = [('rnn_relu', mx.np.random.normal(0, 1, ((input_size + state_size + 2)*state_size),)),
+                        ('rnn_tanh', mx.np.random.normal(0, 1, ((input_size + state_size + 2)*state_size),)),
+                        ('gru', mx.np.random.normal(0, 1, ((input_size + state_size + 2)*state_size*3),))
+                        ]
+        for m, p in modes_params:
+            data = mx.np.random.normal(0, 1, (seq_length, batch_size, input_size))
+            state = mx.np.random.normal(0, 1, (1, batch_size, state_size))
+            data.attach_grad()
+            state.attach_grad()
+
+            with mx.autograd.record():
+                y = mx.npx.rnn(data=data, parameters=p, mode=m, \
+                               state=state, state_size=state_size, num_layers=1)
+            assert y.shape == (seq_length, batch_size, state_size)
+            assert type(y[0]).__name__ == 'ndarray'
+            y.backward()
+            assert state.shape == (1, batch_size, state_size)
+            assert type(state[0]).__name__ == 'ndarray'
+
+    for sl, ss, bs, in_s in itertools.product(SEQ_LENGTH, STATE_SIZE, BATCH_SIZE, INPUT_SIZE): 
+        batch_check(sl, ss, bs, in_s)

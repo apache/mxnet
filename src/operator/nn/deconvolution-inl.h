@@ -85,11 +85,11 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
                   "`adj` will be ignored and computed accordingly.");
     DMLC_DECLARE_FIELD(target_shape).set_default(mxnet::TShape(0, 0))
         .describe("Shape of the output tensor: (w,), (h, w) or (d, h, w).");
-    DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
+    DMLC_DECLARE_FIELD(num_filter).set_lower_bound(1)
         .describe("Number of output filters.");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
         .describe("Number of groups partition.");
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
+    DMLC_DECLARE_FIELD(workspace).set_default(512).set_lower_bound(0)
         .describe("Maximum temporary workspace allowed (MB) in deconvolution."
                   "This parameter has two usages. When CUDNN is not used, it determines the "
                   "effective batch size of the deconvolution kernel. When CUDNN is used, "
@@ -454,7 +454,7 @@ class DeconvolutionOp {
  private:
   inline index_t InitTemp(const mshadow::Shape<4> &ishape,
                           const mshadow::Shape<4> &oshape) {
-    const int ksize = param_.kernel.Size();
+    const index_t ksize = param_.kernel.Size();
     shape_colunit_ = mshadow::Shape2(ishape[1] * ksize,
                                      oshape[2] * oshape[3]);
     shape_dstunit_ = mshadow::Shape3(param_.num_group,

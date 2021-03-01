@@ -32,7 +32,7 @@ from mxnet.test_utils import assert_almost_equal, use_np, set_default_context
 import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import assertRaises, with_seed
+from common import assertRaises
 import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
@@ -40,7 +40,6 @@ from mxnet.util import numpy_fallback
 
 set_default_context(mx.gpu(0))
 
-@with_seed()
 @use_np
 @pytest.mark.serial
 def test_np_fallback_decorator():

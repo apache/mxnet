@@ -40,6 +40,7 @@
 #---------------------------------------------
 set(USE_CUDA OFF CACHE BOOL "Build with CUDA support")
 set(USE_CUDNN OFF CACHE BOOL "Build with cudnn support, if found")
+set(USE_CUTENSOR OFF CACHE BOOL "Build with cutensor support, if found")
 
 # Target NVIDIA GPU achitecture.
 # Valid options are "Auto" for autodetection, "All" for all available
@@ -120,10 +121,9 @@ set(USE_CPP_PACKAGE OFF CACHE BOOL "Build C++ Package")
 # This will cause performance degradation reported in issue #14496
 # Set to 1 for large tensor with tensor size greater than INT32_MAX i.e. 2147483647
 # Note: the size of each dimension is still bounded by INT32_MAX
-set(USE_INT64_TENSOR_SIZE OFF CACHE BOOL "Use int64_t to represent the total number of elements in a tensor")
+set(USE_INT64_TENSOR_SIZE ON CACHE BOOL "Use int64_t to represent the total number of elements in a tensor")
 
 # Other GPU features
 set(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 set(NCCL_ROOT "" CACHE BOOL "NCCL install path. Supports autodetection.")
-set(ENABLE_CUDA_RTC ON CACHE BOOL "Build with CUDA runtime compilation support")
 set(USE_NVTX ON CACHE BOOL "Build with NVTX support")

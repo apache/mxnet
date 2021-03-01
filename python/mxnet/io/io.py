@@ -103,8 +103,8 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
 
         Parameters
         ----------
-        shapes : a tuple of (name_, shape_)
-        types : a tuple of  (name_, np.dtype)
+        shapes : a tuple of (name, shape)
+        types : a tuple of  (name, np.dtype)
         """
         if types is not None:
             type_dict = dict(types)

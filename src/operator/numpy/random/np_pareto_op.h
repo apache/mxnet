@@ -44,13 +44,13 @@ namespace op {
 
 struct NumpyParetoParam : public dmlc::Parameter<NumpyParetoParam> {
   dmlc::optional<float> a;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   std::string ctx;
   DMLC_DECLARE_PARAMETER(NumpyParetoParam) {
       DMLC_DECLARE_FIELD(a)
       .set_default(dmlc::optional<float>());
       DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe("Output shape. If the given shape is, "
           "e.g., (m, n, k), then m * n * k samples are drawn. "
           "Default is None, in which case a single value is returned.");
@@ -174,7 +174,7 @@ inline void ScalarParetoReparamBackwardImpl(const OpContext& ctx,
   const TBlob samples = inputs[3].reshape(new_oshape);
   const TBlob noise = inputs[4].reshape(new_oshape);
   size_t workspace_size =
-      ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
+      ReduceWorkspaceSize(s, igrad.shape_, req[0], ograd.shape_, sizeof(DType));
   Tensor<xpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::left>(

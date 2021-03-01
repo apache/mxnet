@@ -373,6 +373,7 @@ class Accuracy(EvalMetric):
     The accuracy score is defined as
 
     .. math::
+
         \\text{accuracy}(y, \\hat{y}) = \\frac{1}{n} \\sum_{i=0}^{n-1}
         \\text{1}(\\hat{y_i} == y_i)
 
@@ -947,6 +948,7 @@ class MCC(EvalMetric):
     MCC of 0 is uncorrelated, 1 is completely correlated, and -1 is negatively correlated.
 
     .. math::
+
         \\text{MCC} = \\frac{ TP \\times TN - FP \\times FN }
         {\\sqrt{ (TP + FP) ( TP + FN ) ( TN + FP ) ( TN + FN ) } }
 
@@ -1039,6 +1041,7 @@ class MAE(EvalMetric):
     The mean absolute error is given by
 
     .. math::
+
         \\frac{\\sum_i^n |y_i - \\hat{y}_i|}{n}
 
     Parameters
@@ -1099,6 +1102,7 @@ class MSE(EvalMetric):
     The mean squared error is given by
 
     .. math::
+
         \\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}
 
     Parameters
@@ -1158,6 +1162,7 @@ class RMSE(MSE):
     The root mean squared error is given by
 
     .. math::
+
         \\sqrt{\\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}}
 
     Parameters
@@ -1200,6 +1205,7 @@ class MeanPairwiseDistance(EvalMetric):
     The mean pairwise distance is given by
 
     .. math::
+
         \\sqrt{\\frac{(\\sum_i^n (y_i - \\hat{y}_i)^p)^\\frac{1}{p}}{n}}
 
     Parameters
@@ -1261,13 +1267,15 @@ class MeanPairwiseDistance(EvalMetric):
 @register
 @use_np
 class MeanCosineSimilarity(EvalMetric):
-    """Computes Mean Cosine Similarity.
+    r"""Computes Mean Cosine Similarity.
 
     The mean cosine similarity is given by
 
     .. math::
+
         cos_sim(label, pred) = \frac{{label}.{pred}}{max(||label||.||pred||, eps)}
-    (calculating on the last dimension of label and pred.)
+
+    Calculation happens on the last dimension of label and pred.
 
     Parameters
     ----------
@@ -1338,6 +1346,7 @@ class CrossEntropy(EvalMetric):
     The cross entropy over a batch of sample size :math:`N` is given by
 
     .. math::
+
        -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
 
     where :math:`t_{nk}=1` if and only if sample :math:`n` belongs to class :math:`k`.
@@ -1352,9 +1361,12 @@ class CrossEntropy(EvalMetric):
         Index of invalid label to ignore when
         counting. By default, sets to -1.
         If set to `None`, it will include all entries.
-    axis : int (default -1)
+    axis : int, default -1
         The axis from prediction that was used to
         compute softmax. By default use the last axis.
+    from_logits : boolean, default False
+        Whether `pred` is expected to be a logits tensor.
+        By default, we assume that `pred` encodes a probability distribution.
     name : str
         Name of this metric instance for display.
     output_names : list of str, or None
@@ -1373,12 +1385,13 @@ class CrossEntropy(EvalMetric):
     >>> print ce.get()
     ('cross-entropy', 0.57159948348999023)
     """
-    def __init__(self, eps=1e-12, ignore_label=None, axis=-1, name='cross-entropy',
-                 output_names=None, label_names=None):
+    def __init__(self, eps=1e-12, ignore_label=None, axis=-1, from_logits=False,
+                 name='cross-entropy', output_names=None, label_names=None):
         super(CrossEntropy, self).__init__(
             name, output_names=output_names, label_names=label_names)
         self.ignore_label = ignore_label
         self.axis = axis
+        self.from_logits = from_logits
         self.eps = eps
 
     def update(self, labels, preds):
@@ -1400,6 +1413,8 @@ class CrossEntropy(EvalMetric):
             assert label.size == pred.size/pred.shape[-1], \
                 "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
             label = label.reshape((label.size,))
+            if self.from_logits:
+                pred = ndarray.softmax(pred, axis=self.axis)
             pred = ndarray.pick(pred.as_in_context(label.ctx), label.astype(dtype='int32'), axis=self.axis)
             label = label.as_np_ndarray()
             pred = pred.as_np_ndarray()
@@ -1425,6 +1440,7 @@ class Perplexity(CrossEntropy):
     The perplexity of a model q is defined as
 
     .. math::
+
         b^{\\big(-\\frac{1}{N} \\sum_{i=1}^N \\log_b q(x_i) \\big)}
         = \\exp \\big(-\\frac{1}{N} \\sum_{i=1}^N \\log q(x_i)\\big)
 
@@ -1469,88 +1485,17 @@ class Perplexity(CrossEntropy):
     >>> print perp.get()
     ('Perplexity', 1.7710976285155853)
     """
-    def __init__(self, eps=1e-12, ignore_label=None, axis=-1, name='perplexity',
-                 output_names=None, label_names=None):
+    def __init__(self, eps=1e-12, ignore_label=None, axis=-1, from_logits=False,
+                 name='perplexity', output_names=None, label_names=None):
         super(Perplexity, self).__init__(
-            name=name, eps=eps, ignore_label=ignore_label, axis=axis,
-            output_names=output_names, label_names=label_names)
+            eps=eps, ignore_label=ignore_label, axis=axis, from_logits=from_logits,
+            name=name, output_names=output_names, label_names=label_names)
 
     def get(self):
         if self.num_inst == 0:
             return (self.name, float('nan'))
         else:
             return (self.name, math.exp(self.sum_metric/self.num_inst))
-
-
-@register
-@alias('nll_loss')
-@use_np
-class NegativeLogLikelihood(EvalMetric):
-    """Computes the negative log-likelihood loss.
-
-    The negative log-likelihoodd loss over a batch of sample size :math:`N` is given by
-
-    .. math::
-       -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
-
-    where :math:`K` is the number of classes, :math:`y_{nk}` is the prediceted probability for
-    :math:`k`-th class for :math:`n`-th sample. :math:`t_{nk}=1` if and only if sample
-    :math:`n` belongs to class :math:`k`.
-
-    Parameters
-    ----------
-    eps : float
-        Negative log-likelihood loss is undefined for predicted value is 0,
-        so predicted values are added with the small constant.
-    name : str
-        Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
-
-    Examples
-    --------
-    >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
-    >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> nll_loss = mx.gluon.metric.NegativeLogLikelihood()
-    >>> nll_loss.update(labels, predicts)
-    >>> print nll_loss.get()
-    ('nll-loss', 0.57159948348999023)
-    """
-    def __init__(self, eps=1e-12, name='nll-loss',
-                 output_names=None, label_names=None):
-        super(NegativeLogLikelihood, self).__init__(
-            name, eps=eps,
-            output_names=output_names, label_names=label_names)
-        self.eps = eps
-
-    def update(self, labels, preds):
-        """Updates the internal evaluation result.
-
-        Parameters
-        ----------
-        labels : list of `NDArray`
-            The labels of the data.
-
-        preds : list of `NDArray`
-            Predicted values.
-        """
-        labels, preds = check_label_shapes(labels, preds, True)
-
-        for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray()
-            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-
-            label = label.reshape(-1)
-            num_examples = pred.shape[0]
-            assert label.shape[0] == num_examples, (label.shape[0], num_examples)
-            prob = pred[numpy.arange(num_examples, dtype=numpy.int64), numpy.int64(label)]
-            nll = (-numpy.log(prob + self.eps)).sum()
-            self.sum_metric += nll
-            self.num_inst += num_examples
 
 
 @register
@@ -1562,6 +1507,7 @@ class PearsonCorrelation(EvalMetric):
     The pearson correlation is given by
 
     .. math::
+
         \\frac{cov(y, \\hat{y})}{\\sigma{y}\\sigma{\\hat{y}}}
 
     Parameters
@@ -1653,6 +1599,7 @@ class PCC(EvalMetric):
     from a discrete solution to the Pearson correlation coefficient.
 
     .. math::
+
         \\text{PCC} = \\frac {\\sum _{k}\\sum _{l}\\sum _{m}C_{kk}C_{lm}-C_{kl}C_{mk}}
         {{\\sqrt {\\sum _{k}(\\sum _{l}C_{kl})(\\sum _{k'|k'\\neq k}\\sum _{l'}C_{k'l'})}}
          {\\sqrt {\\sum _{k}(\\sum _{l}C_{lk})(\\sum _{k'|k'\\neq k}\\sum _{l'}C_{l'k'})}}}
@@ -1801,15 +1748,6 @@ class Torch(Loss):
     def __init__(self, name='torch',
                  output_names=None, label_names=None):
         super(Torch, self).__init__(
-            name, output_names=output_names, label_names=label_names)
-
-
-@register
-class Caffe(Loss):
-    """Dummy metric for caffe criterions."""
-    def __init__(self, name='caffe',
-                 output_names=None, label_names=None):
-        super(Caffe, self).__init__(
             name, output_names=output_names, label_names=label_names)
 
 

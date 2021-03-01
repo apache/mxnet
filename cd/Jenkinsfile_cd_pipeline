@@ -36,7 +36,7 @@ pipeline {
 
   parameters {
     // Release parameters
-    string(defaultValue: "cpu,native,cu92,cu100,cu101,cu102", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
+    string(defaultValue: "cpu,native,cu101,cu102,cu110,cu112", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
     booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
   }
 
@@ -54,33 +54,21 @@ pipeline {
     stage("MXNet Release") {
       steps {
         script {
-          cd_utils.error_checked_parallel([
-
-            "Static libmxnet based release": {
-              stage("Build") {
-                cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)
+          stage("Build libmxnet") {
+            cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Build libmxnet", "mxnet_lib", params.MXNET_VARIANTS)
+          }
+          stage("Releases") {
+            cd_utils.error_checked_parallel([
+              "PyPI Release": {
+                echo "Building PyPI Release"
+                cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Release PyPI Packages", "python/pypi", params.MXNET_VARIANTS)
+              },
+              "Python Docker Release": {
+                echo "Building Python Docker Release"
+                cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Release Python Docker Images", "python/docker", params.MXNET_VARIANTS)
               }
-              stage("Releases") {
-                cd_utils.error_checked_parallel([
-                  "PyPI Release": {
-                    echo "Building PyPI Release"
-                    cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Release PyPI Packages", "python/pypi", params.MXNET_VARIANTS)
-                  },
-                  "Python Docker Release": {
-                    echo "Building Python Docker Release"
-                    cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Release Python Docker Images", "python/docker", params.MXNET_VARIANTS)
-                  }
-                ])
-              }
-            },
-
-            "Dynamic libmxnet based release": {
-              stage("Build") {
-                cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Build dynamic libmxnet", "mxnet_lib/dynamic", params.MXNET_VARIANTS)
-              }
-            }
-
-          ])
+            ])
+          }
         }
       }
     }

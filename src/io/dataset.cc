@@ -29,6 +29,7 @@
 #include <mxnet/ndarray.h>
 #include <mxnet/tensor_blob.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -75,11 +76,11 @@ class RecordFileDataset final : public Dataset {
     delete idx_stream;
   }
 
-  uint64_t GetLen() const {
+  uint64_t GetLen() const override {
     return idx_.size();
   }
 
-  bool GetItem(uint64_t idx, std::vector<NDArray>* ret) {
+  bool GetItem(uint64_t idx, std::vector<NDArray>* ret) override {
     ret->resize(1);
     auto& out = (*ret)[0];
     static thread_local std::unique_ptr<dmlc::Stream> stream;
@@ -193,11 +194,11 @@ class ImageRecordFileDataset : public Dataset {
     base_ = std::make_shared<RecordFileDataset>(kwargs);
   }
 
-  uint64_t GetLen() const {
+  uint64_t GetLen() const override {
     return base_->GetLen();
   }
 
-  bool GetItem(uint64_t idx, std::vector<NDArray>* ret) {
+  bool GetItem(uint64_t idx, std::vector<NDArray>* ret) override {
     CHECK_LT(idx, GetLen());
     std::vector<NDArray> raw;
     if (!base_->GetItem(idx, &raw)) return false;
@@ -292,11 +293,11 @@ class ImageSequenceDataset final : public Dataset {
     img_list_ = dmlc::Split(param_.img_list, param_.path_sep);
   }
 
-  uint64_t GetLen() const {
+  uint64_t GetLen() const override {
     return img_list_.size();
   }
 
-  bool GetItem(uint64_t idx, std::vector<NDArray>* ret) {
+  bool GetItem(uint64_t idx, std::vector<NDArray>* ret) override {
 #if MXNET_USE_OPENCV
     CHECK_LT(idx, img_list_.size())
       << "GetItem index: " << idx << " out of bound: " << img_list_.size();
@@ -355,11 +356,11 @@ class NDArrayDataset final : public Dataset {
     size_ = data_.shape().begin()[0];
   }
 
-  uint64_t GetLen() const {
+  uint64_t GetLen() const override {
     return size_;
   }
 
-  bool GetItem(uint64_t idx, std::vector<NDArray>* rets) {
+  bool GetItem(uint64_t idx, std::vector<NDArray>* rets) override {
     CHECK_LT(idx, size_)
       << "GetItem index: " << idx << " out of bound: " << size_;
     rets->resize(1);
@@ -430,15 +431,15 @@ class GroupDataset final : public Dataset {
     }
   }
 
-  uint64_t GetLen() const {
+  uint64_t GetLen() const override {
     return size_;
   }
 
-  bool GetItem(uint64_t idx, std::vector<NDArray>* ret) {
+  bool GetItem(uint64_t idx, std::vector<NDArray>* ret) override {
     CHECK_LT(idx, size_)
       << "GetItem index: " << idx << " out of bound: " << size_;
     ret->clear();
-    for (auto child : childs_) {
+    for (const auto& child : childs_) {
       std::vector<NDArray> temp_ret;
       if (!child->GetItem(idx, &temp_ret)) return false;
       ret->insert(ret->end(), temp_ret.begin(), temp_ret.end());
@@ -485,11 +486,11 @@ class IndexedDataset final : public Dataset {
     base_data_ = *static_cast<std::shared_ptr<Dataset>*>(reinterpret_cast<void*>(param_.base));
   }
 
-  uint64_t GetLen() const {
+  uint64_t GetLen() const override {
     return param_.indices.ndim();
   }
 
-  bool GetItem(uint64_t idx, std::vector<NDArray>* ret) {
+  bool GetItem(uint64_t idx, std::vector<NDArray>* ret) override {
     CHECK_GT(param_.indices.ndim(), idx) << "IndexError: " << idx
       << " from total: " << param_.indices.ndim();
     auto new_idx = param_.indices[idx];
@@ -545,15 +546,15 @@ class LazyTransformDataset final : public Dataset {
     this->pass_through_indices_ = other.pass_through_indices_;
     this->use_input_indices_ = other.use_input_indices_;
     this->num_outputs_ = other.num_outputs_;
-    this->cached_op_ = NaiveCachedOpPtr(new NaiveCachedOp(
-      other.cached_op_->sym_, other.cached_op_->flags_));
+    this->cached_op_ = std::make_shared<NaiveCachedOp>(
+      other.cached_op_->sym_, other.cached_op_->flags_);
     this->base_data_ = other.base_data_;
   }
 
   explicit LazyTransformDataset(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     param_.InitAllowUnknown(kwargs);
     auto op = *static_cast<CachedOpPtr*>(reinterpret_cast<void*>(param_.cached_op));
-    cached_op_ = NaiveCachedOpPtr(new NaiveCachedOp(op->sym_, op->flags_));
+    cached_op_ = std::make_shared<NaiveCachedOp>(op->sym_, op->flags_);
     base_data_ = *static_cast<std::shared_ptr<Dataset>*>(reinterpret_cast<void*>(param_.dataset));
 
     // use first item to calculate size info
@@ -596,14 +597,13 @@ class LazyTransformDataset final : public Dataset {
     num_outputs_ = inputs.size() + cached_op_->num_outputs() - cached_op_->num_inputs();
   }
 
-  virtual ~LazyTransformDataset(void) {
-  }
+  ~LazyTransformDataset() override = default;
 
-  uint64_t GetLen() const {
+  uint64_t GetLen() const override {
     return base_data_->GetLen();
   }
 
-  bool GetItem(uint64_t idx, std::vector<NDArray>* outputs) {
+  bool GetItem(uint64_t idx, std::vector<NDArray>* outputs) override {
     std::vector<NDArray> inputs;
     if (!base_data_->GetItem(idx, &inputs)) return false;
     outputs->reserve(num_outputs_);
@@ -616,8 +616,8 @@ class LazyTransformDataset final : public Dataset {
     std::vector<NDArray*> ndinputs;
     std::vector<NDArray*> ndoutputs;
     ndinputs.reserve(inputs.size());
-    for (size_t i = 0; i < use_input_indices_.size(); ++i) {
-      ndinputs.emplace_back(&(inputs[use_input_indices_[i]]));
+    for (int use_input_indice : use_input_indices_) {
+      ndinputs.emplace_back(&(inputs[use_input_indice]));
     }
     ndoutputs.reserve(cached_op_->num_outputs());
     CHECK_LE(cached_op_->num_outputs(), outputs->size());
@@ -625,8 +625,8 @@ class LazyTransformDataset final : public Dataset {
       ndoutputs.emplace_back(&(outputs->at(i)));
     }
 
-    for (size_t i = 0; i < inputs.size(); ++i) {
-      inputs[i].WaitToRead();
+    for (auto & input : inputs) {
+      input.WaitToRead();
     }
     CHECK(inputs.size() > 0) << "dataset getitem requires at least one input";
     Context default_ctx = inputs[0].ctx();

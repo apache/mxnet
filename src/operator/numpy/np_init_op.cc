@@ -47,11 +47,13 @@ inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
     << "_npi_indices dimensions the number of dim must not be less than 0";
   mxnet::TShape param_dim = param.dimensions;
   if (!shape_is_known(param_dim)) return false;
+  CHECK_LT(param_dim.Size(), INT32_MAX) << "ValueError: np.indices does not support large"
+     << " input tensors (containing >= 2^31 elements).";
   const int indim = param.dimensions.ndim();
   mxnet::TShape ret(indim + 1, -1);
   ret[0] = indim;
   for (int i = 1; i < indim + 1; ++i) {
-    ret[i] = param.dimensions[i-1];
+    ret[i] = param_dim[i-1];
   }
   SHAPE_ASSIGN_CHECK(*out_shapes, 0, ret);
   return shape_is_known(out_shapes->at(0));
@@ -161,6 +163,7 @@ NNVM_REGISTER_OP(_npi_atleast_##N##d)                                      \
 [](const nnvm::NodeAttrs& attrs) {                                        \
   int num_args = nnvm::get<AtleastNDParam>(attrs.parsed).num_args;        \
   std::vector<std::string> ret;                                           \
+  ret.reserve(num_args);                                                  \
   for (int i = 0; i < num_args; i++) {                                    \
     ret.push_back(std::string("ary") + std::to_string(i));                \
   }                                                                       \

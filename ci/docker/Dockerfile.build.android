@@ -35,10 +35,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     unzip \
  && rm -rf /var/lib/apt/lists/*
 
-RUN curl -o android-ndk-r19-linux-x86_64.zip -L https://dl.google.com/android/repository/android-ndk-r19-linux-x86_64.zip && \
-    unzip android-ndk-r19-linux-x86_64.zip && \
-    rm android-ndk-r19-linux-x86_64.zip
-ENV CMAKE_TOOLCHAIN_FILE=/usr/local/android-ndk-r19/build/cmake/android.toolchain.cmake
+RUN curl -o android-ndk-r19c-linux-x86_64.zip -L https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip && \
+    unzip android-ndk-r19c-linux-x86_64.zip && \
+    rm android-ndk-r19c-linux-x86_64.zip
+ENV CMAKE_TOOLCHAIN_FILE=/usr/local/android-ndk-r19c/build/cmake/android.toolchain.cmake
 
 ARG USER_ID=0
 ARG GROUP_ID=0
@@ -57,17 +57,15 @@ ENV ARCH=armv7l \
     HOSTCXX=g++ \
     TARGET=ARMV7
 
-RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
-    mkdir /usr/local/openblas-android && \
+RUN git clone --recursive -b v0.3.12 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local/OpenBLAS && \
-    export TOOLCHAIN=/usr/local/android-ndk-r19/toolchains/llvm/prebuilt/linux-x86_64 && \
+    export TOOLCHAIN=/usr/local/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64 && \
     make NOFORTRAN=1 ARM_SOFTFP_ABI=1 NO_SHARED=1 \
-        LDFLAGS="-L/usr/local/android-ndk-r19/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/lib/gcc/arm-linux-androideabi/4.9.x -lm" \
+        LDFLAGS="-L/usr/local/android-ndk-r19c/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/lib/gcc/arm-linux-androideabi/4.9.x -lm" \
         CC=$TOOLCHAIN/bin/armv7a-linux-androideabi16-clang AR=$TOOLCHAIN/bin/arm-linux-androideabi-ar && \
-    make PREFIX=/usr/local/openblas-android NO_SHARED=1 install && \
+    make PREFIX=/usr/local/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/ NO_SHARED=1 install && \
     cd /usr/local && \
     rm -rf OpenBLAS
-ENV OpenBLAS_HOME=/usr/local/openblas-android
 
 WORKDIR /work/build
 
@@ -81,16 +79,14 @@ ENV ARCH=aarch64 \
     HOSTCXX=g++ \
     TARGET=ARMV8
 
-RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
-    mkdir /usr/local/openblas-android && \
+RUN git clone --recursive -b v0.3.12 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local/OpenBLAS && \
-    export TOOLCHAIN=/usr/local/android-ndk-r19/toolchains/llvm/prebuilt/linux-x86_64 && \
+    export TOOLCHAIN=/usr/local/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64 && \
     make NOFORTRAN=1 NO_SHARED=1 \
         LDFLAGS="-L/usr/local/android-ndk-r21/toolchains/aarch64-linux-android-4.9/prebuilt/linux-x86_64/lib/gcc/aarch64-linux-android/4.9.x -lm" \
         CC=$TOOLCHAIN/bin/aarch64-linux-android21-clang AR=$TOOLCHAIN/bin/aarch64-linux-android-ar && \
-    make PREFIX=/usr/local/openblas-android NO_SHARED=1 install && \
+    make PREFIX=/usr/local/android-ndk-r19c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/ NO_SHARED=1 install && \
     cd /usr/local && \
     rm -rf OpenBLAS
-ENV OpenBLAS_HOME=/usr/local/openblas-android
 
 WORKDIR /work/build

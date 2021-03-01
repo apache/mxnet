@@ -44,7 +44,7 @@ MXNET_REGISTER_API("_npi.unique")
   } else {
     param.axis = args[4].operator int();
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyUniqueParam>(&attrs);
   // inputs
