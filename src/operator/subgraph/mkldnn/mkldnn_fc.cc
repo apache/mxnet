@@ -26,18 +26,22 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
-#include <string>
-#include "../common.h"
-#include "../../nn/mkldnn/mkldnn_base-inl.h"
-#include "../../nn/mkldnn/mkldnn_ops-inl.h"
-#include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
+
 #include "../../nn/mkldnn/mkldnn_act-inl.h"
-#include "../../tensor/matrix_op-inl.h"
+#include "../../nn/mkldnn/mkldnn_base-inl.h"
+#include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
+#include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../quantization/quantization_utils.h"
-#include "mkldnn_fc-inl.h"
-#include "mkldnn_common.h"
+#include "../../tensor/matrix_op-inl.h"
+#include "../common.h"
+#include "./mkldnn_common.h"
+#include "./mkldnn_fc-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -106,10 +110,10 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   auto &mkldnn_param = full_param_.mkldnn_param;
   auto &default_param = full_param_.default_param;
   bool has_bias = !default_param.no_bias;
-  const size_t base_num_inputs = (has_bias ? 3 : 2) + (mkldnn_param.with_sum ? 1 : 0); // TODO(anko) ? consider not increasing this  for with_sum enabled ?
+  const size_t base_num_inputs = (has_bias ? 3 : 2) + (mkldnn_param.with_sum ? 1 : 0);
   size_t base_num_outputs = 1;
 
-  const int in_sum = has_bias ? fullc::kBias + 1 : fullc::kBias; //TODO(anko) remove kBias enum ? or all enums
+  const int in_sum = has_bias ? fullc::kBias + 1 : fullc::kBias;
 
   float min_data = 0.0f;
   float max_data = 0.0f;
@@ -220,9 +224,11 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       }
     } else {
       if (cached_min_data_ != min_data || cached_max_data_ != max_data ||
-	      cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
-          cached_min_weight_ != min_weight || cached_max_weight_ != max_weight ||
-          (has_bias && (cached_min_bias_ != min_bias || cached_max_bias_ != max_bias))) {
+          cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
+          cached_min_weight_ != min_weight ||
+          cached_max_weight_ != max_weight ||
+          (has_bias &&
+           (cached_min_bias_ != min_bias || cached_max_bias_ != max_bias))) {
         initialized_ = false;
       }
     }
@@ -323,7 +329,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
         weight_scales_[0] =
           GetQuantizeScale(cached_weight_.dtype(), cached_min_weight_, cached_max_weight_);
         if (has_bias) {
-          if(cached_bias_.dtype() == mshadow::kInt8) {
+          if (cached_bias_.dtype() == mshadow::kInt8) {
             float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_min_bias_, cached_max_bias_);
 
             float bias_int32_rescale = data_scale_ * weight_scales_[0] / bias_scale;
@@ -396,10 +402,11 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       }
 
       if (mkldnn_param.with_sum && !mkldnn_param.enable_float_output) {
-        float sum_in_scale =  GetQuantizeScale(in_data[in_sum].dtype(), cached_sum_min_, cached_sum_max_);
-        mkldnn_param.sum_scale = out_scale / sum_in_scale; // TODO(anko) scales for channel wise
+        float sum_in_scale = GetQuantizeScale(in_data[in_sum].dtype(),
+                                              cached_sum_min_, cached_sum_max_);
+        mkldnn_param.sum_scale = out_scale / sum_in_scale;
       }
-    } // if (mkldnn_param.quantized)
+    }
 
     fwd_.reset(new MKLDNNFullyConnectedForward(full_param_, ctx.is_train, data, cached_weight_,
       (has_bias ? &cached_bias_ : nullptr), out_md));
@@ -540,7 +547,7 @@ static std::vector<std::string> SgMKLDNNFCListInputNames(const NodeAttrs &attrs)
   if (full_param.mkldnn_param.quantized) {
     bool channel_wise = false;
     if (full_param.mkldnn_param.with_sum) {
-      input_names.emplace_back("sum"); //TODO(anko) verify position
+      input_names.emplace_back("sum");
     }
 
     if (full_param.mkldnn_param.channel_wise_quantize.has_value() &&
@@ -628,14 +635,15 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
       channel_wise = true;
     }
     // true if sum is fused with FC and have integer input and output
-    bool integer_sum_input = full_param.mkldnn_param.with_sum && ! full_param.mkldnn_param.enable_float_output;
+    bool integer_sum_input = full_param.mkldnn_param.with_sum &&
+                             !full_param.mkldnn_param.enable_float_output;
     size_t base_num_inputs = (full_param.default_param.no_bias ? 2 : 3)
                             + (integer_sum_input ? 1 : 0);
     CHECK(in_types->at(0) == mshadow::kInt8 ||
           in_types->at(0) == mshadow::kUint8)
         << "QuantizedFullyConnected only supports int8/uint8 input, while "
         << in_types->at(0) << " is given.";
-    if(channel_wise) {
+    if (channel_wise) {
       for (size_t i = 1; i < in_types->size(); ++i) {
         TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
       }
@@ -758,15 +766,15 @@ static bool SgMKLDNNAvoidFCQuantizeInput(const NodeAttrs& attrs, const size_t in
   auto const &full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
   std::unordered_set<size_t> avoid_indexes;
   if (quantize_granularity == "channel-wise") {
-    avoid_indexes.insert(fullc::kWeight);   // weight
+    avoid_indexes.insert(fullc::kWeight);
     if (!full_param.default_param.no_bias) {
-      avoid_indexes.insert(fullc::kBias);   // bias
+      avoid_indexes.insert(fullc::kBias);
     }
   }
 
   if (full_param.mkldnn_param.with_sum) {
     if (full_param.mkldnn_param.enable_float_output) {
-      size_t in_sum = full_param.default_param.no_bias ? fullc::kBias :  fullc::kBias + 1; //TODO(anko) enumes/names of inputs ( function?)
+      size_t in_sum = full_param.default_param.no_bias ? fullc::kBias :  fullc::kBias + 1;
       avoid_indexes.insert(in_sum);
     }
   }
@@ -783,7 +791,6 @@ NNVM_REGISTER_OP(_sg_mkldnn_fully_connected)
 
 
   if (full_param.mkldnn_param.quantized) {
-
     if (full_param.mkldnn_param.channel_wise_quantize.has_value() &&
         full_param.mkldnn_param.channel_wise_quantize) {
       return num_inputs + 2;  // min_data, max_data

@@ -19,18 +19,18 @@
 
 #if MXNET_USE_MKLDNN == 1
 
-#include "mkldnn_conv_property.h"
-#include "mkldnn_fc_property.h"
-#include "mkldnn_post_quantize_property.h"
-#include "mkldnn_fc_post_quantize_property.h"
-#include "mkldnn_fc_post_quantize_2_property.h"
-#include "mkldnn_elemwisemul_post_quantize_property.h"
-#include "mkldnn_post_quantize_align_scale_property.h"
-#include "mkldnn_transformer_property.h"
-#include "mkldnn_transformer_post_quantize_property.h"
-#include "mkldnn_asym_quant_fc_property.h"
-#include "mkldnn_interleaved_u8_fc_property.h"
-#include "mkldnn_fc_u8_fc_property.h"
+#include "./mkldnn_conv_property.h"
+#include "./mkldnn_fc_property.h"
+#include "./mkldnn_post_quantize_property.h"
+#include "./mkldnn_fc_post_quantize_property.h"
+#include "./mkldnn_fc_post_quantize_2_property.h"
+#include "./mkldnn_elemwisemul_post_quantize_property.h"
+#include "./mkldnn_post_quantize_align_scale_property.h"
+#include "./mkldnn_transformer_property.h"
+#include "./mkldnn_transformer_post_quantize_property.h"
+#include "./mkldnn_asym_quant_fc_property.h"
+#include "./mkldnn_interleaved_u8_fc_property.h"
+#include "./mkldnn_fc_u8_fc_property.h"
 
 namespace mxnet {
 namespace op {

@@ -17,16 +17,20 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <memory>
+#include <unordered_set>
+#include <utility>
 #include <string>
 #include <vector>
+
 #include "../common.h"
 #include "../../tensor/matrix_op-inl.h"
-#include "mkldnn_subgraph_base-inl.h"
-#include "mkldnn_fc-inl.h"
+#include "./mkldnn_subgraph_base-inl.h"
+#include "./mkldnn_fc-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -161,8 +165,7 @@ class SgMKLDNNFC_PostQuantize_2_Property : public SubgraphProperty {
   }
 
   static SubgraphPropertyPtr Create() {
-
-    static const std::string &name = "MKLDNN FullyConnected post quantization second pass"; // TODO(anko)
+    static const std::string &name = "MKLDNN FullyConnected post quantization second pass";
     auto property = std::make_shared<SgMKLDNNFC_PostQuantize_2_Property>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
@@ -190,7 +193,6 @@ class SgMKLDNNFC_PostQuantize_2_Property : public SubgraphProperty {
 
     CHECK_NOTNULL(fc_node);
     if (ew_add_node != nullptr) {
-      // TODO(anko)    change node name ?
       CHECK_NOTNULL(fc_node->attrs.subgraphs[0]);
       auto fc_orginal = fc_node->attrs.subgraphs[0]->outputs[0].node;
       if (fc_orginal->op() == Op::Get("FullyConnected")) {
@@ -199,8 +201,6 @@ class SgMKLDNNFC_PostQuantize_2_Property : public SubgraphProperty {
                                         ew_add_node->inputs[1] :
                                         ew_add_node->inputs[0];
         ew_input_with_fc.node = fc_orginal;
-        //ew_input_with_fc.index = 0; // should be already set to 0
-        //ew_input_with_fc.version = 0;
         new_sym.outputs.emplace_back(ew_add_node);
         fc_node->attrs.subgraphs.clear();
         fc_node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
@@ -232,7 +232,7 @@ class SgMKLDNNFC_PostQuantize_2_Property : public SubgraphProperty {
       const nnvm::ObjectPtr n, std::vector<nnvm::NodeEntry *> *input_entries,
       std::vector<nnvm::NodeEntry> *orig_input_entries) const override {
     auto sym = n->attrs.subgraphs[0];
-    auto const &fc_param = nnvm::get<MKLDNNFCFullParam>( n->attrs.parsed );
+    auto const &fc_param = nnvm::get<MKLDNNFCFullParam>(n->attrs.parsed);
     std::unordered_set<const nnvm::Node *> node_sets;
     DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr &node) {
         if (node->is_variable()) return;
@@ -244,11 +244,11 @@ class SgMKLDNNFC_PostQuantize_2_Property : public SubgraphProperty {
           // switch sum operands sequence to ensure that
           // the extra sum operand stays in the last of inputs.
           if (node_sets.count(node->inputs[1].node.get())) {
-            std::swap( node->inputs[0],  node->inputs[1]);
+            std::swap(node->inputs[0], node->inputs[1]);
 
             std::rotate(input_entries->begin(),
                         input_entries->begin() + 1,
-                        input_entries->begin() + base_inputs );
+                        input_entries->begin() + base_inputs);
             std::rotate(orig_input_entries->begin(),
                         orig_input_entries->begin() + 1,
                         orig_input_entries->begin() + base_inputs);
@@ -273,4 +273,4 @@ class SgMKLDNNFC_PostQuantize_2_Property : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY_H_

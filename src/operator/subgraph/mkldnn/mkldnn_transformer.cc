@@ -38,7 +38,7 @@ static bool MKLDNNInterleavedMatMulSelfAttQKShape(const NodeAttrs& attrs,
 
   CHECK_EQ(qkv_shape.ndim(), 3U)
     << "Input queries_keys_values should be 3D in seq_length-batch-proj_dim, "
-    << "currently is: " << qkv_shape.ndim() << "D"; 
+    << "currently is: " << qkv_shape.ndim() << "D";
 
   if (param.quantized) {
     if (!param.enable_float_output) {
@@ -151,10 +151,18 @@ void MKLDNNInterleavedMatMulSelfAttQKOp::Forward(
     dnnl::memory::dims src1_strides = {3*(EMBED/HEADS/3), EMBED*BS, 1};
     dnnl::memory::dims src2_strides = {3*(EMBED/HEADS/3), 1, EMBED*BS};
 
-    auto src1_md = param_.quantized ? dnnl::memory::desc(src1_dims, dnnl::memory::data_type::s8, src1_strides) :
-                                      dnnl::memory::desc(src1_dims, dnnl::memory::data_type::f32, src1_strides);
-    auto src2_md = param_.quantized ? dnnl::memory::desc(src2_dims, dnnl::memory::data_type::s8, src2_strides) :
-                                      dnnl::memory::desc(src2_dims, dnnl::memory::data_type::f32, src2_strides);
+    auto src1_md =
+        param_.quantized
+            ? dnnl::memory::desc(src1_dims, dnnl::memory::data_type::s8,
+                                 src1_strides)
+            : dnnl::memory::desc(src1_dims, dnnl::memory::data_type::f32,
+                                 src1_strides);
+    auto src2_md =
+        param_.quantized
+            ? dnnl::memory::desc(src2_dims, dnnl::memory::data_type::s8,
+                                 src2_strides)
+            : dnnl::memory::desc(src2_dims, dnnl::memory::data_type::f32,
+                                 src2_strides);
 
     dnnl::memory::desc dst_md;
     float out_scale = 1.0f;
