@@ -1,6 +1,4 @@
-#!/usr/bin/env bash
-# -*- coding: utf-8 -*-
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,33 +15,30 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to run MXNet on Ubuntu 16.04 for GPU
 
-mxnet_variant=${1:?"Please specify the mxnet variant as the first parameter"}
+FROM nvidia/cuda:11.2-cudnn8-devel-ubuntu16.04
 
-case ${mxnet_variant} in
-    cu100*)
-    echo "nvidia/cuda:10.0-cudnn7-runtime-ubuntu16.04"
-    ;;
-    cu101*)
-    echo "nvidia/cuda:10.1-cudnn7-runtime-ubuntu16.04"
-    ;;
-    cu102*)
-    echo "nvidia/cuda:10.2-cudnn7-runtime-ubuntu16.04"
-    ;;
-    cu110*)
-    echo "nvidia/cuda:11.0-cudnn8-runtime-ubuntu16.04"
-    ;;
-    cu112*)
-    echo "nvidia/cuda:11.2-cudnn8-runtime-ubuntu16.04"
-    ;;
-    cpu)
-    echo "ubuntu:16.04"
-    ;;
-    native)
-    echo "ubuntu:16.04"
-    ;;
-    *)
-    echo "Error: Unrecognized mxnet-variant: '${mxnet_variant}'"
-    exit 1
-    ;;
-esac
+WORKDIR /work/deps
+
+COPY install/ubuntu_core.sh /work/
+RUN /work/ubuntu_core.sh
+
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
+
+COPY install/ubuntu_python.sh /work/
+COPY install/requirements /work/
+RUN /work/ubuntu_python.sh
+
+# Always last
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
+
+COPY runtime_functions.sh /work/
+
+WORKDIR /work/mxnet
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda/compat
