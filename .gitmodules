@@ -7,9 +7,6 @@
 [submodule "3rdparty/dlpack"]
 	path = 3rdparty/dlpack
 	url = https://github.com/dmlc/dlpack
-[submodule "3rdparty/openmp"]
-	path = 3rdparty/openmp
-	url = https://github.com/llvm-mirror/openmp
 [submodule "3rdparty/googletest"]
 	path = 3rdparty/googletest
 	url = https://github.com/google/googletest.git
