@@ -41,8 +41,6 @@ static bool MKLDNNInterleavedMatMulSelfAttQKShape(const NodeAttrs& attrs,
     << "currently is: " << qkv_shape.ndim() << "D"; 
 
   if (param.quantized) {
-    // CHECK_EQ(in_shape->size(), 3U) << "Input:[queries_keys_values, min_qkv, max_qkv] currently have, "
-    //                               << in_shape->size() << " inputs";
     if (!param.enable_float_output) {
       out_shape->resize(3);
       SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape({1}));
@@ -51,9 +49,6 @@ static bool MKLDNNInterleavedMatMulSelfAttQKShape(const NodeAttrs& attrs,
       out_shape->resize(1);
     }
   } else {
-    
-    // CHECK_EQ(in_shape->size(), 1U) << "Input:[queries_keys_values] currently have, "
-    //                               << in_shape->size() << " inputs";
     out_shape->resize(1);
   }
 
@@ -113,7 +108,7 @@ static bool MKLDNNInterleavedMatMulSelfAttQKStorageType(const nnvm::NodeAttrs &a
     std::vector<int> base_in_attrs{in_attrs->at(0)};
     std::vector<int> base_out_attrs{out_attrs->at(0)};
     return DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
-                                        &base_in_attrs, &base_out_attrs);;
+                                        &base_in_attrs, &base_out_attrs);
   } else {
     return DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
                                         in_attrs, out_attrs);
@@ -167,7 +162,7 @@ void MKLDNNInterleavedMatMulSelfAttQKOp::Forward(
       const float min_data = inputs[1].data().dptr<float>()[0];
       const float max_data = inputs[2].data().dptr<float>()[0];
       const float data_scale = GetQuantizeScale(mshadow::kInt8, min_data, max_data);
-      
+
       if (param_.min_calib_range.has_value() && param_.max_calib_range.has_value()) {
         cached_min_output_ = param_.min_calib_range.value();
         cached_max_output_ = param_.max_calib_range.value();
@@ -331,7 +326,7 @@ static bool MKLDNNInterleavedMatMulSelfAttValAttShape(const NodeAttrs& attrs,
   CHECK_EQ(qkv_shape[2] % 3, 0)
     << "queries_keys_values.shape[2] should be a multiple of 3, "
     << "currently is " << qkv_shape[2];
-  
+
   if (param.quantized) {
     CHECK_EQ(in_shape->size(), 6U) << "Input:[queries_keys_values, attention, min_qkv, max_qkv, "
                                       "min_att, max_att] currently have, "
@@ -407,7 +402,7 @@ static bool MKLDNNInterleavedMatMulSelfAttValAttStorageType(const nnvm::NodeAttr
     std::vector<int> base_in_attrs{in_attrs->at(0), in_attrs->at(1)};
     std::vector<int> base_out_attrs{out_attrs->at(0)};
     return DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
-                                        &base_in_attrs, &base_out_attrs);;
+                                        &base_in_attrs, &base_out_attrs);
   } else {
     return DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
                                         in_attrs, out_attrs);
@@ -472,7 +467,7 @@ void MKLDNNInterleavedMatMulSelfAttValAttOp::Forward(
                                       dnnl::memory::desc(src2_dims, dnnl::memory::data_type::f32, src2_strides);
 
     dnnl::memory::desc dst_md;
-    
+
     float out_scale = 1.0f;
     if (param_.quantized) {
       const float min_qkv = inputs[2].data().dptr<float>()[0];

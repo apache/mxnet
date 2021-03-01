@@ -21,6 +21,7 @@
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <memory>
 #include <string>
 #include <vector>
 #include "../../quantization/requantize-inl.h"
@@ -175,7 +176,6 @@ class SgMKLDNNTransformerPostQuantizeProperty : public SubgraphProperty {
 
     // When only fused quantized_fullyconnected and requantize, set min/max_cablib_range,
     // When fused quantized_fullyconnected + requantize + dequantize, set dequantize flag to true.
-    // auto& param = nnvm::get<MKLDNNInterleavedMatMulParam>(interleaved_node->attrs.parsed);
     if (dequantize_node != nullptr) {
       interleaved_node->attrs.dict["enable_float_output"] = "True";
     } else {

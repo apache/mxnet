@@ -121,8 +121,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   bool sum_input_quantized = mkldnn_param.with_sum && mkldnn_param.quantized
                              && !mkldnn_param.enable_float_output;
 
-  //  quantized_fullc::kWeightMax = 4    ,  quantized_fullc::kBiasMax = 6
-  size_t in_sum_min =  sum_input_quantized ? (in_sum + 5) : 0; // TODO(anko) inputs order/numbers
+  size_t in_sum_min =  sum_input_quantized ? (in_sum + 5) : 0;
 
   const float sum_min = sum_input_quantized
                       ? in_data[in_sum_min].data().dptr<float>()[0]
@@ -154,9 +153,8 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
 
   NDArray data = in_data[fullc::kData];
   const NDArray &weight = in_data[fullc::kWeight];
-  //const NDArray &output = out_data[fullc::kOut];
 
-  NDArray output = mkldnn_param.with_sum ? in_data[in_sum] : out_data[fullc::kOut]; // TODO(anko) move asigment for in_data below
+  NDArray output = mkldnn_param.with_sum ? in_data[in_sum] : out_data[fullc::kOut];
 
 
   // Copy inputs[in_sum] into outputs[kOut] in case inplace optimization failed.

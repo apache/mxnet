@@ -46,7 +46,7 @@ namespace op {
 // Declare enumeration of input order to make code more intuitive.
 // These enums are only visible within this header
 namespace fullc {
-enum FullyConnectedOpInputs {kData, kWeight, kBias}; // and optional Bias, Summand, // TODO(anko) remove kBias from enum
+enum FullyConnectedOpInputs {kData, kWeight, kBias};
 enum FullyConnectedOpResource {kTempSpace};
 enum FullyConnectedOpOutputs {kOut};
 enum FullyConnectedGradGradOutputs { kOyGrad, kXGradGrad, kWGradGrad, kBGradGrad };

@@ -17,17 +17,8 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2019 by Contributors
- * \file mkldnn_fc_property.cc
- * \brief Partition gragph property for FullyConnected operator
- * \author Ciyong Chen // TODO(anko)
-*/
-
-// TODO(anko) integtate it with mkldnn_fc_property.cc code or made separate MKLDNN_QUANTIZE pass (before/after?)
-
-#ifndef MKLDNN_FC_POST_QUANTIZE_2_PROPERTY
-#define MKLDNN_FC_POST_QUANTIZE_2_PROPERTY
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY
 #if MXNET_USE_MKLDNN == 1
 
 #include <string>
@@ -56,16 +47,14 @@ class SgMKLDNNFCPostQuantize2Selector : public SubgraphSelector {
   std::vector<const nnvm::Node *> matched_list_;
 
  public:
-  explicit SgMKLDNNFCPostQuantize2Selector(const bool dis_fc_eltwise, bool quantized) :
-      disable_fc_eltwise_(dis_fc_eltwise),
-      quantized_(quantized) {
-      //LOG(INFO) << " SgMKLDNNFCPostQuantize2Selector quantized="  << quantized_ ;
-      }
+  explicit SgMKLDNNFCPostQuantize2Selector(const bool dis_fc_eltwise,
+                                           bool quantized)
+      : disable_fc_eltwise_(dis_fc_eltwise), quantized_(quantized) {}
 
   bool Select(const nnvm::Node &n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() == Op::Get("_sg_mkldnn_fully_connected") && SupportMKLDNNAttr(node_attr)) {
       auto const &fc_param = nnvm::get<MKLDNNFCFullParam>(n.attrs.parsed);
-      if (fc_param.mkldnn_param.enable_float_output) { //} && fc_param.mkldnn_param.quantized) {
+      if (fc_param.mkldnn_param.enable_float_output) {
         status_ = disable_fc_eltwise_ ? kSuccess : kStart;
         matched_list_.clear();
         matched_list_.push_back(&n);
@@ -256,8 +245,6 @@ class SgMKLDNNFC_PostQuantize_2_Property : public SubgraphProperty {
           // the extra sum operand stays in the last of inputs.
           if (node_sets.count(node->inputs[1].node.get())) {
             std::swap( node->inputs[0],  node->inputs[1]);
-            // std::swap(input_entries[0][0],  input_entries[0][1]);
-            // std::swap(orig_input_entries[0][0],  orig_input_entries[0][1]);
 
             std::rotate(input_entries->begin(),
                         input_entries->begin() + 1,
@@ -286,4 +273,4 @@ class SgMKLDNNFC_PostQuantize_2_Property : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY

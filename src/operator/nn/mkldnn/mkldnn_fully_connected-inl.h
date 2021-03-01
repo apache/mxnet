@@ -42,7 +42,7 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   bool enable_float_output;
   bool with_eltwise;
   bool with_sum;
-  float sum_scale = 1.0f; // TODO(anko) vector of scales for channel-wise ; // TODO(anko) make it optional ?
+  float sum_scale = 1.0f;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
   dmlc::optional<int32_t> shift_value;
