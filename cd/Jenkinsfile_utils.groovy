@@ -34,6 +34,7 @@ def trigger_release_job(cd_release_job, job_name, job_type, mxnet_variants) {
       string(name: "RELEASE_JOB_TYPE", value: "${job_type}"),
       string(name: "MXNET_VARIANTS", value: "${mxnet_variants}"),
       booleanParam(name: "RELEASE_BUILD", value: "${env.RELEASE_BUILD}"),
+      string(name: "VERSION", value: "${env.VERSION}"),
       string(name: "COMMIT_ID", value: "${env.GIT_COMMIT}")
     ],
     // If propagate is true, any result other than successful will

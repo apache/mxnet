@@ -70,18 +70,6 @@ push() {
 
     # Push image
     docker push "${image_name}"
-
-    # Iterate over remaining tags, if any
-    for ((i=1;i<${#docker_tags[@]};i++)); do
-        local docker_tag="${docker_tags[${i}]}"
-        local latest_image_name="${RELEASE_PUBLIC_ECR_REPOSITORY}/${repository}:${docker_tag}_py3"
-
-        docker tag "${image_name}" "${latest_image_name}"
-        docker push "${latest_image_name}"
-        echo "Successfully pushed ${latest_image_name}. Pull it with:"
-        echo "docker pull ${latest_image_name}"
-        echo "For a complete list of tags see https://hub.docker.com/u/${RELEASE_DOCKERHUB_REPOSITORY}/${repository}"
-    done
 }
 
 case ${command} in
