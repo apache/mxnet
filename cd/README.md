@@ -60,7 +60,7 @@ The [release job](Jenkinsfile_release_job) takes five parameters:
  * **RELEASE\_JOB\_TYPE**: Defines the release pipeline you want to execute.
  * **COMMIT_ID**: The commit id to build
 
-The release job executes, in parallel, the release pipeline for each of the variants (**MXNET_VARIANTS**) for the job type (**RELEASE\_JOB\_TYPE**). The job type the path to a directory (relative to the `cd` directory) that includes a `Jenkins_pipeline.groovy` file ([e.g.](mxnet_lib/static/Jenkins_pipeline.groovy)).
+The release job executes, in parallel, the release pipeline for each of the variants (**MXNET_VARIANTS**) for the job type (**RELEASE\_JOB\_TYPE**). The job type the path to a directory (relative to the `cd` directory) that includes a `Jenkins_pipeline.groovy` file ([e.g.](mxnet_lib/Jenkins_pipeline.groovy)).
 
 NOTE: The **COMMIT_ID** is a little tricky and we must be very careful with it. It is necessary to ensure that the same commit is built through out the pipeline, but at the same time, it has the potential to change the current state of the release job configuration - specifically the parameter configuration. Any changes to this configuration will require a "dry-run" of the release job to ensure Jenkins has the current (master) version. This is acceptable as there will be few changes to the parameter configuration for the job, if any at all. But, it's something to keep in mind.
 
@@ -192,4 +192,4 @@ def test(mxnet_variant) {
 
 Examples:
 
-Both the [statically linked libmxnet](mxnet_lib/static/Jenkins_pipeline.groovy) and [dynamically linked libmxnet](mxnet_lib/dynamic/Jenkins_pipeline.groovy) pipelines have long running compilation and testing stages that **do not** require specialized/expensive hardware (e.g. GPUs). Therefore, as much as possible, it is important to run each stage in on its own node, and design the pipeline to spend the least amount of time possible on expensive hardware. E.g. for GPU builds, only run GPU tests on GPU instances, all other stages can be executed on CPU nodes.
+The [libmxnet](mxnet_lib/Jenkins_pipeline.groovy) pipeline has long running compilation and testing stages that **do not** require specialized/expensive hardware (e.g. GPUs). Therefore, as much as possible, it is important to run each stage in on its own node, and design the pipeline to spend the least amount of time possible on expensive hardware. E.g. for GPU builds, only run GPU tests on GPU instances, all other stages can be executed on CPU nodes.
