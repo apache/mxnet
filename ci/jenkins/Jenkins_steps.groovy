@@ -1204,7 +1204,7 @@ def docs_upload_s3() {
 
               utils.docker_run('ubuntu_cpu', "push_docs ${env.FOLDER_NAME}", false)
 
-              archiveArtifacts 'docs/_build/versions.zip'
+              archiveArtifacts 'docs/_build/versions-test.zip'
             } else {
               sh 'echo Can not find website version for release. Please specify env var FOLDER_NAME in Jenkins pipeline'
               sh 'exit 1'
