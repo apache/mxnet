@@ -1231,7 +1231,7 @@ push_docs() {
     # Upload versions folder
     aws s3 cp versions-test.zip s3://mxnet-website-static-artifacts --acl public-read
     # Backup versions folder with the latest version name
-    backup_file = "versions_backup_upto_$folder_name.zip"
+    backup_file="versions_backup_upto_$folder_name.zip"
     aws s3 cp versions-test.zip s3://mxnet-website-static-artifacts/$backup_file --acl public-read
     popd
 }
