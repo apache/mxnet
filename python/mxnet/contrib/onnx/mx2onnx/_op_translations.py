@@ -4035,6 +4035,47 @@ def convert_argsort(node, **kwargs):
     return nodes
 
 
+@mx_op.register('one_hot')
+def convert_one_hot(node, **kwargs):
+    """Map MXNet's one_hot operator attributes to onnx's OneHot operator
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    depth = int(attrs.get('depth'))
+    on_value = float(attrs.get('on_value', 1.))
+    off_value = float(attrs.get('off_value', 0.))
+    dtype = attrs.get('dtype', 'float32')
+
+    create_tensor([off_value, on_value], name+'_values', kwargs['initializer'], dtype=np.dtype(dtype))
+    create_tensor([depth], name+'_depth', kwargs['initializer'])
+    nodes = [
+        make_node('OneHot', [input_nodes[0], name+'_depth', name+'_values'], [name], name=name)
+    ]
+
+    return nodes
+
+
+@mx_op.register('_random_uniform_like')
+def convert_random_uniform_like(node, **kwargs):
+    """Map MXNet's random_uniform_like operator attributes to onnx's RandomUniformLike operator
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    low = float(attrs.get('low', 0.))
+    high = float(attrs.get('high', 1.))
+    dtype = attrs.get('dtype', 'float32')
+
+    nodes = [
+        make_node('RandomUniformLike', [input_nodes[0]], [name], name=name,
+                  dtype=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)],
+                  low=low, high=high)
+    ]
+
+    return nodes
+
+
 @mx_op.register('SequenceReverse')
 def convert_sequence_reverse(node, **kwargs):
     """Map MXNet's SequenceReverse op
