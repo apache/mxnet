@@ -23,11 +23,15 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-ARG PYTHON_CMD=python3
 RUN apt-get update && \
-    apt-get install -y wget ${PYTHON_CMD}-dev gcc && \
-    wget https://bootstrap.pypa.io/get-pip.py && \
-    ${PYTHON_CMD} get-pip.py
+    apt-get install -y software-properties-common && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y python3.7-dev python3.7-distutils virtualenv wget && \
+    ln -sf /usr/bin/python3.7 /usr/local/bin/python3 && \
+    wget -nv https://bootstrap.pypa.io/get-pip.py && \
+    python3 get-pip.py
+
 
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
