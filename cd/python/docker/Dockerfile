@@ -32,7 +32,6 @@ RUN apt-get update && \
     wget -nv https://bootstrap.pypa.io/get-pip.py && \
     python3 get-pip.py
 
-
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
 
