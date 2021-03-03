@@ -68,9 +68,21 @@ rm -rf .DS_Store
 rm -rf CODEOWNERS
 rm -rf .github
 
+# make sure all files referenced in LICENSE file still exist
+echo "Making sure all paths referenced in LICENSE file exist..."
+for f in $(cat LICENSE | grep "^\s*[0-9A-Za-z]*/[0-9A-Za-z]*" | awk '{print $1}'); do
+	echo "Checking if $f exists in source..."
+	if [[ ! -e $f ]]; then
+		echo -n "ERROR: Path $f is referenced in LICENSE file, but is not present "
+	        echo "in source directory. Please update the LICENSE file."
+		exit -1
+	fi
+done
+
 # run Apache RAT license checker to verify all source files are compliant
 echo "Running Apache RAT License Checker..."
 ci/build.py -p ubuntu_rat /work/runtime_functions.sh nightly_test_rat_check
+
 
 popd
 
