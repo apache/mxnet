@@ -18,16 +18,14 @@
 
 set -e
 
-MXNET_BRANCH=$1
-MXNET_TAG=$2
+MXNET_TAG=$1
 CMD=$(basename $0)
 
-if [[ -z "$MXNET_BRANCH" || -z "$MXNET_TAG" ]]; then
-    echo "Usage: $CMD <branch> <tag>"
-    echo "  where <branch> is the branch the tag was cut from."
-    echo "        <tag> is the tag you want to build a release for."
+if [[ -z "$MXNET_TAG" ]]; then
+    echo "Usage: $CMD <tag>"
+    echo "  where <tag> is the git tag you want to build a release for."
     echo ""
-    echo "  example: $CMD v1.8.x 1.8.0.rc3"
+    echo "  example: $CMD 1.8.0.rc3"
     exit -1
 fi
 
@@ -50,11 +48,10 @@ TARBALL=$SRCDIR.tar.gz
 
 # clone the repo and checkout the tag
 echo "Cloning the MXNet repository..."
-git clone -b $MXNET_BRANCH https://github.com/apache/incubator-mxnet.git $SRCDIR
+git clone -b $MXNET_TAG --depth 1 --recurse-submodules \
+	--shallow-submodules https://github.com/apache/incubator-mxnet.git \
+	$SRCDIR
 pushd $SRCDIR
-git submodule update --init --recursive
-echo "Checking out tag $MXNET_TAG..."
-git checkout $MXNET_TAG
 
 echo "Removing unwanted artifacts..."
 #### IMPORTANT ####
