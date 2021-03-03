@@ -231,6 +231,9 @@
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark
     3rdparty/mkldnn/tests/benchdnn (Copy of the License available at top of current file)
     src/operator/special_functions-inl.h Cephes Library Functions (Copy of the License available at top of current file)
+    3rdparty/mkldnn/doc/assets/mathjax (Copy of the License available at top of current file)
+    docs/python_docs/themes/mx-theme/mxtheme/static/material-design-icons-3.0.1 (Copy of the License available at top of current file)
+    docs/python_docs/themes/mx-theme/mxtheme/static/font/Roboto (Copy of the License available at top of current file)
     3rdparty/tvm/3rdparty/bfloat16/bfloat16.cc (Copy of the License available at top of current file)
 
     =======================================================================================
@@ -242,6 +245,7 @@
     3rdparty/onnx-tensorrt
     3rdparty/onnx-tensorrt/third_party/onnx
     docs/static_site/src/assets/js/clipboard.js
+    docs/python_docs/themes/mx-theme
     3rdparty/intgemm
     3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
     src/operator/nn/layer_norm.cc
@@ -342,3 +346,8 @@
 
     3rdparty/tvm/3rdparty/rang
 
+    =======================================================================================
+    SIL Open Font License (OFL)
+    =======================================================================================
+
+    docs/python_docs/themes/mx-theme/mxtheme/static/webfonts/ (Copy of the License available at licenses/OFL1_1)
