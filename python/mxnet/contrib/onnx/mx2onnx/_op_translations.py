@@ -1225,12 +1225,11 @@ def scalar_op_helper(node, op_name, **kwargs):
         data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[new_initializer.dtype]
         dims = np.shape(new_initializer)
 
-        new_a_node = input_nodes[0] + str(kwargs["idx"])
-        tensor_node = onnx.helper.make_tensor_value_info(new_a_node, data_type, dims)
+        tensor_node = onnx.helper.make_tensor_value_info(name, data_type, dims)
 
         initializer.append(
             onnx.helper.make_tensor(
-                name=new_a_node,
+                name=name,
                 data_type=data_type,
                 dims=dims,
                 vals=new_initializer.flatten(),
