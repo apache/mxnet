@@ -23,7 +23,7 @@ find_path(CUDNN_INCLUDE cudnn.h
   PATHS ${CUDNN_ROOT} $ENV{CUDNN_ROOT}
   DOC "Path to cuDNN include directory." )
 
-find_library(CUDNN_LIBRARY NAMES libcudnn.so cudnn.lib # libcudnn_static.a
+find_library(CUDNN_LIBRARY NAMES libcudnn.so cudnn.lib cudnn
   PATHS ${CUDNN_ROOT} $ENV{CUDNN_ROOT} ${CUDNN_INCLUDE}
   PATH_SUFFIXES lib lib/x64  cuda/lib cuda/lib64 lib/x64
   DOC "Path to cuDNN library.")
