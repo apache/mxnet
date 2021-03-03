@@ -330,6 +330,17 @@ class MXNetGraph(object):
             else:
                 logging.info("Operator converter function should always return a list")
 
+        # sometimes the graph output can also be in the intializer
+        for i in initializer:
+            if i.name in graph_outputs:
+                onnx_processed_outputs.append(
+                    make_tensor_value_info(
+                        name=i.name,
+                        elem_type=graph_outputs[i.name]['dtype'],
+                        shape=graph_outputs[i.name]['shape']
+                    )
+                )
+
         graph = helper.make_graph(
             onnx_processed_nodes,
             "mxnet_converted_model",
