@@ -1204,3 +1204,17 @@ def test_onnx_export_sequence_reverse(tmp_path, dtype, params):
     seq_len = mx.nd.array(params[1])
     M1 = def_model('SequenceReverse', use_sequence_length=True)
     op_export_test('SequenceReverse1', M1, [x, seq_len], tmp_path)
+
+
+# onnx LSTM from opset 11 does not support float64
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('state_size', [128, 256, 512])
+def test_onnx_export_RNN(tmp_path, dtype, state_size):
+    # the current implementation fails assertion checks for large parm/state_size. 
+    M = def_model('RNN', mode='lstm', state_size=state_size, state_outputs=True,  num_layers=1, p=0)
+    x = mx.nd.random.normal(0, 10, (38, 1, 300), dtype=dtype)
+    batch_size = np.shape(x)[1]
+    input_size = np.shape(x)[2]
+    param = mx.nd.random.normal(0, 1, [4*state_size*input_size + 4*state_size*state_size + 8*state_size], dtype=dtype)
+    state = mx.nd.random.uniform(-1, 1, [1, batch_size, state_size], dtype=dtype)
+    cell = mx.nd.random.uniform(-1, 1, [1, batch_size, state_size], dtype=dtype)
