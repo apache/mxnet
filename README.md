@@ -65,6 +65,7 @@ Contents
 
 What's New
 ----------
+* [1.8.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.8.0) - MXNet 1.8.0 Release.
 * [1.7.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.7.0) - MXNet 1.7.0 Release.
 * [1.6.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.6.0) - MXNet 1.6.0 Release.
 * [1.5.1 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.5.1) - MXNet 1.5.1 Patch Release.
