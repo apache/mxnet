@@ -822,7 +822,7 @@ def convert_leakyrelu(node, **kwargs):
             inputs=input_nodes,
             outputs=[name],
             name=name)
-    elif act_type in ('gelu'):
+    elif act_type in ('gelu',):
         sqrt2 = np.float32(1.4142135623730951)
         create_const_scalar_node(name+"_sqrt2", sqrt2, kwargs)
         create_const_scalar_node(name+"_one", np.float32(1.0), kwargs)
@@ -1233,7 +1233,7 @@ def scalar_op_helper(node, op_name, **kwargs):
                 name=new_a_node,
                 data_type=data_type,
                 dims=dims,
-                vals=new_initializer,
+                vals=new_initializer.flatten(),
                 raw=False,
             )
         )
@@ -2841,6 +2841,8 @@ def convert_zeros(node, **kwargs):
     dtype = attrs.get('dtype')
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
     shape = convert_string_to_list(attrs.get('shape'))
+    # replace 0 with 1
+    shape = [x if x else 1 for x in shape]
     create_tensor(shape, name+'_shape', kwargs['initializer'])
     tensor_value = make_tensor(name+'_zero', data_type, [1], [0])
     nodes = [
@@ -2858,6 +2860,8 @@ def convert_ones(node, **kwargs):
     dtype = attrs.get('dtype')
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
     shape = convert_string_to_list(attrs.get('shape'))
+    # replace 0 with 1
+    shape = [x if x else 1 for x in shape]
     create_tensor(shape, name+'_shape', kwargs['initializer'])
     tensor_value = make_tensor(name+'_one', data_type, [1], [1])
     nodes = [
@@ -4040,6 +4044,7 @@ def convert_one_hot(node, **kwargs):
     """Map MXNet's one_hot operator attributes to onnx's OneHot operator
     """
     from onnx.helper import make_node
+    from onnx import TensorProto
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     depth = int(attrs.get('depth'))
@@ -4050,7 +4055,8 @@ def convert_one_hot(node, **kwargs):
     create_tensor([off_value, on_value], name+'_values', kwargs['initializer'], dtype=np.dtype(dtype))
     create_tensor([depth], name+'_depth', kwargs['initializer'])
     nodes = [
-        make_node('OneHot', [input_nodes[0], name+'_depth', name+'_values'], [name], name=name)
+        make_node('Cast', [input_nodes[0]], [name+'_cast'], to=int(TensorProto.INT64)),
+        make_node('OneHot', [name+'_cast', name+'_depth', name+'_values'], [name], name=name)
     ]
 
     return nodes
@@ -4105,3 +4111,4 @@ def convert_sequence_reverse(node, **kwargs):
         ]
 
     return nodes
+
