@@ -59,8 +59,12 @@ git checkout $MXNET_TAG
 echo "Removing unwanted artifacts..."
 #### IMPORTANT ####
 # Remove artifacts which do not comply with the Apache Licensing Policy
-rm -rf R-package
-rm -rf 3rdparty/mkldnn/doc
+for d in $(cat tools/source-exclude-artifacts.txt | grep -v "^#"); do
+	if [[ -e $d ]]; then
+		echo "Removing $d from source archive..."
+		rm -rf $d
+	fi
+done
 
 # Remove other artifacts we do not want contained in the source archive
 rm -rf .DS_Store
