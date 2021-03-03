@@ -69,7 +69,7 @@ done
 # Remove other artifacts we do not want contained in the source archive
 rm -rf .DS_Store
 rm -rf CODEOWNERS
-find . -name ".git*" -print0 | xargs -0 rm -rf
+rm -rf .github
 
 # run Apache RAT license checker to verify all source files are compliant
 echo "Running Apache RAT License Checker..."
@@ -78,7 +78,7 @@ ci/build.py -p ubuntu_rat /work/runtime_functions.sh nightly_test_rat_check
 popd
 
 echo "Creating tarball $TARBALL..."
-$TAR -czf $TARBALL $SRCDIR
+$TAR --exclude-vcs -czf $TARBALL $SRCDIR
 
 # sign the release tarball and create checksum file
 gpg --armor --output $TARBALL.asc --detach-sig $TARBALL
