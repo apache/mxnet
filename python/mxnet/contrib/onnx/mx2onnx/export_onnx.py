@@ -334,12 +334,12 @@ class MXNetGraph(object):
         for i in initializer:
             if i.name in graph_outputs:
                 onnx_processed_outputs.append(
-                        make_tensor_value_info(
-                            name=i.name,
-                            elem_type=graph_outputs[i.name]['dtype'],
-                            shape=graph_outputs[i.name]['shape']
-                        )
+                    make_tensor_value_info(
+                        name=i.name,
+                        elem_type=graph_outputs[i.name]['dtype'],
+                        shape=graph_outputs[i.name]['shape']
                     )
+                )
 
         graph = helper.make_graph(
             onnx_processed_nodes,
