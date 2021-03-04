@@ -1,0 +1,45 @@
+--reset
+--dir=FWD_I,FWD_B
+
+--cfg=f32
+--attr-post-ops='dw_k3s1p1:f32'
+--batch=shapes_fused_mobilenet_stride_1
+
+--cfg=u8s8u8,s8s8u8
+--attr-oscale=per_oc:0.5
+--attr-post-ops='relu;dw_k3s1p1:u8:per_oc:2.5;relu:0.5', \
+                'relu;dw_k3s1p1:s8:per_oc:1.5;linear:0.5:1.5', \
+                'relu;dw_k3s1p1:s32;square', \
+                'relu;dw_k3s1p1:f32;pow:0.5:0.33'
+--batch=shapes_fused_mobilenet_stride_1
+
+--cfg=u8s8s8,s8s8s8
+--attr-post-ops='linear:2;dw_k3s1p1:u8:per_oc:2.5;relu', \
+                'linear:0.5:1.5;dw_k3s1p1:s8:per_oc:2.5;relu', \
+                'dw_k3s1p1:s32;relu', \
+                'dw_k3s1p1:f32;relu'
+--batch=shapes_fused_mobilenet_stride_1
+
+# dw_k3s2p1
+
+--attr-scratchpad=user
+
+--cfg=f32
+--attr-oscale=
+--attr-post-ops='relu;dw_k3s2p1:f32;tanh'
+--batch=shapes_fused_mobilenet_stride_2
+
+--cfg=u8s8u8,s8s8u8
+--attr-oscale=per_oc:0.5
+--attr-post-ops='linear:2;dw_k3s2p1:u8:per_oc:2.5;relu', \
+                'relu;dw_k3s2p1:s8:per_oc:2.5;relu', \
+                'relu;dw_k3s2p1:s32;relu', \
+                'relu;dw_k3s2p1:f32;relu'
+--batch=shapes_fused_mobilenet_stride_2
+
+--cfg=u8s8s8,s8s8s8
+--attr-post-ops='relu:0.5;dw_k3s2p1:u8:per_oc:2.5;relu', \
+                'relu:0.5;dw_k3s2p1:s8:per_oc:2.5;relu', \
+                'relu:0.5;dw_k3s2p1:s32;relu', \
+                'relu:0.5;dw_k3s2p1:f32;relu'
+--batch=shapes_fused_mobilenet_stride_2

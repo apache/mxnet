@@ -1,0 +1,7 @@
+# option set to run all reasonable large lstmp shapes
+
+--skip-nonlinear=true
+--l=1,2,3
+--t=1,2,3
+--mb=1,16,17
+--batch=shapes_lstmp_large

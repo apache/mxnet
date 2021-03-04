@@ -1,0 +1,74 @@
+# ic/oc is not multiple of simd width
+# simd width is 16 so far (avx512+)
+
+# conv common
+ic32oc13_ih13oh12kh3ph0_n"tails_conv:1"
+ic64oc33_ih13oh13kh3ph1_n"tails_conv:2"
+
+ic19oc32_ih13oh12kh3ph0_n"tails_conv:3"
+ic20oc32_ih13oh13kh3ph1_n"tails_conv:4"
+ic21oc64_ih13oh12kh3ph0_n"tails_conv:5"
+ic23oc64_ih13oh13kh3ph1_n"tails_conv:6"
+ic24oc32_ih13oh12kh3ph0_n"tails_conv:7"
+ic25oc32_ih13oh13kh3ph1_n"tails_conv:8"
+ic27oc64_ih13oh12kh3ph0_n"tails_conv:9"
+ic28oc64_ih13oh13kh3ph1_n"tails_conv:10"
+ic29oc32_ih13oh12kh3ph0_n"tails_conv:11"
+
+ic19oc33_ih13oh13kh3ph1_n"tails_conv:12"
+ic20oc31_ih13oh12kh3ph0_n"tails_conv:13"
+ic21oc25_ih13oh13kh3ph1_n"tails_conv:14"
+ic23oc35_ih13oh12kh3ph0_n"tails_conv:15"
+ic24oc34_ih13oh13kh3ph1_n"tails_conv:16"
+ic25oc24_ih13oh12kh3ph0_n"tails_conv:17"
+ic27oc30_ih13oh13kh3ph1_n"tails_conv:18"
+ic28oc20_ih13oh12kh3ph0_n"tails_conv:19"
+ic29oc65_ih13oh13kh3ph1_n"tails_conv:20"
+g64ic512oc512_ih240oh120kh3sh2dh0ph1_n"tails_conv:21"
+g128ic512oc512_ih240oh120kh3sh2dh0ph1_n"tails_conv:22"
+g1ic4ih84oc16oh20kh8sh4ph0_n"tails_conv:23"
+
+# conv 1x1
+ic32oc13_ih13oh13kh1ph0_n"tails_conv_1x1:1"
+ic64oc33_ih13oh13kh1ph0_n"tails_conv_1x1:2"
+
+ic19oc32_ih13oh13kh1ph0_n"tails_conv_1x1:3"
+ic20oc32_ih13oh13kh1ph0_n"tails_conv_1x1:4"
+ic21oc64_ih13oh13kh1ph0_n"tails_conv_1x1:5"
+ic23oc64_ih13oh13kh1ph0_n"tails_conv_1x1:6"
+ic24oc32_ih13oh13kh1ph0_n"tails_conv_1x1:7"
+ic25oc32_ih13oh13kh1ph0_n"tails_conv_1x1:8"
+ic27oc64_ih13oh13kh1ph0_n"tails_conv_1x1:9"
+ic28oc64_ih13oh13kh1ph0_n"tails_conv_1x1:10"
+ic29oc32_ih13oh13kh1ph0_n"tails_conv_1x1:11"
+
+ic19oc33_ih13oh13kh1ph0_n"tails_conv_1x1:12"
+ic20oc31_ih13oh13kh1ph0_n"tails_conv_1x1:13"
+ic21oc25_ih13oh13kh1ph0_n"tails_conv_1x1:14"
+ic23oc35_ih13oh13kh1ph0_n"tails_conv_1x1:15"
+ic24oc34_ih13oh13kh1ph0_n"tails_conv_1x1:16"
+ic25oc24_ih13oh13kh1ph0_n"tails_conv_1x1:17"
+ic27oc30_ih13oh13kh1ph0_n"tails_conv_1x1:18"
+ic28oc20_ih13oh13kh1ph0_n"tails_conv_1x1:19"
+ic29oc65_ih13oh13kh1ph0_n"tails_conv_1x1:20"
+
+# 3d conv common
+ic32oc13_id13od11kd3pd0_ih13oh12kh3ph0_iw13ow12kw3pw0_n"tails_conv_3d:1"
+ic64oc33_id13od11kd3pd0_ih13oh13kh3ph1_iw13ow13kw3pw1_n"tails_conv_3d:2"
+
+ic17oc16_id13od11kd3pd0_ih13oh12kh3ph0_iw13ow12kw3pw0_n"tails_conv_3d:3"
+ic35oc32_id13od11kd3pd0_ih13oh13kh3ph1_iw13ow13kw3pw1_n"tails_conv_3d:4"
+
+ic47oc37_id13od11kd3pd0_ih13oh12kh3ph0_iw13ow12kw3pw0_n"tails_conv_3d:5"
+ic27oc19_id13od11kd3pd0_ih13oh13kh3ph1_iw13ow13kw3pw1_n"tails_conv_3d:6"
+
+# 1d conv
+ic19oc32_iw13ow12kw3pw1_n"tails_conv_1d:1"
+ic20oc32_iw13ow13kw3pw0_n"tails_conv_1d:2"
+ic23oc64_iw13ow13kw3pw1_n"tails_conv_1d:3"
+ic25oc24_iw13ow12kw3pw0_n"tails_conv_1d:4"
+ic29oc32_iw13ow12kw3pw0_n"tails_conv_1d:5"
+ic20oc32_iw13kw1pw0_n"tails_conv_1d_1x1:2"
+ic23oc64_iw13kw1pw0_n"tails_conv_1d_1x1:3"
+ic25oc24_iw13kw1pw0_n"tails_conv_1d_1x1:4"
+ic29oc32_iw13kw1pw0_n"tails_conv_1d_1x1:5"

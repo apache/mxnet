@@ -1,0 +1,24 @@
+--reset
+
+--mb=2,16
+--stag=any,axb
+--dtag=any,axb
+--alg=direct
+
+# Training
+## Forward
+--dir=FWD_B
+--cfg=f32,bf16bf16bf16,f16
+--attr-post-ops='','sum:0.25;relu:0.5'
+--batch=shapes_basic_gpu
+## Backward
+--dir=BWD_D,BWD_WB
+--attr-post-ops=
+--batch=shapes_basic_gpu
+
+# Inference
+--dir=FWD_I
+--cfg=u8s8s32
+--attr-oscale=,common:0.25,per_oc:5
+--attr-post-ops='','sum:0.25;add:f32:per_oc;relu:0.5:0:0.75'
+--batch=shapes_basic_gpu

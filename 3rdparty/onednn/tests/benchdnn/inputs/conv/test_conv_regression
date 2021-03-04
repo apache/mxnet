@@ -1,0 +1,17 @@
+# f32
+--reset --cfg=f32_full
+--dir=FWD_B,BWD_D,BWD_WB
+--batch=shapes_regression_small_spatial
+--batch=shapes_regression_padding
+--batch=shapes_regression_gemm
+--batch=shapes_regression_1x1
+--stag=axb --dtag=axb --batch=shapes_regression_1x1
+
+--reset --cfg=f32_full
+--dir=FWD_B
+--attr-post-ops='relu'
+--batch=shapes_regression_small_spatial
+--batch=shapes_regression_padding
+
+#
+--batch=harness_conv_regression_general

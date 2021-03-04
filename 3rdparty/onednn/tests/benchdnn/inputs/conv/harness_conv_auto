@@ -1,0 +1,7 @@
+# auto algo
+--reset --cfg=f32 --alg=auto
+--dir=FWD_B --batch=shapes_auto
+--dir=BWD_D --batch=shapes_auto
+--dir=BWD_WB --batch=shapes_auto
+--cfg=u8s8s8
+--dir=FWD_B --batch=shapes_auto

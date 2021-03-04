@@ -1,0 +1,4 @@
+# bf16 (for legacy infra support)
+--reset
+
+--batch=harness_binary_bf16

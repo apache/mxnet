@@ -1,0 +1,7 @@
+# alexnet
+
+g1mb256ic3ih227iw227oc96oh55ow55kh11kw11sh4sw4ph0pw0n"alexnet:conv1"
+g2mb256ic96ih27oc256oh27kh5ph2n"alexnet:conv2"
+mb256ic256ih13oc384oh13kh3ph1n"alexnet:conv3"
+g2mb256ic384ih13oc384oh13kh3ph1n"alexnet:conv4"
+g2mb256ic384ih13oc256oh13kh3ph1n"alexnet:conv5"

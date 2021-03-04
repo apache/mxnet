@@ -1,0 +1,53 @@
+# bf16
+--reset
+
+--cfg=bf16bf16f32,bf16bf16bf16
+--stag=ab,ba --wtag=ab,ba
+--bia_dt=undef,f32 --bia_mask=2
+
+--runtime_m=0,1 --runtime_n=0 --runtime_k=0
+--batch=shapes_2d
+
+--runtime_m=1 --runtime_n=1 --runtime_k=0,1
+--attr-post-ops='add:s32:per_oc'
+--batch=shapes_2d
+
+--attr-oscale=common:1.25
+--attr-post-ops='sum:2;relu'
+--batch=shapes_2d
+
+# test any
+--runtime_m=0 --runtime_n=0 --runtime_k=0
+--bia_dt=undef
+--stag=ab,ba,any --wtag=ab,ba,any --dtag=any
+--batch=shapes_2d
+
+# 3d
+--reset
+--cfg=bf16bf16f32,bf16bf16bf16
+--stag=abc,acb --wtag=abc,acb --dtag=abc
+--bia_dt=undef,f32 --bia_mask=4,6
+
+--runtime_mb=0,1 --runtime_m=0 --runtime_n=0 --runtime_k=0
+--attr-post-ops='','sum'
+--batch=shapes_3d
+
+--runtime_mb=0,1 --runtime_m=1 --runtime_n=1 --runtime_k=0,1
+--attr-oscale=common:2.25
+--attr-post-ops='sum;relu;add:u8'
+--batch=shapes_3d
+
+# runtime
+--reset
+--skip-impl=ref
+
+--cfg=bf16bf16f32,bf16bf16bf16
+--stag=ab,ba --wtag=ab,ba
+--runtime_m=0 --runtime_n=0,1 --runtime_k=0,1
+--bia_dt=undef,f32
+--bia_mask=2
+
+--attr-oscale=common:2.25*,per_oc:2.25*
+--attr-post-ops='','sum:2;relu;mul:f32:per_oc'
+--batch=shapes_2d
+

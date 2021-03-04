@@ -1,0 +1,23 @@
+# int8
+--reset
+
+--trivial-strides=true
+--prop=FWD_D
+--alg=VANILLA_LSTM
+--activation=UNDEF
+--with-peephole=false
+--with-projection=false
+
+# small problems
+--cfg=u8u8u8u8,u8u8u8f32,f32u8f32u8,f32u8f32f32
+--direction=left2right,right2left,concat,sum
+--scaling=common,per_oc
+--batch=option_set_small
+--batch=option_set_lstmp_small
+
+# large problems
+--cfg=u8u8u8u8
+--direction=left2right
+--scaling=per_oc
+--batch=option_set_large
+--batch=option_set_lstmp_large

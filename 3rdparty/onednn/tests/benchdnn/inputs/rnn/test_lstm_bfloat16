@@ -1,0 +1,3 @@
+--reset
+
+--batch=harness_lstm_bfloat16

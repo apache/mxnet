@@ -1,0 +1,82 @@
+# test for run-time specified values and dimensions
+
+# 1. testing `jit:uni`
+#    requirements: no runtime-dims, no zero-points
+
+--reset
+--runtime-dim-mask=0
+
+# f32 <-> s32 <-> s8 <-> u8
+--sdt=f32,s32,s8,u8
+--ddt=f32,s32,s8,u8
+
+--attr-oscale=per_dim_1:0*
+--stag=abx,axb,aBx4b,aBx8b,aBx16b
+--dtag=abx,axb,aBx8b,aBx16b
+2x64x3x3
+
+--attr-post-ops='sum'
+--attr-oscale=per_dim_1:0*
+--stag=abx,axb,aBx16b
+--dtag=abx,axb,aBx16b
+2x64x1x1
+
+--attr-post-ops=
+--attr-oscale=per_dim_0:0*
+--stag=abx,xba
+--dtag=abx,xba
+2x64x3x3
+
+--attr-oscale=per_dim_01:0*
+--stag=abx,gOIhw16i16o
+--dtag=abx,gOIhw16i16o
+3x32x32x2x2
+
+--attr-oscale=common:0*
+--stag=abx,axb
+--dtag=abx,axb
+2x8x8 # special 8x8 kernel
+
+# 2. testing `simple:any`
+#    requirements: none
+
+--reset
+--runtime-dim-mask=63 # all dims are run-time defined
+
+#
+# f32 <-> s32 <-> s8 <-> u8
+#
+--sdt=f32,s32,s8,u8
+--ddt=f32,s32,s8,u8
+
+--attr-zero-points=,src:common:1*_dst:common:-2*
+--attr-oscale=,per_dim_1:0.*
+--stag=abx,axb,aBx4b,aBx8b,aBx16b
+--dtag=abx,axb,aBx8b,aBx16b
+2x64x3x3
+
+--attr-oscale=,per_dim_0:0.*
+--stag=abx,xba
+--dtag=abx,xba
+2x64x3x3
+
+--attr-oscale=,per_dim_01:0.*
+--stag=abx,gOIhw16i16o
+--dtag=abx,gOIhw16i16o
+3x32x32x2x2
+
+--attr-oscale=,common:0.*
+--stag=abx,axb
+--dtag=abx,axb
+2x8x8 # special 8x8 kernel
+
+# f16
+--reset
+--runtime-dim-mask=63 # all dims are run-time defined
+
+--stag=abx,xba
+--dtag=abx,xba
+--attr-zero-points=,src:common:1*_dst:common:-2*
+--attr-oscale=,per_dim_1:0.5*
+--sdt=f32 --ddt=f16 3x5x7x11
+--sdt=f16 --ddt=f32 3x5x7x11

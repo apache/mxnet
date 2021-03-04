@@ -1,0 +1,45 @@
+# random problems
+
+# regular
+mb16ic64_iw32ow16_kw3sw2
+
+# non-squared shapes
+mb1ic32_iw300_ow151_kw3_sw2_pw1
+
+# tails for blocked format
+mb4ic17_iw60_ow31_kw3_sw2_pw1pw1
+
+# asymmetric padding
+mb1ic8_iw14_ow8_kw3_sw2_pw1
+
+# Tensorflow pooling corner problems
+mb1ic1_iw2ow1kw1sw1pw0
+mb1ic32_iw32ow6kw6sw6pw2
+
+# Stride along the width is large
+mb2ic5_iw42_ow14_pw0_kw3_sw3
+
+# Padding along the width is minimal
+mb2ic5_iw15_ow14_pw1_kw3_sw1
+
+# Padding along the height is minimal
+mb2ic5_iw16_ow14_pw0_kw3_sw1
+
+# corner case problems when kernel starts working in the padded area
+# Padding along the width is same as kernel width (pw == kw)
+ic35_iw13_ow14_pw3_kw3_sw1
+ic35_iw13_ow14_pw6_kw6_sw1
+
+# Negative padding along the right side
+ic35_iw30_ow14_pw0_kw3_sw2
+ic35_iw33_ow14_pw0_kw6_sw2
+
+# With dilation
+mb16ic64_iw32ow16_kw3sw2_dw2
+mb1ic32_iw300_ow151_kw3_sw2_pw1_dw3
+mb4ic17_iw60_ow31_kw3_sw2_pw1pw1_dw1
+mb1ic8_iw14_ow8_kw3_sw2_pw1_dw1
+mb1ic1_iw2ow1kw1sw1pw0_dw1
+mb2ic5_iw42_ow14_pw0_kw3_sw3_dw2
+mb2ic5_iw15_ow14_pw1_kw3_sw1_dw1
+mb2ic5_iw16_ow14_pw0_kw3_sw1_dw4

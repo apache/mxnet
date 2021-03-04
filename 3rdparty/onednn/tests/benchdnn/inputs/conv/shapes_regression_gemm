@@ -1,0 +1,6 @@
+# ResNext50
+mb2_g32ic128oc128_ih56oh56kh3sh1dh0ph1_iw56ow56kw3sw1dw0pw1
+
+# Faster RCNN
+mb1_g64ic256oc256_ih240oh240kh3sh1dh0ph1_iw352ow352kw3sw1dw0pw1
+

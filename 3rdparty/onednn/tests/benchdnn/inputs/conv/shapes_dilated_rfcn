@@ -1,0 +1,3 @@
+# Dilated Convolution from RFCN
+
+mb1ic512ih38iw57oc512oh38ow57kh3kw3ph3pw3dh2dw2n"dilated_rfcn"

@@ -1,0 +1,16 @@
+# googlenet_v1
+
+mb96ic64_ih114oh57_kh3sh2ph0n"googlenet_v1:max_pool1/3x3_s2"
+mb96ic192_ih57oh28_kh3sh2ph0n"googlenet_v1:max_pool2/3x3_s2"
+mb96ic192_ih28oh28_kh3sh1ph1n"googlenet_v1:inception_3a/max_pool"
+mb96ic256_ih28oh28_kh3sh1ph1n"googlenet_v1:inception_3b/max_pool"
+mb96ic480_ih28oh14_kh3sh2ph0n"googlenet_v1:max_pool3/3x3_s2"
+mb96ic480_ih14oh14_kh3sh1ph1n"googlenet_v1:inception_4a/max_pool"
+mb96ic512_ih14oh14_kh3sh1ph1n"googlenet_v1:inception_4b/max_pool*3"
+# mb96ic512_ih14oh14_kh3sh1ph1n"googlenet_v1:inception_4c/max_pool"
+# mb96ic512_ih14oh14_kh3sh1ph1n"googlenet_v1:inception_4d/max_pool"
+mb96ic528_ih14oh14_kh3sh1ph1n"googlenet_v1:inception_4e/max_pool"
+mb96ic832_ih14oh7_kh3sh2ph0n"googlenet_v1:max_pool4/3x3_s2"
+mb96ic832_ih7oh7_kh3sh1ph1n"googlenet_v1:inception_5a/max_pool*2"
+# mb96ic832_ih7oh7_kh3sh1ph1n"googlenet_v1:inception_5b/max_pool"
+mb96ic1024_ih7oh1_kh7sh1ph0n"googlenet_v1:avg_pool5/7x7_s1"

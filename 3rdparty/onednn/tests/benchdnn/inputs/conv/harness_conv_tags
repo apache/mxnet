@@ -1,0 +1,28 @@
+# Test different combinations of memory format tags for input tensors
+--reset
+--mb=2
+
+# Source or destination tensor may be in plain layout
+--stag=any,abx,axb
+--dtag=any,abx,axb
+
+# Training: bf16 and f32
+--cfg=bf16bf16bf16,f32
+--dir=FWD_B,BWD_D,BWD_WB
+--batch=shapes_basic
+# Inference: int8
+--cfg=u8s8u8
+--dir=FWD_B
+--batch=shapes_basic
+
+# Winograd
+--alg=wino
+--match=.*k[dhw]3.*
+# Training: f32 (no bf16 for Winograd)
+--cfg=f32
+--dir=FWD_B,BWD_D,BWD_WB
+--batch=shapes_basic
+# Inference: int8
+--cfg=u8s8u8
+--dir=FWD_B
+--batch=shapes_basic

@@ -1,0 +1,4 @@
+ic512ih7iw7oc4096n"VGG16:ip1"
+ic4096oc4096n"VGG16:ip2"
+ic4096oc81n"VGG16:ip3"
+ic4096oc324n"VGG16:ip4"

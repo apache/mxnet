@@ -1,0 +1,71 @@
+# basic shapes:
+#
+# 1. 1st convolution
+# 2. 1x1 convolution
+# 3. 3x3 convolution
+# 4. gemm-based convolution (kernel less than padding)
+# 5. grouped convolution
+# 6. depthwise convolution
+#
+# (each of the above have plain, channel tail and strided cases)
+
+# one dimensional shapes
+g1ic3oc16_iw5ow5kw3pw1_n"1d_conv:1st"
+g1ic3oc17_iw5ow5kw3pw1_n"1d_conv:1st_tail"
+g1ic3oc17_iw8ow4kw3pw1sw2_n"1d_conv:1st_stride_tail"
+g1ic16oc16_iw5ow5kw1pw0_n"1d_conv:1x1"
+g1ic17oc17_iw5ow5kw1pw0_n"1d_conv:1x1_tail"
+g1ic17oc17_iw8ow4kw1pw0sw2_n"1d_conv:1x1_stride_tail"
+g1ic16oc16_iw5ow5kw3pw1_n"1d_conv:3x3"
+g1ic17oc17_iw5ow5kw3pw1_n"1d_conv:3x3_tail"
+g1ic17oc17_iw8ow4kw3pw1sw2_n"1d_conv:3x3_stride_tail"
+g1ic16oc16_iw5ow8kw3pw3_n"1d_conv:gemm"
+g1ic17oc17_iw5ow8kw3pw3_n"1d_conv:gemm_tail"
+g1ic17oc17_iw8ow5kw3pw3sw2_n"1d_conv:gemm_stride_tail"
+g4ic16oc16_iw5ow5kw3pw1_n"1d_conv:grouped"
+g4ic20oc20_iw5ow5kw3pw1_n"1d_conv:grouped_tail"
+g4ic20oc20_iw8ow4kw3pw1sw2_n"1d_conv:grouped_stride_tail"
+g16ic16oc16_iw5ow5kw3pw1_n"1d_conv:depthwise"
+g17ic17oc17_iw5ow5kw3pw1_n"1d_conv:depthwise_tail"
+g17ic17oc17_iw8ow4kw3pw1sw2_n"1d_conv:depthwise_stride_tail"
+
+# two dimensional shapes
+g1ic3oc16_ih5oh5kh3ph1_n"2d_conv:1st"
+g1ic3oc17_ih5oh5kh3ph1_n"2d_conv:1st_tail"
+g1ic3oc17_ih8oh4kh3ph1sh2_n"2d_conv:1st_stride_tail"
+g1ic16oc16_ih5oh5kh1ph0_n"2d_conv:1x1"
+g1ic17oc17_ih5oh5kh1ph0_n"2d_conv:1x1_tail"
+g1ic17oc17_ih8oh4kh1ph0sh2_n"2d_conv:1x1_stride_tail"
+g1ic16oc16_ih5oh5kh3ph1_n"2d_conv:3x3"
+g1ic17oc17_ih5oh5kh3ph1_n"2d_conv:3x3_tail"
+g1ic17oc17_ih8oh4kh3ph1sh2_n"2d_conv:3x3_stride_tail"
+g1ic16oc16_ih5oh8kh3ph3_n"2d_conv:gemm"
+g1ic17oc17_ih5oh8kh3ph3_n"2d_conv:gemm_tail"
+g1ic17oc17_ih8oh5kh3ph3sh2_n"2d_conv:gemm_stride_tail"
+g4ic16oc16_ih5oh5kh3ph1_n"2d_conv:grouped"
+g4ic20oc20_ih5oh5kh3ph1_n"2d_conv:grouped_tail"
+g4ic20oc20_ih8oh4kh3ph1sh2_n"2d_conv:grouped_stride_tail"
+g16ic16oc16_ih5oh5kh3ph1_n"2d_conv:depthwise"
+g17ic17oc17_ih5oh5kh3ph1_n"2d_conv:depthwise_tail"
+g17ic17oc17_ih8oh4kh3ph1sh2_n"2d_conv:depthwise_stride_tail"
+
+# three dimensional shapes
+g1ic3oc16_id5od5kd3pd1_n"3d_conv:1st"
+g1ic3oc17_id5od5kd3pd1_n"3d_conv:1st_tail"
+g1ic3oc17_id8od4kd3pd1sd2_n"3d_conv:1st_stride_tail"
+g1ic16oc16_id5od5kd1pd0_n"3d_conv:1x1"
+g1ic17oc17_id5od5kd1pd0_n"3d_conv:1x1_tail"
+g1ic17oc17_id8od4kd1pd0sd2_n"3d_conv:1x1_stride_tail"
+g1ic16oc16_id5od5kd3pd1_n"3d_conv:3x3"
+g1ic17oc17_id5od5kd3pd1_n"3d_conv:3x3_tail"
+g1ic17oc17_id8od4kd3pd1sd2_n"3d_conv:3x3_stride_tail"
+g1ic16oc16_id5od8kd3pd3_n"3d_conv:gemm"
+g1ic17oc17_id5od8kd3pd3_n"3d_conv:gemm_tail"
+g1ic17oc17_id8od5kd3pd3sd2_n"3d_conv:gemm_stride_tail"
+g4ic16oc16_id5od5kd3pd1_n"3d_conv:grouped"
+g4ic20oc20_id5od5kd3pd1_n"3d_conv:grouped_tail"
+g4ic20oc20_id8od4kd3pd1sd2_n"3d_conv:grouped_stride_tail"
+g16ic16oc16_id5od5kd3pd1_n"3d_conv:depthwise"
+g17ic17oc17_id5od5kd3pd1_n"3d_conv:depthwise_tail"
+g17ic17oc17_id8od4kd3pd1sd2_n"3d_conv:depthwise_stride_tail"
+

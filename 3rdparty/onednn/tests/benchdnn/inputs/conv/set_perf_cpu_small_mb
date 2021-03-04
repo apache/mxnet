@@ -1,0 +1,2 @@
+--batch=set_maskrcnn
+--batch=set_fastrcnn

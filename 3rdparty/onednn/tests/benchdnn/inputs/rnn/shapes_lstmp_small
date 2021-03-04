@@ -1,0 +1,10 @@
+# small shapes for lstm w/ projection when dhc != dic
+
+l1t1mb1_sic16_dic32_n"non-uniform:dhc_neq_dic"
+l1t1mb1_sic17_dic34_n"non-uniform:dhc_neq_dic_tail"
+l1t1mb1_sic16_slc32_dic32_n"non-uniform:slc_neq_sic_and_dhc_neq_dic"
+l1t1mb1_sic17_slc34_dic34_n"non-uniform:slc_neq_sic_and_dhc_neq_dic_tail"
+l1t1mb1_sic16_dhc32_dic64_n"non-uniform:slc_neq_dhc_neq_dic"
+l1t1mb1_sic17_dhc34_dic68_n"non-uniform:slc_neq_dhc_neq_dic_tail"
+l1t1mb1_sic16_slc32_dhc64_dic80_n"non-uniform:slc_neq_sic_neq_dhc_neq_dic"
+l1t1mb1_sic17_slc34_dhc68_dic85_n"non-uniform:slc_neq_sic_neq_dhc_neq_dic_tail"

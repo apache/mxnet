@@ -1,0 +1,27 @@
+--reset
+
+--dt=f32,bf16
+--dir=FWD_D
+--alg=SOFTMAX,LOGSOFTMAX
+--inplace=true,false
+--dir=FWD_D,BWD_D
+--tag=aBx16b
+--axis=0,1,2,3     --batch=shapes_2d
+
+--tag=abx
+--axis=0,1         --batch=shapes_0d
+--axis=0,1,2,3,4   --batch=shapes_3d
+
+--dt=f16
+--dir=FWD_I
+--tag=aBx16b --axis=2,3 --batch=shapes_2d
+
+--reset
+--dir=FWD_D,FWD_I
+--alg=SOFTMAX,LOGSOFTMAX
+--dt=bf16,f16,f32
+--inplace=true,false
+--tag=abx
+--axis=0,1     --batch=shapes_0d
+--axis=0,1,2,3 --batch=shapes_2d
+

@@ -1,0 +1,12 @@
+# f32 wino
+--reset --cfg=f32_wino --alg=wino
+--match=.*kh3[^0-9].*       # only 3x3 convolutions so far
+--mb=2                      # for fwd and bwd_d reduce mb
+--dir=FWD_I,FWD_B,BWD_D,BWD_WB
+--batch=set_conv_all
+--batch=shapes_regression_padding
+
+--reset
+--cfg=f32_wino --alg=wino
+--match=.*kh3[^0-9].*       # only 3x3 convolutions so far
+--dir=FWD_B,BWD_D,BWD_WB  --batch=shapes_tails

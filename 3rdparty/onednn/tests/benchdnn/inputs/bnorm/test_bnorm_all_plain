@@ -1,0 +1,56 @@
+--reset
+
+--skip-impl=ref
+
+# training
+--inplace=false
+--dir=FWD_D,BWD_DW
+--dt=f32
+
+--tag=abx
+--mb=17
+--flags=,GSR
+--batch=set_nd
+
+--tag=axb
+--mb=64
+--flags=  --batch=shapes_googlenet_v2
+--flags=G --batch=shapes_densenet_121
+--flags=S --batch=shapes_resnet_50
+--flags=R --batch=shapes_googlenet_v3
+
+# inference
+--inplace=true
+--dir=FWD_I
+
+## f32
+--dt=f32
+
+--flags=,G,S
+--mb=1,17
+--tag=abx
+--attr-post-ops='','relu'
+--batch=set_nd
+
+--mb=1,64
+--tag=axb
+--attr-post-ops=''
+--flags=  --batch=shapes_googlenet_v2
+--flags=G --batch=shapes_densenet_121
+--flags=S --batch=shapes_resnet_50
+
+--flags=
+--mb=1
+--attr-post-ops='relu'
+--batch=set_nd
+
+## int8
+--dt=s8
+--flags=G,GSR
+--attr-post-ops=''
+--mb=1,64
+--tag=axb
+--batch=shapes_densenet_121
+
+# bf16
+--batch=test_bnorm_bfloat16_plain

@@ -1,0 +1,16 @@
+--reset
+--ddt=f32,s32,s8,u8
+--sdt=f32:f32,f32:s32,f32:s8,f32:u8,s32:s8,s32:u8,s8:u8
+--dtag=undef,abx,axb,aBx8b,aBx16b
+--stag=abx:abx       3x3x16x4
+--stag=axb:axb       4x4x2x16 5x5x1x15
+--stag=aBx8b:aBx8b   2x8x3x10 1x9x4x7
+--stag=aBx16b:aBx16b 1x16x5x11 2x15x6x3
+
+--ddt=f32,s32
+--sdt=f32:s32:s8
+--stag=aBx8b:abx:axb,axb:axb:axb
+--scales=1.25:3:0.5    16x2x6x4x3
+
+# bf16
+--batch=test_sum_bfloat16

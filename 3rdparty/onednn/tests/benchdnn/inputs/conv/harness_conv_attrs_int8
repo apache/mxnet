@@ -1,0 +1,48 @@
+# i8
+--reset
+--mb=2
+--skip-impl="ref"
+--dir=FWD_B
+--attr-oscale=per_oc:2.25 --attr-post-ops='sum:1.5;relu:0:0:2.6'
+--cfg=u8s8u8  --batch=shapes_vgg_19
+--cfg=u8s8f32 --batch=shapes_googlenet_v2
+--cfg=s8s8u8  --batch=shapes_vgg_19
+--cfg=s8s8f32 --batch=shapes_googlenet_v2
+--cfg=u8s8s32 --batch=shapes_3d
+--dir=FWD_D
+--attr-oscale=common:2.25 --attr-post-ops='sum:1.5'
+--cfg=u8s8s8  --batch=shapes_googlenet_v3
+--cfg=u8s8s32 --batch=shapes_alexnet
+--cfg=s8s8s8  --batch=shapes_googlenet_v3
+--cfg=s8s8s32 --batch=shapes_alexnet
+--cfg=s8s8s32 --batch=shapes_3d
+
+--reset
+--mb=2
+--skip-impl="ref:gemm"      # ! test jit version only
+--dir=FWD_B
+--attr-oscale=per_oc:2.25 --attr-post-ops='sum:1.5;relu'
+--cfg=s8s8f32,s8s8u8,u8s8f32,u8s8u8  --batch=shapes_tails
+
+--dir=FWD_D
+--attr-oscale=common:2.25 --attr-post-ops='sum:1.5'
+--cfg=s8s8s32,s8s8s8,u8s8s32,u8s8s8  --batch=shapes_tails
+
+# i8 conv + f32 leaky relu
+--reset --dir=FWD_B --mb=2
+--skip-impl="ref:gemm"      # ! test jit version only
+--attr-post-ops='relu:0.5','relu:0.5;sum','sum;relu:0.5'
+--cfg=s8s8f32,u8s8f32 --batch=shapes_yolov2
+--attr-post-ops='sum:0.5'
+--cfg=s8s8f32 --batch=shapes_3d
+
+# binary post operation
+--reset --dir=FWD_B --mb=2
+--skip-impl=  # ! test everything until jit injector is available
+--cfg=s8s8s32
+--attr-post-ops='sum:0.5;add:f32:common;abs;max:u8:per_oc'
+--batch=shapes_tails
+
+--cfg=u8s8s8
+--attr-post-ops='add:s8:per_oc;add:s32;add:u8:per_oc;max:f32:per_oc'
+--batch=shapes_resnet_50

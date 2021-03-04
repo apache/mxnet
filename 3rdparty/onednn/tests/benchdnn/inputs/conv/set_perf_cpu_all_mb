@@ -1,0 +1,2 @@
+--batch=set_perf_cpu_large_mb
+--batch=set_perf_cpu_small_mb

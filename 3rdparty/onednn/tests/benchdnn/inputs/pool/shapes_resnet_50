@@ -1,0 +1,7 @@
+# resnet_50
+
+mb50ic64_ih112oh56_kh3sh2n"resnet_50:max_pool1"
+# mb50ic256_ih56oh28_khXshXn"resnet_50:res2c_max_pool"
+# mb50ic512_ih28oh14_khXshXn"resnet_50:res3d_max_pool"
+# mb50ic1024_ih14oh7_khXshXn"resnet_50:res4f_max_pool"
+mb50ic2048_ih7oh1_kh7sh1n"resnet_50:ave_pool5"

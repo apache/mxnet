@@ -1,0 +1,7 @@
+# multihead self-attention layer
+# mb = 1, num_heads = 12, hidden_size = 1024, t_x = t_y = 128
+mb12m128n128k64
+mb12m128n64k128
+# mb = 128, num_heads = 12, hidden_size = 1024, t_x = t_y = 128
+mb1536m128n128k64
+mb1536m128n64k128

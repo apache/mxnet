@@ -1,0 +1,172 @@
+#===============================================================================
+# Copyright 2019-2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#===============================================================================
+
+cmake_minimum_required(VERSION 2.8.11)
+
+if("${CMAKE_BUILD_TYPE}" STREQUAL "")
+    message(STATUS "CMAKE_BUILD_TYPE is unset, defaulting to Release")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+        "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel ...")
+endif()
+
+project (DNNL_EXAMPLES)
+
+set(DNNL_CPU_RUNTIME "@DNNL_CPU_RUNTIME@")
+set(DNNL_GPU_RUNTIME "@DNNL_GPU_RUNTIME@")
+
+if(POLICY CMP0015)
+    cmake_policy(SET CMP0015 NEW)
+endif()
+
+# Use <PackageName>_ROOT env. variable as a prefix
+if(POLICY CMP0074)
+    cmake_policy(SET CMP0074 NEW)
+endif()
+
+if(NOT DEFINED DNNLROOT AND DEFINED ENV{DNNLROOT})
+    set(DNNLROOT "$ENV{DNNLROOT}" CACHE STRING "")
+else()
+    set(DNNLROOT "${PROJECT_SOURCE_DIR}/.." CACHE STRING "")
+endif()
+
+message(STATUS "DNNLROOT: ${DNNLROOT}")
+
+include_directories(${DNNLROOT}/examples)
+
+enable_testing()
+
+if(UNIX OR MINGW)
+    find_library(LIBM m)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    if(NOT APPLE)
+        set(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
+    endif()
+    # XXX: DPC++ compiler generates a lot of warnings
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+endif()
+
+if(WIN32 AND ${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+    add_definitions(/Qpar)
+    add_definitions(/openmp)
+else()
+    find_package(OpenMP)
+    #newer version for findOpenMP (>= v. 3.9)
+    if(CMAKE_VERSION VERSION_LESS "3.9" AND OPENMP_FOUND)
+        if(${CMAKE_MAJOR_VERSION} VERSION_LESS "3" AND
+                ${CMAKE_CXX_COMPILER_ID} STREQUAL "Intel")
+            # Override FindOpenMP flags for Intel Compiler (otherwise deprecated)
+            set(OpenMP_CXX_FLAGS "-fopenmp")
+            set(OpenMP_C_FLAGS "-fopenmp")
+        endif()
+        set(OpenMP_C_FOUND true)
+        set(OpenMP_CXX_FOUND true)
+    endif()
+    if(OpenMP_C_FOUND)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    endif()
+    if(OpenMP_CXX_FOUND)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    endif()
+endif()
+
+if(WIN32 AND DNNL_SYCL_DPCPP)
+    # Ignore warning LNK4078: multiple '__CLANG_OFFLOAD_BUNDLE__sycl-spi'
+    # sections found with different attributes
+    append(CMAKE_EXE_LINKER_FLAGS "-Xlinker /IGNORE:4078")
+endif()
+
+find_package(dnnl @PROJECT_VERSION@ CONFIG REQUIRED HINTS ${DNNLROOT})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DNNL_COMPILE_FLAGS}")
+
+if(WIN32)
+    set(CTESTCONFIG_PATH "${DNNLROOT}\\bin")
+elseif(APPLE)
+    set(CTESTCONFIG_PATH "${DNNLROOT}/lib")
+endif()
+
+# Common configuration for tests / test cases on Windows and Apple
+function(maybe_configure_test name kind)
+    if(WIN32)
+        string(REPLACE  ";" "\;" PATH "${CTESTCONFIG_PATH};$ENV{PATH}")
+        set_property(${kind} ${name} PROPERTY ENVIRONMENT "PATH=${PATH}")
+        if(CMAKE_GENERATOR MATCHES "Visual Studio")
+            configure_file(template.vcxproj.user ${name}.vcxproj.user @ONLY)
+        endif()
+    elseif(APPLE)
+        # When LIBRARY_PATH is set (e.g. when using compiler env. scripts)
+        # cmake may stop passing `rpath` linker option. The hack below adds the
+        # LIBRARY_PATH to DYLD_LIBRARY_PATH to make the executable find its
+        # dependencies.
+        # TODO: the problem may be in older version of cmake (2.8.11), revisit.
+        set_property(${kind} ${name} PROPERTY ENVIRONMENT
+                "DYLD_LIBRARY_PATH=${CTESTCONFIG_PATH}:$ENV{LIBRARY_PATH}:$ENV{DYLD_LIBRARY_PATH}")
+    endif()
+endfunction()
+
+# Register example
+#   name -- name of the executable
+#   srcs -- list of source, if many must be enclosed with ""
+#   test -- "test" to mark executable as a test, "" otherwise
+function(register_example name srcs test)
+    add_executable(${name} ${srcs})
+    target_link_libraries(${name} DNNL::dnnl ${LIBM})
+    if("x${test}" STREQUAL "xtest")
+        add_test(${name} ${name})
+        maybe_configure_test("${example_name}" TEST)
+    endif()
+endfunction()
+
+file(GLOB sources *.cpp *.c)
+file(GLOB_RECURSE tutorial_sources tutorials/*.cpp tutorials/*.c)
+list(APPEND sources ${tutorial_sources})
+
+foreach(src ${sources})
+    file(RELATIVE_PATH src_rel_path ${CMAKE_CURRENT_SOURCE_DIR} ${src})
+    string(REGEX REPLACE "[/_\\.]" "-" example_name ${src_rel_path})
+
+    # Put hw-specific part of the name in front.
+    # It is important for examples in subdirectories.
+    foreach(pat "cpu-" "gpu-" "cross-engine-")
+        string(REGEX REPLACE "^(.*)${pat}" "${pat}\\1"
+            example_name ${example_name})
+    endforeach()
+
+    if(${example_name} MATCHES "(cross-engine|cpu|gpu)-")
+        # Example name contains cross-engine, cpu or gpu
+        if(NOT ${example_name} MATCHES ".*opencl" OR DNNL_GPU_RUNTIME STREQUAL "OCL")
+            register_example(${example_name} ${src} "test" ${LIBM})
+        endif()
+    else()
+        set(cpu_rt_pattern "(SEQ|OMP|TBB|SYCL|DPCPP)")
+        set(gpu_rt_pattern "(OCL|SYCL|DPCPP)")
+        if(${example_name} MATCHES "sycl.*")
+            set(cpu_rt_pattern "(SYCL|DPCPP)")
+            set(gpu_rt_pattern "(SYCL|DPCPP)")
+        endif()
+        if(DNNL_CPU_RUNTIME MATCHES ${cpu_rt_pattern})
+            # Adding test for CPU
+            add_test("cpu-${example_name}" "${example_name}" cpu)
+            maybe_configure_test("cpu-${example_name}" TEST)
+        endif()
+        if(DNNL_GPU_RUNTIME MATCHES ${gpu_rt_pattern})
+            # Adding test for GPU
+            add_test("gpu-${example_name}" "${example_name}" gpu)
+            maybe_configure_test("gpu-${example_name}" TEST)
+        endif()
+        register_example(${example_name} ${src} "" ${LIBM})
+    endif()
+endforeach()

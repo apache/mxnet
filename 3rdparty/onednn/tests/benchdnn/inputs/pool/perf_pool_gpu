@@ -1,0 +1,32 @@
+# mb=1, inference only
+--reset
+--mb=1
+
+--cfg=f32,s8
+--dir=FWD_I
+--alg=MAX,AVG_NP,AVG_P
+--tag=axb,aBx16b
+
+--batch=set_topologies_gpu
+
+# mb>1, inference only
+--reset
+--mb=16,32,64
+
+--cfg=f32,s8
+--dir=FWD_I
+--alg=MAX,AVG_NP,AVG_P
+--tag=axb,ABx16a16b
+
+--batch=set_topologies_gpu
+
+# mb>1, training only
+--reset 
+--mb=16,32,64
+
+--cfg=f32
+--dir=FWD_D,BWD_D
+--alg=MAX,AVG_NP,AVG_P
+--tag=axb,ABx16a16b
+
+--batch=set_topologies_gpu

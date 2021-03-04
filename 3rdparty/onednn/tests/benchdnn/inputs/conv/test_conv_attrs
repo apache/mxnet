@@ -1,0 +1,26 @@
+# f32
+--reset --cfg=f32
+--mb=2
+--skip-impl="ref:gemm"      # ! test jit version only
+--dir=FWD_B
+--attr-post-ops='sum;relu' --batch=shapes_resnet_50
+--attr-post-ops='sum;relu:0.5' --batch=shapes_tails
+--attr-post-ops='sum;tanh:0:0:2.5' --batch=shapes_tails
+--attr-post-ops='sum;elu:0.5' --batch=shapes_tails
+--attr-post-ops='sum;abs' --batch=shapes_tails
+--attr-post-ops='sum;linear:0.5:1.5' --batch=shapes_tails
+--attr-post-ops='sum;bounded_relu:0.5' --batch=shapes_tails
+--attr-post-ops='sum;logistic:0:0:2.5' --batch=shapes_tails
+--cfg=f32_no_limits # kinds that overrun int_max_exact
+--attr-post-ops='sum;square' --batch=shapes_tails
+--attr-post-ops='sum;soft_relu' --batch=shapes_tails
+--attr-post-ops='sum;pow:0.5:0.33' --batch=shapes_tails
+--attr-post-ops='add:f32:per_oc' --batch=shapes_tails
+
+# f32_wino
+--reset --alg=wino --cfg=f32_wino
+--mb=2
+--dir=FWD_B --attr-post-ops='sum;relu' --batch=shapes_resnet_50
+
+# Depthwise fusion
+--batch=harness_conv_fused_depthwise

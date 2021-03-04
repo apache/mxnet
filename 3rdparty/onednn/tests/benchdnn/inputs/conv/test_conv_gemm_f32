@@ -1,0 +1,8 @@
+# Test GeMM specific functionality
+--reset --cfg=f32
+--mb=2                      # for fwd and bwd_d reduce mb
+--dir=FWD_B,BWD_D,BWD_WB --batch=shapes_gemm
+
+--stag=abx --dtag=abx
+--batch=shapes_3d_2d_strided_padding
+--batch=shapes_dilated_3d_strided_padding

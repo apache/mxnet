@@ -1,0 +1,14 @@
+--reset
+--cfg=f32,u8s8u8,s8s8s8,u8s8s32,s8s8f32,bf16bf16f32,bf16bf16bf16
+--stag=abcd,abdc
+--wtag=abcd,abdc
+--runtime_dims_masks=0,1:1,8:4
+--batch=shapes_multidim
+
+--reset
+--cfg=f32,u8s8f32,s8s8s32,bf16bf16f32,bf16bf16bf16
+--bia_dt=f32
+--bia_mask=0,1,2047,2048,4094,4095
+--stag=abx,abcdefghijlk
+--wtag=abx,abcdefghijlk
+2x2x1x3x3x2x1x4x1x2x3x3:1x2x4x3x1x1x3x4x1x1x3x4

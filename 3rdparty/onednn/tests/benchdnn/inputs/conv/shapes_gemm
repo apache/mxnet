@@ -1,0 +1,31 @@
+# gemm convs
+
+# one dimensional shapes
+mb4_g3ic3oc48_iw5ow3kw3sw1dw0pw0_n"ic%simd_width_!=0_with_im2col"
+mb7_g2ic32oc6_iw5ow3kw3sw1dw0pw0_n"oc%simd_width_!=0_with_im2col"
+mb4_g3ic9oc96_iw4ow4kw1sw1dw0pw0_n"ic%simd_width_!=0_without_im2col"
+mb1_g2ic64oc4_iw7ow7kw1sw1dw0pw0_n"oc%simd_width_!=0_without_im2col"
+g1ic16oc16_iw5ow3kw3sw1dw4pw4_n"big_padding_and_dilation_w.r.t._kernel_size-1"
+g8ic8oc32_iw5ow3kw3sw1dw4pw4_n"big_padding_and_dilation_w.r.t._kernel_size-2"
+mb5_g5ic10oc20_iw15ow7kw2sw3pw5_n"big_padding_w.r.t._kernel_size"
+
+# two dimensional shapes
+mb4_g3ic3oc48_ih5oh3kh3sh1dh0ph0_n"ic%simd_width_!=0_with_im2col"
+mb7_g2ic32oc6_ih5oh3kh3sh1dh0ph0_n"oc%simd_width_!=0_with_im2col"
+mb4_g3ic9oc96_ih4oh4kh1sh1dh0ph0_n"ic%simd_width_!=0_without_im2col"
+mb1_g2ic64oc4_ih7oh7kh1sh1dh0ph0_n"oc%simd_width_!=0_without_im2col"
+g1ic16oc16_ih5oh3kh3sh1dh4ph4_n"big_padding_and_dilation_w.r.t._kernel_size-1"
+g8ic8oc32_ih5oh3kh3sh1dh4ph4_n"big_padding_and_dilation_w.r.t._kernel_size-2"
+mb5_g5ic10oc20_ih15oh7kh2sh3ph5_n"big_padding_w.r.t._kernel_size"
+
+# three dimensional shapes
+mb4_g3ic3oc48_id5od3kd3sd1dd0pd0_n"ic%simd_width_!=0_with_im2col"
+mb7_g2ic32oc6_id5od3kd3sd1dd0pd0_n"oc%simd_width_!=0_with_im2col"
+mb4_g3ic9oc96_id4od4kd1sd1dd0pd0_n"ic%simd_width_!=0_without_im2col"
+mb1_g2ic64oc4_id7od7kd1sd1dd0pd0_n"oc%simd_width_!=0_without_im2col"
+g1ic16oc16_id5od3kd3sd1dd4pd4_n"big_padding_and_dilation_w.r.t._kernel_size-1"
+g8ic8oc32_id5od3kd3sd1dd4pd4_n"big_padding_and_dilation_w.r.t._kernel_size-2"
+mb5_g5ic10oc20_id15od7kd2sd3pd5_n"big_padding_w.r.t._kernel_size"
+
+# shapes with large spatial using blocked-os
+mb1_ic64oc64_ih1000kh3sh1dh127ph128

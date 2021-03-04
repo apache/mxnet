@@ -1,0 +1,17 @@
+# f32
+--reset
+
+--trivial-strides=true,false
+--alg=VANILLA_RNN
+--cfg=f32
+--prop=FWD_D,BWD_DW
+
+# small test case to check GEMM and non-GEMM ops accuracy
+--direction=left2right,right2left,concat,sum
+--activation=RELU,TANH,LOGISTIC
+--batch=option_set_small
+
+# large cases - test linear activations
+--direction=left2right
+--activation=RELU
+--batch=option_set_large

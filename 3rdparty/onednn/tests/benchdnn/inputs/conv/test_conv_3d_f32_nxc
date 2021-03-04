@@ -1,0 +1,8 @@
+# f32 3-D Convolutions
+--reset --cfg=f32_full
+--stag=axb --dtag=axb
+--mb=2
+--skip-impl="ref:gemm"      # ! test jit version only
+--dir=FWD_B,BWD_D,BWD_WB
+--batch=shapes_3d
+--batch=set_conv_3d

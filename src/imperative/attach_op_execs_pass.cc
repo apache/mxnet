@@ -36,7 +36,7 @@ namespace mxnet {
 
 namespace exec {
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #define CREATE_DEFAULT_INPUTS_MKLDNN(in_array, in_array_fallback, attrs)  \
         CREATE_DEFAULT_INPUTS(true, attrs, CreateDefaultInputs(in_array, in_array_fallback))
 #else

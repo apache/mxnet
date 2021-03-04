@@ -1,0 +1,15 @@
+# Dilated Int8
+--reset
+--mb=2
+--dir=FWD_D
+--cfg=u8s8u8,s8s8u8
+--batch=shapes_dilated_rfcn
+--match=.*fc6.* --batch=shapes_ssd_300_voc0712
+
+--reset
+--dir=FWD_D --mb=2
+--skip-impl="ref:gemm"
+--cfg=u8s8s32
+--batch=set_dilated-conv_1st
+--batch=set_dilated-conv
+--batch=set_dilated-conv_3d

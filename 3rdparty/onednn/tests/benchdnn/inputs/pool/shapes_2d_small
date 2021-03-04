@@ -1,0 +1,78 @@
+# random problems
+
+# regular
+ic128_ih4oh2_kh3
+ic4_ih4oh4_kh3ph1
+ic64_ih32oh16_kh3sh2
+
+# non-squared shapes
+ic32_ih300iw500_oh151ow251_kh3kw3_sh2sw2_ph1pw1
+
+# tails for blocked format
+ic23_ih60iw60_oh31ow31_kh3kw4_sh2sw2_ph1pw1
+ic14_ih60iw60_oh31ow31_kh2kw3_sh2sw2_ph1pw1
+
+# asymmetric padding
+ic8_ih3iw14_oh1ow8_kh3kw3_sh1sw2_ph0pw1
+ic16_ih3iw100_oh1ow51_kh3kw3_sh1sw2_ph0pw1
+
+#assymetric padding and kh=3,sh=2
+ic16_ih103iw9_oh52ow7_kh3kw3_sh2sw1_ph1pw0
+
+# Tensorflow pooling corner problems
+ic1_ih32oh6_kh6sh6ph2
+ic1_ih32oh6kh6sh6ph2_iw2ow1kw1sw1pw0
+
+# Stride along the width is large
+ic35_iw45ih20_ow14oh17_kw6kh4_sw3sh1
+
+# Stride along the height is large
+ic35_iw16ih52_ow14oh17_kw3kh4_sw1sh3
+
+# Padding along the width is minimal
+ic35_iw15ih20_ow14oh17_pw1ph0_kw3kh4_sw1sh1
+
+# Padding along the height is minimal
+ic35_iw19ih19_ow14oh17_pw0ph1_kw6kh4_sw1sh1
+
+# Stride dimension is more than the kernel dimension
+ic35_iw10ih9_ow3oh3_pw0ph1_kw2kh2_sw4sh4
+
+# resnet_50
+ic2048_ih7oh1_kh7sh1n"resnet_50:ave_pool5"
+
+# googlenet_v1
+ic192_ih57oh28_kh3sh2ph0n"googlenet_v1:max_pool2/3x3_s2"
+ic480_ih14oh14_kh3sh1ph1n"googlenet_v1:inception_4a/max_pool"
+ic1024_ih7oh1_kh7sh1ph0n"googlenet_v1:avg_pool5/7x7_s1"
+
+# googlenet_v3
+ic2048_ih8oh1_kh8sh1ph0n"googlenet_v3:ave_global_pool"
+
+# corner case problems when kernel starts working in the padded area
+
+# Random 2d tests
+mb1ic16_ih10oh6_kh5sh5ph10
+mb2ic20_ih16oh3_kh16sh16ph16
+mb3ic17_ih13oh37_kh17ph20
+
+# Padding along the width is same as kernel width (pw == kw)
+ic32_iw13ih36_ow14oh17_pw6ph0_kw6kh4_sw1sh2
+
+# Padding along the height is same as kernel height (ph == kh)
+ic32_iw19ih16_ow14oh17_pw0ph4_kw6kh4_sw1sh1
+
+# Padding along both width and height is same as kernel width
+# and kernel height (pw == kw && ph == kh)
+ic32_iw13ih16_ow14oh17_pw3ph4_kw3kh4_sw1sh1
+ic32_iw13ih32_ow14oh17_pw6ph4_kw6kh4_sw1sh2
+
+# Negative padding along the right side
+ic32_iw33ih19_ow14oh17_pw0ph1_kw6kh4_sw2sh1
+
+# Negative padding along the bottom side
+ic32_iw19ih37_ow14oh17_kw6kh4_sw1sh2
+
+# Negative padding along the right and bottom sides
+ic32_iw30ih36_ow14oh17_pw0ph1_kw3kh4_sw2sh2
+ic32_iw33ih37_ow14oh17_kw6kh4_sw2sh2

@@ -1,0 +1,48 @@
+# f32
+--reset
+--mb=2
+--dir=FWD_B
+--attr-post-ops='sum:0.5;add:f32;add:u8:per_dim_01;linear:0.5:1.5:2.0;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01;relu:0.5'
+--batch=set_all
+
+#run backward without post ops
+--dir=BWD_D,BWD_WB
+--attr-post-ops=
+--batch=set_all
+--dir=BWD_W --batch=shapes_1d
+
+# f16
+--reset
+--cfg=f16_no_limits
+--mb=2
+--dir=FWD_B
+--attr-post-ops='sum:0.5;add:f32;add:u8:per_dim_01;linear:0.5:1.5:2.0;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01;relu:0.5'
+--batch=set_all
+
+#bf16
+--reset
+--mb=2
+--cfg=bf16bf16bf16,bf16bf16f32
+--dir=FWD_B
+--attr-post-ops='sum:0.5;add:f32;add:u8:per_dim_01;linear:0.5:1.5:2.0;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01;relu:0.5'
+--batch=set_all
+
+#run backward without post ops
+--attr-post-ops=
+--cfg=bf16bf16bf16 --dir=BWD_D,BWD_WB --batch=set_all
+--cfg=f32bf16bf16 --dir=BWD_D --batch=set_all
+--cfg=bf16f32bf16 --dir=BWD_WB --batch=set_all
+
+# int8
+--reset
+--cfg=u8s8u8,s8s8u8,s8s8s8,s8s8s32,u8s8s32
+--mb=2
+--dir=FWD_B
+--attr-post-ops='sum:0.5;add:f32;add:u8:per_dim_01;linear:0.5:1.5:2.0;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01;relu:0.5'
+--batch=set_all
+
+# regression
+--reset
+--cfg=f32,f16_no_limits --dtag=axb --alg=auto
+--attr-post-ops='sum:0.5;add:f32;add:u8:per_dim_01;linear:0.5:1.5:2.0;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01;relu:0.5'
+g1ic16iw5oc16ow5kw1pw0

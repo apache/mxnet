@@ -1,0 +1,102 @@
+#
+# f32 <-> s32 <-> s8 <-> u8
+#
+--reset
+--sdt=f32,s32,s8,u8
+--ddt=f32,s32,s8,u8
+
+--attr-oscale=per_dim_1:0.
+--stag=abx,axb,aBx4b,aBx8b,aBx16b
+--dtag=abx,axb,aBx8b,aBx16b
+2x64x3x3
+
+--stag=abx,axb,aBx16b
+--dtag=abx,axb,aBx16b
+--attr-oscale=,per_dim_1:0.
+--attr-post-ops='sum:0.5'
+2x64x1x1
+
+--attr-oscale=per_dim_0:0.
+--stag=abx,xba
+--dtag=abx,xba
+2x64x3x3
+
+--attr-oscale=per_dim_01:0.
+--stag=abx,gOIhw16i16o
+--dtag=abx,gOIhw16i16o
+3x32x32x2x2
+
+# blocked with tail
+--stag=aBx4b,aBx8b --dtag=aBx16b 2x40x3x3
+--stag=aBx16b      --dtag=aBx8b  2x40x3x3
+
+--attr-oscale=common:0.
+--stag=abx,axb
+--dtag=abx,axb
+2x8x8 # special 8x8 kernel
+
+--stag=abx,axb,aBx4b,aBx8b,aBx16b
+--dtag=abx,axb,aBx4b,aBx8b,aBx16b
+2x64x3x3
+
+--stag=abx,xba
+--dtag=abx,xba
+2x64x3x3
+
+# simple nChw{8,16}c impl
+--stag=aBx4b,aBx8b --dtag=aBx16b 2x71x16x16 2x72x16x16 2x73x16x16
+--stag=aBx16b      --dtag=aBx8b  2x71x16x16 2x72x16x16 2x73x16x16
+
+#
+# s8, f32, bf16 -> s8 w/ compensations
+#
+--reset
+--alg=bootstrap
+--sdt=f32,s8,bf16
+--ddt=s8
+
+--stag=oiw,wio --dtag=wio,OIw4i16o4i,OIw2i8o4i,OIw4o4i
+32x32x3
+--oflag=conv_s8s8,conv_zp_comp,conv_s8s8:conv_zp_comp 32x32x3
+
+--stag=oihw,hwio --dtag=hwio,OIhw4i16o4i,OIhw2i8o4i,OIhw4o4i
+32x32x3x3
+--oflag=conv_s8s8,conv_zp_comp,conv_s8s8:conv_zp_comp 32x32x3x3
+
+--stag=wigo,goiw --oflag=gconv_s8s8,gconv_zp_comp,gconv_s8s8:gconv_zp_comp
+--dtag=wigo 2x32x32x3
+--dtag=gOIw4i16o4i 2x32x32x3
+--dtag=gOIw4o4i 2x36x36x3
+--dtag=gOIw2i8o4i 2x40x40x3
+--dtag=Goiw16g,Goiw8g,Goiw4g 64x1x1x3
+
+--stag=dhwio,oidhw --dtag=dhwio,OIdhw4i16o4i,OIdhw2i8o4i,OIdhw4o4i
+--oflag=conv_s8s8,conv_zp_comp,conv_s8s8:conv_zp_comp  32x32x3x3x3
+
+--stag=hwigo,goihw --oflag=gconv_s8s8,gconv_zp_comp,gconv_s8s8:gconv_zp_comp
+--dtag=hwigo 2x32x32x3x3
+--dtag=gOIhw4i16o4i 2x32x32x3x3
+--dtag=gOIhw4o4i 2x36x36x3x3
+--dtag=gOIhw2i8o4i 2x40x40x3x3
+--dtag=Goihw16g,Goihw8g,Goihw4g 512x1x1x3x3
+
+--stag=goidhw --dtag=dhwigo,gOIdhw4i16o4i,gOIdhw2i8o4i,gOIdhw4o4i
+--oflag=gconv_s8s8,gconv_zp_comp,gconv_s8s8:gconv_zp_comp  16x32x32x3x3x3
+
+# f16
+--reset
+--attr-oscale=per_dim_1:0.5
+--sdt=f32 --ddt=f16 3x5x7x11
+--sdt=f16 --ddt=f32 3x5x7x11
+
+# bf16
+--batch=test_reorder_bfloat16
+
+# Run-time
+--batch=harness_reorder_runtime
+
+# Saturation
+--batch=harness_reorder_saturation
+
+# Weights formats for AMX kernels
+--batch=harness_reorder_amx

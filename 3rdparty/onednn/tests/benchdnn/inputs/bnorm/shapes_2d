@@ -1,0 +1,8 @@
+# random 2d problems
+
+mb1ic1ih1_n"bnorm_2d:1"
+mb1ic3ih1_n"bnorm_2d:2"
+mb1ic256ih28_n"bnorm_2d:3"
+mb1ic257ih28_n"bnorm_2d:4"
+mb1ic1024ih28iw17_n"bnorm_2d:5"
+mb2ic128ih2_n"bnorm_2d:catch_cancel"

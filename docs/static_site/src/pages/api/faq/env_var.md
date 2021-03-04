@@ -327,7 +327,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 * MXNET_MKLDNN_ENABLED
   - Values: 0, 1 ```(default=1)```
   - Flag to enable or disable MKLDNN accelerator. On by default.
-  - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
+  - Only applies to mxnet that has been compiled with ONEDNN (```pip install mxnet-mkl``` or built from source with ```USE_ONEDNN=1```)
 
 * MXNET_MKLDNN_CACHE_NUM
   - Values: Int ```(default=-1)```
@@ -399,9 +399,9 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Values: 0(false) or 1(true) ```(default=1)```
   - If this variable is set, MXNet will simplify the computation graph, eliminating duplicated operations on the same inputs.
 
-* MXNET_USE_MKLDNN_RNN
+* MXNET_USE_ONEDNN_RNN
   - Values: 0(false) or 1(true) ```(default=1)```
-  - This variable controls whether to use the MKL-DNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The MKL-DNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
+  - This variable controls whether to use the ONE-DNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The ONE-DNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
 
 * MXNET_FC_TRUE_FP16
   - Values: 0(false) or 1(true) ```(default=0)```

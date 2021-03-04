@@ -1,0 +1,120 @@
+# random problems
+
+# regular
+mb1ic8_ih3oh3_kh3ph1
+mb2ic128_ih4oh2_kh3
+mb2ic96_ih4oh2_kh3
+mb2ic64_ih1oh1_kh3ph1
+mb2ic4_ih4oh4_kh3ph1
+mb2ic32_ih4oh4_kh3
+mb2ic32_ih13oh12_kh3
+mb16ic64_ih32oh16_kh3sh2
+mb4ic16_ih10oh10_kh2ph1
+mb64ic64_ih56oh56_kh3ph1
+
+# non-squared shapes
+mb122ic32_ih32iw2_oh32ow2_kh3kw3_ph1pw1
+mb1ic32_ih300iw500_oh151ow251_kh3kw3_sh2sw2_ph1pw1
+
+# tails for blocked format
+mb4ic17_ih6oh7_kh2ph1
+mb4ic23_ih60iw60_oh31ow31_kh3kw4_sh2sw2_ph1pw1
+mb4ic14_ih60iw60_oh31ow31_kh3kw2_sh2sw2_ph1pw1
+mb4ic17_ih60iw60_oh31ow31_kh4kw3_sh2sw2_ph1pw1
+mb4ic14_ih60iw60_oh31ow31_kh2kw3_sh2sw2_ph1pw1
+mb4ic25_ih60iw60_oh31ow31_kh2kw4_sh2sw2_ph1pw1
+mb4ic28_ih60iw60_oh31ow31_kh4kw2_sh2sw2_ph1pw1
+
+# asymmetric padding
+mb1ic8_ih3iw4_oh1ow5_kh3kw3_ph0pw1
+mb1ic8_ih3iw14_oh1ow8_kh3kw3_sh1sw2_ph0pw1
+mb1ic96_ih3iw100_oh1ow51_kh3kw3_sh1sw2_ph0pw1
+mb1ic96_ih103iw9_oh52ow7_kh3kw3_sh2sw1_ph1pw0
+
+# Tensorflow pooling corner problems
+mb1ic1_ih32oh6_kh6sh6ph2
+mb1ic1_ih32oh6kh6sh6ph2_iw2ow1kw1sw1pw0
+
+# Stride along the width is large
+ic35_iw42ih20_ow14oh17_kw3kh4_sw3sh1
+ic35_iw45ih20_ow14oh17_kw6kh4_sw3sh1
+
+# Stride along the height is large
+ic35_iw16ih52_ow14oh17_kw3kh4_sw1sh3
+ic35_iw19ih52_ow14oh17_kw6kh4_sw1sh3
+
+# Padding along the width is minimal
+ic35_iw15ih20_ow14oh17_pw1ph0_kw3kh4_sw1sh1
+ic35_iw18ih20_ow14oh17_pw1ph0_kw6kh4_sw1sh1
+
+# Padding along the height is minimal
+ic35_iw16ih19_ow14oh17_pw0ph1_kw3kh4_sw1sh1
+ic35_iw19ih19_ow14oh17_pw0ph1_kw6kh4_sw1sh1
+
+# Stride dimension is more than the kernel dimension
+ic35_iw10ih19_ow3oh17_pw0ph1_kw2kh4_sw4sh1
+ic35_iw10ih9_ow3oh3_pw0ph1_kw2kh2_sw4sh4
+
+# Different Input Channels
+ic16_iw15ih20_ow14oh17_pw1ph0_kw3kh4_sw1sh1
+ic32_iw15ih20_ow14oh17_pw1ph0_kw3kh4_sw1sh1
+ic65_iw15ih20_ow14oh17_pw1ph0_kw3kh4_sw1sh1
+ic130_iw10ih19_ow3oh17_pw0ph1_kw2kh4_sw4sh1
+ic259_iw10ih19_ow3oh17_pw0ph1_kw2kh4_sw4sh1
+ic516_iw10ih19_ow3oh17_pw0ph1_kw2kh4_sw4sh1
+
+# corner case problems when kernel starts working in the padded area
+
+# Random 2d tests
+mb1ic16_ih10oh6_kh5sh5ph10
+mb2ic20_ih16oh3_kh16sh16ph16
+mb3ic17_ih13oh37_kh17ph20
+
+# Padding along the width is same as kernel width (pw == kw)
+ic35_iw13ih20_ow14oh17_pw3ph0_kw3kh4_sw1sh1
+ic35_iw13ih36_ow14oh17_pw3ph0_kw3kh4_sw1sh2
+ic35_iw13ih20_ow14oh17_pw6ph0_kw6kh4_sw1sh1
+ic35_iw13ih36_ow14oh17_pw6ph0_kw6kh4_sw1sh2
+
+# Padding along the height is same as kernel height (ph == kh)
+ic35_iw16ih16_ow14oh17_pw0ph4_kw3kh4_sw1sh1
+ic35_iw16ih32_ow14oh17_pw0ph4_kw3kh4_sw1sh2
+ic35_iw19ih16_ow14oh17_pw0ph4_kw6kh4_sw1sh1
+ic35_iw19ih32_ow14oh17_pw0ph4_kw6kh4_sw1sh2
+
+# Padding along both width and height is same as kernel width 
+# and kernel height (pw == kw && ph == kh)
+ic35_iw13ih16_ow14oh17_pw3ph4_kw3kh4_sw1sh1
+ic35_iw13ih32_ow14oh17_pw3ph4_kw3kh4_sw1sh2
+ic35_iw13ih16_ow14oh17_pw6ph4_kw6kh4_sw1sh1
+ic35_iw13ih32_ow14oh17_pw6ph4_kw6kh4_sw1sh2
+
+# Negative padding along the right side
+ic35_iw30ih20_ow14oh17_kw3kh4_sw2sh1
+ic35_iw30ih19_ow14oh17_pw0ph1_kw3kh4_sw2sh1
+ic35_iw33ih20_ow14oh17_kw6kh4_sw2sh1
+ic35_iw33ih19_ow14oh17_pw0ph1_kw6kh4_sw2sh1
+
+# Negative padding along the bottom side
+ic35_iw16ih37_ow14oh17_kw3kh4_sw1sh2
+ic35_iw16ih36_ow14oh17_pw0ph1_kw3kh4_sw1sh2
+ic35_iw19ih37_ow14oh17_kw6kh4_sw1sh2
+ic35_iw19ih36_ow14oh17_pw0ph1_kw6kh4_sw1sh2
+
+# Negative padding along the right and bottom sides
+ic35_iw30ih37_ow14oh17_kw3kh4_sw2sh2
+ic35_iw30ih36_ow14oh17_pw0ph1_kw3kh4_sw2sh2
+ic35_iw33ih37_ow14oh17_kw6kh4_sw2sh2
+ic35_iw33ih36_ow14oh17_pw0ph1_kw6kh4_sw2sh2
+# With dilation
+mb1ic8_ih3oh3_kh3ph1_dh2dw2
+mb122ic32_ih32iw2_oh32ow2_kh3kw3_ph1pw1_dh4dw1
+mb4ic17_ih6oh7_kh2ph1_dh4dw4
+mb1ic8_ih3iw4_oh1ow5_kh3kw3_ph0pw1_dh1dw1
+mb1ic1_ih32oh6_kh6sh6ph2_dh2dw2
+ic35_iw42ih20_ow14oh17_kw3kh4_sw3sh1_dh5dw2
+ic35_iw16ih52_ow14oh17_kw3kh4_sw1sh3_dh3dw5
+ic35_iw15ih20_ow14oh17_pw1ph0_kw3kh4_sw1sh1_dh3dw2
+ic35_iw16ih19_ow14oh17_pw0ph1_kw3kh4_sw1sh1_dh1dw1
+ic35_iw10ih19_ow3oh17_pw0ph1_kw2kh4_sw4sh1_dh2dw2
+ic16_iw15ih20_ow14oh17_pw1ph0_kw3kh4_sw1sh1_dh3dw0

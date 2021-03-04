@@ -22,7 +22,7 @@
  * \brief MKLDNN(Quantized) Activation operator based on subgraph
  * /author Zhiyuan Huang
 */
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../quantization_utils.h"
@@ -52,4 +52,4 @@ NNVM_REGISTER_OP(_contrib_quantized_act)
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

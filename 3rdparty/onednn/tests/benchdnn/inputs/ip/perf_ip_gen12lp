@@ -1,0 +1,13 @@
+--batch=perf_ip_gen9
+
+--reset
+
+# Forward, int8
+--dir=FWD_B
+--cfg=u8s8s32
+
+--mb=1,32,64,128
+--batch=set_gpu
+
+--mb=0
+--batch=shapes_1d

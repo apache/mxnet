@@ -1,0 +1,16 @@
+--reset
+
+--inplace=true,false
+--dt=bf16
+
+--dir=FWD_D,FWD_I
+--flags=,S,G,GS
+--batch=option_set_all
+
+--dir=BWD_D
+--flags=,G
+--batch=option_set_all
+
+--dir=BWD_DW
+--flags=S,GS
+--batch=option_set_all

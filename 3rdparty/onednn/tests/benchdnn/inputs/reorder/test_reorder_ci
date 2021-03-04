@@ -1,0 +1,30 @@
+--reset
+
+# reference reorders
+--sdt=f32,bf16,f16,s32,s8,u8
+--ddt=f32,bf16,f16,s32,s8,u8
+--attr-oscale=, \
+              per_dim_0:2, \
+              per_dim_1:0.5, \
+              per_dim_01:0.25, \
+              per_dim_0:2*, \
+              per_dim_1:0.5*, \
+              per_dim_01:0.25*
+--attr-zero-points=,src:common:1_dst:common:-2,src:common:1*_dst:common:-2*
+--attr-post-ops='','sum:0.5'
+--runtime-dim-mask=0,63
+--stag=abx
+--dtag=abx,axb,xba
+--alg=reference
+--oflag=none
+2x16x3x4 1x17x5x3
+
+--reset
+# compensation reorders without groups
+--sdt=f32,s8,bf16
+--ddt=s8
+--stag=abx
+--dtag=xba
+--alg=bootstrap
+--oflag=conv_s8s8
+2x16x3x4 1x17x5x3

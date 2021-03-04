@@ -1,0 +1,38 @@
+# f32
+--reset
+--skip-impl=ref
+--mb=2
+
+--dir=FWD_B
+--attr-post-ops='','sum','linear:2:1','sum:1.5;add:f32:per_oc;relu'
+--batch=set_all
+
+--dir=BWD_D,BWD_W,BWD_WB
+--attr-post-ops=
+--batch=set_all
+
+# int8
+--dir=FWD_B
+--attr-oscale=,per_oc:2.25,common:2.25
+--attr-post-ops='','sum','linear:2:1','sum:1.5;add:f32:per_oc;relu'
+## 1x1
+--cfg=s8s8f32,s8s8s32,s8s8s8,s8s8u8,u8s8f32,u8s8s32,u8s8s8,u8s8u8
+--batch=shapes_1x1
+## 1D
+--cfg=u8s8u8,s8s8f32
+--batch=shapes_1d
+## 2D
+--cfg=u8s8s32,s8s8s8
+--batch=shapes_2d
+
+--cfg=u8s8s8,s8s8s32
+--batch=shapes_dilated
+## 3D
+--cfg=u8s8f32,s8s8u8
+--batch=shapes_3d
+
+# bf16
+--batch=test_deconv_bfloat16
+
+# Regression
+--batch=harness_deconv_regression_general

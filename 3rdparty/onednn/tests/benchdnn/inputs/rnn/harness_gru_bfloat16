@@ -1,0 +1,16 @@
+# bf16
+--reset
+
+--trivial-strides=true,false
+--alg=VANILLA_GRU,LBR_GRU
+--activation=UNDEF
+--cfg=bf16
+--prop=FWD_D,BWD_DW
+
+# small problems
+--direction=left2right,right2left,concat,sum
+--batch=option_set_small
+
+# large problems
+--direction=left2right
+--batch=option_set_large

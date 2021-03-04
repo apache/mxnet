@@ -1,0 +1,21 @@
+# random problems
+
+# upsampling
+mb1ic8_ih6oh6_iw24ow24
+mb1ic8_ih3oh6_iw7ow21
+mb2ic16_ih5oh3_iw10ow11
+mb12ic8_ih5oh3_iw7ow11
+
+# downsampling
+mb1ic8_ih14oh14_iw7ow7
+mb1ic8_ih14oh6_iw7ow3
+mb2ic16_ih15oh73_iw10ow11
+mb12ic8_ih15oh3_iw5ow11
+
+# mixed
+mb16ic18_ih14oh6_iw7ow12
+mb16ic8_ih4oh63_iw9ow13
+
+# tails for blocked format
+mb4ic17_ih6oh7_iw12ow14
+mb4ic23_ih60oh60_iw30ow75

@@ -1,0 +1,15 @@
+# f32
+--reset
+--dir=FWD_B,BWD_D,BWD_WB
+--mb=128 --batch=shapes_gnmt
+--mb=40 --batch=shapes_wd
+--mb=256 --batch=shapes_wd
+--mb=112 --batch=shapes_resnet_50
+--mb=64 --batch=shapes_resnet_50_sparse
+--mb=128 --batch=shapes_googlenet_v1
+--mb=224 --batch=shapes_googlenet_v3
+--mb=64 --batch=shapes_vgg16
+--mb=2048 --batch=shapes_ncf
+--mb=1024 --batch=shapes_alexnet
+--mb=512 --batch=shapes_maskrcnn
+--mb=2048 --batch=shapes_dlrm

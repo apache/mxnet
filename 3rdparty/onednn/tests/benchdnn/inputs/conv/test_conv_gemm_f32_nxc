@@ -1,0 +1,15 @@
+# Test GeMM specific functionality
+--reset --cfg=f32
+--mb=2                      # for fwd and bwd_d reduce mb
+--stag=axb --dtag=axb
+
+--dir=FWD_B,BWD_D,BWD_WB --batch=shapes_gemm
+
+# Test for attributes
+--dir=FWD_B
+--attr-post-ops='sum;relu' --batch=shapes_gemm
+--attr-post-ops='sum;tanh:0:0:2.5' --batch=shapes_gemm
+--attr-post-ops='sum;logistic:0:0:2.5' --batch=shapes_gemm
+--cfg=f32_no_limits # kinds that overrun int_max_exact
+--attr-post-ops='sum;soft_relu' --batch=shapes_gemm
+--attr-post-ops='sum;pow:0.5:0.33' --batch=shapes_gemm

@@ -1,0 +1,19 @@
+--reset
+
+--group=4
+--dir=FWD_D,BWD_D
+
+--dt=f32,f16,bf16,s8,u8
+
+--tag=abx,aBx16b
+--axis=1,2 1x68x56x56 1x272x56x56
+--axis=1,3,4 1x272x2x56x56
+
+--tag=ABx16a16b
+--axis=1,2 32x64x56x56
+--axis=1,3,4 32x64x2x56x56
+
+# blocked with tail
+--dt=f32
+--tag=aBx16b --axis=1 1x12x56x56 1x36x56x56
+

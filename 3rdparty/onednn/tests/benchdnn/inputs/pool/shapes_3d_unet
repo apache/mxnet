@@ -1,0 +1,5 @@
+# 3d unet
+
+mb1ic64_id64od32_kd2sd2n"3d_unet:max_pool1"
+mb1ic128_id28od14_kd2sd2n"3d_unet:max_pool2"
+mb1ic256_id12od6_kd2sd2n"3d_unet:max_pool3"

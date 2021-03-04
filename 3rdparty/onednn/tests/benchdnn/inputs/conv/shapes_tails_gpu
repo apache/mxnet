@@ -1,0 +1,35 @@
+# ic/oc is not multiple of simd width
+# simd width is 16 so far (avx512+)
+
+# conv common
+ic32oc13_ih13oh12kh3ph0_n"tails_conv:1"
+
+ic23oc64_ih13oh13kh3ph1_n"tails_conv:6"
+ic25oc32_ih13oh13kh3ph1_n"tails_conv:8"
+ic27oc64_ih13oh12kh3ph0_n"tails_conv:9"
+ic29oc32_ih13oh12kh3ph0_n"tails_conv:11"
+
+ic19oc33_ih13oh13kh3ph1_n"tails_conv:12"
+ic27oc30_ih13oh13kh3ph1_n"tails_conv:18"
+
+# conv 1x1
+ic32oc13_ih13oh13kh1ph0_n"tails_conv_1x1:1"
+
+ic23oc64_ih13oh13kh1ph0_n"tails_conv_1x1:6"
+ic24oc32_ih13oh13kh1ph0_n"tails_conv_1x1:7"
+ic27oc64_ih13oh13kh1ph0_n"tails_conv_1x1:9"
+ic28oc64_ih13oh13kh1ph0_n"tails_conv_1x1:10"
+
+ic20oc31_ih13oh13kh1ph0_n"tails_conv_1x1:13"
+ic23oc35_ih13oh13kh1ph0_n"tails_conv_1x1:15"
+
+# 3d conv common
+ic64oc33_id13od11kd3pd0_ih13oh13kh3ph1_iw13ow13kw3pw1_n"tails_conv_3d:2"
+
+ic17oc16_id13od11kd3pd0_ih13oh12kh3ph0_iw13ow12kw3pw0_n"tails_conv_3d:3"
+
+# 1d conv
+ic25oc24_iw13ow12kw3pw0_n"tails_conv_1d:4"
+
+# depthwise
+g576mb1ic576ih19oc576oh19kh3ph1_n"tails_conv_dw:1"

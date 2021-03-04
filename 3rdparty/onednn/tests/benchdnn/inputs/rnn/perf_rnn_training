@@ -1,0 +1,11 @@
+--reset
+
+--mb=128
+--alg=VANILLA_LSTM
+--activation=TANH
+--batch=option_set_gnmt_decoder
+--batch=option_set_gnmt_encoder
+
+--alg=VANILLA_RNN,LBR_GRU
+--direction=left2right
+--batch=shapes_deepspeech_2

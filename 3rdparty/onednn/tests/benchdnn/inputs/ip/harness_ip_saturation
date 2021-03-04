@@ -1,0 +1,5 @@
+--reset
+--dir=FWD_D
+--cfg=u8s8s32,u8s8s8,u8s8u8
+--attr-oscale=common:4294967296
+ic16oc16ih1

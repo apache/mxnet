@@ -1,0 +1,22 @@
+# basic checks for saturation
+--reset
+
+--sdt=f32,s32,s8,u8
+--ddt=f32,s32,s8,u8
+
+--attr-oscale=common:4294967296
+--stag=abx,axb,aBx4b,aBx8b,aBx16b
+--dtag=abx,axb,aBx4b,aBx8b,aBx16b
+1x17x9x5 2x64x3x3
+
+# checks for int overflow
+--reset
+
+--sdt=s32
+--ddt=f32,s8
+
+--attr-oscale=common:4294967296
+--attr-zero-points=src:common:1
+--stag=abx,axb,aBx4b,aBx8b,aBx16b
+--dtag=abx,axb,aBx4b,aBx8b,aBx16b
+1x17x9x5

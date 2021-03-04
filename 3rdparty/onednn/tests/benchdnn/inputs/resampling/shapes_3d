@@ -1,0 +1,13 @@
+# random problems
+
+# upsampling
+ic8_id2ih4iw6_od4oh8ow12
+ic9_id3ih6iw4_od4oh8ow9
+
+# downsampling
+ic16_id6ih6iw6_od3oh3ow3
+ic19_id6ih6iw6_od4oh4ow4
+
+# mixed
+mb4ic16_id6ih6iw6_od12oh6ow3
+mb32ic32_id31ih50iw31_od16oh77ow16

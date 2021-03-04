@@ -1,0 +1,17 @@
+--reset
+
+--inplace=true,false
+
+--dt=f32,bf16,f16
+--tag=abx,axb
+--dir=FWD_D
+--attr-post-ops='','mul:s8:per_oc'
+--batch=option_set_all_algs_ci
+--dir=BWD_D
+--attr-post-ops=
+--batch=option_set_all_algs_ci
+
+--dir=FWD_I
+--dt=s32,s8,u8
+--attr-post-ops='','mul:f32'
+--batch=option_set_all_algs_int8_ci

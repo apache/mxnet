@@ -1,0 +1,240 @@
+# DNNL-537
+--reset
+--cfg=f32
+--dir=FWD_D mb2ic16ih7oc16oh7kh5ph2
+--dir=FWD_D mb2ic16ih29oc16oh29kh5ph2
+
+# DNNL-611
+--reset --cfg=f32
+--dir=FWD_D mb1ic64ih150iw200oc256oh150ow200kh1kw1ph0pw0sh1sw1n"rfcn-resnet50-res2a_branch1"
+--dir=FWD_B --attr-post-ops='relu' mb1ic64ih150iw200oc256oh150ow200kh1kw1ph0pw0sh1sw1n"rfcn-resnet50-res2a_branch1" --attr-post-ops=
+--dir=BWD_W mb1ic256ih150iw200oc64oh150ow200kh1kw1ph0pw0sh1sw1n"rfcn-resnet50-res2a_branch1"
+
+# DS2 (stride_h != stride_w)
+--reset --cfg=f32 --skip-impl="ref:gemm"
+--dir=FWD_B  mb2_ic32oc32_ih41oh16kh10sh2ph0_iw79ow75kw5sw1pw0n"ds2" mb2_ic32oc32_iw79ow75kw5sw1pw0_ih41oh16kh10sh2ph0n"ds2-swap"
+--dir=BWD_D  mb2_ic32oc32_ih41oh16kh10sh2ph0_iw79ow75kw5sw1pw0n"ds2" mb2_ic32oc32_iw79ow75kw5sw1pw0_ih41oh16kh10sh2ph0n"ds2-swap"
+--dir=BWD_WB mb2_ic32oc32_ih41oh16kh10sh2ph0_iw79ow75kw5sw1pw0n"ds2" mb2_ic32oc32_iw79ow75kw5sw1pw0_ih41oh16kh10sh2ph0n"ds2-swap"
+
+# github #174
+--reset --cfg=f32
+--dir=FWD_B,FWD_D --attr-post-ops='sum','sum;relu' mb1_ic4oc4_ih13oh13kh3ph1_n"gemm_acc"
+
+# DNNL-623
+--reset --cfg=u8s8u8 --dir=FWD_D --skip-impl="ref:gemm" mb2ic672ih29iw29oc192kh1kw1sh1sw1ph0pw0n"DENSENET_161:conv3_11/x1"
+--reset --cfg=s8s8u8 --dir=FWD_D --skip-impl="ref:gemm" mb2ic672ih29iw29oc192kh1kw1sh1sw1ph0pw0n"DENSENET_161:conv3_11/x1"
+--reset --cfg=f32 --skip-impl="ref:gemm" mb2ic672ih29iw29oc192kh1kw1sh1sw1ph0pw0n"DENSENET_161:conv3_11/x1"
+--reset --cfg=f32 --dir=BWD_D --skip-impl="ref:gemm" mb2ic672ih29iw29oc192kh1kw1sh1sw1ph0pw0n"DENSENET_161:conv3_11/x1"
+--reset --cfg=f32 --dir=BWD_WB --skip-impl="ref:gemm" mb2ic672ih29iw29oc192kh1kw1sh1sw1ph0pw0n"DENSENET_161:conv3_11/x1"
+
+# DNNL-671
+--reset --dir=BWD_D ic2ih1iw9oc3oh1ow4kh1kw3sh1sw2
+
+# DNNL-796: large asymmetric padding
+--reset --cfg=f32_full mb2_g1ic32oc32_ih7oh11kh3ph2
+--reset --cfg=u8s8u8 mb2_g1ic32oc32_ih7oh11kh3ph2
+--reset --cfg=s8s8u8 mb2_g1ic32oc32_ih7oh11kh3ph2
+
+# DNNL-860
+--reset --dir=BWD_WB --cfg=f32_wino --alg=wino  mb2ic16ih13oc16oh13kh3ph1
+
+# DNNL-854
+--reset --dir=BWD_W mb2_ic32oc16_ih13oh13kh1
+
+# DNNL-930
+--reset mb2ic3ih300oc32oh150kh3sh2
+--reset --cfg=u8s8u8 mb2ic3ih84oc16oh42kh3sh2
+--reset --cfg=s8s8u8 mb2ic3ih84oc16oh42kh3sh2
+
+# DNNL-949
+--reset --dir=BWD_D mb2_g1ic1oc2_ih3oh1kh2sh1dh1ph0_iw5ow3kw2sw1dw1pw0
+
+# special case for 4vnni and 4fma kernels had this FPE bug
+--reset --cfg=f32_full mb1_g1ic16oc16_ih7oh7kh3ph1
+
+# DNNL-982: FPE for large right-hand-side padding
+--reset --dir=FWD_D mb2_g1ic1oc2_ih3oh10kh2sh1dh1ph4_iw5ow12kw2sw1dw1pw2
+--reset --dir=FWD_D mb2_g1ic8oc8_ih1oh16kh2ph1
+
+# DNNL-1074: FPE for mb1 with ih < sh or iw < sw
+--reset --dir=FWD_D mb1_g1ic128oc256_ih1oh1kh3sh2dh0ph1_iw1ow1kw3sw2dw0pw1
+
+#DNNL-1184 grouped convolutions with small input-channel and
+# non-blocked src format
+--reset --dir=FWD_D
+#AVX2
+mb1_g2ic4oc16_ih8oh6kh3sh1dh0ph0_iw8ow6kw3sw1dw0pw0
+
+--reset --mb=2 --dir=BWD_W --cfg=f32
+g1_ic16ih4iw8_oc16oh3ow8_kh1kw1sh2sw1ph0pw0
+g1_ic16ih4iw8_oc16oh3ow8_kh2kw1sh2sw1ph0pw0
+g1_ic16ih4iw8_oc16oh4ow8_kh2kw1sh2sw1ph0pw0
+g1_oc16oh56ow56_ic16ih28iw28_kh1kw1sh2sw2ph0pw0
+
+#AVX512
+mb1_g2ic16oc32_ih8oh8kh3sh1dh0ph1_iw8ow8kw3sw1dw0pw1
+mb1_g2ic8oc32_ih8oh8kh3sh1dh0ph1_iw8ow8kw3sw1dw0pw1
+mb1_g2ic4oc32_ih8oh8kh3sh1dh0ph1_iw8ow8kw3sw1dw0pw1
+mb1_g2ic22oc32_ih8oh6kh3sh1dh0ph0_iw8ow6kw3sw1dw0pw0
+
+#MFDNN-1707
+--reset --mb=1 --dir=FWD_D --cfg=f32
+mb1_g2ic6oc16_ih5oh5kh1sh1dh0ph0_iw5ow5kw1sw1dw0pw0
+
+# Code too big error
+--reset --mb=1 --dir=FWD_D,BWD_D --cfg=f32
+mb1_ic16oc16_iw80ow80kw31sw1dw0pw15
+
+# github #542
+# r_overflow1 corner case
+--reset --dir=bwd_d mb1_ic9oc3_ih32oh10kh5sh3dh0ph1
+
+# MFDNN-1968 1x1 conv asymmetrical strides with stride_h=1
+--reset --dir=BWD_D mb1ic2ih10iw8oc4oh10ow4kh1kw1sh1sw2ph0pw0dh0dw0
+
+# MFDNN-1995 1x1 2d & 3d conv with negative padding
+--reset
+--dir=BWD_D
+--cfg=f32
+mb1_g1_ic16oc16_kd1kh1kw1_id1ih2iw1_od1oh1ow1_sd1sh3sw1_pd0ph0pw0_dd0dh0dw0n"neg-padding(-1)"
+mb1_g1_ic16oc16_kd1kh1kw1_id2ih2iw1_od1oh1ow1_sd3sh3sw1_pd0ph0pw0_dd0dh0dw0n"neg-padding(-1)"
+
+# Negative padding creates negative remainder in calculation of overflow_kh_hi
+--dir=BWD_D mb1_g1_ic16oc16_kd1kh2kw1_id1ih3iw1_od1oh1ow1_sd1sh3sw1_pd0ph0pw0_dd0dh0dw0n"2D_Neg-Padding"
+--dir=BWD_D mb1_g1_ic16oc16_kd2kh1kw1_id3ih1iw1_od1oh1ow1_sd3sh1sw1_pd0ph0pw0_dd0dh0dw0n"3D_Neg-Padding"
+
+# Depthwise with large right padding
+--reset --dir=BWD_D
+mb1_g3ic3oc3_ih10oh9kh2sh2dh0ph4
+mb1_g16ic16oc16_ih5oh2kh2sh5ph0
+mb1_g16ic16oc16_ih5oh2kh2sh3ph0
+
+# MFDNN-2023 3d corner case (small spatial)
+--dir=BWD_W --cfg=f32 g1ic1id2ih1iw1oc1od2oh1ow1kd3kh1kw1pd2ph0pw0n
+
+# MFDNN-2027 2d corner case (large kernel and top padding, negative bottom padding + stride)
+--dir=BWD_W --cfg=f32 g1ic16ih7iw1oc16oh1ow1kh11kw1sh2sw1ph5pw0n
+
+# 1x1 Conv with spatial padding
+--reset --dir=FWD_B
+--cfg=f32 g1ic64ih31iw1oc64oh32ow1kh1kw1ph0pw0
+--cfg=bf16bf16f32,u8s8u8 g1ic64ih31iw1oc64oh32ow1kh1kw1ph0pw0
+
+# 3d problem dispatching
+--dir=FWD_D,BWD_D,BWD_W
+--cfg=f32,bf16bf16bf16 g1ic16id1ih7iw8oc16od1oh7ow8kd3kh3kw3sd2sh1sw1pd1ph1pw1
+
+# AVX JIT incorrectly calculates output when 'nb_oc_block' results in a prime number
+--reset --dir=FWD_I mb1ic3ih320oc51oh160kh7sh2ph3n"regression_oc-channel"
+
+# Dilated convolution with ih<=dh when there is _no_ compute work.
+--reset --cfg=u8s8u8 mb1ic16ih1iw1oc16oh2ow1kh3kw1dh1ph1n"regression_dh_equals_ih"
+
+# Dilated BWD_W corner case with dilated kernel size less than padding
+--reset --cfg=f32,bf16bf16bf16 --dir=BWD_W
+mb1_ic1oc16_iw1_ow29_kw14_pw28_dw1_n"dilated_kernel_size_lt_padding"
+
+# Depthwise s8s8 tests to detect padding issues
+--reset --cfg=s8s8s32
+mb1_g960ic960oc960_ih7oh7kh5ph2_iw7ow7kw5pw2n"s8s8_padding:dw1"
+mb1_g16ic16oc16_ih1oh1kh1ph0_iw1ow1kw3pw1n"s8s8_padding:dw2"
+mb1_g16ic16oc16_ih1oh1kh1ph0_iw1ow1kw2pw1n"s8s8_padding:dw3"
+mb1_g16ic16oc16_ih1oh1kh1ph0_iw3ow3kw2pw1n"s8s8_padding:dw4"
+mb1_g16ic16oc16_ih1oh1kh2ph0_iw1ow1kw3pw1n"s8s8_padding:dw5"
+
+# Depthwise s8s8 tail processing
+--reset --cfg=s8s8s32
+mb1_g184ic184oc184_ih3oh3kh3sh1dh0ph1_iw3ow3kw3sw1dw0pw1
+
+# Read past end-of-buffer in int8 jit
+--reset
+--cfg=s8s8s8
+mb1_ic1oc16_ih123kh3oh121n"jit_reads_past_end_of_src_buffer:1"
+mb1_ic1oc16_ih124kh3oh122n"jit_reads_past_end_of_src_buffer:2"
+--cfg=u8s8u8
+mb1_ic1oc16_ih16kh3oh16ph1n"jit_reads_past_end_of_src_buffer:3"
+mb1_ic2oc16_ih16kh3oh16ph1n"jit_reads_past_end_of_src_buffer:4"
+mb1_ic1oc16_ih10oh10kh3ph1n"jit_reads_past_end_of_src_buffer:5"
+ 
+# Test Input-channel blocking w/stride heuristic
+--reset --dir=BWD_D
+ic32oc1_id5ih1iw1_od2oh1ow1_kd3kh1kw1_sd2sh1sw1n"ic-blocking_stride-d_test"
+ic32oc1_ih5iw1_oh2ow1_kh3kw1_sh2sw1n"ic-blocking_stride-h_test"
+
+# Test-case to ensure pre-condition for dispatching optimized channel blocking
+--reset --dir=BWD_D
+ic16ih7oc16oh5kh3ph0n"small_spatial_optimization"
+ic48ih7oc48oh5kh3ph0n"small_spatial_optimization"
+
+# False positives due to long accumulation chains
+--reset
+mb1_ic16oc16_id100od1kd100
+--cfg=f32_full --dir=BWD_W mb28_ic16oc16_id10od10kd3
+
+# Int 3D Depthwise dispatch check
+--reset --skip-impl="ref:gemm" --cfg=u8s8u8
+g16mb1ic16id3ih3iw3oc16od3oh3ow3kd3kh3kw3sd1sh1sw1pd1ph1pw1n"check_int8_3d_depthwise_dispatch"
+
+# Incorrect input offset for dilated height executing 3D JIT-Kernel
+--reset --skip-impl="ref:gemm" --cfg=u8s8s32
+mb1_ic16oc16_id2ih10iw1_kd2kh3kw1_dd0dh2dw0n"3d_dilated_check"
+
+# Test correctness of 1x1 strided convolution with different layouts src and dst
+--reset --stag=abx,axb --dir=FWD_B,BWD_D,BWD_WB
+ic256ih56oc512oh28kh1sh2ph0n"strided_1x1_with_mixed_data_layouts"
+
+# Depthwise uni-jit kernel is only supported for 2D convolutions.
+--reset --stag=abx --dtag=abx --wtag=goiw mb1_g16ic16oc16_iw4ow4kw2sw1
+
+# Test fix for Seg-fault in bwd_w with padding + dilation
+--reset --dir=BWD_W --skip-impl="ref:gemm"
+mb1ic16ih2iw30oc1oh1ow30kh2kw3ph0pw17dh0dw16n"bwd-w_check_dilation_padding_1"
+mb1ic16ih2iw84oc1oh1ow84kh2kw3ph0pw29dh0dw28n"bwd-w_check_dilation_padding_2"
+mb1ic16ih2iw70oc1oh1ow10kh2kw3ph0pw0dh0dw29n"bwd_w_check_large-dilation"
+
+# dw fusion with strides, skip 1x1's that doesn't support strides.
+--reset
+--skip-impl="ref_fused_convolution"
+--cfg=f32,u8s8u8
+--attr-post-ops='relu;dw_k3s1p1;sqrt'
+ic256oc256_ih60oh20kh1ph0sh3_iw50ow25kw1pw0sw2n"dw_fusion_with_strides"
+
+--cfg=bf16bf16bf16
+ic256oc256_ih60oh20kh1ph0sh3_iw50ow25kw1pw0sw2n"dw_fusion_with_strides"
+
+# dw fusion with reorder
+--reset
+--cfg=f32
+--attr-post-ops='relu;dw_k3s1p1;sqrt'
+ic16oc16_ih10oh6kh1ph0sh2n"dw_fusion_with_reorder"
+
+--reset
+--skip-impl="ref:gemm"
+--cfg=bf16bf16bf16 --dir=bwd_w
+# shape that verifies proper selection of ic_block_step for large filter sizes
+mb2ic16oc1_ih2iw100_kh2kw13_dh0dw3_ph0pw12n"check_large-filter_ic-step"
+# shape that verifies checks for supported padding sizes in width dimension
+mb1_ic16oc1_ih2oh1kh2sh1dh0ph0_iw1000kw6sw1dw30pw128n"1d_conv_large_dilated_padding_1"
+mb1_ic16oc1_ih2oh1kh2sh1dh0ph0_iw1000kw6sw1dw30pw127n"1d_conv_large_dilated_padding_2"
+
+# convolution size has to be larger than L2
+--reset
+--skip-impl='ref:gemm'
+--dir=BWD_WB --stag=axb --dtag=axb
+mb2g1ic33iw84350oc33ow84349kw2pw0n"channel_tail_for_specialized_axb_bwd_w_kernel"
+
+# small spatial convolution in amx kernel
+--reset
+--skip-impl='ref:gemm'
+--cfg=bf16bf16bf16,u8s8u8
+ic64ih20iw14oc16oh20ow7kh1kw1sh1sw2ph0pw0n"small_ow_large_oh"
+
+# large filter size with ic tails
+--reset
+--dir=FWD_D,BWD_D mb1g2ic16oc16iw128kw21n"large_filter_with_ic_tails"
+
+# test hw_transpose optimization
+--reset
+--skip-impl='ref:gemm'
+--dir=BWD_WB
+ic3oc64_ih25oh18kh8sh1dh0ph0_iw20ow1kw20sw1dw0pw0n"1st_conv_hw-transpose"

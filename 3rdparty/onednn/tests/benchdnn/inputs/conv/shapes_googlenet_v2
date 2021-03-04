@@ -1,0 +1,73 @@
+# googlenet_v2
+
+g1mb96ic3ih224iw224oc64oh112ow112kh7kw7sh2sw2ph3pw3n"googlenet_v2:conv1/7x7_s2"
+mb96ic64ih56oc64oh56kh1ph0n"googlenet_v2:conv2/3x3_reduce"
+mb96ic64ih56oc192oh56kh3ph1n"googlenet_v2:conv2/3x3"
+mb96ic192ih28oc64oh28kh1ph0n"googlenet_v2:inception_3a/1x1*3"
+# mb96ic192ih28oc64oh28kh1ph0n"googlenet_v2:inception_3a/3x3_reduce"        # inception_3a/1x1
+mb96ic64ih28oc64oh28kh3ph1n"googlenet_v2:inception_3a/3x3"
+# mb96ic192ih28oc64oh28kh1ph0n"googlenet_v2:inception_3a/double3x3_reduce"  # inception_3a/1x1
+mb96ic64ih28oc96oh28kh3ph1n"googlenet_v2:inception_3a/double3x3a*4"
+mb96ic96ih28oc96oh28kh3ph1n"googlenet_v2:inception_3a/double3x3b*2"
+mb96ic192ih28oc32oh28kh1ph0n"googlenet_v2:inception_3a/pool_proj"
+mb96ic256ih28oc64oh28kh1ph0n"googlenet_v2:inception_3b/1x1*4"
+# mb96ic256ih28oc64oh28kh1ph0n"googlenet_v2:inception_3b/3x3_reduce"        # inception_3b/1x1
+# mb96ic64ih28oc96oh28kh3ph1n"googlenet_v2:inception_3b/3x3"                # inception_3a/double3x3a
+# mb96ic256ih28oc64oh28kh1ph0n"googlenet_v2:inception_3b/double3x3_reduce"  # inception_3b/1x1
+# mb96ic64ih28oc96oh28kh3ph1n"googlenet_v2:inception_3b/double3x3a"         # inception_3a/double3x3a
+# mb96ic96ih28oc96oh28kh3ph1n"googlenet_v2:inception_3b/double3x3b"         # inception_3a/double3x3b
+# mb96ic256ih28oc64oh28kh1ph0n"googlenet_v2:inception_3b/pool_proj"         # inception_3b/1x1
+mb96ic320ih28oc128oh28kh1ph0n"googlenet_v2:inception_3c/3x3_reduce"
+g1mb96ic128ih28iw28oc160oh14ow14kh3kw3sh2sw2ph1pw1n"googlenet_v2:inception_3c/3x3"
+mb96ic320ih28oc64oh28kh1ph0n"googlenet_v2:inception_3c/double3x3_reduce"
+# mb96ic64ih28oc96oh28kh3ph1n"googlenet_v2:inception_3c/double3x3a"         # inception_3a/double3x3a
+g1mb96ic96ih28iw28oc96oh14ow14kh3kw3sh2sw2ph1pw1n"googlenet_v2:inception_3c/double3x3b"
+mb96ic576ih4oc128oh4kh1ph0n"googlenet_v2:loss1/conv"
+mb96ic576ih14oc224oh14kh1ph0n"googlenet_v2:inception_4a/1x1"
+mb96ic576ih14oc64oh14kh1ph0n"googlenet_v2:inception_4a/3x3_reduce"
+mb96ic64ih14oc96oh14kh3ph1n"googlenet_v2:inception_4a/3x3"
+mb96ic576ih14oc96oh14kh1ph0n"googlenet_v2:inception_4a/double3x3_reduce*6"
+mb96ic96ih14oc128oh14kh3ph1n"googlenet_v2:inception_4a/double3x3a*3"
+mb96ic128ih14oc128oh14kh3ph1n"googlenet_v2:inception_4a/double3x3b*2"
+mb96ic576ih14oc128oh14kh1ph0n"googlenet_v2:inception_4a/pool_proj*6"
+mb96ic576ih14oc192oh14kh1ph0n"googlenet_v2:inception_4b/1x1*2"
+# mb96ic576ih14oc96oh14kh1ph0n"googlenet_v2:inception_4b/3x3_reduce"        # inception_4a/double3x3_reduce
+# mb96ic96ih14oc128oh14kh3ph1n"googlenet_v2:inception_4b/3x3"               # inception_4a/double3x3a
+# mb96ic576ih14oc96oh14kh1ph0n"googlenet_v2:inception_4b/double3x3_reduce"  # inception_4a/double3x3_reduce
+# mb96ic96ih14oc128oh14kh3ph1n"googlenet_v2:inception_4b/double3x3a"        # inception_4a/double3x3a
+# mb96ic128ih14oc128oh14kh3ph1n"googlenet_v2:inception_4b/double3x3b"       # inception_4a/double3x3b
+# mb96ic576ih14oc128oh14kh1ph0n"googlenet_v2:inception_4b/pool_proj"        # inception_4a/pool_proj
+mb96ic576ih14oc160oh14kh1ph0n"googlenet_v2:inception_4c/1x1*2"
+# mb96ic576ih14oc128oh14kh1ph0n"googlenet_v2:inception_4c/3x3_reduce"       # inception_4a/pool_proj
+mb96ic128ih14oc160oh14kh3ph1n"googlenet_v2:inception_4c/3x3*2"
+# mb96ic576ih14oc128oh14kh1ph0n"googlenet_v2:inception_4c/double3x3_reduce" # inception_4a/pool_proj
+# mb96ic128ih14oc160oh14kh3ph1n"googlenet_v2:inception_4c/double3x3a"       # inception_4c/3x3
+mb96ic160ih14oc160oh14kh3ph1n"googlenet_v2:inception_4c/double3x3b"
+# mb96ic576ih14oc96oh14kh1ph0n"googlenet_v2:inception_4c/pool_proj"         # inception_4a/double3x3_reduce
+# mb96ic576ih14oc96oh14kh1ph0n"googlenet_v2:inception_4d/1x1"               # inception_4a/double3x3_reduce
+# mb96ic576ih14oc128oh14kh1ph0n"googlenet_v2:inception_4d/3x3_reduce"       # inception_4a/pool_proj
+mb96ic128ih14oc192oh14kh3ph1n"googlenet_v2:inception_4d/3x3"
+# mb96ic576ih14oc160oh14kh1ph0n"googlenet_v2:inception_4d/double3x3_reduce" # inception_4c/1x1
+mb96ic160ih14oc192oh14kh3ph1n"googlenet_v2:inception_4d/double3x3a"
+mb96ic192ih14oc192oh14kh3ph1n"googlenet_v2:inception_4d/double3x3b"
+# mb96ic576ih14oc96oh14kh1ph0n"googlenet_v2:inception_4d/pool_proj"         # inception_4a/double3x3_reduce
+# mb96ic576ih14oc128oh14kh1ph0n"googlenet_v2:inception_4e/3x3_reduce"       # inception_4a/pool_proj
+g1mb96ic128ih14iw14oc192oh7ow7kh3kw3sh2sw2ph1pw1n"googlenet_v2:inception_4e/3x3"
+# mb96ic576ih14oc192oh14kh1ph0n"googlenet_v2:inception_4e/double3x3_reduce" # inception_4b/1x1
+mb96ic192ih14oc256oh14kh3ph1n"googlenet_v2:inception_4e/double3x3a"
+g1mb96ic256ih14iw14oc256oh7ow7kh3kw3sh2sw2ph1pw1n"googlenet_v2:inception_4e/double3x3b"
+mb96ic1024ih2oc128oh2kh1ph0n"googlenet_v2:loss2/conv"
+mb96ic1024ih7oc352oh7kh1ph0n"googlenet_v2:inception_5a/1x1*2"
+mb96ic1024ih7oc192oh7kh1ph0n"googlenet_v2:inception_5a/3x3_reduce*3"
+mb96ic192ih7oc320oh7kh3ph1n"googlenet_v2:inception_5a/3x3*2"
+mb96ic1024ih7oc160oh7kh1ph0n"googlenet_v2:inception_5a/double3x3_reduce"
+mb96ic160ih7oc224oh7kh3ph1n"googlenet_v2:inception_5a/double3x3a"
+mb96ic224ih7oc224oh7kh3ph1n"googlenet_v2:inception_5a/double3x3b*2"
+mb96ic1024ih7oc128oh7kh1ph0n"googlenet_v2:inception_5a/pool_proj*2"
+# mb96ic1024ih7oc352oh7kh1ph0n"googlenet_v2:inception_5b/1x1"               # inception_5a/1x1
+# mb96ic1024ih7oc192oh7kh1ph0n"googlenet_v2:inception_5b/3x3_reduce"        # inception_5a/3x3_reduce
+# mb96ic192ih7oc320oh7kh3ph1n"googlenet_v2:inception_5b/3x3"                # inception_5a/3x3
+# mb96ic1024ih7oc192oh7kh1ph0n"googlenet_v2:inception_5b/double3x3_reduce"  # inception_5a/3x3_reduce
+mb96ic192ih7oc224oh7kh3ph1n"googlenet_v2:inception_5b/double3x3a"
+# mb96ic224ih7oc224oh7kh3ph1n"googlenet_v2:inception_5b/double3x3b"         # inception_5a/double3x3b
+# mb96ic1024ih7oc128oh7kh1ph0n"googlenet_v2:inception_5b/pool_proj"         # inception_5a/pool_proj

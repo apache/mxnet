@@ -1,0 +1,56 @@
+--reset
+
+--cfg=f32,f16,bf16bf16f32,u8s8s8
+--stag=ab,ba --wtag=ab,ba
+--runtime_m=0,1 --runtime_n=0,1 --runtime_k=0,1
+--bia_dt=undef,f32
+--bia_mask=1,2,3
+                                                      m10n20k30
+--attr-oscale=common:1.25 --attr-post-ops='sum;add:f32;add:u8:per_dim_01;linear:0.5:1.5:2.0;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01'       m10n20k30
+--attr-oscale=per_oc:1.25 --attr-post-ops='relu;add:f32;add:u8:per_dim_01;linear:0.5:1.5:2.0;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01'      m10n20k30
+--attr-oscale=
+--attr-post-ops='sum:2;add:f32;add:u8:per_dim_01;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01;linear:3:-1'                   m10n1k30
+--attr-post-ops='add:f32;add:u8:per_dim_01;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01;linear:3:-1:2'                       m10n1k30
+
+# test any
+--reset
+--cfg=f32,f16,bf16bf16bf16,s8s8f32
+--runtime_m=0 --runtime_n=0 --runtime_k=0
+--bia_dt=undef
+
+--stag=ab,ba,any --wtag=ab,ba,any --dtag=ab,any       m1n20k30
+
+# test x8x8x8
+--reset
+
+--cfg=u8s8s32,u8s8f32,s8s8s8
+--runtime_m=0,1 --runtime_n=1 --runtime_k=0
+--bia_dt=undef,f32,u8
+--stag=ab,ba --wtag=ab --dtag=ab
+
+--attr-oscale=common:2.25* --attr-zero-points=src:common:1*_wei:common:-1*_dst:common:2* --attr-post-ops='sum;relu;add:f32;add:u8:per_dim_01;linear:0.5:1.5:2.0;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01'  m100n10k10
+
+--cfg=s8s8s8,s8s8s32,s8s8u8
+--runtime_m=0 --runtime_n=0,1 --runtime_k=1
+--bia_dt=undef,u8
+--stag=ba --wtag=ab,ba --dtag=ab
+
+--attr-oscale=common:1.15 --attr-zero-points=src:common:1_wei:common:-2_dst:common:3* --attr-post-ops='sum;relu;add:f32;add:u8:per_dim_01;linear:0.5:1.5:2.0;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01'     m10n10k100
+
+# 3d
+--reset
+
+--cfg=f32,f16,bf16bf16bf16,bf16bf16f32
+--stag=abc,acb --wtag=abc,acb --dtag=abc
+--runtime_mb=0,1 --runtime_m=0,1 --runtime_n=0,1 --runtime_k=0,1
+--bia_dt=undef,f32
+--bia_mask=4,6
+
+--attr-oscale=common:1.25 --attr-post-ops='sum;add:f32;add:u8:per_dim_01;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01;linear:2:-1'   mb3m30n20k1
+
+# test regressions
+--reset
+
+--cfg=f32
+--wtag=ba
+m96n512k8

@@ -1,0 +1,8 @@
+--reset
+
+# f32
+--batch=harness_conv_f32
+
+# tails
+--reset
+--dir=FWD_B,BWD_D,BWD_WB  --batch=shapes_tails

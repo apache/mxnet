@@ -1,0 +1,51 @@
+--reset
+
+--cfg=f32,u8s8s8,s8s8f32
+--stag=ab --wtag=ab,ba
+--runtime_m=0,1 --runtime_n=0 --runtime_k=0,1
+--bia_dt=undef,f32 --bia_mask=1,3
+
+                                                       --batch=shapes_2d
+--attr-oscale=common:2.25 --attr-post-ops='sum'        --batch=shapes_2d
+--attr-oscale=per_oc:2.25 --attr-post-ops='relu'       --batch=shapes_2d
+
+--cfg=f32,s8s8s32
+--stag=ba --wtag=ab,ba
+--runtime_m=1 --runtime_n=0,1 --runtime_k=1
+--bia_dt=f32 --bia_mask=1,2,3
+--attr-oscale=,common:1.25
+--attr-post-ops='add:f32','sum;mul:s32:per_oc;linear:2:-1'
+--batch=shapes_2d
+
+# test any
+--reset
+--cfg=f32,u8s8s32,s8s8s32
+--runtime_m=0 --runtime_n=0 --runtime_k=0
+--bia_dt=undef
+--stag=ab,ba,any --wtag=ab,ba,any --dtag=any
+--batch=shapes_2d
+
+# 3d
+--reset
+
+--cfg=f32,u8s8s8,s8s8f32
+--stag=abc,acb --wtag=abc,acb --dtag=abc,bac
+--bia_dt=undef,f32 --bia_mask=4,6
+
+--runtime_mb=0,1 --runtime_m=0 --runtime_n=0 --runtime_k=0
+--attr-post-ops='','sum'
+--batch=shapes_3d
+
+--runtime_mb=0,1 --runtime_m=1 --runtime_n=1 --runtime_k=0,1
+--attr-oscale=common:2.25
+--attr-post-ops='sum;relu;add:u8'
+--batch=shapes_3d
+
+# Run-time
+--batch=harness_matmul_runtime
+
+# bf16
+--batch=test_matmul_bfloat16
+
+# multidim
+--batch=test_matmul_multidims

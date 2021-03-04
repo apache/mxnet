@@ -541,7 +541,7 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 #define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
 
 
-#if MXNET_USE_MKLDNN == 1 || MXNET_USE_INTGEMM == 1
+#if MXNET_USE_ONEDNN == 1 || MXNET_USE_INTGEMM == 1
 constexpr size_t kMKLDNNAlign = 64;
 #endif
 

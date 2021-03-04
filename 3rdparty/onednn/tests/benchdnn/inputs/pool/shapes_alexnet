@@ -1,0 +1,5 @@
+# alexnet
+
+mb256ic96_ih55oh27_kh3sh2n"alexnet:max_pool1"
+mb256ic256_ih27oh13_kh3sh2n"alexnet:max_pool2"
+mb256ic256_ih13oh6_kh3sh2n"alexnet:max_pool5"

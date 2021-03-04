@@ -1,0 +1,32 @@
+#_name_str = conv_3d_1x1_unit-stride_no-padding
+#_batch = [1]
+#_IS_DEPTHWISE_ = False
+#_ngroups = [1]
+#_permute_channels = True
+#_ic = [16]; _oc = [16]
+#_permute_kh = False
+#_permute_kw = False
+#_kd = [1]; _kh = [1]; _kw = [1]
+#_permute_ih = True
+#_permute_iw = False
+#_id = [2,3,4,5,6,7,11,12,33,55,64,111,202,300,610,1000]; _ih = [1]; _iw = [1]
+#_sd = [1]; _sh = [1]; _sw = [1]
+#_pd = [0]; _ph = [0]; _pw = [0]
+#_dd = [0]; _dh = [0]; _dw = [0]
+#_GENERATE_OUTPUT_ = True
+mb1_ic16oc16_kd1kh1kw1_id2ih1iw1_od2oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_1"
+mb1_ic16oc16_kd1kh1kw1_id3ih1iw1_od3oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_2"
+mb1_ic16oc16_kd1kh1kw1_id4ih1iw1_od4oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_3"
+mb1_ic16oc16_kd1kh1kw1_id5ih1iw1_od5oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_4"
+mb1_ic16oc16_kd1kh1kw1_id6ih1iw1_od6oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_5"
+mb1_ic16oc16_kd1kh1kw1_id7ih1iw1_od7oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_6"
+mb1_ic16oc16_kd1kh1kw1_id11ih1iw1_od11oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_7"
+mb1_ic16oc16_kd1kh1kw1_id12ih1iw1_od12oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_8"
+mb1_ic16oc16_kd1kh1kw1_id33ih1iw1_od33oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_9"
+mb1_ic16oc16_kd1kh1kw1_id55ih1iw1_od55oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_10"
+mb1_ic16oc16_kd1kh1kw1_id64ih1iw1_od64oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_11"
+mb1_ic16oc16_kd1kh1kw1_id111ih1iw1_od111oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_12"
+mb1_ic16oc16_kd1kh1kw1_id202ih1iw1_od202oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_13"
+mb1_ic16oc16_kd1kh1kw1_id300ih1iw1_od300oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_14"
+mb1_ic16oc16_kd1kh1kw1_id610ih1iw1_od610oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_15"
+mb1_ic16oc16_kd1kh1kw1_id1000ih1iw1_od1000oh1ow1_sd1sh1sw1_pd0ph0pw0_dd0dh0dw0n"conv_3d_1x1_unit-stride_no-padding_16"

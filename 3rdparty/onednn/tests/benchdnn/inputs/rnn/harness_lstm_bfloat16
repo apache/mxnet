@@ -1,0 +1,20 @@
+# bf16
+--reset
+
+--trivial-strides=true,false
+--prop=FWD_D,BWD_DW
+--alg=VANILLA_LSTM
+--activation=UNDEF
+--cfg=bf16
+--with-peephole=false,true
+--with-projection=false,true
+
+# small problems
+--direction=left2right,right2left,concat,sum
+--batch=option_set_small
+--batch=option_set_lstmp_small
+
+# large problems
+--direction=left2right
+--batch=option_set_large
+--batch=option_set_lstmp_large

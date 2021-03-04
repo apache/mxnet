@@ -1,0 +1,9 @@
+# int linear saturation check
+--reset
+
+--dt=u8
+--tag=abx,axb
+--alpha=1,4294967296
+--beta=1,4294967296
+--alg=linear
+--batch=shapes_eltwise

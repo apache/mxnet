@@ -1,0 +1,16 @@
+# Algorithm coverage based on alpha and beta validity
+--alpha=0 --beta=0
+--alg=abs,exp,exp_dst,gelu_erf,gelu_tanh,log,logistic,logistic_dst,round,sqrt,sqrt_dst,square,soft_relu,tanh,tanh_dst
+--batch=shapes_eltwise
+
+--alpha= --beta=0
+--alg=bounded_relu,elu,elu_dst,relu,relu_dst,swish
+--batch=shapes_eltwise
+
+--alpha= --beta=
+--alg=clip,linear
+--batch=shapes_eltwise
+
+--alpha= --beta=-1,0,0.5,1,1.5,2
+--alg=pow
+--batch=shapes_eltwise

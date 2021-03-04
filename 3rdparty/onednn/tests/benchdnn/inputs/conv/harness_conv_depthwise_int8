@@ -1,0 +1,19 @@
+#i8
+--reset
+--mb=2
+--skip-impl="ref:gemm"      # ! test jit version only
+--dir=FWD_D
+--cfg=u8s8u8 --batch=shapes_mobilenet_dw
+--cfg=u8s8u8 --batch=shapes_regression_dw
+
+#i8 attrs
+--reset
+--mb=2
+--skip-impl="ref:gemm"      # ! test jit version only
+--dir=FWD_B
+--attr-oscale=per_oc:2.25 --attr-post-ops='sum:1.5;relu'
+--cfg=s8s8f32,u8s8u8 --batch=shapes_mobilenet_dw
+--dir=FWD_D
+--attr-oscale=common:2.25 --attr-post-ops='sum:1.5'
+--cfg=s8s8s32,u8s8s8 --batch=shapes_mobilenet_dw
+--cfg=s8s8u8,u8s8s8 g8mb1ic8ih112iw112oc8oh112ow112kh3kw3sh1sw1ph1pw1n"depthwise:conv1"

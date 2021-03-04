@@ -1,0 +1,12 @@
+--reset
+
+--inplace=true,false
+--dt=bf16
+--tag=abx,axb,aBx8b,aBx16b,ABx16a16b
+
+--dir=FWD_D,BWD_D
+--batch=option_set_all_algs
+
+--dir=FWD_D
+--attr-post-ops='add:f32;mul:f32:per_oc'
+--batch=option_set_all_algs

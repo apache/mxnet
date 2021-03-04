@@ -1,0 +1,6 @@
+--batch=shapes_3d_unet
+--batch=shapes_alexnet
+--batch=shapes_googlenet_v1
+--batch=shapes_googlenet_v3
+--batch=shapes_i3d_resnet50_v1
+--batch=shapes_resnet_50

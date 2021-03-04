@@ -1,0 +1,13 @@
+# Regression: long accumulation chains
+--reset --cfg=f32_full --dir=bwd_w mb28_ic16oc16_id10od10kd3
+
+# Dilated deconvolution with ih<=dh when there is _no_ compute work
+--reset
+--cfg=u8s8u8 mb1ic16ih1iw1oc16oh2ow1kh3kw1dh1ph1n"regression_dh_equals_ih"
+
+# Dilated deconvolution with signed input
+--cfg=s8s8s32 mb1_ic16oc16_kh2kw1_ih1iw1_oh2ow1_sh1sw1_ph1pw0_dh1dw0n"signed_dilation_with_top_overflow"
+
+# depthwise deconv channel tails
+--reset
+--cfg=u8s8s32 g19ic19iw5oc19ow5kw3pw1n"depthwise_deconv_channel_tails"

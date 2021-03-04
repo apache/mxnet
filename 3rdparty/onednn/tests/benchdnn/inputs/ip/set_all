@@ -1,0 +1,8 @@
+--batch=shapes_resnet_50
+--batch=shapes_googlenet_v1
+--batch=shapes_googlenet_v3
+--batch=shapes_resnet_50_sparse
+--batch=shapes_vgg16
+--batch=shapes_3d
+--batch=shapes_wd
+--batch=shapes_maskrcnn

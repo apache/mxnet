@@ -1,0 +1,12 @@
+--reset
+
+--dir=FWD_B,BWD_D,BWD_W
+--batch=shapes_deepbench_inference_device
+--batch=shapes_deepbench_inference_server
+--batch=shapes_deepbench_training
+
+--dir=FWD_B
+--attr-post-ops='relu'
+--batch=shapes_deepbench_inference_device
+--batch=shapes_deepbench_inference_server
+--batch=shapes_deepbench_training

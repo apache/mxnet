@@ -1,0 +1,18 @@
+--reset
+
+--inplace=true
+--tag=axb,abx,aBx8b,aBx16b
+
+# training
+--dir=FWD_D,BWD_DW
+--dt=f32,bf16
+--flags=,G,S,R,GSR
+--batch=shapes_regressions
+
+# inference
+--dir=FWD_I
+
+--dt=f32,bf16
+--flags=,GS
+--attr-post-ops='','relu'
+--batch=shapes_regressions

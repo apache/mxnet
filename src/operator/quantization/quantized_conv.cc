@@ -24,7 +24,7 @@
  * \author Ziheng Jiang, Jun Wu
 */
 #include "../nn/convolution-inl.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
 #endif
 
@@ -40,7 +40,7 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), param.no_bias? 6U : 9U);
   CHECK_EQ(out_shape->size(), 3U);
   if (param.layout.has_value()) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     CHECK(param.layout.value() == mshadow::kNCHW || param.layout.value() == mshadow::kNCDHW)
           << "mkldnn quantized_conv now supports NCHW or NCDHW for now";
 #else
@@ -53,7 +53,7 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
   const int kernel_ndims = param.kernel.ndim();
   if (data_ndims == 0U) return false;
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   CHECK(kernel_ndims == 2U || kernel_ndims == 3U)
         << "mkldnn quantized_conv only supports 2d or 3d kernel for now";
   CHECK(data_ndims == 4U || data_ndims == 5U)
@@ -94,7 +94,7 @@ if (data_ndims == 4) {
     SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);
     SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));
     SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   } else {
     // conv 3d
     mxnet::TShape wshape(data_ndims, 0);
@@ -140,7 +140,7 @@ bool QuantizedConvType(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   CHECK_EQ(in_type->size(), param.no_bias? 6U : 9U);
   CHECK_EQ(out_type->size(), 3U);
-#ifndef MXNET_USE_MKLDNN
+#ifndef MXNET_USE_ONEDNN
   TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
 #endif
   TYPE_ASSIGN_CHECK(*in_type, 1, mshadow::kInt8);
@@ -165,7 +165,7 @@ bool QuantizedConvStorageType(const nnvm::NodeAttrs& attrs,
                               std::vector<int> *in_attrs,
                               std::vector<int> *out_attrs) {
   *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }

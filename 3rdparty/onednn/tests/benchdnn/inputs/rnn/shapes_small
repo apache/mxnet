@@ -1,0 +1,10 @@
+# small shapes
+
+l1t1mb1_sic16_n"uniform"
+l1t1mb1_sic17_n"uniform:tail"
+l1t1mb1_sic16_slc32_n"non-uniform:slc_neq_sic"
+l1t1mb1_sic17_slc34_n"non-uniform:slc_neq_sic_tail"
+l1t1mb1_sic16_dhc32_n"non-uniform:slc_neq_dhc"
+l1t1mb1_sic17_dhc34_n"non-uniform:slc_neq_dhc_tail"
+l1t1mb1_sic16_slc32_dhc64_n"non-uniform:slc_neq_sic_neq_dhc"
+l1t1mb1_sic17_slc34_dhc68_n"non-uniform:slc_neq_sic_neq_dhc_tail"

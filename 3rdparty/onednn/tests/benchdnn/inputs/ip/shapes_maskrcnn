@@ -1,0 +1,4 @@
+mb1000ic256ih7iw7oc1024n"masknet:ip1"
+mb1000ic1024oc1024n"masknet:ip2"
+mb1000ic1024oc324n"masknet:ip3"
+mb1000ic1024oc81n"masknet:ip4"

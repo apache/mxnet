@@ -1,0 +1,3 @@
+# i8
+--alg=SUM,MUL,MAX,MIN
+--batch=shapes_ci

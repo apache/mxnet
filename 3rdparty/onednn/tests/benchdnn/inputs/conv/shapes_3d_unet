@@ -1,0 +1,13 @@
+# 3D u-net
+
+mb1ic3ih132iw132id116oc32kh3kw3kd3ph0pw0pd0sh1sw1sd1n"3d_unet:conv_1"
+mb1ic32ih130iw130id114oc64kh3kw3kd3ph0pw0pd0sh1sw1sd1n"3d_unet:conv_2"
+
+mb1ic64ih64iw64id56oc64kh3kw3kd3ph0pw0pd0sh1sw1sd1n"3d_unet:conv_3"
+mb1ic64ih62iw62id54oc128kh3kw3kd3ph0pw0pd0sh1sw1sd1n"3d_unet:conv_4"
+
+mb1ic128ih30iw30id28oc128kh3kw3kd3ph0pw0pd0sh1sw1sd1n"3d_unet:conv_5"
+mb1ic128ih28iw28id26oc256kh3kw3kd3ph0pw0pd0sh1sw1sd1n"3d_unet:conv_6"
+
+mb1ic256ih13iw13id12oc256kh3kw3kd3ph0pw0pd0sh1sw1sd1n"3d_unet:conv_7"
+mb1ic256ih11iw11id10oc512kh3kw3kd3ph0pw0pd0sh1sw1sd1n"3d_unet:conv_8"

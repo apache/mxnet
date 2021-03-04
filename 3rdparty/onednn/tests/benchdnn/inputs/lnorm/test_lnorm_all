@@ -1,0 +1,20 @@
+--reset
+
+# f32
+--inplace=true,false
+--dt=f32
+
+--dir=FWD_D,FWD_I
+--flags=,S,G,GS
+--batch=option_set_all
+
+--dir=BWD_D
+--flags=,G
+--batch=option_set_all
+
+--dir=BWD_DW
+--flags=S,GS
+--batch=option_set_all
+
+# bf16
+--batch=test_lnorm_bfloat16

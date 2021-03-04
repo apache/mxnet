@@ -1,0 +1,6 @@
+# 3D Dilated Convolution
+# N-sized Filter
+--batch=shapes_dilated_3d_strided_no-padding
+--batch=shapes_dilated_3d_strided_padding
+--batch=shapes_dilated_3d_unit-stride_no-padding
+--batch=shapes_dilated_3d_unit-stride_padding

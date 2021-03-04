@@ -1,0 +1,14 @@
+# Test Int8 Convolutions
+--reset
+
+--batch=harness_conv_saturation_int8
+
+--batch=harness_conv_int8
+
+--batch=harness_conv_dilated_int8
+
+--batch=harness_conv_attrs_int8
+
+--batch=harness_conv_attrs_int8_asymmetric
+
+--batch=harness_conv_depthwise_int8

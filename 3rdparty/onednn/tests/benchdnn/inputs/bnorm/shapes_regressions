@@ -1,0 +1,13 @@
+# Blocking bugs
+mb2ic251ih28 # 2-core system w/ 1.5MB LLC slices
+mb2ic64ih224 # 2-core system w/ 2.5MB LLC slices
+mb2ic64ih56 # 4-core system w/ 1.5MB LLC slices
+mb8ic322ih16 # 4-core system w/ 2.5MB LLC slices
+mb88ic600ih16 # 36-core system w/ 1.5MB LLC slices
+mb88ic980ih16 # 44-core system w/ 2.5MB LLC slices
+mb88ic800ih16 # 48-core system w/ 1.5MB LLC slices
+mb88ic900ih16 # 56-core system w/ 1.5MB LLC slices
+
+# Spatial threading bugs for bfloat16
+mb12ic4ih8
+mb1ic24ih14iw14

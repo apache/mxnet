@@ -1,0 +1,30 @@
+--reset
+
+--dtag=undef,abx,axb,aBx16b
+--sdt=bf16
+--ddt=bf16
+--stag=abx:abx       --axis=3 3x4x5x13:3x4x5x17
+--stag=axb:axb       --axis=2 5x2x0x8:5x2x8x8
+                     --axis=0 5x2x8x8:11x2x8x8
+--stag=aBx16b:aBx16b --axis=1 4x16x2x1:4x16x2x1
+                              4x16x2x1:4x15x2x1
+                              4x15x2x1:4x16x2x1
+                              4x15x2x1:4x15x2x1
+                              1x16x2x1:1x16x2x1
+                              1x16x2x1:1x15x2x1
+                              1x15x2x1:1x16x2x1
+                              1x15x2x1:1x15x2x1
+
+--stag=aBx16b:abx:axb
+--axis=1
+6x48x3x4x5:6x32x3x4x5:6x16x3x4x5
+6x48x3x4x5:6x31x3x4x5:6x16x3x4x5
+6x47x3x4x5:6x33x3x4x5:6x15x3x4x5
+
+# sizes less than blocks (+zero dim)
+--stag=aBx16b:abx:aBx16b:axb
+--axis=1
+6x8x3x4:6x2x3x4:6x3x3x4:6x0x3x4
+6x8x3x4:6x1x3x4:6x0x3x4:6x3x3x4
+6x0x3x4:6x3x3x4:6x5x3x4:6x5x3x4
+

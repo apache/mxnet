@@ -1,0 +1,35 @@
+--reset
+
+--cfg=f32,bf16bf16bf16,u8s8s8,s8s8f32
+--bia_dt=undef,f32
+--attr-post-ops='','sum:0.5','linear:2:1','add:f32',\
+                'mul:s8:per_oc;sum:0.25;relu:0.5'
+
+# 2D
+--stag=ab,ba --wtag=ab,ba
+--bia_mask=1,2,3
+## Defined
+--runtime_m=0 --runtime_n=0 --runtime_k=0
+--attr-oscale=,common:2.25,per_oc:2.25
+--attr-zero-points=,src:common:1_wei:common:-1_dst:common:2
+m16n7k12
+## Run-time
+--runtime_m=1 --runtime_n=1 --runtime_k=1
+--attr-oscale=common:0.5*,per_oc:5*
+--attr-zero-points=src:common:-1*_wei:common:1*_dst:common:0*
+m16n7k13
+
+# 3D (batched)
+--stag=abc,acb --wtag=abc,acb
+--bia_mask=4,6
+## Defined
+--runtime_mb=0 --runtime_m=0 --runtime_n=0 --runtime_k=0
+--attr-oscale=,common:2.25,per_oc:2.25
+--attr-zero-points=,src:common:1_wei:common:-1_dst:common:2
+mb2m10n4k30
+
+## Run-time
+--runtime_mb=1 --runtime_m=1 --runtime_n=1 --runtime_k=1
+--attr-oscale=common:2.25*,per_oc:2.25*
+--attr-zero-points=src:common:1*_wei:common:-1*_dst:common:2*
+mb2m10n4k31

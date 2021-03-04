@@ -1,0 +1,7 @@
+--reset
+--mb=2
+--cfg=u8f32,f32u8,s8f32,f32s8
+--dir=FWD_I
+--alg=MAX,AVG_NP,AVG_P
+--batch=shapes_1d
+--batch=shapes_2d_small

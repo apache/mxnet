@@ -1,0 +1,54 @@
+# ssd_300_voc0712 (based on VGG-16)
+
+mb32_ic3oc64_ih300kh3oh300ph1n"ssd_300_voc0712:conv1_1"
+mb32_ic64oc64_ih300kh3oh300ph1n"ssd_300_voc0712:conv1_2"
+
+mb32_ic64oc128_ih150kh3oh150ph1n"ssd_300_voc0712:conv2_1"
+mb32_ic128oc128_ih150kh3oh150ph1n"ssd_300_voc0712:conv2_2"
+
+mb32_ic128oc256_ih75kh3oh75ph1n"ssd_300_voc0712:conv3_1"
+mb32_ic256oc256_ih75kh3oh75ph1n"ssd_300_voc0712:conv3_2*2"
+# mb32_ic256oc256_ih75kh3oh75ph1n"ssd_300_voc0712:conv3_3"
+
+mb32_ic256oc512_ih38kh3oh38ph1n"ssd_300_voc0712:conv4_1"
+mb32_ic512oc512_ih38kh3oh38ph1n"ssd_300_voc0712:conv4_2*2"
+# mb32_ic512oc512_ih38kh3oh38ph1n"ssd_300_voc0712:conv4_3"
+
+mb32_ic512oc512_ih19kh3oh19ph1n"ssd_300_voc0712:conv5_1*3"
+# mb32_ic512oc512_ih19kh3oh19ph1n"ssd_300_voc0712:conv5_2"
+# mb32_ic512oc512_ih19kh3oh19ph1n"ssd_300_voc0712:conv5_3"
+
+mb32_ic512oc1024_ih19kh3oh19ph6dh5n"ssd_300_voc0712:fc6"
+mb32_ic1024oc1024_ih19kh1oh19ph0n"ssd_300_voc0712:fc7"
+
+mb32_ic1024oc256_ih19kh1oh19ph0_n"ssd_300_voc0712:conv6_1"
+mb32_ic256oc512_ih19kh3oh10sh2ph1_n"ssd_300_voc0712:conv6_2"
+
+mb32_ic512oc128_ih10kh1oh10ph0_n"ssd_300_voc0712:conv7_1"
+mb32_ic128oc256_ih10kh3oh5sh2ph1_n"ssd_300_voc0712:conv7_2"
+
+mb32_ic256oc128_ih5kh1oh5ph0_n"ssd_300_voc0712:conv8_1"
+mb32_ic128oc256_ih5kh3oh3ph0_n"ssd_300_voc0712:conv8_2"
+
+mb32_ic256oc128_ih3kh1oh3ph0_n"ssd_300_voc0712:conv9_1"
+mb32_ic128oc256_ih3kh3oh1ph0_n"ssd_300_voc0712:conv9_2"
+
+#
+
+mb32_ic512oc16_ih38kh3oh38ph1n"ssd_300_voc0712:conv4_3_norm_mbox_loc"
+mb32_ic512oc84_ih38kh3oh38ph1n"ssd_300_voc0712:conv4_3_norm_mbox_conf"
+
+mb32_ic1024oc24_ih19kh3oh19ph1n"ssd_300_voc0712:fc7_mbox_loc"
+mb32_ic1024oc126_ih19kh3oh19ph1n"ssd_300_voc0712:fc7_mbox_conf"
+
+mb32_ic512oc24_ih10kh3oh10ph1_n"ssd_300_voc0712:conv6_2_mbox_loc"
+mb32_ic512oc126_ih10kh3oh10ph1_n"ssd_300_voc0712:conv6_2_mbox_conf"
+
+mb32_ic256oc24_ih5kh3oh5ph1_n"ssd_300_voc0712:conv7_2_mbox_loc"
+mb32_ic256oc126_ih5kh3oh5ph1_n"ssd_300_voc0712:conv7_2_mbox_conf"
+
+mb32_ic256oc16_ih3kh3oh3ph1_n"ssd_300_voc0712:conv8_2_mbox_loc"
+mb32_ic256oc84_ih3kh3oh3ph1_n"ssd_300_voc0712:conv8_2_mbox_conf"
+
+mb32_ic256oc16_ih1kh3oh1ph1_n"ssd_300_voc0712:conv9_2_mbox_loc"
+mb32_ic256oc84_ih1kh3oh1ph1_n"ssd_300_voc0712:conv9_2_mbox_conf"

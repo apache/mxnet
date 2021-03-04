@@ -1,0 +1,25 @@
+# f32, bf16
+--reset
+--inplace=true,false
+--dir=FWD_D,BWD_D
+--dt=f32,bf16
+--tag=abx,aBx16b,ABx16a16b
+--batch=option_set_all_algs
+
+# uint8, int8, int32
+--reset
+--inplace=true,false
+--dir=FWD_I
+--dt=u8,s8,s32
+--tag=axb
+--alg=relu,linear
+--batch=shapes_eltwise
+
+# f16
+--reset
+--inplace=true,false
+--dir=FWD_I
+--dt=f16
+--tag=axb
+--batch=option_set_all_algs
+

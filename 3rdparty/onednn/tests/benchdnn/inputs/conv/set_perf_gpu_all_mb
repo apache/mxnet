@@ -1,0 +1,2 @@
+--batch=set_perf_gpu_large_mb
+--batch=set_perf_gpu_small_mb

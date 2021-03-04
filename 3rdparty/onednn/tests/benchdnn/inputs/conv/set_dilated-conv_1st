@@ -1,0 +1,4 @@
+# Dilated Convolutions
+# ic = 1 for 1st convolution code-path
+--batch=shapes_dilated_1d_1st_strided_padding
+--batch=shapes_dilated_2d_1st_strided_padding

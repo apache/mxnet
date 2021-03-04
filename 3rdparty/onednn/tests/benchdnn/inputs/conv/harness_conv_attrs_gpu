@@ -1,0 +1,53 @@
+# i8
+--reset
+--mb=2
+--stag=any,axb
+
+--attr-oscale=common:2.25 --attr-post-ops='sum:1.5;relu:0.5'
+--dir=FWD_B
+--cfg=u8s8s8  --batch=shapes_resnet_50
+
+--attr-oscale=common:2.25 --attr-post-ops='sum:1.5'
+--dir=FWD_D
+--cfg=u8s8u8  --batch=shapes_resnet_50
+--cfg=u8s8s8  --batch=shapes_resnet_50
+
+--attr-oscale=per_oc:2.25 --attr-post-ops='sum:1.5;relu:0.5'
+--dir=FWD_B
+--cfg=u8s8s8  --batch=shapes_resnet_50
+
+--attr-oscale=per_oc:1.25* --attr-post-ops='sum:0.5;relu:2.5'
+--dir=FWD_B
+--cfg=u8s8s8  --batch=shapes_resnet_50
+
+--attr-post-ops='relu:0.5'
+--cfg=u8s8s8 --batch=shapes_resnet_50
+
+--attr-post-ops='relu:0.5;sum'
+--cfg=u8s8s8 --batch=shapes_resnet_50
+
+--attr-post-ops='relu:0.5;sum:1.5:u8;add:f32;add:u8:per_dim_01;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01'
+--cfg=u8s8s8 --batch=shapes_resnet_50
+
+--attr-post-ops='sum:0.5:s8;relu:1.5;add:f32;add:u8:per_dim_01;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01'
+--cfg=u8s8u8 --batch=shapes_resnet_50
+
+# f32
+--reset --cfg=f32,f16
+--mb=2,16
+
+--dir=FWD_B
+--attr-post-ops='sum' --batch=shapes_resnet_50
+--attr-post-ops='relu' --batch=shapes_resnet_50
+--attr-post-ops='sum;relu' --batch=shapes_resnet_50
+--attr-post-ops='sum:2.5;relu:0.5' --batch=shapes_resnet_50
+--attr-post-ops='sum;linear:0.5:1.5' --batch=shapes_resnet_50
+
+# requires no_limit config since final value can go out of f16 cfg boundaries
+--cfg=f16_no_limits
+--attr-post-ops='sum:2.5;add:f32;add:u8:per_dim_01;linear:0.5:1.5:2.0;mul:f32:per_dim_0;add:s8:per_oc;add:f32:per_dim_01'
+--batch=shapes_resnet_50
+
+# remaining configs with binary post op testing
+--cfg=bf16bf16bf16,u8s8s32,u8s8f32
+--batch=shapes_resnet_50

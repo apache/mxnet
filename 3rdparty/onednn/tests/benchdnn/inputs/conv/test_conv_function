@@ -1,0 +1,9 @@
+# Test functional convolution features
+
+--reset
+
+# auto algo
+--batch=harness_conv_auto
+
+# memory-tags
+--batch=harness_conv_tags

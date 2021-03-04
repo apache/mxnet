@@ -1,0 +1,7 @@
+--reset
+
+--batch=harness_lstm_f32
+
+--batch=harness_lstm_int8
+
+--batch=test_lstm_bfloat16

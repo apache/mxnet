@@ -1,0 +1,16 @@
+# some shapes from existing shapes files to shorten testing time
+
+mb50_ic64_ih112iw112_n"resnet_50:bn_conv1"
+mb50_ic256_ih56iw56_n"resnet_50:bn2a_branch1"
+mb50_ic128_ih28iw28_n"resnet_50:bn3a_branch2a"
+mb50_ic1024_ih14iw14_n"resnet_50:bn4a_branch1"
+mb50_ic512_ih7iw7_n"resnet_50:bn5a_branch2a"
+
+mb96_ic224_ih14iw14_n"googlenet_v2:inception_4a/1x1/bn"
+mb96_ic320_ih7iw7_n"googlenet_v2:inception_5a/3x3/bn"
+
+mb96_ic64_ih147iw147_n"googlenet_v3:conv_2_2_batchnorm"
+mb96_ic80_ih73iw73_n"googlenet_v3:conv_3_3_batchnorm"
+mb96_ic96_ih35iw35_n"googlenet_v3:mixed_tower_1_conv_1_batchnorm"
+mb96_ic160_ih17iw17_n"googlenet_v3:mixed_5_tower_conv_batchnorm"
+mb96_ic384_ih8iw8_n"googlenet_v3:mixed_9_tower_conv_batchnorm"

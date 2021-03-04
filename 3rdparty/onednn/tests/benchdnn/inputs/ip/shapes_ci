@@ -1,0 +1,3 @@
+--batch=shapes_dlrm
+--batch=shapes_ncf
+--batch=shapes_resnet_50

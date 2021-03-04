@@ -1,0 +1,14 @@
+--reset
+--mb=2
+
+--dt=f32,bf16
+--dir=FWD_D,BWD_D
+--alg=nearest,linear
+--tag=abx,axb,aBx16b
+--batch=set_all
+
+--dt=f16,u8,s8
+--dir=FWD_D
+--alg=nearest,linear
+--tag=abx,axb,aBx16b
+--batch=set_all

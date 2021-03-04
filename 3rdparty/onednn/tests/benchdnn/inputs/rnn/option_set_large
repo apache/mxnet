@@ -1,0 +1,7 @@
+# option set to run all reasonable large shapes
+
+--skip-nonlinear=true
+--l=1,2,3
+--t=1,2,3
+--mb=1,16,65
+--batch=shapes_large

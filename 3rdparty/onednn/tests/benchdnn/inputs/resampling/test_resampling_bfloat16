@@ -1,0 +1,10 @@
+--reset
+
+# bf16
+--mb=2
+--dt=bf16
+--dir=FWD_D,BWD_D
+--alg=nearest,linear
+--tag=abx,axb,aBx8b,aBx16b
+--batch=set_all
+

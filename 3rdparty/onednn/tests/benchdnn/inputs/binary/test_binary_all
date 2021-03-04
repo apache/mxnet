@@ -1,0 +1,7 @@
+# all
+--reset
+
+--batch=harness_binary_f32
+--batch=harness_binary_bf16
+--batch=harness_binary_i8
+

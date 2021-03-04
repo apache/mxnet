@@ -1,0 +1,5 @@
+--batch=shapes_1d
+--batch=shapes_2d
+--batch=shapes_3d
+--batch=shapes_maskrcnn
+

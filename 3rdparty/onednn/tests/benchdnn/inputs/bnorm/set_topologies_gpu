@@ -1,0 +1,3 @@
+--batch=shapes_resnet_50
+--batch=shapes_densenet_121
+--batch=shapes_googlenet_v3

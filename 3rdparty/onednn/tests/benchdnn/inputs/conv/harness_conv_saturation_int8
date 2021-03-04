@@ -1,0 +1,19 @@
+# Test that saturation is handled properly (lightweight test)
+--reset
+--mb=2
+--dir=FWD_B
+--cfg=u8s8u8,u8s8s8,u8s8s32
+--attr-oscale=common:4294967296
+ic16oc16ih4oh4kh1ph0 # jit 1x1
+ic16oc16ih4oh4kh3ph0 # jit
+ic16oc16ih4oh7kh3ph3 # gemm impl
+
+--alg=wino
+--cfg=u8s8u8_wino,u8s8s8_wino,u8s8s32_wino
+ic16ih1oc16oh1kh3ph1 # jit wino
+
+--reset
+--cfg=u8s8u8
+--attr-oscale=common:4.29497e+09
+--attr-post-ops='round'
+ic16oc16_ih5oh5kh3ph1

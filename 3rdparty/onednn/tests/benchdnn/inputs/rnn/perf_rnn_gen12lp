@@ -1,0 +1,13 @@
+--batch=perf_rnn_gen9
+
+--reset
+
+# Forward, int8
+--prop=FWD_D
+--cfg=u8u8u8u8
+--scaling=per_oc
+--trivial-strides=true
+
+--batch=option_set_perf_inference_lb
+--batch=option_set_perf_inference_sb
+--batch=option_set_perf_training

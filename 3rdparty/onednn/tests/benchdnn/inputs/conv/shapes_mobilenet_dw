@@ -1,0 +1,11 @@
+# mobilenet
+
+g32mb1ic32ih112iw112oc32oh112ow112kh3kw3sh1sw1ph1pw1n"mobilenet:conv2_1/dw"
+g64mb1ic64ih112iw112oc64oh56ow56kh3kw3sh2sw2ph1pw1n"mobilenet:conv2_2/dw"
+g128mb1ic128ih56iw56oc128oh56ow56kh3kw3sh1sw1ph1pw1n"mobilenet:conv3_1/dw"
+g128mb1ic128ih56iw56oc128oh28ow28kh3kw3sh2sw2ph1pw1n"mobilenet:conv3_2/dw"
+g256mb1ic256ih28iw28oc256oh28ow28kh3kw3sh1sw1ph1pw1n"mobilenet:conv4_1/dw"
+g256mb1ic256ih28iw28oc256oh14ow14kh3kw3sh2sw2ph1pw1n"mobilenet:conv4_2/dw"
+g512mb1ic512ih14iw14oc512oh14ow14kh3kw3sh1sw1ph1pw1n"mobilenet:conv5_1/dw"
+g512mb1ic512ih14iw14oc512oh7ow7kh3kw3sh2sw2ph1pw1n"mobilenet:conv5_6/dw"
+g1024mb1ic1024ih7iw7oc1024oh7ow7kh3kw3sh1sw1ph1pw1n"mobilenet:conv6/dw"

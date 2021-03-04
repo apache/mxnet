@@ -1,0 +1,41 @@
+# i8
+--reset
+
+--inplace=true,false
+--alg=ADD,MUL,MAX,MIN,DIV
+
+## post_ops
+--ddt=s8 --sdt=s8:s8
+--attr-post-ops='', \
+                'sum:0.5', \
+                'logistic:0:0:0.5', \
+                'linear:2:0.125', \
+                'sum:0.25;relu:-0.01', \
+                'add:f32:per_oc', \
+                'mul:s8;linear:0.5:0.25', \
+                'sum:0.5;add:f32:common;abs;min:u8:per_oc'
+--batch=option_set_all
+
+## scales
+--ddt=u8 --sdt=u8:u8
+--attr-scales=, \
+              src:common:0.25_src1:common:0.5, \
+              src:common:0.125, \
+              src1:common:2
+--batch=option_set_all
+
+## post_ops + scales
+--ddt=s8 --sdt=s8:u8
+--attr-scales=, \
+              src1:common:0.5, \
+              src:common:0.125, \
+              src:common:0.25_src1:common:0.5
+--attr-post-ops='', \
+                'sum:0.5', \
+                'sum:0.5;logistic:0:0:2', \
+                'linear:2:0.125'
+--batch=option_set_all
+
+# check for proper saturation
+--attr-scales=src:common:4.29497e+09_src1:common:4.29497e+09
+--batch=option_set_all

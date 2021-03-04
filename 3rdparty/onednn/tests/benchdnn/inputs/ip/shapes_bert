@@ -1,0 +1,4 @@
+ic768oc2304n"BERT:1"
+ic768oc768n"BERT:2"
+ic768oc3072n"BERT:3"
+ic3072oc768n"BERT:4"

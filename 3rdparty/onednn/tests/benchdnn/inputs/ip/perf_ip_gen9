@@ -1,0 +1,32 @@
+--reset
+
+# Forward
+
+# f32
+--dir=FWD_B
+--cfg=f32
+
+--mb=1,32,64,128
+--batch=set_gpu
+
+--mb=0
+--batch=shapes_1d
+
+# f16
+--dir=FWD_B
+--cfg=f16
+
+--mb=1,32,64,128
+--batch=set_gpu
+
+--mb=0
+--batch=shapes_1d
+
+# Backward
+
+# f32
+--dir=BWD_D,BWD_WB
+--cfg=f32
+
+--mb=32,64,128
+--batch=set_gpu

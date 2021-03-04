@@ -26,7 +26,7 @@
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RESHAPE_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RESHAPE_INL_H_
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include <vector>
 #include "mkldnn_base-inl.h"
 #include "../../tensor/matrix_op-inl.h"
@@ -57,5 +57,5 @@ MKLDNNReshapeFwd &GetReshapeForward(const OpReqType &req, const NDArray &input,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RESHAPE_INL_H_

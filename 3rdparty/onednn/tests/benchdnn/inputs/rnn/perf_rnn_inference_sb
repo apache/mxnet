@@ -1,0 +1,17 @@
+# inference_sb -- inference with small batch size
+--reset
+
+--mb=10
+--alg=VANILLA_LSTM
+--activation=TANH
+--batch=option_set_gnmt_decoder
+
+--mb=1
+--alg=VANILLA_LSTM
+--activation=TANH
+--batch=option_set_gnmt_encoder
+
+--mb=1
+--alg=VANILLA_RNN,LBR_GRU
+--direction=left2right
+--batch=shapes_deepspeech_2

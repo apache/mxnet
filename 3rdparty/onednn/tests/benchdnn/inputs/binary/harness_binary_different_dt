@@ -1,0 +1,16 @@
+# testing ddt different from sdt
+--reset
+
+--inplace=false
+--alg=ADD,MUL,MAX,MIN,DIV
+--ddt=s8,u8
+
+# same src0 and src1 dt
+--sdt=f32:f32
+--attr-post-ops='','sum:0.5;linear:2:0.125:1.5;add:f32:per_oc'
+--batch=option_set_all
+
+# different src0 and src1 dt
+--sdt=s8:f32
+--attr-post-ops='','sum:0.5;linear:2:0.125:1.5;add:f32:per_oc'
+--batch=option_set_all

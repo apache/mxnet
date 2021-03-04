@@ -1,0 +1,159 @@
+oneAPI Deep Neural Network Library (oneDNN)
+===========================================
+
+oneAPI Deep Neural Network Library (oneDNN) is an
+open-source performance library for deep learning applications. The library
+includes basic building blocks for neural networks optimized
+for Intel Architecture Processors, Intel Processor Graphics and 
+Xe architecture-based Graphics.
+
+This package contains oneDNN v@PROJECT_VERSION@ (@DNNL_VERSION_HASH@).
+
+You can find information about the latest version and release notes
+at the oneDNN Github (https://github.com/oneapi-src/oneDNN/releases).
+
+Documentation
+-------------
+
+* Developer guide (https://oneapi-src.github.io/oneDNN/v@DNNL_VERSION_MAJOR@.@DNNL_VERSION_MINOR@)
+  explains the programming model, supported functionality, and implementation
+  details, and includes annotated examples.
+* API reference (https://oneapi-src.github.io/oneDNN/v@DNNL_VERSION_MAJOR@.@DNNL_VERSION_MINOR@/modules.html)
+provides a comprehensive reference of the library API.
+
+System Requirements
+-------------------
+
+oneDNN supports systems based on Intel 64 or AMD64 architectures.
+
+The library is optimized for the following CPUs:
+* Intel Atom processor with Intel SSE4.1 support
+* 4th, 5th, 6th, 7th, and 8th generation Intel(R) Core(TM) processor
+* Intel(R) Xeon(R) processor E3, E5, and E7 family (formerly Sandy Bridge,
+  Ivy Bridge, Haswell, and Broadwell)
+* Intel(R) Xeon Phi(TM) processor (formerly Knights Landing and Knights Mill)
+* Intel Xeon Scalable processor (formerly Skylake, Cascade Lake, and Cooper
+  Lake)
+* future Intel Xeon Scalable processor (code name Sapphire Rapids)
+
+oneDNN detects the instruction set architecture (ISA) at runtime and uses
+just-in-time (JIT) code generation to deploy the code optimized
+for the latest supported ISA. Future ISAs may have initial support in the
+library disabled by default and require the use of run-time controls to enable
+them. See CPU dispatcher control (https://oneapi-src.github.io/oneDNN/dev_guide_cpu_dispatcher_control.html)
+for more details.
+
+The library is optimized for the following GPUs:
+* Intel HD Graphics
+* Intel UHD Graphics
+* Intel Iris Plus Graphics
+* Xe architecture-based Graphics (code named DG1 and Tiger Lake)
+
+## Linux
+
+Common dependencies:
+* GNU C Library (libc.so) 2.12 or later
+* GNU Standard C++ Library v3 (libstdc++.so) compatible with GCC 4.8 or later
+* Dynamic Linking Library (libdl.so)
+* C Math Library (libm.so)
+* POSIX Threads Library (libpthread.so)
+
+Runtime specific dependencies:
+
+| Runtime configuration | Dependency                                         |
+| --------------------- | -------------------------------------------------- |
+| cpu_gomp              | GNU OpenMP runtime (libgomp.so)                    |
+| cpu_iomp              | Intel OpenMP runtime (libiomp5.so)                 |
+| cpu_tbb               | TBB 2017 Update 2 or later (libtbb.so)             |
+| cpu_dpcpp_gpu_dpcpp   | Intel oneAPI DPC++ Compiler runtime (libsycl.so.3) |
+|                       | TBB 2020.2 or later (libtbb.so.12)                 |
+|                       | oneAPI Level Zero loader (libze_loader.so.1)       |
+|                       | OpenCL loader (libOpenCL.so)                       |
+
+## Windows
+
+Common dependencies:
+* Microsoft Visual C++ Redistributable 2015 or later (msvcrt.dll)
+
+Runtime specific dependencies:
+
+| Runtime configuration | Dependency                                         |
+| --------------------- | -------------------------------------------------- |
+| cpu_vcomp             | No additional dependencies                         |
+| cpu_iomp              | Intel OpenMP runtime                               |
+| cpu_tbb               | TBB 2017 Update 2 or later (tbb.dll)               |
+| cpu_dpcpp_gpu_dpcpp   | Intel oneAPI DPC++ Compiler runtime (sycl.dll)     |
+|                       | TBB 2020.2 or later (tbb.dll)                      |
+|                       | oneAPI Level Zero loader (ze_loader.dll)           |
+|                       | OpenCL loader (OpenCL.dll)                         |
+
+## macOS
+
+Common dependencies:
+* System C/C++ runtime (libc++.dylib, libSystem.dylib) compatible with
+  macOS 10.13 (High Sierra) or later
+
+Runtime specific dependencies:
+
+| Runtime configuration | Dependency                                |
+| --------------------- | ----------------------------------------- |
+| cpu_iomp              | Intel OpenMP runtime (libiomp5.dylib)     |
+| cpu_tbb               | TBB 2017 Update 2 or later (libtbb.dylib) |
+
+Support
+-------
+
+Please submit your questions, feature requests, and bug reports on the
+GitHub issues page (https://github.com/oneapi-src/oneDNN/issues/new/choose).
+
+You may reach out to project maintainers privately at
+dnnl.maintainers@intel.com.
+
+WARNING:
+This is pre-production software and functionality may change without prior
+notice.
+
+License
+-------
+
+oneDNN is licensed under Apache License Version 2.0. Refer to the "LICENSE"
+file for the full license text and copyright notice.
+
+This distribution includes third party software governed by separate license
+terms.
+
+3-clause BSD license:
+* Xbyak (https://github.com/herumi/xbyak)
+* Instrumentation and Tracing Technology API (ITT API) (https://github.com/intel/IntelSEAPI/tree/master/ittnotify)
+* CMake (https://github.com/Kitware/CMake)
+
+Boost Software License, Version 1.0:
+* Boost C++ Libraries (https://www.boost.org/)
+
+MIT License:
+* Intel Graphics Compute Runtime for oneAPI Level Zero and OpenCL Driver (https://github.com/intel/compute-runtime)
+* Intel Graphics Compiler (https://github.com/intel/intel-graphics-compiler)
+
+This third party software, even if included with the distribution of
+the Intel software, may be governed by separate license terms, including
+without limitation, third party license terms, other Intel software license
+terms, and open source software license terms. These separate license terms
+govern your use of the third party programs as set forth in the
+"THIRD-PARTY-PROGRAMS" file.
+
+# Trademark Information
+
+Intel, the Intel logo, Intel Atom, Intel Core, Intel Xeon Phi, Iris, OpenVINO,
+the OpenVINO logo, Pentium, VTune, and Xeon are trademarks
+of Intel Corporation or its subsidiaries.
+
+* Other names and brands may be claimed as the property of others.
+
+Microsoft, Windows, and the Windows logo are trademarks, or registered
+trademarks of Microsoft Corporation in the United States and/or other
+countries.
+
+OpenCL and the OpenCL logo are trademarks of Apple Inc. used by permission
+by Khronos.
+
+(C) Intel Corporation

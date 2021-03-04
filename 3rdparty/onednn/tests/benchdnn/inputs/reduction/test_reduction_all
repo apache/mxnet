@@ -1,0 +1,6 @@
+# all
+--reset
+
+--batch=harness_reduction_f32
+--batch=harness_reduction_i8
+--batch=test_reduction_bfloat16

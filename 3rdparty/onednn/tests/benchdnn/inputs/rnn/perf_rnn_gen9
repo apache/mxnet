@@ -1,0 +1,19 @@
+--reset
+
+# Forward
+
+--prop=FWD_D
+--cfg=f16,f32
+
+--batch=option_set_perf_inference_lb
+--batch=option_set_perf_inference_sb
+--batch=option_set_perf_training
+
+# Backward
+
+--prop=BWD_DW
+--cfg=f32
+
+--batch=option_set_perf_inference_lb
+--batch=option_set_perf_inference_sb
+--batch=option_set_perf_training

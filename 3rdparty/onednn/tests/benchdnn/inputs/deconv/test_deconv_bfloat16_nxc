@@ -1,0 +1,27 @@
+# bf16 nxc
+--reset
+--skip-impl=ref
+--mb=2
+--stag=axb --dtag=axb
+
+--cfg=bf16bf16bf16
+--dir=FWD_B
+--attr-post-ops='','sum','linear:2:1','sum:1.5;add:f32:per_oc;relu'
+--batch=set_all
+
+--dir=BWD_D,BWD_W,BWD_WB
+--attr-post-ops=
+--batch=set_all
+
+--cfg=bf16bf16f32 --dir=FWD_B --batch=set_all
+--cfg=f32bf16bf16 --dir=BWD_D --batch=set_all
+--cfg=bf16f32bf16 --dir=BWD_WB --batch=set_all
+
+# Test Deconv w/bias through GeMM
+--reset
+--skip-impl=ref
+--mb=2
+--stag=axb --dtag=axb
+
+--cfg=bf16bf16bf16
+--dir=FWD_B,BWD_WB g16_ic32ih4iw8_oc64oh3ow8_kh3kw3sh1sw1ph0pw0n"gemm_shape"

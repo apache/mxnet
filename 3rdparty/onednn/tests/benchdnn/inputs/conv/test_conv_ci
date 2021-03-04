@@ -1,0 +1,60 @@
+--reset
+
+--mb=2
+
+# Training
+## Forward
+--dir=FWD_B,FWD_D
+### Direct
+--alg=direct
+--cfg=f32,bf16bf16bf16,f16
+--stag=any,axb
+--dtag=any,axb
+--attr-post-ops='','sum:0.5','linear:2:1','add:f32',\
+                'mul:s8:per_oc;sum:0.25;relu:0.5'
+--batch=shapes_basic
+### Wino
+--alg=wino
+--cfg=f32_wino
+--stag=any
+--dtag=any
+# TODO: non-relu and non-unit relu scale is not supported by wino
+# TODO: binary post op is not supported by wino
+--attr-post-ops='','sum:0.5','relu','sum:0.25;relu'
+--batch=shapes_basic
+## Backward
+--dir=BWD_D,BWD_W,BWD_WB
+--attr-post-ops=
+### Direct
+--alg=direct
+--cfg=f32,bf16bf16bf16,f16
+--stag=any,axb
+--dtag=any,axb
+--batch=shapes_basic
+### Wino
+--alg=wino
+--cfg=f32_wino
+--stag=any
+--dtag=any
+--batch=shapes_basic
+
+# Inference
+--dir=FWD_I
+--attr-oscale=,common:0.25,per_oc:5
+## Direct
+--alg=direct
+--cfg=u8s8s32
+--stag=any,axb
+--dtag=any,axb
+--attr-post-ops='','sum:0.5','linear:2:1','add:f32',\
+                'mul:s8:per_oc;sum:0.25;relu:0.5:0:0.75'
+--batch=shapes_basic
+## Wino
+--alg=wino
+--cfg=u8s8s32_wino
+--stag=any
+--dtag=any
+# TODO: non-relu and non-unit relu scale is not supported by wino
+# TODO: binary post op is not supported by wino
+--attr-post-ops='','sum:0.5','relu','sum:0.25;relu:0:0:0.75'
+--batch=shapes_basic

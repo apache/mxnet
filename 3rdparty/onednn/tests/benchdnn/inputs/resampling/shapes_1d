@@ -1,0 +1,16 @@
+# random problems
+
+# upsampling
+mb16ic2_iw2_ow6
+mb16ic64_iw32_ow64
+mb1ic32_iw151_ow300
+mb4ic17_iw17_ow20
+
+# downsampling
+mb1ic8_iw14_ow7
+mb1ic3_iw20_ow17
+mb1ic1_iw21_ow13
+mb1ic32_iw32_ow6
+mb2ic5_iw42_ow14
+mb1ic23_iw525_ow5
+

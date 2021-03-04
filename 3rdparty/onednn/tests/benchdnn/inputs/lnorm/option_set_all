@@ -1,0 +1,17 @@
+# plain case
+--tag=abx     --stat_tag=any,undef,abx 30x300
+                                       256x768
+                                       128x1024
+                                       5120x1024
+                                       64x30x512
+                                       128x1x1024
+                                       128x40x1024
+                                       6x2x128x1024
+
+# special src case
+--tag=ntc --stat_tag=any,undef,abx,xba 64x30x512
+                                       128x1x1024
+                                       128x40x1024
+
+# special stats case
+--tag=abx --stat_tag=ntc               6x2x128x1024

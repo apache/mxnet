@@ -1,0 +1,29 @@
+--reset
+
+--inplace=true,false
+--skip-impl="ref"
+
+# f32
+--dir=FWD_D,BWD_D
+--dt=f32
+--tag=abx,axb,aBx8b,aBx16b,ABx16a16b
+--batch=option_set_all_algs
+
+--dir=FWD_D
+--dt=f32
+--tag=abx,axb,aBx8b,aBx16b,ABx16a16b
+--attr-post-ops='add:f32;mul:f32:per_oc'
+--batch=option_set_all_algs
+
+# s32, s8, u8
+--dir=FWD_I
+--dt=s32,s8,u8
+--tag=axb
+--attr-post-ops='','add:f32;mul:f32:per_oc'
+--batch=option_set_all_algs_int8
+
+# int linear saturation check
+--batch=harness_eltwise_saturation
+
+# bf16
+--batch=test_eltwise_bfloat16

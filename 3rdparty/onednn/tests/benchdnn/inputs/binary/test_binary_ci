@@ -1,0 +1,23 @@
+--reset
+
+--inplace=true,false
+--alg=ADD,MUL,MAX,MIN,DIV
+--stag=abx:abx,axb:axb
+--attr-post-ops='','sum:0.5','linear:2:0.125','add:f32',\
+                'mul:s8:per_oc;sum:0.25;relu:-0.01'
+
+--ddt=f32 --sdt=f32:f32
+--batch=shapes_ci
+
+--ddt=bf16 --sdt=bf16:bf16
+--batch=shapes_ci
+
+--ddt=f16 --sdt=f16:f16
+--batch=shapes_ci
+
+--ddt=s8 --sdt=s8:u8
+--attr-scales=, \
+              src1:common:0.5, \
+              src:common:0.125, \
+              src:common:0.25_src1:common:0.5
+--batch=shapes_ci

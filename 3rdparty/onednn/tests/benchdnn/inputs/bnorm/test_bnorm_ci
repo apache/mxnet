@@ -1,0 +1,30 @@
+--reset
+
+--inplace=true,false
+--tag=abx,axb
+
+# training
+--dir=FWD_D,BWD_DW
+--dt=f32,bf16
+--flags=,G,S,R,GS,GR,SR,GSR
+--batch=shapes_ci
+## no scaleshift support for backward_data
+--dir=BWD_D
+--flags=,G,R,GR
+--batch=shapes_ci
+
+# inference
+--dir=FWD_I
+
+--dt=f32,bf16,f16
+--flags=,G,S,GS
+--attr-post-ops='','relu'
+--batch=shapes_ci
+
+--dt=f16
+--flags=,G,S,R,GS,GR,SR,GSR
+--batch=shapes_ci
+
+--dt=s8
+--flags=G,GS,GR,GSR
+--batch=shapes_ci

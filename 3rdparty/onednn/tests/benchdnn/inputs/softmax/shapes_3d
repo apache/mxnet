@@ -1,0 +1,9 @@
+# 5d dataset
+
+# spatial is 1
+96x1024x1x1x1
+256x10x1x1x1
+
+# regular 5d
+3x101x59x37x19
+2x8x1024x2x4

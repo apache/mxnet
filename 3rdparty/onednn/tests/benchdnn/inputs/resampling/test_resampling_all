@@ -1,0 +1,14 @@
+--reset
+
+# f32
+--mb=2
+--dt=f32
+--dir=FWD_D,BWD_D
+--alg=nearest,linear
+--tag=abx,axb,aBx8b,aBx16b
+--batch=set_all
+--reset
+--mb=2
+
+# bf16
+--batch=test_resampling_bfloat16

@@ -1,0 +1,4 @@
+# bf16
+--reset
+
+--batch=harness_reduction_bf16

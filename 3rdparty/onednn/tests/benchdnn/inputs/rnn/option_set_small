@@ -1,0 +1,7 @@
+# option set to run all reasonable small shapes
+
+--skip-nonlinear=false
+--l=1,2,3
+--t=1,2,3
+--mb=1,3,4
+--batch=shapes_small

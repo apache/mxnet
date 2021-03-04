@@ -1,0 +1,3 @@
+ic9216oc4096n"Alexnet:ip1"
+ic4096oc4096n"Alexnet:ip2"
+ic4096oc1000n"Alexnet:ip3"

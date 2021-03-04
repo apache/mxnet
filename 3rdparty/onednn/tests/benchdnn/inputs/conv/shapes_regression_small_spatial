@@ -1,0 +1,93 @@
+# k: 1
+# h: 1
+
+mb1ic16oc16_ih1oh1kh1ph0
+
+# k: 3
+# h: 1
+
+mb1ic16oc16_ih1oh1kh3ph0
+mb1ic16oc16_ih1oh1kh3ph1
+mb1ic16oc16_ih1oh1kh3ph2
+
+# k: 5
+# h: 1
+
+mb1ic16oc16_ih1oh1kh5ph0
+mb1ic16oc16_ih1oh1kh5ph1
+mb1ic16oc16_ih1oh1kh5ph2
+mb1ic16oc16_ih1oh1kh5ph3
+mb1ic16oc16_ih1oh1kh5ph4
+
+# k: 5
+# h: 3
+
+mb1ic16oc16_ih3oh1kh5ph0
+mb1ic16oc16_ih3oh1kh5ph1
+mb1ic16oc16_ih3oh1kh5ph2
+
+mb1ic16oc16_ih3oh3kh5ph0
+mb1ic16oc16_ih3oh3kh5ph1
+mb1ic16oc16_ih3oh3kh5ph2
+mb1ic16oc16_ih3oh3kh5ph3
+mb1ic16oc16_ih3oh3kh5ph4
+
+# k: 7
+# h: 1
+
+mb1ic16oc16_ih1oh1kh7ph0
+mb1ic16oc16_ih1oh1kh7ph1
+mb1ic16oc16_ih1oh1kh7ph2
+mb1ic16oc16_ih1oh1kh7ph3
+mb1ic16oc16_ih1oh1kh7ph4
+mb1ic16oc16_ih1oh1kh7ph5
+mb1ic16oc16_ih1oh1kh7ph6
+
+# k: 7
+# h: 3
+
+mb1ic16oc16_ih3oh1kh7ph0
+mb1ic16oc16_ih3oh1kh7ph1
+mb1ic16oc16_ih3oh1kh7ph2
+mb1ic16oc16_ih3oh1kh7ph3
+mb1ic16oc16_ih3oh1kh7ph4
+
+mb1ic16oc16_ih3oh3kh7ph0
+mb1ic16oc16_ih3oh3kh7ph1
+mb1ic16oc16_ih3oh3kh7ph2
+mb1ic16oc16_ih3oh3kh7ph3
+mb1ic16oc16_ih3oh3kh7ph4
+mb1ic16oc16_ih3oh3kh7ph5
+mb1ic16oc16_ih3oh3kh7ph6
+
+
+# k: 7
+# h: 5
+
+mb1ic16oc16_ih5oh1kh7ph0
+mb1ic16oc16_ih5oh1kh7ph1
+mb1ic16oc16_ih5oh1kh7ph2
+
+mb1ic16oc16_ih5oh3kh7ph0
+mb1ic16oc16_ih5oh3kh7ph1
+mb1ic16oc16_ih5oh3kh7ph2
+mb1ic16oc16_ih5oh3kh7ph3
+mb1ic16oc16_ih5oh3kh7ph4
+
+mb1ic16oc16_ih5oh5kh7ph0
+mb1ic16oc16_ih5oh5kh7ph1
+mb1ic16oc16_ih5oh5kh7ph2
+mb1ic16oc16_ih5oh5kh7ph3
+mb1ic16oc16_ih5oh5kh7ph4
+mb1ic16oc16_ih5oh5kh7ph5
+mb1ic16oc16_ih5oh5kh7ph6
+
+mb4_g1ic1oc2_ih5oh2kh2sh2dh0ph0_iw5ow2kw2sw2dw0pw0
+mb2ic16ih33oc16oh16kh2sh2
+mb1g2ic2oc4_ih2oh1kh2sh1ph0_iw3ow2kw3sw1pw0
+mb1_g1ic1oc1_id4od3kd3sd2dd0pd2_ih4oh2kh5sh2dh0ph2_iw4ow1kw7sw2dw0pw2
+
+# Representative shapes of workloads for small-spatial
+mb1_ic1oc96_ih98oh80kh19sh1dh0ph0_iw28ow1kw28sw1dw0pw0n"small-spatial:1"
+mb1_ic144oc150_ih80oh80kh5sh1dh0ph2_iw1ow1kw1sw1dw0pw0n"small-spatial:2"
+mb7_ic128oc256_ih102iw19_oh100ow1_kh3kw19n"small-spatial:3"

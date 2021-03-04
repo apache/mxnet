@@ -1,0 +1,18 @@
+# vgg_19
+
+mb64ic3ih224oc64oh224kh3ph1n"vgg_19:conv1_1"
+mb64ic64ih224oc64oh224kh3ph1n"vgg_19:conv1_2"
+mb64ic64ih112oc128oh112kh3ph1n"vgg_19:conv2_1"
+mb64ic128ih112oc128oh112kh3ph1n"vgg_19:conv2_2"
+mb64ic128ih56oc256oh56kh3ph1n"vgg_19:conv3_1"
+mb64ic256ih56oc256oh56kh3ph1n"vgg_19:conv3_2*3"
+# mb64ic256ih56oc256oh56kh3ph1n"vgg_19:conv3_3"     # conv3_2
+# mb64ic256ih56oc256oh56kh3ph1n"vgg_19:conv3_4"     # conv3_2
+mb64ic256ih28oc512oh28kh3ph1n"vgg_19:conv4_1"
+mb64ic512ih28oc512oh28kh3ph1n"vgg_19:conv4_2*3"
+# mb64ic512ih28oc512oh28kh3ph1n"vgg_19:conv4_3"     # conv4_2
+# mb64ic512ih28oc512oh28kh3ph1n"vgg_19:conv4_4"     # conv4_2
+mb64ic512ih14oc512oh14kh3ph1n"vgg_19:conv5_1*4"
+# mb64ic512ih14oc512oh14kh3ph1n"vgg_19:conv5_2"     # conv5_2
+# mb64ic512ih14oc512oh14kh3ph1n"vgg_19:conv5_3"     # conv5_2
+# mb64ic512ih14oc512oh14kh3ph1n"vgg_19:conv5_4"     # conv5_2

@@ -1,0 +1,23 @@
+# f32, s8, u8 <--> bf16
+--reset
+--sdt=f32,s8,u8 --ddt=bf16
+--stag=abx
+--dtag=aBx16b 2x64x14x14 2x56x14x14
+--dtag=gOIhw16i16o 2x64x64x3x3 2x56x56x3x3
+--dtag=gOIhw8i16o2i 2x64x64x3x3 2x56x56x3x3
+--dtag=gOIhw8o16i2o 2x64x64x3x3 2x56x56x3x3
+--dtag=gOIhw2i4o2i 4x16x16x3x3 2x16x6x3x2 2x2x10x2x3
+--dtag=gOIhw2o4i2o 4x16x16x3x3 2x16x6x3x2 2x2x10x2x3
+--dtag=gOIhw4i8o2i 4x16x16x3x3 2x16x6x3x2 2x2x10x2x3
+--dtag=gOIhw4o8i2o 4x16x16x3x3 2x16x6x3x2 2x2x10x2x3
+
+--sdt=bf16 --ddt=f32,s8,u8
+--dtag=abx
+--stag=aBx16b 2x64x14x14 2x56x14x14
+--stag=gOIhw16i16o 2x64x64x3x3 2x56x56x3x3
+--stag=gOIhw8i16o2i 2x64x64x3x3 2x56x56x3x3
+--stag=gOIhw8o16i2o 2x64x64x3x3 2x56x56x3x3
+--stag=aBCde2b4c2b 4x16x16x3x3 2x16x6x3x2 2x2x10x2x3
+--stag=aBCde2c4b2c 4x16x16x3x3 2x16x6x3x2 2x2x10x2x3
+--stag=aBCde4b8c2b 4x16x16x3x3 2x16x6x3x2 2x2x10x2x3
+--stag=aBCde4c8b2c 4x16x16x3x3 2x16x6x3x2 2x2x10x2x3

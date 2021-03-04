@@ -1,0 +1,25 @@
+# random problems
+
+# regular
+ic8_id20ih40iw60_od11oh21ow31_kd2kh3kw4_sd2sh2sw2_pd1ph1pw1
+ic16_id60ih60iw60_od31oh31ow31_kd4kh2kw3_sd2sh2sw2_pd1ph1pw1
+
+# Stride along the depth is large
+ic32_iw16ih20id52_ow14oh5od17_kw3kh4kd4_sw1sh4sd3
+ic32_iw19ih20id52_ow14oh5od17_kw6kh4kd4_sw1sh4sd3
+
+# Padding along the depth is minimal
+ic32_id15ih20iw20_od14oh17ow5_pd1ph0pw0_kd3kh4kw4_sd1sh1sw4
+ic32_id18ih20iw20_od14oh17ow5_pd1ph0pw0_kd6kh4kw4_sd1sh1sw4
+
+# Stride is more than the kernel dimension
+ic33_id11ih12iw7_od3oh3ow2_kd3kh4kw2_sd4sh4sw5
+ic32_id13ih7iw10_od3oh2ow3_pd1ph0pw1_kd2kh2kw3_sd6sh5sw4
+
+# Kernel lies inside the padding
+ic32_iw13ih16id30_ow14oh17od11_pw6ph4pd3_kw6kh4kd3_sw1sh1sd3
+ic32_iw13ih32id20_ow14oh17od11_pw6ph4pd2_kw6kh4kd2_sw1sh2sd2
+
+# Negative padding along the depth
+ic32_iw16ih7id36_ow14oh4od17_pw0ph1pd1_kw3kh5kd4_sw1sh1sd2
+ic32_iw19ih7id36_ow14oh4od17_pw0ph1pd1_kw6kh5kd4_sw1sh1sd2

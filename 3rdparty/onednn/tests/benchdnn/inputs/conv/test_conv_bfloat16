@@ -1,0 +1,74 @@
+# bfloat16
+--reset
+--mb=2
+--dir=FWD_B
+--cfg=bf16bf16f32  --batch=shapes_resnet_50
+--cfg=bf16bf16bf16 --batch=set_conv_all
+
+--dir=FWD_D
+--cfg=bf16bf16bf16 --batch=shapes_resnet_50 --batch=shapes_regression_1x1
+
+--dir=BWD_D
+--cfg=f32bf16bf16  --batch=shapes_resnet_50 --batch=shapes_regression_1x1
+--cfg=bf16bf16bf16 --batch=set_conv_all
+
+--dir=BWD_WB
+--cfg=bf16f32bf16
+--batch=set_conv_all --batch=set_dilated-conv --batch=shapes_regression_1x1
+--cfg=bf16bf16bf16 --batch=shapes_resnet_50 --batch=set_dilated-conv
+
+--reset
+--mb=2
+--skip-impl="ref:gemm"
+--dir=FWD_D --cfg=bf16bf16bf16
+--batch=shapes_3d_2d_strided_padding --batch=shapes_dilated_3d_strided_padding
+--dir=BWD_D --cfg=f32bf16bf16 --batch=shapes_3d_2d_strided_padding
+--dir=BWD_WB --cfg=bf16f32bf16
+--batch=set_conv_3d --batch=shapes_dilated_3d_unit-stride_no-padding
+
+# Attributes
+--reset
+--mb=2
+--skip-impl="ref:gemm"
+--dir=FWD_B
+--cfg=bf16bf16bf16
+## Post-Ops
+--attr-post-ops='sum' --batch=shapes_resnet_50
+--attr-post-ops='relu' --batch=shapes_googlenet_v3
+--attr-post-ops='add:bf16:per_oc' --batch=shapes_tails
+--attr-post-ops='mul:f32;sum;tanh:1:1:2.5' --batch=shapes_tails
+
+## Depthwise fusion stride 1
+--attr-post-ops='dw_k3s1p1:bf16;relu'
+--batch=shapes_fused_mobilenet_stride_1
+--attr-post-ops='relu:0.5;dw_k3s1p1:f32;tanh:0:0:2.5'
+--batch=shapes_fused_mobilenet_stride_1
+
+## Depthwise fusion stride 2
+--attr-post-ops='relu;dw_k3s2p1:bf16;tanh'
+--batch=shapes_fused_mobilenet_stride_2
+--attr-post-ops='relu;dw_k3s2p1:f32;tanh'
+--batch=shapes_fused_mobilenet_stride_2
+
+--batch=harness_conv_dw_bfloat16
+
+# Test src-transpose padding handling in bf16 bwd-w convolution
+--reset --mb=2
+--skip-impl="ref:gemm"
+--cfg=bf16bf16bf16 --dir=BWD_W
+--batch=shapes_src-transpose_padding
+
+# Test plain and blocked layout in non-1x1 jit kernels
+# (amx non-1x1 kernel supports both, so need to always test both)
+--reset
+--mb=2
+--skip-impl=ref:gemm
+--dir=FWD_B
+--cfg=bf16bf16bf16
+--match=.*k[dhw][^1].*
+
+--stag=axb --dtag=axb
+--batch=shapes_1d --batch=shapes_googlenet_v1 --batch=shapes_resnet_50
+
+--stag=aBx16b --dtag=aBx16b
+--batch=shapes_1d --batch=shapes_googlenet_v1 --batch=shapes_resnet_50

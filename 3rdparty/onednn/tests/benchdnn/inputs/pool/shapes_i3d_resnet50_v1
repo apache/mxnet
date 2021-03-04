@@ -1,0 +1,6 @@
+# i3d resnet50 v1
+
+mb1ic64_id16od8kd1sd2pd0_ih112oh56kh3sh2ph1_iw112ow56kw3sw2pw1_n"i3d_resnet50_v1:max_pool1"
+mb1ic256_id8od4kd2sd2pd0_ih56oh56kh1sh1ph0_iw56ow56kw1sw1pw0_n"i3d_resnet50_v1:max_pool2"
+mb1ic2048_id4od1kd4sd1pd0_ih7oh1kh7sh1ph0_iw7ow1kw7sw1pw0_n"i3d_resnet50_v1:max_pool3"
+

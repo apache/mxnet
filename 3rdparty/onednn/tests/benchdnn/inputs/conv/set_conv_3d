@@ -1,0 +1,17 @@
+# 3D Convolutions
+# ngroups = 1; ic = oc = 16
+# 1x1 Filter
+--batch=shapes_3d_1x1_unit-stride_no-padding
+--batch=shapes_3d_1x1_unit-stride_padding
+--batch=shapes_3d_1x1_strided_no-padding
+--batch=shapes_3d_1x1_strided_padding
+# N-sized Filter
+# ngroups = 1; ic = 1; oc = 16
+--batch=shapes_3d_1st_strided_padding
+# ngroups = 1; ic = oc = 16
+--batch=shapes_3d_unit-stride_no-padding
+--batch=shapes_3d_unit-stride_padding
+--batch=shapes_3d_strided_no-padding
+--batch=shapes_3d_strided_padding
+# Depth + Height
+--batch=shapes_3d_2d_strided_padding

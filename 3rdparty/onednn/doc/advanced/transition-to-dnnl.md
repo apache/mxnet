@@ -1,0 +1,147 @@
+Transition from Intel MKL-DNN to oneDNN {#dev_guide_transition_to_dnnl}
+=======================================================================
+
+To simplify library naming and differentiate it from Intel MKL, starting with
+version 1.1 the library name is changed to
+**Deep Neural Network Library (DNNL)**.
+
+@note Subsequent library name change to
+oneAPI Deep Neural Network Library (oneDNN) does not impact API, environment
+variables, or build options.
+
+The library will maintain backward compatibility with respect to API,
+environment variables and build options until the next major release.
+However, there are some incompatibilities that are described in
+[Broken compatibility with Intel MKL-DNN](@ref dg_mtdt_s2) section below.
+
+## 1. Summary of Changes
+
+In short, the migration can be as simple as just replacing all
+`MKLDNN/mkldnn` substrings with `DNNL/dnnl`.
+
+### 1.1. Source code changes
+
+All headers, functions, types, and namespaces renamed by replacing `mkldnn`
+with `dnnl`. The macros with `MKLDNN` are replaced with `DNNL` counterparts.
+
+An example of code with Intel MKL-DNN v1.0:
+~~~ cpp
+#include "mkldnn.hpp"
+
+using namespace mkldnn;
+
+mkldnn_memory_desc_t md;
+if (md.format_kind == mkldnn_blocked) {}
+conv.exec(stream, {{MKLDNN_ARGS_SRC, src}, ...});
+~~~
+
+The updated example with DNNL v1.1:
+~~~ cpp
+#include "dnnl.hpp"
+
+using namespace dnnl;
+
+dnnl_memory_desc_t md;
+if (md.format_kind == dnnl_blocked) {}
+conv.exec(stream, {{DNNL_ARGS_SRC, src}, ...});
+~~~
+
+To API compatibility with Intel MKL-DNN is based on
+`include/mkldnn_dnnl_mangling.h` header file that maps all Intel MKL-DNN
+symbols to DNNL ones using C preprocessor:
+
+~~~ cpp
+// ...
+#define mkldnn_memory_desc_t           dnnl_memory_desc_t
+#define mkldnn_memory_desc_init_by_tag dnnl_memory_desc_init_by_tag
+// ...
+~~~
+
+This file is included to every former Intel MKL-DNN header files
+(for instance, see `mkldnn.h`) along with the DNNL counterpart.
+
+### 1.2. Build process
+
+The changes to the build options are similar to the ones in the source code.
+All the options and namespace with `MKLDNN` are replaced with `DNNL`:
+
+| Intel MKL-DNN                 | DNNL                        |
+| :--                           | :--                         |
+| MKLDNN (namespace)            | DNNL (namespace)            |
+| MKLDNN_ARCH_OPT_FLAGS         | DNNL_ARCH_OPT_FLAGS         |
+| MKLDNN_BUILD_EXAMPLES         | DNNL_BUILD_EXAMPLES         |
+| MKLDNN_BUILD_FOR_CI           | DNNL_BUILD_FOR_CI           |
+| MKLDNN_BUILD_TESTS            | DNNL_BUILD_TESTS            |
+| MKLDNN_CPU_RUNTIME            | DNNL_CPU_RUNTIME            |
+| MKLDNN_ENABLE_CONCURRENT_EXEC | DNNL_ENABLE_CONCURRENT_EXEC |
+| MKLDNN_ENABLE_JIT_PROFILING   | DNNL_ENABLE_JIT_PROFILING   |
+| MKLDNN_GPU_BACKEND            | DNNL_GPU_BACKEND            |
+| MKLDNN_GPU_RUNTIME            | DNNL_GPU_RUNTIME            |
+| MKLDNN_INSTALL_MODE           | DNNL_INSTALL_MODE           |
+| MKLDNN_LIBRARY_TYPE           | DNNL_LIBRARY_TYPE           |
+| MKLDNN_THREADING              | DNNL_THREADING              |
+| MKLDNN_USE_CLANG_SANITIZER    | DNNL_USE_CLANG_SANITIZER    |
+| MKLDNN_VERBOSE                | DNNL_VERBOSE                |
+| MKLDNN_WERROR                 | DNNL_WERROR                 |
+
+Similarly to the source code, DNNL preserves compatibility for build process
+as well. It should be possible to continue using:
+
+~~~ sh
+# Through find package
+find_package(mkldnn MKLDNN CONFIG REQUIRED)
+target_link_libraries(project_app MKLDNN::mkldnn)
+
+# Or direct sub-project inclusion
+add_subdirectory(${MKLDNN_DIR} MKLDNN)
+include_directories(${MKLDNN_DIR}/include)
+target_link_libraries(project_app mkldnn)
+~~~
+
+Though it is preferable to switch to:
+
+~~~ sh
+# Through find package
+find_package(dnnl DNNL CONFIG REQUIRED)
+target_link_libraries(project_app DNNL::dnnl)
+
+# Or direct sub-project inclusion
+add_subdirectory(${DNNL_DIR} DNNL)
+include_directories(${DNNL_DIR}/include)
+target_link_libraries(project_app dnnl)
+~~~
+
+In case both style options are set, the DNNL one takes precedence.
+
+### 1.3. Runtime parameters
+
+DNNL supports both old Intel MKL-DNN and new DNNL environment variable controls.
+DNNL value takes precedence over Intel MKL-DNN ones.
+
+|                                                      | Intel MKL-DNN   | DNNL          |
+| :--                                                  | :--             | :--           |
+| [Verbose](@ref dev_guide_verbose)                    | MKLDNN_VERBOSE  | DNNL_VERBOSE  |
+| [Dumping jit kernels](@ref dev_guide_inspecting_jit) | MKLDNN_JIT_DUMP | DNNL_JIT_DUMP |
+
+@anchor dg_mtdt_s2
+## 2. Broken compatibility with Intel MKL-DNN
+
+Unfortunately, the full compatibility after renaming is not implemented.
+DNNL is **not** compatible with Intel MKL-DNN in the following things:
+- ABI: An application or a library built with Intel MKL-DNN cannot switch on
+  using DNNL without re-compilation.
+- Microsoft\* Visual Studio Solution files that are generated by cmake will
+  be based on DNNL name only
+  (e.g. `MKLDNN.sln` becomes `DNNL.sln`, and the former is no more generated).
+
+## 3. Information for developers
+
+The implementation of renaming (several patches and scripts that rename the
+library) can be found
+[here](https://github.com/emfomenk/intel-mkldnn-rebranding).
+
+Also it is worth mentioning that DNNL team finally switched to the mandatory
+code formatting based on `_clang-format` file in the root of the repository.
+The corresponding changes were done by
+[this](https://github.com/oneapi-src/oneDNN/commit/56ef626d6627e93da039c15e032603e1a4bc8af4)
+and neighbor commits.

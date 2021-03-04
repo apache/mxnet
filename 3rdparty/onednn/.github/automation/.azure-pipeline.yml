@@ -1,0 +1,114 @@
+#! /bin/bash
+
+#===============================================================================
+# Copyright 2019-2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#===============================================================================
+
+trigger:
+- master
+
+jobs:
+  - job: 'ClangFormat'
+    pool:
+      vmImage: 'ubuntu-18.04'
+    steps:
+      - script: |
+          .github/automation/env/clang.sh
+        displayName: 'init'
+      - script: |
+          .github/automation/clang-format.sh
+        displayName: 'ClangFormat_Check'
+        failOnStderr: true 
+  - job: 'Ubuntu16'
+    pool:
+      vmImage: 'ubuntu-16.04'
+    strategy:
+      matrix: 
+        clang:
+          CC: clang
+          CXX: clang++
+        gcc:
+          CC: gcc
+          CXX: g++
+    steps:
+      - script: |
+          if [ "$(CC)" == "clang" ]; then
+            .github/automation/env/clang.sh
+          fi
+        displayName: "Init_Env"
+      - script: |
+          .github/automation/build.sh --threading omp --mode Release --source-dir $(pwd) --build-dir $(pwd)/build
+        displayName: 'build'
+      - script: |
+          .github/automation/test.sh --test-kind gtest --build-dir $(pwd)/build --report-dir $(pwd)/report
+        displayName: 'test'
+        failOnStderr: true
+  - job: 'Ubuntu18'
+    pool:
+      vmImage: 'ubuntu-18.04'
+    strategy:
+      matrix: 
+        clang:
+          CC: clang
+          CXX: clang++
+        gcc:
+          CC: gcc
+          CXX: g++
+    steps:
+      - script: |
+          if [ "$(CC)" == "clang" ]; then
+            .github/automation/env/clang.sh
+          fi
+        displayName: "Init_Env"
+      - script: |
+          .github/automation/build.sh --threading omp --mode Release --source-dir $(pwd) --build-dir $(pwd)/build
+        displayName: 'build'
+      - script: |
+          .github/automation/test.sh --test-kind gtest --build-dir $(pwd)/build --report-dir $(pwd)/report
+        displayName: 'test'
+        failOnStderr: true
+  - job: 'OSX_10_14'
+    pool:
+      vmImage: 'macOS-10.14'
+    steps:
+      - script: |
+          .github/automation/build.sh --threading omp --mode Release --source-dir $(pwd) --build-dir $(pwd)/build
+        displayName: 'build'
+      - script: |
+          .github/automation/test.sh --test-kind gtest --build-dir $(pwd)/build --report-dir $(pwd)/report
+        displayName: 'test'
+        failOnStderr: true 
+  - job: 'Windows_Server_2019'
+    pool:
+      vmImage: 'windows-2019'
+    steps:
+      - script: |
+          .github\automation\build.bat /THREADING omp /MODE Release /VSVERSION vs2019 /SOURCEDIR %CD% /BUILDDIR %CD%\build
+        displayName: 'build'
+      - script: |
+         .github\automation\test.bat /TESTKIND gtest /BUILDDIR %CD%\build /MODE Release /REPORTDIR %CD%\report
+        displayName: 'test'
+        failOnStderr: true 
+  - job: 'Windows_Server_2012'
+    pool:
+      vmImage: 'vs2017-win2016'
+    steps:
+      - script: |
+          .github\automation\build.bat /THREADING omp /MODE Release /VSVERSION vs2017 /SOURCEDIR %CD% /BUILDDIR %CD%\build
+        displayName: 'build'
+      - script: |
+         .github\automation\test.bat /TESTKIND gtest /BUILDDIR %CD%\build /MODE Release /REPORTDIR %CD%\report
+        displayName: 'test'
+        failOnStderr: true

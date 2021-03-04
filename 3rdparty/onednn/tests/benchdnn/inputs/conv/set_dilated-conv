@@ -1,0 +1,11 @@
+# Dilated Convolution
+# 1D
+--batch=shapes_dilated_1d_strided_no-padding
+--batch=shapes_dilated_1d_unit-stride_no-padding
+--batch=shapes_dilated_1d_unit-stride_padding
+--batch=shapes_dilated_1d_strided_padding
+# 2D
+--batch=shapes_dilated_2d_strided_no-padding
+--batch=shapes_dilated_2d_strided_padding
+--batch=shapes_dilated_2d_unit-stride_no-padding
+--batch=shapes_dilated_2d_unit-stride_padding

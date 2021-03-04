@@ -1,0 +1,13 @@
+# f32 nxc
+--reset
+--skip-impl=ref
+--mb=2
+--stag=axb --dtag=axb
+
+--dir=FWD_B
+--attr-post-ops='','sum','linear:2:1','sum:1.5;add:f32:per_oc;relu'
+--batch=set_all
+
+--dir=BWD_D,BWD_W,BWD_WB
+--attr-post-ops=
+--batch=set_all

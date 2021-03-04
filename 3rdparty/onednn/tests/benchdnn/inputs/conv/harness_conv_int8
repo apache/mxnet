@@ -1,0 +1,13 @@
+# Int8
+--reset --dir=FWD_B --mb=2
+--skip-impl="ref:gemm"      # ! test jit version only
+--cfg=u8s8u8  --batch=set_conv_all
+--cfg=u8s8s8  --batch=shapes_resnet_50
+--cfg=u8s8s32 --batch=shapes_googlenet_v3 --batch=shapes_regression_1x1
+--cfg=u8s8f32 --batch=shapes_vgg_19
+--cfg=s8s8s8  --batch=set_conv_all
+--cfg=s8s8u8  --batch=shapes_resnet_50
+--cfg=s8s8f32 --batch=shapes_googlenet_v3 --batch=shapes_regression_1x1
+--cfg=s8s8s32 --batch=shapes_vgg_19
+--cfg=s8s8s32 --batch=shapes_large_padding
+--cfg=u8s8u8 --stag=axb --dtag=axb --batch=shapes_1x1   # nhwc in rtus

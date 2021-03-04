@@ -1,0 +1,7 @@
+# Minibatch 4 is found in the original prototxt
+# Not clear if that's what should be used for perf measurements
+
+mb4ih240iw320ic64oc64oh240ow320kh7kw7ph3pw3sh1sw1n"conv2"
+mb4ih120iw160ic64oc64oh120ow160kh7kw7ph3pw3sh1sw1n"conv3"
+mb4ih60iw80ic64oc64oh60ow80kh7kw7ph3pw3sh1sw1n"conv4"
+mb4ih480iw640ic64oc64oh480ow640kh7kw7ph3pw3sh1sw1n"conv_decode1"

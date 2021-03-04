@@ -1,0 +1,17 @@
+# inference_lb -- inference with large batch size
+--reset
+
+--mb=640
+--alg=VANILLA_LSTM
+--activation=TANH
+--batch=option_set_gnmt_decoder
+
+--mb=64
+--alg=VANILLA_LSTM
+--activation=TANH
+--batch=option_set_gnmt_encoder
+
+--mb=64
+--alg=VANILLA_RNN,LBR_GRU
+--direction=left2right
+--batch=shapes_deepspeech_2

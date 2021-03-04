@@ -1,0 +1,15 @@
+# Wavenet sizes
+mb1_g1ic32oc32_iw84350ow84349kw2sw1dw0pw0n"wavenet:conv1d_1"
+mb2_g1ic32oc32_iw42175ow42174kw2sw1dw0pw0n"wavenet:conv1d_2"
+mb4_g1ic32oc32_iw21087ow21086kw2sw1dw0pw0n"wavenet:conv1d_3"
+mb8_g1ic32oc32_iw10543ow10542kw2sw1dw0pw0n"wavenet:conv1d_4"
+mb16_g1ic32oc32_iw5271ow5270kw2sw1dw0pw0n"wavenet:conv1d_5"
+mb32_g1ic32oc32_iw2635ow2634kw2sw1dw0pw0n"wavenet:conv1d_6"
+mb64_g1ic32oc32_iw1317ow1316kw2sw1dw0pw0n"wavenet:conv1d_7"
+mb128_g1ic32oc32_iw658ow657kw2sw1dw0pw0n"wavenet:conv1d_8"
+mb256_g1ic32oc32_iw329ow328kw2sw1dw0pw0n"wavenet:conv1d_9"
+mb512_g1ic32oc32_iw164ow163kw2sw1dw0pw0n"wavenet:conv1d_10"
+
+mb1_g1ic32oc32_iw842ow842kw1sw1dw0pw0n"wavenet:conv1d_1x1_1"
+mb1_g1ic512oc256_iw812ow812kw1sw1dw0pw0n"wavenet:conv1d_1x1_2"
+mb1_g1ic512oc512_iw812ow812kw1sw1dw0pw0n"wavenet:conv1d_1x1_3"

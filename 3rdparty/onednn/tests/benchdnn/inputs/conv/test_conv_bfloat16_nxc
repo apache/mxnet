@@ -1,0 +1,58 @@
+# bfloat16
+--reset
+--mb=2
+--stag=axb --dtag=axb
+--skip-impl="ref"
+--dir=FWD_B
+--cfg=bf16bf16f32  --batch=shapes_resnet_50
+--cfg=bf16bf16bf16 --batch=set_conv_all
+
+--dir=FWD_D
+--cfg=bf16bf16bf16 --batch=shapes_resnet_50
+
+--dir=BWD_D
+--cfg=f32bf16bf16  --batch=shapes_resnet_50
+--cfg=bf16bf16bf16 --batch=set_conv_all
+
+--dir=BWD_WB
+--cfg=bf16f32bf16 --batch=set_conv_all --batch=set_dilated-conv
+--cfg=bf16bf16bf16 --batch=shapes_resnet_50 --batch=set_dilated-conv
+
+--reset
+--mb=2
+--stag=axb --dtag=axb
+--skip-impl="ref:gemm"
+
+--dir=FWD_D
+--cfg=bf16bf16bf16
+--batch=shapes_3d_2d_strided_padding --batch=shapes_dilated_3d_strided_padding
+
+--dir=BWD_D
+--cfg=f32bf16bf16
+--batch=shapes_3d_2d_strided_padding
+
+--dir=BWD_WB
+--cfg=bf16f32bf16
+--batch=set_conv_3d --batch=shapes_dilated_3d_unit-stride_no-padding
+
+# Attributes
+--reset
+--mb=2
+--stag=axb --dtag=axb
+--skip-impl="ref:gemm"
+--dir=FWD_B
+--cfg=bf16bf16bf16
+## PostOps
+--attr-post-ops='sum' --batch=shapes_resnet_50
+--attr-post-ops='relu' --batch=shapes_googlenet_v3
+--attr-post-ops='add:bf16:per_oc' --batch=shapes_tails
+--attr-post-ops='mul:f32;sum;tanh:1:1:2.5' --batch=shapes_tails
+
+--batch=harness_conv_dw_bfloat16_nxc
+
+# Test src-transpose padding handling in bf16 bwd-w convolution
+--reset --mb=2
+--stag=axb --dtag=axb
+--skip-impl="ref:gemm"
+--cfg=bf16bf16bf16 --dir=BWD_W
+--batch=shapes_src-transpose_padding

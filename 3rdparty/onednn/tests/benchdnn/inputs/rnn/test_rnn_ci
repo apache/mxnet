@@ -1,0 +1,29 @@
+--reset
+
+--alg=VANILLA_RNN
+--skip-nonlinear=false
+--l=1,2
+--t=1,2
+--mb=1,2
+
+--trivial-strides=true,false
+--prop=FWD_D,BWD_DW
+--cfg=f32,bf16,f16
+
+# Run all activations with left2right...
+--activation=RELU,TANH,LOGISTIC
+--direction=left2right
+--batch=shapes_small
+
+# ... but a single activation for other directions
+--activation=RELU
+--direction=right2left
+--batch=shapes_small
+
+--activation=TANH
+--direction=concat
+--batch=shapes_small
+
+--activation=LOGISTIC
+--direction=sum
+--batch=shapes_small

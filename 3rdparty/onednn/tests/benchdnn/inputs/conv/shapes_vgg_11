@@ -1,0 +1,12 @@
+# vgg_11
+
+mb64ic3ih100oc32oh100kh3ph1n"vgg_11:conv1_1"
+mb64ic32ih100oc64oh100kh3ph1n"vgg_11:conv1_2"
+mb64ic64ih50oc64oh50kh3ph1n"vgg_11:conv2_1"
+mb64ic64ih50oc128oh50kh3ph1n"vgg_11:conv2_2"
+mb64ic128ih25oc96oh25kh3ph1n"vgg_11:conv3_1"
+mb64ic96ih25oc192oh25kh3ph1n"vgg_11:conv3_2"
+mb64ic192ih13oc128oh13kh3ph1n"vgg_11:conv4_1"
+mb64ic128ih13oc256oh13kh3ph1n"vgg_11:conv4_2"
+mb64ic256ih7oc160oh7kh3ph1n"vgg_11:conv5_1"
+mb64ic160ih7oc320oh7kh3ph1n"vgg_11:conv5_2"

@@ -1,0 +1,10 @@
+# large shapes
+
+l1t1mb1_sic64_n"uniform"
+l1t1mb1_sic65_n"uniform:tail"
+l1t1mb1_sic64_slc128_n"non-uniform:slc_neq_sic"
+l1t1mb1_sic65_slc130_n"non-uniform:slc_neq_sic_tail"
+l1t1mb1_sic64_dhc128_n"non-uniform:slc_neq_dhc"
+l1t1mb1_sic65_dhc130_n"non-uniform:slc_neq_dhc_tail"
+l1t1mb1_sic64_slc128_dhc256_n"non-uniform:slc_neq_sic_neq_dhc"
+l1t1mb1_sic65_slc130_dhc260_n"non-uniform:slc_neq_sic_neq_dhc_tail"

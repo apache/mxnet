@@ -1,0 +1,43 @@
+# f32 <--> s8
+--reset
+--sdt=f32 --ddt=s8
+--stag=goihw --dtag=gOIhw16i16o4i 2x64x64x3x3 2x56x56x3x3 2x14x114x3x2
+             --dtag=gOhwI16o4i 2x64x3x7x7 2x32x3x3x3
+--stag=oihw --dtag=OIhw16i16o4i 64x128x3x3 55x114x3x7 32x3x7x3
+            --dtag=OhwI16o4i 64x3x7x7 32x3x3x3
+--stag=goiw --dtag=gOIw16i16o4i 2x64x64x3 2x56x56x3 2x14x114x2
+            --dtag=gOwI16o4i 2x64x3x7 2x32x3x3
+--stag=oiw --dtag=OIw16i16o4i 64x128x3 55x114x5 32x3x7
+           --dtag=OwI16o4i 64x3x7 32x3x3
+
+--sdt=s8 --ddt=f32
+--dtag=goihw --stag=gOIhw16i16o4i 2x64x64x3x3 2x56x56x3x3 2x14x114x3x2
+             --stag=gOhwI16o4i 2x64x3x7x7 2x32x3x3x3
+--dtag=oihw --stag=OIhw16i16o4i 64x128x3x3 55x114x3x7 32x3x7x3
+            --stag=OhwI16o4i 64x3x7x7 32x3x3x3
+--dtag=goiw --stag=gOIw16i16o4i 2x64x64x3 2x56x56x3 2x14x114x2
+            --stag=gOwI16o4i 2x64x3x7 2x32x3x3
+--dtag=oiw --stag=OIw16i16o4i 64x128x3 55x114x5 32x3x7
+           --stag=OwI16o4i 64x3x7 32x3x3
+
+# f32 <--> bf16
+--reset
+--sdt=f32 --ddt=bf16
+--stag=goihw --dtag=gOIhw16i16o2i 2x64x64x3x3 2x56x56x3x3 2x14x114x3x2
+             --dtag=gOhwI16o4i 2x64x3x7x7 2x32x3x3x3
+--stag=oihw --dtag=OIhw16i16o2i 64x128x3x3 55x114x3x7 32x3x7x3
+            --dtag=OhwI16o4i 64x3x7x7 32x3x3x3
+--stag=goiw --dtag=gOIw16i16o2i 2x64x64x3 2x56x56x3 2x14x114x2
+            --dtag=gOwI16o4i 2x64x3x7 2x32x3x3
+--stag=oiw --dtag=OIw16i16o2i 64x128x3 55x114x5 32x3x7
+           --dtag=OwI16o4i 64x3x7 32x3x3
+
+--sdt=bf16 --ddt=f32
+--dtag=goihw --stag=gOIhw16i16o2i 2x64x64x3x3 2x56x56x3x3 2x14x114x3x2
+             --stag=gOhwI16o4i 2x64x3x7x7 2x32x3x3x3
+--dtag=oihw --stag=OIhw16i16o2i 64x128x3x3 55x114x3x7 32x3x7x3
+            --stag=OhwI16o4i 64x3x7x7 32x3x3x3
+--dtag=goiw --stag=gOIw16i16o2i 2x64x64x3 2x56x56x3 2x14x114x2
+            --stag=gOwI16o4i 2x64x3x7 2x32x3x3
+--dtag=oiw --stag=OIw16i16o2i 64x128x3 55x114x5 32x3x7
+           --stag=OwI16o4i 64x3x7 32x3x3

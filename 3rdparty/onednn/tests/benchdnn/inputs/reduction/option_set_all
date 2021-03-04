@@ -1,0 +1,54 @@
+# same src and dst tags
+--stag=axb --dtag=any       5x3x2x9:1x3x2x9
+                            4x4x4x4:4x4x1x4
+                            32x17x2x3:32x17x1x1
+                            32x17x2x3:1x17x1x1
+                            16x12x2x2:16x1x1x1
+                            16x12x2x2:1x1x1x1
+                            8x16x7:8x16x1
+                            12x12:1x12
+                            127:1
+
+--stag=abx --dtag=any       5x3x2x9:1x3x2x9
+                            4x4x4x4:4x4x1x4
+                            32x17x2x3:32x17x1x1
+                            32x17x2x3:1x17x1x1
+                            16x12x2x2:16x1x1x1
+                            16x12x2x2:1x1x1x1
+                            8x16x7:8x16x1
+                            12x12:1x12
+                            127:1
+
+--stag=aBx16b --dtag=any    8x15x5x7:8x15x1x1
+                            8x15x5x7:1x1x1x1
+                            8x16x5x7:1x1x1x1
+                            8x16x7:8x16x1
+
+--stag=aBx8b --dtag=any     8x15x5x7:1x15x1x1
+                            8x15x5x7:1x1x1x1
+                            8x16x7:8x16x1
+                            8x16x7:1x1x1
+
+--stag=ABx16a16b --dtag=any 2x16x5x7:2x16x5x1
+                            16x15x5x7:1x15x1x1
+                            16x15x5x7:1x1x1x1
+
+# different src and dst tags
+--stag=abx --dtag=axb       5x3x2x9:1x3x2x9
+                            4x4x4x4:4x4x1x4
+                            16x12x2x2:16x1x1x1
+                            16x12x2x2:1x1x1x1
+
+--stag=abx --dtag=aBx16b    2x32x3x10:2x32x3x1
+                            2x17x3x10:1x17x1x1
+
+--stag=axb --dtag=aBx8b     2x7x3x10:2x7x3x1
+                            2x17x3x10:1x17x1x1
+
+--stag=aBx8b --dtag=aBx16b  2x16x5x7:2x16x1x1
+                            3x15x5x1:1x15x5x1
+
+--stag=aBx16b --dtag=axb    2x16x5x7:2x16x1x1
+                            3x15x5x1:1x15x5x1
+
+--stag=abc --dtag=bac       4x6x7:4x6x1

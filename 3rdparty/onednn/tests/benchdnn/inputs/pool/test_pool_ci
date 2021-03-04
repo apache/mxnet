@@ -1,0 +1,16 @@
+--reset
+--mb=2
+
+--alg=MAX,AVG_NP,AVG_P
+# Training
+--cfg=f32,bf16
+--dir=FWD_D,BWD_D
+--tag=abx,axb
+--batch=shapes_basic
+
+# Inference
+--cfg=f32,bf16,f16,s32,s8,u8
+--dir=FWD_I
+--tag=axb
+--attr-post-ops='','add:f32:per_oc'
+--batch=shapes_basic

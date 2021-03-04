@@ -1,0 +1,8 @@
+--reset
+
+--dt=bf16
+--dir=FWD_D,BWD_D
+--alg=SOFTMAX,LOGSOFTMAX
+--inplace=true,false
+--tag=abx            --axis=1,0     --batch=set_0d
+--tag=abx,axb,aBx16b --axis=1,0,2,3 --batch=shapes_2d

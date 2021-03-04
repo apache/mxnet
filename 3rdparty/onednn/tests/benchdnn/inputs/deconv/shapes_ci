@@ -1,0 +1,61 @@
+# basoc shapes
+# 1. 1st convolution (+ tailed case)
+# 2. 1x1 convolution (+ tailed cases)
+# 3. 3x3 convolution (+ tailed cases)
+# 4. gemm-based convolution (kernel less than padding) (+ tailed cases)
+# 5. grouped convolution (+ tailed cases)
+# 6. depthwise convolution (+ tailed case)
+
+# one dimensional shapes
+g1oc3ic16_ow5iw5kw3pw1_n"1d_conv:1st"
+g1oc3ic17_ow5iw5kw3pw1_n"1d_tail_conv:1st"
+g1oc16ic16_ow5iw5kw1pw0_n"1d_conv:1x1"
+g1oc17ic16_ow5iw5kw1pw0_n"1d_oc_tail_conv:1x1"
+g1oc16ic17_ow5iw5kw1pw0_n"1d_ic_tail_conv:1x1"
+g1oc16ic16_ow5iw5kw3pw1_n"1d_conv:3x3"
+g1oc17ic16_ow5iw5kw3pw1_n"1d_oc_tail_conv:3x3"
+g1oc16ic17_ow5iw5kw3pw1_n"1d_ic_tail_conv:3x3"
+g1oc16ic16_ow5iw8kw3pw3_n"1d_conv:gemm"
+g1oc17ic16_ow5iw8kw3pw3_n"1d_oc_tail_conv:gemm"
+g1oc16ic17_ow5iw8kw3pw3_n"1d_ic_tail_conv:gemm"
+g4oc16ic16_ow5iw5kw3pw1_n"1d_conv:grouped"
+g4oc20ic16_ow5iw5kw3pw1_n"1d_oc_tail_conv:grouped"
+g4oc16ic20_ow5iw5kw3pw1_n"1d_ic_tail_conv:grouped"
+g16oc16ic16_ow5iw5kw3pw1_n"1d_conv:depthwise"
+g17oc17ic17_ow5iw5kw3pw1_n"1d_tail_conv:depthwise"
+
+# two dimensional shapes
+g1oc3ic16_oh5ih5kh3ph1_n"2d_conv:1st"
+g1oc3ic17_oh5ih5kh3ph1_n"2d_tail_conv:1st"
+g1oc16ic16_oh5ih5kh1ph0_n"2d_conv:1x1"
+g1oc17ic16_oh5ih5kh1ph0_n"2d_oc_tail_conv:1x1"
+g1oc16ic17_oh5ih5kh1ph0_n"2d_ic_tail_conv:1x1"
+g1oc16ic16_oh5ih5kh3ph1_n"2d_conv:3x3"
+g1oc17ic16_oh5ih5kh3ph1_n"2d_oc_tail_conv:3x3"
+g1oc16ic17_oh5ih5kh3ph1_n"2d_ic_tail_conv:3x3"
+g1oc16ic16_oh5ih8kh3ph3_n"2d_conv:gemm"
+g1oc17ic16_oh5ih8kh3ph3_n"2d_oc_tail_conv:gemm"
+g1oc16ic17_oh5ih8kh3ph3_n"2d_ic_tail_conv:gemm"
+g4oc16ic16_oh5ih5kh3ph1_n"2d_conv:grouped"
+g4oc20ic16_oh5ih5kh3ph1_n"2d_oc_tail_conv:grouped"
+g4oc16ic20_oh5ih5kh3ph1_n"2d_ic_tail_conv:grouped"
+g16oc16ic16_oh5ih5kh3ph1_n"2d_conv:depthwise"
+g17oc17ic17_oh5ih5kh3ph1_n"2d_tail_conv:depthwise"
+
+# three dimensional shapes
+g1oc3ic16_od5id5kd3pd1_n"3d_conv:1st"
+g1oc3ic17_od5id5kd3pd1_n"3d_tail_conv:1st"
+g1oc16ic16_od5id5kd1pd0_n"3d_conv:1x1"
+g1oc17ic16_od5id5kd1pd0_n"3d_oc_tail_conv:1x1"
+g1oc16ic17_od5id5kd1pd0_n"3d_ic_tail_conv:1x1"
+g1oc16ic16_od5id5kd3pd1_n"3d_conv:3x3"
+g1oc17ic16_od5id5kd3pd1_n"3d_oc_tail_conv:3x3"
+g1oc16ic17_od5id5kd3pd1_n"3d_ic_tail_conv:3x3"
+g1oc16ic16_od5id8kd3pd3_n"3d_conv:gemm"
+g1oc17ic16_od5id8kd3pd3_n"3d_oc_tail_conv:gemm"
+g1oc16ic17_od5id8kd3pd3_n"3d_ic_tail_conv:gemm"
+g4oc16ic16_od5id5kd3pd1_n"3d_conv:grouped"
+g4oc20ic16_od5id5kd3pd1_n"3d_oc_tail_conv:grouped"
+g4oc16ic20_od5id5kd3pd1_n"3d_ic_tail_conv:grouped"
+g16oc16ic16_od5id5kd3pd1_n"3d_conv:depthwise"
+g17oc17ic17_od5id5kd3pd1_n"3d_tail_conv:depthwise"

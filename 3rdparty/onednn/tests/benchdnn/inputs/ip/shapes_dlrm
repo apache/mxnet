@@ -1,0 +1,8 @@
+ic13oc512n"DLRM:0"
+ic512oc256n"DLRM:1*2"
+ic256oc128n"DLRM:2"
+ic479oc1024n"DLRM:3"
+ic1024oc1024n"DLRM:4"
+ic1024oc512n"DLRM:5"
+# ic512oc256n"DLRM:6"
+ic256oc1n"DLRM:7"

@@ -1,0 +1,18 @@
+# f32, bf16
+--reset
+
+--dt=f32,bf16
+--alg=ACROSS,WITHIN
+--dir=FWD_D,FWD_I,BWD_D
+--tag=abx
+--batch=set_all
+
+# f16
+--reset
+
+--dt=f16
+--alg=ACROSS,WITHIN
+--dir=FWD_I
+--tag=abx
+--batch=set_all
+

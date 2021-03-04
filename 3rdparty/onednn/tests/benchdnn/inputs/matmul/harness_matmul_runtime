@@ -1,0 +1,62 @@
+# f32
+
+--reset
+--skip-impl=ref
+
+--cfg=f32
+--stag=ab,ba --wtag=ab,ba
+--bia_dt=undef,f32 --bia_mask=2
+
+--runtime_m=0 --runtime_n=0 --runtime_k=0
+--attr-oscale=common:2.25*,per_oc:2.25*
+--attr-post-ops='','sum','relu'
+--batch=shapes_2d
+
+--runtime_m=1 --runtime_n=1 --runtime_k=1
+--attr-oscale=common:2.25*,per_oc:2.25*
+--attr-post-ops='','sum;add:s8','mul:f32:per_oc'
+--batch=shapes_2d
+
+# int8
+
+--reset
+--skip-impl=ref
+
+--cfg=u8s8u8,s8s8f32
+--stag=ab,ba --wtag=ab,ba
+--runtime_m=0,1 --runtime_n=0 --runtime_k=0
+--bia_dt=undef,f32,u8 --bia_mask=2
+
+--attr-oscale=common:2.25*,per_oc:2.25*
+--attr-post-ops='','sum','relu'
+--batch=shapes_2d
+
+# int8 (w/ zero points)
+
+--reset
+--skip-impl=ref
+
+--cfg=u8s8u8,s8s8f32
+--stag=ab,ba --wtag=ab,ba
+--runtime_m=0 --runtime_n=0 --runtime_k=0,1
+--bia_dt=undef,f32,u8 --bia_mask=2
+
+--attr-oscale=common:2.25*
+--attr-zero-points=src:common:1_wei:common:-1_dst:common:2
+--attr-post-ops='sum'
+--batch=shapes_2d
+
+--attr-zero-points=src:common:1*_wei:common:-1*_dst:common:-2
+--attr-post-ops='linear:2:1'
+--batch=shapes_2d
+
+--attr-zero-points=src:common:1*_wei:common:-1*_dst:common:2*
+--attr-post-ops='add:f32:per_oc'
+--batch=shapes_2d
+
+# zero point doesn't belong to the data type (e.g. -1 is not u8)
+--cfg=u8s8f32
+--runtime_m=0 --runtime_n=0 --runtime_k=0
+--bia_dt=undef
+--attr-oscale=common:1 --attr-zero-points=src:common:-1*_wei:common:1_dst:common:2       --batch=shapes_2d
+

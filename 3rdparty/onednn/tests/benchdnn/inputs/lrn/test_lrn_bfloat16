@@ -1,0 +1,12 @@
+--reset
+
+--mb=2
+--dt=bf16
+--alg=ACROSS,WITHIN
+--dir=FWD_D,FWD_I,BWD_D
+
+--tag=abx
+--batch=shapes_0d
+
+--tag=abx,axb,aBx8b,aBx16b
+--batch=set_all

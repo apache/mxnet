@@ -1,0 +1,8 @@
+# f32
+--reset --cfg=f32
+--mb=2                      # for fwd and bwd_d reduce mb
+--dir=FWD_B --batch=set_conv_all
+--dir=BWD_D --batch=set_conv_all
+--dir=BWD_WB --batch=set_conv_all
+--mb=0                      # for bwd_w use the actual mb for 1 topology
+--dir=BWD_WB --batch=shapes_resnet_50

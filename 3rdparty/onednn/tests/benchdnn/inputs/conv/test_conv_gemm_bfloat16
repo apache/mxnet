@@ -1,0 +1,22 @@
+# Test Bfloat16 GeMM specific functionality
+--reset
+--mb=2
+--skip-impl="ref"
+--dir=FWD_B
+--cfg=bf16bf16f32 --batch=shapes_gemm
+
+--dir=FWD_D
+--cfg=bf16bf16bf16 --batch=shapes_gemm
+
+--dir=BWD_D
+--cfg=f32bf16bf16 --batch=shapes_gemm
+
+--dir=BWD_WB
+--cfg=bf16f32bf16 --batch=shapes_gemm
+
+--dir=FWD_B,BWD_D,BWD_W
+--cfg=bf16bf16bf16
+--stag=abx --dtag=abx
+--batch=shapes_gemm
+--batch=shapes_3d_2d_strided_padding
+--batch=shapes_dilated_3d_strided_padding

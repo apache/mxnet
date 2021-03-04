@@ -1,0 +1,7 @@
+# Test All Topologies with F32 Configuration
+--reset --cfg=f32
+--stag=axb --dtag=axb
+--skip-impl="ref"
+--mb=2
+--dir=FWD_B,BWD_D,BWD_WB
+--batch=set_all_topologies

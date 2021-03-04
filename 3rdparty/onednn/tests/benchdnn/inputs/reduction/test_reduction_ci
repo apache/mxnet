@@ -1,0 +1,15 @@
+--reset
+
+--stag=abx,axb --dtag=abx,axb,any
+
+--sdt=f32 --ddt=f32
+--batch=option_set_all_algs_ci
+
+--sdt=bf16 --ddt=bf16,f32
+--batch=option_set_all_algs_ci
+
+--sdt=s8 --ddt=s8,s32,f32
+--batch=option_set_all_algs_int8_ci
+
+--sdt=u8 --ddt=u8,s32,f32
+--batch=option_set_all_algs_int8_ci

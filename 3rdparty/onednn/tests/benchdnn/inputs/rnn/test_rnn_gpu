@@ -1,0 +1,59 @@
+# Small tests
+# f32, bf16
+--reset
+
+--cfg=f32,bf16
+--trivial-strides=true,false
+--direction=left2right,right2left,concat,sum
+--prop=FWD_D,BWD_DW --batch=shapes_small
+
+# RNN, LSTM
+--alg=VANILLA_RNN --activation=RELU,TANH,LOGISTIC --batch=shapes_small
+--alg=VANILLA_LSTM --activation=UNDEF --batch=shapes_small
+
+# GRU
+--alg=LBR_GRU,VANILLA_GRU --batch=shapes_small
+
+--reset
+
+# f16
+--cfg=f16
+--prop=FWD_D
+--direction=left2right,right2left,concat,sum
+
+# RNN, LSTM
+--alg=VANILLA_RNN  --activation=RELU,TANH,LOGISTIC        --batch=shapes_small
+--alg=VANILLA_LSTM,LBR_GRU,VANILLA_GRU --activation=UNDEF --batch=shapes_small
+
+--reset
+
+# LSTM int8
+--alg=VANILLA_LSTM
+--direction=left2right,right2left,concat,sum
+--prop=FWD_D
+--trivial-strides=true
+
+--cfg=u8u8u8f32,u8u8u8u8     --scaling=common --batch=shapes_small
+--cfg=f32u8f32f32,f32u8f32u8 --scaling=per_oc --batch=shapes_small
+
+# Large tests
+--reset
+
+# LSTM, GRU
+# f32, bf16
+--cfg=f32,bf16
+--direction=right2left,concat,sum
+--mb=50
+
+--alg=VANILLA_LSTM,LBR_GRU,VANILLA_GRU --prop=FWD_D,BWD_DW --batch=shapes_large
+
+# RNN
+# f16
+--reset
+
+--cfg=f16
+--prop=FWD_D
+--mb=50
+--direction=right2left,concat,sum
+
+--alg=VANILLA_RNN --activation=RELU --batch=shapes_large

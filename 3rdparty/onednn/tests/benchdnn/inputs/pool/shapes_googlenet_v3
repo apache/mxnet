@@ -1,0 +1,16 @@
+# googlenet_v3
+
+mb96ic64_ih147oh73_kh3sh2ph0n"googlenet_v3:max_pool"
+mb96ic192_ih71oh35_kh3sh2ph0n"googlenet_v3:max_pool1"
+mb96ic192_ih35oh35_kh3sh1ph1n"googlenet_v3:ave_pool_mixed_pool"
+mb96ic256_ih35oh35_kh3sh1ph1n"googlenet_v3:ave_pool_mixed_1_pool"
+mb96ic288_ih35oh35_kh3sh1ph1n"googlenet_v3:ave_pool_mixed_2_pool"
+mb96ic288_ih35oh17_kh3sh2ph0n"googlenet_v3:max_pool_mixed_3_pool"
+mb96ic768_ih17oh17_kh3sh1ph1n"googlenet_v3:ave_pool_mixed_4_pool*4"
+# mb96ic768_ih17oh17_kh3sh1ph1n"googlenet_v3:ave_pool_mixed_5_pool"
+# mb96ic768_ih17oh17_kh3sh1ph1n"googlenet_v3:ave_pool_mixed_6_pool"
+# mb96ic768_ih17oh17_kh3sh1ph1n"googlenet_v3:ave_pool_mixed_7_pool"
+mb96ic768_ih17oh8_kh3sh2ph0n"googlenet_v3:max_pool_mixed_8_pool"
+mb96ic1280_ih8oh8_kh3sh1ph1n"googlenet_v3:ave_pool_mixed_9_pool"
+mb96ic2048_ih8oh8_kh3sh1ph1n"googlenet_v3:max_pool_mixed_10_pool"
+mb96ic2048_ih8oh1_kh8sh1ph0n"googlenet_v3:ave_global_pool"

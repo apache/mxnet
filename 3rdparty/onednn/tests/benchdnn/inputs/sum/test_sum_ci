@@ -1,0 +1,14 @@
+--reset
+
+--ddt=f32,bf16,f16,s32,s8,u8
+--sdt=f32:f32,f32:bf16,f32:s8,bf16:bf16,f16:f16,s32:s8,u8:u8
+--dtag=undef,any,abx,axb
+--stag=abx:abx,axb:axb
+--scales=0.25:2
+3x17x5x7 4x16x8x10
+
+--ddt=f32,s8
+--sdt=f32:u8:s8
+--stag=abx:abx:abx,axb:axb:axb
+--scales=0.25:2:0.5
+2x17x5x7x3 4x16x8x10x2

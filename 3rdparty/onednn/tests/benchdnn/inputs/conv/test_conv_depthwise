@@ -1,0 +1,18 @@
+# f32
+--reset
+--mb=2
+--dir=FWD_D,BWD_D,BWD_WB --batch=shapes_mobilenet_dw
+--dir=FWD_D,BWD_D,BWD_WB --batch=shapes_regression_dw
+
+# post-ops
+--dir=FWD_D
+--attr-post-ops='relu','sum','sum;relu'
+--batch=shapes_mobilenet_dw
+
+--reset --cfg=f32_full
+--mb=2
+--skip-impl="ref:gemm"
+--dir=FWD_B,BWD_D,BWD_WB
+--batch=set_conv_dw
+--batch=shapes_dw_minibatch_2d-spatial
+--batch=shapes_dw_minibatch_channel_2d-spatial

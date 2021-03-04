@@ -1,0 +1,12 @@
+--reset
+
+--ddt=f32,bf16
+--sdt=bf16:bf16
+--dtag=undef,abx,axb,aBx16b
+--stag=abx:abx       3x3x16x4
+--stag=axb:axb       4x4x2x16 5x5x1x15
+--stag=aBx16b:aBx16b 1x16x5x11 2x15x6x3
+
+--sdt=bf16:bf16:bf16
+--stag=aBx16b:abx:axb,axb:axb:axb
+--scales=2:0.25:0.5   16x2x6x4x3

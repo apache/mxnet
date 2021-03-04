@@ -1,0 +1,8 @@
+# Integer algorithm coverage based on alpha and beta validity
+--alpha=-2 --beta=0
+--alg=relu
+--batch=shapes_ci
+
+--alpha=1 --beta=2
+--alg=linear
+--batch=shapes_ci

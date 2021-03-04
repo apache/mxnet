@@ -1,0 +1,4 @@
+# 2d dataset
+
+--batch=shapes_0d
+--batch=shapes_nlp

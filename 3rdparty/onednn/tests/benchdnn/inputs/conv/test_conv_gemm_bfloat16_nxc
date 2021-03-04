@@ -1,0 +1,24 @@
+# bfloat16
+--reset
+--mb=2
+--stag=axb --dtag=axb
+--skip-impl="ref"
+
+--dir=FWD_B
+--cfg=bf16bf16f32,bf16bf16bf16
+--batch=shapes_gemm
+
+--dir=BWD_D
+--cfg=f32bf16bf16,bf16bf16bf16
+--batch=shapes_gemm
+
+--dir=BWD_WB
+--mb=0
+--cfg=bf16f32bf16,bf16bf16bf16
+--batch=shapes_gemm
+
+# PostOps + Attributes
+--dir=FWD_B
+--cfg=bf16bf16f32,bf16bf16bf16
+--mb=2
+--attr-post-ops='sum','relu','sum;tanh:1:1:2.5' --batch=shapes_gemm

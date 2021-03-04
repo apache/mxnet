@@ -1,0 +1,49 @@
+#===============================================================================
+# Copyright 2019 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#===============================================================================
+
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.BSD             text
+*.c               text
+*.cc              text
+*.cl              text
+*.cmake           text
+*.cpp             text
+*.css             text
+*.h               text
+*.hpp             text
+*.html            text
+*.in              text
+*.js              text
+*.md              text
+*.py              text
+*.svg             text
+*.txt             text
+*.xml             text
+*.pump            text
+
+# Declare files that will always have OS specific line endings on checkout.
+*.vcxproj.user    text eol=crlf
+*.sh              text eol=lf
+
+# Denote all files that are truly binary and should not be modified.
+*.jpg             binary
+*.otf             binary
+*.png             binary
+*.woff            binary

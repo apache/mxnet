@@ -1,0 +1,8 @@
+--reset
+
+--mb=2
+--dt=f32,bf16,f16
+--alg=ACROSS,WITHIN
+--dir=FWD_D,FWD_I,BWD_D
+--tag=abx,axb
+--batch=shapes_ci

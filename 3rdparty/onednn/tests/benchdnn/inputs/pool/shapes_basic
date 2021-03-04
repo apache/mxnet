@@ -1,0 +1,39 @@
+# basic shapes: single problem per case
+
+## 1D
+mb16ic64_iw32ow16kw3sw2_n"pool_1d_regular"
+mb1ic32_iw100ow51kw3sw2pw1_n"pool_1d_asymmetric"
+mb4ic17_iw60ow31kw3sw2pw1_n"pool_1d_ic_tail"
+mb1ic8_iw14ow8kw3sw2pw1_n"pool_1d_asymmetric_pad"
+ic5_iw42ow14kw3sw3pw0_n"pool_1d_kw_equals_sw"
+ic5_iw15ow14kw3sw1pw1_n"pool_1d_only_pad_l"
+ic5_iw16ow14kw3sw1pw0_n"pool_1d_no_pad"
+ic16_iw13ow14kw3sw1pw3_n"pool_1d_kw_equals_pw"
+ic16_iw30ow14kw3sw2pw0_n"pool_1d_negative_pw_r"
+ic16_iw30ow16kw3sw2pw0_n"pool_1d_kw_equals_pw_r"
+
+## 2D
+mb8ic32_ih32oh16kh3sh2_n"pool_2d_regular"
+mb1ic16_ih50oh26kh3sh2ph1_n"pool_2d_asymmetric"
+mb1ic16_ih32oh16kh3sh2_iw16ow8kw3sw2_n"pool_2d_non_square"
+mb4ic17_ih30oh16kh3sh2ph1_n"pool_2d_ic_tail"
+mb1ic8_ih14oh8kh3sh2ph1_n"pool_2d_asymmetric_pad"
+ic5_ih27oh9kh3sh3ph0_n"pool_2d_kh_equals_sh"
+ic5_ih15oh14kh3sh1ph1_n"pool_2d_only_pad_l"
+ic5_ih16oh14kh3sh1ph0_n"pool_2d_no_pad"
+ic16_ih13oh14kh3sh1ph3_n"pool_2d_kh_equals_ph"
+ic16_ih20oh9kh3sh2ph0_n"pool_2d_negative_ph_r"
+ic16_ih20oh11kh3sh2ph0_n"pool_2d_kh_equals_ph_r"
+
+## 3D
+mb8ic32_id16od8kd3sd2_n"pool_3d_regular"
+mb1ic16_id10od6kd3sd2pd1_n"pool_3d_asymmetric"
+mb1ic16_id32od16kd3sd2_ih16oh8kh3sh2_iw8ow4kw3sw2_n"pool_3d_non_cubic"
+mb4ic17_id30od16kd3sd2pd1_n"pool_3d_ic_tail"
+mb1ic8_id14od8kd3sd2pd1_n"pool_3d_asymmetric_pad"
+ic5_id12od4kd3sd3pd0_n"pool_3d_kd_equals_sd"
+ic5_id15od14kd3sd1pd1_n"pool_3d_only_pad_l"
+ic5_id16od14kd3sd1pd0_n"pool_3d_no_pad"
+ic16_id13od14kd3sd1pd3_n"pool_3d_kd_equals_pd"
+ic16_id10od4kd3sd2pd0_n"pool_3d_negative_pd_r"
+ic16_id10od6kd3sd2pd0_n"pool_3d_kd_equals_pd_r"

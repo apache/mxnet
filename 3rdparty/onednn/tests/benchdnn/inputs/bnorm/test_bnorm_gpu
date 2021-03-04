@@ -1,0 +1,67 @@
+--reset
+
+--tag=abx,aBx16b,ABx16a16b
+--dir=FWD_D,BWD_DW --flags=SR,GS,S --attr-post-ops=       --batch=shapes_1d --batch=shapes_3d
+--dir=FWD_D        --flags=GS,S    --attr-post-ops='relu' --batch=shapes_1d
+--dir=BWD_D        --flags=        --attr-post-ops=       --batch=shapes_1d
+
+--tag=abx,aBx16b
+--dir=FWD_D,BWD_DW --flags=SR,GS,S --attr-post-ops=       --batch=shapes_topologies_small
+--dir=FWD_D        --flags=GS,S    --attr-post-ops='relu' --batch=shapes_topologies_small
+--dir=BWD_D        --flags=        --attr-post-ops=       --batch=shapes_topologies_small
+
+--mb=2
+--dt=f16,s8,bf16
+--dir=FWD_I        --flags=GS      --attr-post-ops=       --batch=shapes_topologies_small
+--dir=FWD_I        --flags=GS      --attr-post-ops='relu' --batch=shapes_topologies_small
+
+--reset
+
+--mb=48
+--tag=ABx16a16b
+--dir=FWD_D,BWD_DW --flags=SR,GS,S --attr-post-ops=       --batch=shapes_topologies_small
+--dir=FWD_D        --flags=GS,S    --attr-post-ops='relu' --batch=shapes_topologies_small
+--dir=BWD_D        --flags=        --attr-post-ops=       --batch=shapes_topologies_small
+
+--dt=f16,s8,bf16
+--dir=FWD_I        --flags=GS      --attr-post-ops=       --batch=shapes_topologies_small
+--dir=FWD_I        --flags=GS      --attr-post-ops='relu' --batch=shapes_topologies_small
+
+--mb=1,2,32
+--dt=bf16
+--tag=abx,aBx16b,ABx16a16b
+--dir=FWD_D,BWD_DW --flags=SR,GS,S --attr-post-ops=       ic96ih35iw35
+--dir=FWD_D        --flags=GS,S    --attr-post-ops='relu' ic96ih35iw35
+--dir=BWD_D        --flags=        --attr-post-ops=       ic96ih35iw35
+
+--dt=f16,bf16
+--mb=2
+--dir=FWD_I,FWD_D
+--tag=abx,aBx16b,ABx16a16b
+--flags=,S
+--batch=shapes_1d
+--batch=shapes_topologies_small
+--batch=shapes_3d
+
+--reset
+--mb=2
+--dt=f32,f16,bf16
+--tag=axb
+--dir=FWD_I        --flags=        --attr-post-ops=       --batch=shapes_topologies_small
+--dir=FWD_D        --flags=SR,GS,S --attr-post-ops=       --batch=shapes_topologies_small
+--dir=FWD_D        --flags=GS,S    --attr-post-ops='relu' --batch=shapes_topologies_small
+
+--reset
+--mb=1
+--dt=f32,bf16
+--tag=axb,aBx16b
+--dir=BWD_D,BWD_W,BWD_WB,BWD_DW     --flags=        --batch=shapes_topologies_small
+--dir=BWD_W,BWD_WB,BWD_DW           --flags=SR,GS,S --batch=shapes_topologies_small
+
+--reset
+--mb=32
+--dt=f32,bf16
+--tag=axb,ABx16a16b
+--dir=BWD_D,BWD_W,BWD_WB,BWD_DW     --flags=        --batch=shapes_topologies_small
+--dir=BWD_W,BWD_WB,BWD_DW           --flags=SR,GS,S --batch=shapes_topologies_small
+

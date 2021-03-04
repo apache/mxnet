@@ -1,0 +1,10 @@
+# PointNet
+
+mb10ic1088ih1iw15000oc512oh1ow15000kh1kw1ph0pw0n"pointnet:0*300"
+mb10ic128ih1iw15000oc1024oh1ow15000kh1kw1ph0pw0n"pointnet:1*900"
+mb10ic128ih1iw15000oc5oh1ow15000kh1kw1ph0pw0n"pointnet:2*300"
+mb10ic256ih1iw15000oc128oh1ow15000kh1kw1ph0pw0n"pointnet:3*300"
+mb10ic4ih1iw15000oc64oh1ow15000kh1kw1ph0pw0n"pointnet:4*500"
+mb10ic512ih1iw15000oc256oh1ow15000kh1kw1ph0pw0n"pointnet:5*300"
+mb10ic64ih1iw15000oc128oh1ow15000kh1kw1ph0pw0n"pointnet:6*900"
+mb10ic64ih1iw15000oc64oh1ow15000kh1kw1ph0pw0n"pointnet:7*900"

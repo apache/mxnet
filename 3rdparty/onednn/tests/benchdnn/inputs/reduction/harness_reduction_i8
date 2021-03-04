@@ -1,0 +1,8 @@
+# i8
+--reset
+
+--sdt=u8 --ddt=u8,s32,f32
+--batch=option_set_all_algs_int8
+
+--sdt=s8 --ddt=s8,s32,f32
+--batch=option_set_all_algs_int8

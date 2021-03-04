@@ -1,0 +1,34 @@
+# 5x5
+mb1ic16oc16_ih10kh5_ph7sh1
+mb1ic16oc16_ih10kh5_ph6sh1
+mb1ic16oc16_ih10kh5_ph5sh1
+mb1ic16oc16_ih10kh5_ph4sh1
+mb1ic16oc16_ih10kh5_ph3sh1
+mb1ic16oc16_ih10kh5_ph2sh1
+mb1ic16oc16_ih10kh5_ph1sh1
+
+# 3x3 (Symmetrical)
+mb1ic16oc16_ih10kh3_ph5sh1
+mb1ic16oc16_ih10kh3_ph4sh1
+mb1ic16oc16_ih10kh3_ph3sh1
+mb1ic16oc16_ih10kh3_ph2sh1
+mb1ic16oc16_ih10kh3_ph1sh1
+
+# 3x3 (Asymmetrical)
+mb1ic16oc16_ih16kh3ph1oh15_iw16kw3pw0ow15
+mb1ic16oc16_ih16kh3ph1oh16_iw16kw3pw1ow15
+mb1ic16oc16_ih16kh3ph0oh15_iw16kw3pw1ow16
+
+# 1x1
+mb1ic16oc16_ih10kh1_ph3sh1
+mb1ic16oc16_ih10kh1_ph2sh1
+mb1ic16oc16_ih10kh1_ph1sh1
+
+# 3d with depth padding
+mb1ic1oc16_kd2kh1kw1_id2ih1iw1_od1oh1ow1_sd2sh1sw1_pd1ph0pw0
+
+# Skip compute on kh
+mb1ic16id1ih1iw1oc16od2oh2ow1kd3kh3kw1dd1dh1ph1pd1
+
+# Large input channel
+mb1_ic128ih1_oc16oh1_kh3_ph1

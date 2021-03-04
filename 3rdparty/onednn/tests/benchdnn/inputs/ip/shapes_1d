@@ -1,0 +1,6 @@
+# 1D
+mb128ic128iw4oc1024n"googlenet_v1_1d:ip1"
+mb64ic512iw7oc4096n"VGG16_1d:ip1"
+mb32ic64iw3oc1000n"1d:ip1"
+mb32ic512iw5oc1000n"1d:ip2"
+mb256ic128iw5oc128n"1d:ip3"

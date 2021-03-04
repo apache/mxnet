@@ -1,0 +1,5 @@
+--reset
+
+--batch=harness_rnn_f32
+
+--batch=test_rnn_bfloat16

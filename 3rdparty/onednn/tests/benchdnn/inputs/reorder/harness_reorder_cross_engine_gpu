@@ -1,0 +1,11 @@
+# cross engine test
+--reset
+
+--cross-engine=cpu2gpu,gpu2cpu
+--sdt=f32,bf16,f16,s32,s8,u8
+--ddt=f32,bf16,f16,s32,s8,u8
+--attr-oscale=,per_dim_1:0.5
+--attr-post-ops='','sum:0.5'
+--stag=abx,axb,aBx16b,ABx16a16b
+--dtag=abx,axb,aBx16b,ABx16a16b
+2x16x3x4 1x17x5x3

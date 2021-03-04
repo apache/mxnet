@@ -1,0 +1,76 @@
+# resnet_50_sparse
+
+mb50ic3ih224iw224oc64oh112ow112kh7kw7sh2sw2ph3pw3n"resnet_50_sparse:conv1"
+mb50ic64ih56oc256oh56kh1ph0n"resnet_50_sparse:res2a_branch1*3"
+mb50ic64ih56oc64oh56kh1ph0n"resnet_50_sparse:res2a_branch2a"
+mb50ic64ih56oc64oh56kh3ph1n"resnet_50_sparse:res2a_branch2b*2"
+# mb50ic64ih56oc256oh56kh1ph0n"resnet_50_sparse:res2a_branch2c"        # res2a_branch1
+mb50ic256ih56oc64oh56kh1ph0n"resnet_50_sparse:res2b_branch2a*2"
+# mb50ic64ih56oc64oh56kh3ph1n"resnet_50_sparse:res2b_branch2b"         # res2a_branch2b
+# mb50ic64ih56oc256oh56kh1ph0n"resnet_50_sparse:res2b_branch2c"        # res2a_branch1
+# mb50ic256ih56oc64oh56kh1ph0n"resnet_50_sparse:res2c_branch2a"        # res2b_branch2a
+
+# _mb50ic64ih56oc64oh56kh3ph1n"resnet_50_sparse:res2c_branch2b"          # res2a_branch2b
+# _mb50ic64ih56oc256oh56kh1ph0n"resnet_50_sparse:res2c_branch2c"         # res2a_branch1
+# _g1mb50ic256ih56iw56oc512oh28ow28kh1kw1sh2sw2ph0pw0n"resnet_50_sparse:res3a_branch1"
+# _g1mb50ic256ih56iw56oc128oh28ow28kh1kw1sh2sw2ph0pw0n"resnet_50_sparse:res3a_branch2a"
+# -->
+mb50ic64ih56oc64oh28kh3sh2ph1n"resnet_50_sparse:res2c_branch2b"         # res2a_branch2b
+mb50ic64ih28oc256oh28kh1ph0n"resnet_50_sparse:res2c_branch2c"           # res2a_branch1
+g1mb50ic256ih28iw28oc512oh28ow28kh1kw1ph0pw0n"resnet_50_sparse:res3a_branch1"
+g1mb50ic256ih28iw28oc128oh28ow28kh1kw1ph0pw0n"resnet_50_sparse:res3a_branch2a"
+
+mb50ic128ih28oc128oh28kh3ph1n"resnet_50_sparse:res3a_branch2b*3"
+mb50ic128ih28oc512oh28kh1ph0n"resnet_50_sparse:res3a_branch2c*3"
+mb50ic512ih28oc128oh28kh1ph0n"resnet_50_sparse:res3b_branch2a*3"
+# mb50ic128ih28oc128oh28kh3ph1n"resnet_50_sparse:res3b_branch2b"       # res3a_branch2b
+# mb50ic128ih28oc512oh28kh1ph0n"resnet_50_sparse:res3b_branch2c"       # res3a_branch2c
+# mb50ic512ih28oc128oh28kh1ph0n"resnet_50_sparse:res3c_branch2a"       # res3b_branch2a
+# mb50ic128ih28oc128oh28kh3ph1n"resnet_50_sparse:res3c_branch2b"       # res3a_branch2b
+# mb50ic128ih28oc512oh28kh1ph0n"resnet_50_sparse:res3c_branch2c"       # res3a_branch2c
+# mb50ic512ih28oc128oh28kh1ph0n"resnet_50_sparse:res3d_branch2a"       # res3b_branch2a
+
+# _mb50ic128ih28oc128oh28kh3ph1n"resnet_50_sparse:res3d_branch2b"        # res3a_branch2b
+# _mb50ic128ih28oc512oh28kh1ph0n"resnet_50_sparse:res3d_branch2c"        # res3a_branch2c
+# _g1mb50ic512ih28iw28oc1024oh14ow14kh1kw1sh2sw2ph0pw0n"resnet_50_sparse:res4a_branch1"
+# _g1mb50ic512ih28iw28oc256oh14ow14kh1kw1sh2sw2ph0pw0n"resnet_50_sparse:res4a_branch2a"
+# -->
+mb50ic128ih28oc128oh14kh3sh2ph1n"resnet_50_sparse:res3d_branch2b"       # res3a_branch2b
+mb50ic128ih14oc512oh14kh1ph0n"resnet_50_sparse:res3d_branch2c"          # res3a_branch2c
+g1mb50ic512ih14iw14oc1024oh14ow14kh1kw1ph0pw0n"resnet_50_sparse:res4a_branch1"
+g1mb50ic512ih14iw14oc256oh14ow14kh1kw1ph0pw0n"resnet_50_sparse:res4a_branch2a"
+
+mb50ic256ih14oc256oh14kh3ph1n"resnet_50_sparse:res4a_branch2b*5"
+mb50ic256ih14oc1024oh14kh1ph0n"resnet_50_sparse:res4a_branch2c*5"
+mb50ic1024ih14oc256oh14kh1ph0n"resnet_50_sparse:res4b_branch2a*5"
+# mb50ic256ih14oc256oh14kh3ph1n"resnet_50_sparse:res4b_branch2b"       # res4a_branch2b
+# mb50ic256ih14oc1024oh14kh1ph0n"resnet_50_sparse:res4b_branch2c"      # res4a_branch2c
+# mb50ic1024ih14oc256oh14kh1ph0n"resnet_50_sparse:res4c_branch2a"      # res4b_branch2a
+# mb50ic256ih14oc256oh14kh3ph1n"resnet_50_sparse:res4c_branch2b"       # res4a_branch2b
+# mb50ic256ih14oc1024oh14kh1ph0n"resnet_50_sparse:res4c_branch2c"      # res4a_branch2c
+# mb50ic1024ih14oc256oh14kh1ph0n"resnet_50_sparse:res4d_branch2a"      # res4b_branch2a
+# mb50ic256ih14oc256oh14kh3ph1n"resnet_50_sparse:res4d_branch2b"       # res4a_branch2b
+# mb50ic256ih14oc1024oh14kh1ph0n"resnet_50_sparse:res4d_branch2c"      # res4a_branch2c
+# mb50ic1024ih14oc256oh14kh1ph0n"resnet_50_sparse:res4e_branch2a"      # res4b_branch2a
+# mb50ic256ih14oc256oh14kh3ph1n"resnet_50_sparse:res4e_branch2b"       # res4a_branch2b
+# mb50ic256ih14oc1024oh14kh1ph0n"resnet_50_sparse:res4e_branch2c"      # res4a_branch2c
+# mb50ic1024ih14oc256oh14kh1ph0n"resnet_50_sparse:res4f_branch2a"      # res4b_branch2a
+
+# _mb50ic256ih14oc256oh14kh3ph1n"resnet_50_sparse:res4f_branch2b"        # res4a_branch2b
+# _mb50ic256ih14oc1024oh14kh1ph0n"resnet_50_sparse:res4f_branch2c"       # res4a_branch2c
+# _g1mb50ic1024ih14iw14oc2048oh7ow7kh1kw1sh2sw2ph0pw0n"resnet_50_sparse:res5a_branch1"
+# _g1mb50ic1024ih14iw14oc512oh7ow7kh1kw1sh2sw2ph0pw0n"resnet_50_sparse:res5a_branch2a"
+# -->
+mb50ic256ih14oc256oh7kh3sh2ph1n"resnet_50_sparse:res4f_branch2b"        # res4a_branch2b
+mb50ic256ih7oc1024oh7kh1ph0n"resnet_50_sparse:res4f_branch2c"           # res4a_branch2c
+g1mb50ic1024ih7iw7oc2048oh7ow7kh1kw1ph0pw0n"resnet_50_sparse:res5a_branch1"
+g1mb50ic1024ih7iw7oc512oh7ow7kh1kw1ph0pw0n"resnet_50_sparse:res5a_branch2a"
+
+mb50ic512ih7oc512oh7kh3ph1n"resnet_50_sparse:res5a_branch2b*3"
+mb50ic512ih7oc2048oh7kh1ph0n"resnet_50_sparse:res5a_branch2c*3"
+mb50ic2048ih7oc512oh7kh1ph0n"resnet_50_sparse:res5b_branch2a*2"
+# mb50ic512ih7oc512oh7kh3ph1n"resnet_50_sparse:res5b_branch2b"         # res5a_branch2b
+# mb50ic512ih7oc2048oh7kh1ph0n"resnet_50_sparse:res5b_branch2c"        # res5a_branch2c
+# mb50ic2048ih7oc512oh7kh1ph0n"resnet_50_sparse:res5c_branch2a"        # res5b_branch2a
+# mb50ic512ih7oc512oh7kh3ph1n"resnet_50_sparse:res5c_branch2b"         # res5a_branch2b
+# mb50ic512ih7oc2048oh7kh1ph0n"resnet_50_sparse:res5c_branch2c"        # res5a_branch2c

@@ -1,0 +1,73 @@
+--reset
+# f32, bf16
+--mb=2
+--cfg=f32,bf16
+--dir=FWD_D,FWD_I,BWD_D
+--alg=MAX,AVG_NP,AVG_P
+--tag=abx,aBx16b,aBx32b
+--batch=set_all_small
+
+# f32
+--mb=16
+--cfg=f32
+--dir=FWD_D,FWD_I,BWD_D
+--alg=MAX,AVG_NP,AVG_P
+--tag=ABx16a16b,ABx32a32b
+--batch=set_all_small
+
+# u8, s8, s32, f16, bf16
+--mb=2
+--cfg=u8,s8,s32,f16,bf16
+--dir=FWD_I
+--alg=MAX,AVG_NP,AVG_P
+--tag=abx,aBx16b,aBx32b
+--batch=shapes_2d_small
+
+--mb=16
+--tag=ABx16a16b
+--batch=set_all_small
+
+--mb=32
+--tag=ABx32a32b
+--batch=set_all_small
+
+--reset
+# f32, nhwc
+--mb=1
+--cfg=f32
+--dir=FWD_D,BWD_D
+--alg=MAX,AVG_NP,AVG_P
+--tag=axb
+--batch=shapes_2d_small
+
+--mb=1,16
+--alg=MAX
+--batch=set_all_small
+
+# f16, nhwc
+--mb=1,16
+--cfg=f16
+--dir=FWD_I
+--alg=MAX
+--batch=set_all_small
+
+# basic post op tests
+--reset
+--dir=FWD_I
+--cfg=f32,s32,f16,bf16,u8,s8
+--alg=MAX,AVG_NP,AVG_P
+--attr-post-ops='add:s32:per_oc','add:f32;linear:-0.5:1.5'
+--mb=2
+--tag=abx,aBx16b
+--batch=shapes_3d_small
+
+--mb=16
+--tag=ABx16a16b
+--batch=shapes_2d_small
+
+--mb=32
+--tag=ABx32a32b
+--batch=shapes_2d_small
+
+# Test different src and dst datatypes
+--batch=harness_pooling_different_dt

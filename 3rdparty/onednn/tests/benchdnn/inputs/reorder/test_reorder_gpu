@@ -1,0 +1,147 @@
+### shuffle dims
+--reset
+--sdt=f32
+--ddt=f32
+--stag=abx,axb
+--dtag=abx,axb
+11 7x11 5x7x11 3x5x7x11 2x3x5x7x11
+
+# test vectorized kernel
+--stag=abcd
+--dtag=acbd,bacd
+3x5x7x64 64x16x384x64
+
+--stag=abcde
+--dtag=bacde,acbde
+3x5x7x11x16
+
+### test types
+--reset
+--sdt=f32,s32,s8,u8,f16,bf16
+--ddt=f32,s32,s8,u8,f16,bf16
+--stag=abx,aBx16b,ABx16a16b
+--dtag=abx,aBx16b,ABx16a16b
+32x32x2x2
+
+### test scale
+# axis type
+--reset
+--sdt=u8
+--ddt=u8
+--stag=abx,xba
+--dtag=abx,xba
+--attr-oscale=per_dim_0:0,per_dim_1:0,per_dim_01:0
+3x5x7x11
+
+# data types
+--reset
+--sdt=f32,s32,s8,u8,f16,bf16
+--ddt=f32,s32,s8,u8,f16,bf16
+
+--attr-oscale=per_dim_1:0.5
+--stag=abx,xba
+--dtag=abx,xba
+3x5x7x11
+
+# post operation
+--reset
+--sdt=f32,s32,s8,u8,f16,bf16
+--ddt=f32,s32,s8,u8,f16,bf16
+
+--attr-oscale=per_dim_1:0.5
+--attr-post-ops='sum:0.5'
+--stag=abx,xba
+--dtag=abx,xba
+2x16x3x4
+
+# layouts
+--reset
+--sdt=u8
+--ddt=u8
+
+--attr-oscale=per_dim_0:0.5
+--stag=a
+--dtag=a
+128
+
+--stag=ab,ba
+--dtag=ab,ba
+7x11
+
+--stag=abc,bac
+--dtag=abc,bac
+5x7x11
+
+--stag=abcd,ABcd16a16b
+--dtag=abcd,ABcd16a16b
+32x32x2x2
+
+--stag=abcde,ABcde16a16b
+--dtag=abcde,ABcde16a16b
+32x32x2x2x2
+
+--stag=abcdef,aBCdef16b16c
+--dtag=abcdef,aBCdef16b16c
+2x32x32x2x2x2
+
+### test blocking
+--reset
+--sdt=f32
+--ddt=f32
+
+# data
+--stag=abx,aBx4b,aBx8b,aBx16b
+--dtag=abx,aBx4b,aBx8b,aBx16b
+2x64x3 2x19x5 2x64x3x2 2x19x3x5 2x64x3x2x2 2x19x2x3x5
+
+# weights
+--stag=abc,ABc16a16b,ABc16b16a,BAc16a16b,BAc16b16a
+--dtag=abc,ABc16a16b,ABc16b16a,BAc16a16b,BAc16b16a
+16x32x3 32x16x3 11x17x3
+
+--stag=abcd,ABcd16a16b,ABcd16b16a,BAcd16a16b,BAcd16b16a
+--dtag=abcd,ABcd16a16b,ABcd16b16a,BAcd16a16b,BAcd16b16a
+16x32x3x2 32x16x2x3 11x17x2x3
+
+--stag=abcde,ABcde16a16b,ABcde16b16a,BAcde16b16a
+--dtag=abcde,ABcde16a16b,ABcde16b16a,BAcde16b16a
+16x32x3x2x4 32x16x2x3x4 11x17x2x3x4
+
+# weights with groups
+--stag=abcd,aBCd16b16c,aBCd16c16b,aCBd16b16c,aCBd16c16b
+--dtag=abcd,aBCd16b16c,aBCd16c16b,aCBd16b16c,aCBd16c16b
+2x16x32x3 5x32x16x2 4x11x27x2
+
+--stag=abcde,aBCde16b16c,aBCde16c16b,aCBde16b16c,aCBde16c16b
+--dtag=abcde,aBCde16b16c,aBCde16c16b,aCBde16b16c,aCBde16c16b
+3x16x32x3x2 5x32x16x2x3 4x11x17x2x2
+
+--stag=abcdef,aBCdef16b16c,aBCdef16c16b,aCBdef16c16b
+--dtag=abcdef,aBCdef16b16c,aBCdef16c16b,aCBdef16c16b
+3x16x32x3x2x4 5x32x16x2x3x4 4x11x17x2x2x3
+
+--stag=oiw,OIw8o16i2o,OIw8i16o2i
+--dtag=oiw,OIw8o16i2o,OIw8i16o2i
+16x32x3 32x16x2 11x27x2
+
+--stag=oihw,OIhw8o16i2o,OIhw8i16o2i,OIhw4o8i8o4i,OIhw2o8i8o2i
+--dtag=oihw,OIhw8o16i2o,OIhw8i16o2i,OIhw4o8i8o4i,OIhw2o8i8o2i
+32x32x3x2 32x32x2x3 29x27x2x2
+
+--stag=oidhw,OIdhw8i16o2i
+--dtag=oidhw,OIdhw8i16o2i
+16x32x3x2x4 32x16x2x3x4 11x17x2x2x3
+
+--stag=goiw,gOIw8o16i2o,gOIw8i16o2i
+--dtag=goiw,gOIw8o16i2o,gOIw8i16o2i
+2x16x32x3 5x32x16x2 4x11x27x2
+
+--stag=goihw,gOIhw8o16i2o,gOIhw8i16o2i,gOIhw4o8i8o4i,gOIhw2o8i8o2i
+--dtag=goihw,gOIhw8o16i2o,gOIhw8i16o2i,gOIhw4o8i8o4i,gOIhw2o8i8o2i
+3x32x32x3x2 5x32x32x2x3 4x29x27x2x2
+
+--stag=goidhw,gOIdhw8i16o2i
+--dtag=goidhw,gOIdhw8i16o2i
+3x16x32x3x2x4 5x32x16x2x3x4 4x11x17x2x2x3
+
+--batch=harness_reorder_cross_engine_gpu

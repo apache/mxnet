@@ -1,0 +1,5 @@
+# random batched shapes for correctness testing
+mb1m1n1k1
+mb2m10n1k30
+mb3m30n20k1
+mb1m30n20k30

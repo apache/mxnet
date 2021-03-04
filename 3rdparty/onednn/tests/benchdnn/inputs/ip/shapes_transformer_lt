@@ -1,0 +1,13 @@
+# encoder
+mb5120ic1024oc1024n"transformer_lt:encoder:SA*2"
+mb5120ic1024oc4096n"transformer_lt:encoder:FF1"
+mb5120ic4096oc1024n"transformer_lt:encoder:FF2"
+mb20480ic1024oc1024n"transformer_lt:encoder:SA-precompute"
+# decoder
+mb512ic1024oc1024n"transformer_lt:decoder:SA1"
+# mb5120ic1024oc1024n"transformer_lt:decoder:SA10"
+mb10240ic1024oc1024n"transformer_lt:decoder:SA20"
+mb512ic1024oc4096n"transformer_lt:decoder:FF1"
+mb512ic4096oc1024n"transformer_lt:decoder:FF2"
+# vocabulary
+mb512ic10246oc33945n"transformer_lt:output_logits"

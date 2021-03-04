@@ -1,0 +1,8 @@
+# model problems
+mb256ic96_ih55n"alexnet:norm1"
+mb256ic256_ih27n"alexnet:norm2"
+mb96ic64_ih57n"googlenet:pool1/norm1"
+mb96ic192_ih57n"googlenet:conv2/norm2"
+mb50ic96ih112_alpha0.0005_k2n"fastrcnn:norm1"
+mb50ic96ih112_ls3_alpha0.00005n"fastrcnn_zf:norm1"
+

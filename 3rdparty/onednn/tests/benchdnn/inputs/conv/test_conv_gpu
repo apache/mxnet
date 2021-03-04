@@ -1,0 +1,80 @@
+# f32
+--reset
+--mb=2,16
+--dir=FWD_B,BWD_D,BWD_WB --stag=any --batch=set_gpu
+
+# f16
+--cfg=f16
+--mb=2,16
+--dir=FWD_B --batch=set_gpu
+
+# bf16
+--cfg=bf16bf16bf16
+--mb=2
+--dir=FWD_B,BWD_D,BWD_WB --batch=shapes_resnet_50
+
+# i8
+# i8 - 1x1 tests
+--reset --cfg=u8s8u8,u8s8s8,u8s8s32
+--stag=any,axb
+--dir=FWD_I,FWD_B
+--mb=2,16
+mb2ic256ih14oc1024oh14kh1ph0n
+mb2ic32ih14oc32oh14kh1ph0n
+mb2ic32ih7oc512oh7kh1ph0n
+mb2ic512ih14oc32oh14kh1ph0n
+--batch=shapes_regression_dw
+
+--reset --cfg=u8s8u8,u8s8s8
+--stag=any
+--mb=2,16
+--dir=FWD_B,BWD_D --batch=set_gpu
+
+--reset --cfg=u8s8u8,u8s8s8
+--stag=axb
+--mb=2,16
+--dir=FWD_B --batch=set_gpu
+
+--reset --cfg=u8s8s32,u8s8f32
+--mb=2,16
+--stag=any,axb
+--dir=FWD_B --batch=set_gpu
+
+# test scale and post-ops
+--batch=harness_conv_attrs_gpu
+
+# test zero points
+--batch=harness_conv_attrs_int8_asymmetric
+
+# test padding
+--reset --cfg=f16,f32
+--stag=any,axb
+g1mb16ic16ih2iw9oc16oh2ow11kh2kw1sh2sw1ph1pw1
+g1mb16ic32id9ih1iw9oc32od3oh1ow5kd3kh1kw1sd3sh1sw3pd1ph0pw2dd1dh0dw0
+g1mb16ic32ih5iw9oc32oh1ow5kh4kw1sh3sw3ph1pw2dh1dw1
+g1mb32ic16id12ih5iw5oc32od14oh2ow4kd1kh3kw2sd1sh2sw2pd1ph1pw2dd0dh1dw1
+g1mb32ic32ih11iw6oc16oh15ow4kh1kw4sh1sw2ph2pw2
+g1mb32ic32ih6iw15oc32oh7ow19kh4kw1ph2pw2dh0dw1
+g1ic32id2ih13iw15oc32od4oh15ow9kd1kh2kw3sd1sh1sw2pd1ph2pw2dd1dh1dw0
+g1mb32ic32ih3iw4oc16oh4ow3kh1kw2sh2sw2ph2pw1dh1dw0
+mb1_ic16oc16_id1od2kd1sd1dd1pd0_ih2oh3kh2sh1dh1ph2_iw5ow3kw3sw2dw0pw0
+g2ic2ih1iw2oc4oh1ow2kh1kw1ph0pw0
+
+# nhwc
+--reset
+--skip-impl="ref"
+--stag=axb
+--dir=FWD_B,BWD_D,BWD_WB --mb=1,16 --batch=set_gpu
+# nhwc f16
+--reset
+--skip-impl="ref"
+--stag=axb
+--cfg=f16 --mb=1,16 --batch=set_gpu
+
+# regression
+--reset
+--cfg=f32,f16
+--dir=FWD_B,BWD_D,BWD_WB
+--dtag=axb
+g1ic16iw5oc16ow5kw1pw0
+mb3g1ic33iw5oc33ow17kw1pw0

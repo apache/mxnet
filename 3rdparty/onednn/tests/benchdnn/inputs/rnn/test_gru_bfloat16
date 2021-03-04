@@ -1,0 +1,3 @@
+--reset
+
+--batch=harness_gru_bfloat16

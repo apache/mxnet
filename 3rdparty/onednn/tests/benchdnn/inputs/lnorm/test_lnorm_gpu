@@ -1,0 +1,8 @@
+--reset
+
+--dt=f32,bf16
+--dir=FWD_D,BWD_D  --inplace=true,false  --flags=     --batch=option_set_all
+--dir=FWD_D,BWD_DW --inplace=true        --flags=GS,S --batch=option_set_all
+
+--dt=f16
+--dir=FWD_I        --inplace=true,false  --flags=GS,S --batch=option_set_all

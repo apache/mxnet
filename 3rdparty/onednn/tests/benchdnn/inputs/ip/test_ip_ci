@@ -1,0 +1,27 @@
+--reset
+
+--mb=2
+
+# Training
+## Forward
+--dir=FWD_B,FWD_D
+--attr-post-ops='','sum:0.5','linear:2:1','add:f32',\
+                'mul:s8:per_oc;sum:0.25;relu:0.5'
+--cfg=f32,bf16bf16bf16,f16
+--stag=any,axb
+--dtag=any,axb
+--batch=shapes_ci
+## Backward
+--dir=BWD_D,BWD_W,BWD_WB
+--attr-post-ops=
+--batch=shapes_ci
+
+# Inference
+--dir=FWD_B,FWD_I
+--attr-oscale=,common:0.25,per_oc:5
+--attr-post-ops='','sum:0.5','linear:2:1','add:f32',\
+                'mul:s8:per_oc;sum:0.25;relu:0.5'
+--cfg=u8s8s32
+--stag=any,axb
+--dtag=any,axb
+--batch=shapes_ci

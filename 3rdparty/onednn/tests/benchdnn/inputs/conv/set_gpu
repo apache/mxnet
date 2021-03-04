@@ -1,0 +1,6 @@
+--batch=shapes_1d_wavenet
+--batch=shapes_alexnet
+--batch=shapes_resnet_50
+--batch=shapes_3d_gpu
+--batch=shapes_mobilenet_dw
+--batch=shapes_tails_gpu

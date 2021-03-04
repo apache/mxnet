@@ -1,0 +1,22 @@
+# inference_sb -- inference with small batch size
+
+--alg=VANILLA_LSTM
+--activation=UNDEF
+
+--mb=10
+--batch=option_set_gnmt_decoder
+
+--mb=1
+--batch=option_set_gnmt_encoder
+
+--mb=1
+--alg=VANILLA_RNN
+--direction=left2right
+--activation=TANH
+--batch=shapes_deepspeech_2
+
+--mb=1
+--alg=LBR_GRU
+--direction=left2right
+--activation=UNDEF
+--batch=shapes_deepspeech_2

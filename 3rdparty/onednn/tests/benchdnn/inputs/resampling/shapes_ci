@@ -1,0 +1,23 @@
+# basic shapes
+
+# 1D
+mb16ic64_iw32ow64
+mb16ic64_iw64ow32
+mb4ic17_iw17ow21
+mb4ic17_iw21ow17
+
+# 2D
+mb3ic16_ih3oh5_iw11ow11
+mb3ic16_ih5oh3_iw11ow11
+mb4ic17_ih7oh6_iw14ow12
+mb4ic17_ih6oh7_iw12ow14
+
+# 3D
+mb2ic8_id2od4_ih4oh8_iw6ow12
+mb2ic8_id2od4_ih4oh8_iw12ow6
+mb2ic8_id2od4_ih8oh4_iw6ow12
+mb2ic8_id4od2_ih4oh8_iw6ow12
+mb2ic9_id2od3_ih8oh5_iw12ow7
+mb2ic9_id3od2_ih5oh8_iw7ow12
+mb2ic9_id3od2_ih8oh5_iw7ow12
+mb2ic9_id3od2_ih8oh5_iw6ow12
