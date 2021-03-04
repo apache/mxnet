@@ -53,14 +53,25 @@ git clone -b $MXNET_TAG --depth 1 --recurse-submodules \
 	$SRCDIR
 pushd $SRCDIR
 
-echo "Removing unwanted artifacts..."
 #### IMPORTANT ####
 # Remove artifacts which do not comply with the Apache Licensing Policy
+echo "Removing unwanted artifacts..."
 for d in $(cat tools/source-exclude-artifacts.txt | grep -v "^#"); do
 	if [[ -e $d ]]; then
 		echo "Removing $d from source archive..."
 		rm -rf $d
 	fi
+done
+
+# Remove lines from LICENSE file for artifacts removed from source tree
+echo "Removing lines from LICENSE for artifacts removed from source archive..."
+for d in $(cat tools/source-exclude-artifacts.txt | grep -v "^#"); do
+        line=$(grep "$d" LICENSE)
+        if [[ $? -eq 0 && ! -z "$line" ]]; then
+                echo "Removing line from LICENSE: $line"
+                cat LICENSE | grep -v "$d" > LICENSE.new
+                mv -f LICENSE.new LICENSE
+        fi
 done
 
 # Remove other artifacts we do not want contained in the source archive
