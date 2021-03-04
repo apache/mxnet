@@ -165,7 +165,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     CommitOutput(outputs[0], o_mem);
     if (shifted) {
      uint8_t* raw_out_mem = (uint8_t*) o_mem.second->get_data_handle();
-     #pragma omp parallel for simd
+     #pragma omp parallel for simd schedule(static, 128)
      for(size_t i=0; i<outputs[0].shape().Size(); i++) {
         raw_out_mem[i] = 128;
      }
