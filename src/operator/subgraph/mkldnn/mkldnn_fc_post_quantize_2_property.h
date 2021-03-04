@@ -177,7 +177,7 @@ class SgMKLDNNFC_PostQuantize_2_Property : public SubgraphProperty {
     auto property = std::make_shared<SgMKLDNNFC_PostQuantize_2_Property>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FC_OPT", 0)) { //TODO(anko)
+    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FC_SUM_OPT", 0)) {
       property->SetAttr<bool>("disable", true);
     }
     return property;
