@@ -20,6 +20,14 @@
 
 FROM nvidia/cuda:11.2.1-cudnn8-devel-ubuntu16.04
 
+# Currently CUDA11.2 containers don't have NCCL installed
+# Gitlab Issue: https://gitlab.com/nvidia/container-images/cuda/-/issues/112
+ENV NCCL_VERSION 2.8.3
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libnccl2=$NCCL_VERSION-1+cuda11.0 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/

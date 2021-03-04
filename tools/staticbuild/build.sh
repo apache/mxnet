@@ -75,8 +75,5 @@ cp DISCLAIMER-WIP licenses/
 if [[ -z "$CMAKE_STATICBUILD" ]]; then
     source tools/staticbuild/build_lib.sh
 else
-    if [[ $PLATFORM == 'linux' && $VARIANT == cu* ]]; then
-        export CUDNN_ROOT=${DEPS_PATH}
-    fi
     source tools/staticbuild/build_lib_cmake.sh
 fi
