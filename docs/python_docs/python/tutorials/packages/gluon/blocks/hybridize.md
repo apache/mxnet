@@ -18,7 +18,9 @@
 # Hybridize
 
 <!-- adapted from diveintodeeplearning -->
+
 ## A Hybrid of Imperative and Symbolic Programming
+
 Imperative programming makes use of
 programming statements to change a program’s state. Consider the following
 example of simple imperative programming code.
@@ -79,10 +81,9 @@ The three functions defined above will only return the results of the computatio
 
 A comparison of these two programming methods shows that
 
-* imperative programming is easier. When imperative programming is used in Python, the majority of the code is straightforward and easy to write. At the same time, it is easier to debug imperative programming code. This is because it is easier to obtain and print all relevant intermediate variable values, or make use of Python’s built-in debugging tools.
+- imperative programming is easier. When imperative programming is used in Python, the majority of the code is straightforward and easy to write. At the same time, it is easier to debug imperative programming code. This is because it is easier to obtain and print all relevant intermediate variable values, or make use of Python’s built-in debugging tools.
 
-* Symbolic programming is more efficient and easier to port. Symbolic programming makes it easier to better optimize the system during compilation, while also having the ability to port the program into a format independent of Python. This allows the program to be run in a non-Python environment, thus avoiding any potential performance issues related to the Python interpreter.
-
+- Symbolic programming is more efficient and easier to port. Symbolic programming makes it easier to better optimize the system during compilation, while also having the ability to port the program into a format independent of Python. This allows the program to be run in a non-Python environment, thus avoiding any potential performance issues related to the Python interpreter.
 
 ## Hybrid programming provides the best of both worlds.
 
@@ -123,7 +124,6 @@ net(x)
 
 It should be noted that only the layers inheriting the HybridBlock class will be optimized during computation. For example, the HybridSequential and `Dense` classes provided by Gluon are all subclasses of HybridBlock class, meaning they will both be optimized during computation. A layer will not be optimized if it inherits from the Block class rather than the HybridBlock class.
 
-
 ### Computing Performance
 
 To demonstrate the performance improvement gained by the use of symbolic programming, we will compare the computation time before and after calling the `hybridize` function. Here we time 1000 `net` model computations. The model computations are based on imperative and symbolic programming, respectively, before and after `net` has called the `hybridize` function.
@@ -143,7 +143,6 @@ print('after hybridizing: %.4f sec' % (benchmark(net, x)))
 ```
 
 As is observed in the above results, after a HybridSequential instance calls the `hybridize` function, computing performance is improved through the use of symbolic programming.
-
 
 ### Achieving Symbolic Programming
 
@@ -303,4 +302,12 @@ x = mx.nd.array([1,2,3])
 value = mx.nd.ones_like(x)*2
 condition = mx.nd.array([0,1,1])
 mx.nd.where(condition=condition, x=x, y=value)
+```
+
+## Disabling hybridization
+
+If we want to disable the `hybridize` function we can do that by using the following code:
+
+```{.python .input}
+net.hybridize(active=False)
 ```
