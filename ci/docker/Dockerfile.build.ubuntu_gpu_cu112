@@ -16,17 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to run MXNet on Ubuntu 16.04 for GPU
+# Dockerfile to run MXNet on Ubuntu 18.04 for GPU
 
-FROM nvidia/cuda:11.2.1-cudnn8-devel-ubuntu16.04
-
-# Currently CUDA11.2 containers don't have NCCL installed
-# Gitlab Issue: https://gitlab.com/nvidia/container-images/cuda/-/issues/112
-ENV NCCL_VERSION 2.8.3
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libnccl2=$NCCL_VERSION-1+cuda11.0 \
-    && rm -rf /var/lib/apt/lists/*
+FROM nvidia/cuda:11.2.1-cudnn8-devel-ubuntu18.04
 
 WORKDIR /work/deps
 
