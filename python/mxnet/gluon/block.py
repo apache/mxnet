@@ -1080,7 +1080,13 @@ class HybridBlock(Block):
             out = [out]
         return _regroup(out, self._out_format)
 
-    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, **kwargs):
+    def optimize_for(self, x, *args, backend=None, clear=False,
+                     static_alloc=False,
+                     static_shape=False,
+                     inline_limit=2,
+                     forward_bulk_size=None,
+                     backward_bulk_size=None,
+                     **kwargs):
         """Partitions the current HybridBlock and optimizes it for a given backend
         without executing a forward pass. Modifies the HybridBlock in-place.
 
@@ -1108,19 +1114,29 @@ class HybridBlock(Block):
             other inputs to model
         backend : str
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
-        backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
-            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
-        clear : clears any previous optimizations
+        clear : bool, default False
+            Clears any previous optimizations
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : bool, default False
             Optimize for invariant input shapes between iterations. Must also
             set static_alloc to True. Change of input shapes is still allowed
             but slower.
+        inline_limit : optional int, default 2
+            Maximum number of operators that can be inlined.
+        forward_bulk_size : optional int, default None
+            Segment size of bulk execution during forward pass.
+        backward_bulk_size : optional int, default None
+            Segment size of bulk execution during forward pass.
+        **kwargs: The backend options, optional
+            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         """
+        if len(kwargs) > 0:
+            self._backend_opts = kwargs
 
-        # do hybrize API call
-        self.hybridize(True, backend, backend_opts, clear, **kwargs)
+        if clear or not self._active:
+            self.hybridize(True, backend, clear, static_alloc, static_shape,
+                           inline_limit, forward_bulk_size, backward_bulk_size)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
@@ -1155,7 +1171,12 @@ class HybridBlock(Block):
         super(HybridBlock, self).register_child(block, name)
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, **kwargs):
+    def hybridize(self, active=True, backend=None, clear=True,
+                  static_alloc=False, static_shape=False,
+                  inline_limit=2,
+                  forward_bulk_size=None,
+                  backward_bulk_size=None,
+                  **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1165,32 +1186,47 @@ class HybridBlock(Block):
             Whether to turn hybrid on or off.
         backend : str
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
-        backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
-            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
-        clear : clears any previous optimizations
-        static_alloc : bool, default False
+        clear : bool, default True
+            Clears any previous optimizations
+        static_alloc : optional bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
-        static_shape : bool, default False
+        static_shape : optional bool, default False
             Optimize for invariant input shapes between iterations. Must also
             set static_alloc to True. Change of input shapes is still allowed
             but slower.
+        inline_limit : optional int, default 2
+            Maximum number of operators that can be inlined.
+        forward_bulk_size : optional int, default None
+            Segment size of bulk execution during forward pass.
+        backward_bulk_size : optional int, default None
+            Segment size of bulk execution during forward pass.
+        **kwargs:  optional
+            Backend options.
         """
+        if len(kwargs) > 0:
+            self._backend_opts = kwargs
 
         self._backend = backend
-        if backend_opts is not None:
-            assert isinstance(backend_opts, dict), \
-            "HybridBlock hybridize requires backend_opts to be a dictionary."
-            self._backend_opts = backend_opts
 
         self._active = active
-        self._flags = list(kwargs.items())
+        self._flags = [("static_alloc", static_alloc), ("static_shape", static_shape),
+                       ("inline_limit", inline_limit)]
+        if forward_bulk_size is not None:
+            self._flags.append(("forward_bulk_size", forward_bulk_size))
+        if backward_bulk_size is not None:
+            self._flags.append(("backward_bulk_size", backward_bulk_size))
         if clear:
             self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:
             warnings.warn('"{block}" is being hybridized while still having forward hook/pre-hook. '
                           'If "{block}" is a child of HybridBlock, the hooks will not take effect.'
                           .format(block=self))
-        super(HybridBlock, self).hybridize(active, **kwargs)
+        super(HybridBlock, self).hybridize(active,
+                                           static_alloc=static_alloc,
+                                           static_shape=static_shape,
+                                           inline_limit=inline_limit,
+                                           forward_bulk_size=forward_bulk_size,
+                                           backward_bulk_size=backward_bulk_size)
 
     def cast(self, dtype):
         self._clear_cached_op()

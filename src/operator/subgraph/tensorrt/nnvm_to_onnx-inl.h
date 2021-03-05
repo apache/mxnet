@@ -47,7 +47,8 @@ using namespace nnvm;
 using namespace ::onnx;
 using int64 = ::google::protobuf::int64;
 
-std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(const ShapeVector& shape_inputs,
+std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(
+    const ShapeVector& shape_inputs,
     const nnvm::IndexedGraph& ig);
 
 std::unordered_map<std::string, int> GetPlaceholderDTypes(const DTypeVector& dtype_inputs,
@@ -70,7 +71,12 @@ void ConvertOutput(GraphProto* graph_proto,
                    const std::string& node_name, const ShapeVector& shapes,
                    const DTypeVector& dtypes, const nnvm::IndexedGraph &ig);
 
-typedef void (*ConverterFunction)(NodeProto *node_proto,
+void DefaultConnectInputsOutputs(const array_view<IndexedGraph::NodeEntry>& inputs,
+                                 const nnvm::IndexedGraph& ig,
+                                 const std::string& node_name);
+
+typedef void (*ConverterFunction)(GraphProto *graph_proto,
+                                  const std::string& node_name,
                                   const NodeAttrs &attrs,
                                   const nnvm::IndexedGraph &ig,
                                   const array_view<IndexedGraph::NodeEntry> &inputs);
@@ -84,88 +90,112 @@ void ConvDeconvConvertHelper(NodeProto *node_proto,
                              ConvDeconvType type);
 
 // Forward declarations
-void ConvertIdentity(NodeProto* node_proto,
+void ConvertIdentity(GraphProto *graph_proto,
+                     const std::string& node_name,
                      const NodeAttrs &attrs,
                      const nnvm::IndexedGraph& ig,
                      const array_view<IndexedGraph::NodeEntry> &inputs);
 
 void ConvertConvolution(
-                        NodeProto *node_proto,
+                        GraphProto *graph_proto,
+                        const std::string& node_name,
                         const NodeAttrs &attrs,
                         const nnvm::IndexedGraph &ig,
                         const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertDeconvolution(NodeProto *node_proto,
+void ConvertDeconvolution(GraphProto *graph_proto,
+                        const std::string& node_name,
                         const NodeAttrs &attrs,
                         const nnvm::IndexedGraph &ig,
                         const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertPooling(NodeProto *node_proto,
+void ConvertPooling(GraphProto *graph_proto,
+                    const std::string& node_name,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertRelu(NodeProto *node_proto,
+void ConvertRelu(GraphProto *graph_proto,
+                 const std::string& node_name,
                  const NodeAttrs &attrs,
                  const nnvm::IndexedGraph &ig,
                  const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertActivation(NodeProto *node_proto,
+void ConvertActivation(GraphProto *graph_proto,
+                       const std::string& node_name,
                        const NodeAttrs &attrs,
                        const nnvm::IndexedGraph &ig,
                        const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertFullyConnected(NodeProto *node_proto,
+void ConvertFullyConnected(GraphProto *graph_proto,
+                           const std::string& node_name,
                            const NodeAttrs &attrs,
                            const nnvm::IndexedGraph &ig,
                            const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertSoftmaxOutput(NodeProto *node_proto,
+
+void ConvertSlice(GraphProto *graph_proto,
+                  const std::string& node_name,
+                  const NodeAttrs &attrs,
+                  const nnvm::IndexedGraph &ig,
+                  const array_view<IndexedGraph::NodeEntry> &inputs);
+
+void ConvertSoftmaxOutput(GraphProto *graph_proto,
+                          const std::string& node_name,
                           const NodeAttrs &attrs,
                           const nnvm::IndexedGraph &ig,
                           const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertFlatten(NodeProto *node_proto,
+void ConvertFlatten(GraphProto *graph_proto,
+                    const std::string& node_name,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertDropout(NodeProto *node_proto,
+void ConvertDropout(GraphProto *graph_proto,
+                    const std::string& node_name,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertBatchNorm(NodeProto *node_proto,
+void ConvertBatchNorm(GraphProto *graph_proto,
+                    const std::string& node_name,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertElementwiseAdd(NodeProto *node_proto,
+void ConvertElementwiseAdd(GraphProto *graph_proto,
+                    const std::string& node_name,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertElementwiseMul(NodeProto *node_proto,
+void ConvertElementwiseMul(GraphProto *graph_proto,
+                    const std::string& node_name,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertElementwiseSub(NodeProto *node_proto,
+void ConvertElementwiseSub(GraphProto *graph_proto,
+                    const std::string& node_name,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertConcatenate(NodeProto *node_proto,
+void ConvertConcatenate(GraphProto *graph_proto,
+                    const std::string& node_name,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertClip(NodeProto *node_proto,
+void ConvertClip(GraphProto *graph_proto,
+                 const std::string& node_name,
                  const NodeAttrs &attrs,
                  const nnvm::IndexedGraph &ig,
                  const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertPad(NodeProto* node_proto,
+void ConvertPad(GraphProto *graph_proto,
+                const std::string& node_name,
                 const NodeAttrs & attrs,
                 const nnvm::IndexedGraph &ig,
                 const array_view<IndexedGraph::NodeEntry> &inputs);
@@ -190,6 +220,7 @@ static const std::unordered_map<std::string, ConverterFunction> converter_map = 
   {"Pad", ConvertPad},
   {"Pooling", ConvertPooling},
   {"relu", ConvertRelu},
+  {"slice", ConvertSlice},
   {"SoftmaxOutput", ConvertSoftmaxOutput}
 };
 

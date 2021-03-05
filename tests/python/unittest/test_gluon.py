@@ -2021,10 +2021,6 @@ def test_share_inputs_outputs():
             res = t(d1)
             assert_almost_equal(res.asnumpy(), d1.asnumpy())
 
-    param = deepcopy(params[2])
-    param['param_indices'] = (1)
-    param['data_indices'] = (0)
-    params.append(param)
     # Test the case that inputs and outputs of a backward graph share NDArrays.
     for param in params:
         t = TestIOBackward()
