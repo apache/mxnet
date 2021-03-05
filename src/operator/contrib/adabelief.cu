@@ -18,17 +18,16 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
- * \file adamw.cu
+ *  Copyright (c) 2021 by Contributors
+ * \file adabelief.cu
  * \brief Optimizer operators
- * \author Haibin Lin, Moises Hernandez, Andrei Ivanov
+ * \author khaotik
  */
-#include "./adamw-inl.h"
+#include "./adabelief-inl.h"
 
 namespace mxnet {
 namespace op {
-namespace adamw{
-
+namespace adabelief {
 template<>
 void GetScaleFloat<gpu>(mshadow::Stream<gpu> *s, const TBlob &scale_blob, float *pScalef) {
   MSHADOW_REAL_TYPE_SWITCH(scale_blob.type_flag_, DType, {
@@ -40,19 +39,19 @@ void GetScaleFloat<gpu>(mshadow::Stream<gpu> *s, const TBlob &scale_blob, float 
     *pScalef = static_cast<float>(scale);
   })
 }
+}
 
-NNVM_REGISTER_OP(_adamw_update)
-.set_attr<FCompute>("FCompute<gpu>", adamw::MPUpdate<gpu, AdamWUpdate<gpu>>);
+NNVM_REGISTER_OP(_adabelief_update)
+.set_attr<FCompute>("FCompute<gpu>", adabelief::MPUpdate<gpu, adabelief::AdaBeliefUpdate<gpu>>);
 
-NNVM_REGISTER_OP(_mp_adamw_update)
-.set_attr<FCompute>("FCompute<gpu>", adamw::MPUpdate<gpu, MPAdamWUpdate<gpu>>);
+NNVM_REGISTER_OP(_mp_adabelief_update)
+.set_attr<FCompute>("FCompute<gpu>", adabelief::MPUpdate<gpu, adabelief::MPAdaBeliefUpdate<gpu>>);
 
-NNVM_REGISTER_OP(_multi_adamw_update)
-.set_attr<FCompute>("FCompute<gpu>", adamw::multiMPUpdate<gpu, false>);
+NNVM_REGISTER_OP(_multi_adabelief_update)
+.set_attr<FCompute>("FCompute<gpu>", adabelief::multiMPUpdate<gpu, false>);
 
-NNVM_REGISTER_OP(_multi_mp_adamw_update)
-.set_attr<FCompute>("FCompute<gpu>", adamw::multiMPUpdate<gpu, true>);
+NNVM_REGISTER_OP(_multi_mp_adabelief_update)
+.set_attr<FCompute>("FCompute<gpu>", adabelief::multiMPUpdate<gpu, true>);
 
-}  // namespace adamw
 }  // namespace op
 }  // namespace mxnet
