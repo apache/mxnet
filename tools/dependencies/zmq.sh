@@ -20,6 +20,12 @@
 # This script builds the static library of zeroMQ that can be used as dependency of mxnet.
 set -ex
 ZEROMQ_VERSION=4.2.2
+if [[ $PLATFORM == 'darwin' ]]; then
+    DY_EXT="dylib"
+else
+    DY_EXT="so"
+fi
+
 if [[ ! -f $DEPS_PATH/lib/libzmq.a ]]; then
     # Download and build zmq
     >&2 echo "Building zmq..."
@@ -37,5 +43,14 @@ if [[ ! -f $DEPS_PATH/lib/libzmq.a ]]; then
           -D BUILD_SHARED_LIBS=OFF ..
     $MAKE
     $MAKE install
+
+    if [[ ! -f $DEPS_PATH/lib/libzmq.a ]]; then
+        rm $DEPS_PATH/lib64/*zmq*$DY_EXT*
+        mkdir -p $DEPS_PATH/lib
+        cp $DEPS_PATH/lib64/*zmq* $DEPS_PATH/lib
+    else
+        rm $DEPS_PATH/lib/*zmq*$DY_EXT*
+    fi
+
     popd
 fi

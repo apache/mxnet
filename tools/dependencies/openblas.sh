@@ -42,8 +42,6 @@ if [[ ((! -e $DEPS_PATH/lib/libopenblas.a) && -z "$CMAKE_STATICBUILD") ||
     fi
 
     $MAKE PREFIX=$DEPS_PATH install
-
-
     if [[ -z "$CMAKE_STATICBUILD" ]]; then
         # Manually removing .so to avoid linking against it
         rm $DEPS_PATH/lib/libopenblasp-r${OPENBLAS_VERSION}.so
