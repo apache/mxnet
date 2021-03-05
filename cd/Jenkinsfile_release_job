@@ -45,6 +45,7 @@ pipeline {
     string(defaultValue: "mxnet_lib", description: "Pipeline to build", name: "RELEASE_JOB_TYPE")
     string(defaultValue: "cpu,native,cu100,cu101,cu102,cu110,cu112", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
     booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
+    string(defaultValue: "nightly_v1.x", description: "String used for naming docker images", name: "VERSION")
   }
 
   stages {
@@ -74,6 +75,7 @@ pipeline {
             |Release Build: ${params.RELEASE_BUILD}
             |Commit Id: ${env.GIT_COMMIT}
             |Branch: ${env.GIT_BRANCH}
+            |Version: ${VERSION}
             |Variants: ${params.MXNET_VARIANTS}""".stripMargin()
           }
         }
