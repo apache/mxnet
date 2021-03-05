@@ -10,9 +10,16 @@ page](https://mxnet.apache.org/get_started/download).
 
 Run the following command:
 
-<div class="v1-7-0">
+<div class="v1-8-0">
 {% highlight bash %}
 $ pip install mxnet-cu102
+{% endhighlight %}
+
+</div> <!-- End of v1-6-0 -->
+
+<div class="v1-7-0">
+{% highlight bash %}
+$ pip install mxnet-cu102==1.7.0
 {% endhighlight %}
 
 </div> <!-- End of v1-6-0 -->
