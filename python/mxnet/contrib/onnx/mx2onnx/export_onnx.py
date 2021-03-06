@@ -85,7 +85,13 @@ class MXNetGraph(object):
         if op not in MXNetGraph.registry_:
             raise AttributeError("No conversion function registered for op type %s yet." % op)
         convert_func = MXNetGraph.registry_[op]
-        return convert_func(node, **kwargs)
+        ret = convert_func(node, **kwargs)
+        # in case the conversion function does not specify the returned dtype, we just return None
+        # as the second value
+        if isinstance(ret, list):
+            return ret, None
+        else:
+            return ret
 
     @staticmethod
     def split_params(sym, params):
@@ -197,7 +203,7 @@ class MXNetGraph(object):
             ONNX graph
         """
         try:
-            from onnx import (checker, helper, NodeProto, ValueInfoProto, TensorProto)
+            from onnx import (checker, helper, NodeProto, ValueInfoProto, TensorProto, mapping)
             from onnx.helper import make_tensor_value_info
             from onnx.defs import onnx_opset_version
         except ImportError:
@@ -217,6 +223,11 @@ class MXNetGraph(object):
         weights = MXNetGraph.convert_weights_to_numpy(params)
 
         mx_graph = json.loads(sym.tojson())["nodes"]
+
+        class NodeOutput:
+            def __init__(self, name, dtype):
+                self.name = name
+                self.dtype = dtype
 
         initializer = []
         all_processed_nodes = []
@@ -250,7 +261,7 @@ class MXNetGraph(object):
                 # Refer "output_label" assignment above for more details.
                 if name == output_label:
                     continue
-                converted = MXNetGraph.convert_layer(
+                converted, dtypes = MXNetGraph.convert_layer(
                     node,
                     is_input=True,
                     mx_graph=mx_graph,
@@ -264,7 +275,7 @@ class MXNetGraph(object):
 
             else:
                 # Handling graph layers
-                converted = MXNetGraph.convert_layer(
+                converted, dtypes = MXNetGraph.convert_layer(
                     node,
                     is_input=False,
                     mx_graph=mx_graph,
@@ -314,7 +325,24 @@ class MXNetGraph(object):
                     node_output_names = [converted[-1].name]
                 # process node outputs (sort by alphabetical order)
                 node_output_names.sort()
-                outputs_lookup.append(node_output_names)
+                # match the output names to output dtypes
+                if dtypes is not None:
+                    assert len(node_output_names) == len(dtypes)
+                    node_outputs = [NodeOutput(node_output_names[i], dtypes[i])
+                                    for i in range(len(dtypes))]
+                else:
+                    # in case dtypes is None, we just default to the dtype of the first input
+                    #TODO
+                    #assert len(node["inputs"]) > 0
+                    if len(node["inputs"]) > 0:
+                        first_input = node["inputs"][0]
+                        first_input_dtype = outputs_lookup[first_input[0]][first_input[1]].dtype
+                    else:
+                        #print('no inputs')
+                        first_input_dtype = mapping.TENSOR_TYPE_TO_NP_TYPE[in_type]
+                    node_outputs = [NodeOutput(n, first_input_dtype)
+                                    for n in node_output_names]
+                outputs_lookup.append(node_outputs)
 
                 # process graph outputs (sort by alphabetical order)
                 graph_output_names.sort()
