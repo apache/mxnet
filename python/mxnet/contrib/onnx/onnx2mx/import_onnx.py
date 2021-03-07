@@ -147,7 +147,8 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         for graph_input in graph.input:
             if graph_input.name not in _params:
                 shape = [val.dim_value for val in graph_input.type.tensor_type.shape.dim]
-                input_data.append((graph_input.name, tuple(shape)))
+                dtype = graph_input.type.tensor_type.elem_type
+                input_data.append((graph_input.name, tuple(shape), dtype))
 
         output_data = []
         for graph_out in graph.output:
