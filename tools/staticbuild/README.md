@@ -30,13 +30,13 @@ Ubuntu systems.
 ```
 tools/staticbuild/build.sh cu112
 ```
-This would build the mxnet package based on CUDA 11.2. Currently, we support variants cpu, native, cu101, cu102, cu110, and cu112. All of these variants expect native have MKL-DNN backend enabled. 
+This would build the mxnet package based on CUDA 11.2. Currently, we support variants cpu, native, cu101, cu102, cu110, and cu112. All of these variants expect native have ONEDNN backend enabled. 
 
 ```
 tools/staticbuild/build.sh cpu
 ```
 
-This would build the mxnet package based on MKL-DNN.
+This would build the mxnet package based on ONEDNN.
 
 As the result, users would have a complete static dependencies in `/staticdeps` in the root folder as well as a static-linked `libmxnet.so` file lives in `lib`. You can build your language binding by using the `libmxnet.so`.
 

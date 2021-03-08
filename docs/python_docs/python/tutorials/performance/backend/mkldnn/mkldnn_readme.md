@@ -15,14 +15,14 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Install MXNet with MKL-DNN
+# Install MXNet with ONEDNN
 
-A better training and inference performance is expected to be achieved on Intel-Architecture CPUs with MXNet built with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) on multiple operating system, including Linux, Windows and MacOS.
-In the following sections, you will find build instructions for MXNet with Intel MKL-DNN on Linux, MacOS and Windows.
+A better training and inference performance is expected to be achieved on Intel-Architecture CPUs with MXNet built with [Intel ONEDNN](https://github.com/oneapi-src/oneDNN) on multiple operating system, including Linux, Windows and MacOS.
+In the following sections, you will find build instructions for MXNet with Intel ONEDNN on Linux, MacOS and Windows.
 
-Please find MKL-DNN optimized operators and other features in the [MKL-DNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md).
+Please find ONEDNN optimized operators and other features in the [ONEDNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md).
 
-The detailed performance data collected on Intel Xeon CPU with MXNet built with Intel MKL-DNN can be found [here](https://mxnet.apache.org/api/faq/perf#intel-cpu).
+The detailed performance data collected on Intel Xeon CPU with MXNet built with Intel ONEDNN can be found [here](https://mxnet.apache.org/api/faq/perf#intel-cpu).
 
 
 <h2 id="0">Contents</h2>
@@ -55,7 +55,7 @@ git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd incubator-mxnet
 ```
 
-### Build MXNet with MKL-DNN
+### Build MXNet with ONEDNN
 
 To achieve better performance, the Intel OpenMP and llvm OpenMP are recommended as below instruction. Otherwise, default GNU OpenMP will be used and you may get the sub-optimal performance. If you don't have the full [MKL](https://software.intel.com/en-us/intel-mkl) library installation, you might use OpenBLAS as the blas library, by setting USE_BLAS=openblas.
 
@@ -107,7 +107,7 @@ git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd incubator-mxnet
 ```
 
-### Build MXNet with MKL-DNN
+### Build MXNet with ONEDNN
 
 ```
 LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew --prefix llvm)/bin/clang CXX=$(brew --prefix llvm)/bin/clang++ USE_OPENCV=1 USE_OPENMP=1 USE_ONEDNN=1 USE_BLAS=apple
@@ -115,7 +115,7 @@ LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew -
 
 <h2 id="3">Windows</h2>
 
-On Windows, you can use [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) to compile MXNet with Intel MKL-DNN.
+On Windows, you can use [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) to compile MXNet with Intel ONEDNN.
 [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is recommended.
 
 **Visual Studio 2015**
@@ -136,14 +136,14 @@ After you have installed all of the required dependencies, build the MXNet sourc
 git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd C:\incubator-mxent
 ```
-2. Enable Intel MKL-DNN by -DUSE_ONEDNN=1. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build```. Make sure to specify the architecture in the
+2. Enable Intel ONEDNN by -DUSE_ONEDNN=1. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build```. Make sure to specify the architecture in the
 command:
 ```
 >mkdir build
 >cd build
 >cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_ONEDNN=1 -DCMAKE_BUILD_TYPE=Release
 ```
-3. Enable Intel MKL-DNN and Intel MKL as BLAS library by the command:
+3. Enable Intel ONEDNN and Intel MKL as BLAS library by the command:
 ```
 >"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64
 >cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_ONEDNN=1 -DCMAKE_BUILD_TYPE=Release
@@ -158,7 +158,7 @@ msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 
 **Visual Studio 2017**
 
-User can follow the same steps of Visual Studio 2015 to build MXNET with MKL-DNN, but change the version related command, for example,```C:\opencv\build\x64\vc15\bin``` and build command is as below:
+User can follow the same steps of Visual Studio 2015 to build MXNET with ONEDNN, but change the version related command, for example,```C:\opencv\build\x64\vc15\bin``` and build command is as below:
 
 ```
 >cmake -G "Visual Studio 15 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_ONEDNN=1 -DCMAKE_BUILD_TYPE=Release
@@ -183,9 +183,9 @@ Expected Output:
 [[ 2.  2.  2.]
  [ 2.  2.  2.]]
 ```
-### Verify whether MKL-DNN works
+### Verify whether ONEDNN works
 
-After MXNet is installed, you can verify if MKL-DNN backend works well with a single Convolution layer.
+After MXNet is installed, you can verify if ONEDNN backend works well with a single Convolution layer.
 ```
 import mxnet as mx
 import numpy as np
@@ -212,7 +212,7 @@ More detailed debugging and profiling information can be logged by setting the e
 ```
 export MKLDNN_VERBOSE=1
 ```
-For example, by running above code snippet, the following debugging logs providing more insights on MKL-DNN primitives `convolution` and `reorder`. That includes: Memory layout, infer shape and the time cost of primitive execution.
+For example, by running above code snippet, the following debugging logs providing more insights on ONEDNN primitives `convolution` and `reorder`. That includes: Memory layout, infer shape and the time cost of primitive execution.
 ```
 dnnl_verbose,info,DNNL v1.1.2 (commit cb2cc7ac17ff4e2ef50805c7048d33256d82be4d)
 dnnl_verbose,info,Detected ISA is Intel AVX-512 with Intel DL Boost
@@ -223,7 +223,7 @@ dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::bl
 dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:aBcd16b:f0 dst_f32::blocked:abcd:f0,,,32x32x256x256,35.9771
 ```
 
-You can find step-by-step guidance to do profiling for MKLDNN primitives in [Profiling MKLDNN Operators](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/profiler.html#Profiling-MKLDNN-Operators).
+You can find step-by-step guidance to do profiling for ONEDNN primitives in [Profiling ONEDNN Operators](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/profiler.html#Profiling-MKLDNN-Operators).
 
 <h2 id="5">Enable MKL BLAS</h2>
 
@@ -293,7 +293,7 @@ This limitations of this experimental feature are:
 
 <h2 id="7">Quantization and Inference with INT8</h2>
 
-Benefiting from Intel MKL-DNN, MXNet built with Intel MKL-DNN brings outstanding performance improvement on quantization and inference with INT8 Intel CPU Platform on Intel Xeon Scalable Platform.
+Benefiting from Intel ONEDNN, MXNet built with Intel ONEDNN brings outstanding performance improvement on quantization and inference with INT8 Intel CPU Platform on Intel Xeon Scalable Platform.
 
 - [CNN Quantization Examples](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
 
@@ -303,6 +303,6 @@ Benefiting from Intel MKL-DNN, MXNet built with Intel MKL-DNN brings outstanding
 
 - For questions or support specific to MKL, visit the [Intel MKL](https://software.intel.com/en-us/mkl) website.
 
-- For questions or support specific to MKL, visit the [Intel MKLDNN](https://github.com/intel/mkl-dnn) website.
+- For questions or support specific to ONEDNN, visit the [Intel ONEDNN](https://github.com/intel/mkl-dnn) website.
 
-- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with MKLDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN).
+- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with ONEDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN).
