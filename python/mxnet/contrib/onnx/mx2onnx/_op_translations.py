@@ -1761,10 +1761,10 @@ def convert_cast(node, **kwargs):
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    dtype = attrs.get('dtype')
-    to_dtype = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
+    dtype = np.dtype(attrs.get('dtype'))
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     nodes = [
-        onnx.helper.make_node("Cast", input_nodes, [name], to=to_dtype, name=name)
+        onnx.helper.make_node("Cast", input_nodes, [name], to=dtype_t, name=name)
     ]
     return nodes, (dtype,)
 
@@ -2894,13 +2894,9 @@ def convert_zeros_like(node, **kwargs):
     """
     from onnx.helper import make_node, make_tensor
     name, input_nodes, attrs = get_inputs(node, kwargs)
-    dtype = attrs.get('dtype')
-    if dtype is not None:
-        data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
-    else:
-        input_dtypes = get_input_dtypes(node, kwargs)
-        dtype = np.dtype(input_dtypes[0])
-        dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+    input_dtypes = get_input_dtypes(node, kwargs)
+    dtype = np.dtype(input_dtypes[0])
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     # create tensor with shape of input
     tensor_value = make_tensor(name+"_zero", dtype_t, [1], [0])
@@ -2917,13 +2913,9 @@ def convert_ones_like(node, **kwargs):
     """
     from onnx.helper import make_node, make_tensor
     name, input_nodes, attrs = get_inputs(node, kwargs)
-    dtype = attrs.get('dtype')
-    if dtype is not None:
-        data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
-    else:
-        input_dtypes = get_input_dtypes(node, kwargs)
-        dtype = np.dtype(input_dtypes[0])
-        dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+    input_dtypes = get_input_dtypes(node, kwargs)
+    dtype = np.dtype(input_dtypes[0])
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     # create tensor with shape of input
     tensor_value = make_tensor(name+"_one", dtype_t, [1], [1])

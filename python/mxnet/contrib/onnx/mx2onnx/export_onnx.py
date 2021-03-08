@@ -208,7 +208,7 @@ class MXNetGraph(object):
             ONNX graph
         """
         try:
-            from onnx import (checker, helper, NodeProto, ValueInfoProto, TensorProto, mapping)
+            from onnx import (checker, helper, NodeProto, ValueInfoProto, TensorProto)
             from onnx.helper import make_tensor_value_info
             from onnx.defs import onnx_opset_version
         except ImportError:
@@ -279,11 +279,6 @@ class MXNetGraph(object):
                 graph_input_idx += 1
 
             else:
-                # Handle no input case
-                intype = 1  # Float32 in tensor type
-                if len(in_type) > 0:
-                    intype = in_type[0]
-
                 # Handling graph layers
                 converted, dtypes = MXNetGraph.convert_layer(
                     node,
