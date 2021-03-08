@@ -19,21 +19,22 @@
 
 // Triggers a downstream jenkins job responsible for building, testing
 // and publishing all the variants for a particular 'job_type'.
-// The 'job_type' should be the name of the directory that contains the 
-// 'Jenkins_pipeline.groovy' file and has the pipeline definition for the 
+// The 'job_type' should be the name of the directory that contains the
+// 'Jenkins_pipeline.groovy' file and has the pipeline definition for the
 // artifact (docker image, binary, pypi or maven package, etc.) that should
 // be published.
 
 STATE_UPDATE="State Update"
 
-def trigger_release_job(job_name, job_type, mxnet_variants) {
+def trigger_release_job(cd_release_job, job_name, job_type, mxnet_variants) {
   def run = build(
-    job: env.CD_RELEASE_JOB_NAME, 
+    job: cd_release_job,
     parameters: [
       string(name: "RELEASE_JOB_NAME", value: "${job_name}"),
       string(name: "RELEASE_JOB_TYPE", value: "${job_type}"),
       string(name: "MXNET_VARIANTS", value: "${mxnet_variants}"),
       booleanParam(name: "RELEASE_BUILD", value: "${env.RELEASE_BUILD}"),
+      string(name: "VERSION", value: "${env.VERSION}"),
       string(name: "COMMIT_ID", value: "${env.GIT_COMMIT}")
     ],
     // If propagate is true, any result other than successful will
@@ -49,7 +50,7 @@ def trigger_release_job(job_name, job_type, mxnet_variants) {
   // continue with the pipeline and try to post as many releases as possible
   // but mark it as unstable
   if (result == "UNSTABLE" || result == "ABORTED") {
-    currentBuild.result = "UNSTABLE" 
+    currentBuild.result = "UNSTABLE"
   }
 
   // Throw an exception on failure, because this would mean the whole
@@ -65,12 +66,12 @@ def trigger_release_job(job_name, job_type, mxnet_variants) {
 // the configuration of the release job in jenkins
 // to the configuration of release job as defined in the
 // Jenkinsfile _release_job for env.GIT_COMMIT revision
-def update_release_job_state() {
+def update_release_job_state(cd_release_job) {
   build(
-    job: env.CD_RELEASE_JOB_NAME, 
+    job: cd_release_job,
     parameters: [
       string(name: "RELEASE_JOB_TYPE", value: STATE_UPDATE),
-  
+
       // Should be set to the current git commit
       string(name: "COMMIT_ID", value: "${env.GIT_COMMIT}")
     ])
@@ -103,7 +104,7 @@ def wrap_variant_pipeline_fn(variant_pipeline, total_num_pipelines) {
 // The outcome of the execution of each parallel step will affect
 // the result (SUCCESS, FAILURE, ABORTED, UNSTABLE) of the overall job.
 // If all steps fail or are aborted, the job will be set to failed.
-// If some steps fail or are aborted, the job will be set to unstable. 
+// If some steps fail or are aborted, the job will be set to unstable.
 def error_checked_parallel(variant_pipelines) {
   pipelines = variant_pipelines.inject([:]) { mp, key, value ->
     mp << ["${key}": wrap_variant_pipeline_fn(value, variant_pipelines.size())]
@@ -179,7 +180,7 @@ def restore_dynamic_libmxnet(variant) {
 // NOTE: Be mindful of the expected time that a step should take. If it will take a long time,
 // and it can be done in a CPU node, do it in a CPU node. We should avoid using GPU instances unless
 // we *have* to.
-// However, if it is only packaging libmxnet and that doesn't take long. Then, the pipeline can 
+// However, if it is only packaging libmxnet and that doesn't take long. Then, the pipeline can
 // just run on a single node. As is done bellow.
 // For examples of multi-node CD pipelines, see the the binary_release/static and binary_release/dynamic
 // pipeline.

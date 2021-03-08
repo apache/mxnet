@@ -21,10 +21,14 @@
 
 mxnet_variant=${1:?"Please specify the mxnet variant as the first parameter"}
 is_release=${RELEASE_BUILD:-false}
-version=${VERSION:-nightly}
+version=${VERSION:-nightly_v1.x}
 
-# The docker tags will be in the form <version>_<hardware>(_mkl)
-# Eg. nightly_cpu, 1.4.0_cpu_mkl, nightly_gpu_cu80_mkl, etc.
+if [[ ${version} == "null" ]]; then
+    version="nightly_v1.x"
+fi
+
+# The docker tags will be in the form <version>_<hardware>
+# Eg. nightly_v1.x_cpu, 1.8.0_cpu, nightly_v1.x_gpu_cu110, etc.
 
 if [[ ${mxnet_variant} == "cpu" ]]; then
     tag_suffix="cpu"
@@ -39,15 +43,3 @@ else
 fi
 
 echo "${version}_${tag_suffix}"
-
-# Print out latest tags as well
-if [[ ${is_release} == "true" ]]; then
-    if [[ ${mxnet_variant} == "cpu" ]]; then
-        echo "latest"
-        echo "latest_cpu"
-    elif [[ ${mxnet_variant} == "native" ]]; then
-        echo "latest_cpu_native"
-    elif [[ ${mxnet_variant} == "cu90" ]]; then
-        echo "latest_gpu"
-    fi
-fi
