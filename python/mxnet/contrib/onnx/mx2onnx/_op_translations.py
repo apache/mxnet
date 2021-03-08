@@ -345,9 +345,9 @@ def convert_fully_connected(node, **kwargs):
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
 
-    input_type = kwargs['in_type']
-    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+    dtype = input_dtypes[0]
     flatten = get_boolean_attribute_value(attrs, 'flatten')
     no_bias = get_boolean_attribute_value(attrs, 'no_bias')
     num_hidden = int(attrs.get('num_hidden'))
@@ -864,6 +864,7 @@ def convert_softmax(node, **kwargs):
     from onnx.helper import make_node
     from onnx import TensorProto
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
 
     axis = int(attrs.get("axis", -1))
     temperature = str(attrs.get("temperature", 'None'))
@@ -873,8 +874,8 @@ def convert_softmax(node, **kwargs):
         temperature = float(temperature)
 
     use_length = str(attrs.get("use_length", 'None'))
-    input_type = kwargs["in_type"]
-    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     data = input_nodes[0]
 
     # use op set 11 ONNX Softmax
@@ -930,8 +931,8 @@ def convert_softmax(node, **kwargs):
         nodes += [
             # cast data type
             make_node("Cast", [length], [name+"_length"], to=int(TensorProto.INT64)),
-            make_node("Cast", [name+"_0"], [name+"_0_itype"], to=input_type),
-            make_node("Cast", [name+"_1"], [name+"_1_itype"], to=input_type),
+            make_node("Cast", [name+"_0"], [name+"_0_itype"], to=dtype_t),
+            make_node("Cast", [name+"_1"], [name+"_1_itype"], to=dtype_t),
             # softmax output
             make_node("Div", [name+"_exp_out", name+"_rsum_out"], [name+"_div1_out"]),
             # update axis
@@ -964,7 +965,7 @@ def convert_softmax(node, **kwargs):
             make_node('Reshape', [name+"_length", name+"_add2_out"], [name+"_reshape1_out"]),
             # mask output
             make_node("Less", [name+"_reshape0_out", name+"_reshape1_out"], [name+"_less_out"]),
-            make_node("Cast", [name+"_less_out"], [name+"_mask"], to=input_type),
+            make_node("Cast", [name+"_less_out"], [name+"_mask"], to=dtype_t),
             make_node("Mul", [name+"_div1_out", name+"_mask"], [name+"_mul3_out"]),
             make_node("ReduceSum", [name+"_mul3_out"], [name+"_rsum1_out"], axes=[axis], keepdims=1),
             make_node("Equal", [name+"_rsum1_out", name+"_0_itype"], [name+"_equal1_out"]),
@@ -1179,7 +1180,7 @@ def scalar_op_helper(node, op_name, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
     input_dtypes = get_input_dtypes(node, kwargs)
 
-    dtype = np.dtype(input_dtypes[0])
+    dtype = input_dtypes[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     scalar_value = np.array([attrs.get("scalar", 1)],
@@ -2079,11 +2080,14 @@ def convert_broadcast_equal(node, **kwargs):
     """
     from onnx.helper import make_node
     name, input_nodes, _ = get_inputs(node, kwargs)
-    input_type = kwargs['in_type']
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     nodes = [
         make_node("Equal", input_nodes, [name+"_equal"]),
-        make_node("Cast", [name+"_equal"], [name], name=name, to=int(input_type))
+        make_node("Cast", [name+"_equal"], [name], name=name, to=int(dtype_t))
     ]
     return nodes
 
@@ -2487,11 +2491,13 @@ def convert_layer_norm(node, **kwargs):
     from onnx.helper import make_node
     from onnx import TensorProto
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
+
     axes = int(attrs.get('axis', -1))
     eps = attrs.get('eps', 9.99999975e-06)
 
-    input_type = int(kwargs['in_type'])
-    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
 
     create_tensor([axes], name+"_axes", kwargs["initializer"])
     create_tensor([axes+1], name+"_axes+1", kwargs["initializer"])
@@ -2892,10 +2898,12 @@ def convert_zeros_like(node, **kwargs):
     if dtype is not None:
         data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
     else:
-        data_type = kwargs['in_type']
+        input_dtypes = get_input_dtypes(node, kwargs)
+        dtype = np.dtype(input_dtypes[0])
+        dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     # create tensor with shape of input
-    tensor_value = make_tensor(name+"_zero", data_type, [1], [0])
+    tensor_value = make_tensor(name+"_zero", dtype_t, [1], [0])
     nodes = [
         make_node("Shape", [input_nodes[0]], [name+"_shape"]),
         make_node("ConstantOfShape", [name+"_shape"], [name], name=name, value=tensor_value)
@@ -2913,9 +2921,12 @@ def convert_ones_like(node, **kwargs):
     if dtype is not None:
         data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(dtype)]
     else:
-        data_type = kwargs['in_type']
+        input_dtypes = get_input_dtypes(node, kwargs)
+        dtype = np.dtype(input_dtypes[0])
+        dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+
     # create tensor with shape of input
-    tensor_value = make_tensor(name+"_one", data_type, [1], [1])
+    tensor_value = make_tensor(name+"_one", dtype_t, [1], [1])
     nodes = [
         make_node("Shape", [input_nodes[0]], [name+"_shape"]),
         make_node("ConstantOfShape", [name+"_shape"], [name], name=name, value=tensor_value)
@@ -2936,7 +2947,7 @@ def convert_arange_like(node, **kwargs):
         raise AttributeError("ONNX opset 11 or greater is required to export this operator")
 
     # use the same dtype as the that of the input node
-    dtype = np.dtype(input_dtypes[0])
+    dtype = input_dtypes[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     axis = attrs.get('axis', 'None')
     start = attrs.get('start', 0.)
@@ -3199,13 +3210,14 @@ def convert_contrib_box_nms(node, **kwargs):
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
+    #dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     opset_version = kwargs['opset_version']
     if opset_version < 11:
         raise AttributeError('ONNX opset 11 or greater is required to export this operator')
-
-    input_type = kwargs['in_type']
-    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
 
     overlap_thresh = float(attrs.get('overlap_thresh', '0.5'))
     valid_thresh = float(attrs.get('valid_thresh', '0'))
@@ -3300,7 +3312,7 @@ def convert_greater_scalar(node, **kwargs):
     input_dtypes = get_input_dtypes(node, kwargs)
 
     scalar = float(attrs.get('scalar'))
-    dtype = np.dtype(input_dtypes[0])
+    dtype = input_dtypes[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     if str(dtype).startswith('int'):
@@ -3328,7 +3340,7 @@ def convert_lesser_scalar(node, **kwargs):
     input_dtypes = get_input_dtypes(node, kwargs)
 
     scalar = float(attrs.get('scalar'))
-    dtype = np.dtype(input_dtypes[0])
+    dtype = input_dtypes[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     if str(dtype).startswith('int'):
@@ -3356,7 +3368,7 @@ def convert_equal_scalar(node, **kwargs):
     input_dtypes = get_input_dtypes(node, kwargs)
 
     scalar = float(attrs.get('scalar'))
-    dtype = np.dtype(input_dtypes[0])
+    dtype = input_dtypes[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     if str(dtype).startswith('int'):
@@ -3398,7 +3410,7 @@ def convert_maximum_scalar(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     input_dtypes = get_input_dtypes(node, kwargs)
-    dtype = np.dtype(input_dtypes[0])
+    dtype = input_dtypes[0]
 
     scalar = None
     if 'float' in str(dtype):
@@ -3421,7 +3433,7 @@ def convert_minimum_scalar(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     input_dtypes = get_input_dtypes(node, kwargs)
-    dtype = np.dtype(input_dtypes[0])
+    dtype = input_dtypes[0]
 
     scalar = None
     if 'float' in str(dtype):
@@ -3442,10 +3454,13 @@ def convert_contrib_box_decode(node, **kwargs):
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     data = input_nodes[0]
     anchors = input_nodes[1]
-    input_type = kwargs['in_type']
     fmt = attrs.get('format', 'center')
     std0 = float(attrs.get('std0', '1.'))
     std1 = float(attrs.get('std1', '1.'))
@@ -3509,7 +3524,7 @@ def convert_contrib_box_decode(node, **kwargs):
         make_node('Sub', [name+'_add0_out', name+'_div1_out'], [name+'_sub0_out']),
         make_node('Add', [name+'_add0_out', name+'_div1_out'], [name+'_add1_out']),
         make_node('Concat', [name+'_sub0_out', name+'_add1_out'], [name+'concat0_out'], axis=2),
-        make_node("Cast", [name+'concat0_out'], [name], to=input_type, name=name)
+        make_node("Cast", [name+'concat0_out'], [name], to=dtype_t, name=name)
     ]
 
     return nodes
@@ -4000,14 +4015,15 @@ def convert_log2(node, **kwargs):
     """
     from onnx.helper import make_node, make_tensor
     name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
 
-    input_type = kwargs["in_type"]
-    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     ln2 = np.array([0.693147180559945309], dtype=dtype)
     if dtype == 'float16':
         ln2 = ln2.view(dtype=np.uint16)
-    ln2v = make_tensor(name+'_ln2', input_type, [1], ln2)
+    ln2v = make_tensor(name+'_ln2', dtype_t, [1], ln2)
 
     nodes = [
         make_node('Log', [input_nodes[0]], [name+'_log']),

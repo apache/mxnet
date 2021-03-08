@@ -290,8 +290,6 @@ class MXNetGraph(object):
                     is_input=False,
                     mx_graph=mx_graph,
                     weights=weights,
-                    in_shape=in_shape,
-                    in_type=intype,
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
                     outputs_lookup=outputs_lookup,
