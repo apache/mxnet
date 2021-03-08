@@ -50,7 +50,7 @@ class MXNetBackend(Backend):
         cls.operation = operation
 
     @staticmethod
-    def perform_import_export(sym, arg_params, aux_params, input_shape):
+    def perform_import_export(sym, arg_params, aux_params, input_shape, input_dtype):
         """ Import ONNX model to mxnet model and then export to ONNX model
             and then import it back to mxnet for verifying the result"""
         graph = GraphProto()
@@ -63,7 +63,7 @@ class MXNetBackend(Backend):
         # exporting to onnx graph proto format
         converter = MXNetGraph()
         graph_proto = converter.create_onnx_graph_proto(sym, params, in_shape=input_shape,
-                                                        in_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
+                                                        in_type=input_dtype,
                                                         opset_version=opset_version)
 
         # importing back to MXNET for verifying result.
@@ -108,8 +108,9 @@ class MXNetBackend(Backend):
                 metadata = graph.get_graph_metadata(model.graph)
                 input_data = metadata['input_tensor_data']
                 input_shape = [data[1] for data in input_data]
+                input_dtype = [data[2] for data in input_data]
                 sym, arg_params, aux_params = MXNetBackend.perform_import_export(sym, arg_params, aux_params,
-                                                                                 input_shape)
+                                                                                 input_shape, input_dtype)
 
             return MXNetBackendRep(sym, arg_params, aux_params, device)
         elif backend == 'gluon':

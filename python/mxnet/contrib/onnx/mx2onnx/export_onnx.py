@@ -161,14 +161,19 @@ class MXNetGraph(object):
 
         assert len(out_shapes) == len(out_names)
 
-        # infer output types
-        args = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[in_type] for n in sym.list_inputs()}
-        _, out_type, _ = sym.infer_type(**args)
+        ## Infer output types
+        # Remove any input listed in params from sym.list_inputs() and bind them to the input types provided
+        # by user. Also remove in_label
+        in_dtype = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[t]
+                    for n, t in zip([n for n in sym.list_inputs() if n not in params and n != in_label], in_type)}
+        # Add params and their types to list of inputs
+        in_dtype.update({n: v.dtype for n, v in params.items() if n in sym.list_inputs()})
+        _, out_type, _ = sym.infer_type(**in_dtype)
         out_types = [mapping.NP_TYPE_TO_TENSOR_TYPE[o(0).dtype] for o in out_type]
 
         assert len(out_types) == len(out_names)
 
-        # bind output shapes with output names
+        # bind output shapes/types with output names
         graph_outputs = {n: {'shape': s, 'dtype': d} for n, s, d in zip(out_names, out_shapes, out_types)}
 
         return graph_outputs
@@ -267,13 +272,18 @@ class MXNetGraph(object):
                     mx_graph=mx_graph,
                     weights=weights,
                     in_shape=in_shape[graph_input_idx],
-                    in_type=in_type,
+                    in_type=in_type[graph_input_idx],
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
                     outputs_lookup=outputs_lookup)
                 graph_input_idx += 1
 
             else:
+                # Handle no input case
+                intype = 1  # Float32 in tensor type
+                if len(in_type) > 0:
+                    intype = in_type[0]
+
                 # Handling graph layers
                 converted, dtypes = MXNetGraph.convert_layer(
                     node,
@@ -281,7 +291,7 @@ class MXNetGraph(object):
                     mx_graph=mx_graph,
                     weights=weights,
                     in_shape=in_shape,
-                    in_type=in_type,
+                    in_type=intype,
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
                     outputs_lookup=outputs_lookup,

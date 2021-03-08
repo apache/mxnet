@@ -154,7 +154,7 @@ class TestNode(unittest.TestCase):
 
                 if mxnet_specific:
                     onnxmodelfile = onnx_mxnet.export_model(test_op, {}, [np.shape(ip) for ip in inputs],
-                                                            np.float32,
+                                                            [ip.dtype for ip in inputs],
                                                             onnx_name + ".onnx")
                     onnxmodel = load_model(onnxmodelfile)
                 else:
@@ -190,9 +190,9 @@ class TestNode(unittest.TestCase):
                                                       onnx_file_path=outsym.name + ".onnx")
 
             sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
-        result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
+            result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
 
-        npt.assert_almost_equal(result, forward_op)
+            npt.assert_almost_equal(result, forward_op)
 
     def test_imports(self):
         for test in import_test_cases:

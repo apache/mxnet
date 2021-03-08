@@ -45,16 +45,15 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_
         model.export(model_path, epoch=0)
         sym_file = '{}-symbol.json'.format(model_path)
         params_file = '{}-0000.params'.format(model_path)
-        dtype = inputs[0].dtype
         onnx_file = '{}/{}.onnx'.format(tmp_path, model_name)
         mx.contrib.onnx.export_model(sym_file, params_file, [inp.shape for inp in inputs],
-                                     dtype, onnx_file)
+                                     [inp.dtype for inp in inputs], onnx_file)
         return onnx_file
 
     def onnx_rt(onnx_file, inputs):
         sess = rt.InferenceSession(onnx_file)
         dtype_0 = inputs[0].asnumpy().dtype
-        input_dict = dict((sess.get_inputs()[i].name, inputs[i].asnumpy().astype(dtype_0)) for i in range(len(inputs)))
+        input_dict = dict((sess.get_inputs()[i].name, inputs[i].asnumpy()) for i in range(len(inputs)))
         pred = sess.run(None, input_dict)
         return pred
 
@@ -560,7 +559,7 @@ def test_onnx_export_equal_scalar(tmp_path, dtype, scalar):
     op_export_test('_internal._equal_scalar', M, [x], tmp_path)
 
 
-@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("dtype", ["float16", "float32", "int32", "int64"])
 @pytest.mark.parametrize("shape", [(1,1), (3,3), (10,2), (20,30,40)])
 def test_onnx_export_where(tmp_path, dtype, shape):
     M = def_model('where')
