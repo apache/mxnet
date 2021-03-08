@@ -342,14 +342,9 @@ class MXNetGraph(object):
                                     for i in range(len(dtypes))]
                 else:
                     # in case dtypes is None, we just default to the dtype of the first input
-                    #TODO
-                    #assert len(node["inputs"]) > 0
-                    if len(node["inputs"]) > 0:
-                        first_input = node["inputs"][0]
-                        first_input_dtype = outputs_lookup[first_input[0]][first_input[1]].dtype
-                    else:
-                        #print('no inputs')
-                        first_input_dtype = mapping.TENSOR_TYPE_TO_NP_TYPE[in_type]
+                    assert len(node["inputs"]) > 0
+                    first_input = node["inputs"][0]
+                    first_input_dtype = outputs_lookup[first_input[0]][first_input[1]].dtype
                     node_outputs = [NodeOutput(n, first_input_dtype)
                                     for n in node_output_names]
                 outputs_lookup.append(node_outputs)

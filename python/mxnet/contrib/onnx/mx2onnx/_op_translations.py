@@ -228,8 +228,10 @@ def convert_weights_and_inputs(node, **kwargs):
 
         return [tensor_node], (np_arr.dtype,)
     else:
-        tval_node = onnx.helper.make_tensor_value_info(name, kwargs["in_type"], kwargs["in_shape"])
-        return [tval_node]
+        dtype_t = kwargs["in_type"]
+        dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[dtype_t]
+        tval_node = onnx.helper.make_tensor_value_info(name, dtype_t, kwargs["in_shape"])
+        return [tval_node], (dtype,)
 
 
 @mx_op.register('Convolution')
@@ -2858,7 +2860,7 @@ def convert_zeros(node, **kwargs):
     nodes = [
         make_node('ConstantOfShape', [name+'_shape'], [name], name=name, value=tensor_value)
     ]
-    return nodes
+    return nodes, (dtype,)
 
 
 @mx_op.register("_ones")
@@ -2877,7 +2879,7 @@ def convert_ones(node, **kwargs):
     nodes = [
         make_node('ConstantOfShape', [name+'_shape'], [name], name=name, value=tensor_value)
     ]
-    return nodes
+    return nodes, (dtype,)
 
 
 @mx_op.register("zeros_like")
@@ -3067,7 +3069,7 @@ def convert_arange(node, **kwargs):
         make_node("Range", [name+"_start", name+"_stop", name+"_step"], [name], name=name)
     ]
 
-    return nodes
+    return nodes, (dtype,)
 
 
 @mx_op.register("reverse")
@@ -3395,8 +3397,8 @@ def convert_maximum_scalar(node, **kwargs):
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    input_type = int(kwargs['in_type'])
-    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+    input_dtypes = get_input_dtypes(node, kwargs)
+    dtype = np.dtype(input_dtypes[0])
 
     scalar = None
     if 'float' in str(dtype):
@@ -3418,8 +3420,8 @@ def convert_minimum_scalar(node, **kwargs):
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    input_type = int(kwargs['in_type'])
-    dtype = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type]
+    input_dtypes = get_input_dtypes(node, kwargs)
+    dtype = np.dtype(input_dtypes[0])
 
     scalar = None
     if 'float' in str(dtype):
