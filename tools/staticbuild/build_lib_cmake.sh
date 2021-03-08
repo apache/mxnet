@@ -30,6 +30,7 @@ git submodule update --init --recursive || true
 
 # Build libmxnet.so
 rm -rf build; mkdir build; cd build
+CUDNN_ROOT=${DEPS_PATH}
 cmake -GNinja -C $cmake_config -DCMAKE_PREFIX_PATH=${DEPS_PATH} -DCMAKE_FIND_ROOT_PATH=${DEPS_PATH} ..
 ninja -v
 cd -

@@ -98,6 +98,17 @@ set(FORTRAN_DIR \\\"\$\{CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES\}\\\")
     else()
       message("Using LP64 OpenBLAS")
     endif()
+    if(USE_LAPACK)
+      execute_process(COMMAND ${CMAKE_NM} -g ${OpenBLAS_LIB}
+                      COMMAND grep sgetri_
+                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                      OUTPUT_VARIABLE OPENBLAS_CONTAINS_C_LAPACK_OUT
+                      RESULT_VARIABLE OPENBLAS_CONTAINS_C_LAPACK_RET)
+      if(OPENBLAS_CONTAINS_C_LAPACK_OUT STREQUAL ""
+         AND NOT OPENBLAS_CONTAINS_C_LAPACK_RET)
+        list(APPEND mshadow_LINKER_LIBS lapack)
+      endif()
+    endif()
   endif()
   
 elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
