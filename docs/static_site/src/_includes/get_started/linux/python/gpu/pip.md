@@ -15,14 +15,14 @@ Run the following command:
 $ pip install mxnet-cu102
 {% endhighlight %}
 
-</div> <!-- End of v1-6-0 -->
+</div> <!-- End of v1-8-0 -->
 
 <div class="v1-7-0">
 {% highlight bash %}
 $ pip install mxnet-cu102==1.7.0
 {% endhighlight %}
 
-</div> <!-- End of v1-6-0 -->
+</div> <!-- End of v1-7-0 -->
 
 <div class="v1-6-0">
 {% highlight bash %}
