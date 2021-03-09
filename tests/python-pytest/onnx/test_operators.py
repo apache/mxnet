@@ -113,15 +113,22 @@ def test_onnx_export_ones(tmp_path, dtype, shape):
     x = mx.nd.array([0])
     op_export_test('ones', M, [x], tmp_path, dummy_input=True)
 
-def test_onnx_export_zeros_like(tmp_path):
-    M = def_model('zeros_like')
-    x = mx.nd.array([[-2,-1,0],[0,50,99],[4,5,6],[7,8,9]], dtype='float32')
+
+@pytest.mark.parametrize('dtype', [None, 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [(1), (1,2), (2,3,4), (5,6,7)])
+def test_onnx_export_zeros_like(tmp_path, dtype, shape):
+    M = def_model('zeros_like', dtype=dtype)
+    x = mx.random.uniform(0, 1, shape, dtype='float32')
     op_export_test('zeros_like', M, [x], tmp_path)
 
-def test_onnx_export_ones_like(tmp_path):
-    M = def_model('ones_like')
-    x = mx.nd.array([[-2,-1,0],[0,50,99],[4,5,6],[7,8,9]], dtype='float32')
+
+@pytest.mark.parametrize('dtype', [None, 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [(1), (1,2), (2,3,4), (5,6,7)])
+def test_onnx_export_ones_like(tmp_path, dtype, shape):
+    M = def_model('ones_like', dtype=dtype)
+    x = mx.random.uniform(0, 1, shape, dtype='float32')
     op_export_test('ones_like', M, [x], tmp_path)
+
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("axis", [None,0,1])
@@ -471,7 +478,7 @@ def test_onnx_export_contrib_BilinearResize2D(tmp_path, dtype, params):
 @pytest.mark.parametrize('topk', [2, 3, 4])
 @pytest.mark.parametrize('valid_thresh', [0.3, 0.4, 0.8])
 @pytest.mark.parametrize('overlap_thresh', [0.4, 0.7, 1.0])
-def test_onnx_export_contrib_box_nms_manual(tmp_path, topk, valid_thresh, overlap_thresh):
+def test_onnx_export_contrib_box_nms(tmp_path, topk, valid_thresh, overlap_thresh):
     # Note that ONNX NMS op only supports float32
 
     # Also note that onnxruntime's nms has slightly different implementation in handling
