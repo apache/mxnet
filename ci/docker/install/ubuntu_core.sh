@@ -67,3 +67,4 @@ sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
 ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 rm cmake-3.13.5-Linux-x86_64.sh
 cmake --version
+ldconfig

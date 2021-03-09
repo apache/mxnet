@@ -32,6 +32,12 @@ COPY install/ubuntu_python.sh /work/
 COPY install/requirements /work/
 RUN /work/ubuntu_python.sh
 
+COPY install/ubuntu_scala.sh /work/
+COPY install/sbt.gpg /work/
+RUN /work/ubuntu_scala.sh
+
+COPY install/ubuntu_r.sh /work/
+RUN /work/ubuntu_r.sh
 
 COPY install/ubuntu_perl.sh /work/
 RUN /work/ubuntu_perl.sh
