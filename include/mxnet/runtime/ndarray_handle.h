@@ -31,7 +31,7 @@ namespace mxnet {
 class NDArrayHandleObj : public Object {
  public:
   /*! \brief the Internal value. */
-  NDArray* value;
+  NDArray value;
 
   static constexpr const char* _type_key = "MXNet.NDArrayHandle";
   MXNET_DECLARE_FINAL_OBJECT_INFO(NDArrayHandleObj, Object)
@@ -41,8 +41,11 @@ class NDArrayHandle : public ObjectRef {
  public:
   explicit NDArrayHandle(NDArray* value) {
     runtime::ObjectPtr<NDArrayHandleObj> node = make_object<NDArrayHandleObj>();
-    node->value = value;
+    node->value = *value;
     data_ = std::move(node);
+  }
+  inline NDArray* getArray() const {
+    return static_cast<NDArray*>(&(static_cast<NDArrayHandleObj*>(data_.get())->value));
   }
   MXNET_DEFINE_OBJECT_REF_METHODS(NDArrayHandle, ObjectRef, NDArrayHandleObj)
 };

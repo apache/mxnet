@@ -27,35 +27,38 @@ from numbers import Number, Integral
 cdef inline int make_arg(object arg,
                          MXNetValue* value,
                          int* tcode,
-                         ObjectRef* temp_objs,
                          list temp_args) except -1:
     """Pack arguments into c args mxnet call accept"""
     cdef unsigned long long ptr
 
-    if isinstance(arg, (list, tuple)):
-        temp_objs[0] = convert_object(arg)
-        value[0].v_handle = (<void*>(temp_objs[0].get()))
-        tcode[0] = kObjectHandle
-    elif isinstance(arg, NDArrayBase):
+    if isinstance(arg, NDArrayBase):
         value[0].v_handle = <void*><size_t>(arg._get_handle())
         tcode[0] = kNDArrayHandle
-    elif isinstance(arg, (int, long)):
+    elif isinstance(arg, Integral):
         value[0].v_int64 = arg
         tcode[0] = kInt
+    elif isinstance(arg, ObjectBase):
+        value[0].v_handle = (<ObjectBase>arg).chandle
+        tcode[0] = kObjectHandle
     elif isinstance(arg, float):
         value[0].v_float64 = arg
         tcode[0] = kFloat
+    elif isinstance(arg, PyNativeObject):
+        value[0].v_handle = (<ObjectBase>(arg.__mxnet_object__)).chandle
+        tcode[0] = kObjectHandle
     elif isinstance(arg, str):
         tstr = c_str(arg)
         value[0].v_str = tstr
         tcode[0] = kStr
         temp_args.append(tstr)
+    elif isinstance(arg, (list, tuple, dict)):
+        arg = _FUNC_CONVERT_TO_NODE(arg)
+        value[0].v_handle = (<ObjectBase>arg).chandle
+        tcode[0] = kObjectHandle
+        temp_args.append(arg)
     elif arg is None:
         value[0].v_handle = NULL
         tcode[0] = kNull
-    elif isinstance(arg, ObjectBase):
-        value[0].v_handle = (<ObjectBase>arg).chandle
-        tcode[0] = kObjectHandle
     elif isinstance(arg, Number):
         value[0].v_float64 = arg
         tcode[0] = kFloat
@@ -72,12 +75,10 @@ cdef inline int make_arg(object arg,
     return 0
 
 
-cdef inline object make_ret(MXNetValue value, int tcode, tuple args):
+cdef inline object make_ret(MXNetValue value, int tcode):
     """convert result to return value."""
     if tcode == kNDArrayHandle:
         return c_make_array(value.v_handle)
-    elif tcode == kPyArg:
-        return args[value.v_int64]
     elif tcode == kNull:
         return None
     elif tcode == kObjectHandle:
@@ -89,7 +90,7 @@ cdef inline object make_ret(MXNetValue value, int tcode, tuple args):
     elif tcode == kStr:
         return py_str(value.v_str)
     elif tcode == kHandle:
-        return ctypes_handle(value.v_handle)
+        return <unsigned long long>(value.v_handle)
     raise ValueError("Unhandled type code %d" % tcode)
 
 
@@ -100,11 +101,10 @@ cdef inline int FuncCall3(void* chandle,
                           int* ret_tcode) except -1:
     cdef MXNetValue[3] values
     cdef int[3] tcodes
-    cdef ObjectRef[3] temp_objs
     nargs = len(args)
     temp_args = []
     for i in range(nargs):
-        make_arg(args[i], &values[i], &tcodes[i], &temp_objs[i], temp_args)
+        make_arg(args[i], &values[i], &tcodes[i], temp_args)
     CALL(MXNetFuncCall(chandle, &values[0], &tcodes[0],
                      nargs, ret_val, ret_tcode))
     return 0
@@ -122,14 +122,12 @@ cdef inline int FuncCall(void* chandle,
 
     cdef vector[MXNetValue] values
     cdef vector[int] tcodes
-    cdef vector[ObjectRef] temp_objs
     values.resize(nargs)
     tcodes.resize(nargs)
-    temp_objs.resize(nargs)
 
     temp_args = []
     for i in range(nargs):
-        make_arg(args[i], &values[i], &tcodes[i], &temp_objs[i], temp_args)
+        make_arg(args[i], &values[i], &tcodes[i], temp_args)
     CALL(MXNetFuncCall(chandle, &values[0], &tcodes[0],
                      nargs, ret_val, ret_tcode))
     return 0
@@ -186,12 +184,43 @@ cdef class FunctionBase:
         cdef MXNetValue ret_val
         cdef int ret_tcode
         FuncCall(self.chandle, args, &ret_val, &ret_tcode)
-        return make_ret(ret_val, ret_tcode, args)
+        if ret_tcode == kPyArg:
+            return args[ret_val.v_int64]
+        else:
+            return make_ret(ret_val, ret_tcode)
 
+cdef object make_packed_func(MXNetFunctionHandle chandle, int is_global):
+    obj = _CLASS_PACKED_FUNC.__new__(_CLASS_PACKED_FUNC)
+    (<FunctionBase>obj).chandle = chandle
+    (<FunctionBase>obj).is_global = is_global
+    return obj
+
+def _get_global_func(name, allow_missing=False):
+    cdef MXNetFunctionHandle chandle
+    CALL(MXNetFuncGetGlobal(c_str(name), &chandle))
+    if chandle != NULL:
+        return make_packed_func(chandle, True)
+
+    if allow_missing:
+        return None
+
+    raise ValueError("Cannot find global function %s" % name)
 
 _CLASS_OBJECT = None
-
+_CLASS_PACKED_FUNC = None
+_FUNC_CONVERT_TO_NODE = None
 
 def _set_class_object(obj_class):
+    """Initialize object class defined in cython"""
     global _CLASS_OBJECT
     _CLASS_OBJECT = obj_class
+
+def _set_class_packed_func(func_class):
+    """Initialize packed function defined in cython"""
+    global _CLASS_PACKED_FUNC
+    _CLASS_PACKED_FUNC = func_class
+
+def _set_node_generic(func_convert_to_node):
+    """Initialize packed function type conversion function in cython"""
+    global _FUNC_CONVERT_TO_NODE
+    _FUNC_CONVERT_TO_NODE = func_convert_to_node

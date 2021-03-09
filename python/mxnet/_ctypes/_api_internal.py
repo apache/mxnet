@@ -15,9 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Acknowledgement: This file originates from incubator-tvm"""
+"""CachedOp APIs exposed from C++."""
 
-include "./base.pxi"
-include "./ndarray.pxi"
-include "./object.pxi"
-include "./function.pxi"
+import mxnet._ffi
+
+mxnet._ffi._init_api("cached_op", __name__)
