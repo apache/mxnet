@@ -644,11 +644,15 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
     } else {
         TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kInt8);
         if (!full_param.default_param.no_bias) {
-            CHECK(in_types->at(2) ==  mshadow::kInt8 ||
-                  in_types->at(2) == mshadow::kInt32)
-                << "QuantizedFullyConnected only supports int8/int32 bias, while "
-                << in_types->at(2) << " is given.";
-        }
+           if (mxnet::op::type_is_none(in_types->at(2))) {
+              TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kInt8);
+	   } else {
+              CHECK(in_types->at(2) ==  mshadow::kInt8 ||
+                    in_types->at(2) == mshadow::kInt32)
+                  << "QuantizedFullyConnected only supports int8/int32 bias, while "
+                  << in_types->at(2) << " is given.";
+	   }
+	}
         for (size_t i = base_num_inputs; i < in_types->size(); ++i) {
           TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
         }
