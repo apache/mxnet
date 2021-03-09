@@ -87,28 +87,6 @@ set(FORTRAN_DIR \\\"\$\{CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES\}\\\")
       list(APPEND mshadow_LINKER_LIBS ${FORTRAN_LIB})
       file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/temp/")
     endif()
-    # check the lapack flavor of openblas
-    include(CheckSymbolExists)
-    check_symbol_exists(OPENBLAS_USE64BITINT "${OpenBLAS_INCLUDE_DIR}/openblas_config.h" OPENBLAS_ILP64)
-    if(OPENBLAS_ILP64)
-      message("Using ILP64 OpenBLAS")
-      if(NOT USE_INT64_TENSOR_SIZE)
-        message(FATAL_ERROR "Must set USE_INT64_TENSOR_SIZE=1 when using ILP64 OpenBLAS")
-      endif()
-    else()
-      message("Using LP64 OpenBLAS")
-    endif()
-    if(USE_LAPACK)
-      execute_process(COMMAND ${CMAKE_NM} -g ${OpenBLAS_LIB}
-                      COMMAND grep sgetri_
-                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                      OUTPUT_VARIABLE OPENBLAS_CONTAINS_C_LAPACK_OUT
-                      RESULT_VARIABLE OPENBLAS_CONTAINS_C_LAPACK_RET)
-      if(OPENBLAS_CONTAINS_C_LAPACK_OUT STREQUAL ""
-         AND NOT OPENBLAS_CONTAINS_C_LAPACK_RET)
-        list(APPEND mshadow_LINKER_LIBS lapack)
-      endif()
-    endif()
   endif()
   
 elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")

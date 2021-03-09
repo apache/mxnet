@@ -256,9 +256,7 @@ if [[ ! -d $DEPS_PATH/usr/local/cuda-${CUDA_MAJOR_VERSION} ]]; then
         done
     fi
     cp -f ${prefix}/usr/include/x86_64-linux-gnu/cudnn_v${LIBCUDNN_MAJOR}.h ${prefix}/include/cudnn.h
-    cp -f ${prefix}/usr/lib/x86_64-linux-gnu/*so* ${prefix}/lib/
-    ln -sf ${prefix}/lib/libcudnn.so.${LIBCUDNN_MAJOR} ${prefix}/lib/libcudnn.so
-    cp -f ${prefix}/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/*so* ${prefix}/lib/
+    ln -sf ${prefix}/usr/lib/x86_64-linux-gnu/libcudnn.so.${LIBCUDNN_MAJOR} ${prefix}/lib/libcudnn.so
     cp -f ${prefix}/usr/include/nccl.h ${prefix}/include/nccl.h
 fi
 

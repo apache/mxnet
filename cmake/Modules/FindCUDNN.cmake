@@ -25,7 +25,7 @@ find_path(CUDNN_INCLUDE cudnn.h
 
 find_library(CUDNN_LIBRARY NAMES libcudnn.so cudnn.lib # libcudnn_static.a
   PATHS ${CUDNN_ROOT} $ENV{CUDNN_ROOT} ${CUDNN_INCLUDE}
-  PATH_SUFFIXES lib lib/x64  cuda/lib cuda/lib64 lib/x64 usr/lib/x86_64-linux-gnu
+  PATH_SUFFIXES lib lib/x64  cuda/lib cuda/lib64 lib/x64
   DOC "Path to cuDNN library.")
 
 find_package_handle_standard_args(CUDNN DEFAULT_MSG CUDNN_LIBRARY CUDNN_INCLUDE)
