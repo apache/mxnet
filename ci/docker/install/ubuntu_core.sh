@@ -38,6 +38,8 @@ apt-get install -y \
     libcurl4-openssl-dev \
     libjemalloc-dev \
     libhdf5-dev \
+    libomp5 \
+    libomp-dev \
     liblapack-dev \
     libopenblas-dev \
     libopencv-dev \
