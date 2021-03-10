@@ -62,7 +62,6 @@ apt-get install -y \
 
 # Use libturbojpeg package as it is correctly compiled with -fPIC flag
 # https://github.com/HaxeFoundation/hashlink/issues/147
-#ln -s /usr/lib/x86_64-linux-gnu/libturbojpeg.so.0.1.0 /usr/lib/x86_64-linux-gnu/libturbojpeg.so
 
 
 # CMake 3.13.2+ is required
@@ -72,4 +71,3 @@ sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
 ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 rm cmake-3.13.5-Linux-x86_64.sh
 cmake --version
-ldconfig
