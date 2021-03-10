@@ -668,7 +668,7 @@ class DataLoader(object):
                         initargs=[self._dataset, is_np_shape(), is_np_array()])
                     # resume keyboard interupt signal in main process
                     signal.signal(signal.SIGINT, original_sigint_handler)
-                self._refresh()
+                self.refresh()
 
     def __iter__(self):
         if self._mx_iter is not None:
@@ -705,7 +705,6 @@ class DataLoader(object):
     def refresh(self):
         """Refresh its iter, fetch data again. Only valid without nopython mode"""
         self._iter = self._prefetch_iter()
-            
 
     def __len__(self):
         return len(self._batch_sampler)
