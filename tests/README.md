@@ -27,7 +27,7 @@
     ```
 1. Generate your Makefile and build along with the tests with cmake (specify appropraite flags)
     ```
-    cmake -DUSE_CUDNN=ON -DUSE_CUDA=ON -DUSE_MKLDNN=ON -DBLAS=Open -DCMAKE_BUILD_TYPE=Debug .. && make
+    cmake -DUSE_CUDNN=ON -DUSE_CUDA=ON -DUSE_MKLDNN=ON -DUSE_BLAS=Open -DCMAKE_BUILD_TYPE=Debug .. && make
     ```
 1.  Run tests
     ```
@@ -53,7 +53,7 @@ Ninja is a build tool (like make) that prioritizes building speed. If you will b
     ```
 1. When running cmake, add the `-GNinja` flag to specify cmake to generate a Ninja build file
     ```
-    cmake -DUSE_CUDNN=ON -DUSE_CUDA=ON -DUSE_MKLDNN=ON -DBLAS=Open -GNinja -DCMAKE_BUILD_TYPE=Debug ..
+    cmake -DUSE_CUDNN=ON -DUSE_CUDA=ON -DUSE_MKLDNN=ON -DUSE_BLAS=Open -GNinja -DCMAKE_BUILD_TYPE=Debug ..
     ```
 1. Run the ninja build file with
     ```
