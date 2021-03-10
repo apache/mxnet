@@ -109,7 +109,7 @@ def export_model(sym, params, in_shapes, in_types=np.float32,
     if run_shape_inference:
         try:
             onnx_model = shape_inference.infer_shapes(onnx_model)
-        except:
+        except: # pylint: disable=bare-except
             logging.info("Shape inference failed, original export is kept.")
 
     # Save model on disk

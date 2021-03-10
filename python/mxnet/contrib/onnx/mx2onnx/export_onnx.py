@@ -125,7 +125,29 @@ class MXNetGraph(object):
     def get_outputs(sym, params, in_shapes, output_label, in_types, dynamic_input_shapes=False):
         from onnx import mapping
         import re
+        """Helper function to collect the output names, types, and shapes
 
+        Parameters
+        ----------
+        sym : :class:`~mxnet.symbol.Symbol`
+            MXNet symbol object
+        params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
+            Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
+        in_shapes: list of tuple
+            Input shapes
+        out_label : ``str``
+            Name of label typically used in loss that may be left in graph. This name is
+            removed from list of inputs required by symbol
+        in_types : List of Int
+            Input ONNX data types
+        dynamic_input_shapes : Boolean
+            If True will allow for dynamic input shapes to the model
+
+        Returns
+        graph_outputs : dict ``str`` to dict
+            This maps output name to {'shape':tuple, 'dtype':Int}
+        -------
+        """
         # Collect graph output names
         out_names = list()
         for name in sym.list_outputs():
@@ -151,8 +173,9 @@ class MXNetGraph(object):
             # remove any input listed in params from sym.list_inputs() and bind them to the input shapes provided
             # by user. Also remove output_label, which is the name of the label symbol that may have been used
             # as the label for loss during training.
-            inputs = {n: tuple(s) for n, s in zip([n for n in sym.list_inputs() if n not in params and n != output_label],
-                                              in_shapes)}
+            inputs = {n: tuple(s) for n, s in
+                      zip([n for n in sym.list_inputs() if n not in params and n != output_label],
+                          in_shapes)}
             # Add params and their shape to list of inputs
             inputs.update({n: v.shape for n, v in params.items() if n in sym.list_inputs()})
             # Provide input data as well as input params to infer_shape()
@@ -162,8 +185,9 @@ class MXNetGraph(object):
         # Collect graph output types
         # Remove any input listed in params from sym.list_inputs() and bind them to the input types provided
         # by user. Also remove output_label
-        in_dtypes = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[t]
-                    for n, t in zip([n for n in sym.list_inputs() if n not in params and n != output_label], in_types)}
+        in_dtypes = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[t] for n, t in
+                     zip([n for n in sym.list_inputs() if n not in params and n != output_label],
+                         in_types)}
         # Add params and their types to list of inputs
         in_dtypes.update({n: v.dtype for n, v in params.items() if n in sym.list_inputs()})
         _, out_type, _ = sym.infer_type(**in_dtypes)
@@ -245,7 +269,7 @@ class MXNetGraph(object):
 
         # Determine output shape
         graph_outputs = MXNetGraph.get_outputs(sym, params, in_shapes, output_label, in_types, dynamic_input_shapes)
-        
+
         appeared_names = set()
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
