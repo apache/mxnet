@@ -147,7 +147,7 @@ class MXNetGraph(object):
         else:
             for shape in in_shapes:
                 assert None not in shape, "None detected in input shapes, " \
-                    "please set dynamic_intput_shapes=True to enable dynamic inputs shapes"
+                    "please set dynamic_input_shapes=True to enable dynamic inputs shapes"
             # remove any input listed in params from sym.list_inputs() and bind them to the input shapes provided
             # by user. Also remove output_label, which is the name of the label symbol that may have been used
             # as the label for loss during training.
