@@ -122,29 +122,11 @@ class MXNetGraph(object):
         return arg_params, aux_params
 
     @staticmethod
-    def get_outputs(sym, params, in_shape, in_label, in_type):
-        """ Infer output shapes and return dictionary of output name to shape
-
-        :param :class:`~mxnet.symbol.Symbol` sym: symbol to perform infer shape on
-        :param dic of (str, nd.NDArray) params:
-        :param list of tuple(int, ...) in_shape: list of all input shapes
-        :param  in_label: name of label typically used in loss that may be left in graph. This name is
-            removed from list of inputs required by symbol
-        :return: dictionary of output name to shape
-        :rtype: dict of (str, tuple(int, ...))
-        """
+    def get_outputs(sym, params, in_shapes, output_label, in_types, dynamic_input_shapes=False):
         from onnx import mapping
         import re
-        # remove any input listed in params from sym.list_inputs() and bind them to the input shapes provided
-        # by user. Also remove in_label, which is the name of the label symbol that may have been used
-        # as the label for loss during training.
-        inputs = {n: tuple(s) for n, s in zip([n for n in sym.list_inputs() if n not in params and n != in_label],
-                                              in_shape)}
-        # Add params and their shape to list of inputs
-        inputs.update({n: v.shape for n, v in params.items() if n in sym.list_inputs()})
-        # Provide input data as well as input params to infer_shape()
-        _, out_shapes, _ = sym.infer_shape(**inputs)
 
+        # Collect graph output names
         out_names = list()
         for name in sym.list_outputs():
             if name.endswith('_state_output'): # handel special cases for RNN operator
@@ -159,21 +141,38 @@ class MXNetGraph(object):
                 logging.info("output '%s' does not end with '_output'", name)
                 out_names.append(name)
 
-        assert len(out_shapes) == len(out_names)
+        # Collect graph output shapes
+        if dynamic_input_shapes:
+            out_shapes = [(None,) for _ in range(len(out_names))]
+        else:
+            for shape in in_shapes:
+                assert None not in shape, "None detected in input shapes, " \
+                    "please set dynamic_intput_shapes=True to enable dynamic inputs shapes"
+            # remove any input listed in params from sym.list_inputs() and bind them to the input shapes provided
+            # by user. Also remove output_label, which is the name of the label symbol that may have been used
+            # as the label for loss during training.
+            inputs = {n: tuple(s) for n, s in zip([n for n in sym.list_inputs() if n not in params and n != output_label],
+                                              in_shapes)}
+            # Add params and their shape to list of inputs
+            inputs.update({n: v.shape for n, v in params.items() if n in sym.list_inputs()})
+            # Provide input data as well as input params to infer_shape()
+            _, out_shapes, _ = sym.infer_shape(**inputs)
 
-        ## Infer output types
+
+        # Collect graph output types
         # Remove any input listed in params from sym.list_inputs() and bind them to the input types provided
-        # by user. Also remove in_label
-        in_dtype = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[t]
-                    for n, t in zip([n for n in sym.list_inputs() if n not in params and n != in_label], in_type)}
+        # by user. Also remove output_label
+        in_dtypes = {n: mapping.TENSOR_TYPE_TO_NP_TYPE[t]
+                    for n, t in zip([n for n in sym.list_inputs() if n not in params and n != output_label], in_types)}
         # Add params and their types to list of inputs
-        in_dtype.update({n: v.dtype for n, v in params.items() if n in sym.list_inputs()})
-        _, out_type, _ = sym.infer_type(**in_dtype)
+        in_dtypes.update({n: v.dtype for n, v in params.items() if n in sym.list_inputs()})
+        _, out_type, _ = sym.infer_type(**in_dtypes)
         out_types = [mapping.NP_TYPE_TO_TENSOR_TYPE[o(0).dtype] for o in out_type]
 
-        assert len(out_types) == len(out_names)
+        # Make sure the types, names, and shapes all align up
+        assert len(out_types) == len(out_names) == len(out_shapes)
 
-        # bind output shapes/types with output names
+        # Bind output shapes/types with output names
         graph_outputs = {n: {'shape': s, 'dtype': d} for n, s, d in zip(out_names, out_shapes, out_types)}
 
         return graph_outputs
@@ -184,7 +183,8 @@ class MXNetGraph(object):
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy())
                      for k, v in weights_dict.items()])
 
-    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, verbose=False, opset_version=None):
+    def create_onnx_graph_proto(self, sym, params, in_shapes, in_types, verbose=False, opset_version=None,
+                                dynamic_input_shapes=False):
         """Convert MXNet graph to ONNX graph
 
         Parameters
@@ -193,14 +193,16 @@ class MXNetGraph(object):
             MXNet symbol object
         params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
             Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
-        in_shape : List of tuple
+        in_shapes : List of tuple
             Input shape of the model e.g [(1,3,224,224)]
-        in_type : data type
-            Input data type e.g. np.float32
+        in_types : List of Int
+            Input ONNX data types
         verbose : Boolean
             If true will print logs of the model conversion
         opset_version : Int
             ONNX opset version to use for export, defaults to latest supported by onnx package
+        dynamic_input_shapes: Boolean
+            If True will allow for dynamic input shapes to the model
 
         Returns
         -------
@@ -242,8 +244,8 @@ class MXNetGraph(object):
         outputs_lookup = []
 
         # Determine output shape
-        graph_outputs = MXNetGraph.get_outputs(sym, params, in_shape, output_label, in_type)
-
+        graph_outputs = MXNetGraph.get_outputs(sym, params, in_shapes, output_label, in_types, dynamic_input_shapes)
+        
         appeared_names = set()
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
@@ -260,26 +262,26 @@ class MXNetGraph(object):
             # A node is an input node if its op_name is "null" and is not
             # in params dict
             if op == "null" and name not in params:
-                # Handling graph input
+                # Handle graph input
 
-                # Skipping output_label node, as this node is not part of graph
-                # Refer "output_label" assignment above for more details.
+                # Skip output_label node, as this node is not part of graph
+                # Refer to "output_label" assignment above for more details.
                 if name == output_label:
                     continue
+
                 converted, dtypes = MXNetGraph.convert_layer(
                     node,
                     is_input=True,
                     mx_graph=mx_graph,
                     weights=weights,
-                    in_shape=in_shape[graph_input_idx],
-                    in_type=in_type[graph_input_idx],
+                    in_shape=in_shapes[graph_input_idx],
+                    in_type=in_types[graph_input_idx],
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
                     outputs_lookup=outputs_lookup)
                 graph_input_idx += 1
-
             else:
-                # Handling graph layers
+                # Handle graph layers
                 converted, dtypes = MXNetGraph.convert_layer(
                     node,
                     is_input=False,
@@ -291,7 +293,6 @@ class MXNetGraph(object):
                     idx=idx,
                     opset_version=opset_version
                 )
-
             if isinstance(converted, list):
                 # Collect all the node's output names
                 node_possible_names = [name] + [name + str(i) for i in range(10)]
