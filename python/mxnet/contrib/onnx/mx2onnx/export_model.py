@@ -30,7 +30,7 @@ from ._export_helper import load_module
 
 def export_model(sym, params, in_shapes, in_types=np.float32,
                  onnx_file_path='model.onnx', verbose=False, opset_version=None,
-                 dynamic_input_shapes=False, run_shape_inference=False, input_type=None):
+                 dynamic=False, dynamic_input_shapes=None, run_shape_inference=False, input_type=None):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
     Operator support and coverage -
@@ -50,8 +50,10 @@ def export_model(sym, params, in_shapes, in_types=np.float32,
         Path where to save the generated onnx file
     verbose : Boolean
         If True will print logs of the model conversion
-    dynamic_input_shapes: Boolean
+    dynamic: Boolean
         If True will allow for dynamic input shapes to the model
+    dynamic_input_shapes: list of tuple
+        Specifies the dynamic input_shapes. If None then all dimensions are set to None
     run_shape_inference : Boolean
         If True will run shape inference on the model
     input_type : data type or list of data types
@@ -93,12 +95,12 @@ def export_model(sym, params, in_shapes, in_types=np.float32,
         onnx_graph = converter.create_onnx_graph_proto(sym_obj, params_obj, in_shapes,
                                                        in_types_t,
                                                        verbose=verbose, opset_version=opset_version,
-                                                       dynamic_input_shapes=dynamic_input_shapes)
+                                                       dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes)
     elif isinstance(sym, symbol.Symbol) and isinstance(params, dict):
         onnx_graph = converter.create_onnx_graph_proto(sym, params, in_shapes,
                                                        in_types_t,
                                                        verbose=verbose, opset_version=opset_version,
-                                                       dynamic_input_shapes=dynamic_input_shapes)
+                                                       dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes)
     else:
         raise ValueError("Input sym and params should either be files or objects")
 

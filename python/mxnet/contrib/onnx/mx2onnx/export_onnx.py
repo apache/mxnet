@@ -122,7 +122,8 @@ class MXNetGraph(object):
         return arg_params, aux_params
 
     @staticmethod
-    def get_outputs(sym, params, in_shapes, output_label, in_types, dynamic_input_shapes=False):
+    def get_outputs(sym, params, in_shapes, output_label, in_types, dynamic=False,
+                    dynamic_input_shapes=None):
         """Helper function to collect the output names, types, and shapes
 
         Parameters
@@ -131,17 +132,21 @@ class MXNetGraph(object):
             MXNet symbol object
         params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
             Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
-        in_shapes: list of tuple
+        in_shapes : list of tuple
             Input shapes
         out_label : ``str``
             Name of label typically used in loss that may be left in graph. This name is
             removed from list of inputs required by symbol
-        in_types : List of Int
+        in_types : list of Int
             Input ONNX data types
-        dynamic_input_shapes : Boolean
+        dynamic : Boolean
             If True will allow for dynamic input shapes to the model
+        dynamic_input_shapes: list of tuple
+            Specifies the dynamic input_shapes. If None then all dimensions are set to None
 
         Returns
+        in_shapes : list of tuple
+            Updated input shapes
         graph_outputs : dict ``str`` to dict
             This maps output name to {'shape':tuple, 'dtype':Int}
         -------
@@ -165,23 +170,33 @@ class MXNetGraph(object):
                 out_names.append(name)
 
         # Collect graph output shapes
-        if dynamic_input_shapes:
-            out_shapes = [(None,) for _ in range(len(out_names))]
-        else:
-            for shape in in_shapes:
-                assert None not in shape, "None detected in input shapes, " \
-                    "please set dynamic_input_shapes=True to enable dynamic inputs shapes"
-            # remove any input listed in params from sym.list_inputs() and bind them to the input shapes provided
-            # by user. Also remove output_label, which is the name of the label symbol that may have been used
-            # as the label for loss during training.
-            inputs = {n: tuple(s) for n, s in
-                      zip([n for n in sym.list_inputs() if n not in params and n != output_label],
-                          in_shapes)}
-            # Add params and their shape to list of inputs
-            inputs.update({n: v.shape for n, v in params.items() if n in sym.list_inputs()})
-            # Provide input data as well as input params to infer_shape()
-            _, out_shapes, _ = sym.infer_shape(**inputs)
+        # Remove any input listed in params from sym.list_inputs() and bind them to the input shapes provided
+        # by user. Also remove output_label, which is the name of the label symbol that may have been used
+        # as the label for loss during training.
+        inputs = {n: tuple(s) for n, s in
+                  zip([n for n in sym.list_inputs() if n not in params and n != output_label],
+                      in_shapes)}
+        # Add params and their shape to list of inputs
+        inputs.update({n: v.shape for n, v in params.items() if n in sym.list_inputs()})
+        # Provide input data as well as input params to infer_shape()
+        _, out_shapes, _ = sym.infer_shape(**inputs)
+        if dynamic:
+            # Keep the dimensionality of the output shapes but change the values to None
+            out_shapes = [tuple(None for _ in i_s) for i_s in out_shapes]
 
+            if dynamic_input_shapes is None:
+                # Set all dimensions to None
+                in_shapes = [tuple(None for _ in i_s) for i_s in in_shapes]
+            else:
+                assert len(in_shapes) == len(dynamic_input_shapes), "The length of " \
+                    "dynamic_input_shapes must equal to the length of in_shapes."
+                for i in range(len(in_shapes)):
+                    assert len(in_shapes[i]) == len(dynamic_input_shapes[i]), "The dimensionality " \
+                        "of each shape must match."
+                in_shapes = dynamic_input_shapes
+        else:
+            assert dynamic_input_shapes is None, "dynamic_input_shapes is specified. Please " \
+                "set dynamic_input_shapes=True to enable dynamic input shapes"
 
         # Collect graph output types
         # Remove any input listed in params from sym.list_inputs() and bind them to the input types provided
@@ -200,7 +215,7 @@ class MXNetGraph(object):
         # Bind output shapes/types with output names
         graph_outputs = {n: {'shape': s, 'dtype': d} for n, s, d in zip(out_names, out_shapes, out_types)}
 
-        return graph_outputs
+        return in_shapes, graph_outputs
 
     @staticmethod
     def convert_weights_to_numpy(weights_dict):
@@ -209,7 +224,7 @@ class MXNetGraph(object):
                      for k, v in weights_dict.items()])
 
     def create_onnx_graph_proto(self, sym, params, in_shapes, in_types, verbose=False, opset_version=None,
-                                dynamic_input_shapes=False):
+                                dynamic=True, dynamic_input_shapes=None):
         """Convert MXNet graph to ONNX graph
 
         Parameters
@@ -226,8 +241,10 @@ class MXNetGraph(object):
             If true will print logs of the model conversion
         opset_version : Int
             ONNX opset version to use for export, defaults to latest supported by onnx package
-        dynamic_input_shapes: Boolean
+        dynamic: Boolean
             If True will allow for dynamic input shapes to the model
+        dynamic_input_shapes: list of tuple
+            Specifies the dynamic input_shapes. If None then all dimensions are set to None
 
         Returns
         -------
@@ -268,9 +285,9 @@ class MXNetGraph(object):
         onnx_processed_outputs = []
         outputs_lookup = []
 
-        # Determine output shape
-        graph_outputs = MXNetGraph.get_outputs(sym, params, in_shapes, output_label, in_types, dynamic_input_shapes)
-
+        # Determine graph output names, shapes, and dtypes. Also update in_shapes
+        in_shapes, graph_outputs = MXNetGraph.get_outputs(sym, params, in_shapes, output_label,
+                                                           in_types, dynamic, dynamic_input_shapes)
         appeared_names = set()
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
