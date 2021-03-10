@@ -55,6 +55,13 @@ class GluonModel():
                                      [self.input_shape], self.input_dtype, onnx_file)
         return onnx_file
 
+    def export_onnx_dynamic(self, input_shape, dynamic_input_shapes):
+        onnx_file = self.modelpath + ".onnx"
+        mx.contrib.onnx.export_model(self.modelpath + "-symbol.json", self.modelpath + "-0000.params",
+                                     [input_shape], self.input_dtype, onnx_file,
+                                     dynamic_input_shapes = dynamic_input_shapes)
+        return onnx_file
+
     def predict(self, data):
         return self.model(data)
 
@@ -584,11 +591,7 @@ def test_roberta_inference_onnxruntime(tmp_path, model_name):
 
         sequence_outputs, attention_outputs= model(inputs, valid_length, masked_positions)    
 
-        model_dir = f'roberta_model'
-        if not os.path.isdir(model_dir):
-            os.mkdir(model_dir)
-
-        prefix = '%s/%s' % (model_dir, model_name)
+        prefix = "%s/roberta" % tmp_path
         model.export(prefix)
 
         sym_file = "%s-symbol.json" % prefix
@@ -608,7 +611,7 @@ def test_roberta_inference_onnxruntime(tmp_path, model_name):
         pred = sess.run(None, input_dict)
 
         assert_almost_equal(sequence_outputs, pred[0])
-        assert_almost_equal(attension_outputs, pred[1])
+        assert_almost_equal(attention_outputs, pred[1])
 
     finally:
         shutil.rmtree(tmp_path)
@@ -716,3 +719,29 @@ def test_distilbert_inference_onnxruntime(tmp_path, model_name):
     finally:
         shutil.rmtree(tmp_path)
 
+
+@with_seed()
+@pytest.mark.parametrize('model_name', ['mobilenet1.0', 'inceptionv3', 'darknet53', 'resnest14'])
+def test_dynamic_shape_cv_inference_onnxruntime(tmp_path, model_name):
+    tmp_path = str(tmp_path)
+    try:
+        M = GluonModel(model_name, (1, 3, 512, 512), 'float32', tmp_path)
+        onnx_file = M.export_onnx_dynamic((None, 3, 512, 512), dynamic_input_shapes=True)
+
+        # create onnxruntime session using the generated onnx file
+        ses_opt = onnxruntime.SessionOptions()
+        ses_opt.log_severity_level = 3
+        sess = onnxruntime.InferenceSession(onnx_file, ses_opt)
+
+        # test on a different batch size
+        x = mx.random.uniform(0, 10, (5, 3, 512, 512))
+        in_tensors = [x]
+        input_dict = dict((sess.get_inputs()[i].name, in_tensors[i].asnumpy()) for i in range(len(in_tensors)))
+        pred_on = sess.run(None, input_dict)
+
+        pred_mx = M.predict(x)
+
+        assert_almost_equal(pred_mx, pred_on[0])
+
+    finally:
+        shutil.rmtree(tmp_path)

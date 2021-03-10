@@ -123,8 +123,6 @@ class MXNetGraph(object):
 
     @staticmethod
     def get_outputs(sym, params, in_shapes, output_label, in_types, dynamic_input_shapes=False):
-        from onnx import mapping
-        import re
         """Helper function to collect the output names, types, and shapes
 
         Parameters
@@ -148,6 +146,9 @@ class MXNetGraph(object):
             This maps output name to {'shape':tuple, 'dtype':Int}
         -------
         """
+        from onnx import mapping
+        import re
+
         # Collect graph output names
         out_names = list()
         for name in sym.list_outputs():
