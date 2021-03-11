@@ -25,6 +25,7 @@ from ..ndarray_doc import _build_doc
 
 from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null, _is_np_op, _output_is_list  # pylint: disable=unused-import
 from ..util import use_np_shape  # pylint: disable=unused-import
+from .._ctypes import _api_internal
 
 
 def _verify_all_np_ndarrays(op_name, func_name, args, out):
@@ -178,60 +179,118 @@ def _generate_ndarray_function_code(handle, op_name, func_name, signature_only=F
     output_is_list = _output_is_list(op_name)
     doc_str_idx = 1
     if is_np_op:
-        doc_str_idx = 2
-    if arr_name:
-        code.append("""
-def %s(*%s, **kwargs):"""%(func_name, arr_name))
-        if not signature_only:
+        if arr_name:
             code.append("""
+def %s(*%s, **kwargs):"""%(func_name, arr_name))
+            if not signature_only:
+                code.append("""
     ndargs = []
     for i in {}:
         assert isinstance(i, NDArrayBase), \\
             "Positional arguments must have NDArray type, " \\
             "but got %s"%str(i)
         ndargs.append(i)""".format(arr_name))
-            if dtype_name is not None:
-                code.append("""
+                if dtype_name is not None:
+                    code.append("""
     if '%s' in kwargs:
         if _np.dtype(kwargs['%s']).names:
             kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
         else:
             kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
-                dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
-            code.append("""
-    _ = kwargs.pop('name', None)
-    out = kwargs.pop('out', None)
-    keys = list(kwargs.keys())
-    vals = list(kwargs.values())""")
-    else:
-        code.append("""
-def %s(%s):"""%(func_name, ', '.join(signature)))
-        if not signature_only:
-            code.append("""
-    ndargs = []
-    keys = list(kwargs.keys())
-    vals = list(kwargs.values())""")
-            # NDArray args
-            for name in ndarg_names: # pylint: disable=redefined-argument-from-local
+                    dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
                 code.append("""
+    _ = kwargs.pop('name', None)
+    out = kwargs.pop('out', None)""")
+        else:
+            code.append("""
+def %s(%s):"""%(func_name, ', '.join(signature)))
+            if not signature_only:
+                code.append("""
+    ndargs = []""")
+                # NDArray args
+                for name in ndarg_names: # pylint: disable=redefined-argument-from-local
+                    code.append("""
     if {name} is not None:
         assert isinstance({name}, NDArrayBase), \\
             "Argument {name} must have NDArray type, but got %s"%str({name})
         ndargs.append({name})""".format(name=name))
-            # kwargs
-            for name in kwarg_names: # pylint: disable=redefined-argument-from-local
+                # kwargs
+                for name in kwarg_names: # pylint: disable=redefined-argument-from-local
+                    code.append("""
+    if %s is not _Null:
+        kwargs['%s'] = %s"""%(name, name, name))
+                # dtype
+                if dtype_name is not None:
+                    code.append("""
+    if %s is not _Null and %s is not None:
+        kwargs['%s'] = _np.dtype(%s).name"""%(dtype_name, dtype_name, dtype_name, dtype_name))
+
+        if not signature_only:
+            code.append("""
+    _verify_all_np_ndarrays("{op_name}", "{func_name}", ndargs, out)
+            """.format(op_name=op_name, func_name=func_name))
+            code.append("""
+    flags = {key: str(value) for key, value in kwargs.items()} if kwargs else None
+    output_vars = _api_internal._imperative_invoke(%d, *ndargs, flags, out)
+    if out is not None:
+        return out
+    if isinstance(output_vars, NDArrayBase) and not %s:
+        return output_vars
+    else:
+        return list(output_vars)"""%(
+            handle.value, str(output_is_list)))
+        else:
+            code.append("""
+    return (0,)""")
+
+    else:
+        if arr_name:
+            code.append("""
+def %s(*%s, **kwargs):"""%(func_name, arr_name))
+            if not signature_only:
                 code.append("""
+    ndargs = []
+    for i in {}:
+        assert isinstance(i, NDArrayBase), \\
+            "Positional arguments must have NDArray type, " \\
+            "but got %s"%str(i)
+        ndargs.append(i)""".format(arr_name))
+                if dtype_name is not None:
+                    code.append("""
+    if '%s' in kwargs:
+        if _np.dtype(kwargs['%s']).names:
+            kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
+        else:
+            kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
+                    dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
+                code.append("""
+    _ = kwargs.pop('name', None)
+    out = kwargs.pop('out', None)
+    keys = list(kwargs.keys())
+    vals = list(kwargs.values())""")
+        else:
+            code.append("""
+def %s(%s):"""%(func_name, ', '.join(signature)))
+            if not signature_only:
+                code.append("""
+    ndargs = []
+    keys = list(kwargs.keys())
+    vals = list(kwargs.values())""")
+                # NDArray args
+                for name in ndarg_names: # pylint: disable=redefined-argument-from-local
+                    code.append("""
+    if {name} is not None:
+        assert isinstance({name}, NDArrayBase), \\
+            "Argument {name} must have NDArray type, but got %s"%str({name})
+        ndargs.append({name})""".format(name=name))
+                # kwargs
+                for name in kwarg_names: # pylint: disable=redefined-argument-from-local
+                    code.append("""
     if %s is not _Null:
         keys.append('%s')
         vals.append(%s)"""%(name, name, name))
-            # dtype
-            if dtype_name is not None:
-                if is_np_op:
-                    code.append("""
-    if %s is not _Null and %s is not None:
-        keys.append('%s')
-        vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name, dtype_name))
-                else:
+                # dtype
+                if dtype_name is not None:
                     code.append("""
     if %s is not _Null:
         keys.append('%s')
@@ -239,25 +298,22 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
             vals.append(_np.dtype(%s).names[0])
         else:
             vals.append(_np.dtype(%s).name) """%(dtype_name, dtype_name, dtype_name,
-                                                 dtype_name, dtype_name))
-
-    verify_ndarrays_fn =\
-        _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_legacy_ndarrays.__name__
-    if not signature_only:
-        code.append("""
-    {verify_fn}("{op_name}", "{func_name}", ndargs, out)
-        """.format(verify_fn=verify_ndarrays_fn, op_name=op_name, func_name=func_name))
-        code.append("""
-    return _imperative_invoke(%d, ndargs, keys, vals, out, %s, %s)"""%(
-        handle.value, str(is_np_op), str(output_is_list)))
-    else:
-        code.append("""
+                                                dtype_name, dtype_name))
+        if not signature_only:
+            code.append("""
+    _verify_all_legacy_ndarrays("{op_name}", "{func_name}", ndargs, out)
+            """.format(op_name=op_name, func_name=func_name))
+            code.append("""
+    return _imperative_invoke(%d, ndargs, keys, vals, out, False, %s)"""%(
+            handle.value, str(output_is_list)))
+        else:
+            code.append("""
     return (0,)""")
 
     doc_str_lines = _os.linesep+''.join(['    '+s if s.strip() else s
-                                         for s in 'r"""{doc_str}"""'.format(doc_str=doc_str)
-                                         .splitlines(True)])
-    code.insert(doc_str_idx, doc_str_lines)
+                                        for s in 'r"""{doc_str}"""'.format(doc_str=doc_str)
+                                        .splitlines(True)])
+    code.insert(1, doc_str_lines)
     return ''.join(code), doc_str
 
 
