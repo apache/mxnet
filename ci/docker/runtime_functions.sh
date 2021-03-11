@@ -1214,6 +1214,30 @@ build_docs_beta() {
     popd
 }
 
+push_docs() {
+    folder_name=$1
+    set -ex
+    pip3 install --user awscli
+    export PATH=~/.local/bin:$PATH
+    pushd docs/_build
+    tar -xzf full_website.tgz --strip-components 1
+    # check if folder_name already exists in versions
+    pushd versions
+    if [ -d "$folder_name" ]; then
+        echo "Folder $folder_name already exists in versions. Please double check the FOLDER_NAME variable in Jenkens pipeline"
+        exit 1
+    fi
+    mv master $folder_name
+    popd
+    zip -r9 versions.zip versions/.
+    # Upload versions folder
+    aws s3 cp versions.zip s3://mxnet-website-static-artifacts --acl public-read
+    # Backup versions folder with the latest version name
+    backup_file="versions_backup_upto_$folder_name.zip"
+    aws s3 cp s3://mxnet-website-static-artifacts/versions.zip s3://mxnet-website-static-artifacts/$backup_file --acl public-read
+    popd
+}
+
 create_repo() {
    repo_folder=$1
    mxnet_url=$2
