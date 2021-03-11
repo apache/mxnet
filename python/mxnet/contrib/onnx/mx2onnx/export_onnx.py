@@ -190,8 +190,8 @@ class MXNetGraph(object):
             else:
                 assert len(in_shapes) == len(dynamic_input_shapes), "The length of " \
                     "dynamic_input_shapes must equal to the length of in_shapes."
-                for i in range(len(in_shapes)):
-                    assert len(in_shapes[i]) == len(dynamic_input_shapes[i]), "The dimensionality " \
+                for i_s, d_i_s in zip(in_shapes, dynamic_input_shapes):
+                    assert len(i_s) == len(d_i_s), "The dimensionality " \
                         "of each shape must match."
                 in_shapes = dynamic_input_shapes
         else:
@@ -287,7 +287,7 @@ class MXNetGraph(object):
 
         # Determine graph output names, shapes, and dtypes. Also update in_shapes
         in_shapes, graph_outputs = MXNetGraph.get_outputs(sym, params, in_shapes, output_label,
-                                                           in_types, dynamic, dynamic_input_shapes)
+                                                          in_types, dynamic, dynamic_input_shapes)
         appeared_names = set()
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
