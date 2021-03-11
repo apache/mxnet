@@ -2842,7 +2842,6 @@ def convert_slice(node, **kwargs):
     create_tensor(steps, name+'_steps', kwargs['initializer'])
 
     nodes = [
-        #make_node('Range', [name+'_0_s', name+'_len_s', name+'_1_s'], [name+'_axes']),
         make_node("Slice", [input_nodes[0], name+'_starts', name+'_ends', name+'_axes',
                             name+'_steps'], [name], name=name)
     ]
