@@ -2834,15 +2834,14 @@ def convert_slice(node, **kwargs):
         if ends[i] is None:
             ends[i] = 2**63-1
 
-    create_const_scalar_node(name+'_0_s', np.int64(0), kwargs)
-    create_const_scalar_node(name+'_1_s', np.int64(1), kwargs)
-    create_const_scalar_node(name+'_len_s', np.int64(len(starts)), kwargs)
+    axes = [i for i in range(len(starts))]
+
+    create_tensor(axes, name+'_axes', kwargs['initializer'])
     create_tensor(starts, name+'_starts', kwargs['initializer'])
     create_tensor(ends, name+'_ends', kwargs['initializer'])
     create_tensor(steps, name+'_steps', kwargs['initializer'])
 
     nodes = [
-        make_node('Range', [name+'_0_s', name+'_len_s', name+'_1_s'], [name+'_axes']),
         make_node("Slice", [input_nodes[0], name+'_starts', name+'_ends', name+'_axes',
                             name+'_steps'], [name], name=name)
     ]
