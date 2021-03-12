@@ -60,5 +60,9 @@ FILES=(
     "http://data.mxnet.io/data/mnist_train.csv.gz")
 
 for FILE in ${FILES[@]}; do
-    download ${FILE}
+    if curl --output /dev/null --silent --head --fail "$FILE"; then
+        download ${FILE}
+    else
+        download "https://web.archive.org/web/20160828233817/$FILE"
+    fi
 done

@@ -16,9 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to build and run MXNet on Ubuntu 16.04 for CPU
+# Dockerfile to build and run MXNet on Ubuntu 18.04 for CPU
 
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 WORKDIR /work/deps
 

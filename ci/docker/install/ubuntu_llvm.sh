@@ -17,9 +17,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-echo deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main\
+echo deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-5.0 main\
      >> /etc/apt/sources.list.d/llvm.list
-echo deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main\
+echo deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-5.0 main\
      >> /etc/apt/sources.list.d/llvm.list
 
 wget -qO - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
