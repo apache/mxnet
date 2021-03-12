@@ -4183,16 +4183,16 @@ def convert_RNN(node, **kwargs):
         create_tensor([0], name+'_0', kwargs['initializer'])
         create_tensor([8*state_size], name+'_8*state_size', kwargs['initializer'])
         create_tensor([4*state_size*state_size], name+'_4*state_size^2', kwargs['initializer'])
-        
+
         create_tensor([1, 4*state_size, state_size], name+'_WR_shape', kwargs['initializer'])
         create_tensor([1, 8*state_size], name+'_B_shape', kwargs['initializer'])
-        
+
         create_tensor([4*4*state_size*state_size], name+'_WR_offset', kwargs['initializer'])
 
         nodes += [
             make_node('Shape', [data], [name+'_data_shape']),
             make_node('Split', [name+'_data_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size']),
-            
+
             # Layer 0
             # get W
             make_node('Slice', [param, name+'_0', name+'_4*state_size^2'], [name+'_W0_1d']),
@@ -4286,7 +4286,7 @@ def convert_RNN(node, **kwargs):
             make_node('Concat', [name+'_B0', name+'_B3', name+'_B1', name+'_B2',
                                  name+'_B4', name+'_B7', name+'_B5', name+'_B6'], [name+'_B_'], axis=0),
             make_node('Reshape', [name+'_B_', name+'_B_shape'], [name+'_B']),
-           # get seq_len
+            # get seq_len
             make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
             make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
             # compute LSTM
