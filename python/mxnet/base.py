@@ -281,7 +281,11 @@ def _load_lib():
         # pylint: disable=E1123
         lib = ctypes.CDLL(lib_path[0], winmode=0x00000008)
     else:
-        lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
+        # We use RTLD_GLOBAL as, when dynamically linking with MKL,
+        # libmkl_core.so may load libmkl_avx512.so via dlopen. When opening
+        # libmxnet and it's dependencies (libmkl_core.so) via RTLD_LOCAL, MKL's
+        # dlopen calls will fail with undefined symbol errors.
+        lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_GLOBAL)
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
     return lib
