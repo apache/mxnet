@@ -55,6 +55,13 @@ class GluonModel():
                                      [self.input_shape], self.input_dtype, onnx_file)
         return onnx_file
 
+    def export_onnx_dynamic(self, dynamic_input_shapes):
+        onnx_file = self.modelpath + ".onnx"
+        mx.contrib.onnx.export_model(self.modelpath + "-symbol.json", self.modelpath + "-0000.params",
+                                     [self.input_shape], self.input_dtype, onnx_file, dynamic=True,
+                                     dynamic_input_shapes=dynamic_input_shapes)
+        return onnx_file
+
     def predict(self, data):
         return self.model(data)
 
@@ -584,11 +591,7 @@ def test_roberta_inference_onnxruntime(tmp_path, model_name):
 
         sequence_outputs, attention_outputs= model(inputs, valid_length, masked_positions)    
 
-        model_dir = f'roberta_model'
-        if not os.path.isdir(model_dir):
-            os.mkdir(model_dir)
-
-        prefix = '%s/%s' % (model_dir, model_name)
+        prefix = "%s/roberta" % tmp_path
         model.export(prefix)
 
         sym_file = "%s-symbol.json" % prefix
@@ -608,7 +611,7 @@ def test_roberta_inference_onnxruntime(tmp_path, model_name):
         pred = sess.run(None, input_dict)
 
         assert_almost_equal(sequence_outputs, pred[0])
-        assert_almost_equal(attension_outputs, pred[1])
+        assert_almost_equal(attention_outputs, pred[1])
 
     finally:
         shutil.rmtree(tmp_path)
@@ -722,7 +725,7 @@ def test_distilbert_inference_onnxruntime(tmp_path, model_name):
                                         ('standard_lstm_lm_1500', 1500)])
 @pytest.mark.parametrize('seq_length', [16, 32])
 def test_standard_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name, seq_length):
-    if True:
+    try:
         import gluonnlp as nlp
         ctx = mx.cpu()
         dataset= 'wikitext-2'
@@ -740,8 +743,7 @@ def test_standard_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name
         inputs = mx.nd.random.randint(0, 33278, shape=(seq_length, batch),
                                       ctx=ctx).astype('float32')
         begin_state = model.begin_state(func=mx.nd.random.uniform, low=0, high=1,
-                                        shape=(num_layers, batch, num_hidden),
-                                        dtype='float32', ctx=ctx)
+                                        batch_size=batch, dtype='float32', ctx=ctx)
         out, out_state= model(inputs, begin_state)
 
         prefix = "%s/standard_rnn_lstm" % tmp_path
@@ -765,3 +767,103 @@ def test_standard_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name
         assert_almost_equal(out, pred[2])
         assert_almost_equal(out_state[0], pred[0])
         assert_almost_equal(out_state[1], pred[1])
+
+    finally:
+        shutil.rmtree(tmp_path)
+
+
+@pytest.mark.parametrize('model_name', ['mobilenet1.0', 'inceptionv3', 'darknet53', 'resnest14'])
+def test_dynamic_shape_cv_inference_onnxruntime(tmp_path, model_name):
+    tmp_path = str(tmp_path)
+    try:
+        M = GluonModel(model_name, (1, 3, 512, 512), 'float32', tmp_path)
+        dynamic_input_shapes = [(None, 3, 512, 512)]
+        onnx_file = M.export_onnx_dynamic(dynamic_input_shapes)
+
+        # create onnxruntime session using the generated onnx file
+        ses_opt = onnxruntime.SessionOptions()
+        ses_opt.log_severity_level = 3
+        sess = onnxruntime.InferenceSession(onnx_file, ses_opt)
+
+        # test on a different batch size
+        x = mx.random.uniform(0, 10, (5, 3, 512, 512))
+        in_tensors = [x]
+        input_dict = dict((sess.get_inputs()[i].name, in_tensors[i].asnumpy()) for i in range(len(in_tensors)))
+        pred_on = sess.run(None, input_dict)
+
+        pred_mx = M.predict(x)
+
+        assert_almost_equal(pred_mx, pred_on[0])
+
+    finally:
+        shutil.rmtree(tmp_path)
+
+
+@with_seed()
+@pytest.mark.parametrize('model', ['bert_12_768_12'])
+def test_dynamic_shape_bert_inference_onnxruntime(tmp_path, model):
+    tmp_path = str(tmp_path)
+    try:
+        import gluonnlp as nlp
+        dataset = 'book_corpus_wiki_en_uncased'
+        ctx = mx.cpu(0)
+        model, vocab = nlp.model.get_model(
+            name=model,
+            ctx=ctx,
+            dataset_name=dataset,
+            pretrained=True,
+            use_pooler=True,
+            use_decoder=False,
+            num_layers = 3,
+            hparam_allow_override = True,
+            use_classifier=False)
+
+        model.hybridize(static_alloc=True)
+
+        batch = 5
+        seq_length = 16
+        # create synthetic test data
+        inputs = mx.nd.random.uniform(0, 30522, shape=(batch, seq_length), dtype='float32')
+        token_types = mx.nd.random.uniform(0, 2, shape=(batch, seq_length), dtype='float32')
+        valid_length = mx.nd.array([seq_length] * batch, dtype='float32')
+
+        seq_encoding, cls_encoding = model(inputs, token_types, valid_length)
+
+        prefix = "%s/bert" % tmp_path
+        model.export(prefix)
+        sym_file = "%s-symbol.json" % prefix
+        params_file = "%s-0000.params" % prefix
+        onnx_file = "%s.onnx" % prefix
+
+        dynamic_input_shapes = [(None, seq_length), (None, seq_length), (None,)]
+        input_shapes = [(batch, seq_length), (batch, seq_length), (batch,)]
+        input_types = [np.float32, np.float32, np.float32]
+        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
+                                                            input_types, onnx_file,
+                                                            dynamic=True,
+                                                            dynamic_input_shapes=dynamic_input_shapes)
+
+        # create onnxruntime session using the generated onnx file
+        ses_opt = onnxruntime.SessionOptions()
+        ses_opt.log_severity_level = 3
+        session = onnxruntime.InferenceSession(onnx_file, ses_opt)
+
+        # test on a different batch size
+        batch = 7
+        seq_length = 16
+        inputs = mx.nd.random.uniform(0, 30522, shape=(batch, seq_length), dtype='float32')
+        token_types = mx.nd.random.uniform(0, 2, shape=(batch, seq_length), dtype='float32')
+        valid_length = mx.nd.array([seq_length] * batch, dtype='float32')
+
+        seq_encoding, cls_encoding = model(inputs, token_types, valid_length)
+
+        onnx_inputs = [inputs, token_types, valid_length]
+        input_dict = dict((session.get_inputs()[i].name, onnx_inputs[i].asnumpy()) for i in range(len(onnx_inputs)))
+        pred_onx, cls_onx = session.run(None, input_dict)
+
+        assert_almost_equal(seq_encoding, pred_onx)
+        assert_almost_equal(cls_encoding, cls_onx)
+
+    finally:
+        shutil.rmtree(tmp_path)
+

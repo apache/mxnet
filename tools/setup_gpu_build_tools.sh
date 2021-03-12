@@ -30,14 +30,13 @@ DEPS_PATH=$2
 
 >&2 echo "Setting CUDA versions for $VARIANT"
 if [[ $VARIANT == cu112* ]]; then
-    CUDA_VERSION='11.2.135-1'
+    CUDA_VERSION='11.2.67-1'
     CUDA_PATCH_VERSION='11.4.1.1026-1'
     CUDA_LIBS_VERSION='10.2.3.135-1'
     CUDA_SOLVER_VERSION='11.1.0.135-1'
-    CUDA_NVTX_VERSION='11.2.67-1'
     LIBCUDA_VERSION='460.32.03-0ubuntu1'
     LIBCUDNN_VERSION='8.1.0.77-1+cuda11.2'
-    LIBNCCL_VERSION='2.8.4-1+cuda11.2'
+    LIBNCCL_VERSION='2.8.3-1+cuda11.2'
     LIBCUDART_VERSION='11.2.72-1'
     LIBCUFFT_VERSION='10.4.0.135-1'
 elif [[ $VARIANT == cu110* ]]; then
@@ -67,36 +66,6 @@ elif [[ $VARIANT == cu100* ]]; then
     LIBCUDA_VERSION='410.48-0ubuntu1'
     LIBCUDNN_VERSION='7.6.5.32-1+cuda10.0'
     LIBNCCL_VERSION='2.5.6-1+cuda10.0'
-elif [[ $VARIANT == cu92* ]]; then
-    CUDA_VERSION='9.2.148-1'
-    CUDA_PATCH_VERSION='9.2.148.1-1'
-    LIBCUDA_VERSION='396.44-0ubuntu1'
-    LIBCUDNN_VERSION='7.6.5.32-1+cuda9.2'
-    LIBNCCL_VERSION='2.4.8-1+cuda9.2'
-elif [[ $VARIANT == cu91* ]]; then
-    CUDA_VERSION='9.1.85-1'
-    CUDA_PATCH_VERSION='9.1.85.3-1'
-    LIBCUDA_VERSION='396.44-0ubuntu1'
-    LIBCUDNN_VERSION='7.1.3.16-1+cuda9.1'
-    LIBNCCL_VERSION='2.2.12-1+cuda9.1'
-elif [[ $VARIANT == cu90* ]]; then
-    CUDA_VERSION='9.0.176-1'
-    CUDA_PATCH_VERSION='9.0.176.3-1'
-    LIBCUDA_VERSION='384.145-0ubuntu1'
-    LIBCUDNN_VERSION='7.6.5.32-1+cuda9.0'
-    LIBNCCL_VERSION='2.5.6-1+cuda9.0'
-elif [[ $VARIANT == cu80* ]]; then
-    CUDA_VERSION='8.0.61-1'
-    CUDA_PATCH_VERSION='8.0.61.2-1'
-    LIBCUDA_VERSION='375.88-0ubuntu1'
-    LIBCUDNN_VERSION='7.2.1.38-1+cuda8.0'
-    LIBNCCL_VERSION='2.3.4-1+cuda8.0'
-elif [[ $VARIANT == cu75* ]]; then
-    CUDA_VERSION='7.5-18'
-    CUDA_PATCH_VERSION='7.5-18'
-    LIBCUDA_VERSION='375.88-0ubuntu1'
-    LIBCUDNN_VERSION='6.0.21-1+cuda7.5'
-    LIBNCCL_VERSION=''
 fi
 if [[ $VARIANT == cu* ]]; then
     CUDA_MAJOR_VERSION=$(echo $CUDA_VERSION | tr '-' '.' | cut -d. -f1,2)
@@ -108,7 +77,7 @@ if [[ $VARIANT == cu* ]]; then
     os_name=$(cat /etc/*release | grep '^ID=' | sed 's/^.*=//g')
     os_version=$(cat /etc/*release | grep VERSION_ID | sed 's/^.*"\([0-9]*\)\.\([0-9]*\)"/\1\2/g')
     os_id="${os_name}${os_version}"
-    if [[ $CUDA_MAJOR_DASH == 9-* ]] || [[ $CUDA_MAJOR_DASH == 10-* ]] || [[ $CUDA_MAJOR_DASH == 11-* ]]; then
+    if [[ $CUDA_MAJOR_DASH == 9-* ]] || [[ $CUDA_MAJOR_DASH == 10-* ]] || [[ $CUDA_MAJOR_DASH == 11-* ]] ; then
         os_id="ubuntu1604"
     fi
     export PATH=/usr/lib/binutils-2.26/bin/:${PATH}:$DEPS_PATH/usr/local/cuda-$CUDA_MAJOR_VERSION/bin
@@ -135,14 +104,16 @@ if [[ $VARIANT == cu112* ]]; then
       "libcusolver-${CUDA_MAJOR_DASH}_${CUDA_SOLVER_VERSION}_amd64.deb" \
       "libcusolver-dev-${CUDA_MAJOR_DASH}_${CUDA_SOLVER_VERSION}_amd64.deb" \
       "cuda-nvcc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvtx-${CUDA_MAJOR_DASH}_${CUDA_NVTX_VERSION}_amd64.deb" \
+      "cuda-nvtx-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "libcuda1-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
       "cuda-nvprof-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "nvidia-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
+      "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
+      "libcudnn${LIBCUDNN_MAJOR}_${LIBCUDNN_VERSION}_amd64.deb" \
     )
     ml_files=( \
-      "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
       "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
+      "libnccl2_${LIBNCCL_VERSION}_amd64.deb" \
     )
 elif [[ $VARIANT == cu110* ]]; then
     cuda_files=( \
@@ -166,7 +137,9 @@ elif [[ $VARIANT == cu110* ]]; then
     )
     ml_files=( \
       "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
+      "libcudnn${LIBCUDNN_MAJOR}_${LIBCUDNN_VERSION}_amd64.deb" \
       "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
+      "libnccl2_${LIBNCCL_VERSION}_amd64.deb" \
     )
 elif [[ $VARIANT == cu102* ]]; then
     cuda_files=( \
@@ -191,7 +164,9 @@ elif [[ $VARIANT == cu102* ]]; then
     )
     ml_files=( \
       "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
+      "libcudnn${LIBCUDNN_MAJOR}_${LIBCUDNN_VERSION}_amd64.deb" \
       "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
+      "libnccl2_${LIBNCCL_VERSION}_amd64.deb" \
     )
 elif [[ $VARIANT == cu101* ]]; then
     cuda_files=( \
@@ -216,7 +191,9 @@ elif [[ $VARIANT == cu101* ]]; then
     )
     ml_files=( \
       "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
+      "libcudnn${LIBCUDNN_MAJOR}_${LIBCUDNN_VERSION}_amd64.deb" \
       "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
+      "libnccl2_${LIBNCCL_VERSION}_amd64.deb" \
     )
 elif [[ $VARIANT == cu100* ]]; then
     cuda_files=( \
@@ -241,125 +218,9 @@ elif [[ $VARIANT == cu100* ]]; then
     )
     ml_files=( \
       "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
+      "libcudnn${LIBCUDNN_MAJOR}_${LIBCUDNN_VERSION}_amd64.deb" \
       "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
-    )
-elif [[ $VARIANT == cu92* ]]; then
-    cuda_files=( \
-      "cuda-core-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cublas-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cublas-dev-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cudart-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cudart-dev-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-curand-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-curand-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cufft-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cufft-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvrtc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvrtc-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cusolver-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cusolver-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-misc-headers-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvcc-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-nvtx-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "libcuda1-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-      "nvidia-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-    )
-    ml_files=( \
-      "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
-      "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
-    )
-elif [[ $VARIANT == cu91* ]]; then
-    cuda_files=( \
-      "cuda-core-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cublas-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cublas-dev-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cudart-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cudart-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-curand-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-curand-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cufft-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cufft-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvrtc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvrtc-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cusolver-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cusolver-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-misc-headers-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvcc-${CUDA_MAJOR_DASH}_9.1.85.2-1_amd64.deb" \
-      "cuda-nvtx-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "libcuda1-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-      "nvidia-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-    )
-    ml_files=( \
-      "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
-      "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
-    )
-elif [[ $VARIANT == cu90* ]]; then
-    cuda_files=( \
-      "cuda-core-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cublas-${CUDA_MAJOR_DASH}_9.0.176.4-1_amd64.deb" \
-      "cuda-cublas-dev-${CUDA_MAJOR_DASH}_9.0.176.4-1_amd64.deb" \
-      "cuda-cudart-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cudart-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-curand-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-curand-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cufft-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cufft-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvrtc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvrtc-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cusolver-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cusolver-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-misc-headers-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "libcuda1-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-      "nvidia-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-    )
-    ml_files=( \
-      "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
-      "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
-    )
-elif [[ $VARIANT == cu80* ]]; then
-    cuda_files=( \
-      "cuda-core-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cublas-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cublas-dev-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cudart-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cudart-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-curand-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-curand-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cufft-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cufft-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvrtc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvrtc-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cusolver-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cusolver-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-misc-headers-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "libcuda1-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-      "nvidia-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-    )
-    ml_files=( \
-      "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
-      "libnccl-dev_${LIBNCCL_VERSION}_amd64.deb" \
-    )
-elif [[ $VARIANT == cu75* ]]; then
-    cuda_files=( \
-      "cuda-core-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cublas-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cublas-dev-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cudart-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cudart-dev-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-curand-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-curand-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cufft-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cufft-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvrtc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvrtc-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cusolver-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cusolver-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-misc-headers-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "libcuda1-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-      "nvidia-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
-    )
-    ml_files=( \
-      "libcudnn${LIBCUDNN_MAJOR}-dev_${LIBCUDNN_VERSION}_amd64.deb" \
+      "libnccl2_${LIBNCCL_VERSION}_amd64.deb" \
     )
 fi
 
@@ -377,7 +238,12 @@ if [[ ! -d $DEPS_PATH/usr/local/cuda-${CUDA_MAJOR_VERSION} ]]; then
     for item in ${ml_files[*]}
     do
         echo "Installing $item"
-        curl -sL "http://developer.download.nvidia.com/compute/machine-learning/repos/${os_id}/x86_64/${item}" -o package.deb
+        if [[ $item == libnccl* ]] && [[ $VARIANT == cu112* ]] ; then
+            echo "variant ${VARIANT} and installing ${item}"
+            curl -sL "http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/${item}" -o package.deb
+        else
+            curl -sL "http://developer.download.nvidia.com/compute/machine-learning/repos/${os_id}/x86_64/${item}" -o package.deb
+        fi
         dpkg -X package.deb ${prefix}
         rm package.deb
     done
@@ -390,9 +256,7 @@ if [[ ! -d $DEPS_PATH/usr/local/cuda-${CUDA_MAJOR_VERSION} ]]; then
         done
     fi
     cp -f ${prefix}/usr/include/x86_64-linux-gnu/cudnn_v${LIBCUDNN_MAJOR}.h ${prefix}/include/cudnn.h
-    ln -sf libcudnn_static_v${LIBCUDNN_MAJOR}.a ${prefix}/usr/lib/x86_64-linux-gnu/libcudnn.a
-    cp -f ${prefix}/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/*.a ${prefix}/lib/
+    ln -sf ${prefix}/usr/lib/x86_64-linux-gnu/libcudnn.so.${LIBCUDNN_MAJOR} ${prefix}/lib/libcudnn.so
     cp -f ${prefix}/usr/include/nccl.h ${prefix}/include/nccl.h
-    ln -sf libnccl_static.a ${prefix}/usr/lib/x86_64-linux-gnu/libnccl.a
 fi
 
