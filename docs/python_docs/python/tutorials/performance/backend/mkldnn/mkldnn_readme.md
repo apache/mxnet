@@ -62,7 +62,7 @@ To achieve better performance, the Intel OpenMP and llvm OpenMP are recommended 
 ```
 # build with llvm OpenMP and Intel MKL/openblas
 mkdir build && cd build
-cmake -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=ON -DUSE_MKLDNN=ON -DUSE_OPENMP=ON -DUSE_OPENCV=ON ..
+cmake -DUSE_CUDA=OFF -DUSE_MKLDNN=ON -DUSE_OPENMP=ON -DUSE_OPENCV=ON ..
 make -j $(nproc)
 ```
 

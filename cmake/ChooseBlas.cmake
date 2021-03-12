@@ -24,12 +24,10 @@ set(INTEL_OPT_ROOT "/opt/intel" CACHE PATH "Folder contains root-installed intel
 if(DEFINED USE_BLAS)
   set(BLAS "${USE_BLAS}")
 else()
-  if (USE_MKL_IF_AVAILABLE)
-    # Setting up BLAS_mkl_MKLROOT for non-Ubuntu 20.04 OSes
-    find_path(BLAS_mkl_MKLROOT mkl PATHS $ENV{MKLROOT} ${INTEL_HOME_ROOT} ${INTEL_OPT_ROOT})
-    if(NOT BLAS_mkl_MKLROOT STREQUAL "BLAS_mkl_MKLROOT-NOTFOUND")
-      set(BLAS "MKL")
-    endif()
+  # Setting up BLAS_mkl_MKLROOT for non-Ubuntu 20.04 OSes
+  find_path(BLAS_mkl_MKLROOT mkl PATHS $ENV{MKLROOT} ${INTEL_HOME_ROOT} ${INTEL_OPT_ROOT})
+  if(NOT BLAS_mkl_MKLROOT STREQUAL "BLAS_mkl_MKLROOT-NOTFOUND")
+    set(BLAS "MKL")
   endif()
 endif()
 

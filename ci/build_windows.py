@@ -67,7 +67,6 @@ CMAKE_FLAGS = {
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DBUILD_CPP_EXAMPLES=ON '
-        '-DUSE_MKL_IF_AVAILABLE=OFF '
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN': (
@@ -80,7 +79,6 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DUSE_MKL_IF_AVAILABLE=ON '
         '-DUSE_MKLDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
@@ -94,7 +92,6 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DUSE_MKL_IF_AVAILABLE=ON '
         '-DUSE_MKLDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
@@ -108,7 +105,6 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DUSE_MKL_IF_AVAILABLE=ON '
         '-DUSE_MKLDNN=OFF '
         '-DCMAKE_BUILD_TYPE=Release')
 
@@ -123,7 +119,6 @@ CMAKE_FLAGS = {
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DMXNET_CUDA_ARCH="5.2" '
-        '-DUSE_MKL_IF_AVAILABLE=OFF '
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU_MKLDNN': (
@@ -228,6 +223,7 @@ def nix_build(args):
         logging.info("Generating project with CMake")
         check_call("cmake \
             -DUSE_CUDA=OFF \
+            -DUSE_BLAS=open \
             -DUSE_OPENCV=OFF \
             -DUSE_OPENMP=OFF \
             -DCMAKE_BUILD_TYPE=Debug \
