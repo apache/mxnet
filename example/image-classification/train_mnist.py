@@ -32,7 +32,7 @@ def read_data(label, image):
     """
     download and read data into numpy
     """
-    base_url = 'http://yann.lecun.com/exdb/mnist/'
+    base_url = 'https://web.archive.org/web/20160828233817/http://yann.lecun.com/exdb/mnist/'
     with gzip.open(download_file(base_url+label, os.path.join('data',label))) as flbl:
         magic, num = struct.unpack(">II", flbl.read(8))
         label = np.fromstring(flbl.read(), dtype=np.int8)
