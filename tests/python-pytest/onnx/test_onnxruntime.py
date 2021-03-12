@@ -772,6 +772,7 @@ def test_standard_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name
         shutil.rmtree(tmp_path)
 
 
+@with_seed()
 @pytest.mark.parametrize('model_name', ['mobilenet1.0', 'inceptionv3', 'darknet53', 'resnest14'])
 def test_dynamic_shape_cv_inference_onnxruntime(tmp_path, model_name):
     tmp_path = str(tmp_path)
