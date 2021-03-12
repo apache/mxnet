@@ -80,7 +80,21 @@ def _make_mxnet_args(args, temp_args):
         elif isinstance(arg, str):
             values[i].v_str = c_str(arg)
             type_codes[i] = TypeCode.STR
-        elif isinstance(arg, (list, tuple, dict)):
+        elif isinstance(arg, tuple):
+            if len(arg) == 2 and arg[1] == 'params':
+                params = (ctypes.c_char_p * (len(arg[0])*2))()
+                params_list = []
+                for key, value in arg[0].items():
+                    params_list.extend((c_str(key), c_str(str(value))))
+                params[:] = params_list
+                values[i].v_handle = ctypes.cast(params, ctypes.c_void_p)
+                type_codes[i] = TypeCode.HANDLE
+            else:
+                arg = _FUNC_CONVERT_TO_NODE(arg)
+                values[i].v_handle = arg.handle
+                type_codes[i] = TypeCode.OBJECT_HANDLE
+                temp_args.append(arg)
+        elif isinstance(arg, (list, dict)):
             arg = _FUNC_CONVERT_TO_NODE(arg)
             values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.OBJECT_HANDLE

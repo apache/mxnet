@@ -36,28 +36,29 @@ MXNET_REGISTER_GLOBAL("ndarray._imperative_invoke")
   AtomicSymbolCreator creator = static_cast<AtomicSymbolCreator>(args[0].value().v_handle);
   const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
   
-  int num_inputs = args_size - 3;
+  int num_inputs = args[1];
   std::vector<NDArray*> ndinputs;
   ndinputs.reserve(num_inputs);
-  for (int i = 1; i < num_inputs + 1; ++i) {
+  for (int i = 2; i < num_inputs + 2; ++i) {
     ndinputs.push_back(static_cast<NDArray*>(args[i]));
   }
   
-  int num_params;
+  int num_params = args[num_inputs + 2];
   nnvm::NodeAttrs attrs;
-  if (args[args_size - 2].type_code() == kNull) {
-    num_params = 0;
-    attrs.dict.reserve(1);
-  } else {
-    MXNET_CHECK_TYPE_CODE(args[args_size - 2].type_code(), kObjectHandle);
-    Object* flags_ptr = static_cast<Object*>(args[args_size - 2].value().v_handle);
-    auto* n = static_cast<const MapObj*>(flags_ptr);
-    num_params = static_cast<int>(n->size());
-    attrs.dict.reserve(num_params + 1);
-    for (const auto& kv : *n) {
-      attrs.dict.emplace(std::string(runtime::Downcast<runtime::String>(kv.first)),
-                        std::string(runtime::Downcast<runtime::String>(kv.second)));
+  attrs.dict.reserve(num_params + 1);
+  int params_type_code = args[num_inputs + 3].type_code();
+  if (params_type_code == kParams) {
+    std::string *params = static_cast<std::string*>(args[num_inputs + 3].value().v_handle);
+    for (int i = 0; i < num_params*2; i+=2) {
+      attrs.dict.emplace(params[i], params[i+1]);
     }
+  } else if (params_type_code == kHandle) {
+    const char **params = static_cast<const char **>(args[num_inputs + 3].value().v_handle);
+    for (int i = 0; i < num_params*2; i+=2) {
+      attrs.dict.emplace(params[i], params[i+1]);
+    }
+  } else {
+    MXNET_CHECK_TYPE_CODE(params_type_code, kNull);
   }
   static auto& num_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
   attrs.op = op;

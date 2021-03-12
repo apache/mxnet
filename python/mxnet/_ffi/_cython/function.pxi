@@ -51,7 +51,16 @@ cdef inline int make_arg(object arg,
         value[0].v_str = tstr
         tcode[0] = kStr
         temp_args.append(tstr)
-    elif isinstance(arg, (list, tuple, dict)):
+    elif isinstance(arg, tuple):
+        if len(arg) == 2 and arg[1] == 'params':
+            _convert_params(arg[0], value)
+            tcode[0] = kParams
+        else:
+            arg = _FUNC_CONVERT_TO_NODE(arg)
+            value[0].v_handle = (<ObjectBase>arg).chandle
+            tcode[0] = kObjectHandle
+            temp_args.append(arg)
+    elif isinstance(arg, (list, dict)):
         arg = _FUNC_CONVERT_TO_NODE(arg)
         value[0].v_handle = (<ObjectBase>arg).chandle
         tcode[0] = kObjectHandle

@@ -25,7 +25,7 @@ from ..ndarray_doc import _build_doc
 
 from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null, _is_np_op, _output_is_list  # pylint: disable=unused-import
 from ..util import use_np_shape  # pylint: disable=unused-import
-from .._ctypes import _api_internal
+from .._ctypes import _api_internal  # pylint: disable=unused-import
 
 
 def _verify_all_np_ndarrays(op_name, func_name, args, out):
@@ -112,6 +112,20 @@ def _verify_all_legacy_ndarrays(op_name, func_name, args, out):
                             .format(op_name, func_name))
 
 
+def np_imperative_invoke(handle, ndargs, params, out, output_is_list):
+    # keys, vals = params.keys(), [str(val) for val in params.values()]
+    # output_vars = _api_internal.imperative_invoke(handle, len(ndargs), *ndargs, *keys, *vals, out)
+    params_num = len(params) if params else 0
+    params = (params, 'params') if params else None
+    output_vars = _api_internal.imperative_invoke(handle, len(ndargs), *ndargs, params_num, params, out)
+    if out is not None:
+        return out
+    if isinstance(output_vars, NDArrayBase) and not output_is_list:
+        return output_vars
+    else:
+        return list(output_vars)
+
+
 # pylint: disable=too-many-locals
 def _generate_ndarray_function_code(handle, op_name, func_name, signature_only=False):
     """Generate function for ndarray op by handle and function op_name."""
@@ -177,7 +191,6 @@ def _generate_ndarray_function_code(handle, op_name, func_name, signature_only=F
     code = []
     is_np_op = _is_np_op(op_name)
     output_is_list = _output_is_list(op_name)
-    doc_str_idx = 1
     if is_np_op:
         if arr_name:
             code.append("""
@@ -197,7 +210,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
         else:
             kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
-                    dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
+                dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
                 code.append("""
     _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)""")
@@ -230,15 +243,8 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
     _verify_all_np_ndarrays("{op_name}", "{func_name}", ndargs, out)
             """.format(op_name=op_name, func_name=func_name))
             code.append("""
-    flags = {key: str(value) for key, value in kwargs.items()} if kwargs else None
-    output_vars = _api_internal._imperative_invoke(%d, *ndargs, flags, out)
-    if out is not None:
-        return out
-    if isinstance(output_vars, NDArrayBase) and not %s:
-        return output_vars
-    else:
-        return list(output_vars)"""%(
-            handle.value, str(output_is_list)))
+    return np_imperative_invoke(%d, ndargs, kwargs, out, %s)"""%(
+        handle.value, str(output_is_list)))
         else:
             code.append("""
     return (0,)""")
@@ -262,7 +268,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
         else:
             kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
-                    dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
+                dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
                 code.append("""
     _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)
@@ -298,21 +304,21 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
             vals.append(_np.dtype(%s).names[0])
         else:
             vals.append(_np.dtype(%s).name) """%(dtype_name, dtype_name, dtype_name,
-                                                dtype_name, dtype_name))
+                                                 dtype_name, dtype_name))
         if not signature_only:
             code.append("""
     _verify_all_legacy_ndarrays("{op_name}", "{func_name}", ndargs, out)
             """.format(op_name=op_name, func_name=func_name))
             code.append("""
-    return _imperative_invoke(%d, ndargs, keys, vals, out, False, %s)"""%(
-            handle.value, str(output_is_list)))
+    return _imperative_invoke(%d, ndargs, keys, vals, out, %s)"""%(
+        handle.value, str(output_is_list)))
         else:
             code.append("""
     return (0,)""")
 
     doc_str_lines = _os.linesep+''.join(['    '+s if s.strip() else s
-                                        for s in 'r"""{doc_str}"""'.format(doc_str=doc_str)
-                                        .splitlines(True)])
+                                         for s in 'r"""{doc_str}"""'.format(doc_str=doc_str)
+                                         .splitlines(True)])
     code.insert(1, doc_str_lines)
     return ''.join(code), doc_str
 

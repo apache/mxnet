@@ -21,6 +21,7 @@ from libcpp.vector cimport vector
 from cpython.version cimport PY_MAJOR_VERSION
 from cpython cimport pycapsule
 from libc.stdint cimport int32_t, int64_t, uint64_t, uint8_t, uint16_t, uint32_t
+from libcpp.string cimport string
 import ctypes
 from ...base import get_last_ffi_error
 
@@ -37,6 +38,7 @@ cdef enum MXNetTypeCode:
     kBytes = 9
     kPyArg = 10
     kNDArrayHandle = 11
+    kParams = 12
     kExtBegin = 15
 
 cdef extern from "mxnet/runtime/c_runtime_api.h":
@@ -101,3 +103,11 @@ cdef inline void* c_handle(object handle):
     cdef unsigned long long v_ptr
     v_ptr = handle.value
     return <void*>(v_ptr)
+
+cdef inline int _convert_params(object arg,
+                                MXNetValue* value):
+    cdef vector[string] cdict
+    for i, j in arg.items():
+        cdict.push_back(c_str(i))
+        cdict.push_back(c_str(str(j)))
+    value[0].v_handle = &cdict[0]
