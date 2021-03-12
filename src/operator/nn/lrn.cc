@@ -26,7 +26,7 @@
 
 #include "./lrn-inl.h"
 #include "../operator_common.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "./mkldnn/mkldnn_lrn-inl.h"
 #include "./mkldnn/mkldnn_base-inl.h"
 #endif
@@ -82,7 +82,7 @@ struct LRNGrad {
   }
 };
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 const int dev_mask,
                                 DispatchMode* dispatch_mode,
@@ -163,7 +163,7 @@ number of kernels in the layer.
 .set_attr_parser(ParamParser<LRNParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", LRNShape)
 .set_attr<nnvm::FInferType>("FInferType", LRNType)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
 #endif
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -175,7 +175,7 @@ number of kernels in the layer.
   return std::vector<std::string>{"output", "tmp_norm"};
 })
 .set_attr<FCompute>("FCompute<cpu>", LRNCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNComputeExCPU)
 #endif
@@ -187,11 +187,11 @@ NNVM_REGISTER_OP(_backward_LRN)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<LRNParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", LRNBackwardInferStorageType)
 #endif
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradComputeExCPU)
 // Native compute requires norm while MKLDNN does not so cannot be compared in debug mode

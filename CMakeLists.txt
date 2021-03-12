@@ -62,9 +62,9 @@ option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects supp
 option(USE_LAPACK "Build with lapack support" ON)
 option(USE_MKL_LAYERNORM "Use layer normalization from MKL, which is currently slower than internal. No effect unless USE_BLAS=MKL (or mkl)." OFF)
 if((NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
-  option(USE_MKLDNN "Build with MKL-DNN support" ON)
+  option(USE_ONEDNN "Build with ONEDNN support" ON)
 else()
-  option(USE_MKLDNN "Build with MKL-DNN support" OFF)
+  option(USE_ONEDNN "Build with ONEDNN support" OFF)
 endif()
 cmake_dependent_option(USE_INTGEMM "Build with x86_64 intgemm library for low-precision multiplication" ON "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64" OFF)
 if(NOT MSVC)
@@ -257,7 +257,7 @@ endif()
 if(USE_MKL_LAYERNORM)
   add_definitions(-DMXNET_USE_MKL_LAYERNORM=1)
 endif()
-if(USE_MKLDNN)
+if(USE_ONEDNN)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
@@ -272,7 +272,7 @@ if(USE_MKLDNN)
     endif()
   endif()
 
-  function(load_mkldnn)
+  function(load_onednn)
     set(MKLDNN_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
     set(MKLDNN_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
     set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
@@ -285,13 +285,13 @@ if(USE_MKLDNN)
       set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
     endif()
 
-    set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/mkldnn")
-    add_subdirectory(3rdparty/mkldnn)
+    set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/onednn")
+    add_subdirectory(3rdparty/onednn)
   endfunction()
-  load_mkldnn()
-  include_directories(3rdparty/mkldnn/include)
-  include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
-  add_definitions(-DMXNET_USE_MKLDNN=1)
+  load_onednn()
+  include_directories(3rdparty/onednn/include)
+  include_directories(${PROJECT_BINARY_DIR}/3rdparty/onednn/include)
+  add_definitions(-DMXNET_USE_ONEDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
   set_target_properties(dnnl PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
@@ -836,12 +836,12 @@ if(USE_DIST_KVSTORE)
   set_target_properties(pslite PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
 
-if(USE_MKLDNN)
+if(USE_ONEDNN)
     add_custom_command(TARGET mxnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/
+      ${CMAKE_BINARY_DIR}/3rdparty/onednn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/onednn/oneapi/dnnl/
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/)
+      ${CMAKE_BINARY_DIR}/3rdparty/onednn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/onednn/oneapi/dnnl/)
 endif()
 
 if(USE_INTGEMM)

@@ -83,7 +83,7 @@ bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   bool ret = ElemwiseStorageAttr<false, true, false>(attrs, dev_mask, dispatch_mode,
                                                      in_attrs, out_attrs);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   // We should always use FComputeEx.
   if (dev_mask == mshadow::cpu::kDevMask
       && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
@@ -94,7 +94,7 @@ bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   return ret;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static inline bool IsMKLDNNData(const std::vector<NDArray> &arrs) {
   for (auto &arr : arrs) {
     if (!arr.IsMKLDNNData())
@@ -113,7 +113,7 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   if (req[0] == kNullOp) return;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   if (IsMKLDNNData(inputs)) {
     MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
@@ -180,7 +180,7 @@ The storage type of ``add_n`` output depends on storage types of inputs
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 #endif
 .set_attr<mxnet::FInferShape>("FInferShape", ElementWiseSumShape)

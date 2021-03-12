@@ -27,10 +27,10 @@
 #include "./activation-inl.h"
 #include "../mshadow_op.h"
 #include "../tensor/elemwise_unary_op.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "./mkldnn/mkldnn_base-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #include "../operator_common.h"
 #include "../../common/utils.h"
 
@@ -101,7 +101,7 @@ struct ActivationGrad {
   }
 };
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const OpContext& ctx,
                                    const std::vector<NDArray>& inputs,
@@ -157,7 +157,7 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
   return MKLDNNStorageType(attrs, dev_mask, SupportMKLDNNAct(param),
                            dispatch_mode, in_attrs, out_attrs);
 }
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 
 
 MXNET_OPERATOR_REGISTER_UNARY(Activation)
@@ -174,7 +174,7 @@ The following activation functions are supported:
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ActivationParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", ActivationStorageType)
 #endif
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
@@ -182,7 +182,7 @@ The following activation functions are supported:
     return std::vector<std::string>{"output"};
 })
 .set_attr<FCompute>("FCompute<cpu>", ActivationCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ActivationComputeExCPU)
 #endif
@@ -196,7 +196,7 @@ NNVM_REGISTER_OP(_backward_Activation)
 })
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", BackwardActStorageType)
 #endif
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<-1, 1>)
@@ -204,13 +204,13 @@ NNVM_REGISTER_OP(_backward_Activation)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 #endif
 .set_attr_parser(ParamParser<ActivationParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ActivationGradComputeExCPU)
 #endif

@@ -290,6 +290,7 @@ List of Contributors
 * [Paweł Głomski](https://github.com/PawelGlomski-Intel)
 * [Andrzej Kotlowski](https://github.com/anko-intel)
 * [Yingxiao Du](https://github.com/Duconnor)
+* [Bartosz Kuncer](https://github.com/bartekkuncer)
 
 Label Bot
 ---------

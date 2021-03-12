@@ -79,7 +79,7 @@ $ cd example/multi_threaded_inference
 $ make
 ```
 
-If you have built mxnet from source with cmake, please uncomment the specific lines for cmake build or set the following environment variables: `MKLDNN_BUILD_DIR (default is $(MXNET_ROOT)/3rdparty/mkldnn/build)`, `MKLDNN_INCLUDE_DIR (default is $(MXNET_ROOT)/3rdparty/mkldnn/include)`, `MXNET_LIB_DIR (default is $(MXNET_ROOT)/lib)`.
+If you have built mxnet from source with cmake, please uncomment the specific lines for cmake build or set the following environment variables: `MKLDNN_BUILD_DIR (default is $(MXNET_ROOT)/3rdparty/onednn/build)`, `MKLDNN_INCLUDE_DIR (default is $(MXNET_ROOT)/3rdparty/onednn/include)`, `MXNET_LIB_DIR (default is $(MXNET_ROOT)/lib)`.
 
 ### Run multi threaded inference example
 The example is tested with models such as `imagenet1k-inception-bn`, `imagenet1k-resnet-50`,
@@ -166,7 +166,7 @@ The above code outputs results for different threads and cleans up the thread sa
 
 1. Only operators tested with the existing model coverage are supported. Other operators and operator types (stateful operators, custom operators are not supported. Existing model coverage is as follows (this list will keep growing as we test more models with different model types):
 
-|Models Tested|MKLDNN|CUDNN|NO-CUDNN|
+|Models Tested|ONEDNN|CUDNN|NO-CUDNN|
 | --- | --- | --- | --- |
 | imagenet1k-resnet-18 | Yes | Yes | Yes |
 | imagenet1k-resnet-152 | Yes | Yes | Yes |

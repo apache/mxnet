@@ -70,7 +70,7 @@ _WHITE_LIST = [
                '3rdparty/dlpack',
                '3rdparty/dmlc-core',
                '3rdparty/googletest',
-               '3rdparty/mkldnn',
+               '3rdparty/onednn',
                '3rdparty/nvidia_cub',
                '3rdparty/onnx-tensorrt',
                '3rdparty/openmp',
@@ -78,7 +78,7 @@ _WHITE_LIST = [
                '3rdparty/tvm',
 
                # 3rdparty headerfiles under different licenses
-               'include/mkldnn',
+               'include/onednn',
 
                # Docs Sphinx themes under different licenses
                'docs/python_docs/themes',
