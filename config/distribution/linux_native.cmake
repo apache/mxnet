@@ -14,22 +14,17 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
 
-boto3==1.9.229
-cpplint==1.3.0
-Cython==0.29.7
-decorator==4.4.0
-h5py<3
-mock==2.0.0
-nose==1.3.7
-nose-timer==0.7.3
-numpy>1.16.0,<1.19.0  # Restrict numpy version to < 1.19.0 due to https://github.com/apache/incubator-mxnet/issues/18600
-pylint==2.3.1  # pylint and astroid need to be aligned
-astroid==2.3.3  # pylint and astroid need to be aligned
-requests<2.19.0,>=2.18.4
-scipy==1.2.1
-setuptools
-coverage
+set(CMAKE_BUILD_TYPE "Distribution" CACHE STRING "Build type")
+set(CFLAGS "-mno-avx" CACHE STRING "CFLAGS")
+set(CXXFLAGS "-mno-avx" CACHE STRING "CXXFLAGS")
+
+set(USE_CUDA OFF CACHE BOOL "Build with CUDA support")
+set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
+set(USE_OPENMP ON CACHE BOOL "Build with Openmp support")
+set(USE_MKL_IF_AVAILABLE OFF CACHE BOOL "Use Intel MKL if found")
+set(USE_MKLDNN OFF CACHE BOOL "Build with MKL-DNN support")
+set(USE_LAPACK ON CACHE BOOL "Build with lapack support")
+set(USE_TVM_OP OFF CACHE BOOL "Enable use of TVM operator build system.")
+set(USE_SSE ON CACHE BOOL "Build with x86 SSE instruction support")
+set(USE_F16C OFF CACHE BOOL "Build with x86 F16C instruction support")

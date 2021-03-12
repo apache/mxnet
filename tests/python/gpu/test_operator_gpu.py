@@ -2248,6 +2248,7 @@ def kernel_error_check_symbolic():
             f.forward()
             g = f.outputs[0].asnumpy()
 
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/20011')
 def test_kernel_error_checking():
     # Running tests that may throw exceptions out of worker threads will stop CI testing
     # if not run in a separate process (with its own address space for CUDA compatibility).

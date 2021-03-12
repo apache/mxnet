@@ -489,6 +489,8 @@ build_ubuntu_cpu_openblas() {
         USE_DIST_KVSTORE=1            \
         USE_LIBJPEG_TURBO=1           \
         USE_SIGNAL_HANDLER=1          \
+        USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
+        USE_LIBJPEG_TURBO_PATH=/usr/lib/x86_64-linux-gnu \
         -j$(nproc)
     make cython PYTHON=python3
 }
@@ -506,6 +508,7 @@ build_ubuntu_cpu_mkl() {
         USE_INTEL_PATH=/opt/intel     \
         USE_DIST_KVSTORE=1            \
         USE_SIGNAL_HANDLER=1          \
+        USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
         -j$(nproc)
 }
 
@@ -680,6 +683,7 @@ build_ubuntu_cpu_mkldnn() {
         USE_TVM_OP=1                  \
         USE_BLAS=openblas             \
         USE_SIGNAL_HANDLER=1          \
+        USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
         -j$(nproc)
 }
 
@@ -695,6 +699,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
         USE_BLAS=mkl                  \
         USE_SIGNAL_HANDLER=1          \
         USE_INTEL_PATH=/opt/intel/    \
+        USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
         -j$(nproc)
 }
 
@@ -768,6 +773,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_TVM_OP=0                              \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
+        USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
         -j$(nproc)
 }
 
@@ -785,6 +791,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         USE_TVM_OP=0                              \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
+        USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
         -j$(nproc)
 }
 
@@ -802,6 +809,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
+        USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
         -j$(nproc)
     make cython PYTHON=python3
 }
@@ -1659,6 +1667,8 @@ build_ubuntu_cpu_docs() {
         USE_DIST_KVSTORE=1            \
         USE_LIBJPEG_TURBO=1           \
         USE_SIGNAL_HANDLER=1          \
+        USE_LAPACK_PATH=/usr/lib/x86_64-linux-gnu \
+        USE_LIBJPEG_TURBO_PATH=/usr/lib/x86_64-linux-gnu \
         -j$(nproc)
 }
 
@@ -1984,6 +1994,7 @@ build_static_libmxnet() {
     set -ex
     pushd .
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    CMAKE_STATICBUILD=1
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
 }
