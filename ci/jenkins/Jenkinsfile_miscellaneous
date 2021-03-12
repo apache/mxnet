@@ -38,11 +38,7 @@ core_logic: {
     custom_steps.compile_unix_asan_cpu(),
     custom_steps.compile_unix_amalgamation_min(),
     custom_steps.compile_unix_amalgamation()
-  ]) 
-
-  utils.parallel_stage('Tests', [
-    custom_steps.misc_asan_cpu()
-  ]) 
+  ])
 }
 ,
 failure_handler: {

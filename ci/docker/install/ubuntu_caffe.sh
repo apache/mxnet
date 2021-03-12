@@ -40,6 +40,7 @@ git clone http://github.com/BVLC/caffe.git
 
 cd caffe
 cp Makefile.config.example Makefile.config
+echo "OPENCV_VERSION := 3" >> Makefile.config
 
 echo "CPU_ONLY := 1" >> Makefile.config
 

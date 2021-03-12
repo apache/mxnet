@@ -16,12 +16,12 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to build MXNet on Ubuntu 16.04 for GPU but on
+# Dockerfile to build MXNet on Ubuntu 18.04 for GPU but on
 # a CPU-only instance. This restriction is caused by the CPP-
 # package generation, requiring the actual CUDA library to be
 # present
 
-FROM nvidia/cuda:10.1-devel-ubuntu16.04
+FROM nvidia/cuda:10.1-devel-ubuntu18.04
 
 WORKDIR /work/deps
 

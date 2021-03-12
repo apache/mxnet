@@ -16,9 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to run MXNet on Ubuntu 16.04 for GPU
+# Dockerfile to run MXNet on Ubuntu 18.04 for GPU
 
-FROM nvidia/cuda:11.2.1-cudnn8-devel-ubuntu16.04
+FROM nvidia/cuda:11.2.1-cudnn8-devel-ubuntu18.04
 
 WORKDIR /work/deps
 
