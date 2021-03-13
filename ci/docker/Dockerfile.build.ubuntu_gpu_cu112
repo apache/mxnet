@@ -22,6 +22,8 @@ FROM nvidia/cuda:11.2.1-cudnn8-devel-ubuntu18.04
 
 WORKDIR /work/deps
 
+COPY install/requirements /work/
+
 COPY install/ubuntu_core.sh /work/
 RUN /work/ubuntu_core.sh
 
@@ -31,6 +33,9 @@ RUN /work/deb_ubuntu_ccache.sh
 COPY install/ubuntu_python.sh /work/
 COPY install/requirements /work/
 RUN /work/ubuntu_python.sh
+
+COPY install/ubuntu_docs.sh /work/
+RUN /work/ubuntu_docs.sh
 
 # Always last
 ARG USER_ID=0
