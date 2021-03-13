@@ -28,37 +28,29 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_GLOBAL("ndarray._imperative_invoke")
+MXNET_REGISTER_GLOBAL("ndarray.imperative_invoke")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
 
   int args_size = args.size();
   AtomicSymbolCreator creator = static_cast<AtomicSymbolCreator>(args[0].value().v_handle);
   const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
-  
+
   int num_inputs = args[1];
   std::vector<NDArray*> ndinputs;
   ndinputs.reserve(num_inputs);
   for (int i = 2; i < num_inputs + 2; ++i) {
     ndinputs.push_back(static_cast<NDArray*>(args[i]));
   }
-  
-  int num_params = args[num_inputs + 2];
+
+  int num_params = (args_size - num_inputs - 3) / 2;
   nnvm::NodeAttrs attrs;
   attrs.dict.reserve(num_params + 1);
-  int params_type_code = args[num_inputs + 3].type_code();
-  if (params_type_code == kParams) {
-    std::string *params = static_cast<std::string*>(args[num_inputs + 3].value().v_handle);
-    for (int i = 0; i < num_params*2; i+=2) {
-      attrs.dict.emplace(params[i], params[i+1]);
-    }
-  } else if (params_type_code == kHandle) {
-    const char **params = static_cast<const char **>(args[num_inputs + 3].value().v_handle);
-    for (int i = 0; i < num_params*2; i+=2) {
-      attrs.dict.emplace(params[i], params[i+1]);
-    }
-  } else {
-    MXNET_CHECK_TYPE_CODE(params_type_code, kNull);
+  int end = num_inputs + 3 + num_params;
+  for (i = num_inputs + 2; i < end; ++i) {
+    const char *key = args[i].value().v_str;
+    const char *value = args[i+num_params].value().v_str;
+    attrs.dict.emplace(key, value);
   }
   static auto& num_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
   attrs.op = op;
@@ -72,31 +64,13 @@ MXNET_REGISTER_GLOBAL("ndarray._imperative_invoke")
     attrs.name = attrs.op->name;
   }
 
-  NDArray** outputs;
-  int num_outputs;
   int out_type_code = args[args_size - 1].type_code();
-  if (out_type_code == kNull) {
-    outputs = nullptr;
-    num_outputs = 0;
-  } else if (out_type_code == kNDArrayHandle) {
-    NDArray* out = static_cast<NDArray*>(args[args_size - 1].value().v_handle);
-    outputs = &out;
-    num_outputs = 1;
-  } else {
-    MXNET_CHECK_TYPE_CODE(out_type_code, kObjectHandle);
-    ADT adt = Downcast<ADT, ObjectRef>(args[args_size - 1].operator ObjectRef());
-    num_outputs = adt.size();
-    std::vector<NDArray*> outputs_vec;
-    outputs_vec.reserve(num_outputs);
-    for (int i = 0; i < num_outputs; ++i) {
-      const auto& temp_handle = Downcast<NDArrayHandle>(adt[i]);
-      outputs_vec.push_back(temp_handle.getArray());
-    }
-    outputs = outputs_vec.data();
-  }
+  NDArray* out = args[args_size - 1].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
 
   auto ndoutputs = Invoke(op, &attrs, num_inputs, ndinputs.data(), &num_outputs, outputs);
-  
+
   if (out_type_code == kNull) {
     if (num_outputs == 1) {
       *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);

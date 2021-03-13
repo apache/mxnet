@@ -38,7 +38,6 @@ class TypeCode(object):
     BYTES = 9
     PYARG = 10
     NDARRAYHANDLE = 11
-    PARAMS = 12
     EXT_BEGIN = 15
 
 

@@ -871,7 +871,6 @@ inline const char* TypeCode2Str(int type_code) {
     case kNull: return "NULL";
     case kObjectHandle: return "ObjectCell";
     case kNDArrayHandle: return "NDArray";
-    case kParams: return "Params";
     default: LOG(FATAL) << "unknown type_code="
                         << static_cast<int>(type_code); return "";
   }

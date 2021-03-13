@@ -113,11 +113,9 @@ def _verify_all_legacy_ndarrays(op_name, func_name, args, out):
 
 
 def np_imperative_invoke(handle, ndargs, params, out, output_is_list):
-    # keys, vals = params.keys(), [str(val) for val in params.values()]
-    # output_vars = _api_internal.imperative_invoke(handle, len(ndargs), *ndargs, *keys, *vals, out)
-    params_num = len(params) if params else 0
-    params = (params, 'params') if params else None
-    output_vars = _api_internal.imperative_invoke(handle, len(ndargs), *ndargs, params_num, params, out)
+    """PackedFunc based numpy operator invocation call"""
+    keys, vals = params.keys(), [str(val) for val in params.values()]
+    output_vars = _api_internal.imperative_invoke(handle, len(ndargs), *ndargs, *keys, *vals, out)
     if out is not None:
         return out
     if isinstance(output_vars, NDArrayBase) and not output_is_list:

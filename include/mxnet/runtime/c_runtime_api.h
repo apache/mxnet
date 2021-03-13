@@ -52,7 +52,6 @@ typedef enum {
   kBytes = 9U,
   kPyArg = 10U,
   kNDArrayHandle = 11U,
-  kParams = 12U,
   // Extension codes for other frameworks to integrate MXNet PackedFunc.
   // To make sure each framework's id do not conflict, use first and
   // last sections to mark ranges.
