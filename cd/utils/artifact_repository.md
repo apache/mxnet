@@ -17,7 +17,7 @@
 
 # Artifact Repository - Pushing and Pulling libmxnet
 
-The artifact repository is an S3 bucket accessible only to restricted Jenkins nodes. It is used to store compiled MXNet artifacts that can be used by downstream CD pipelines to package the compiled libraries for different delivery channels (e.g. DockerHub, PyPI, Maven, etc.). The S3 object keys for the files being posted will be prefixed with the following distinguishing characteristics of the binary: branch, commit id, operating system, variant and dependency linking strategy (static or dynamic). For instance, s3://bucket/73b29fa90d3eac0b1fae403b7583fdd1529942dc/ubuntu16.04/cu100/static/libmxnet.so
+The artifact repository is an S3 bucket accessible only to restricted Jenkins nodes. It is used to store compiled MXNet artifacts that can be used by downstream CD pipelines to package the compiled libraries for different delivery channels (e.g. DockerHub, PyPI, Maven, etc.). The S3 object keys for the files being posted will be prefixed with the following distinguishing characteristics of the binary: branch, commit id, operating system, variant and dependency linking strategy (static or dynamic). For instance, s3://bucket/73b29fa90d3eac0b1fae403b7583fdd1529942dc/ubuntu18.04/cu100/static/libmxnet.so
 
 An MXNet artifact is defined as the following set of files:
 
