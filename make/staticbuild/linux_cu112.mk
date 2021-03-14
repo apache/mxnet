@@ -66,7 +66,7 @@ USE_CUDA = 1
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
 # USE_CUDA_PATH = /usr/local/cuda
-USE_CUDA_PATH = $(DEPS_PATH)/usr/local/cuda-8.0
+USE_CUDA_PATH = $(DEPS_PATH)/usr/local/cuda-11.2
 
 # whether to use CuDNN library
 USE_CUDNN = 1
@@ -80,6 +80,8 @@ USE_NCCL = 1
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
 ENABLE_CUDA_RTC = 1
+
+USE_NVTX=1
 
 # use openmp for parallelization
 USE_OPENMP = 1
@@ -168,3 +170,4 @@ EXTRA_OPERATORS =
 # git@github.com:dato-code/SFrame.git
 # SFRAME_PATH = $(HOME)/SFrame
 # MXNET_PLUGINS += plugin/sframe/plugin.mk
+

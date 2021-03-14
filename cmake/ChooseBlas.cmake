@@ -45,6 +45,50 @@ elseif(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
   add_definitions(-DMXNET_USE_BLAS_OPEN=1)
+  if(NOT MSVC AND CMAKE_BUILD_TYPE STREQUAL "Distribution")
+    # check if we need to link to omp
+    execute_process(COMMAND ${CMAKE_NM} -g ${OpenBLAS_LIB}
+                    COMMAND grep omp_get_num_threads
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                    OUTPUT_VARIABLE OPENBLAS_USES_OMP_OUT
+                    RESULT_VARIABLE OPENBLAS_USES_OMP_RET)
+    if(NOT OPENBLAS_USES_OMP_OUT STREQUAL "" AND NOT OPENBLAS_USES_OMP_RET AND NOT USE_OPENMP)
+      message("Openblas uses OMP, automatically linking to it")
+      find_package(OpenMP REQUIRED)
+      message("OpenMP_CXX_LIBRARIES is ${OpenMP_CXX_LIBRARIES}")
+      list(APPEND mshadow_LINKER_LIBS "${OpenMP_CXX_LIBRARIES}")
+    endif()
+    # check if we need to link to gfortran
+    execute_process(COMMAND ${CMAKE_NM} -g ${OpenBLAS_LIB}
+                    COMMAND grep gfortran
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                    OUTPUT_VARIABLE OPENBLAS_USES_GFORTRAN_OUT
+                    RESULT_VARIABLE OPENBLAS_USES_GFORTRAN_RET)
+    if(NOT OPENBLAS_USES_GFORTRAN_OUT STREQUAL "" AND NOT OPENBLAS_USES_GFORTRAN_RET)
+      message("Openblas uses GFortran, automatically linking to it")
+      file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/temp/CMakeLists.txt"
+      "cmake_minimum_required(VERSION ${CMAKE_VERSION})
+project(CheckFortran Fortran)
+set(CMAKE_Fortran_COMPILER gfortran)
+file(WRITE \"${CMAKE_CURRENT_BINARY_DIR}/temp/FortranDir.cmake\"
+\"
+set(FORTRAN_DIR \\\"\$\{CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES\}\\\")
+\")
+")
+      execute_process(
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/temp/
+        COMMAND ${CMAKE_COMMAND} .
+      )
+      set(FORTRAN_DIR "")
+      include(build/temp/FortranDir.cmake)
+      find_library(FORTRAN_LIB NAMES gfortran HINTS ${FORTRAN_DIR})
+      message("FORTRAN_DIR is ${FORTRAN_DIR}")
+      message("FORTRAN_LIB is ${FORTRAN_LIB}")
+      list(APPEND mshadow_LINKER_LIBS ${FORTRAN_LIB})
+      file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/temp/")
+    endif()
+  endif()
+  
 elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
   find_package(MKL REQUIRED)
   include_directories(SYSTEM ${MKL_INCLUDE_DIR})

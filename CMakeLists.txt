@@ -142,6 +142,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND UNIX AND NOT APPLE)
   # Enforce DT_PATH instead of DT_RUNPATH
   set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--disable-new-dtags")
   set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+  set(Protobuf_USE_STATIC_LIBS ON)
 endif()
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/upstream;${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")

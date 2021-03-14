@@ -53,10 +53,10 @@ download () {
 
 # MNIST dataset from: http://yann.lecun.com/exdb/mnist/
 FILES=(
-    "http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz"
-    "http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz"
-    "http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz"
-    "http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz"
+    "https://web.archive.org/web/20160828233817/http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz"
+    "https://web.archive.org/web/20160828233817/http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz"
+    "https://web.archive.org/web/20160828233817/http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz"
+    "https://web.archive.org/web/20160828233817/http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz"
     "http://data.mxnet.io/data/mnist_train.csv.gz")
 
 for FILE in ${FILES[@]}; do

@@ -1,3 +1,4 @@
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,21 +16,33 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+# Dockerfile to run MXNet on Ubuntu 18.04 for GPU
 
-boto3==1.9.229
-cpplint==1.3.0
-Cython==0.29.7
-decorator==4.4.0
-h5py<3
-mock==2.0.0
-nose==1.3.7
-nose-timer==0.7.3
-numpy>1.16.0,<1.19.0  # Restrict numpy version to < 1.19.0 due to https://github.com/apache/incubator-mxnet/issues/18600
-pylint==2.3.1  # pylint and astroid need to be aligned
-astroid==2.3.3  # pylint and astroid need to be aligned
-requests<2.19.0,>=2.18.4
-scipy==1.2.1
-setuptools
-coverage
+FROM nvidia/cuda:11.2.1-cudnn8-devel-ubuntu18.04
+
+WORKDIR /work/deps
+
+COPY install/requirements /work/
+
+COPY install/ubuntu_core.sh /work/
+RUN /work/ubuntu_core.sh
+
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
+
+COPY install/ubuntu_python.sh /work/
+RUN /work/ubuntu_python.sh
+
+COPY install/ubuntu_docs.sh /work/
+RUN /work/ubuntu_docs.sh
+
+# Always last
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
+
+COPY runtime_functions.sh /work/
+
+WORKDIR /work/mxnet
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda/compat
