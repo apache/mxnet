@@ -289,6 +289,7 @@ List of Contributors
 * [Nikolay Ulmasov](https://github.com/r3stl355)
 * [Paweł Głomski](https://github.com/PawelGlomski-Intel)
 * [Andrzej Kotlowski](https://github.com/anko-intel)
+* [Yingxiao Du](https://github.com/Duconnor)
 
 Label Bot
 ---------
