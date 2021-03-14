@@ -72,7 +72,7 @@ void GradientCompression::SetTwoBitCompression(const float threshold) {
 std::string GradientCompression::EncodeParams() {
   using namespace std;  // to reduce length of next line
   string rval = get_type_str();
-  if (type_ == CompressionType::kTwoBit) {
+  if (type_ != CompressionType::kNone) {
     rval += "," + to_string(threshold_);
   }
   return rval;
