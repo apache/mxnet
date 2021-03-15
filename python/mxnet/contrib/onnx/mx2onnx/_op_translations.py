@@ -893,10 +893,10 @@ def convert_softmax(node, **kwargs):
                 make_node("Sub", [name+"_dim", name+"_1"], [name+"_dim_m1"]),
                 make_node("Slice", [name+"_shape", name+"_dim_m1", name+"_dim"],
                           [name+"_dim_last_"]),
-                make_node("Squeeze", [name+"_dim_last_"], [name+"_dim_last"]),
+                make_node("Squeeze", [name+"_dim_last_"], [name+"_dim_last"], axes=[0]),
                 make_node("Range", [name+"_0_s", name+"_dim_last", name+"_1_s"], [name+"_range"]),
                 make_node("Cast", [input_nodes[1]], [name+"_len"], to=int(TensorProto.INT64)),
-                make_node("Unsqueeze", [name+"_len"], [name+"_len_unsqueezed"], axes=(-1,)),
+                make_node("Unsqueeze", [name+"_len"], [name+"_len_unsqueezed"], axes=[-1]),
                 make_node("Less", [name+"_range", name+"_len_unsqueezed"], [name+"_less"]),
                 make_node("Where", [name+'_less', data, name+"_mask_val"], [name+"_data_masked"])
             ]
@@ -944,10 +944,10 @@ def convert_softmax(node, **kwargs):
             # data mask
             make_node("Add", [name+"_final_axis", name+"_1_s"], [name+"_final_axis+1"]),
             make_node("Slice", [name+"_shape0_out", name+"_final_axis", name+"_final_axis+1"], [name+"_axis_dim"]),
-            make_node("Squeeze", [name+"_axis_dim"], [name+"_axis_dim_s"]),
+            make_node("Squeeze", [name+"_axis_dim"], [name+"_axis_dim_s"], axes=[0]),
             make_node("Range", [name+"_0_s", name+"_axis_dim_s", name+"_1_s"], [name+"_range0_out"]),
             # one hot for axis
-            make_node("Squeeze", [name+"_in_dim"], [name+"_in_dim_s"]),
+            make_node("Squeeze", [name+"_in_dim"], [name+"_in_dim_s"], axes=[0]),
             make_node("Range", [name+"_0_s", name+"_in_dim_s", name+"_1_s"], [name+"_range1_out"]),
             make_node("Equal", [name+"_range1_out", name+"_final_axis"], [name+"_equal_out"]),
             make_node("Cast", [name+"_equal_out"], [name+"_one_hot"], to=int(TensorProto.INT64)),
@@ -2525,12 +2525,12 @@ def convert_layer_norm(node, **kwargs):
         nodes += [
             make_node("Shape", [input_nodes[0]], [name+"_shape0_out"]),
             make_node("Shape", [name+"_shape0_out"], [name+"_in_dim"]),
-            make_node("Squeeze", [name+"_in_dim"], [name+"_in_dim_s"]),
+            make_node("Squeeze", [name+"_in_dim"], [name+"_in_dim_s"], axes=[0]),
             make_node("Range", [name+"_0_s", name+"_in_dim_s", name+"_1_s"], [name+"_range"]),
             make_node("Equal", [name+"_range", name+"_axes"], [name+"_equal"]),
             make_node("Cast", [name+"_equal"], [name+"_one_hot"], to=int(TensorProto.INT64)),
             make_node("Slice", [name+"_shape0_out", name+"_axes", name+"_axes+1"], [name+"_slice_out"]),
-            make_node("Squeeze", [name+"_slice_out"], [name+"_slice_out_s"]),
+            make_node("Squeeze", [name+"_slice_out"], [name+"_slice_out_s"], axes=[0]),
             make_node("Sub", [name+"_slice_out_s", name+"_1_s"], [name+"_sub1_out"]),
             make_node("Mul", [name+"_one_hot", name+"_sub1_out"], [name+"_mul0_out"]),
             make_node("Add", [name+"_mul0_out", name+"_1_s"], [name+"_add1_out"]),
@@ -2681,7 +2681,7 @@ def convert_broadcast_axis(node, **kwargs):
     nodes = [
         make_node('Shape', [input_nodes[0]], [shape_name]),
         make_node('Shape', [shape_name], [name+'_in_dim']),
-        make_node('Squeeze', [name+'_in_dim'], [name+'_in_dim_s']),
+        make_node('Squeeze', [name+'_in_dim'], [name+'_in_dim_s'], axes=[0]),
         make_node('Range', [name+'_0_s', name+'_in_dim_s', name+'_1_s'], [name+'_range']),
     ]
 
@@ -2735,7 +2735,7 @@ def convert_sequencemask(node, **kwargs):
         make_node('Slice', [name+'_in_shape', name+'_1', name+'_2'], [name+'_slice_1']),
         make_node('Concat', [name+'_slice_0', name+'_1'], [name+'_shape_0'], axis=0),
         make_node('Shape', [name+'_in_shape'], [name+'_in_dim']),
-        make_node('Squeeze', [name+'_in_dim'], [name+'_in_dim_s']),
+        make_node('Squeeze', [name+'_in_dim'], [name+'_in_dim_s'], axes=[0]),
         make_node('Range', [name+'_0_s', name+'_in_dim_s', name+'_1_s'], [name+'_range_0']),
         make_node('Less', [name+'_range_0', name+'_2'], [name+'_less_0']),
         make_node('Where', [name+'_less_0', name+'_in_shape', name+'_1'], [name+'_shape_1'])
@@ -2743,7 +2743,7 @@ def convert_sequencemask(node, **kwargs):
 
     if(axis == 0):
         nodes += [
-            make_node('Squeeze', [name+'_slice_0'], [name+'_max_len']),
+            make_node('Squeeze', [name+'_slice_0'], [name+'_max_len'], axes=[0]),
             make_node('Range', [name+'_0_s', name+'_max_len', name+'_1_s'], [name+'_range_1']),
             make_node('Reshape', [name+'_range_1', name+'_shape_0'], [name+"_reshape_0"]),
             make_node('Cast', [input_nodes[1]], [name+'_cast'], to=int(TensorProto.INT64)),
@@ -2753,7 +2753,7 @@ def convert_sequencemask(node, **kwargs):
         ]
     else:
         nodes += [
-            make_node('Squeeze', [name+'_slice_1'], [name+'_max_len']),
+            make_node('Squeeze', [name+'_slice_1'], [name+'_max_len'], axes=[0]),
             make_node('Range', [name+'_0_s', name+'_max_len', name+'_1_s'], [name+'_range_1']),
             make_node('Reshape', [input_nodes[1], name+'_shape_0'], [name+"_reshape_0"]),
             make_node('Cast', [name+"_reshape_0"], [name+'_cast'], to=int(TensorProto.INT64)),
@@ -2957,7 +2957,7 @@ def convert_arange_like(node, **kwargs):
         nodes += [
             make_node('Shape', [input_nodes[0]], [name+"_shape0_out"]),
             make_node("ReduceProd", [name+"_shape0_out"], [name+"_redprod0_out"]),
-            make_node('Squeeze', [name+'_redprod0_out'], [name+'_reshape0_out']),
+            make_node('Squeeze', [name+'_redprod0_out'], [name+'_reshape0_out'], axes=[0]),
             make_node("Cast", [name+"_reshape0_out"], [name+"_cast0_out"], to=dtype_t),
             make_node("Mul", [name+"_cast0_out", name+"_step"], [name+"_mul0_out"]),
             make_node("Add", [name+"_mul0_out", name+"_start"], [name+"_add1_out"]),
@@ -2973,7 +2973,7 @@ def convert_arange_like(node, **kwargs):
             make_node('Shape', [input_nodes[0]], [name+"_shape0_out"]),
             make_node('Slice', [name+"_shape0_out", name+"_axis_start", name+"_axis_end"], [name+"_slice0_out"]),
             make_node("ReduceProd", [name+"_slice0_out"], [name+"_reprod0_out"]),
-            make_node('Squeeze', [name+'_reprod0_out'], [name+'_reshape0_out']),
+            make_node('Squeeze', [name+'_reprod0_out'], [name+'_reshape0_out'], axes=[0]),
             make_node("Cast", [name+"_reshape0_out"], [name+"_cast0_out"], to=dtype_t),
             make_node("Mul", [name+"_cast0_out", name+"_step"], [name+"_mul0_out"]),
             make_node("Add", [name+"_mul0_out", name+"_start"], [name+"_add1_out"]),
@@ -3105,7 +3105,7 @@ def convert_reverse(node, **kwargs):
         make_node('Transpose', [name+'_data_10_dim'], [name+'_data_t'], perm=perm),
         make_node('Slice', [name+'_shape', name+'_axis', name+'_axis_p1'], [name+'_axis_len']),
         make_node('Sub', [name+'_axis_len', name+'_1'], [name+'_axis_len_m1']),
-        make_node('Squeeze', [name+'_axis_len_m1'], [name+'_axis_len_m1_s']),
+        make_node('Squeeze', [name+'_axis_len_m1'], [name+'_axis_len_m1_s'], axes=[0]),
         make_node('Range', [name+'_axis_len_m1_s', name+'_m1_s', name+'_m1_s'], [name+'_indices']),
         make_node('Gather', [name+'_data_t', name+'_indices'], [name+'_gather']),
         make_node('Transpose', [name+'_gather'], [name+'_data_reversed'], perm=perm),
@@ -3158,7 +3158,7 @@ def convert_repeat(node, **kwargs):
         nodes += [
             make_node('Shape', [input_nodes[0]], [name+'_shape']),
             make_node('Shape', [name+'_shape'], [name+'_dim']),
-            make_node('Squeeze', [name+'_dim'], [name+'_dim_s']),
+            make_node('Squeeze', [name+'_dim'], [name+'_dim_s'], axes=[0]),
             make_node('Range', [name+'_0_s', name+'_dim_s', name+'_1_s'], [name+'_range'])
         ]
         if axis < 0:
@@ -3276,7 +3276,7 @@ def convert_contrib_box_nms(node, **kwargs):
         make_node('Pad', [name+'_candidates', name+'_pad', name+'_m1_f'], [name+'_cand_padded']),
         make_node('Shape', [name+'_nms'], [name+'_nms_shape']),
         make_node('Slice', [name+'_nms_shape', name+'_0', name+'_1'], [name+'_cand_cnt']),
-        make_node('Squeeze', [name+'_cand_cnt'], [name+'_cc_s']),
+        make_node('Squeeze', [name+'_cand_cnt'], [name+'_cc_s'], axes=[0]),
         make_node('Range', [name+'_0_s', name+'_cc_s', name+'_1_s'], [name+'_cand_indices']),
         make_node('Slice', [name+'_scores_shape_actual', name+'_0', name+'_3', name+'_m1',
                             name+'_2'], [name+'_shape_bat_spat']),
@@ -3890,7 +3890,7 @@ def convert_contrib_roialign(node, **kwargs):
     nodes = [
         make_node('Slice', [input_nodes[1], name+'_1', name+'_5', name+'_1'], [name+'_rois']),
         make_node('Slice', [input_nodes[1], name+'_0', name+'_1', name+'_1'], [name+'_inds__']),
-        make_node('Squeeze', [name+'_inds__'], [name+'_inds_'], axes=(1,)),
+        make_node('Squeeze', [name+'_inds__'], [name+'_inds_'], axes=[1]),
         make_node('Cast', [name+'_inds_'], [name+'_inds'], to=int(TensorProto.INT64)),
         make_node('RoiAlign', [input_nodes[0], name+'_rois', name+'_inds'], [name],
                   mode='avg', output_height=pooled_size[0], output_width=pooled_size[1],
@@ -4154,8 +4154,6 @@ def convert_RNN(node, **kwargs):
         raise NotImplementedError('Currently RNN onnx export only supports bidirectional is False')
 
     num_layers = int(attrs.get('num_layers', '1'))
-    if num_layers != 1:
-        raise NotImplementedError('Currently RNN onnx export only supports num_layers equals to 1')
 
     p = float(attrs.get('p', '0'))
     if p != 0:
@@ -4179,46 +4177,141 @@ def convert_RNN(node, **kwargs):
     initial_h = input_nodes[2]
     initial_c = input_nodes[3]
 
-    create_tensor([0], name+'_0', kwargs['initializer'])
-    create_tensor([1], name+'_1', kwargs['initializer'])
-    create_tensor([4*state_size], name+'_4*state_size', kwargs['initializer'])
-    create_tensor([8*state_size], name+'_8*state_size', kwargs['initializer'])
-    create_tensor([4*state_size*state_size], name+'_4*state_size^2', kwargs['initializer'])
-    create_tensor([1, 4*state_size, state_size], name+'_R_shape', kwargs['initializer'])
-    create_tensor([1, 8*state_size], name+'_B_shape', kwargs['initializer'])
+    nodes = []
+
+    if num_layers == 2:
+        create_tensor([0], name+'_0', kwargs['initializer'])
+        create_tensor([8*state_size], name+'_8*state_size', kwargs['initializer'])
+        create_tensor([4*state_size*state_size], name+'_4*state_size^2', kwargs['initializer'])
+
+        create_tensor([1, 4*state_size, state_size], name+'_WR_shape', kwargs['initializer'])
+        create_tensor([1, 8*state_size], name+'_B_shape', kwargs['initializer'])
+
+        create_tensor([4*4*state_size*state_size], name+'_WR_offset', kwargs['initializer'])
+
+        nodes += [
+            make_node('Shape', [data], [name+'_data_shape']),
+            make_node('Split', [name+'_data_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size']),
+
+            # Layer 0
+            # get W
+            make_node('Slice', [param, name+'_0', name+'_4*state_size^2'], [name+'_W0_1d']),
+            make_node('Split', [name+'_W0_1d'], [name+'_W00', name+'_W01', name+'_W02', name+'_W03']),
+            make_node('Concat', [name+'_W00', name+'_W03', name+'_W01', name+'_W02'], [name+'_W0_'], axis=0),
+            make_node('Reshape', [name+'_W0_', name+'_WR_shape'], [name+'_W0']),
+            # get R
+            make_node('Add', [name+'_4*state_size^2', name+'_4*state_size^2'], [name+'_R0_offset']),
+            make_node('Slice', [param, name+'_4*state_size^2', name+'_R0_offset'], [name+'_R0_1d']),
+            make_node('Split', [name+'_R0_1d'], [name+'_R00', name+'_R01', name+'_R02', name+'_R03']),
+            make_node('Concat', [name+'_R00', name+'_R03', name+'_R01', name+'_R02'], [name+'_R0_'], axis=0),
+            make_node('Reshape', [name+'_R0_', name+'_WR_shape'], [name+'_R0']),
+            # get B
+            make_node('Add', [name+'_WR_offset', name+'_8*state_size'], [name+'_B0_offset']),
+            make_node('Slice', [param, name+'_WR_offset', name+'_B0_offset'], [name+'_B0_1d']),
+            make_node('Split', [name+'_B0_1d'], [name+'_B00', name+'_B01', name+'_B02', name+'_B03',
+                                                 name+'_B04', name+'_B05', name+'_B06', name+'_B07']),
+            make_node('Concat', [name+'_B00', name+'_B03', name+'_B01', name+'_B02',
+                                 name+'_B04', name+'_B07', name+'_B05', name+'_B06'], [name+'_B0_'], axis=0),
+            make_node('Reshape', [name+'_B0_', name+'_B_shape'], [name+'_B0']),
+            # get initial states
+            make_node('Split', [initial_h], [name+'_initial_h0', name+'_initial_h1'], axis=0),
+            make_node('Split', [initial_c], [name+'_initial_c0', name+'_initial_c1'], axis=0),
+            # get seq_len
+            make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
+            make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
+            # Layer 0 LSTM
+            make_node('LSTM', [data, name+'_W0', name+'_R0', name+'_B0', name+'_seq_len',
+                               name+'_initial_h0', name+'_initial_c0'],
+                      [name+'_lstm0_out_', name+'_lstm0_h', name+'_lstm0_c'], hidden_size=state_size),
+            make_node('Squeeze', [name+'_lstm0_out_'], [name+'_lstm0_out'], axes=[1]),
+
+            # Layer 1
+            # get W
+            make_node('Add', [name+'_R0_offset', name+'_4*state_size^2'], [name+'_W1_offset']),
+            make_node('Slice', [param, name+'_R0_offset', name+'_W1_offset'], [name+'_W1_1d']),
+            make_node('Split', [name+'_W1_1d'], [name+'_W10', name+'_W11', name+'_W12', name+'_W13']),
+            make_node('Concat', [name+'_W10', name+'_W13', name+'_W11', name+'_W12'], [name+'_W1_'], axis=0),
+            make_node('Reshape', [name+'_W1_', name+'_WR_shape'], [name+'_W1']),
+            # get R
+            make_node('Slice', [param, name+'_W1_offset', name+'_WR_offset'], [name+'_R1_1d']),
+            make_node('Split', [name+'_R1_1d'], [name+'_R10', name+'_R11', name+'_R12', name+'_R13']),
+            make_node('Concat', [name+'_R10', name+'_R13', name+'_R11', name+'_R12'], [name+'_R1_'], axis=0),
+            make_node('Reshape', [name+'_R1_', name+'_WR_shape'], [name+'_R1']),
+            # get B
+            make_node('Add', [name+'_B0_offset', name+'_8*state_size'], [name+'_B1_offset']),
+            make_node('Slice', [param, name+'_B0_offset', name+'_B1_offset'], [name+'_B1_1d']),
+            make_node('Split', [name+'_B1_1d'], [name+'_B10', name+'_B11', name+'_B12', name+'_B13',
+                                                 name+'_B14', name+'_B15', name+'_B16', name+'_B17']),
+            make_node('Concat', [name+'_B10', name+'_B13', name+'_B11', name+'_B12',
+                                 name+'_B14', name+'_B17', name+'_B15', name+'_B16'], [name+'_B1_'], axis=0),
+            make_node('Reshape', [name+'_B1_', name+'_B_shape'], [name+'_B1']),
+            # Layer 1 LSTM
+            make_node('LSTM', [name+'_lstm0_out', name+'_W1', name+'_R1', name+'_B1', name+'_seq_len',
+                               name+'_initial_h1', name+'_initial_c1'],
+                      [name+'_lstm1_out_', name+'_lstm1_h', name+'_lstm1_c'], hidden_size=state_size),
+            make_node('Squeeze', [name+'_lstm1_out_'], [name], axes=[1]),
+            make_node('Concat', [name+'_lstm0_h', name+'_lstm1_h'], [name+'1'], axis=0),
+            make_node('Concat', [name+'_lstm0_c', name+'_lstm1_c'], [name+'2'], axis=0),
+        ]
+    elif num_layers == 1:
+        create_tensor([0], name+'_0', kwargs['initializer'])
+        create_tensor([1], name+'_1', kwargs['initializer'])
+        create_tensor([4*state_size], name+'_4*state_size', kwargs['initializer'])
+        create_tensor([8*state_size], name+'_8*state_size', kwargs['initializer'])
+        create_tensor([4*state_size*state_size], name+'_4*state_size^2', kwargs['initializer'])
+        create_tensor([1, 4*state_size, state_size], name+'_R_shape', kwargs['initializer'])
+        create_tensor([1, 8*state_size], name+'_B_shape', kwargs['initializer'])
+
+        nodes += [
+            make_node('Shape', [data], [name+'_data_shape']),
+            make_node('Split', [name+'_data_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size']),
+            # get W
+            make_node('Mul', [name+'_4*state_size', name+'_input_size'], [name+'_mul0']),
+            make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_1d']),
+            make_node('Split', [name+'_W_1d'], [name+'_W0', name+'_W1', name+'_W2', name+'_W3']),
+            make_node('Concat', [name+'_W0', name+'_W3', name+'_W1', name+'_W2'], [name+'_W_'], axis=0),
+            make_node('Concat', [name+'_1', name+'_4*state_size', name+'_input_size'], [name+'_W_shape'], axis=0),
+            make_node('Reshape', [name+'_W_', name+'_W_shape'], [name+'_W']),
+            # get R
+            make_node('Add', [name+'_mul0', name+'_4*state_size^2'], [name+'_add0']),
+            make_node('Slice', [param, name+'_mul0', name+'_add0'], [name+'_R_1d']),
+            make_node('Split', [name+'_R_1d'], [name+'_R0', name+'_R1', name+'_R2', name+'_R3']),
+            make_node('Concat', [name+'_R0', name+'_R3', name+'_R1', name+'_R2'], [name+'_R_'], axis=0),
+            make_node('Reshape', [name+'_R_', name+'_R_shape'], [name+'_R']),
+            # get B
+            make_node('Add', [name+'_add0', name+'_8*state_size'], [name+'_add1']),
+            make_node('Slice', [param, name+'_add0', name+'_add1'], [name+'_B_1d']),
+            make_node('Split', [name+'_B_1d'], [name+'_B0', name+'_B1', name+'_B2', name+'_B3',
+                                                name+'_B4', name+'_B5', name+'_B6', name+'_B7']),
+            make_node('Concat', [name+'_B0', name+'_B3', name+'_B1', name+'_B2',
+                                 name+'_B4', name+'_B7', name+'_B5', name+'_B6'], [name+'_B_'], axis=0),
+            make_node('Reshape', [name+'_B_', name+'_B_shape'], [name+'_B']),
+            # get seq_len
+            make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
+            make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
+            # compute LSTM
+            make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c],
+                      [name+'0_', name+'1', name+'2'], hidden_size=state_size),
+            make_node('Squeeze', [name+'0_'], [name], axes=[1]),
+        ]
+    else:
+        raise NotImplementedError('Currently RNN onnx export only supports num_layers equals to 1 or 2')
+
+    return nodes
+
+@mx_op.register('_rnn_param_concat')
+def convert_rnn_param_concat(node, **kwargs):
+    """Map MXNet’s _rnn_param_concat operator
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    axis = int(attrs.get('dim', 1))
 
     nodes = [
-        make_node('Shape', [data], [name+'_data_shape']),
-        make_node('Split', [name+'_data_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size']),
-        # get W
-        make_node('Mul', [name+'_4*state_size', name+'_input_size'], [name+'_mul0']),
-        make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_1d']),
-        make_node('Split', [name+'_W_1d'], [name+'_W0', name+'_W1', name+'_W2', name+'_W3']),
-        make_node('Concat', [name+'_W0', name+'_W3', name+'_W1', name+'_W2'], [name+'_W_'], axis=0),
-        make_node('Concat', [name+'_1', name+'_4*state_size', name+'_input_size'], [name+'_W_shape'], axis=0),
-        make_node('Reshape', [name+'_W_', name+'_W_shape'], [name+'_W']),
-        # get R
-        make_node('Add', [name+'_mul0', name+'_4*state_size^2'], [name+'_add0']),
-        make_node('Slice', [param, name+'_mul0', name+'_add0'], [name+'_R_1d']),
-        make_node('Split', [name+'_R_1d'], [name+'_R0', name+'_R1', name+'_R2', name+'_R3']),
-        make_node('Concat', [name+'_R0', name+'_R3', name+'_R1', name+'_R2'], [name+'_R_'], axis=0),
-        make_node('Reshape', [name+'_R_', name+'_R_shape'], [name+'_R']),
-        # get B
-        make_node('Add', [name+'_add0', name+'_8*state_size'], [name+'_add1']),
-        make_node('Slice', [param, name+'_add0', name+'_add1'], [name+'_B_1d']),
-        make_node('Split', [name+'_B_1d'], [name+'_B0', name+'_B1', name+'_B2', name+'_B3',
-                                            name+'_B4', name+'_B5', name+'_B6', name+'_B7']),
-        make_node('Concat', [name+'_B0', name+'_B3', name+'_B1', name+'_B2',
-                             name+'_B4', name+'_B7', name+'_B5', name+'_B6'], [name+'_B_'], axis=0),
-        make_node('Reshape', [name+'_B_', name+'_B_shape'], [name+'_B']),
-        # get seq_len
-        make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
-        make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
-        # compute LSTM
-        make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c],
-                  [name+'0_', name+'1', name+'2'], hidden_size=state_size),
-        make_node('Squeeze', [name+'0_'], [name], axes=[1]),
+        make_node('Concat', input_nodes, [name], axis=axis)
     ]
+
     return nodes
 
 
