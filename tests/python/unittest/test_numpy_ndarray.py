@@ -1012,7 +1012,8 @@ def test_np_save_load_large_ndarrays(load_fn, tmp_path):
 @use_np
 @pytest.mark.serial
 @pytest.mark.parametrize('load_fn', [_np.load, npx.load])
-def test_np_save_load_ndarrays(load_fn):
+@pytest.mark.parametrize('positional', [True, False])
+def test_np_save_load_ndarrays(load_fn, positional):
     shapes = [(2, 0, 1), (0,), (), (), (0, 4), (), (3, 0, 0, 0), (2, 1), (0, 5, 0), (4, 5, 6), (0, 0, 0)]
     array_list = [_np.random.randint(0, 10, size=shape) for shape in shapes]
     array_list = [np.array(arr, dtype=arr.dtype) for arr in array_list]
@@ -1028,7 +1029,10 @@ def test_np_save_load_ndarrays(load_fn):
     # test save/load a list of ndarrays
     with TemporaryDirectory() as work_dir:
         fname = os.path.join(work_dir, 'dataset.npz')
-        npx.savez(fname, *array_list)
+        if positional:
+            npx.savez(fname, *array_list)
+        else:
+            npx.savez(fname, array_list)
         if load_fn is _np.load:
             with load_fn(fname) as array_dict_loaded:  # Ensure NPZFile is closed
                 array_list_loaded = [
@@ -1053,7 +1057,10 @@ def test_np_save_load_ndarrays(load_fn):
         arr_dict[k] = v
     with TemporaryDirectory() as work_dir:
         fname = os.path.join(work_dir, 'dataset.npz')
-        npx.savez(fname, **arr_dict)
+        if positional:
+            npx.savez(fname, **arr_dict)
+        else:
+            npx.savez(fname, arr_dict)
         if load_fn is _np.load:
             with load_fn(fname) as arr_dict_loaded:  # Ensure NPZFile is closed
                 assert isinstance(arr_dict_loaded, _np.lib.npyio.NpzFile)

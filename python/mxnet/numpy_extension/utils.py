@@ -105,10 +105,21 @@ def savez(file, *args, **kwds):
     """
 
     if len(args):
-        for i, arg in enumerate(args):
-            name = 'arr_{}'.format(str(i))
-            assert name not in kwds, 'Naming conflict between arg {} and kwargs.'.format(str(i))
-            kwds[name] = arg
+        if isinstance(args[0], (list, tuple)):
+            assert len(args) == 1, 'Only accepts dict str->ndarray or list of ndarrays.'
+            for i, arg in enumerate(args[0]):
+                name = 'arr_{}'.format(str(i))
+                assert name not in kwds, 'Naming conflict between arg {} and kwargs.'.format(str(i))
+                kwds[name] = arg
+        elif isinstance(args[0], dict):
+            assert len(args) == 1, 'Only accepts dict str->ndarray or list of ndarrays.'
+            kwds = args[0]
+        else:
+            assert isinstance(args[0], NDArray), 'Only accepts dict str->ndarray or list of ndarrays.'
+            for i, arg in enumerate(args):
+                name = 'arr_{}'.format(str(i))
+                assert name not in kwds, 'Naming conflict between arg {} and kwargs.'.format(str(i))
+                kwds[name] = arg
 
     str_keys = kwds.keys()
     nd_vals = kwds.values()
