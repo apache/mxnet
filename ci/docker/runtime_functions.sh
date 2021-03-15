@@ -1115,7 +1115,6 @@ build_python_docs() {
 
     pushd docs/python_docs
     python3 -m pip install -r requirements
-    python3 -m pip install themes/mx-theme
     python3 -m pip install -e /work/mxnet/python --user
 
     export PATH=/home/jenkins_slave/.local/bin:$PATH
