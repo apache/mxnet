@@ -819,7 +819,7 @@ def test_dynamic_shape_bert_inference_onnxruntime(tmp_path, model):
 
 @with_seed()
 @pytest.mark.parametrize('model_name', [('awd_lstm_lm_600', 600), ('awd_lstm_lm_1150', 1150)])
-@pytest.mark.parametrize('seq_length', [16, 64, 128])
+@pytest.mark.parametrize('seq_length', [16, 128, 256])
 def test_awd_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name, seq_length):
     try:
         import gluonnlp as nlp
@@ -842,7 +842,7 @@ def test_awd_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name, seq
                                         batch_size=batch, dtype='float32', ctx=ctx)
         out, out_state= model(inputs, begin_state)
 
-        prefix = "%s/standard_rnn_lstm" % tmp_path
+        prefix = "%s/awd_lstm" % tmp_path
         model.export(prefix)
         sym_file = "%s-symbol.json" % prefix
         params_file = "%s-0000.params" % prefix
