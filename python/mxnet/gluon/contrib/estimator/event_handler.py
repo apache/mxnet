@@ -730,7 +730,6 @@ class GradientUpdateHandler(BatchEnd):
     priority : scalar, default -2000
         priority level of the gradient update handler. Priority level is sorted in ascending
         order. The lower the number is, the higher priority level the handler is.
-    ----------
     """
     def __init__(self, priority=-2000):
         self.priority = priority
