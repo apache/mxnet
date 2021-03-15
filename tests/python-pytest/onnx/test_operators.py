@@ -1214,13 +1214,23 @@ def test_onnx_export_sequence_reverse(tmp_path, dtype, params):
 
 # onnx LSTM from opset 11 does not support float64
 @pytest.mark.parametrize('dtype', ['float32'])
-@pytest.mark.parametrize('state_size', [128, 256, 512])
-def test_onnx_export_RNN(tmp_path, dtype, state_size):
-    # the current implementation fails assertion checks for large parm/state_size. 
-    M = def_model('RNN', mode='lstm', state_size=state_size, state_outputs=True,  num_layers=1, p=0)
-    x = mx.nd.random.normal(0, 10, (38, 1, 300), dtype=dtype)
-    batch_size = np.shape(x)[1]
-    input_size = np.shape(x)[2]
-    param = mx.nd.random.normal(0, 1, [4*state_size*input_size + 4*state_size*state_size + 8*state_size], dtype=dtype)
-    state = mx.nd.random.uniform(-1, 1, [1, batch_size, state_size], dtype=dtype)
-    cell = mx.nd.random.uniform(-1, 1, [1, batch_size, state_size], dtype=dtype)
+@pytest.mark.parametrize('state_size', [32, 40])
+@pytest.mark.parametrize('input_size', [32, 40, 64])
+@pytest.mark.parametrize('num_layers', [1, 2])
+@pytest.mark.parametrize('batch_size', [1, 3, 5])
+@pytest.mark.parametrize('seq_length', [16, 32])
+def test_onnx_export_RNN(tmp_path, dtype, state_size, input_size, num_layers, batch_size, seq_length):
+    # TODO: The current implementation fails assertion checks for large parm/state_size. 
+    
+    # for num_layers >= 2, input_size must equal to state_size
+    if num_layers >= 2 and input_size != state_size:
+        return
+    
+    M = def_model('RNN', mode='lstm', state_size=state_size, state_outputs=True,  num_layers=num_layers, p=0)
+    x = mx.nd.random.normal(0, 10, (seq_length, batch_size, input_size), dtype=dtype)
+    param = mx.nd.random.normal(0, 1, [num_layers*4*state_size*input_size +
+                                       num_layers*4*state_size*state_size +
+                                       num_layers*8*state_size], dtype=dtype)
+    state = mx.nd.random.uniform(-1, 1, [num_layers, batch_size, state_size], dtype=dtype)
+    cell = mx.nd.random.uniform(-1, 1, [num_layers, batch_size, state_size], dtype=dtype)
+    op_export_test('rnn', M, [x, param, state, cell], tmp_path)
