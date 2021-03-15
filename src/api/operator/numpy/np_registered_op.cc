@@ -46,7 +46,7 @@ MXNET_REGISTER_GLOBAL("ndarray.imperative_invoke")
   int num_params = (args_size - num_inputs - 3) / 2;
   nnvm::NodeAttrs attrs;
   attrs.dict.reserve(num_params + 1);
-  int end = num_inputs + 3 + num_params;
+  int end = num_inputs + 2 + num_params;
   for (int i = num_inputs + 2; i < end; ++i) {
     const char *key = args[i].value().v_str;
     const char *value = args[i+num_params].value().v_str;
