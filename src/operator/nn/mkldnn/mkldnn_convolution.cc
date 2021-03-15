@@ -23,7 +23,7 @@
  * \author Da Zheng
  */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include "../convolution-inl.h"
 #include "./mkldnn_ops-inl.h"
@@ -556,4 +556,4 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

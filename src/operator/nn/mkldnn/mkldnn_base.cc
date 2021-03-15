@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <atomic>
 #include "./mkldnn_base-inl.h"
@@ -605,7 +605,7 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
     if (v == - 1) v = kDefaultStorage;
 
   DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet())
     wanted_mode = DispatchMode::kFComputeFallback;
   else if (dev_mask == mshadow::cpu::kDevMask && support_mkldnn)

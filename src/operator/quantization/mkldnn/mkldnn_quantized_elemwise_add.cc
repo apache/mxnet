@@ -23,7 +23,7 @@
  * \brief
  */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../quantized_elemwise_add-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
@@ -255,4 +255,4 @@ NNVM_REGISTER_OP(_contrib_quantized_elemwise_add)
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

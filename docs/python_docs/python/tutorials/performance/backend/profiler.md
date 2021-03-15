@@ -210,12 +210,12 @@ Let's zoom in to check the time taken by operators
 
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
 
-### Profiling MKLDNN Operators
-Reagrding MKLDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `MKLDNN_VERBOSE=1` to enable internal profiler.
+### Profiling ONEDNN Operators
+Reagrding ONEDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `MKLDNN_VERBOSE=1` to enable internal profiler.
 
 `$ MKLDNN_VERBOSE=1 python my_script.py > mkldnn_verbose.log`
 
-Now, the detailed profiling insights of each mkldnn prmitive are saved into `mkldnn_verbose.log` (like below).
+Now, the detailed profiling insights of each ONEDNN prmitive are saved into `mkldnn_verbose.log` (like below).
 
 ```
 dnnl_verbose,info,DNNL v1.1.2 (commit cb2cc7ac17ff4e2ef50805c7048d33256d82be4d)

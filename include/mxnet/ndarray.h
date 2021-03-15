@@ -37,7 +37,7 @@
 #include <algorithm>
 #include <memory>
 #include <algorithm>
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include <mkldnn.hpp>
 #endif
 #include "./base.h"
@@ -727,7 +727,7 @@ class NDArray {
     ptr_->CheckAndAllocAuxData(i, aux_shape);
   }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   /*
    * Create NDArray from mkldnn memory.
    * mkldnn_mem The mkldnn memory to be managed.
@@ -859,7 +859,7 @@ class NDArray {
     */
     std::vector<Storage::Handle> aux_handles;
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     /*! This is created when data is stored in MKLDNN format.
      */
     std::shared_ptr<MKLDNNMemory> mkl_mem_;
@@ -1018,7 +1018,7 @@ class NDArray {
     inline void CheckAndAlloc(void) {
       if (delay_alloc) {
         Storage::Get()->Alloc(&shandle);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
         mkl_mem_ = nullptr;
 #endif
         delay_alloc = false;
@@ -1034,7 +1034,7 @@ class NDArray {
       if (delay_alloc) {
         shandle.size = dbytes;
         Storage::Get()->Alloc(&shandle);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
         mkl_mem_ = nullptr;
 #endif
         delay_alloc = false;
@@ -1044,7 +1044,7 @@ class NDArray {
         // init storage
         shandle.size = dbytes;
         Storage::Get()->Alloc(&shandle);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
         mkl_mem_ = nullptr;
 #endif
       }
@@ -1080,7 +1080,7 @@ class NDArray {
     // and allocate new storage
     void CheckAndAllocData(const mxnet::TShape &shape, int dtype);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     // Have MKL memory reference to the data in the default storage
     // or create memory for MKLDNN.
     void SetMKLMem(const mxnet::TShape &shape, int dtype);

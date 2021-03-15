@@ -49,7 +49,7 @@
 #include <limits>
 
 #include "../operator/mxnet_op.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
 #endif
 
@@ -495,7 +495,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
     "0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
                                        "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
   if (GetMKLDNNCacheSize() != -1) common::LogOnce("MXNET_MKLDNN_CACHE_NUM is set."

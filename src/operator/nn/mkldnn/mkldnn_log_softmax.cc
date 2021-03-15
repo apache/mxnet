@@ -26,7 +26,7 @@
 #include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 namespace mxnet {
 namespace op {
 

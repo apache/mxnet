@@ -1012,14 +1012,14 @@ TEST(BATCH_NORM, TestTiming_2D) {
   }
 MSHADOW_REAL_TYPE_SWITCH_EX(
   mshadow::kFloat32, DType, AccReal, {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   // MKL
   timingTest<BatchNormCoreOpProp, BNOperatorExecutor<DType, AccReal>>(
     "MKL BatchNormProp<cpu> 2D",
     false, false,
     blank_kwargs_nocudnn,
     2, THISCOUNT);
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
   // CPU
   test::ScopeSet<volatile bool> disableMKL(&mxnet::op::batchnorm::disable_mkl, true);
   timingTest<BatchNormCoreOpProp, BNOperatorExecutor<DType, AccReal>>(

@@ -25,7 +25,7 @@
 */
 #include <mxnet/op_attr_types.h>
 #include "../nn/batch_norm-inl.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../nn/mkldnn/mkldnn_batch_norm-inl.h"
 #endif
 
@@ -67,7 +67,7 @@ bool QuantizedBatchNormType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_t
   CHECK_EQ(in_type->size(), 7U);
   CHECK_EQ(out_type->size(), 3U);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   CHECK(in_type->at(0) == mshadow::kInt8 || in_type->at(0) == mshadow::kUint8)
       << "QuantizedBatchNorm with MKLDNN backend only supports int8/uint8 input, while "
       << in_type->at(0) << " is given.";

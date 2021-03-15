@@ -24,7 +24,7 @@
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <utility>
 #include <mkldnn.hpp>
@@ -160,5 +160,5 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
                                 const NDArray &output);
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_

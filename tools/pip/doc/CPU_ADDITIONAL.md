@@ -23,7 +23,7 @@ This package supports Linux, Mac OSX, and Windows platforms. You may also want t
 - [mxnet-cu102](https://pypi.python.org/pypi/mxnet-cu102/) with CUDA-10.2 support.
 - [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101/) with CUDA-10.1 support.
 - [mxnet](https://pypi.python.org/pypi/mxnet/).
-- [mxnet-native](https://pypi.python.org/pypi/mxnet-native/) CPU variant without MKLDNN.
+- [mxnet-native](https://pypi.python.org/pypi/mxnet-native/) CPU variant without ONEDNN.
 
 To use this package on Linux you need the `libquadmath.so.0` shared library. On
 Debian based systems, including Ubuntu, run `sudo apt install libquadmath0` to

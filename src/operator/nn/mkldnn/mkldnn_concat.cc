@@ -23,7 +23,7 @@
  * \author
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "mkldnn_concat-inl.h"
 
 namespace mxnet {
@@ -101,4 +101,4 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

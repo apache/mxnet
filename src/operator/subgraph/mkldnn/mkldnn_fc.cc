@@ -24,7 +24,7 @@
  * \author Ciyong Chen
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <utility>
 #include <vector>
@@ -670,4 +670,4 @@ NNVM_REGISTER_OP(_sg_mkldnn_fully_connected)
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // if MXNET_USE_MKLDNN == 1
+#endif  // if MXNET_USE_ONEDNN == 1
