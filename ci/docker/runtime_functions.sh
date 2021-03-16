@@ -273,7 +273,7 @@ build_centos7_cpu() {
     ninja
 }
 
-build_centos7_mkldnn() {
+build_centos7_onednn() {
     set -ex
     cd /work/build
     source /opt/rh/devtoolset-7/enable
@@ -483,7 +483,7 @@ build_ubuntu_cpu_clang_tidy() {
     ninja
 }
 
-build_ubuntu_cpu_clang6_mkldnn() {
+build_ubuntu_cpu_clang6_onednn() {
     set -ex
     cd /work/build
     export OpenBLAS_HOME=/usr/local/openblas-clang/
@@ -496,7 +496,7 @@ build_ubuntu_cpu_clang6_mkldnn() {
     ninja
 }
 
-build_ubuntu_cpu_clang100_mkldnn() {
+build_ubuntu_cpu_clang100_onednn() {
     set -ex
     cd /work/build
     export OpenBLAS_HOME=/usr/local/openblas-clang/
@@ -508,7 +508,7 @@ build_ubuntu_cpu_clang100_mkldnn() {
     ninja
 }
 
-build_ubuntu_cpu_mkldnn() {
+build_ubuntu_cpu_onednn() {
     set -ex
     cd /work/build
     CC=gcc-7 CXX=g++-7 cmake \
@@ -523,7 +523,7 @@ build_ubuntu_cpu_mkldnn() {
     ninja
 }
 
-build_ubuntu_cpu_mkldnn_mkl() {
+build_ubuntu_cpu_onednn_mkl() {
     set -ex
     cd /work/build
     CC=gcc-7 CXX=g++-7 cmake \
@@ -593,7 +593,7 @@ build_ubuntu_gpu_tensorrt() {
     ninja
 }
 
-build_ubuntu_gpu_mkldnn() {
+build_ubuntu_gpu_onednn() {
     set -ex
     cd /work/build
     CC=gcc-7 CXX=g++-7 cmake \
@@ -607,7 +607,7 @@ build_ubuntu_gpu_mkldnn() {
     ninja
 }
 
-build_ubuntu_gpu_mkldnn_nocudnn() {
+build_ubuntu_gpu_onednn_nocudnn() {
     set -ex
     cd /work/build
     CC=gcc-7 CXX=g++-7 cmake \
@@ -775,7 +775,7 @@ unittest_ubuntu_python3_cpu() {
     pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
 }
 
-unittest_ubuntu_python3_cpu_mkldnn() {
+unittest_ubuntu_python3_cpu_onednn() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_ONEDNN_DEBUG=0  # Ignored if not present
@@ -1291,7 +1291,7 @@ build_static_libmxnet() {
 # Tests CD PyPI packaging in CI
 ci_package_pypi() {
     set -ex
-    # copies mkldnn header files to 3rdparty/onednn/include/oneapi/dnnl/ as in CD
+    # copies onednn header files to 3rdparty/onednn/include/oneapi/dnnl/ as in CD
     mkdir -p 3rdparty/onednn/include/oneapi/dnnl
     cp include/onednn/oneapi/dnnl/dnnl_version.h 3rdparty/onednn/include/oneapi/dnnl/.
     cp include/onednn/oneapi/dnnl/dnnl_config.h 3rdparty/onednn/include/oneapi/dnnl/.

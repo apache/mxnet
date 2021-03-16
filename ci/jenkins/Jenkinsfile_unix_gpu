@@ -34,8 +34,8 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_unix_mkldnn_gpu('mkldnn_gpu'),
-    custom_steps.compile_unix_mkldnn_nocudnn_gpu('mkldnn_gpu_nocudnn'),
+    custom_steps.compile_unix_onednn_gpu('onednn_gpu'),
+    custom_steps.compile_unix_onednn_nocudnn_gpu('onednn_gpu_nocudnn'),
     custom_steps.compile_unix_full_gpu('gpu'),
     custom_steps.compile_unix_full_gpu_debug('gpu_debug'),
     custom_steps.compile_unix_tensorrt_gpu('tensorrt'),
@@ -44,8 +44,8 @@ core_logic: {
 
   utils.parallel_stage('Tests', [
     custom_steps.test_unix_python3_gpu('gpu'),
-    custom_steps.test_unix_python3_mkldnn_gpu('mkldnn_gpu'),
-    custom_steps.test_unix_python3_mkldnn_nocudnn_gpu('mkldnn_gpu_nocudnn'),
+    custom_steps.test_unix_python3_onednn_gpu('onednn_gpu'),
+    custom_steps.test_unix_python3_onednn_nocudnn_gpu('onednn_gpu_nocudnn'),
     // TODO(szha): fix and reenable the hanging issue. tracked in #18098
     // custom_steps.test_unix_distributed_kvstore_gpu('gpu'),
     custom_steps.test_unix_byteps_gpu('gpu'),
