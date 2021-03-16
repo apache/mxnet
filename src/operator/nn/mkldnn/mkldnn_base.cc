@@ -74,7 +74,7 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::desc &md) {
     // then re-requests abundant space from MXNet resource. MKL-DNN could allocate
     // the space by itself. Thus, we just let it continue for estimating the maximum
     // required space size. It will be allocated at next call.
-    if (this->curr_mem && dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false)) {
+    if (this->curr_mem && dmlc::GetEnv("MXNET_ONEDNN_DEBUG", false)) {
       LOG(WARNING) << "mkl-dnn debug message: The rest of the temporary space is not "
           << "adequate for allocating " << md.get_size() << " bytes. Thus, mkl-dnn "
           << "allocate the space by itself.";
@@ -565,7 +565,7 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
   for (size_t i = 0; i < out_blobs.size(); i++)
     out_blobs[i] = outputs[i].data();
   fn(attrs, ctx, in_blobs, req, out_blobs);
-  if (dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false))
+  if (dmlc::GetEnv("MXNET_ONEDNN_DEBUG", false))
     LOG(INFO) << "test " << attrs.op->name;
   size_t num = std::min(outputs.size(), outputs_.size());
   num = std::min(num_checks, num);

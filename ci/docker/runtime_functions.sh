@@ -724,7 +724,7 @@ cd_unittest_ubuntu() {
     set -ex
     source /opt/rh/rh-python36/enable
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
+    export MXNET_ONEDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
@@ -764,7 +764,7 @@ cd_unittest_ubuntu() {
 unittest_ubuntu_python3_cpu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
+    export MXNET_ONEDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
@@ -778,7 +778,7 @@ unittest_ubuntu_python3_cpu() {
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
+    export MXNET_ONEDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
@@ -793,7 +793,7 @@ unittest_ubuntu_python3_cpu_mkldnn() {
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
+    export MXNET_ONEDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
@@ -811,7 +811,7 @@ unittest_ubuntu_python3_gpu() {
 unittest_ubuntu_python3_gpu_cython() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
+    export MXNET_ONEDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
@@ -978,7 +978,7 @@ test_ubuntu_cpu_python3() {
 unittest_ubuntu_python3_arm() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
+    export MXNET_ONEDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
