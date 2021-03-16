@@ -36,7 +36,7 @@ mx_mkldnn_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/
 mx_tensorrt_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
 mx_lib_cpp_examples = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_examples_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
-mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, '
+mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf'
 mx_cd_lib = 'lib/libmxnet.so, licenses/*, lib/libgfortran.so.*, lib/libopenblas.so.0, include/mkldnn/oneapi/dnnl/dnnl_version.h, include/mkldnn/oneapi/dnnl/dnnl_config.h'
 
 
@@ -1093,6 +1093,30 @@ def docs_prepare() {
     }]
 }
 
+// This is for updateing the new version of website artifact
+// Assumes you have run all of the docs generation functions
+// Called from Jenkins_website_version_artifacts
+def docs_full_website() {
+    return ['Build artifacts full_website.tgz': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+
+            unstash 'jekyll-artifacts'
+            unstash 'python-artifacts'
+
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
+
+            utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
+
+            // archive so the publish pipeline can access the artifact
+            archiveArtifacts 'docs/_build/full_website.tgz'
+          }
+        }
+      }
+    }]
+}
 
 def docs_prepare_beta() {
     return ['Prepare for publication to the staging website': {
@@ -1168,6 +1192,28 @@ def docs_publish_beta() {
     }]
 }
 
+// This is for uploading website artifacts to S3 bucket
+// Assumes you have run docs_full_website function
+def docs_upload_s3() {
+    return ['Upload artifacts to s3 bucket': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            if(env.FOLDER_NAME) {
+              utils.unpack_and_init('full_website', 'docs/_build/full_website.tgz')
+
+              utils.docker_run('ubuntu_cpu', "push_docs ${env.FOLDER_NAME}", false)
+
+              archiveArtifacts 'docs/_build/versions.zip'
+            } else {
+              sh 'echo Can not find website version for release. Please specify env var FOLDER_NAME in Jenkins pipeline'
+              sh 'exit 1'
+            }
+          }
+        }
+      }
+    }]
+}
 
 def sanity_lint() {
     return ['Lint': {

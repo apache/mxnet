@@ -47,6 +47,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get install -y \
         ## Utilities
         curl \
+        zip \ 
         unzip \
         pandoc \
         ## Development tools

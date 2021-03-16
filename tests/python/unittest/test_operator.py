@@ -4334,8 +4334,7 @@ def test_cast_float32_to_float16():
                     fp32_val, model_fp16_val, np_fp16_val)
 
     check_cast(mx.sym.Cast, input_np, expected_output)
-    if default_context().device_type == 'gpu':
-        check_cast(mx.sym.amp_cast, input_np, expected_output)
+    check_cast(mx.sym.amp_cast, input_np, expected_output)
 
 
 def test_amp_multicast():
