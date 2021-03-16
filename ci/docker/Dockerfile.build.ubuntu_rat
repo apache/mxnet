@@ -18,7 +18,7 @@
 #
 # Dockerfile to run the Apache RAT license check
 
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 WORKDIR /work/deps
 

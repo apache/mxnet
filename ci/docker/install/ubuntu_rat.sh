@@ -21,7 +21,23 @@ set -ex
 
 echo "Install dependencies"
 apt-get update || true
-apt-get install -y subversion maven openjdk-8-jdk openjdk-8-jre
+apt-get install -y curl subversion openjdk-8-jdk openjdk-8-jre software-properties-common
+apt-add-repository ppa:webupd8team/java
+apt-get update
+
+# Installing maven 3.6.3 because default maven 3.7.x requires maven compiler >= 1.6
+url="https://mirror.olnevhost.net/pub/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz"
+install_dir="/opt/maven"
+mkdir ${install_dir}
+curl -fsSL ${url} | tar zx --strip-components=1 -C ${install_dir}
+cat << EOF > /etc/profile.d/maven.sh
+#!/bin/sh
+export M2_HOME=${install_dir}
+export MAVEN_HOME=${install_dir}
+export PATH=${install_dir}/bin:${PATH}
+EOF
+source /etc/profile.d/maven.sh
+cat /etc/profile.d/maven.sh
 
 echo "download RAT"
 #svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/
