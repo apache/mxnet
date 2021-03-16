@@ -32,6 +32,7 @@
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -43,6 +44,11 @@ struct AMPCastParam : public dmlc::Parameter<AMPCastParam> {
     DMLC_DECLARE_FIELD(dtype)
     MXNET_ADD_ALL_TYPES
     .describe("Output data type.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream dtype_s;
+    dtype_s << dtype;
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 

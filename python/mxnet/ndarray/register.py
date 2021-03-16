@@ -112,13 +112,24 @@ def _verify_all_legacy_ndarrays(op_name, func_name, args, out):
                             .format(op_name, func_name))
 
 
-def np_imperative_invoke(handle, ndargs, params, out, output_is_list):
+def _np_imperative_invoke(handle, ndargs, out):
     """PackedFunc based numpy operator invocation call"""
-    keys, vals = params.keys(), [str(val) for val in params.values()]
-    output_vars = _api_internal.imperative_invoke(handle, len(ndargs), *ndargs, *keys, *vals, out)
+    output_vars = _api_internal.invoke(handle, len(ndargs), *ndargs, out)
     if out is not None:
         return out
-    if isinstance(output_vars, NDArrayBase) and not output_is_list:
+    if isinstance(output_vars, NDArrayBase):
+        return output_vars
+    else:
+        return list(output_vars)
+
+
+def _np_imperative_invoke_params(handle, ndargs, params, out):
+    """PackedFunc based numpy operator invocation call"""
+    keys, vals = params.keys(), [str(val) for val in params.values()]
+    output_vars = _api_internal.invoke_with_params(handle, len(ndargs), *ndargs, *keys, *vals, out)
+    if out is not None:
+        return out
+    if isinstance(output_vars, NDArrayBase):
         return output_vars
     else:
         return list(output_vars)
@@ -212,6 +223,16 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
                 code.append("""
     _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)""")
+            if not signature_only:
+                code.append("""
+    _verify_all_np_ndarrays("{op_name}", "{func_name}", ndargs, out)
+            """.format(op_name=op_name, func_name=func_name))
+                code.append("""
+    return _imperative_invoke(%d, ndargs, kwargs.keys(), kwargs.values(), out, True, %s)"""%(
+        handle.value, str(output_is_list)))
+            else:
+                code.append("""
+    return (0,)""")
         else:
             code.append("""
 def %s(%s):"""%(func_name, ', '.join(signature)))
@@ -226,27 +247,36 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
             "Argument {name} must have NDArray type, but got %s"%str({name})
         ndargs.append({name})""".format(name=name))
                 # kwargs
-                for name in kwarg_names: # pylint: disable=redefined-argument-from-local
+                if not kwarg_names:
                     code.append("""
+    _verify_all_np_ndarrays("{op_name}", "{func_name}", ndargs, out)
+            """.format(op_name=op_name, func_name=func_name))
+                    if not signature_only:
+                        code.append("""
+    return _np_imperative_invoke(%d, ndargs, out)"""%(handle.value))
+                    else:
+                        code.append("""
+    return (0,)""")
+                else:
+                    for name in kwarg_names: # pylint: disable=redefined-argument-from-local
+                        code.append("""
     if %s is not _Null:
         kwargs['%s'] = %s"""%(name, name, name))
                 # dtype
-                if dtype_name is not None:
-                    code.append("""
+                    if dtype_name is not None:
+                        code.append("""
     if %s is not _Null and %s is not None:
         kwargs['%s'] = _np.dtype(%s).name"""%(dtype_name, dtype_name, dtype_name, dtype_name))
-
-        if not signature_only:
-            code.append("""
+                    if not signature_only:
+                        code.append("""
     _verify_all_np_ndarrays("{op_name}", "{func_name}", ndargs, out)
             """.format(op_name=op_name, func_name=func_name))
-            code.append("""
-    return np_imperative_invoke(%d, ndargs, kwargs, out, %s)"""%(
+                        code.append("""
+    return _imperative_invoke(%d, ndargs, kwargs.keys(), kwargs.values(), out, True, %s)"""%(
         handle.value, str(output_is_list)))
-        else:
-            code.append("""
+                    else:
+                        code.append("""
     return (0,)""")
-
     else:
         if arr_name:
             code.append("""
@@ -308,7 +338,7 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
     _verify_all_legacy_ndarrays("{op_name}", "{func_name}", ndargs, out)
             """.format(op_name=op_name, func_name=func_name))
             code.append("""
-    return _imperative_invoke(%d, ndargs, keys, vals, out, %s)"""%(
+    return _imperative_invoke(%d, ndargs, keys, vals, out, False, %s)"""%(
         handle.value, str(output_is_list)))
         else:
             code.append("""

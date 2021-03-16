@@ -55,7 +55,7 @@ class NDArrayBase(object):
         return (_global_var._ndarray_cls, (None,), self.__getstate__())
 
 
-def _imperative_invoke(handle, ndargs, keys, vals, out, output_is_list):
+def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op, output_is_list):
     """ctypes implementation of imperative invoke wrapper"""
     if out is not None:
         original_output = out
@@ -84,7 +84,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, output_is_list):
         c_str_array([str(s) for s in vals]),
         ctypes.byref(out_stypes)))
 
-    create_ndarray_fn = _global_var._ndarray_cls
+    create_ndarray_fn = _global_var._np_ndarray_cls if is_np_op else _global_var._ndarray_cls
     if original_output is not None:
         return original_output
     if num_output.value == 1 and not output_is_list:

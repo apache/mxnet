@@ -58,7 +58,7 @@ def _cast_symbol_NDArray(s, dtype, is_numpy_module=False):
         amp_cast = symbol.numpy._internal.amp_cast if is_numpy_module else symbol.amp_cast
         return amp_cast(s, dtype=dtype)
     if isinstance(s, NDArray):
-        amp_cast = ndarray.numpy._internal.amp_cast if is_numpy_module else ndarray.amp_cast
+        amp_cast = ndarray.numpy._api_internal.amp_cast if is_numpy_module else ndarray.amp_cast
         if s.dtype != dtype and (s.dtype in float_types_gpu and s.context.device_type != 'cpu' or
                                  s.dtype in float_types_cpu and s.context.device_type == 'cpu'):
             return amp_cast(s, dtype=dtype)
@@ -106,7 +106,7 @@ def _wrap_module_functions(module, is_numpy_module, target_dtype, get_aliases, g
                            get_fun_to_wrap, target_precision_ops=None, conditional_fp32_ops=None,
                            fp32_ops=None):
 
-    nd_mod = ndarray.numpy._internal if is_numpy_module else ndarray
+    nd_mod = ndarray.numpy._api_internal if is_numpy_module else ndarray
     sy_mod = symbol.numpy._internal if is_numpy_module else symbol
 
     def _ndarray_wrapper(f, target_dtype, fp32_param=None, cond_arg=None):
