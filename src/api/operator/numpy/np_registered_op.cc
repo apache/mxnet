@@ -33,10 +33,10 @@ MXNET_REGISTER_GLOBAL("ndarray.invoke")
   using namespace runtime;
   int args_size = args.size();
   const nnvm::Op* op = static_cast<nnvm::Op*>(args[0].value().v_handle);
-  int num_inputs = args[1];
+  int num_inputs = args_size - 2;
   std::vector<NDArray*> ndinputs;
   ndinputs.reserve(num_inputs);
-  for (int i = 2; i < num_inputs + 2; ++i) {
+  for (int i = 1; i < num_inputs + 1; ++i) {
     ndinputs.push_back(static_cast<NDArray*>(args[i]));
   }
   nnvm::NodeAttrs attrs;
