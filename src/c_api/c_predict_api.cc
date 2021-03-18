@@ -434,6 +434,130 @@ int MXPredCreateMultiThread(const char* symbol_json_str,
       out);
 }
 
+int MXPredCreateEx(const char* symbol_json_str,
+                   int dev_type, int dev_id,
+                   const char** input_keys,
+                   const mx_float** input_data,
+                   const mx_uint* input_shape_indptr,
+                   const mx_uint* input_shape_data,
+                   const mx_uint num_input_nodes,
+                   PredictorHandle* out) {
+  return MXPredCreatePartialOutEx(symbol_json_str,
+                                  dev_type,
+                                  dev_id,
+                                  input_keys,
+                                  input_data,
+                                  input_shape_indptr,
+                                  input_shape_data,
+                                  num_input_nodes,
+                                  0,
+                                  nullptr,
+                                  out);
+}
+ 
+int MXPredCreatePartialOutEx(const char* symbol_json_str,
+                             int dev_type, int dev_id,
+                             const char** input_keys,
+                             const mx_float** input_data,
+                             const mx_uint* input_shape_indptr,
+                             const mx_uint* input_shape_data,
+                             const mx_uint num_input_nodes,
+                             const mx_uint num_output_nodes,
+                             const char** output_keys,
+                             PredictorHandle* out) {
+  using nnvm::Symbol;
+ 
+  MXAPIPredictor* ret = new MXAPIPredictor();
+  API_BEGIN();
+  Symbol sym;
+  // make sure symbols are registered
+  {
+    mx_uint outSize;
+    const char **outArray;
+    MXListAllOpNames(&outSize, &outArray);
+  }
+  // load in the symbol.
+  {
+    nnvm::Graph g;
+    g.attrs["json"] = std::make_shared<nnvm::any>(std::string(symbol_json_str));
+    sym.outputs = nnvm::ApplyPass(g, "LoadLegacyJSON").outputs;
+  }
+  // output the internal results
+  if (num_output_nodes != 0) {
+    Symbol internal = sym.GetInternals();
+    std::vector<std::string> all_out = internal.ListOutputNames();
+    std::vector<Symbol> out_syms(num_output_nodes);
+    for (mx_uint i = 0; i < num_output_nodes; ++i) {
+      std::string out_key(output_keys[i]);
+      out_key += "_output";
+      for (size_t j = 0; j < all_out.size(); ++j) {
+        if (all_out[j] == out_key) {
+          out_syms[i] = internal[j];
+          break;
+        }
+        CHECK_NE(j, all_out.size() - 1) << "didn't find node name: " << out_key;
+      }
+    }
+    sym = nnvm::Symbol::CreateGroup(out_syms);
+  }
+ 
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+  std::unordered_map<std::string, TShape> input_shape_map;
+  std::unordered_map<std::string, NDArray> input_nd_map;
+  for (mx_uint i = 0; i < num_input_nodes; ++i) {
+    const std::string input_name = input_keys[i];
+    CHECK_EQ(input_shape_map.count(input_name), 0U);
+    input_shape_map[input_name] = TShape(input_shape_data + input_shape_indptr[i],
+                                         input_shape_data + input_shape_indptr[i + 1]);
+    NDArray nd(input_shape_map[input_name], ctx);
+    nd.SyncCopyFromCPU(input_data[i], nd.shape().Size());
+    CHECK_EQ(input_nd_map.count(input_name), 0U);
+    input_nd_map.emplace(input_name, nd);
+  }
+  CHECK_EQ(input_shape_map.size(), input_nd_map.size());
+ 
+  const std::vector<std::string> arg_names = sym.ListInputNames(Symbol::kReadOnlyArgs);
+  const std::vector<std::string> aux_names = sym.ListInputNames(Symbol::kAuxiliaryStates);
+  CHECK_EQ(input_shape_map.size(), arg_names.size() + aux_names.size());
+  for (size_t i = 0; i < arg_names.size(); ++i) {
+    std::string key = arg_names[i];
+    ret->key2arg[key] = i;
+  }
+  // load args
+  ret->arg_arrays.clear();
+  ret->arg_arrays.reserve(arg_names.size());
+  for (const auto& name : arg_names) {
+    auto it = input_nd_map.find(name);
+    CHECK(it != input_nd_map.end());
+    ret->arg_arrays.push_back(it->second);
+  }
+  // load aux
+  ret->aux_arrays.clear();
+  ret->aux_arrays.reserve(aux_names.size());
+  for (const auto& name : aux_names) {
+    auto it = input_nd_map.find(name);
+    CHECK(it != input_nd_map.end());
+    ret->aux_arrays.push_back(it->second);
+  }
+ 
+  // bind
+  std::map<std::string, Context> ctx_map;
+  std::vector<NDArray> grad_store(ret->arg_arrays.size());
+  std::vector<OpReqType> grad_req(ret->arg_arrays.size(), kNullOp);
+ 
+ 
+  ret->exec.reset(Executor::Bind(sym, ctx, ctx_map,
+                                 ret->arg_arrays,
+                                 grad_store, grad_req,
+                                 ret->aux_arrays));
+  ret->out_arrays = ret->exec->outputs();
+  ret->out_shapes.resize(ret->out_arrays.size());
+  std::transform(ret->out_arrays.begin(), ret->out_arrays.end(), ret->out_shapes.begin(),
+      [](const NDArray& nd) { return nd.shape(); });
+  *out = ret;
+  API_END_HANDLE_ERROR(delete ret);
+}
+
 int MXPredReshape(uint32_t num_input_nodes,
                   const char** input_keys,
                   const uint32_t* input_shape_indptr,
