@@ -32,7 +32,7 @@ mx_cmake_lib_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/lib
 mx_cmake_lib_cython = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/tests/mxnet_unit_tests, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib_debug = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/tests/mxnet_unit_tests'
-mx_mkldnn_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so'
+mx_onednn_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so'
 mx_tensorrt_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
 mx_lib_cpp_examples = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_examples_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
@@ -168,7 +168,7 @@ def compile_unix_mkldnn_cpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn', false)
-            utils.pack_lib(lib_name, mx_mkldnn_lib, true)
+            utils.pack_lib(lib_name, mx_onednn_lib, true)
           }
         }
       }
@@ -182,7 +182,7 @@ def compile_unix_mkldnn_mkl_cpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn_mkl', false)
-            utils.pack_lib(lib_name, mx_mkldnn_lib, false)
+            utils.pack_lib(lib_name, mx_onednn_lib, false)
           }
         }
       }
@@ -196,7 +196,7 @@ def compile_unix_mkldnn_gpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_mkldnn', false)
-            utils.pack_lib(lib_name, mx_mkldnn_lib)
+            utils.pack_lib(lib_name, mx_onednn_lib)
           }
         }
       }
@@ -210,7 +210,7 @@ def compile_unix_mkldnn_nocudnn_gpu(lib_name) {
            timeout(time: max_time, unit: 'MINUTES') {
              utils.init_git()
              utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_mkldnn_nocudnn', false)
-             utils.pack_lib(lib_name, mx_mkldnn_lib)
+             utils.pack_lib(lib_name, mx_onednn_lib)
            }
          }
        }
@@ -729,7 +729,7 @@ def test_unix_python3_mkldnn_cpu(lib_name) {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-mkldnn-cpu') {
           try {
-            utils.unpack_and_init(lib_name, mx_mkldnn_lib, true)
+            utils.unpack_and_init(lib_name, mx_onednn_lib, true)
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -763,7 +763,7 @@ def test_unix_python3_mkldnn_gpu(lib_name) {
       node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-mkldnn-gpu') {
           try {
-            utils.unpack_and_init(lib_name, mx_mkldnn_lib)
+            utils.unpack_and_init(lib_name, mx_onednn_lib)
             python3_gpu_ut('ubuntu_gpu_cu111')
             utils.publish_test_coverage()
           } finally {
@@ -779,7 +779,7 @@ def test_unix_python3_mkldnn_nocudnn_gpu(lib_name) {
       node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
           try {
-            utils.unpack_and_init(lib_name, mx_mkldnn_lib)
+            utils.unpack_and_init(lib_name, mx_onednn_lib)
             python3_gpu_ut_nocudnn('ubuntu_gpu_cu111')
             utils.publish_test_coverage()
           } finally {
