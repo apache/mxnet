@@ -2112,8 +2112,8 @@ def convert_broadcast_lesser(node, **kwargs):
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     nodes = [
-        make_node('GreaterOrEqual', [input_nodes[0], input_nodes[1]], [name+'_lt']),
-        make_node('Cast', [name+'_lt'], [name], to=dtype_t)
+        make_node('GreaterOrEqual', [input_nodes[0], input_nodes[1]], [name+'_gt']),
+        make_node('Cast', [name+'_gt'], [name], to=dtype_t)
     ]
 
     return nodes
