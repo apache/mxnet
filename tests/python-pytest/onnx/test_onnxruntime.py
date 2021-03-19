@@ -992,14 +992,14 @@ def test_ernie_inference_onnxruntime(tmp_path, model_name):
 
 @with_seed()
 @pytest.mark.parametrize('model_name', ['transformer_en_de_512'])
-def test_transformer_pretrained_inference_onnxruntime(tmp_path, model):
+def test_transformer_pretrained_inference_onnxruntime(tmp_path, model_name):
     tmp_path = str(tmp_path)
     try:
         import gluonnlp as nlp
         dataset = 'WMT2014'
         ctx = mx.cpu(0)
         model, _, _ = nlp.model.get_model(
-            name=model,
+            name=model_name,
             ctx=ctx,
             pretrained=True,
             dataset_name=dataset)
