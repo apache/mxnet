@@ -11810,7 +11810,7 @@ def cumsum(a, axis=None, dtype=None, out=None):
     return _mx_nd_np.cumsum(a, axis=axis, dtype=dtype, out=out)
 
 @set_module('mxnet.numpy')
-def reshape(a, newshape, reverse, order='C'):
+def reshape(a, newshape, reverse=False, order='C'):
     """
     Gives a new shape to an array without changing its data.
     This function always returns a copy of the input array if
