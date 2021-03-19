@@ -40,7 +40,7 @@ def reshape(a, newshape, reverse=False, order='C'):
         an integer, then the result will be a 1-D array of that length.
         One shape dimension can be -1. In this case, the value is
         inferred from the length of the array and remaining dimensions.
-    
+
     reverse : boolean, optional, default=0
         If true then the special values are inferred from right to left
 
