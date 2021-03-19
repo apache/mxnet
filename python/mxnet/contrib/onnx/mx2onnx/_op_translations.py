@@ -4171,7 +4171,7 @@ def convert_RNN(node, **kwargs):
     data = input_nodes[0]
     param = input_nodes[1]
     initial_h = input_nodes[2]
-    
+
     nodes = []
 
     mode = str(attrs.get('mode'))
@@ -4333,7 +4333,7 @@ def convert_RNN(node, **kwargs):
                 make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
                 # Layer 0 GRU
                 make_node('GRU', [data, name+'_W0', name+'_R0', name+'_B0', name+'_seq_len',
-                                   name+'_initial_h0'],
+                                  name+'_initial_h0'],
                           [name+'_gru0_out_', name+'_gru0_h'], hidden_size=state_size, linear_before_reset=1),
                 make_node('Squeeze', [name+'_gru0_out_'], [name+'_gru0_out'], axes=[1]),
 
@@ -4359,7 +4359,7 @@ def convert_RNN(node, **kwargs):
                 make_node('Reshape', [name+'_B1_', name+'_B_shape'], [name+'_B1']),
                 # Layer 1 GRU
                 make_node('GRU', [name+'_gru0_out', name+'_W1', name+'_R1', name+'_B1', name+'_seq_len',
-                                   name+'_initial_h1'],
+                                  name+'_initial_h1'],
                           [name+'_gru1_out_', name+'_gru1_h'], hidden_size=state_size, linear_before_reset=1),
                 make_node('Squeeze', [name+'_gru1_out_'], [name], axes=[1]),
                 make_node('Concat', [name+'_gru0_h', name+'_gru1_h'], [name+'1'], axis=0)

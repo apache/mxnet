@@ -1242,6 +1242,3 @@ def test_onnx_export_RNN(tmp_path, mode, dtype, state_size, input_size, num_laye
         op_export_test('rnn', M, [x, param, state, cell], tmp_path)
     else:
         op_export_test('rnn', M, [x, param, state], tmp_path)
-
-test_onnx_export_RNN('.', 'gru', 'float32', 40, 40, 2, 4, 32)
-print('done')
