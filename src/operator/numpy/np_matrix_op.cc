@@ -174,31 +174,6 @@ bool NumpyReshapeInferShape(const mxnet::TShape& src, mxnet::TShape* dst) {
   }
 }
 
-bool NumpyReshapeShape(const nnvm::NodeAttrs& attrs,
-                       mxnet::ShapeVector* in_attrs,
-                       mxnet::ShapeVector* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
-  CHECK_EQ(out_attrs->size(), 1U);
-  const NumpyReshapeParam& param = nnvm::get<NumpyReshapeParam>(attrs.parsed);
-  // sanity check
-  bool has_unknown_dim_size = false;
-  for (int i = 0; i < param.newshape.ndim(); ++i) {
-    if (param.newshape[i] < 0) {
-      CHECK_EQ(param.newshape[i], -1) << "The shape dimension size to inferred must be -1";
-      CHECK(!has_unknown_dim_size) << "Can only specify one unknown dimension";
-      has_unknown_dim_size = true;
-    }
-  }
-
-  mxnet::TShape target_shape = param.newshape;
-  bool success = NumpyReshapeInferShape(in_attrs->at(0), &target_shape);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
-  if (!success) {
-    success = NumpyReshapeInferShape(out_attrs->at(0), &in_attrs->at(0));
-  }
-  return success;
-}
-
 bool NumpyXReshapeInferShape(const mxnet::TShape& src,
                              const mxnet::TShape& target,
                              mxnet::TShape* output,
@@ -315,6 +290,40 @@ bool NumpyXReshapeInferShape(const mxnet::TShape& src,
   }
 }
 
+bool NumpyReshapeShape(const nnvm::NodeAttrs& attrs,
+                       mxnet::ShapeVector* in_attrs,
+                       mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
+  CHECK_EQ(out_attrs->size(), 1U);
+  const NumpyReshapeParam& param = nnvm::get<NumpyReshapeParam>(attrs.parsed);
+  // sanity check
+  bool has_unknown_dim_size = false;
+  for (int i = 0; i < param.newshape.ndim(); ++i) {
+    if (param.newshape[i] < 0) {
+      CHECK_GE(param.newshape[i], -6)
+        << "Dimension size must be greater than or equal to -6";
+      if (param.newshape[i] == -1) {
+        CHECK(!has_unknown_dim_size) << "Can only specify one unknown dimension";
+        has_unknown_dim_size = true;
+      }
+    }
+  }
+
+  mxnet::TShape output_shape;
+  std::stringstream ss;
+  ss << "Cannot reshape array of shape " << in_attrs->at(0)
+     << " into shape " << param.newshape;
+  std::string err_msg = ss.str();
+  mxnet::TShape target_shape = param.newshape;
+  bool success = NumpyXReshapeInferShape(in_attrs->at(0),
+                                         target_shape, &output_shape, err_msg);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, output_shape);
+  if (!success) {
+    success = NumpyReshapeInferShape(out_attrs->at(0), &in_attrs->at(0));
+  }
+  return success;
+}
+
 bool NumpyXReshapeShape(const nnvm::NodeAttrs& attrs,
                        mxnet::ShapeVector* in_attrs,
                        mxnet::ShapeVector* out_attrs) {
@@ -385,6 +394,7 @@ NNVM_REGISTER_OP(_np_reshape)
 NNVM_REGISTER_OP(_npx_reshape)
 .describe(R"code()code" ADD_FILELINE)
 .add_alias("_npx_reshape")
+.add_alias("_npi_reshape")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyXReshapeParam>)
