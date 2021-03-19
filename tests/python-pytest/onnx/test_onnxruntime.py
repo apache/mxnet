@@ -868,3 +868,123 @@ def test_dynamic_shape_bert_inference_onnxruntime(tmp_path, model):
     finally:
         shutil.rmtree(tmp_path)
 
+
+@with_seed()
+@pytest.mark.parametrize('model_name', [('awd_lstm_lm_600', 600), ('awd_lstm_lm_1150', 1150)])
+@pytest.mark.parametrize('seq_length', [16, 128, 256])
+def test_awd_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name, seq_length):
+    try:
+        import gluonnlp as nlp
+        ctx = mx.cpu()
+        dataset= 'wikitext-2'
+        model, _ = nlp.model.get_model(
+            name=model_name[0],
+            ctx=ctx,
+            pretrained=True,
+            dataset_name=dataset,
+            dropout=0)
+        model.hybridize()
+
+        batch = 2
+        num_hidden = model_name[1]
+        num_layers = 2
+        inputs = mx.nd.random.randint(0, 33278, shape=(seq_length, batch),
+                                      ctx=ctx).astype('float32')
+        begin_state = model.begin_state(func=mx.nd.random.uniform, low=0, high=1,
+                                        batch_size=batch, dtype='float32', ctx=ctx)
+        out, out_state= model(inputs, begin_state)
+
+        prefix = "%s/awd_lstm" % tmp_path
+        model.export(prefix)
+        sym_file = "%s-symbol.json" % prefix
+        params_file = "%s-0000.params" % prefix
+        onnx_file = "%s.onnx" % prefix
+
+        input_shapes = [(seq_length, batch), 
+                        np.shape(begin_state[0][0]), np.shape(begin_state[0][1]),
+                        np.shape(begin_state[1][0]), np.shape(begin_state[1][1]),
+                        np.shape(begin_state[2][0]), np.shape(begin_state[2][1])]
+        input_types = [np.float32, np.float32, np.float32, np.float32, np.float32, np.float32,
+                       np.float32]
+        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
+                                                            input_types, onnx_file, verbose=True)
+
+        sess_options = onnxruntime.SessionOptions()
+        sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+        sess = onnxruntime.InferenceSession(onnx_file, sess_options)
+
+        in_tensors = [inputs, begin_state[0][0], begin_state[0][1],
+                      begin_state[1][0], begin_state[1][1],
+                      begin_state[2][0], begin_state[2][1]]
+        input_dict = dict((sess.get_inputs()[i].name, in_tensors[i].asnumpy()) for i in range(len(in_tensors)))
+        pred = sess.run(None, input_dict)
+
+        assert_almost_equal(out, pred[6])
+        assert_almost_equal(out_state[0][0], pred[0])
+        assert_almost_equal(out_state[0][1], pred[1])
+        assert_almost_equal(out_state[1][0], pred[2])
+        assert_almost_equal(out_state[1][1], pred[3])
+        assert_almost_equal(out_state[2][0], pred[4])
+        assert_almost_equal(out_state[2][1], pred[5])
+
+    finally:
+        shutil.rmtree(tmp_path)
+
+
+@with_seed()
+@pytest.mark.parametrize('model_name', ['ernie_12_768_12'])
+def test_ernie_inference_onnxruntime(tmp_path, model_name):
+    tmp_path = str(tmp_path)
+    try:
+        import gluonnlp as nlp
+        dataset = 'baidu_ernie_uncased'
+        ctx = mx.cpu(0)
+        model, vocab = nlp.model.get_model(
+            name=model_name,
+            ctx=ctx,
+            dataset_name=dataset,
+            pretrained=True,
+            use_pooler=True,
+            use_decoder=False,
+            num_layers = 3,
+            hparam_allow_override = True,
+            use_classifier=False)
+
+        model.hybridize(static_alloc=True)
+
+        batch = 5
+        seq_length = 16
+        # create synthetic test data
+        inputs = mx.nd.random.uniform(0, 17964, shape=(batch, seq_length), dtype='float32')
+        token_types = mx.nd.random.uniform(0, 2, shape=(batch, seq_length), dtype='float32')
+        valid_length = mx.nd.array([seq_length] * batch, dtype='float32')
+
+        seq_encoding, cls_encoding = model(inputs, token_types, valid_length)
+
+        prefix = "%s/ernie" % tmp_path
+        model.export(prefix)
+        sym_file = "%s-symbol.json" % prefix
+        params_file = "%s-0000.params" % prefix
+        onnx_file = "%s.onnx" % prefix
+
+        input_shapes = [(batch, seq_length), (batch, seq_length), (batch,)]
+        input_types = [np.float32, np.float32, np.float32]
+        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
+                                                            input_types, onnx_file)
+
+        # create onnxruntime session using the generated onnx file
+        ses_opt = onnxruntime.SessionOptions()
+        ses_opt.log_severity_level = 3
+        session = onnxruntime.InferenceSession(onnx_file, ses_opt)
+
+        seq_encoding, cls_encoding = model(inputs, token_types, valid_length)
+
+        onnx_inputs = [inputs, token_types, valid_length]
+        input_dict = dict((session.get_inputs()[i].name, onnx_inputs[i].asnumpy()) for i in range(len(onnx_inputs)))
+        pred_onx, cls_onx = session.run(None, input_dict)
+
+        assert_almost_equal(seq_encoding, pred_onx)
+        assert_almost_equal(cls_encoding, cls_onx)
+
+    finally:
+        shutil.rmtree(tmp_path)

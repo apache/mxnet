@@ -94,6 +94,7 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
     if not isinstance(in_types, list):
         in_types = [in_types for _ in range(len(in_shapes))]
     in_types_t = [mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(i_t)] for i_t in in_types]
+    assert len(in_types) == len(in_shapes), "The lengths of in_types and in_shapes must equal"
     # if input parameters are strings(file paths), load files and create symbol parameter objects
     if isinstance(sym, string_types) and isinstance(params, string_types):
         logging.info("Converting json and weight file to sym and params")

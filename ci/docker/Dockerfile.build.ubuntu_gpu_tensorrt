@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to run MXNet on Ubuntu 16.04 for CPU
+# Dockerfile to run MXNet on Ubuntu 18.04 for CPU
 
 FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
 
