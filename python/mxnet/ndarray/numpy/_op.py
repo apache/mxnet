@@ -9476,7 +9476,7 @@ def cumsum(a, axis=None, dtype=None, out=None):
     return _api_internal.cumsum(a, axis, dtype, out)
 
 @set_module('mxnet.ndarray.numpy')
-def reshape(a, newshape, reverse=False, order='C'):
+def reshape(a, newshape, order='C'):
     """
     Gives a new shape to an array without changing its data.
     This function always returns a copy of the input array if
@@ -9537,7 +9537,7 @@ def reshape(a, newshape, reverse=False, order='C'):
            [3., 4.],
            [5., 6.]])
     """
-    return _api_internal.reshape(a, newshape, reverse, order)
+    return _api_internal.reshape(a, newshape, order)
 
 @set_module('mxnet.ndarray.numpy')
 def moveaxis(a, source, destination):

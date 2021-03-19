@@ -99,6 +99,13 @@ struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {
                   " Note that currently only C-like order is"
                   " supported");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream newshape_s, order_s;
+    newshape_s << newshape;
+    order_s << order;
+    (*dict)["newshape"] = newshape_s.str();
+    (*dict)["order"] = order_s.str();
+  }
 };
 
 struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
