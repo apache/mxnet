@@ -2064,7 +2064,7 @@ def convert_broadcast_lesser(node, **kwargs):
     """Map MXNet's broadcast_lesser operator attributes to onnx's Less operator
     and return the created node.
     """
-    from onnx.helper import make_node, make_tensor
+    from onnx.helper import make_node
     name, input_nodes, _ = get_inputs(node, kwargs)
     input_dtypes = get_input_dtypes(node, kwargs)
 
@@ -2080,11 +2080,10 @@ def convert_broadcast_lesser(node, **kwargs):
 
 
 @mx_op.register("broadcast_lesser_equal")
-def convert_broadcast_lesser(node, **kwargs):
-    """Map MXNet's broadcast_lesser operator attributes to onnx's Less operator
-    and return the created node.
+def convert_broadcast_lesser_equal(node, **kwargs):
+    """Map MXNet's broadcast_lesser_equal operator
     """
-    from onnx.helper import make_node, make_tensor
+    from onnx.helper import make_node
     name, input_nodes, _ = get_inputs(node, kwargs)
     input_dtypes = get_input_dtypes(node, kwargs)
 
@@ -2100,11 +2099,10 @@ def convert_broadcast_lesser(node, **kwargs):
 
 
 @mx_op.register("broadcast_greater_equal")
-def convert_broadcast_lesser(node, **kwargs):
-    """Map MXNet's broadcast_lesser operator attributes to onnx's Less operator
-    and return the created node.
+def convert_broadcast_greater_equal(node, **kwargs):
+    """Map MXNet's broadcast_greater_equal operator
     """
-    from onnx.helper import make_node, make_tensor
+    from onnx.helper import make_node
     name, input_nodes, _ = get_inputs(node, kwargs)
     input_dtypes = get_input_dtypes(node, kwargs)
 
@@ -2124,7 +2122,7 @@ def convert_broadcast_greater(node, **kwargs):
     """Map MXNet's broadcast_greater operator attributes to onnx's Greater operator
     and return the created node.
     """
-    from onnx.helper import make_node, make_tensor
+    from onnx.helper import make_node
     name, input_nodes, _ = get_inputs(node, kwargs)
     input_dtypes = get_input_dtypes(node, kwargs)
 
@@ -4389,7 +4387,6 @@ def convert_contrib_div_sqrt_dim(node, **kwargs):
     """Map MXNet's _contrib_div_sqrt_dim operator
     """
     from onnx.helper import make_node
-    from onnx import TensorProto
     name, input_nodes, _ = get_inputs(node, kwargs)
     input_dtypes = get_input_dtypes(node, kwargs)
 
@@ -4411,4 +4408,3 @@ def convert_contrib_div_sqrt_dim(node, **kwargs):
     ]
 
     return nodes
-
