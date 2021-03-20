@@ -528,9 +528,9 @@ MXNET_REGISTER_API("_npi.rollaxis")
 MXNET_REGISTER_API("_npi.reshape")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  const nnvm::Op* op = Op::Get("_np_reshape");
+  const nnvm::Op* op = Op::Get("_npi_reshape");
   nnvm::NodeAttrs attrs;
-  op::NumpyReshapeParam param;
+  op::NumpyXReshapeParam param;
   if (args[1].type_code() == kNull) {
     param.newshape = TShape(-1, 0);
   } else if (args[1].type_code() == kDLInt) {
@@ -538,10 +538,11 @@ MXNET_REGISTER_API("_npi.reshape")
   } else {
     param.newshape = TShape(args[1].operator ObjectRef());
   }
-  param.order = args[2].operator std::string();
+  param.reverse = args[2].operator bool();
+  param.order = args[3].operator std::string();
   attrs.parsed = param;
   attrs.op = op;
-  SetAttrDict<op::NumpyReshapeParam>(&attrs);
+  SetAttrDict<op::NumpyXReshapeParam>(&attrs);
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
   int num_outputs = 0;
