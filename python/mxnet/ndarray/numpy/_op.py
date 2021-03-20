@@ -9537,7 +9537,7 @@ def reshape(a, newshape, order='C'):
            [3., 4.],
            [5., 6.]])
     """
-    return _api_internal.reshape(a, newshape, order)
+    return _api_internal.reshape(a, newshape, False, order)
 
 @set_module('mxnet.ndarray.numpy')
 def moveaxis(a, source, destination):
