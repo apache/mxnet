@@ -195,38 +195,37 @@ class AdaBelief(Optimizer):
                 eidx = min(current_index + self.aggregate_num, len(indices))
                 if not multi_precision:
                     mean, var = list(zip(*states[sidx:eidx]))
-                    multi_adabelief_update(weights[sidx:eidx],
-                                       grads[sidx:eidx],
-                                       mean, var,
-                                       out=weights[sidx:eidx],
-                                       size=len(weights[sidx:eidx]),
-                                       lrs=list(np.ones(len(weights[sidx:eidx]))),
-                                       wds=wds[sidx:eidx],
-                                       etas=lrs[sidx:eidx],
-                                       **kwargs)
+                    multi_adabelief_update(weights[sidx:eidx], grads[sidx:eidx],
+                                           mean, var,
+                                           out=weights[sidx:eidx],
+                                           size=len(weights[sidx:eidx]),
+                                           lrs=list(np.ones(len(weights[sidx:eidx]))),
+                                           wds=wds[sidx:eidx],
+                                           etas=lrs[sidx:eidx],
+                                           **kwargs)
                 else:
                     mean_var = list(zip(*states[sidx:eidx]))[0]
                     tmean_var = list(zip(*mean_var))
                     mean = tmean_var[0]
                     var = tmean_var[1]
                     multi_mp_adabelief_update(weights[sidx:eidx],
-                                          grads[sidx:eidx],
-                                          mean, var,
-                                          list(zip(*states[sidx:eidx]))[1],
-                                          out=weights[sidx:eidx],
-                                          size=len(weights[sidx:eidx]),
-                                          lrs=list(np.ones(len(weights[sidx:eidx]))),
-                                          wds=wds[sidx:eidx],
-                                          etas=lrs[sidx:eidx],
-                                          **kwargs)
+                                              grads[sidx:eidx],
+                                              mean, var,
+                                              list(zip(*states[sidx:eidx]))[1],
+                                              out=weights[sidx:eidx],
+                                              size=len(weights[sidx:eidx]),
+                                              lrs=list(np.ones(len(weights[sidx:eidx]))),
+                                              wds=wds[sidx:eidx],
+                                              etas=lrs[sidx:eidx],
+                                              **kwargs)
                 current_index += self.aggregate_num
         else:
             for w_i, g_i, s_i, lr, wd in zip(weights, grads, states, lrs, wds):
                 if not multi_precision:
                     mean, var = s_i
                     adabelief_update(w_i, g_i, mean, var, out=w_i,
-                                 lr=1, wd=wd, eta=lr, **kwargs)
+                                     lr=1, wd=wd, eta=lr, **kwargs)
                 else:
                     mean, var = s_i[0]
                     mp_adabelief_update(w_i, g_i, mean, var, s_i[1], out=w_i,
-                                    lr=1, wd=wd, eta=lr, **kwargs)
+                                        lr=1, wd=wd, eta=lr, **kwargs)
