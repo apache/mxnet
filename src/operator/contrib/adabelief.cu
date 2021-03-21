@@ -39,7 +39,7 @@ void GetScaleFloat<gpu>(mshadow::Stream<gpu> *s, const TBlob &scale_blob, float 
     *pScalef = static_cast<float>(scale);
   })
 }
-}
+}  // namespace adabelief
 
 NNVM_REGISTER_OP(_adabelief_update)
 .set_attr<FCompute>("FCompute<gpu>", adabelief::MPUpdate<gpu, adabelief::AdaBeliefUpdate<gpu>>);

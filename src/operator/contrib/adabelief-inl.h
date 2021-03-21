@@ -143,9 +143,11 @@ struct MPAdaBeliefUpdate {
       Tensor<xpu, 2, float> weight32 = inputs[4].FlatTo2D<xpu, float>(s);
       Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        Kernel<MPAdaBeliefKernel<req_type>, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mean.dptr_,
-          var.dptr_, weight.dptr_, grad.dptr_, weight32.dptr_, param.clip_gradient, param.beta1,
-          param.beta2, param.eta, param.lr, param.wd, rescale_grad, param.epsilon);
+        Kernel<MPAdaBeliefKernel<req_type>, xpu>::Launch(
+            s, weight.shape_.Size(), out.dptr_, mean.dptr_, var.dptr_,
+            weight.dptr_, grad.dptr_, weight32.dptr_,
+            param.clip_gradient, param.beta1, param.beta2, param.eta,
+            param.lr, param.wd, rescale_grad, param.epsilon);
       });
     });
   }

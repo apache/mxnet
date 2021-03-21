@@ -27,7 +27,7 @@
 
 namespace mxnet {
 namespace op {
-namespace adamw{
+namespace adamw {
 
 template<>
 void GetScaleFloat<gpu>(mshadow::Stream<gpu> *s, const TBlob &scale_blob, float *pScalef) {

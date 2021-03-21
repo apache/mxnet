@@ -126,7 +126,8 @@ void GetScaleFloat<cpu>(mshadow::Stream<cpu> *s, const TBlob &scale_blob, float 
   )
 }
 
-static std::vector<std::string> ParamToVector(uint32_t num_args, const char *pName[], size_t nParams) {
+static std::vector<std::string>
+ParamToVector(uint32_t num_args, const char *pName[], size_t nParams) {
   std::vector<std::string> ret;
   for (uint32_t i = 0; i < num_args; ++i) {
     const auto idx = std::to_string(i);
