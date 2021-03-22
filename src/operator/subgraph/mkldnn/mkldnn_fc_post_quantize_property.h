@@ -144,8 +144,8 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
 class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
  public:
   SgMKLDNNFCPostQuantizeProperty() {
-    disable_fuse_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QFC_FUSE_ALL", false);
-    disable_float_output = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QFC_FLOAT_OUTPUT", false);
+    disable_fuse_all = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_QFC_FUSE_ALL", false);
+    disable_float_output = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_QFC_FLOAT_OUTPUT", false);
   }
 
   static SubgraphPropertyPtr Create() {

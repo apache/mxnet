@@ -144,8 +144,8 @@ class ElemwiseMulPostQuantizeSelector : public SubgraphSelector {
 class ElemwiseMulPostQuantizeProperty : public SubgraphProperty {
  public:
   ElemwiseMulPostQuantizeProperty() {
-    disable_fuse_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QEM_FUSE_ALL", false);
-    disable_float_output = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QEM_FLOAT_OUTPUT", false);
+    disable_fuse_all = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_QEM_FUSE_ALL", false);
+    disable_float_output = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_QEM_FLOAT_OUTPUT", false);
   }
 
   static SubgraphPropertyPtr Create() {

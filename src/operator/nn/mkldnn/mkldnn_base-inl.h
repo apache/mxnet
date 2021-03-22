@@ -168,12 +168,12 @@ static inline bool SupportMKLDNN(const NDArray &input) {
 }
 
 static inline bool MKLDNNEnvSet() {
-  static bool is_mkldnn_enabled = dmlc::GetEnv("MXNET_MKLDNN_ENABLED", true);
+  static bool is_mkldnn_enabled = dmlc::GetEnv("MXNET_ONEDNN_ENABLED", true);
   return is_mkldnn_enabled;
 }
 
 static inline int GetMKLDNNCacheSize() {
-  static int mkldnn_cache_size = dmlc::GetEnv("MXNET_MKLDNN_CACHE_NUM", -1);
+  static int mkldnn_cache_size = dmlc::GetEnv("MXNET_ONEDNN_CACHE_NUM", -1);
   return mkldnn_cache_size;
 }
 

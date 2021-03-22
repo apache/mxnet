@@ -324,12 +324,12 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Data directory in the filesystem for storage, for example when downloading gluon models.
   - Default in *nix is .mxnet APPDATA/mxnet in windows.
 
-* MXNET_MKLDNN_ENABLED
+* MXNET_ONEDNN_ENABLED
   - Values: 0, 1 ```(default=1)```
   - Flag to enable or disable ONEDNN accelerator. On by default.
   - Only applies to mxnet that has been compiled with ONEDNN (```pip install mxnet``` or built from source with ```USE_ONEDNN=1```)
 
-* MXNET_MKLDNN_CACHE_NUM
+* MXNET_ONEDNN_CACHE_NUM
   - Values: Int ```(default=-1)```
   - Flag to set num of elements that ONEDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use ONEDNN and different input shape.
 

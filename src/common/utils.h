@@ -496,9 +496,9 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
   os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
 #if MXNET_USE_ONEDNN == 1
-  if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
-                                       "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
-  if (GetMKLDNNCacheSize() != -1) common::LogOnce("MXNET_MKLDNN_CACHE_NUM is set."
+  if (!MKLDNNEnvSet()) common::LogOnce("MXNET_ONEDNN_ENABLED flag is off. "
+                                       "You can re-enable by setting MXNET_ONEDNN_ENABLED=1");
+  if (GetMKLDNNCacheSize() != -1) common::LogOnce("MXNET_ONEDNN_CACHE_NUM is set."
                                        "Should only be set if "
                                        "your model has variable input shapes, "
                                        "as cache size may grow unbounded");
