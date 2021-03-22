@@ -291,6 +291,7 @@ List of Contributors
 * [Andrzej Kotlowski](https://github.com/anko-intel)
 * [Yingxiao Du](https://github.com/Duconnor)
 * [Bartosz Kuncer](https://github.com/bartekkuncer)
+* [Zhenghui Jin](https://github.com/barry-jin)
 
 Label Bot
 ---------

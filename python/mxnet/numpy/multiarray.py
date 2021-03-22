@@ -5724,7 +5724,7 @@ def expand_dims(a, axis):
     >>> np.newaxis is None
     True
     """
-    return _npi.expand_dims(a, axis)
+    return _mx_nd_np.expand_dims(a, axis)
 
 
 @set_module('mxnet.numpy')
