@@ -291,7 +291,7 @@ def probe_cpu_variant(mxnet_features: Dict[str, bool]) -> str:
     :return: Either cpu, or mkl as the variant
     """
     logger.debug('Determining cpu variant')
-    if not mxnet_features['MKLDNN']:
+    if not mxnet_features['ONEDNN']:
         logger.debug('variant is: native')
         return 'native'
 
@@ -312,7 +312,7 @@ def probe_gpu_variant(mxnet_features: Dict[str, bool]) -> Optional[str]:
     cuda_version = get_cuda_version()
     if cuda_version:
         variant = 'cu{}'.format(cuda_version)
-        if not mxnet_features['MKLDNN']:
+        if not mxnet_features['ONEDNN']:
             RuntimeError('Error determining mxnet variant: ONEDNN should be enabled for cuda variants')
         logger.debug('variant is: {}'.format(variant))
         return variant

@@ -172,8 +172,8 @@ enum : unsigned {
   // Other math libraries:
   // Linear Algebra PACKage
   LAPACK,
-  // Intel(R) Math Kernel Library for Deep Neural Networks
-  MKLDNN,
+  // oneAPI Deep Neural Network Library (oneDNN)
+  ONEDNN,
 
   // Image processing
   OPENCV,
