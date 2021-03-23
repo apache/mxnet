@@ -35,41 +35,36 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(MKLDNNInterleavedMatMulParam);
 
-static bool MKLDNNInterleavedMatMulSelfAttQKShape(const NodeAttrs& attrs,
-                                            mxnet::ShapeVector* in_shape,
-                                            mxnet::ShapeVector* out_shape) {
+static bool SgMKLDNNSelfAttQKShape(const NodeAttrs& attrs,
+                                            mxnet::ShapeVector* in_shapes,
+                                            mxnet::ShapeVector* out_shapes) {
   const auto& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
   if (param.quantized) {
-    auto qkv_shape = in_shape->at(0);
-    out_shape->resize(3);
-    SHAPE_ASSIGN_CHECK(*out_shape, 0,
-      mxnet::TShape({param.heads * qkv_shape[1], qkv_shape[0], qkv_shape[0]}));  // output
+    mxnet::ShapeVector base_in_shapes  = {in_shapes[0]};
+    mxnet::ShapeVector base_out_shapes = {out_shapes[0]};
+    bool ret = DefaultSubgraphOpShape(attrs, &base_in_shapes, &base_out_shapes);
 
     if (!param.enable_float_output) {
-      SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape({1}));                     // min output
-      SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape({1}));                     // max output
+      SHAPE_ASSIGN_CHECK(*out_shapes, 1, mxnet::TShape({1}));      // min output
+      SHAPE_ASSIGN_CHECK(*out_shapes, 2, mxnet::TShape({1}));      // max output
     }
-    return true;
+
+    return ret;
   } else {
-    CHECK_EQ(in_shape->size(), 1U) << "Input:[queries_keys_values] currently have, "
-                                  << in_shape->size() << " inputs";
-    auto qkv_shape = in_shape->at(0);
-    CHECK_EQ(qkv_shape.ndim(), 3U)
-      << "Input queries_keys_values should be 3D in seq_length-batch-proj_dim, "
-      << "currently is: " << qkv_shape.ndim() << "D";
-    out_shape->resize(1);
-    SHAPE_ASSIGN_CHECK(*out_shape, 0,
-      mxnet::TShape({param.heads * qkv_shape[1], qkv_shape[0], qkv_shape[0]}));
-    return true;
+    return DefaultSubgraphOpShape(attrs, in_shapes, out_shapes);
   }
 }
 
-static bool MKLDNNInterleavedMatMulSelfAttQKInferType(const nnvm::NodeAttrs &attrs,
+static bool SgMKLDNNSelfAttQKInferType(const nnvm::NodeAttrs &attrs,
                                 std::vector<int> *in_types,
                                 std::vector<int> *out_types) {
   const auto& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
   if (param.quantized) {
-    TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kInt8);    // qkv input
+     CHECK(in_types->at(0) == mshadow::kInt8 ||
+          in_types->at(0) == mshadow::kUint8)
+        << "QuantizedInterleavedMatMulSelfAttQK only supports int8/uint8 input, while "
+        << in_types->at(0) << " is given.";
+
     TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32); // min value
     TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32); // max value
 
@@ -90,35 +85,40 @@ static bool MKLDNNInterleavedMatMulSelfAttQKInferType(const nnvm::NodeAttrs &att
   }
 }
 
-static bool MKLDNNInterleavedMatMulSelfAttQKStorageType(const nnvm::NodeAttrs &attrs,
+static bool SgMKLDNNSelfAttQKStorageType(const nnvm::NodeAttrs &attrs,
                                                           const int dev_mask,
                                                           DispatchMode *dispatch_mode,
                                                           std::vector<int> *in_attrs,
                                                           std::vector<int> *out_attrs) {
   auto const &param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
   if (param.quantized) {
-    type_assign(&in_attrs->at(0), mxnet::kDefaultStorage);
-    type_assign(&in_attrs->at(1), mxnet::kDefaultStorage);
-    type_assign(&in_attrs->at(2), mxnet::kDefaultStorage);
+    std::vector<int> base_in_attrs{in_attrs->at(0)};
+    std::vector<int> base_out_attrs{out_attrs->at(0)};
+    bool ret = DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
+                                            &base_in_attrs, &base_out_attrs);
 
-    type_assign(&out_attrs->at(0), mxnet::kDefaultStorage);
+    for (size_t i = 0; i < in_attrs->size(); ++i) {
+      if (i < base_in_attrs.size())
+        in_attrs->at(i) = base_in_attrs[i];
+      else
+        type_assign(&in_attrs->at(i), mxnet::kDefaultStorage);
+    }
+
+    out_attrs->at(0) = base_out_attrs[0];
     if (!param.enable_float_output) {
       type_assign(&out_attrs->at(1), mxnet::kDefaultStorage);
       type_assign(&out_attrs->at(2), mxnet::kDefaultStorage);
     }
-    std::vector<int> base_in_attrs{in_attrs->at(0)};
-    std::vector<int> base_out_attrs{out_attrs->at(0)};
-    return DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
-                                        &base_in_attrs, &base_out_attrs);;
+    return ret;
   } else {
     return DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
                                         in_attrs, out_attrs);
   }
 }
 
-class MKLDNNInterleavedMatMulSelfAttQKOp {
+class SgMKLDNNSelfAttQKOp {
  public:
-  explicit MKLDNNInterleavedMatMulSelfAttQKOp(const nnvm::NodeAttrs &attrs) :
+  explicit SgMKLDNNSelfAttQKOp(const nnvm::NodeAttrs &attrs) :
     param_(nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed)) {}
 
   void Forward(const OpContext &ctx,
@@ -139,8 +139,8 @@ class MKLDNNInterleavedMatMulSelfAttQKOp {
   MKLDNNInterleavedMatMulParam param_;
   mkldnn_args_map_t args_;
   std::shared_ptr<dnnl::matmul> fwd_;
-  std::shared_ptr<dnnl::memory> cached_data1_mem_;
-  std::shared_ptr<dnnl::memory> cached_data2_mem_;
+  std::shared_ptr<dnnl::memory> cached_query_mem_;
+  std::shared_ptr<dnnl::memory> cached_key_mem_;
   std::shared_ptr<dnnl::memory> cached_out_mem_;
   float cached_min_data_;
   float cached_max_data_;
@@ -149,27 +149,27 @@ class MKLDNNInterleavedMatMulSelfAttQKOp {
   float data_scale_{0.0f};
 };
 
-static OpStatePtr CreateMKLDNNInterleavedMatMulSelfAttQKState(const nnvm::NodeAttrs &attrs,
-                                                              Context ctx,
-                                                              const mxnet::ShapeVector &in_shapes,
-                                                              const std::vector<int> &in_types) {
-  return OpStatePtr::Create<MKLDNNInterleavedMatMulSelfAttQKOp>(attrs);
+static OpStatePtr CreateSgMKLDNNSelfAttQKState(const nnvm::NodeAttrs &attrs,
+                                               Context ctx,
+                                               const mxnet::ShapeVector &in_shapes,
+                                               const std::vector<int> &in_types) {
+  return OpStatePtr::Create<SgMKLDNNSelfAttQKOp>(attrs);
 }
 
-static void MKLDNNInterleavedMatMulSelfAttQKForward(const OpStatePtr &state_pointer,
-                              const OpContext &ctx,
-                              const std::vector<NDArray> &inputs,
-                              const std::vector<OpReqType> &req,
-                              const std::vector<NDArray> &outputs) {
-  MKLDNNInterleavedMatMulSelfAttQKOp &op = state_pointer.get_state<MKLDNNInterleavedMatMulSelfAttQKOp>();
+static void SgMKLDNNSelfAttQKForward(const OpStatePtr &state_pointer,
+                                     const OpContext &ctx,
+                                     const std::vector<NDArray> &inputs,
+                                     const std::vector<OpReqType> &req,
+                                     const std::vector<NDArray> &outputs) {
+  SgMKLDNNSelfAttQKOp &op = state_pointer.get_state<SgMKLDNNSelfAttQKOp>();
   op.Forward(ctx, inputs, req, outputs);
 }
 
-void MKLDNNInterleavedMatMulSelfAttQKOp::Forward(
-                                   const OpContext &ctx,
-                                   const std::vector<NDArray> &inputs,
-                                   const std::vector<OpReqType> &req,
-                                   const std::vector<NDArray> &outputs) {
+void SgMKLDNNSelfAttQKOp::Forward(const OpContext &ctx,
+                                  const std::vector<NDArray> &inputs,
+                                  const std::vector<OpReqType> &req,
+                                  const std::vector<NDArray> &outputs) {
+  using namespace mkldnn;
 
   float min_data = 0.0f;
   float max_data = 0.0f;
@@ -179,10 +179,21 @@ void MKLDNNInterleavedMatMulSelfAttQKOp::Forward(
     max_data = inputs[2].data().dptr<float>()[0];
   }
 
-  const dnnl::memory::dim HEADS = param_.heads;
-  const dnnl::memory::dim BS = inputs[0].shape()[1];
-  const dnnl::memory::dim SEQ_LEN = inputs[0].shape()[0];
-  const dnnl::memory::dim EMBED = inputs[0].shape()[2];
+  const auto qkv_tensor = inputs[0];
+  const auto out_tensor = outputs[0];
+  const auto qkv_dtype = get_mkldnn_type(qkv_tensor.dtype());
+  const auto out_dtype = get_mkldnn_type(out_tensor.dtype());
+
+  const memory::dim heads          = param_.heads;
+  const memory::dim sequences      = inputs[0].shape()[1];
+  const memory::dim qkv_seq_len    = inputs[0].shape()[0];
+  const memory::dim output_lin_dim = inputs[0].shape()[2];
+  const memory::dim embed_dim      = output_lin_dim / 3;
+  const memory::dim head_dim       = embed_dim / heads;
+  const memory::dim attn_batches   = heads * sequences;
+  const memory::dim lead_dim       = attn_batches * 3 * head_dim;
+  const memory::dim batch_stride   = 3 * head_dim;
+  const float scale                = 1.0 / sqrt(static_cast<float>(head_dim));
 
   if (!initialized_) {
     const auto engine = CpuEngine::Get()->get_engine();
@@ -190,74 +201,80 @@ void MKLDNNInterleavedMatMulSelfAttQKOp::Forward(
     cached_min_data_ = min_data;
     cached_max_data_ = max_data;
 
-    dnnl::memory::dims src1_dims = {HEADS*BS, SEQ_LEN, EMBED/HEADS/3};
-    dnnl::memory::dims src2_dims = {HEADS*BS, EMBED/HEADS/3, SEQ_LEN};
-    dnnl::memory::dims dst_dims  = {HEADS*BS, SEQ_LEN, SEQ_LEN};
+    memory::dims query_dims    = {attn_batches, qkv_seq_len, head_dim};
+    memory::dims key_dims      = {attn_batches, head_dim, qkv_seq_len};
+    memory::dims out_dims      = {attn_batches, qkv_seq_len, qkv_seq_len};
 
-    dnnl::memory::dims src1_strides = {3*(EMBED/HEADS/3), EMBED*BS, 1};
-    dnnl::memory::dims src2_strides = {3*(EMBED/HEADS/3), 1, EMBED*BS};
+    memory::dims query_strides = {batch_stride, lead_dim, 1};
+    memory::dims key_strides   = {batch_stride, 1, lead_dim};
+    
+    auto query_md = memory::desc(query_dims, qkv_dtype, query_strides);
+    auto key_md   = memory::desc(key_dims, qkv_dtype, key_dims);
 
-    auto src1_md = param_.quantized ? dnnl::memory::desc(src1_dims, dnnl::memory::data_type::s8, src1_strides) :
-                                      dnnl::memory::desc(src1_dims, dnnl::memory::data_type::f32, src1_strides);
-    auto src2_md = param_.quantized ? dnnl::memory::desc(src2_dims, dnnl::memory::data_type::s8, src2_strides) :
-                                      dnnl::memory::desc(src2_dims, dnnl::memory::data_type::f32, src2_strides);
-
-    dnnl::memory::desc dst_md;
+    memory::desc out_md;
     
     float tmp_scale = 1.0f;
     if (param_.quantized) {
-      data_scale_ = GetQuantizeScale(mshadow::kInt8, cached_min_data_, cached_max_data_);
+      data_scale_ = GetQuantizeScale(qkv_tensor.dtype(), cached_min_data_, cached_max_data_);
 
       if (param_.min_calib_range.has_value() &&
           param_.max_calib_range.has_value()) {
         cached_min_output_ = param_.min_calib_range.value();
         cached_max_output_ = param_.max_calib_range.value();
 
-        tmp_scale = GetQuantizeScale(mshadow::kInt8, cached_min_output_, cached_max_output_) / (data_scale_ * data_scale_);
-        dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::s8, dnnl::memory::format_tag::abc);
+        tmp_scale = 
+            GetQuantizeScale(out_tensor.dtype(), cached_min_output_, cached_max_output_) /
+            (data_scale_ * data_scale_);
+        out_md = memory::desc(out_dims, memory::data_type::s8, memory::format_tag::abc);
       } else if (param_.enable_float_output) {
         tmp_scale = 1.0f / (data_scale_ * data_scale_);
-        dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::f32, dnnl::memory::format_tag::abc);
+        out_md = dnnl::memory::desc(out_dims, memory::data_type::f32, memory::format_tag::abc);
       } else {
         mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
         mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
               s, 1, &cached_min_output_, &cached_max_output_, &min_data, &max_data, &min_data,
               &max_data);
-        dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::s32, dnnl::memory::format_tag::abc);
+        out_md = dnnl::memory::desc(out_dims, memory::data_type::s32, memory::format_tag::abc);
       }
     } else {
-      dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::f32, dnnl::memory::format_tag::abc);
+      out_md = dnnl::memory::desc(out_dims, memory::data_type::f32, memory::format_tag::abc);
     }
-    tmp_scale /= sqrt(static_cast<float>(EMBED/HEADS/3));
+    tmp_scale /= sqrt(static_cast<float>(head_dim));
 
     dnnl::primitive_attr attr;
     attr.set_output_scales(0, {tmp_scale});
-    auto matmul_d = dnnl::matmul::desc(src1_md, src2_md, dst_md);
-    auto matmul_pd = dnnl::matmul::primitive_desc(matmul_d, attr, engine);
+    auto matmul_d = matmul::desc(query_md, key_md, out_md);
+    auto matmul_pd = matmul::primitive_desc(matmul_d, attr, engine);
 
-    fwd_ = std::make_shared<dnnl::matmul>(matmul_pd);
+    fwd_ = std::make_shared<matmul>(matmul_pd);
 
     MSHADOW_TYPE_SWITCH(inputs[0].dtype(), DType, {
-      cached_data1_mem_ = std::make_shared<dnnl::memory>(src1_md, engine, inputs[0].data().dptr<DType>());
-      cached_data2_mem_ = std::make_shared<dnnl::memory>(src2_md, engine, inputs[0].data().dptr<DType>() + (EMBED/HEADS/3));
+      cached_query_mem_ = std::make_shared<memory>(query_md, engine, inputs[0].data().dptr<DType>());
+      cached_key_mem_ = std::make_shared<memory>(key_md, engine, inputs[0].data().dptr<DType>() + (head_dim));
     });
     MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-      cached_out_mem_ = std::make_shared<dnnl::memory>(dst_md, engine, outputs[0].data().dptr<DType>());
+      cached_out_mem_ = std::make_shared<memory>(out_md, engine, outputs[0].data().dptr<DType>());
     });
 
-    args_[DNNL_ARG_SRC] = *cached_data1_mem_;
-    args_[DNNL_ARG_WEIGHTS] = *cached_data2_mem_;
-    args_[DNNL_ARG_DST] = *cached_out_mem_;
+    args_[DNNL_ARG_SRC]     = *cached_query_mem_;
+    args_[DNNL_ARG_WEIGHTS] = *cached_key_mem_;
+    args_[DNNL_ARG_DST]     = *cached_out_mem_;
+
     initialized_ = true;
   } else {
-    MSHADOW_TYPE_SWITCH(inputs[0].dtype(), DType, {
-      cached_data1_mem_->set_data_handle(reinterpret_cast<void*>(inputs[0].data().dptr<DType>()));
-      cached_data2_mem_->set_data_handle(reinterpret_cast<void*>(inputs[0].data().dptr<DType>() + (EMBED/HEADS/3)));
+
+    MSHADOW_TYPE_SWITCH(qkv_tensor.dtype(), DType, {
+      void* query_mem_ptr = reinterpret_cast<void*>(inputs[0].data().dptr<DType>());
+      void* key_mem_ptr   = query_mem_ptr + head_dim;
+      cached_query_mem_->set_data_handle(query_mem_ptr);
+      cached_key_mem_->set_data_handle(key_mem_ptr);
     });
-    MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
+
+    MSHADOW_TYPE_SWITCH(out_tensor.dtype(), DType, {
       cached_out_mem_->set_data_handle(reinterpret_cast<void*>(outputs[0].data().dptr<DType>()));
     });
   }
+
   MKLDNNStream::Get()->RegisterPrimArgs(*fwd_, args_);
   MKLDNNStream::Get()->Submit();
 
@@ -269,256 +286,9 @@ void MKLDNNInterleavedMatMulSelfAttQKOp::Forward(
     *max_output = cached_max_output_;
   }
 
-
-
-  
-
-  // if (param_.quantized) {
-  //   if (param_.enable_float_output) {
-      
-
-  //     dnnl::engine engine(dnnl::engine::kind::cpu, 0);
-  //     dnnl::stream engine_stream(engine);
-
-  //     dnnl::memory::dims src1_dims = {HEADS*BS, SEQ_LEN, EMBED/HEADS/3};
-  //     dnnl::memory::dims src2_dims = {HEADS*BS, EMBED/HEADS/3, SEQ_LEN};
-  //     dnnl::memory::dims dst_dims  = {HEADS*BS, SEQ_LEN, SEQ_LEN};
-
-  //     dnnl::memory::dims src1_strides = {3*(EMBED/HEADS/3), EMBED*BS, 1};
-  //     dnnl::memory::dims src2_strides = {3*(EMBED/HEADS/3), 1, EMBED*BS};
-
-  //     auto src1_md = dnnl::memory::desc(src1_dims, dnnl::memory::data_type::s8, src1_strides);
-  //     auto src2_md = dnnl::memory::desc(src2_dims, dnnl::memory::data_type::s8, src2_strides);
-  //     auto dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::f32, dnnl::memory::format_tag::abc);
-
-  //     // const float scale = 1.0f / sqrt(static_cast<float>(EMBED/HEADS/3));
-  //     float min_data = inputs[1].dptr<float>()[0];
-  //     float max_data = inputs[2].dptr<float>()[0];
-
-  //     float data_scale = GetQuantizeScale(mshadow::kInt8, min_data, max_data);
-  //     const float scale = 1.0f / (data_scale * data_scale) / sqrt(static_cast<float>(EMBED/HEADS/3));
-
-  //     dnnl::primitive_attr attr;
-  //     attr.set_output_scales(0, {scale});
-
-  //     // CODE FOR HANLDING MASKING
-  //     // float* mask = inputs[1].FlatTo2D<cpu, float>(s).dptr_;
-  //     // memcpy(output, mask, sizeof(float)*HEADS*BS*SEQ_LEN*SEQ_LEN);
-  //     // dnnl::post_ops post_op;
-  //     // post_op.append_sum(1);
-  //     // attr.set_post_ops(post_op);
-
-  //     auto matmul_d = dnnl::matmul::desc(src1_md, src2_md, dst_md);
-  //     auto matmul_pd = dnnl::matmul::primitive_desc(matmul_d, attr, engine);
-
-  //     auto matmul_prim = dnnl::matmul(matmul_pd);
-
-  //     mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
-  //     int8_t* queries_keys_values = inputs[0].FlatTo2D<cpu, int8_t>(s).dptr_;
-      
-  //     float* output = outputs[0].FlatTo2D<cpu, float>(s).dptr_;
-
-  //     auto src1_mem = dnnl::memory(src1_md, engine, queries_keys_values);
-  //     auto src2_mem = dnnl::memory(src2_md, engine, queries_keys_values+(EMBED/HEADS/3));
-  //     auto dst_mem = dnnl::memory(dst_md, engine, output);
-
-  //     std::unordered_map<int, dnnl::memory> matmul_args;
-  //     matmul_args.insert({DNNL_ARG_SRC, src1_mem});
-  //     matmul_args.insert({DNNL_ARG_WEIGHTS, src2_mem});
-  //     matmul_args.insert({DNNL_ARG_DST, dst_mem});
-
-  //     matmul_prim.execute(engine_stream, matmul_args);
-  //     engine_stream.wait();
-  //   } else if (param_.min_calib_range.has_value() && param_.max_calib_range.has_value()) {
-  //     const dnnl::memory::dim HEADS = param.heads;
-  //     const dnnl::memory::dim BS = inputs[0].shape_[1];
-  //     const dnnl::memory::dim SEQ_LEN = inputs[0].shape_[0];
-  //     const dnnl::memory::dim EMBED = inputs[0].shape_[2];
-
-  //     dnnl::engine engine(dnnl::engine::kind::cpu, 0);
-  //     dnnl::stream engine_stream(engine);
-
-  //     dnnl::memory::dims src1_dims = {HEADS*BS, SEQ_LEN, EMBED/HEADS/3};
-  //     dnnl::memory::dims src2_dims = {HEADS*BS, EMBED/HEADS/3, SEQ_LEN};
-  //     dnnl::memory::dims dst_dims = {HEADS*BS, SEQ_LEN, SEQ_LEN};
-
-  //     dnnl::memory::dims src1_strides = {3*(EMBED/HEADS/3), EMBED*BS, 1};
-  //     dnnl::memory::dims src2_strides = {3*(EMBED/HEADS/3), 1, EMBED*BS};
-
-  //     auto src1_md = dnnl::memory::desc(src1_dims, dnnl::memory::data_type::s8, src1_strides);
-  //     auto src2_md = dnnl::memory::desc(src2_dims, dnnl::memory::data_type::s8, src2_strides);
-  //     auto dst_md  = dnnl::memory::desc(dst_dims,  dnnl::memory::data_type::s8, dnnl::memory::format_tag::abc);
-
-  //     // const float scale = 1.0f / sqrt(static_cast<float>(EMBED/HEADS/3));
-  //     float min_data = inputs[1].dptr<float>()[0];
-  //     float max_data = inputs[2].dptr<float>()[0];
-
-      
-
-  //     float data_scale = GetQuantizeScale(mshadow::kInt8, min_data, max_data);
-  //     const float scale = GetQuantizeScale(mshadow::kInt8, param.min_calib_range.value(), param.max_calib_range.value()) 
-  //                         / (data_scale * data_scale) / sqrt(static_cast<float>(EMBED/HEADS/3));
-
-  //     dnnl::primitive_attr attr;
-  //     attr.set_output_scales(0, {scale});
-
-  //     // CODE FOR HANLDING MASKING
-  //     // float* mask = inputs[1].FlatTo2D<cpu, float>(s).dptr_;
-  //     // memcpy(output, mask, sizeof(float)*HEADS*BS*SEQ_LEN*SEQ_LEN);
-  //     // dnnl::post_ops post_op;
-  //     // post_op.append_sum(1);
-  //     // attr.set_post_ops(post_op);
-
-  //     auto matmul_d = dnnl::matmul::desc(src1_md, src2_md, dst_md);
-  //     auto matmul_pd = dnnl::matmul::primitive_desc(matmul_d, attr, engine);
-
-  //     auto matmul_prim = dnnl::matmul(matmul_pd);
-
-  //     mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
-  //     int8_t* queries_keys_values = inputs[0].FlatTo2D<cpu, int8_t>(s).dptr_;
-      
-  //     int8_t* output = outputs[0].FlatTo2D<cpu, int8_t>(s).dptr_;
-  //     float* min_output = outputs[1].dptr<float>();
-  //     float* max_output = outputs[2].dptr<float>();
-  //     min_output[0] = param.min_calib_range.value();
-  //     max_output[0] = param.max_calib_range.value();
-
-  //     auto src1_mem = dnnl::memory(src1_md, engine, queries_keys_values);
-  //     auto src2_mem = dnnl::memory(src2_md, engine, queries_keys_values+(EMBED/HEADS/3));
-  //     auto dst_mem = dnnl::memory(dst_md, engine, output);
-
-  //     std::unordered_map<int, dnnl::memory> matmul_args;
-  //     matmul_args.insert({DNNL_ARG_SRC, src1_mem});
-  //     matmul_args.insert({DNNL_ARG_WEIGHTS, src2_mem});
-  //     matmul_args.insert({DNNL_ARG_DST, dst_mem});
-
-  //     matmul_prim.execute(engine_stream, matmul_args);
-  //     engine_stream.wait();
-  //   } else {
-  //     const dnnl::memory::dim HEADS = param.heads;
-  //     const dnnl::memory::dim BS = inputs[0].shape_[1];
-  //     const dnnl::memory::dim SEQ_LEN = inputs[0].shape_[0];
-  //     const dnnl::memory::dim EMBED = inputs[0].shape_[2];
-
-  //     dnnl::engine engine(dnnl::engine::kind::cpu, 0);
-  //     dnnl::stream engine_stream(engine);
-
-  //     dnnl::memory::dims src1_dims = {HEADS*BS, SEQ_LEN, EMBED/HEADS/3};
-  //     dnnl::memory::dims src2_dims = {HEADS*BS, EMBED/HEADS/3, SEQ_LEN};
-  //     dnnl::memory::dims dst_dims = {HEADS*BS, SEQ_LEN, SEQ_LEN};
-
-  //     dnnl::memory::dims src1_strides = {3*(EMBED/HEADS/3), EMBED*BS, 1};
-  //     dnnl::memory::dims src2_strides = {3*(EMBED/HEADS/3), 1, EMBED*BS};
-
-  //     auto src1_md = dnnl::memory::desc(src1_dims, dnnl::memory::data_type::s8, src1_strides);
-  //     auto src2_md = dnnl::memory::desc(src2_dims, dnnl::memory::data_type::s8, src2_strides);
-  //     auto dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::s32, dnnl::memory::format_tag::abc);
-
-  //     // const float scale = 1.0f / sqrt(static_cast<float>(EMBED/HEADS/3));
-  //     float min_data = inputs[1].dptr<float>()[0];
-  //     float max_data = inputs[2].dptr<float>()[0];
-
-  //     // float data_scale = GetQuantizeScale(mshadow::kInt8, min_data, max_data);
-  //     const float scale = 1.0f / sqrt(static_cast<float>(EMBED/HEADS/3));
-
-  //     dnnl::primitive_attr attr;
-  //     attr.set_output_scales(0, {scale});
-
-  //     // CODE FOR HANLDING MASKING
-  //     // float* mask = inputs[1].FlatTo2D<cpu, float>(s).dptr_;
-  //     // memcpy(output, mask, sizeof(float)*HEADS*BS*SEQ_LEN*SEQ_LEN);
-  //     // dnnl::post_ops post_op;
-  //     // post_op.append_sum(1);
-  //     // attr.set_post_ops(post_op);
-
-  //     auto matmul_d = dnnl::matmul::desc(src1_md, src2_md, dst_md);
-  //     auto matmul_pd = dnnl::matmul::primitive_desc(matmul_d, attr, engine);
-
-  //     auto matmul_prim = dnnl::matmul(matmul_pd);
-
-  //     mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
-  //     int8_t* queries_keys_values = inputs[0].FlatTo2D<cpu, int8_t>(s).dptr_;
-      
-  //     int32_t* output = outputs[0].FlatTo2D<cpu, int32_t>(s).dptr_;
-  //     float* min_output = outputs[1].dptr<float>();
-  //     float* max_output = outputs[2].dptr<float>();
-
-  //     mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
-  //               s, 1, min_output, max_output, &min_data, &max_data, &min_data,
-  //               &max_data);
-
-  //     // min_output[0] = min_data;
-  //     // max_output[0] = max_data;
-
-  //     auto src1_mem = dnnl::memory(src1_md, engine, queries_keys_values);
-  //     auto src2_mem = dnnl::memory(src2_md, engine, queries_keys_values+(EMBED/HEADS/3));
-  //     auto dst_mem = dnnl::memory(dst_md, engine, output);
-
-  //     std::unordered_map<int, dnnl::memory> matmul_args;
-  //     matmul_args.insert({DNNL_ARG_SRC, src1_mem});
-  //     matmul_args.insert({DNNL_ARG_WEIGHTS, src2_mem});
-  //     matmul_args.insert({DNNL_ARG_DST, dst_mem});
-
-  //     matmul_prim.execute(engine_stream, matmul_args);
-  //     engine_stream.wait();
-  //   }
-  // } else {
-  //   const dnnl::memory::dim HEADS = param.heads;
-  //   const dnnl::memory::dim BS = inputs[0].shape_[1];
-  //   const dnnl::memory::dim SEQ_LEN = inputs[0].shape_[0];
-  //   const dnnl::memory::dim EMBED = inputs[0].shape_[2];
-
-  //   dnnl::engine engine(dnnl::engine::kind::cpu, 0);
-  //   dnnl::stream engine_stream(engine);
-
-  //   dnnl::memory::dims src1_dims = {HEADS*BS, SEQ_LEN, EMBED/HEADS/3};
-  //   dnnl::memory::dims src2_dims = {HEADS*BS, EMBED/HEADS/3, SEQ_LEN};
-  //   dnnl::memory::dims dst_dims = {HEADS*BS, SEQ_LEN, SEQ_LEN};
-
-  //   dnnl::memory::dims src1_strides = {3*(EMBED/HEADS/3), EMBED*BS, 1};
-  //   dnnl::memory::dims src2_strides = {3*(EMBED/HEADS/3), 1, EMBED*BS};
-
-  //   auto src1_md = dnnl::memory::desc(src1_dims, dnnl::memory::data_type::f32, src1_strides);
-  //   auto src2_md = dnnl::memory::desc(src2_dims, dnnl::memory::data_type::f32, src2_strides);
-  //   auto dst_md = dnnl::memory::desc(dst_dims, dnnl::memory::data_type::f32, dnnl::memory::format_tag::abc);
-
-  //   const float scale = 1.0f / sqrt(static_cast<float>(EMBED/HEADS/3));
-
-  //   dnnl::primitive_attr attr;
-  //   attr.set_output_scales(0, {scale});
-
-  //   // CODE FOR HANLDING MASKING
-  //   // float* mask = inputs[1].FlatTo2D<cpu, float>(s).dptr_;
-  //   // memcpy(output, mask, sizeof(float)*HEADS*BS*SEQ_LEN*SEQ_LEN);
-  //   // dnnl::post_ops post_op;
-  //   // post_op.append_sum(1);
-  //   // attr.set_post_ops(post_op);
-
-  //   auto matmul_d = dnnl::matmul::desc(src1_md, src2_md, dst_md);
-  //   auto matmul_pd = dnnl::matmul::primitive_desc(matmul_d, attr, engine);
-
-  //   auto matmul_prim = dnnl::matmul(matmul_pd);
-
-  //   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
-  //   float* queries_keys_values = inputs[0].FlatTo2D<cpu, float>(s).dptr_;
-    
-  //   float* output = outputs[0].FlatTo2D<cpu, float>(s).dptr_;
-
-  //   auto src1_mem = dnnl::memory(src1_md, engine, queries_keys_values);
-  //   auto src2_mem = dnnl::memory(src2_md, engine, queries_keys_values+(EMBED/HEADS/3));
-  //   auto dst_mem = dnnl::memory(dst_md, engine, output);
-
-  //   std::unordered_map<int, dnnl::memory> matmul_args;
-  //   matmul_args.insert({DNNL_ARG_SRC, src1_mem});
-  //   matmul_args.insert({DNNL_ARG_WEIGHTS, src2_mem});
-  //   matmul_args.insert({DNNL_ARG_DST, dst_mem});
-
-  //   matmul_prim.execute(engine_stream, matmul_args);
-  //   engine_stream.wait();
-  // }
 }
 
-nnvm::ObjectPtr SgMKLDNNInterleavedMatMulSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
+nnvm::ObjectPtr SgMKLDNNSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
   nnvm::ObjectPtr node = nnvm::Node::Create();
   auto const &param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
   node->attrs.op = Op::Get("_sg_mkldnn_interleaved_matmul_selfatt_qk");
@@ -571,17 +341,17 @@ NNVM_REGISTER_OP(_sg_mkldnn_interleaved_matmul_selfatt_qk)
   }
   return output_names;
 })
-.set_attr<mxnet::FInferShape>("FInferShape", MKLDNNInterleavedMatMulSelfAttQKShape)
-.set_attr<nnvm::FInferType>("FInferType", MKLDNNInterleavedMatMulSelfAttQKInferType)
-.set_attr<FInferStorageType>("FInferStorageType", MKLDNNInterleavedMatMulSelfAttQKStorageType)
-.set_attr<FCreateOpState>("FCreateOpState", CreateMKLDNNInterleavedMatMulSelfAttQKState)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", MKLDNNInterleavedMatMulSelfAttQKForward)
+.set_attr<mxnet::FInferShape>("FInferShape", SgMKLDNNSelfAttQKShape)
+.set_attr<nnvm::FInferType>("FInferType", SgMKLDNNSelfAttQKInferType)
+.set_attr<FInferStorageType>("FInferStorageType", SgMKLDNNSelfAttQKStorageType)
+.set_attr<FCreateOpState>("FCreateOpState", CreateSgMKLDNNSelfAttQKState)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNSelfAttQKForward)
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
     return QuantizeType::kMust;
 })
-.set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNInterleavedMatMulSelfAttQKQuantizedOp)
+.set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNSelfAttQKQuantizedOp)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .add_argument("queries_keys_values", "NDArray-or-Symbol", "Interleaved queries, keys and values")
 .add_arguments(MKLDNNInterleavedMatMulParam::__FIELDS__());
@@ -1101,62 +871,62 @@ void MKLDNNInterleavedMatMulSelfAttValAttOp::Forward(
 //   }
 // }
 
-NNVM_REGISTER_OP(_sg_mkldnn_interleaved_matmul_selfatt_valatt)
-.describe(R"code(_sg_mkldnn_interleaved_matmul_selfatt_valatt)code" ADD_FILELINE)
-.set_num_inputs([](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
-  if (param.quantized) {
-    return 6;
-  } else {
-    return 2;
-  }
-})
-.set_num_outputs([](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
-  if (param.quantized && !param.enable_float_output) {
-    return 3;
-  } else {
-    return 1;
-  }
-})
-.set_attr_parser(ParamParser<MKLDNNInterleavedMatMulParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
-  std::vector<std::string> input_names {"queries_keys_values", "attention"};
-  if (param.quantized) {
-    input_names.emplace_back("min_qkv");
-    input_names.emplace_back("max_qkv");
+// NNVM_REGISTER_OP(_sg_mkldnn_interleaved_matmul_selfatt_valatt)
+// .describe(R"code(_sg_mkldnn_interleaved_matmul_selfatt_valatt)code" ADD_FILELINE)
+// .set_num_inputs([](const NodeAttrs& attrs) {
+//   auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+//   if (param.quantized) {
+//     return 6;
+//   } else {
+//     return 2;
+//   }
+// })
+// .set_num_outputs([](const NodeAttrs& attrs) {
+//   auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+//   if (param.quantized && !param.enable_float_output) {
+//     return 3;
+//   } else {
+//     return 1;
+//   }
+// })
+// .set_attr_parser(ParamParser<MKLDNNInterleavedMatMulParam>)
+// .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
+//   auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+//   std::vector<std::string> input_names {"queries_keys_values", "attention"};
+//   if (param.quantized) {
+//     input_names.emplace_back("min_qkv");
+//     input_names.emplace_back("max_qkv");
 
-    input_names.emplace_back("min_attention");
-    input_names.emplace_back("max_attention");
-  }
-  return input_names;
-})
-.set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
-  std::vector<std::string> output_names {"output"};
-  if (param.quantized && !param.enable_float_output) {
-    output_names.emplace_back("min_output");
-    output_names.emplace_back("max_output");
-  }
-  return output_names;
-})
-.set_attr<mxnet::FInferShape>("FInferShape", MKLDNNInterleavedMatMulSelfAttValAttShape)
-.set_attr<nnvm::FInferType>("FInferType", MKLDNNInterleavedMatMulSelfAttValAttInferType)
-// .set_attr<FCompute>("FCompute<cpu>", MKLDNNInterleavedMatMulSelfAttValAttCPU)
-.set_attr<FInferStorageType>("FInferStorageType", MKLDNNInterleavedMatMulSelfAttValAttStorageType)
-.set_attr<FCreateOpState>("FCreateOpState", CreateMKLDNNInterleavedMatMulSelfAttValAttState)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", MKLDNNInterleavedMatMulSelfAttValAttForward)
-.set_attr<bool>("TIsMKLDNN", true)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
-    return QuantizeType::kMust;
-})
-.set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNInterleavedMatMulSelfAttValAttQuantizedOp)
-.set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
-.add_argument("queries_keys_values", "NDArray-or-Symbol", "Queries, keys and values interleaved")
-.add_argument("attention", "NDArray-or-Symbol", "Attention maps")
-.add_arguments(MKLDNNInterleavedMatMulParam::__FIELDS__());
+//     input_names.emplace_back("min_attention");
+//     input_names.emplace_back("max_attention");
+//   }
+//   return input_names;
+// })
+// .set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
+//   auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+//   std::vector<std::string> output_names {"output"};
+//   if (param.quantized && !param.enable_float_output) {
+//     output_names.emplace_back("min_output");
+//     output_names.emplace_back("max_output");
+//   }
+//   return output_names;
+// })
+// .set_attr<mxnet::FInferShape>("FInferShape", MKLDNNInterleavedMatMulSelfAttValAttShape)
+// .set_attr<nnvm::FInferType>("FInferType", MKLDNNInterleavedMatMulSelfAttValAttInferType)
+// // .set_attr<FCompute>("FCompute<cpu>", MKLDNNInterleavedMatMulSelfAttValAttCPU)
+// .set_attr<FInferStorageType>("FInferStorageType", MKLDNNInterleavedMatMulSelfAttValAttStorageType)
+// .set_attr<FCreateOpState>("FCreateOpState", CreateMKLDNNInterleavedMatMulSelfAttValAttState)
+// .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", MKLDNNInterleavedMatMulSelfAttValAttForward)
+// .set_attr<bool>("TIsMKLDNN", true)
+// .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+// .set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
+//     return QuantizeType::kMust;
+// })
+// .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNInterleavedMatMulSelfAttValAttQuantizedOp)
+// .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
+// .add_argument("queries_keys_values", "NDArray-or-Symbol", "Queries, keys and values interleaved")
+// .add_argument("attention", "NDArray-or-Symbol", "Attention maps")
+// .add_arguments(MKLDNNInterleavedMatMulParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
