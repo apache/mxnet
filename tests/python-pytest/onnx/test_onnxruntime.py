@@ -990,6 +990,7 @@ def test_ernie_inference_onnxruntime(tmp_path, model_name):
         shutil.rmtree(tmp_path)
 
 
+@with_seed()
 @pytest.mark.parametrize('model_name', ['transformer_en_de_512'])
 def test_transformer_pretrained_inference_onnxruntime(tmp_path, model_name):
     tmp_path = str(tmp_path)
@@ -1002,6 +1003,7 @@ def test_transformer_pretrained_inference_onnxruntime(tmp_path, model_name):
             ctx=ctx,
             pretrained=True,
             dataset_name=dataset)
+
         model.hybridize(static_alloc=False)
 
         batch = 7
@@ -1193,6 +1195,7 @@ def test_gpt_pretrained_inference_onnxruntime(tmp_path, model_params):
             dataset_name=dataset)
 
         model.hybridize()
+
         batch = 4
         seq_length = 64
         inputs = mx.nd.random.uniform(0, 50257, shape=(batch, seq_length), dtype='float32',
@@ -1227,3 +1230,4 @@ def test_gpt_pretrained_inference_onnxruntime(tmp_path, model_params):
 
     finally:
         shutil.rmtree(tmp_path)
+
