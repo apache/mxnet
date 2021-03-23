@@ -1709,6 +1709,36 @@ def convert_reshape(node, **kwargs):
         ]
         return nodes
 
+    if targ_shape == [-1, 0] and reverse == 'True':
+        create_tensor([-1], name+'_m1', kwargs['initializer'])
+        nodes = [
+            make_node('Shape', [input_nodes[0]], [name+'_shape']),
+            make_node('Shape', [name+'_shape'], [name+'_dim']),
+            make_node('Add', [name+'_dim', name+'_m1'], [name+'_dim_m1']),
+            make_node('Slice', [name+'_shape', name+'_dim_m1', name+'_dim'], [name+'_dim_last']),
+            make_node('Concat', [name+'_m1', name+'_dim_last'], [name+'_shape_new'], axis=0),
+            make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
+        ]
+        return nodes
+
+    if targ_shape == [12, -1, 0] and reverse == 'True':
+        #create_tensor([-1], name+'_m1', kwargs['initializer'])
+        #create_tensor([12], name+'_12', kwargs['initializer'])
+        #nodes = [
+        #    make_node('Shape', [input_nodes[0]], [name+'_shape']),
+        #    make_node('Shape', [name+'_shape'], [name+'_dim']),
+        #    make_node('Add', [name+'_dim', name+'_m1'], [name+'_dim_m1']),
+        #    make_node('Slice', [name+'_shape', name+'_dim_m1', name+'_dim'], [name+'_dim_last']),
+        #    make_node('Concat', [name+'_12', name+'_m1', name+'_dim_last'], [name+'_shape_new'], axis=0),
+        #    make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
+        #]
+        #return nodes
+        reverse = 'False'
+        targ_shape = [12, 64, 768]
+
+    if targ_shape == [12, -1] and reverse == 'True':
+        reverse = 'False'
+
     not_supported_shape = [-2, -3, -4]
     for val in targ_shape:
         if val in not_supported_shape:
@@ -3005,7 +3035,7 @@ def convert_arange_like(node, **kwargs):
         raise AttributeError("ONNX opset 11 or greater is required to export this operator")
 
     # use the same dtype as the that of the input node
-    dtype = input_dtypes[0]
+    dtype = np.dtype('int32')
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     axis = attrs.get('axis', 'None')
     start = attrs.get('start', 0.)
@@ -3017,6 +3047,10 @@ def convert_arange_like(node, **kwargs):
     create_const_scalar_node(name+"_start", np.dtype(dtype).type(start), kwargs)
     create_const_scalar_node(name+"_step", np.dtype(dtype).type(step), kwargs)
     create_const_scalar_node(name+"_half_step", np.dtype(dtype).type(float(step)*0.5), kwargs)
+
+
+    dtype_true = input_dtypes[0]
+    dtype_true_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype_true]
 
     nodes = []
     if axis == 'None':
@@ -3045,7 +3079,8 @@ def convert_arange_like(node, **kwargs):
             make_node("Mul", [name+"_cast0_out", name+"_step"], [name+"_mul0_out"]),
             make_node("Add", [name+"_mul0_out", name+"_start"], [name+"_add1_out"]),
             make_node("Sub", [name+"_add1_out", name+"_half_step"], [name+"_sub0_out"]),
-            make_node("Range", [name+"_start", name+"_sub0_out", name+"_step"], [name], name=name)
+            make_node("Range", [name+"_start", name+"_sub0_out", name+"_step"], [name+'_range']),
+            make_node('Cast', [name+'_range'], [name], to=dtype_true_t)
         ]
 
     return nodes
