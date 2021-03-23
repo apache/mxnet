@@ -57,6 +57,9 @@ MXNET_REGISTER_API("_npx.fully_connected")
   attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::FullyConnectedParam>(&attrs);
+  if (args[args_size - 4].type_code() != kNull) {
+    attrs.dict["name"] = args[args_size - 4].operator std::string();
+  }
 
   int num_outputs = 0;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);

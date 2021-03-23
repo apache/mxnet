@@ -57,6 +57,9 @@ MXNET_REGISTER_API("_npx.activation")
   attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::ActivationParam>(&attrs);
+  if (args[2].type_code() != kNull) {
+    attrs.dict["name"] = args[2].operator std::string();
+  }
   // inputs
   NDArray* inputs[] = {args[0].operator NDArray*()};
   int num_inputs = 1;

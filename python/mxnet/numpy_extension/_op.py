@@ -50,7 +50,8 @@ def softmax(data, length=None, axis=-1, temperature=None, use_length=False, dtyp
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
     dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
-        DType of the output in case this can't be inferred. Defaults to the same as input's dtype if not defined (dtype=None).
+        DType of the output in case this can't be inferred. Defaults to
+        the same as input's dtype if not defined (dtype=None).
     use_length : boolean or None, optional, default=0
         Whether to use the length input as a mask over the data input.
 
@@ -88,7 +89,8 @@ def log_softmax(data, length=None, axis=-1, temperature=None, use_length=False, 
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
     dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
-        DType of the output in case this can't be inferred. Defaults to the same as input's dtype if not defined (dtype=None).
+        DType of the output in case this can't be inferred. Defaults to
+        the same as input's dtype if not defined (dtype=None).
     use_length : boolean or None, optional, default=0
         Whether to use the length input as a mask over the data input.
 
@@ -127,7 +129,8 @@ def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
     dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
-        DType of the output in case this can't be inferred. Defaults to the same as input's dtype if not defined (dtype=None).
+        DType of the output in case this can't be inferred. Defaults to
+        the same as input's dtype if not defined (dtype=None).
     normalize : boolean or None, optional, default=1
         Whether to normalize input data x: x = x - max(x)
 
@@ -168,7 +171,8 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
     dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
-        DType of the output in case this can't be inferred. Defaults to the same as input's dtype if not defined (dtype=None).
+        DType of the output in case this can't be inferred. Defaults to
+        the same as input's dtype if not defined (dtype=None).
     normalize : boolean or None, optional, default=1
         Whether to normalize input data x: x = x - max(x)
 
@@ -194,7 +198,7 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def activation(data, act_type='relu', name='fwd'):
+def activation(data, act_type='relu', name=None):
     r"""Applies an activation function element-wise to the input.
 
     The following activation functions are supported:
@@ -217,12 +221,12 @@ def activation(data, act_type='relu', name='fwd'):
     out : NDArray or list of NDArrays
         The output of this function.
     """
-    return _mx_nd_npx.activation(data, act_type=act_type)
+    return _mx_nd_npx.activation(data, act_type=act_type, name=name)
 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def batch_norm(x, gamma, beta, running_mean, running_var, name='fwd', eps=1e-3, momentum=0.9,
+def batch_norm(x, gamma, beta, running_mean, running_var, name=None, eps=1e-3, momentum=0.9,
                fix_gamma=True, use_global_stats=False, output_mean_var=False, axis=1,
                cudnn_off=False, min_calib_range=None, max_calib_range=None):
     r"""Batch normalization.
@@ -287,39 +291,45 @@ def batch_norm(x, gamma, beta, running_mean, running_var, name='fwd', eps=1e-3, 
     moving_var : NDArray
         running variance of input
     eps : double, optional, default=0.0010000000474974513
-        Epsilon to prevent div 0. Must be no less than CUDNN_BN_MIN_EPSILON defined in cudnn.h when using cudnn (usually 1e-5)
+        Epsilon to prevent div 0. Must be no less than CUDNN_BN_MIN_EPSILON
+        defined in cudnn.h when using cudnn (usually 1e-5)
     momentum : float, optional, default=0.899999976
         Momentum for moving average
     fix_gamma : boolean, optional, default=1
         Fix gamma while training
     use_global_stats : boolean, optional, default=0
-        Whether use global moving statistics instead of local batch-norm. This will force change batch-norm into a scale shift operator.
+        Whether use global moving statistics instead of local batch-norm.
+        This will force change batch-norm into a scale shift operator.
     output_mean_var : boolean, optional, default=0
-        Output the mean and inverse std 
+        Output the mean and inverse std
     axis : int, optional, default='1'
         Specify which shape axis the channel is specified
     cudnn_off : boolean, optional, default=0
         Do not select CUDNN operator, if available
     min_calib_range : float or None, optional, default=None
-        The minimum scalar value in the form of float32 obtained through calibration. If present, it will be used to by quantized batch norm op to calculate primitive scale.Note: this calib_range is to calib bn output.
+        The minimum scalar value in the form of float32 obtained through calibration.
+        If present, it will be used to by quantized batch norm op to calculate primitive scale.
+        Note: this calib_range is to calib bn output.
     max_calib_range : float or None, optional, default=None
-        The maximum scalar value in the form of float32 obtained through calibration. If present, it will be used to by quantized batch norm op to calculate primitive scale.Note: this calib_range is to calib bn output.
+        The maximum scalar value in the form of float32 obtained through calibration.
+        If present, it will be used to by quantized batch norm op to calculate primitive scale.
+        Note: this calib_range is to calib bn output.
 
     Returns
     -------
     out : NDArray or list of NDArrays
         The output of this function.
     """
-    return _mx_nd_npx.batch_norm(x, gamma, beta, running_mean, running_var, eps=eps,
+    return _mx_nd_npx.batch_norm(x, gamma, beta, running_mean, running_var,eps=eps,
                                  momentum=momentum, fix_gamma=fix_gamma,
-                                 use_global_stats=use_global_stats,
+                                 use_global_stats=use_global_stats, name=name,
                                  output_mean_var=output_mean_var, axis=axis, cudnn_off=cudnn_off,
                                  min_calib_range=min_calib_range, max_calib_range=max_calib_range)
 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def fully_connected(x, weight, name='fwd', bias=None, num_hidden=None,
+def fully_connected(x, weight, name=None, bias=None, num_hidden=None,
                     no_bias=True, flatten=True):
     r"""Applies a linear transformation: :math:`Y = XW^T + b`.
 
@@ -372,4 +382,4 @@ def fully_connected(x, weight, name='fwd', bias=None, num_hidden=None,
         The output of this function.
     """
     return _mx_nd_npx.fully_connected(x, weight, bias=bias, num_hidden=num_hidden,
-                                      no_bias=no_bias, flatten=flatten)
+                                      no_bias=no_bias, flatten=flatten, name=name)
