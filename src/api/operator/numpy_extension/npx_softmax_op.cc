@@ -86,7 +86,7 @@ MXNET_REGISTER_API("_npx.log_softmax")
   nnvm::NodeAttrs attrs;
   static const nnvm::Op* op = Op::Get("_npx_log_softmax");
   op::SoftmaxParam param;
-  
+
   int args_size = args.size();
   // inputs
   int num_inputs = args_size - 4;

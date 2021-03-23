@@ -45,7 +45,7 @@ MXNET_REGISTER_API("_npx.batch_norm")
   // output_mean_var
   param.output_mean_var = args[9].operator bool();
   // axis
-  param.axis= args[10].operator int();
+  param.axis = args[10].operator int();
   // cudnn_off
   param.cudnn_off = args[11].operator bool();
   // min_calib_range
