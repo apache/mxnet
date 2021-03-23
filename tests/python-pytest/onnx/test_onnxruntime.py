@@ -1221,9 +1221,9 @@ def test_gpt_pretrained_inference_onnxruntime(tmp_path, model_params):
         input_dict = dict((session.get_inputs()[i].name, onnx_inputs[i].asnumpy()) for i in range(len(onnx_inputs)))
         pred_onx = session.run(None, input_dict)
 
-        # checkout output
+        # check output
         assert_almost_equal(pred[0], pred_onx[0])
-        # chckout states
+        # check states
         num_states = model_params[1]
         for i in range(num_states):
             assert_almost_equal(pred[1][i], pred_onx[i+1])
