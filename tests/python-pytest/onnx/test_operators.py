@@ -1234,3 +1234,29 @@ def test_onnx_export_RNN(tmp_path, dtype, state_size, input_size, num_layers, ba
     state = mx.nd.random.uniform(-1, 1, [num_layers, batch_size, state_size], dtype=dtype)
     cell = mx.nd.random.uniform(-1, 1, [num_layers, batch_size, state_size], dtype=dtype)
     op_export_test('rnn', M, [x, param, state, cell], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
+@pytest.mark.parametrize('shapes', [((3, 3, 3), (1, 3)), ((4, 5, 6, 7), (6, 7))])
+def test_onnx_export_broadcast_lesser_equal(tmp_path, dtype, shapes):
+    A = mx.nd.random.uniform(0, 5, shapes[0]).astype('int32').astype(dtype)
+    B = mx.nd.random.uniform(0, 5, shapes[1]).astype('int32').astype(dtype)
+    M = def_model('broadcast_lesser_equal')
+    op_export_test('broadcast_lesser_equal', M, [A, B], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
+@pytest.mark.parametrize('shapes', [((3, 3, 3), (1, 3)), ((4, 5, 6, 7), (6, 7))])
+def test_onnx_export_broadcast_greater_equal(tmp_path, dtype, shapes):
+    A = mx.nd.random.uniform(0, 5, shapes[0]).astype('int32').astype(dtype)
+    B = mx.nd.random.uniform(0, 5, shapes[1]).astype('int32').astype(dtype)
+    M = def_model('broadcast_greater_equal')
+    op_export_test('broadcast_greater_equal', M, [A, B], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('shape', [(3, 4, 5), (6, 7), (8,)])
+def test_onnx_export_contrib_div_sqrt_dim(tmp_path, dtype, shape):
+    A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
+    M = def_model('contrib.div_sqrt_dim')
+    op_export_test('contrib_div_sqrt_dim', M, [A], tmp_path)

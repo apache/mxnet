@@ -1274,6 +1274,7 @@ integrationtest_ubuntu_cpu_onnx() {
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_action_recognition_model_inference_onnxruntime[inceptionv3_kinetics400]
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_dynamic_shape_bert_inference_onnxruntime
     pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_dynamic_shape_cv_inference_onnxruntime
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_transformer_pretrained_inference_onnxruntime
 }
 
 integrationtest_ubuntu_gpu_python() {
