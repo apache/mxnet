@@ -277,6 +277,17 @@ struct SampleRandIntParam : public dmlc::Parameter<SampleRandIntParam>,
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to int32 if not defined (dtype=None).");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream low_s, high_s, dtype_s, shape_s;
+    low_s << low;
+    high_s << high;
+    dtype_s << dtype;
+    shape_s << shape;
+    (*dict)["low"] = low_s.str();
+    (*dict)["high"] = high_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    (*dict)["shape"] = shape_s.str();
+  }
 };
 
 struct SampleUniformLikeParam : public dmlc::Parameter<SampleUniformLikeParam>,
