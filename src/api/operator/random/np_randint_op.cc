@@ -38,11 +38,10 @@ MXNET_REGISTER_API("_npi.randint")
   int num_inputs = 0;
   param.low = args[0].operator int();
   param.high = args[1].operator int();
-  if (args[2].type_code() == kDLInt ||
-             args[2].type_code() == kDLFloat) {
-    param.shape = Tuple<index_t>(1, args[2].operator int64_t());
+  if (args[2].type_code() == kDLInt) {
+    param.shape = TShape(1, args[2].operator int64_t());
   } else {
-    param.shape = Tuple<index_t>(args[2].operator ObjectRef());
+    param.shape = TShape(args[2].operator ObjectRef());
   }
   if (args[3].type_code() == kNull) {
     param.dtype = mxnet::common::GetDefaultDtype();
