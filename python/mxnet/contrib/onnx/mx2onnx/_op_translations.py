@@ -1645,7 +1645,9 @@ def convert_reshape(node, **kwargs):
         targ_shape = [-1, 0]
         reverse = 'True'
 
+    special_case = False
     if targ_shape == [0, 0, -3, -3] and reverse != 'True':
+        special_case = True
         nodes = [
             make_node('Shape', [input_nodes[0]], [name+'_shape']),
             make_node('Split', [name+'_shape'], [name+'_dim0', name+'_dim1', name+'_dim2',
@@ -1657,9 +1659,9 @@ def convert_reshape(node, **kwargs):
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
-        return nodes
 
     if targ_shape == [0, -4, -1, 4, 0, 0] and reverse != 'True':
+        special_case = True
         create_tensor([4], name+'_4', kwargs['initializer'])
         nodes = [
             make_node('Shape', [input_nodes[0]], [name+'_shape']),
@@ -1670,9 +1672,9 @@ def convert_reshape(node, **kwargs):
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
-        return nodes
 
     if targ_shape == [0, 0, -4, 2, 2, 0, 0] and reverse != 'True':
+        special_case = True
         create_tensor([2], name+'_2', kwargs['initializer'])
         nodes = [
             make_node('Shape', [input_nodes[0]], [name+'_shape']),
@@ -1682,9 +1684,9 @@ def convert_reshape(node, **kwargs):
                                  name+'_dim3', name+'_dim4'], [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
-        return nodes
 
     if targ_shape == [-4, 1, -1, 0, 0, 0] and reverse != 'True':
+        special_case = True
         create_tensor([1], name+'_1', kwargs['initializer'])
         create_tensor([-1], name+'_m1', kwargs['initializer'])
         nodes = [
@@ -1695,9 +1697,9 @@ def convert_reshape(node, **kwargs):
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
-        return nodes
 
     if targ_shape == [-4, 1, 1000, 0, 0] and reverse != 'True':
+        special_case = True
         create_tensor([1], name+'_1', kwargs['initializer'])
         create_tensor([1000], name+'_1000', kwargs['initializer'])
         nodes = [
@@ -1707,9 +1709,9 @@ def convert_reshape(node, **kwargs):
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
-        return nodes
 
     if targ_shape == [0, -4, 12, -1, 0] and reverse != 'True':
+        special_case = True
         create_tensor([-1], name+'_m1', kwargs['initializer'])
         create_tensor([12], name+'_12', kwargs['initializer'])
         nodes = [
@@ -1719,9 +1721,9 @@ def convert_reshape(node, **kwargs):
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
-        return nodes
 
     if targ_shape == [0, -4, 16, -1, 0] and reverse != 'True':
+        special_case = True
         create_tensor([-1], name+'_m1', kwargs['initializer'])
         create_tensor([16], name+'_16', kwargs['initializer'])
         nodes = [
@@ -1731,6 +1733,8 @@ def convert_reshape(node, **kwargs):
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
+
+    if special_case:
         return nodes
 
     not_supported_shape = [-2, -3, -4]
