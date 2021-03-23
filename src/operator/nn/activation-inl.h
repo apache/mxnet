@@ -69,6 +69,11 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   bool operator==(const ActivationParam& other) const {
     return this->act_type == other.act_type;
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream act_type_s;
+    act_type_s << act_type;
+    (*dict)["act_type"] = act_type_s.str();
+  }
 };
 
 }  // namespace op

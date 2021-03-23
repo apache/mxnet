@@ -1179,6 +1179,21 @@ struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
            this->dtype == other.dtype &&
            this->use_length == other.use_length;
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, temperature_s, dtype_s, use_length_s;
+    axis_s << axis;
+    temperature_s << temperature;
+    dtype_s << dtype;
+    use_length_s << use_length;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["temperature"] = temperature_s.str();
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
+    (*dict)["use_length"] = use_length_s.str();
+  }
 };
 
 struct MaskedSoftmaxParam : public dmlc::Parameter<MaskedSoftmaxParam> {
