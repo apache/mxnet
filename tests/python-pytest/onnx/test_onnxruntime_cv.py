@@ -114,13 +114,13 @@ def obj_class_test_images(tmpdir_factory):
     'mobilenetv2_0.75',
     'mobilenetv2_0.5',
     'mobilenetv2_0.25',
-    'mobilenetv3_large',
+    pytest.param('mobilenetv3_large', marks=pytest.mark.integrationtest_onnx),
     'mobilenetv3_small',
     'resnest14',
     'resnest26',
     'resnest50',
     'resnest101',
-    'resnest200',
+    pytest.param('resnest200', marks=pytest.mark.integrationtest_onnx),
     'resnest269',
     'resnet18_v1',
     'resnet18_v1b_0.89',
@@ -132,7 +132,7 @@ def obj_class_test_images(tmpdir_factory):
     'resnet50_v1d_0.48',
     'resnet50_v1d_0.37',
     'resnet50_v1d_0.11',
-    'resnet50_v2',
+    pytest.param('resnet50_v2', marks=pytest.mark.integrationtest_onnx),
     'resnet101_v1',
     'resnet101_v1d_0.76',
     'resnet101_v1d_0.73',
@@ -155,7 +155,7 @@ def obj_class_test_images(tmpdir_factory):
     'vgg16',
     'vgg16_bn',
     'vgg19',
-    'vgg19_bn',
+    pytest.param('vgg19_bn', marks=pytest.mark.integrationtest_onnx),
     'xception',
     'inceptionv3'
 ])
@@ -218,7 +218,7 @@ def obj_detection_test_images(tmpdir_factory):
 @pytest.mark.parametrize('model', [
     'center_net_resnet18_v1b_voc',
     'center_net_resnet50_v1b_voc',
-    'center_net_resnet101_v1b_voc',
+    pytest.param('center_net_resnet101_v1b_voc', marks=pytest.mark.integrationtest_onnx),
     'center_net_resnet18_v1b_coco',
     'center_net_resnet50_v1b_coco',
     'center_net_resnet101_v1b_coco',
@@ -349,7 +349,7 @@ def img_segmentation_test_images(tmpdir_factory):
     'fcn_resnet101_voc',
     'deeplab_resnet101_voc',
     'deeplab_resnet152_voc',
-    'deeplab_resnet50_citys',
+    pytest.param('deeplab_resnet50_citys', marks=pytest.mark.integrationtest_onnx),
     'deeplab_resnet101_citys',
     'deeplab_v3b_plus_wideresnet_citys'
 ])
@@ -412,7 +412,7 @@ def pose_estimation_test_images(tmpdir_factory):
     'alpha_pose_resnet101_v1b_coco',
     'mobile_pose_resnet18_v1b',
     'mobile_pose_resnet50_v1b',
-    'mobile_pose_mobilenet1.0',
+    pytest.param('mobile_pose_mobilenet1.0', marks=pytest.mark.integrationtest_onnx),
     'mobile_pose_mobilenetv2_1.0',
     'mobile_pose_mobilenetv3_large',
     'mobile_pose_mobilenetv3_small',
@@ -472,7 +472,7 @@ def act_recognition_test_data(tmpdir_factory):
     'resnet50_v1b_hmdb51',
     'resnet50_v1b_sthsthv2',
     'vgg16_ucf101',
-    'inceptionv3_kinetics400',
+    pytest.param('inceptionv3_kinetics400', marks=pytest.mark.integrationtest_onnx),
     'inceptionv3_ucf101',
 ])
 def test_action_recognition_model_inference_onnxruntime(tmp_path, model, act_recognition_test_data):
@@ -507,6 +507,7 @@ def test_action_recognition_model_inference_onnxruntime(tmp_path, model, act_rec
 
 
 @with_seed()
+@pytest.mark.integrationtest_onnx
 @pytest.mark.parametrize('model_name', ['mobilenet1.0', 'inceptionv3', 'darknet53', 'resnest14'])
 def test_dynamic_shape_cv_inference_onnxruntime(tmp_path, model_name):
     tmp_path = str(tmp_path)
