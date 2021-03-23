@@ -320,7 +320,7 @@ def batch_norm(x, gamma, beta, running_mean, running_var, name=None, eps=1e-3, m
     out : NDArray or list of NDArrays
         The output of this function.
     """
-    return _mx_nd_npx.batch_norm(x, gamma, beta, running_mean, running_var,eps=eps,
+    return _mx_nd_npx.batch_norm(x, gamma, beta, running_mean, running_var, eps=eps,
                                  momentum=momentum, fix_gamma=fix_gamma,
                                  use_global_stats=use_global_stats, name=name,
                                  output_mean_var=output_mean_var, axis=axis, cudnn_off=cudnn_off,
