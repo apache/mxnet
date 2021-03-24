@@ -29,6 +29,7 @@
 namespace mxnet {
 
 inline int String2MXNetActType(const std::string& s) {
+  using namespace op;
   if (s == "relu") {
     return activation::kReLU;
   } else if (s == "sigmoid") {
