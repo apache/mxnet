@@ -1254,6 +1254,92 @@ def test_get_optimal_thresholds():
         assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
 
 
+@with_seed()
+def test_onednn_shifted_quantization():
+    def collect_param(fc_layer, p):
+        param = fc_layer.collect_params(p)[p]._reduce()
+        return param
+
+    def quantize_to_int8(param):
+        p_int8, p_min, p_max = mx.ndarray.contrib.quantize(data=param,
+                                                    min_range=mx.ndarray.min(param),
+                                                    max_range=mx.ndarray.max(param),
+                                                    out_type='int8')
+        p_scale = 127.5/np.max(np.abs([p_max.asnumpy(), p_min.asnumpy()]))
+        return p_int8.asnumpy(), p_scale
+
+    def get_shifted_bias(quantize_attrs, weights_int8, weights_scale, bias_int8, bias_scale):
+        max_data = float(quantize_attrs['max_calib_range'])
+        min_data = float(quantize_attrs['min_calib_range'])
+        data_scale = 255.5 / (max_data - min_data)
+        shift_value = np.array(np.round(-data_scale*min_data),np.uint8)
+        shift_matrix = shift_value*np.ones((1, weights_int8.shape[1]), np.int32)
+        shift_matrix = np.array(np.dot(shift_matrix, weights_int8.T).squeeze(), np.int32)
+        bias_int32_rescale = data_scale * weights_scale / bias_scale
+        bias_int32 = np.array(np.round(bias_int8*bias_int32_rescale),dtype=np.int32)
+        bias_shifted = bias_int32 - shift_matrix
+        return bias_shifted
+
+    def quantize_fc_layer(fc_layer, qdtype, random_data):
+        batch_size = 1
+        calib_data = NDArrayIter(data=random_data, batch_size=batch_size)
+        calib_data = DummyIter(calib_data)
+        num_calib_examples = 5
+        fc_layer = mx.contrib.quant.quantize_net(fc_layer, quantized_dtype=qdtype,
+                                                 exclude_layers=None,
+                                                 exclude_layers_match=[],
+                                                 calib_data=calib_data,
+                                                 calib_mode='naive',
+                                                 num_calib_examples=num_calib_examples,
+                                                 ctx=mx.current_context())
+        fc_layer.hybridize(static_alloc=True, static_shape=True)
+        fc_layer(random_data).wait_to_read()
+
+        _, sym = fc_layer._cached_graph
+        quantize_attrs = sym.attr_dict()['data_quantize']
+        return fc_layer, quantize_attrs
+
+    def get_fc_layer(random_data):
+        fc_layer = mx.gluon.nn.Dense(5, use_bias=True, weight_initializer=mx.initializer.Normal(
+        ), bias_initializer=mx.initializer.Normal())
+        fc_layer.initialize()
+        fc_layer(random_data).wait_to_read()
+        return fc_layer
+
+    # Shifted quantization should set new bias to FC and add shift to output of quantize
+    # b'=b-shift*w because FC(x+shift,w,b)=(x+shift)*w+b
+    def check(number, qdtype):
+        if is_test_for_native_cpu():
+            print('skipped testing test_quantize_model_with_forward for native cpu since it is not supported yet')
+            return
+        elif is_test_for_gpu():
+            print('skipped testing test_quantize_model_with_forward for gpu uint8 since it is not supported yet')
+            return
+
+        random_data = mx.nd.random_normal(shape=(1, 32))
+        fc_layer = get_fc_layer(random_data)
+
+        if qdtype is 'auto':
+            bias_int8, bias_scale = quantize_to_int8(collect_param(fc_layer, 'dense%d_bias' % number))
+            weights_int8, weights_scale = quantize_to_int8(collect_param(fc_layer, 'dense%d_weight' % number))
+
+        fc_layer_quantized, quantize_attrs = quantize_fc_layer(fc_layer, qdtype, random_data)
+
+        if qdtype is 'auto':
+            assert quantize_attrs['shifted'] == 'True'
+            bias_s32 = collect_param(fc_layer_quantized, 'dense%d_bias_quantize_s32' % number)
+            assert bias_s32.dtype == np.int32
+            bias_shifted = get_shifted_bias(quantize_attrs, weights_int8, weights_scale, bias_int8, bias_scale)
+            assert_almost_equal(bias_s32, bias_shifted)
+        else:
+            assert 'shifted' not in quantize_attrs
+            bias = collect_param(fc_layer_quantized, 'dense%d_bias_quantize' % number)
+            assert bias.dtype == np.int8
+
+    for i, qdtype in enumerate(['int8', 'uint8', 'auto']):
+        check(i, qdtype)
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule()

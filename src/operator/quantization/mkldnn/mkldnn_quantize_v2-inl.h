@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZE_V2_INL_H_
 #if MXNET_USE_MKLDNN == 1
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <vector>
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
@@ -47,6 +48,7 @@ class SgMKLDNNQuantizeOperator {
   QuantizeV2Param param_;
   float cached_data_min_{0.f};
   float cached_data_max_{0.f};
+  float cached_scale_;
   mkldnn::memory::desc o_desc_;
   mkldnn_args_map_t args_;
   std::shared_ptr<mkldnn::reorder> fwd_pd_;
@@ -55,7 +57,6 @@ class SgMKLDNNQuantizeOperator {
 void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<NDArray> &inputs,
                                        const std::vector<OpReqType> &req,
                                        const std::vector<NDArray> &outputs) {
-  float quantized_range = 0.0;
   NDArray in_buffer = inputs[0];
   float data_min = mshadow::red::limits::MaxValue<float>();
   float data_max = mshadow::red::limits::MinValue<float>();
@@ -109,13 +110,19 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
 
     // Write output min/max
     auto out_type = GetQuantizeOutputType(param_);
-    if (out_type == mshadow::kUint8) {
-      quantized_range = kUint8Range;
+    const bool shifted = param_.shifted.has_value() && param_.shifted.value();
+    if (shifted) {
+      // if shifted == true we have guarantee that data_max is negative because
+      // we require that in shifted quantization pass in quantize_graph_pass
+      // Modify out min/max range to reflect shifted data
+      out_type = mshadow::kUint8;
+      *outputs[1].data().dptr<float>() = 0;
+      *outputs[2].data().dptr<float>() = data_max - data_min;
+    } else if (out_type == mshadow::kUint8) {
       *outputs[1].data().dptr<float>() = data_min;
       *outputs[2].data().dptr<float>() = data_max;
     } else if (out_type == mshadow::kInt8) {
       float real_range = MaxAbs(data_min, data_max);
-      quantized_range = kInt8Range;
       *outputs[1].data().dptr<float>() = -real_range;
       *outputs[2].data().dptr<float>() = real_range;
     } else {
@@ -125,12 +132,21 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     if (!initalized_) {
       cached_data_min_ = data_min;
       cached_data_max_ = data_max;
-      float real_range = MaxAbs(data_min, data_max);
-      float scale = quantized_range / real_range;
+      if (shifted) {
+        CHECK_LT(data_min, 0);  // assert that we are working on signed
+        cached_scale_ = kUint8Range / (data_max - data_min);
+      } else {
+        cached_scale_ = GetQuantizeScale(out_type, data_min, data_max);
+      }
       mkldnn::primitive_attr attr;
       const int mask = 0;
-      std::vector<float> scales = {scale};
+      std::vector<float> scales = {cached_scale_};
       attr.set_output_scales(mask, scales);
+      if (shifted) {
+        dnnl::post_ops po;
+        po.append_sum();
+        attr.set_post_ops(po);
+      }
       mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
       auto i_desc = i_mem->get_desc();
       size_t i_ndim = in_buffer.shape().ndim();
@@ -152,6 +168,14 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     args_[MKLDNN_ARG_TO] = *o_mem.second;
     MKLDNNStream::Get()->RegisterPrimArgs(*fwd_pd_, args_);
     CommitOutput(outputs[0], o_mem);
+    if (shifted) {
+      uint8_t *raw_out_mem = static_cast<uint8_t *>(o_mem.second->get_data_handle());
+      #pragma omp parallel for simd
+      for (size_t i = 0; i < outputs[0].shape().Size(); i++) {
+        raw_out_mem[i] =
+            static_cast<uint8_t>(std::round(-cached_scale_ * cached_data_min_));
+      }
+    }
     MKLDNNStream::Get()->Submit();
   }
 }

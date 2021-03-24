@@ -632,7 +632,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
         raise ValueError(
             'quantize_model_mkldnn only support Intel cpu platform with MKL-DNN Backend')
 
-    sym = sym.get_backend_symbol('MKLDNN_QUANTIZE')
+    sym = sym.optimize_for('MKLDNN_QUANTIZE')
 
     qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                    data_names=data_names, label_names=label_names,
@@ -643,7 +643,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
                                                    quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
                                                    quantize_granularity=quantize_granularity, logger=logger)
 
-    qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
+    qsym = qsym.optimize_for('MKLDNN_QUANTIZE')
 
     return qsym, qarg_params, aux_params
 
@@ -945,7 +945,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         logger.info('These layers have been excluded %s' % exclude_layers)
 
     if ctx == mx.cpu():
-        symnet = symnet.get_backend_symbol('MKLDNN_QUANTIZE')
+        symnet = symnet.optimize_for('MKLDNN_QUANTIZE')
 
     qsym, qarg_params, aux_params, collector = quantize_graph(
         sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
@@ -982,7 +982,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         data_names = [pair[0] for pair in data_shapes]
 
     if ctx == mx.cpu():
-        qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
+        qsym = qsym.optimize_for('MKLDNN_QUANTIZE')
 
     from ..gluon import SymbolBlock
     data_sym = []
@@ -1001,6 +1001,11 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         nd_save(param_name, save_dict)
         net.collect_params().load(param_name, cast_dtype=True, dtype_source='saved')
         net.collect_params().reset_ctx(ctx)
+        if quantized_dtype == 'auto':
+            net.optimize_for(*data_nd, backend="OneDNNShiftedQuantization")
+            tmp_file = os.path.join(tmpdirname, 'model')
+            net.export(tmp_file)
+            net = SymbolBlock.imports(tmp_file+'-symbol.json', data_names, tmp_file+'-0000.params')
     return net
 
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
