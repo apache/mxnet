@@ -48,11 +48,11 @@ KNOWN_VCVARS = {
 
 class BuildFlavour(Enum):
     WIN_CPU = 'WIN_CPU'
-    WIN_CPU_MKLDNN = 'WIN_CPU_MKLDNN'
-    WIN_CPU_MKLDNN_MKL = 'WIN_CPU_MKLDNN_MKL'
+    WIN_CPU_ONEDNN = 'WIN_CPU_ONEDNN'
+    WIN_CPU_ONEDNN_MKL = 'WIN_CPU_ONEDNN_MKL'
     WIN_CPU_MKL = 'WIN_CPU_MKL'
     WIN_GPU = 'WIN_GPU'
-    WIN_GPU_MKLDNN = 'WIN_GPU_MKLDNN'
+    WIN_GPU_ONEDNN = 'WIN_GPU_ONEDNN'
 
 
 CMAKE_FLAGS = {
@@ -69,7 +69,7 @@ CMAKE_FLAGS = {
         '-DBUILD_CPP_EXAMPLES=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
-    , 'WIN_CPU_MKLDNN': (
+    , 'WIN_CPU_ONEDNN': (
         '-DCMAKE_C_COMPILER=cl '
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
@@ -82,7 +82,7 @@ CMAKE_FLAGS = {
         '-DUSE_ONEDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
-    , 'WIN_CPU_MKLDNN_MKL': (
+    , 'WIN_CPU_ONEDNN_MKL': (
         '-DCMAKE_C_COMPILER=cl '
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
@@ -121,7 +121,7 @@ CMAKE_FLAGS = {
         '-DMXNET_CUDA_ARCH="5.2" '
         '-DCMAKE_BUILD_TYPE=Release')
 
-    , 'WIN_GPU_MKLDNN': (
+    , 'WIN_GPU_ONEDNN': (
         '-DCMAKE_C_COMPILER=cl '
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '

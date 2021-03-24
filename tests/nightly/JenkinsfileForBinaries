@@ -32,9 +32,9 @@ core_logic: {
   stage('Build') {
     parallel 'GPU: CUDA10.1+cuDNN7': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-mkldnn-gpu') {
+        ws('workspace/build-onednn-gpu') {
           utils.init_git()
-          utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_mkldnn', false)
+          utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_onednn', false)
           utils.pack_lib('gpu', mx_lib)
         }
       }
