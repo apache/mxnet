@@ -228,7 +228,7 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
     return logits
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, unused-argument
 @set_module('mxnet.ndarray.numpy_extension')
 def activation(data, act_type='relu', **kwargs):
     r"""Applies an activation function element-wise to the input.
@@ -256,7 +256,7 @@ def activation(data, act_type='relu', **kwargs):
     return _api_internal.activation(data, act_type)
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, unused-argument
 @set_module('mxnet.ndarray.numpy_extension')
 def batch_norm(x, gamma, beta, running_mean, running_var, eps=1e-3, momentum=0.9,
                fix_gamma=True, use_global_stats=False, output_mean_var=False, axis=1,
@@ -357,7 +357,7 @@ def batch_norm(x, gamma, beta, running_mean, running_var, eps=1e-3, momentum=0.9
                                     cudnn_off, min_calib_range, max_calib_range)
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, unused-argument
 @set_module('mxnet.ndarray.numpy_extension')
 def fully_connected(x, weight, bias=None, num_hidden=None,
                     no_bias=True, flatten=True, **kwargs):
