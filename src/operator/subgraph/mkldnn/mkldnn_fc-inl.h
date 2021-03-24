@@ -72,6 +72,9 @@ static inline bool IsOutputUint8(const MKLDNNFCFullParam& full_param) {
        alg == mkldnn::algorithm::eltwise_exp ||
        alg == mkldnn::algorithm::eltwise_abs)) {
     return true;
+  } else if (full_param.mkldnn_param.shifted_output.has_value() &&
+             full_param.mkldnn_param.shifted_output.value()) {
+               return true;
   }
 
   return false;

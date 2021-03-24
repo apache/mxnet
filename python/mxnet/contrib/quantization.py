@@ -900,7 +900,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     while True:
         try:
             network(*data_nd)
-        except TypeError:
+        except (TypeError, ValueError):
             del data_nd[-1]
             del calib_data.provide_data[-1]
             continue

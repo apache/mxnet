@@ -382,8 +382,14 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   if (mkldnn_param.quantized && !mkldnn_param.enable_float_output) {
     float *min_output_ptr = out_data[quantized_fullc::kOutMin].data().dptr<float>();
     float *max_output_ptr = out_data[quantized_fullc::kOutMax].data().dptr<float>();
-    *min_output_ptr = cached_min_output_;
-    *max_output_ptr = cached_max_output_;
+
+    if (mkldnn_param.shifted_output.has_value() && mkldnn_param.shifted_output.value()) {
+      *min_output_ptr = 0;
+      *max_output_ptr = cached_max_output_ - cached_min_output_;
+    } else {
+      *min_output_ptr = cached_min_output_;
+      *max_output_ptr = cached_max_output_;
+    }
   }
 }
 

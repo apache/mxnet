@@ -1348,6 +1348,64 @@ def test_onednn_shifted_quantization():
             check(i, qdtype)
 
 
+@with_seed()
+def test_onednn_shifted_fc_fc():
+    batch_size = 2
+    if not is_test_for_mkldnn():
+        print("Test only for mkldnn")
+        return
+
+    def get_fc_fc_layers():
+        net = mx.gluon.nn.HybridSequential()
+        with net.name_scope():
+            net.add(mx.gluon.nn.Dense(2, use_bias=True, flatten=True,
+                                      weight_initializer=mx.initializer.Normal(),
+                                      bias_initializer=mx.initializer.Normal()))
+            net.add(mx.gluon.nn.Dense(2, use_bias=True, flatten=True,
+                                      weight_initializer=mx.initializer.Normal(),
+                                      bias_initializer=mx.initializer.Normal()))
+        net.initialize()
+        return net
+
+    def quantize_net(net, qdtype, random_data):
+        calib_data = NDArrayIter(data=random_data, batch_size=batch_size)
+        calib_data = DummyIter(calib_data)
+        net = mx.contrib.quant.quantize_net(net, quantized_dtype=qdtype,
+                                            exclude_layers=None,
+                                            exclude_layers_match=[],
+                                            calib_data=calib_data,
+                                            calib_mode='naive',
+                                            num_calib_examples=1,
+                                            ctx=mx.current_context())
+        net.hybridize(static_alloc=True, static_shape=True)
+        print("calibrated, now run to get symbol")
+        out = net(random_data)
+        out.wait_to_read()
+
+        _, sym = net._cached_graph
+        fc_attrs = sym.attr_dict()['quantized_sg_mkldnn_fully_connected_0']
+        return fc_attrs, out
+
+    def check(qdtype, random_data):
+        net_ref = get_fc_fc_layers()
+        out_ref = net_ref(random_data)
+        out_ref.wait_to_read()
+
+        fc_attrs, out_q = quantize_net(net_ref, qdtype, random_data)
+
+        assert_almost_equal(out_ref, out_q)
+
+        if qdtype == 'auto':
+            assert fc_attrs['shifted_output'] == 'True'
+        else:
+            assert 'shifted' not in fc_attrs
+
+    with environment({'MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS': '0',
+        'MXNET_DISABLE_SHIFTED_QUANTIZE_FC_OPTIMIZATION': '1'}):
+        for qdtype in ['uint8', 'int8', 'auto']:
+            check(qdtype, mx.nd.random_uniform(low=0 if qdtype == 'uint8' else -1, high=1, shape=(batch_size, 10)))
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule()
