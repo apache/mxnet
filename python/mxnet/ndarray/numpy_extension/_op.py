@@ -357,8 +357,8 @@ def batch_norm(x, gamma, beta, running_mean, running_var, name=None, eps=1e-3, m
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.ndarray.numpy_extension')
-def fully_connected(x, weight, name=None, bias=None, num_hidden=None,
-                    no_bias=True, flatten=True):
+def fully_connected(x, weight, bias, num_hidden=None,
+                    no_bias=True, flatten=True, name=None):
     r"""Applies a linear transformation: :math:`Y = XW^T + b`.
 
     If ``flatten`` is set to be true, then the shapes are:
@@ -409,10 +409,10 @@ def fully_connected(x, weight, name=None, bias=None, num_hidden=None,
     out : NDArray or list of NDArrays
         The output of this function.
     """
-    assert num_hidden is not None, "Please provide number of hidden layers"
+    assert num_hidden is not None, "Please provide number of hidden nodes"
     if no_bias:
         return _api_internal.fully_connected(x, weight, name, num_hidden, no_bias, flatten)
     else:
-        assert bias is not None, "Missing bias input"
+        assert bias is not None, "Missing bias parameter"
         return _api_internal.fully_connected(x, weight, bias, name, num_hidden,
                                              no_bias, flatten)
