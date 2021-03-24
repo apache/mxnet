@@ -33,13 +33,21 @@
 namespace mxnet {
 namespace op {
 
+#define SELFATT_QK     "_contrib_interleaved_matmul_selfatt_qk"
+#define SELFATT_VALATT "_contrib_interleaved_matmul_selfatt_valatt"
+
+const std::map<std::string, std::string> OpMapping = {
+  {SELFATT_QK,     "_sg_mkldnn_selfatt_qk"},
+  {SELFATT_VALATT, "_sg_mkldnn_selfatt_valatt"}
+};
+
 class SgMKLDNNTransformerSelector : public SubgraphSelector {
  public:
   explicit SgMKLDNNTransformerSelector() {}
 
   bool Select(const nnvm::Node &n, const std::shared_ptr<NodeAttr>& node_attr) override {
-    if (n.op() == Op::Get("_contrib_interleaved_matmul_selfatt_qk") ||
-        n.op() == Op::Get("_contrib_interleaved_matmul_selfatt_valatt")) {
+    if (n.op() == Op::Get(SELFATT_QK)) { //||
+        //n.op() == Op::Get(SELFATT_VALATT)) { // Enable when refactored
       return true;
     }
     return false;
@@ -77,14 +85,12 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
     nnvm::Symbol new_sym;
     new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
-    node_name << "_sg_mkldnn";
-  
     std::string op_name;
     MKLDNNInterleavedMatMulParam new_param;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->op() && 
-          (node->op()->name == "_contrib_interleaved_matmul_selfatt_qk" ||
-           node->op()->name == "_contrib_interleaved_matmul_selfatt_valatt")) {
+          (node->op()->name == SELFATT_QK ||
+           node->op()->name == SELFATT_VALATT)) {
         op_name = node->op()->name;
         auto param = nnvm::get<InterleavedMatMulParam>(node->attrs.parsed);
         new_param.heads = param.heads;
@@ -92,11 +98,11 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
         new_param.enable_float_output = false;
       }
     });
-    node_name << op_name << "_" << std::to_string(subgraph_id);
+    node_name << OpMapping.at(op_name) << "_" << std::to_string(subgraph_id);
 
 
     n->attrs.name = node_name.str();
-    n->attrs.op = Op::Get("_sg_mkldnn" + op_name);
+    n->attrs.op = Op::Get(OpMapping.at(op_name));
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     n->attrs.parsed = new_param;

@@ -304,8 +304,8 @@ nnvm::ObjectPtr SgMKLDNNSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
   return node;
 }
 
-NNVM_REGISTER_OP(_sg_mkldnn_interleaved_matmul_selfatt_qk)
-.describe(R"code(_sg_mkldnn_interleaved_matmul_selfatt_qk)code" ADD_FILELINE)
+NNVM_REGISTER_OP(_sg_mkldnn_selfatt_qk)
+.describe(R"code(_sg_mkldnn_selfatt_qk)code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
   auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
   if (param.quantized) {
