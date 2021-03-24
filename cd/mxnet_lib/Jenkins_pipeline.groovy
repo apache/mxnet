@@ -32,8 +32,8 @@ libmxnet = 'lib/libmxnet.so'
 licenses = 'licenses/*'
 
 // libmxnet dependencies
-mx_native_deps = 'lib/libgfortran.so.3'
-mx_deps = 'lib/libgfortran.so.3, 3rdparty/mkldnn/build/install/include/dnnl_version.h, 3rdparty/mkldnn/build/install/include/dnnl_config.h'
+mx_native_deps = 'lib/libgfortran.so.*, lib/libopenblas.so.0'
+mx_deps = 'lib/libgfortran.so.*, lib/libopenblas.so.0, build/3rdparty/mkldnn/include/dnnl_version.h, build/3rdparty/mkldnn/include/dnnl_config.h'
 
 // library type
 // either static or dynamic - depending on how it links to its dependencies
