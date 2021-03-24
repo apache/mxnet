@@ -30,20 +30,20 @@ namespace mxnet {
 
 inline int String2MXNetActType(const std::string& s) {
   if (s == "relu") {
-    return 0;
+    return activation::kReLU;
   } else if (s == "sigmoid") {
-    return 1;
+    return activation::kSigmoid;
   } else if (s == "tanh") {
-    return 2;
+    return activation::kTanh;
   } else if (s == "softrelu") {
-    return 3;
+    return activation::kSoftReLU;
   } else if (s == "softsign") {
-    return 4;
+    return activation::kSoftSign;
   } else {
     LOG(FATAL) << "unknown activation type " << s;
   }
   LOG(FATAL) << "should not reach here ";
-  return -1;
+  return 0;
 }
 
 MXNET_REGISTER_API("_npx.activation")
