@@ -70,7 +70,7 @@ def softmax(data, axis=-1, length=None, temperature=None, use_length=False, dtyp
     array([[0.33333334, 0.33333334, 0.33333334],
         [0.33333334, 0.33333334, 0.33333334]])
     """
-    return _mx_nd_npx.softmax(data, length, axis=axis, temperature=temperature,
+    return _mx_nd_npx.softmax(data, axis=axis, length=length, temperature=temperature,
                               use_length=use_length, dtype=dtype)
 
 
@@ -111,7 +111,7 @@ def log_softmax(data, axis=-1, length=None, temperature=None, use_length=False, 
     array([[-0.34115386, -0.6931472 , -1.2411538 ],
         [-1.2411538 , -0.6931472 , -0.34115386]])
     """
-    return _mx_nd_npx.log_softmax(data, length, axis=axis, temperature=temperature,
+    return _mx_nd_npx.log_softmax(data, axis=axis, length=length, temperature=temperature,
                                   use_length=use_length, dtype=dtype)
 
 
