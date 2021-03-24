@@ -69,10 +69,28 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   bool operator==(const ActivationParam& other) const {
     return this->act_type == other.act_type;
   }
+  std::string MXNetActType2String(int act_type) {
+    switch (act_type) {
+      case activation::kReLU:
+        return "relu";
+      case activation::kSigmoid:
+        return "sigmoid";
+      case activation::kTanh:
+        return "tanh";
+      case activation::kSoftReLU:
+        return "softrelu";
+      case activation::kSoftSign:
+        return "softsign";
+      default:
+        LOG(FATAL) << "Unknown act_type enum " << act_type;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream act_type_s;
     act_type_s << act_type;
-    (*dict)["act_type"] = act_type_s.str();
+    (*dict)["act_type"] = MXNetActType2String(act_type);
   }
 };
 
