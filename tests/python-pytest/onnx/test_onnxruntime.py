@@ -1155,3 +1155,79 @@ def test_transformer_pretrained_inference_onnxruntime(tmp_path, model_name):
 
     finally:
         shutil.rmtree(tmp_path)
+
+
+@with_seed()
+@pytest.mark.parametrize('model_params', [('gpt2_117m', 24), ('gpt2_345m', 48)])
+def test_gpt_pretrained_inference_onnxruntime(tmp_path, model_params):
+    tmp_path = str(tmp_path)
+    try:
+        import gluonnlp as nlp
+        import urllib.request
+        from zipfile import ZipFile
+        import importlib.util
+        import sys
+
+        url = 'https://nlp.gluon.ai/_downloads/77d227fbc8f1613e6802acc7253cc090/text_generation.zip'
+        urllib.request.urlretrieve(url, tmp_path + 'text_generation.zip')
+
+        with ZipFile(tmp_path + 'text_generation.zip', 'r') as zipObj:
+            zipObj.extractall(tmp_path)
+
+        # load in the text_generation module, refer to:
+        # https://github.com/dmlc/gluon-nlp/tree/v0.10.x/scripts/text_generation
+        spec = importlib.util.spec_from_file_location(
+            'text_generation',
+            tmp_path + '/text_generation/__init__.py')
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = mod
+        spec.loader.exec_module(mod)
+
+        ctx = mx.cpu(0)
+        model_name= model_params[0]
+        dataset= 'openai_webtext'
+        # get_model() is overridden in here:
+        # https://github.com/dmlc/gluon-nlp/blob/v0.10.x/scripts/text_generation/model/__init__.py#L23
+        model, _ = mod.model.get_model(
+            name=model_name,
+            ctx=ctx,
+            pretrained=True,
+            dataset_name=dataset)
+
+        model.hybridize()
+
+        batch = 4
+        seq_length = 64
+        inputs = mx.nd.random.uniform(0, 50257, shape=(batch, seq_length), dtype='float32',
+                                      ctx=ctx)
+
+        pred = model(inputs)
+
+        prefix = "%s/%s" % (tmp_path, model_name)
+        model.export(prefix)
+        sym_file = "%s-symbol.json" % prefix
+        params_file = "%s-0000.params" % prefix
+        onnx_file = "%s.onnx" % prefix
+
+        input_shapes = [(batch, seq_length)]
+        input_types = [np.float32]
+        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
+                                                            input_types, onnx_file)
+
+        ses_opt = onnxruntime.SessionOptions()
+        ses_opt.log_severity_level = 3
+        session = onnxruntime.InferenceSession(onnx_file, ses_opt)
+        onnx_inputs = [inputs]
+        input_dict = dict((session.get_inputs()[i].name, onnx_inputs[i].asnumpy()) for i in range(len(onnx_inputs)))
+        pred_onx = session.run(None, input_dict)
+
+        # check output
+        assert_almost_equal(pred[0], pred_onx[0])
+        # check states
+        num_states = model_params[1]
+        for i in range(num_states):
+            assert_almost_equal(pred[1][i], pred_onx[i+1])
+
+    finally:
+        shutil.rmtree(tmp_path)
+

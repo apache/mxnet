@@ -276,6 +276,14 @@ def test_onnx_export_reshape_special_cases(tmp_path, dtype):
     M9 = def_model('reshape', shape=(-4, 1, 1000, 0, 0))
     op_export_test('reshape_spec_9', M9, [x7], tmp_path)
 
+    x8 = mx.nd.ones((3, 96, 5), dtype=dtype)
+    M10 = def_model('reshape', shape=(0, -4, 12, -1, 0))
+    op_export_test('reshape_spec_10', M10, [x8], tmp_path)
+
+    x9 = mx.nd.ones((3, 96, 5), dtype=dtype)
+    M11 = def_model('reshape', shape=(0, -4, 16, -1, 0))
+    op_export_test('reshape_spec_11', M11, [x9], tmp_path)
+
 
 @pytest.mark.parametrize('dtype', ['int32', 'int64'])
 def test_onnx_export_embedding(tmp_path, dtype):
