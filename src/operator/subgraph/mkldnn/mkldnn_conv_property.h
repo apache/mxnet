@@ -182,9 +182,9 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 class SgMKLDNNConvProperty : public SubgraphProperty {
  public:
   SgMKLDNNConvProperty() {
-    disable_conv_bn_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_BN", 0);
-    disable_conv_act_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU", 0);
-    disable_conv_sum_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM", 0);
+    disable_conv_bn_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_CONV_BN", 0);
+    disable_conv_act_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_CONV_RELU", 0);
+    disable_conv_sum_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_CONV_SUM", 0);
 
     disable_all_ = disable_conv_bn_ && disable_conv_act_ && disable_conv_sum_;
   }
@@ -193,7 +193,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     auto property = std::make_shared<SgMKLDNNConvProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_CONV_OPT", 0)) {
+    if (dmlc::GetEnv("MXNET_DISABLE_ONEDNN_CONV_OPT", 0)) {
       property->SetAttr<bool>("disable", true);
     }
     return property;

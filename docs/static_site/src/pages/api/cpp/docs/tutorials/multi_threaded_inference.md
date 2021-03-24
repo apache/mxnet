@@ -79,7 +79,7 @@ $ cd example/multi_threaded_inference
 $ make
 ```
 
-If you have built mxnet from source with cmake, please uncomment the specific lines for cmake build or set the following environment variables: `MKLDNN_BUILD_DIR (default is $(MXNET_ROOT)/3rdparty/onednn/build)`, `MKLDNN_INCLUDE_DIR (default is $(MXNET_ROOT)/3rdparty/onednn/include)`, `MXNET_LIB_DIR (default is $(MXNET_ROOT)/lib)`.
+If you have built mxnet from source with cmake, please uncomment the specific lines for cmake build or set the following environment variables: `ONEDNN_BUILD_DIR (default is $(MXNET_ROOT)/3rdparty/onednn/build)`, `ONEDNN_INCLUDE_DIR (default is $(MXNET_ROOT)/3rdparty/onednn/include)`, `MXNET_LIB_DIR (default is $(MXNET_ROOT)/lib)`.
 
 ### Run multi threaded inference example
 The example is tested with models such as `imagenet1k-inception-bn`, `imagenet1k-resnet-50`,

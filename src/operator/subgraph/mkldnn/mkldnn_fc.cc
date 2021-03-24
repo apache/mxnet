@@ -141,7 +141,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   }
 
   if (initialized_ && mkldnn_param.quantized &&
-      dmlc::GetEnv("MXNET_MKLDNN_QFC_DYNAMIC_PARAMS", 0)) {
+      dmlc::GetEnv("MXNET_ONEDNN_QFC_DYNAMIC_PARAMS", 0)) {
     if (channel_wise_runtime_) {
       if (cached_min_data_ != min_data || cached_max_data_ != max_data ||
           weight_ver_ != weight.version() ||
@@ -234,8 +234,8 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
           << "Currently, channel-wise quantization requires fuse requantize or dequantize."
           << " Please make sure the `min_calib_range` and `max_calib_range` are set when only"
           << " fuse requantize (outputs of FullyConnected are collected during calibration phase),"
-          << " or the env var of `MXNET_DISABLE_MKLDNN_QFC_FLOAT_OUTPUT` and "
-          << " `MXNET_DISABLE_MKLDNN_QFC_FUSE_ALL` are not set to true (default is false)";
+          << " or the env var of `MXNET_DISABLE_ONEDNN_QFC_FLOAT_OUTPUT` and "
+          << " `MXNET_DISABLE_ONEDNN_QFC_FUSE_ALL` are not set to true (default is false)";
       }
       support_channelwise_scale = support_channelwise_scale && channel_wise_runtime_;
 
