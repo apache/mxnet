@@ -38,7 +38,7 @@ namespace op {
 
 const std::map<std::string, std::string> OpMapping = {
   {SELFATT_QK,     "_sg_mkldnn_selfatt_qk"},
-  {SELFATT_VALATT, "_sg_mkldnn_selfatt_valatt"}
+ // {SELFATT_VALATT, "_sg_mkldnn_selfatt_valatt"}
 };
 
 class SgMKLDNNTransformerSelector : public SubgraphSelector {
@@ -89,8 +89,8 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
     MKLDNNInterleavedMatMulParam new_param;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->op() && 
-          (node->op()->name == SELFATT_QK ||
-           node->op()->name == SELFATT_VALATT)) {
+          (node->op()->name == SELFATT_QK)) {// ||
+           //node->op()->name == SELFATT_VALATT)) {
         op_name = node->op()->name;
         auto param = nnvm::get<InterleavedMatMulParam>(node->attrs.parsed);
         new_param.heads = param.heads;

@@ -40,10 +40,18 @@ static bool SgMKLDNNSelfAttQKShape(const NodeAttrs& attrs,
                                             mxnet::ShapeVector* out_shapes) {
   const auto& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
   if (param.quantized) {
-    mxnet::ShapeVector base_in_shapes  = {in_shapes[0]};
-    mxnet::ShapeVector base_out_shapes = {out_shapes[0]};
+    mxnet::ShapeVector base_in_shapes  = {in_shapes->at(0)};
+    mxnet::ShapeVector base_out_shapes = {out_shapes->at(0)};
     bool ret = DefaultSubgraphOpShape(attrs, &base_in_shapes, &base_out_shapes);
 
+    for (size_t i = 0; i < in_shapes->size(); ++i) {
+      if (i < base_in_shapes.size())
+        in_shapes->at(i) = base_in_shapes[i];
+      else
+        SHAPE_ASSIGN_CHECK(*in_shapes, i, mxnet::TShape({1}));
+    }
+    out_shapes->resize(3);
+    out_shapes->at(0) = base_out_shapes[0];
     if (!param.enable_float_output) {
       SHAPE_ASSIGN_CHECK(*out_shapes, 1, mxnet::TShape({1}));      // min output
       SHAPE_ASSIGN_CHECK(*out_shapes, 2, mxnet::TShape({1}));      // max output
@@ -191,8 +199,8 @@ void SgMKLDNNSelfAttQKOp::Forward(const OpContext &ctx,
   const memory::dim embed_dim      = output_lin_dim / 3;
   const memory::dim head_dim       = embed_dim / heads;
   const memory::dim attn_batches   = heads * sequences;
-  const memory::dim lead_dim       = attn_batches * 3 * head_dim;
-  const memory::dim batch_stride   = 3 * head_dim;
+  const memory::dim lead_dim       = attn_batches * 3 * head_dim; // sequences * output_lin_dim
+  const memory::dim batch_stride   = 3 * head_dim; //  output_lin_dim / heads;
   const float scale                = 1.0 / sqrt(static_cast<float>(head_dim));
 
   if (!initialized_) {
@@ -209,7 +217,7 @@ void SgMKLDNNSelfAttQKOp::Forward(const OpContext &ctx,
     memory::dims key_strides   = {batch_stride, 1, lead_dim};
     
     auto query_md = memory::desc(query_dims, qkv_dtype, query_strides);
-    auto key_md   = memory::desc(key_dims, qkv_dtype, key_dims);
+    auto key_md   = memory::desc(key_dims, qkv_dtype, key_strides);
 
     memory::desc out_md;
     
@@ -291,7 +299,7 @@ void SgMKLDNNSelfAttQKOp::Forward(const OpContext &ctx,
 nnvm::ObjectPtr SgMKLDNNSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
   nnvm::ObjectPtr node = nnvm::Node::Create();
   auto const &param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
-  node->attrs.op = Op::Get("_sg_mkldnn_interleaved_matmul_selfatt_qk");
+  node->attrs.op = Op::Get("_sg_mkldnn_selfatt_qk");
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
   node->attrs.dict["heads"] = std::to_string(param.heads);
