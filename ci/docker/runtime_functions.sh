@@ -1263,8 +1263,8 @@ integrationtest_ubuntu_cpu_onnx() {
     # Skip this as https://github.com/apache/incubator-mxnet/pull/19914 breaks import
     #pytest $COV_ARG --verbose tests/python-pytest/onnx/test_models.py
     #pytest $COV_ARG --verbose tests/python-pytest/onnx/test_node.py
-    pytest $COV_ARG -v -m integrationtest_onnx tests/python-pytest/onnx/test_onnxruntime_cv.py
-    pytest $COV_ARG -v -m integrationtest_onnx tests/python-pytest/onnx/test_onnxruntime_nlp.py
+    pytest $COV_ARG -v -m integration tests/python-pytest/onnx/test_onnxruntime_cv.py
+    pytest $COV_ARG -v -m integration tests/python-pytest/onnx/test_onnxruntime_nlp.py
 }
 
 integrationtest_ubuntu_gpu_python() {

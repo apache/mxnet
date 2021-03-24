@@ -83,7 +83,7 @@ def test_roberta_inference_onnxruntime(tmp_path, model_name):
 
 
 @with_seed()
-@pytest.mark.integrationtest_onnx
+@pytest.mark.integration
 @pytest.mark.parametrize('model', ['bert_12_768_12', 'bert_24_1024_16'])
 def test_bert_inference_onnxruntime(tmp_path, model):
     tmp_path = str(tmp_path)
@@ -239,7 +239,7 @@ def test_standard_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name
 
 
 @with_seed()
-@pytest.mark.integrationtest_onnx
+@pytest.mark.integration
 @pytest.mark.parametrize('model', ['bert_12_768_12'])
 def test_dynamic_shape_bert_inference_onnxruntime(tmp_path, model):
     tmp_path = str(tmp_path)
