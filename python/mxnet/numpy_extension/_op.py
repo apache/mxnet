@@ -27,7 +27,7 @@ __all__ = ['softmax', 'log_softmax', 'masked_softmax', 'masked_log_softmax',
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def softmax(data, length=None, axis=-1, temperature=None, use_length=False, dtype=None):
+def softmax(data, axis=-1, length=None, temperature=None, use_length=False, dtype=None):
     r"""Applies the softmax function.
 
     The resulting array contains elements in the range (0,1) and the elements along the given axis sum up to 1.
@@ -43,10 +43,10 @@ def softmax(data, length=None, axis=-1, temperature=None, use_length=False, dtyp
     ----------
     data : NDArray
         The input array.
-    length : NDArray
-        The length array.
     axis : int, optional, default='-1'
         The axis along which to compute softmax.
+    length : NDArray
+        The length array.
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
     dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
@@ -76,7 +76,7 @@ def softmax(data, length=None, axis=-1, temperature=None, use_length=False, dtyp
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def log_softmax(data, length=None, axis=-1, temperature=None, use_length=False, dtype=None):
+def log_softmax(data, axis=-1, length=None, temperature=None, use_length=False, dtype=None):
     r"""Computes the log softmax of the input.
     This is equivalent to computing softmax followed by log.
 
@@ -86,6 +86,8 @@ def log_softmax(data, length=None, axis=-1, temperature=None, use_length=False, 
         The input array.
     axis : int, optional, default='-1'
         The axis along which to compute softmax.
+    length : NDArray
+        The length array.
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
     dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
@@ -198,7 +200,7 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def activation(data, act_type='relu', name=None):
+def activation(data, act_type='relu', **kwargs):
     r"""Applies an activation function element-wise to the input.
 
     The following activation functions are supported:
@@ -221,14 +223,14 @@ def activation(data, act_type='relu', name=None):
     out : NDArray or list of NDArrays
         The output of this function.
     """
-    return _mx_nd_npx.activation(data, act_type=act_type, name=name)
+    return _mx_nd_npx.activation(data, act_type=act_type)
 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def batch_norm(x, gamma, beta, running_mean, running_var, name=None, eps=1e-3, momentum=0.9,
+def batch_norm(x, gamma, beta, running_mean, running_var, eps=1e-3, momentum=0.9,
                fix_gamma=True, use_global_stats=False, output_mean_var=False, axis=1,
-               cudnn_off=False, min_calib_range=None, max_calib_range=None):
+               cudnn_off=False, min_calib_range=None, max_calib_range=None, **kwargs):
     r"""Batch normalization.
 
     Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
@@ -322,7 +324,7 @@ def batch_norm(x, gamma, beta, running_mean, running_var, name=None, eps=1e-3, m
     """
     return _mx_nd_npx.batch_norm(x, gamma, beta, running_mean, running_var, eps=eps,
                                  momentum=momentum, fix_gamma=fix_gamma,
-                                 use_global_stats=use_global_stats, name=name,
+                                 use_global_stats=use_global_stats,
                                  output_mean_var=output_mean_var, axis=axis, cudnn_off=cudnn_off,
                                  min_calib_range=min_calib_range, max_calib_range=max_calib_range)
 
@@ -330,7 +332,7 @@ def batch_norm(x, gamma, beta, running_mean, running_var, name=None, eps=1e-3, m
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
 def fully_connected(x, weight, bias=None, num_hidden=None,
-                    no_bias=True, flatten=True, name=None):
+                    no_bias=True, flatten=True, **kwargs):
     r"""Applies a linear transformation: :math:`Y = XW^T + b`.
 
     If ``flatten`` is set to be true, then the shapes are:
@@ -382,4 +384,4 @@ def fully_connected(x, weight, bias=None, num_hidden=None,
         The output of this function.
     """
     return _mx_nd_npx.fully_connected(x, weight, bias, num_hidden=num_hidden,
-                                      no_bias=no_bias, flatten=flatten, name=name)
+                                      no_bias=no_bias, flatten=flatten)

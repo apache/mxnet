@@ -63,9 +63,6 @@ MXNET_REGISTER_API("_npx.batch_norm")
   attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::BatchNormParam>(&attrs);
-  if (args[14].type_code() != kNull) {
-    attrs.dict["name"] = args[14].operator std::string();
-  }
   // inputs
   int num_inputs = 5;
   std::vector<NDArray*> inputs;
