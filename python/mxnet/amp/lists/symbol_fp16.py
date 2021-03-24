@@ -600,7 +600,7 @@ FP32_FUNCS = [
     '_contrib_sldwin_atten_context',
     ]
 
-if Features().is_enabled('MKLDNN'):
+if Features().is_enabled('ONEDNN'):
     FP32_FUNCS.extend([
         '_sg_mkldnn_conv',
         '_sg_mkldnn_fully_connected',

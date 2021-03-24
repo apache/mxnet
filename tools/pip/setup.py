@@ -141,14 +141,14 @@ else:
         libraries.append('CUDA-10.1')
 
 from mxnet.runtime import Features
-if Features().is_enabled("MKLDNN"):
-    libraries.append('MKLDNN')
+if Features().is_enabled("ONEDNN"):
+    libraries.append('ONEDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
-if Features().is_enabled("MKLDNN"):
+if Features().is_enabled("ONEDNN"):
     shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/onednn/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/onednn'))
 if platform.system() == 'Linux':
