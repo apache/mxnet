@@ -357,7 +357,7 @@ def batch_norm(x, gamma, beta, running_mean, running_var, name=None, eps=1e-3, m
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.ndarray.numpy_extension')
-def fully_connected(x, weight, bias, num_hidden=None,
+def fully_connected(x, weight, bias=None, num_hidden=None,
                     no_bias=True, flatten=True, name=None):
     r"""Applies a linear transformation: :math:`Y = XW^T + b`.
 
