@@ -16,11 +16,38 @@
 # under the License.
 """Module for ONNX model format support for Apache MXNet."""
 
-from .onnx2mx.import_model import import_model, get_model_metadata
-from .onnx2mx.import_to_gluon import import_to_gluon
-from ...onnx.export_model import export_model
-print('Calling ONNX module through mxnet.contrib.onnx...')
-print('Please be advised that mxnet.contrib.onnx.import_model/get_model_metadata/import_to_gluon '
-      'will be deprecated in the upcoming MXNet v1.10 release. mxnet.contrib.onnx.export_model '
-      'has been moved to mxnet.onnx.export_model. The mxnet.contrib.onnx.export_model '
-      'alias will also be deprecated in the MXNet v1.10 release.')
+from .onnx2mx.import_model import import_model as import_model_
+from .onnx2mx.import_model import get_model_metadata as get_model_metadata_
+from .onnx2mx.import_to_gluon import import_to_gluon as import_to_gluon_
+from ...onnx.export_model import export_model as export_model_
+
+def import_model(*args, **kwargs):
+    print('Calling mxnet.contrib.onnx.import_model...')
+    print('Please be advised that importing ONNX models into MXNet is going to be deprecated '
+          'in the upcoming MXNet v1.10 release. The following apis will be deleted: '
+          'mxnet.contrib.onnx.import_model/get_model_metadata/import_to_gluon.')
+    import_model_(*args, **kwargs)
+
+
+def get_model_metadata(*args, **kwargs):
+    print('Calling mxnet.contrib.onnx.get_model_metadata...')
+    print('Please be advised that importing ONNX models into MXNet is going to be deprecated '
+          'in the upcoming MXNet v1.10 release. The following apis will be deleted: '
+          'mxnet.contrib.onnx.import_model/get_model_metadata/import_to_gluon.')   
+    get_model_metadata_(*args, **kwargs)
+
+
+def import_to_gluon(*args, **kwargs):
+    print('Calling mxnet.contrib.onnx.import_to_gluon...')
+    print('Please be advised that importing ONNX models into MXNet is going to be deprecated '
+          'in the upcoming MXNet v1.10 release. The following apis will be deleted: '
+          'mxnet.contrib.onnx.import_model/get_model_metadata/import_to_gluon.')
+    import_to_gluon_(*args, **kwargs)
+
+
+def export_model(*args, **kwargs):
+    print('Calling mxnet.contrib.onnx.export_model...')
+    print('Please be advised that the ONNX module has been moved to mxnet.onnx and '
+          'mxnet.onnx.export_model is the preferred path. The current path will be deprecated '
+          'in the upcoming MXNet v1.10 release.')
+    export_model_(*args, **kwargs)
