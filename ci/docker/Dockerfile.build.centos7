@@ -53,7 +53,7 @@ RUN yum -y check-update || true && \
         protobuf-devel \
         # CentOS Software Collections https://www.softwarecollections.org
         devtoolset-7 \
-        devtoolset-8 \
+        devtoolset-9 \
         rh-python36 \
         rh-maven35 \
         # Libraries

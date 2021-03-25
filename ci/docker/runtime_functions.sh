@@ -111,7 +111,7 @@ build_dynamic_libmxnet() {
     gather_licenses
 
     cd /work/build
-    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/devtoolset-9/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     if [[ ${mxnet_variant} = "cpu" ]]; then
@@ -722,7 +722,6 @@ sanity_python() {
 # $1 -> mxnet_variant: The variant of the libmxnet.so library
 cd_unittest_ubuntu() {
     set -ex
-    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     export PYTHONPATH=./python/
     export MXNET_ONEDNN_DEBUG=0  # Ignored if not present
@@ -854,7 +853,6 @@ unittest_cpp() {
 
 unittest_centos7_cpu() {
     set -ex
-    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     cd /work/mxnet
     export DMLC_LOG_STACK_TRACE_DEPTH=100
@@ -867,7 +865,6 @@ unittest_centos7_cpu() {
 
 unittest_centos7_gpu() {
     set -ex
-    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
@@ -1282,7 +1279,7 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/devtoolset-9/enable
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
@@ -1307,7 +1304,7 @@ ci_package_pypi() {
 cd_package_pypi() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/devtoolset-9/enable
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
@@ -1319,7 +1316,7 @@ cd_package_pypi() {
 # Sanity checks wheel file
 cd_integration_test_pypi() {
     set -ex
-    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/devtoolset-9/enable
     source /opt/rh/rh-python36/enable
 
     # install mxnet wheel package
@@ -1353,7 +1350,7 @@ build_static_python_cpu() {
     set -ex
     pushd .
     export mxnet_variant=cpu
-    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/devtoolset-9/enable
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
@@ -1365,7 +1362,7 @@ build_static_python_cu102() {
     set -ex
     pushd .
     export mxnet_variant=cu102
-    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/devtoolset-9/enable
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
