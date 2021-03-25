@@ -379,6 +379,7 @@ def convert_fully_connected(node, **kwargs):
     else:
         create_tensor([0], name+'_0', kwargs['initializer'])
         create_tensor([1], name+'_1', kwargs['initializer'])
+        create_tensor([0,0,-1], name+'_000', kwargs['initializer'])
         create_tensor([num_hidden], name+'_num_hidden', kwargs['initializer'])
         nodes += [
             make_node('Gemm', in_nodes, [name+'_gemm'], alpha=1.0, beta=1.0, transA=0, transB=1),
@@ -387,7 +388,8 @@ def convert_fully_connected(node, **kwargs):
                       [name+'_shape_sliced']),
             make_node('Concat', [name+'_shape_sliced', name+'_num_hidden'],
                       [name+'_shape_new'], axis=0),
-            make_node('Reshape', [name+'_gemm', name+'_shape_new'], [name], name=name)
+            make_node('Reshape', [name+'_gemm', name+'_shape_new'], [name+'__']),
+            make_node('Reshape', [name+'__', name+'_000'], [name], name=name)
         ]
 
     return nodes
@@ -887,6 +889,7 @@ def convert_softmax(node, **kwargs):
             create_tensor([1], name+"_1", kwargs["initializer"])
             create_const_scalar_node(name+"_0_s", np.int64(0), kwargs)
             create_const_scalar_node(name+"_1_s", np.int64(1), kwargs)
+            create_tensor([0, 0, 0], name+"_000", kwargs["initializer"])
             nodes += [
                 make_node("Shape", [data], [name+"_shape"]),
                 make_node("Shape", [name+"_shape"], [name+"_dim"]),
@@ -896,7 +899,11 @@ def convert_softmax(node, **kwargs):
                 make_node("Squeeze", [name+"_dim_last_"], [name+"_dim_last"], axes=[0]),
                 make_node("Range", [name+"_0_s", name+"_dim_last", name+"_1_s"], [name+"_range"]),
                 make_node("Cast", [input_nodes[1]], [name+"_len"], to=int(TensorProto.INT64)),
-                make_node("Unsqueeze", [name+"_len"], [name+"_len_unsqueezed"], axes=[-1]),
+                #make_node("Unsqueeze", [name+"_len"], [name+"_len_unsqueezed"], axes=[1]),
+                make_node('Shape', [name+"_len"], [name+'_len_shape']),
+                make_node('Concat', [name+'_len_shape', name+'_1'], [name+'_len_shape_new'], axis=0),
+                make_node('Reshape', [name+'_len', name+'_len_shape_new'], [name+"_len_unsqueezed_"]),
+                make_node('Reshape', [name+'_len_unsqueezed_', name+'_000'], [name+"_len_unsqueezed"]),
                 make_node("Less", [name+"_range", name+"_len_unsqueezed"], [name+"_less"]),
                 make_node("Where", [name+'_less', data, name+"_mask_val"], [name+"_data_masked"])
             ]
@@ -2660,6 +2667,12 @@ def convert_matmul_selfatt_qk(node, **kwargs):
     create_tensor([3], name+"_3", kwargs["initializer"])
     create_tensor([heads], name+"_c", kwargs["initializer"])
     create_tensor([3], name+"_d", kwargs["initializer"])
+    
+    #create_tensor([0, 0, 0, 0, 0], name+"_slice_start0", kwargs["initializer"])
+    #create_tensor([16, 5, 12, 1, 64], name+"_slice_end0", kwargs["initializer"])
+    create_tensor([0, 0, heads, 3, -1], name+"_shape0", kwargs["initializer"])
+    create_tensor([0, 0, 0, -1], name+"_shape1", kwargs["initializer"])
+    create_tensor([-1, 1, 0, 0], name+"_shape2", kwargs["initializer"])
     nodes = [
         make_node('Shape', [input_nodes[0]], [name+"_data_shape"]),
         make_node('Slice', [name+'_data_shape', name+'_0', name+'_1'], [name+"_a"]),
@@ -2672,35 +2685,37 @@ def convert_matmul_selfatt_qk(node, **kwargs):
         make_node('Div', [name+'_1_f', name+'_sqrt_e'], [name+'_1_over_sqrt_e']),
         make_node('Mul', [name+'_b', name+'_c'], [name+'_bc']),
 
-        make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_d', name+'_e'], \
-            [name+'_shape0'], axis=0),
-        make_node("Concat", [name+'_0', name+'_0', name+'_0', name+'_0', name+'_0'], \
-            [name+'_slice_start0'], axis=0),
-        make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_1', name+'_e'], \
-            [name+'_slice_end0'], axis=0),
-        make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_e'], \
-            [name+'_shape1'], axis=0),
-        make_node("Concat", [name+'_bc', name+'_a', name+'_e'], \
-            [name+'_shape2'], axis=0),
-        make_node("Concat", [name+'_0', name+'_0', name+'_0', name+'_1', name+'_0'], \
-            [name+'_slice_start1'], axis=0),
-        make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_2', name+'_e'], \
-            [name+'_slice_end1'], axis=0),
+        #make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_d', name+'_e'], \
+        #    [name+'_shape0'], axis=0),
+        #make_node("Concat", [name+'_0', name+'_0', name+'_0', name+'_0', name+'_0'], \
+        #    [name+'_slice_start0'], axis=0),
+        #make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_1', name+'_e'], \
+        #    [name+'_slice_end0'], axis=0),
+        #make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_e'], \
+        #    [name+'_shape1'], axis=0),
+        #make_node("Concat", [name+'_bc', name+'_a', name+'_e'], \
+        #    [name+'_shape2'], axis=0),
+        #make_node("Concat", [name+'_0', name+'_0', name+'_0', name+'_1', name+'_0'], \
+        #    [name+'_slice_start1'], axis=0),
+        #make_node("Concat", [name+'_a', name+'_b', name+'_c', name+'_2', name+'_e'], \
+        #    [name+'_slice_end1'], axis=0),
 
         make_node('Reshape', [input_nodes[0], name+'_shape0'], [name+'_reshape0_out']),
-        make_node('Slice', [name+'_reshape0_out', name+'_slice_start0', name+'_slice_end0'], \
+        make_node('Slice', [name+'_reshape0_out', name+'_0', name+'_1', name+'_3'], \
             [name+'_slice0_out']),
         make_node('Reshape', [name+'_slice0_out', name+'_shape1'], [name+'_reshape1_out']),
         make_node('Transpose', [name+'_reshape1_out'], [name+'_transpose0_out'], \
             perm=(1, 2, 0, 3)),
-        make_node('Reshape', [name+'_transpose0_out', name+'_shape2'], [name+'_reshape2_out']),
+        make_node('Reshape', [name+'_transpose0_out', name+'_shape2'], [name+'_reshape2_out_']),
+        make_node('Squeeze', [name+'_reshape2_out_'], [name+'_reshape2_out'], axes=(1,)),
         make_node('Mul', [name+'_reshape2_out', name+'_1_over_sqrt_e'], [name+'_mul0_out']),
-        make_node('Slice', [name+'_reshape0_out', name+'_slice_start1', name+'_slice_end1'], \
+        make_node('Slice', [name+'_reshape0_out', name+'_1', name+'_2', name+'_3'], \
             [name+'_slice1_out']),
         make_node('Reshape', [name+'_slice1_out', name+'_shape1'], [name+'_reshape3_out']),
         make_node('Transpose', [name+'_reshape3_out'], [name+'_transpose1_out'], \
             perm=(1, 2, 0, 3)),
-        make_node('Reshape', [name+'_transpose1_out', name+'_shape2'], [name+'_reshape4_out']),
+        make_node('Reshape', [name+'_transpose1_out', name+'_shape2'], [name+'_reshape4_out_']),
+        make_node('Squeeze', [name+'_reshape4_out_'], [name+'_reshape4_out'], axes=(1,)),
         make_node('Transpose', [name+'_reshape4_out'], [name+'_transpose2_out'], \
             perm=(0, 2, 1)),
         make_node('MatMul', [name+'_mul0_out', name+'_transpose2_out'], [name], name=name)
@@ -2744,7 +2759,7 @@ def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
             [name+"_reshape3_shape"], axis=0),
         make_node("Concat", [name+"_qkv_d0", name+"_qkv_d1", name+"_qkv_d2", name+"_const_3", name+"_d4"], \
             [name+"_slice_end"], axis=0),
-        make_node("Slice", [name+"_reshape0_output", name+"_slice_start", name+"_slice_end"], [name+"_slice_output"]),
+        make_node("Slice", [name+"_reshape0_output", name+"_const_2", name+"_const_3", name+"_const_3"], [name+"_slice_output"]),
         make_node("Reshape", [name+"_slice_output", name+"_reshape1_shape"], [name+"_reshape1_output"]),
         make_node("Transpose", [name+"_reshape1_output"], [name+"_transpose0_output"], perm=[1, 2, 0, 3]),
         make_node("Reshape", [name+"_transpose0_output", name+"_reshape2_shape"], [name+"_reshape2_output"]),
