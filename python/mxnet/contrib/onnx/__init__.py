@@ -18,4 +18,9 @@
 
 from .onnx2mx.import_model import import_model, get_model_metadata
 from .onnx2mx.import_to_gluon import import_to_gluon
-from .mx2onnx.export_model import export_model
+from ...onnx.export_model import export_model
+print('Calling ONNX module through mxnet.contrib.onnx...')
+print('Please be advised that mxnet.contrib.onnx.import_model/get_model_metadata/import_to_gluon '
+      'will be deprecated in the upcoming MXNet v1.10 release. mxnet.contrib.onnx.export_model '
+      'has been moved to mxnet.onnx.export_model. The mxnet.contrib.onnx.export_model '
+      'alias will also be deprecated in the MXNet v1.10 release.')

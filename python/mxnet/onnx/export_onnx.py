@@ -50,7 +50,7 @@
 import logging
 import json
 
-from .... import ndarray as nd
+from .. import ndarray as nd
 
 
 class MXNetGraph(object):
