@@ -722,6 +722,7 @@ sanity_python() {
 # $1 -> mxnet_variant: The variant of the libmxnet.so library
 cd_unittest_ubuntu() {
     set -ex
+    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     export PYTHONPATH=./python/
     export MXNET_ONEDNN_DEBUG=0  # Ignored if not present
@@ -853,6 +854,7 @@ unittest_cpp() {
 
 unittest_centos7_cpu() {
     set -ex
+    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     cd /work/mxnet
     export DMLC_LOG_STACK_TRACE_DEPTH=100
@@ -865,6 +867,7 @@ unittest_centos7_cpu() {
 
 unittest_centos7_gpu() {
     set -ex
+    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
@@ -1316,6 +1319,7 @@ cd_package_pypi() {
 # Sanity checks wheel file
 cd_integration_test_pypi() {
     set -ex
+    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
 
     # install mxnet wheel package
