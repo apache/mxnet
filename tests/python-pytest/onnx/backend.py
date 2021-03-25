@@ -19,7 +19,7 @@
 """MXNet/Gluon backend wrapper for onnx test infrastructure"""
 
 from mxnet.contrib.onnx.onnx2mx.import_onnx import GraphProto
-from mxnet.contrib.onnx.mx2onnx.export_onnx import MXNetGraph
+from mxnet.onnx.export_onnx import MXNetGraph
 import mxnet as mx
 import numpy as np
 

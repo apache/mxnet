@@ -46,8 +46,8 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_
         sym_file = '{}-symbol.json'.format(model_path)
         params_file = '{}-0000.params'.format(model_path)
         onnx_file = '{}/{}.onnx'.format(tmp_path, model_name)
-        mx.contrib.onnx.export_model(sym_file, params_file, [inp.shape for inp in inputs],
-                                     [inp.dtype for inp in inputs], onnx_file)
+        mx.onnx.export_model(sym_file, params_file, [inp.shape for inp in inputs],
+                             [inp.dtype for inp in inputs], onnx_file)
         return onnx_file
 
     def onnx_rt(onnx_file, inputs):
