@@ -1288,6 +1288,7 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
+    local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     if [[ ${mxnet_variant} =~ cu10[0-9]+$ ]]; then
         source /opt/rh/devtoolset-8/enable
     else
@@ -1296,7 +1297,6 @@ build_static_libmxnet() {
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
-    local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
 }
