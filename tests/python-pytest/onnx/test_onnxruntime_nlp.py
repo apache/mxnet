@@ -189,7 +189,7 @@ def test_distilbert_inference_onnxruntime(tmp_path, model_name):
 @with_seed()
 @pytest.mark.parametrize('model_name', [('standard_lstm_lm_200', 200), ('standard_lstm_lm_650', 650),
                                         ('standard_lstm_lm_1500', 1500)])
-@pytest.mark.parametrize('seq_length', [16, 32])
+@pytest.mark.parametrize('seq_length', [64, 128])
 def test_standard_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name, seq_length):
     try:
         import gluonnlp as nlp
