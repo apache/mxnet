@@ -38,7 +38,12 @@ namespace op {
 
 const std::map<std::string, std::string> OpMapping = {
   {SELFATT_QK,     "_sg_mkldnn_selfatt_qk"},
- // {SELFATT_VALATT, "_sg_mkldnn_selfatt_valatt"}
+  {SELFATT_VALATT, "_sg_mkldnn_selfatt_valatt"}
+};
+
+const std::map<std::string, std::string> NameMapping = {
+  {SELFATT_QK,     "sg_mkldnn_selfatt_qk"},
+  {SELFATT_VALATT, "sg_mkldnn_selfatt_valatt"}
 };
 
 class SgMKLDNNTransformerSelector : public SubgraphSelector {
@@ -98,7 +103,7 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
         new_param.enable_float_output = false;
       }
     });
-    node_name << OpMapping.at(op_name) << "_" << std::to_string(subgraph_id);
+    node_name << NameMapping.at(op_name) << "_" << std::to_string(subgraph_id);
 
 
     n->attrs.name = node_name.str();

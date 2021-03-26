@@ -36,8 +36,8 @@ namespace op {
 DMLC_REGISTER_PARAMETER(MKLDNNInterleavedMatMulParam);
 
 static bool SgMKLDNNSelfAttQKShape(const NodeAttrs& attrs,
-                                            mxnet::ShapeVector* in_shapes,
-                                            mxnet::ShapeVector* out_shapes) {
+                                   mxnet::ShapeVector* in_shapes,
+                                   mxnet::ShapeVector* out_shapes) {
   const auto& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
   if (param.quantized) {
     mxnet::ShapeVector base_in_shapes  = {in_shapes->at(0)};
@@ -64,13 +64,12 @@ static bool SgMKLDNNSelfAttQKShape(const NodeAttrs& attrs,
 }
 
 static bool SgMKLDNNSelfAttQKInferType(const nnvm::NodeAttrs &attrs,
-                                std::vector<int> *in_types,
-                                std::vector<int> *out_types) {
+                                       std::vector<int> *in_types,
+                                       std::vector<int> *out_types) {
   const auto& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
   if (param.quantized) {
-     CHECK(in_types->at(0) == mshadow::kInt8 ||
-          in_types->at(0) == mshadow::kUint8)
-        << "QuantizedInterleavedMatMulSelfAttQK only supports int8/uint8 input, while "
+     CHECK(in_types->at(0) == mshadow::kInt8)
+        << "QuantizedInterleavedMatMulSelfAttQK only supports int8 input, while "
         << in_types->at(0) << " is given.";
 
     TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32); // min value
@@ -94,10 +93,10 @@ static bool SgMKLDNNSelfAttQKInferType(const nnvm::NodeAttrs &attrs,
 }
 
 static bool SgMKLDNNSelfAttQKStorageType(const nnvm::NodeAttrs &attrs,
-                                                          const int dev_mask,
-                                                          DispatchMode *dispatch_mode,
-                                                          std::vector<int> *in_attrs,
-                                                          std::vector<int> *out_attrs) {
+                                         const int dev_mask,
+                                         DispatchMode *dispatch_mode,
+                                         std::vector<int> *in_attrs,
+                                         std::vector<int> *out_attrs) {
   auto const &param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
   if (param.quantized) {
     std::vector<int> base_in_attrs{in_attrs->at(0)};
