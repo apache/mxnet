@@ -111,20 +111,29 @@ build_dynamic_libmxnet() {
     gather_licenses
 
     cd /work/build
-    source /opt/rh/devtoolset-9/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     if [[ ${mxnet_variant} = "cpu" ]]; then
+        source /opt/rh/devtoolset-9/enable
         cmake -DUSE_BLAS=Open \
             -DUSE_ONEDNN=ON \
             -DUSE_CUDA=OFF \
             -G Ninja /work/mxnet
     elif [[ ${mxnet_variant} = "native" ]]; then
+        source /opt/rh/devtoolset-9/enable
         cmake -DUSE_BLAS=Open \
             -DUSE_ONEDNN=OFF \
             -DUSE_CUDA=OFF \
             -G Ninja /work/mxnet
+    elif [[ ${mxnet_variant} =~ cu11[0-9]+$ ]]; then
+        source /opt/rh/devtoolset-9/enable
+        cmake -DUSE_BLAS=Open \
+              -DUSE_ONEDNN=ON \
+              -DUSE_DIST_KVSTORE=ON \
+              -DUSE_CUDA=ON \
+              -G Ninja /work/mxnet
     elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
+        source /opt/rh/devtoolset-8/enable
         cmake -DUSE_BLAS=Open \
             -DUSE_ONEDNN=ON \
             -DUSE_DIST_KVSTORE=ON \
@@ -1362,7 +1371,7 @@ build_static_python_cu102() {
     set -ex
     pushd .
     export mxnet_variant=cu102
-    source /opt/rh/devtoolset-9/enable
+    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
