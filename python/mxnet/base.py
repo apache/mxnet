@@ -794,6 +794,9 @@ _NP_OP_IMPLEMENTED_SET = {'_np_reshape'}
 
 _NP_EXT_OP_PREFIX = '_npx_'
 _NP_EXT_OP_SUBMODULE_LIST = ['_image_', '_random_']
+_NP_EXT_OP_IMPLEMENTED_SET = {'_npx_softmax', '_npx_log_softmax', '_npx_masked_softmax',
+                              '_npx_masked_log_softmax', '_npx_activation',
+                              '_npx_batch_norm', '_npx_fully_connected'}
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
 
@@ -855,7 +858,7 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
     elif np_module_name == 'numpy_extension':
         op_name_prefix = _NP_EXT_OP_PREFIX
         submodule_name_list = _NP_EXT_OP_SUBMODULE_LIST
-        op_implemented_set = set()
+        op_implemented_set = _NP_EXT_OP_IMPLEMENTED_SET
     elif np_module_name == 'numpy._internal':
         op_name_prefix = _NP_INTERNAL_OP_PREFIX
         submodule_name_list = []
