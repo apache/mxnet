@@ -1288,7 +1288,11 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-9/enable
+    if [[ ${mxnet_variant} =~ cu10[0-9]+$ ]]; then
+        source /opt/rh/devtoolset-8/enable
+    else
+        source /opt/rh/devtoolset-9/enable
+    fi
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
