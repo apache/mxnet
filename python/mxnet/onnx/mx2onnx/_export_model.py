@@ -22,9 +22,9 @@
 import logging
 import numpy as np
 
-from ..base import string_types
-from .. import symbol
-from .export_onnx import MXNetGraph
+from mxnet.base import string_types
+from mxnet import symbol
+from ._export_onnx import MXNetGraph
 from ._export_helper import load_module
 
 

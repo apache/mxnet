@@ -19,7 +19,7 @@
 from .onnx2mx.import_model import import_model as import_model_
 from .onnx2mx.import_model import get_model_metadata as get_model_metadata_
 from .onnx2mx.import_to_gluon import import_to_gluon as import_to_gluon_
-from ...onnx.export_model import export_model as export_model_
+from ...onnx import export_model as export_model_
 
 def import_model(*args, **kwargs):
     print('Calling mxnet.contrib.onnx.import_model...')
