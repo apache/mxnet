@@ -273,6 +273,17 @@ MXNET_DLL int MXPredReshape(uint32_t num_input_nodes,
                   PredictorHandle handle,
                   PredictorHandle* out);
 /*!
+ * \brief Get the list of output node names.
+ * The returned out_names is valid until MXPredFree is called on the given PredictorHandle.
+ * \param handle The handle of the predictor.
+ * \param out_names_length Used to hold The length of the out_names array.
+ * \param out_names Used to hold the array of output node names.
+ * \return 0 when success, -1 when failure.
+ */
+MXNET_DLL int MXPredGetOutputNames(PredictorHandle handle,
+                                   mx_uint *out_names_length,
+                                   const char ***out_names);
+/*!
  * \brief Get the shape of output node.
  *  The returned shape_data and shape_ndim is only valid before next call to MXPred function.
  * \param handle The handle of the predictor.
