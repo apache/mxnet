@@ -69,6 +69,10 @@ class GPUPooledStorageManager final : public StorageManager {
       LOG(FATAL) << "MXNET_GPU_MEM_POOL_PAGE_SIZE cannot be set to a value smaller than " << NDEV \
                  << ". Got " << page_size_ << ".";
     }
+    memory_limit_percentage_ = dmlc::GetEnv<double>("EIA_MXNET_GPU_MEM_LIMIT", 100.0);
+     if (memory_limit_percentage_ <= 0 || memory_limit_percentage_ > 100) {
+       LOG(FATAL) << "Invalid memory limit percentage given: " << memory_limit_percentage_ << std::endl;
+     }
   }
   /*!
    * \brief Default destructor.
@@ -79,6 +83,7 @@ class GPUPooledStorageManager final : public StorageManager {
 
   void Alloc(Storage::Handle* handle) override;
   void Free(Storage::Handle handle) override;
+  size_t GetMemoryInUseInBytes() override;
 
   void DirectFree(Storage::Handle handle) override {
     std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
@@ -123,6 +128,9 @@ class GPUPooledStorageManager final : public StorageManager {
   size_t page_size_;
   // size that large allocations should be rounded to, for proper freeing.
   size_t large_alloc_round_size_;
+  // used_memory_ - free lists
+  size_t used_memory_no_free_lists_ = 0;
+  double memory_limit_percentage_;
   // percentage of reserved memory
   int reserve_;
   // number of devices
@@ -148,8 +156,17 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
     mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
     size_t free, total;
     cudaMemGetInfo(&free, &total);
-    if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
+    double mem_limit_in_bytes = total * memory_limit_percentage_ / 100.0;
+    free = mem_limit_in_bytes - used_memory_; 
+    if (free <= mem_limit_in_bytes * reserve_ / 100 || size > free - mem_limit_in_bytes * reserve_ / 100)
       ReleaseAll();
+
+    if (used_memory_ + size > mem_limit_in_bytes) {
+      // This calls abort() unless
+      // DMLC_LOG_FATAL_THROW != 0, then it
+      // throws std::runtime_error()
+      LOG(FATAL) << "EIA memory limit reached";
+    }
 
     void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
@@ -165,6 +182,8 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
       }
     }
     used_memory_ += size;
+    // We are allocating memory so add to this variable as well
+    used_memory_no_free_lists_ += size;
     handle->dptr = ret;
   } else {
     auto&& reuse_pool = reuse_it->second;
@@ -183,6 +202,11 @@ void GPUPooledStorageManager::Free(Storage::Handle handle) {
   size_t size = RoundAllocSize(handle.size);
   auto&& reuse_pool = memory_pool_[size];
   reuse_pool.push_back(handle.dptr);
+  // This method doesn't actually free
+  // but instead adds to the free list of the given size
+  // We should subtract size here because we want to exclude
+  // memory that resides in free lists
+  used_memory_no_free_lists_ -= size;
 }
 
 void GPUPooledStorageManager::ReleaseAll() {
@@ -379,6 +403,10 @@ void GPUPooledRoundedStorageManager::ReleaseAll() {
     }
     memory_pool_[i].clear();
   }
+}
+
+size_t GPUPooledStorageManager::GetMemoryInUseInBytes() {
+  return used_memory_no_free_lists_;
 }
 
 #endif  // MXNET_USE_CUDA
