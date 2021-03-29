@@ -307,7 +307,20 @@ MXNET_DLL int MXPredGetOutputShape(PredictorHandle handle,
 MXNET_DLL int MXPredGetOutputType(PredictorHandle handle,
                                   uint32_t out_index,
                                   int* out_dtype);
-
+/*!
+ * \brief Get the shape of input node.
+ * \param handle The handle of the predictor.
+ * \param key The name of input argument.
+ * \param shape_data Used to hold pointer to the shape data.
+ * \param shape_ndim Used to hold shape dimension.
+ * \param key_found Used to return if input key is a valid argument
+ * \return 0 when success, -1 when failure.
+ */
+MXNET_DLL int MXPredGetInputShape(PredictorHandle handle,
+                                   const char* key,
+                                   mx_uint** shape_data,
+                                   mx_uint* shape_ndim,
+                                   int* key_found);
 /*!
  * \brief Set the input data of predictor.
  * \param handle The predictor handle.

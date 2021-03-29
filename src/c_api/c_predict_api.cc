@@ -53,6 +53,8 @@ struct MXAPIPredictor {
   // output types
   nnvm::DTypeVector out_dtypes;
 
+  // uint32_t buffer for input shapes
+  std::vector<uint32_t> in_shapes_buffer;
   // uint32_t buffer for output shapes
   std::vector<uint32_t> out_shapes_buffer;
   // key to arguments
@@ -572,7 +574,7 @@ int MXPredCreatePartialOutEx(const char* symbol_json_str,
   ret->out_shapes.resize(ret->out_arrays.size());
   std::transform(ret->out_arrays.begin(), ret->out_arrays.end(), ret->out_shapes.begin(),
       [](const NDArray& nd) { return nd.shape(); });
-      
+
   *out = ret;
   API_END_HANDLE_ERROR(delete ret);
 }
@@ -718,6 +720,28 @@ int MXPredGetOutputType(PredictorHandle handle,
   const int s = p->out_dtypes[out_index];
   CHECK_GE(s, 0);
   out_dtype[out_index] = s;
+  API_END();
+}
+
+int MXPredGetInputShape(PredictorHandle handle,
+                        const char* key,
+                        mx_uint** shape_data,
+                        mx_uint* shape_ndim,
+                        int* key_found) {
+  MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
+  API_BEGIN();
+  auto it = p->key2arg.find(key);
+  if(it == p->key2arg.end()) {
+    *key_found = 0;
+  } else {
+    *key_found = 1;
+    const NDArray& nd = p->arg_arrays[it->second];
+    const TShape& s = nd.shape();
+    p->in_shapes_buffer.resize(s.ndim());
+    nnvm::ShapeTypeCast(s.begin(), s.end(), p->in_shapes_buffer.data());
+    *shape_data = p->in_shapes_buffer.data();
+    *shape_ndim = s.ndim();
+  }
   API_END();
 }
 
