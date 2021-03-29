@@ -142,6 +142,27 @@ struct PickParam : public dmlc::Parameter<PickParam> {
               " they are replaced by the index that addresses the last element along an axis. "
               " \"wrap\" means to wrap around.");
   }
+  std::string Mode2String(int mode) {
+    switch (mode) {
+      case kWrap:
+        return "wrap";
+      case kClip:
+        return "clip";
+      default:
+        LOG(FATAL) << "Unknown mode enum " << mode;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, mode_s, keepdims_s;
+    axis_s << axis;
+    mode_s << mode;
+    keepdims_s << keepdims;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["mode"] = Mode2String(mode);
+    (*dict)["keepdims"] = keepdims_s.str();
+  }
 };
 
 struct BroadcastAxesParam : public dmlc::Parameter<BroadcastAxesParam> {
