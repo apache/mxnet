@@ -90,7 +90,7 @@ MXNET_REGISTER_API("_npx.convolution")
   }
   // layout
   if (args[num_inputs + 10].type_code() == kNull) {
-    param.cudnn_tune = dmlc::nullopt;
+    param.layout = dmlc::nullopt;
   } else {
     param.layout = String2Layout(args[num_inputs + 10]);
   }
