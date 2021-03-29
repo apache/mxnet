@@ -45,6 +45,10 @@ config =  {
   'fc': {
     OP_NAME: 'sg_mkldnn_fully_connected',
     QUANTIZED_OP_NAME: 'quantized_sg_mkldnn_fully_connected'
+  },
+  'selfatt_qk': {
+    OP_NAME: 'sg_mkldnn_selfatt_qk',
+    QUANTIZED_OP_NAME: 'quantized_sg_mkldnn_selfatt_qk'
   }
 }
 
@@ -59,7 +63,9 @@ def check_qsym_calibrated(qsym, out_type, name='conv'):
     if k.find('_quantize') != -1:
       assert v['out_type'] == out_type
     if k.find(quantized_op_name) != -1:
-      if quantized_op_name.startswith("quantized_sg_mkldnn_fully_connected") and 'enable_float_output' in v:
+      if ('enable_float_output' in v
+          and quantized_op_name.startswith(("quantized_sg_mkldnn_fully_connected",
+                                            "quantized_sg_mkldnn_selfatt_qk"))):
         continue
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
@@ -677,6 +683,13 @@ def fc_eltwise(no_bias, data_shape, flatten=True, alg='relu'):
 
   return sym, attr
 
+def single_selfatt_qk(data_shape, nheads=16):
+  attr = {'selfatt_qk': {}}
+  data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
+  qk = mx.symbol.contrib.interleaved_matmul_selfatt_qk(queries_keys_values=data,
+                                                       heads=nheads)
+  return qk, attr
+
 # fc + relu can't be fusion case
 # eg.1
 # fc -----------> relu
@@ -864,6 +877,17 @@ def test_fc_eltwise():
       check_fusion(syms, dshape, attrs, check_quantization=True)
     else:
       check_fusion(syms, dshape, attrs, check_quantization=False)
+
+@with_seed()
+def test_selfatt_qk():
+  batchsizes = [1, 8, 16]
+  seq_lengths = [180, 255, 384]#,64,128,256,512,768,1024]
+  num_hidden = [1024, 2048, 3072]
+  num_heads = [8, 16]
+  for bs, seqlen, nhidden, nheads in itertools.product(batchsizes, seq_lengths, num_hidden, num_heads):
+    dshape = (seqlen, bs, nhidden)
+    syms, attrs = single_selfatt_qk(dshape, nheads)
+    check_fusion(syms, dshape, attrs, out_types=['int8', 'auto'], check_quantization=True)
 
 @with_seed()
 def test_neg_fc_relu():

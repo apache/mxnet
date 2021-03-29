@@ -141,6 +141,15 @@ class SgMKLDNNSelfAttQKOp {
                   "inference computation.";
   }
 
+  void Initialize(const OpContext &ctx,
+                  const std::vector<NDArray> &inputs,
+                  const std::vector<OpReqType> &req,
+                  const std::vector<NDArray> &outputs);
+
+  bool IsInitialized() {
+    return initialized_;
+  }
+
  private:
   bool initialized_{false};
   MKLDNNInterleavedMatMulParam param_;
@@ -149,10 +158,10 @@ class SgMKLDNNSelfAttQKOp {
   std::shared_ptr<dnnl::memory> cached_query_mem_;
   std::shared_ptr<dnnl::memory> cached_key_mem_;
   std::shared_ptr<dnnl::memory> cached_out_mem_;
-  float cached_min_data_;
-  float cached_max_data_;
-  float cached_min_output_;
-  float cached_max_output_;
+  float min_data_;
+  float max_data_;
+  float min_output_;
+  float max_output_;
   float data_scale_{0.0f};
 };
 
@@ -169,44 +178,40 @@ static void SgMKLDNNSelfAttQKForward(const OpStatePtr &state_pointer,
                                      const std::vector<OpReqType> &req,
                                      const std::vector<NDArray> &outputs) {
   SgMKLDNNSelfAttQKOp &op = state_pointer.get_state<SgMKLDNNSelfAttQKOp>();
+  if(!op.IsInitialized()) {
+    op.Initialize(ctx, inputs, req, outputs);
+  }
   op.Forward(ctx, inputs, req, outputs);
 }
 
-void SgMKLDNNSelfAttQKOp::Forward(const OpContext &ctx,
-                                  const std::vector<NDArray> &inputs,
-                                  const std::vector<OpReqType> &req,
-                                  const std::vector<NDArray> &outputs) {
-  using namespace mkldnn;
+void SgMKLDNNSelfAttQKOp::Initialize(const OpContext &ctx,
+                                     const std::vector<NDArray> &inputs,
+                                     const std::vector<OpReqType> &req,
+                                     const std::vector<NDArray> &outputs) {
+    using namespace mkldnn;
+    const auto qkv_tensor = inputs[0];
+    const auto out_tensor = outputs[0];
+    const auto qkv_dtype = get_mkldnn_type(qkv_tensor.dtype());
 
-  float min_data = 0.0f;
-  float max_data = 0.0f;
+    const memory::dim heads          = param_.heads;
+    const memory::dim sequences      = inputs[0].shape()[1];
+    const memory::dim qkv_seq_len    = inputs[0].shape()[0];
+    const memory::dim output_lin_dim = inputs[0].shape()[2];
+    const memory::dim embed_dim      = output_lin_dim / 3;
+    const memory::dim head_dim       = embed_dim / heads;
+    const memory::dim attn_batches   = heads * sequences;
+    const memory::dim lead_dim       = attn_batches * 3 * head_dim;
+    const memory::dim batch_stride   = 3 * head_dim;
 
-  if (param_.quantized) {
-    min_data = inputs[1].data().dptr<float>()[0];
-    max_data = inputs[2].data().dptr<float>()[0];
-  }
+    float min_data = 0.0f;
+    float max_data = 0.0f;
 
-  const auto qkv_tensor = inputs[0];
-  const auto out_tensor = outputs[0];
-  const auto qkv_dtype = get_mkldnn_type(qkv_tensor.dtype());
-  const auto out_dtype = get_mkldnn_type(out_tensor.dtype());
+    if (param_.quantized) {
+      min_data_ = inputs[1].data().dptr<float>()[0];
+      max_data_ = inputs[2].data().dptr<float>()[0];
+    }
 
-  const memory::dim heads          = param_.heads;
-  const memory::dim sequences      = inputs[0].shape()[1];
-  const memory::dim qkv_seq_len    = inputs[0].shape()[0];
-  const memory::dim output_lin_dim = inputs[0].shape()[2];
-  const memory::dim embed_dim      = output_lin_dim / 3;
-  const memory::dim head_dim       = embed_dim / heads;
-  const memory::dim attn_batches   = heads * sequences;
-  const memory::dim lead_dim       = attn_batches * 3 * head_dim; // sequences * output_lin_dim
-  const memory::dim batch_stride   = 3 * head_dim; //  output_lin_dim / heads;
-  const float scale                = 1.0 / sqrt(static_cast<float>(head_dim));
-
-  if (!initialized_) {
     const auto engine = CpuEngine::Get()->get_engine();
-
-    cached_min_data_ = min_data;
-    cached_max_data_ = max_data;
 
     memory::dims query_dims    = {attn_batches, qkv_seq_len, head_dim};
     memory::dims key_dims      = {attn_batches, head_dim, qkv_seq_len};
@@ -219,45 +224,46 @@ void SgMKLDNNSelfAttQKOp::Forward(const OpContext &ctx,
     auto key_md   = memory::desc(key_dims, qkv_dtype, key_strides);
 
     memory::desc out_md;
-    
-    float tmp_scale = 1.0f;
+
+    float oscale = 1.0f;
     if (param_.quantized) {
-      data_scale_ = GetQuantizeScale(qkv_tensor.dtype(), cached_min_data_, cached_max_data_);
+      data_scale_ = GetQuantizeScale(qkv_tensor.dtype(), min_data_, max_data_);
 
       if (param_.min_calib_range.has_value() &&
           param_.max_calib_range.has_value()) {
-        cached_min_output_ = param_.min_calib_range.value();
-        cached_max_output_ = param_.max_calib_range.value();
-
-        tmp_scale = 
-            GetQuantizeScale(out_tensor.dtype(), cached_min_output_, cached_max_output_) /
+        min_output_ = param_.min_calib_range.value();
+        max_output_ = param_.max_calib_range.value();
+        oscale = 
+            GetQuantizeScale(out_tensor.dtype(), min_output_, max_output_) /
             (data_scale_ * data_scale_);
         out_md = memory::desc(out_dims, memory::data_type::s8, memory::format_tag::abc);
       } else if (param_.enable_float_output) {
-        tmp_scale = 1.0f / (data_scale_ * data_scale_);
+        oscale = 1.0f / (data_scale_ * data_scale_);
         out_md = dnnl::memory::desc(out_dims, memory::data_type::f32, memory::format_tag::abc);
       } else {
         mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
         mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
-              s, 1, &cached_min_output_, &cached_max_output_, &min_data, &max_data, &min_data,
+              s, 1, &min_output_, &max_output_, &min_data, &max_data, &min_data,
               &max_data);
         out_md = dnnl::memory::desc(out_dims, memory::data_type::s32, memory::format_tag::abc);
       }
     } else {
       out_md = dnnl::memory::desc(out_dims, memory::data_type::f32, memory::format_tag::abc);
     }
-    tmp_scale /= sqrt(static_cast<float>(head_dim));
+    oscale /= sqrt(static_cast<float>(head_dim)); // combine quantized scale and sqrt(head_dim)
 
     dnnl::primitive_attr attr;
-    attr.set_output_scales(0, {tmp_scale});
+    attr.set_output_scales(0, {oscale});
     auto matmul_d = matmul::desc(query_md, key_md, out_md);
     auto matmul_pd = matmul::primitive_desc(matmul_d, attr, engine);
 
     fwd_ = std::make_shared<matmul>(matmul_pd);
 
     MSHADOW_TYPE_SWITCH(inputs[0].dtype(), DType, {
-      cached_query_mem_ = std::make_shared<memory>(query_md, engine, inputs[0].data().dptr<DType>());
-      cached_key_mem_ = std::make_shared<memory>(key_md, engine, inputs[0].data().dptr<DType>() + (head_dim));
+      DType* query_mem_ptr = inputs[0].data().dptr<DType>();
+      DType* key_mem_ptr   = query_mem_ptr + head_dim;
+      cached_query_mem_ = std::make_shared<memory>(query_md, engine, query_mem_ptr);
+      cached_key_mem_ = std::make_shared<memory>(key_md, engine, key_mem_ptr);
     });
     MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
       cached_out_mem_ = std::make_shared<memory>(out_md, engine, outputs[0].data().dptr<DType>());
@@ -266,32 +272,38 @@ void SgMKLDNNSelfAttQKOp::Forward(const OpContext &ctx,
     args_[DNNL_ARG_SRC]     = *cached_query_mem_;
     args_[DNNL_ARG_WEIGHTS] = *cached_key_mem_;
     args_[DNNL_ARG_DST]     = *cached_out_mem_;
-
     initialized_ = true;
-  } else {
+}
 
-    MSHADOW_TYPE_SWITCH(qkv_tensor.dtype(), DType, {
-      void* query_mem_ptr = reinterpret_cast<void*>(inputs[0].data().dptr<DType>());
-      void* key_mem_ptr   = query_mem_ptr + head_dim;
+
+void SgMKLDNNSelfAttQKOp::Forward(const OpContext &ctx,
+                                  const std::vector<NDArray> &inputs,
+                                  const std::vector<OpReqType> &req,
+                                  const std::vector<NDArray> &outputs) {
+
+    const size_t head_dim = inputs[0].shape()[2] / 3 / param_.heads;
+
+    MSHADOW_TYPE_SWITCH(inputs[0].dtype(), DType, {
+      DType* query_mem_ptr = inputs[0].data().dptr<DType>();
+      DType* key_mem_ptr   = query_mem_ptr + head_dim;
       cached_query_mem_->set_data_handle(query_mem_ptr);
       cached_key_mem_->set_data_handle(key_mem_ptr);
     });
 
-    MSHADOW_TYPE_SWITCH(out_tensor.dtype(), DType, {
+    MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
       cached_out_mem_->set_data_handle(reinterpret_cast<void*>(outputs[0].data().dptr<DType>()));
     });
-  }
 
-  MKLDNNStream::Get()->RegisterPrimArgs(*fwd_, args_);
-  MKLDNNStream::Get()->Submit();
+    MKLDNNStream::Get()->RegisterPrimArgs(*fwd_, args_);
+    MKLDNNStream::Get()->Submit();
 
-  if (param_.quantized && !param_.enable_float_output) {
-    float* min_output = outputs[1].data().dptr<float>();
-    float* max_output = outputs[2].data().dptr<float>();
+    if (param_.quantized && !param_.enable_float_output) {
+      float* output_min = outputs[1].data().dptr<float>();
+      float* output_max = outputs[2].data().dptr<float>();
 
-    *min_output = cached_min_output_;
-    *max_output = cached_max_output_;
-  }
+      *output_min = min_output_;
+      *output_max = max_output_;
+    }
 
 }
 
