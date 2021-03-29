@@ -1645,7 +1645,9 @@ def convert_reshape(node, **kwargs):
         targ_shape = [-1, 0]
         reverse = 'True'
 
+    special_case = False
     if targ_shape == [0, 0, -3, -3] and reverse != 'True':
+        special_case = True
         nodes = [
             make_node('Shape', [input_nodes[0]], [name+'_shape']),
             make_node('Split', [name+'_shape'], [name+'_dim0', name+'_dim1', name+'_dim2',
@@ -1657,9 +1659,9 @@ def convert_reshape(node, **kwargs):
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
-        return nodes
 
     if targ_shape == [0, -4, -1, 4, 0, 0] and reverse != 'True':
+        special_case = True
         create_tensor([4], name+'_4', kwargs['initializer'])
         nodes = [
             make_node('Shape', [input_nodes[0]], [name+'_shape']),
@@ -1670,9 +1672,9 @@ def convert_reshape(node, **kwargs):
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
-        return nodes
 
     if targ_shape == [0, 0, -4, 2, 2, 0, 0] and reverse != 'True':
+        special_case = True
         create_tensor([2], name+'_2', kwargs['initializer'])
         nodes = [
             make_node('Shape', [input_nodes[0]], [name+'_shape']),
@@ -1682,9 +1684,9 @@ def convert_reshape(node, **kwargs):
                                  name+'_dim3', name+'_dim4'], [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
-        return nodes
 
     if targ_shape == [-4, 1, -1, 0, 0, 0] and reverse != 'True':
+        special_case = True
         create_tensor([1], name+'_1', kwargs['initializer'])
         create_tensor([-1], name+'_m1', kwargs['initializer'])
         nodes = [
@@ -1695,9 +1697,9 @@ def convert_reshape(node, **kwargs):
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
-        return nodes
 
     if targ_shape == [-4, 1, 1000, 0, 0] and reverse != 'True':
+        special_case = True
         create_tensor([1], name+'_1', kwargs['initializer'])
         create_tensor([1000], name+'_1000', kwargs['initializer'])
         nodes = [
@@ -1707,6 +1709,32 @@ def convert_reshape(node, **kwargs):
                       [name+'_shape_new'], axis=0),
             make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
         ]
+
+    if targ_shape == [0, -4, 12, -1, 0] and reverse != 'True':
+        special_case = True
+        create_tensor([-1], name+'_m1', kwargs['initializer'])
+        create_tensor([12], name+'_12', kwargs['initializer'])
+        nodes = [
+            make_node('Shape', [input_nodes[0]], [name+'_shape']),
+            make_node('Split', [name+'_shape'], [name+'_dim0', name+'_dim1', name+'_dim2'], axis=0),
+            make_node('Concat', [name+'_dim0', name+'_12', name+'_m1', name+'_dim2'],
+                      [name+'_shape_new'], axis=0),
+            make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
+        ]
+
+    if targ_shape == [0, -4, 16, -1, 0] and reverse != 'True':
+        special_case = True
+        create_tensor([-1], name+'_m1', kwargs['initializer'])
+        create_tensor([16], name+'_16', kwargs['initializer'])
+        nodes = [
+            make_node('Shape', [input_nodes[0]], [name+'_shape']),
+            make_node('Split', [name+'_shape'], [name+'_dim0', name+'_dim1', name+'_dim2'], axis=0),
+            make_node('Concat', [name+'_dim0', name+'_16', name+'_m1', name+'_dim2'],
+                      [name+'_shape_new'], axis=0),
+            make_node('Reshape', [input_nodes[0], name+'_shape_new'], [name], name=name)
+        ]
+
+    if special_case:
         return nodes
 
     not_supported_shape = [-2, -3, -4]
@@ -2064,14 +2092,78 @@ def convert_broadcast_lesser(node, **kwargs):
     """Map MXNet's broadcast_lesser operator attributes to onnx's Less operator
     and return the created node.
     """
-    return create_basic_op_node('Less', node, kwargs)
+    from onnx.helper import make_node
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+
+    nodes = [
+        make_node('Less', [input_nodes[0], input_nodes[1]], [name+'_lt']),
+        make_node('Cast', [name+'_lt'], [name], to=dtype_t)
+    ]
+
+    return nodes
+
+
+@mx_op.register("broadcast_lesser_equal")
+def convert_broadcast_lesser_equal(node, **kwargs):
+    """Map MXNet's broadcast_lesser_equal operator
+    """
+    from onnx.helper import make_node
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+
+    nodes = [
+        make_node('LessOrEqual', [input_nodes[0], input_nodes[1]], [name+'_lt']),
+        make_node('Cast', [name+'_lt'], [name], to=dtype_t)
+    ]
+
+    return nodes
+
+
+@mx_op.register("broadcast_greater_equal")
+def convert_broadcast_greater_equal(node, **kwargs):
+    """Map MXNet's broadcast_greater_equal operator
+    """
+    from onnx.helper import make_node
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+
+    nodes = [
+        make_node('GreaterOrEqual', [input_nodes[0], input_nodes[1]], [name+'_gt']),
+        make_node('Cast', [name+'_gt'], [name], to=dtype_t)
+    ]
+
+    return nodes
+
 
 @mx_op.register("broadcast_greater")
 def convert_broadcast_greater(node, **kwargs):
     """Map MXNet's broadcast_greater operator attributes to onnx's Greater operator
     and return the created node.
     """
-    return create_basic_op_node('Greater', node, kwargs)
+    from onnx.helper import make_node
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+
+    nodes = [
+        make_node('Greater', [input_nodes[0], input_nodes[1]], [name+'_gt']),
+        make_node('Cast', [name+'_gt'], [name], to=dtype_t)
+    ]
+
+    return nodes
+
 
 @mx_op.register("broadcast_equal")
 def convert_broadcast_equal(node, **kwargs):
@@ -2498,7 +2590,6 @@ def convert_layer_norm(node, **kwargs):
     axes = int(attrs.get('axis', -1))
     eps = attrs.get('eps', 9.99999975e-06)
 
-
     create_tensor([axes], name+"_axes", kwargs["initializer"])
     create_tensor([axes+1], name+"_axes+1", kwargs["initializer"])
     create_const_scalar_node(name+'_0_s', np.int64(0), kwargs)
@@ -2519,7 +2610,11 @@ def convert_layer_norm(node, **kwargs):
     if axes == -1:
         nodes += [
             make_node("Mul", [name+"_div0_out", input_nodes[1]], [name+"_mul0_out"]),
-            make_node("Add", [name+"_mul0_out", input_nodes[2]], [name], name=name)
+            # make_node("Add", [name+"_mul0_out", input_nodes[2]], [name])
+            # the Add operator triggers a weird NaN issue in onnxruntime
+            # a workaround is to use Neg + Sub
+            make_node('Neg', [input_nodes[2]], [name+'_neg']),
+            make_node("Sub", [name+"_mul0_out", name+'_neg'], [name])
         ]
     else:
         nodes += [
@@ -4415,7 +4510,7 @@ def convert_RNN(node, **kwargs):
 
 @mx_op.register('_rnn_param_concat')
 def convert_rnn_param_concat(node, **kwargs):
-    """Map MXNet’s _rnn_param_concat operator
+    """Map MXNet's _rnn_param_concat operator
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
@@ -4424,6 +4519,34 @@ def convert_rnn_param_concat(node, **kwargs):
 
     nodes = [
         make_node('Concat', input_nodes, [name], axis=axis)
+    ]
+
+    return nodes
+
+
+@mx_op.register('_contrib_div_sqrt_dim')
+def convert_contrib_div_sqrt_dim(node, **kwargs):
+    """Map MXNet's _contrib_div_sqrt_dim operator
+    """
+    from onnx.helper import make_node
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+
+    create_tensor([0], name+'_0', kwargs['initializer'])
+    create_tensor([1], name+'_1', kwargs['initializer'])
+    create_tensor([1], name+'_1_f', kwargs['initializer'], dtype=dtype)
+    nodes = [
+        make_node('Shape', [input_nodes[0]], [name+'_shape']),
+        make_node('Shape', [name+'_shape'], [name+'_dim']),
+        make_node('Sub', [name+'_dim', name+'_1'], [name+'_dim_m1']),
+        make_node('Slice', [name+'_shape', name+'_dim_m1', name+'_dim', name+'_0'], [name+'_c_']),
+        make_node('Cast', [name+'_c_'], [name+'_c'], to=dtype_t),
+        make_node('Sqrt', [name+'_c'], [name+'_c_sqrt']),
+        make_node('Div', [name+'_1_f', name+'_c_sqrt'], [name+'_1_over_c_sqrt']),
+        make_node('Mul', [input_nodes[0], name+'_1_over_c_sqrt'], [name])
     ]
 
     return nodes

@@ -94,11 +94,19 @@ core_logic: {
         }
       }
     },
-    'ONNX: CPU': {
+    'ONNX-CV: CPU': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/onnx-test-cpu') {
+        ws('workspace/onnx-cv-test-cpu') {
           utils.unpack_and_init('cpu_int64', mx_cmake_lib)
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_onnx_tests', false)
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_onnx_cv_tests', false)
+        }
+      }
+    }
+    'ONNX-NLP: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/onnx-nlp-test-cpu') {
+          utils.unpack_and_init('cpu_int64', mx_cmake_lib)
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_onnx_nlp_tests', false)
         }
       }
     }

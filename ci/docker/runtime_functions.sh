@@ -1263,17 +1263,8 @@ integrationtest_ubuntu_cpu_onnx() {
     # Skip this as https://github.com/apache/incubator-mxnet/pull/19914 breaks import
     #pytest $COV_ARG --verbose tests/python-pytest/onnx/test_models.py
     #pytest $COV_ARG --verbose tests/python-pytest/onnx/test_node.py
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_bert_inference_onnxruntime
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime[mobilenetv3_large]
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime[resnest200]
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime[resnet50_v2]
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_class_model_inference_onnxruntime[vgg19_bn]
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_obj_detection_model_inference_onnxruntime[center_net_resnet101_v1b_voc]
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_img_segmentation_model_inference_onnxruntime[deeplab_resnet50_citys]
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_pose_estimation_model_inference_onnxruntime[mobile_pose_mobilenet1.0]
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_action_recognition_model_inference_onnxruntime[inceptionv3_kinetics400]
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_dynamic_shape_bert_inference_onnxruntime
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py::test_dynamic_shape_cv_inference_onnxruntime
+    pytest $COV_ARG -v -m integration tests/python-pytest/onnx/test_onnxruntime_cv.py
+    pytest $COV_ARG -v -m integration tests/python-pytest/onnx/test_onnxruntime_nlp.py
 }
 
 integrationtest_ubuntu_gpu_python() {
@@ -1603,13 +1594,22 @@ nightly_estimator() {
     nosetests test_sentiment_rnn.py
 }
 
-nightly_onnx_tests() {
+nightly_onnx_cv_tests() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     COV_ARG="--cov=./ --cov-report=xml --cov-append"
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime.py
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime_cv.py
+}
+
+nightly_onnx_nlp_tests() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime_nlp.py
 }
 
 # For testing PRs
