@@ -141,6 +141,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream state_size_s, num_layers_s, bidirectional_s,
                        state_outputs_s, mode_s, p_s, seq_length_s,
+                       batch_size_s, input_size_s,
                        use_sequence_length_s, projection_size_s,
                        lstm_state_clip_min_s, lstm_state_clip_max_s,
                        lstm_state_clip_nan_s;
@@ -150,6 +151,9 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     state_outputs_s << state_outputs;
     mode_s << mode;
     p_s << p;
+    seq_length_s << seq_length_;
+    batch_size_s << batch_size_;
+    input_size_s << input_size_;
     use_sequence_length_s << use_sequence_length;
     projection_size_s << projection_size;
     lstm_state_clip_min_s << lstm_state_clip_min;
@@ -161,6 +165,9 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     (*dict)["state_outputs"] = state_outputs_s.str();
     (*dict)["mode"] = ComputeMode2String(mode);
     (*dict)["p"] = p_s.str();
+    (*dict)["seq_length_"] = seq_length_s.str();
+    (*dict)["batch_size_"] = batch_size_s.str();
+    (*dict)["input_size_"] = input_size_s.str();
     (*dict)["use_sequence_length"] = use_sequence_length_s.str();
     (*dict)["projection_size"] = projection_size_s.str();
     (*dict)["lstm_state_clip_min"] = lstm_state_clip_min_s.str();
