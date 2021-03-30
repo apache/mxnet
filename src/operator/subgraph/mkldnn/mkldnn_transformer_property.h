@@ -51,8 +51,8 @@ class SgMKLDNNTransformerSelector : public SubgraphSelector {
   explicit SgMKLDNNTransformerSelector() {}
 
   bool Select(const nnvm::Node &n, const std::shared_ptr<NodeAttr>& node_attr) override {
-    if (n.op() == Op::Get(SELFATT_QK)) { //||
-        //n.op() == Op::Get(SELFATT_VALATT)) { // Enable when refactored
+    if (n.op() == Op::Get(SELFATT_QK) ||
+        n.op() == Op::Get(SELFATT_VALATT)) {
       return true;
     }
     return false;
@@ -94,8 +94,8 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
     MKLDNNInterleavedMatMulParam new_param;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->op() && 
-          (node->op()->name == SELFATT_QK)) {// ||
-           //node->op()->name == SELFATT_VALATT)) {
+          (node->op()->name == SELFATT_QK ||
+           node->op()->name == SELFATT_VALATT)) {
         op_name = node->op()->name;
         auto param = nnvm::get<InterleavedMatMulParam>(node->attrs.parsed);
         new_param.heads = param.heads;
