@@ -75,9 +75,7 @@ MXNET_REGISTER_API("_npx.topk")
     param.is_ascend = args[4].operator bool();
   }
   // dtype
-  if (args[5].type_code() != kNull) {
-    param.dtype = String2MXNetTypeWithBool(args[5].operator std::string());
-  }
+  param.dtype = String2MXNetTypeWithBool(args[5].operator std::string());
   attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::TopKParam>(&attrs);
