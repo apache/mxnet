@@ -464,7 +464,7 @@ def embedding(data, weight, input_dim=None, output_dim=None, dtype="float32", sp
            [0., 2.]])
 
     Mapped input x to its vector representation y.
-    
+
     >>> npx.embedding(x, y, input_dim, output_dim)
     array([[[ 5.,  6.,  7.,  8.,  9.],
             [15., 16., 17., 18., 19.]],
@@ -540,7 +540,7 @@ def topk(data, axis=-1, k=1, ret_typ="indices", is_ascend=False, dtype="float32"
     flattens and then returns list of both values and indices
     >>> npx.topk(x, ret_typ='both', k=2)
     [array([[0.4, 0.3], [0.3, 0.2]]),
-     array([[2., 0.], [1., 2.]])]  
+     array([[2., 0.], [1., 2.]])]
     """
     return _mx_nd_npx.topk(data=data, axis=axis, k=k, ret_typ=ret_typ, is_ascend=is_ascend, dtype=dtype)
 
@@ -554,7 +554,7 @@ def layer_norm(data=None, gamma=None, beta=None, axis=None, eps=None, output_mea
     well as offset ``beta``.
 
     Assume the input has more than one dimension and we normalize along axis 1.
-    We first compute the mean and variance along this axis and then 
+    We first compute the mean and variance along this axis and then
     compute the normalized output, which has the same shape as input, as following:
 
     .. math::
