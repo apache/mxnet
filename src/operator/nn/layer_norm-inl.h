@@ -72,7 +72,7 @@ struct LayerNormParam : public dmlc::Parameter<LayerNormParam> {
   }
 };
 
-static int GetRealAxis(int axis, int ndim) {
+inline int GetRealAxis(int axis, int ndim) {
   return axis < 0 ? (axis + ndim) : axis;
 }
 
