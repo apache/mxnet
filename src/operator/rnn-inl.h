@@ -140,7 +140,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream state_size_s, num_layers_s, bidirectional_s,
-                       state_outputs_s, mode_s, p_s, seq_length_s, 
+                       state_outputs_s, mode_s, p_s, seq_length_s,
                        use_sequence_length_s, projection_size_s,
                        lstm_state_clip_min_s, lstm_state_clip_max_s,
                        lstm_state_clip_nan_s;
