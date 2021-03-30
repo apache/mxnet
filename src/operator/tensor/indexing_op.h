@@ -82,6 +82,17 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
     .describe("Compute row sparse gradient in the backward calculation. If set to True, "
               "the grad's storage type is row_sparse.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream input_dim_s, output_dim_s, dtype_s, sparse_grad_s;
+    input_dim_s << input_dim;
+    output_dim_s << output_dim;
+    dtype_s << dtype;
+    sparse_grad_s << sparse_grad;
+    (*dict)["input_dim"] = input_dim_s.str();
+    (*dict)["output_dim"] = output_dim_s.str();
+    (*dict)["sparse_grad"] = sparse_grad_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+  }
 };
 
 /*!

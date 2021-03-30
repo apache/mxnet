@@ -796,7 +796,8 @@ _NP_EXT_OP_PREFIX = '_npx_'
 _NP_EXT_OP_SUBMODULE_LIST = ['_image_', '_random_']
 _NP_EXT_OP_IMPLEMENTED_SET = {'_npx_softmax', '_npx_log_softmax', '_npx_masked_softmax',
                               '_npx_masked_log_softmax', '_npx_activation',
-                              '_npx_batch_norm', '_npx_fully_connected'}
+                              '_npx_batch_norm', '_npx_fully_connected', '_npx_embedding',
+                              '_npx_topk', '_npx_layer_norm', '_npx_leaky_relu'}
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
 

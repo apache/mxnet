@@ -95,6 +95,35 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
               "An error will be raised if the selected data type cannot precisely represent the "
               "indices.");
   }
+  std::string ReturnType2String(int ret_typ) {
+    switch (ret_typ) {
+      case topk_enum::kReturnValue:
+        return "value";
+      case topk_enum::kReturnIndices:
+        return "indices";
+      case topk_enum::kReturnMask:
+        return "mask";
+      case topk_enum::kReturnBoth:
+        return "both";
+      default:
+        LOG(FATAL) << "Unknown return type enum " << ret_typ;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, k_s, ret_typ_s, is_ascend_s, dtype_s;
+    axis_s << axis;
+    k_s << k;
+    dtype_s << dtype;
+    ret_typ_s << ret_typ;
+    is_ascend_s << is_ascend;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["k"] = k_s.str();
+    (*dict)["ret_typ"] = ReturnType2String(ret_typ);
+    (*dict)["is_ascend"] = is_ascend_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+  }
 };
 
 struct SortParam : public dmlc::Parameter<SortParam> {
