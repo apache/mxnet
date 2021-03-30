@@ -786,28 +786,34 @@ def topk(data, axis=-1, k=1, ret_typ="indices", is_ascend=False, dtype="float32"
 
     Example
     -------
+    >>> x = np.array([[0.3, 0.2, 0.4], [0.1, 0.3, 0.2]])
+
     returns an index of the largest element on last axis
 
-    >>> x = np.array([[0.3, 0.2, 0.4], [0.1, 0.3, 0.2]])
     >>> npx.topk(x)
     array([[2.],
            [1.]])
+
+    returns the value of top-2 largest elements on last axis
 
     >>> npx.topk(x, ret_typ='value', k=2)
     array([[0.4, 0.3],
            [0.3, 0.2]])
 
     returns the value of top-2 smallest elements on last axis
+
     >>> npx.topk(x, ret_typ='value', k=2, is_ascend=1)
     array([[0.2, 0.3],
            [0.1, 0.2]])
 
     returns the value of top-2 largest elements on axis 0
+
     >>> npx.topk(x, axis=0, ret_typ='value', k=2)
     array([[0.3, 0.3, 0.4],
            [0.1, 0.2, 0.2]])
 
     flattens and then returns list of both values and indices
+
     >>> npx.topk(x, ret_typ='both', k=2)
     [array([[0.4, 0.3], [0.3, 0.2]]),
      array([[2., 0.], [1., 2.]])]
