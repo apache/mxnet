@@ -390,7 +390,7 @@ def fully_connected(x, weight, bias=None, num_hidden=None,
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def pick(data, index, axis=None, mode='clip', keepdims=False):
+def pick(data, index, axis=-1, mode='clip', keepdims=False):
     r"""Picks elements from an input array according to the input indices along the given axis.
 
     Given an input array of shape ``(d0, d1)`` and indices of shape ``(i0,)``, the result will be
@@ -588,7 +588,7 @@ def convolution(data=None, weight=None, bias=None, kernel=None, stride=None, dil
 @set_module('mxnet.numpy_extension')
 def deconvolution(data=None, weight=None, bias=None, kernel=None, stride=None, dilate=None,
                   pad=None, adj=None, target_shape=None, num_filter=1, num_group=1,
-                  workspace=1024, no_bias=False, cudnn_tune=None,
+                  workspace=512, no_bias=False, cudnn_tune=None,
                   cudnn_off=False, layout=None):
     r"""Computes 1D or 2D transposed convolution (aka fractionally strided convolution) of
     the input tensor. This operation can be seen as the gradient of Convolution operation

@@ -28,7 +28,7 @@
 
 namespace mxnet {
 
-inline int String2Mode(const std::string& s) {
+inline int String2PickMode(const std::string& s) {
   using namespace op;
   if (s == "wrap") {
     return kWrap;
@@ -54,7 +54,7 @@ MXNET_REGISTER_API("_npx.pick")
     param.axis = args[2].operator int();
   }
   // mode
-  param.mode = String2Mode(args[3].operator std::string());
+  param.mode = String2PickMode(args[3].operator std::string());
   // keepdims
   if (args[4].type_code() == kNull) {
     param.keepdims = false;

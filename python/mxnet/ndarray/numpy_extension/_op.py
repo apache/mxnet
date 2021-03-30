@@ -423,7 +423,7 @@ def fully_connected(x, weight, bias=None, num_hidden=None,
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.ndarray.numpy_extension')
-def pick(data, index, axis=None, mode='clip', keepdims=False):
+def pick(data, index, axis=-1, mode='clip', keepdims=False):
     r"""Picks elements from an input array according to the input indices along the given axis.
 
     Given an input array of shape ``(d0, d1)`` and indices of shape ``(i0,)``, the result will be
@@ -497,7 +497,7 @@ def pick(data, index, axis=None, mode='clip', keepdims=False):
 @set_module('mxnet.ndarray.numpy_extension')
 def convolution(data=None, weight=None, bias=None, kernel=None, stride=None, dilate=None,
                 pad=None, num_filter=1, num_group=1, workspace=1024, no_bias=False,
-                cudnn_tune=None, cudnn_off=False, layout="NCHW"):
+                cudnn_tune=None, cudnn_off=False, layout=None):
     r"""Compute *N*-D convolution on *(N+2)*-D input.
 
     In the 2-D convolution, given input data with shape *(batch_size,
@@ -611,7 +611,10 @@ def convolution(data=None, weight=None, bias=None, kernel=None, stride=None, dil
     out : NDArray or list of NDArrays
         The output of this function.
     """
-    assert data is not None and weight is not None, "Missing input data and weight"
+    assert data is not None and weight is not None and kernel is not None, \
+           "Missing input data, weight or kernel"
+    assert num_filter > 1, "Number of output filters should be greater than 1"
+    assert workspace > 0, "Maximum temporary workspace should be greater than 0"
     if no_bias:
         assert bias is None, "Using no bias"
         return _api_internal.convolution(data, weight, kernel, stride, dilate, pad,
@@ -628,7 +631,7 @@ def convolution(data=None, weight=None, bias=None, kernel=None, stride=None, dil
 @set_module('mxnet.ndarray.numpy_extension')
 def deconvolution(data=None, weight=None, bias=None, kernel=None, stride=None, dilate=None,
                   pad=None, adj=None, target_shape=None, num_filter=1, num_group=1,
-                  workspace=1024, no_bias=False, cudnn_tune=None,
+                  workspace=512, no_bias=False, cudnn_tune=None,
                   cudnn_off=False, layout=None):
     r"""Computes 1D or 2D transposed convolution (aka fractionally strided convolution) of
     the input tensor. This operation can be seen as the gradient of Convolution operation
@@ -691,7 +694,10 @@ def deconvolution(data=None, weight=None, bias=None, kernel=None, stride=None, d
     out : NDArray or list of NDArrays
         The output of this function.
     """
-    assert data is not None and weight is not None, "Missing input data and weight"
+    assert data is not None and weight is not None and kernel is not None, \
+           "Missing input data, weight or kernel"
+    assert num_filter > 1, "Number of output filters should be greater than 1"
+    assert workspace > 0, "Maximum temporary workspace should be greater than 0"
     if no_bias:
         assert bias is None, "Using no bias"
         return _api_internal.deconvolution(data, weight, kernel, stride, dilate, pad,

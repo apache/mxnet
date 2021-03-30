@@ -142,7 +142,7 @@ struct PickParam : public dmlc::Parameter<PickParam> {
               " they are replaced by the index that addresses the last element along an axis. "
               " \"wrap\" means to wrap around.");
   }
-  std::string Mode2String(int mode) {
+  std::string PickMode2String(int mode) {
     switch (mode) {
       case kWrap:
         return "wrap";
@@ -160,7 +160,7 @@ struct PickParam : public dmlc::Parameter<PickParam> {
     mode_s << mode;
     keepdims_s << keepdims;
     (*dict)["axis"] = axis_s.str();
-    (*dict)["mode"] = Mode2String(mode);
+    (*dict)["mode"] = PickMode2String(mode);
     (*dict)["keepdims"] = keepdims_s.str();
   }
 };
