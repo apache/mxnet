@@ -122,6 +122,51 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
         "`sequence_length` "
         "to specify variable length sequence");
   }
+  std::string ComputeMode2String(int mode) {
+    switch (mode) {
+      case rnn_enum::kRnnRelu:
+        return "rnn_relu";
+      case rnn_enum::kRnnTanh:
+        return "rnn_tanh";
+      case rnn_enum::kLstm:
+        return "lstm";
+      case rnn_enum::kGru:
+        return "gru";
+      default:
+        LOG(FATAL) << "Unknown mode enum " << mode;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream state_size_s, num_layers_s, bidirectional_s,
+                       state_outputs_s, mode_s, p_s, seq_length_s, 
+                       use_sequence_length_s, projection_size_s,
+                       lstm_state_clip_min_s, lstm_state_clip_max_s,
+                       lstm_state_clip_nan_s;
+    state_size_s << state_size;
+    num_layers_s << num_layers;
+    bidirectional_s << bidirectional;
+    state_outputs_s << state_outputs;
+    mode_s << mode;
+    p_s << p;
+    use_sequence_length_s << use_sequence_length;
+    projection_size_s << projection_size;
+    lstm_state_clip_min_s << lstm_state_clip_min;
+    lstm_state_clip_max_s << lstm_state_clip_max;
+    lstm_state_clip_nan_s << lstm_state_clip_nan;
+    (*dict)["state_size"] = state_size_s.str();
+    (*dict)["num_layers"] = num_layers_s.str();
+    (*dict)["bidirectional"] = bidirectional_s.str();
+    (*dict)["state_outputs"] = state_outputs_s.str();
+    (*dict)["mode"] = ComputeMode2String(mode);
+    (*dict)["p"] = p_s.str();
+    (*dict)["use_sequence_length"] = use_sequence_length_s.str();
+    (*dict)["projection_size"] = projection_size_s.str();
+    (*dict)["lstm_state_clip_min"] = lstm_state_clip_min_s.str();
+    (*dict)["lstm_state_clip_max"] = lstm_state_clip_max_s.str();
+    (*dict)["lstm_state_clip_nan"] = lstm_state_clip_nan_s.str();
+  }
 };
 
 inline index_t GetRnnParamSize(int num_layer,
