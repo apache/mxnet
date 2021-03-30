@@ -939,7 +939,7 @@ def layer_norm(data=None, gamma=None, beta=None, axis=None, eps=None, output_mea
 
 # pylint: disable=too-many-arguments, unused-argument
 @set_module('mxnet.ndarray.numpy_extension')
-def leaky_relu(data=None, gamma=None, act_type=None, slope=0.25, lower_bound=0.125,
+def leaky_relu(data=None, gamma=None, act_type="leaky", slope=0.25, lower_bound=0.125,
                upper_bound=0.334, **kwargs):
     r"""Applies Leaky rectified linear unit activation element-wise to the input.
 
@@ -978,10 +978,11 @@ def leaky_relu(data=None, gamma=None, act_type=None, slope=0.25, lower_bound=0.1
     out : NDArray or list of NDArrays
         The output of this function.
     """
-    assert act_type is not None, "Missing activation function. Accepted activation functions are \
-                                  rrelu, leaky, prelu, elu, selu, gelu"
     if act_type == "prelu":
         assert gamma is not None, "If activation function is prelu, please provide input gamma"
-        return list(_api_internal.leaky_relu(data, gamma, act_type, slope, lower_bound, upper_bound))
+        out = _api_internal.leaky_relu(data, gamma, act_type, slope, lower_bound, upper_bound)
+        if isinstance(out, NDArrayBase):
+            return out
+        return list(out)
     else:
         return _api_internal.leaky_relu(data, act_type, slope, lower_bound, upper_bound)

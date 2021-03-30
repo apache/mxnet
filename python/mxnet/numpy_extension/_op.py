@@ -877,7 +877,7 @@ def layer_norm(data=None, gamma=None, beta=None, axis=None, eps=None, output_mea
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def leaky_relu(data=None, gamma=None, act_type=None, slope=0.25, lower_bound=0.125,
+def leaky_relu(data=None, gamma=None, act_type="leaky", slope=0.25, lower_bound=0.125,
                upper_bound=0.334, **kwargs):
     r"""Applies Leaky rectified linear unit activation element-wise to the input.
 
