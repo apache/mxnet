@@ -101,7 +101,7 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_cpu', 'nightly_onnx_cv_tests', false)
         }
       }
-    }
+    },
     'ONNX-NLP: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/onnx-nlp-test-cpu') {
