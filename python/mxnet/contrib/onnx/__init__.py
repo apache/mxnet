@@ -33,7 +33,7 @@ def get_model_metadata(*args, **kwargs):
     print('Calling mxnet.contrib.onnx.get_model_metadata...')
     print('Please be advised that importing ONNX models into MXNet is going to be deprecated '
           'in the upcoming MXNet v1.10 release. The following apis will be deleted: '
-          'mxnet.contrib.onnx.import_model/get_model_metadata/import_to_gluon.')   
+          'mxnet.contrib.onnx.import_model/get_model_metadata/import_to_gluon.')
     get_model_metadata_(*args, **kwargs)
 
 

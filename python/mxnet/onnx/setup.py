@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=missing-module-docstring
+
 from setuptools import setup, find_packages
 
 setup(
