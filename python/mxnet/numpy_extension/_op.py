@@ -1062,8 +1062,8 @@ def broadcast_like(lhs, rhs, lhs_axes=None, rhs_axes=None):
 # pylint: disable=too-many-arguments, unused-argument
 @set_module('mxnet.numpy_extension')
 def arange_like(data, start=0.0, step=1.0, repeat=1, ctx=None, axis=None):
-    r"""Return an array with evenly spaced values. If axis is not given, the output will 
-    have the same shape as the input array. Otherwise, the output will be a 1-D array with size of 
+    r"""Return an array with evenly spaced values. If axis is not given, the output will
+    have the same shape as the input array. Otherwise, the output will be a 1-D array with size of
     the specified axis in input shape.
 
     Parameters
