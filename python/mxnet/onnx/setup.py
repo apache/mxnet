@@ -15,7 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=missing-module-docstring
+"""
+setup.py for mx2onnx
+"""
 
 from setuptools import setup, find_packages
 
