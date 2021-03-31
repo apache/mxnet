@@ -158,7 +158,6 @@ class SgMKLDNNTransformerPostQuantizeProperty : public SubgraphProperty {
       if (node->is_variable()) return;
       if (node->op() == Op::Get("_sg_mkldnn_selfatt_qk") ||
           node->op() == Op::Get("_sg_mkldnn_selfatt_valatt")) {
-            LOG(INFO) << " NOO COO?";
         interleaved_node = node;
       } else if (node->op() == Op::Get("_contrib_requantize")) {
         requantize_node = node;
