@@ -123,18 +123,6 @@ def _np_imperative_invoke(handle, ndargs, out):
         return list(output_vars)
 
 
-def _np_imperative_invoke_params(handle, ndargs, params, out):
-    """PackedFunc based numpy operator invocation call"""
-    keys, vals = params.keys(), [str(val) for val in params.values()]
-    output_vars = _api_internal.invoke_with_params(handle, len(ndargs), *ndargs, *keys, *vals, out)
-    if out is not None:
-        return out
-    if isinstance(output_vars, NDArrayBase):
-        return output_vars
-    else:
-        return list(output_vars)
-
-
 # pylint: disable=too-many-locals
 def _generate_ndarray_function_code(handle, op_name, func_name, signature_only=False):
     """Generate function for ndarray op by handle and function op_name."""
