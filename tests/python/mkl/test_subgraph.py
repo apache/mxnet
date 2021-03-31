@@ -49,12 +49,20 @@ config =  {
   'selfatt_qk': {
     OP_NAME: 'sg_mkldnn_selfatt_qk',
     QUANTIZED_OP_NAME: 'quantized_sg_mkldnn_selfatt_qk'
+  },
+  'selfatt_valatt': {
+    OP_NAME: 'sg_mkldnn_selfatt_valatt',
+    QUANTIZED_OP_NAME: 'quantized_sg_mkldnn_selfatt_valatt'
   }
 }
 
 DATA_SHAPE=[(64, 4, 10, 10), (4, 3, 24, 24), (1, 16, 32, 32)]
 fc_post_ops_list=['relu', 'sigmoid', 'tanh', 'softrelu',
                   'square', 'square_root', 'abs', 'exp', 'bounded_relu']
+
+quant_op_fp32_output_support = ("quantized_sg_mkldnn_fully_connected",
+                                "quantized_sg_mkldnn_selfatt_qk",
+                                "quantized_sg_mkldnn_selfatt_valatt")
 
 def check_qsym_calibrated(qsym, out_type, name='conv'):
   quantized_op_name = 'quantized_' + name
@@ -64,8 +72,7 @@ def check_qsym_calibrated(qsym, out_type, name='conv'):
       assert v['out_type'] == out_type
     if k.find(quantized_op_name) != -1:
       if ('enable_float_output' in v
-          and quantized_op_name.startswith(("quantized_sg_mkldnn_fully_connected",
-                                            "quantized_sg_mkldnn_selfatt_qk"))):
+          and quantized_op_name.startswith(quant_op_fp32_output_support)):
         continue
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
@@ -125,9 +132,11 @@ def check_qsym_gluon_forward(qsym, qarg_params, qaux_params, data_shape):
 class CalibIter(mx.io.DataIter):
     def __init__(self, batch, data_shape, batch_size):
         super(CalibIter, self).__init__(batch_size)
-        self.data_shape = data_shape
         self.label_shape = (batch_size,)
-        self.provide_data = [('data', self.data_shape)]
+        if isinstance(data_shape, tuple):
+          self.provide_data = [('data', data_shape)]
+        else:
+          self.provide_data = data_shape
         self.provide_label = []
         self.batch = batch
 
@@ -255,7 +264,6 @@ def check_fusion(sym, data_shape, attrs_dict, check_fp32_fusion=True, check_quan
     if ''.join(sym.get_internals().list_outputs()).find('sqrt') != -1:
       check_quantization = False
       data_min = 0
-
     sym_sg = sym.get_backend_symbol(SG_PASS_NAME)
     for name, attrs in attrs_dict.items():
       if name in config:
@@ -881,13 +889,83 @@ def test_fc_eltwise():
 @with_seed()
 def test_selfatt_qk():
   batchsizes = [1, 8, 16]
-  seq_lengths = [180, 255, 384]#,64,128,256,512,768,1024]
+  seq_lengths = [180, 255, 384]
   num_hidden = [1024, 2048, 3072]
   num_heads = [8, 16]
   for bs, seqlen, nhidden, nheads in itertools.product(batchsizes, seq_lengths, num_hidden, num_heads):
     dshape = (seqlen, bs, nhidden)
     syms, attrs = single_selfatt_qk(dshape, nheads)
     check_fusion(syms, dshape, attrs, out_types=['int8', 'auto'], check_quantization=True)
+
+@with_seed()
+def test_selfatt_valatt():
+  batchsizes = [1, 8]
+  seq_lengths = [18, 255, 384]
+  num_hidden = [1024, 3072]
+  num_heads = [1, 16]
+
+  def get_valatt_symbol(qkv_shape, attention_shape, nheads):
+      qkv = mx.symbol.Variable('qkv', shape=qkv_shape, dtype='float32')
+      attention = mx.symbol.Variable('attention', shape=attention_shape, dtype='float32')
+      # CalibIter assumes that batch_size is always first dimension
+      # following operators changes shapes to the proper one
+      qkv_swap = mx.symbol.swapaxes(data=qkv, dim1=0, dim2=1)
+      attention_reshape = mx.symbol.reshape(data=attention, shape=(-1, 0, 0), reverse=True)
+      sym = mx.symbol.contrib.interleaved_matmul_selfatt_valatt(queries_keys_values=qkv_swap,
+                                                                attention=attention_reshape,
+                                                                heads=nheads)
+      return sym
+
+  def check_valatt_quantize(sym, qkv_shape, att_shape):
+      qkv_nd    = mx.nd.random.uniform(low=-1, high=1, shape=qkv_shape)
+      weight_nd  = mx.nd.random.uniform(low=0, high=1, shape=att_shape)
+      arg_params = {
+          'qkv': qkv_nd,
+          'attention': weight_nd
+      }
+
+      ex = sym.bind(mx.cpu(), arg_params, args_grad=None)
+      ex.forward()
+      ref_out = ex.outputs
+
+      sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
+
+      batch = mx.io.DataBatch([qkv_nd, weight_nd], [])
+      calib_data = CalibIter(batch, [('qkv', qkv_shape), ('attention', att_shape)], bs)
+      qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+                                                                       arg_params=arg_params,
+                                                                       aux_params={},
+                                                                       ctx=mx.cpu(),
+                                                                       excluded_sym_names=None,
+                                                                       excluded_op_names=None,
+                                                                       quantize_granularity='tensor-wise',
+                                                                       quantized_dtype='auto',
+                                                                       calib_mode='naive',
+                                                                       calib_data=calib_data,
+                                                                       data_names=('qkv', 'attention'),
+                                                                       label_names=None,
+                                                                       num_calib_examples=1,
+                                                                       quantize_mode='full')
+      qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
+
+      qex = qsym.bind(mx.cpu(), arg_params, args_grad=None)
+      qex.forward()
+      quantized_out = qex.outputs
+
+      for i in range(len(ref_out)):
+        min_range = mx.nd.min(ref_out[i]).asscalar()
+        max_range = mx.nd.max(ref_out[i]).asscalar()
+        atol = 0.1 * max(abs(min_range), abs(max_range))
+        assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+
+  for bs, seqlen, nhidden, nheads in itertools.product(batchsizes, seq_lengths, num_hidden, num_heads):
+    qkv_shape = (bs, seqlen, 3*nhidden)
+    att_shape = (bs, nheads, seqlen, seqlen)
+
+    sym = get_valatt_symbol(qkv_shape, att_shape, nheads)
+    check_fusion(sym, None, {'selfatt_valatt': {}}, check_quantization=False)
+    check_valatt_quantize(sym, qkv_shape, att_shape)
+
 
 @with_seed()
 def test_neg_fc_relu():
