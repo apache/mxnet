@@ -1221,27 +1221,34 @@ def test_onnx_export_sequence_reverse(tmp_path, dtype, params):
 
 
 # onnx LSTM from opset 11 does not support float64
+@pytest.mark.parametrize('mode', ['lstm', 'gru'])
 @pytest.mark.parametrize('dtype', ['float32'])
-@pytest.mark.parametrize('state_size', [32, 40])
-@pytest.mark.parametrize('input_size', [32, 40, 64])
+@pytest.mark.parametrize('state_size', [16, 32])
+@pytest.mark.parametrize('input_size', [16, 32, 64])
 @pytest.mark.parametrize('num_layers', [1, 2])
-@pytest.mark.parametrize('batch_size', [1, 3, 5])
+@pytest.mark.parametrize('batch_size', [1, 2, 4])
 @pytest.mark.parametrize('seq_length', [16, 32])
-def test_onnx_export_RNN(tmp_path, dtype, state_size, input_size, num_layers, batch_size, seq_length):
+def test_onnx_export_RNN(tmp_path, mode, dtype, state_size, input_size, num_layers, batch_size, seq_length):
     # TODO: The current implementation fails assertion checks for large parm/state_size. 
-    
+
     # for num_layers >= 2, input_size must equal to state_size
     if num_layers >= 2 and input_size != state_size:
         return
-    
-    M = def_model('RNN', mode='lstm', state_size=state_size, state_outputs=True,  num_layers=num_layers, p=0)
+    factor = 3
+    if mode == 'lstm':
+        factor = 4
+
+    M = def_model('RNN', mode=mode, state_size=state_size, state_outputs=True,  num_layers=num_layers, p=0)
     x = mx.nd.random.normal(0, 10, (seq_length, batch_size, input_size), dtype=dtype)
-    param = mx.nd.random.normal(0, 1, [num_layers*4*state_size*input_size +
-                                       num_layers*4*state_size*state_size +
-                                       num_layers*8*state_size], dtype=dtype)
+    param = mx.nd.random.normal(0, 1, [num_layers*factor*state_size*input_size +
+                                       num_layers*factor*state_size*state_size +
+                                       num_layers*2*factor*state_size], dtype=dtype)
     state = mx.nd.random.uniform(-1, 1, [num_layers, batch_size, state_size], dtype=dtype)
-    cell = mx.nd.random.uniform(-1, 1, [num_layers, batch_size, state_size], dtype=dtype)
-    op_export_test('rnn', M, [x, param, state, cell], tmp_path)
+    if mode == 'lstm':
+        cell = mx.nd.random.uniform(-1, 1, [num_layers, batch_size, state_size], dtype=dtype)
+        op_export_test('rnn', M, [x, param, state, cell], tmp_path)
+    else:
+        op_export_test('rnn', M, [x, param, state], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
