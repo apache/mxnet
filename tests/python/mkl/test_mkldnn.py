@@ -469,7 +469,6 @@ def test_convolution():
 
 
 @with_seed()
-# @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12579")
 def test_Deconvolution():
     def check_Deconvolution_training(stype):
         for shape in [(3, 3, 10, 10)]: # testing only 2D for now

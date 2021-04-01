@@ -39,6 +39,7 @@
 #if MXNET_USE_MKLDNN == 1
 #include <utility>
 #include <vector>
+#include <numeric>
 
 #include "../deconvolution-inl.h"
 #include "./mkldnn_base-inl.h"
