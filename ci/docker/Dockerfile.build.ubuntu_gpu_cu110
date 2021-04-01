@@ -39,3 +39,5 @@ COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
+
+WORKDIR /work/mxnet
