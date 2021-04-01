@@ -58,11 +58,6 @@ if not travis_tag and not is_release:
 elif travis_tag.startswith('patch-'):
     __version__ = os.environ['TRAVIS_TAG'].split('-')[1]
 
-# release tag
-elif is_release:
-    __version__ += 'RELEASE'
-
-
 DEPENDENCIES = [
     'numpy<2.0.0,>1.16.0',
     'requests>=2.20.0,<3',
