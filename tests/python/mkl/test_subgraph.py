@@ -49,7 +49,7 @@ config =  {
 }
 
 DATA_SHAPE=[(64, 4, 10, 10), (4, 3, 24, 24), (1, 16, 32, 32)]
-fc_post_ops_list=['relu', 'sigmoid', 'tanh', 'softrelu',
+fc_post_ops_list=['relu', 'sigmoid', 'tanh', 'softrelu', 'gelu',
                   'square', 'square_root', 'abs', 'exp', 'bounded_relu']
 
 def check_qsym_calibrated(qsym, out_type, name='conv'):
@@ -664,6 +664,8 @@ def fc_eltwise(no_bias, data_shape, flatten=True, alg='relu'):
                                 no_bias=no_bias, flatten=flatten)
   if alg in ['relu', 'sigmoid', 'tanh', 'softrelu']:
     sym = mx.symbol.Activation(data=fc, name='act', act_type=alg)
+  elif alg == "gelu":
+    sym = mx.symbol.LeakyReLU(data=fc, act_type='gelu')
   elif alg == 'square':
     sym = mx.symbol.square(data=fc, name='square')
   elif alg == 'square_root':
