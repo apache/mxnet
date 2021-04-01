@@ -1160,6 +1160,17 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
       MXNET_ADD_ALL_TYPES
       .describe("DType of the output");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream depth_s, on_value_s, off_value_s, axis_s, dtype_s;
+    depth_s << depth;
+    on_value_s << on_value;
+    off_value_s << off_value;
+    dtype_s << dtype;
+    (*dict)["depth"] = depth_s.str();
+    (*dict)["on_value"] = on_value_s.str();
+    (*dict)["off_value"] = off_value_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+  }
 };
 
 inline void GetOneHotParams(const OneHotParam& param, index_t* depth, double* on_value,

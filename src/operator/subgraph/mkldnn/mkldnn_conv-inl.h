@@ -19,7 +19,7 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <utility>
@@ -61,5 +61,5 @@ enum MKLDNNConvOpOutputs { kOut, kMin, kMax };
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_

@@ -78,7 +78,7 @@ class FeatureSet {
     feature_bits.set(BLAS_MKL, MXNET_USE_BLAS_MKL);
     feature_bits.set(BLAS_APPLE, MXNET_USE_BLAS_APPLE);
     feature_bits.set(LAPACK, MXNET_USE_LAPACK);
-    feature_bits.set(MKLDNN, MXNET_USE_MKLDNN);
+    feature_bits.set(ONEDNN, MXNET_USE_ONEDNN);
 
     // Image
     feature_bits.set(OPENCV, MXNET_USE_OPENCV);
@@ -152,7 +152,7 @@ const std::vector<std::string> EnumNames::names = {
   "BLAS_MKL",
   "BLAS_APPLE",
   "LAPACK",
-  "MKLDNN",
+  "ONEDNN",
   "OPENCV",
   "DIST_KVSTORE",
   "INT64_TENSOR_SIZE",

@@ -32,12 +32,12 @@ mx_cmake_lib_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/lib
 mx_cmake_lib_cython = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/tests/mxnet_unit_tests, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib_debug = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/tests/mxnet_unit_tests'
-mx_mkldnn_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so'
+mx_onednn_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so'
 mx_tensorrt_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
 mx_lib_cpp_examples = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, example/extensions/lib_external_ops/build/libexternal_lib.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_examples_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf'
-mx_cd_lib = 'lib/libmxnet.so, licenses/*, lib/libgfortran.so.*, lib/libopenblas.so.0, include/mkldnn/oneapi/dnnl/dnnl_version.h, include/mkldnn/oneapi/dnnl/dnnl_config.h'
+mx_cd_lib = 'lib/libmxnet.so, licenses/*, lib/libgfortran.so.*, lib/libopenblas.so.0, include/onednn/oneapi/dnnl/dnnl_version.h, include/onednn/oneapi/dnnl/dnnl_config.h'
 
 
 // Python unittest for CPU
@@ -48,9 +48,9 @@ def python3_ut(docker_container_name) {
   }
 }
 
-def python3_ut_mkldnn(docker_container_name) {
+def python3_ut_onednn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_onednn', false)
   }
 }
 
@@ -161,56 +161,56 @@ def compile_unix_mkl_cpu(lib_name) {
     }]
 }
 
-def compile_unix_mkldnn_cpu(lib_name) {
-    return ['CPU: MKLDNN': {
+def compile_unix_onednn_cpu(lib_name) {
+    return ['CPU: ONEDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-mkldnn-cpu') {
+        ws('workspace/build-onednn-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn', false)
-            utils.pack_lib(lib_name, mx_mkldnn_lib, true)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_onednn', false)
+            utils.pack_lib(lib_name, mx_onednn_lib, true)
           }
         }
       }
     }]
 }
 
-def compile_unix_mkldnn_mkl_cpu(lib_name) {
-    return ['CPU: MKLDNN_MKL': {
+def compile_unix_onednn_mkl_cpu(lib_name) {
+    return ['CPU: ONEDNN_MKL': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-mkldnn-cpu') {
+        ws('workspace/build-onednn-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn_mkl', false)
-            utils.pack_lib(lib_name, mx_mkldnn_lib, false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_onednn_mkl', false)
+            utils.pack_lib(lib_name, mx_onednn_lib, false)
           }
         }
       }
     }]
 }
 
-def compile_unix_mkldnn_gpu(lib_name) {
-    return ['GPU: MKLDNN': {
+def compile_unix_onednn_gpu(lib_name) {
+    return ['GPU: ONEDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-mkldnn-gpu') {
+        ws('workspace/build-onednn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_mkldnn', false)
-            utils.pack_lib(lib_name, mx_mkldnn_lib)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_onednn', false)
+            utils.pack_lib(lib_name, mx_onednn_lib)
           }
         }
       }
     }]
 }
 
-def compile_unix_mkldnn_nocudnn_gpu(lib_name) {
-    return ['GPU: MKLDNN_CUDNNOFF': {
+def compile_unix_onednn_nocudnn_gpu(lib_name) {
+    return ['GPU: ONEDNN_CUDNNOFF': {
        node(NODE_LINUX_CPU) {
-         ws('workspace/build-mkldnn-gpu-nocudnn') {
+         ws('workspace/build-onednn-gpu-nocudnn') {
            timeout(time: max_time, unit: 'MINUTES') {
              utils.init_git()
-             utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_mkldnn_nocudnn', false)
-             utils.pack_lib(lib_name, mx_mkldnn_lib)
+             utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_onednn_nocudnn', false)
+             utils.pack_lib(lib_name, mx_onednn_lib)
            }
          }
        }
@@ -273,13 +273,13 @@ def compile_centos7_cpu(lib_name) {
     }]
 }
 
-def compile_centos7_cpu_mkldnn() {
-    return ['CPU: CentOS 7 MKLDNN': {
+def compile_centos7_cpu_onednn() {
+    return ['CPU: CentOS 7 ONEDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-centos7-mkldnn') {
+        ws('workspace/build-centos7-onednn') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_cpu', 'build_centos7_mkldnn', false)
+            utils.docker_run('centos7_cpu', 'build_centos7_onednn', false)
           }
         }
       }
@@ -340,13 +340,13 @@ def compile_unix_clang_tidy_cpu() {
     }]
 }
 
-def compile_unix_clang_6_mkldnn_cpu() {
-    return ['CPU: Clang 6 MKLDNN': {
+def compile_unix_clang_6_onednn_cpu() {
+    return ['CPU: Clang 6 ONEDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-mkldnn-clang6') {
+        ws('workspace/build-cpu-onednn-clang6') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang6_mkldnn', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang6_onednn', false)
           }
         }
       }
@@ -354,13 +354,13 @@ def compile_unix_clang_6_mkldnn_cpu() {
 }
 
 // TODO(leezu) delete once DUSE_DIST_KVSTORE=ON builds in -WError build
-def compile_unix_clang_10_mkldnn_cpu() {
-    return ['CPU: Clang 10 MKLDNN': {
+def compile_unix_clang_10_onednn_cpu() {
+    return ['CPU: Clang 10 ONEDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-mkldnn-clang100') {
+        ws('workspace/build-cpu-onednn-clang100') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang100_mkldnn', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang100_onednn', false)
           }
         }
       }
@@ -518,13 +518,13 @@ def compile_windows_cpu(lib_name) {
     }]
 }
 
-def compile_windows_cpu_mkldnn(lib_name) {
-    return ['Build CPU MKLDNN windows':{
+def compile_windows_cpu_onednn(lib_name) {
+    return ['Build CPU ONEDNN windows':{
       node(NODE_WINDOWS_CPU) {
-        ws('workspace/build-cpu-mkldnn') {
+        ws('workspace/build-cpu-onednn') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'py -3 ci/build_windows.py -f WIN_CPU_MKLDNN'
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU_ONEDNN'
             stash includes: 'windows_package.7z', name: lib_name
           }
         }
@@ -532,13 +532,13 @@ def compile_windows_cpu_mkldnn(lib_name) {
     }]
 }
 
-def compile_windows_cpu_mkldnn_mkl(lib_name) {
-    return ['Build CPU MKLDNN MKL windows':{
+def compile_windows_cpu_onednn_mkl(lib_name) {
+    return ['Build CPU ONEDNN MKL windows':{
       node(NODE_WINDOWS_CPU) {
-        ws('workspace/build-cpu-mkldnn-mkl') {
+        ws('workspace/build-cpu-onednn-mkl') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'py -3 ci/build_windows.py -f WIN_CPU_MKLDNN_MKL'
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU_ONEDNN_MKL'
             stash includes: 'windows_package.7z', name: lib_name
           }
         }
@@ -574,13 +574,13 @@ def compile_windows_gpu(lib_name) {
     }]
 }
 
-def compile_windows_gpu_mkldnn(lib_name) {
-    return ['Build GPU MKLDNN windows':{
+def compile_windows_gpu_onednn(lib_name) {
+    return ['Build GPU ONEDNN windows':{
       node(NODE_WINDOWS_CPU) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'py -3 ci/build_windows.py -f WIN_GPU_MKLDNN'
+            powershell 'py -3 ci/build_windows.py -f WIN_GPU_ONEDNN'
             stash includes: 'windows_package.7z', name: lib_name
           }
         }
@@ -724,66 +724,66 @@ def test_unix_python3_cpu_no_tvm_op(lib_name) {
     }]
 }
 
-def test_unix_python3_mkldnn_cpu(lib_name) {
-    return ['Python3: MKLDNN-CPU': {
+def test_unix_python3_onednn_cpu(lib_name) {
+    return ['Python3: ONEDNN-CPU': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python3-mkldnn-cpu') {
+        ws('workspace/ut-python3-onednn-cpu') {
           try {
-            utils.unpack_and_init(lib_name, mx_mkldnn_lib, true)
-            python3_ut_mkldnn('ubuntu_cpu')
+            utils.unpack_and_init(lib_name, mx_onednn_lib, true)
+            python3_ut_onednn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_mkldnn_cpu_unittest.xml')
-            utils.collect_test_results_unix('tests_mkl.xml', 'tests_python3_mkldnn_cpu_mkl.xml')
+            utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_onednn_cpu_unittest.xml')
+            utils.collect_test_results_unix('tests_mkl.xml', 'tests_python3_onednn_cpu_mkl.xml')
           }
         }
       }
     }]
 }
 
-def test_unix_python3_mkldnn_mkl_cpu(lib_name) {
-    return ['Python3: MKLDNN-MKL-CPU': {
+def test_unix_python3_onednn_mkl_cpu(lib_name) {
+    return ['Python3: ONEDNN-MKL-CPU': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python3-mkldnn-mkl-cpu') {
+        ws('workspace/ut-python3-onednn-mkl-cpu') {
           try {
             utils.unpack_and_init(lib_name, mx_lib)
-            python3_ut_mkldnn('ubuntu_cpu')
+            python3_ut_onednn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_mkldnn_cpu_unittest.xml')
-            utils.collect_test_results_unix('tests_mkl.xml', 'tests_python3_mkldnn_cpu_mkl.xml')
+            utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_onednn_cpu_unittest.xml')
+            utils.collect_test_results_unix('tests_mkl.xml', 'tests_python3_onednn_cpu_mkl.xml')
           }
         }
       }
     }]
 }
 
-def test_unix_python3_mkldnn_gpu(lib_name) {
-    return ['Python3: MKLDNN-GPU': {
+def test_unix_python3_onednn_gpu(lib_name) {
+    return ['Python3: ONEDNN-GPU': {
       node(NODE_LINUX_GPU_G4) {
-        ws('workspace/ut-python3-mkldnn-gpu') {
+        ws('workspace/ut-python3-onednn-gpu') {
           try {
-            utils.unpack_and_init(lib_name, mx_mkldnn_lib)
+            utils.unpack_and_init(lib_name, mx_onednn_lib)
             python3_gpu_ut('ubuntu_gpu_cu111')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_mkldnn_gpu.xml')
+            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_onednn_gpu.xml')
           }
         }
       }
     }]
 }
 
-def test_unix_python3_mkldnn_nocudnn_gpu(lib_name) {
-    return ['Python3: MKLDNN-GPU-NOCUDNN': {
+def test_unix_python3_onednn_nocudnn_gpu(lib_name) {
+    return ['Python3: ONEDNN-GPU-NOCUDNN': {
       node(NODE_LINUX_GPU_G4) {
-        ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
+        ws('workspace/ut-python3-onednn-gpu-nocudnn') {
           try {
-            utils.unpack_and_init(lib_name, mx_mkldnn_lib)
+            utils.unpack_and_init(lib_name, mx_onednn_lib)
             python3_gpu_ut_nocudnn('ubuntu_gpu_cu111')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_mkldnn_gpu_nocudnn.xml')
+            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_onednn_gpu_nocudnn.xml')
           }
         }
       }
@@ -954,8 +954,8 @@ def test_windows_python3_gpu(lib_name) {
     }]
 }
 
-def test_windows_python3_gpu_mkldnn(lib_name) {
-    return ['Python 3: MKLDNN-GPU Win':{
+def test_windows_python3_gpu_onednn(lib_name) {
+    return ['Python 3: ONEDNN-GPU Win':{
       node(NODE_WINDOWS_GPU) {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/ut-python-gpu') {
@@ -964,8 +964,8 @@ def test_windows_python3_gpu_mkldnn(lib_name) {
               unstash lib_name
               powershell 'ci/windows/test_py3_gpu.ps1'
             } finally {
-              utils.collect_test_results_windows('tests_forward.xml', 'tests_gpu_forward_windows_python3_gpu_mkldnn.xml')
-              utils.collect_test_results_windows('tests_operator.xml', 'tests_gpu_operator_windows_python3_gpu_mkldnn.xml')
+              utils.collect_test_results_windows('tests_forward.xml', 'tests_gpu_forward_windows_python3_gpu_onednn.xml')
+              utils.collect_test_results_windows('tests_operator.xml', 'tests_gpu_operator_windows_python3_gpu_onednn.xml')
             }
           }
         }

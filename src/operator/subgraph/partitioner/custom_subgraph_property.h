@@ -212,7 +212,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         arg_names.push_back(in_arg_names[i].c_str());
         const NDArray &in_arg = *(in_args_ptr[i]);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
         // reorder data if in MKLDNN format
         if (in_arg.IsMKLDNNData()) {
           in_arg.Reorder2DefaultAsync();
@@ -246,7 +246,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         aux_names.push_back(in_aux_names[i].c_str());
         const auto &in_aux = *(in_aux_ptr[i]);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
         // reorder data if in MKLDNN format
         if (in_aux.IsMKLDNNData()) {
           in_aux.Reorder2DefaultAsync();

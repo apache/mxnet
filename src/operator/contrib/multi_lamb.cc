@@ -167,7 +167,7 @@ std::vector<std::string> LAMBParamToVector(uint32_t num_tensors,
   return ret;
 }
 
-inline uint32_t NumTensors(const nnvm::NodeAttrs& attrs) {
+static inline uint32_t NumTensors(const nnvm::NodeAttrs& attrs) {
   return static_cast<uint32_t>(dmlc::get<MultiLAMBParam>(attrs.parsed).num_tensors);
 }
 

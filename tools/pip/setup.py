@@ -141,16 +141,16 @@ else:
         libraries.append('CUDA-10.1')
 
 from mxnet.runtime import Features
-if Features().is_enabled("MKLDNN"):
-    libraries.append('MKLDNN')
+if Features().is_enabled("ONEDNN"):
+    libraries.append('ONEDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
-if Features().is_enabled("MKLDNN"):
-    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
-                    os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
+if Features().is_enabled("ONEDNN"):
+    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/onednn/include'),
+                    os.path.join(CURRENT_DIR, 'mxnet/include/onednn'))
 if platform.system() == 'Linux':
     libdir, mxdir = os.path.dirname(LIB_PATH[0]), os.path.join(CURRENT_DIR, 'mxnet')
     if os.path.exists(os.path.join(libdir, 'libgfortran.so.3')):

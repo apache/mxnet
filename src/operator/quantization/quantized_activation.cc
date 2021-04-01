@@ -68,7 +68,7 @@ inline static bool QuantizedActivationStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(in_attrs->size(), 3);
 
   *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   const ActivationParam &param = nnvm::get<ActivationParam>(attrs.parsed);
   if (dev_mask == mshadow::cpu::kDevMask && param.act_type == activation::kReLU) {
     *dispatch_mode = DispatchMode::kFComputeEx;

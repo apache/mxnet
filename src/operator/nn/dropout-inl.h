@@ -84,6 +84,29 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
     .describe("Whether to turn off cudnn in dropout operator. "
               "This option is ignored if axes is specified.");
   }
+  std::string Mode2String(int mode) {
+    switch (mode) {
+      case dropout::kTraining:
+        return "training";
+      case dropout::kAlways:
+        return "always";
+      default:
+        LOG(FATAL) << "Unknown mode enum " << mode;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream p_s, mode_s, axes_s, cudnn_off_s;
+    p_s << p;
+    mode_s << mode;
+    axes_s << axes;
+    cudnn_off_s << cudnn_off;
+    (*dict)["p"] = p_s.str();
+    (*dict)["mode"] = Mode2String(mode);
+    (*dict)["axes"] = axes_s.str();
+    (*dict)["cudnn_off"] = cudnn_off_s.str();
+  }
 };  // struct DropoutParam
 
 template<typename xpu, typename DType>

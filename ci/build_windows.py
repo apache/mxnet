@@ -48,11 +48,11 @@ KNOWN_VCVARS = {
 
 class BuildFlavour(Enum):
     WIN_CPU = 'WIN_CPU'
-    WIN_CPU_MKLDNN = 'WIN_CPU_MKLDNN'
-    WIN_CPU_MKLDNN_MKL = 'WIN_CPU_MKLDNN_MKL'
+    WIN_CPU_ONEDNN = 'WIN_CPU_ONEDNN'
+    WIN_CPU_ONEDNN_MKL = 'WIN_CPU_ONEDNN_MKL'
     WIN_CPU_MKL = 'WIN_CPU_MKL'
     WIN_GPU = 'WIN_GPU'
-    WIN_GPU_MKLDNN = 'WIN_GPU_MKLDNN'
+    WIN_GPU_ONEDNN = 'WIN_GPU_ONEDNN'
 
 
 CMAKE_FLAGS = {
@@ -69,7 +69,7 @@ CMAKE_FLAGS = {
         '-DBUILD_CPP_EXAMPLES=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
-    , 'WIN_CPU_MKLDNN': (
+    , 'WIN_CPU_ONEDNN': (
         '-DCMAKE_C_COMPILER=cl '
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
@@ -79,10 +79,10 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DUSE_MKLDNN=ON '
+        '-DUSE_ONEDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
-    , 'WIN_CPU_MKLDNN_MKL': (
+    , 'WIN_CPU_ONEDNN_MKL': (
         '-DCMAKE_C_COMPILER=cl '
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
@@ -92,7 +92,7 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DUSE_MKLDNN=ON '
+        '-DUSE_ONEDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKL': (
@@ -105,7 +105,7 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DUSE_MKLDNN=OFF '
+        '-DUSE_ONEDNN=OFF '
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': (
@@ -121,7 +121,7 @@ CMAKE_FLAGS = {
         '-DMXNET_CUDA_ARCH="5.2" '
         '-DCMAKE_BUILD_TYPE=Release')
 
-    , 'WIN_GPU_MKLDNN': (
+    , 'WIN_GPU_ONEDNN': (
         '-DCMAKE_C_COMPILER=cl '
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
@@ -132,7 +132,7 @@ CMAKE_FLAGS = {
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DMXNET_CUDA_ARCH="5.2" '
-        '-DUSE_MKLDNN=ON '
+        '-DUSE_ONEDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
 }

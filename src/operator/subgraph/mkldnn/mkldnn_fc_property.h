@@ -26,7 +26,7 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
@@ -158,7 +158,7 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 class SgMKLDNNFCProperty : public SubgraphProperty {
  public:
   SgMKLDNNFCProperty() {
-    disable_fc_eltwise_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_FC_ELTWISE", false);
+    disable_fc_eltwise_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_FC_ELTWISE", false);
   }
 
   static SubgraphPropertyPtr Create() {
@@ -166,7 +166,7 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
     auto property = std::make_shared<SgMKLDNNFCProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FC_OPT", 0)) {
+    if (dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FC_OPT", 0)) {
       property->SetAttr<bool>("disable", true);
     }
     return property;
@@ -223,5 +223,5 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // if MXNET_USE_MKLDNN == 1
+#endif  // if MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_

@@ -183,7 +183,7 @@ std::vector<std::string> LANSParamToVector(uint32_t num_tensors,
   return ret;
 }
 
-inline uint32_t NumTensors(const nnvm::NodeAttrs& attrs) {
+static inline uint32_t NumTensors(const nnvm::NodeAttrs& attrs) {
   return static_cast<uint32_t>(dmlc::get<MultiLANSParam>(attrs.parsed).num_tensors);
 }
 

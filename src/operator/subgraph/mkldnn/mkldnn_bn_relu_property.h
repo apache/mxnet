@@ -19,7 +19,7 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_BN_RELU_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_BN_RELU_PROPERTY_H_
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
@@ -84,7 +84,7 @@ class SgMKLDNNBNReLUSelector : public SubgraphSelector {
 class SgMKLDNNBNReLUProperty : public SubgraphProperty {
  public:
   SgMKLDNNBNReLUProperty() {
-    disable_bn_relu_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_BN_RELU", false);
+    disable_bn_relu_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_BN_RELU", false);
   }
 
   void PrePartition(const nnvm::Graph& g,
@@ -97,7 +97,7 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
     auto property = std::make_shared<SgMKLDNNBNReLUProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_BN_RELU_OPT", 0)) {
+    if (dmlc::GetEnv("MXNET_DISABLE_ONEDNN_BN_RELU_OPT", 0)) {
       property->SetAttr<bool>("disable", true);
     }
     return property;
@@ -138,5 +138,5 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // if MXNET_USE_MKLDNN == 1
+#endif  // if MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_BN_RELU_PROPERTY_H_

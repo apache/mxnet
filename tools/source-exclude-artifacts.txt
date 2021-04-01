@@ -20,4 +20,4 @@
 #  not be included in source release archives due to licensing
 #  restrictions.
 
-3rdparty/mkldnn/doc
+3rdparty/onednn/doc

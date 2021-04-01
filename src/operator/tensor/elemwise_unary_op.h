@@ -409,7 +409,7 @@ class UnaryOp : public OpBase {
       case kWriteInplace:
 // cannot check if ptrs are the same for MKLDNN because we may have
 // created copies of input when reordering. WriteInPlace will still write to original array
-#if MXNET_USE_MKLDNN == 0
+#if MXNET_USE_ONEDNN == 0
         CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
 #endif
         break;

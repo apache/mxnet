@@ -80,6 +80,15 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
            this->no_bias == other.no_bias &&
            this->flatten == other.flatten;
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_hidden_s, no_bias_s, flatten_s;
+    num_hidden_s << num_hidden;
+    no_bias_s << no_bias;
+    flatten_s << flatten;
+    (*dict)["num_hidden"] = num_hidden_s.str();
+    (*dict)["no_bias"] = no_bias_s.str();
+    (*dict)["flatten"] = flatten_s.str();
+  }
 };
 
 /**
