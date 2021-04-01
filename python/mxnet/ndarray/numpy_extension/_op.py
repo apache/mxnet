@@ -19,7 +19,6 @@
 used in Gluon dispatched by F=ndarray module."""
 
 import numpy as _np
-from .. import numpy as np  # pylint: disable=reimported
 from .._internal import NDArrayBase
 from . import _api_internal
 from ...util import set_module
