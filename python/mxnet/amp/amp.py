@@ -61,7 +61,7 @@ def _cast_symbol_NDArray(s, dtype, is_numpy_module=False):
         amp_cast = ndarray.numpy._api_internal.amp_cast if is_numpy_module else ndarray.amp_cast
         if s.dtype != dtype and (s.dtype in float_types_gpu and s.context.device_type != 'cpu' or
                                  s.dtype in float_types_cpu and s.context.device_type == 'cpu'):
-            return amp_cast(s, dtype=dtype)
+            return amp_cast(s, dtype)
     return s
 
 def _get_nd_fun_to_wrap(name, module, submodule_dict):
