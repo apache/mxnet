@@ -37,6 +37,9 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_DECONVOLUTION_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
+#include <utility>
+#include <vector>
+
 #include "../deconvolution-inl.h"
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_ops-inl.h"
@@ -61,7 +64,7 @@ inline mkldnn::memory::desc IOLogicalSwapDesc(const mkldnn::memory::desc &desc,
                                               const uint32_t num_group) {
   std::vector<int> order(desc.data.ndims);
   std::iota(std::begin(order), std::end(order), 0);
-  const int offset = int(num_group > 1);
+  const int offset = static_cast<int>(num_group > 1);
   std::swap(order[offset + 0], order[offset + 1]);
   return desc.permute_axes(order);
 }

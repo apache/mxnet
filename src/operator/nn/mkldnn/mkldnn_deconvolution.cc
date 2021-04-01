@@ -323,8 +323,9 @@ DeconvDescCreator::DeconvDescCreator(const DeconvolutionParam &param, const NDAr
       padding(param.pad.ndim()),
       dilates(param.dilate.ndim()) {
   // assuming only deconv2D is supported for now
-  CHECK(param.stride.ndim() == param.pad.ndim() && param.stride.ndim() == param.dilate.ndim());
-  CHECK(param.stride.ndim() == 2);
+  CHECK_EQ(param.stride.ndim(), param.pad.ndim());
+  CHECK_EQ(param.stride.ndim(), param.dilate.ndim());
+  CHECK_EQ(param.stride.ndim(), 2);
   for (int i = 0; i < param.stride.ndim(); ++i) {
     strides[i] = param.stride[i];
     padding[i] = param.pad[i];
