@@ -10156,6 +10156,16 @@ def test_npx_stop_gradient():
                     assert_almost_equal(new_grad, old_grad + 1)
 
 
+def test_npx_broadcast_like_different_types():
+    x = mx.np.zeros((2, 1))
+    y = mx.np.ones((2, 2))
+
+    y = mx.np.array(y).astype('int32')
+    z = mx.npx.broadcast_like(x, y)
+    assert_almost_equal(z.asnumpy(), np.array([[0,0],[0,0]]))
+    assert x.dtype == z.dtype
+
+
 @use_np
 def test_np_elementwise_ops_on_misaligned_input():
     a = np.array([1,2,3,4], dtype='float16')
