@@ -118,7 +118,7 @@ def log_softmax(data, axis=-1, length=None, temperature=None, use_length=False, 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None, normalize=True):
+def masked_softmax(data, mask, axis=-1, temperature=1.0, normalize=True):
     r"""Applies the softmax function masking elements according to the mask provided
 
     Parameters
@@ -131,9 +131,6 @@ def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None, normalize=T
         The axis along which to compute softmax.
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
-    dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
-        DType of the output in case this can't be inferred. Defaults to
-        the same as input's dtype if not defined (dtype=None).
     normalize : boolean or None, optional, default=1
         Whether to normalize input data x: x = x - max(x)
 
@@ -154,12 +151,12 @@ def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None, normalize=T
            [0.9933072 , 0.        , 0.9933072 , 0.        , 0.9933072 ]])
     """
     return _mx_nd_npx.masked_softmax(data, mask, axis=axis, temperature=temperature,
-                                     dtype=dtype, normalize=normalize)
+                                     normalize=normalize)
 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None, normalize=True):
+def masked_log_softmax(data, mask, axis=-1, temperature=1.0, normalize=True):
     r"""Computes the masked log softmax of the input.
     This is equivalent to computing masked softmax followed by log.
 
@@ -173,9 +170,6 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None, normali
         The axis along which to compute softmax.
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
-    dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
-        DType of the output in case this can't be inferred. Defaults to
-        the same as input's dtype if not defined (dtype=None).
     normalize : boolean or None, optional, default=1
         Whether to normalize input data x: x = x - max(x)
 
@@ -196,7 +190,7 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None, normali
            [-0.00671535,        -inf, -0.00671535,        -inf, -0.00671535]])
     """
     return _mx_nd_npx.masked_log_softmax(data, mask, axis=axis, temperature=temperature,
-                                         dtype=dtype, normalize=normalize)
+                                         normalize=normalize)
 
 
 # pylint: disable=too-many-arguments, unused-argument

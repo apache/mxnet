@@ -165,17 +165,11 @@ MXNET_REGISTER_API("_npx.masked_softmax")
   } else {
     param.temperature = args[3].operator double();
   }
-  // parse dtype
-  if (args[4].type_code() == kNull) {
-    param.dtype = dmlc::nullopt;
-  } else {
-    param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
-  }
   // parse normalize
-  if (args[5].type_code() == kNull) {
+  if (args[4].type_code() == kNull) {
     param.normalize = true;
   } else {
-    param.normalize = args[5].operator bool();
+    param.normalize = args[4].operator bool();
   }
 
   attrs.parsed = param;
@@ -215,17 +209,11 @@ MXNET_REGISTER_API("_npx.masked_log_softmax")
   } else {
     param.temperature = args[3].operator double();
   }
-  // parse dtype
-  if (args[4].type_code() == kNull) {
-    param.dtype = dmlc::nullopt;
-  } else {
-    param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
-  }
   // parse normalize
-  if (args[5].type_code() == kNull) {
+  if (args[4].type_code() == kNull) {
     param.normalize = true;
   } else {
-    param.normalize = args[5].operator bool();
+    param.normalize = args[4].operator bool();
   }
 
   attrs.parsed = param;
