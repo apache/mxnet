@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_TENSOR_AMP_CAST_H_
 
 #include <vector>
+#include <string>
 #include <utility>
 #include <algorithm>
 #include "../mshadow_op.h"
