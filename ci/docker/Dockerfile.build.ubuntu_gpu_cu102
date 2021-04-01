@@ -69,10 +69,6 @@ ENV CUDNN_VERSION=8.0.4.30
 COPY install/ubuntu_cudnn.sh /work/
 RUN /work/ubuntu_cudnn.sh
 
-# update the cuda compatibity package because cd host uses nvidia driver 460
-RUN apt-get update && apt-get install -y cuda-compat-11-2
-RUN ln -sfn /usr/local/cuda-11.2 /usr/local/cuda
-
 # Always last
 ARG USER_ID=0
 ARG GROUP_ID=0
@@ -80,6 +76,3 @@ COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
-
-WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda/compat
