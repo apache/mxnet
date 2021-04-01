@@ -132,7 +132,7 @@ def container_run(platform: str,
     logging.info("Using ccache directory: %s", local_ccache_dir)
 
     # Log enviroment
-    logging.info("environment : ", environment)
+    logging.info("environment ---> {0}".format(environment))
 
     # Build docker command
     docker_arg_list = [
@@ -277,7 +277,7 @@ def main() -> int:
     command = list(chain.from_iterable(args.command))
     environment = dict([(e.split('=')[:2] if '=' in e else (e, os.environ[e]))
                         for e in args.environment])
-
+    print(environment)
     if args.list:
         print(list_platforms())
     elif args.platform:
