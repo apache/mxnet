@@ -51,12 +51,12 @@ MXNET_REGISTER_API("_npx.softmax")
   }
 
   // parse axis
-  if (args[args_size - 4].type_code() == kNull) {
-    param.axis = -1;
-  } else if (args[args_size - 4].type_code() == kDLInt) {
+  if (args[args_size - 4].type_code() == kDLInt) {
     param.axis = args[args_size - 4].operator int();
   } else if (args[args_size - 4].type_code() == kDLFloat) {
     param.axis = static_cast<int>(args[args_size - 4].operator double());
+  } else {
+    param.axis = -1;
   }
 
   // parse temperature
@@ -106,12 +106,12 @@ MXNET_REGISTER_API("_npx.log_softmax")
   }
 
   // parse axis
-  if (args[args_size - 4].type_code() == kNull) {
-    param.axis = -1;
-  } else if (args[args_size - 4].type_code() == kDLInt) {
+  if (args[args_size - 4].type_code() == kDLInt) {
     param.axis = args[args_size - 4].operator int();
   } else if (args[args_size - 4].type_code() == kDLFloat) {
     param.axis = static_cast<int>(args[args_size - 4].operator double());
+  } else {
+    param.axis = -1;
   }
 
   // parse temperature
