@@ -144,7 +144,6 @@ MXNET_REGISTER_API("_npx.masked_softmax")
   static const nnvm::Op* op = Op::Get("_npx_masked_softmax");
   op::MaskedSoftmaxParam param;
 
-  int args_size = args.size();
   // inputs
   int num_inputs = 2;
   std::vector<NDArray*> inputs;
@@ -153,12 +152,12 @@ MXNET_REGISTER_API("_npx.masked_softmax")
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
   // parse axis
-  if (args[2].type_code() == kNull) {
-    param.axis = -1;
-  } else if (args[2].type_code() == kDLInt) {
+  if (args[2].type_code() == kDLInt) {
     param.axis = args[2].operator int();
   } else if (args[2].type_code() == kDLFloat) {
     param.axis = static_cast<int>(args[2].operator double());
+  } else {
+    param.axis = -1;
   }
   // parse temperature
   if (args[3].type_code() == kNull) {
@@ -195,7 +194,6 @@ MXNET_REGISTER_API("_npx.masked_log_softmax")
   static const nnvm::Op* op = Op::Get("_npx_masked_log_softmax");
   op::MaskedSoftmaxParam param;
 
-  int args_size = args.size();
   // inputs
   int num_inputs = 2;
   std::vector<NDArray*> inputs;
@@ -204,12 +202,12 @@ MXNET_REGISTER_API("_npx.masked_log_softmax")
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
   // parse axis
-  if (args[2].type_code() == kNull) {
-    param.axis = -1;
-  } else if (args[2].type_code() == kDLInt) {
+  if (args[2].type_code() == kDLInt) {
     param.axis = args[2].operator int();
   } else if (args[2].type_code() == kDLFloat) {
     param.axis = static_cast<int>(args[2].operator double());
+  } else {
+    param.axis = -1;
   }
   // parse temperature
   if (args[3].type_code() == kNull) {
