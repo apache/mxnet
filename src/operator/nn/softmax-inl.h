@@ -1210,6 +1210,21 @@ struct MaskedSoftmaxParam : public dmlc::Parameter<MaskedSoftmaxParam> {
     .set_default(dmlc::optional<bool>(true))
     .describe("Whether to normalize input data x: x = x - max(x)");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, temperature_s, dtype_s, normalize_s;
+    axis_s << axis;
+    temperature_s << temperature;
+    dtype_s << dtype;
+    normalize_s << normalize;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["temperature"] = temperature_s.str();
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
+    (*dict)["normalize"] = normalize_s.str();
+  }
 };
 
 static inline bool softmax_has_dtype_override(const nnvm::NodeAttrs& attrs) {

@@ -134,7 +134,7 @@ def log_softmax(data, axis=-1, length=None, temperature=None, use_length=False, 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.ndarray.numpy_extension')
-def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
+def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None, normalize=True):
     r"""Applies the softmax function masking elements according to the mask provided
 
     Parameters
@@ -167,22 +167,15 @@ def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
     >>> data = np.arange(10).reshape((2, 5))
     >>> npx.masked_softmax(data, mask, axis=0)
     array([[0.00669285, 0.        , 0.00669285, 0.        , 0.00669285],
-        [0.9933072 , 0.        , 0.9933072 , 0.        , 0.9933072 ]])
+           [0.9933072 , 0.        , 0.9933072 , 0.        , 0.9933072 ]])
     """
-    if mask is not None:
-        neg = -1e18
-        if _np.dtype(dtype) == _np.float16:
-            neg = -1e4
-        data = np.where(mask, data, neg)
-        logits = (softmax(data, axis=axis) / temperature) * mask
-    else:
-        logits = softmax(data, axis=axis) / temperature
-    return logits
+    assert data is not None and mask is not None, "Missing input data and mask"
+    return _api_internal.masked_softmax(data, mask, axis, temperature, dtype, normalize)
 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.ndarray.numpy_extension')
-def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
+def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None, normalize=True):
     r"""Computes the masked log softmax of the input.
     This is equivalent to computing masked softmax followed by log.
 
@@ -216,18 +209,10 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
     >>> data = np.arange(10).reshape((2, 5))
     >>> npx.masked_log_softmax(data, mask, axis=0)
     array([[-5.0067153 ,        -inf, -5.0067153 ,        -inf, -5.0067153 ],
-       [-0.00671535,        -inf, -0.00671535,        -inf, -0.00671535]])
+           [-0.00671535,        -inf, -0.00671535,        -inf, -0.00671535]])
     """
-    if mask is not None:
-        neg = -1e18
-        inf = -_np.inf
-        if _np.dtype(dtype) == _np.float16:
-            neg = -1e4
-        data = np.where(mask, data, neg)
-        logits = np.where(mask, log_softmax(data, axis=axis) / temperature, inf)
-    else:
-        logits = log_softmax(data, axis=axis) / temperature
-    return logits
+    assert data is not None and mask is not None, "Missing input data and mask"
+    return _api_internal.masked_log_softmax(data, mask, axis, temperature, dtype, normalize)
 
 
 # pylint: disable=too-many-arguments, unused-argument
