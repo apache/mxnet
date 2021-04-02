@@ -277,7 +277,7 @@ def main() -> int:
     command = list(chain.from_iterable(args.command))
     environment = dict([(e.split('=')[:2] if '=' in e else (e, os.environ[e]))
                         for e in args.environment])
-    print(environment)
+
     if args.list:
         print(list_platforms())
     elif args.platform:
