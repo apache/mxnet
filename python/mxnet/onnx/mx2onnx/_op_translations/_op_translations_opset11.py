@@ -56,7 +56,7 @@ Add new functions here with a decorator.
 import re
 import logging
 import numpy as np
-from ._export_onnx import MXNetGraph as mx_op
+from .._export_onnx import MXNetGraph as mx_op
 try:
     import onnx
 except ImportError:
@@ -1855,9 +1855,6 @@ def convert_slice_channel(node, **kwargs):
     num_outputs = int(attrs.get('num_outputs'))
     axis = int(attrs.get('axis', 1))
     squeeze_axis = attrs.get('squeeze_axis', 'False')
-
-    create_tensor([axis], name+'_axis', kwargs['initializer'])
-    create_tensor([axis+1], name+'axis_p1', kwargs['initializer'])
 
     nodes = []
     if squeeze_axis in ['True', '1']:
@@ -4502,7 +4499,7 @@ def convert_RNN(node, **kwargs):
                 make_node('Squeeze', [name+'0_'], [name], axes=[1]),
             ]
         else:
-            raise NotImplementedError('Currently RNN onnx export only supports num_layers equals to 1')
+            raise NotImplementedError('Currently RNN onnx export only supports num_layers equals to 1 or 2')
 
     else:
         raise NotImplementedError(f"Currently RNN onnx export does not support {mode} mode")

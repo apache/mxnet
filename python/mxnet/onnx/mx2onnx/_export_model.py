@@ -29,8 +29,8 @@ from ._export_helper import load_module
 
 
 def export_model(sym, params, in_shapes=None, in_types=np.float32,
-                 onnx_file_path='model.onnx', verbose=False, opset_version=None,
-                 dynamic=False, dynamic_input_shapes=None, run_shape_inference=False, input_type=None,
+                 onnx_file_path='model.onnx', verbose=False, dynamic=False,
+                 dynamic_input_shapes=None, run_shape_inference=False, input_type=None,
                  input_shape=None):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
@@ -87,10 +87,8 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
         in_shapes = input_shape
 
     converter = MXNetGraph()
-    if opset_version is None:
-        # default is to use latest opset version the onnx package supports
-        opset_version = onnx_opset_version()
-
+    opset_version = onnx_opset_version()
+    
     if not isinstance(in_types, list):
         in_types = [in_types for _ in range(len(in_shapes))]
     in_types_t = [mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(i_t)] for i_t in in_types]

@@ -1594,6 +1594,18 @@ nightly_estimator() {
     nosetests test_sentiment_rnn.py
 }
 
+nightly_onnx_operator_tests() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pip3 install onnx==1.8.1
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_operators.py
+    pip3 install onnx==1.7.0
+    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_operators.py
+}
+
 nightly_onnx_cv_batch1_tests() {
     set -ex
     export PYTHONPATH=./python/

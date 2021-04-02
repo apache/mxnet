@@ -125,6 +125,8 @@ _WHITE_LIST = [
                # Dual-Licensed under Apache 2.0 and Nvidia BSD-3
                'python/mxnet/onnx/mx2onnx/_export_onnx.py',
                'python/mxnet/onnx/mx2onnx/_op_translations.py',
+               'python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset11.py',
+               'python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset13.py',
 
                # Github template
                '.github/ISSUE_TEMPLATE/bug_report.md',
