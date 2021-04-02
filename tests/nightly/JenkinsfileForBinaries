@@ -94,11 +94,19 @@ core_logic: {
         }
       }
     },
-    'ONNX-CV: CPU': {
+    'ONNX-CV-batch1: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/onnx-cv-test-cpu') {
           utils.unpack_and_init('cpu_int64', mx_cmake_lib)
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_onnx_cv_tests', false)
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_onnx_cv_batch1_tests', false)
+        }
+      }
+    },
+    'ONNX-CV-batch2: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/onnx-cv-test-cpu') {
+          utils.unpack_and_init('cpu_int64', mx_cmake_lib)
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_onnx_cv_batch2_tests', false)
         }
       }
     },

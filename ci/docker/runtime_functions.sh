@@ -1594,13 +1594,22 @@ nightly_estimator() {
     nosetests test_sentiment_rnn.py
 }
 
-nightly_onnx_cv_tests() {
+nightly_onnx_cv_batch1_tests() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     COV_ARG="--cov=./ --cov-report=xml --cov-append"
-    pytest $COV_ARG --verbose tests/python-pytest/onnx/test_onnxruntime_cv.py
+    pytest $COV_ARG -v -m onnx_cv_batch1 tests/python-pytest/onnx/test_onnxruntime_cv.py
+}
+
+nightly_onnx_cv_batch2_tests() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    COV_ARG="--cov=./ --cov-report=xml --cov-append"
+    pytest $COV_ARG -v -m onnx_cv_batch2 tests/python-pytest/onnx/test_onnxruntime_cv.py
 }
 
 nightly_onnx_nlp_tests() {
