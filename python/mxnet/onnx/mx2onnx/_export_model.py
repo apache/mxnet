@@ -88,7 +88,7 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
 
     converter = MXNetGraph()
     opset_version = onnx_opset_version()
-    
+
     if not isinstance(in_types, list):
         in_types = [in_types for _ in range(len(in_shapes))]
     in_types_t = [mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(i_t)] for i_t in in_types]
