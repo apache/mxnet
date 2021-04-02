@@ -1998,30 +1998,31 @@ def np_masked_softmax(data, mask, axis=-1, temperature=1.0):
     return result
 
 def np_masked_log_softmax(data, mask, axis=-1, temperature=1.0):
-    return _np.log(np_masked_softmax(data, mask, axis, temperature)+1e-20) * mask
+    neg = -1e18
+    if data.dtype == _np.float16:
+        neg = -1e4
+    data = _np.where(mask, data, neg)
+    return _np.where(mask, np_log_softmax(data, axis=axis) / temperature, -_np.inf)
 
 @use_np
 @pytest.mark.parametrize('hybridize', [True, False])
 @pytest.mark.parametrize('shape', [(3, 0, 4), (0, 0)])
-@pytest.mark.parametrize('temperature', [1.0, 2.0, 3.0])
-def test_npx_masked_softmax(hybridize, shape, temperature):
+def test_npx_masked_softmax(hybridize, shape):
     class TestMaskedSoftmax(HybridBlock):
-        def __init__(self, axis, temperature):
+        def __init__(self, axis):
             super(TestMaskedSoftmax, self).__init__()
             self._axis = axis
-            self._temperature = temperature
 
         def hybrid_forward(self, F, a, mask):
-            return F.npx.masked_softmax(a, mask, axis=self._axis, temperature=self._temperature)
+            return F.npx.masked_softmax(a, mask, axis=self._axis)
 
     class TestMaskedLogSoftmax(HybridBlock):
-        def __init__(self, axis, temperature):
+        def __init__(self, axis):
             super(TestMaskedLogSoftmax, self).__init__()
             self._axis = axis
-            self._temperature = temperature
 
         def hybrid_forward(self, F, a, mask):
-            return F.npx.masked_log_softmax(a, mask, axis=self._axis, temperature=self._temperature)
+            return F.npx.masked_log_softmax(a, mask, axis=self._axis)
 
     #(operator, function) tuples
     tested_ops = [(TestMaskedSoftmax, np_masked_softmax),
@@ -2034,18 +2035,17 @@ def test_npx_masked_softmax(hybridize, shape, temperature):
         mx_a.attach_grad()
         mask.attach_grad()
         for axis in range(-len(shape), len(shape)):
-            test_softmax_op = SoftmaxOp(axis, temperature)
+            test_softmax_op = SoftmaxOp(axis)
             if hybridize:
                 test_softmax_op.hybridize()
 
             with mx.autograd.record():
                 mx_out = test_softmax_op(mx_a, mask)
 
-            np_out = softmax_function(mx_a.asnumpy(), mask.asnumpy(), axis, temperature)
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, equal_nan=True)
+            mx_out.wait_to_read()
 
-            mx_out.backward()
-            assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape), rtol=1e-3, atol=1e-5)
+            np_out = softmax_function(mx_a.asnumpy(), mask.asnumpy(), axis)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, equal_nan=True)
 
 
 @use_np
