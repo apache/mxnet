@@ -41,4 +41,3 @@ RUN /work/ubuntu_adduser.sh
 COPY runtime_functions.sh /work/
 
 WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda/compat
