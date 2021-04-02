@@ -59,7 +59,7 @@ def _cast_symbol_NDArray(s, dtype, is_numpy_module=False):
         return amp_cast(s, dtype=dtype)
     if isinstance(s, NDArray):
         if is_numpy_module:
-            def amp_cast(s, dtype=None):
+            def amp_cast(s, dtype=None):  # pylint: disable=function-redefined
                 if not isinstance(dtype, str):
                     dtype = np.dtype(dtype).name
                 return ndarray.numpy._api_internal.amp_cast(s, dtype)
