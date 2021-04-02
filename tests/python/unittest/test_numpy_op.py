@@ -1931,6 +1931,18 @@ def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
                     _test_batchnorm_impl(axis,
                         data_grad_req, gamma_grad_req, beta_grad_req)
 
+
+def np_softmax(x, axis=-1):
+    if (x.shape[axis] == 0):
+        return _np.sum(x, axis=axis, keepdims=True)
+    x = x - _np.max(x, axis=axis, keepdims=True)
+    x = _np.exp(x)
+    x /= _np.sum(x, axis=axis, keepdims=True)
+    return x
+
+def np_log_softmax(x, axis=-1):
+    return _np.log(np_softmax(x, axis))
+
 @use_np
 def test_npx_softmax():
     class TestSoftmax(HybridBlock):
@@ -1948,17 +1960,6 @@ def test_npx_softmax():
 
         def hybrid_forward(self, F, a):
             return F.npx.log_softmax(a, axis=axis)
-
-    def np_softmax(x, axis=-1):
-        if (x.shape[axis] == 0):
-            return _np.sum(x, axis=axis, keepdims=True)
-        x = x - _np.max(x, axis=axis, keepdims=True)
-        x = _np.exp(x)
-        x /= _np.sum(x, axis=axis, keepdims=True)
-        return x
-
-    def np_log_softmax(x, axis=-1):
-        return _np.log(np_softmax(x, axis))
 
     #(operator, function) tuples
     tested_ops = [(TestSoftmax, np_softmax),
@@ -1986,6 +1987,65 @@ def test_npx_softmax():
                     mx_out.backward()
                     mx_a.grad.wait_to_read()
                     assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape), rtol=1e-3, atol=1e-5)
+
+
+def np_masked_softmax(data, mask, axis=-1, temperature=1.0):
+    neg = -1e18
+    if data.dtype == _np.float16:
+        neg = -1e4
+    temp = _np.where(mask, data, neg)
+    result = (np_softmax(temp, axis=axis) / temperature) * mask
+    return result
+
+def np_masked_log_softmax(data, mask, axis=-1, temperature=1.0):
+    neg = -1e18
+    if data.dtype == _np.float16:
+        neg = -1e4
+    data = _np.where(mask, data, neg)
+    return _np.where(mask, np_log_softmax(data, axis=axis) / temperature, -_np.inf)
+
+@use_np
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('shape', [(3, 0, 4), (0, 0)])
+def test_npx_masked_softmax(hybridize, shape):
+    class TestMaskedSoftmax(HybridBlock):
+        def __init__(self, axis):
+            super(TestMaskedSoftmax, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a, mask):
+            return F.npx.masked_softmax(a, mask, axis=self._axis)
+
+    class TestMaskedLogSoftmax(HybridBlock):
+        def __init__(self, axis):
+            super(TestMaskedLogSoftmax, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a, mask):
+            return F.npx.masked_log_softmax(a, mask, axis=self._axis)
+
+    #(operator, function) tuples
+    tested_ops = [(TestMaskedSoftmax, np_masked_softmax),
+                  (TestMaskedLogSoftmax, np_masked_log_softmax)]
+
+    # only testing 0-size shaped inputs here, other input cases have been tested in test_opeartor.py
+    for SoftmaxOp, softmax_function in tested_ops:
+        mx_a = np.random.uniform(size=shape)
+        mask = np.random.randint(0, 2, shape)
+        mx_a.attach_grad()
+        mask.attach_grad()
+        for axis in range(-len(shape), len(shape)):
+            test_softmax_op = SoftmaxOp(axis)
+            if hybridize:
+                test_softmax_op.hybridize()
+
+            with mx.autograd.record():
+                mx_out = test_softmax_op(mx_a, mask)
+
+            mx_out.wait_to_read()
+
+            np_out = softmax_function(mx_a.asnumpy(), mask.asnumpy(), axis)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, equal_nan=True)
 
 
 @use_np
