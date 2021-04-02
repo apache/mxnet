@@ -28,7 +28,7 @@ case ${mxnet_variant} in
     echo "nvidia/cuda:10.1-cudnn7-runtime-ubuntu18.04"
     ;;
     cu102*)
-    echo "nvidia/cuda:10.2-cudnn7-runtime-ubuntu18.04"
+    echo "nvidia/cuda:10.2-cudnn8-runtime-ubuntu18.04"
     ;;
     cu110*)
     echo "nvidia/cuda:11.0-cudnn8-runtime-ubuntu18.04"
