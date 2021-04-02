@@ -50,15 +50,15 @@ class GluonModel():
 
     def export_onnx(self):
         onnx_file = self.modelpath + ".onnx"
-        mx.contrib.onnx.export_model(self.modelpath + "-symbol.json", self.modelpath + "-0000.params",
-                                     [self.input_shape], self.input_dtype, onnx_file)
+        mx.onnx.export_model(self.modelpath + "-symbol.json", self.modelpath + "-0000.params",
+                             [self.input_shape], self.input_dtype, onnx_file)
         return onnx_file
 
     def export_onnx_dynamic(self, dynamic_input_shapes):
         onnx_file = self.modelpath + ".onnx"
-        mx.contrib.onnx.export_model(self.modelpath + "-symbol.json", self.modelpath + "-0000.params",
-                                     [self.input_shape], self.input_dtype, onnx_file, dynamic=True,
-                                     dynamic_input_shapes=dynamic_input_shapes)
+        mx.onnx.export_model(self.modelpath + "-symbol.json", self.modelpath + "-0000.params",
+                             [self.input_shape], self.input_dtype, onnx_file, dynamic=True,
+                             dynamic_input_shapes=dynamic_input_shapes)
         return onnx_file
 
     def predict(self, data):

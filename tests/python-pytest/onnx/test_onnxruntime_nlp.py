@@ -63,9 +63,9 @@ def test_roberta_inference_onnxruntime(tmp_path, model_name):
         params_file = "%s-0000.params" % prefix
         onnx_file = "%s.onnx" % prefix
         input_shapes = [(batch, seq_length), (batch,), (batch, num_masked_positions)]
-        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
-                                                            [np.float32, np.float32, np.int32],
-                                                            onnx_file, verbose=True)
+        converted_model_path = mx.onnx.export_model(sym_file, params_file, input_shapes,
+                                                    [np.float32, np.float32, np.int32],
+                                                    onnx_file, verbose=True)
 
         sess_options = onnxruntime.SessionOptions()
         sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -120,7 +120,7 @@ def test_bert_inference_onnxruntime(tmp_path, model):
 
         input_shapes = [(batch, seq_length), (batch, seq_length), (batch,)]
         input_types = [np.float32, np.float32, np.float32]
-        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes, input_types, onnx_file)
+        converted_model_path = mx.onnx.export_model(sym_file, params_file, input_shapes, input_types, onnx_file)
 
 
         # create onnxruntime session using the generated onnx file
@@ -169,9 +169,9 @@ def test_distilbert_inference_onnxruntime(tmp_path, model_name):
         onnx_file = "%s.onnx" % prefix
 
         input_shapes = [(batch, seq_length), (batch,)]
-        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
-                                                            [np.float32, np.float32],
-                                                            onnx_file, verbose=True)
+        converted_model_path = mx.onnx.export_model(sym_file, params_file, input_shapes,
+                                                    [np.float32, np.float32],
+                                                    onnx_file, verbose=True)
         sess_options = onnxruntime.SessionOptions()
         sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
         sess = onnxruntime.InferenceSession(onnx_file, sess_options)
@@ -219,9 +219,9 @@ def test_standard_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name
         onnx_file = "%s.onnx" % prefix
 
         input_shapes = [(seq_length, batch), np.shape(begin_state[0]), np.shape(begin_state[1])]
-        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
-                                                            [np.float32, np.float32, np.float32],
-                                                            onnx_file, verbose=True)
+        converted_model_path = mx.onnx.export_model(sym_file, params_file, input_shapes,
+                                                    [np.float32, np.float32, np.float32],
+                                                    onnx_file, verbose=True)
         sess_options = onnxruntime.SessionOptions()
         sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
         sess = onnxruntime.InferenceSession(onnx_file, sess_options)
@@ -278,10 +278,10 @@ def test_dynamic_shape_bert_inference_onnxruntime(tmp_path, model):
         dynamic_input_shapes = [(None, seq_length), (None, seq_length), (None,)]
         input_shapes = [(batch, seq_length), (batch, seq_length), (batch,)]
         input_types = [np.float32, np.float32, np.float32]
-        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
-                                                            input_types, onnx_file,
-                                                            dynamic=True,
-                                                            dynamic_input_shapes=dynamic_input_shapes)
+        converted_model_path = mx.onnx.export_model(sym_file, params_file, input_shapes,
+                                                    input_types, onnx_file,
+                                                    dynamic=True,
+                                                    dynamic_input_shapes=dynamic_input_shapes)
 
         # create onnxruntime session using the generated onnx file
         ses_opt = onnxruntime.SessionOptions()
@@ -345,8 +345,8 @@ def test_awd_rnn_lstm_pretrained_inference_onnxruntime(tmp_path, model_name, seq
                         np.shape(begin_state[2][0]), np.shape(begin_state[2][1])]
         input_types = [np.float32, np.float32, np.float32, np.float32, np.float32, np.float32,
                        np.float32]
-        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
-                                                            input_types, onnx_file, verbose=True)
+        converted_model_path = mx.onnx.export_model(sym_file, params_file, input_shapes,
+                                                    input_types, onnx_file, verbose=True)
 
         sess_options = onnxruntime.SessionOptions()
         sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -408,8 +408,8 @@ def test_ernie_inference_onnxruntime(tmp_path, model_name):
 
         input_shapes = [(batch, seq_length), (batch, seq_length), (batch,)]
         input_types = [np.float32, np.float32, np.float32]
-        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
-                                                            input_types, onnx_file)
+        converted_model_path = mx.onnx.export_model(sym_file, params_file, input_shapes,
+                                                    input_types, onnx_file)
 
         # create onnxruntime session using the generated onnx file
         ses_opt = onnxruntime.SessionOptions()
@@ -475,8 +475,8 @@ def test_transformer_pretrained_inference_onnxruntime(tmp_path, model_name):
             sym_file = "%s-symbol.json" % prefix
             params_file = "%s-0000.params" % prefix
             onnx_file = "%s.onnx" % prefix
-            return mx.contrib.onnx.export_model(sym_file, params_file, input_shapes, input_types,
-                                                onnx_file, **kwargs)
+            return mx.onnx.export_model(sym_file, params_file, input_shapes, input_types,
+                                        onnx_file, **kwargs)
 
         def onnx_runtime_predict(onnx_file, onnx_inputs):
             ses_opt = onnxruntime.SessionOptions()
@@ -650,8 +650,8 @@ def test_gpt_pretrained_inference_onnxruntime(tmp_path, model_params):
 
         input_shapes = [(batch, seq_length)]
         input_types = [np.float32]
-        converted_model_path = mx.contrib.onnx.export_model(sym_file, params_file, input_shapes,
-                                                            input_types, onnx_file)
+        converted_model_path = mx.onnx.export_model(sym_file, params_file, input_shapes,
+                                                    input_types, onnx_file)
 
         ses_opt = onnxruntime.SessionOptions()
         ses_opt.log_severity_level = 3
