@@ -618,12 +618,10 @@ def test_concat():
     for stype in stypes:
         check_concat_training(stype)
 
-
-@with_seed()
 def test_concat_blocked():
     ctx = mx.cpu()
     axis = 1
-    filters = 32  # must be a power of 2 and >= 16
+    filters = 32  # must be a multiple of 16
     kernel = (3, 3)
     for in_dim_size in range(1, 17):  # check cases with and without padding
         in_shape = (1, in_dim_size, 64, 64)
@@ -631,7 +629,7 @@ def test_concat_blocked():
         conv_weights = mx.nd.random.uniform(-1, 1, (filters, in_shape[1], kernel[0], kernel[1]), ctx=ctx)
 
         def calc_output_of_layer(layer):
-            ex = layer.simple_bind(ctx, x=in_shape)
+            ex = layer._simple_bind(ctx, x=in_shape)
             in_data.copyto(ex.arg_arrays[0])
             conv_weights.copyto(ex.arg_arrays[1])
             return ex.forward()[0].asnumpy()
@@ -649,8 +647,6 @@ def test_concat_blocked():
         out = calc_output_of_layer(conc)
         assert_almost_equal(out, ref_out)
 
-
-@with_seed()
 def test_elemwise_add():
     def ref_add(a, b):
       return np.add(a, b)
