@@ -32,6 +32,8 @@ RUN apt-get update && \
     wget -nv https://bootstrap.pypa.io/get-pip.py && \
     python3 get-pip.py
 
+RUN apt-get install -y libgomp1 libquadmath0
+
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
 
