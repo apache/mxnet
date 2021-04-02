@@ -30,7 +30,7 @@ from ._export_helper import load_module
 
 def export_model(sym, params, in_shapes=None, in_types=np.float32,
                  onnx_file_path='model.onnx', verbose=False, opset_version=None,
-                 dynamic=False, dynamic_input_shapes=None, run_shape_inference=False, input_type=None,
+                 dynamic=False, dynamic_input_shapes=None, dynamic_output_shapes=None, run_shape_inference=False, input_type=None,
                  input_shape=None):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
@@ -102,12 +102,14 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
         onnx_graph = converter.create_onnx_graph_proto(sym_obj, params_obj, in_shapes,
                                                        in_types_t,
                                                        verbose=verbose, opset_version=opset_version,
-                                                       dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes)
+                                                       dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes,
+                                                       dynamic_output_shapes=dynamic_output_shapes)
     elif isinstance(sym, symbol.Symbol) and isinstance(params, dict):
         onnx_graph = converter.create_onnx_graph_proto(sym, params, in_shapes,
                                                        in_types_t,
                                                        verbose=verbose, opset_version=opset_version,
-                                                       dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes)
+                                                       dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes,
+                                                       dynamic_output_shapes=dynamic_output_shapes)
     else:
         raise ValueError("Input sym and params should either be files or objects")
 

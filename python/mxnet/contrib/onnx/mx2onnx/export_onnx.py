@@ -123,7 +123,7 @@ class MXNetGraph(object):
 
     @staticmethod
     def get_outputs(sym, params, in_shapes, output_label, in_types, dynamic=False,
-                    dynamic_input_shapes=None):
+                    dynamic_input_shapes=None, dynamic_output_shapes=None):
         """Helper function to collect the output names, types, and shapes
 
         Parameters
@@ -183,6 +183,8 @@ class MXNetGraph(object):
         if dynamic:
             # Keep the dimensionality of the output shapes but change the values to None
             out_shapes = [tuple(None for _ in i_s) for i_s in out_shapes]
+            if dynamic_output_shapes is not None:
+                out_shapes = dynamic_output_shapes
 
             if dynamic_input_shapes is None:
                 # Set all dimensions to None
@@ -214,6 +216,7 @@ class MXNetGraph(object):
 
         # Bind output shapes/types with output names
         graph_outputs = {n: {'shape': s, 'dtype': d} for n, s, d in zip(out_names, out_shapes, out_types)}
+        
 
         return in_shapes, graph_outputs
 
@@ -224,7 +227,7 @@ class MXNetGraph(object):
                      for k, v in weights_dict.items()])
 
     def create_onnx_graph_proto(self, sym, params, in_shapes, in_types, verbose=False, opset_version=None,
-                                dynamic=True, dynamic_input_shapes=None):
+                                dynamic=True, dynamic_input_shapes=None, dynamic_output_shapes=None):
         """Convert MXNet graph to ONNX graph
 
         Parameters
@@ -287,7 +290,8 @@ class MXNetGraph(object):
 
         # Determine graph output names, shapes, and dtypes. Also update in_shapes
         in_shapes, graph_outputs = MXNetGraph.get_outputs(sym, params, in_shapes, output_label,
-                                                          in_types, dynamic, dynamic_input_shapes)
+                                                          in_types, dynamic, dynamic_input_shapes,
+                                                          dynamic_output_shapes)
         appeared_names = set()
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
