@@ -88,6 +88,7 @@ def obj_class_test_images(tmpdir_factory):
         paths.append(fn)
     return paths
 
+@pytest.mark.onnx_cv_batch1
 @pytest.mark.parametrize('model', [
     'alexnet',
     'cifar_resnet20_v1',
@@ -215,6 +216,7 @@ def obj_detection_test_images(tmpdir_factory):
     return paths
 
 
+@pytest.mark.onnx_cv_batch2
 @pytest.mark.parametrize('model', [
     'center_net_resnet18_v1b_voc',
     'center_net_resnet50_v1b_voc',
@@ -335,6 +337,7 @@ def img_segmentation_test_images(tmpdir_factory):
         paths.append(fn)
     return paths
 
+@pytest.mark.onnx_cv_batch2
 @pytest.mark.parametrize('model', [
     'fcn_resnet50_ade',
     'fcn_resnet101_ade',
@@ -401,6 +404,7 @@ def pose_estimation_test_images(tmpdir_factory):
         paths.append(fn)
     return paths
 
+@pytest.mark.onnx_cv_batch1
 @pytest.mark.parametrize('model', [
     'simple_pose_resnet18_v1b',
     'simple_pose_resnet50_v1b',
@@ -462,6 +466,7 @@ def act_recognition_test_data(tmpdir_factory):
         paths.append(fn)
     return paths
 
+@pytest.mark.onnx_cv_batch2
 @pytest.mark.parametrize('model', [
     'inceptionv1_kinetics400',
     'resnet18_v1b_kinetics400',
@@ -507,6 +512,7 @@ def test_action_recognition_model_inference_onnxruntime(tmp_path, model, act_rec
 
 
 @with_seed()
+@pytest.mark.onnx_cv_batch1
 @pytest.mark.integration
 @pytest.mark.parametrize('model_name', ['mobilenet1.0', 'inceptionv3', 'darknet53', 'resnest14'])
 def test_dynamic_shape_cv_inference_onnxruntime(tmp_path, model_name):
