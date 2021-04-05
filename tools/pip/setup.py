@@ -45,7 +45,7 @@ LIB_PATH = libinfo['find_lib_path']()
 __version__ = libinfo['__version__']
 
 # set by the CD pipeline
-is_release = os.environ.get("IS_RELEASE", "").strip()
+is_release = os.environ.get("RELEASE_BUILD", "False").strip().lower() in ['true', '1']
 
 # set by the travis build pipeline
 travis_tag = os.environ.get("TRAVIS_TAG", "").strip()
@@ -57,7 +57,6 @@ if not travis_tag and not is_release:
 # patch build tag
 elif travis_tag.startswith('patch-'):
     __version__ = os.environ['TRAVIS_TAG'].split('-')[1]
-
 
 DEPENDENCIES = [
     'numpy<2.0.0,>1.16.0',

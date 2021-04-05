@@ -153,8 +153,7 @@ def docker_run(platform, function_name, use_nvidia = false, shared_mem = '500m',
     env_vars = [env_vars]
   }
   env_vars << "BRANCH=${env.BRANCH_NAME}"
-  env_vars = env_vars.collect { "-e ${it}" }
-  def env_vars_str = env_vars.join(' ')
+  def env_vars_str = "-e " + env_vars.join(' ')
   command = command.replaceAll('%ENV_VARS%', env_vars_str)
   command = command.replaceAll('%BUILD_ARGS%', build_args.length() > 0 ? "${build_args}" : '')
   command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
