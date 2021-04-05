@@ -16,6 +16,7 @@
 # under the License.
 
 set(CMAKE_BUILD_TYPE "Distribution" CACHE STRING "Build type")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum supported version of OSX.")
 set(CFLAGS "-mno-avx" CACHE STRING "CFLAGS")
 set(CXXFLAGS "-mno-avx" CACHE STRING "CXXFLAGS")
 
