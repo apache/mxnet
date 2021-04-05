@@ -748,7 +748,7 @@ def pooling(data=None, kernel=None, stride=None, pad=None, pool_type="max",
 
 # pylint: disable=too-many-arguments, unused-argument
 @set_module('mxnet.numpy_extension')
-def dropout(data, p=0.5, mode="training", axes=None, cudnn_off=True, **kwargs):
+def dropout(data, p=0.5, mode="training", axes=None, cudnn_off=False, **kwargs):
     r"""Applies dropout operation to input array.
 
     - During training, each element of the input is set to zero with probability p.
@@ -829,10 +829,8 @@ def one_hot(data, depth=None, on_value=1.0, off_value=0.0, dtype="float32"):
     >>> npx.one_hot(data, 3)
     array([[[0., 1., 0.],
             [1., 0., 0.]],
-
            [[0., 1., 0.],
             [1., 0., 0.]],
-
            [[0., 0., 1.],
             [1., 0., 0.]]], dtype=float64)
     """
