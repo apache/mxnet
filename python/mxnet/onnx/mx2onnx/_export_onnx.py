@@ -65,13 +65,14 @@ class MXNetGraph(object):
         self.output_tensors = []
 
     @staticmethod
-    def register(op_name):
+    def register(op_name, opset_version=11):
         """Register operators"""
         def wrapper(func):
             """Helper function to map functions"""
             try:
                 import onnx as _
-                MXNetGraph.registry_[op_name] = func
+                op_map = MXNetGraph.registry_.setdefault(opset_version, {})
+                op_map[op_name] = func
             except ImportError:
                 pass
             return func
@@ -81,10 +82,23 @@ class MXNetGraph(object):
     @staticmethod
     def convert_layer(node, **kwargs):
         """Convert MXNet layer to ONNX"""
+        try:
+            from onnx.defs import onnx_opset_version
+        except ImportError:
+            raise ImportError("Onnx and protobuf need to be installed. "
+                              + "Instructions to install - https://github.com/onnx/onnx")
+
         op = str(node["op"])
-        if op not in MXNetGraph.registry_:
-            raise AttributeError("No conversion function registered for op type %s yet." % op)
-        convert_func = MXNetGraph.registry_[op]
+        opset_version = kwargs.get("opset_version", onnx_opset_version())
+        # fallback to older opset versions if op is not registered in current version
+        for op_version in range(opset_version, 10, -1):
+            if op_version not in MXNetGraph.registry_ or op not in MXNetGraph.registry_[op_version]:
+                if opset_version == 11:
+                    raise AttributeError("No conversion function registered for op type %s yet." % op)
+                continue
+            convert_func = MXNetGraph.registry_[op_version][op]
+            break
+
         ret = convert_func(node, **kwargs)
         # in case the conversion function does not specify the returned dtype, we just return None
         # as the second value
