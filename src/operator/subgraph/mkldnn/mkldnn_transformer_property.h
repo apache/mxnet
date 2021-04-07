@@ -91,7 +91,7 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
     new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
     std::string op_name;
-    MKLDNNInterleavedMatMulParam new_param;
+    MKLDNNSelfAttParam new_param;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->op() && 
           (node->op()->name == SELFATT_QK ||

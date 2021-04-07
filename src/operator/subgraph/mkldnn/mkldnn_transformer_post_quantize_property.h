@@ -175,7 +175,7 @@ class SgMKLDNNTransformerPostQuantizeProperty : public SubgraphProperty {
 
     // When only fusing quantized_interleaved_matmul and requantize, set min/max_cablib_range,
     // When fusing quantized_interleaved_matmul + requantize + dequantize, set dequantize flag to true.
-    // auto& param = nnvm::get<MKLDNNInterleavedMatMulParam>(interleaved_node->attrs.parsed);
+    // auto& param = nnvm::get<MKLDNNSelfAttParam>(interleaved_node->attrs.parsed);
     if (dequantize_node != nullptr) {
       interleaved_node->attrs.dict["enable_float_output"] = "True";
     } else {

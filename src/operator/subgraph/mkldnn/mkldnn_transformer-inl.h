@@ -27,13 +27,13 @@
 namespace mxnet {
 namespace op {
 
-struct MKLDNNInterleavedMatMulParam : public dmlc::Parameter<MKLDNNInterleavedMatMulParam> {
+struct MKLDNNSelfAttParam : public dmlc::Parameter<MKLDNNSelfAttParam> {
   int heads;
   bool quantized;
   bool enable_float_output;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
-  DMLC_DECLARE_PARAMETER(MKLDNNInterleavedMatMulParam) {
+  DMLC_DECLARE_PARAMETER(MKLDNNSelfAttParam) {
     DMLC_DECLARE_FIELD(heads)
     .describe("Set number of heads");
     DMLC_DECLARE_FIELD(quantized).set_default(false)

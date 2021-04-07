@@ -33,13 +33,13 @@
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(MKLDNNInterleavedMatMulParam);
+DMLC_REGISTER_PARAMETER(MKLDNNSelfAttParam);
 
 template<int base_num_inputs>
 static bool SgMKLDNNSelfAttShape(const NodeAttrs& attrs,
                                  mxnet::ShapeVector* in_shapes,
                                  mxnet::ShapeVector* out_shapes) {
-  const auto& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  const auto& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
     mxnet::ShapeVector base_in_shapes;
     mxnet::ShapeVector base_out_shapes = {out_shapes->at(0)};
@@ -71,7 +71,7 @@ static bool SgMKLDNNSelfAttShape(const NodeAttrs& attrs,
 static bool SgMKLDNNSelfAttQKInferType(const nnvm::NodeAttrs &attrs,
                                        std::vector<int> *in_types,
                                        std::vector<int> *out_types) {
-  const auto& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  const auto& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
      CHECK(in_types->at(0) == mshadow::kInt8)
         << "QuantizedInterleavedMatMulSelfAttQK only supports int8 input, while "
@@ -103,7 +103,7 @@ static bool SgMKLDNNSelfAttStorageType(const nnvm::NodeAttrs &attrs,
                                        DispatchMode *dispatch_mode,
                                        std::vector<int> *in_attrs,
                                        std::vector<int> *out_attrs) {
-  auto const &param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const &param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
     std::vector<int> base_in_attrs;
     std::vector<int> base_out_attrs{out_attrs->at(0)};
@@ -136,7 +136,7 @@ static bool SgMKLDNNSelfAttStorageType(const nnvm::NodeAttrs &attrs,
 class SgMKLDNNSelfAttQKOp {
  public:
   explicit SgMKLDNNSelfAttQKOp(const nnvm::NodeAttrs &attrs) :
-    param_(nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed)) {}
+    param_(nnvm::get<MKLDNNSelfAttParam>(attrs.parsed)) {}
 
   void Forward(const OpContext &ctx,
                const std::vector<NDArray> &inputs,
@@ -162,7 +162,7 @@ class SgMKLDNNSelfAttQKOp {
 
  private:
   bool initialized_{false};
-  MKLDNNInterleavedMatMulParam param_;
+  MKLDNNSelfAttParam param_;
   mkldnn_args_map_t args_;
   std::shared_ptr<dnnl::matmul> fwd_;
   std::shared_ptr<dnnl::memory> cached_query_mem_;
@@ -318,7 +318,7 @@ void SgMKLDNNSelfAttQKOp::Forward(const OpContext &ctx,
 
 nnvm::ObjectPtr SgMKLDNNSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
   nnvm::ObjectPtr node = nnvm::Node::Create();
-  auto const &param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const &param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   node->attrs.op = Op::Get("_sg_mkldnn_selfatt_qk");
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
@@ -335,7 +335,7 @@ nnvm::ObjectPtr SgMKLDNNSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
 NNVM_REGISTER_OP(_sg_mkldnn_selfatt_qk)
 .describe(R"code(_sg_mkldnn_selfatt_qk)code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
     return 3;
   } else {
@@ -343,16 +343,16 @@ NNVM_REGISTER_OP(_sg_mkldnn_selfatt_qk)
   }
 })
 .set_num_outputs([](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized && !param.enable_float_output) {
     return 3;
   } else {
     return 1;
   }
 })
-.set_attr_parser(ParamParser<MKLDNNInterleavedMatMulParam>)
+.set_attr_parser(ParamParser<MKLDNNSelfAttParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   std::vector<std::string> input_names {"queries_keys_values"};
   if (param.quantized) {
     input_names.emplace_back("min_qkv");
@@ -361,7 +361,7 @@ NNVM_REGISTER_OP(_sg_mkldnn_selfatt_qk)
   return input_names;
 })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   std::vector<std::string> output_names {"output"};
   if (param.quantized && !param.enable_float_output) {
     output_names.emplace_back("min_output");
@@ -382,14 +382,14 @@ NNVM_REGISTER_OP(_sg_mkldnn_selfatt_qk)
 .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNSelfAttQKQuantizedOp)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .add_argument("queries_keys_values", "NDArray-or-Symbol", "Interleaved queries, keys and values")
-.add_arguments(MKLDNNInterleavedMatMulParam::__FIELDS__());
+.add_arguments(MKLDNNSelfAttParam::__FIELDS__());
 
 /**********************************_sg_mkldnn_selfatt_valatt**********************************/
 
 static bool SgMKLDNNSelfAttValAttInferType(const nnvm::NodeAttrs &attrs,
                                          std::vector<int> *in_types,
                                          std::vector<int> *out_types) {
-  const auto& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  const auto& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
     TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kInt8);  // qkv input
     TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kUint8); // att input
@@ -418,7 +418,7 @@ static bool SgMKLDNNSelfAttValAttInferType(const nnvm::NodeAttrs &attrs,
 
 nnvm::ObjectPtr SgMKLDNNSelfAttValAttQuantizedOp(const NodeAttrs& attrs) {
   nnvm::ObjectPtr node = nnvm::Node::Create();
-  auto const &param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const &param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   node->attrs.op = Op::Get("_sg_mkldnn_selfatt_valatt");
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
@@ -435,7 +435,7 @@ nnvm::ObjectPtr SgMKLDNNSelfAttValAttQuantizedOp(const NodeAttrs& attrs) {
 class MKLDNNSelfAttValAttOp {
  public:
   explicit MKLDNNSelfAttValAttOp(const nnvm::NodeAttrs &attrs) :
-    param_(nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed)) {}
+    param_(nnvm::get<MKLDNNSelfAttParam>(attrs.parsed)) {}
 
   void Forward(const OpContext &ctx,
                const std::vector<NDArray> &inputs,
@@ -461,7 +461,7 @@ class MKLDNNSelfAttValAttOp {
 
  private:
   bool initialized_{false};
-  MKLDNNInterleavedMatMulParam param_;
+  MKLDNNSelfAttParam param_;
   mkldnn_args_map_t args_;
   std::shared_ptr<dnnl::matmul> fwd_;
   std::shared_ptr<dnnl::memory> cached_att_mem_;
@@ -615,7 +615,7 @@ void MKLDNNSelfAttValAttOp::Forward(const OpContext &ctx,
 NNVM_REGISTER_OP(_sg_mkldnn_selfatt_valatt)
 .describe(R"code(_sg_mkldnn_selfatt_valatt)code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
     return 6;
   } else {
@@ -623,16 +623,16 @@ NNVM_REGISTER_OP(_sg_mkldnn_selfatt_valatt)
   }
 })
 .set_num_outputs([](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized && !param.enable_float_output) {
     return 3;
   } else {
     return 1;
   }
 })
-.set_attr_parser(ParamParser<MKLDNNInterleavedMatMulParam>)
+.set_attr_parser(ParamParser<MKLDNNSelfAttParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   std::vector<std::string> input_names {"queries_keys_values", "attention"};
   if (param.quantized) {
     input_names.emplace_back("min_qkv");
@@ -644,7 +644,7 @@ NNVM_REGISTER_OP(_sg_mkldnn_selfatt_valatt)
   return input_names;
 })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
-  auto const& param = nnvm::get<MKLDNNInterleavedMatMulParam>(attrs.parsed);
+  auto const& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   std::vector<std::string> output_names {"output"};
   if (param.quantized && !param.enable_float_output) {
     output_names.emplace_back("min_output");
@@ -666,7 +666,7 @@ NNVM_REGISTER_OP(_sg_mkldnn_selfatt_valatt)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .add_argument("queries_keys_values", "NDArray-or-Symbol", "Queries, keys and values interleaved")
 .add_argument("attention", "NDArray-or-Symbol", "Attention maps")
-.add_arguments(MKLDNNInterleavedMatMulParam::__FIELDS__());
+.add_arguments(MKLDNNSelfAttParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
