@@ -112,7 +112,13 @@ def _wrap_module_functions(module, is_numpy_module, target_dtype, get_aliases, g
                            get_fun_to_wrap, target_precision_ops=None, conditional_fp32_ops=None,
                            fp32_ops=None):
 
-    nd_mod = ndarray.numpy._api_internal if is_numpy_module else ndarray
+    if is_numpy_module:
+        def amp_cast(s, dtype=None):  # pylint: disable=function-redefined
+            if not isinstance(dtype, str):
+                dtype = np.dtype(dtype).name
+            return ndarray.numpy._api_internal.amp_cast(s, dtype)
+    else:
+        amp_cast = ndarray.amp_cast
     sy_mod = symbol.numpy._internal if is_numpy_module else symbol
 
     def _ndarray_wrapper(f, target_dtype, fp32_param=None, cond_arg=None):
@@ -200,7 +206,7 @@ def _wrap_module_functions(module, is_numpy_module, target_dtype, get_aliases, g
                             widest_type = np.float32
                 for arr, index, arg in symbols:
                     if arg.dtype != widest_type and arg.dtype == target_dtype:
-                        arr[index] = nd_mod.amp_cast(arg, dtype=widest_type)
+                        arr[index] = amp_cast(arg, dtype=widest_type)
             else:
                 # Symbol case
                 sym_to_check = list(map(lambda x: x[2], symbols))
