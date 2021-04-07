@@ -17,10 +17,9 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_MKLDNN_TRANSFORMER_INL_H_
-#define MXNET_OPERATOR_MKLDNN_TRANSFORMER_INL_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_INL_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_INL_H_
 
-// #include <vector>
 #include "../../mxnet_op.h"
 #include "../../mshadow_op.h"
 
@@ -56,4 +55,4 @@ struct MKLDNNInterleavedMatMulParam : public dmlc::Parameter<MKLDNNInterleavedMa
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_MKLDNN_TRANSFORMER_INL_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_INL_H_

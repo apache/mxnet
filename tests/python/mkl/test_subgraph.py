@@ -888,9 +888,9 @@ def test_fc_eltwise():
 
 @with_seed()
 def test_selfatt_qk():
-  batchsizes = [1, 8, 16]
-  seq_lengths = [180, 255, 384]
-  num_hidden = [1024, 2048, 3072]
+  batchsizes = [1, 8]
+  seq_lengths = [180, 384]
+  num_hidden = [1024, 3072]
   num_heads = [8, 16]
   for bs, seqlen, nhidden, nheads in itertools.product(batchsizes, seq_lengths, num_hidden, num_heads):
     dshape = (seqlen, bs, nhidden)

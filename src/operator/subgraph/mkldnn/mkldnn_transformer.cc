@@ -35,7 +35,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(MKLDNNInterleavedMatMulParam);
 
-template<int base_num_inputs=1>
+template<int base_num_inputs>
 static bool SgMKLDNNSelfAttShape(const NodeAttrs& attrs,
                                  mxnet::ShapeVector* in_shapes,
                                  mxnet::ShapeVector* out_shapes) {
@@ -97,7 +97,7 @@ static bool SgMKLDNNSelfAttQKInferType(const nnvm::NodeAttrs &attrs,
   }
 }
 
-template<int base_num_inputs=1>
+template<int base_num_inputs>
 static bool SgMKLDNNSelfAttStorageType(const nnvm::NodeAttrs &attrs,
                                        const int dev_mask,
                                        DispatchMode *dispatch_mode,
@@ -524,7 +524,8 @@ void MKLDNNSelfAttValAttOp::Initialize(const OpContext &ctx,
   auto att_md = dnnl::memory::desc(att_dims, get_mkldnn_type(att_dtype), att_strides);
   auto qkv_md = dnnl::memory::desc(qkv_dims, get_mkldnn_type(qkv_dtype), qkv_strides);
 
-  dnnl::memory::desc dst_md;
+  dnnl::memory::desc out_md;
+  dnnl::primitive_attr attr;
 
   float oscale = 1.0f;
   if (param_.quantized) {
@@ -541,8 +542,10 @@ void MKLDNNSelfAttValAttOp::Initialize(const OpContext &ctx,
       max_output_ = param_.max_calib_range.value();
 
       oscale = GetQuantizeScale(out_dtype, min_output_, max_output_)  / (qkv_scale_ * att_scale_);
+      attr.set_output_scales(0, {oscale});
     } else if (param_.enable_float_output) {
       oscale = 1.0f / (qkv_scale_ * att_scale_);
+      attr.set_output_scales(0, {oscale});
     } else {
       mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
       mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
@@ -550,12 +553,10 @@ void MKLDNNSelfAttValAttOp::Initialize(const OpContext &ctx,
               &max_att_);
     }
   }
-  dst_md = dnnl::memory::desc(dst_dims, get_mkldnn_type(out_dtype), dnnl::memory::format_tag::bac);
+  out_md = dnnl::memory::desc(dst_dims, get_mkldnn_type(out_dtype), dnnl::memory::format_tag::bac);
 
   const auto engine = CpuEngine::Get()->get_engine();
-  dnnl::primitive_attr attr;
-  attr.set_output_scales(0, {oscale});
-  auto matmul_d = dnnl::matmul::desc(att_md, qkv_md, dst_md);
+  auto matmul_d = dnnl::matmul::desc(att_md, qkv_md, out_md);
   auto matmul_pd = dnnl::matmul::primitive_desc(matmul_d, attr, engine);
 
   fwd_ = std::make_shared<dnnl::matmul>(matmul_pd);
@@ -570,7 +571,7 @@ void MKLDNNSelfAttValAttOp::Initialize(const OpContext &ctx,
   });
   MSHADOW_TYPE_SWITCH(out_dtype, DType, {
     DType* out_ptr = outputs[0].data().dptr<DType>();
-    cached_out_mem_ = std::make_shared<dnnl::memory>(dst_md, engine, out_ptr);
+    cached_out_mem_ = std::make_shared<dnnl::memory>(out_md, engine, out_ptr);
   });
 
   args_[DNNL_ARG_SRC] = *cached_att_mem_;
