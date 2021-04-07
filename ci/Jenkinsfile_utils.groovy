@@ -112,7 +112,18 @@ def get_git_commit_hash() {
 }
 
 def publish_test_coverage() {
-    sh "curl -s https://codecov.io/bash | bash"
+    // CodeCovs auto detection has trouble with our CIs PR validation due the merging strategy
+    git_commit_hash = get_git_commit_hash()
+
+    if (env.CHANGE_ID) {
+      // PR execution
+      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${git_commit_hash} -P ${env.CHANGE_ID}"
+    } else {
+      // Branch execution
+      codecovArgs = "-B ${env.BRANCH_NAME} -C ${git_commit_hash}"
+    }
+
+    sh "curl -s https://codecov.io/bash | bash -s - ${codecovArgs}"
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {
