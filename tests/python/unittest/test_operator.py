@@ -3410,7 +3410,6 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32,
                             gt_beta_grad + init_beta_grad, backward_check_eps, backward_check_eps)
 
 
-@pytest.mark.flaky
 def test_norm():
     try:
         import scipy
@@ -3491,7 +3490,6 @@ def test_norm():
     (np.float32, 1E-3, 1E-3, [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False]),
     (np.float64, 1E-4, 1E-4, [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False])
 ])
-@pytest.mark.flaky
 def test_layer_norm(enforce_safe_acc, dtype, forward_check_eps, backward_check_eps,
                     in_shape_l, finite_grad_check_l):
     with environment('MXNET_SAFE_ACCUMULATION', enforce_safe_acc):
