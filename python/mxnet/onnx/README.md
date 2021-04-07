@@ -31,6 +31,22 @@ If you are a user of earlier MXNet versions and do not want to upgrade MXNet, yo
 ### APIs
 
 ### Operator Support Matrix
+|MXNet Op|ONNX Version|
+|:-|:-:|
+|Activation|1.7 1.8 |
+|BatchNorm|1.7 1.8 |
+|BlockGrad|1.7 1.8 |
+|Cast|1.7 1.8 |
+|Concat|1.7 1.8 |
+|Convolution|1.7 1.8 |
+|Crop|1.7 1.8 |
+|Deconvolution|1.7 1.8 |
+|Dropout|1.7 1.8 |
+|Embedding|1.7 1.8 |
+|Flatten|1.7 1.8 |
+|FullyConnected|1.7 1.8 |
+|InstanceNorm|1.7 1.8 |
+|L2Normalization|1.7 1.8 |
 |LRN|1.7 1.8 |
 |LayerNorm|1.7 1.8 |
 |LeakyReLU|1.7 1.8 |
