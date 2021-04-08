@@ -151,10 +151,13 @@ size_t StorageImpl::GetMemoryInUseInBytes(const Context &ctx) {
   auto &&device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
     ctx.real_dev_id(), []() {
-      LOG(FATAL) << "Cannot get memory usage for a device you have not allocated";
+      LOG(WARNING) << "Cannot get memory usage for a device you have not allocated";
         return nullptr;
       });
-  return manager->GetMemoryInUseInBytes();
+  if (nullptr == manager)
+    return 0;
+  else
+    return manager->GetMemoryInUseInBytes();
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
