@@ -33,6 +33,7 @@
 #include <mxnet/storage.h>
 #include <unordered_map>
 #include <algorithm>
+#include <atomic>
 #include <vector>
 #include <mutex>
 #include <new>
@@ -57,7 +58,7 @@ class GPUPooledStorageManager final : public StorageManager {
    * \param initial_context context used by this Storage Manager
    */
   explicit GPUPooledStorageManager(Context initial_context) :
-    initial_context_(initial_context) {
+    initial_context_(initial_context), used_memory_no_free_lists_(0) {
     reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
     large_alloc_round_size_ = dmlc::GetEnv("MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE", 2 * 1024 * 1024);
@@ -129,7 +130,7 @@ class GPUPooledStorageManager final : public StorageManager {
   // size that large allocations should be rounded to, for proper freeing.
   size_t large_alloc_round_size_;
   // used_memory_ - free lists
-  size_t used_memory_no_free_lists_ = 0;
+  std::atomic<size_t> used_memory_no_free_lists_;
   double memory_limit_percentage_;
   // percentage of reserved memory
   int reserve_;
@@ -182,8 +183,6 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
       }
     }
     used_memory_ += size;
-    // We are allocating memory so add to this variable as well
-    used_memory_no_free_lists_ += size;
     handle->dptr = ret;
   } else {
     auto&& reuse_pool = reuse_it->second;
@@ -191,6 +190,9 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
     reuse_pool.pop_back();
     handle->dptr = ret;
   }
+  // We either allocated using cudaMalloc or reused free list memory 
+  // so add that memory back
+  used_memory_no_free_lists_ += size;
 }
 
 void GPUPooledStorageManager::Free(Storage::Handle handle) {
