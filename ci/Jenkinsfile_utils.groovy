@@ -117,13 +117,13 @@ def publish_test_coverage() {
 
     if (env.CHANGE_ID) {
       // PR execution
-      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${git_commit_hash} -P ${env.CHANGE_ID}"
+      codecovArgs = "-B ${env.CHANGE_TARGET} -P ${env.CHANGE_ID} -C ${git_commit_hash}"
     } else {
       // Branch execution
       codecovArgs = "-B ${env.BRANCH_NAME} -C ${git_commit_hash}"
     }
 
-    sh "curl -s https://codecov.io/bash | bash -s - ${codecovArgs}"
+    sh "(curl -s https://codecov.io/bash | bash -s ${codecovArgs}) || true"
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {
