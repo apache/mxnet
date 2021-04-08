@@ -50,8 +50,8 @@
 import logging
 import json
 
-from mxnet import ndarray as nd
 import numpy as np
+from mxnet import ndarray as nd
 
 
 class MXNetGraph(object):
