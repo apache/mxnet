@@ -18,4 +18,4 @@
 # coding: utf-8
 """ONNX Export module"""
 
-from .mx2onnx import export_model
+from .mx2onnx import export_model, get_operator_support

@@ -66,7 +66,7 @@ class MXNetGraph(object):
         self.output_tensors = []
 
     @staticmethod
-    def register(op_name, opset_version=11):
+    def register(op_name, opset_version=12):
         """Register operators"""
         def wrapper(func):
             """Helper function to map functions"""
@@ -92,9 +92,9 @@ class MXNetGraph(object):
         op = str(node["op"])
         opset_version = kwargs.get("opset_version", onnx_opset_version())
         # fallback to older opset versions if op is not registered in current version
-        for op_version in range(opset_version, 10, -1):
+        for op_version in range(opset_version, 11, -1):
             if op_version not in MXNetGraph.registry_ or op not in MXNetGraph.registry_[op_version]:
-                if opset_version == 11:
+                if opset_version == 12:
                     raise AttributeError("No conversion function registered for op type %s yet." % op)
                 continue
             convert_func = MXNetGraph.registry_[op_version][op]
