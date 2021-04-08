@@ -846,6 +846,20 @@ def test_unix_distributed_kvstore_gpu(lib_name) {
     }]
 }
 
+def test_unix_cpp_package_gpu(lib_name) {
+    return ['cpp-package GPU Makefile': {
+      node(NODE_LINUX_GPU_G4) {
+        ws('workspace/it-cpp-package') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_lib_cpp_examples)
+            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_gpu_cpp_package', true)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
 def test_centos7_python3_cpu(lib_name) {
     return ['Python3: CentOS 7 CPU': {
       node(NODE_LINUX_CPU) {

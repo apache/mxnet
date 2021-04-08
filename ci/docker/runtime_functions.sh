@@ -631,6 +631,7 @@ build_ubuntu_gpu() {
         -DUSE_NVML=OFF \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=ON \
+        -DUSE_CPP_PACKAGE=ON \
         -DUSE_BLAS=Open \
         -DUSE_ONEDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
@@ -876,6 +877,12 @@ unittest_centos7_gpu() {
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu/test_amp_init.py
+}
+
+integrationtest_ubuntu_gpu_cpp_package() {
+    set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    cpp-package/tests/ci_test.sh
 }
 
 integrationtest_ubuntu_cpu_onnx() {
