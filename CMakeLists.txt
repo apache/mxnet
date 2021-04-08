@@ -596,6 +596,8 @@ if(USE_CUDA)
         include_directories(${NVML_INCLUDE_DIRS})
         list(APPEND mxnet_LINKER_LIBS ${NVML_LIBRARIES})
         add_definitions(-DMXNET_USE_NVML=1)
+        # https://github.com/apache/incubator-mxnet/issues/20145
+        target_compile_definitions(mxnet PRIVATE NVML_NO_UNVERSIONED_FUNC_DEFS)
       else()
         add_definitions(-DMXNET_USE_NVML=0)
         message(WARNING "Could not find NVML libraries")
