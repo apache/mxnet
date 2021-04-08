@@ -50,6 +50,7 @@
 import logging
 import json
 
+import numpy as np
 from mxnet import ndarray as nd
 
 
@@ -290,7 +291,7 @@ class MXNetGraph(object):
         class NodeOutput:
             def __init__(self, name, dtype):
                 self.name = name
-                self.dtype = dtype
+                self.dtype = np.dtype(dtype)
 
         initializer = []
         all_processed_nodes = []
