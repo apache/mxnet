@@ -117,10 +117,10 @@ def publish_test_coverage() {
 
     if (env.CHANGE_ID) {
       // PR execution
-      codecovArgs = "-f '*.xml' -B ${env.CHANGE_TARGET} -P ${env.CHANGE_ID} -C ${git_commit_hash}"
+      codecovArgs = "-B ${env.CHANGE_TARGET} -P ${env.CHANGE_ID} -C ${git_commit_hash}"
     } else {
       // Branch execution
-      codecovArgs = "-f '*.xml' -B ${env.BRANCH_NAME} -C ${git_commit_hash}"
+      codecovArgs = "-B ${env.BRANCH_NAME} -C ${git_commit_hash}"
     }
 
     sh "(curl -s https://codecov.io/bash | bash -s ${codecovArgs}) || true"
