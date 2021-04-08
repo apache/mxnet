@@ -20,4 +20,4 @@
 
 from ._export_model import export_model, get_operator_support
 from ._op_translations import _op_translations_opset11
-from ._op_translations import _op_translations_opset13
+from ._op_translations import _op_translations_opset12
