@@ -481,8 +481,9 @@ def test_Deconvolution():
             elif np.array(shape).shape[0] == 4:
                 test = mx.symbol.Deconvolution(data=data, kernel=(3, 3), stride=(2, 2), num_filter=4)
                 weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3, 3))
-            # not testing stype fallback, as 3D deconvolution is not natively supported yet
             elif np.array(shape).shape[0] == 5 and stype == "default":
+                # Unable to test fallback to native implementation for non-default storage types
+                # as 3D deconvolution is not natively supported
                 test = mx.symbol.Deconvolution(data=data, kernel=(3,3,3), stride=(2,2,2), num_filter=4)
                 weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3, 3, 3))
             else:
