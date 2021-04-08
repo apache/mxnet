@@ -58,7 +58,7 @@ class GPUPooledStorageManager final : public StorageManager {
    * \param initial_context context used by this Storage Manager
    */
   explicit GPUPooledStorageManager(Context initial_context) :
-    initial_context_(initial_context), used_memory_no_free_lists_(0) {
+    initial_context_(initial_context), free_list_size_(0) {
     reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
     large_alloc_round_size_ = dmlc::GetEnv("MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE", 2 * 1024 * 1024);
@@ -129,8 +129,7 @@ class GPUPooledStorageManager final : public StorageManager {
   size_t page_size_;
   // size that large allocations should be rounded to, for proper freeing.
   size_t large_alloc_round_size_;
-  // used_memory_ - free lists
-  std::atomic<size_t> used_memory_no_free_lists_;
+  size_t free_list_size_;
   double memory_limit_percentage_;
   // percentage of reserved memory
   int reserve_;
@@ -188,11 +187,10 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
     auto&& reuse_pool = reuse_it->second;
     auto ret = reuse_pool.back();
     reuse_pool.pop_back();
+    // Decrement the free list size as memory pool is getting used.
+    free_list_size_ -= size;
     handle->dptr = ret;
   }
-  // We either allocated using cudaMalloc or reused free list memory 
-  // so add that memory back
-  used_memory_no_free_lists_ += size;
 }
 
 void GPUPooledStorageManager::Free(Storage::Handle handle) {
@@ -206,9 +204,7 @@ void GPUPooledStorageManager::Free(Storage::Handle handle) {
   reuse_pool.push_back(handle.dptr);
   // This method doesn't actually free
   // but instead adds to the free list of the given size
-  // We should subtract size here because we want to exclude
-  // memory that resides in free lists
-  used_memory_no_free_lists_ -= size;
+  free_list_size_ += size;
 }
 
 void GPUPooledStorageManager::ReleaseAll() {
@@ -408,7 +404,8 @@ void GPUPooledRoundedStorageManager::ReleaseAll() {
 }
 
 size_t GPUPooledStorageManager::GetMemoryInUseInBytes() {
-  return used_memory_no_free_lists_;
+  std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
+  return used_memory_ - free_list_size_;
 }
 
 #endif  // MXNET_USE_CUDA
