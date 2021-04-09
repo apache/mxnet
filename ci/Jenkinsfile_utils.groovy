@@ -123,7 +123,7 @@ def publish_test_coverage() {
       codecovArgs = "-B ${env.BRANCH_NAME} -C ${git_commit_hash}"
     }
 
-    sh "pip install coverage==5.5 || (curl -s https://codecov.io/bash | bash -s ${codecovArgs}) || true"
+    sh "(curl -s https://codecov.io/bash | bash -s ${codecovArgs}) || true"
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {

@@ -774,6 +774,7 @@ unittest_ubuntu_python3_cpu() {
     MXNET_ENGINE_TYPE=NaiveEngine \
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
+    coverage xml -i
 }
 
 unittest_ubuntu_python3_cpu_onednn() {
@@ -789,6 +790,7 @@ unittest_ubuntu_python3_cpu_onednn() {
                      OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
+    coverage xml -i
 }
 
 unittest_ubuntu_python3_gpu() {
@@ -807,6 +809,7 @@ unittest_ubuntu_python3_gpu() {
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu/test_amp_init.py
+    coverage xml -i
 }
 
 unittest_ubuntu_python3_gpu_cython() {
@@ -827,6 +830,7 @@ unittest_ubuntu_python3_gpu_cython() {
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu/test_amp_init.py
+    coverage xml -i
 }
 
 unittest_ubuntu_python3_gpu_nocudnn() {
@@ -844,6 +848,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu/test_amp_init.py
+    coverage xml -i
 }
 
 unittest_cpp() {
@@ -862,6 +867,7 @@ unittest_centos7_cpu() {
         OMP_NUM_THREADS=$(expr $(nproc) / 4) python -m pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     python -m pytest -m 'serial' --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     OMP_NUM_THREADS=$(expr $(nproc) / 4) python -m pytest -n 4 --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_train.xml --verbose tests/python/train
+    coverage xml -i
 }
 
 unittest_centos7_gpu() {
@@ -877,6 +883,7 @@ unittest_centos7_gpu() {
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest --durations=50 $PYTEST_COVERAGE_ARGUMENTS --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu/test_amp_init.py
+    coverage xml -i
 }
 
 integrationtest_ubuntu_cpu_onnx() {
