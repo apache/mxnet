@@ -43,7 +43,7 @@
   #include <cuda_fp16.h>
   #if defined(__CUDA_ARCH__)
     /*! \brief __half2float_warp */
-    __host__ __device__ float __half2float_warp(const volatile __half& h) { /* NOLINT(*) */
+    MSHADOW_XINLINE float __half2float_warp(const volatile __half& h) { /* NOLINT(*) */
       __half val;
 #if CUDA_VERSION >= 9000
       val = const_cast<__half&>(h);
