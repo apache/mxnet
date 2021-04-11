@@ -980,4 +980,11 @@ if(BUILD_CYTHON_MODULES)
 endif()
 
 # https://github.com/apache/incubator-mxnet/issues/20145
-target_compile_definitions(mxnet PRIVATE NVML_NO_UNVERSIONED_FUNC_DEFS)
+if(UNIX)
+    if(USE_NVML)
+      find_package(NVML)
+      if(NVML_FOUND)
+         target_compile_definitions(mxnet PRIVATE NVML_NO_UNVERSIONED_FUNC_DEFS)
+    endif()
+  endif()
+endif()
