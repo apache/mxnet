@@ -486,7 +486,7 @@ int MXPredCreatePartialOutEx(const char* symbol_json_str,
                              const char** output_keys,
                              PredictorHandle* out) {
   using nnvm::Symbol;
- 
+
   MXAPIPredictor* ret = new MXAPIPredictor();
   API_BEGIN();
   Symbol sym;
