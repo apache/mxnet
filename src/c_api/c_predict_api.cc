@@ -452,49 +452,27 @@ int MXPredCreateMultiThread(const char* symbol_json_str,
       out);
 }
 
-int MXPredCreateEx(const char* symbol_json_str,
-                   int dev_type, int dev_id,
-                   const char** input_keys,
-                   const mx_float** input_data,
-                   const mx_uint* input_shape_indptr,
-                   const mx_uint* input_shape_data,
-                   const mx_uint num_input_nodes,
-                   PredictorHandle* out) {
-  return MXPredCreatePartialOutEx(symbol_json_str,
-                                  dev_type,
-                                  dev_id,
-                                  input_keys,
-                                  input_data,
-                                  input_shape_indptr,
-                                  input_shape_data,
-                                  num_input_nodes,
-                                  0,
-                                  nullptr,
-                                  out);
-}
-
-int MXPredCreateEx(const char* symbol_json_str,
-                   int dev_type, int dev_id,
-                   const char** input_keys,
-                   const mx_float** input_data,
-                   const void** input_data,
-                   const int* input_dtypes,
-                   const mx_uint* input_shape_indptr,
-                   const mx_uint* input_shape_data,
-                   const mx_uint num_input_nodes,
-                   PredictorHandle* out) {
-  return MXPredCreatePartialOutEx(symbol_json_str,
-                                  dev_type,
-                                  dev_id,
-                                  input_keys,
-                                  input_data,
-                                  input_dtypes,
-                                  input_shape_indptr,
-                                  input_shape_data,
-                                  num_input_nodes,
-                                  0,
-                                  nullptr,
-                                  out);
+int MXPredCreateEx2(const char* symbol_json_str,
+                    int dev_type, int dev_id,
+                    const char** input_keys,
+                    const void** input_data,
+                    const int* input_dtypes,
+                    const mx_uint* input_shape_indptr,
+                    const mx_uint* input_shape_data,
+                    const mx_uint num_input_nodes,
+                    PredictorHandle* out) {
+  return MXPredCreatePartialOutEx2(symbol_json_str,
+                                   dev_type,
+                                   dev_id,
+                                   input_keys,
+                                   input_data,
+                                   input_dtypes,
+                                   input_shape_indptr,
+                                   input_shape_data,
+                                   num_input_nodes,
+                                   0,
+                                   nullptr,
+                                   out);
 }
 
 int MXPredCreatePartialOutEx(const char* symbol_json_str,
@@ -542,7 +520,7 @@ int MXPredCreatePartialOutEx(const char* symbol_json_str,
     }
     sym = nnvm::Symbol::CreateGroup(out_syms);
   }
- 
+
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
   std::unordered_map<std::string, TShape> input_shape_map;
   std::unordered_map<std::string, NDArray> input_nd_map;
@@ -557,7 +535,7 @@ int MXPredCreatePartialOutEx(const char* symbol_json_str,
     input_nd_map.emplace(input_name, nd);
   }
   CHECK_EQ(input_shape_map.size(), input_nd_map.size());
- 
+
   const std::vector<std::string> arg_names = sym.ListInputNames(Symbol::kReadOnlyArgs);
   const std::vector<std::string> aux_names = sym.ListInputNames(Symbol::kAuxiliaryStates);
   const std::vector<std::string> out_names = sym.ListOutputNames();
@@ -582,25 +560,25 @@ int MXPredCreatePartialOutEx(const char* symbol_json_str,
     CHECK(it != input_nd_map.end());
     ret->aux_arrays.push_back(it->second);
   }
- 
+
   // bind
   std::map<std::string, Context> ctx_map;
   std::vector<NDArray> grad_store(ret->arg_arrays.size());
   std::vector<OpReqType> grad_req(ret->arg_arrays.size(), kNullOp);
- 
- 
+
+
   ret->exec.reset(Executor::Bind(sym, ctx, ctx_map,
                                  ret->arg_arrays,
                                  grad_store, grad_req,
                                  ret->aux_arrays));
   ret->out_arrays = ret->exec->outputs();
-   
+
   CHECK(out_names.size() == ret->out_arrays.size());
   ret->out_names = out_names;
   ret->out_names_buffer.resize(ret->out_names.size());
   std::transform(ret->out_names.begin(), ret->out_names.end(), ret->out_names_buffer.begin(),
       [](const std::string& name) { return name.c_str(); });
- 
+
   ret->out_shapes.resize(ret->out_arrays.size());
   std::transform(ret->out_arrays.begin(), ret->out_arrays.end(), ret->out_shapes.begin(),
       [](const NDArray& nd) { return nd.shape(); });
@@ -609,20 +587,19 @@ int MXPredCreatePartialOutEx(const char* symbol_json_str,
   API_END_HANDLE_ERROR(delete ret);
 }
 
-int MXPredCreatePartialOutEx(const char* symbol_json_str,
-                             int dev_type, int dev_id,
-                             const char** input_keys,
-                             const mx_float** input_data,
-                             const void** input_data,
-                             const int* input_dtypes,
-                             const mx_uint* input_shape_indptr,
-                             const mx_uint* input_shape_data,
-                             const mx_uint num_input_nodes,
-                             const mx_uint num_output_nodes,
-                             const char** output_keys,
-                             PredictorHandle* out) {
+int MXPredCreatePartialOutEx2(const char* symbol_json_str,
+                              int dev_type, int dev_id,
+                              const char** input_keys,
+                              const void** input_data,
+                              const int* input_dtypes,
+                              const mx_uint* input_shape_indptr,
+                              const mx_uint* input_shape_data,
+                              const mx_uint num_input_nodes,
+                              const mx_uint num_output_nodes,
+                              const char** output_keys,
+                              PredictorHandle* out) {
   using nnvm::Symbol;
- 
+
   MXAPIPredictor* ret = new MXAPIPredictor();
   API_BEGIN();
   Symbol sym;
@@ -656,7 +633,7 @@ int MXPredCreatePartialOutEx(const char* symbol_json_str,
     }
     sym = nnvm::Symbol::CreateGroup(out_syms);
   }
- 
+
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
   std::unordered_map<std::string, TShape> input_shape_map;
   std::unordered_map<std::string, NDArray> input_nd_map;
@@ -665,14 +642,13 @@ int MXPredCreatePartialOutEx(const char* symbol_json_str,
     CHECK_EQ(input_shape_map.count(input_name), 0U);
     input_shape_map[input_name] = TShape(input_shape_data + input_shape_indptr[i],
                                          input_shape_data + input_shape_indptr[i + 1]);
-    NDArray nd(input_shape_map[input_name], ctx);
     NDArray nd(input_shape_map[input_name], ctx, false, input_dtypes[i]);
     nd.SyncCopyFromCPU(input_data[i], nd.shape().Size());
     CHECK_EQ(input_nd_map.count(input_name), 0U);
     input_nd_map.emplace(input_name, nd);
   }
   CHECK_EQ(input_shape_map.size(), input_nd_map.size());
- 
+
   const std::vector<std::string> arg_names = sym.ListInputNames(Symbol::kReadOnlyArgs);
   const std::vector<std::string> aux_names = sym.ListInputNames(Symbol::kAuxiliaryStates);
   const std::vector<std::string> out_names = sym.ListOutputNames();
@@ -697,33 +673,33 @@ int MXPredCreatePartialOutEx(const char* symbol_json_str,
     CHECK(it != input_nd_map.end());
     ret->aux_arrays.push_back(it->second);
   }
- 
+
   // bind
   std::map<std::string, Context> ctx_map;
   std::vector<NDArray> grad_store(ret->arg_arrays.size());
   std::vector<OpReqType> grad_req(ret->arg_arrays.size(), kNullOp);
- 
- 
+
+
   ret->exec.reset(Executor::Bind(sym, ctx, ctx_map,
                                  ret->arg_arrays,
                                  grad_store, grad_req,
                                  ret->aux_arrays));
   ret->out_arrays = ret->exec->outputs();
- 
+
   CHECK(out_names.size() == ret->out_arrays.size());
   ret->out_names = out_names;
   ret->out_names_buffer.resize(ret->out_names.size());
   std::transform(ret->out_names.begin(), ret->out_names.end(), ret->out_names_buffer.begin(),
       [](const std::string& name) { return name.c_str(); });
- 
+
   ret->out_dtypes.resize(ret->out_arrays.size());
   std::transform(ret->out_arrays.begin(), ret->out_arrays.end(), ret->out_dtypes.begin(),
       [](const NDArray& nd) { return nd.dtype(); });
- 
+
   ret->out_shapes.resize(ret->out_arrays.size());
   std::transform(ret->out_arrays.begin(), ret->out_arrays.end(), ret->out_shapes.begin(),
       [](const NDArray& nd) { return nd.shape(); });
- 
+
   *out = ret;
   API_END_HANDLE_ERROR(delete ret);
 }
@@ -814,13 +790,13 @@ int MXPredReshape(uint32_t num_input_nodes,
                                    p->exec.get()));
     ret->out_arrays = ret->exec->outputs();
     ret->out_dtypes = p->out_dtypes;
-     
+
     CHECK(out_shapes.size() == ret->out_arrays.size());
     CHECK(out_names.size() == ret->out_arrays.size());
- 
+
     ret->out_shapes = out_shapes;
     ret->out_names = out_names;
- 
+
     ret->out_names_buffer.resize(ret->out_names.size());
     std::transform(ret->out_names.begin(), ret->out_names.end(), ret->out_names_buffer.begin(),
         [](const std::string& name) { return name.c_str(); });
@@ -880,7 +856,7 @@ int MXPredGetInputShape(PredictorHandle handle,
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
   auto it = p->key2arg.find(key);
-  if(it == p->key2arg.end()) {
+  if (it == p->key2arg.end()) {
     *key_found = 0;
   } else {
     *key_found = 1;
@@ -895,13 +871,13 @@ int MXPredGetInputShape(PredictorHandle handle,
 }
 
 int MXPredGetInputType(PredictorHandle handle,
-                                  const char* key,
-                                  int* dtype,
-                                  int* key_found) {
+                       const char* key,
+                       int* dtype,
+                       int* key_found) {
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
   auto it = p->key2arg.find(key);
-  if(it == p->key2arg.end()) {
+  if (it == p->key2arg.end()) {
     *key_found = 0;
   } else {
     *key_found = 1;
@@ -1010,14 +986,14 @@ int MXNDListGet(NDListHandle handle,
   API_END();
 }
 
-int MXNDListGetEx(NDListHandleEx handle,
+int MXNDListGetEx(NDListHandle handle,
                   mx_uint index,
                   const char** out_key,
                   const void** out_data,
                   int* out_dtype,
                   const mx_uint** out_shape,
                   mx_uint* out_ndim) {
-  MXAPINDListEx* p = static_cast<MXAPINDListEx*>(handle.ptr);
+  MXAPINDListEx* p = static_cast<MXAPINDListEx*>(handle);
   API_BEGIN();
   CHECK_LT(index, p->arrays.size())
       << "Index out of range";

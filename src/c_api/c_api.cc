@@ -96,8 +96,7 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
   API_END();
 }
 
-size_t MXGetBytesInUse(int dev_type, int dev_id)
-{
+size_t MXGetBytesInUse(int dev_type, int dev_id) {
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
   return Storage::Get()->GetMemoryInUseInBytes(ctx);
 }

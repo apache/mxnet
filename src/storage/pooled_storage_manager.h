@@ -72,7 +72,8 @@ class GPUPooledStorageManager final : public StorageManager {
     }
     memory_limit_percentage_ = dmlc::GetEnv<double>("EIA_MXNET_GPU_MEM_LIMIT", 100.0);
      if (memory_limit_percentage_ <= 0 || memory_limit_percentage_ > 100) {
-       LOG(FATAL) << "Invalid memory limit percentage given: " << memory_limit_percentage_ << std::endl;
+       LOG(FATAL) << "Invalid memory limit percentage given: " << memory_limit_percentage_
+                  << std::endl;
      }
   }
   /*!
@@ -157,8 +158,9 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
     size_t free, total;
     cudaMemGetInfo(&free, &total);
     double mem_limit_in_bytes = total * memory_limit_percentage_ / 100.0;
-    free = mem_limit_in_bytes - used_memory_; 
-    if (free <= mem_limit_in_bytes * reserve_ / 100 || size > free - mem_limit_in_bytes * reserve_ / 100)
+    free = mem_limit_in_bytes - used_memory_;
+    if (free <= mem_limit_in_bytes * reserve_ / 100 ||
+        size > free - mem_limit_in_bytes * reserve_ / 100)
       ReleaseAll();
 
     if (used_memory_ + size > mem_limit_in_bytes) {
