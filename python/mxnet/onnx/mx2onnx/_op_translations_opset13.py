@@ -56,7 +56,7 @@ Add new functions here with a decorator.
 import re
 import logging
 import numpy as np
-from .._export_onnx import MXNetGraph as mx_op
+from ._export_onnx import MXNetGraph as mx_op
 try:
     import onnx
 except ImportError:
