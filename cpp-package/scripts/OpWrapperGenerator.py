@@ -320,7 +320,7 @@ def ParseAllOps():
                                               const char ***arg_descriptions,
                                               const char **key_var_num_args);
     """
-    cdll.libmxnet = cdll.LoadLibrary(sys.argv[1])
+    cdll.libmxnet = cdll.LoadLibrary(find_lib_path()[0])
     ListOP = cdll.libmxnet.MXSymbolListAtomicSymbolCreators
     GetOpInfo = cdll.libmxnet.MXSymbolGetAtomicSymbolInfo
     ListOP.argtypes=[POINTER(c_int), POINTER(POINTER(c_void_p))]
@@ -372,6 +372,65 @@ def ParseAllOps():
         ret = ret + op.GetOpDefinitionString(True) + "\n"
         ret2 = ret2 + op.GetOpDefinitionString(False) + "\n"
     return ret + ret2
+
+def find_lib_path(prefix='libmxnet'):
+    """Find MXNet dynamic library files.
+
+    Returns
+    -------
+    lib_path : list(string)
+        List of all found path to the libraries.
+    """
+    lib_from_env = os.environ.get('MXNET_LIBRARY_PATH')
+    if lib_from_env:
+        lib_from_env = lib_from_env.replace('libmxnet', prefix)
+        if os.path.isfile(lib_from_env):
+            if not os.path.isabs(lib_from_env):
+                logging.warning("MXNET_LIBRARY_PATH should be an absolute path, instead of: %s",
+                                lib_from_env)
+            else:
+                if os.name == 'nt':
+                    os.environ['PATH'] = os.environ['PATH'] + ';' + os.path.dirname(lib_from_env)
+                return [lib_from_env]
+        else:
+            logging.warning("MXNET_LIBRARY_PATH '%s' doesn't exist", lib_from_env)
+
+    curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+    api_path = os.path.join(curr_path, '../../lib/')
+    cmake_build_path = os.path.join(curr_path, '../../build/')
+    dll_path = [curr_path, api_path, cmake_build_path]
+    if os.name == 'nt':
+        dll_path.append(os.path.join(curr_path, '../../build'))
+        vs_configuration = 'Release'
+        if platform.architecture()[0] == '64bit':
+            dll_path.append(os.path.join(curr_path, '../../build', vs_configuration))
+            dll_path.append(os.path.join(curr_path, '../../windows/x64', vs_configuration))
+        else:
+            dll_path.append(os.path.join(curr_path, '../../build', vs_configuration))
+            dll_path.append(os.path.join(curr_path, '../../windows', vs_configuration))
+    elif os.name == "posix" and os.environ.get('LD_LIBRARY_PATH', None):
+        dll_path[0:0] = [p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")]
+    if os.name == 'nt':
+        os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ.get('PATH', '')
+        dll_path = [os.path.join(p, prefix + '.dll') for p in dll_path]
+    elif platform.system() == 'Darwin':
+        dll_path = [os.path.join(p, prefix + '.dylib') for p in dll_path] + \
+                   [os.path.join(p, prefix + '.so') for p in dll_path]
+    else:
+        dll_path.append('../../../')
+        dll_path = [os.path.join(p, prefix + '.so') for p in dll_path]
+    lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
+    if len(lib_path) == 0:
+        raise RuntimeError('Cannot find the MXNet library.\n' +
+                           'List of candidates:\n' + str('\n'.join(dll_path)))
+    if os.name == 'nt':
+        os.environ['PATH'] = os.environ['PATH'] + ';' + os.path.dirname(lib_path[0])
+        if sys.version_info >= (3, 8):
+            if 'CUDA_PATH' not in os.environ:
+                raise RuntimeError('Cannot find the env CUDA_PATH.Please set CUDA_PATH env with cuda path')
+            os.add_dll_directory(os.path.dirname(lib_path[0]))
+            os.add_dll_directory(os.path.join(os.environ['CUDA_PATH'], 'bin'))
+    return lib_path
 
 if __name__ == "__main__":
     #et = EnumType(typeName = 'MyET')
