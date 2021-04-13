@@ -1282,7 +1282,7 @@ def convert_slice_channel(node, **kwargs):
     squeeze_axis = attrs.get('squeeze_axis', 'False')
 
     create_tensor([axis], name+'_axis', kwargs['initializer'])
-    
+
     nodes = []
     if squeeze_axis in ['True', '1']:
         nodes += [
