@@ -522,12 +522,12 @@ int MXPredCreatePartialOutEx(const char* symbol_json_str,
   }
 
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
-  std::unordered_map<std::string, TShape> input_shape_map;
+  std::unordered_map<std::string, mxnet::TShape> input_shape_map;
   std::unordered_map<std::string, NDArray> input_nd_map;
   for (mx_uint i = 0; i < num_input_nodes; ++i) {
     const std::string input_name = input_keys[i];
     CHECK_EQ(input_shape_map.count(input_name), 0U);
-    input_shape_map[input_name] = TShape(input_shape_data + input_shape_indptr[i],
+    input_shape_map[input_name] = mxnet::TShape(input_shape_data + input_shape_indptr[i],
                                          input_shape_data + input_shape_indptr[i + 1]);
     NDArray nd(input_shape_map[input_name], ctx);
     nd.SyncCopyFromCPU(input_data[i], nd.shape().Size());
@@ -635,12 +635,12 @@ int MXPredCreatePartialOutEx2(const char* symbol_json_str,
   }
 
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
-  std::unordered_map<std::string, TShape> input_shape_map;
+  std::unordered_map<std::string, mxnet::TShape> input_shape_map;
   std::unordered_map<std::string, NDArray> input_nd_map;
   for (mx_uint i = 0; i < num_input_nodes; ++i) {
     const std::string input_name = input_keys[i];
     CHECK_EQ(input_shape_map.count(input_name), 0U);
-    input_shape_map[input_name] = TShape(input_shape_data + input_shape_indptr[i],
+    input_shape_map[input_name] = mxnet::TShape(input_shape_data + input_shape_indptr[i],
                                          input_shape_data + input_shape_indptr[i + 1]);
     NDArray nd(input_shape_map[input_name], ctx, false, input_dtypes[i]);
     nd.SyncCopyFromCPU(input_data[i], nd.shape().Size());
@@ -861,7 +861,7 @@ int MXPredGetInputShape(PredictorHandle handle,
   } else {
     *key_found = 1;
     const NDArray& nd = p->arg_arrays[it->second];
-    const TShape& s = nd.shape();
+    const mxnet::TShape& s = nd.shape();
     p->in_shapes_buffer.resize(s.ndim());
     nnvm::ShapeTypeCast(s.begin(), s.end(), p->in_shapes_buffer.data());
     *shape_data = p->in_shapes_buffer.data();
@@ -1002,7 +1002,7 @@ int MXNDListGetEx(NDListHandle handle,
   const TBlob& t = nd.data();
   *out_data = t.dptr_;
   *out_dtype = nd.dtype();
-  const TShape& s = nd.shape();
+  const mxnet::TShape& s = nd.shape();
   p->shapes_buffer.resize(s.ndim());
   nnvm::ShapeTypeCast(s.begin(), s.end(), p->shapes_buffer.data());
   *out_shape = p->shapes_buffer.data();
