@@ -629,12 +629,11 @@ def test_embedding():
     check_embedding()
     check_embedding_large_input()
 
-@use_np
-def test_layernorm():
-    layer = nn.LayerNorm(in_channels=10)
-    check_layer_forward(layer, (2, 10, 10, 10))
 
-def check_layer_forward(layer, dshape):
+@use_np
+@pytest.mark.parametrize('dshape', [(10, ), (2, 10, 10, 10)])
+def test_layernorm(dshape):
+    layer = nn.LayerNorm(in_channels=10)
     print("checking layer {}\nshape: {}.".format(layer, dshape))
     layer.initialize()
     x = mx.np.ones(shape=dshape)
