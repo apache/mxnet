@@ -19,12 +19,13 @@ import os
 import math
 import itertools
 import mxnet as mx
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry, assert_almost_equal
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_almost_equal
 import numpy as np
 import random as rnd
-from common import setup_module, with_seed, random_seed, teardown
+from common import retry, random_seed
 import scipy.stats as ss
 import unittest
+import pytest
 from mxnet.test_utils import *
 
 def same(a, b):
@@ -278,7 +279,7 @@ def check_with_device(device, dtype):
         Y = symbol(**params) + X
         x = mx.nd.zeros(shape, dtype=dtype, ctx=device)
         xgrad = mx.nd.zeros(shape, dtype=dtype, ctx=device)
-        yexec = Y.bind(device, {'X' : x}, {'X': xgrad})
+        yexec = Y._bind(device, {'X' : x}, {'X': xgrad})
         mx.random.seed(128)
         yexec.forward(is_train=True)
         yexec.backward(yexec.outputs[0])
@@ -310,7 +311,7 @@ def check_with_device(device, dtype):
         bindings = { 'v1' : mx.nd.array(symbdic['inputs'][0][1]) }
         if not single_param :
             bindings.update({ 'v2' : mx.nd.array(symbdic['inputs'][1][1]) })
-        yexec = Y.bind(ctx=device, args=bindings)
+        yexec = Y._bind(ctx=device, args=bindings)
         yexec.forward()
         un1 = yexec.outputs[0].copyto(device).asnumpy()
         params = {}
@@ -339,7 +340,7 @@ def check_with_device(device, dtype):
            un1 = np.maximum(un1, 1e-1)
         if name == 'uniform':
            un1 = np.minimum(np.maximum(un1.reshape((un1.shape[0],un1.shape[1],-1)), p1.reshape((p1.shape[0],p1.shape[1],-1))+1e-4),
-                            p2.reshape((p2.shape[0],p2.shape[1],-1))-1e-4).reshape(un1.shape) 
+                            p2.reshape((p2.shape[0],p2.shape[1],-1))-1e-4).reshape(un1.shape)
         for use_log in [False, True]:
             test_pdf = symbol(v0, v1, is_log=use_log) if single_param else symbol(v0, v1, v2, is_log=use_log)
             forw_atol  = 1e-7 if dtype != np.float16 else 1e-3
@@ -349,7 +350,7 @@ def check_with_device(device, dtype):
             if single_param:
                 res = pdffunc(un1.reshape((un1.shape[0],un1.shape[1],-1)),
                     p1.reshape((p1.shape[0],p1.shape[1],-1))).reshape(un1.shape)
-                if use_log: 
+                if use_log:
                     res = np.log(res)
                 check_symbolic_forward(test_pdf, [un1, p1], [res], atol=forw_atol, rtol=forw_rtol, dtype=dtype)
                 if dtype == np.float64:
@@ -366,7 +367,8 @@ def check_with_device(device, dtype):
                   grad_nodes = ['v1', 'v2'] if symbdic['discrete'] else ['v0', 'v1', 'v2']
                   check_numeric_gradient(test_pdf, [un1, p1, p2], grad_nodes=grad_nodes, atol=backw_atol, rtol=backw_rtol, dtype=dtype)
 
-@with_seed(1000)
+@pytest.mark.seed(1000)
+@pytest.mark.serial
 def test_dirichlet():
     num_classes = 2
     num = 100
@@ -398,6 +400,7 @@ def test_dirichlet():
                 eps = 1e-5
                 check_numeric_gradient(test_pdf, [samples, alpha], numeric_eps=eps, atol=backw_atol, rtol=backw_rtol, dtype=dtype)
 
+@pytest.mark.serial
 def test_random():
     for dtype in [np.float16, np.float32, np.float64]:
         check_with_device(mx.context.current_context(), dtype)
@@ -411,7 +414,7 @@ def set_seed_variously(init_seed, num_init_seeds, final_seed):
     return end_seed
 
 # Tests that seed setting of std (non-parallel) rng is synchronous w.r.t. rng use before and after.
-@with_seed()
+@pytest.mark.serial
 def test_random_seed_setting():
     ctx = mx.context.current_context()
     seed_to_test = 1234
@@ -433,7 +436,7 @@ def test_random_seed_setting():
 
 
 # Tests that seed setting of parallel rng is synchronous w.r.t. rng use before and after.
-@with_seed()
+@pytest.mark.serial
 def test_parallel_random_seed_setting():
     ctx = mx.context.current_context()
     seed_to_test = 1234
@@ -462,7 +465,7 @@ def test_parallel_random_seed_setting():
             Y = mx.sym.random.uniform(**params) + X
             x = mx.nd.zeros(shape, dtype=dtype, ctx=ctx)
             xgrad = mx.nd.zeros(shape, dtype=dtype, ctx=ctx)
-            yexec = Y.bind(ctx, {'X' : x}, {'X': xgrad})
+            yexec = Y._bind(ctx, {'X' : x}, {'X': xgrad})
             seed = set_seed_variously(seed, num_temp_seeds, seed_to_test)
             yexec.forward(is_train=True)
             yexec.backward(yexec.outputs[0])
@@ -483,7 +486,7 @@ def set_seed_variously_for_context(ctx, init_seed, num_init_seeds, final_seed):
     return end_seed
 
 # Tests that seed setting of std (non-parallel) rng for specific context is synchronous w.r.t. rng use before and after.
-@with_seed()
+@pytest.mark.serial
 def test_random_seed_setting_for_context():
     seed_to_test = 1234
     num_temp_seeds = 25
@@ -506,7 +509,7 @@ def test_random_seed_setting_for_context():
                 # Check symbolic. `multinomial` uses non-parallel rng.
                 P = mx.sym.Variable("P")
                 X = mx.sym.random.multinomial(data=P, shape=num_samples, get_prob=False)
-                exe = X.bind(ctx, {"P": mx.nd.array(probs, dtype=dtype)})
+                exe = X._bind(ctx, {"P": mx.nd.array(probs, dtype=dtype)})
                 set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
                 exe.forward()
                 samples_sym.append(exe.outputs[0].asnumpy())
@@ -517,7 +520,7 @@ def test_random_seed_setting_for_context():
             assert same(samples_sym[i - 1], samples_sym[i])
 
 # Tests that seed setting of parallel rng for specific context is synchronous w.r.t. rng use before and after.
-@with_seed()
+@pytest.mark.serial
 def test_parallel_random_seed_setting_for_context():
     seed_to_test = 1234
     dev_type = mx.context.current_context().device_type
@@ -547,7 +550,7 @@ def test_parallel_random_seed_setting_for_context():
                     Y = mx.sym.random.uniform(**params) + X
                     x = mx.nd.zeros(shape, dtype=dtype)
                     xgrad = mx.nd.zeros(shape, dtype=dtype)
-                    yexec = Y.bind(ctx, {'X' : x}, {'X': xgrad})
+                    yexec = Y._bind(ctx, {'X' : x}, {'X': xgrad})
                     set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
                     yexec.forward(is_train=True)
                     yexec.backward(yexec.outputs[0])
@@ -558,51 +561,42 @@ def test_parallel_random_seed_setting_for_context():
         for i in range(1, len(samples_sym)):
             assert same(samples_sym[i - 1], samples_sym[i])
 
-@retry(5)
-@with_seed()
-def test_sample_multinomial():
-    for dtype in ['uint8', 'int32', 'float16', 'float32', 'float64']: # output array types
-        for x in [mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0, mx.nd.array([0,1,2,3,4])/10.0]:
-            dx = mx.nd.ones_like(x)
-            mx.contrib.autograd.mark_variables([x], [dx])
-            # Adding rtol and increasing samples needed to pass with seed 2951820647
-            samples = 10000
-            with mx.autograd.record():
-                y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True, dtype=dtype)
-                r = prob * 5
-                r.backward()
+@pytest.mark.parametrize('dtype', ['uint8', 'int32', 'float16', 'float32', 'float64'])
+@pytest.mark.parametrize('x', [[[0,1,2,3,4],[4,3,2,1,0]], [0,1,2,3,4]])
+@pytest.mark.serial
+def test_sample_multinomial(dtype, x):
+    x = mx.nd.array(x) / 10.0
+    dx = mx.nd.ones_like(x)
+    mx.autograd.mark_variables([x], [dx])
+    # Adding rtol and increasing samples needed to pass with seed 2951820647
+    samples = 10000
+    with mx.autograd.record():
+        y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True, dtype=dtype)
+        r = prob * 5
+        r.backward()
 
-            assert(np.dtype(dtype) == y.dtype)
-            y = y.asnumpy()
-            x = x.asnumpy()
-            dx = dx.asnumpy()
-            if len(x.shape) is 1:
-                x = x.reshape((1, x.shape[0]))
-                dx = dx.reshape(1, dx.shape[0])
-                y = y.reshape((1, y.shape[0]))
-                prob = prob.reshape((1, prob.shape[0]))
-            for i in range(x.shape[0]):
-                freq = np.bincount(y[i,:].astype('int32'), minlength=5)/np.float32(samples)*x[i,:].sum()
-                assert_almost_equal(freq, x[i], rtol=0.20, atol=1e-1)
-                rprob = x[i][y[i].astype('int32')]/x[i].sum()
-                assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
+    assert(np.dtype(dtype) == y.dtype)
+    y = y.asnumpy()
+    x = x.asnumpy()
+    dx = dx.asnumpy()
+    if len(x.shape) is 1:
+        x = x.reshape((1, x.shape[0]))
+        dx = dx.reshape(1, dx.shape[0])
+        y = y.reshape((1, y.shape[0]))
+        prob = prob.reshape((1, prob.shape[0]))
+    for i in range(x.shape[0]):
+        freq = np.bincount(y[i,:].astype('int32'), minlength=5)/np.float32(samples)*x[i,:].sum()
+        assert_almost_equal(freq, x[i], rtol=0.20, atol=1e-1)
+        rprob = x[i][y[i].astype('int32')]/x[i].sum()
+        assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
 
-                real_dx = np.zeros((5,))
-                for j in range(samples):
-                    real_dx[int(y[i][j])] += 5.0 / rprob[j]
-                assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
-    for dtype in ['uint8', 'float16', 'float32']:
-        # Bound check for the output data types. 'int32' and 'float64' require large memory so are skipped.
-        x = mx.nd.zeros(2 ** 25)  # Larger than the max integer in float32 without precision loss.
-        bound_check = False
-        try:
-            y = mx.nd.random.multinomial(x, dtype=dtype)
-        except mx.MXNetError as e:
-            bound_check = True
-        assert bound_check
+        real_dx = np.zeros((5,))
+        for j in range(samples):
+            real_dx[int(y[i][j])] += 5.0 / rprob[j]
+        assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
 
 # Test the generators with the chi-square testing
-@with_seed()
+@pytest.mark.serial
 def test_normal_generator():
     ctx = mx.context.current_context()
     samples = 1000000
@@ -626,7 +620,7 @@ def test_normal_generator():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs,
                              nsamples=samples, nrepeat=trials)
 
-@with_seed()
+@pytest.mark.serial
 def test_uniform_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -644,7 +638,7 @@ def test_uniform_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
-@with_seed()
+@pytest.mark.serial
 def test_gamma_generator():
     success_rate = 0.05
     ctx = mx.context.current_context()
@@ -659,7 +653,7 @@ def test_gamma_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=success_rate)
 
-@with_seed()
+@pytest.mark.serial
 def test_exponential_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -673,7 +667,7 @@ def test_exponential_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=0.20)
 
-@with_seed()
+@pytest.mark.serial
 def test_poisson_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -688,7 +682,7 @@ def test_poisson_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
-@with_seed()
+@pytest.mark.serial
 def test_negative_binomial_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -717,7 +711,7 @@ def test_negative_binomial_generator():
                  for _ in range(10)])
         verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
-@with_seed()
+@pytest.mark.serial
 def test_multinomial_generator():
     # This test fails with dtype float16 if the probabilities themselves cannot be
     # well-represented in float16.  When the float16 random picks are assigned to buckets,
@@ -761,7 +755,7 @@ def test_multinomial_generator():
                          nsamples=samples, nrepeat=trials, success_rate=0.20)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_with_random_seed():
     ctx = mx.context.current_context()
     size = 100
@@ -822,7 +816,7 @@ def test_with_random_seed():
         for j in range(i+1, num_seeds):
             check_data(data[i],data[j])
 
-@with_seed()
+@pytest.mark.serial
 def test_random_seed():
     shape = (5, 5)
     seed = rnd.randint(-(1 << 31), (1 << 31))
@@ -848,7 +842,7 @@ def test_random_seed():
     except NameError:
         pass
 
-@with_seed()
+@pytest.mark.serial
 def test_unique_zipfian_generator():
     ctx = mx.context.current_context()
     if ctx.device_type == 'cpu':
@@ -865,7 +859,7 @@ def test_unique_zipfian_generator():
             assert num_trial > 14500
             assert num_trial < 17000
 
-@with_seed()
+@pytest.mark.serial
 def test_zipfian_generator():
     # dummy true classes
     num_true = 5
@@ -890,14 +884,14 @@ def test_zipfian_generator():
     true_classes_var = mx.sym.var('true_classes')
     outputs = mx.sym.contrib.rand_zipfian(true_classes_var, num_sampled, range_max)
     outputs = mx.sym.Group(outputs)
-    executor = outputs.bind(mx.context.current_context(), {'true_classes' : true_classes})
+    executor = outputs._bind(mx.context.current_context(), {'true_classes' : true_classes})
     executor.forward()
     sampled_classes, exp_cnt_true, exp_cnt_sampled = executor.outputs
     assert_almost_equal(exp_cnt_sampled, exp_cnt[sampled_classes], rtol=1e-1, atol=1e-2)
     assert_almost_equal(exp_cnt_true, exp_cnt[true_classes], rtol=1e-1, atol=1e-2)
 
 # Issue #10277 (https://github.com/apache/incubator-mxnet/issues/10277) discusses this test.
-@with_seed()
+@pytest.mark.serial
 def test_shuffle():
     def check_first_axis_shuffle(arr):
         stride = int(arr.size / arr.shape[0])
@@ -976,7 +970,7 @@ def test_shuffle():
     testLarge(mx.nd.arange(0, 100000), 10)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_randint():
     dtypes = ['int32', 'int64']
     for dtype in dtypes:
@@ -994,12 +988,12 @@ def test_randint():
         assert same(ret1, ret2), \
                 "ndarray test: `%s` should give the same result with the same seed"
 
-@with_seed()
+@pytest.mark.serial
 def test_randint_extremes():
     a = mx.nd.random.randint(dtype='int64', low=50000000, high=50000010, ctx=mx.context.current_context())
     assert a>=50000000 and a<=50000010
 
-@with_seed()
+@pytest.mark.serial
 def test_randint_generator():
     ctx = mx.context.current_context()
     for dtype in ['int32', 'int64']:
@@ -1019,13 +1013,13 @@ def test_randint_generator():
                         for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
 
-@with_seed()
+@pytest.mark.serial
 def test_randint_without_dtype():
     a = mx.nd.random.randint(low=50000000, high=50000010, ctx=mx.context.current_context())
     assert a.dtype == np.int32
 
 
-@with_seed()
+@pytest.mark.serial
 def test_sample_multinomial_num_outputs():
     ctx = mx.context.current_context()
     probs = [[0.125, 0.25, 0.25], [0.0625, 0.125, 0.1875]]
@@ -1035,7 +1029,3 @@ def test_sample_multinomial_num_outputs():
     assert isinstance(out, list)
     assert len(out) == 2
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

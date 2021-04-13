@@ -148,7 +148,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunnerSimpleUnary) {
 }
 
 TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunner) {
-  typedef float DType;
+  using DType = float;
   mxnet::TShape shape({5, 5});
   for (const std::pair<std::string, std::string>& i : test_binary_operators) {
     const char *op_name = i.first.c_str();
@@ -163,7 +163,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunner) {
  * \brief Test RunBidirectional dot product, which has different shaped inputs and outputs
  */
 TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunnerDotProduct) {
-  typedef float DType;
+  using DType = float;
   const char *op_name = "dot";
   const char *backward_op_name = "_backward_dot";
   test::op::CoreOperatorRunner<DType> runner;
@@ -179,7 +179,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunnerDotProduct) {
  * \brief Timing tests for CPU
  */
 TEST(CORE_OP_RUNNER, TimingCPUSimpleUnary) {
-  typedef float DType;
+  using DType = float;
 
   const char *op_name = "relu";
 
@@ -210,7 +210,7 @@ TEST(CORE_OP_RUNNER, TimingCPUSimpleUnary) {
 }
 
 TEST(CORE_OP_RUNNER, TimingCPUBinary) {
-  typedef float DType;
+  using DType = float;
 
   const char *op_name = "elemwise_add";
   const char *backward_op_name = "_backward_add";
@@ -246,7 +246,7 @@ TEST(CORE_OP_RUNNER, TimingCPUBinary) {
  * \brief Performance run dot product, which has different shaped inputs and outputs
  */
 TEST(CORE_OP_RUNNER, TimingCPUBinaryDotProduct) {
-  typedef float DType;
+  using DType = float;
 
   const char *op_name = "dot";
   const char *backward_op_name = "_backward_dot";

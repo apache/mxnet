@@ -112,7 +112,6 @@ struct SGDMomStdDnsRspDnsKernel<req, cpu> {
     DType* mom_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
     const DType momentum, const DType lr, const DType wd, const DType rescale_grad) {
-    const DType rate = lr * wd;
     const bool non_zero = (i == 0) ? prefix_sum[0] > 0
                                    : prefix_sum[i] > prefix_sum[i-1];
 
@@ -122,17 +121,13 @@ struct SGDMomStdDnsRspDnsKernel<req, cpu> {
       const index_t data_i = row_i + j;
       const DType grad = non_zero ? grad_data[grad_i + j]
                                   : static_cast<DType>(0);
+      DType grad_rescaled = rescale_grad * grad;
       if (clip_gradient >= 0.0f) {
-        mom_data[data_i] = momentum * mom_data[data_i]
-                - rate * weight_data[data_i]
-                - lr *
-                mshadow_op::clip::Map(rescale_grad * grad,
-                                      clip_gradient);
-      } else {
-        mom_data[data_i] = momentum * mom_data[data_i]
-                  - rate * weight_data[data_i]
-                  - lr * rescale_grad * grad;
+        grad_rescaled = mshadow_op::clip::Map(grad_rescaled, clip_gradient);
       }
+      grad_rescaled += wd * weight_data[data_i];
+      mom_data[data_i] *= momentum;
+      mom_data[data_i] -= lr * grad_rescaled;
       KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + mom_data[data_i]);
     }
   }
@@ -208,20 +203,16 @@ struct AdamStdDnsRspDnsKernel<req, cpu> {
     const RType grad_i = (prefix_sum[i]-1) * row_length;
     for (index_t j = 0; j < row_length; j++) {
       const index_t data_i = row_i + j;
-      const DType grad_rescaled = non_zero ? static_cast<DType>(
-                                               grad_data[grad_i + j] * rescale_grad +
-                                               weight_data[data_i] * wd)
-                                           : static_cast<DType>(weight_data[data_i] * wd);
+      DType grad_rescaled = non_zero ? static_cast<DType>(
+                                         grad_data[grad_i + j] * rescale_grad)
+                                     : static_cast<DType>(0);
       if (clip_gradient >= 0.0f) {
-        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) *
-                            clip::Map(grad_rescaled, clip_gradient);
-        var_data[data_i] =  beta2 * var_data[data_i] + (1.f - beta2) * square::Map(
-                            clip::Map(grad_rescaled, clip_gradient));
-      } else {
-        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
-        var_data[data_i] = beta2 * var_data[data_i] +
-                           (1.f - beta2) * square::Map(grad_rescaled);
+        grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
       }
+      grad_rescaled += weight_data[data_i] * wd;
+      mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
+      var_data[data_i] = beta2 * var_data[data_i] +
+                         (1.f - beta2) * square::Map(grad_rescaled);
       KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] - lr * mean_data[data_i] /
                     (square_root::Map(var_data[data_i]) + epsilon));
     }
@@ -398,6 +389,7 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
     const MultiSGDMomParam& param = dmlc::get<MultiSGDMomParam>(attrs.parsed);
+    ret.reserve(param.num_weights);
     for (int i = 0; i < param.num_weights; ++i) {
       ret.push_back(i * 3 + 2);
     }
@@ -441,6 +433,7 @@ It updates the weights using::
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
     const MultiSGDParam& param = dmlc::get<MultiSGDParam>(attrs.parsed);
+    ret.reserve(param.num_weights);
     for (int i = 0; i < param.num_weights; ++i) {
       ret.push_back(i * 3 + 2);
     }
@@ -780,7 +773,7 @@ gradient and :math:`E[g^2]_t` is the decaying average over past squared gradient
 The :math:`E[g^2]_t` is given by:
 
 .. math::
-  E[g^2]_t = \gamma * E[g^2]_{t-1} + (1-\gamma) * g_t^2
+  E[g^2]_t = \rho * E[g^2]_{t-1} + (1-\rho) * g_t^2
 
 The update step is
 
@@ -791,7 +784,7 @@ The RMSProp code follows the version in
 http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
 Tieleman & Hinton, 2012.
 
-Hinton suggests the momentum term :math:`\gamma` to be 0.9 and the learning rate
+Hinton suggests the momentum term :math:`\rho` to be 0.9 and the learning rate
 :math:`\eta` to be 0.001.
 
 )code" ADD_FILELINE)
@@ -819,19 +812,19 @@ Define :math:`E[g^2]_t` is the decaying average over past squared gradient and
 :math:`E[g]_t` is the decaying average over past gradient.
 
 .. math::
-  E[g^2]_t = \gamma_1 * E[g^2]_{t-1} + (1 - \gamma_1) * g_t^2\\
-  E[g]_t = \gamma_1 * E[g]_{t-1} + (1 - \gamma_1) * g_t\\
-  \Delta_t = \gamma_2 * \Delta_{t-1} - \frac{\eta}{\sqrt{E[g^2]_t - E[g]_t^2 + \epsilon}} g_t\\
+  E[g^2]_t = \rho * E[g^2]_{t-1} + (1 - \rho) * g_t^2\\
+  E[g]_t = \rho * E[g]_{t-1} + (1 - \rho) * g_t\\
+  momentum_t = \gamma * momentum_{t-1} - \frac{\eta}{\sqrt{E[g^2]_t - E[g]_t^2 + \epsilon}} g_t\\
 
 The update step is
 
 .. math::
-  \theta_{t+1} = \theta_t + \Delta_t
+  \theta_{t+1} = \theta_t + momentum_t
 
 The RMSPropAlex code follows the version in
 http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 
-Graves suggests the momentum term :math:`\gamma_1` to be 0.95, :math:`\gamma_2`
+Graves suggests the momentum term :math:`\rho` to be 0.95, :math:`\gamma`
 to be 0.9 and the learning rate :math:`\eta` to be 0.0001.
 )code" ADD_FILELINE)
 .set_num_inputs(5)

@@ -19,7 +19,7 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
@@ -65,7 +65,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
   bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() && n.op()->name == "Convolution") {
       const auto &param = nnvm::get<ConvolutionParam>(n.attrs.parsed);
-      if (param.kernel.ndim() == 2 && SupportMKLDNNAttr(node_attr)) {
+      if ((param.kernel.ndim() == 2 || param.kernel.ndim() == 3) &&
+           SupportMKLDNNAttr(node_attr)) {
         status_ = disable_all_ ? kSuccess : kStart;
         matched_list_.clear();
         matched_list_.push_back(&n);
@@ -97,22 +98,23 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 
     // Use status_ machine to do selection. The status_ change is
     // kStart -> kBN -> kSum -> kSuccess
+    const auto node_name = new_node.op()->name;
     switch (status_) {
       case kStart:
-        if ((!disable_conv_bn_) && new_node.op()->name == "BatchNorm") {
+        if ((!disable_conv_bn_) && node_name == "BatchNorm") {
           matched_list_.push_back(&new_node);
           status_ = kBN;
           return true;
         }
       case kBN:
-        if ((!disable_conv_sum_) && new_node.op()->name == "elemwise_add") {
+        if ((!disable_conv_sum_) && (node_name == "elemwise_add" || node_name == "_npi_add")) {
           matched_list_.push_back(&new_node);
           status_ = kSum;
           return true;
         }
       case kSum:
       default:
-        if ((!disable_conv_act_) && new_node.op()->name == "Activation") {
+        if ((!disable_conv_act_) && node_name == "Activation") {
           const ActivationParam &param =
               nnvm::get<ActivationParam>(new_node.attrs.parsed);
           if ((quantize_ && SupportQuantizedMKLDNNAct(param)) ||
@@ -122,7 +124,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
             status_ = kSuccess;
             return true;
           }
-        } else if ((!disable_conv_act_) && new_node.op()->name == "LeakyReLU") {
+        } else if ((!disable_conv_act_) && node_name == "LeakyReLU") {
           const LeakyReLUParam &param =
               nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
           if (param.act_type == leakyrelu::kLeakyReLU ||
@@ -132,7 +134,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
             status_ = kSuccess;
             return true;
           }
-        } else if ((!disable_conv_act_) && new_node.op()->name == "clip") {
+        } else if ((!disable_conv_act_) && node_name == "clip") {
           if (!(quantize_ && (status_ == kSum))) {
             // TODO(zhennan): doesn't support int8 conv+sum+relu6 at moment. To support this, we
             // need to fuse conv+sum first, and calibrate with it. Then fuse int8 relu6 into fused
@@ -180,9 +182,9 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 class SgMKLDNNConvProperty : public SubgraphProperty {
  public:
   SgMKLDNNConvProperty() {
-    disable_conv_bn_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_BN", 0);
-    disable_conv_act_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU", 0);
-    disable_conv_sum_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM", 0);
+    disable_conv_bn_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_CONV_BN", 0);
+    disable_conv_act_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_CONV_RELU", 0);
+    disable_conv_sum_ = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_FUSE_CONV_SUM", 0);
 
     disable_all_ = disable_conv_bn_ && disable_conv_act_ && disable_conv_sum_;
   }
@@ -191,7 +193,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     auto property = std::make_shared<SgMKLDNNConvProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_CONV_OPT", 0)) {
+    if (dmlc::GetEnv("MXNET_DISABLE_ONEDNN_CONV_OPT", 0)) {
       property->SetAttr<bool>("disable", true);
     }
     return property;
@@ -214,11 +216,10 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
       } else if (sub_name == "BatchNorm") {
         node_name << "bn_";
         n->attrs.dict["with_bn"] = "true";
-      } else if (sub_name == "elemwise_add") {
+      } else if (sub_name == "elemwise_add" || sub_name == "_npi_add") {
         node_name << "add_";
         n->attrs.dict["with_sum"] = "true";
         _with_sum = true;
-
       } else if (sub_name == "Activation" || sub_name == "LeakyReLU" || sub_name == "clip") {
         node_name << "act_";
         if (!_with_sum) {
@@ -258,10 +259,20 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
       std::vector<nnvm::NodeEntry> *orig_input_entries) const override {
     auto sym = n->attrs.subgraphs[0];
     std::unordered_set<const nnvm::Node *> node_sets;
+    nnvm::Node* conv_input = nullptr;
     DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->is_variable()) return;
       node_sets.insert(node.get());
-      if (node->op()->name == "elemwise_add") {
+      if (node->op()->name == "Convolution") {
+        conv_input = node->inputs[0].node.get();
+      } else if (node->op()->name == "elemwise_add" || node->op()->name == "_npi_add") {
+        if (dedup_subgraph &&
+          (conv_input == node->inputs[1].node.get() ||
+           conv_input == node->inputs[0].node.get())) {
+            n->attrs.dict["dedup_sum"] = "true";
+            n->op()->attr_parser(&(n->attrs));
+            return;
+        }
         // Make sure n is the left operand of sum, if not,
         // switch sum operands sequence to ensure that
         // the extra sum operand stays in the last of inputs.
@@ -290,5 +301,5 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // if MXNET_USE_MKLDNN == 1
+#endif  // if MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_

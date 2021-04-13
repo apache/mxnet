@@ -22,61 +22,58 @@
  * \brief GPU Implementation of power (x^k for fixed k) functions.
  */
 #include "./elemwise_binary_op.h"
+#include "./elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
 
 // reciprocal
 NNVM_REGISTER_OP(reciprocal)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::reciprocal>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"reciprocal"});
 
 NNVM_REGISTER_OP(_backward_reciprocal)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::reciprocal_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_reciprocal"});
 
 // square
 NNVM_REGISTER_OP(square)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::square>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::square>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"square"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"square"});
 
 NNVM_REGISTER_OP(_backward_square)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::square_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_square"});
 
 // sqrt
 NNVM_REGISTER_OP(sqrt)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::square_root>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::square_root>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"sqrt"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"sqrt"});
 
 NNVM_REGISTER_OP(_backward_sqrt)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::square_root_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_sqrt"});
 
 // rsqrt
 NNVM_REGISTER_OP(rsqrt)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::reciprocal_square_root>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"rsqrt"});
 
 NNVM_REGISTER_OP(_backward_rsqrt)
 .set_attr<FCompute>("FCompute<gpu>",
-  ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::reciprocal_square_root_grad> >);
+  ElemwiseBinaryRTCCompute{"backward_rsqrt"});
 
 // cbrt
 NNVM_REGISTER_OP(cbrt)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::cube_root>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::cube_root>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"cbrt"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"cbrt"});
 
 
 NNVM_REGISTER_OP(_backward_cbrt)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::cube_root_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_cbrt"});
 
 // rcbrt
 NNVM_REGISTER_OP(rcbrt)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::reciprocal_cube_root>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"rcbrt"});
 
 NNVM_REGISTER_OP(_backward_rcbrt)
 .set_attr<FCompute>("FCompute<gpu>",
-  ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::reciprocal_cube_root_grad> >);
+  ElemwiseBinaryRTCCompute{"backward_rcbrt"});
 
 }  // namespace op
 }  // namespace mxnet

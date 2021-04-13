@@ -33,4 +33,3 @@ Directory | What's in it?
 `word_lm/` | Language model trained on the Sherlock Holmes dataset achieving state of the art performance
 `bucketing/` | Language model with bucketing API with python
 `bucket_R/` | Language model with bucketing API with R
-`old/` | Language model trained with low level symbol interface (deprecated)

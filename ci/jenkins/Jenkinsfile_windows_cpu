@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 240
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -34,16 +34,14 @@ utils.assign_node_labels(utility: 'utility', windows_cpu: 'mxnetwindows-cpu')
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_windows_cpu(),
-    custom_steps.compile_windows_cpu_mkldnn(),
-    custom_steps.compile_windows_cpu_mkldnn_mkl(),
-    custom_steps.compile_windows_cpu_mkl()
+    custom_steps.compile_windows_cpu('windows_package_cpu'),
+    custom_steps.compile_windows_cpu_onednn('windows_package_cpu_onednn'),
+    custom_steps.compile_windows_cpu_onednn_mkl('windows_package_cpu_onednn_mkl'),
+    custom_steps.compile_windows_cpu_mkl('windows_package_cpu_mkl')
   ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.test_windows_python3_cpu(),
-    custom_steps.test_windows_julia07_cpu(),
-    custom_steps.test_windows_julia10_cpu()
+    custom_steps.test_windows_python3_cpu('windows_package_cpu'),
   ])
 }
 ,

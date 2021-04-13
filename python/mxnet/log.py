@@ -21,7 +21,6 @@
 # pylint: disable= protected-access, invalid-name
 """Logging utilities."""
 import logging
-import sys
 import warnings
 
 CRITICAL = logging.CRITICAL
@@ -30,8 +29,6 @@ WARNING = logging.WARNING
 INFO = logging.INFO
 DEBUG = logging.DEBUG
 NOTSET = logging.NOTSET
-
-PY3 = sys.version_info[0] == 3
 
 
 class _Formatter(logging.Formatter):
@@ -71,10 +68,7 @@ class _Formatter(logging.Formatter):
         fmt += '%(asctime)s %(process)d %(pathname)s:%(funcName)s:%(lineno)d'
         fmt += ']\x1b[0m'
         fmt += ' %(message)s'
-        if PY3:
-            self._style._fmt = fmt # pylint: disable= no-member
-        else:
-            self._fmt = fmt
+        self._style._fmt = fmt # pylint: disable= no-member
         return super(_Formatter, self).format(record)
 
 def getLogger(name=None, filename=None, filemode=None, level=WARNING):

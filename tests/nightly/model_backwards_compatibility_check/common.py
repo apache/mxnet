@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -29,12 +29,9 @@ from mxnet.gluon import nn
 import re
 from mxnet.test_utils import assert_almost_equal
 
-try:
-    cmp             # Python 2
-except NameError:
-    # See: https://docs.python.org/3.0/whatsnew/3.0.html#ordering-comparisons
-    def cmp(x, y):  # Python 3
-        return (x > y) - (x < y)
+
+def cmp(x, y):  # Python 3
+    return (x > y) - (x < y)
 
 # Set fixed random seeds.
 mx.random.seed(7)
@@ -54,18 +51,6 @@ rtol_default = 1e-5
 
 def get_model_path(model_name):
     return os.path.join(os.getcwd(), 'models', str(mxnet_version), model_name)
-
-
-def get_module_api_model_definition():
-    input = mx.symbol.Variable('data')
-    input = mx.symbol.Flatten(data=input)
-
-    fc1 = mx.symbol.FullyConnected(data=input, name='fc1', num_hidden=128)
-    act1 = mx.sym.Activation(data=fc1, name='relu1', act_type="relu")
-    fc2 = mx.symbol.FullyConnected(data=act1, name='fc2', num_hidden=2)
-    op = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
-    model = mx.mod.Module(symbol=op, context=ctx, data_names=['data'], label_names=['softmax_label'])
-    return model
 
 
 def save_inference_results(inference_results, model_name):
@@ -153,15 +138,12 @@ def create_model_folder(model_name):
 class Net(gluon.Block):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
-        with self.name_scope():
-            # layers created in name_scope will inherit name space
-            # from parent layer.
-            self.conv1 = nn.Conv2D(20, kernel_size=(5, 5))
-            self.pool1 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
-            self.conv2 = nn.Conv2D(50, kernel_size=(5, 5))
-            self.pool2 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
-            self.fc1 = nn.Dense(500)
-            self.fc2 = nn.Dense(2)
+        self.conv1 = nn.Conv2D(20, kernel_size=(5, 5))
+        self.pool1 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
+        self.conv2 = nn.Conv2D(50, kernel_size=(5, 5))
+        self.pool2 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
+        self.fc1 = nn.Dense(500)
+        self.fc2 = nn.Dense(2)
 
     def forward(self, x):
         x = self.pool1(F.tanh(self.conv1(x)))
@@ -177,15 +159,12 @@ class Net(gluon.Block):
 class HybridNet(gluon.HybridBlock):
     def __init__(self, **kwargs):
         super(HybridNet, self).__init__(**kwargs)
-        with self.name_scope():
-            # layers created in name_scope will inherit name space
-            # from parent layer.
-            self.conv1 = nn.Conv2D(20, kernel_size=(5, 5))
-            self.pool1 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
-            self.conv2 = nn.Conv2D(50, kernel_size=(5, 5))
-            self.pool2 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
-            self.fc1 = nn.Dense(500)
-            self.fc2 = nn.Dense(2)
+        self.conv1 = nn.Conv2D(20, kernel_size=(5, 5))
+        self.pool1 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
+        self.conv2 = nn.Conv2D(50, kernel_size=(5, 5))
+        self.pool2 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
+        self.fc1 = nn.Dense(500)
+        self.fc2 = nn.Dense(2)
 
     def hybrid_forward(self, F, x):
         x = self.pool1(F.tanh(self.conv1(x)))
@@ -201,14 +180,12 @@ class HybridNet(gluon.HybridBlock):
 class SimpleLSTMModel(gluon.Block):
     def __init__(self, **kwargs):
         super(SimpleLSTMModel, self).__init__(**kwargs)
-        with self.name_scope():
-            self.model = mx.gluon.nn.Sequential(prefix='')
-            with self.model.name_scope():
-                self.model.add(mx.gluon.nn.Embedding(30, 10))
-                self.model.add(mx.gluon.rnn.LSTM(20))
-                self.model.add(mx.gluon.nn.Dense(100))
-                self.model.add(mx.gluon.nn.Dropout(0.5))
-                self.model.add(mx.gluon.nn.Dense(2, flatten=True, activation='tanh'))
+        self.model = mx.gluon.nn.Sequential()
+        self.model.add(mx.gluon.nn.Embedding(30, 10))
+        self.model.add(mx.gluon.rnn.LSTM(20))
+        self.model.add(mx.gluon.nn.Dense(100))
+        self.model.add(mx.gluon.nn.Dropout(0.5))
+        self.model.add(mx.gluon.nn.Dense(2, flatten=True, activation='tanh'))
 
     def forward(self, x):
         return self.model(x)

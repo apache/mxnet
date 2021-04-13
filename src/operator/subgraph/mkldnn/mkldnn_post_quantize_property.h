@@ -18,7 +18,7 @@
  */
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_PROPERTY_H_
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <set>
 #include <string>
@@ -50,6 +50,7 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
   SgMKLDNNPostQuantizeSelector() {
     support_requantize_fusion_op_name.insert("_sg_mkldnn_conv");
     support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
+    support_requantize_fusion_op_name.insert("_contrib_quantized_npi_add");
   }
 
   bool Select(const nnvm::Node &n) override {
@@ -62,7 +63,8 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
           matched_list.push_back(&n);
           return true;
         }
-      } else if (n.op()->name == "_contrib_quantized_elemwise_add") {
+      } else if (n.op()->name == "_contrib_quantized_elemwise_add" ||
+                 n.op()->name == "_contrib_quantized_npi_add") {
         status = kStart;
         matched_list.clear();
         matched_list.push_back(&n);
@@ -121,6 +123,7 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
   SgMKLDNNPostQuantizeProperty() {
     support_requantize_fusion_op_name.insert("_sg_mkldnn_conv");
     support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
+    support_requantize_fusion_op_name.insert("_contrib_quantized_npi_add");
   }
   static SubgraphPropertyPtr Create() {
     static const std::string &name = "MKLDNN post-quantization optimization pass";
@@ -176,5 +179,5 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // if MXNET_USE_MKLDNN == 1
+#endif  // if MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_PROPERTY_H_

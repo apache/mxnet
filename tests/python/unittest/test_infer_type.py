@@ -18,12 +18,10 @@
 # pylint: skip-file
 import mxnet as mx
 import numpy as np
-from common import models, with_seed
+from common import models
 from mxnet import autograd
-from nose.tools import *
 from mxnet.test_utils import assert_almost_equal
 
-@with_seed()
 def test_infer_multiout_op():
     data = mx.nd.arange(16, dtype=np.float64).reshape((4, 4))
     data.attach_grad()
@@ -32,8 +30,8 @@ def test_infer_multiout_op():
         y = mx.nd.split(data, axis=0, num_outputs=2)
     y[0].backward()
     assert data.grad.dtype == np.float64
+    mx.nd.waitall()
 
-@with_seed()
 def test_infer_multiout_op2():
     def test_func(a):
         q, l = mx.nd.linalg.gelqf(a)
@@ -52,7 +50,3 @@ def test_infer_multiout_op2():
         test64.backward()
     assert_almost_equal(data64.grad.asnumpy(), data32.grad.asnumpy(), atol=1e-5, rtol=1e-5)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

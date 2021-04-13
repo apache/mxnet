@@ -31,6 +31,7 @@
 #include <string>
 #include <algorithm>
 #include "./dist_common.h"
+#include "../../../api/operator/op_utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "../../mshadow_op.h"
@@ -47,12 +48,12 @@ struct NumpyGammaParam : public dmlc::Parameter<NumpyGammaParam> {
   dmlc::optional<float> scale;
   std::string ctx;
   int dtype;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   DMLC_DECLARE_PARAMETER(NumpyGammaParam) {
     DMLC_DECLARE_FIELD(shape);
     DMLC_DECLARE_FIELD(scale);
     DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe("Output shape. If the given shape is, "
                 "e.g., (m, n, k), then m * n * k samples are drawn. "
                 "Default is None, in which case a single value is returned.");
@@ -61,12 +62,25 @@ struct NumpyGammaParam : public dmlc::Parameter<NumpyGammaParam> {
       .describe("Context of output, in format [xpu|xpu|xpu_pinned](n)."
                 " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
+      .add_enum("None", -1)
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)
       .add_enum("float16", mshadow::kFloat16)
-      .set_default(mshadow::kFloat32)
-      .describe("DType of the output in case this can't be inferred. "
-                "Defaults to float32 if not defined (dtype=None).");
+      .set_default(-1)
+      .describe("DType of the output in case this can't be inferred."
+                "Defaults to float64 or float32 if not defined (dtype=None),"
+                "which depends on your current default dtype.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s, scale_s, dtype_s, size_s;
+    shape_s << shape;
+    scale_s << scale;
+    dtype_s << dtype;
+    size_s << size;
+    (*dict)["shape"] = shape_s.str();
+    (*dict)["scale"] = scale_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    (*dict)["size"] = size_s.str();
   }
 };
 
@@ -119,6 +133,13 @@ struct CheckSuccessKernel {
     if (out[i] < 0) {
       flag[0] = -1.0;
     }
+  }
+};
+
+template<typename DType>
+struct StandarizeKernel {
+  MSHADOW_XINLINE static void Map(int i, DType* samples, float scale) {
+    samples[i] /= scale;
   }
 };
 
@@ -375,6 +396,81 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
           in_resample_stage = true;
           } while (failure_indicator < 0);
         });
+      });
+    });
+  }
+}
+
+template<typename xpu, int ndim, typename DType>
+inline void GammaReparamBackwardImpl(const OpContext& ctx,
+                                            const std::vector<TBlob>& inputs,
+                                            const std::vector<OpReqType>& req,
+                                            const std::vector<TBlob>& outputs,
+                                            const mxnet::TShape& new_ishape,
+                                            const mxnet::TShape& new_oshape,
+                                            const float scale) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace broadcast;
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob igrad = outputs[0].reshape(new_ishape);
+  // inputs: [grad_from_samples, alpha_tensor, samples]
+  const TBlob ograd = inputs[0].reshape(new_oshape);
+  const TBlob alpha = inputs[1].reshape(new_ishape);
+  TBlob samples = inputs[2].reshape(new_oshape);
+  size_t workspace_size =
+      ReduceWorkspaceSize(s, igrad.shape_, req[0], ograd.shape_, sizeof(DType));
+  // Convert samples to standard gamma
+  Kernel<op_with_req<mshadow_op::div, kWriteTo>, xpu>::Launch(
+    s, samples.Size(), samples.dptr<DType>(), samples.dptr<DType>(), DType(scale));
+  Tensor<xpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+  Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::gamma_implicit_grad>(
+      s, igrad, req[0], workspace, ograd, alpha, samples);
+  Kernel<op_with_req<mshadow_op::mul, kWriteTo>, xpu>::Launch(
+    s, igrad.Size(), igrad.dptr<DType>(), igrad.dptr<DType>(), DType(scale));
+  // Convert samples back, otherwise the output would be corrupted.
+  Kernel<op_with_req<mshadow_op::mul, kWriteTo>, xpu>::Launch(
+    s, samples.Size(), samples.dptr<DType>(), samples.dptr<DType>(), DType(scale));
+}
+
+// Allow gamma sampling to be differentiable,
+// using implicit reparameterization gradient:
+// -(d/d\alpha cdf(x;alpha)) / pdf(x;alpha)
+template<typename xpu>
+void NumpyGammaGrad(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  // skip kernel launch for zero-size tensors
+  if (inputs[0].shape_.Size() == 0U) {
+    return;
+  }
+  // [scalar, scalar] case
+  if (outputs.size() == 0U) {
+    return;
+  }
+  const NumpyGammaParam &param = nnvm::get<NumpyGammaParam>(attrs.parsed);
+  // [tensor tensor] case, not supported.
+  if (inputs.size() == 5U) {
+    LOG(FATAL) << "ValueError: two tensor case not supported";
+  }
+
+  // [tensor, scalar] case, only scalar scale is supported.
+  if (inputs.size() == 3U) {
+    if (param.shape.has_value()) {
+      LOG(FATAL) << "ValueError: tensor scale case not supported";
+    }
+    mxnet::TShape new_ishape, new_oshape;
+    int ndim = FillShape(outputs[0].shape_, outputs[0].shape_, inputs[0].shape_,
+                         &new_ishape, &new_ishape, &new_oshape);
+    auto scale = param.scale.value();
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
+        GammaReparamBackwardImpl<xpu, NDim, DType>(
+          ctx, inputs, req, outputs, new_ishape, new_oshape, scale);
       });
     });
   }

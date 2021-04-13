@@ -29,8 +29,8 @@ from benchmark.opperf.utils.op_registry_utils import get_all_rearrange_operators
 """
 
 
-def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype) for all the
+def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
+    """Runs benchmarks with the given context, precision (dtype), and input data size (int64_tensor) for all the
     rearrange operators in MXNet.
 
     Parameters
@@ -41,6 +41,8 @@ def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -55,5 +57,5 @@ def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
     mx_rearrange_ops = get_all_rearrange_operators()
 
     # Run benchmarks
-    mx_rearrange_op_results = run_op_benchmarks(mx_rearrange_ops, dtype, ctx, profiler, warmup, runs)
+    mx_rearrange_op_results = run_op_benchmarks(mx_rearrange_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return mx_rearrange_op_results

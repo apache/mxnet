@@ -56,8 +56,8 @@
  */
 
 #include "./np_einsum_op-inl.h"
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 namespace mxnet {
 namespace op {
@@ -342,6 +342,7 @@ NNVM_REGISTER_OP(_npi_einsum)
   [](const nnvm::NodeAttrs& attrs) {
     int num_args = dmlc::get<NumpyEinsumParam>(attrs.parsed).num_args;
     std::vector<std::string> ret;
+    ret.reserve(num_args);
     for (int i = 0; i < num_args; i++) {
       ret.push_back(std::string("arg") + std::to_string(i));
     }

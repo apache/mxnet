@@ -16,6 +16,8 @@
 # under the License.
 
 import os
+from mxnet.test_utils import environment
+import pytest
 
 try:
     reload         # Python 2
@@ -23,19 +25,13 @@ except NameError:  # Python 3
     from importlib import reload
 
 
+@pytest.mark.skip(reason='test needs improving, current use of reload(mxnet) is ineffective')
 def test_engine_import():
     import mxnet
-        
-    engine_types = ['', 'NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']
+    # Temporarily add an illegal entry (that is not caught) to show how the test needs improving
+    engine_types = [None, 'NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice', 'BogusEngine']
 
     for type in engine_types:
-        if type:
-            os.environ['MXNET_ENGINE_TYPE'] = type
-        else:
-            os.environ.pop('MXNET_ENGINE_TYPE', None)
-        reload(mxnet)
+        with environment('MXNET_ENGINE_TYPE', type):
+            reload(mxnet)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -17,11 +17,10 @@
 
 # coding: utf-8
 """Information about mxnet."""
-from __future__ import absolute_import
 import os
 import platform
 import logging
-
+import sys
 
 def find_lib_path(prefix='libmxnet'):
     """Find MXNet dynamic library files.
@@ -33,6 +32,7 @@ def find_lib_path(prefix='libmxnet'):
     """
     lib_from_env = os.environ.get('MXNET_LIBRARY_PATH')
     if lib_from_env:
+        lib_from_env = lib_from_env.replace('libmxnet', prefix)
         if os.path.isfile(lib_from_env):
             if not os.path.isabs(lib_from_env):
                 logging.warning("MXNET_LIBRARY_PATH should be an absolute path, instead of: %s",
@@ -60,7 +60,7 @@ def find_lib_path(prefix='libmxnet'):
     elif os.name == "posix" and os.environ.get('LD_LIBRARY_PATH', None):
         dll_path[0:0] = [p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")]
     if os.name == 'nt':
-        os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ['PATH']
+        os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ.get('PATH', '')
         dll_path = [os.path.join(p, prefix + '.dll') for p in dll_path]
     elif platform.system() == 'Darwin':
         dll_path = [os.path.join(p, prefix + '.dylib') for p in dll_path] + \
@@ -74,6 +74,11 @@ def find_lib_path(prefix='libmxnet'):
                            'List of candidates:\n' + str('\n'.join(dll_path)))
     if os.name == 'nt':
         os.environ['PATH'] = os.environ['PATH'] + ';' + os.path.dirname(lib_path[0])
+        if sys.version_info >= (3, 8):
+            if 'CUDA_PATH' not in os.environ:
+                raise RuntimeError('Cannot find the env CUDA_PATH.Please set CUDA_PATH env with cuda path')
+            os.add_dll_directory(os.path.dirname(lib_path[0]))
+            os.add_dll_directory(os.path.join(os.environ['CUDA_PATH'], 'bin'))
     return lib_path
 
 def find_include_path():
@@ -142,4 +147,4 @@ def find_conf_path(prefix='tvmop'):
 
 
 # current version
-__version__ = "1.6.0"
+__version__ = "2.0.0"

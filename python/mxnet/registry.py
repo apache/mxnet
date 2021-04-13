@@ -19,7 +19,6 @@
 # pylint: disable=no-member
 
 """Registry for serializable objects."""
-from __future__ import absolute_import
 
 import json
 import warnings

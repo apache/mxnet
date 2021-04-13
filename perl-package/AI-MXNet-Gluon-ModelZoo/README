@@ -1,7 +1,0 @@
-This archive contains the distribution AI-MXNet-Gluon-ModelZoo,
-version 1.33:
-
-  Perl interface to MXNet Gluon ModelZoo, a collection of pretrained machine learning models for computer vision.
-
-This library is licensed under Apache 2.0 license https://www.apache.org/licenses/LICENSE-2.0
-

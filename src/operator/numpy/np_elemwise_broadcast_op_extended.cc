@@ -29,21 +29,19 @@
 namespace mxnet {
 namespace op {
 
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)              \
-  NNVM_REGISTER_OP(name)                                            \
-  .set_num_inputs(1)                                                \
-  .set_num_outputs(1)                                               \
-  .set_attr_parser([](NodeAttrs* attrs) {                           \
-      attrs->parsed = std::stod(attrs->dict["scalar"]);             \
-    })                                                              \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>) \
-  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)  \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
-    [](const NodeAttrs& attrs){                                     \
-      return std::vector<std::pair<int, int> >{{0, 0}};             \
-    })                                                              \
-  .add_argument("data", "NDArray-or-Symbol", "source input")        \
-  .add_argument("scalar", "float", "scalar input")
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)                    \
+  NNVM_REGISTER_OP(name)                                                  \
+  .set_num_inputs(1)                                                      \
+  .set_num_outputs(1)                                                     \
+  .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)                   \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)       \
+  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)        \
+  .set_attr<FResourceRequest>("FResourceRequest",                         \
+    [](const NodeAttrs& attrs) {                                          \
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};   \
+    })                                                                    \
+  .add_argument("data", "NDArray-or-Symbol", "source input")              \
+  .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_copysign)
 .describe(R"code()code" ADD_FILELINE)
@@ -64,6 +62,39 @@ NNVM_REGISTER_OP(_backward_npi_copysign)
   })
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::copysign_grad,
                                                                   mshadow_op::copysign_rgrad>);
+
+NNVM_REGISTER_OP(_npi_gcd)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+[](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"lhs", "rhs"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<2, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+[](const NodeAttrs& attrs){
+     return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
+})
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastIntCompute<cpu, mshadow_op::gcd>)
+.add_argument("lhs", "NDArray-or-Symbol", "First input to the function")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input to the function");
+
+NNVM_REGISTER_OP(_npi_gcd_scalar)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("data", "NDArray-or-Symbol", "source input")
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::gcd>);
 
 NNVM_REGISTER_OP(_npi_lcm)
 .set_num_inputs(2)
@@ -86,9 +117,7 @@ NNVM_REGISTER_OP(_npi_lcm)
 NNVM_REGISTER_OP(_npi_lcm_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
-  })
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
@@ -97,8 +126,8 @@ NNVM_REGISTER_OP(_npi_lcm_scalar)
   })
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "source input")
-.add_argument("scalar", "int", "scalar input")
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::lcm>);
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::lcm>);
 
 NNVM_REGISTER_OP(_npi_bitwise_and)
 .set_num_inputs(2)
@@ -121,9 +150,7 @@ NNVM_REGISTER_OP(_npi_bitwise_and)
 NNVM_REGISTER_OP(_npi_bitwise_and_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
-  })
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
@@ -132,7 +159,7 @@ NNVM_REGISTER_OP(_npi_bitwise_and_scalar)
   })
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "source input")
-.add_argument("scalar", "int", "scalar input")
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::bitwise_and>);
 
 NNVM_REGISTER_OP(_npi_bitwise_xor)
@@ -174,9 +201,7 @@ NNVM_REGISTER_OP(_npi_bitwise_or)
 NNVM_REGISTER_OP(_npi_bitwise_xor_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
-  })
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
@@ -185,15 +210,13 @@ NNVM_REGISTER_OP(_npi_bitwise_xor_scalar)
   })
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "source input")
-.add_argument("scalar", "int", "scalar input")
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::bitwise_xor>);
 
 NNVM_REGISTER_OP(_npi_bitwise_or_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
-  })
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
@@ -202,7 +225,7 @@ NNVM_REGISTER_OP(_npi_bitwise_or_scalar)
   })
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "source input")
-.add_argument("scalar", "int", "scalar input")
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeInt<cpu, mshadow_op::bitwise_or>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_copysign_scalar)
@@ -211,15 +234,11 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_copysign_scalar)
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rcopysign_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rcopysign>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_rcopysign_scalar"});
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_backward_npi_copysign_scalar)
 .set_attr<FCompute>("FCompute<cpu>",
                     BinaryScalarOp::Backward<cpu, mshadow_op::copysign_grad>);
-
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_backward_npi_rcopysign_scalar)
-.set_attr<FCompute>("FCompute<cpu>",
-                    BinaryScalarOp::Backward<cpu, mshadow_op::rcopysign_grad>);
 
 inline bool Arctan2OpType(const nnvm::NodeAttrs& attrs,
                           std::vector<int>* in_attrs,
@@ -274,14 +293,14 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rarctan2_scalar)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_rarctan2_scalar"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_arctan2_scalar)
-.add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<FCompute>("FCompute<cpu>",
                     BinaryScalarOp::Backward<cpu, mshadow_op::arctan2_grad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rarctan2_scalar)
-.add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<FCompute>("FCompute<cpu>",
                     BinaryScalarOp::Backward<cpu, mshadow_op::arctan2_rgrad>);
 
@@ -362,13 +381,13 @@ NNVM_REGISTER_OP(_backward_npi_ldexp)
                                                                   mshadow_op::ldexp_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_ldexp_scalar)
-.add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::ldexp_grad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rldexp_scalar)
-.add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::rldexp_grad>);
 
 }  // namespace op

@@ -106,3 +106,25 @@ int MXRemoveSubgraphPropertyOpNamesV2(const char* prop_name) {
   }
   API_END();
 }
+
+int MXGetEnv(const char* name,
+             const char** value) {
+  API_BEGIN();
+  *value = getenv(name);
+  API_END();
+}
+
+int MXSetEnv(const char* name,
+             const char* value) {
+  API_BEGIN();
+#ifdef _WIN32
+  auto value_arg = (value == nullptr) ? "" : value;
+  _putenv_s(name, value_arg);
+#else
+  if (value == nullptr)
+    unsetenv(name);
+  else
+    setenv(name, value, 1);
+#endif
+  API_END();
+}

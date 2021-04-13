@@ -29,7 +29,7 @@
 #include <mshadow/cuda/reduce.cuh>
 #include <algorithm>
 #include <vector>
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 #include "../mxnet_op.h"
 
 #define DeformablePSROIPOOLING_CUDA_CHECK(condition) \
@@ -183,7 +183,7 @@ namespace cuda {
                    no_trans, trans_std, sample_per_part, output_dim,
                    group_size, part_size, num_classes,
                    channels_each_class, top_data, top_count_data);
-    DeformablePSROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
+    DeformablePSROIPOOLING_CUDA_CHECK(cudaGetLastError());
   }
 
 
@@ -354,7 +354,7 @@ namespace cuda {
                     bottom_data, bottom_rois, bottom_trans,
                     no_trans, trans_std, sample_per_part, group_size,
                     part_size, num_classes, channels_each_class);
-    DeformablePSROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
+    DeformablePSROIPOOLING_CUDA_CHECK(cudaGetLastError());
   }
 
 }  // namespace cuda

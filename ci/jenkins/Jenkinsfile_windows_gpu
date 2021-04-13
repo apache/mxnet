@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 240
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -34,13 +34,13 @@ utils.assign_node_labels(utility: 'utility', windows_cpu: 'mxnetwindows-cpu', wi
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_windows_gpu(),
-    custom_steps.compile_windows_gpu_mkldnn()
+    custom_steps.compile_windows_gpu('windows_package_gpu'),
+    custom_steps.compile_windows_gpu_onednn('windows_package_gpu_onednn')
   ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.test_windows_python3_gpu(),
-    custom_steps.test_windows_python3_gpu_mkldnn()
+    custom_steps.test_windows_python3_gpu('windows_package_gpu'),
+    custom_steps.test_windows_python3_gpu_onednn('windows_package_gpu_onednn')
   ])
 }
 ,

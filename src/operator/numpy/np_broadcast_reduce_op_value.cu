@@ -26,28 +26,28 @@
 
 namespace mxnet {
 namespace op {
-NNVM_REGISTER_OP(_np_sum)
+NNVM_REGISTER_OP(_npi_sum)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true>);
 
-NNVM_REGISTER_OP(_backward_np_sum)
+NNVM_REGISTER_OP(_backward_npi_sum)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu>);
 
-NNVM_REGISTER_OP(_np_max)
+NNVM_REGISTER_OP(_npi_max)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeCompute<gpu, mshadow::red::maximum>);
 
-NNVM_REGISTER_OP(_backward_np_max)
+NNVM_REGISTER_OP(_backward_npi_max)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeBackward<gpu, mshadow_op::eq>);
 
-NNVM_REGISTER_OP(_np_min)
+NNVM_REGISTER_OP(_npi_min)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeCompute<gpu, mshadow::red::minimum>);
 
-NNVM_REGISTER_OP(_backward_np_min)
+NNVM_REGISTER_OP(_backward_npi_min)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeBackward<gpu, mshadow_op::eq>);
 
-NNVM_REGISTER_OP(_np_prod)
+NNVM_REGISTER_OP(_npi_prod)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::product, true>);
 
-NNVM_REGISTER_OP(_backward_np_prod)
+NNVM_REGISTER_OP(_backward_npi_prod)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
 
 NNVM_REGISTER_OP(_npi_average)

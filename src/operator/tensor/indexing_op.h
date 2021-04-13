@@ -65,32 +65,9 @@ enum QuantizedEmbeddingOpResource {kTempSpace};
 }  // namespace quantized_embedding
 
 
-struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
-  int input_dim;
-  int output_dim;
-  int dtype;
-  bool deterministic;
-  DMLC_DECLARE_PARAMETER(SparseEmbeddingParam) {
-    DMLC_DECLARE_FIELD(input_dim).set_lower_bound(1)
-    .describe("Vocabulary size of the input indices.");
-    DMLC_DECLARE_FIELD(output_dim).set_lower_bound(1)
-    .describe("Dimension of the embedding vectors.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .add_enum("uint8", mshadow::kUint8)
-    .add_enum("int32", mshadow::kInt32)
-    .describe("Data type of weight.");
-    DMLC_DECLARE_FIELD(deterministic).set_default(false)
-    .describe("Force the backward gradient calculation to be executed based on a deterministic"
-               " order at the cost of slower speed.");
-  }
-};
-
 struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
-  int input_dim;
-  int output_dim;
+  index_t input_dim;
+  index_t output_dim;
   int dtype;
   bool sparse_grad;
   DMLC_DECLARE_PARAMETER(EmbeddingParam) {
@@ -193,52 +170,6 @@ inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-// storage type inference function for Embedding
-inline bool EmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
-                                          const int dev_mask,
-                                          DispatchMode* dispatch_mode,
-                                          std::vector<int>* in_attrs,
-                                          std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  const int& data_stype = in_attrs->at(embedding::kData);
-  const int& weight_stype = in_attrs->at(embedding::kWeight);
-  int& out_stype = out_attrs->at(embedding::kOut);
-  bool dispatched = false;
-  if (!dispatched && data_stype == kDefaultStorage && weight_stype == kDefaultStorage) {
-    // dns, dns -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
-  }
-  if (!dispatched && data_stype == kDefaultStorage && weight_stype == kRowSparseStorage) {
-    // dns, rsp -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
-  }
-  return dispatched;
-}
-
-// storage type inference function for SparseEmbedding
-inline bool SparseEmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
-                                                const int dev_mask,
-                                                DispatchMode* dispatch_mode,
-                                                std::vector<int>* in_attrs,
-                                                std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  const int& data_stype = in_attrs->at(embedding::kData);
-  const int& weight_stype = in_attrs->at(embedding::kWeight);
-  int& out_stype = out_attrs->at(embedding::kOut);
-  bool dispatched = false;
-  if (!dispatched && data_stype == kDefaultStorage &&
-      (weight_stype == kRowSparseStorage || weight_stype == kDefaultStorage)) {
-    // dns, rsp/dns -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
-  }
-  return dispatched;
-}
-
 // storage type inference function for _backward_Embedding
 inline bool EmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
                                            const int dev_mask,
@@ -272,36 +203,6 @@ inline bool EmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
-// storage type inference function for _backward_SparseEmbedding
-inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
-                                                 const int dev_mask,
-                                                 DispatchMode* dispatch_mode,
-                                                 std::vector<int>* in_attrs,
-                                                 std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 2U);
-  const int ograd_stype = in_attrs->at(0);
-  const int data_stype = in_attrs->at(1);
-  int& data_grad_stype = out_attrs->at(0);
-  int& weight_grad_stype = out_attrs->at(1);
-  bool dispatched = false;
-  if (!dispatched && ograd_stype == kDefaultStorage &&
-      data_stype == kDefaultStorage) {
-    // dns, dns -> dns, rsp
-    if (type_assign(&data_grad_stype, kDefaultStorage) &&
-        type_assign(&weight_grad_stype, kRowSparseStorage) &&
-        dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx)) {
-      dispatched = true;
-    }
-  }
-  const SparseEmbeddingParam& param = nnvm::get<SparseEmbeddingParam>(attrs.parsed);
-  if (param.deterministic) {
-    common::LogOnce("_SparseEmbedding_backward with deterministic=True may reduce "
-                    "speed significantly");
-  }
-  return dispatched;
-}
-
 /*! \brief name the struct TakeNonzeroAxis for general take when
  *         axis is not zero, use TakeZeroAxisGPU or TakeZeroAxisCPU for axis zero
  */
@@ -321,17 +222,17 @@ struct TakeNonzeroAxis {
    */
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
-                                  const IType* idx, const int out_prev_stride,
-                                  const int in_prev_stride, const int in_stride,
+                                  const IType* idx, const index_t out_prev_stride,
+                                  const index_t in_prev_stride, const index_t in_stride,
                                   const int in_ndims, const int out_ndims, const int idx_ndims,
                                   const int axis_dim, const int axis) {
     // i is the global flattened index in the output
-    const int64_t out_head_index = i / out_prev_stride;
-    const int64_t out_rest_index = i % out_prev_stride;
-    const int64_t out_mid_index = out_rest_index / in_stride;
-    const int64_t out_tail_index = (axis == in_ndims - 1) ?
+    const index_t out_head_index = i / out_prev_stride;
+    const index_t out_rest_index = i % out_prev_stride;
+    const index_t out_mid_index = out_rest_index / in_stride;
+    const index_t out_tail_index = (axis == in_ndims - 1) ?
                                    0 : (out_rest_index % in_stride);
-    int64_t idx_index = static_cast<int64_t>(idx[out_mid_index]);
+    index_t idx_index = static_cast<index_t>(idx[out_mid_index]);
     if (clip) {
       idx_index = (idx_index < 0) ? 0 : idx_index;
       idx_index = (idx_index > axis_dim - 1) ? (axis_dim - 1) : idx_index;
@@ -339,9 +240,9 @@ struct TakeNonzeroAxis {
       idx_index %= axis_dim;
       idx_index += (idx_index < 0) ? axis_dim : 0;
     }
-    const int64_t in_tail_index = out_tail_index;
-    const int64_t in_head_index = out_head_index;
-    int64_t in_src_index = in_tail_index + idx_index * in_stride;
+    const index_t in_tail_index = out_tail_index;
+    const index_t in_head_index = out_head_index;
+    index_t in_src_index = in_tail_index + idx_index * in_stride;
     in_src_index += in_head_index * in_prev_stride;
     out_data[i] = in_data[in_src_index];
   }
@@ -468,38 +369,6 @@ void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
                                  req[embedding::kOut], outputs[embedding::kOut]);
 }
 
-template<typename xpu>
-void SparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs) {
-  CHECK_EQ(req[embedding::kOut], kWriteTo);
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 1U);
-  const NDArray& data = inputs[embedding::kData];
-  const NDArray& weight = inputs[embedding::kWeight];
-  const NDArray& out = outputs[embedding::kOut];
-  CHECK_EQ(weight.shape().ndim(), 2U)
-          << "Embedding layer expects its weight to be two-dimensional. "
-          << weight.shape().ndim() << " dimensional input is given instead";
-  const auto data_stype = data.storage_type();
-  const auto weight_stype = weight.storage_type();
-  const auto out_stype = out.storage_type();
-  if (data_stype == kDefaultStorage && weight_stype == kRowSparseStorage &&
-      out_stype == kDefaultStorage) {
-    // dns, rsp -> dns
-    SparseEmbeddingOpForwardRspImpl<xpu>(ctx, data.data(), weight, req[0], out.data());
-  } else if (data_stype == kDefaultStorage && weight_stype == kDefaultStorage &&
-             out_stype == kDefaultStorage) {
-    // dns, dns -> dns
-    EmbeddingOpForwardDnsImpl<xpu>(ctx.get_stream<xpu>(), data.data(), weight.data(),
-                                   req[0], out.data());
-  } else {
-    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
-  }
-}
-
 /*! \brief cast to type and clip to range [0, K - 1]
  */
 struct tcast_clip {
@@ -531,20 +400,38 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& oshape = inputs[0].shape_;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[1].type_flag_, DType, {
+
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
+  if (!safe_acc && outputs[1].type_flag_ == mshadow::kFloat16) {
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for EmbeddingOpBackward "
+                    "with float16 inputs. "
+                    "See https://mxnet.apache.org/api/faq/env_var "
+                    "for more details.");
+  }
+  MXNET_REAL_ACC_TYPE_SWITCH(outputs[1].type_flag_, DType, AType, {
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {
       Tensor < xpu, 1, IType > data = inputs[1].get_with_shape<xpu, 1, IType>(
         Shape1(ishape.ProdShape(0, ishape.ndim())), s);
       Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
-      Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
+        Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
       Tensor<xpu, 2, DType> grad_in = outputs[1].get<xpu, 2, DType>(s);
-
 
       if (req[embedding::kWeight] == kWriteTo || req[embedding::kWeight] == kAddTo) {
         if (req[embedding::kWeight] == kWriteTo) {
           grad_in = scalar<DType>(0.0f);
         }
-        AddTakeGrad(grad_in, data, grad_out);
+        if (safe_acc) {
+          // Temporary storage for safe accumulation
+          size_t temp_space_size = grad_in.size(0) * grad_in.size(1) * sizeof(AType);
+          Tensor<xpu, 1, char> temp_space =
+            ctx.requested[embedding::kTempSpace].get_space_typed<xpu, 1, char>(
+              Shape1(temp_space_size), s);
+          Tensor<xpu, 2, AType> temp_grad_in(reinterpret_cast<AType*>(temp_space.dptr_),
+              grad_in.shape_, s);
+          AddTakeGrad(grad_in, temp_grad_in, data, grad_out);
+        } else {
+          AddTakeGrad(grad_in, data, grad_out);
+        }
       } else {
         LOG(FATAL) << "wrong req";
       }
@@ -627,32 +514,6 @@ void EmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
   }
 }
 
-template<typename xpu>
-void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
-                                 const OpContext& ctx,
-                                 const std::vector<NDArray>& inputs,
-                                 const std::vector<OpReqType>& req,
-                                 const std::vector<NDArray>& outputs) {
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 2U);
-  const NDArray& weight_grad = outputs[1];
-  const NDArray& ograd = inputs[0];
-  const NDArray& data = inputs[1];
-  // check dtype
-  CHECK_EQ(weight_grad.dtype(), ograd.dtype());
-  // check req
-  CHECK_EQ(req[embedding::kData], kNullOp)
-          << "SparseEmbedding layer doesn't support calculate data gradient";
-  const SparseEmbeddingParam& param = nnvm::get<SparseEmbeddingParam>(attrs.parsed);
-  if (data.storage_type() == kDefaultStorage && ograd.storage_type() == kDefaultStorage &&
-      weight_grad.storage_type() == kRowSparseStorage) {
-    SparseEmbeddingOpBackwardRspImpl<xpu>(param.deterministic, ctx, ograd.data(), data.data(),
-                                          req[embedding::kWeight], weight_grad);
-  } else {
-    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
-  }
-}
-
 namespace take_ {  // to avoid name conflict
 enum TakeOpInputs {kArr, kIdx};
 enum TakeOpOutputs {kOut};
@@ -679,6 +540,27 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
               " they are replaced by the index that addresses the last element along an axis."
               " \"wrap\" means to wrap around."
               " \"raise\" means to raise an error when index out of range.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, mode_s;
+    axis_s << axis;
+    mode_s << mode;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["mode"] = mode_s.str();
+    switch (mode) {
+      case take_::kRaise:
+        (*dict)["mode"] = "raise";
+        break;
+      case take_::kClip:
+        (*dict)["mode"] = "clip";
+        break;
+      case take_::kWrap:
+        (*dict)["mode"] = "wrap";
+        break;
+      default:
+        (*dict)["mode"] = mode_s.str();
+    }
   }
 };
 
@@ -832,7 +714,48 @@ struct TakeGradGeneralKernel {
   }
 };
 
-template<bool clip = true>
+struct TakeGradGeneralKernelSafeAccumulation {
+  /*!
+   * \brief Map function for general case of take grad
+   * \param tid           global thread id
+   * \param arr_grad      ptr to in_grad
+   * \param temp          ptr to temporal space to perform accumulation
+   * \param ograd         ptr to out_grad
+   * \param src_indptr    ptr to indptr to src indices
+   * \param original_idx  ptr to original indices of the inputs
+   * \param in_strides    strides of inputs
+   * \param out_strides   strides of outputs
+   * \param in_ndims      # of dims of input tensor
+   * \param out_ndims     # of dims of output tensor
+   * \param idx_ndims     # of dims of indices tensor
+   * \param axis_dim      dim size of the axis dimension
+   * \param axis          axis id
+   */
+  template<typename DType, typename IType, typename AType>
+  MSHADOW_XINLINE static void Map(int tid, DType* arr_grad, AType* temp,
+                                  const DType* ograd,
+                                  const IType* src_indptr, const IType* original_idx,
+                                  mshadow::Shape<10> in_strides, mshadow::Shape<10> out_strides,
+                                  const int in_ndims, const int out_ndims, const int idx_ndims,
+                                  const int axis, const int K) {
+    const int in_head_index = (axis == 0) ? 0 : tid / in_strides[axis - 1];
+    const int in_rest_index = (axis == 0) ? tid : tid % in_strides[axis - 1];
+    const int in_mid_index = in_rest_index / in_strides[axis];
+    const int in_tail_index = (axis == in_ndims - 1) ?
+                              0 : (in_rest_index % in_strides[axis]);
+    temp[tid] = static_cast<AType>(arr_grad[tid]);
+    for (IType i = src_indptr[in_mid_index]; i < src_indptr[in_mid_index + 1]; ++i) {
+      int out_mid_index = original_idx[i];
+      out_mid_index = (out_mid_index < 0) ? out_mid_index + K : out_mid_index;
+      int target = in_tail_index + out_mid_index * in_strides[axis];
+      target += (axis == 0) ? 0 : in_head_index * out_strides[axis - 1];
+      temp[tid] += ograd[target];
+    }
+    arr_grad[tid] = temp[tid];
+  }
+};
+
+template<bool clip = true, bool safe_acc = false, typename AType>
 void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
                         const OpContext& ctx,
                         const TBlob& arr,
@@ -851,14 +774,23 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
     size_t temp_storage_bytes = SortByKeyWorkspaceSize<int, int, cpu>(idxshape.Size());
     size_t original_idx_bytes = idxshape.Size() * sizeof(int);
     size_t src_indptr_bytes = (arrshape[axis] + 1) * sizeof(int);
-    size_t workspace_bytes = src_indptr_bytes + 2 * original_idx_bytes + temp_storage_bytes;
+    size_t temp_accumulation_arrgrad_bytes = 0;
+    if (safe_acc) {
+        temp_accumulation_arrgrad_bytes = arr.Size() * sizeof(AType);
+    }
+    size_t workspace_bytes = src_indptr_bytes + 2 * original_idx_bytes +
+        temp_storage_bytes + temp_accumulation_arrgrad_bytes;
     Tensor<cpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<cpu, 1, char>(Shape1(workspace_bytes), s);
-    int* sorted_idx_ptr = reinterpret_cast<int*>(workspace.dptr_);
-    int* original_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + original_idx_bytes);
-    src_indptr_ptr = reinterpret_cast<int*>(workspace.dptr_ + 2 * original_idx_bytes);
+    AType* temp_accum_arrgrad_ptr = reinterpret_cast<AType*>(workspace.dptr_);
+    int* sorted_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + temp_accumulation_arrgrad_bytes);
+    int* original_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + original_idx_bytes +
+                                                   temp_accumulation_arrgrad_bytes);
+    src_indptr_ptr = reinterpret_cast<int*>(workspace.dptr_ + 2 * original_idx_bytes +
+                                            temp_accumulation_arrgrad_bytes);
     Tensor<cpu, 1, char> temp_storage(
-      workspace.dptr_ + 2 * original_idx_bytes + src_indptr_bytes, Shape1(temp_storage_bytes), s);
+      workspace.dptr_ + 2 * original_idx_bytes + src_indptr_bytes + temp_accumulation_arrgrad_bytes,
+      Shape1(temp_storage_bytes), s);
     // Reset indptr to zero
     Kernel<set_zero, cpu>::Launch(s, arrshape[axis] + 1, src_indptr_ptr);
     // Fill original_idx
@@ -895,16 +827,23 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
       out_strides[i] = stride;
     }
     MSHADOW_TYPE_SWITCH(arr.type_flag_, DType, {
-      Kernel<TakeGradGeneralKernel, cpu>::Launch(
-        s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(), src_indptr_ptr,
-        original_idx_ptr, in_strides, out_strides,
-        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
+      if (safe_acc) {
+        Kernel<TakeGradGeneralKernelSafeAccumulation, cpu>::Launch(
+          s, arrshape.Size(), arr.dptr<DType>(), temp_accum_arrgrad_ptr, ograd.dptr<DType>(),
+          src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
+          arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
+      } else {
+        Kernel<TakeGradGeneralKernel, cpu>::Launch(
+          s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(),
+          src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
+          arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
+      }
     });
   });
 }
 
 #ifdef __CUDACC__
-template<bool clip = true>
+template<bool clip = true, bool safe_acc = false, typename AType>
 void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
                         const OpContext& ctx,
                         const TBlob& arr,
@@ -944,13 +883,23 @@ void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
     temp_storage_bytes = max(temp_storage_bytes, histo_temp_storage_bytes);
     size_t original_idx_bytes = idxshape.Size() * sizeof(int);
     size_t src_indptr_bytes = (arrshape[axis] + 1) * sizeof(int);
-    size_t workspace_bytes = src_indptr_bytes + 2 * original_idx_bytes + temp_storage_bytes;
+    size_t temp_accumulation_igrad_bytes = 0;
+    if (safe_acc) {
+        temp_accumulation_igrad_bytes = arr.Size() * sizeof(AType);
+    }
+    size_t workspace_bytes = src_indptr_bytes + 2 * original_idx_bytes +
+        temp_storage_bytes + temp_accumulation_igrad_bytes;
     Tensor<gpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_bytes), s);
-    sorted_idx_ptr = reinterpret_cast<int*>(workspace.dptr_);
-    int* original_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + original_idx_bytes);
-    src_indptr_ptr = reinterpret_cast<int*>(workspace.dptr_ + 2 * original_idx_bytes);
-    temp_storage_ptr = workspace.dptr_ + 2 * original_idx_bytes + src_indptr_bytes;
+    AType* temp_accum_igrad_ptr = reinterpret_cast<AType*>(workspace.dptr_);
+    sorted_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + temp_accumulation_igrad_bytes);
+    int* original_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + original_idx_bytes +
+                                                   temp_accumulation_igrad_bytes);
+    src_indptr_ptr = reinterpret_cast<int*>(workspace.dptr_ + 2 * original_idx_bytes +
+                                            temp_accumulation_igrad_bytes);
+    temp_storage_ptr = workspace.dptr_ + 2 * original_idx_bytes + src_indptr_bytes +
+                       temp_accumulation_igrad_bytes;
+
     // Reset indptr to zero
     Kernel<set_zero, gpu>::Launch(s, arrshape[axis] + 1, src_indptr_ptr);
     // Fill original_idx
@@ -999,10 +948,19 @@ void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
       out_strides[i] = stride;
     }
     MSHADOW_TYPE_SWITCH(arr.type_flag_, DType, {
-      Kernel<TakeGradGeneralKernel, gpu>::Launch(
-        s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(),
-        src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
-        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
+      if (safe_acc) {
+          Kernel<TakeGradGeneralKernelSafeAccumulation, gpu>::Launch(
+            s, arrshape.Size(), arr.dptr<DType>(), temp_accum_igrad_ptr, ograd.dptr<DType>(),
+            src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
+            arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis,
+            static_cast<int>(arrshape[axis]));
+      } else {
+          Kernel<TakeGradGeneralKernel, gpu>::Launch(
+            s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(),
+            src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
+            arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis,
+            static_cast<int>(arrshape[axis]));
+      }
     });
   });
 }
@@ -1027,7 +985,14 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
   // grad_in is the gradient of the inputs in the feed-forward
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
+  if (!safe_acc && outputs[0].type_flag_ == mshadow::kFloat16) {
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for TakeOpBackward "
+                    "with float16 inputs. "
+                    "See https://mxnet.apache.org/api/faq/env_var "
+                    "for more details.");
+  }
+  MXNET_REAL_ACC_TYPE_SWITCH(outputs[0].type_flag_, DType, AType, {
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
       // inputs are specified in the .cc file, which are the gradients from
       // the upper layer and the input index
@@ -1061,10 +1026,25 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
           if (req[take_::kArr] == kWriteTo) {
             grad_in = scalar<DType>(0.0f);
           }
-          if (param.mode == take_::kClip) {
-            AddTakeGrad(grad_in, idx, grad_out);
+          if (safe_acc) {
+            // Temporary storage for safe accumulation
+            size_t temp_space_size = grad_in.size(0) * grad_in.size(1) * sizeof(AType);
+            Tensor<xpu, 1, char> temp_space =
+              ctx.requested[take_::kTempSpace].get_space_typed<xpu, 1, char>(
+                Shape1(temp_space_size), s);
+            Tensor<xpu, 2, AType> temp_grad_in(reinterpret_cast<AType*>(temp_space.dptr_),
+                grad_in.shape_, s);
+            if (param.mode == take_::kClip) {
+              AddTakeGrad(grad_in, temp_grad_in, idx, grad_out);
+            } else {
+              AddTakeGrad<false>(grad_in, temp_grad_in, idx, grad_out);
+            }
           } else {
-            AddTakeGrad<false>(grad_in, idx, grad_out);
+            if (param.mode == take_::kClip) {
+              AddTakeGrad(grad_in, idx, grad_out);
+            } else {
+              AddTakeGrad<false>(grad_in, idx, grad_out);
+            }
           }
         } else {
           LOG(FATAL) << "wrong req";
@@ -1075,10 +1055,18 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
         const TBlob& arr = outputs[0];
         const TBlob& ograd = inputs[0];
 
-        if (param.mode == take_::kClip) {
-          TakeOpBackwardImpl<true>(s, ctx, arr, idx, ograd, actual_axis);
+        if (safe_acc) {
+          if (param.mode == take_::kClip) {
+            TakeOpBackwardImpl<true, true, AType>(s, ctx, arr, idx, ograd, actual_axis);
+          } else {
+            TakeOpBackwardImpl<false, true, AType>(s, ctx, arr, idx, ograd, actual_axis);
+          }
         } else {
-          TakeOpBackwardImpl<false>(s, ctx, arr, idx, ograd, actual_axis);
+          if (param.mode == take_::kClip) {
+            TakeOpBackwardImpl<true, false, AType>(s, ctx, arr, idx, ograd, actual_axis);
+          } else {
+            TakeOpBackwardImpl<false, false, AType>(s, ctx, arr, idx, ograd, actual_axis);
+          }
         }
       }
     });
@@ -1171,6 +1159,17 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
       MXNET_ADD_ALL_TYPES
       .describe("DType of the output");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream depth_s, on_value_s, off_value_s, axis_s, dtype_s;
+    depth_s << depth;
+    on_value_s << on_value;
+    off_value_s << off_value;
+    dtype_s << dtype;
+    (*dict)["depth"] = depth_s.str();
+    (*dict)["on_value"] = on_value_s.str();
+    (*dict)["off_value"] = off_value_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
@@ -1447,8 +1446,8 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   if (kWriteTo == req[0]) {
     Fill<true>(s, outputs[0], req[0], 0);
   }
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[1].type_flag_, IType, {  // indices data type switch
       mxnet_op::Kernel<scatter_nd, xpu>::Launch(
         s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
         inputs[0].dptr<DType>(), inputs[1].dptr<IType>());

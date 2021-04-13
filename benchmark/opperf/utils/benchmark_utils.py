@@ -26,7 +26,7 @@ from .op_registry_utils import prepare_op_inputs
 from benchmark.opperf.rules.default_params import PARAMS_OF_TYPE_NDARRAY
 from .profiler_utils import cpp_profile, python_profile
 
-no_backward = ['gather_nd', 'softmax_cross_entropy', 'linalg_gelqf', 'linalg_slogdet', 'moments', 'SequenceLast']
+no_backward = {'gather_nd', 'softmax_cross_entropy', 'linalg_gelqf', 'linalg_slogdet', 'moments', 'SequenceLast', 'Embedding'}
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     mx.random.seed(41)
@@ -163,6 +163,8 @@ def run_performance_test(ops, inputs, run_backward=True,
     -------
     List of dictionary of benchmark results. key -> name of the operator, Value is benchmark results.
 
+    Note: when run_performance_test is called on the nd.Embedding operator with run_backward=True, an error will
+    be thrown. Track issue here: https://github.com/apache/incubator-mxnet/issues/11314
     """
     kwargs_list = _prepare_op_inputs(inputs, run_backward, dtype, ctx)
 
@@ -179,25 +181,30 @@ def run_performance_test(ops, inputs, run_backward=True,
     return op_benchmark_result
 
 
-def run_op_benchmarks(ops, dtype, ctx, profiler, warmup, runs):
+def run_op_benchmarks(ops, dtype, ctx, profiler, int64_tensor, warmup, runs):
+    # Running im2col either forwards or backwards on GPU results in errors
+    # track issue here: https://github.com/apache/incubator-mxnet/issues/17493
+    gpu_disabled_ops = ['im2col']
+
     # For each operator, run benchmarks
     mx_op_benchmark_results = []
     for op, op_params in ops.items():
-        # Prepare inputs for the operator
-        inputs = prepare_op_inputs(op, op_params)
+        if ctx == mx.cpu() or op not in gpu_disabled_ops:
+            # Prepare inputs for the operator
+            inputs = prepare_op_inputs(op, op_params, int64_tensor)
 
-        # setting backward false for ops with known issue
-        if op in no_backward:
-            op_params["has_backward"] = False
+            # setting backward false for ops with known issue
+            if op in no_backward:
+                op_params["has_backward"] = False
 
-        # Run benchmarks
-        cur_op_res = run_performance_test(op_params["nd_op_handle"],
-                                          run_backward=op_params["has_backward"],
-                                          dtype=dtype, ctx=ctx,
-                                          profiler=profiler,
-                                          inputs=inputs,
-                                          warmup=warmup, runs=runs)
-        mx_op_benchmark_results += cur_op_res
+            # Run benchmarks
+            cur_op_res = run_performance_test(op_params["nd_op_handle"],
+                                              run_backward=op_params["has_backward"],
+                                              dtype=dtype, ctx=ctx,
+                                              profiler=profiler,
+                                              inputs=inputs,
+                                              warmup=warmup, runs=runs)
+            mx_op_benchmark_results += cur_op_res
 
     # Prepare combined results for all operators
     mx_op_benchmark_results = merge_map_list(mx_op_benchmark_results)

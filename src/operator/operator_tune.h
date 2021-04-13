@@ -215,6 +215,10 @@ class OperatorTuneByType : public OperatorTuneBase {
   static volatile tune::TuningMode tuning_mode_;
 };
 
+// TODO(leezu) uncomment once gcc4.8 support is dropped; fixes Wno-undefined-var-template
+// template <typename DType>
+// volatile tune::TuningMode OperatorTuneByType<DType>::tuning_mode_;
+
 namespace mxnet_op {
 /*!
  * \brief Kernel operator wrapper used for tuning data

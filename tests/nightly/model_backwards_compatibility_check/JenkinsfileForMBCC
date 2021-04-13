@@ -18,7 +18,7 @@
 //
 //This is a Jenkinsfile for the model backwards compatibility checker. The format and some functions have been picked up from the top-level Jenkinsfile.
 
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so'
 
 node('restricted-utility') {
   // Loading the utilities requires a node context unfortunately
@@ -34,7 +34,7 @@ core_logic: {
       ws('workspace/modelBackwardsCompat') {
         utils.init_git()
         // Train models on older versions
-        utils.docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_train', false)
+        utils.docker_run('ubuntu_cpu', 'nightly_model_backwards_compat_train', false)
         // upload files to S3 here outside of the docker environment
         sh "./tests/nightly/model_backwards_compatibility_check/upload_models_to_s3.sh"
       }
@@ -56,7 +56,7 @@ core_logic: {
       ws('workspace/modelBackwardsCompat') {
         utils.unpack_and_init('cpu', mx_lib)
         // Perform inference on the latest version of MXNet
-        utils.docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_test', false)
+        utils.docker_run('ubuntu_cpu', 'nightly_model_backwards_compat_test', false)
       }
     }
   }

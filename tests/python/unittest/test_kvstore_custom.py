@@ -20,7 +20,7 @@ import mxnet as mx
 import numpy as np
 import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
-from common import setup_module, with_seed, assertRaises, teardown
+from common import assertRaises
 from mxnet.base import py_str, MXNetError
 
 shape = (4, 4)
@@ -34,7 +34,6 @@ def check_diff_to_scalar(A, x):
 def init_kv(name='device'):
     return mx.kv.create(name)
 
-@with_seed()
 def test_broadcast_single_kv_pair():
     """single key-value pair push & pull"""
     def check_single_kv_pair(kv, key):
@@ -54,7 +53,6 @@ def test_broadcast_single_kv_pair():
         check_single_kv_pair(init_kv(name), 3)
         check_single_kv_pair(init_kv(name), 'a')
 
-@with_seed()
 def test_broadcast_list_kv_pair():
     """list key-value pair push & pull"""
     def check_list_kv_pair(kv, key):
@@ -73,7 +71,6 @@ def test_broadcast_list_kv_pair():
     check_list_kv_pair(init_kv(), keys)
     check_list_kv_pair(init_kv(), str_keys)
 
-@with_seed()
 def test_pushpull_single_kv_pair():
     """aggregate value on muliple devices"""
     def check_aggregator(kv, key, key_list=None):
@@ -119,7 +116,6 @@ def test_pushpull_single_kv_pair():
     check_aggregator(init_kv('teststore'), 3)
     check_aggregator(init_kv('teststore'), 'a')
 
-@with_seed()
 def test_pushpull_list_kv_pair():
     """aggregate value on muliple devices"""
     def check_aggregator(kv, key, key_list=None):
@@ -155,7 +151,6 @@ def test_pushpull_list_kv_pair():
     check_aggregator(init_kv('teststore'), 'a')
 
 
-@with_seed()
 def test_custom_store():
     kv = mx.kv.create('teststore')
     out = mx.nd.empty((1,))
@@ -172,13 +167,11 @@ def test_custom_store():
     for arr in arr_list:
         check_diff_to_scalar(arr, 4)
 
-@with_seed()
 def test_get_type_device():
     kvtype = 'teststore'
     kv = mx.kv.create(kvtype)
     assert kv.type == kvtype
 
-@with_seed()
 def test_set_optimizer():
     def check_unsupported_methods(kv):
         assert not kv.is_capable('optimizer')
@@ -190,6 +183,3 @@ def test_set_optimizer():
     kv = mx.kv.create('teststore')
     check_unsupported_methods(kv)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

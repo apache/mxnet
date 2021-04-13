@@ -24,6 +24,8 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
+
+#include <utility>
 #include "./operator_common.h"
 #include "./elemwise_op_common.h"
 #include "../imperative/imperative_utils.h"
@@ -65,7 +67,7 @@ class ForeachState: public LoopState {
   ForeachParam params;
   int num_iterations;
 
-  ForeachState(const Symbol &g, const ForeachParam &params) : LoopState(g) {
+  ForeachState(const nnvm::Symbol &g, const ForeachParam &params) : LoopState(g, false) {
     this->params = params;
   }
 };
@@ -531,7 +533,7 @@ class WhileLoopState: public LoopState {
   // indicates to which index the output of `func' will be copied to the input of `cond'
   std::vector<int> oi_map;
 
-  WhileLoopState(const WhileLoopParam &params, const Symbol &cond, const Symbol &func) :
+  WhileLoopState(const WhileLoopParam &params, const nnvm::Symbol &cond, const nnvm::Symbol &func) :
                  LoopState(func),
                  params(params),
                  n_iterations(0U),
@@ -588,7 +590,9 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   std::vector<NDArray> func_inputs, func_outputs(outputs.size());
   extract_by_loc(inputs, params.func_input_locs, &func_inputs);
   for (size_t &step = state.n_iterations = 0; step < (size_t) params.max_iterations; ++step) {
-    state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr);
+    CHECK(inputs.size() > 0) << "while loop forward requires at least 1 input";
+    Context default_ctx = inputs[0].ctx();
+    state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr, default_ctx);
     if (!as_bool_scalar(*cond_output_ptr[0])) {
       break;
     }
@@ -646,9 +650,9 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
     const_cast<NDArray &>(outputs[i]).SetShapeFromChunk();
   }
   if (state.n_iterations == 0) {
-    for (size_t i = 0; i < outputs.size(); ++i) {
-      if (!shape_is_known(outputs[i].shape())) {
-        const_cast<NDArray &>(outputs[i]).ReshapeAndAlloc({1});
+    for (const auto & output : outputs) {
+      if (!shape_is_known(output.shape())) {
+        const_cast<NDArray &>(output).ReshapeAndAlloc({1});
       }
     }
   }
@@ -863,11 +867,11 @@ class CondState {
   LoopState else_branch;
   int branch_selection;  // 1 if then branch; 0 if else branch; -1 if undefined
 
-  CondState(const CondParam &params,
-            const Symbol &cond,
-            const Symbol &then_sym,
-            const Symbol &else_sym):
-            params(params),
+  CondState(CondParam params,
+            const nnvm::Symbol &cond,
+            const nnvm::Symbol &then_sym,
+            const nnvm::Symbol &else_sym):
+            params(std::move(params)),
             cond_op(LoopState::MakeSharedOp(cond)),
             then_branch(then_sym),
             else_branch(else_sym),
@@ -910,7 +914,9 @@ static void CondComputeExCPU(const OpStatePtr& state_ptr,
   to_ptr_vec(cond_outputs, &cond_output_ptr);
   int &branch_selection = state.branch_selection;
   // run cond
-  state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr);
+  CHECK(cond_input_ptr.size() > 0) << "condition requires at least 1 input";
+  Context default_ctx = cond_inputs[0].ctx();
+  state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr, default_ctx);
   branch_selection = as_bool_scalar(*cond_output_ptr[0]);
   // select the right branch
   const mxnet::Tuple<dim_t> &func_input_locs = branch_selection
@@ -1024,7 +1030,8 @@ static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size() + 3U, (size_t) params.num_args);
   CHECK_EQ(attrs.subgraphs.size(), 3U);
   static const std::function<bool(const int &)> is_udf = is_stype_udf;
-  auto sub_pass = [&](const std::shared_ptr<Symbol> &subg, const mxnet::Tuple<dim_t> &input_locs) {
+  auto sub_pass = [&](const std::shared_ptr<nnvm::Symbol> &subg,
+                      const mxnet::Tuple<dim_t> &input_locs) {
     // A. first construct subg_in_attrs
     // need subg_in_attrs as subg_bwd_out (copy), subg_fwd_in (extract), subg_fwd_out (copy)
     std::vector<int> subg_in_attrs;

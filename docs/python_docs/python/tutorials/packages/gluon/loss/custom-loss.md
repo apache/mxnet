@@ -19,13 +19,13 @@
 
 All neural networks need a loss function for training. A loss function is a quantitive measure of how bad the predictions of the network are when compared to ground truth labels. Given this score, a network can improve by iteratively updating its weights to minimise this loss. Some tasks use a combination of multiple loss functions, but often you'll just use one. MXNet Gluon provides a number of the most commonly used loss functions, and you'll choose certain functions depending on your network and task. Some common task and loss function pairs include:
 
-- Regression: [L1Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.L1Loss), [L2Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.L2Loss)
-- Classification: [SigmoidBinaryCrossEntropyLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss), [SoftmaxBinaryCrossEntropyLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.SoftmaxBinaryCrossEntropyLoss)
-- Embeddings: [HingeLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.HingeLoss)
+- Regression: [L1Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.L1Loss), [L2Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.L2Loss)
+- Classification: [SigmoidBinaryCrossEntropyLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss), [SoftmaxCrossEntropyLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.SoftmaxCrossEntropyLoss)
+- Embeddings: [HingeLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.HingeLoss)
 
 However, we may sometimes want to solve problems that require customized loss functions; this tutorial shows how we can do that in Gluon. We will implement contrastive loss which is typically used in Siamese networks.
 
-```python
+```{.python .input}
 import matplotlib.pyplot as plt
 import mxnet as mx
 from mxnet import autograd, gluon, nd
@@ -37,7 +37,7 @@ import random
 
 [Contrastive loss](http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf) is a distance-based loss function. During training, pairs of images are fed into a model. If the images are similar, the loss function will return 0, otherwise 1.
 
-<img src="images/contrastive_loss.jpeg" width="400">
+![contrastive loss](/_static/contrastive_loss.jpeg)
 
 *Y* is a binary label indicating similarity between training images. Contrastive loss uses the Euclidean distance *D* between images and is the sum of 2 terms:
  - the loss for a pair of similar points
@@ -45,10 +45,10 @@ import random
 
 The loss function uses a margin *m* which is has the effect that dissimlar pairs only contribute if their loss is within a certain margin.
 
-In order to implement such a customized loss function in Gluon, we only need to define a new class that is inheriting from the [Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.Loss) base class. We then define the contrastive loss logic in the [hybrid_forward](/api/python/docs/api/gluon/hybrid_block.html#mxnet.gluon.HybridBlock.hybrid_forward) method. This method takes the images `image1`, `image2` and the label which defines whether  `image1` and `image2` are similar (=0) or  dissimilar (=1). The input F is an `mxnet.ndarry` or an `mxnet.symbol` if we hybridize the network. Gluon's `Loss` base class is in fact a [HybridBlock](/api/python/docs/api/gluon/hybrid_block.html). This means we can either run  imperatively or symbolically. When we hybridize our custom loss function, we can get performance speedups.
+In order to implement such a customized loss function in Gluon, we only need to define a new class that is inheriting from the [Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.Loss) base class. We then define the contrastive loss logic in the [hybrid_forward](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock.hybrid_forward) method. This method takes the images `image1`, `image2` and the label which defines whether  `image1` and `image2` are similar (=0) or  dissimilar (=1). The input F is an `mxnet.ndarry` or an `mxnet.symbol` if we hybridize the network. Gluon's `Loss` base class is in fact a [HybridBlock](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock). This means we can either run  imperatively or symbolically. When we hybridize our custom loss function, we can get performance speedups.
 
 
-```python
+```{.python .input}
 class ContrastiveLoss(Loss):
     def __init__(self, margin=6., weight=None, batch_axis=0, **kwargs):
         super(ContrastiveLoss, self).__init__(weight, batch_axis, **kwargs)
@@ -71,19 +71,17 @@ A [Siamese network](https://papers.nips.cc/paper/769-signature-verification-usin
 Our network consists of 2 convolutional and max pooling layers that downsample the input image. The output is then fed through a fully connected layer with 256 hidden units and another fully connected layer with 2 hidden units.
 
 
-```python
+```{.python .input}
 class Siamese(gluon.HybridBlock):
     def __init__(self, **kwargs):
         super(Siamese, self).__init__(**kwargs)
-        with self.name_scope():
-            self.cnn = gluon.nn.HybridSequential()
-            with self.cnn.name_scope():
-                self.cnn.add(gluon.nn.Conv2D(64, 5, activation='relu'))
-                self.cnn.add(gluon.nn.MaxPool2D(2, 2))
-                self.cnn.add(gluon.nn.Conv2D(64, 5, activation='relu'))
-                self.cnn.add(gluon.nn.MaxPool2D(2, 2))
-                self.cnn.add(gluon.nn.Dense(256, activation='relu'))
-                self.cnn.add(gluon.nn.Dense(2, activation='softrelu'))
+        self.cnn = gluon.nn.HybridSequential()
+        self.cnn.add(gluon.nn.Conv2D(64, 5, activation='relu'))
+        self.cnn.add(gluon.nn.MaxPool2D(2, 2))
+        self.cnn.add(gluon.nn.Conv2D(64, 5, activation='relu'))
+        self.cnn.add(gluon.nn.MaxPool2D(2, 2))
+        self.cnn.add(gluon.nn.Dense(256, activation='relu'))
+        self.cnn.add(gluon.nn.Dense(2, activation='softrelu'))
 
     def hybrid_forward(self, F, input0, input1):
         out0 = self.cnn(input0)
@@ -97,7 +95,7 @@ class Siamese(gluon.HybridBlock):
 We train our network on the [Ominglot](http://www.omniglot.com/) dataset which is a collection of 1623 hand drawn characters from 50 alphabets. You can download it from [here](https://github.com/brendenlake/omniglot/tree/master/python). We need to create a dataset that contains a random set of similar and dissimilar images. We use Gluon's `ImageFolderDataset` where we overwrite `__getitem__` and randomly return similar and dissimilar pairs of images.
 
 
-```python
+```{.python .input}
 class GetImagePairs(mx.gluon.data.vision.ImageFolderDataset):
     def __init__(self, root):
         super(GetImagePairs, self).__init__(root, flag=0)
@@ -127,7 +125,7 @@ class GetImagePairs(mx.gluon.data.vision.ImageFolderDataset):
 We train the network on a subset of the data, the  [*Tifinagh*](https://www.omniglot.com/writing/tifinagh.htm) alphabet. Once the model is trained we test it on the [*Inuktitut*](https://www.omniglot.com/writing/inuktitut.htm) alphabet.
 
 
-```python
+```{.python .input}
 def transform(img0, img1, label):
     normalized_img0 = nd.transpose(img0.astype('float32'), (2, 0, 1))/255.0
     normalized_img1 = nd.transpose(img1.astype('float32'), (2, 0, 1))/255.0
@@ -146,7 +144,7 @@ test_dataloader = gluon.data.DataLoader(test.transform(transform),
 Following code plots some examples from the test dataset.
 
 
-```python
+```{.python .input}
 img1, img2, label = test[0]
 print("Same: {}".format(int(label.asscalar()) == 0))
 fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(10, 5))
@@ -158,7 +156,7 @@ plt.show()
 
 ```
 
-![example1](images/inuktitut_1.png)
+![example1](/_static/inuktitut_1.png)
 
 
 ### Train the Siamese network
@@ -166,7 +164,7 @@ plt.show()
 Before we can start training, we need to instantiate the custom constrastive loss function and initialize the model.
 
 
-```python
+```{.python .input}
 model = Siamese()
 model.initialize(init=mx.init.Xavier())
 trainer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate': 0.001})
@@ -176,7 +174,7 @@ loss = ContrastiveLoss(margin=6.0)
 Start the training loop:
 
 
-```python
+```{.python .input}
 for epoch in range(10):
     for i, data in enumerate(train_dataloader):
         image1, image2, label = data
@@ -194,7 +192,7 @@ for epoch in range(10):
 During inference we compute the Euclidean distance between the output vectors of the Siamese network. High distance indicates dissimilarity, low values indicate similarity.
 
 
-```python
+```{.python .input}
 for i, data in enumerate(test_dataloader):
     img1, img2, label = data
     output1, output2 = model(img1, img2)
@@ -210,7 +208,7 @@ for i, data in enumerate(test_dataloader):
 
 ```
 
-![example2](images/inuktitut_2.png)
+![example2](/_static/inuktitut_2.png)
 
 
 ### Common pitfalls with custom loss functions

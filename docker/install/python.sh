@@ -19,10 +19,9 @@
 
 # install libraries for mxnet's python package on ubuntu
 
-apt-get update && apt-get install -y python-dev python3-dev
+apt-get update && apt-get install -y python3-dev
 
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here
-cd /tmp && wget https://bootstrap.pypa.io/get-pip.py && python3 get-pip.py && python2 get-pip.py
+cd /tmp && wget https://bootstrap.pypa.io/get-pip.py && python3 get-pip.py
 
-pip2 install nose pylint numpy nose-timer requests Pillow
-pip3 install nose pylint numpy nose-timer requests Pillow
+pip3 install pylint numpy requests Pillow pytest==6.1.2 pytest-env==0.6.2 pytest-cov==2.10.1 pytest-xdist==2.1.0

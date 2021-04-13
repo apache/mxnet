@@ -285,7 +285,7 @@ __global__ void reduce_kernel_M1_wr(const int N, const bool addto,
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP>
 void ReduceImplWithReducer(cudaStream_t stream, const TBlob& small, const OpReqType req,
                            const TBlob& big, const Tensor<gpu, 1, char>& workspace,
-                           const ReduceImplConfig<ndim>& config,
+                           const ReduceImplConfig& config,
                            Reducer* reducer = nullptr) {
   bool need_clean = !reducer;
   reducer = reducer ? reducer : new Reducer();
@@ -310,13 +310,13 @@ void ReduceImplWithReducer(cudaStream_t stream, const TBlob& small, const OpReqT
 
     const int by = (config.kernel_1.do_transpose) ?
       config.kernel_1.blockDim.x : config.kernel_1.blockDim.y;
-    const bool do_unroll = ( config.M / (by*config.Mnext) >= config.unroll_reduce );
-    KERNEL_UNROLL_SWITCH(do_unroll, ReduceImplConfig<ndim>::unroll_reduce, UNROLL, {
+    const bool do_unroll = ( config.M / (by*config.Mnext) >= unroll_reduce );
+    KERNEL_UNROLL_SWITCH(do_unroll, unroll_reduce, UNROLL, {
       reduce_kernel_wr<Reducer, ndim, AType, DType, OType, OP, UNROLL>
       <<< config.kernel_1.gridDim, config.kernel_1.blockDim, config.kernel_1.shMemSize, stream>>>(
         config.N, config.M, addto, big.dptr<DType>(), small_dptr, big.shape_.get<ndim>(),
-        small.shape_.get<ndim>(), config.rshape, config.rstride, config.Mnext,
-        config.kernel_1.do_transpose, reducer);
+        small.shape_.get<ndim>(), config.rshape.get<ndim>(), config.rstride.get<ndim>(),
+        config.Mnext, config.kernel_1.do_transpose, reducer);
     });
     MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel_wr);
 
@@ -335,7 +335,7 @@ void ReduceImplWithReducer(cudaStream_t stream, const TBlob& small, const OpReqT
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
 void ReduceImplWithReducer(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const TBlob& rhs,
                            const OpReqType req, const TBlob& big, const Tensor<gpu, 1, char>& workspace,
-                           const ReduceImplConfig<ndim>& config, Reducer* reducer = nullptr) {
+                           const ReduceImplConfig& config, Reducer* reducer = nullptr) {
   bool need_clean = !reducer;
   reducer = reducer ? reducer : new Reducer();
   if (config.M == 1) {
@@ -360,8 +360,8 @@ void ReduceImplWithReducer(cudaStream_t stream, const TBlob& small, const TBlob&
 
     const int by = (config.kernel_1.do_transpose) ?
       config.kernel_1.blockDim.x : config.kernel_1.blockDim.y;
-    const bool do_unroll = ( config.M / (by*config.Mnext) >= config.unroll_reduce );
-    KERNEL_UNROLL_SWITCH(do_unroll, ReduceImplConfig<ndim>::unroll_reduce, UNROLL, {
+    const bool do_unroll = ( config.M / (by*config.Mnext) >= unroll_reduce );
+    KERNEL_UNROLL_SWITCH(do_unroll, unroll_reduce, UNROLL, {
       reduce_kernel_wr<Reducer, ndim, DType, OP1, OP2, UNROLL>
       <<< config.kernel_1.gridDim, config.kernel_1.blockDim, config.kernel_1.shMemSize, stream>>>(
         config.N, config.M, addto, big.dptr<DType>(), lhs.dptr<DType>(), rhs.dptr<DType>(),
@@ -393,14 +393,13 @@ void ReduceWithReducer(Stream<gpu> *s, const TBlob& small, const OpReqType req,
   cudaStream_t stream = Stream<gpu>::GetStream(s);
   bool need_clean = !reducer;
   reducer = reducer ? reducer : new Reducer();
-  ReduceImplConfig<ndim> config =
-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
+  ReduceImplConfig config(small.shape_, big.shape_, nullptr, nullptr, sizeof(DType));
   if (safe_acc) {
     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
         typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
-        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, nullptr, nullptr);
+        config = ReduceImplConfig(small.shape_, big.shape_, nullptr, nullptr, sizeof(AccType));
         ReduceImplWithReducer<Reducer, ndim, AccType, DataType, OutType, OP>(
           stream, small, req, big, workspace, config, reducer);
       });

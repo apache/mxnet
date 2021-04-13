@@ -19,7 +19,7 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <string>
 #include <vector>
@@ -85,8 +85,7 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
     return false;
   }
 
-  virtual std::vector<BiDirectedNode *> Filter(
-      const std::vector<BiDirectedNode *> &candidates) {
+  std::vector<BiDirectedNode *> Filter(const std::vector<BiDirectedNode *> &candidates) override {
     if (matched_list_.size() < 2) {
       return std::vector<BiDirectedNode *>(0);
     } else {
@@ -168,5 +167,5 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // if MXNET_USE_MKLDNN == 1
+#endif  // if MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_

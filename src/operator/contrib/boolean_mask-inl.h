@@ -60,9 +60,14 @@ struct BooleanMaskForwardCPUKernel {
     // i is row id already
     int32_t prev = (i == 0) ? 0 : idx[i - 1];
     int32_t curr = idx[i];
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     if (prev != curr) {
       std::memcpy(out + prev * col_size, data + i * col_size, col_size * sizeof(DType));
     }
+#pragma GCC diagnostic pop
   }
 };
 

@@ -39,16 +39,16 @@ static bool GroupNormShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
   const mxnet::TShape &dshape = in_shape->at(groupnorm::kData);
-  CHECK_GE(dshape.ndim(), 3U);
-  const int num_groups = param.num_groups;
-  CHECK_EQ(dshape[1] % num_groups, 0) << "# of channels must be divisible by # of groups";
-
   if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
 
-  in_shape->at(groupnorm::kGamma) = mxnet::TShape(Shape1(num_groups));
-  in_shape->at(groupnorm::kBeta) = mxnet::TShape(Shape1(num_groups));
+  CHECK_GE(dshape.ndim(), 3U);
+  const int num_groups = param.num_groups;
+  CHECK_EQ(dshape[1] % num_groups, 0) << "# of channels must be divisible by # of groups";
+
+  in_shape->at(groupnorm::kGamma) = mxnet::TShape(Shape1(dshape[1]));
+  in_shape->at(groupnorm::kBeta) = mxnet::TShape(Shape1(dshape[1]));
 
   out_shape->clear();
   out_shape->push_back(dshape);

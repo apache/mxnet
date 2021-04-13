@@ -43,6 +43,25 @@ namespace mxnet {
 namespace op {
 
 struct NonzeroForwardKernel {
+  // this is for cpu
+  template<int ndim>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  int64_t* out,
+                                  const index_t* idx,
+                                  const mshadow::Shape<ndim> shape) {
+    index_t prev = (i == 0) ? 0 : idx[i - 1];
+    index_t curr = idx[i];
+    if (prev != curr) {
+      mshadow::Shape<ndim> coord = mxnet_op::unravel<ndim>(i, shape);
+      for (int j = 0; j < ndim; j++) {
+        out[prev * ndim + j] = coord[j];
+      }
+    }
+  }
+};
+
+struct NonzeroForwardKernelGPU {
+  // for gpu implementation because it does not support int 64 indexing
   template<int ndim>
   MSHADOW_XINLINE static void Map(int i,
                                   int64_t* out,

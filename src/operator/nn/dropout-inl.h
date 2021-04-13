@@ -84,6 +84,29 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
     .describe("Whether to turn off cudnn in dropout operator. "
               "This option is ignored if axes is specified.");
   }
+  std::string Mode2String(int mode) {
+    switch (mode) {
+      case dropout::kTraining:
+        return "training";
+      case dropout::kAlways:
+        return "always";
+      default:
+        LOG(FATAL) << "Unknown mode enum " << mode;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream p_s, mode_s, axes_s, cudnn_off_s;
+    p_s << p;
+    mode_s << mode;
+    axes_s << axes;
+    cudnn_off_s << cudnn_off;
+    (*dict)["p"] = p_s.str();
+    (*dict)["mode"] = Mode2String(mode);
+    (*dict)["axes"] = axes_s.str();
+    (*dict)["cudnn_off"] = cudnn_off_s.str();
+  }
 };  // struct DropoutParam
 
 template<typename xpu, typename DType>
@@ -255,7 +278,7 @@ class DropoutOp {
       Stream<xpu> *s = ctx.get_stream<xpu>();
 
       // set dropout state.
-      ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_, seed_);
+      ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_);
 
       // describe input/output tensor
       int dim[4], stride[4];
@@ -492,7 +515,6 @@ class DropoutOp {
   Context ctx_;
   cudnnDataType_t dtype_;
   cudnnDropoutDescriptor_t dropout_desc_;
-  uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   size_t dropout_reserve_byte_;
   cudnnTensorDescriptor_t x_desc_, y_desc_, dx_desc_, dy_desc_;
 #endif  // MXNET_USE_CUDNN_DROPOUT

@@ -72,9 +72,6 @@ parser.add_argument('--last-gamma', action='store_true', default=False,
                     each bottleneck to 0 (default: False)')
 parser.add_argument('--model', type=str, default='resnet50_v1',
                     help='type of model to use. see vision_model for options.')
-parser.add_argument('--mode', type=str, default='module',
-                    help='mode in which to train the model. options are \
-                    module, gluon (default: module)')
 parser.add_argument('--use-pretrained', action='store_true', default=False,
                     help='load pretrained model weights (default: False)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -286,8 +283,8 @@ def train_gluon():
             return
 
         val_data.reset()
-        acc_top1 = mx.metric.Accuracy()
-        acc_top5 = mx.metric.TopKAccuracy(5)
+        acc_top1 = mx.gluon.metric.Accuracy()
+        acc_top5 = mx.gluon.metric.TopKAccuracy(5)
         for _, batch in enumerate(val_data):
             data, label = batch_fn(batch, context)
             output = net(data.astype(args.dtype, copy=False))
@@ -321,7 +318,7 @@ def train_gluon():
 
     # Create loss function and train metric
     loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
-    metric = mx.metric.Accuracy()
+    metric = mx.gluon.metric.Accuracy()
 
     # Train model
     for epoch in range(args.num_epochs):
@@ -371,97 +368,6 @@ def train_gluon():
     evaluate(epoch)
 
 
-def train_module():
-    # Create input symbol
-    data = mx.sym.var('data')
-    if args.dtype == 'float16':
-        data = mx.sym.Cast(data=data, dtype=np.float16)
-        net.cast(np.float16)
-
-    # Create output symbol
-    out = net(data)
-    if args.dtype == 'float16':
-        out = mx.sym.Cast(data=out, dtype=np.float32)
-    softmax = mx.sym.SoftmaxOutput(out, name='softmax')
-
-    # Create model
-    mod = mx.mod.Module(softmax, context=context)
-
-    # Initialize parameters
-    if args.use_pretrained:
-        arg_params = {}
-        for x in net.collect_params().values():
-            x.reset_ctx(mx.cpu())
-            arg_params[x.name] = x.data()
-    else:
-        arg_params = None
-    aux_params = None
-    mod.bind(data_shapes=train_data.provide_data,
-             label_shapes=train_data.provide_label)
-    mod.init_params(initializer, arg_params=arg_params, aux_params=aux_params)
-
-    # Horovod: fetch and broadcast parameters
-    (arg_params, aux_params) = mod.get_params()
-    if arg_params is not None:
-        hvd.broadcast_parameters(arg_params, root_rank=0)
-    if aux_params is not None:
-        hvd.broadcast_parameters(aux_params, root_rank=0)
-    mod.set_params(arg_params=arg_params, aux_params=aux_params)
-
-    # Create optimizer
-    # Note that when using Module API, we need to specify rescale_grad since
-    # we create optimizer first and wrap it with DistributedOptimizer. For
-    # Gluon API, it is handled in Trainer.step() function so there is no need
-    # to specify rescale_grad (see above train_gluon() function). 
-    optimizer_params = {'wd': args.wd,
-                        'momentum': args.momentum,
-                        'rescale_grad': 1.0 / batch_size,
-                        'lr_scheduler': lr_sched}
-    if args.dtype == 'float16':
-        optimizer_params['multi_precision'] = True
-    opt = mx.optimizer.create('sgd', **optimizer_params)
-
-    # Horovod: wrap optimizer with DistributedOptimizer
-    opt = hvd.DistributedOptimizer(opt)
-
-    # Setup validation data and callback during training
-    eval_data = None
-    if args.eval_epoch:
-        eval_data = val_data
-    batch_callback = None
-    if args.log_interval > 0 and rank == 0:
-        batch_callback = mx.callback.Speedometer(batch_size * num_workers,
-                                                 args.log_interval)
-
-    epoch_callback = None
-    if args.save_frequency > 0:
-        epoch_callback = mx.callback.do_checkpoint(
-            '%s-%d' % (args.model, rank),
-            period=args.save_frequency)
-
-    # Train model
-    mod.fit(train_data,
-            eval_data=eval_data,
-            num_epoch=args.num_epochs,
-            kvstore=None,
-            batch_end_callback=batch_callback,
-            epoch_end_callback=epoch_callback,
-            optimizer=opt)
-
-    # Evaluate performance if not using synthetic data
-    if args.use_rec:
-        acc_top1 = mx.metric.Accuracy()
-        acc_top5 = mx.metric.TopKAccuracy(5)
-        res = mod.score(val_data, [acc_top1, acc_top5])
-        for name, val in res:
-            logging.info('Epoch[%d] Rank[%d] Validation-%s=%f',
-                         args.num_epochs - 1, rank, name, val)
-
 
 if __name__ == '__main__':
-    if args.mode == 'module':
-        train_module()
-    elif args.mode == 'gluon':
-        train_gluon()
-    else:
-        raise ValueError('Invalid training mode.')
+    train_gluon()

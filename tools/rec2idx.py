@@ -31,8 +31,8 @@ class IndexCreator(mx.recordio.MXRecordIO):
     Example usage:
     ----------
     >>> creator = IndexCreator('data/test.rec','data/test.idx')
-    >>> record.create_index()
-    >>> record.close()
+    >>> creator.create_index()
+    >>> creator.close()
     >>> !ls data/
     test.rec  test.idx
 

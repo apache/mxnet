@@ -15,11 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import nose
 import mxnet as mx
 import os
-import unittest
-from mxnet.test_utils import EnvManager
+from mxnet.test_utils import environment
+import pytest
 
 def test_bulk():
     with mx.engine.bulk(10):
@@ -33,7 +32,7 @@ def test_bulk():
             x += 1
     assert (x.asnumpy() == 104).all()
 
-@unittest.skip("OMP platform dependent")
+@pytest.mark.skip(reason="OMP platform dependent")
 def test_engine_openmp_after_fork():
     """
     Test that the number of max threads in the child is 1. After forking we should not use a bigger
@@ -42,7 +41,7 @@ def test_engine_openmp_after_fork():
     With GOMP the child always has the same number when calling omp_get_max_threads, with LLVM OMP
     the child respects the number of max threads set in the parent.
     """
-    with EnvManager('OMP_NUM_THREADS', '42'):
+    with environment('OMP_NUM_THREADS', '42'):
         r, w = os.pipe()
         pid = os.fork()
         if pid:
@@ -70,8 +69,3 @@ def test_engine_openmp_after_fork():
             print("Child omp max threads: {}".format(omp_max_threads))
             assert omp_max_threads == 1
 
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

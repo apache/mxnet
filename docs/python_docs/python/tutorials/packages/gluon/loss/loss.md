@@ -19,9 +19,9 @@
 
 Loss functions are used to train neural networks and to compute the difference between output and target variable. A critical component of training neural networks is the loss function. A loss function is a quantative measure of how bad the predictions of the network are when compared to ground truth labels. Given this score, a network can improve by iteratively updating its weights to minimise this loss. Some tasks use a combination of multiple loss functions, but often you'll just use one. MXNet Gluon provides a number of the most commonly used loss functions, and you'll choose certain loss functions depending on your network and task. Some common task and loss function pairs include:
 
-- regression: [L1Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.L1Loss), [L2Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.L2Loss) 
-- classification: [SigmoidBinaryCrossEntropyLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss), [SoftmaxCrossEntropyLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.SoftmaxCrossEntropyLoss)
-- embeddings: [HingeLoss](/api/python/docs/api/gluon/_autogen/mxnet.gluon.loss.HingeLoss.html)
+- Regression: [L1Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.L1Loss), [L2Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.L2Loss)
+- Classification: [SigmoidBinaryCrossEntropyLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss), [SoftmaxCrossEntropyLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.SoftmaxCrossEntropyLoss)
+- Embeddings: [HingeLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.HingeLoss)
 
 We'll first import the modules, where the `mxnet.gluon.loss` module is imported as `gloss` to avoid the commonly used name `loss`.
 
@@ -103,7 +103,7 @@ def show_classification_loss(loss):
     plot(x, y)
 ```
 
-#### [L1 Loss](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.L1Loss)
+#### [L1 Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.L1Loss)
 
 L1 Loss, also called Mean Absolute Error, computes the sum of absolute distance between target values and the output of the neural network. It is defined as:
 
@@ -115,7 +115,7 @@ It is a non-smooth function that can lead to non-convergence. It creates the sam
 show_regression_loss(gloss.L1Loss())
 ```
 
-#### [L2 Loss](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.L2Loss)
+#### [L2 Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.L2Loss)
 
 L2Loss, also called Mean Squared Error, is a regression loss function that computes the squared distances between the target values and the output of the neural network. It is defined as:
 
@@ -127,7 +127,7 @@ Compared to L1, L2 loss it is a smooth function and it creates larger gradients 
 show_regression_loss(gloss.L2Loss())
 ```
 
-#### [Huber Loss](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.HuberLosss)
+#### [Huber Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.HuberLoss)
 
 HuberLoss  combines advantages of L1 and L2 loss. It calculates a smoothed L1 loss that is equal to L1 if the absolute error exceeds a threshold $$\rho$$, otherwise it is equal to L2. It is defined as:
 $$
@@ -144,7 +144,7 @@ show_regression_loss(gloss.HuberLoss(rho=1))
 
 An example of where Huber Loss is used can be found in [Deep Q Network](https://openai.com/blog/openai-baselines-dqn/).
 
-#### [Cross Entropy Loss with Sigmoid](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss)
+#### [Cross Entropy Loss with Sigmoid](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss)
 
 Binary Cross Entropy is a loss function used for binary classification problems e.g. classifying images into 2 classes. Cross entropy measures the difference between two probability distributions and it is defined as:
 $$\sum_i -{(y\log(p) + (1 - y)\log(1 - p))} $$
@@ -154,7 +154,7 @@ Before the loss is computed a sigmoid activation is applied per default. If your
 show_classification_loss(gloss.SigmoidBinaryCrossEntropyLoss())
 ```
 
-#### [Cross Entropy Loss with Softmax](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.SoftmaxCrossEntropyLoss)
+#### [Cross Entropy Loss with Softmax](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.SoftmaxCrossEntropyLoss)
 
 In classification, we often apply the
 softmax operator to the predicted outputs to obtain prediction probabilities,
@@ -172,7 +172,7 @@ y = nd.array([0, 1])
 loss(x, y)
 ```
 
-#### [Hinge Loss](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.HingeLoss)
+#### [Hinge Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.HingeLoss)
 
 Commonly used in Support Vector Machines (SVMs), Hinge Loss is used to additionally penalize predictions that are correct but fall within a margin between classes (the region around a decision boundary). Unlike `SoftmaxCrossEntropyLoss`, it's rarely used for neural network training. It is defined as:
 
@@ -184,7 +184,7 @@ $$
 show_classification_loss(gloss.HingeLoss())
 ```
 
-#### [Logistic Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.LogisticLoss)
+#### [Logistic Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.LogisticLoss)
 
 The Logistic Loss function computes the performance of binary classification models.
 $$
@@ -196,7 +196,7 @@ The log loss decreases the closer the prediction is to the actual label. It is s
 show_classification_loss(gloss.LogisticLoss())
 ```
 
-#### [Kullback-Leibler Divergence Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.KLDivLoss)
+#### [Kullback-Leibler Divergence Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.KLDivLoss)
 
 The Kullback-Leibler divergence loss measures the divergence between two probability distributions by calculating the difference between cross entropy and entropy. It takes as input the probability of predicted label and the probability of true label.
 
@@ -209,7 +209,7 @@ The loss is large, if the predicted probability distribution is far from the gro
 
 For instance, in the following example we get a KL divergence of 0.02. We set ```from_logits=False```, so the loss functions will apply ```log_softmax``` on the network output, before computing the KL divergence.
 
-```python
+```{.python .input}
 output = mx.nd.array([[0.39056206, 1.3068528, 0.39056206, -0.30258512]])
 print('output.softmax(): {}'.format(output.softmax().asnumpy().tolist()))
 target_dist = mx.nd.array([[0.3, 0.4, 0.1, 0.2]])
@@ -218,7 +218,7 @@ loss = loss_fn(output, target_dist)
 print('loss (kl divergence): {}'.format(loss.asnumpy().tolist()))
 ```
 
-#### [Triplet Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.TripletLoss)
+#### [Triplet Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.TripletLoss)
 
 Triplet loss takes three input arrays and measures the relative similarity. It takes a positive and negative input and the anchor.
 
@@ -230,17 +230,17 @@ $$
 The loss function minimizes the distance between similar inputs and maximizes the distance  between dissimilar ones.
 In the case of learning embeddings for images of characters, the network may get as input the following 3 images:
 
-![triplet_loss](triplet_loss.png)
+![triplet_loss](/_static/triplet_loss.png)
 
 The network would learn to minimize the distance between the two `A`'s and maximize the distance between `A` and `Z`.
 
-#### [CTC Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.CTCLoss)
+#### [CTC Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.CTCLoss)
 
 CTC Loss is the [connectionist temporal classification loss](https://distill.pub/2017/ctc/) . It is used to train recurrent neural networks with variable time dimension. It learns the alignment and labelling of input sequences. It takes a sequence as input and gives probabilities for each timestep. For instance, in the following image the word is not well aligned with the 5 timesteps because of the different sizes of characters. CTC Loss finds for each timestep the highest probability e.g. `t1` presents with high probability a `C`. It combines the highest probapilities and returns the best path decoding. For an in-depth tutorial on how to use CTC-Loss in MXNet, check out this [example](https://github.com/apache/incubator-mxnet/tree/master/example/ctc).
 
-![ctc_loss](ctc_loss.png)
+![ctc_loss](/_static/ctc_loss.png)
 
-#### [Cosine Embedding Loss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.CosineEmbeddingLoss)
+#### [Cosine Embedding Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.CosineEmbeddingLoss)
 The cosine embedding loss computes the cosine distance between two input vectors.
 
 $$
@@ -270,7 +270,7 @@ loss = gloss.CosineEmbeddingLoss()
 print(loss(x,y,label))
 ```
 
-#### [PoissonNLLLoss](/api/python/docs/api/gluon/loss/index.html#mxnet.gluon.loss.PoissonNLLLoss)
+#### [PoissonNLLLoss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.PoissonNLLLoss)
 Poisson distribution is widely used for modelling count data. It is defined as:
 
 $$

@@ -46,7 +46,12 @@ struct TakeZeroAxisCPU {
       j = j % K;
       j += (j < 0) ? K : 0;
     }
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     std::memcpy(out_data + i * M, in_data + j * M, M * sizeof(DType));
+#pragma GCC diagnostic pop
   }
 };
 
@@ -296,8 +301,8 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[take_::kIdx].type_flag_, IType, {  // index data type
       if (param.mode == take_::kRaise) {
         IType min = 0;
         IType max = static_cast<IType>(arrshape[actual_axis] - 1);
@@ -323,7 +328,7 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
         }
       } else {
         mshadow::Shape<10> in_strides;
-        int stride = 1;
+        index_t stride = 1;
         for (int i = arrshape.ndim() - 1; i >= 0; stride *= arrshape[i], --i) {
           in_strides[i] = stride;
         }
@@ -450,7 +455,7 @@ void GatherNDCheckBoundCPU(mshadow::Stream<cpu> *s, const DType* idx_ptr, index_
   using namespace mxnet_op;
   Kernel<set_zero, cpu>::Launch(s, M, is_valid_dim_ptr);
   Kernel<is_valid_check_gather_nd, cpu>::Launch(s, M, is_valid_dim_ptr, idx_ptr, N, mshape);
-  for (int m = 0; m < M; m++) {
+  for (index_t m = 0; m < M; m++) {
     if (is_valid_dim_ptr[m] > mshape[m] - 1 || is_valid_dim_ptr[m] < - mshape[m]) {
       LOG(FATAL)<< "IndexError: index " << is_valid_dim_ptr[m] << " is out of bounds for axis "
         << m << " with size " << mshape[m];
@@ -471,16 +476,16 @@ void GatherNDForwardCPU(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
   const mxnet::TShape& dshape = inputs[0].shape_;
   const mxnet::TShape& ishape = inputs[1].shape_;
-  int M = ishape[0];
-  int N = ishape.Size() / M;
-  int K = dshape.ProdShape(M, dshape.ndim());
+  index_t M = ishape[0];
+  index_t N = ishape.Size() / M;
+  index_t K = dshape.ProdShape(M, dshape.ndim());
   mshadow::Shape<10> strides;
   mshadow::Shape<10> mshape;
-  for (int i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) {
+  for (index_t i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) {
     strides[i] = stride;
     mshape[i] = dshape[i];
   }
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {  // output data type switch
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
       // check whether indices are out of bound
       IType* idx_ptr = inputs[1].dptr<IType>();
@@ -536,7 +541,6 @@ GatherNDBackwardImpl(index_t N, index_t M, index_t K,
 }
 
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
-DMLC_REGISTER_PARAMETER(SparseEmbeddingParam);
 DMLC_REGISTER_PARAMETER(TakeParam);
 DMLC_REGISTER_PARAMETER(OneHotParam);
 DMLC_REGISTER_PARAMETER(ScatterNDParam);
@@ -605,93 +609,15 @@ The storage type of weight can be either row_sparse or default.
   })
 .set_attr<mxnet::FInferShape>("FInferShape", EmbeddingOpShape<EmbeddingParam>)
 .set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType<EmbeddingParam>)
-.set_attr<FInferStorageType>("FInferStorageType", EmbeddingOpForwardStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpForward<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_Embedding", n, ograds,
-                               {n->inputs[0]}, n->attrs.dict);
-  })
-.add_argument("data", "NDArray-or-Symbol", "The input array to the embedding operator.")
-.add_argument("weight", "NDArray-or-Symbol", "The embedding weight matrix.")
-.add_arguments(EmbeddingParam::__FIELDS__());
-
-NNVM_REGISTER_OP(_contrib_SparseEmbedding)
-.describe(R"code(Maps integer indices to vector representations (embeddings).
-
-note:: ``contrib.SparseEmbedding`` is deprecated, use ``Embedding`` instead.
-
-This operator maps words to real-valued vectors in a high-dimensional space,
-called word embeddings. These embeddings can capture semantic and syntactic properties of the words.
-For example, it has been noted that in the learned embedding spaces, similar words tend
-to be close to each other and dissimilar words far apart.
-
-For an input array of shape (d1, ..., dK),
-the shape of an output array is (d1, ..., dK, output_dim).
-All the input values should be integers in the range [0, input_dim).
-
-If the input_dim is ip0 and output_dim is op0, then shape of the embedding weight matrix must be
-(ip0, op0).
-
-The storage type of the gradient will be `row_sparse`.
-
-.. Note::
-
-    `SparseEmbedding` is designed for the use case where `input_dim` is very large (e.g. 100k).
-    The operator is available on both CPU and GPU.
-    When `deterministic` is set to `True`, the accumulation of gradients follows a
-    deterministic order if a feature appears multiple times in the input. However, the
-    accumulation is usually slower when the order is enforced on GPU.
-    When the operator is used on the GPU, the recommended value for `deterministic` is `True`.
-
-Examples::
-
-  input_dim = 4
-  output_dim = 5
-
-  // Each row in weight matrix y represents a word. So, y = (w0,w1,w2,w3)
-  y = [[  0.,   1.,   2.,   3.,   4.],
-       [  5.,   6.,   7.,   8.,   9.],
-       [ 10.,  11.,  12.,  13.,  14.],
-       [ 15.,  16.,  17.,  18.,  19.]]
-
-  // Input array x represents n-grams(2-gram). So, x = [(w1,w3), (w0,w2)]
-  x = [[ 1.,  3.],
-       [ 0.,  2.]]
-
-  // Mapped input x to its vector representation y.
-  SparseEmbedding(x, y, 4, 5) = [[[  5.,   6.,   7.,   8.,   9.],
-                                 [ 15.,  16.,  17.,  18.,  19.]],
-
-                                [[  0.,   1.,   2.,   3.,   4.],
-                                 [ 10.,  11.,  12.,  13.,  14.]]]
-
-)code" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<SparseEmbeddingParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data", "weight"};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<mxnet::FInferShape>("FInferShape", EmbeddingOpShape<SparseEmbeddingParam>)
-.set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType<SparseEmbeddingParam>)
-.set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpForwardStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeNonlossGradNode("_backward_SparseEmbedding", n, ograds,
                                {n->inputs[0]}, n->attrs.dict);
   })
 .add_argument("data", "NDArray-or-Symbol", "The input array to the embedding operator.")
@@ -710,18 +636,6 @@ NNVM_REGISTER_OP(_backward_Embedding)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", EmbeddingOpBackwardEx<cpu>);
-
-NNVM_REGISTER_OP(_backward_SparseEmbedding)
-.set_attr_parser(ParamParser<SparseEmbeddingParam>)
-.set_num_inputs(2)
-.set_num_outputs(2)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpBackwardStorageType)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpBackwardEx<cpu>);
 
 NNVM_REGISTER_OP(take)
 .add_alias("_npi_take")

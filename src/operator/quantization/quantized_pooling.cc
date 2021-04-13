@@ -23,7 +23,7 @@
 */
 #include <mxnet/op_attr_types.h>
 #include "../nn/pooling-inl.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../nn/mkldnn/mkldnn_pooling-inl.h"
 #endif
 
@@ -37,47 +37,89 @@ bool QuantizedPoolingShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), 3U);
   if (!shape_is_known(in_shape->at(0))) return false;
   const mxnet::TShape &dshape = (*in_shape)[0];
-  CHECK_EQ(dshape.ndim(), 4U)
-      << "quantized_pooling: Input data should be 4D in "
-      << "(batch, channel, y, x)";
-  int layout = param.GetLayout(dshape.ndim());
+
+  const int data_ndims = dshape.ndim();
+  const int kernel_ndims = param.kernel.ndim();
+  const int layout = param.GetLayout(data_ndims);
+
+#if MXNET_USE_ONEDNN == 1
+  CHECK(data_ndims == 4U || data_ndims == 5U)
+        << "MKL-DNN QuantizedPoolingOp only supports 4D/5D layout yet, input should be 4D in"
+        << "(batch, channel, y, x) or 5D in (batch, channel, d, y, x)";
+  CHECK(layout == mshadow::kNCHW || layout == mshadow::kNCDHW)
+        << "MKL-DNN QuantizedPoolingOp only supports NCHW/NCDHW layout for now, saw " << layout;
+  CHECK(kernel_ndims == 2U || kernel_ndims == 3U)
+        << "MKL-DNN QuantizedPoolingOp only supports 2D/3D pooling for now, saw" << kernel_ndims;
+#else
+  CHECK_EQ(data_ndims, 4U)
+           << "quantized_pooling: Input data should be 4D in "
+           << "(batch, channel, y, x)";
   CHECK_EQ(layout, mshadow::kNCHW)
-      << "QuantizedPoolingOp only supports NCHW layout for now, saw " << layout;
-  // NCHW layout
-  const int N = 0, H = 2, W = 3, C = 1;
-  mxnet::TShape oshape(4, -1);
-  CHECK_EQ(param.kernel.ndim(), 2) << "QuantizedPoolingOp only supports 2D pooling for now";
-  CHECK(param.kernel[0] <= dshape[H] + 2 * param.pad[0])
-      << "kernel size (" << param.kernel[0]
+           << "QuantizedPoolingOp only supports NCHW layout for now, saw " << layout;
+  CHECK_EQ(kernel_ndims, 2U)
+           << "QuantizedPoolingOp only supports 2D pooling for now";
+#endif
+
+  const int D = (data_ndims == 5) ? 2 : 1;
+  const int N = 0, H = D + 1, W = D + 2, C = 1;
+  mxnet::TShape oshape(data_ndims, -1);
+
+  int idx = 0;
+  if (kernel_ndims == 3) {
+    CHECK(param.kernel[idx] <= dshape[D] + 2 * param.pad[idx])
+          << "kernel size (" << param.kernel[0]
+          << ") exceeds input (" << dshape[D]
+          << " padded to " << (dshape[D] + 2 * param.pad[idx]) << ")";
+    ++idx;
+  }
+  CHECK(param.kernel[idx] <= dshape[H] + 2 * param.pad[idx])
+      << "kernel size (" << param.kernel[idx]
       << ") exceeds input (" << dshape[H]
-      << " padded to " << (dshape[H] + 2*param.pad[0]) << ")";
-  CHECK(param.kernel[1] <= dshape[W] + 2 * param.pad[1])
-      << "kernel size (" << param.kernel[1]
+      << " padded to " << (dshape[H] + 2 * param.pad[idx]) << ")";
+  ++idx;
+  CHECK(param.kernel[idx] <= dshape[W] + 2 * param.pad[idx])
+      << "kernel size (" << param.kernel[idx]
       << ") exceeds input (" << dshape[W]
-      << " padded to " << (dshape[W] + 2*param.pad[1]) << ")";
+      << " padded to " << (dshape[W] + 2 * param.pad[idx]) << ")";
+
+#define OUTPUT_SHAPE_VALID_ASSIGN(spatial_dim, idx)                                            \
+{                                                                                              \
+  oshape[spatial_dim] = 1 + (dshape[spatial_dim] + 2 * param.pad[idx] - param.kernel[idx]) /   \
+                            param.stride[idx];                                                 \
+}
+#define OUTPUT_SHAPE_FULL_ASSIGN(spatial_dim, idx)                                             \
+{                                                                                              \
+  oshape[spatial_dim] = 1 + static_cast<int>(std::ceil(                                        \
+                              static_cast<float>(dshape[spatial_dim] + 2 * param.pad[idx] -    \
+                            param.kernel[idx]) / param.stride[idx]));                          \
+}
 
   oshape[N] = dshape[N];
   oshape[C] = dshape[C];
   if (param.global_pool) {
+    if (data_ndims == 5)
+      oshape[D] = 1;
     oshape[H] = 1;
     oshape[W] = 1;
   } else {
     if (param.pooling_convention == pool_enum::kValid) {
-      oshape[H] = 1 +
-                  (dshape[H] + 2 * param.pad[0] - param.kernel[0]) /
-                      param.stride[0];
-      oshape[W] = 1 +
-                  (dshape[W] + 2 * param.pad[1] - param.kernel[1]) /
-                      param.stride[1];
+      int idx = 0;
+      if (data_ndims == 5) {
+        OUTPUT_SHAPE_VALID_ASSIGN(D, idx);
+        ++idx;
+      }
+      OUTPUT_SHAPE_VALID_ASSIGN(H, idx);
+      ++idx;
+      OUTPUT_SHAPE_VALID_ASSIGN(W, idx);
     } else {
-      oshape[H] = 1 + static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[H] + 2 * param.pad[0] -
-                                             param.kernel[0]) /
-                          param.stride[0]));
-      oshape[W] = 1 + static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[W] + 2 * param.pad[1] -
-                                             param.kernel[1]) /
-                          param.stride[1]));
+      int idx = 0;
+      if (data_ndims == 5) {
+        OUTPUT_SHAPE_FULL_ASSIGN(D, idx);
+        ++idx;
+      }
+      OUTPUT_SHAPE_FULL_ASSIGN(H, idx);
+      ++idx;
+      OUTPUT_SHAPE_FULL_ASSIGN(W, idx);
     }
   }
 
@@ -98,7 +140,7 @@ bool QuantizedPoolingType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_type->size(), 3U);
   CHECK_EQ(out_type->size(), 3U);
   if (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);
 #else
     TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
@@ -122,7 +164,7 @@ inline static bool QuantizedPoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(in_attrs->size(), 3);
 
   *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;

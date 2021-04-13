@@ -28,7 +28,7 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_
 
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include <vector>
 #include <utility>
 #include "../activation-inl.h"
@@ -74,13 +74,6 @@ MKLDNNActForward &GetActForward(const MKLDNNActParam& param,
                                 const OpContext &ctx, const NDArray &in_data,
                                 const mkldnn::memory &in_mem);
 
-void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                             const NDArray &in_data, const OpReqType &req,
-                             const NDArray &out_data);
-void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                            const NDArray &in_data, const OpReqType &req,
-                            const NDArray &out_data);
-
 mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
     const MKLDNNActParam &param, const mkldnn::memory &input_mem,
     const mkldnn::memory &diff_dst_memory);
@@ -115,5 +108,5 @@ struct hash<mxnet::op::MKLDNNActParam> {
 };
 }  // namespace std
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_

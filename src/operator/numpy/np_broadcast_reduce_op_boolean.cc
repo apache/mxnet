@@ -39,7 +39,8 @@ inline bool NumpyReduceAxesBoolType(const nnvm::NodeAttrs& attrs,
 
 DMLC_REGISTER_PARAMETER(NumpyReduceAxesBoolParam);
 
-NNVM_REGISTER_OP(_np_any)
+NNVM_REGISTER_OP(_npi_any)
+.add_alias("_np_sometrue")
 .set_attr_parser(ParamParser<NumpyReduceAxesBoolParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -60,7 +61,7 @@ NNVM_REGISTER_OP(_np_any)
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyReduceAxesBoolParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_np_all)
+NNVM_REGISTER_OP(_npi_all)
 .set_attr_parser(ParamParser<NumpyReduceAxesBoolParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)

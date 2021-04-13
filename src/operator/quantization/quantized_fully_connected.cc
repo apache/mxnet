@@ -26,7 +26,7 @@
 #include <vector>
 #include "quantization_utils.h"
 #include "../nn/fully_connected-inl.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../nn/mkldnn/mkldnn_fully_connected-inl.h"
 #include "mkldnn/mkldnn_quantized_ops-inl.h"
 #endif
@@ -94,7 +94,7 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_type->size(), num_inputs * 3);
   CHECK_EQ(out_type->size(), 3U);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   CHECK(in_type->at(0) == mshadow::kInt8 || in_type->at(0) == mshadow::kUint8)
       << "QuantizedFullyConnected only supports int8/uint8 input, while "
       << in_type->at(0) << " is given.";
@@ -124,7 +124,7 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), num_inputs * 3);
   CHECK_EQ(out_attrs->size(), 3U);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   return MKLDNNStorageType(attrs, dev_mask, true,
                            dispatch_mode, in_attrs, out_attrs);
 #else
@@ -154,7 +154,7 @@ struct QuantizedSumInitKernelWithBias {
                                   const float *max_out, const float *min_bias,
                                   const float *max_bias) {
     typedef int32_t T1;
-    typedef int8_t  T2;
+    using T2 = int8_t;
     using mshadow::red::limits::MinValue;
     using mshadow::red::limits::MaxValue;
     float float_for_one_out_quant  =
@@ -292,7 +292,7 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
 #endif
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 void QuantizedFullyConnectedForwardExCPU(const nnvm::NodeAttrs &attrs,
                                          const OpContext &ctx,
                                          const std::vector<NDArray> &in_data,
@@ -341,7 +341,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .set_attr<FCompute>("FCompute<cpu>", QuantizedFullyConnectedForwardCPU)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", QuantizedFullyConnectedForwardExCPU)
 #endif

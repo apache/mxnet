@@ -291,9 +291,9 @@ def probe_cpu_variant(mxnet_features: Dict[str, bool]) -> str:
     :return: Either cpu, or mkl as the variant
     """
     logger.debug('Determining cpu variant')
-    if mxnet_features['MKLDNN']:
-        logger.debug('variant is: mkl')
-        return 'mkl'
+    if not mxnet_features['ONEDNN']:
+        logger.debug('variant is: native')
+        return 'native'
 
     logger.debug('variant is: cpu')
     return 'cpu'
@@ -303,7 +303,7 @@ def probe_gpu_variant(mxnet_features: Dict[str, bool]) -> Optional[str]:
     """
     Returns the mxnet gpu variant depending on which mxnet features are enabled
     :param mxnet_features: An mxnet feature dictionary of feature to boolean (True = enabled)
-    :return: The mxnet gpu variant, eg. cu90, cu90mkl, etc.
+    :return: The mxnet gpu variant, eg. cu102, cu102mkl, etc.
     :raises RuntimeError is the CUDA feature is not enabled in the library
     """
     if not mxnet_features['CUDA']:
@@ -312,8 +312,8 @@ def probe_gpu_variant(mxnet_features: Dict[str, bool]) -> Optional[str]:
     cuda_version = get_cuda_version()
     if cuda_version:
         variant = 'cu{}'.format(cuda_version)
-        if mxnet_features['MKLDNN']:
-            variant = '{}mkl'.format(variant)
+        if not mxnet_features['ONEDNN']:
+            RuntimeError('Error determining mxnet variant: ONEDNN should be enabled for cuda variants')
         logger.debug('variant is: {}'.format(variant))
         return variant
 
@@ -323,7 +323,7 @@ def probe_gpu_variant(mxnet_features: Dict[str, bool]) -> Optional[str]:
 def probe_mxnet_variant(limxnet_path: str) -> Optional[str]:
     """
     Probes the libmxnet library and environment to determine
-    the mxnet variant, eg. cpu, mkl, cu90, cu90mkl, etc.
+    the mxnet variant, eg. cpu, cu102, etc.
     :return:
     """
     logger.debug('Probing for mxnet variant')
@@ -496,7 +496,7 @@ def sanitize_path_array(paths: List[str]) -> List[str]:
     :return: A sanitized list of paths
     :raises FileNotFoundError if a file does not exist
     """
-    expanded_paths = list(chain(*[glob.glob(path.strip()) for path in paths if path.strip() != '']))
+    expanded_paths = list(chain.from_iterable(glob.glob(path.strip()) for path in paths if path.strip() != ''))
     return [path.strip() for path in expanded_paths if path.strip() != '' and is_file(path)]
 
 
@@ -544,7 +544,7 @@ def main() -> int:
                         type=str)
 
     parser.add_argument("--variant",
-                        help="MXNet binary variant. Eg. cpu, mkl, cu90, cu100mkl, etc.",
+                        help="MXNet binary variant. Eg. cpu, native, cu102, etc.",
                         required=False,
                         type=str)
 

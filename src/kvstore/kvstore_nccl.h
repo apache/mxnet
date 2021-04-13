@@ -38,7 +38,7 @@
 #include <tuple>
 #include "./comm.h"
 #include "./kvstore_local.h"
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 
 // NCCL v2 introduces NCCL_MAJOR macro for versioning,
 // so if there is no such macro defined in nccl.h

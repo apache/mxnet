@@ -62,16 +62,16 @@ class CSVIterBase: public IIterator<DataInst> {
   CSVIterBase() {
     out_.data.resize(2);
   }
-  virtual ~CSVIterBase() {}
+  ~CSVIterBase() override = default;
 
   // initialize iterator loads data in
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override = 0;
   /*! \brief reset the iterator */
-  virtual void BeforeFirst(void) = 0;
+  void BeforeFirst() override = 0;
   /*! \brief move to next item */
-  virtual bool Next(void) = 0;
+  bool Next() override = 0;
   /*! \brief get current data */
-  virtual const DataInst &Value(void) const {
+  const DataInst &Value() const override {
     return out_;
   }
 
@@ -93,9 +93,9 @@ class CSVIterBase: public IIterator<DataInst> {
 template <typename DType>
 class CSVIterTyped: public CSVIterBase {
  public:
-  virtual ~CSVIterTyped() {}
+  ~CSVIterTyped() override = default;
   // intialize iterator loads data in
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.InitAllowUnknown(kwargs);
     data_parser_.reset(dmlc::Parser<uint32_t, DType>::Create(param_.data_csv.c_str(), 0, 1, "csv"));
     if (param_.label_csv != "NULL") {
@@ -108,7 +108,7 @@ class CSVIterTyped: public CSVIterBase {
     }
   }
 
-  virtual void BeforeFirst() {
+  void BeforeFirst() override {
     data_parser_->BeforeFirst();
     if (label_parser_.get() != nullptr) {
       label_parser_->BeforeFirst();
@@ -119,7 +119,7 @@ class CSVIterTyped: public CSVIterBase {
     end_ = false;
   }
 
-  virtual bool Next() {
+  bool Next() override {
     if (end_) return false;
     while (data_ptr_ >= data_size_) {
       if (!data_parser_->Next()) {
@@ -163,11 +163,11 @@ class CSVIterTyped: public CSVIterBase {
 
 class CSVIter: public IIterator<DataInst> {
  public:
-  CSVIter() {}
-  virtual ~CSVIter() {}
+  CSVIter() = default;
+  ~CSVIter() override = default;
 
   // intialize iterator loads data in
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.InitAllowUnknown(kwargs);
     bool dtype_has_value = false;
     int target_dtype = -1;
@@ -195,15 +195,15 @@ class CSVIter: public IIterator<DataInst> {
     iterator_->Init(kwargs);
   }
 
-  virtual void BeforeFirst() {
+  void BeforeFirst() override {
     iterator_->BeforeFirst();
   }
 
-  virtual bool Next() {
+  bool Next() override {
     return iterator_->Next();
   }
 
-  virtual const DataInst &Value(void) const {
+  const DataInst &Value() const override {
     return iterator_->Value();
   }
 

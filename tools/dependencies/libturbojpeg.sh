@@ -20,13 +20,13 @@
 # This script builds the static library of libturbojpeg that can be used as dependency of
 # mxnet/opencv.
 set -ex
-TURBO_JPEG_VERSION=2.0.2
+TURBO_JPEG_VERSION=2.0.4
 if [[ $PLATFORM == 'darwin' ]]; then
     JPEG_NASM_OPTION="-D CMAKE_ASM_NASM_COMPILER=/usr/local/bin/nasm"
 fi
 
-if [[ ! -f $DEPS_PATH/lib/libjpeg.a ]] || [[ ! -f $DEPS_PATH/lib/libturbojpeg.a ]]; then
-    # download and build libjpeg
+if [[ ( ! -f $DEPS_PATH/lib/libjpeg.a ) || ( ! -f $DEPS_PATH/lib/libturbojpeg.a ) ]] && \
+       [[ ( ! -f $DEPS_PATH/lib64/libjpeg.a ) || ( ! -f $DEPS_PATH/lib64/libturbojpeg.a ) ]]; then    # download and build libjpeg
     >&2 echo "Building libjpeg-turbo..."
     download \
         https://github.com/libjpeg-turbo/libjpeg-turbo/archive/${TURBO_JPEG_VERSION}.zip \

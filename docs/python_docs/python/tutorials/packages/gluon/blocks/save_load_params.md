@@ -31,7 +31,7 @@ The Model architecture of `Hybrid` models stays static and don't change during e
 
 Let's look at the above methods in more detail. Let's start by importing the modules we'll need.
 
-```python
+```{.python .input}
 from __future__ import print_function
 
 import mxnet as mx
@@ -48,7 +48,7 @@ We need a trained model before we can save it to a file. So let's go ahead and b
 
 Let's define a helper function to build a LeNet model and another helper to train LeNet with MNIST.
 
-```python
+```{.python .input}
 # Use GPU if one exists, else use CPU
 ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
 
@@ -65,26 +65,25 @@ train_data = gluon.data.DataLoader(gluon.data.vision.MNIST(train=True).transform
 
 # Build a simple convolutional network
 def build_lenet(net):    
-    with net.name_scope():
-        # First convolution
-        net.add(gluon.nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
-        net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
-        # Second convolution
-        net.add(gluon.nn.Conv2D(channels=50, kernel_size=5, activation='relu'))
-        net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
-        # Flatten the output before the fully connected layers
-        net.add(gluon.nn.Flatten())
-        # First fully connected layers with 512 neurons
-        net.add(gluon.nn.Dense(512, activation="relu"))
-        # Second fully connected layer with as many neurons as the number of classes
-        net.add(gluon.nn.Dense(num_outputs))
+    # First convolution
+    net.add(gluon.nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
+    net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
+    # Second convolution
+    net.add(gluon.nn.Conv2D(channels=50, kernel_size=5, activation='relu'))
+    net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
+    # Flatten the output before the fully connected layers
+    net.add(gluon.nn.Flatten())
+    # First fully connected layers with 512 neurons
+    net.add(gluon.nn.Dense(512, activation="relu"))
+    # Second fully connected layer with as many neurons as the number of classes
+    net.add(gluon.nn.Dense(num_outputs))
 
-        return net
+    return net
 
 # Train a given model using MNIST data
 def train_model(model):
     # Initialize the parameters with Xavier initializer
-    model.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+    model.initialize(mx.init.Xavier(), ctx=ctx)
     # Use cross entropy loss
     softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
     # Use Adam optimizer
@@ -116,7 +115,7 @@ def train_model(model):
 
 Let's build a model and train it. After training, we will save and restore this model from a file.
 
-```python
+```{.python .input}
 net = build_lenet(gluon.nn.Sequential())
 train_model(net)
 ```
@@ -145,31 +144,29 @@ Epoch: 0; Batch 900; Loss 0.008402 <!--notebook-skip-line-->
 
 Okay, we now have a model (`net`) that we can save to a file. Let's save the parameters of this model to a file using the `save_parameters` function.
 
-```python
+```{.python .input}
 file_name = "net.params"
 net.save_parameters(file_name)
 ```
 
 We have successfully saved the parameters of the model into a file.
 
-Note: `Block.collect_params().save()` is not a recommended way to save parameters of a Gluon network if you plan to load the parameters back into a Gluon network using `Block.load_parameters()`.
-
 ## Loading model parameters from file
 
 Let's now create a network with the parameters we saved into the file. We build the network again using the helper first and then load the weights from the file we saved using the `load_parameters` function.
 
-```python
+```{.python .input}
 new_net = build_lenet(gluon.nn.Sequential())
 new_net.load_parameters(file_name, ctx=ctx)
 ```
 
 Note that to do this, we need the definition of the network as Python code. If we want to recreate this network on a different machine using the saved weights, we need the same Python code (`build_lenet`) that created the network to create the `new_net` object shown above. This means Python code needs to be copied over to any machine where we want to run this network.
 
-If our network is [Hybrid](https://mxnet.apache.org/tutorials/gluon/hybrid.html), we can even save the network architecture into files and we won't need the network definition in a Python file to load the network. We'll see how to do it in the next section.
+If our network is [Hybrid](./hybridize.ipynb), we can even save the network architecture into files and we won't need the network definition in a Python file to load the network. We'll see how to do it in the next section.
 
 Let's test the model we just loaded from file.
 
-```python
+```{.python .input}
 import matplotlib.pyplot as plt
 
 def verify_loaded_model(net):
@@ -180,7 +177,7 @@ def verify_loaded_model(net):
         return data.astype(np.float32)/255, label.astype(np.float32)
 
     # Load ten random images from the test dataset
-    sample_data = mx.gluon.data.DataLoader(mx.gluon.data.vision.MNIST(train=False, transform=transform),
+    sample_data = mx.gluon.data.DataLoader(mx.gluon.data.vision.MNIST(train=False).transform(transform),
                                   10, shuffle=True)
 
     for data, label in sample_data:
@@ -202,17 +199,17 @@ def verify_loaded_model(net):
 
 verify_loaded_model(new_net)
 ```
-![Model inputs](https://raw.githubusercontent.com/indhub/web-data/4a9c100aa996df3dff0e7f493029d411c2b526c3/mxnet/tutorials/gluon/save_load_params/mnist_in_1.png) <!--notebook-skip-line-->
+![Model inputs mnist in 1](https://raw.githubusercontent.com/indhub/web-data/4a9c100aa996df3dff0e7f493029d411c2b526c3/mxnet/tutorials/gluon/save_load_params/mnist_in_1.png) <!--notebook-skip-line-->
 
 Model predictions:  [1. 1. 4. 5. 0. 5. 7. 0. 3. 6.] <!--notebook-skip-line-->
 
 ## Saving model parameters AND architecture to file
 
-[Hybrid](https://mxnet.apache.org/tutorials/gluon/hybrid.html) models can be serialized as JSON files using the `export` function. Once serialized, these models can be loaded from other language bindings like C++ or Scala for faster inference or inference in different environments.
+[Hybrid](./hybridize.ipynb) models can be serialized as JSON files using the `export` function. Once serialized, these models can be loaded from other language bindings like C++ or Scala for faster inference or inference in different environments.
 
 Note that the network we created above is not a Hybrid network and therefore cannot be serialized into a JSON file. So, let's create a Hybrid version of the same network and train it.
 
-```python
+```{.python .input}
 net = build_lenet(gluon.nn.HybridSequential())
 net.hybridize()
 train_model(net)
@@ -241,7 +238,7 @@ Epoch: 0; Batch 900; Loss 0.037809 <!--notebook-skip-line-->
 
 We now have a trained hybrid network. This can be exported into files using the `export` function. The `export` function will export the model architecture into a `.json` file and model parameters into a `.params` file.
 
-```python
+```{.python .input}
 net.export("lenet", epoch=1)
 ```
 
@@ -259,7 +256,7 @@ One of the main reasons to serialize model architecture into a JSON file is to l
 
 Serialized Hybrid networks (saved as .JSON and .params file) can be loaded and used inside Python frontend using `gluon.nn.SymbolBlock`. To demonstrate that, let's load the network we serialized above.
 
-```python
+```{.python .input}
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -268,14 +265,12 @@ with warnings.catch_warnings():
 
 `deserialized_net` now contains the network we deserialized from files. Let's test the deserialized network to make sure it works.
 
-```python
+```{.python .input}
 verify_loaded_model(deserialized_net)
 ```
 
-![Model inputs](https://raw.githubusercontent.com/indhub/web-data/4a9c100aa996df3dff0e7f493029d411c2b526c3/mxnet/tutorials/gluon/save_load_params/mnist_in_2.png) <!--notebook-skip-line-->
+![Model inputs mnist in 2](https://raw.githubusercontent.com/indhub/web-data/4a9c100aa996df3dff0e7f493029d411c2b526c3/mxnet/tutorials/gluon/save_load_params/mnist_in_2.png) <!--notebook-skip-line-->
 
 Model predictions:  [4. 8. 0. 1. 5. 5. 8. 8. 1. 9.] <!--notebook-skip-line-->
 
 That's all! We learned how to save and load Gluon networks from files. Parameters of any Gluon network can be persisted into files. For hybrid networks, both the architecture of the network and the parameters can be saved to and loaded from files.
-
-<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

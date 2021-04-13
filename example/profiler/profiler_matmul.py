@@ -52,10 +52,10 @@ if __name__ == '__main__':
     print("execution begin")
     for i in range(args.iter_num):
         if i == args.begin_profiling_iter:
-            t0 = time.clock()
+            t0 = time.process_time()
             mx.profiler.set_state('run')
         if i == args.end_profiling_iter:
-            t1 = time.clock()
+            t1 = time.process_time()
             mx.profiler.set_state('stop')
         executor.forward()
         c = executor.outputs[0]

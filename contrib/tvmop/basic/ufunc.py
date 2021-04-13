@@ -21,11 +21,11 @@ from .. import defop, AllTypes, RealTypes
 from .. import assign_by_req, reduce_axes
 
 def compute_add(dtype, ndim):
-    A = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='A', dtype=dtype)
-    B = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='B', dtype=dtype)
-    C = tvm.compute([tvm.size_var() for _ in range(ndim)],
+    A = tvm.te.placeholder([tvm.te.size_var() for _ in range(ndim)], name='A', dtype=dtype)
+    B = tvm.te.placeholder([tvm.te.size_var() for _ in range(ndim)], name='B', dtype=dtype)
+    C = tvm.te.compute([tvm.te.size_var() for _ in range(ndim)],
                     lambda *index: A[index] + B[index], name='C')
-    s = tvm.create_schedule(C.op)
+    s = tvm.te.create_schedule(C.op)
     return s, A, B, C
 
 
@@ -44,12 +44,12 @@ def vadd(dtype, ndim):
        dtype=["float32", "float64"], ndim=[5])
 def vadd_gpu(dtype, ndim):
     s, A, B, C = compute_add(dtype, ndim)
-    s = tvm.create_schedule(C.op)
+    s = tvm.te.create_schedule(C.op)
     axes = [axis for axis in C.op.axis]
     fused = s[C].fuse(*axes)
     bx, tx = s[C].split(fused, factor=64)
-    s[C].bind(bx, tvm.thread_axis("blockIdx.x"))
-    s[C].bind(tx, tvm.thread_axis("threadIdx.x"))
+    s[C].bind(bx, tvm.te.thread_axis("blockIdx.x"))
+    s[C].bind(tx, tvm.te.thread_axis("threadIdx.x"))
     return s, [A, B, C]
 
 
@@ -62,12 +62,12 @@ def compute_backward_vadd(dtype, ndim, reduce1st, req):
     # They compressed bit string is stored in `axes`. And `reduce1st` represents the first bit
     # of the compressed bit string. Credit to @junrushao1994 and @yzhliu.
     axes = ([reduce1st, 1 - reduce1st] * ndim)[:ndim]
-    X = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='X', dtype=dtype)
-    reducer = tvm.comm_reducer(lambda x, y: x + y,
-        lambda t: tvm.const(0, dtype=t), name="sum")
+    X = tvm.te.placeholder([tvm.te.size_var() for _ in range(ndim)], name='X', dtype=dtype)
+    reducer = tvm.te.comm_reducer(lambda x, y: x + y,
+        lambda t: tvm.tir.const(0, dtype=t), name="sum")
     ret = reduce_axes(X, axes, reducer)
     in_grad_a, in_grad = assign_by_req(ret, req)
-    s = tvm.create_schedule(in_grad.op)
+    s = tvm.te.create_schedule(in_grad.op)
     return s, X, in_grad_a, in_grad, [ret, in_grad]
 
 
@@ -90,8 +90,8 @@ def backward_vadd_gpu(dtype, ndim, reduce1st, req):
     s, X, in_grad_a, in_grad, c_list = compute_backward_vadd(dtype, ndim, reduce1st, req)
     num_thread = 64
     for t in c_list:
-        block_x = tvm.thread_axis("blockIdx.x")
-        thread_x = tvm.thread_axis("threadIdx.x")
+        block_x = tvm.te.thread_axis("blockIdx.x")
+        thread_x = tvm.te.thread_axis("threadIdx.x")
         axes = [axis for axis in t.op.axis]
         fused = s[t].fuse(*axes)
         bx, tx = s[t].split(fused, factor=num_thread)
@@ -101,15 +101,15 @@ def backward_vadd_gpu(dtype, ndim, reduce1st, req):
 
 
 def compute_degandrad(dtype, ndim, n):
-    A = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='A', dtype=dtype)
+    A = tvm.te.placeholder([tvm.te.size_var() for _ in range(ndim)], name='A', dtype=dtype)
     import math
     if n == 0:
-        B = tvm.compute([tvm.size_var() for _ in range(ndim)],
-                        lambda *index: A[index] * tvm.const(math.pi, dtype) / tvm.const(180, dtype), name='B')
+        B = tvm.te.compute([tvm.te.size_var() for _ in range(ndim)],
+                        lambda *index: A[index] * tvm.tir.const(math.pi, dtype) / tvm.tir.const(180, dtype), name='B')
     else:
-        B = tvm.compute([tvm.size_var() for _ in range(ndim)],
-                        lambda *index: A[index] / tvm.const(math.pi, dtype) * tvm.const(180, dtype), name='B')
-    s = tvm.create_schedule(B.op)
+        B = tvm.te.compute([tvm.te.size_var() for _ in range(ndim)],
+                        lambda *index: A[index] / tvm.tir.const(math.pi, dtype) * tvm.tir.const(180, dtype), name='B')
+    s = tvm.te.create_schedule(B.op)
     return s, A, B
 
 
@@ -137,12 +137,12 @@ def rad2deg(dtype, ndim):
        dtype=["float32", "float64"], ndim=list(range(0, 6)))
 def deg2rad_gpu(dtype, ndim):
     s, A, B = compute_degandrad(dtype, ndim, 0)
-    s = tvm.create_schedule(B.op)
+    s = tvm.te.create_schedule(B.op)
     axes = [axis for axis in B.op.axis]
     fused = s[B].fuse(*axes)
     bx, tx = s[B].split(fused, factor=64)
-    s[B].bind(bx, tvm.thread_axis("blockIdx.x"))
-    s[B].bind(tx, tvm.thread_axis("threadIdx.x"))
+    s[B].bind(bx, tvm.te.thread_axis("blockIdx.x"))
+    s[B].bind(tx, tvm.te.thread_axis("threadIdx.x"))
     return s, [A, B]
 
 
@@ -150,30 +150,30 @@ def deg2rad_gpu(dtype, ndim):
        dtype=["float32", "float64"], ndim=list(range(0, 6)))
 def rad2deg_gpu(dtype, ndim):
     s, A, B = compute_degandrad(dtype, ndim, 1)
-    s = tvm.create_schedule(B.op)
+    s = tvm.te.create_schedule(B.op)
     axes = [axis for axis in B.op.axis]
     fused = s[B].fuse(*axes)
     bx, tx = s[B].split(fused, factor=64)
-    s[B].bind(bx, tvm.thread_axis("blockIdx.x"))
-    s[B].bind(tx, tvm.thread_axis("threadIdx.x"))
+    s[B].bind(bx, tvm.te.thread_axis("blockIdx.x"))
+    s[B].bind(tx, tvm.te.thread_axis("threadIdx.x"))
     return s, [A, B]
 
 
 def compute_backward_degandrad(dtype, ndim, req, n):
-    ishape = [tvm.size_var() for _ in range(ndim)]
-    in_grad_tmp = tvm.placeholder(ishape, name='in_grad_tmp', dtype=dtype)
-    in_grad = tvm.placeholder(ishape, name='in_grad', dtype=dtype)
-    out_grad = tvm.placeholder(ishape, name='out_grad', dtype=dtype)
+    ishape = [tvm.te.size_var() for _ in range(ndim)]
+    in_grad_tmp = tvm.te.placeholder(ishape, name='in_grad_tmp', dtype=dtype)
+    in_grad = tvm.te.placeholder(ishape, name='in_grad', dtype=dtype)
+    out_grad = tvm.te.placeholder(ishape, name='out_grad', dtype=dtype)
     import math
     if n == 0:
-        ret = tvm.compute(ishape, lambda *index: out_grad[index] * tvm.const(math.pi, dtype) / tvm.const(180, dtype))
+        ret = tvm.te.compute(ishape, lambda *index: out_grad[index] * tvm.tir.const(math.pi, dtype) / tvm.tir.const(180, dtype))
     else:
-        ret = tvm.compute(ishape, lambda *index: out_grad[index] / tvm.const(math.pi, dtype) * tvm.const(180, dtype))
+        ret = tvm.te.compute(ishape, lambda *index: out_grad[index] / tvm.tir.const(math.pi, dtype) * tvm.tir.const(180, dtype))
     if (req == "kAddTo"):
-        in_grad = tvm.compute(ishape, lambda *index: in_grad_tmp[index] + ret[index])
+        in_grad = tvm.te.compute(ishape, lambda *index: in_grad_tmp[index] + ret[index])
     else:
-        in_grad = tvm.compute(ishape, lambda *index: ret[index])
-    s = tvm.create_schedule(in_grad.op)
+        in_grad = tvm.te.compute(ishape, lambda *index: ret[index])
+    s = tvm.te.create_schedule(in_grad.op)
     return s, out_grad, in_grad_tmp, in_grad, [ret, in_grad]
 
 
@@ -208,8 +208,8 @@ def cuda_backward_deg2rad(dtype, ndim, req):
     s, out_grad, in_grad_tmp, in_grad, c_list = compute_backward_degandrad(dtype, ndim, req, 0)
     num_thread = 64
     for t in c_list:
-        block_x = tvm.thread_axis("blockIdx.x")
-        thread_x = tvm.thread_axis("threadIdx.x")
+        block_x = tvm.te.thread_axis("blockIdx.x")
+        thread_x = tvm.te.thread_axis("threadIdx.x")
         axes = [axis for axis in t.op.axis]
         fused = s[t].fuse(*axes)
         bx, tx = s[t].split(fused, factor=num_thread)
@@ -225,8 +225,8 @@ def cuda_backward_rad2deg(dtype, ndim, req):
     s, out_grad, in_grad_tmp, in_grad, c_list = compute_backward_degandrad(dtype, ndim, req, 1)
     num_thread = 64
     for t in c_list:
-        block_x = tvm.thread_axis("blockIdx.x")
-        thread_x = tvm.thread_axis("threadIdx.x")
+        block_x = tvm.te.thread_axis("blockIdx.x")
+        thread_x = tvm.te.thread_axis("threadIdx.x")
         axes = [axis for axis in t.op.axis]
         fused = s[t].fuse(*axes)
         bx, tx = s[t].split(fused, factor=num_thread)

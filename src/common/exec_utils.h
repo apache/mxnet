@@ -31,10 +31,17 @@
 #include <string>
 #include <utility>
 #include "../common/utils.h"
-#include "../executor/exec_pass.h"
+#include "../imperative/exec_pass.h"
 
 namespace mxnet {
 namespace common {
+
+#if MXNET_USE_ONEDNN == 1
+     // We have to make sure it's default storage and default layout.
+#define DEFAULT_DATA(x)    x.IsDefaultData()
+#else
+#define DEFAULT_DATA(x)    (x.storage_type() == kDefaultStorage)
+#endif
 
 /*
  * \brief setup default-storage tblobs from source NDArrays. If any source NDArray has non-default
@@ -57,17 +64,12 @@ inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
                                 std::unordered_map<uint32_t, uint32_t> *idx_map) {
   bool require_cast = false;
   for (size_t i = 0; i < src.size(); i++) {
-    auto& nd = src[i];
-    bool is_default = nd.storage_type() == kDefaultStorage;
-#if MXNET_USE_MKLDNN == 1
-    // We have to make sure it's default storage and default layout.
-    is_default = nd.IsDefaultData();
-#endif
-    if (!is_default) {
+    const auto& nd = src[i];
+    if (!DEFAULT_DATA(nd)) {
       (*idx_map)[i] = temp_dst->size();
       NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
                                                              true, nd.dtype());
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
       CHECK(temp.IsDefaultData());
 #endif
       temp_src->emplace_back(nd);
@@ -89,9 +91,9 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
                                  std::vector<NDArray> *temp_dst) {
   bool require_cast = false;
   for (size_t i = 0; i < src.size(); i++) {
-    auto& nd = src[i];
-    bool is_default = nd.storage_type() == kDefaultStorage;
-#if MXNET_USE_MKLDNN == 1
+    const auto& nd = src[i];
+
+#if MXNET_USE_ONEDNN == 1
     if (req->at(i) == kWriteInplace && nd.IsMKLDNNData())
       // If it's write inplace and the output array doesn't use the default
       // layout, we'll generate a temporary output array below, which means
@@ -99,17 +101,14 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
       // we should change the request type.
       req->at(i) = kWriteTo;
     // We have to make sure it's default storage and default layout.
-    is_default = nd.IsDefaultData();
 #endif
-    if (!is_default) {
-#if MXNET_USE_MKLDNN == 1
+    if (!DEFAULT_DATA(nd)) {
+#if MXNET_USE_ONEDNN == 1
       NDArray temp;
       if (bufs != nullptr) {
         temp = bufs->at(i);
-      } else if (kAddTo == req->at(i) && nd.IsMKLDNNData()) {
-        temp = nd.Reorder2Default();
       } else if (kAddTo == req->at(i)) {
-        temp = nd;
+        temp = nd.IsMKLDNNData()? nd.Reorder2Default() : nd;
       } else {
         temp = NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
       }
@@ -367,78 +366,6 @@ inline void LogInferStorage(const nnvm::Graph& g) {
       }
     }
   }
-}
-
-// prints a helpful message after shape inference errors in executor.
-inline void HandleInferShapeError(const size_t num_forward_inputs,
-                                  const nnvm::IndexedGraph& idx,
-                                  const mxnet::ShapeVector& inferred_shapes) {
-  int cnt = 10;
-  std::ostringstream oss;
-  for (size_t i = 0; i < num_forward_inputs; ++i) {
-    const uint32_t nid = idx.input_nodes().at(i);
-    const uint32_t eid = idx.entry_id(nid, 0);
-    const mxnet::TShape& inferred_shape = inferred_shapes[eid];
-    if (!shape_is_known(inferred_shape)) {
-      const std::string& arg_name = idx[nid].source->attrs.name;
-      oss << arg_name << ": " << inferred_shape << ", ";
-      if (--cnt == 0) {
-        oss << "...";
-        break;
-      }
-    }
-  }
-  LOG(FATAL) << "InferShape pass cannot decide shapes for the following arguments "
-                "(-1 means unknown dimensions). Please consider providing them as inputs:\n"
-             << oss.str();
-}
-
-// prints a helpful message after type inference errors in executor.
-inline void HandleInferTypeError(const size_t num_forward_inputs,
-                                 const nnvm::IndexedGraph& idx,
-                                 const nnvm::DTypeVector& inferred_dtypes) {
-  int cnt = 10;
-  std::ostringstream oss;
-  for (size_t i = 0; i < num_forward_inputs; ++i) {
-    const uint32_t nid = idx.input_nodes().at(i);
-    const uint32_t eid = idx.entry_id(nid, 0);
-    const int inferred_dtype = inferred_dtypes[eid];
-    if (inferred_dtype == -1) {
-      const std::string& arg_name = idx[nid].source->attrs.name;
-      oss << arg_name << ": " << inferred_dtype << ", ";
-      if (--cnt == 0) {
-        oss << "...";
-        break;
-      }
-    }
-  }
-  LOG(FATAL) << "InferType pass cannot decide dtypes for the following arguments "
-                "(-1 means unknown dtype). Please consider providing them as inputs:\n"
-             << oss.str();
-}
-
-// prints a helpful message after storage type checking errors in executor.
-inline void HandleInferStorageTypeError(const size_t num_forward_inputs,
-                                        const nnvm::IndexedGraph& idx,
-                                        const StorageTypeVector& inferred_stypes) {
-  int cnt = 10;
-  std::ostringstream oss;
-  for (size_t i = 0; i < num_forward_inputs; ++i) {
-    const uint32_t nid = idx.input_nodes().at(i);
-    const uint32_t eid = idx.entry_id(nid, 0);
-    const int inferred_stype = inferred_stypes[eid];
-    if (inferred_stype == -1) {
-      const std::string& arg_name = idx[nid].source->attrs.name;
-      oss << arg_name << ": " << common::stype_string(inferred_stype) << ", ";
-      if (--cnt == 0) {
-        oss << "...";
-        break;
-      }
-    }
-  }
-  LOG(FATAL) << "InferStorageType pass cannot decide storage type for the following arguments "
-                "(-1 means unknown stype). Please consider providing them as inputs:\n"
-             << oss.str();
 }
 
 /*!

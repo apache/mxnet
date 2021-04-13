@@ -65,7 +65,12 @@ struct UniqueComputeAuxCPUKernel {
   MSHADOW_XINLINE static void Map(dim_t i, DType* out_data, const DType* in_data,
                                   const dim_t* idx, const dim_t M) {
     dim_t j = idx[i];
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     std::memcpy(out_data + i * M, in_data + j * M, M * sizeof(DType));
+#pragma GCC diagnostic pop
   }
 };
 
@@ -343,6 +348,8 @@ void NumpyUniqueCPUForward(const nnvm::NodeAttrs& attrs,
       const_cast<NDArray &>(outputs[output_flag]).Init(shape_0);
     }
   } else {
+    CHECK_LT(inputs[0].shape().Size(), INT32_MAX) << "ValueError: np.unique does not support large"
+      << " input tensors (containing >= 2^31).";
     if (!param.axis.has_value()) {
       NumpyUniqueCPUNoneAxisImpl(param, ctx, inputs, req, outputs);
     } else {
@@ -375,6 +382,7 @@ NNVM_REGISTER_OP(_npi_unique)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(NumpyUniqueParam::__FIELDS__());
 

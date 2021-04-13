@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include "../../operator_common.h"
 #include "../../mshadow_op.h"
@@ -48,6 +49,11 @@ struct PinvParam : public dmlc::Parameter<PinvParam> {
     .set_default(false)
     .describe("If True, A is assumed to be Hermitian (symmetric if real-valued).");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream hermitian_s;
+    hermitian_s << hermitian;
+    (*dict)["hermitian"] = hermitian_s.str();
+  }
 };
 
 struct PinvScalarRcondParam : public dmlc::Parameter<PinvScalarRcondParam> {
@@ -61,40 +67,48 @@ struct PinvScalarRcondParam : public dmlc::Parameter<PinvScalarRcondParam> {
     .set_default(false)
     .describe("If True, A is assumed to be Hermitian (symmetric if real-valued).");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream rcond_s;
+    std::ostringstream hermitian_s;
+    rcond_s << rcond;
+    hermitian_s << hermitian;
+    (*dict)["rcond"] = rcond_s.str();
+    (*dict)["hermitian"] = hermitian_s.str();
+  }
 };
 
-template<typename xpu, typename DType>
-int linalg_gesdd_workspace_query(const int m, const int n,
-                                 const Tensor<xpu, 2, DType>& UT,
-                                 const Tensor<xpu, 1, DType>& S,
-                                 const Tensor<xpu, 2, DType>& V,
-                                 Stream<xpu>* s = 0);
+template<typename xpu, typename DType, typename IndexT>
+IndexT linalg_gesdd_workspace_query(const IndexT m, const IndexT n,
+                                    const Tensor<xpu, 2, DType>& UT,
+                                    const Tensor<xpu, 1, DType>& S,
+                                    const Tensor<xpu, 2, DType>& V,
+                                    Stream<xpu>* s = 0);
 
-template<typename xpu, typename DType>
-void linalg_gesdd(const int m, const int n,
+template<typename xpu, typename DType, typename IndexT>
+void linalg_gesdd(const IndexT m, const IndexT n,
                   const Tensor<xpu, 2, DType>& UT,
                   const Tensor<xpu, 1, DType>& S,
                   const Tensor<xpu, 2, DType>& V,
                   const Tensor<xpu, 1, DType>& work,
                   Stream<xpu> *s = 0);
 
-template<typename xpu, typename DType>
-void BatchSVDImpl(const int m, const int n,
+template<typename xpu, typename DType, typename IndexT>
+void BatchSVDImpl(const IndexT m, const IndexT n,
                   const Tensor<xpu, 3, DType>& UT,
                   const Tensor<xpu, 2, DType>& S,
                   const Tensor<xpu, 3, DType>& V,
                   const Tensor<xpu, 1, DType>& work,
                   Stream<xpu> *s = 0);
 
-#define LINALG_CPU_GESDD_WORKSPACE_QUERY(func, DType) \
+#define LINALG_CPU_GESDD_WORKSPACE_QUERY(func, DType, IndexT) \
 template<> inline \
-int linalg_gesdd_workspace_query<cpu, DType>(const int m, const int n, \
-                                             const Tensor<cpu, 2, DType>& UT, \
-                                             const Tensor<cpu, 1, DType>& S, \
-                                             const Tensor<cpu, 2, DType>& V, \
-                                             Stream<cpu> *s) { \
+IndexT linalg_gesdd_workspace_query<cpu, DType>(const IndexT m, const IndexT n, \
+                                                const Tensor<cpu, 2, DType>& UT, \
+                                                const Tensor<cpu, 1, DType>& S, \
+                                                const Tensor<cpu, 2, DType>& V, \
+                                                Stream<cpu> *s) { \
   DType work(0.0); \
-  std::vector<int> iwork(8 * std::min(m, n), 0); \
+  std::vector<IndexT> iwork(8 * std::min(m, n), 0); \
   if (m > n) { \
     MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, n, m, \
                         UT.dptr_, UT.stride_, S.dptr_, \
@@ -108,19 +122,19 @@ int linalg_gesdd_workspace_query<cpu, DType>(const int m, const int n, \
                         UT.dptr_, UT.stride_, \
                         &work, -1, iwork.data()); \
   } \
-  return static_cast<int>(work); \
+  return static_cast<IndexT>(work); \
 }
 
 #define LINALG_CPU_GESDD(func, DType) \
 template<> inline \
-void linalg_gesdd<cpu, DType>(const int m, \
-                              const int n, \
+void linalg_gesdd<cpu, DType>(const lapack_index_t m, \
+                              const lapack_index_t n, \
                               const Tensor<cpu, 2, DType>& UT, \
                               const Tensor<cpu, 1, DType>& S, \
                               const Tensor<cpu, 2, DType>& V, \
                               const Tensor<cpu, 1, DType>& work, \
                               Stream<cpu> *s) { \
-  std::vector<int> iwork(8 * std::min(m, n), 0); \
+  std::vector<lapack_index_t> iwork(8 * std::min(m, n), 0); \
   int res(0); \
   if (m > n) { \
     res = MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, n, m, \
@@ -140,8 +154,8 @@ void linalg_gesdd<cpu, DType>(const int m, \
   CHECK_LE(res, 0) << #func << " did not converge, updating process failed."; \
 }
 
-LINALG_CPU_GESDD_WORKSPACE_QUERY(sgesdd, float)
-LINALG_CPU_GESDD_WORKSPACE_QUERY(dgesdd, double)
+LINALG_CPU_GESDD_WORKSPACE_QUERY(sgesdd, float, LapackIndex<cpu>::IndexT)
+LINALG_CPU_GESDD_WORKSPACE_QUERY(dgesdd, double, LapackIndex<cpu>::IndexT )
 
 LINALG_CPU_GESDD(sgesdd, float)
 LINALG_CPU_GESDD(dgesdd, double)
@@ -180,7 +194,7 @@ LINALG_GPU_GESDD(double)
 
 #define BATCH_SVD_IMPL_CPU(DType) \
 template<> inline \
-void BatchSVDImpl<cpu, DType>(const int m, const int n, \
+void BatchSVDImpl<cpu, DType>(const lapack_index_t m, const lapack_index_t n, \
                               const Tensor<cpu, 3, DType>& UT, \
                               const Tensor<cpu, 2, DType>& S, \
                               const Tensor<cpu, 3, DType>& V, \
@@ -371,7 +385,7 @@ size_t SVDWorkspaceSize(const TBlob& a,
       std::vector<OType> s_vec(s_shape1.Size(), 0);
       std::vector<OType> v_vec(v_shape2.Size(), 0);
       // For workspace size in linalg_gesdd.
-      work_space_size += linalg_gesdd_workspace_query(
+      work_space_size += linalg_gesdd_workspace_query<xpu, OType, lapack_index_t>(
           a.shape_[a_ndim - 2], a.shape_[a_ndim - 1],
           TBlob(u_vec.data(), u_shape2, a.dev_mask(), a.dev_id()).get<xpu, 2, OType>(s),
           TBlob(s_vec.data(), s_shape1, a.dev_mask(), a.dev_id()).get<xpu, 1, OType>(s),
@@ -450,6 +464,14 @@ inline mxnet::TShape GetTransAxis(const mxnet::TShape& in_shape) {
   return mxnet::TShape(trans_axis.begin(), trans_axis.end());
 }
 
+// Windows has issues with #ifdefs inside MSHADOW_TYPE_SWITCH
+#ifndef __CUDACC__
+#define NP_LINALG_PINV_BROADCAST(OP, RTCOP) \
+  mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::OP>
+#else
+#define NP_LINALG_PINV_BROADCAST(OP, RTCOP) mxnet::op::BinaryBroadcastRTCCompute {#RTCOP}
+#endif
+
 template<typename xpu>
 void PinvOpForwardImpl(const TBlob& a,
                        const TBlob& rcond,
@@ -459,6 +481,7 @@ void PinvOpForwardImpl(const TBlob& a,
                        const std::vector<OpReqType>& req,
                        const Tensor<xpu, 1, char>& workspace) {
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  using IndexT = typename LapackIndex<xpu>::IndexT;
   const mxnet::TShape a_shape = a.shape_;
   const mxnet::TShape rcond_shape = rcond.shape_;
   const int a_ndim = a_shape.ndim();
@@ -512,7 +535,8 @@ void PinvOpForwardImpl(const TBlob& a,
           s, a.Size(), u_ptr, a.dptr<AType>());
         mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, u_data, ut_data,  // u_data: src, ut_data: res
                                       GetTransAxis(u_data.shape_));
-        BatchSVDImpl(a_shape[a_ndim - 1], a_shape[a_ndim - 2],
+        BatchSVDImpl(static_cast<IndexT>(a_shape[a_ndim - 1]),
+                     static_cast<IndexT>(a_shape[a_ndim - 2]),
                      vt_data.FlatToKD<xpu, 3, DType>(s),
                      s_data.FlatToKD<xpu, 2, DType>(s),
                      ut_data.FlatToKD<xpu, 3, DType>(s),
@@ -520,7 +544,8 @@ void PinvOpForwardImpl(const TBlob& a,
       } else {
         mxnet_op::Kernel<mshadow_op::identity_with_cast, xpu>::Launch(
           s, a.Size(), v_ptr, a.dptr<AType>());
-        BatchSVDImpl(a_shape[a_ndim - 2], a_shape[a_ndim - 1],
+        BatchSVDImpl(static_cast<IndexT>(a_shape[a_ndim - 2]),
+                     static_cast<IndexT>(a_shape[a_ndim - 1]),
                      u_data.FlatToKD<xpu, 3, DType>(s),
                      s_data.FlatToKD<xpu, 2, DType>(s),
                      v_data.FlatToKD<xpu, 3, DType>(s),
@@ -539,13 +564,13 @@ void PinvOpForwardImpl(const TBlob& a,
         s, S.size(0), Smax.dptr_, S.dptr_, S.size(1), S.stride_);
       // Step3: Calculate Cutoff.
       std::vector<OpReqType> temp_req({kWriteTo});
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
-                                                                  {rcond_data, smax_data},
-                                                                  temp_req, {cutoff_data});
+      NP_LINALG_PINV_BROADCAST(mul, mul)(attrs, ctx,
+                                         {rcond_data, smax_data},
+                                         temp_req, {cutoff_data});
       // Step4: Calculte Large.
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::gt>(attrs, ctx,
-                                                                 {s_data, cutoff_data},
-                                                                 temp_req, {large_data});
+      NP_LINALG_PINV_BROADCAST(gt, greater)(attrs, ctx,
+                                            {s_data, cutoff_data},
+                                            temp_req, {large_data});
       // Step5: Discard small singular values.
       mxnet_op::Kernel<DiscardSmallSingularVal, xpu>::Launch(
         s, s_data.Size(), s_data.dptr<DType>(), large_data.dptr<DType>());
@@ -559,8 +584,8 @@ void PinvOpForwardImpl(const TBlob& a,
       }
       s_data = s_data.reshape(s_shape_newaxis);
       u_data = ut_data.reshape(ut_shape);
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, {s_data, ut_data},
-                                                                  temp_req, {u_data});
+      NP_LINALG_PINV_BROADCAST(mul, mul)(attrs, ctx, {s_data, ut_data},
+                                         temp_req, {u_data});
       gemm2::op(vt_data.FlatToKD<xpu, 3, DType>(s),
                 u_data.FlatToKD<xpu, 3, DType>(s),
                 pinv_a.FlatToKD<xpu, 3, DType>(s),
@@ -632,6 +657,7 @@ void PinvScalarRcondOpForwardImpl(const TBlob& a,
                                   const std::vector<OpReqType>& req,
                                   const Tensor<xpu, 1, char>& workspace) {
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  using IndexT = typename LapackIndex<xpu>::IndexT;
   const mxnet::TShape a_shape = a.shape_;
   const int a_ndim = a_shape.ndim();
 
@@ -671,7 +697,8 @@ void PinvScalarRcondOpForwardImpl(const TBlob& a,
           s, a.Size(), u_ptr, a.dptr<AType>());
         mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, u_data, ut_data,  // u_data: src, ut_data: res
                                       GetTransAxis(u_data.shape_));
-        BatchSVDImpl(a_shape[a_ndim - 1], a_shape[a_ndim - 2],
+        BatchSVDImpl(static_cast<IndexT>(a_shape[a_ndim - 1]),
+                     static_cast<IndexT>(a_shape[a_ndim - 2]),
                      vt_data.FlatToKD<xpu, 3, DType>(s),
                      s_data.FlatToKD<xpu, 2, DType>(s),
                      ut_data.FlatToKD<xpu, 3, DType>(s),
@@ -679,7 +706,8 @@ void PinvScalarRcondOpForwardImpl(const TBlob& a,
       } else {
         mxnet_op::Kernel<mshadow_op::identity_with_cast, xpu>::Launch(
           s, a.Size(), v_ptr, a.dptr<AType>());
-        BatchSVDImpl(a_shape[a_ndim - 2], a_shape[a_ndim - 1],
+        BatchSVDImpl(static_cast<IndexT>(a_shape[a_ndim - 2]),
+                     static_cast<IndexT>(a_shape[a_ndim - 1]),
                      u_data.FlatToKD<xpu, 3, DType>(s),
                      s_data.FlatToKD<xpu, 2, DType>(s),
                      v_data.FlatToKD<xpu, 3, DType>(s),
@@ -698,8 +726,8 @@ void PinvScalarRcondOpForwardImpl(const TBlob& a,
       }
       s_data = s_data.reshape(s_shape_newaxis);
       u_data = ut_data.reshape(ut_shape);
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, {s_data, ut_data},
-                                                                  {kWriteTo}, {u_data});
+      NP_LINALG_PINV_BROADCAST(mul, mul)(attrs, ctx, {s_data, ut_data},
+                                         {kWriteTo}, {u_data});
       gemm2::op(vt_data.FlatToKD<xpu, 3, DType>(s),
                 u_data.FlatToKD<xpu, 3, DType>(s),
                 pinv_a.FlatToKD<xpu, 3, DType>(s),
@@ -707,6 +735,8 @@ void PinvScalarRcondOpForwardImpl(const TBlob& a,
     });
   });
 }
+
+#undef NP_LINALG_PINV_BROADCAST
 
 template<typename xpu>
 void PinvScalarRcondOpForward(const nnvm::NodeAttrs& attrs,

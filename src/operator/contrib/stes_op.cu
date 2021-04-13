@@ -31,13 +31,13 @@ namespace op {
 
 // Round STE
 NNVM_REGISTER_OP(_contrib_round_ste)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::round>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::round>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"round"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"round"});
 
 // Sign STE
 NNVM_REGISTER_OP(_contrib_sign_ste)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::sign>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::sign>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"sign"})
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"sign"});
 
 }  // namespace op
 }  // namespace mxnet

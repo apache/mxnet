@@ -18,21 +18,22 @@
 Prerequisites
 -------------
 This package supports Linux, Mac OSX, and Windows platforms. You may also want to check:
-- [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101mkl/) with CUDA-10.1 support.
-- [mxnet-cu101mkl](https://pypi.python.org/pypi/mxnet-cu101mkl/) with CUDA-10.1 support and MKLDNN support.
-- [mxnet-cu100](https://pypi.python.org/pypi/mxnet-cu100mkl/) with CUDA-10.0 support.
-- [mxnet-cu100mkl](https://pypi.python.org/pypi/mxnet-cu100mkl/) with CUDA-10.0 support and MKLDNN support.
-- [mxnet-cu92](https://pypi.python.org/pypi/mxnet-cu92/) with CUDA-9.2 support.
-- [mxnet-cu92mkl](https://pypi.python.org/pypi/mxnet-cu92mkl/) with CUDA-9.2 support and MKLDNN support.
-- [mxnet-cu90](https://pypi.python.org/pypi/mxnet-cu90/) with CUDA-9.0 support.
-- [mxnet-cu90mkl](https://pypi.python.org/pypi/mxnet-cu90mkl/) with CUDA-9.0 support and MKLDNN support.
-- [mxnet-cu80](https://pypi.python.org/pypi/mxnet-cu80/) with CUDA-8.0 support.
-- [mxnet-cu80mkl](https://pypi.python.org/pypi/mxnet-cu80mkl/) with CUDA-8.0 support and MKLDNN support.
-- [mxnet-cu75](https://pypi.python.org/pypi/mxnet-cu75/) with CUDA-7.5 support.
-- [mxnet-cu75mkl](https://pypi.python.org/pypi/mxnet-cu75mkl/) with CUDA-7.5 support and MKLDNN support.
-- [mxnet-mkl](https://pypi.python.org/pypi/mxnet-mkl/) with MKLDNN support.
+- [mxnet-cu112](https://pypi.python.org/pypi/mxnet-cu112/) with CUDA-11.2 support.
+- [mxnet-cu110](https://pypi.python.org/pypi/mxnet-cu110/) with CUDA-11.0 support.
+- [mxnet-cu102](https://pypi.python.org/pypi/mxnet-cu102/) with CUDA-10.2 support.
+- [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101/) with CUDA-10.1 support.
+- [mxnet](https://pypi.python.org/pypi/mxnet/).
+- [mxnet-native](https://pypi.python.org/pypi/mxnet-native/) CPU variant without ONEDNN.
 
-To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions, check [Installing MXNet](https://mxnet.apache.org/versions/master/install/index.html) for instructions on building from source.
+To use this package on Linux you need the `libquadmath.so.0` shared library. On
+Debian based systems, including Ubuntu, run `sudo apt install libquadmath0` to
+install the shared library. On RHEL based systems, including CentOS, run `sudo
+yum install libquadmath` to install the shared library. As `libquadmath.so.0` is
+a GPL library and MXNet part of the Apache Software Foundation, MXNet must not
+redistribute `libquadmath.so.0` as part of the Pypi package and users must
+manually install it.
+
+To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions, check [Installing MXNet](https://mxnet.apache.org/versions/master) for instructions on building from source.
 
 Installation
 ------------

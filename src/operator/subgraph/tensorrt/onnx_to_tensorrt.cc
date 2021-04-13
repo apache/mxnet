@@ -35,12 +35,8 @@
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
 #include <onnx-tensorrt/NvOnnxParser.h>
-#include <onnx-tensorrt/NvOnnxParserRuntime.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
-
-#include <onnx-tensorrt/PluginFactory.hpp>
-#include <onnx-tensorrt/plugin_common.hpp>
 
 using std::cout;
 using std::cerr;
@@ -78,7 +74,9 @@ std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
 
   auto trt_logger = std::unique_ptr<TRT_Logger>(new TRT_Logger(verbosity));
   auto trt_builder = InferObject(nvinfer1::createInferBuilder(*trt_logger));
-  auto trt_network = InferObject(trt_builder->createNetwork());
+  const auto explicitBatch = 1U << static_cast<uint32_t>(
+                             nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
+  auto trt_network = InferObject(trt_builder->createNetworkV2(explicitBatch));
   auto trt_parser  = InferObject(nvonnxparser::createParser(*trt_network, *trt_logger));
   ::ONNX_NAMESPACE::ModelProto parsed_model;
   // We check for a valid parse, but the main effect is the side effect

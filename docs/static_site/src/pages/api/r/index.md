@@ -47,6 +47,3 @@ You can perform tensor or matrix computation in R:
    [1,]    2    2    2
    [2,]    2    2    2
 ```
-## Resources
-
-* [MXNet R Reference Manual](/api/r/docs/api/R-package/build/mxnet-r-reference-manual.pdf)

@@ -37,7 +37,7 @@ core_logic: {
       ws('workspace/docker_cache') {
         timeout(time: total_timeout, unit: 'MINUTES') {
           utils.init_git()
-          sh "ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY}"
+          sh "cd ci && python3 ./docker_login.py --secret-name ${env.DOCKERHUB_SECRET_NAME} && docker-compose -f docker/docker-compose.yml pull && docker-compose -f docker/docker-compose.yml build --parallel && COMPOSE_HTTP_TIMEOUT=600 docker-compose -f docker/docker-compose.yml push && docker logout"
         }
       }
     }

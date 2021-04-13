@@ -17,7 +17,6 @@
 
 """Registering ops in mxnet.numpy_extension for imperative programming."""
 
-from __future__ import absolute_import
 
 from ..base import _init_np_op_module
 from ..ndarray.register import _make_ndarray_function

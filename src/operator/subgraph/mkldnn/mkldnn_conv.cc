@@ -17,7 +17,7 @@
 * under the License.
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <utility>
 #include <vector>
@@ -42,35 +42,35 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
                                  const NDArray &gamma, const NDArray &beta,
                                  const NDArray &mean, const NDArray &variance,
                                  const BatchNormParam *param) {
-  // TODO(Zhennan): Handle the case weight is not in dims 4.
   NDArray update_weight = NDArray(weight->storage_type(), weight->shape(),
                                   weight->ctx(), true, weight->dtype());
   NDArray update_bias = NDArray(beta.storage_type(), beta.shape(), beta.ctx(),
-                                true, beta.dtype());
+                                true, weight->dtype());
   const DType *weight_ptr = weight->data().dptr<DType>();
   const DType *bias_ptr = no_bias ? nullptr : bias->data().dptr<DType>();
-  const DType *gamma_ptr = gamma.data().dptr<DType>();
-  const DType *beta_ptr = beta.data().dptr<DType>();
-  const DType *mean_ptr = mean.data().dptr<DType>();
-  const DType *var_ptr = variance.data().dptr<DType>();
+  const float *gamma_ptr = gamma.data().dptr<float>();
+  const float *beta_ptr = beta.data().dptr<float>();
+  const float *mean_ptr = mean.data().dptr<float>();
+  const float *var_ptr = variance.data().dptr<float>();
   DType *update_weight_ptr = update_weight.data().dptr<DType>();
   DType *update_bias_ptr = update_bias.data().dptr<DType>();
   size_t channel = gamma.shape()[0];
-  size_t offset = weight->shape()[1] * weight->shape()[2] * weight->shape()[3];
+  const auto wshape = weight->shape();
+  size_t offset = wshape.ProdShape(1, wshape.ndim());
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int c = 0; c < static_cast<int>(channel); ++c) {
     const DType *p1 = weight_ptr + c * offset;
     DType *p2 = update_weight_ptr + c * offset;
-    DType alpha = (param->fix_gamma ? static_cast<DType>(1.0f) : gamma_ptr[c]) /
-                  sqrt(var_ptr[c] + param->eps);
+    float alpha = (param->fix_gamma ? 1.0f : gamma_ptr[c]) / sqrt(var_ptr[c] + param->eps);
 
     if (bias_ptr)
-      update_bias_ptr[c] = beta_ptr[c] + alpha * (bias_ptr[c] - mean_ptr[c]);
+      update_bias_ptr[c] =
+          static_cast<DType>(beta_ptr[c] + alpha * (static_cast<float>(bias_ptr[c]) - mean_ptr[c]));
     else
-      update_bias_ptr[c] = beta_ptr[c] - alpha * mean_ptr[c];
+      update_bias_ptr[c] = static_cast<DType>(beta_ptr[c] - alpha * mean_ptr[c]);
 
     for (size_t k = 0; k < offset; ++k) {
-      p2[k] = p1[k] * alpha;
+      p2[k] = static_cast<DType>(static_cast<float>(p1[k]) * alpha);
     }
   }
   *weight = update_weight;
@@ -78,6 +78,9 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
 }
 
 static inline size_t GetInSumIndex(const MKLDNNConvFusionParam &param) {
+  if (param.full_conv_param.mkldnn_param.dedup_sum) {
+    return 0;
+  }
   return 2 + (param.full_conv_param.conv_param.no_bias ? 0 : 1) +
          (param.full_conv_param.mkldnn_param.with_bn ? 4 : 0);
 }
@@ -127,8 +130,15 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       2 + (conv_param.no_bias ? 0 : 1) + (mkldnn_param.with_bn ? 4 : 0) +
       (mkldnn_param.with_sum ? 1 : 0) +
       (mkldnn_param.quantized ? 2 + (full_conv_param.mkldnn_param.with_sum ? 2 : 0) : 0);
+  // When dedup is on, in_data is used to calculate sum instead of in_sum
+  if (mkldnn_param.dedup_sum) {
+    input_size -= 1;
+    if (mkldnn_param.quantized) {
+      input_size -= 2;
+    }
+  }
   CHECK_EQ(inputs.size(), input_size);
-  size_t idx = 0;
+  index_t idx = 0;
 
   auto in_data = idx++;
   auto in_weight = idx++;
@@ -137,17 +147,22 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
   auto in_beta = mkldnn_param.with_bn ? (idx++) : 0;
   auto in_mean = mkldnn_param.with_bn ? (idx++) : 0;
   auto in_var = mkldnn_param.with_bn ? (idx++) : 0;
-  auto in_sum = mkldnn_param.with_sum ? (idx++) : 0;
+  auto in_sum = mkldnn_param.with_sum ? (mkldnn_param.dedup_sum? in_data : idx++) : -1;
   float data_min =
       mkldnn_param.quantized ? inputs[idx++].data().dptr<float>()[0] : 0.0;
   float data_max =
       mkldnn_param.quantized ? inputs[idx++].data().dptr<float>()[0] : 0.0;
-  float sum_min = (mkldnn_param.with_sum && mkldnn_param.quantized)
-                      ? inputs[idx++].data().dptr<float>()[0]
-                      : 0.0;
-  float sum_max = (mkldnn_param.with_sum && mkldnn_param.quantized)
-                      ? inputs[idx++].data().dptr<float>()[0]
-                      : 0.0;
+  float sum_min = 0.0f;
+  float sum_max = 0.0f;
+  if (mkldnn_param.with_sum && mkldnn_param.quantized) {
+    if (mkldnn_param.dedup_sum) {
+      sum_min = data_min;
+      sum_max = data_max;
+      } else {
+      sum_min = inputs[idx++].data().dptr<float>()[0];
+      sum_max = inputs[idx++].data().dptr<float>()[0];
+    }
+  }
   CHECK_EQ(input_size, idx);
   bool has_bias = mkldnn_param.with_bn || !conv_param.no_bias;
   NDArray data = inputs[in_data];
@@ -224,10 +239,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
 
     // Update weight and bias after bn fusion.
     if (mkldnn_param.with_bn) {
-      CHECK_EQ(inputs[in_weight].dtype(), inputs[in_gamma].dtype());
-      CHECK_EQ(inputs[in_weight].dtype(), inputs[in_beta].dtype());
-      CHECK_EQ(inputs[in_weight].dtype(), inputs[in_var].dtype());
-      MSHADOW_REAL_TYPE_SWITCH(inputs[in_weight].dtype(), DType, {
+      MKLDNN_REAL_TYPE_SWITCH(inputs[in_weight].dtype(), DType, {
         UpdateConvWeightBias<DType>(&cached_weight_, &cached_bias_,
                                     conv_param.no_bias, inputs[in_gamma],
                                     inputs[in_beta], inputs[in_mean],
@@ -249,7 +261,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         weight_channelwise_scale = true;
       }
       data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
-      MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
+      MKLDNN_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
         weight_scales_ = GetWeightScales<DType>(cached_weight_, has_bias ? &cached_bias_ : nullptr,
                                                 data_scale_, weight_channelwise_scale);
       });
@@ -373,7 +385,8 @@ static uint32_t SgMKLDNNConvNumInputs(const NodeAttrs &attrs) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   auto num_input = DefaultSubgraphOpNumInputs(attrs);
   if (param.full_conv_param.mkldnn_param.quantized)
-    return num_input + 2 + (param.full_conv_param.mkldnn_param.with_sum ? 2 : 0);
+    return num_input + 2 + (param.full_conv_param.mkldnn_param.with_sum
+                          && !param.full_conv_param.mkldnn_param.dedup_sum ? 2 : 0);
   else
     return num_input;
 }
@@ -461,13 +474,14 @@ static std::vector<std::string> SgMKLDNNConvListInputNames(const NodeAttrs &attr
     input_names.emplace_back("mean");
     input_names.emplace_back("var");
   }
-  if (param.full_conv_param.mkldnn_param.with_sum) {
+  auto &mkldnn_param = param.full_conv_param.mkldnn_param;
+  if (mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
     input_names.emplace_back("sum");
   }
   if (param.full_conv_param.mkldnn_param.quantized) {
     input_names.emplace_back("data_min");
     input_names.emplace_back("data_max");
-    if (param.full_conv_param.mkldnn_param.with_sum) {
+    if (mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
       input_names.emplace_back("sum_min");
       input_names.emplace_back("sum_max");
     }
@@ -501,7 +515,7 @@ static void FilterMinMaxIndice(const MKLDNNConvParam &mkldnn_param,
                                std::unordered_set<size_t> *minmax_indice) {
   base_out_shapes->push_back(out_shapes->at(0));
   size_t last = in_shapes->size() - 1;
-  if (mkldnn_param.with_sum) {
+  if (mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
     minmax_indice->insert(last);
     minmax_indice->insert(last - 1);
     minmax_indice->insert(last - 2);
@@ -563,14 +577,15 @@ static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs &attrs,
     int orig_data = base_in_types[0];
     base_in_types[0] = mshadow::kFloat32;
     int orig_sum = base_in_types[0];
-    if (param.full_conv_param.mkldnn_param.with_sum) {
+    auto &mkldnn_param = param.full_conv_param.mkldnn_param;
+    if (param.full_conv_param.mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
       auto sum_index = GetInSumIndex(param);
       orig_sum = base_in_types[sum_index];
       base_in_types[sum_index] = mshadow::kFloat32;
     }
     bool result = DefaultSubgraphOpType(attrs, &base_in_types, &base_out_types);
     base_in_types[0] = orig_data;
-    if (param.full_conv_param.mkldnn_param.with_sum) {
+    if (param.full_conv_param.mkldnn_param.with_sum && !mkldnn_param.dedup_sum) {
       auto sum_index = GetInSumIndex(param);
       base_in_types[sum_index] = orig_sum;
     }
@@ -637,7 +652,8 @@ static bool SgMKLDNNConvOpStorageType(const nnvm::NodeAttrs &attrs,
 std::vector<std::pair<int, int>> SgMKLDNNConvInplaceOption(
     const NodeAttrs &attrs) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
-  if (param.full_conv_param.mkldnn_param.with_sum) {
+  if (param.full_conv_param.mkldnn_param.with_sum &&
+      !param.full_conv_param.mkldnn_param.dedup_sum) {
     return std::vector<std::pair<int, int>>{{GetInSumIndex(param), 0}};
   } else {
     return std::vector<std::pair<int, int>>();
@@ -648,8 +664,9 @@ nnvm::ObjectPtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_sg_mkldnn_conv");
-  CHECK_EQ(param.full_conv_param.conv_param.kernel.ndim(), 2U)
-      << "Quantized Convolution of MKL-DNN only supports 2D kernel currently."
+  const int k_ndims = param.full_conv_param.conv_param.kernel.ndim();
+  CHECK(k_ndims == 2U || k_ndims == 3U)
+      << "Quantized Convolution of MKL-DNN supports 2D/3D kernel currently."
       <<  "Please exclude this layer from the quantized model.";
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
@@ -717,4 +734,4 @@ NNVM_REGISTER_OP(_sg_mkldnn_conv)
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // if MXNET_USE_MKLDNN == 1
+#endif  // if MXNET_USE_ONEDNN == 1

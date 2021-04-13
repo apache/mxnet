@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <unordered_map>
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -43,15 +44,27 @@ namespace op {
 
 struct NumpyPowerParam : public dmlc::Parameter<NumpyPowerParam> {
   dmlc::optional<float> a;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  std::string ctx;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   DMLC_DECLARE_PARAMETER(NumpyPowerParam) {
       DMLC_DECLARE_FIELD(a)
       .set_default(dmlc::optional<float>());
       DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe("Output shape. If the given shape is, "
           "e.g., (m, n, k), then m * n * k samples are drawn. "
           "Default is None, in which case a single value is returned.");
+      DMLC_DECLARE_FIELD(ctx).set_default("cpu").describe(
+        "Context of output, in format [cpu|gpu|cpu_pinned](n)."
+        " Only used for imperative calls.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_s, size_s;
+    a_s << a;
+    size_s << size;
+    (*dict)["a"] = a_s.str();
+    (*dict)["size"] = size_s.str();
   }
 };
 

@@ -80,6 +80,7 @@ void NDArrayOp<xpu>::Forward(const OpContext &ctx,
   ndvar.resize(std::unique(ndvar.begin(), ndvar.end()) - ndvar.begin());
 
   std::vector<NDArray> ndcpy;
+  ndcpy.reserve(ptrs.size());
   for (auto& i : ptrs) {
     ndcpy.push_back(*reinterpret_cast<NDArray*>(i));
   }
@@ -129,6 +130,7 @@ void NDArrayOp<xpu>::Backward(const OpContext &ctx,
   }
 
   std::vector<NDArray> ndcpy;
+  ndcpy.reserve(ptrs.size());
   for (auto& i : ptrs) {
     ndcpy.push_back(*reinterpret_cast<NDArray*>(i));
   }

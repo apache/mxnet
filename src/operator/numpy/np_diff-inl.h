@@ -28,6 +28,7 @@
 #include <mxnet/base.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../tensor/broadcast_reduce_op.h"
@@ -37,8 +38,6 @@ namespace op {
 
 struct DiffParam : public dmlc::Parameter<DiffParam> {
   int n, axis;
-  dmlc::optional<mxnet::TShape> prepend;
-  dmlc::optional<mxnet::TShape> append;
   DMLC_DECLARE_PARAMETER(DiffParam) {
     DMLC_DECLARE_FIELD(n).set_default(1).describe(
         "The number of times values are differenced."
@@ -46,6 +45,13 @@ struct DiffParam : public dmlc::Parameter<DiffParam> {
     DMLC_DECLARE_FIELD(axis).set_default(-1).describe(
         "Axis along which the cumulative sum is computed."
         " The default (None) is to compute the diff over the flattened array.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream n_s, axis_s;
+    n_s << n;
+    axis_s << axis;
+    (*dict)["n"] = n_s.str();
+    (*dict)["axis"] = axis_s.str();
   }
 };
 
@@ -62,15 +68,15 @@ inline void YanghuiTri(std::vector<int>* buffer, int n) {
 
 struct diff_forward {
   template <typename IType, typename OType, int ndim>
-  MSHADOW_XINLINE static void Map(int i, int* diffFactor, OType* out,
+  MSHADOW_XINLINE static void Map(index_t i, int* diffFactor, OType* out,
                                   const IType* in, const int n,
-                                  const int stride,
+                                  const index_t stride,
                                   const mshadow::Shape<ndim> oshape,
                                   const mshadow::Shape<ndim> ishape) {
-    using namespace broadcast;
+    using namespace mxnet_op;
 
     // j represent the memory index of the corresponding input entry
-    int j = ravel(unravel(i, oshape), ishape);
+    index_t j = ravel(unravel(i, oshape), ishape);
     int indicator = 1;
     out[i] = 0;
     for (int k = n; k >= 0; --k) {
@@ -92,7 +98,7 @@ void DiffForwardImpl(const OpContext& ctx, const TBlob& in, const TBlob& out,
   // nothing in the output
   if (n >= in.shape_[axis_checked]) return;
   // stride for elements on the given axis, same in input and output
-  int stride = 1;
+  index_t stride = 1;
   for (int i = in.ndim() - 1; i > axis_checked; --i) {
     stride *= in.shape_[i];
   }
@@ -134,12 +140,12 @@ void DiffForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
 
 struct diff_backward {
   template <typename IType, typename OType, int ndim>
-  MSHADOW_XINLINE static void Map(int i, int* diffFactor, OType* igrad,
+  MSHADOW_XINLINE static void Map(index_t i, int* diffFactor, OType* igrad,
                                   const IType* ograd, const int n,
-                                  const int stride, const int axis,
+                                  const index_t stride, const int axis,
                                   const mshadow::Shape<ndim> oshape,
                                   const mshadow::Shape<ndim> ishape) {
-    using namespace broadcast;
+    using namespace mxnet_op;
     if (n == 0) {
       igrad[i] = ograd[i];
       return;
@@ -148,10 +154,10 @@ struct diff_backward {
     Shape<ndim> coor = unravel(i, oshape);
     // one head thread for a whole sequence along the axis
     if (coor[axis] != 0) return;
-    int j = ravel(coor, ishape);
+    index_t j = ravel(coor, ishape);
     // initialize the elements of output array
-    for (int k = 0; k < oshape[axis]; ++k) igrad[i + k * stride] = 0;
-    for (int k = 0; k < ishape[axis]; ++k) {
+    for (index_t k = 0; k < oshape[axis]; ++k) igrad[i + k * stride] = 0;
+    for (index_t k = 0; k < ishape[axis]; ++k) {
       int indicator = 1;
       for (int m = n; m >= 0; --m) {
         igrad[i + (m + k) * stride] +=
@@ -174,7 +180,7 @@ void DiffBackwardImpl(const OpContext& ctx, const TBlob& ograd,
   // nothing in the ograd and igrad
   if (n >= igrad.shape_[axis_checked]) return;
   // stride for elements on the given axis, same in input and output
-  int stride = 1;
+  index_t stride = 1;
   for (int i = igrad.ndim() - 1; i > axis_checked; --i) {
     stride *= igrad.shape_[i];
   }

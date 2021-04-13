@@ -28,9 +28,11 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include "../../common/utils.h"
 #include "../nn/moments-inl.h"
 #include "../tensor/broadcast_reduce_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -66,6 +68,22 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
     DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
       .describe("Starting value for the sum.");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, dtype_s, keepdims_s, initial_s;
+    axis_s << axis;
+    dtype_s << dtype;
+    keepdims_s << keepdims;
+    initial_s << initial;
+    (*dict)["axis"] = axis_s.str();
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["initial"] = initial_s.str();
+  }
 };
 
 struct NumpyReduceAxesNoDTypeParam : public dmlc::Parameter<NumpyReduceAxesNoDTypeParam> {
@@ -84,6 +102,15 @@ struct NumpyReduceAxesNoDTypeParam : public dmlc::Parameter<NumpyReduceAxesNoDTy
     DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
       .describe("Starting value for the sum.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s, initial_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    initial_s << initial;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["initial"] = initial_s.str();
+  }
 };
 
 struct NumpyReduceAxesBoolParam : public dmlc::Parameter<NumpyReduceAxesBoolParam> {
@@ -98,6 +125,13 @@ struct NumpyReduceAxesBoolParam : public dmlc::Parameter<NumpyReduceAxesBoolPara
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
   }
 };
 
@@ -241,6 +275,16 @@ inline bool NeedSafeAcc(int itype, int otype) {
   return safe_acc_hint && rule;
 }
 
+namespace mxnet_op {
+struct set_to_nan {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out) {
+    out[i] = DType(nanf(""));
+  }
+};
+
+}  // namespace mxnet_op
+
 void TVMOpReduce(const OpContext& ctx, const TBlob& input,
                  const dmlc::optional<mxnet::Tuple<int>>& axis,
                  const TBlob& output, const OpReqType req, const std::string& reducer_name);
@@ -259,11 +303,35 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     LOG(FATAL) << "initial is not supported yet";
   }
   Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (outputs[0].shape_.Size() == 0) return;
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
-    });
+    if (normalize) {
+      LOG(WARNING) << "WARNING: Mean of empty slice.";
+      if (mxnet::common::is_float(outputs[0].type_flag_)) {
+        MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+          Kernel<set_to_nan, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                          outputs[0].dptr<DType>());
+        });
+      } else {
+        LOG(WARNING) << "WARNING: nan is outside the range of"<<
+                        "representable values of type 'int'";
+        MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+          Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                        outputs[0].dptr<DType>());
+        });
+      }
+    } else if (std::is_same<reducer, mshadow_op::sum>::value) {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                      outputs[0].dptr<DType>());
+      });
+    } else {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        Kernel<set_one, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                     outputs[0].dptr<DType>());
+      });
+    }
     return;
   }
   CHECK_NE(req[0], kWriteInplace) << "Reduce does not support write in-place";
@@ -379,7 +447,6 @@ void NumpySearchAxisCompute(const nnvm::NodeAttrs& attrs,
     input = TBlob(input.dptr_, shape_2d, input.dev_mask(), input.type_flag_, input.dev_id());
     axis = 1;
   }
-
   axis = CheckAxis(axis, input.shape_.ndim());
   if (inputs[0].shape_.ndim() != 0) {
     if (param.axis.has_value()) {
@@ -392,7 +459,6 @@ void NumpySearchAxisCompute(const nnvm::NodeAttrs& attrs,
       CHECK_NE(inputs[0].shape_.Size(), 0U) << "attempt to search an empty sequence";
     }
   }
-
   if (input.shape_.Size() == 0U) return;  // zero-size tensor
   mxnet::TShape shape = AxisShapeCompact(input.shape_, &axis, false);
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
@@ -402,6 +468,102 @@ void NumpySearchAxisCompute(const nnvm::NodeAttrs& attrs,
       input.get_with_shape<xpu, 3, DType>(shape.get<3>(), s);
     CHECK(req[0] != kAddTo) << "AddTo is not supported";
     ASSIGN_DISPATCH(out, req[0], tcast<int64_t>(reduce_with_axis<reducer, true>(in, 1)));
+  });
+}
+
+struct arg_min_max_parse {
+  template <typename DType, typename OType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  OType* out_data,
+                                  const DType* in_data) {
+    out_data[i] = in_data[i].idx;
+  }
+};
+
+template <typename Reducer, int NDim, typename DType, typename OType>
+void NumpyArgMinMaxReduce(mshadow::Stream<cpu> *s, const TBlob& in_data, const TBlob& out_data,
+                          const mshadow::Tensor<cpu, 1, char>& workspace) {
+  using namespace mshadow;
+  Shape<NDim> rshape, rstride;
+  broadcast::diff<NDim>(out_data.shape_.get<NDim>(), in_data.shape_.get<NDim>(), &rshape, &rstride);
+  size_t N = out_data.shape_.Size(), M = rshape.Size();
+  broadcast::seq_reduce_compute<Reducer, NDim, OType, DType, OType,
+    mxnet::op::mshadow_op::identity,
+    mxnet::op::mshadow_op::arg_min_max_set_index<OType, index_t>> (
+    N, M, false, in_data.dptr<DType>(), static_cast<OType*>(out_data.dptr_),
+    in_data.shape_.get<NDim>(), out_data.shape_.get<NDim>(), rshape, rstride);
+}
+
+#ifdef __CUDACC__
+#include "np_broadcast_reduce_op.cuh"
+#endif
+
+template<typename Reducer, typename xpu, typename IType>
+void NumpyArgMinMaxCompute(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  if (req[0] == kNullOp) return;
+  // parse param
+  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  TBlob out = outputs[0];
+  TBlob in = inputs[0];
+  // do some shape checks
+  if (in.shape_.ndim() != 0) {
+    if (param.axis.has_value()) {
+      // cannot do argmax in an empty dimension
+      int axis = param.axis.value();
+      axis = CheckAxis(axis, in.shape_.ndim());
+      CHECK_NE(in.shape_[axis], 0)
+          << "searching input tensor of shape " << inputs[0].shape_
+          << " along axis = " << axis << " of zero dim-size is not allowed";
+    } else {
+      // cannot do argmax on an empty array
+      CHECK_NE(in.shape_.Size(), 0U) << "attempt to search an empty sequence";
+    }
+  }
+  if (in.shape_.Size() == 0U) return;  // zero-size tensor
+  // prepare shape
+  dmlc::optional<mxnet::Tuple<int>> axes;
+  if (param.axis.has_value()) {
+    mxnet::Tuple<int> t({param.axis.value()});
+    axes = dmlc::optional<mxnet::Tuple<int>>(t);
+  }
+  TShape small;
+  small = NumpyReduceAxesShapeImpl(in.shape_, axes, true);
+  mxnet::TShape src_shape, dst_shape;
+  BroadcastReduceShapeCompact(in.shape_, small, &src_shape, &dst_shape);
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(in.type_flag_, DType, {
+    // define OType
+    typedef mxnet::op::mshadow_op::IndexedNum<IType, DType> OType;
+    // request a work space
+    size_t workspace_size = sizeof(OType) * out.shape_.Size();
+    Tensor<xpu, 1, char> workspace =
+              ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+    // set up intermediate output
+    TBlob intermediate = out;
+    intermediate.dptr_ = reinterpret_cast<int64_t*>(workspace.dptr_);
+    // reshape the input and intermediate output tensor
+    const TBlob in_data = in.reshape(src_shape);
+    const TBlob intermediate_out_data = intermediate.reshape(dst_shape);
+    // switch dim
+    BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
+      size_t workspace_size = broadcast::ReduceWorkspaceSize(
+        s, intermediate_out_data.shape_, req[0], in_data.shape_, sizeof(OType));
+      Tensor<xpu, 1, char> workspace =
+        ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+      NumpyArgMinMaxReduce<Reducer, NDim, DType, OType>(s, in_data,
+        intermediate_out_data, workspace);
+    });
+    // parse the indices from the intermediate tensor back to the actual output tensor
+    using namespace mxnet_op;
+    Kernel<arg_min_max_parse, xpu>::Launch(
+        s, out.shape_.Size(), outputs[0].dptr<int64_t>(),
+        static_cast<OType*>(intermediate_out_data.dptr_));
   });
 }
 
@@ -415,6 +577,7 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   CHECK_NE(outputs[0].type_flag_, kBool) << "reduce operators do not support gradient calculation "
                                             "for input tensors of boolean type.";
+  if (outputs[0].shape_.Size() == 0) return;
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
   TShape small;
   if (param.keepdims) {
@@ -424,6 +587,7 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   }
 
   BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, small);
+
   if (normalize) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, IType, {
@@ -475,11 +639,27 @@ struct NumpyMomentsParam : public dmlc::Parameter<NumpyMomentsParam> {
                 "precision than the default platform integer. In that case, if a is signed then "
                 "the platform integer is used while if a is unsigned then an unsigned integer of "
                 "the same precision as the platform integer is used.");
-    DMLC_DECLARE_FIELD(ddof).set_default(0)
-      .describe("Starting value for the sum.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(ddof).set_default(0)
+      .describe("Starting value for the sum.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, dtype_s, keepdims_s, ddof_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    ddof_s << ddof;
+    (*dict)["axis"] = axis_s.str();
+    dtype_s << dtype;
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["ddof"] = ddof_s.str();
   }
 };
 
@@ -534,6 +714,16 @@ struct NumpyWeightedAverageParam : public dmlc::Parameter<NumpyWeightedAveragePa
     DMLC_DECLARE_FIELD(weighted)
       .set_default(true)
       .describe("Auxiliary flag to deal with none weights.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, returned_s, weighted_s;
+    axis_s << axis;
+    returned_s << returned;
+    weighted_s << weighted;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["returned"] = returned_s.str();
+    (*dict)["weighted"] = weighted_s.str();
   }
 };
 
@@ -681,6 +871,13 @@ struct avg_grad_w_1D_kernel {
   }
 };
 
+// Windows has issues with #ifdefs inside MSHADOW_TYPE_SWITCH
+#ifndef __CUDACC__
+#define NP_BROADCAST_REDUCE_OP_BROADCAST(OP) BinaryBroadcastCompute<xpu, mshadow_op::OP>
+#else
+#define NP_BROADCAST_REDUCE_OP_BROADCAST(OP) BinaryBroadcastRTCCompute {#OP}
+#endif
+
 template<typename xpu, bool back = false>
 void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
                                      const OpContext& ctx,
@@ -724,10 +921,8 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
     TShape src_shape, dst_shape;
     BroadcastReduceShapeCompact(data.shape_, small1, &src_shape, &dst_shape);
     size_t workspace_size = 0;
-    MXNET_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-      workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-        s, dst_shape, {kWriteTo}, src_shape);
-    });
+    workspace_size = broadcast::ReduceWorkspaceSize(
+      s, dst_shape, {kWriteTo}, src_shape, sizeof(DType));
     size_t temp_mem_size = temp_data_size + temp_sum_size + workspace_size;
     Tensor<xpu, 1, char> temp_mem =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
@@ -738,7 +933,7 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
 
     // Compute weighted data
     TBlob wa = TBlob(temp_data_ptr, data.shape_, xpu::kDevMask);
-    BinaryBroadcastCompute<xpu, mshadow_op::mul>(
+    NP_BROADCAST_REDUCE_OP_BROADCAST(mul)(
       attrs, ctx, {data, weights}, {kWriteTo}, {wa});
 
     // Compute sum of weighted data
@@ -756,7 +951,7 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
         ctx, {weights}, {kWriteTo}, {scl}, workspace, w_src_shape, w_dst_shape);
 
       // Compute avg and assign output
-      BinaryBroadcastCompute<xpu, mshadow_op::div>(
+      NP_BROADCAST_REDUCE_OP_BROADCAST(div)(
         attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
     } else {
       // Compute and assign the derivatives of a and weights
@@ -800,6 +995,8 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
     }
   });
 }
+
+#undef NP_BROADCAST_REDUCE_OP_BROADCAST
 
 template<typename xpu>
 void NumpyWeightedAverageForward(const nnvm::NodeAttrs& attrs,
@@ -897,10 +1094,8 @@ void NumpyMomentsForward(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       // Get workspace and temp space for data - mean
       size_t workspace_size = 0;
-      BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-          s, dst_shape, req[0], src_shape);;
-      });
+      workspace_size = broadcast::ReduceWorkspaceSize(
+        s, dst_shape, req[0], src_shape, sizeof(DType));
       size_t temp_data_size = data.shape_.Size() * sizeof(DType);
       size_t temp_mem_size = temp_data_size + workspace_size;
       Tensor<xpu, 1, char> temp_mem =

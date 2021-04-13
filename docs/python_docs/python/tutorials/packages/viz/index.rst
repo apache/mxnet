@@ -33,7 +33,5 @@ References
 
 .. toctree::
    :hidden:
-   :glob:
 
-   *
    Visualize networks <https://mxnet.apache.org/api/faq/visualize_graph>

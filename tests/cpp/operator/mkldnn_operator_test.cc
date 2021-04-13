@@ -23,7 +23,7 @@
  *  \author Alex Zai
  */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <mkldnn_types.h>
 #include <cmath>
@@ -683,9 +683,9 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, false, forward_attrs.output_types);
         ex_out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, false, forward_attrs.output_types);
       }
 
       for (int i = 0; i < forward_attrs.num_inputs; i++)
@@ -897,7 +897,8 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::desc> mds = tas.mds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
+  std::vector<NDArrayAttrs> in_arrs =
+      GetTestInputArrays(forward_attrs.input_types, true, {1}, false, 1);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
@@ -932,9 +933,9 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
-            GetTestOutputArrays(out_shape, mds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(out_shape, mds, {1}, false, forward_attrs.output_types, 1);
         ex_out_arrs[i] =
-            GetTestOutputArrays(out_shape, mds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(out_shape, mds, {1}, false, forward_attrs.output_types, 1);
       }
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
@@ -960,14 +961,14 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
         backwards_input[1] = inputs[0];  // input
         backwards_input[2] = inputs[1];  // weights
 
-        auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true)[i1];
+        auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true, {1}, false, 1)[i1];
         NDArray back_weights(wt_shape, Context());
         NDArray back_bias(bias_shape, Context());
         backwards_outputs[0] = &tmp_output.arr;
         backwards_outputs[1] = &back_weights;
         backwards_outputs[2] = &back_bias;
 
-        auto tmp_output2 = GetTestInputArrays(forward_attrs.input_types, true)[i1];
+        auto tmp_output2 = GetTestInputArrays(forward_attrs.input_types, true, {1}, false, 1)[i1];
         NDArray back_ex_weights(wt_shape, Context());
         NDArray back_ex_bias(bias_shape, Context());
         backwards_ex_outputs[0] = &tmp_output2.arr;
@@ -986,7 +987,7 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
             Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
             back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
-        AssertEqual(backwards_outputs, backwards_ex_outputs);
+        AssertEqual(backwards_outputs, backwards_ex_outputs, 1e-6, 1e-6);
       }
     }
   }
@@ -1348,4 +1349,4 @@ TEST(IMPERATIVE, BNOp) {
   TestOpExBN(forward_attrs, backwards_attrs);
 }
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

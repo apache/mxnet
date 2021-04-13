@@ -18,7 +18,7 @@
 //
 //This is a Jenkinsfile for nightly tests. The format and some functions have been picked up from the top-level Jenkinsfile
 
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
+mx_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so'
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -30,113 +30,6 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_
 utils.main_wrapper(
 core_logic: {
   stage('NightlyTests'){
-    parallel 'CompilationWarnings: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/nt-compilationTest') {
-          utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_compilation_warning', false)
-        }
-      }
-    },
-    'InstallationGuide: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/nt-Installation-cpu') {
-          utils.init_git()
-          //Some install guide tests are currently diabled and tracked here:
-          //1. https://github.com/apache/incubator-mxnet/issues/11369
-          //2. https://github.com/apache/incubator-mxnet/issues/11288
-          //utils.docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_virtualenv', false)
-          //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_pip', false)
-          //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_docker', false)
-          //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_source', false)
-        }
-      }
-    },
-    'InstallationGuide: GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/nt-Installation-gpu') {
-          utils.init_git()
-          //Some install guide tests are currently diabled and tracked here:
-          //1. https://github.com/apache/incubator-mxnet/issues/11369
-          //2. https://github.com/apache/incubator-mxnet/issues/11288
-          //utils.docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_virtualenv', true)
-          //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_pip', true)
-          //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_docker', true)
-          //utils.docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_source', true)
-        }
-      }
-    },
-    'PipTest: GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/nt-pipTest') {
-          utils.init_git()
-        }
-      }
-    },
-    'Amalgamation-atlas: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/nt-amalgamation1') {
-          utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas', false)
-        }
-      }
-    },
-    'Amalgamation-atlas-min: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/nt-amalgamation2') {
-          utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MIN=1', false)
-        }
-      }
-    },
-    'Amalgamation-atlas-mkl: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/nt-amalgamation3') {
-          utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_MKL=1', false)
-        }
-      }
-    },
-    'Amalgamation-atlas-cuda: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/nt-amalgamation4') {
-          utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_CUDA=1', false)
-        }
-      }
-    },
-    'Amalgamation-atlas-openmp: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/nt-amalgamation5') {
-          utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas DISABLE_OPENMP=0', false)
-        }
-      }
-    },
-    'Java Demo: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/java-demo') {
-          utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_java_demo_test_cpu', false)
-        }
-      }
-    },
-    'Scala Demo: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/scala-demo') {
-          utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_scala_demo_test_cpu', false)
-        }
-      }
-    },
-    'MXNetJS: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/nt-mxnetjs') {
-          utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_javascript', false)
-        }
-      }
-    }
   }
 }
 ,

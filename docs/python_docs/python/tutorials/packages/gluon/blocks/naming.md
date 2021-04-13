@@ -17,12 +17,12 @@
 
 # Parameter and Block Naming
 
-In gluon, each Parameter or Block has a name (and prefix). Parameter names are specified by users and Block names can be either specified by users or automatically created.
+In gluon, each Parameter or Block has a name. Parameter names and Block names can be automatically created.
 
 In this tutorial we talk about the best practices on naming. First, let's import MXNet and Gluon:
 
 
-```python
+```{.python .input}
 from __future__ import print_function
 import mxnet as mx
 from mxnet import gluon
@@ -30,153 +30,93 @@ from mxnet import gluon
 
 ## Naming Blocks
 
-When creating a block, you can assign a prefix to it:
+When creating a block, you can simply do as follows:
 
 
-```python
-mydense = gluon.nn.Dense(100, prefix='mydense_')
-print(mydense.prefix)
-```
-
-When no prefix is given, Gluon will automatically generate one:
-
-
-```python
-dense0 = gluon.nn.Dense(100)
-print(dense0.prefix)
+```{.python .input}
+mydense = gluon.nn.Dense(100)
+print(mydense.name)
 ```
 
 When you create more Blocks of the same kind, they will be named with incrementing suffixes to avoid collision:
 
 
-```python
+```{.python .input}
 dense1 = gluon.nn.Dense(100)
-print(dense1.prefix)
+print(dense1.name)
 ```
 
 ## Naming Parameters
 
-Parameters within a Block will be named by prepending the prefix of the Block to the name of the Parameter:
+Parameters will be named automatically by a unique name in the format of `param_{uuid4}_{name}`:
 
 
-```python
+```{.python .input}
+param = gluon.Parameter(name = 'bias')
+print(param.name)
+```
+
+`param.name` is used as the name of a parameter's symbol representation. And it can not be changed once the parameter is created.
+
+When getting parameters within a Block, you should use the structure based name as the key:
+
+
+```{.python .input}
 print(dense0.collect_params())
 ```
 
-## Name scopes
+## Nested Blocks
 
-To manage the names of nested Blocks, each Block has a `name_scope` attached to it. All Blocks created within a name scope will have its parent Block's prefix prepended to its name.
-
-Let's demonstrate this by first defining a simple neural net:
+In MXNet 2, we don't have to define children blocks within a `name_scope` any more. Let's demonstrate this by defining and initiating a simple neural net:
 
 
-```python
-class Model(gluon.Block):
-    def __init__(self, **kwargs):
-        super(Model, self).__init__(**kwargs)
-        with self.name_scope():
-            self.dense0 = gluon.nn.Dense(20)
-            self.dense1 = gluon.nn.Dense(20)
-            self.mydense = gluon.nn.Dense(20, prefix='mydense_')
+```{.python .input}
+class Model(gluon.HybridBlock):
+    def __init__(self):
+        super(Model, self).__init__()
+        self.dense0 = gluon.nn.Dense(20)
+        self.dense1 = gluon.nn.Dense(20)
+        self.mydense = gluon.nn.Dense(20)
 
     def forward(self, x):
         x = mx.nd.relu(self.dense0(x))
         x = mx.nd.relu(self.dense1(x))
         return mx.nd.relu(self.mydense(x))
-```
 
-Now let's instantiate our neural net.
-
-- Note that `model0.dense0` is named as `model0_dense0_` instead of `dense0_`.
-
-- Also note that although we specified `mydense_` as prefix for `model.mydense`, its parent's prefix is automatically prepended to generate the prefix `model0_mydense_`.
-
-
-```python
 model0 = Model()
 model0.initialize()
+model0.hybridize()
 model0(mx.nd.zeros((1, 20)))
-print(model0.prefix)
-print(model0.dense0.prefix)
-print(model0.dense1.prefix)
-print(model0.mydense.prefix)
 ```
 
-
-If we instantiate `Model` again, it will be given a different name like shown before for `Dense`.
-
-- Note that `model1.dense0` is still named as `dense0_` instead of `dense2_`, following dense layers in previously created `model0`. This is because each instance of model's name scope is independent of each other.
+The same principle also applies to container blocks like Sequential. We can simply do as follows:
 
 
-```python
-model1 = Model()
-print(model1.prefix)
-print(model1.dense0.prefix)
-print(model1.dense1.prefix)
-print(model1.mydense.prefix)
-```
-
-**It is recommended that you manually specify a prefix for the top level Block, i.e. `model = Model(prefix='mymodel_')`, to avoid potential confusions in naming.**
-
-The same principle also applies to container blocks like Sequential. `name_scope` can be used inside `__init__` as well as out side of `__init__`:
-
-
-```python
+```{.python .input}
 net = gluon.nn.Sequential()
-with net.name_scope():
-    net.add(gluon.nn.Dense(20))
-    net.add(gluon.nn.Dense(20))
-print(net.prefix)
-print(net[0].prefix)
-print(net[1].prefix)
-```
-
-`gluon.model_zoo` also behaves similarly:
-
-
-```python
-net = gluon.nn.Sequential()
-with net.name_scope():
-    net.add(gluon.model_zoo.vision.alexnet(pretrained=True))
-    net.add(gluon.model_zoo.vision.alexnet(pretrained=True))
-print(net.prefix, net[0].prefix, net[1].prefix)
+net.add(gluon.nn.Dense(20))
+net.add(gluon.nn.Dense(20))
 ```
 
 
 ## Saving and loading
 
-Because model0 and model1 have different prefixes, their parameters also have different names:
+
+For `HybridBlock`, we use `save_parameters`/`load_parameters`, which uses model structure, instead of parameter name, to match parameters.
 
 
-```python
-print(model0.collect_params(), '\n')
-print(model1.collect_params())
-```
-
-
-As a result, if you try to save parameters from model0 and load it with model1, you'll get an error due to unmatching names:
-
-
-```python
-model0.collect_params().save('model.params')
-try:
-    model1.collect_params().load('model.params', mx.cpu())
-except Exception as e:
-    print(e)
-```
-
-
-
-To solve this problem, we use `save_parameters`/`load_parameters` instead of `collect_params` and `save`/`load`. `save_parameters` uses model structure, instead of parameter name, to match parameters.
-
-
-```python
+```{.python .input}
 model0.save_parameters('model.params')
 model1.load_parameters('model.params')
 print(mx.nd.load('model.params').keys())
 ```
 
+For `SymbolBlock.imports`, we use `export`, which uses parameter name `param.name`, to save parameters.
 
+```{.python .input}
+model0.export('model0')
+model2 = gluon.SymbolBlock.imports('model0-symbol.json', ['data'], 'model0-0000.params')
+```
 
 ## Replacing Blocks from networks and fine-tuning
 
@@ -190,20 +130,16 @@ To see how to do this, we first load a pretrained AlexNet.
 - Note that the output layer is a dense block with 1000 dimension outputs.
 
 
-```python
+```{.python .input}
 alexnet = gluon.model_zoo.vision.alexnet(pretrained=True)
 print(alexnet.output)
-print(alexnet.output.prefix)
 ```
 
 
 To change the output to 100 dimension, we replace it with a new block.
 
 
-```python
-with alexnet.name_scope():
-    alexnet.output = gluon.nn.Dense(100)
+```{.python .input}
+alexnet.output = gluon.nn.Dense(100)
 alexnet.output.initialize()
-print(alexnet.output)
-print(alexnet.output.prefix)
 ```

@@ -130,7 +130,7 @@ template <typename xpu> struct GroupAdagradDnsRspKernel {
       // clang-format off
       const DType grad_rescaled = get_grad_rescaled(j);
       index_t data_j = get_data_j(j);
-      const DType div = lr * grad_rescaled / square_root::Map(state_data[grad_idx[i]] + eps);
+      const DType div = lr * grad_rescaled / (square_root::Map(state_data[grad_idx[i]]) + eps);
       out_data[data_j] = weight_data[data_j] - div;
       // clang-format on
     }

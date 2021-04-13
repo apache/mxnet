@@ -24,6 +24,7 @@
 
 file(TO_CMAKE_PATH "$ENV{Accelerate_HOME}" Accelerate_HOME)
 set(Accelerate_INCLUDE_SEARCH_PATHS
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/Current
   /System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Versions/Current
   ${Accelerate_HOME}
 )

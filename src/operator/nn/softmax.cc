@@ -26,7 +26,7 @@
 #include "../tensor/elemwise_unary_op.h"
 #include "../tensor/elemwise_binary_op.h"
 #include "../operator_common.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "mkldnn/mkldnn_base-inl.h"
 #include "mkldnn/mkldnn_ops-inl.h"
 #endif
@@ -34,13 +34,15 @@
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(SoftmaxParam);
+DMLC_REGISTER_PARAMETER(MaskedSoftmaxParam);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
+  if (inputs[0].shape().Size() == 0U) return;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   if (SupportMKLDNNSoftmax(param, inputs[0], outputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
@@ -58,6 +60,7 @@ static void SoftmaxGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
+  if (inputs[0].shape().Size() == 0U) return;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   if (SupportMKLDNNSoftmax(param, inputs[1], outputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
@@ -94,16 +97,14 @@ inline static bool SoftmaxGradStorageType(const nnvm::NodeAttrs& attrs,
                                       DispatchMode* dispatch_mode,
                                       std::vector<int> *in_attrs,
                                       std::vector<int> *out_attrs) {
-  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  if (param.use_length.value() || softmax_has_dtype_override(attrs)) {
-    auto& out_stype = out_attrs->at(0);
-    return storage_type_assign(&out_stype, kDefaultStorage,
-                               dispatch_mode, DispatchMode::kFCompute);
+  bool support = true;
+  if (softmax_use_length(attrs) || softmax_has_dtype_override(attrs)) {
+    support = false;
   }
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
-                           out_attrs);
+
+  CHECK_EQ(in_attrs->size(), SoftmaxGradOpNumInputs(attrs));
+  CHECK_EQ(out_attrs->size(), softmax_use_length(attrs) ? 2U : 1U);
+  return MKLDNNStorageType(attrs, dev_mask, support, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
@@ -147,7 +148,7 @@ Example::
     return std::vector<std::string>{"output"};
 })
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxComputeExCPU)
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
@@ -180,12 +181,73 @@ NNVM_REGISTER_OP(_backward_softmax)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
 .add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
 .set_attr_parser(ParamParser<SoftmaxParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxGradComputeExCPU)
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxGradStorageType)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
+
+NNVM_REGISTER_OP(masked_softmax)
+.add_alias("_npx_masked_softmax")
+.describe(R"code(Applies the softmax function masking elements according to the mask provided)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<MaskedSoftmaxParam>)
+.set_attr<nnvm::FListOutputNames>("FListInputNames",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::string>{"data", "mask"};
+  })
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
+  })
+.set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxCompute<cpu, mxnet_op::softmax_fwd,
+                                     false>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto data_grad = MakeNode("_backward_masked_softmax", n->attrs.name + "_backward_data",
+                              {ograds[0], n->inputs[1], nnvm::NodeEntry(n, 0, 0)},
+                              &n->attrs.dict, &n);
+    auto mask_grad = MakeNode("zeros_like", n->attrs.name + "_backward_mask",
+                              {n->inputs[1]}, nullptr, &n);
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(data_grad);
+    ret.emplace_back(mask_grad);
+    return ret;
+  })
+.set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxOpType)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<mxnet::FInferShape>("FInferShape", MaskedSoftmaxOpShape)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("data", "NDArray-or-Symbol", "The input array.")
+.add_argument("mask", "NDArray-or-Symbol", "Mask to apply.")
+.add_arguments(MaskedSoftmaxParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_masked_softmax)
+.set_num_inputs(3)
+.set_num_outputs(1)
+.set_attr<nnvm::FListOutputNames>("FListInputNames",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::string>{"ograd", "mask", "output"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", MaskedSoftmaxGradOpShape)
+.set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxGradOpType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", MaskedSoftmaxGradOpInplaceOption)
+.add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
+.set_attr_parser(ParamParser<MaskedSoftmaxParam>)
+.set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxGradCompute<cpu, op::mshadow_op::mul,
+                                                              mxnet_op::softmax_bwd>);
 }  // namespace op
 }  // namespace mxnet

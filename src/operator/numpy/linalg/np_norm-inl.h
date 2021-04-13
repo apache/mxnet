@@ -28,6 +28,8 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <limits>
+#include <string>
+#include <sstream>
 #include <cmath>
 #include "../../tensor/la_op.h"
 #include "../../tensor/la_op-inl.h"
@@ -71,6 +73,10 @@ struct nrmlp {
   /*! \brief do stable reduction into dst */
   template<typename AType, typename DType>
   MSHADOW_XINLINE void Reduce(volatile AType& sum_of_powers, volatile DType src, volatile DType& scale) { // NOLINT(*)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#endif
     if (src != 0) {
       DType src_abs = abs::Map(src);
       if (scale < src_abs) {
@@ -81,6 +87,7 @@ struct nrmlp {
         sum_of_powers = sum_of_powers + AType(lp_power(static_cast<double>(src_abs / scale), lp));
       }
     }
+#pragma GCC diagnostic pop
   }
 
   /*! \brief combine the results of two reducers */
@@ -111,9 +118,14 @@ struct nrmlp {
   /*! \brief finalize reduction result */
   template<typename DType>
   MSHADOW_XINLINE void Finalize(volatile DType& sum_of_powers, volatile DType& scale) { // NOLINT(*)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#endif
     if (lp != 0.0) {
       sum_of_powers = scale * DType(lp_power(static_cast<double>(sum_of_powers), 1.0 / lp));
     }
+#pragma GCC diagnostic pop
   }
 
   /*!
@@ -224,6 +236,22 @@ struct NumpyNormParam : public dmlc::Parameter<NumpyNormParam> {
     "ord:  None,  'fro', 'nuc', 'inf'  '-inf'."
     "flag:  0 ,    1,      2,    3,      4. ");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream oss_axis, oss_ord, oss_keepdims, oss_flag;
+    if (axis.has_value()) {
+      oss_axis << axis.value();
+    } else {
+      oss_axis << axis;
+    }
+    (*dict)["axis"] = oss_axis.str();
+    oss_ord << ord;
+    (*dict)["ord"] = oss_ord.str();
+    oss_keepdims << keepdims;
+    (*dict)["keepdims"] = oss_keepdims.str();
+    oss_flag << flag;
+    (*dict)["flag"] = oss_flag.str();
+  }
 };
 
 template<typename xpu>
@@ -245,7 +273,7 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
     const_cast<std::vector<TBlob>&>(outputs)[0] = outputs[0].reshape(small);
   }
-  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
   if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LpNorm with float16 inputs. "
                     "See https://mxnet.apache.org/api/faq/env_var "
@@ -326,35 +354,35 @@ void NumpyLpNormGradCompute(const nnvm::NodeAttrs& attrs,
           out_shape[i] = 1;
         }
       }
+      // refer to NumpyNormType()
+      CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, OType, {
-          if (dst_shape.ndim() == 2) {
-            Tensor<xpu, 2, OType> ograd =
-              inputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
-            Tensor<xpu, 2, DType> igrad =
-              outputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-            Tensor<xpu, 2, DType> data =
-              inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-            MXNET_REQ_TYPE_SWITCH(req[0], Req, {
-              Kernel<norm_backward_broadcast<Req>, xpu>::Launch(
-                s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_,
-                in_shape, out_shape, src_shape.ndim());
-            });
-          } else {
-            const int ndim = MXNET_SPECIAL_MAX_NDIM;
-            Tensor<xpu, ndim, DType> igrad =
-              outputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-            Tensor<xpu, ndim, OType> ograd =
-              inputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
-            Tensor<xpu, ndim, DType> data =
-              inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-            MXNET_REQ_TYPE_SWITCH(req[0], Req, {
-              Kernel<norm_backward_broadcast<Req>, xpu>::Launch(
-                s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_,
-                in_shape, out_shape, src_shape.ndim());
-            });
-          }
-        });
+        if (dst_shape.ndim() == 2) {
+          Tensor<xpu, 2, DType> ograd =
+            inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+          Tensor<xpu, 2, DType> igrad =
+            outputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+          Tensor<xpu, 2, DType> data =
+            inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+          MXNET_REQ_TYPE_SWITCH(req[0], Req, {
+            Kernel<norm_backward_broadcast<Req>, xpu>::Launch(
+              s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_,
+              in_shape, out_shape, src_shape.ndim());
+          });
+        } else {
+          const int ndim = MXNET_SPECIAL_MAX_NDIM;
+          Tensor<xpu, ndim, DType> igrad =
+            outputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+          Tensor<xpu, ndim, DType> ograd =
+            inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+          Tensor<xpu, ndim, DType> data =
+            inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+          MXNET_REQ_TYPE_SWITCH(req[0], Req, {
+            Kernel<norm_backward_broadcast<Req>, xpu>::Launch(
+              s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_,
+              in_shape, out_shape, src_shape.ndim());
+          });
+        }
       });
     } else {  // Elementwise Lp
       mshadow_op::nrmlp_grad host_mapper(ord);
@@ -503,7 +531,7 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
     if (param.flag == 2) {  // nuclear norm
       ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::identity>(
         ctx, eigen, req, outputs, reduced_shape);
-    } else if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+    } else if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true)) {
       if (ord == 2) {
         ReduceAxesComputeImpl<xpu, mshadow::red::maximum, true, false, mshadow_op::abs>(
           ctx, eigen, req, outputs, reduced_shape);

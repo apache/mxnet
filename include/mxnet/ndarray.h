@@ -37,7 +37,7 @@
 #include <algorithm>
 #include <memory>
 #include <algorithm>
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include <mkldnn.hpp>
 #endif
 #include "./base.h"
@@ -83,7 +83,7 @@ class NDArray {
  public:
   /*! \brief default constructor */
   NDArray()
-    : entry_(nullptr) {
+    : autograd_entry_(nullptr) {
   }
   /*!
    * \brief constructs a new dynamic NDArray
@@ -98,14 +98,16 @@ class NDArray {
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
   /*! \brief constructor for NDArray with storage type
    */
   NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx,
           bool delay_alloc = true, int dtype = mshadow::default_type_flag,
-          std::vector<int> aux_types = {}, mxnet::ShapeVector aux_shapes = {},
-          mxnet::TShape storage_shape = mxnet::TShape(mshadow::Shape1(0)));
+          const std::vector<int> &aux_types = {}, const mxnet::ShapeVector &aux_shapes = {},
+          const mxnet::TShape &storage_shape = mxnet::TShape(mshadow::Shape1(0))) {
+    ReInit(stype, shape, ctx, dtype, delay_alloc, &aux_types, &aux_shapes, &storage_shape);
+  }
   /*!
    * \brief constructs a new dynamic NDArray whose shape is unknown,
    *        hence the NDArray is inherently lazily created
@@ -117,7 +119,7 @@ class NDArray {
         shape_(),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
@@ -131,7 +133,7 @@ class NDArray {
         shape_(data.shape_),
         dtype_(data.type_flag_),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
 
   /*!
@@ -149,7 +151,7 @@ class NDArray {
         }),
         shape_(data.shape_),
         dtype_(data.type_flag_), storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
 
   /*! \brief create ndarray from shared memory */
@@ -158,7 +160,7 @@ class NDArray {
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
 
   /*!
@@ -177,7 +179,7 @@ class NDArray {
         shape_(shape),
         dtype_(data.type_flag_),
         storage_type_(stype),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
   /*!
    * \brief initialize the NDArray, assuming it is not assigned a meaningful shape before
@@ -187,10 +189,25 @@ class NDArray {
     ptr_->Init(shape, this->dtype_);
     this->shape_ = shape;
   }
+
+  void InitDetached(const NDArray *src) {
+    *this = *src;
+    autograd_entry_ = nnvm::NodeEntry(nullptr);
+  }
+  inline void ReInit() {
+    ptr_ = nullptr;
+    Init(kUndefinedStorage, TShape(), -1);
+  }
+  void ReInit(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx, int dtype,
+              bool delay_alloc = true, const std::vector<int> *aux_types = nullptr,
+              const mxnet::ShapeVector *aux_shapes = nullptr,
+              const mxnet::TShape *storage_shape = nullptr);
+
+  void SelfReorder2Default();
   /*!
    * \brief set the correct shape of NDArray directly from the storage_shape of its own chunk.
    */
-  void SetShapeFromChunk();
+  void SetShapeFromChunk() const;
   /*
    * This indicates whether an array is a view of another array (created by
    * reshape or slice). If an array is a view and the data is stored in
@@ -326,9 +343,9 @@ class NDArray {
   inline bool is_none() const {
     return ptr_.get() == nullptr;
   }
-  /*! \return updated grad state in entry_ */
+  /*! \return updated grad state in autograd_entry_ */
   bool fresh_out_grad() const;
-  /*! \return updated grad state in entry_ */
+  /*! \return updated grad state in autograd_entry_ */
   void set_fresh_out_grad(bool state) const;
   /*! \brief Returns true if a sparse ndarray's aux_data and storage are initialized
    * Throws an exception if the indices array shape is inconsistent
@@ -361,30 +378,25 @@ class NDArray {
     CheckAndAlloc();
     return ptr_->shandle;
   }
+  /*! \brief assign profiler scope and name to the storage handles */
+  void AssignStorageInfo(const std::string& profiler_scope,
+                         const std::string& name);
   /*!
    * \brief Block until all the pending write operations with respect
    *    to current NDArray are finished, and read can be performed.
+   *
+   * If the array has not been computed yet (deferred compute), this will
+   * trigger computation.
    */
-  inline void WaitToRead() const {
-    if (is_none()) return;
-    Engine::Get()->WaitForVar(ptr_->var);
-  }
+  void WaitToRead() const;
   /*!
    * \brief Block until all the pending read/write operations with respect
    *    to current NDArray are finished, and write can be performed.
+   *
+   * If the array has not been computed yet (deferred compute), this will
+   * trigger computation.
    */
-  inline void WaitToWrite() const {
-    if (is_none()) return;
-    /*!
-     * Push an empty mutable function to flush all preceding reads to the
-     * variable.
-     */
-    Engine::Get()->PushAsync(
-      [](RunContext, Engine::CallbackOnComplete on_complete) {
-        on_complete();
-      }, Context{}, {}, {ptr_->var});
-    Engine::Get()->WaitForVar(ptr_->var);
-  }
+  void WaitToWrite() const;
   /*! \return the associated variable of the ndarray.*/
   inline Engine::VarHandle var() const {
     return ptr_->var;
@@ -576,6 +588,20 @@ class NDArray {
     return ret;
   }
 
+  inline void InitAsArray(const NDArray &src, const mxnet::TShape &shape, int dtype) {
+    CHECK_EQ(src.storage_type(), kDefaultStorage)
+      << "AsArray is intended only for kDefaultStorage.";
+    CHECK_GE(src.ptr_->shandle.size,
+             shape.Size() * mshadow::mshadow_sizeof(dtype))
+      << "NDArray.AsArray: target memory size is bigger than what was allocated.";
+    // We can't reuse memory in a view.
+    CHECK(!src.IsView());
+    *this = src;
+    shape_ = shape;
+    dtype_ = dtype;
+    reuse_ = true;
+  }
+
   /*!
    * \brief Create a reference view of NDArray that
    *  represents as DLManagedTensor.
@@ -645,11 +671,13 @@ class NDArray {
    */
   NDArray ReshapeWithRecord(const mxnet::TShape &shape);
   /*!
-   * \brief Return a copy of this NDArray without autograd history
+   * \brief Return a copy of this NDArray without autograd and deferred compute
+   * history
    */
   NDArray Detach() const {
     NDArray ret(*this);
-    ret.entry_ = nnvm::NodeEntry(nullptr);
+    ret.autograd_entry_ = nnvm::NodeEntry(nullptr);
+    ret.deferredcompute_entry_ = nnvm::NodeEntry(nullptr);
     return ret;
   }
 
@@ -699,7 +727,7 @@ class NDArray {
     ptr_->CheckAndAllocAuxData(i, aux_shape);
   }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   /*
    * Create NDArray from mkldnn memory.
    * mkldnn_mem The mkldnn memory to be managed.
@@ -770,6 +798,12 @@ class NDArray {
    */
   NDArray Reorder2Default() const;
 
+    /*
+   * This creates a new NDArray using f32 with the reordered data.
+   * It doesn't affect the data of the original NDArray.
+   */
+  NDArray Reorder2DefaultFloatFormat() const;
+
   void InvalidateMKLDNNData();
 
   /*
@@ -825,7 +859,7 @@ class NDArray {
     */
     std::vector<Storage::Handle> aux_handles;
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     /*! This is created when data is stored in MKLDNN format.
      */
     std::shared_ptr<MKLDNNMemory> mkl_mem_;
@@ -983,8 +1017,8 @@ class NDArray {
     /*! \brief check if delay alloc is on, do alloc if not yet done */
     inline void CheckAndAlloc(void) {
       if (delay_alloc) {
-        shandle = Storage::Get()->Alloc(shandle.size, shandle.ctx);
-#if MXNET_USE_MKLDNN == 1
+        Storage::Get()->Alloc(&shandle);
+#if MXNET_USE_ONEDNN == 1
         mkl_mem_ = nullptr;
 #endif
         delay_alloc = false;
@@ -998,8 +1032,9 @@ class NDArray {
           << "CheckAndAlloc(dbytes) is only intended for kDefaultStorage";
       dbytes = std::max(dbytes, static_cast<uint64_t>(shandle.size));
       if (delay_alloc) {
-        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
-#if MXNET_USE_MKLDNN == 1
+        shandle.size = dbytes;
+        Storage::Get()->Alloc(&shandle);
+#if MXNET_USE_ONEDNN == 1
         mkl_mem_ = nullptr;
 #endif
         delay_alloc = false;
@@ -1007,8 +1042,9 @@ class NDArray {
         // free storage
         Storage::Get()->Free(shandle);
         // init storage
-        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
-#if MXNET_USE_MKLDNN == 1
+        shandle.size = dbytes;
+        Storage::Get()->Alloc(&shandle);
+#if MXNET_USE_ONEDNN == 1
         mkl_mem_ = nullptr;
 #endif
       }
@@ -1044,7 +1080,7 @@ class NDArray {
     // and allocate new storage
     void CheckAndAllocData(const mxnet::TShape &shape, int dtype);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     // Have MKL memory reference to the data in the default storage
     // or create memory for MKLDNN.
     void SetMKLMem(const mxnet::TShape &shape, int dtype);
@@ -1085,12 +1121,27 @@ class NDArray {
     ~Chunk();
   };  // struct Chunk
 
+  /*!
+   * \brief initialize the NDArray
+  */
+  inline void Init(const NDArrayStorageType stype, const mxnet::TShape &shape, int dtype) {
+    shape_ = shape;
+    dtype_ = dtype;
+    storage_type_ = stype;
+    reuse_ = false;
+    byte_offset_ = 0;
+    autograd_entry_ = nnvm::NodeEntry(nullptr);
+  }
+
   void SetTBlob() const;
 
   /*! \brief internal data of NDArray */
   std::shared_ptr<Chunk> ptr_{nullptr};
-  /*! \brief shape of current NDArray */
-  mxnet::TShape shape_;
+  /*! \brief shape of current NDArray
+   *  \note const methods WaitToRead, WaitToWrite will set shape, if shape is
+   *        previously unknown and array is deferred computed.
+   */
+  mutable mxnet::TShape shape_;
   /*! \brief byte offset in chunk */
   size_t byte_offset_ = 0;
   /*! \brief type of data */
@@ -1100,7 +1151,9 @@ class NDArray {
   /*! \brief storage type of data */
   NDArrayStorageType storage_type_ = kUndefinedStorage;
   /*! \brief node entry for autograd */
-  nnvm::NodeEntry entry_;
+  nnvm::NodeEntry autograd_entry_;
+  /*! \brief node entry for deferred computation tracking */
+  nnvm::NodeEntry deferredcompute_entry_;
   /*!
    * \brief internal TBlob
    * \note When user access tblob_ by some const methods like

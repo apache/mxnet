@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 240
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -29,45 +29,26 @@ node('utility') {
   utils = load('ci/Jenkinsfile_utils.groovy')
   custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
-utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3')
+utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', linux_gpu_g4: 'mxnetlinux-gpu-g4')
 
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_unix_mkldnn_gpu(),
-    custom_steps.compile_unix_mkldnn_nocudnn_gpu(),
-    custom_steps.compile_unix_full_gpu(),
-    custom_steps.compile_unix_cmake_mkldnn_gpu(),
-    custom_steps.compile_unix_cmake_gpu(),
-    custom_steps.compile_unix_tensorrt_gpu(),
-    custom_steps.compile_unix_int64_gpu(),
-    custom_steps.compile_unix_full_gpu_no_tvm_op(),
-    custom_steps.compile_unix_cmake_gpu_no_tvm_op(),
-    custom_steps.compile_unix_cmake_gpu_no_rtc(),
-    custom_steps.compile_unix_full_gpu_mkldnn_cpp_test()
+    custom_steps.compile_unix_onednn_gpu('onednn_gpu'),
+    custom_steps.compile_unix_onednn_nocudnn_gpu('onednn_gpu_nocudnn'),
+    custom_steps.compile_unix_full_gpu('gpu'),
+    custom_steps.compile_unix_full_gpu_debug('gpu_debug'),
+    custom_steps.compile_unix_tensorrt_gpu('tensorrt'),
+    custom_steps.compile_unix_int64_gpu('gpu_int64'),
   ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.test_unix_python3_gpu(),
-    custom_steps.test_unix_python3_quantize_gpu(),
-    custom_steps.test_unix_python3_mkldnn_gpu(),
-    custom_steps.test_unix_python3_mkldnn_nocudnn_gpu(),
-    custom_steps.test_unix_python3_tensorrt_gpu(),
-    custom_steps.test_unix_perl_gpu(),
-    custom_steps.test_unix_r_gpu(),
-    custom_steps.test_unix_cpp_gpu(),
-    custom_steps.test_unix_cpp_mkldnn_gpu(),
-    custom_steps.test_unix_python3_integration_gpu(),
-    custom_steps.test_unix_cpp_package_gpu(),
-    custom_steps.test_unix_scala_gpu(),
-    custom_steps.test_unix_distributed_kvstore_gpu(),
-    custom_steps.test_static_python_gpu(),
-    custom_steps.test_static_python_gpu_cmake(),
-    custom_steps.test_unix_python3_gpu_no_tvm_op(),
-    custom_steps.test_unix_capi_cpp_package(),
-
-    // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
-    //custom_steps.test_unix_caffe_gpu()
+    custom_steps.test_unix_python3_gpu('gpu'),
+    custom_steps.test_unix_python3_onednn_gpu('onednn_gpu'),
+    custom_steps.test_unix_python3_onednn_nocudnn_gpu('onednn_gpu_nocudnn'),
+    // TODO(szha): fix and reenable the hanging issue. tracked in #18098
+    // custom_steps.test_unix_distributed_kvstore_gpu('gpu'),
+    custom_steps.test_unix_byteps_gpu('gpu'),
   ]) 
 }
 ,

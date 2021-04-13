@@ -55,6 +55,13 @@ struct ConcatParam : public dmlc::Parameter<ConcatParam> {
     DMLC_DECLARE_FIELD(dim).set_default(1)
     .describe("the dimension to be concated.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s, dim_s;
+    num_args_s << num_args;
+    dim_s << dim;
+    (*dict)["num_args"] = num_args_s.str();
+    (*dict)["dim"] = dim_s.str();
+  }
 };  // struct ConcatParam
 
 template<typename xpu, typename DType>

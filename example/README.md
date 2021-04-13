@@ -93,61 +93,23 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [MXNet Julia API](https://mxnet.apache.org/api/julia/index.html)
 * [MXNet Perl API](https://mxnet.apache.org/api/perl/index.html)
 * [go-mxnet-predictor](https://github.com/songtianyi/go-mxnet-predictor) - Go binding for inference
-* [MXNet JNI](https://github.com/dmlc/mxnet/tree/master/amalgamation/jni) - JNI(Android) library
-* [MXNet Amalgamation](https://github.com/dmlc/mxnet/tree/master/amalgamation) - Amalgamation (entire library in a single file)
 * [MXNet Javascript](https://github.com/dmlc/mxnet.js/) - MXNetJS: Javascript Package for Deep Learning in Browser (without server)
 
 ### <a name="deep-learning-examples-mxnet"></a>Deep Learning Examples in the MXNet Project Repository
 --------------
 * [Autoencoder](autoencoder) - unsupervised feature learning
-* [Bayesian Methods](bayesian-methods) - various examples related to Bayesian Methods
-* [Bidirectional LSTM Sorting](bi-lstm-sort) - use a bidirectional LSTM to sort an array
-* [Caffe](caffe) - how to call Caffe operators from MXNet
-* [CNN for Chinese Text Classification](cnn_chinese_text_classification) - a MXnet example for Chinese text classification
-* [CNN for Text Classification](cnn_text_classification) - a MXnet example for text classification
-* [CTC with MXNet](ctc) - a modification of warpctc
-* [Deep Embedded Clustering](deep-embedded-clustering) - unsupervised deep embedding for clustering analysis
-* [Dense-Sparse-Dense Training](dsd) - Dense-Sparse-Dense Training for deep neural networks
-* [Fully Convolutional Networks](fcn-xs) - fully convolutional networks for semantic segmentation
-* [Generative Adversarial Networks with R](gan/CGAN_mnist_R) - GAN examples in R
 * [Gluon Examples](gluon) - several examples using the Gluon API
   * [Style Transfer](gluon/style_transfer) - a style transfer example using gluon
   * [Word Language Model](gluon/word_language_model) - an example that trains a multi-layer RNN on the Penn Treebank language modeling benchmark
   * [SN-GAN](gluon/sn_gan) - an example that utilizes spectral normalization to train GAN(Generative adversarial network) using Gluon API
 * [Image Classification with R](image-classification) - image classification on MNIST,CIFAR,ImageNet-1k,ImageNet-Full, with multiple GPU and distributed training.
-* [Kaggle 1st national data science bowl](kaggle-ndsb1) - a MXnet example for Kaggle Nation Data Science Bowl 1
 * [Kaggle 2nd national data science bowl](kaggle-ndsb2) - a tutorial for Kaggle Second Nation Data Science Bowl
-* [Memory Cost](memcost) - a script to show the memory cost of different allocation strategies
-* [Model Parallelism](model-parallel) - various model parallelism examples
-    * [Model Parallelism with LSTM](model-parallel/lstm) - an example showing how to do model parallelism with a LSTM
-    * [Model Parallelism with Matrix Factorization](model-parallel/lstm) - a matrix factorization algorithm for recommendations
-* [Module API](module) - examples with the Python Module API
 * [Multi-task Learning](multi-task) - how to use MXNet for multi-task learning
-* [MXNet Adversarial Variational Autoencoder](mxnet_adversarial_vae) - combines a variational autoencoder with a generative adversarial network
-* [Noise-contrastive estimation loss](nce-loss) - used to speedup multi-class classification
-* [Neural Style](neural-style) - use deep learning for style transfer in images
-* [Numpy Operator Customization](numpy-ops) - Examplea on quick customize new ops with Numpy
 * [Profiling](profiler) - generate profiling results in json files
-* [Quantization and Calibration Examples](quantization) - examples of quantizing a FP32 model to INT8 and performing low-precision inference with Intel MKL-DNN on CPU or cuDNN on GPU
-* [R-CNN](rcnn) - R-CNN with distributed implementation and data parallelization
+* [Quantization and Calibration Examples](quantization) - examples of quantizing a FP32 model to INT8 and performing low-precision inference with Intel ONEDNN on CPU or cuDNN on GPU
 * [Recommender Systems](recommenders) - examples of how to build various kinds of recommender systems
-* [Reinforcement Learning](reinforcement-learning) - a variety of reinforcement learning examples
-    * [A3C](reinforcement-learning/a3c)
-    * [DDPG](reinforcement-learning/ddpg) - example of training DDPG for CartPole
-    * [DQN](reinforcement-learning/dqn) - examples of training DQN and Double DQN to play Atari Games
-    * [Parallel Advantage-Actor Critic](reinforcement-learning/parallel_actor_critic)
 * [Restricted Boltzmann Machine](restricted-boltzmann-machine) - an example of the binary restricted Boltzmann machine learning MNIST
-* [RNN Time Major](rnn-time-major) - RNN implementation with Time-major layout
-* [Recurrent Neural Net](rnn) - creating recurrent neural networks models using high level `mxnet.rnn` interface
-* [Sparse](sparse) - a variety of sparse examples
-    * [Factorization Machine](sparse/factorization_machine)
-    * [Linear Classification](sparse/linear_classification)
-    * [Matrix Factorization](sparse/matrix_factorization)
-    * [Wide Deep](sparse/wide_deep)
 * [Single Shot MultiBox Detector](ssd) - SSD object recognition example
-* [Stochastic Depth](stochastic-depth) - implementation of the stochastic depth algorithm
-* [Support Vector Machine](svm_mnist) - an SVM example using MNIST
-* [Variational Auto Encoder](vae) - implements the Variational Auto Encoder in MXNet using MNIST
 
 ### <a name="deep-learning-examples-other"></a>Other Deep Learning Examples with MXNet
 

@@ -1,5 +1,16 @@
     Apache MXNET (incubating)
-    Copyright 2017-2020 The Apache Software Foundation
+    Copyright 2017-2021 The Apache Software Foundation
 
     This product includes software developed at
     The Apache Software Foundation (http://www.apache.org/).
+
+
+    --------------------------------------------------------------------------------
+    This product includes code from Apache TVM, which includes the
+    following in its NOTICE file:
+
+        Apache TVM (incubating)
+        Copyright 2019-2020 The Apache Software Foundation
+
+        This product includes software developed at
+        The Apache Software Foundation (http://www.apache.org/).

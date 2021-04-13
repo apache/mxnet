@@ -530,14 +530,14 @@ robust for the machine translation task.
     #We use warmup steps as introduced in [1].
     warmup_steps = hparams.warmup_steps
     grad_interval = hparams.num_accumulated
-    model.collect_params().setattr('grad_req', 'add')
+    model.setattr('grad_req', 'add')
     #We use Averaging SGD [2] to update the parameters.
     average_start = (len(train_data_loader) // grad_interval) * \
         (hparams.epochs - hparams.average_start)
     average_param_dict = {k: mx.nd.array([0]) for k, v in
                                           model.collect_params().items()}
     update_average_param_dict = True
-    model.collect_params().zero_grad()
+    model.zero_grad()
     for epoch_id in range(hparams.epochs):
         utils.train_one_epoch(epoch_id, model, train_data_loader, trainer,
                               label_smoothing, loss_function, grad_interval,
@@ -603,5 +603,5 @@ Neural Information Processing Systems. 2017.
 stochastic approximation by averaging." SIAM Journal on Control and
 Optimization. 1992.
 
-.. |transformer| image:: transformer.png
+.. |transformer| image:: /_static/transformer.png
 

@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 240
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -34,11 +34,11 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_unix_clang_3_9_cpu(),
     custom_steps.compile_unix_clang_6_cpu(),
+    custom_steps.compile_unix_clang_10_cpu(),
     custom_steps.compile_unix_clang_tidy_cpu(),
-    custom_steps.compile_unix_clang_3_9_mkldnn_cpu(),
-    custom_steps.compile_unix_clang_6_mkldnn_cpu()
+    custom_steps.compile_unix_clang_6_onednn_cpu(),
+    custom_steps.compile_unix_clang_10_onednn_cpu()
   ]) 
 }
 ,

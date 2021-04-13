@@ -58,7 +58,6 @@ inline bool QuantizedElemwiseMulOpShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*in_attrs, quantized_elemwise_mul::kRhsMin, mxnet::TShape(1, 1));
   SHAPE_ASSIGN_CHECK(*in_attrs, quantized_elemwise_mul::kRhsMax, mxnet::TShape(1, 1));
 
-  out_attrs->clear();
   SHAPE_ASSIGN_CHECK(*out_attrs, quantized_elemwise_mul::kOut, lshape);
   if (!params.enable_float_output) {
     SHAPE_ASSIGN_CHECK(*out_attrs, quantized_elemwise_mul::kOutMin, mxnet::TShape(1, 1));
@@ -139,7 +138,7 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
   float out_data_scale = 1.f;
   float out_scale = 1.f;
   if (!params.enable_float_output) {
-    float output_data_range = kInt32Range;
+    double output_data_range;
     // dataA && dataB are int8
     if (outputs[quantized_elemwise_mul::kOut].type_flag_ == mshadow::kInt8) {
       output_data_range = kInt8Range;
@@ -187,7 +186,7 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
         out_data[i] = static_cast<out_type>(a * b * out_scale);
       }
     } else {
-      typedef int32_t out_type;
+      using out_type = int32_t;
       auto *out_data = outputs[quantized_elemwise_mul::kOut].dptr<out_type>();
 #if !defined(_MSC_VER)
 #pragma omp simd
@@ -199,7 +198,7 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
       }
     }
   } else {
-    typedef float_t out_type;
+    using out_type = float_t;
     auto *out_data = outputs[quantized_elemwise_mul::kOut].dptr<out_type>();
 #if !defined(_MSC_VER)
 #pragma omp simd

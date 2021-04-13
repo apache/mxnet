@@ -23,7 +23,7 @@
 // A place to add tests scripts for supporting tools
 
 // timeout in minutes
-max_time = 180
+max_time = 240
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -37,7 +37,7 @@ utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Tooling Tests', [
     custom_steps.test_artifact_repository(),
-  ])    
+  ])
 }
 ,
 failure_handler: {

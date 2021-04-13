@@ -23,7 +23,7 @@
  * \author Da Zheng
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -48,10 +48,10 @@ bool SupportMKLDNNAct(const ActivationParam& param) {
 }
 
 bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input) {
-  // MKL-DNN Activation supports 1d, 2d, 3d, 4d data layout
+  // MKL-DNN Activation supports 1d, 2d, 3d, 4d and 5d data layout
   if ((input.shape().ndim() < 1) ||
-      (input.shape().ndim() > 4) ||
-      (input.dtype() != mshadow::kFloat32))
+      (input.shape().ndim() > 5) ||
+      !(input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16))
     return false;
   return SupportMKLDNNAct(param);
 }
@@ -63,10 +63,10 @@ bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param) {
 }
 
 bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param, const NDArray &input) {
-  // MKL-DNN Activation supports 1d, 2d, 3d, 4d data layout
+  // MKL-DNN Activation supports 1d, 2d, 3d, 4d and 5d data layout
   if ((input.shape().ndim() < 1) ||
-      (input.shape().ndim() > 4) ||
-      (input.dtype() != mshadow::kFloat32))
+      (input.shape().ndim() > 5) ||
+      !(input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16))
     return false;
   return SupportMKLDNNLeakyRelu(param);
 }
@@ -100,7 +100,7 @@ mkldnn::algorithm GetMKLDNNActAlgo(const LeakyReLUParam& param) {
     case leakyrelu::kELU:
       return mkldnn::algorithm::eltwise_elu;
     case leakyrelu::kGELU:
-      return mkldnn::algorithm::eltwise_gelu;
+      return mkldnn::algorithm::eltwise_gelu_erf;
     default:
       LOG(FATAL) << "unknown activation type for LeakyReLU: " << param.act_type;
       return mkldnn::algorithm::eltwise_relu;
@@ -249,21 +249,28 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx
   auto input_mem = in_buffer.GetMKLDNNData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
   // descriptor. Otherwise, the perf will suffer.
-  if (input_mem->get_desc() != diff_dst_memory->get_desc())
+  if (input_mem->get_desc() != diff_dst_memory->get_desc()) {
     input_mem = in_buffer.GetMKLDNNDataReorder(diff_dst_memory->get_desc());
-  MKLDNNActBackward &bwd =
-      GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
+  }
+
+  MKLDNNActBackward &bwd = GetActBackward(param_, ctx, in_buffer, out_buffer, *input_mem);
   MKLDNNStream *stream = MKLDNNStream::Get();
-  mkldnn_output_t diff_src_memory =
-      CreateMKLDNNMem(in_grad, bwd.bwd_pd.diff_src_desc(), req[0]);
-  mkldnn_args_map_t args = {
-    { MKLDNN_ARG_SRC, *input_mem },
-    { MKLDNN_ARG_DIFF_DST, *diff_dst_memory },
-    { MKLDNN_ARG_DIFF_SRC, *diff_src_memory.second },
-  };
-  stream->RegisterPrimArgs(bwd.GetBwd(), args);
-  CommitOutput(in_grad, diff_src_memory);
-  stream->Submit();
+  mkldnn_args_map_t args = {{MKLDNN_ARG_SRC, *input_mem},
+                            {MKLDNN_ARG_DIFF_DST, *diff_dst_memory}};
+  if (req[0] != kAddTo) {
+    // req[0] is kWriteTo or kWriteInplace
+    auto diff_src_memory =
+        const_cast<NDArray &>(in_grad).CreateMKLDNNData(bwd.bwd_pd.diff_src_desc());
+    args.insert({MKLDNN_ARG_DIFF_SRC, *diff_src_memory});
+    stream->RegisterPrimArgs(bwd.GetBwd(), args);
+    stream->Submit();
+  } else {
+    auto diff_src_memory = CreateMKLDNNMem(in_grad, bwd.bwd_pd.diff_src_desc(), req[0]);
+    args.insert({MKLDNN_ARG_DIFF_SRC, *diff_src_memory.second});
+    stream->RegisterPrimArgs(bwd.GetBwd(), args);
+    CommitOutput(in_grad, diff_src_memory);
+    stream->Submit();
+  }
 }
 
 void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs,

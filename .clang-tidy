@@ -17,45 +17,41 @@
 
 # The checks defined here will be run and will display by default as warnings.
 Checks: >
-    -*, cppcoreguidelines-c-copy-assignment-signature,
-    cppcoreguidelines-interfaces-global-init, cppcoreguidelines-no-malloc,
-    cppcoreguidelines-pro-bounds-constant-array-index, cppcoreguidelines-pro-type-const-cast,
-    cppcoreguidelines-pro-type-cstyle-cast, cppcoreguidelines-pro-type-member-init,
-    cppcoreguidelines-pro-type-static-cast-downcast, cppcoreguidelines-pro-type-union-access,
-    cppcoreguidelines-pro-type-vararg, cppcoreguidelines-slicing,
-    cppcoreguidelines-special-member-functions, clang-analyzer-security.FloatLoopCounter,
-    clang-analyzer-security.insecureAPI.*, clang-analyzer-core.CallAndMessage,
-    clang-analyzer-core.DivideZero, clang-analyzer-core.DynamicTypePropagation,
-    clang-analyzer-core.NonNullParamChecker, clang-analyzer-core.NullDereference,
-    clang-analyzer-core.StackAddressEscape, clang-analyzer-core.UndefinedBinaryOperatorResult,
-    clang-analyzer-core.VLASize, clang-analyzer-core.builtin.BuiltinFunctions,
-    clang-analyzer-core.builtin.NoReturnFunctions, clang-analyzer-core.uninitialized.ArraySubscript,
-    clang-analyzer-core.uninitialized.Assign, clang-analyzer-core.uninitialized.Branch,
-    clang-analyzer-core.uninitialized.CapturedBlockVariable,
-    clang-analyzer-core.uninitialized.UndefReturn, clang-analyzer-cplusplus.NewDelete,
-    clang-analyzer-cplusplus.NewDeleteLeaks, clang-analyzer-cplusplus.SelfAssignment,
-    clang-analyzer-deadcode.DeadStores, modernize-avoid-bind, modernize-deprecated-headers,
-    modernize-loop-convert, modernize-make-shared, modernize-pass-by-value,
+    -*, cppcoreguidelines-* clang-analyzer-*, modernize-*,
+    performance-faster-string-find, performance-for-range-copy,
+    performance-implicit-conversion-in-loop, performance-inefficient-algorithm,
+    performance-inefficient-string-concatenation, performance-trivially-destructible,
+    performance-inefficient-vector-operation, performance-move-const-arg,
+    performance-move-constructor-init, performance-noexcept-move-constructor,
+    performance-no-automatic-move, performance-unnecessary-copy-initialization,
+    performance-type-promotion-in-math-fn
+
+# performance checks not enabled due to segmentation fault in clang-tidy v8+:
+# performance-unnecessary-value-param
+
+# In order to trigger an error, you must have a rule defined both in checks and in this section.
+WarningsAsErrors: >
+    cppcoreguidelines-no-malloc, modernize-deprecated-headers,
+    modernize-loop-convert, modernize-make-shared, modernize-pass-by-value, modernize-make-unique,
     modernize-raw-string-literal, modernize-redundant-void-arg, modernize-replace-auto-ptr,
     modernize-replace-random-shuffle, modernize-return-braced-init-list, modernize-shrink-to-fit,
     modernize-unary-static-assert, modernize-use-bool-literals, modernize-use-default-member-init,
     modernize-use-emplace, modernize-use-equals-default, modernize-use-equals-delete,
     modernize-use-noexcept, modernize-use-nullptr, modernize-use-override,
-    modernize-use-transparent-functors, modernize-use-using, performance-*
+    modernize-use-transparent-functors, modernize-use-using,
+    performance-faster-string-find, performance-implicit-conversion-in-loop,
+    performance-inefficient-algorithm, performance-inefficient-string-concatenation,
+    performance-trivially-destructible, performance-inefficient-vector-operation,
+    performance-move-const-arg, performance-move-constructor-init,
+    performance-noexcept-move-constructor, performance-no-automatic-move,
+    performance-unnecessary-copy-initialization, performance-type-promotion-in-math-fn
 
-# cppcoreguidelines checks not enabled:
-# cppcoreguidelines-pro-bounds-pointer-arithmetic
-# cppcoreguidelines-pro-bounds-array-to-pointer-decay
-# cppcoreguidelines-pro-type-reinterpret-cast
-
-# modernize checks not enabled:
+# modernize checks not enforced:
 # modernize-use-auto
-# modernize-make-unique (C++14 and newer only)
+# modernize-avoid-bind
 
-# In order to trigger an error, you must have a rule defined both in checks and in this section.
-WarningsAsErrors: >
-    cppcoreguidelines-no-malloc, modernize-use-nullptr, performance-unnecessary-copy-initialization,
-    modernize-use-emplace, performance-move-const-arg
+# performance checks not enforced due to segmentation fault
+# performance-for-range-copy
 
 # Todo: define a better regex match that includes most project headers, but excludes third party
 # code.

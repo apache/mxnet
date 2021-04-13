@@ -23,27 +23,25 @@
  * \author Tao Lv
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include "./mkldnn_pooling-inl.h"
 
 namespace mxnet {
 namespace op {
 
+static inline mkldnn::memory::data_type get_data_type(const mkldnn::memory::desc &md) {
+  return static_cast<mkldnn::memory::data_type>(md.data_type());
+}
+
 void MKLDNNPoolingFwd::Init(const mxnet::NDArray &input, const mxnet::NDArray &output,
-                            const int kernel_h,  const int kernel_w,
-                            const int stride_h,  const int stride_w,
-                            const int padding_t, const int padding_b,
-                            const int padding_l, const int padding_r,
+                            const mkldnn::memory::dims &kernel,
+                            const mkldnn::memory::dims &strides,
+                            const mkldnn::memory::dims &pad_l,
+                            const mkldnn::memory::dims &pad_r,
                             const bool is_train, const mkldnn::algorithm alg_kind) {
-  auto src_md = input.GetMKLDNNData()->get_desc();
-  mkldnn::memory::dims dims = {src_md.data.dims[0],
-                               src_md.data.dims[1],
-                               static_cast<int>(output.shape()[2]),
-                               static_cast<int>(output.shape()[3])};
-  auto dst_md = mkldnn::memory::desc({dims},
-                                     static_cast<mkldnn::memory::data_type>(src_md.data.data_type),
-                                     mkldnn::memory::format_tag::any);
+  const auto src_md = input.GetMKLDNNData()->get_desc();
+  const auto dst_md = GetMemDesc(output);
   const mkldnn::engine engine = CpuEngine::Get()->get_engine();
   if (alg_kind != mkldnn::algorithm::pooling_max &&
       alg_kind != mkldnn::algorithm::pooling_avg &&
@@ -60,11 +58,6 @@ void MKLDNNPoolingFwd::Init(const mxnet::NDArray &input, const mxnet::NDArray &o
     LOG(INFO) << "MKLDNN Pooling: training with prop_kind is forward_scoring";
   }
 
-  const mkldnn::memory::dims strides = {stride_h,  stride_w  };
-  const mkldnn::memory::dims pad_l   = {padding_t, padding_l };
-  const mkldnn::memory::dims pad_r   = {padding_b, padding_r };
-  const mkldnn::memory::dims kernel  = {kernel_h,  kernel_w  };
-  // mkldnn::pooling_forward::desc
   const auto fwd_desc = mkldnn::pooling_forward::desc(prop, alg_kind, src_md, dst_md,
                                                       strides, kernel, pad_l, pad_r);
   this->fwd_pd_.reset(new mkldnn::pooling_forward::primitive_desc(fwd_desc, engine));
@@ -93,7 +86,7 @@ void MKLDNNPoolingFwd::Execute(const NDArray &in_data,
     auto engine = CpuEngine::Get()->get_engine();
 
     if (workspace == nullptr) {
-        LOG(FATAL) << "MKLDNN Pooling: incorrect workspace input";
+      LOG(FATAL) << "MKLDNN Pooling: incorrect workspace input";
     }
 
     auto ws = std::make_shared<mkldnn::memory>((*(this->fwd_pd_)).workspace_desc(),
@@ -127,45 +120,129 @@ mkldnn::algorithm GetMKLDNNPoolAlgo(const PoolingParam &param) {
   }
 }
 
+void InitPoolingPrimitiveParams(const PoolingParam &param,
+                                const mkldnn::memory::desc &data_md,
+                                const mkldnn::memory::dims &new_kernel,
+                                const mkldnn::memory::dims &new_strides,
+                                const mkldnn::memory::dims &new_pad_l,
+                                const mkldnn::memory::dims &new_pad_r) {
+  const int kernel_ndims = param.kernel.ndim();
+  mkldnn::memory::dims& kernel = const_cast<mkldnn::memory::dims&>(new_kernel);
+  mkldnn::memory::dims& strides = const_cast<mkldnn::memory::dims&>(new_strides);
+  mkldnn::memory::dims& pad_l = const_cast<mkldnn::memory::dims&>(new_pad_l);
+  mkldnn::memory::dims& pad_r = const_cast<mkldnn::memory::dims&>(new_pad_r);
+  if (kernel_ndims == 1) {
+    CHECK_GE(param.pad.ndim(), 1);
+    CHECK_GE(param.stride.ndim(), 1);
+    kernel[0] = param.kernel[0];
+    pad_l[0] = param.pad[0];
+    pad_r[0] = param.pad[0];
+    strides[0] = param.stride[0];
+
+    if (param.pooling_convention == pool_enum::kFull) {
+      pad_r[0] =
+        GetPaddingSizeFull(data_md.data.dims[2], pad_l[0], pad_r[0], kernel[0], strides[0]);
+    }
+
+    if (param.global_pool) {
+      kernel[0] = data_md.data.dims[2];
+      strides[0] = 1;
+      pad_l[0] = pad_r[0] = 0;
+    }
+
+    CHECK_GT(kernel[0], 0) << "Filter dimensions cannot be zero.";
+  } else if (kernel_ndims == 2) {
+    CHECK_GE(param.pad.ndim(), 2);
+    CHECK_GE(param.stride.ndim(), 2);
+    kernel[0] = param.kernel[0];
+    kernel[1] = param.kernel[1];
+    pad_l[0] = param.pad[0];
+    pad_l[1] = param.pad[1];
+    pad_r[0] = param.pad[0];
+    pad_r[1] = param.pad[1];
+    strides[0] = param.stride[0];
+    strides[1] = param.stride[1];
+
+    if (param.pooling_convention == pool_enum::kFull) {
+      pad_r[0] =
+        GetPaddingSizeFull(data_md.data.dims[2], pad_l[0], pad_r[0], kernel[0], strides[0]);
+      pad_r[1] =
+        GetPaddingSizeFull(data_md.data.dims[3], pad_l[1], pad_r[1], kernel[1], strides[1]);
+    }
+
+    if (param.global_pool) {
+      kernel[0] = data_md.data.dims[2];
+      kernel[1] = data_md.data.dims[3];
+      strides[0] = strides[1] = 1;
+      pad_l[0] = pad_l[1] = pad_r[0] = pad_r[1] = 0;
+    }
+
+    CHECK_GT(kernel[0], 0) << "Filter dimensions cannot be zero.";
+    CHECK_GT(kernel[1], 0) << "Filter dimensions cannot be zero.";
+  } else {
+    CHECK_GE(param.pad.ndim(), 3);
+    CHECK_GE(param.stride.ndim(), 3);
+    kernel[0] = param.kernel[0];
+    kernel[1] = param.kernel[1];
+    kernel[2] = param.kernel[2];
+    pad_l[0] = param.pad[0];
+    pad_l[1] = param.pad[1];
+    pad_l[2] = param.pad[2];
+    pad_r[0] = param.pad[0];
+    pad_r[1] = param.pad[1];
+    pad_r[2] = param.pad[2];
+    strides[0] = param.stride[0];
+    strides[1] = param.stride[1];
+    strides[2] = param.stride[2];
+
+    if (param.pooling_convention == pool_enum::kFull) {
+      pad_r[0] =
+        GetPaddingSizeFull(data_md.data.dims[2], pad_l[0], pad_r[0], kernel[0], strides[0]);
+      pad_r[1] =
+        GetPaddingSizeFull(data_md.data.dims[3], pad_l[1], pad_r[1], kernel[1], strides[1]);
+      pad_r[2] =
+        GetPaddingSizeFull(data_md.data.dims[4], pad_l[2], pad_r[2], kernel[2], strides[2]);
+    }
+
+    if (param.global_pool) {
+      kernel[0] = data_md.data.dims[2];
+      kernel[1] = data_md.data.dims[3];
+      kernel[2] = data_md.data.dims[4];
+      strides[0] = strides[1] = strides[2] = 1;
+      pad_l[0] = pad_l[1] = pad_l[2] = pad_r[0] = pad_r[1] = pad_r[2] = 0;
+    }
+
+    CHECK_GT(kernel[0], 0) << "Filter dimensions cannot be zero.";
+    CHECK_GT(kernel[1], 0) << "Filter dimensions cannot be zero.";
+    CHECK_GT(kernel[2], 0) << "Filter dimensions cannot be zero.";
+  }
+
+  if (pad_l[0] != 0 || (kernel_ndims == 2 && pad_l[1] != 0) ||
+     (kernel_ndims == 3 && pad_l[2] != 0)) {
+    CHECK(param.pool_type == pool_enum::kAvgPooling ||
+          param.pool_type == pool_enum::kMaxPooling)
+        << "Padding implemented only for average and max pooling.";
+    CHECK_LT(pad_l[0], kernel[0]);
+    if (kernel_ndims > 1)
+      CHECK_LT(pad_l[1], kernel[1]);
+    if (kernel_ndims > 2)
+      CHECK_LT(pad_l[2], kernel[2]);
+  }
+}
 
 mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(
     const PoolingParam &param, const bool is_train, const mkldnn::memory::desc &data_md,
     const mkldnn::memory::desc &out_md) {
-  CHECK_EQ(param.kernel.ndim(), 2) << "Not Implemented";
-  int kernel_h_, kernel_w_;
-  if (param.global_pool) {
-    kernel_h_ = data_md.data.dims[2];
-    kernel_w_ = data_md.data.dims[3];
-  } else {
-    kernel_h_ = param.kernel[0];
-    kernel_w_ = param.kernel[1];
-  }
+  CHECK(param.kernel.ndim() == 1 || param.kernel.ndim() == 2 || param.kernel.ndim() == 3)
+        << "Not Implemented";
 
-  CHECK_GT(kernel_h_, 0) << "Filter dimensions cannot be zero.";
-  CHECK_GT(kernel_w_, 0) << "Filter dimensions cannot be zero.";
+  const int kernel_ndims = param.kernel.ndim();
+  mkldnn::memory::dims kernel(kernel_ndims);
+  mkldnn::memory::dims strides(kernel_ndims);
+  mkldnn::memory::dims pad_l(kernel_ndims);
+  mkldnn::memory::dims pad_r(kernel_ndims);
 
-  int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
-  int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
-  int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
-
-  if (param.pooling_convention == pool_enum::kFull) {
-    pad_b_ = GetPaddingSizeFull(data_md.data.dims[2], pad_t_, pad_b_, kernel_h_, stride_h_);
-    pad_r_ = GetPaddingSizeFull(data_md.data.dims[3], pad_l_, pad_r_, kernel_w_, stride_w_);
-  }
-
-  const mkldnn::engine engine = CpuEngine::Get()->get_engine();
-  if (param.global_pool) {
-    pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
-    stride_h_ = stride_w_ = 1;
-  }
-
-  if (pad_t_ != 0 || pad_l_ != 0) {
-    CHECK(param.pool_type == pool_enum::kAvgPooling ||
-          param.pool_type == pool_enum::kMaxPooling)
-        << "Padding implemented only for average and max pooling.";
-    CHECK_LT(pad_l_, kernel_w_);
-    CHECK_LT(pad_t_, kernel_h_);
-  }
+  InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
 
   const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
   mkldnn::prop_kind kind = mkldnn::prop_kind::forward_scoring;
@@ -173,15 +250,9 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(
     kind = mkldnn::prop_kind::forward_training;
   }
 
-  const mkldnn::pooling_forward::desc poolingFwd_desc(kind, alg, data_md, out_md,
-                                              {static_cast<int>(stride_h_),
-                                               static_cast<int>(stride_w_)},
-                                              {kernel_h_, kernel_w_},
-                                              {static_cast<int>(pad_t_),
-                                               static_cast<int>(pad_l_)},
-                                              {static_cast<int>(pad_b_),
-                                               static_cast<int>(pad_r_)});
-  return mkldnn::pooling_forward::primitive_desc(poolingFwd_desc, engine);
+  const mkldnn::pooling_forward::desc poolingFwd_desc(kind, alg, data_md, out_md, strides,
+                                                      kernel, pad_l, pad_r);
+  return mkldnn::pooling_forward::primitive_desc(poolingFwd_desc, CpuEngine::Get()->get_engine());
 }
 
 MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
@@ -207,45 +278,20 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
 
   auto it = pooling_fwds.find(key);
   if (it == pooling_fwds.end()) {
-    CHECK_EQ(param.kernel.ndim(), 2) << "Not Implemented";
+    CHECK(param.kernel.ndim() == 1 || param.kernel.ndim() == 2 || param.kernel.ndim() == 3)
+          << "Not Implemented";
     auto data_md = data.GetMKLDNNData()->get_desc();
-    int kernel_h_, kernel_w_;
-    if (param.global_pool) {
-      kernel_h_ = data_md.data.dims[2];
-      kernel_w_ = data_md.data.dims[3];
-    } else {
-      kernel_h_ = param.kernel[0];
-      kernel_w_ = param.kernel[1];
-    }
 
-    CHECK_GT(kernel_h_, 0) << "Filter dimensions cannot be zero.";
-    CHECK_GT(kernel_w_, 0) << "Filter dimensions cannot be zero.";
-
-    int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
-    int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
-    int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
-
-    if (param.pooling_convention == pool_enum::kFull) {
-      pad_b_ = GetPaddingSizeFull(data_md.data.dims[2], pad_t_, pad_b_, kernel_h_, stride_h_);
-      pad_r_ = GetPaddingSizeFull(data_md.data.dims[3], pad_l_, pad_r_, kernel_w_, stride_w_);
-    }
-
-    if (param.global_pool) {
-      pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
-      stride_h_ = stride_w_ = 1;
-    }
-
-    if (pad_t_ != 0 || pad_l_ != 0) {
-      CHECK(param.pool_type == pool_enum::kAvgPooling ||
-            param.pool_type == pool_enum::kMaxPooling)
-            << "Padding implemented only for average and max pooling.";
-      CHECK_LT(pad_l_, kernel_w_);
-      CHECK_LT(pad_t_, kernel_h_);
-    }
+    const auto kernel_ndims = param.kernel.ndim();
+    mkldnn::memory::dims kernel(kernel_ndims);
+    mkldnn::memory::dims strides(kernel_ndims);
+    mkldnn::memory::dims pad_l(kernel_ndims);
+    mkldnn::memory::dims pad_r(kernel_ndims);
+    InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
 
     const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
-    MKLDNNPoolingFwd fwd(data, output, kernel_h_, kernel_w_, stride_h_, stride_w_,
-                         pad_t_, pad_b_, pad_l_, pad_r_, alg, with_workspace, is_train);
+    MKLDNNPoolingFwd fwd(data, output, kernel, strides,
+                         pad_l, pad_r, alg, with_workspace, is_train);
     it = AddToCache(&pooling_fwds, key, fwd);
   }
   return it->second;
@@ -290,58 +336,35 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
 
   auto it = pooling_bwds.find(key);
   if (it == pooling_bwds.end()) {
-    NDArray diff_dst_buff = out_grad;
-    if (in_data.IsMKLDNNData() == false && diff_dst_buff.IsMKLDNNData() == true) {
-      diff_dst_buff = out_grad.Reorder2Default();
-    }
-    auto diff_dst_mem = diff_dst_buff.GetMKLDNNData();
     auto input_mem = in_data.GetMKLDNNData();
-    const mkldnn::memory::desc data_md = input_mem->get_desc();
-    const mkldnn::memory::dims dims = {data_md.data.dims[0], data_md.data.dims[1],
-                               static_cast<int>(out_grad.shape()[2]),
-                               static_cast<int>(out_grad.shape()[3])};
-    const mkldnn::memory::desc out_md(
-        {dims}, static_cast<mkldnn::memory::data_type>(data_md.data.data_type),
-        mkldnn::memory::format_tag::any);
-    auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, out_md);
-    const mkldnn::memory::desc diff_md =
-        diff_dst_mem->get_desc();
-    const mkldnn::memory::dims dims1 = {diff_md.data.dims[0], diff_md.data.dims[1],
-                                static_cast<int>(in_grad.shape()[2]),
-                                static_cast<int>(in_grad.shape()[3])};
-    const mkldnn::memory::desc diff_in_md(
-        {dims1}, static_cast<mkldnn::memory::data_type>(diff_md.data.data_type),
-        mkldnn::memory::format_tag::any);
-    const mkldnn::engine cpu_engine = CpuEngine::Get()->get_engine();;
-    const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
+    auto data_md = input_mem->get_desc();
 
-    int kernel_h_, kernel_w_;
-    if (param.global_pool) {
-      kernel_h_ = data_md.data.dims[2];
-      kernel_w_ = data_md.data.dims[3];
-    } else {
-      kernel_h_ = param.kernel[0];
-      kernel_w_ = param.kernel[1];
-    }
+    auto dst_dims = mkldnn::memory::dims(out_grad.shape().begin(), out_grad.shape().end());
+    auto any = mkldnn::memory::format_tag::any;
+    auto dst_md = mkldnn::memory::desc(dst_dims, get_data_type(data_md), any);
 
-    int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
-    int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
-    int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
+    // fwd hint
+    auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, dst_md);
 
-    if (param.pooling_convention == pool_enum::kFull) {
-      pad_b_ = GetPaddingSizeFull(data_md.data.dims[2], pad_t_, pad_b_, kernel_h_, stride_h_);
-      pad_r_ = GetPaddingSizeFull(data_md.data.dims[3], pad_l_, pad_r_, kernel_w_, stride_w_);
-    }
+    // creat bwd desc
+    auto diff_src_dims = mkldnn::memory::dims(in_grad.shape().begin(), in_grad.shape().end());
+    auto diff_src_md = mkldnn::memory::desc(diff_src_dims, get_data_type(data_md), any);
+    auto cpu_engine = CpuEngine::Get()->get_engine();;
+    auto alg = GetMKLDNNPoolAlgo(param);
 
-    if (param.global_pool) {
-      pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
-      stride_h_ = stride_w_ = 1;
-    }
+    const int kernel_ndims = param.kernel.ndim();
+    mkldnn::memory::dims kernel(kernel_ndims);
+    mkldnn::memory::dims strides(kernel_ndims);
+    mkldnn::memory::dims pad_l(kernel_ndims);
+    mkldnn::memory::dims pad_r(kernel_ndims);
 
-    const mkldnn::pooling_backward::desc desc(
-        alg, diff_in_md, diff_md, {stride_h_, stride_w_},
-        {kernel_h_, kernel_w_}, {pad_t_, pad_l_}, {pad_b_, pad_r_});
-    const auto pdesc = mkldnn::pooling_backward::primitive_desc(desc, cpu_engine, fwd_pd);
+    InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
+
+    // use dst_md as diff_dst_md with any format
+    auto bwd_desc = mkldnn::pooling_backward::desc(alg, diff_src_md, dst_md,
+                                                   strides, kernel, pad_l, pad_r);
+    auto pdesc = mkldnn::pooling_backward::primitive_desc(bwd_desc, cpu_engine, fwd_pd);
+
     MKLDNNPoolingBwd bwd(pdesc, with_workspace);
     it = AddToCache(&pooling_bwds, key, bwd);
   }
@@ -355,15 +378,15 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
   if (req == kNullOp) {
     return;
   }
+
   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
   auto &bwd = GetPoolingBwd(param, in_data, in_grad, out_grad);
-  auto diff_src_mem =
-      CreateMKLDNNMem(in_grad, bwd.pd.diff_src_desc(), req);
-
+  auto diff_dst_mem = out_grad.GetMKLDNNDataReorder(bwd.pd.diff_dst_desc());
+  auto diff_src_mem = CreateMKLDNNMem(in_grad, bwd.pd.diff_src_desc(), req);
   mkldnn_args_map_t args = {
-    {MKLDNN_ARG_DIFF_DST, *(out_grad.GetMKLDNNData())},
-    {MKLDNN_ARG_DIFF_SRC, *diff_src_mem.second },
+    {MKLDNN_ARG_DIFF_DST, *diff_dst_mem},
+    {MKLDNN_ARG_DIFF_SRC, *diff_src_mem.second},
   };
   if (MKLDNNRequireWorkspace(param) && workspace != nullptr) {
     args[MKLDNN_ARG_WORKSPACE] = *(workspace->GetMKLDNNData());
@@ -376,4 +399,4 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

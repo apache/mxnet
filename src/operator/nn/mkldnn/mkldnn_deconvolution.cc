@@ -22,7 +22,7 @@
  * \brief
  */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include "../deconvolution-inl.h"
 #include "./mkldnn_base-inl.h"
@@ -34,7 +34,8 @@ namespace op {
 bool SupportMKLDNNDeconv(const DeconvolutionParam &params,
                          const NDArray &input) {
   if (params.kernel.ndim() != 2) return false;
-  return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
+  return (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16)
+         && input.shape().ndim() == 4;
 }
 
 static inline mkldnn::memory::desc GetBiasDesc(mkldnn::memory::desc md) {
@@ -524,4 +525,4 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs &attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

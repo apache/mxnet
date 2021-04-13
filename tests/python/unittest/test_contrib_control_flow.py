@@ -16,6 +16,7 @@
 # under the License.
 
 import copy
+import pytest
 import numpy as np
 import mxnet as mx
 from mxnet import gluon
@@ -24,10 +25,8 @@ from collections import defaultdict
 from mxnet.test_utils import *
 from mxnet.base import _as_list
 from mxnet.attribute import AttrScope
-from common import with_seed
 
 
-@with_seed()
 def test_while_loop_simple_forward():
 
     class _TestBlock(gluon.HybridBlock):
@@ -218,7 +217,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
         args_names = ["FreeVar" + str(i) for i, _ in enumerate(free_var_shapes)] \
                    + ["LoopVar" + str(i) for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
         args_grad = None if not is_train else _zeros_like_dict(x for x in args_names)
-        executor = loop_result_sym.bind(
+        executor = loop_result_sym._bind(
             ctx=default_context(),
             args=_copy_args_dict(loop_result_sym.list_inputs()),
             args_grad=args_grad,
@@ -250,7 +249,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
         assert_almost_equal(imp_grad, sym_grad, rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
+@pytest.mark.skip(reason="Bug in while loop op, tracked at incubator-mxnet/issues/18575")
 def test_while_loop_for_foreach():
 
     def make_true_cond():
@@ -791,7 +790,6 @@ def test_while_loop_for_foreach():
     )
 
 
-@with_seed()
 def test_while_loop_nested():
 
     def _to_np_list(arrays):
@@ -876,7 +874,7 @@ def test_while_loop_nested():
             mx.sym.var("sc"),
         ]
         result_sym = mx.sym.Group(make_loop(i, j, x_sum, sc))
-        executor = result_sym.bind(
+        executor = result_sym._bind(
             ctx=default_context(),
             args=args,
             args_grad=args_grad,
@@ -898,101 +896,6 @@ def test_while_loop_nested():
         for x, y in zip(imp_grad, sym_grad):
             assert_almost_equal(x, y, rtol=1e-3, atol=1e-3)
 
-
-@with_seed()
-def test_while_loop_rnn():
-    def _array(shape):
-        return mx.nd.random.uniform(-1.0, 1.0, shape=shape)
-
-    cell_types = [mx.rnn.LSTMCell]
-    num_params = [2]
-
-    batch_size = 2
-    hidden_dim = 3
-    input_dim = 4
-    seq_len = 3
-
-    for cell, n_param in zip(cell_types, num_params):
-        # using while_loop
-        params = mx.rnn.RNNParams()
-        data = mx.sym.var("data")
-        iter_i = mx.sym.var("i")
-        def _cond(*states):
-            i = states[0]
-            return i < seq_len
-        def _func(*states):
-            i = states[0]
-            states = states[1:]
-            in_ = data.take(i).squeeze(axis=0)
-            rnn = cell(hidden_dim, prefix='', params=params)
-            next_hidden, next_states = rnn(in_, states)
-            return [next_hidden], [i + 1] + list(next_states)
-        states = [mx.sym.var("s_" + str(i)) for i in range(n_param)]
-        result = mx.sym.contrib.while_loop(
-                    cond=_cond,
-                    func=_func,
-                    loop_vars=[iter_i] + states,
-                    max_iterations=seq_len
-                )
-        result = mx.sym.Group(result[0] + result[1][1: ])
-        rnn_inputs = result.list_inputs()
-        args = {
-            "i": mx.nd.zeros([1]),
-            "data": _array((seq_len, batch_size, input_dim)),
-            "i2h_weight": _array((input_dim * hidden_dim, input_dim)),
-            "i2h_bias": _array((input_dim * hidden_dim, )),
-            "s_0": _array((batch_size, hidden_dim)),
-            "h2h_weight": _array((input_dim * hidden_dim, seq_len)),
-            "h2h_bias": _array((input_dim * hidden_dim, )),
-            "s_1": _array((batch_size, hidden_dim)),
-        }
-        args_grad = {
-            "i": _array([1]),
-            "data": _array((seq_len, batch_size, input_dim)),
-            "i2h_weight": _array((input_dim * hidden_dim, input_dim)),
-            "i2h_bias": _array((input_dim * hidden_dim, )),
-            "s_0": _array((batch_size, hidden_dim)),
-            "h2h_weight": _array((input_dim * hidden_dim, seq_len)),
-            "h2h_bias": _array((input_dim * hidden_dim, )),
-            "s_1": _array((batch_size, hidden_dim)),
-        }
-        e_1 = result.bind(ctx=default_context(),
-            args={name: array.copy() for name, array in args.items()},
-            args_grad={name: array.copy() for name, array in args_grad.items() if name != "i"},
-        )
-        # using unrolled rnn
-        rnn = cell(hidden_dim, prefix='')
-        unroll_outs = []
-        for inputs in mx.sym.split(data, num_outputs=seq_len, axis=0, squeeze_axis=True):
-            h, states = rnn(inputs, states)
-            unroll_outs.append(mx.sym.expand_dims(h, axis=0))
-        unroll_outs = _as_list(mx.sym.concat(*unroll_outs, dim=0))
-        unroll_outs.extend(states)
-        result = mx.sym.Group(unroll_outs)
-        e_2 = result.bind(ctx=default_context(),
-            args={name: array.copy() for name, array in args.items() if name != "i"},
-            args_grad={name: array.copy() for name, array in args_grad.items() if name != "i"},
-        )
-        for case_id in range(100):
-            args = {name: array.copy() for name, array in args.items()}
-            e_1.forward(is_train=True, **args)
-            out_grads = [_array(arr.shape) for arr in e_1.outputs]
-            e_1.backward(out_grads)
-            args = {name: array.copy() for name, array in args.items() if name != "i"}
-            e_2.forward(is_train=True, **args)
-            e_2.backward(out_grads)
-            assert len(e_1.outputs) == len(e_2.outputs)
-            for x, y in zip(e_1.outputs, e_2.outputs):
-                x = x.asnumpy()
-                y = y.asnumpy()
-                assert_almost_equal(x, y, rtol=1e-3, atol=1e-3)
-            grad_keys = list(e_2.grad_dict.keys())
-            e_1_grad = [e_1.grad_dict[x] for x in grad_keys]
-            e_2_grad = [e_2.grad_dict[x] for x in grad_keys]
-            for x, y in zip(e_1_grad, e_2_grad):
-                x = x.asnumpy()
-                y = y.asnumpy()
-                assert_almost_equal(x, y, rtol=1e-3, atol=1e-3)
 
 def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_shapes, is_train):
 
@@ -1053,7 +956,7 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
         outputs_sym = _as_list(outputs_sym)
         outputs_sym = [x * 2 for x in outputs_sym]
         outputs_sym = mx.sym.Group(outputs_sym)
-        executor = outputs_sym.bind(
+        executor = outputs_sym._bind(
             ctx=default_context(),
             args={name: _args_dict[name].copy() for name in outputs_sym.list_inputs()},
             args_grad=None if not is_train else _merge_dict(
@@ -1081,7 +984,6 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
         assert_almost_equal(imp_grad, sym_grad, rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
 def test_cond():
     # whether there are free variables in three graphs
     # whether these three graphs contain input_vars
@@ -1151,10 +1053,10 @@ def test_cond():
                     ]
                 )
 
-class TestRNNLayer(gluon.HybridBlock):
-    def __init__(self, cell_type, hidden_size, prefix=None, params=None):
-        super(TestRNNLayer, self).__init__(prefix=prefix, params=params)
-        self.cell = cell_type(hidden_size, prefix='rnn_')
+class RNNLayer(gluon.HybridBlock):
+    def __init__(self, cell_type, hidden_size):
+        super(RNNLayer, self).__init__()
+        self.cell = cell_type(hidden_size)
 
     def hybrid_forward(self, F, inputs, states):
         out, states = F.contrib.foreach(self.cell, inputs, states)
@@ -1166,7 +1068,7 @@ def check_contrib_rnn(cell_type, num_states):
     rnn_data = mx.nd.normal(loc=0, scale=1, shape=(5, batch_size, 50))
     state_shape = (batch_size, hidden_size)
     states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(num_states)]
-    layer = TestRNNLayer(cell_type, hidden_size)
+    layer = RNNLayer(cell_type, hidden_size)
     layer.initialize(ctx=default_context())
     res1 = layer(rnn_data, states)
     params1 = layer.collect_params()
@@ -1184,7 +1086,7 @@ def check_contrib_rnn(cell_type, num_states):
             {'static_alloc': True},
             {'static_alloc': True, 'static_shape': True} ]
     for config in configs:
-        layer = TestRNNLayer(cell_type, hidden_size)
+        layer = RNNLayer(cell_type, hidden_size)
         layer.initialize(ctx=default_context())
         layer.hybridize(**config)
         res2 = layer(rnn_data, states)
@@ -1205,7 +1107,6 @@ def check_contrib_rnn(cell_type, num_states):
                     rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
 def test_contrib_rnn():
     cell_types = [(gluon.rnn.RNNCell, 1), (gluon.rnn.LSTMCell, 2),
             (gluon.rnn.GRUCell, 1)]
@@ -1213,7 +1114,7 @@ def test_contrib_rnn():
         check_contrib_rnn(cell_type, num_states)
 
 
-@with_seed()
+@pytest.mark.garbage_expected
 def test_foreach():
     v3 = mx.sym.var("v0")
     v4 = mx.sym.var("v1")
@@ -1234,7 +1135,7 @@ def test_foreach():
         out.extend(states)
         out = mx.sym.Group(out)
         js_1 = out.tojson()
-        out = mx.sym.load_json(js_1)
+        out = mx.sym.fromjson(js_1)
         js_2 = out.tojson()
         assert js_1 == js_2
         arr_grads = []
@@ -1261,9 +1162,9 @@ def test_foreach():
             i = i + 1
 
         if is_train:
-            e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
+            e = out._bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
         else:
-            e = out.bind(ctx=default_context(), args=arg_dict)
+            e = out._bind(ctx=default_context(), args=arg_dict)
         # the inputs to forward and backward are the same so forward and backward
         # should always return the same outputs.
         for i in range(num_iters):
@@ -1505,6 +1406,7 @@ def test_foreach():
     def step14(in1, states, free):
         return (in1 + free[0], [])
     frees = [mx.nd.random.uniform(shape=(2))]
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)], []]
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads)
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads, False)
     def step15(in1, states, free):
@@ -1532,7 +1434,6 @@ def test_foreach():
     verify_foreach(step17, [v3, v4], [v5], [], arrs, states, [], out_grads, False)
 
 
-@with_seed()
 def test_foreach_nested():
     # Test nested foreach.
     def step_in(in1, states):
@@ -1556,7 +1457,7 @@ def test_foreach_nested():
     out = mx.sym.broadcast_add(out, states[0])
 
     js_1 = out.tojson()
-    out = mx.sym.load_json(js_1)
+    out = mx.sym.fromjson(js_1)
     js_2 = out.tojson()
     assert js_1 == js_2
 
@@ -1564,7 +1465,7 @@ def test_foreach_nested():
     state = mx.nd.arange(2)
     data_grad = mx.nd.empty(data.shape)
     state_grad = mx.nd.empty(state.shape)
-    e = out.bind(ctx=default_context(), args={'v1':data, 'v2':state},
+    e = out._bind(ctx=default_context(), args={'v1':data, 'v2':state},
             args_grad={'v1':data_grad, 'v2':state_grad})
     e.forward(is_train=True)
     out_grads = []
@@ -1586,109 +1487,10 @@ def test_foreach_nested():
     assert_almost_equal(state.grad.asnumpy(), state_grad.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-def check_foreach_rnn(cell_type, num_states):
-    data = mx.sym.var("data")
-    params = mx.rnn.RNNParams()
-    hidden_dim = 4
-    input_dim = 5
-    seq_len = 2
-    batch_size = 2
-
-    # This tests foreach with accumulation sum.
-    def step(in1, states):
-        rnn = cell_type(hidden_dim, prefix='', params=params)
-        next_h, states = rnn(in1, states)
-        return (next_h, states)
-
-    def sym_group(out):
-        if (isinstance(out[0], mx.sym.Symbol)):
-            ret = [out[0]]
-        else:
-            ret = out[0]
-        ret.extend(out[1])
-        return mx.sym.Group(ret)
-
-    rnn = cell_type(hidden_dim, prefix='', params=params)
-    if num_states == 2:
-        init_states = [mx.sym.var("h"), mx.sym.var("c")]
-    else:
-        init_states = [mx.sym.var("h")]
-    out = mx.sym.contrib.foreach(step, data, init_states)
-    out = sym_group(out)
-    arg_shapes, out_shapes, aux_shapes = out.infer_shape(data=(seq_len, batch_size, input_dim),
-            h=(batch_size, hidden_dim))
-    rnn_inputs = out.list_inputs()
-
-    # Inputs
-    args1 = {name:mx.nd.random.uniform(shape=arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
-    args2 = copy.deepcopy(args1)
-    # gradients for the backward of the foreach symbol
-    args_grad1 = {name:mx.nd.empty(shape=arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
-    # gradients for the backward of the unrolled symbol.
-    args_grad2 = {name:mx.nd.empty(shape=arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
-
-    # Symbol of running LSTM with foreach.
-    out = mx.sym.contrib.foreach(step, data, init_states)
-    out = sym_group(out)
-    js_1 = out.tojson()
-    out = mx.sym.load_json(js_1)
-    js_2 = out.tojson()
-    assert js_1 == js_2
-    e1 = out.bind(ctx=default_context(), args=args1, args_grad=args_grad1)
-
-    # Symbol of running unrolled LSTM.
-    lstm = cell_type(hidden_dim, prefix='')
-    unroll_outs = []
-    states = init_states
-    for inputs in mx.sym.split(data, num_outputs=seq_len, axis=0, squeeze_axis=True):
-        h, states = lstm(inputs, states)
-        unroll_outs.append(mx.sym.expand_dims(h, axis=0))
-    unroll_outs = _as_list(mx.sym.concat(*unroll_outs, dim=0))
-    unroll_outs.extend(states)
-    out = mx.sym.Group(unroll_outs)
-    js_1 = out.tojson()
-    out = mx.sym.load_json(js_1)
-    js_2 = out.tojson()
-    assert js_1 == js_2
-    e2 = out.bind(ctx=default_context(), args=args2, args_grad=args_grad2)
-
-    for i in range(5):
-        out_grads = []
-        for arr in e1.outputs:
-            out_grads.append(mx.nd.random.uniform(-10, 10, arr.shape))
-
-        args = {name:mx.nd.random.uniform(shape=arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
-
-        e1.forward(is_train=True, **args)
-        outputs1 = e1.outputs
-        e1.backward(out_grads)
-
-        e2.forward(is_train=True, **args)
-        outputs2 = e2.outputs
-        e2.backward(out_grads)
-
-        for i in range(len(outputs2)):
-            assert_almost_equal(outputs1[i].asnumpy(), outputs2[i].asnumpy(),
-                    rtol=1e-3, atol=1e-3)
-        input_names = out.list_inputs()
-        for i in range(len(e1.grad_arrays)):
-            name = input_names[i]
-            assert_almost_equal(args_grad1[name].asnumpy(), args_grad2[name].asnumpy(),
-                    rtol=1e-3, atol=1e-3)
-
-
-@with_seed()
-def test_foreach_rnn():
-    cell_types = [(mx.rnn.LSTMCell, 2), (mx.rnn.RNNCell, 1), (mx.rnn.GRUCell, 1)]
-    for cell_type, num_states in cell_types:
-        check_foreach_rnn(cell_type, num_states)
-
-
-@with_seed()
 def test_cut_subgraph_foreach():
     class TestLayer(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestLayer, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestLayer, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def step1(data, states):
@@ -1719,11 +1521,10 @@ def test_cut_subgraph_foreach():
     assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
 def test_uniq_name():
     class ForeachLayer1(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(ForeachLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(ForeachLayer1, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def step1(data, states):
@@ -1734,8 +1535,8 @@ def test_uniq_name():
             return out
 
     class ForeachLayer2(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(ForeachLayer2, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(ForeachLayer2, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def step1(data, states):
@@ -1749,8 +1550,8 @@ def test_uniq_name():
             return out
 
     class WhileLayer1(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(WhileLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(WhileLayer1, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def cond(state1, state2):
@@ -1765,8 +1566,8 @@ def test_uniq_name():
             return out
 
     class WhileLayer2(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(WhileLayer2, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(WhileLayer2, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def cond(state1, state2):
@@ -1805,11 +1606,10 @@ def test_uniq_name():
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
 
 
-@with_seed()
 def test_cut_subgraph_while_loop():
     class TestLayer(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestLayer, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestLayer, self).__init__()
         def hybrid_forward(self, F, data):
             out1, data1 = F.contrib.while_loop(
                 cond=lambda i: i <= 5,
@@ -1839,11 +1639,10 @@ def test_cut_subgraph_while_loop():
     assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-@with_seed()
 def test_cut_subgraph_cond():
     class TestLayer(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestLayer, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestLayer, self).__init__()
         def hybrid_forward(self, F, data):
             data1 = F.contrib.cond(
                 data > 0.5,
@@ -1873,8 +1672,8 @@ def test_cut_subgraph_cond():
 
 def test_scope():
     class TestBlock1(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestBlock1, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestBlock1, self).__init__()
         def hybrid_forward(self, F, data):
             (new_data, ) = F.contrib.cond(
                 data > 0.5,
@@ -1884,8 +1683,8 @@ def test_scope():
             )
             return new_data
     class TestBlock2(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestBlock2, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestBlock2, self).__init__()
         def hybrid_forward(self, F, data):
             (new_data, ) = F.contrib.cond(
                 data > 0.5,
@@ -1912,8 +1711,8 @@ def test_scope():
 
 def test_output_format_foreach():
     class TestLayer1(gluon.HybridBlock):
-        def __init__(self, step, prefix=None, params=None):
-            super(TestLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self, step):
+            super(TestLayer1, self).__init__()
             self.step = step
         def hybrid_forward(self, F, ins, states):
             out, states = F.contrib.foreach(self.step, ins, states)
@@ -2011,8 +1810,8 @@ def test_output_format_foreach():
 
 def test_output_format_while():
     class TestLayer1(gluon.HybridBlock):
-        def __init__(self, step, use_list, nested_list=False, prefix=None, params=None):
-            super(TestLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self, step, use_list, nested_list=False):
+            super(TestLayer1, self).__init__()
             self.step = step
             self.use_list = use_list
             self.nested_list = nested_list
@@ -2122,8 +1921,8 @@ def test_output_format_while():
 
 def test_output_format_cond():
     class TestLayer1(gluon.HybridBlock):
-        def __init__(self, func, prefix=None, params=None):
-            super(TestLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self, func):
+            super(TestLayer1, self).__init__()
             self.func = func
         def hybrid_forward(self, F, data):
             def then_func():
@@ -2168,6 +1967,3 @@ def test_foreach_with_unkown_dim():
     _, output_shape, _ = outs.infer_shape_partial()
     assert_allclose((0, 3, 32, 32), output_shape[0])
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

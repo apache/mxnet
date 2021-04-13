@@ -53,7 +53,7 @@ NNVM_REGISTER_OP(_npi_bernoulli)
     return (num_inputs == 0) ? std::vector<std::string>() : std::vector<std::string>{"input1"};
   })
 .set_attr_parser(ParamParser<NumpyBernoulliParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", UnaryDistOpShape<NumpyBernoulliParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyBernoulliParam>)
 .set_attr<nnvm::FInferType>("FInferType", NumpyBernoulliOpType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const nnvm::NodeAttrs& attrs) {

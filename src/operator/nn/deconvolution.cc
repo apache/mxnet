@@ -27,15 +27,15 @@
 #include "./deconvolution-inl.h"
 #include "../operator_common.h"
 #include "../../common/utils.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "./mkldnn/mkldnn_base-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
-#endif  // MXNET_USE_MKLDNN
+#endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
 namespace op {
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void DeconvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
                                       const OpContext& ctx,
                                       const std::vector<NDArray>& inputs,
@@ -332,7 +332,21 @@ static bool DeconvolutionType(const nnvm::NodeAttrs& attrs,
   const DeconvolutionParam& param_ = nnvm::get<DeconvolutionParam>(attrs.parsed);
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
+  if (type_is_none(dtype)) {
+    // Input type is undefined, we try backward inference
+    if (out_type->size() == 0 || type_is_none((*out_type)[0])) {
+       // Neither the input nor the output are defined,
+       // types cannot be infered for this op
+      return false;
+    } else {
+       // Input type is undefined but output type is: backward inference
+      dtype = (*out_type)[0];
+    }
+  } else {
+    // Input type is defined but output type is not: forward inference
+    out_type->clear();
+    out_type->push_back(dtype);
+  }
   for (size_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       (*in_type)[i] = dtype;
@@ -340,8 +354,6 @@ static bool DeconvolutionType(const nnvm::NodeAttrs& attrs,
       UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments(param_)[i]);
     }
   }
-  out_type->clear();
-  out_type->push_back(dtype);
   return true;
 }
 
@@ -433,7 +445,7 @@ NNVM_REGISTER_OP(Deconvolution)
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", DeconvolutionCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", DeconvolutionGrad{"_backward_Deconvolution"})
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FInferStorageType>("FInferStorageType", DeconvStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", DeconvolutionComputeExCPU)
@@ -458,7 +470,7 @@ NNVM_REGISTER_OP(_backward_Deconvolution)
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr_parser(DeconvolutionParamParser)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardDeconvStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", DeconvolutionGradComputeExCPU)

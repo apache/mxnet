@@ -24,27 +24,19 @@ This script is a wrapper around `build_lib.sh. It simplifies the build by
 automatically identifing the system version, number of cores, and all
 environment variable settings. Here are examples you can run with this script:
 
-```
-tools/staticbuild/build.sh cu102
-```
+You need to install `patchelf` first, for example via `apt install patchelf` on
+Ubuntu systems.
 
-This would build the mxnet package based on CUDA 10.2.
+```
+tools/staticbuild/build.sh cu112
+```
+This would build the mxnet package based on CUDA 11.2. Currently, we support variants cpu, native, cu101, cu102, cu110, and cu112. All of these variants expect native have ONEDNN backend enabled. 
 
 ```
 tools/staticbuild/build.sh cpu
 ```
 
-This would build the mxnet package based on MKLDNN.
-
-To use CMake to build the `libmxnet.so` instead of the deprecated Makefile based
-build logic, set the `CMAKE_STATICBUILD` environment variable. For example
-
-```
-CMAKE_STATICBUILD=1 tools/staticbuild/build.sh cpu
-```
-
-For the CMake build, you need to install `patchelf` first, for example via `apt
-install patchelf` on Ubuntu systems.
+This would build the mxnet package based on ONEDNN.
 
 As the result, users would have a complete static dependencies in `/staticdeps` in the root folder as well as a static-linked `libmxnet.so` file lives in `lib`. You can build your language binding by using the `libmxnet.so`.
 
@@ -53,7 +45,7 @@ This script clones the most up-to-date master and builds the MXNet backend with 
 
 - `DEPS_PATH` Path to your static dependencies
 - `PLATFORM` linux, darwin
-- `VARIANT` cpu, cu*, cu*mkl, mkl
+- `VARIANT` cpu, cu*
 
 It is not recommended to run this file alone since there are a bunch of variables need to be set.
 

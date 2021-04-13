@@ -86,11 +86,11 @@ class SplitSampler(gluon.data.sampler.Sampler):
 
 
 # Load the training data
-train_data = gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=True, transform=transform), batch_size,
+train_data = gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=True).transform(transform), batch_size,
                                    sampler=SplitSampler(50000, store.num_workers, store.rank))
 
 # Load the test data
-test_data = gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=False, transform=transform),
+test_data = gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=False).transform(transform),
                                   batch_size, shuffle=False)
 
 # Use ResNet from model zoo
@@ -121,7 +121,7 @@ def evaluate_accuracy(data_iterator, network):
     ----------
     tuple of array element
     """
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
 
     # Iterate through data and label
     for i, (data, label) in enumerate(data_iterator):

@@ -19,7 +19,6 @@
 # pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
 # pylint: disable=import-error, no-name-in-module
 """Symbolic configuration API of MXNet."""
-from __future__ import absolute_import as _abs
 try:
     from __builtin__ import slice as py_slice
 except ImportError:
@@ -29,25 +28,25 @@ from array import array
 import ctypes
 import warnings
 from numbers import Number
-import sys
 import numpy as _numpy  # pylint: disable=relative-import
 
-from ..attribute import AttrScope
+from .. import attribute
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
 from ..base import mx_uint, py_str, string_types, integer_types, mx_int, mx_int64
-from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
+from ..base import NDArrayHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
-from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
+from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled, _SIGNED_INT32_UPPER_LIMIT
-from ..ndarray import _ndarray_cls
 from ..executor import Executor
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
 from ..util import is_np_shape
+from ..profiler import scope as _profiler_scope
+from ..profiler import _current_scope as _current_profiler_scope
 
-__all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
+__all__ = ["Symbol", "var", "Variable", "Group", "load", "fromjson",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
            "ones", "full", "arange", "linspace", "histogram", "split_v2"]
 
@@ -74,12 +73,15 @@ class Symbol(SymbolBase):
 
     def __repr__(self):
         """Gets a string representation of the symbol."""
-        name = self.name
-        if name is None:
-            name = ', '.join([i.name for i in self])
-            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        if self._alive:
+            name = self.name
+            if name is None:
+                name = ', '.join([i.name for i in self])
+                return '<%s group [%s]>' % (self.__class__.__name__, name)
+            else:
+                return '<%s %s>' % (self.__class__.__name__, name)
         else:
-            return '<%s %s>' % (self.__class__.__name__, name)
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __iter__(self):
         """Returns a generator object of symbol.
@@ -677,6 +679,33 @@ class Symbol(SymbolBase):
             check_call(_LIB.MXSymbolSetAttr(
                 self.handle, c_str(key), c_str(str(value))))
 
+    def get_inputs(self):
+        """Gets a new grouped symbol `sgroup`. The output of `sgroup` is a list of inputs to this symbol.
+
+        Consider the following code:
+
+        Example
+        -------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
+        >>> c = a + b
+        >>> d = c.get_inputs()
+        >>> d
+        <Symbol Grouped>
+        >>> d.list_outputs()
+        ['a', 'b']
+
+        Returns
+        -------
+        sgroup : Symbol
+            A symbol group containing all input nodes of the computation graph
+            used to compute the symbol.
+        """
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolGetInputs(
+            self.handle, ctypes.byref(handle)))
+        return Symbol(handle=handle)
+
     def get_internals(self):
         """Gets a new grouped symbol `sgroup`. The output of `sgroup` is a list of
         outputs of all of the internal nodes.
@@ -1212,14 +1241,14 @@ class Symbol(SymbolBase):
         aux_shape_size = mx_uint()
         aux_shape_ndim = ctypes.POINTER(mx_int)()
         complete = ctypes.c_int()
-        if sys.version_info[0] > 2 and _int64_enabled():
+        if _int64_enabled():
             arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             if partial:
-                infer_func = _LIB.MXSymbolInferShapePartialEx64
+                infer_func = _LIB.MXSymbolInferShapePartial64
             else:
-                infer_func = _LIB.MXSymbolInferShapeEx64
+                infer_func = _LIB.MXSymbolInferShape64
             check_call(infer_func(
                 self.handle,
                 mx_uint(len(indptr) - 1),
@@ -1246,9 +1275,9 @@ class Symbol(SymbolBase):
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
             if partial:
-                infer_func = _LIB.MXSymbolInferShapePartialEx
+                infer_func = _LIB.MXSymbolInferShapePartial
             else:
-                infer_func = _LIB.MXSymbolInferShapeEx
+                infer_func = _LIB.MXSymbolInferShape
             check_call(infer_func(
                 self.handle,
                 mx_uint(len(indptr) - 1),
@@ -1366,15 +1395,20 @@ class Symbol(SymbolBase):
         else:
             check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
-    def tojson(self):
+    def tojson(self, remove_amp_cast=True):
         """Saves symbol to a JSON string.
 
         See Also
         --------
-        symbol.load_json : Used to load symbol from JSON string.
+        symbol.fromjson : Used to load symbol from JSON string.
         """
         json_str = ctypes.c_char_p()
-        check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            check_call(_LIB.MXSymbolRemoveAmpCast(self.handle, ctypes.byref(handle)))
+            check_call(_LIB.MXSymbolSaveToJSON(handle, ctypes.byref(json_str)))
+        else:
+            check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
         return py_str(json_str.value)
 
     @staticmethod
@@ -1442,46 +1476,136 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
-    def optimize_for(self, backend, args=None, ctx=None, **kwargs):
-        """Partitions current symbol and optimizes it for a given backend,
-        returns new partitioned symbol.
+    # pylint: disable=too-many-locals
+    def optimize_for(self, backend, args=None, aux=None, ctx=None,
+                     shape_dict=None, type_dict=None, stype_dict=None, skip_infer=False, **kwargs):
+        r"""Partitions current symbol and optimizes it for a given backend.
+
+        The backend must have registered the partitioning graph pass in
+        ``SubgraphBackendRegistry``.
 
         Parameters
         ----------
         backend : str
-            The name of backend, as registered in `SubgraphBackendRegistry`
-
-        args : list of NDArray or dict of str to NDArray, optional
+            The name of backend, as registered in ``SubgraphBackendRegistry``
+        args : dict of str to NDArray, optional
             Input arguments to the symbol, required to infer shapes/types before partitioning
-
-            - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
-            - If type is a dict of str to `NDArray`, then it maps the name of arguments
-              to the corresponding `NDArray`.
-
+            If type is a dict of str to NDArray, then it maps the names of arguments
+            to the corresponding NDArray. Undefined arguments' NDArrays
+            don't have to be specified in the dict.
+        aux : dict of str to NDArray, optional
+            Input auxiliary arguments to the symbol
+            If type is a dict of str to :class:`NDArray`, then it maps the name of arguments
+            to the corresponding :class:`NDArray`.
         ctx : Context, optional
             Device context, used to infer stypes
-
+        shape_dict : Dict of str->tuple, optional
+            Input shape dictionary.
+            Used iff input :class:`NDArray` is not in ``args``.
+        type_dict : Dict of str->numpy.dtype, optional
+            Input type dictionary.
+            Used iff input :class:`NDArray` is not in ``args``.
+        stype_dict  : Dict of str->str, optional
+            Input storage type dictionary.
+            Used iff input :class:`NDArray` is not in ``args``.
+        skip_infer : bool, optional
+            If True, the optimization skips the shape, type and storage type inference pass.
         kwargs : optional arguments
-            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
+            Passed on to ``PrePartition`` and ``PostPartition`` functions of ``SubgraphProperty``
 
         Returns
         -------
         out : SymbolHandle
-            The created symbol for target backend.
+            A symbol with the partitioned graph for target backend.
         """
         out = SymbolHandle()
         assert isinstance(backend, str)
+        assert isinstance(args, dict) or args is None
+        assert isinstance(aux, dict) or aux is None
 
-        if args is None:
-            args = []
+        if args is None or len(args) == 0:
+            args_ = []
             args_handle = c_array(NDArrayHandle, [])
         else:
-            listed_arguments = self.list_arguments()
-            args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
+            args_handle, args_ = self._get_ndarray_inputs('args', args,
+                                                          self.list_arguments(), True)
 
+        if aux is None or len(aux) == 0:
+            aux_ = []
+            aux_handle = c_array(NDArrayHandle, [])
+        else:
+            aux_handle, aux_ = self._get_ndarray_inputs('aux_states', aux,
+                                                        self.list_auxiliary_states(), True)
         if ctx is None:
             ctx = current_context()
         assert isinstance(ctx, Context)
+
+
+        # parse input data shape dict
+        num_input_shapes = 0
+        input_shape_names = ctypes.POINTER(ctypes.c_char_p)()
+        input_shape_data = ctypes.POINTER(mx_int64)()
+        input_shape_idx = ctypes.POINTER(mx_uint)()
+        if shape_dict is not None:
+            input_shape_names = []
+            input_shape_data = []
+            input_shape_idx = [0]
+            for k, v in shape_dict.items():
+                if isinstance(v, (tuple, list)):
+                    input_shape_names.append(k)
+                    input_shape_data.extend(v)
+                    input_shape_idx.append(len(input_shape_data))
+                else:
+                    raise ValueError(str(v) + " has to be a tuple or list.")
+            num_input_shapes = mx_uint(len(input_shape_names))
+            input_shape_names = c_str_array(input_shape_names)
+            input_shape_data = c_array_buf(mx_int64, array('q', input_shape_data))
+            input_shape_idx = c_array_buf(mx_uint, array('i', input_shape_idx))
+
+        # parse input data types dict
+        num_input_types = 0
+        input_type_names = ctypes.POINTER(ctypes.c_char_p)()  # provided type argument names
+        input_type_data = ctypes.POINTER(mx_uint)()  # provided types
+        if type_dict is not None:
+            input_type_names = []
+            input_type_data = []
+            for k, v in type_dict.items():
+                v = _numpy.dtype(v).type
+                if v in _DTYPE_NP_TO_MX:
+                    input_type_names.append(k)
+                    input_type_data.append(_DTYPE_NP_TO_MX[v])
+                else:
+                    raise ValueError(str(v) + " is not a MXNet type.")
+
+            num_input_types = mx_uint(len(input_type_names))
+            input_type_names = c_str_array(input_type_names)
+            input_type_data = c_array_buf(ctypes.c_int, array('i', input_type_data))
+
+        # parse input data storage types dict
+        num_input_stypes = 0
+        # provided storage type argument names
+        input_stype_names = ctypes.POINTER(ctypes.c_char_p)()
+        input_stype_data = ctypes.POINTER(mx_uint)()  # provided storage types
+        if stype_dict is not None:
+            input_stype_names = []
+            input_stype_data = []
+            for k, v in stype_dict.items():
+                if v in _STORAGE_TYPE_STR_TO_ID:
+                    input_stype_names.append(k)
+                    input_stype_data.append(_STORAGE_TYPE_STR_TO_ID[v])
+                else:
+                    raise ValueError(str(v) + " is not a MXNet storage type.")
+
+            num_input_stypes = mx_uint(len(input_stype_names))
+            input_stype_names = c_str_array(input_stype_names)
+            input_stype_data = c_array_buf(ctypes.c_int, array('i', input_stype_data))
+
+        new_args_size = ctypes.c_uint()
+        new_arg_names = ctypes.POINTER(ctypes.c_char_p)()
+        new_args_handle = ctypes.POINTER(NDArrayHandle)()
+        new_aux_size = ctypes.c_uint()
+        new_aux_names = ctypes.POINTER(ctypes.c_char_p)()
+        new_aux_handle = ctypes.POINTER(NDArrayHandle)()
 
         key_list = []
         val_list = []
@@ -1492,18 +1616,79 @@ class Symbol(SymbolBase):
                                              c_str(backend),
                                              ctypes.c_int(ctx.device_typeid),
                                              ctypes.byref(out),
-                                             mx_uint(len(args)),
+                                             mx_uint(len(args_)),
                                              args_handle,
+                                             mx_uint(len(aux_)),
+                                             aux_handle,
                                              mx_uint(len(key_list)),
                                              c_str_array(key_list),
-                                             c_str_array(val_list)))
-        return Symbol(out)
+                                             c_str_array(val_list),
+                                             num_input_shapes,
+                                             input_shape_names,
+                                             input_shape_data,
+                                             input_shape_idx,
+                                             num_input_types,
+                                             input_type_names,
+                                             input_type_data,
+                                             num_input_stypes,
+                                             input_stype_names,
+                                             input_stype_data,
+                                             ctypes.c_bool(skip_infer),
+                                             ctypes.byref(new_args_size),
+                                             ctypes.byref(new_args_handle),
+                                             ctypes.byref(new_arg_names),
+                                             ctypes.byref(new_aux_size),
+                                             ctypes.byref(new_aux_handle),
+                                             ctypes.byref(new_aux_names)))
+        # add new args/aux
+        if not args is None:
+            for i in range(new_args_size.value):
+                args[py_str(new_arg_names[i])] = NDArray(NDArrayHandle(new_args_handle[i]))
+        elif new_args_size.value > 0:
+            raise RuntimeError('Cannot add new args in optimize_for since args is None\n' +
+                               'Provide a dictionary to the args argument to optimize_for')
 
+        if not aux is None:
+            for i in range(new_aux_size.value):
+                aux[py_str(new_aux_names[i])] = NDArray(NDArrayHandle(new_aux_handle[i]))
+        elif new_aux_size.value > 0:
+            raise RuntimeError('Cannot add new aux in optimize_for since aux is None\n' +
+                               'Provide a dictionary to the aux argument to optimize_for')
+
+        new_sym = Symbol(out)
+
+        arg_names = self.list_arguments()
+        new_arg_names = new_sym.list_arguments()
+        deleted_arg_names = set([item for item in arg_names
+                                 if item not in set(new_arg_names)])
+
+        if len(deleted_arg_names) > 0:
+            if args is not None:
+                for a_n in deleted_arg_names:
+                    if a_n in args:
+                        args.pop(a_n)
+            else:
+                warnings.warn('A param was deleted during optimization, but no args dictionary was provided.\n' +
+                              'Please ensure that your model weights match the newly optimized model.')
+
+        aux_names = self.list_auxiliary_states()
+        new_aux_names = new_sym.list_auxiliary_states()
+        deleted_aux_names = set([item for item in aux_names
+                                 if item not in set(new_aux_names)])
+        if len(deleted_aux_names) > 0:
+            if aux is not None:
+                for a_n in deleted_aux_names:
+                    if a_n in aux:
+                        aux.pop(a_n)
+            else:
+                warnings.warn('A param was deleted during optimization, but no args dictionary was provided.\n' +
+                              'Please ensure that your model weights match the newly optimized model.')
+
+        return new_sym
 
     # pylint: disable=too-many-locals
-    def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
-                    group2ctx=None, shared_arg_names=None, shared_exec=None,
-                    shared_buffer=None, **kwargs):
+    def _simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
+                     **kwargs):
         """Bind current symbol to get an executor, allocate all the arguments needed.
         Allows specifying data types.
 
@@ -1548,23 +1733,6 @@ class Symbol(SymbolBase):
         stype_dict  : Dict of str->str
             Input storage type dictionary, name->storage_type
 
-        group2ctx : Dict of string to mx.Context
-            The dict mapping the `ctx_group` attribute to the context assignment.
-
-        shared_arg_names : List of string
-            The argument names whose `NDArray` of shared_exec can be reused for initializing
-            the current executor.
-
-        shared_exec : Executor
-            The executor whose arg_arrays, arg_arrays, grad_arrays, and aux_arrays can be
-            reused for initializing the current executor.
-
-        shared_buffer : Dict of string to `NDArray`
-            The dict mapping argument names to the `NDArray` that can be reused for initializing
-            the current executor. This buffer will be checked for reuse if one argument name
-            of the current executor is not found in `shared_arg_names`. The `NDArray` s are
-            expected have default storage type.
-
         kwargs : Dict of str->shape
             Input shape dictionary, name->shape
 
@@ -1573,238 +1741,59 @@ class Symbol(SymbolBase):
         executor : mxnet.Executor
             The generated executor
         """
-        # data types
-        num_provided_arg_types = 0
-        provided_arg_type_names = ctypes.POINTER(ctypes.c_char_p)()  # provided type argument names
-        provided_arg_type_data = ctypes.POINTER(mx_uint)()  # provided types
-        if type_dict is not None:
-            provided_arg_type_names = []
-            provided_arg_type_data = []
-            for k, v in type_dict.items():
-                v = _numpy.dtype(v).type
-                if v in _DTYPE_NP_TO_MX:
-                    provided_arg_type_names.append(k)
-                    provided_arg_type_data.append(_DTYPE_NP_TO_MX[v])
-            num_provided_arg_types = mx_uint(len(provided_arg_type_names))
-            provided_arg_type_names = c_str_array(provided_arg_type_names)
-            provided_arg_type_data = c_array_buf(ctypes.c_int, array('i', provided_arg_type_data))
-
-        # storage types
-        num_provided_arg_stypes = 0
-        # provided storage type argument names
-        provided_arg_stype_names = ctypes.POINTER(ctypes.c_char_p)()
-        provided_arg_stype_data = ctypes.POINTER(mx_uint)()  # provided storage types
-        if stype_dict is not None:
-            provided_arg_stype_names = []
-            provided_arg_stype_data = []
-            for k, v in stype_dict.items():
-                if v in _STORAGE_TYPE_STR_TO_ID:
-                    provided_arg_stype_names.append(k)
-                    provided_arg_stype_data.append(_STORAGE_TYPE_STR_TO_ID[v])
-            num_provided_arg_stypes = mx_uint(len(provided_arg_stype_names))
-            provided_arg_stype_names = c_str_array(provided_arg_stype_names)
-            provided_arg_stype_data = c_array_buf(ctypes.c_int, array('i', provided_arg_stype_data))
-
-        provided_arg_shape_data = []  # shape data
-        # argument shape index in sdata,
-        # e.g. [sdata[indptr[0]], sdata[indptr[1]]) is the shape of the first arg
-        provided_arg_shape_idx = [0]
-        provided_arg_shape_names = []  # provided argument names
-        for k, v in kwargs.items():
-            # if k not in listed_arguments and k not in listed_aux_states:
-            #   raise ValueError('arg name %s is not valid', k)
-            if isinstance(v, tuple):
-                provided_arg_shape_names.append(k)
-                provided_arg_shape_data.extend(v)
-                provided_arg_shape_idx.append(len(provided_arg_shape_data))
-
-        provided_req_type_list_len = 0
-        provided_grad_req_types = ctypes.POINTER(ctypes.c_char_p)()
-        provided_grad_req_names = ctypes.POINTER(ctypes.c_char_p)()
-        if grad_req is not None:
-            if isinstance(grad_req, string_types):
-                # use provided_req_type_list_len = 0 to indicate this situation
-                provided_req_type_list_len = 0
-                provided_grad_req_types = [grad_req]
-            elif isinstance(grad_req, list):
-                if len(grad_req) == 0:
-                    raise RuntimeError('grad_req in simple_bind cannot be an empty list')
-                provided_grad_req_types = grad_req
-                provided_req_type_list_len = len(provided_grad_req_types)
-            elif isinstance(grad_req, dict):
-                if len(grad_req) == 0:
-                    raise RuntimeError('grad_req in simple_bind cannot be an empty dict')
-                provided_grad_req_names = []
-                provided_grad_req_types = []
-                for k, v in grad_req.items():
-                    provided_grad_req_names.append(k)
-                    provided_grad_req_types.append(v)
-                provided_grad_req_names = c_str_array(provided_grad_req_names)
-                provided_req_type_list_len = len(provided_grad_req_types)
-            provided_grad_req_types = c_str_array(provided_grad_req_types)
-
-        num_ctx_map_keys = mx_uint(0)
-        ctx_map_keys = ctypes.POINTER(ctypes.c_char_p)()
-        ctx_map_dev_types = ctypes.POINTER(ctypes.c_int)()
-        ctx_map_dev_ids = ctypes.POINTER(ctypes.c_int)()
-        if group2ctx is not None:
-            ctx_map_keys = []
-            ctx_map_dev_types = []
-            ctx_map_dev_ids = []
-            for key, val in group2ctx.items():
-                ctx_map_keys.append(key)
-                ctx_map_dev_types.append(val.device_typeid)
-                ctx_map_dev_ids.append(val.device_id)
-            num_ctx_map_keys = mx_uint(len(ctx_map_keys))
-            ctx_map_keys = c_str_array(ctx_map_keys)
-            ctx_map_dev_types = c_array(ctypes.c_int, array('i', ctx_map_dev_types))
-            ctx_map_dev_ids = c_array(ctypes.c_int, array('i', ctx_map_dev_ids))
-
-        # prepare param names
-        shared_arg_name_list = []
-        if shared_arg_names is not None:
-            if not isinstance(shared_arg_names, list):
-                raise ValueError('shared_arg_names in simple_bind must be a list or None')
-            shared_arg_name_list = shared_arg_names
-
-        # prepare shared_buffer
-        if shared_buffer is None:
-            shared_buffer_len = ctypes.c_int(-1)
-            shared_buffer_names = ctypes.POINTER(ctypes.c_char_p)()
-            shared_buffer_handles = ctypes.POINTER(NDArrayHandle)()
-        else:
-            if not isinstance(shared_buffer, dict):
-                raise ValueError('shared_buffer in simple_bind must be dict or None')
-            buffer_names = shared_buffer.keys()
-            buffer_arrays = shared_buffer.values()
-            for v in buffer_arrays:
-                assert(v.stype == 'default'), \
-                    "shared_buffer is expected to only contain NDArrays with default storage"
-            shared_buffer_names = c_str_array(buffer_names)
-            shared_buffer_len = ctypes.c_int(len(buffer_arrays))
-            shared_buffer_handles = c_handle_array(buffer_arrays)
-        updated_shared_buffer_names = ctypes.POINTER(ctypes.c_char_p)()
-        updated_shared_buffer_handles = ctypes.POINTER(NDArrayHandle)()
-
-        # prepare shared_exec_handle
-        shared_exec_handle = shared_exec.handle if shared_exec is not None else ExecutorHandle()
-
-        # prepare current executor handle
-        exe_handle = ExecutorHandle()
-
-        # prepare current executor's in_args, arg_grads, and aux_states
-        num_in_args = ctypes.c_uint()
-        in_arg_handles = ctypes.POINTER(NDArrayHandle)()
-        arg_grad_handles = ctypes.POINTER(NDArrayHandle)()
-        num_aux_states = ctypes.c_uint()
-        aux_state_handles = ctypes.POINTER(NDArrayHandle)()
-
+        assert isinstance(grad_req, (str, dict))
+        # infer shape
+        arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
+        type_dict = {} if type_dict is None else type_dict
+        arg_dtypes, _, _ = None, None, None
         try:
-            if sys.version_info[0] > 2 and _int64_enabled():
-                check_call(_LIB.MXExecutorSimpleBindEx64(self.handle,
-                                                         ctypes.c_int(ctx.device_typeid),
-                                                         ctypes.c_int(ctx.device_id),
-                                                         num_ctx_map_keys,
-                                                         ctx_map_keys,
-                                                         ctx_map_dev_types,
-                                                         ctx_map_dev_ids,
-                                                         mx_uint(provided_req_type_list_len),
-                                                         provided_grad_req_names,
-                                                         provided_grad_req_types,
-                                                         mx_uint(len(provided_arg_shape_names)),
-                                                         c_str_array(provided_arg_shape_names),
-                                                         c_array_buf(mx_int64,
-                                                                     array('q', provided_arg_shape_data)),
-                                                         c_array_buf(mx_uint,
-                                                                     array('i', provided_arg_shape_idx)),
-                                                         num_provided_arg_types,
-                                                         provided_arg_type_names,
-                                                         provided_arg_type_data,
-                                                         num_provided_arg_stypes,
-                                                         provided_arg_stype_names,
-                                                         provided_arg_stype_data,
-                                                         mx_uint(len(shared_arg_name_list)),
-                                                         c_str_array(shared_arg_name_list),
-                                                         ctypes.byref(shared_buffer_len),
-                                                         shared_buffer_names,
-                                                         shared_buffer_handles,
-                                                         ctypes.byref(updated_shared_buffer_names),
-                                                         ctypes.byref(updated_shared_buffer_handles),
-                                                         ctypes.byref(num_in_args),
-                                                         ctypes.byref(in_arg_handles),
-                                                         ctypes.byref(arg_grad_handles),
-                                                         ctypes.byref(num_aux_states),
-                                                         ctypes.byref(aux_state_handles),
-                                                         shared_exec_handle,
-                                                         ctypes.byref(exe_handle)))
+            arg_dtypes, _, aux_dtypes = self.infer_type(**type_dict)
+        except Exception: # pylint: disable=broad-except
+            pass
+        args = [None] * len(arg_shapes) if arg_shapes else []
+        aux_states = [None] * len(aux_shapes) if aux_shapes else []
+
+        arg_names = self.list_arguments()
+        aux_names = self.list_auxiliary_states()
+
+        from ..ndarray import zeros as nd_zeros
+        if arg_shapes:
+            for i, shape in enumerate(arg_shapes):
+                if arg_dtypes:
+                    args[i] = nd_zeros(shape, dtype=arg_dtypes[i])
+                else:
+                    args[i] = nd_zeros(shape)
+        if aux_shapes:
+            for i, shape in enumerate(aux_shapes):
+                if aux_dtypes:
+                    aux_states[i] = nd_zeros(shape, dtype=aux_dtypes[i])
+                else:
+                    aux_states[i] = nd_zeros(shape)
+
+        if stype_dict:
+            for name, stype in stype_dict.items():
+                if name in arg_names:
+                    index = arg_names.index(name)
+                    args[index] = args[index].tostype(stype)
+                else:
+                    assert name in aux_names
+                    index = aux_names.index(name)
+                    aux_states[index] = aux_states[index].totype(stype)
+
+        with _profiler_scope("symbol:arg_grad:"):
+            if grad_req == 'null':
+                args_grad = None
+            elif isinstance(grad_req, dict):
+                args_grad = {}
+                for i, name in enumerate(arg_names):
+                    if grad_req[name] != 'null':
+                        args_grad[name] = args[i].copy()
             else:
-                check_call(_LIB.MXExecutorSimpleBindEx(self.handle,
-                                                       ctypes.c_int(ctx.device_typeid),
-                                                       ctypes.c_int(ctx.device_id),
-                                                       num_ctx_map_keys,
-                                                       ctx_map_keys,
-                                                       ctx_map_dev_types,
-                                                       ctx_map_dev_ids,
-                                                       mx_uint(provided_req_type_list_len),
-                                                       provided_grad_req_names,
-                                                       provided_grad_req_types,
-                                                       mx_uint(len(provided_arg_shape_names)),
-                                                       c_str_array(provided_arg_shape_names),
-                                                       c_array_buf(mx_int,
-                                                                   array('I', provided_arg_shape_data)),
-                                                       c_array_buf(mx_uint,
-                                                                   array('i', provided_arg_shape_idx)),
-                                                       num_provided_arg_types,
-                                                       provided_arg_type_names,
-                                                       provided_arg_type_data,
-                                                       num_provided_arg_stypes,
-                                                       provided_arg_stype_names,
-                                                       provided_arg_stype_data,
-                                                       mx_uint(len(shared_arg_name_list)),
-                                                       c_str_array(shared_arg_name_list),
-                                                       ctypes.byref(shared_buffer_len),
-                                                       shared_buffer_names,
-                                                       shared_buffer_handles,
-                                                       ctypes.byref(updated_shared_buffer_names),
-                                                       ctypes.byref(updated_shared_buffer_handles),
-                                                       ctypes.byref(num_in_args),
-                                                       ctypes.byref(in_arg_handles),
-                                                       ctypes.byref(arg_grad_handles),
-                                                       ctypes.byref(num_aux_states),
-                                                       ctypes.byref(aux_state_handles),
-                                                       shared_exec_handle,
-                                                       ctypes.byref(exe_handle)))
-        except MXNetError as e:
-            error_msg = "simple_bind error. Arguments:\n"
-            for k, v in kwargs.items():
-                error_msg += "%s: %s\n" % (k, v)
-            error_msg += "%s" % e
-            raise RuntimeError(error_msg)
+                args_grad = [x.copy() for x in args]
+        return Executor(self, ctx, args, args_grad, grad_req, aux_states)
 
-        # update shared_buffer
-        if shared_buffer is not None:
-            for i in range(shared_buffer_len.value):
-                k = py_str(updated_shared_buffer_names[i])
-                v = NDArray(NDArrayHandle(updated_shared_buffer_handles[i]))
-                shared_buffer[k] = v
-
-        # create in_args, arg_grads, and aux_states for the current executor
-        arg_arrays = [_ndarray_cls(NDArrayHandle(in_arg_handles[i]))
-                      for i in range(num_in_args.value)]
-        grad_arrays = [_ndarray_cls(NDArrayHandle(arg_grad_handles[i]))
-                       if arg_grad_handles[i] is not None
-                       else None for i in range(num_in_args.value)]
-        aux_arrays = [_ndarray_cls(NDArrayHandle(aux_state_handles[i]))
-                      for i in range(num_aux_states.value)]
-
-        executor = Executor(exe_handle, self, ctx, grad_req, group2ctx)
-        executor.arg_arrays = arg_arrays
-        executor.grad_arrays = grad_arrays
-        executor.aux_arrays = aux_arrays
-        return executor
-
-    def bind(self, ctx, args, args_grad=None, grad_req='write',
-             aux_states=None, group2ctx=None, shared_exec=None):
+    def _bind(self, ctx, args, args_grad=None, grad_req='write',
+              aux_states=None):
         """Binds the current symbol to an executor and returns it.
 
         We first declare the computation and then bind to the data to run.
@@ -1817,7 +1806,7 @@ class Symbol(SymbolBase):
         >>> b = mx.sym.Variable('b')
         >>> c = a + b
         <Symbol _plus1>
-        >>> ex = c.bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]), 'b' : mx.nd.ones([2,3])})
+        >>> ex = c._bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]), 'b' : mx.nd.ones([2,3])})
         >>> ex.forward()
         [<NDArray 2x3 @cpu(0)>]
         >>> ex.outputs[0].asnumpy()
@@ -1867,14 +1856,6 @@ class Symbol(SymbolBase):
               `auxiliary_states` to the corresponding `NDArray`,
             - In either case, all the auxiliary states need to be provided.
 
-        group2ctx : Dict of string to mx.Context
-            The dict mapping the `ctx_group` attribute to the context assignment.
-
-        shared_exec : mx.executor.Executor
-            Executor to share memory with. This is intended for runtime reshaping, variable length
-            sequences, etc. The returned executor shares state with `shared_exec`, and should not be
-            used in parallel with it.
-
         Returns
         -------
         executor : Executor
@@ -1892,74 +1873,8 @@ class Symbol(SymbolBase):
         One can give up gradient by using a dict in `args_grad` and only specify
         gradient they interested in.
         """
-        # pylint: disable=too-many-locals, too-many-branches
-        if not isinstance(ctx, Context):
-            raise TypeError("Context type error")
-
-        listed_arguments = self.list_arguments()
-        args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
-        # setup args gradient
-        if args_grad is None:
-            args_grad_handle = c_array(NDArrayHandle, [None] * len(args))
-        else:
-            args_grad_handle, args_grad = self._get_ndarray_inputs(
-                'args_grad', args_grad, listed_arguments, True)
-
-        if aux_states is None:
-            aux_states = []
-        aux_args_handle, aux_states = self._get_ndarray_inputs(
-            'aux_states', aux_states, self.list_auxiliary_states(), False)
-
-        # setup requirements
-        if isinstance(grad_req, string_types):
-            if grad_req not in _GRAD_REQ_MAP:
-                raise ValueError('grad_req must be in %s' % str(_GRAD_REQ_MAP))
-            reqs_array = c_array_buf(mx_uint,
-                                     array('I', [_GRAD_REQ_MAP[grad_req]] * len(listed_arguments)))
-        elif isinstance(grad_req, list):
-            reqs_array = c_array_buf(mx_uint,
-                                     array('I', [_GRAD_REQ_MAP[item] for item in grad_req]))
-        elif isinstance(grad_req, dict):
-            req_array = []
-            for name in listed_arguments:
-                if name in grad_req:
-                    req_array.append(_GRAD_REQ_MAP[grad_req[name]])
-                else:
-                    req_array.append(0)
-            reqs_array = c_array_buf(mx_uint, array('I', req_array))
-
-        ctx_map_keys = []
-        ctx_map_dev_types = []
-        ctx_map_dev_ids = []
-
-        if group2ctx:
-            for key, val in group2ctx.items():
-                ctx_map_keys.append(key)
-                ctx_map_dev_types.append(val.device_typeid)
-                ctx_map_dev_ids.append(val.device_id)
-
-        handle = ExecutorHandle()
-        shared_handle = shared_exec.handle if shared_exec is not None else ExecutorHandle()
-        check_call(_LIB.MXExecutorBindEX(self.handle,
-                                         ctypes.c_int(ctx.device_typeid),
-                                         ctypes.c_int(ctx.device_id),
-                                         mx_uint(len(ctx_map_keys)),
-                                         c_str_array(ctx_map_keys),
-                                         c_array_buf(ctypes.c_int, array('i', ctx_map_dev_types)),
-                                         c_array_buf(ctypes.c_int, array('i', ctx_map_dev_ids)),
-                                         mx_uint(len(args)),
-                                         args_handle,
-                                         args_grad_handle,
-                                         reqs_array,
-                                         mx_uint(len(aux_states)),
-                                         aux_args_handle,
-                                         shared_handle,
-                                         ctypes.byref(handle)))
-        executor = Executor(handle, self, ctx, grad_req, group2ctx)
-        executor.arg_arrays = args
-        executor.grad_arrays = args_grad
-        executor.aux_arrays = aux_states
-        return executor
+        assert isinstance(grad_req, (str, dict))
+        return Executor(self, ctx, args, args_grad, grad_req, aux_states)
 
     def gradient(self, wrt):
         """Gets the autodiff of current symbol.
@@ -2026,7 +1941,7 @@ class Symbol(SymbolBase):
         """
         if ctx is None:
             ctx = current_context()
-        return self.bind(ctx, kwargs).forward()
+        return self._bind(ctx, kwargs).forward()
 
     def reshape(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape`.
@@ -2738,8 +2653,17 @@ class Symbol(SymbolBase):
     def backward(self):
         raise NotImplementedForSymbol(self.backward, None)
 
+
+    def has_dynamic_shape_op(self):
+        """Check if any dynamic shape op is present in the symbol.
+        """
+        has_dynamic_shape = ctypes.c_bool(False)
+        check_call(_LIB.MXCheckDynamicShapeOp(self.handle,
+                                              ctypes.byref(has_dynamic_shape)))
+        return has_dynamic_shape.value
+
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
-        init=None, stype=None, **kwargs):
+        init=None, stype=None, profiler_scope=None, **kwargs):
     """Creates a symbolic variable with specified name.
 
     Example
@@ -2774,6 +2698,8 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         Initializer for this variable to (optionally) override the default initializer.
     stype : str
         The storage type of the variable, such as 'row_sparse', 'csr', 'default', etc
+    profiler_scope : str
+        The profiler scope for input variable.
     kwargs : Additional attribute variables
         Additional attributes must start and end with double underscores.
 
@@ -2787,9 +2713,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
     ret = Symbol(handle)
-    if not hasattr(AttrScope._current, "value"):
-        AttrScope._current.value = AttrScope()
-    attr = AttrScope._current.value.get(attr)
+    attr = attribute.current().get(attr)
     attr = {} if attr is None else attr
     if shape is not None:
         attr['__shape__'] = str(shape)
@@ -2798,13 +2722,21 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if wd_mult is not None:
         attr['__wd_mult__'] = str(wd_mult)
     if dtype is not None:
-        attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
+        np_dtype = _numpy.dtype(dtype)
+        if np_dtype == _numpy.dtype([('bfloat16', _numpy.uint16)]):
+            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[np_dtype])
+        else:
+            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
     if init is not None:
         if not isinstance(init, string_types):
             init = init.dumps()
         attr['__init__'] = init
     if stype is not None:
         attr['__storage_type__'] = str(_STORAGE_TYPE_STR_TO_ID[stype])
+    if profiler_scope is not None:
+        attr['__profiler_scope__'] = profiler_scope
+    else:
+        attr['__profiler_scope__'] = _current_profiler_scope.get()
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)
@@ -2889,7 +2821,7 @@ def load(fname):
     return Symbol(handle)
 
 
-def load_json(json_str):
+def fromjson(json_str):
     """Loads symbol from json string.
 
     Parameters
@@ -3276,8 +3208,6 @@ def linspace(start, stop, num, endpoint=True, name=None, dtype=None):
     endpoint : bool
         If True, stop is the last sample. Otherwise, it is not included.
         The default is True.
-    ctx : Context, optional
-        Device context. Default context is the current default context.
     dtype : str or numpy.dtype, optional
         The data type of the `NDArray`. The default datatype is `np.float32`.
 

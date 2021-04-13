@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Contrib data iterators for common data formats."""
-from __future__ import absolute_import
 from ..io import DataIter, DataDesc
 from .. import ndarray as nd
 

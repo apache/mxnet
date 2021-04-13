@@ -39,7 +39,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #include "../common/utils.h"
 
 namespace mxnet {
@@ -140,6 +140,8 @@ inline std::string type_string(const int& x) {
       return "float64";
     case mshadow::kFloat16:
       return "float16";
+    case mshadow::kBfloat16:
+      return "bfloat16";
     case mshadow::kInt8:
       return "int8";
     case mshadow::kUint8:
@@ -548,7 +550,7 @@ class OpSignature {
    * and the layout to sign the op.
    */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   void AddSign(const mkldnn::memory &mem) {
     auto desc = mem.get_desc();
     hash = hash * 2 + desc.data.format_kind;
@@ -616,7 +618,7 @@ class OpSignature {
   }
 
   void AddSign(const NDArray &arr) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     if (arr.IsMKLDNNData()) {
       AddSign(*(arr.GetMKLDNNData()));
     } else {
@@ -624,7 +626,7 @@ class OpSignature {
       hash = hash * 2 + arr.dtype();
       eles.push_back(arr.dtype());
       AddSign(arr.shape());
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     }
 #endif
   }

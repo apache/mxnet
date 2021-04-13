@@ -24,7 +24,7 @@
 #include <set>
 #include <vector>
 #include "../elemwise_op_common.h"
-#include "../../executor/exec_pass.h"
+#include "../../imperative/exec_pass.h"
 
 namespace mxnet {
 namespace op {

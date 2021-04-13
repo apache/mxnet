@@ -41,19 +41,6 @@ We also highly encourage you to read [Symbolic Configuration and Execution in Pi
 The symbolic API provides a way to configure computation graphs.
 You can configure the graphs either at the level of neural network layer operations or as fine-grained operations.
 
-The following example configures a two-layer neural network.
-
-```scala
-    import org.apache.mxnet._
-    val data = Symbol.Variable("data")
-    val fc1 = Symbol.api.FullyConnected(Some(data), num_hidden = 128, name = "fc1")
-    val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
-    val fc2 = Symbol.api.FullyConnected(Some(act1), num_hidden = 64, name = "fc2")
-    val net = Symbol.api.SoftmaxOutput(Some(fc2), name = "out")
-    :type net
-    // org.apache.mxnet.Symbol
-```
-
 The basic arithmetic operators (plus, minus, div, multiplication) are overloaded for
 *element-wise operations* of symbols.
 
@@ -129,25 +116,6 @@ input data, and the weights of the neural network that were learned during train
 
 To manually execute a set of symbols, you need to create an [`Executor`] object,
 which is typically constructed by calling the [`simpleBind(<parameters>)`] method on a symbol.
-
-## Multiple Outputs
-
-To group the symbols together, use the [mxnet.symbol.Group](#mxnet.symbol.Group) function.
-
-```scala
-    import org.apache.mxnet._
-    val data = Symbol.Variable("data")
-    val fc1 = Symbol.api.FullyConnected(Some(data), num_hidden = 128, name = "fc1")
-    val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
-    val fc2 = Symbol.api.FullyConnected(Some(act1), num_hidden = 64, name = "fc2")
-    val net = Symbol.api.SoftmaxOutput(Some(fc2), name = "out")
-    val group = Symbol.Group(fc1, net)
-    group.listOutputs()
-    // IndexedSeq[String] = ArrayBuffer(fc1_output, out_output)
-```
-
-After you get the ```group```, you can bind on ```group``` instead.
-The resulting executor will have two outputs, one for fc1_output and one for softmax_output.
 
 ## Next Steps
 * See [IO Data Loading API](io) for parsing and loading data.

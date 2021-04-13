@@ -20,11 +20,10 @@ import sys
 import os
 import mxnet as mx
 import numpy as np
-import unittest
-from mxnet.test_utils import assert_almost_equal, default_context, EnvManager
+import pytest
+from mxnet.test_utils import assert_almost_equal, default_context, environment
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown
 
 shape = (4, 4)
 keys = [5, 7, 11]
@@ -40,11 +39,12 @@ def init_kv_with_str(stype='default', kv_type='local'):
     return kv
 
 # 1. Test seed 89411477 (module seed 1829754103) resulted in a py3-gpu CI runner core dump.
-# 2. Test seed 1155716252 (module seed 1032824746) resulted in py3-mkldnn-gpu have error 
+# 2. Test seed 1155716252 (module seed 1032824746) resulted in py3-mkldnn-gpu have error
 # src/operator/nn/mkldnn/mkldnn_base.cc:567: Check failed: similar
 # Both of them are not reproducible, so this test is back on random seeds.
-@with_seed()
-@unittest.skipIf(mx.context.num_gpus() < 2, "test_rsp_push_pull needs more than 1 GPU")
+@pytest.mark.skipif(mx.context.num_gpus() < 2, reason="test_rsp_push_pull needs more than 1 GPU")
+@pytest.mark.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14189")
+@pytest.mark.serial
 def test_rsp_push_pull():
     def check_rsp_push_pull(kv_type, sparse_pull, is_push_cpu=True):
         kv = init_kv_with_str('row_sparse', kv_type)
@@ -97,11 +97,11 @@ def test_rsp_push_pull():
         check_rsp_pull(kv, [mx.gpu(i//2) for i in range(4)], sparse_pull, use_slice=True)
         check_rsp_pull(kv, [mx.cpu(i) for i in range(4)], sparse_pull, use_slice=True)
 
-    envs = ["","1"]
-    key  = "MXNET_KVSTORE_USETREE"
+    envs = [None, '1']
+    key  = 'MXNET_KVSTORE_USETREE'
     for val in envs:
-        with EnvManager(key, val):
-            if val is "1":
+        with environment(key, val):
+            if val is '1':
                 sparse_pull = False
             else:
                 sparse_pull = True
@@ -123,6 +123,7 @@ def test_row_sparse_pull_single_device():
     assert_almost_equal(grad.asnumpy(), copy.asnumpy())
 
 
+@pytest.mark.serial
 def test_rsp_push_pull_large_rowid():
     num_rows = 793470
     val = mx.nd.ones((num_rows, 1)).tostype('row_sparse').copyto(mx.gpu())
@@ -133,6 +134,3 @@ def test_rsp_push_pull_large_rowid():
     kv.row_sparse_pull('a', out=out, row_ids=mx.nd.arange(0, num_rows, dtype='int64'))
     assert(out.indices.shape[0] == num_rows)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

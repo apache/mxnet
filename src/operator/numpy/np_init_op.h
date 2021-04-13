@@ -29,8 +29,10 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include "../../api/operator/op_utils.h"
 #include "../tensor/init_op.h"
 #include "../tensor/elemwise_unary_op.h"
+#include "../../api/operator/op_utils.h"
 
 
 namespace mxnet {
@@ -58,9 +60,21 @@ struct NumpyEyeParam : public dmlc::Parameter<NumpyEyeParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
+    .set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES
     .describe("Data-type of the returned array.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream N_s, M_s, k_s, dtype_s;
+    N_s << N;
+    M_s << M;
+    k_s << k;
+    dtype_s << dtype;
+    (*dict)["N"] = N_s.str();
+    (*dict)["M"] = M_s.str();
+    (*dict)["k"] = k_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
@@ -71,13 +85,21 @@ struct IndicesOpParam : public dmlc::Parameter<IndicesOpParam> {
   DMLC_DECLARE_PARAMETER(IndicesOpParam) {
     DMLC_DECLARE_FIELD(dimensions)
     .describe("The shape of the grid.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kInt32)
+    DMLC_DECLARE_FIELD(dtype).set_default(-1)
+      .add_enum("None", -1)
       MXNET_ADD_ALL_TYPES
       .describe("Target data type.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream dimensions_s, dtype_s;
+    dimensions_s << dimensions;
+    dtype_s << dtype;
+    (*dict)["dimensions"] = dimensions_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
@@ -216,7 +238,7 @@ void IdentityCompute(const nnvm::NodeAttrs& attrs,
 struct LogspaceParam : public dmlc::Parameter<LogspaceParam> {
   double start;
   double stop;
-  int num;
+  index_t num;
   bool endpoint;
   double base;
   std::string ctx;
@@ -239,9 +261,24 @@ struct LogspaceParam : public dmlc::Parameter<LogspaceParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
     "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    DMLC_DECLARE_FIELD(dtype).set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream start_s, stop_s, num_s, endpoint_s, base_s, dtype_s;
+    start_s << start;
+    stop_s << stop;
+    num_s << num;
+    endpoint_s << endpoint;
+    base_s << base;
+    (*dict)["start"] = start_s.str();
+    (*dict)["stop"] = stop_s.str();
+    (*dict)["num"] = num_s.str();
+    (*dict)["endpoint"] = endpoint_s.str();
+    (*dict)["base"] = base_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
@@ -265,7 +302,7 @@ void LogspaceCompute(const nnvm::NodeAttrs& attrs,
   const LogspaceParam& param = nnvm::get<LogspaceParam>(attrs.parsed);
   if (param.num == 0) return;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      int step_num = param.endpoint ? param.num - 1 : param.num;
+      index_t step_num = param.endpoint ? param.num - 1 : param.num;
       double step = step_num > 0 ? (param.stop - param.start) / step_num : 0.0f;
       Kernel<logspace_fwd, xpu>::Launch(s, outputs[0].Size(), param.start, param.stop, param.base,
           step, req[0], outputs[0].dptr<DType>());
@@ -278,6 +315,11 @@ struct AtleastNDParam : dmlc::Parameter<AtleastNDParam> {
     DMLC_DECLARE_FIELD(num_args)
     .set_lower_bound(1)
     .describe("Number of input arrays.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s;
+    num_args_s << num_args;
+    (*dict)["num_args"] = num_args_s.str();
   }
 };
 

@@ -27,22 +27,24 @@
 #include "./elemwise_binary_scalar_op.h"
 
 #define MXNET_OPERATOR_REGISTER_BINARY_WITH_SCALAR_SUPPORT_WITH_DENSE_RESULT(name)    \
-  NNVM_REGISTER_OP(name)                                            \
-  .set_num_inputs(1)                                                \
-  .set_num_outputs(1)                                               \
-  .set_attr_parser([](NodeAttrs* attrs) {                           \
-      attrs->parsed = std::stod(attrs->dict["scalar"]);             \
-    })                                                              \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .set_attr<FInferStorageType>("FInferStorageType",                 \
-    BinaryScalarStorageTypeWithDenseResultStorageType)              \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
-    [](const NodeAttrs& attrs){                                     \
-      return std::vector<std::pair<int, int> >{{0, 0}};             \
-    })                                                              \
-  .add_argument("data", "NDArray-or-Symbol", "source input")        \
-  .add_argument("scalar", "float", "scalar input")
+  NNVM_REGISTER_OP(name)                                                              \
+  .set_num_inputs(1)                                                                  \
+  .set_num_outputs(1)                                                                 \
+  .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)                               \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                   \
+  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)                    \
+  .set_attr<FInferStorageType>("FInferStorageType",                                   \
+    BinaryScalarStorageTypeWithDenseResultStorageType)                                \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                   \
+    [](const NodeAttrs& attrs){                                                       \
+      return std::vector<std::pair<int, int> >{{0, 0}};                               \
+    })                                                                                \
+  .set_attr<FResourceRequest>("FResourceRequest",                                     \
+    [](const NodeAttrs& attrs) {                                                      \
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};               \
+    })                                                                                \
+  .add_argument("data", "NDArray-or-Symbol", "source input")                          \
+  .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
 namespace mxnet {
 namespace op {
@@ -64,7 +66,8 @@ static bool BinaryScalarStorageTypeWithDenseResultStorageType(const NodeAttrs& a
   const NDArrayStorageType instype = static_cast<NDArrayStorageType>(in_attrs->at(0));
   const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback
                                        : DispatchMode::kFComputeEx;
-  const double alpha = nnvm::get<double>(attrs.parsed);
+  const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
+  const double alpha = param.scalar;
   if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = storage_type_assign(&out_attrs[0],
       kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
@@ -188,8 +191,8 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_rdiv_scalar)
 .add_alias("_RDivScalar");
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_rdiv_scalar)
-.add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
   cpu, mshadow_op::rdiv_grad>);
 
@@ -199,8 +202,8 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_mod_scalar)
 .add_alias("_ModScalar");
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_mod_scalar)
-.add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
   cpu, mshadow_op::mod_grad>);
 
@@ -210,8 +213,8 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_rmod_scalar)
 .add_alias("_RModScalar");
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_rmod_scalar)
-.add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
   cpu, mshadow_op::rmod_grad>);
 

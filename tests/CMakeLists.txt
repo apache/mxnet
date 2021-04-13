@@ -16,10 +16,6 @@ if(NOT GTEST_ROOT)
   endif()
 endif()
 
-if(NOT MSVC)
-  set(UNITTEST_STATIC_LINK ON)
-endif()
-
 # FIXME MSVC unit test linking issue
 if(GTEST_FOUND AND NOT MSVC)
   enable_testing()
@@ -28,7 +24,6 @@ if(GTEST_FOUND AND NOT MSVC)
 
   include_directories(${GTEST_INCLUDE_DIR})
   include_directories(cpp/include)
-  include_directories(../cpp-package/include)
 
   if (NOT PRIVATE_RUNTIME_DIR)
    set(PRIVATE_RUNTIME_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
@@ -37,28 +32,15 @@ if(GTEST_FOUND AND NOT MSVC)
   add_executable(${PROJECT_NAME}_unit_tests ${UNIT_TEST_SOURCE})
   set_property(TARGET ${PROJECT_NAME}_unit_tests
                PROPERTY RUNTIME_OUTPUT_DIRECTORY ${PRIVATE_RUNTIME_DIR})
-  if (USE_CPP_PACKAGE)
-    add_dependencies(${PROJECT_NAME}_unit_tests cpp_package_op_h)
-  endif()
 
-  if(UNITTEST_STATIC_LINK)
-    target_link_libraries(${PROJECT_NAME}_unit_tests
-      ${GTEST_LIBRARY}
-      ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
-      dmlc
-      ${mxnet_LINKER_LIBS}
-      ${pslite_LINKER_LIBS}
-      )
-  else()
-    target_link_libraries(${PROJECT_NAME}_unit_tests
-      ${GTEST_LIBRARY}
-      dmlc
-      ${nnvm_LINKER_LIBS}
-      ${mxnet_LINKER_LIBS}
-      mxnet
-      ${pslite_LINKER_LIBS}
-      )
-  endif()
+  target_link_libraries(${PROJECT_NAME}_unit_tests
+    ${GTEST_LIBRARY}
+    dmlc
+    ${nnvm_LINKER_LIBS}
+    ${mxnet_LINKER_LIBS}
+    mxnet
+    ${pslite_LINKER_LIBS}
+    )
 
   add_test(AllTestsIn${PROJECT_NAME}UnitTests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests)
 else()

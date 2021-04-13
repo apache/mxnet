@@ -7,6 +7,55 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <style>
+    .dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: #f9f9f9;
+        min-width: 160px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        padding: 12px 16px;
+        z-index: 1;
+        text-align: left;
+    }
+
+    .dropdown:hover .dropdown-content {
+        display: block;
+    }
+
+    .dropdown-option:hover {
+        color: #FF4500;
+    }
+
+    .dropdown-option-active {
+        color: #FF4500;
+        font-weight: lighter;
+    }
+
+    .dropdown-option {
+        color: #000000;
+        font-weight: lighter;
+    }
+
+    .dropdown-header {
+        color: #FFFFFF;
+        display: inline-flex;
+    }
+
+    .dropdown-caret {
+        width: 18px;
+        height: 54px;
+    }
+
+    .dropdown-caret-path {
+        fill: #FFFFFF;
+    }
+    </style>
     {{ super() }}
 {% endblock %}
 
@@ -16,11 +65,15 @@
     '_static/sphinx_materialdesign_theme.css',
     '_static/fontawesome/all.css',
     '_static/fonts.css',
+    '_static/feedback.css',
 ] %}
 
-    {%- block header %}
-	<script type="text/javascript" src="{{ pathto('_static/sphinx_materialdesign_theme.js', 1) }} "></script>
-    {% endblock %}
+{% set script_files = script_files + [
+    '_static/sphinx_materialdesign_theme.js'
+  ]
+%}
+
+{%- block header %}{% endblock %}
 {%- block relbar1 %}{% endblock %}
 {%- block relbar2 %}{% include "relations.html" %}{% endblock %}
 {%- block sidebar2 %}{% endblock %}
@@ -37,6 +90,7 @@
 {%- block document %}
         <div class="page-content" role="main">
         {% block body %} {% endblock %}
+        {% include "feedback.html" %}
         </div>
         <div class="side-doc-outline">
             <div class="side-doc-outline--content">

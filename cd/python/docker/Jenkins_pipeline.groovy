@@ -32,10 +32,9 @@ def get_pipeline(mxnet_variant) {
 // The environment corresponds to the docker files in the 'docker' directory
 def get_environment(mxnet_variant) {
   if (mxnet_variant.startsWith("cu")) {
-    // Remove 'mkl' suffix from variant to properly format test environment
-    return "ubuntu_gpu_${mxnet_variant.replace('mkl', '')}"
+    return "centos7_gpu_${mxnet_variant}"
   }
-  return "ubuntu_cpu"
+  return "centos7_cpu"
 }
 
 
@@ -50,24 +49,21 @@ def build(mxnet_variant) {
     ci_utils.docker_run(environment, "cd_package_pypi ${mxnet_variant}", nvidia_docker)
 
     // build python docker images
-    sh "./cd/python/docker/python_images.sh build ${mxnet_variant} py3"
-    sh "./cd/python/docker/python_images.sh build ${mxnet_variant} py2"
+    sh "./cd/python/docker/python_images.sh build ${mxnet_variant}"
   }
 }
 
 def test(mxnet_variant) {
   ws("workspace/python_docker/${mxnet_variant}/${env.BUILD_NUMBER}") {
     // test python docker images
-    sh "./cd/python/docker/python_images.sh test ${mxnet_variant} py3"
-    sh "./cd/python/docker/python_images.sh test ${mxnet_variant} py2"
+    sh "./cd/python/docker/python_images.sh test ${mxnet_variant}"
   }
 }
 
 def push(mxnet_variant) {
   ws("workspace/python_docker/${mxnet_variant}/${env.BUILD_NUMBER}") {
     // push python docker images
-    sh "./cd/python/docker/python_images.sh push ${mxnet_variant} py3"
-    sh "./cd/python/docker/python_images.sh push ${mxnet_variant} py2"
+    sh "./cd/python/docker/python_images.sh push ${mxnet_variant}"
   }
 }
 

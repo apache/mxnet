@@ -140,13 +140,13 @@ class TestArtifactRepositoryTool(unittest.TestCase):
         Tests correct cuda version with the right format is returned
         :return:
         """
-        mock.return_value = b'Cuda compilation tools, release 10.0, V10.0.130'
+        mock.return_value = b'Cuda compilation tools, release 10.2, V10.2.130'
         cuda_version = get_cuda_version()
-        self.assertEqual(cuda_version, '100')
+        self.assertEqual(cuda_version, '102')
 
-        mock.return_value = b'Cuda compilation tools, release 9.2, V9.2.148'
+        mock.return_value = b'Cuda compilation tools, release 11.0, V11.0.148'
         cuda_version = get_cuda_version()
-        self.assertEqual(cuda_version, '92')
+        self.assertEqual(cuda_version, '110')
 
     @patch('artifact_repository.check_output')
     def test_get_cuda_version_not_found(self, mock):
@@ -159,40 +159,30 @@ class TestArtifactRepositoryTool(unittest.TestCase):
         self.assertIsNone(get_cuda_version())
 
     @patch('artifact_repository.get_libmxnet_features')
-    def test_probe_variant_cpu(self, mock_features):
+    def test_probe_variant_native(self, mock_features):
         """
-        Tests 'cpu' is returned if MKLDNN and CUDA features are OFF
+        Tests 'native' is returned if ONEDNN and CUDA features are OFF
         """
-        mock_features.return_value = {'MKLDNN': False, 'CUDA': False}
-        self.assertEqual(probe_mxnet_variant('libmxnet.so'), 'cpu')
+        mock_features.return_value = {'ONEDNN': False, 'CUDA': False}
+        self.assertEqual(probe_mxnet_variant('libmxnet.so'), 'native')
 
     @patch('artifact_repository.get_libmxnet_features')
-    def test_probe_variant_mkl(self, mock_features):
+    def test_probe_variant_cpu(self, mock_features):
         """
-        Tests 'mkl' is returned if MKLDNN is ON and CUDA is OFF
+        Tests 'cpu' is returned if ONEDNN is ON and CUDA is OFF
         """
-        mock_features.return_value = {'MKLDNN': True, 'CUDA': False}
-        self.assertEqual(probe_mxnet_variant('libmxnet.so'), 'mkl')
+        mock_features.return_value = {'ONEDNN': True, 'CUDA': False}
+        self.assertEqual(probe_mxnet_variant('libmxnet.so'), 'cpu')
 
     @patch('artifact_repository.get_libmxnet_features')
     @patch('artifact_repository.get_cuda_version')
     def test_probe_variant_cuda(self, mock_cuda_version, mock_features):
         """
-        Tests 'cu100' is returned if MKLDNN is OFF and CUDA is ON and CUDA version is 10.0
+        Tests 'cu102' is returned if ONEDNN is OFF and CUDA is ON and CUDA version is 10.2
         """
-        mock_features.return_value = {'MKLDNN': False, 'CUDA': True}
-        mock_cuda_version.return_value = '100'
-        self.assertEqual(probe_mxnet_variant('libmxnet.so'), 'cu100')
-
-    @patch('artifact_repository.get_libmxnet_features')
-    @patch('artifact_repository.get_cuda_version')
-    def test_probe_variant_cuda_mkl(self, mock_cuda_version, mock_features):
-        """
-        Tests 'cu100mkl' is returned if MKLDNN is ON and CUDA is ON and CUDA version is 10.0
-        """
-        mock_features.return_value = {'MKLDNN': True, 'CUDA': True}
-        mock_cuda_version.return_value = '100'
-        self.assertEqual(probe_mxnet_variant('libmxnet.so'), 'cu100mkl')
+        mock_features.return_value = {'ONEDNN': True, 'CUDA': True}
+        mock_cuda_version.return_value = '102'
+        self.assertEqual(probe_mxnet_variant('libmxnet.so'), 'cu102')
 
     @patch('artifact_repository.get_libmxnet_features')
     def test_probe_variant_cuda_returns_none_on_no_features(self, mock_features):
@@ -208,7 +198,7 @@ class TestArtifactRepositoryTool(unittest.TestCase):
         """
         Tests exception is raised if CUDA feature is ON but cuda version could not be determined
         """
-        mock_features.return_value = {'MKLDNN': True, 'CUDA': True}
+        mock_features.return_value = {'ONEDNN': True, 'CUDA': True}
         mock_cuda_version.return_value = None
         with self.assertRaises(RuntimeError):
             probe_mxnet_variant('libmxnet.so')

@@ -29,8 +29,10 @@
 #include <dmlc/omp.h>
 #include <nnvm/graph.h>
 #include <nnvm/node.h>
+#include <mxnet/imperative.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
+#include <mxnet/storage.h>
 #include <mxnet/op_attr_types.h>
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
@@ -47,7 +49,7 @@
 #include <limits>
 
 #include "../operator/mxnet_op.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
 #endif
 
@@ -493,10 +495,10 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
     "0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
-#if MXNET_USE_MKLDNN == 1
-  if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
-                                       "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
-  if (GetMKLDNNCacheSize() != -1) common::LogOnce("MXNET_MKLDNN_CACHE_NUM is set."
+#if MXNET_USE_ONEDNN == 1
+  if (!MKLDNNEnvSet()) common::LogOnce("MXNET_ONEDNN_ENABLED flag is off. "
+                                       "You can re-enable by setting MXNET_ONEDNN_ENABLED=1");
+  if (GetMKLDNNCacheSize() != -1) common::LogOnce("MXNET_ONEDNN_CACHE_NUM is set."
                                        "Should only be set if "
                                        "your model has variable input shapes, "
                                        "as cache size may grow unbounded");
@@ -696,6 +698,11 @@ constexpr size_t MaxIntegerValue<mshadow::half::half_t>() {
   return size_t(2) << 10;
 }
 
+template <>
+constexpr size_t MaxIntegerValue<mshadow::bfloat::bf16_t>() {
+  return size_t(2) << 14;
+}
+
 MSHADOW_XINLINE int ilog2ul(size_t a) {
   int k = 1;
   while (a >>= 1) ++k;
@@ -726,8 +733,10 @@ inline NDArray InitZeros(const NDArrayStorageType stype, const mxnet::TShape &sh
 /*!
  * \brief Helper to add a NDArray of zeros to a std::vector.
  */
-inline void EmplaceBackZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
-                             const Context &ctx, const int dtype,
+inline void EmplaceBackZeros(const NDArrayStorageType stype,
+                             const mxnet::TShape &shape,
+                             const Context &ctx,
+                             const int dtype,
                              std::vector<NDArray> *vec) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
@@ -752,7 +761,12 @@ inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
       dst[i] = src[i];
     }
   } else {
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     std::memcpy(dst, src, sizeof(DType) * size);
+#pragma GCC diagnostic pop
   }
 }
 
@@ -841,15 +855,6 @@ void ExecuteMonOutputCallback(
     size_t nid, const std::function<void(const char *, const char *, void *)>
                     &monitor_callback);
 
-/*!
- * \brief This is function can return the output names of a NodeEntry.
- */
-static inline std::string GetOutputName(const nnvm::NodeEntry& e) {
-  nnvm::Symbol sym;
-  sym.outputs.push_back(e);
-  return sym.ListOutputNames()[0];
-}
-
 inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
   // convert negative axes to positive values
   const int ndim = src.ndim();
@@ -867,6 +872,11 @@ inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
 
 inline bool is_float(const int dtype) {
   return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
+}
+
+inline bool is_int(const int dtype) {
+  return dtype == mshadow::kUint8 || dtype == mshadow::kInt8 ||
+         dtype == mshadow::kInt32 || dtype == mshadow::kInt64;
 }
 
 inline int get_more_precise_type(const int type1, const int type2) {
@@ -904,6 +914,68 @@ inline int np_binary_out_infer_type(const int type1, const int type2) {
   }
   return get_more_precise_type(type1, type2);
 }
+
+inline const std::string
+NodeAttrsGetProfilerScope(const nnvm::NodeAttrs& attrs) {
+  // obtain the profiler scope name, if assigned previously
+  std::string profiler_scope = MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR;
+  const std::unordered_map<std::string, std::string>& node_attrs_dict = attrs.dict;
+  const std::unordered_map<std::string, std::string>::const_iterator
+      profiler_scope_iter  = node_attrs_dict.find("__profiler_scope__");
+  if (profiler_scope_iter != node_attrs_dict.end()) {
+    profiler_scope = profiler_scope_iter->second;
+  }
+  return profiler_scope;
+}
+
+inline int GetDefaultDtype() {
+  return Imperative::Get()->is_np_default_dtype() ?
+         mshadow::kFloat64 :
+         mshadow::kFloat32;
+}
+
+inline int GetDefaultDtype(int dtype) {
+  if (dtype != -1) return dtype;
+  return Imperative::Get()->is_np_default_dtype() ?
+         mshadow::kFloat64 :
+         mshadow::kFloat32;
+}
+
+struct MShadowTypeInfo {
+  std::string name;
+  int size;
+  int acc_size;
+
+  MShadowTypeInfo(const std::string name, const int size, const int acc_size) :
+    name(std::move(name)), size(size), acc_size(acc_size) {}
+
+  MShadowTypeInfo(const std::string name, const int size) :
+    MShadowTypeInfo(name, size, size) {}
+};
+
+MShadowTypeInfo mshadow_type_info(const int type_flag);
+
+inline bool AlignedMemAlloc(void** ptr, size_t size, size_t alignment) {
+#if _MSC_VER
+  *ptr = _aligned_malloc(size, alignment);
+  if (*ptr == nullptr)
+    return false;
+#else
+  int res = posix_memalign(ptr, alignment, size);
+  if (res != 0)
+    return false;
+#endif
+  return true;
+}
+
+inline void AlignedMemFree(void* ptr) {
+#if _MSC_VER
+  _aligned_free(ptr);
+#else
+  free(ptr);
+#endif
+}
+
 
 }  // namespace common
 }  // namespace mxnet

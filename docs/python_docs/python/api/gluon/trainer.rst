@@ -16,8 +16,7 @@
    under the License.
 
 gluon.Trainer
-===========
-
+=============
 
 .. autoclass:: mxnet.gluon.Trainer
     :members:

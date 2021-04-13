@@ -67,7 +67,7 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
   const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
   mxnet::TShape sshape = param.shape;
   for (int i = 0; i < sshape.ndim(); ++i) {
-    CHECK_GT(sshape[i], 0) << "shape parameter must be non-zero within each dimension";
+    CHECK_GE(sshape[i], 0) << "shape parameter must be non-negative within each dimension";
   }
   // Examine output shape whether it is already defined.
   mxnet::TShape tshape((*out_attrs)[0]);
@@ -177,7 +177,9 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   CHECK_EQ(inputs.size(), inum);
   CHECK_EQ(outputs.size(), 1);
-  CHECK_GT(inputs[0].Size(), 0);
+  if (inputs[0].Size() == 0) {
+    return;
+  }
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {

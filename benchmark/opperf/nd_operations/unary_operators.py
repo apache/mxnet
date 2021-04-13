@@ -38,8 +38,8 @@ from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
 from benchmark.opperf.rules.default_params import MX_OP_MODULE
 
-def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype)for all the unary
+def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
+    """Runs benchmarks with the given context, precision (dtype), and input data size (int64_tensor) for all the unary
     operators in MXNet.
 
     Parameters
@@ -50,6 +50,8 @@ def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -60,16 +62,26 @@ def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
+
+    standard_inputs = [{"args": [(1024, 1024)],
+                        "num_outputs":1},
+                       {"args": [(10000, 1)],
+                        "num_outputs":1}]
+    int64_tensor_inputs = [{"args": [(2**32, 1)],
+                            "num_outputs":1}]
+
+    if int64_tensor == 'on':
+        inputs = int64_tensor_inputs
+    else:
+        inputs = standard_inputs
+
     # Run amp_multicast as it needs data as positional argument
     amp_multicast_benchmark = run_performance_test([getattr(MX_OP_MODULE, "amp_multicast")],
                                                    run_backward=True,
                                                    dtype=dtype,
                                                    ctx=ctx,
                                                    profiler=profiler,
-                                                   inputs=[{"args": [(1024, 1024)],
-                                                            "num_outputs":1},
-                                                           {"args": [(10000, 1)],
-                                                            "num_outputs":1}],
+                                                   inputs=inputs,
                                                    warmup=warmup,
                                                    runs=runs)
 
@@ -77,5 +89,5 @@ def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     mx_unary_broadcast_ops = get_all_unary_operators()
 
     # Run benchmarks
-    mx_unary_op_results = run_op_benchmarks(mx_unary_broadcast_ops, dtype, ctx, profiler, warmup, runs)
+    mx_unary_op_results = run_op_benchmarks(mx_unary_broadcast_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return merge_map_list(amp_multicast_benchmark + [mx_unary_op_results])

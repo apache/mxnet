@@ -16,8 +16,6 @@
 # under the License.
 
 # pylint: skip-file
-from __future__ import absolute_import
-from __future__ import division
 import itertools
 import os
 import sys
@@ -31,8 +29,8 @@ import numpy as _np
 import mxnet as mx
 from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
-from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, use_np
-from common import with_seed
+from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, use_np
+from common import retry
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
@@ -40,7 +38,6 @@ import scipy.stats as ss
 
 
 @retry(5)
-@with_seed()
 @use_np
 def test_np_exponential():
     samples = 1000000
@@ -56,7 +53,6 @@ def test_np_exponential():
 
 
 @retry(5)
-@with_seed()
 @use_np
 def test_np_uniform():
     types = [None, "float32", "float64"]
@@ -76,7 +72,6 @@ def test_np_uniform():
 
 
 @retry(5)
-@with_seed()
 @use_np
 def test_np_logistic():
     samples = 1000000
@@ -93,7 +88,6 @@ def test_np_logistic():
 
 
 @retry(5)
-@with_seed()
 @use_np
 def test_np_gumbel():
     samples = 1000000
@@ -109,7 +103,6 @@ def test_np_gumbel():
 
 
 @retry(5)
-@with_seed()
 @use_np
 def test_np_normal():
     types = [None, "float32", "float64"]
@@ -129,7 +122,6 @@ def test_np_normal():
 
 
 @retry(5)
-@with_seed()
 @use_np
 def test_np_gamma():
     types = [None, "float32", "float64"]
@@ -155,6 +147,20 @@ def test_np_gamma():
                              nsamples=samples, nrepeat=trials)
 
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+@retry(5)
+@use_np
+def test_np_laplace():
+    types = [None, "float32", "float64"]
+    ctx = mx.context.current_context()
+    samples = 1000000
+    # Generation test
+    trials = 8
+    num_buckets = 5
+    for dtype in types:
+        for loc, scale in [(0.0, 1.0), (1.0, 5.0)]:
+            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.laplace.ppf(x, loc=loc, scale=scale), num_buckets)
+            buckets = np.array(buckets, dtype=dtype).tolist()
+            probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
+            generator_mx_np = lambda x: np.random.laplace(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
+            verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
+

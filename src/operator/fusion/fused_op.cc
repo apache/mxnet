@@ -21,9 +21,9 @@
 
 #include "./fused_op.h"
 #include "../operator_common.h"
-#include "../../executor/exec_pass.h"
+#include "../../imperative/exec_pass.h"
 
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 
@@ -61,6 +61,7 @@ FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) :
 bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
                          std::vector<mxnet::TShape> *in_attrs,
                          std::vector<mxnet::TShape> *out_attrs) {
+  std::lock_guard<std::mutex> lock(my_mutex_);
   subgraph_.attrs.erase("shape");
   subgraph_.attrs.erase("shape_inputs");
   std::vector<mxnet::TShape> input_shapes(*in_attrs);
@@ -95,7 +96,6 @@ bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
     inferred = inferred && !op::shape_is_none(attr);
   }
   if (inferred) {
-    std::lock_guard<std::mutex> lock(my_mutex_);
     intermediate_shapes_.push_back({*in_attrs, *out_attrs, shapes});
   }
   return inferred;
@@ -104,6 +104,7 @@ bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
 bool FusedOp::InferType(const nnvm::NodeAttrs &attrs,
                         std::vector<int> *in_attrs,
                         std::vector<int> *out_attrs) {
+  std::lock_guard<std::mutex> lock(my_mutex_);
   subgraph_.attrs.erase("dtype");
   subgraph_.attrs.erase("dtype_inputs");
   std::vector<int> input_types(*in_attrs);
@@ -138,7 +139,6 @@ bool FusedOp::InferType(const nnvm::NodeAttrs &attrs,
     inferred = inferred && !op::type_is_none(attr);
   }
   if (inferred) {
-    std::lock_guard<std::mutex> lock(my_mutex_);
     intermediate_dtypes_.push_back({*in_attrs, *out_attrs, types});
   }
   return inferred;
@@ -302,4 +302,4 @@ NNVM_REGISTER_OP(_FusedOpOutHelper)
 
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#endif  // MXNET_USE_CUDA

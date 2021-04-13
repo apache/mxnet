@@ -24,7 +24,7 @@
  * \author Da Zheng, Ciyong Chen
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "mkldnn_fully_connected-inl.h"
 
 namespace mxnet {
@@ -273,24 +273,6 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
       data, weight, param.no_bias ? nullptr : &in_grad[fullc::kBias], GetMemDesc(out_grad));
 
   CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
-  if (req[fullc::kData]) {
-    mkldnn::inner_product_backward_data::primitive_desc ipBwdData_pd = GetFCBwdData(
-        data, weight, out_grad, fwd_pd);
-    auto out_grad_mem = out_grad.GetMKLDNNDataReorder(
-        ipBwdData_pd.diff_dst_desc());
-    auto weight_mem = weight.GetMKLDNNDataReorder(ipBwdData_pd.weights_desc());
-    auto in_grad_mem = CreateMKLDNNMem(in_grad[fullc::kData],
-                                       ipBwdData_pd.diff_src_desc(),
-                                       req[fullc::kData]);
-    mkldnn_args_map_t args = {
-      {MKLDNN_ARG_DIFF_DST, *out_grad_mem},
-      {MKLDNN_ARG_WEIGHTS, *weight_mem},
-      {MKLDNN_ARG_DIFF_SRC, *in_grad_mem.second}
-    };
-
-    MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::inner_product_backward_data(ipBwdData_pd), args);
-    CommitOutput(in_grad[fullc::kData], in_grad_mem);
-  }
   if (req[fullc::kWeight]) {
     mkldnn::inner_product_backward_weights::primitive_desc ipBwdWeights_pd
       = GetFCBwdWeights(data, weight, param.no_bias ? nullptr : &in_grad[fullc::kBias],
@@ -317,11 +299,31 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     MKLDNNStream::Get()->RegisterPrimArgs(
         mkldnn::inner_product_backward_weights(ipBwdWeights_pd), args);
     CommitOutput(in_grad[fullc::kWeight], in_grad_weight);
-    CommitOutput(in_grad[fullc::kBias], in_grad_bias);
+    if (!param.no_bias) {
+      CommitOutput(in_grad[fullc::kBias], in_grad_bias);
+    }
+  }
+  if (req[fullc::kData]) {
+    mkldnn::inner_product_backward_data::primitive_desc ipBwdData_pd = GetFCBwdData(
+        data, weight, out_grad, fwd_pd);
+    auto out_grad_mem = out_grad.GetMKLDNNDataReorder(
+        ipBwdData_pd.diff_dst_desc());
+    auto weight_mem = weight.GetMKLDNNDataReorder(ipBwdData_pd.weights_desc());
+    auto in_grad_mem = CreateMKLDNNMem(in_grad[fullc::kData],
+                                       ipBwdData_pd.diff_src_desc(),
+                                       req[fullc::kData]);
+    mkldnn_args_map_t args = {
+      {MKLDNN_ARG_DIFF_DST, *out_grad_mem},
+      {MKLDNN_ARG_WEIGHTS, *weight_mem},
+      {MKLDNN_ARG_DIFF_SRC, *in_grad_mem.second}
+    };
+
+    MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::inner_product_backward_data(ipBwdData_pd), args);
+    CommitOutput(in_grad[fullc::kData], in_grad_mem);
   }
   MKLDNNStream::Get()->Submit();
 }
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

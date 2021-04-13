@@ -27,10 +27,7 @@ from mxnet.gluon import data
 from mxnet.gluon.contrib.estimator import estimator
 from mxnet.gluon.model_zoo import vision
 
-# use with_seed decorator in python/unittest/common.py
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python', 'unittest'))
-from common import with_seed
-import unittest
+import pytest
 
 
 def load_data_mnist(batch_size, resize=None, num_workers=4):
@@ -93,7 +90,6 @@ def get_net(model_name, context):
     return net, input_shape, label_shape, loss_axis
 
 
-@with_seed()
 def test_estimator_cpu():
     '''
     Test estimator by doing one pass over each model with synthetic data
@@ -116,7 +112,7 @@ def test_estimator_cpu():
         # Define estimator
         est = estimator.Estimator(net=net,
                                   loss=loss,
-                                  train_metrics=mx.metric.Accuracy(),
+                                  train_metrics=mx.gluon.metric.Accuracy(),
                                   trainer=trainer,
                                   context=context)
         # Call fit()
@@ -125,9 +121,8 @@ def test_estimator_cpu():
                 epochs=1)
 
 
-# using fixed seed to reduce flakiness in accuracy assertion
-@with_seed(7)
-@unittest.skipIf(mx.context.num_gpus() < 1, "skip if no GPU")
+@pytest.mark.seed(7)  # using fixed seed to reduce flakiness in accuracy assertion
+@pytest.mark.skipif(mx.context.num_gpus() < 1, reason="skip if no GPU")
 def test_estimator_gpu():
     '''
     Test estimator by training resnet18_v1 for 5 epochs on MNIST and verify accuracy
@@ -140,7 +135,7 @@ def test_estimator_gpu():
     train_data, test_data = load_data_mnist(batch_size, resize=224)
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     net.hybridize()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # Define estimator
     est = estimator.Estimator(net=net,
@@ -155,7 +150,3 @@ def test_estimator_gpu():
 
     assert acc.get()[1] > 0.80
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

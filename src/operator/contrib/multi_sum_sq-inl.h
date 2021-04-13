@@ -18,10 +18,10 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2020 by Contributors
  * \file multi_l2_norm-inl.h
  * \brief vectorized L2 norm over multiple arrays operators
- * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez
+ * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez, Shuai Zheng
  */
 
 
@@ -41,9 +41,14 @@ namespace op {
 
 struct MultiSumSqParam : public dmlc::Parameter<MultiSumSqParam> {
   int num_arrays;
+  float scale;
+
   DMLC_DECLARE_PARAMETER(MultiSumSqParam) {
     DMLC_DECLARE_FIELD(num_arrays)
     .describe("number of input arrays.");
+    DMLC_DECLARE_FIELD(scale)
+    .set_default(1.0f)
+    .describe("Scaling factor for l2 norm");
   }
 };
 
@@ -88,7 +93,7 @@ size_t GetRequiredStorageMultiSumSq(const std::vector<TBlob> &inputs,
 
 template<typename xpu>
 void MultiSumSqRun(const std::vector<TBlob> &inputs, int nInputs,
-                   float *out_ptr, const OpContext &ctx);
+                   float *out_ptr, const OpContext &ctx, float scale = 1.0f);
 
 template<typename xpu>
 void MultiSumSq(const nnvm::NodeAttrs& attrs,
@@ -99,7 +104,7 @@ void MultiSumSq(const nnvm::NodeAttrs& attrs,
   auto s = ctx.get_stream<xpu>();
   const auto& p = dmlc::get<MultiSumSqParam>(attrs.parsed);
   float* out_ptr = outputs[0].FlatTo2D<xpu, float>(s).dptr_;
-  MultiSumSqRun<xpu>(inputs, p.num_arrays, out_ptr, ctx);
+  MultiSumSqRun<xpu>(inputs, p.num_arrays, out_ptr, ctx, p.scale);
 }
 
 }  // namespace op

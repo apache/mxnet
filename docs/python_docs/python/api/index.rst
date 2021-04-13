@@ -27,14 +27,20 @@ following categories:
 
 
 Imperative API
----------------
+--------------
 .. container:: cards
 
    .. card::
-      :title: mxnet.ndarray
-      :link: ndarray/index.html
+      :title: mxnet.np
+      :link: np/index.html
 
-      Imperative APIs to manipulate multi-dimensional arrays.
+      MXNet NP module, an array library that provides NumPy-compatible API.
+
+   .. card::
+      :title: mxnet.npx
+      :link: npx/index.html
+
+      MXNet NPX module, neural network extension to the NumPy-compatible API.
 
    .. card::
       :title: mxnet.gluon
@@ -74,12 +80,6 @@ Gluon related modules
       Scheduling the learning rate.
 
    .. card::
-      :title: mxnet.metric
-      :link: metric/index.html
-
-      Metrics to evaluate the performance of a learned model.
-
-   .. card::
       :title: mxnet.kvstore
       :link: kvstore/index.html
 
@@ -104,130 +104,126 @@ Gluon related modules
       Imperative random distribution generator functions.
 
 
-Symbolic API
-------------
-
-.. container:: cards
-
-   .. card::
-      :title: mxnet.sym
-      :link: symbol/index.html
-
-      Symbolic APIs for multi-dimensional arrays and neural network layers
-
-   .. card::
-      :title: mxnet.module
-      :link: module/index.html
-
-      Intermediate and high-level interface for performing computation with Symbols.
-
-
-Symbol related modules
-----------------------
-
-.. container:: cards
-
-   .. card::
-      :title: mxnet.callback
-      :link: mxnet/callback/index.html
-
-      Functions to track various statuses during an epoch.
-
-   .. card::
-      :title: mxnet.monitor
-      :link: mxnet/monitor/index.html
-
-      Outputs, weights, and gradients for debugging
-
-
-   .. card::
-      :title: mxnet.image
-      :link: mxnet/image/index.html
-
-      Image iterators and image augmentation functions.
-
-   .. card::
-      :title: mxnet.io
-      :link: mxnet/io/index.html
-
-      Data iterators for common data formats and utility functions.
-
-   .. card::
-      :title: mxnet.recordio
-      :link: mxnet/recordio/index.html
-
-      Read and write for the RecordIO data format.
-
-   .. card::
-      :title: mxnet.visualization
-      :link: mxnet/visualization/index.html
-
-      Functions for Symbol visualization.
-
 Advanced modules
 ----------------
 
 .. container:: cards
 
    .. card::
+      :title: mxnet.runtime
+      :link: runtime/index.html
+
+      API for querying MXNet enabled features.
+
+   .. card::
+      :title: mxnet.context
+      :link: context/index.html
+
+      MXNet array context for specifying in-memory storage device.
+
+   .. card::
+      :title: mxnet.profiler
+      :link: profiler/index.html
+
+      MXNet memory and performance profiler.
+
+   .. card::
       :title: mxnet.executor
-      :link: mxnet/executor/index.html
+      :link: executor/index.html
 
       Managing symbolic graph execution.
 
    .. card::
       :title: mxnet.kvstore_server
-      :link: mxnet/kvstore_server/index.html
+      :link: kvstore_server/index.html
 
       Server node for the key value store.
 
    .. card::
       :title: mxnet.engine
-      :link: mxnet/engine/index.html
+      :link: engine/index.html
 
       Engine properties management.
 
-
-   .. card::
-      :title: mxnet.executor_manager
-      :link: mxnet/executor_manager/index.html
-
-      Executor manager
-
-
    .. card::
       :title: mxnet.rtc
-      :link: mxnet/rtc/index.html
+      :link: rtc/index.html
 
       Tools for compiling and running CUDA code from the python frontend.
 
    .. card::
       :title: mxnet.test_utils
-      :link: mxnet/test_utils/index.html
+      :link: test_utils/index.html
 
       Tools for using and testing MXNet.
 
    .. card::
       :title: mxnet.util
-      :link: mxnet/util/index.html
+      :link: util/index.html
 
       General utility functions
+
+Legacy
+------
+
+.. container:: cards
+
+   .. card::
+      :title: mxnet.ndarray
+      :link: legacy/ndarray/index.html
+
+      Imperative APIs to manipulate multi-dimensional arrays.
+
+   .. card::
+      :title: mxnet.symbol
+      :link: legacy/symbol/index.html
+
+      Symbolic APIs for multi-dimensional arrays and neural network layers
+
+   .. card::
+      :title: mxnet.callback
+      :link: legacy/callback/index.html
+
+      Functions to track various statuses during an epoch.
+
+   .. card::
+      :title: mxnet.image
+      :link: legacy/image/index.html
+
+      Image iterators and image augmentation functions.
+
+   .. card::
+      :title: mxnet.io
+      :link: legacy/io/index.html
+
+      Data iterators for common data formats and utility functions.
+
+   .. card::
+      :title: mxnet.recordio
+      :link: legacy/recordio/index.html
+
+      Read and write for the RecordIO data format.
+
+   .. card::
+      :title: mxnet.visualization
+      :link: legacy/visualization/index.html
+
+      Functions for Symbol visualization.
 
 
 .. toctree::
    :maxdepth: 1
    :hidden:
+   :glob:
 
-   ndarray/index
+   np/index
+   npx/index
    gluon/index
    autograd/index
    initializer/index
    optimizer/index
    lr_scheduler/index
-   metric/index
    kvstore/index
-   symbol/index
-   module/index
    contrib/index
-   image/index
-   mxnet/index
+   legacy/index
+   */index*

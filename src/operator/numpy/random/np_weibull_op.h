@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <unordered_map>
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -43,23 +44,35 @@ namespace op {
 
 struct NumpyWeibullParam : public dmlc::Parameter<NumpyWeibullParam> {
   dmlc::optional<float> a;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
+  std::string ctx;
   DMLC_DECLARE_PARAMETER(NumpyWeibullParam) {
       DMLC_DECLARE_FIELD(a)
       .set_default(dmlc::optional<float>());
       DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe("Output shape. If the given shape is, "
           "e.g., (m, n, k), then m * n * k samples are drawn. "
           "Default is None, in which case a single value is returned.");
+      DMLC_DECLARE_FIELD(ctx).set_default("cpu").describe(
+        "Context of output, in format [cpu|gpu|cpu_pinned](n)."
+        " Only used for imperative calls.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_s, size_s;
+    a_s << a;
+    size_s << size;
+    (*dict)["a"] = a_s.str();
+    (*dict)["size"] = size_s.str();
   }
 };
 
 template <typename DType>
 struct scalar_weibull_kernel {
-  MSHADOW_XINLINE static void Map(index_t i, float a, float *threshold,
+  MSHADOW_XINLINE static void Map(index_t i, float a, float *noise,
                                   DType *out) {
-    out[i] = powf(-log(threshold[i]), DType(1.0/a));
+    out[i] = powf(-log(noise[i]), DType(1.0/a));
   }
 };
 
@@ -67,8 +80,8 @@ namespace mxnet_op {
 
 template <typename IType>
 struct check_legal_a_kernel {
-  MSHADOW_XINLINE static void Map(index_t i, IType *a, float* flag) {
-    if (a[i] < 0.0) {
+  MSHADOW_XINLINE static void Map(index_t i, IType *a, float *flag) {
+    if (a[i] <= 0.0) {
       flag[0] = -1.0;
     }
   }
@@ -80,10 +93,13 @@ struct weibull_kernel {
   MSHADOW_XINLINE static void Map(index_t i,
                                   const Shape<ndim> &stride,
                                   const Shape<ndim> &oshape,
-                                  IType *aparams, float* threshold, OType *out) {
+                                  IType *aparams, float *noise, OType *out) {
     Shape<ndim> coord = unravel(i, oshape);
     auto idx = static_cast<index_t>(dot(coord, stride));
-    out[i] =  powf(-log(threshold[i]), IType(1.0/aparams[idx]));
+    noise[i] = -log(noise[i]);
+    out[i] =  powf(noise[i], IType(1.0/aparams[idx]));
+    // get grad
+    noise[i] = -log(noise[i]) * out[i] * (1.0/(aparams[idx] * aparams[idx]));
   }
 };
 
@@ -91,26 +107,25 @@ struct weibull_kernel {
 
 template <typename xpu>
 void NumpyWeibullForward(const nnvm::NodeAttrs &attrs,
-                             const OpContext &ctx,
-                             const std::vector<TBlob> &inputs,
-                             const std::vector<OpReqType> &req,
-                             const std::vector<TBlob> &outputs) {
+                         const OpContext &ctx,
+                         const std::vector<TBlob> &inputs,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   const NumpyWeibullParam &param = nnvm::get<NumpyWeibullParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  index_t output_len = outputs[0].Size();
   Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
   Tensor<xpu, 1, float> workspace =
-      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(output_len + 1), s);
-  Tensor<xpu, 1, float> uniform_tensor = workspace.Slice(0, output_len);
-  Tensor<xpu, 1, float> indicator_device = workspace.Slice(output_len, output_len + 1);
+      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(1), s);
+  Tensor<xpu, 1, float> uniform_tensor = outputs[1].FlatTo1D<xpu, float>(s);
+  Tensor<xpu, 1, float> indicator_device = workspace;
   float indicator_host = 1.0;
   float *indicator_device_ptr = indicator_device.dptr_;
   Kernel<set_zero, xpu>::Launch(s, 1, indicator_device_ptr);
-  prnd->SampleUniform(&workspace, 0.0, 1.0);
+  prnd->SampleUniform(&uniform_tensor, 0.0, 1.0);
   if (param.a.has_value()) {
-    CHECK_GE(param.a.value(), 0.0) << "ValueError: expect a >= 0";
+    CHECK_GT(param.a.value(), 0.0) << "ValueError: expect a > 0";
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       Kernel<scalar_weibull_kernel<DType>, xpu>::Launch(
         s, outputs[0].Size(), param.a.value(),
@@ -122,7 +137,7 @@ void NumpyWeibullForward(const nnvm::NodeAttrs &attrs,
       s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
     });
     _copy<xpu>(s, &indicator_host, indicator_device_ptr);
-    CHECK_GE(indicator_host, 0.0) << "ValueError: expect a >= 0";
+    CHECK_GE(indicator_host, 0.0) << "ValueError: expect a > 0";
     mxnet::TShape new_lshape, new_oshape;
     int ndim = FillShape(inputs[0].shape_, inputs[0].shape_, outputs[0].shape_,
                          &new_lshape, &new_lshape, &new_oshape);
@@ -135,6 +150,60 @@ void NumpyWeibullForward(const nnvm::NodeAttrs &attrs,
               s, outputs[0].Size(), stride, oshape, inputs[0].dptr<IType>(),
               uniform_tensor.dptr_, outputs[0].dptr<OType>());
         });
+      });
+    });
+  }
+}
+
+template<typename xpu, int ndim, typename DType>
+inline void ScalarWeibullReparamBackwardImpl(const OpContext& ctx,
+                                             const std::vector<TBlob>& inputs,
+                                             const std::vector<OpReqType>& req,
+                                             const std::vector<TBlob>& outputs,
+                                             const mxnet::TShape& new_ishape,
+                                             const mxnet::TShape& new_oshape) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace broadcast;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob igrad = outputs[0].reshape(new_ishape);
+  // inputs: [grad_from_samples, grad_from_noise(invisible), input_tensor,
+  //          samples, noise]
+  const TBlob ograd = inputs[0].reshape(new_oshape);
+  const TBlob itensor = inputs[2].reshape(new_ishape);
+  const TBlob samples = inputs[3].reshape(new_oshape);
+  const TBlob noise = inputs[4].reshape(new_oshape);
+  size_t workspace_size =
+      ReduceWorkspaceSize(s, igrad.shape_, req[0], ograd.shape_, sizeof(DType));
+  Tensor<xpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+  Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::left>(
+      s, igrad, req[0], workspace, ograd, noise, noise);
+  }
+
+template<typename xpu>
+void WeibullReparamBackward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& reqs,
+                            const std::vector<TBlob>& outputs) {
+// skip kernel launch for zero-size tensors
+if (inputs[0].shape_.Size() == 0U) {
+  return;
+}
+// [scalar] case
+if (outputs.size() == 0U) {
+  return;
+}
+// [tensor] case
+if (inputs.size() == 5U) {
+  mxnet::TShape new_ishape, new_oshape;
+  int ndim = FillShape(outputs[0].shape_, outputs[0].shape_, inputs[0].shape_,
+                      &new_ishape, &new_ishape, &new_oshape);
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    BROADCAST_NDIM_SWITCH(ndim, NDim, {
+      ScalarWeibullReparamBackwardImpl<xpu, NDim, DType>(
+        ctx, inputs, reqs, outputs, new_ishape, new_oshape);
       });
     });
   }

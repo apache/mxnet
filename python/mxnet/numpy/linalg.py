@@ -17,14 +17,125 @@
 
 """Namespace for ops used in imperative programming."""
 
-from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback_linalg
 
-__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv',
-           'eigvals', 'eig', 'eigvalsh', 'eigh']
+__all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank']
 __all__ += fallback_linalg.__all__
+
+
+def matrix_rank(M, tol=None, hermitian=False):
+    r"""Return matrix rank of array using SVD method
+
+    Rank of the array is the number of singular values of the array that are
+    greater than `tol`.
+
+    Parameters
+    ----------
+    M : {(M,), (..., M, N)} ndarray
+        Input vector or stack of matrices.
+    tol : (...) ndarray, float, optional
+        Threshold below which SVD values are considered zero. If `tol` is
+        None, and ``S`` is an array with singular values for `M`, and
+        ``eps`` is the epsilon value for datatype of ``S``, then `tol` is
+        set to ``S.max() * max(M.shape) * eps``.
+    hermitian : bool, optional
+        If True, `M` is assumed to be Hermitian (symmetric if real-valued),
+        enabling a more efficient method for finding singular values.
+        Defaults to False.
+
+    Returns
+    -------
+    rank : (...) ndarray
+        Rank of M.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> np.matrix_rank(np.eye(4)) # Full rank matrix
+    4
+    >>> I=np.eye(4); I[-1,-1] = 0. # rank deficient matrix
+    >>> np.matrix_rank(I)
+    3
+    >>> np.matrix_rank(np.ones((4,))) # 1 dimension - rank 1 unless all 0
+    1
+    >>> np.matrix_rank(np.zeros((4,)))
+    0
+    """
+    return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
+
+
+def lstsq(a, b, rcond='warn'):
+    r"""
+    Return the least-squares solution to a linear matrix equation.
+
+    Solves the equation :math:`a x = b` by computing a vector `x` that
+    minimizes the squared Euclidean 2-norm :math:`\| b - a x \|^2_2`.
+    The equation may be under-, well-, or over-determined (i.e., the
+    number of linearly independent rows of `a` can be less than, equal
+    to, or greater than its number of linearly independent columns).
+    If `a` is square and of full rank, then `x` (but for round-off error)
+    is the "exact" solution of the equation.
+
+    Parameters
+    ----------
+    a : (M, N) ndarray
+        "Coefficient" matrix.
+    b : {(M,), (M, K)} ndarray
+        Ordinate or "dependent variable" values. If `b` is two-dimensional,
+        the least-squares solution is calculated for each of the `K` columns
+        of `b`.
+    rcond : float, optional
+        Cut-off ratio for small singular values of `a`.
+        For the purposes of rank determination, singular values are treated
+        as zero if they are smaller than `rcond` times the largest singular
+        value of `a`
+        The default of ``warn`` or ``-1`` will use the machine precision as
+        `rcond` parameter. The default of ``None`` will use the machine
+        precision times `max(M, N)`.
+
+    Returns
+    -------
+    x : {(N,), (N, K)} ndarray
+        Least-squares solution. If `b` is two-dimensional,
+        the solutions are in the `K` columns of `x`.
+    residuals : {(1,), (K,), (0,)} ndarray
+        Sums of residuals.
+        Squared Euclidean 2-norm for each column in ``b - a*x``.
+        If the rank of `a` is < N or M <= N, this is an empty array.
+        If `b` is 1-dimensional, this is a (1,) shape array.
+        Otherwise the shape is (K,).
+    rank : int
+        Rank of matrix `a`.
+    s : (min(M, N),) ndarray
+        Singular values of `a`.
+
+    Raises
+    ------
+    MXNetError
+        If computation does not converge.
+
+    Notes
+    -----
+    If `b` is a matrix, then all array results are returned as matrices.
+
+    Examples
+    --------
+    >>> x = np.array([0, 1, 2, 3])
+    >>> y = np.array([-1, 0.2, 0.9, 2.1])
+    >>> A = np.vstack([x, np.ones(len(x))]).T
+    >>> A
+    array([[ 0.,  1.],
+           [ 1.,  1.],
+           [ 2.,  1.],
+           [ 3.,  1.]])
+    >>> m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+    >>> m, c
+    (1.0 -0.95) # may vary
+    """
+    return _mx_nd_np.linalg.lstsq(a, b, rcond)
 
 
 def pinv(a, rcond=1e-15, hermitian=False):
@@ -160,8 +271,7 @@ def norm(x, ord=None, axis=None, keepdims=False):
 
 
 def svd(a):
-    r"""
-    Singular Value Decomposition.
+    r"""Singular Value Decomposition.
 
     When `a` is a 2D array, it is factorized as ``ut @ np.diag(s) @ v``,
     where `ut` and `v` are 2D orthonormal arrays and `s` is a 1D
@@ -186,36 +296,34 @@ def svd(a):
         Orthonormal array(s). The first ``a.ndim - 2`` dimensions have the same
         size as those of the input `a`.
 
-    Notes
-    -----
+    .. note::
+       The decomposition is performed using LAPACK routine ``_gesvd``.
 
-    The decomposition is performed using LAPACK routine ``_gesvd``.
+       SVD is usually described for the factorization of a 2D matrix :math:`A`.
+       The higher-dimensional case will be discussed below. In the 2D case, SVD is
+       written as :math:`A = U^T S V`, where :math:`A = a`, :math:`U^T = ut`,
+       :math:`S= \mathtt{np.diag}(s)` and :math:`V = v`. The 1D array `s`
+       contains the singular values of `a` and `ut` and `v` are orthonormal. The rows
+       of `v` are the eigenvectors of :math:`A^T A` and the columns of `ut` are
+       the eigenvectors of :math:`A A^T`. In both cases the corresponding
+       (possibly non-zero) eigenvalues are given by ``s**2``.
 
-    SVD is usually described for the factorization of a 2D matrix :math:`A`.
-    The higher-dimensional case will be discussed below. In the 2D case, SVD is
-    written as :math:`A = U^T S V`, where :math:`A = a`, :math:`U^T = ut`,
-    :math:`S= \mathtt{np.diag}(s)` and :math:`V = v`. The 1D array `s`
-    contains the singular values of `a` and `ut` and `v` are orthonormal. The rows
-    of `v` are the eigenvectors of :math:`A^T A` and the columns of `ut` are
-    the eigenvectors of :math:`A A^T`. In both cases the corresponding
-    (possibly non-zero) eigenvalues are given by ``s**2``.
+       The sign of rows of `u` and `v` are determined as described in
+       `Auto-Differentiating Linear Algebra <https://arxiv.org/pdf/1710.08717.pdf>`_.
 
-    The sign of rows of `u` and `v` are determined as described in
-    `Auto-Differentiating Linear Algebra <https://arxiv.org/pdf/1710.08717.pdf>`_.
+       If `a` has more than two dimensions, then broadcasting rules apply.
+       This means that SVD is working in "stacked" mode: it iterates over
+       all indices of the first ``a.ndim - 2`` dimensions and for each
+       combination SVD is applied to the last two indices. The matrix `a`
+       can be reconstructed from the decomposition with either
+       ``(ut * s[..., None, :]) @ v`` or
+       ``ut @ (s[..., None] * v)``. (The ``@`` operator denotes batch matrix multiplication)
 
-    If `a` has more than two dimensions, then broadcasting rules apply.
-    This means that SVD is working in "stacked" mode: it iterates over
-    all indices of the first ``a.ndim - 2`` dimensions and for each
-    combination SVD is applied to the last two indices. The matrix `a`
-    can be reconstructed from the decomposition with either
-    ``(ut * s[..., None, :]) @ v`` or
-    ``ut @ (s[..., None] * v)``. (The ``@`` operator denotes batch matrix multiplication)
-
-    This function differs from the original `numpy.linalg.svd
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.svd.html>`_ in
-    the following way(s):
-     - The sign of rows of `u` and `v` may differ.
-     - Does not support complex input.
+       This function differs from the original `numpy.linalg.svd
+       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.svd.html>`_ in
+       the following way(s):
+       * The sign of rows of `u` and `v` may differ.
+       * Does not support complex input.
 
     Examples
     --------
@@ -290,6 +398,68 @@ def cholesky(a):
            [ 4., 10.]])
     """
     return _mx_nd_np.linalg.cholesky(a)
+
+
+def qr(a, mode='reduced'):
+    r"""
+    Compute the qr factorization of a matrix a.
+    Factor the matrix a as qr, where q is orthonormal and r is upper-triangular.
+
+    Parameters
+    ----------
+    a : (..., M, N) ndarray
+        Matrix or stack of matrices to be qr factored.
+    mode: {‘reduced’, ‘complete’, ‘r’, ‘raw’, ‘full’, ‘economic’}, optional
+        Only default mode, 'reduced', is implemented. If K = min(M, N), then
+        * 'reduced’ : returns q, r with dimensions (M, K), (K, N) (default)
+
+    Returns
+    -------
+    q : (..., M, K) ndarray
+        A matrix or stack of matrices with K orthonormal columns, with K = min(M, N).
+    r : (..., K, N) ndarray
+        A matrix or stack of upper triangular matrices.
+
+    Raises
+    ------
+    MXNetError
+        If factoring fails.
+
+    Notes
+    -----
+    Currently, the gradient for the QR factorization is well-defined
+    only when the first K columns of the input matrix are linearly independent.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> a = np.random.uniform(-10, 10, (2, 2))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.22121978, -0.97522414],
+           [-0.97522414,  0.22121954]])
+    >>> r
+    array([[-4.4131265 , -7.1255064 ],
+           [ 0.        , -0.28771925]])
+    >>> a = np.random.uniform(-10, 10, (2, 3))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.28376842, -0.9588929 ],
+           [-0.9588929 ,  0.28376836]])
+    >>> r
+    array([[-7.242763  , -0.5673361 , -2.624416  ],
+           [ 0.        , -7.297918  , -0.15949416]])
+    >>> a = np.random.uniform(-10, 10, (3, 2))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.34515655,  0.10919492],
+           [ 0.14765628, -0.97452265],
+           [-0.92685735, -0.19591334]])
+    >>> r
+    array([[-8.453794,  8.4175  ],
+           [ 0.      ,  5.430561]])
+    """
+    return _mx_nd_np.linalg.qr(a, mode)
 
 
 def inv(a):
@@ -602,8 +772,7 @@ def tensorsolve(a, b, axes=None):
 
 
 def eigvals(a):
-    r"""
-    Compute the eigenvalues of a general matrix.
+    r"""Compute the eigenvalues of a general matrix.
 
     Main difference between `eigvals` and `eig`: the eigenvectors aren't
     returned.
@@ -630,18 +799,17 @@ def eigvals(a):
     eigh : eigenvalues and eigenvectors of a real symmetric array.
     eigvalsh : eigenvalues of a real symmetric.
 
-    Notes
-    -----
-    Broadcasting rules apply, see the `numpy.linalg` documentation for
-    details.
+    .. note::
+       Broadcasting rules apply, see the `numpy.linalg` documentation for
+       details.
 
-    This is implemented using the ``_geev`` LAPACK routines which compute
-    the eigenvalues and eigenvectors of general square arrays.
+       This is implemented using the ``_geev`` LAPACK routines which compute
+       the eigenvalues and eigenvectors of general square arrays.
 
-    This function differs from the original `numpy.linalg.eigvals
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigvals.html>`_ in
-    the following way(s):
-     - Does not support complex input and output.
+       This function differs from the original `numpy.linalg.eigvals
+       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigvals.html>`_ in
+       the following way(s):
+       * Does not support complex input and output.
 
     Examples
     --------
@@ -651,6 +819,7 @@ def eigvals(a):
     of `Q`), preserves the eigenvalues of the "middle" matrix.  In other words,
     if `Q` is orthogonal, then ``Q * A * Q.T`` has the same eigenvalues as
     ``A``:
+
     >>> from numpy import linalg as LA
     >>> x = np.random.random()
     >>> Q = np.array([[np.cos(x), -np.sin(x)], [np.sin(x), np.cos(x)]])
@@ -658,6 +827,7 @@ def eigvals(a):
     (1.0, 1.0, 0.0)
 
     Now multiply a diagonal matrix by ``Q`` on one side and by ``Q.T`` on the other:
+
     >>> D = np.diag((-1,1))
     >>> LA.eigvals(D)
     array([-1.,  1.])
@@ -670,8 +840,7 @@ def eigvals(a):
 
 
 def eigvalsh(a, UPLO='L'):
-    r"""
-    Compute the eigenvalues real symmetric matrix.
+    r"""Compute the eigenvalues real symmetric matrix.
 
     Main difference from eigh: the eigenvectors are not computed.
 
@@ -704,24 +873,23 @@ def eigvalsh(a, UPLO='L'):
     eigvals : eigenvalues of a non-symmetric array.
     eigh : eigenvalues and eigenvectors of a real symmetric array.
 
-    Notes
-    -----
-    Broadcasting rules apply, see the `numpy.linalg` documentation for
-    details.
+    .. note::
+       Broadcasting rules apply, see the `numpy.linalg` documentation for
+       details.
 
-    The eigenvalues are computed using LAPACK routines ``_syevd``.
+       The eigenvalues are computed using LAPACK routines ``_syevd``.
 
-    This function differs from the original `numpy.linalg.eigvalsh
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigvalsh.html>`_ in
-    the following way(s):
-     - Does not support complex input and output.
+       This function differs from the original `numpy.linalg.eigvalsh
+       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigvalsh.html>`_ in
+       the following way(s):
+       * Does not support complex input and output.
 
     Examples
     --------
     >>> from numpy import linalg as LA
     >>> a = np.array([[ 5.4119368 ,  8.996273  , -5.086096  ],
-                      [ 0.8866155 ,  1.7490431 , -4.6107802 ],
-                      [-0.08034172,  4.4172044 ,  1.4528792 ]])
+    ...               [ 0.8866155 ,  1.7490431 , -4.6107802 ],
+    ...               [-0.08034172,  4.4172044 ,  1.4528792 ]])
     >>> LA.eigvalsh(a, UPLO='L')
     array([-2.87381886,  5.10144682,  6.38623114]) # in ascending order
     """
@@ -759,32 +927,31 @@ def eig(a):
     eigh : eigenvalues and eigenvectors of a real symmetric array.
     eigvalsh : eigenvalues of a real symmetric.
 
-    Notes
-    -----
-    This is implemented using the ``_geev`` LAPACK routines which compute
-    the eigenvalues and eigenvectors of general square arrays.
+    .. note::
+       This is implemented using the ``_geev`` LAPACK routines which compute
+       the eigenvalues and eigenvectors of general square arrays.
 
-    The number `w` is an eigenvalue of `a` if there exists a vector
-    `v` such that ``dot(a,v) = w * v``. Thus, the arrays `a`, `w`, and
-    `v` satisfy the equations ``dot(a[:,:], v[:,i]) = w[i] * v[:,i]``
-    for :math:`i \\in \\{0,...,M-1\\}`.
+       The number `w` is an eigenvalue of `a` if there exists a vector
+       `v` such that ``dot(a,v) = w * v``. Thus, the arrays `a`, `w`, and
+       `v` satisfy the equations ``dot(a[:,:], v[:,i]) = w[i] * v[:,i]``
+       for :math:`i \\in \\{0,...,M-1\\}`.
 
-    The array `v` of eigenvectors may not be of maximum rank, that is, some
-    of the columns may be linearly dependent, although round-off error may
-    obscure that fact. If the eigenvalues are all different, then theoretically
-    the eigenvectors are linearly independent.
+       The array `v` of eigenvectors may not be of maximum rank, that is, some
+       of the columns may be linearly dependent, although round-off error may
+       obscure that fact. If the eigenvalues are all different, then theoretically
+       the eigenvectors are linearly independent.
 
-    This function differs from the original `numpy.linalg.eig
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eig.html>`_ in
-    the following way(s):
-     - Does not support complex input and output.
+       This function differs from the original `numpy.linalg.eig
+       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eig.html>`_ in
+       the following way(s):
+       * Does not support complex input and output.
 
     Examples
     --------
     >>> from numpy import linalg as LA
     >>> a = np.array([[-1.9147992 ,  6.054115  , 18.046988  ],
-                      [ 0.77563655, -4.860152  ,  2.1012988 ],
-                      [ 2.6083658 ,  2.3705218 ,  0.3192524 ]])
+    ...               [ 0.77563655, -4.860152  ,  2.1012988 ],
+    ...               [ 2.6083658 ,  2.3705218 ,  0.3192524 ]])
     >>> w, v = LA.eig(a)
     >>> w
     array([ 6.9683027, -7.768063 , -5.655937 ])
@@ -797,8 +964,7 @@ def eig(a):
 
 
 def eigh(a, UPLO='L'):
-    r"""
-    Return the eigenvalues and eigenvectors real symmetric matrix.
+    r"""Return the eigenvalues and eigenvectors real symmetric matrix.
 
     Returns two objects, a 1-D array containing the eigenvalues of `a`, and
     a 2-D square array or matrix (depending on the input type) of the
@@ -837,21 +1003,21 @@ def eigh(a, UPLO='L'):
     eigvals : eigenvalues of a non-symmetric array.
     eigvalsh : eigenvalues of a real symmetric.
 
-    Notes
-    -----
-    The eigenvalues/eigenvectors are computed using LAPACK routines ``_syevd``.
+    .. note::
 
-    This function differs from the original `numpy.linalg.eigh
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigh.html>`_ in
-    the following way(s):
-     - Does not support complex input and output.
+       The eigenvalues/eigenvectors are computed using LAPACK routines ``_syevd``.
+
+       This function differs from the original `numpy.linalg.eigh
+       <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigh.html>`_ in
+       the following way(s):
+       * Does not support complex input and output.
 
     Examples
     --------
     >>> from numpy import linalg as LA
     >>> a = np.array([[ 6.8189726 , -3.926585  ,  4.3990498 ],
-                      [-0.59656644, -1.9166266 ,  9.54532   ],
-                      [ 2.1093285 ,  0.19688708, -1.1634291 ]])
+    ...               [-0.59656644, -1.9166266 ,  9.54532   ],
+    ...               [ 2.1093285 ,  0.19688708, -1.1634291 ]])
     >>> w, v = LA.eigh(a, UPLO='L')
     >>> w
     array([-2.175445 , -1.4581827,  7.3725457])

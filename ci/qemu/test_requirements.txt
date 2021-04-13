@@ -1,3 +1,0 @@
-mock
-nose
-nose-timer

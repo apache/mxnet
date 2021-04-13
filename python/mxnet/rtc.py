@@ -16,7 +16,6 @@
 # under the License.
 
 """Interface to runtime cuda kernel compile module."""
-from __future__ import absolute_import
 
 from array import array
 import re

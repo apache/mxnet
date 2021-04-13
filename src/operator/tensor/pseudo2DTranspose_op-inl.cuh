@@ -32,7 +32,7 @@
 #include <mshadow/base.h>
 #include <algorithm>
 #include <utility>
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 
 
 namespace mxnet {
@@ -165,7 +165,7 @@ inline void call_transpose_pseudo2D(index_t cTypeSize,
     default:
       LOG(FATAL) << "Unsupported type combination. " << "Copy type size = " << cTypeSize;
   }
-  auto cuErr = cudaPeekAtLastError();
+  auto cuErr = cudaGetLastError();
   CHECK_EQ(cuErr, cudaSuccess) << "TransposePseudo2D kernel failure: "
                                << cudaGetErrorString(cuErr) << ". "
                                << "block: (" << block.x << "," << block.y << "," << block.z << ")"

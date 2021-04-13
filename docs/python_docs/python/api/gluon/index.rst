@@ -16,7 +16,7 @@
    under the License.
 
 mxnet.gluon
-============
+===========
 
 The Gluon library in Apache MXNet provides a clear, concise, and simple API for deep learning.
 It makes it easy to prototype, build, and train deep learning models without sacrificing training speed.
@@ -33,10 +33,9 @@ one input layer, one hidden layer, and one output layer.
    # When instantiated, Sequential stores a chain of neural network layers.
    # Once presented with data, Sequential executes each layer in turn, using
    # the output of one layer as the input for the next
-   with net.name_scope():
-       net.add(gluon.nn.Dense(256, activation="relu")) # 1st layer (256 nodes)
-       net.add(gluon.nn.Dense(256, activation="relu")) # 2nd hidden layer
-       net.add(gluon.nn.Dense(num_outputs))
+   net.add(gluon.nn.Dense(256, activation="relu")) # 1st layer (256 nodes)
+   net.add(gluon.nn.Dense(256, activation="relu")) # 2nd hidden layer
+   net.add(gluon.nn.Dense(num_outputs))
 
 
 .. automodule:: mxnet.gluon
@@ -49,7 +48,7 @@ Tutorials
 
    .. card::
       :title: Gluon Guide
-      :link: ../tutorials/packages/gluon/index.html
+      :link: ../../tutorials/packages/gluon/index.html
 
       The Gluon guide. Start here!
 
@@ -96,6 +95,12 @@ Training
       :link: loss/index.html
 
       Loss functions for training neural networks.
+
+   .. card::
+      :title: gluon.metric
+      :link: metric/index.html
+
+      Metrics to evaluate the performance of a learned model.
 
    .. card::
       :title: gluon.Parameter
@@ -154,6 +159,5 @@ Utilities
    symbol_block
    constant
    parameter
-   parameter_dict
    trainer
    */index

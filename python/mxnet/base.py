@@ -18,9 +18,7 @@
 # coding: utf-8
 # pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument, unnecessary-pass, too-many-lines, wrong-import-position
 """ctypes library of mxnet and helper functions."""
-from __future__ import absolute_import
 
-import io
 import re
 import atexit
 import ctypes
@@ -51,12 +49,9 @@ numeric_types = (float, int, long, _np.generic)
 string_types = basestring,
 error_types = {}
 
-if sys.version_info[0] > 2:
-    # this function is needed for python3
-    # to convert ctypes.char_p .value back to python str
-    py_str = lambda x: x.decode('utf-8')
-else:
-    py_str = lambda x: x
+# this function is needed for python3
+# to convert ctypes.char_p .value back to python str
+py_str = lambda x: x.decode('utf-8')
 
 
 def data_dir_default():
@@ -77,28 +72,6 @@ def data_dir():
     :return: data directory in the filesystem for storage, for example when downloading models
     """
     return os.getenv('MXNET_HOME', data_dir_default())
-
-class _Py2CompatibleUnicodeFileWriter(object):
-    """
-    Wraps a file handle decorating the write command to unicode the content before writing.
-    This makes writing files opened with encoding='utf-8' compatible with Python 2
-    """
-
-    def __init__(self, file_handle):
-        self._file_handle = file_handle
-        if sys.version_info[0] > 2:
-            self.unicode = str
-        else:
-            from functools import partial
-            # pylint: disable=undefined-variable
-            self.unicode = partial(unicode, encoding="utf-8")
-            # pylint: enable=undefined-variable
-
-    def write(self, value):
-        self._file_handle.write(self.unicode(value))
-
-    def __getattr__(self, name):
-        return getattr(self._file_handle, name)
 
 
 class _NullType(object):
@@ -300,73 +273,15 @@ class MXCallbackList(ctypes.Structure):
         ]
 
 
-# Please see: https://stackoverflow.com/questions/5189699/how-to-make-a-class-property
-class _MXClassPropertyDescriptor(object):
-    def __init__(self, fget, fset=None):
-        self.fget = fget
-        self.fset = fset
-
-    def __get__(self, obj, clas=None):
-        if clas is None:
-            clas = type(obj)
-        return self.fget.__get__(obj, clas)()
-
-    def __set__(self, obj, value):
-        if not self.fset:
-            raise MXNetError("cannot use the setter: %s to set attribute" % obj.__name__)
-        if inspect.isclass(obj):
-            type_ = obj
-            obj = None
-        else:
-            type_ = type(obj)
-        return self.fset.__get__(obj, type_)(value)
-
-    def setter(self, func):
-        if not isinstance(func, (classmethod, staticmethod)):
-            func = classmethod(func)
-        self.fset = func
-        return self
-
-
-class _MXClassPropertyMetaClass(type):
-    def __setattr__(cls, key, value):
-        obj = cls.__dict__.get(key)
-        if obj and isinstance(obj, _MXClassPropertyDescriptor):
-            return obj.__set__(cls, value)
-
-        return super(_MXClassPropertyMetaClass, cls).__setattr__(key, value)
-
-
-# with_metaclass function obtained from: https://github.com/benjaminp/six/blob/master/six.py
-# pylint: disable=unused-argument
-def with_metaclass(meta, *bases):
-    """Create a base class with a metaclass."""
-    # This requires a bit of explanation: the basic idea is to make a dummy
-    # metaclass for one level of class instantiation that replaces itself with
-    # the actual metaclass.
-    class metaclass(type):
-
-        def __new__(cls, name, this_bases, d):
-            return meta(name, bases, d)
-
-        @classmethod
-        def __prepare__(cls, name, this_bases):
-            return meta.__prepare__(name, bases)
-    return type.__new__(metaclass, 'temporary_class', (), {})
-# pylint: enable=unused-argument
-
-
-def classproperty(func):
-    if not isinstance(func, (classmethod, staticmethod)):
-        func = classmethod(func)
-
-    return _MXClassPropertyDescriptor(func)
-
-
 def _load_lib():
     """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
-    lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
+    if sys.version_info >= (3, 8) and os.name == "nt":
+        # use LOAD_WITH_ALTERED_SEARCH_PATH, For simplicity, let's just fill the numbers.
+        # pylint: disable=E1123
+        lib = ctypes.CDLL(lib_path[0], winmode=0x00000008)
+    else:
+        lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
     return lib
@@ -389,98 +304,58 @@ FunctionHandle = ctypes.c_void_p
 OpHandle = ctypes.c_void_p
 CachedOpHandle = ctypes.c_void_p
 SymbolHandle = ctypes.c_void_p
-ExecutorHandle = ctypes.c_void_p
 DataIterCreatorHandle = ctypes.c_void_p
 DataIterHandle = ctypes.c_void_p
+DatasetHandle = ctypes.c_void_p
+BatchifyFunctionhandle = ctypes.c_void_p
 KVStoreHandle = ctypes.c_void_p
 RecordIOHandle = ctypes.c_void_p
 RtcHandle = ctypes.c_void_p
 CudaModuleHandle = ctypes.c_void_p
 CudaKernelHandle = ctypes.c_void_p
 ProfileHandle = ctypes.c_void_p
-DLPackHandle = ctypes.c_void_p
 
 
 #----------------------------
 # helper function definition
 #----------------------------
-if sys.version_info[0] < 3:
-    def c_str(string):
-        """Create ctypes char * from a Python string.
+def c_str(string):
+    """Create ctypes char * from a Python string.
 
-        Parameters
-        ----------
-        string : string type
-            Python string.
+    Parameters
+    ----------
+    string : string type
+        Python string.
 
-        Returns
-        -------
-        str : c_char_p
-            A char pointer that can be passed to C API.
+    Returns
+    -------
+    str : c_char_p
+        A char pointer that can be passed to C API.
 
-        Examples
-        --------
-        >>> x = mx.base.c_str("Hello, World")
-        >>> print x.value
-        Hello, World
-        """
-        return ctypes.c_char_p(string)
+    Examples
+    --------
+    >>> x = mx.base.c_str("Hello, World")
+    >>> print(x.value)
+    b"Hello, World"
+    """
+    return ctypes.c_char_p(string.encode('utf-8'))
 
-    def c_str_array(strings):
-        """Create ctypes const char ** from a list of Python strings.
+def c_str_array(strings):
+    """Create ctypes const char ** from a list of Python strings.
 
-        Parameters
-        ----------
-        strings : list of string
-            Python strings.
+    Parameters
+    ----------
+    strings : list of string
+        Python strings.
 
-        Returns
-        -------
-        (ctypes.c_char_p * len(strings))
-            A const char ** pointer that can be passed to C API.
-        """
-        arr = (ctypes.c_char_p * len(strings))()
-        arr[:] = strings
-        return arr
-
-else:
-    def c_str(string):
-        """Create ctypes char * from a Python string.
-
-        Parameters
-        ----------
-        string : string type
-            Python string.
-
-        Returns
-        -------
-        str : c_char_p
-            A char pointer that can be passed to C API.
-
-        Examples
-        --------
-        >>> x = mx.base.c_str("Hello, World")
-        >>> print(x.value)
-        b"Hello, World"
-        """
-        return ctypes.c_char_p(string.encode('utf-8'))
-
-    def c_str_array(strings):
-        """Create ctypes const char ** from a list of Python strings.
-
-        Parameters
-        ----------
-        strings : list of string
-            Python strings.
-
-        Returns
-        -------
-        (ctypes.c_char_p * len(strings))
-            A const char ** pointer that can be passed to C API.
-        """
-        arr = (ctypes.c_char_p * len(strings))()
-        arr[:] = [s.encode('utf-8') for s in strings]
-        return arr
+    Returns
+    -------
+    (ctypes.c_char_p * len(strings))
+        A const char ** pointer that can be passed to C API.
+    """
+    arr = (ctypes.c_char_p * len(strings))()
+    arr[:] = [s.encode('utf-8') for s in strings]
+    return arr
 
 
 def c_array(ctype, values):
@@ -815,18 +690,39 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
     op_code_gen_func : function
         Function for creating op functions for `ndarray` and `symbol` modules.
     """
+    license_lines = [
+        '# Licensed to the Apache Software Foundation (ASF) under one',
+        '# or more contributor license agreements.  See the NOTICE file',
+        '# distributed with this work for additional information',
+        '# regarding copyright ownership.  The ASF licenses this file',
+        '# to you under the Apache License, Version 2.0 (the',
+        '# "License"); you may not use this file except in compliance',
+        '# with the License.  You may obtain a copy of the License at',
+        '#',
+        '#   http://www.apache.org/licenses/LICENSE-2.0',
+        '#',
+        '# Unless required by applicable law or agreed to in writing,',
+        '# software distributed under the License is distributed on an',
+        '# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY',
+        '# KIND, either express or implied.  See the License for the',
+        '# specific language governing permissions and limitations',
+        '# under the License.',
+        '',
+    ]
+    license_str = os.linesep.join(license_lines)
     def get_module_file(module_name):
         """Return the generated module file based on module name."""
         path = os.path.dirname(__file__)
         module_path = module_name.split('.')
         module_path[-1] = 'gen_' + module_path[-1]
         file_name = os.path.join(path, '..', *module_path) + '.py'
-        module_file = _Py2CompatibleUnicodeFileWriter(io.open(file_name, 'w', encoding="utf-8"))
+        module_file = open(file_name, 'w', encoding="utf-8")
         dependencies = {'symbol': ['from ._internal import SymbolBase',
                                    'from ..base import _Null'],
                         'ndarray': ['from ._internal import NDArrayBase',
                                     'from ..base import _Null']}
         module_file.write('# coding: utf-8')
+        module_file.write(license_str)
         module_file.write('# File content is auto-generated. Do not modify.' + os.linesep)
         module_file.write('# pylint: skip-file' + os.linesep)
         module_file.write(os.linesep.join(dependencies[module_name.split('.')[1]]))
@@ -894,9 +790,15 @@ ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
 _NP_OP_PREFIX = '_np_'
 _NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
+_NP_OP_IMPLEMENTED_SET = {'_np_reshape'}
 
 _NP_EXT_OP_PREFIX = '_npx_'
 _NP_EXT_OP_SUBMODULE_LIST = ['_image_', '_random_']
+_NP_EXT_OP_IMPLEMENTED_SET = {'_npx_softmax', '_npx_log_softmax', '_npx_masked_softmax',
+                              '_npx_masked_log_softmax', '_npx_activation',
+                              '_npx_batch_norm', '_npx_fully_connected', '_npx_pick',
+                              '_npx_convolution', '_npx_deconvolution', '_npx_pooling',
+                              '_npx_dropout', '_npx_one_hot', '_npx_rnn'}
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
 
@@ -954,12 +856,15 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
     if np_module_name == 'numpy':
         op_name_prefix = _NP_OP_PREFIX
         submodule_name_list = _NP_OP_SUBMODULE_LIST
+        op_implemented_set = _NP_OP_IMPLEMENTED_SET
     elif np_module_name == 'numpy_extension':
         op_name_prefix = _NP_EXT_OP_PREFIX
         submodule_name_list = _NP_EXT_OP_SUBMODULE_LIST
+        op_implemented_set = _NP_EXT_OP_IMPLEMENTED_SET
     elif np_module_name == 'numpy._internal':
         op_name_prefix = _NP_INTERNAL_OP_PREFIX
         submodule_name_list = []
+        op_implemented_set = set()
     else:
         raise ValueError('unsupported np module name {}'.format(np_module_name))
 
@@ -969,8 +874,12 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
     op_names = []
     for i in range(size.value):
         name = py_str(plist[i])
-        if name.startswith(op_name_prefix):
-            op_names.append(name)
+        if mx_module_name != 'symbol':
+            if name.startswith(op_name_prefix) and name not in op_implemented_set:
+                op_names.append(name)
+        else:
+            if name.startswith(op_name_prefix):
+                op_names.append(name)
 
     if mx_module_name is None:
         # register np/npx ops for imperative programming

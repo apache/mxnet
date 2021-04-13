@@ -54,8 +54,8 @@ from benchmark.opperf.rules.default_params import MX_OP_MODULE
 """
 
 
-def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype) for all the neural network
+def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
+    """Runs benchmarks with the given context, precision (dtype), and input data size (int64_tensor) for all the neural network
     optimizer update operators in MXNet.
 
     Parameters
@@ -66,6 +66,8 @@ def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -76,60 +78,68 @@ def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
     Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
+    standard_shape = (5, 5)
+    int64_tensor_shape = (2**16, 2**16)
+
+    if int64_tensor == 'on':
+        arg_shape = int64_tensor_shape
+    else:
+        arg_shape = standard_shape
+
     # Run independent tests for ops that need specific input data
     multi_mp_sgd_mom_res = run_performance_test([getattr(MX_OP_MODULE, "multi_mp_sgd_mom_update")],
-                                                inputs=[{"args0": nd.random_normal(shape=(5,5)),
-                                                "args1": nd.random_normal(shape=(5,5)), "args2": nd.random_normal(shape=(5,5)),
-                                                "args3": nd.random_normal(shape=(5,5)), "lrs": 0.1, "wds": 0.2,
-                                                "out": nd.random_normal(shape=(5,5))}],run_backward=False)
+                                                inputs=[{"args0": nd.random_normal(shape=arg_shape),
+                                                "args1": nd.random_normal(shape=arg_shape), "args2": nd.random_normal(shape=arg_shape),
+                                                "args3": nd.random_normal(shape=arg_shape), "lrs": 0.1, "wds": 0.2,
+                                                "out": nd.random_normal(shape=arg_shape)}],run_backward=False)
 
     multi_sgd_mom_res = run_performance_test([getattr(MX_OP_MODULE, "multi_sgd_mom_update")],
-                                             inputs=[{"args0": nd.random_normal(shape=(5,5)),
-                                             "args1": nd.random_normal(shape=(5,5)),"args2": nd.random_normal(shape=(5,5)),
-                                             "lrs": 0.1, "wds": 0.2, "out": nd.random_normal(shape=(5,5))}], run_backward=False)
+                                             inputs=[{"args0": nd.random_normal(shape=arg_shape),
+                                             "args1": nd.random_normal(shape=arg_shape),"args2": nd.random_normal(shape=arg_shape),
+                                             "lrs": 0.1, "wds": 0.2, "out": nd.random_normal(shape=arg_shape)}], run_backward=False)
 
     multi_sgd_res = run_performance_test([getattr(MX_OP_MODULE, "multi_sgd_update")],
-                                         inputs=[{"args0": nd.random_normal(shape=(5,5)),
-                                         "args1": nd.random_normal(shape=(5,5)), "lrs": 0.1, "wds": 0.2,
-                                         "out": nd.random_normal(shape=(5,5))}], run_backward=False)
+                                         inputs=[{"args0": nd.random_normal(shape=arg_shape),
+                                         "args1": nd.random_normal(shape=arg_shape), "lrs": 0.1, "wds": 0.2,
+                                         "out": nd.random_normal(shape=arg_shape)}], run_backward=False)
 
     multi_mp_sgd_res = run_performance_test([getattr(MX_OP_MODULE, "multi_mp_sgd_update")],
-                                            inputs=[{"args0": nd.random_normal(shape=(5,5)),
-                                            "args1": nd.random_normal(shape=(5,5)),"args2": nd.random_normal(shape=(5,5)),
-                                            "lrs": 0.1, "wds": 0.2, "out": nd.random_normal(shape=(5,5))}], run_backward=False)
+                                            inputs=[{"args0": nd.random_normal(shape=arg_shape),
+                                            "args1": nd.random_normal(shape=arg_shape),"args2": nd.random_normal(shape=arg_shape),
+                                            "lrs": 0.1, "wds": 0.2, "out": nd.random_normal(shape=arg_shape)}], run_backward=False)
 
     preloaded_multi_mp_sgd_res = run_performance_test(
                                  [getattr(MX_OP_MODULE, "preloaded_multi_mp_sgd_update")],
-                                 inputs=[{"args0": nd.random_normal(shape=(5,5)),
-                                          "args1": nd.random_normal(shape=(5,5)), "args2": nd.random_normal(shape=(5,5)),
+                                 inputs=[{"args0": nd.random_normal(shape=arg_shape),
+                                          "args1": nd.random_normal(shape=arg_shape), "args2": nd.random_normal(shape=arg_shape),
                                           "args3": nd.random_normal(shape=(1)), "args4": nd.random_normal(shape=(1)),
-                                          "out": nd.random_normal(shape=(5,5))}], run_backward=False)
+                                          "out": nd.random_normal(shape=arg_shape)}], run_backward=False)
 
     preloaded_multi_sgd_mom_res = run_performance_test(
                                   [getattr(MX_OP_MODULE, "preloaded_multi_sgd_mom_update")],
-                                  inputs=[{"args0": nd.random_normal(shape=(5,5)),
-                                           "args1": nd.random_normal(shape=(5,5)), "args2": nd.random_normal(shape=(5,5)),
+                                  inputs=[{"args0": nd.random_normal(shape=arg_shape),
+                                           "args1": nd.random_normal(shape=arg_shape), "args2": nd.random_normal(shape=arg_shape),
                                            "args3": nd.random_normal(shape=(1)), "args4": nd.random_normal(shape=(1)),
-                                           "out": nd.random_normal(shape=(5,5))}], run_backward=False)
+                                           "out": nd.random_normal(shape=arg_shape)}], run_backward=False)
 
     preloaded_multi_sgd_res = run_performance_test(
                               [getattr(MX_OP_MODULE, "preloaded_multi_sgd_update")],
-                              inputs=[{"args0": nd.random_normal(shape=(5,5)), "args1": nd.random_normal(shape=(5,5)),
+                              inputs=[{"args0": nd.random_normal(shape=arg_shape), "args1": nd.random_normal(shape=arg_shape),
                                        "args4": nd.random_normal(shape=(1)), "args5": nd.random_normal(shape=(1)),
-                                       "out": nd.random_normal(shape=(5,5))}], run_backward=False)
+                                       "out": nd.random_normal(shape=arg_shape)}], run_backward=False)
 
     preloaded_multi_mp_sgd_mom_res = run_performance_test(
                                      [getattr(MX_OP_MODULE, "preloaded_multi_mp_sgd_mom_update")],
-                                     inputs=[{"args0": nd.random_normal(shape=(5,5)), "args1": nd.random_normal(shape=(5,5)),
-                                              "args2": nd.random_normal(shape=(5,5)), "args3": nd.random_normal(shape=(5,5)),
+                                     inputs=[{"args0": nd.random_normal(shape=arg_shape), "args1": nd.random_normal(shape=arg_shape),
+                                              "args2": nd.random_normal(shape=arg_shape), "args3": nd.random_normal(shape=arg_shape),
                                               "args4": nd.random_normal(shape=(1)), "args5": nd.random_normal(shape=(1)),
-                                              "out": nd.random_normal(shape=(5,5))}], run_backward=False)
+                                              "out": nd.random_normal(shape=arg_shape)}], run_backward=False)
 
     # Fetch remaining optimizer operators
     mx_optimizer_ops = get_all_optimizer_operators()
 
     # Run benchmarks
-    mx_optimizer_op_results = run_op_benchmarks(mx_optimizer_ops, dtype, ctx, profiler, warmup, runs)
+    mx_optimizer_op_results = run_op_benchmarks(mx_optimizer_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return merge_map_list(multi_sgd_mom_res + multi_sgd_mom_res + multi_sgd_res + multi_mp_sgd_res + preloaded_multi_mp_sgd_res +\
                           preloaded_multi_sgd_mom_res + preloaded_multi_mp_sgd_res + preloaded_multi_mp_sgd_mom_res +\
-                          [mx_optimizer_op_results])
+                          multi_mp_sgd_mom_res + preloaded_multi_sgd_res + [mx_optimizer_op_results])

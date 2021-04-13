@@ -24,7 +24,7 @@
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <utility>
 #include <mkldnn.hpp>
@@ -38,17 +38,15 @@ class MKLDNNPoolingFwd {
  public:
   MKLDNNPoolingFwd(const mxnet::NDArray &input,
                    const mxnet::NDArray &output,
-                   const int kernel_h, const int kernel_w,
-                   const int stride_h, const int stride_w,
-                   const int padding_t, const int padding_b,
-                   const int padding_l, const int padding_r,
+                   const mkldnn::memory::dims &kernel,
+                   const mkldnn::memory::dims &strides,
+                   const mkldnn::memory::dims &pad_l,
+                   const mkldnn::memory::dims &pad_r,
                    const mkldnn::algorithm alg_kind,
                    const bool with_workspace, const bool is_train):
                    with_workspace_(with_workspace),
                    fwd_(nullptr) {
-    Init(input, output,
-         kernel_h, kernel_w, stride_h, stride_w,
-         padding_t, padding_b, padding_l, padding_r,
+    Init(input, output, kernel, strides, pad_l, pad_r,
          is_train, alg_kind);
   }
 
@@ -67,10 +65,10 @@ class MKLDNNPoolingFwd {
  private:
   void Init(const mxnet::NDArray &input,
             const mxnet::NDArray &output,
-            const int kernel_h, const int kernel_w,
-            const int stride_h, const int stride_w,
-            const int padding_t, const int padding_b,
-            const int padding_l, const int padding_r,
+            const mkldnn::memory::dims &kernel,
+            const mkldnn::memory::dims &strides,
+            const mkldnn::memory::dims &pad_l,
+            const mkldnn::memory::dims &pad_r,
             const bool is_train, const mkldnn::algorithm alg_kind);
 };
 
@@ -98,31 +96,46 @@ inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
 }
 
 inline bool SupportMKLDNNPooling(const PoolingParam &param) {
-  return param.kernel.ndim() == 2 &&
+  return (param.kernel.ndim() == 1 || param.kernel.ndim() == 2 ||
+          param.kernel.ndim() == 3) &&
          (param.pool_type == pool_enum::kMaxPooling ||
           param.pool_type == pool_enum::kAvgPooling) &&
-         (!param.layout.has_value() || param.layout.value() == mshadow::kNCHW);
+         (!param.layout.has_value() ||
+         (param.layout.value() == mshadow::kNCW || param.layout.value() == mshadow::kNCHW ||
+          param.layout.value() == mshadow::kNCDHW));
 }
 
 inline bool SupportMKLDNNPooling(const PoolingParam &param,
-                                 const mxnet::TShape &dshape) {
-  bool ret = SupportMKLDNNPooling(param);
-  if (!ret)
+                                 const NDArray &input) {
+  const auto dshape = input.shape();
+  const auto ndim = dshape.ndim();
+  const auto dtype = input.dtype();
+
+  if (!(SupportStorageMKLDNN(input.storage_type()) && (ndim == 3 || ndim == 4 || ndim == 5) &&
+       (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16)))
+    return false;
+
+  if (!SupportMKLDNNPooling(param))
     return false;
 
   if (param.pooling_convention == pool_enum::kValid) {
     return true;
   } else {
     if (param.pool_type == pool_enum::kAvgPooling) {
-      CHECK_EQ(dshape.ndim(), 4);
       // mkldnn works differently when padding is asymmetric, so let's skip this case.
-      if (param.pad[0] == GetPaddingSizeFull(dshape[2], param.pad[0], param.pad[0], param.kernel[0],
-                                             param.stride[0]) &&
-          param.pad[1] == GetPaddingSizeFull(dshape[3], param.pad[1], param.pad[1], param.kernel[1],
-                                             param.stride[1])) {
-        return true;
+      bool is_symmetric = true;
+      switch (ndim) {
+        case 5:
+          is_symmetric = is_symmetric && (param.pad[2] == GetPaddingSizeFull(dshape[4],
+                                param.pad[2], param.pad[2], param.kernel[2], param.stride[2]));
+        case 4:
+          is_symmetric = is_symmetric && (param.pad[1] == GetPaddingSizeFull(dshape[3],
+                                param.pad[1], param.pad[1], param.kernel[1], param.stride[1]));
+        case 3:
+          is_symmetric = is_symmetric && (param.pad[0] == GetPaddingSizeFull(dshape[2],
+                                param.pad[0], param.pad[0], param.kernel[0], param.stride[0]));
       }
-      return false;
+      return is_symmetric;
     }
     return param.pool_type == pool_enum::kMaxPooling;
   }
@@ -147,5 +160,5 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
                                 const NDArray &output);
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_

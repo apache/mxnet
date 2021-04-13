@@ -97,7 +97,8 @@ class CachedOpThreadSafe : public CachedOp {
   OpStatePtr Forward(
       const std::shared_ptr<CachedOp>& op_ptr,
       const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs);
+      const std::vector<NDArray*>& outputs,
+      const Context& default_ctx);
   std::vector<std::string> ListForwardInputNames() const {
     nnvm::Symbol sym = GetForwardSym();
     return sym.ListInputNames(nnvm::Symbol::kAll);

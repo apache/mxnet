@@ -17,7 +17,6 @@
 
 """Namespace for ops used in imperative programming."""
 
-from __future__ import absolute_import
 from .. import random as _mx_rand
 from ..ndarray import numpy_extension as _mx_nd_npx
 

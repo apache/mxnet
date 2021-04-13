@@ -26,7 +26,7 @@
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include <vector>
 
 namespace mxnet {
@@ -87,7 +87,7 @@ static std::vector<float> GetWeightScales(const NDArray &weight, const NDArray *
 }
 
 static void ConvertWeightBias2MKLDNN(NDArray *weight, NDArray *bias, bool has_bias,
-                                     const mkldnn::memory::desc weight_md,
+                                     const mkldnn::memory::desc &weight_md,
                                      const mkldnn::memory::desc *bias_md,
                                      const int num_group, float data_scale,
                                      const std::vector<float> &weight_scales,
@@ -134,5 +134,5 @@ static void ConvertWeightBias2MKLDNN(NDArray *weight, NDArray *bias, bool has_bi
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // if MXNET_USE_MKLDNN == 1
+#endif  // if MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_

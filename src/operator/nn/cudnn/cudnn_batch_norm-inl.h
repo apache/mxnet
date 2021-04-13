@@ -123,13 +123,15 @@ class CuDNNBatchNormOp {
         Tensor<gpu, 1, DTypeParam> save_inv_var =
           out_data[cudnnbatchnorm::kInvVar]
           .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-        // If the lock on the auxiliary states is set,
-        // then this implies that the preceding call is also a `Forward()` call,
-        // which further indicates that we are in the backward mirroring mode,
-        // and therefore update to the auxiliary states is disabled.
-        // This is done by setting the `momentum` to `1` (or `factor` to `0`).
-        float factor = (dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0) && internal_aux_states_lock_) ?
-            0 : (1 - param_.momentum);
+        // If the lock on the auxiliary states is set, then this implies that
+        // the preceding call is also a `Forward()` call, which further
+        // indicates that we are in the backward mirroring mode, and therefore
+        // update to the auxiliary states is disabled. This is done by setting
+        // the `momentum` to `1` (or `factor` to `0`).
+        float factor = ((dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0) ||
+                         dmlc::GetEnv("MXNET_MEMORY_OPT", 0))
+                        && internal_aux_states_lock_) ?
+                       0 : (1 - param_.momentum);
         CUDNN_CALL(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
                                                           mode,
                                                           &a,
@@ -220,13 +222,24 @@ class CuDNNBatchNormOp {
 
       if (param_.fix_gamma) gamma = 1.f;
 
+      bool grad_add_gamma_beta = (req[cudnnbatchnorm::kGamma] == kAddTo) ||
+                                 (req[cudnnbatchnorm::kBeta] == kAddTo);
+      if (grad_add_gamma_beta) {
+        if (IsBNWriting(req[cudnnbatchnorm::kGamma])) {
+          dgamma = 0.f;
+        }
+        if (IsBNWriting(req[cudnnbatchnorm::kBeta])) {
+          dbeta = 0.f;
+        }
+      }
+
       CUDNN_CALL(cudnnBatchNormalizationBackward(
         s->dnn_handle_,
         mode,
         &a,
-        &b,
+        req[cudnnbatchnorm::kData] == kAddTo ? &b_add : &b,
         &a,
-        req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
+        grad_add_gamma_beta ? &b_add : &b,  // gamma and beta
         io_desc_,
         x.dptr_,
         io_desc_,
@@ -249,15 +262,27 @@ class CuDNNBatchNormOp {
 
  private:
   void Init(const TBlob &in_data) {
-    if (in_data.ndim() == 4) {
-      for (int i = 0; i < 4; ++i)
-        shape_[i] = in_data.shape_[i];
+    CHECK_GE(param_.axis, 0);
+    CHECK_LT(param_.axis, in_data.ndim());
+    if (param_.axis == 1) {
+      if (in_data.ndim() == 4) {
+        for (int i = 0; i < 4; ++i)
+          shape_[i] = in_data.shape_[i];
+      } else {
+        // when in_data.ndim() != 4
+        shape_[0] = in_data.shape_[0];
+        shape_[1] = in_data.ndim() > 1 ? in_data.shape_[1] : 1;
+        shape_[2] = 1;
+        shape_[3] = static_cast<dim_t>(in_data.shape_.ProdShape(2,
+              in_data.ndim()));
+      }
     } else {
-      // when in_data.ndim() != 4
-      shape_[0] = in_data.shape_[0];
-      shape_[1] = in_data.ndim() > 1 ? in_data.shape_[1] : 1;
+      // reshape to (N, C, 1, D), C is the `param_.axis` dimension
+      shape_[0] = static_cast<dim_t>(in_data.shape_.ProdShape(0, param_.axis));
+      shape_[1] = in_data.shape_[param_.axis];
       shape_[2] = 1;
-      shape_[3] = in_data.shape_.ProdShape(2, in_data.ndim());
+      shape_[3] = static_cast<dim_t>(in_data.shape_.ProdShape(param_.axis + 1,
+            in_data.ndim()));
     }
 
     CUDNN_CALL(cudnnSetTensor4dDescriptor(io_desc_,

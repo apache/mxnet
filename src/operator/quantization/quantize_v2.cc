@@ -24,7 +24,7 @@
  */
 
 #include "./quantize_v2-inl.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "./mkldnn/mkldnn_quantize_v2-inl.h"
 #endif
 
@@ -36,7 +36,7 @@ static bool QuantizeV2StorageType(const nnvm::NodeAttrs& attrs, const int dev_ma
                                   DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
                                   std::vector<int>* out_attrs) {
   *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
@@ -54,7 +54,7 @@ static OpStatePtr CreateQuantizeV2State(const nnvm::NodeAttrs& attrs, Context ct
   if (ctx.dev_type == kGPU) {
     state = OpStatePtr::Create<QuantizeV2Operator<gpu>>(attrs);
   } else {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     state = OpStatePtr::Create<SgMKLDNNQuantizeOperator>(attrs);
 #else
     state = OpStatePtr::Create<QuantizeV2Operator<cpu>>(attrs);
@@ -64,6 +64,7 @@ static OpStatePtr CreateQuantizeV2State(const nnvm::NodeAttrs& attrs, Context ct
 }
 
 NNVM_REGISTER_OP(_contrib_quantize_v2)
+.add_alias("_npx_contrib_quantize_v2")
 .describe(R"code(Quantize a input tensor from float to `out_type`,
 with user-specified `min_calib_range` and `max_calib_range` or the input range collected at runtime.
 
@@ -103,7 +104,7 @@ If min_calib_range isn't presented, the output type will be int8.
 // will be reverted after the improvement of CachedOP is done.
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FCreateOpState>("FCreateOpState", CreateQuantizeV2State)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNQuantizeForward)
 #endif

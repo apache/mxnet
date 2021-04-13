@@ -48,10 +48,9 @@ opt = parser.parse_args()
 # define network
 
 net = nn.Sequential()
-with net.name_scope():
-    net.add(nn.Dense(128, activation='relu'))
-    net.add(nn.Dense(64, activation='relu'))
-    net.add(nn.Dense(10))
+net.add(nn.Dense(128, activation='relu'))
+net.add(nn.Dense(64, activation='relu'))
+net.add(nn.Dense(10))
 
 # data
 
@@ -60,17 +59,17 @@ def transformer(data, label):
     return data, label
 
 train_data = gluon.data.DataLoader(
-    gluon.data.vision.MNIST('./data', train=True, transform=transformer),
+    gluon.data.vision.MNIST('./data', train=True).transform(transformer),
     batch_size=opt.batch_size, shuffle=True, last_batch='discard')
 
 val_data = gluon.data.DataLoader(
-    gluon.data.vision.MNIST('./data', train=False, transform=transformer),
+    gluon.data.vision.MNIST('./data', train=False).transform(transformer),
     batch_size=opt.batch_size, shuffle=False)
 
 # train
 
 def test(ctx):
-    metric = mx.metric.Accuracy()
+    metric = mx.gluon.metric.Accuracy()
     for data, label in val_data:
         data = data.as_in_context(ctx)
         label = label.as_in_context(ctx)
@@ -86,7 +85,7 @@ def train(epochs, ctx):
     # Trainer is for updating parameters with gradient.
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
                             {'learning_rate': opt.lr, 'momentum': opt.momentum})
-    metric = mx.metric.Accuracy()
+    metric = mx.gluon.metric.Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
     for epoch in range(epochs):

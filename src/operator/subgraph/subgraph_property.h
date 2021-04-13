@@ -251,13 +251,14 @@ class SubgraphSelectorV2Bridge : public SubgraphSelectorV2 {
  */
 class SubgraphProperty {
  public:
+  virtual ~SubgraphProperty() {}
   /*! \brief Property type */
   enum SgPropertyType {
     kCreate,
     kAdjust,
   };
 
-  explicit SubgraphProperty(SgPropertyType type = kCreate) : type_(type) {}
+  explicit SubgraphProperty(SgPropertyType type = kCreate) : type_(type), dedup_subgraph(true) {}
 
   /*!
    * \brief The criteria of selecting the subgraph nodes.
@@ -268,7 +269,14 @@ class SubgraphProperty {
   }
 
   virtual void PrePartition(const nnvm::Graph& g,
-    const std::vector<std::pair<std::string, std::string>>& options_map) {}
+    const std::unordered_map<std::string, std::string>& options_map) {
+    if (options_map.count("dedup_subgraph") > 0 &&
+        options_map.at("dedup_subgraph").compare("True") == 0) {
+      dedup_subgraph = true;
+    } else {
+      dedup_subgraph = false;
+    }
+  }
 
   virtual void PostPartition(const nnvm::Graph& g) {}
 
@@ -341,10 +349,25 @@ class SubgraphProperty {
    */
   virtual void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node,
                                       std::vector<nnvm::NodeEntry*>* output_entries) const {
+    // Collapse output_entries pointing to same NodeEntry
+    // Outputs are ordered, duplicates are neighbors
+    nnvm::NodeEntryEqual node_equal;
+    nnvm::NodeEntry prevNodeEntry;
+    uint32_t idx = 0;
     for (size_t i = 0; i < output_entries->size(); ++i) {
-      *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, static_cast<uint32_t>(i), 0};
+      if (dedup_subgraph) {
+        // increment the output idx for each unique output of the subgraph
+        if (i != 0 && !node_equal(prevNodeEntry, *output_entries->at(i)))
+          idx++;
+        prevNodeEntry = *output_entries->at(i);  // make a copy so we can compare before modifying
+        // change output entry to point to subgraph instead of original node
+        *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, idx, 0};
+      } else {
+        *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, static_cast<uint32_t>(i), 0};
+      }
     }
   }
+
   /*!
    * \brief Connect subgraph internal input with external input entries.
    * By default, each input entry will connect in top sorted order.
@@ -357,6 +380,14 @@ class SubgraphProperty {
                                      std::vector<nnvm::NodeEntry>* orig_input_entries) const {
     subgraph_node->inputs = *orig_input_entries;
   }
+  /*!
+   * \brief Initialize subgraph internal inputs with external input entries.
+   * Called before CreateSubgraphNode, optional
+   * \param input_entries input entries inside subgraph
+   * \param orig_input_entries input entries outside subgraph
+   */
+  virtual void InitSubgraphInputs(std::vector<nnvm::NodeEntry*>* input_entries,
+                                  std::vector<nnvm::NodeEntry>* orig_input_entries) const {}
   /*!
    * \brief Set an attr with name in the attr map.
    */
@@ -398,6 +429,7 @@ class SubgraphProperty {
  protected:
   SgPropertyType type_;
   std::unordered_map<std::string, std::shared_ptr<nnvm::any>> attrs_;
+  bool dedup_subgraph;
 };
 
 using SubgraphPropertyPtr = std::shared_ptr<SubgraphProperty>;

@@ -37,51 +37,16 @@ However, you may setup the website on macOS or Windows with or without a GPU.
 
 ### Prerequisites
 
-* [Conda >= 4.6.13](https://www.anaconda.com/distribution/#download-section) (install to PATH)
+To run the full build, including tests of all tutorials, **you will need at
+least two GPUs**. Distributed training is a key feature of MXNet, so multiple
+GPUs are required for running through some of the tutorials.
 
-You can update Conda with the following:
-
-```
-conda update conda
-```
-
-### GPU setup
-To run the full build, including tests of all tutorials,
-**you will need at least two GPUs**.
-Distributed training is a key feature of MXNet,
-so multiple GPUs are required for running through every tutorial.
-* [CUDA 9.2](https://developer.nvidia.com/cuda-downloads)
-
-### CPU-only setup
-In the `environment.yml` file:
-* Change `mxnet-cu92` to `mxnet`.
-
-### macOS setup
-In the `environment.yml` file:
-* Change `mxnet-cu92` to `mxnet`. (There is no CUDA package for mac anyway.)
-* Change `pytorch-cpu` to `pytorch`.
-* Change `torchvision-cpu` to `torchvision`.
-
-### Windows Setup
-If you have a GPU and have installed CUDA 9.2 you can leave the MXNet dependency alone.
-Otherwise, in the `environment.yml` file:
-* Change `mxnet-cu92` to `mxnet`.
-
-Install recommended software:
-* [git bash](https://gitforwindows.org/)
-* Be sure to install `Conda` in `PATH`
-* Install `make` from a `git bash` terminal with Admin rights
-    - [Install chocolatey](https://chocolatey.org/install)
-    - Use `choco to install make`
-* Restart terminals after installations to make sure PATH is set.
-    - The `choco`, `make`, and `conda` commands should work in `git bash`.
-
-### Conda environment setup
-Run the following commands from the project root (`python-docs`) to setup the environment.
+You need to install MXNet, for example, by following the build from source
+guide. Further, you need to install the Python requirements listed in the
+`requirements` file: 
 
 ```bash
-conda env create -f environment.yml
-source activate mxnet-docs
+python3 -m pip install -r requirements
 ```
 
 ## Build the docs
@@ -128,11 +93,3 @@ Optionally, one can run the following to launch the notedown plugin automaticall
 is not existing by run `jupyter notebook --generate-config`
 2. Add `c.NotebookApp.contents_manager_class = 'notedown.NotedownContentsManager'` to `~/.jupyter/jupyter_notebook_config.py`
 3. Simply run `jupyter notebook`
-
-## Troubleshooting
-Dependencies and the setup steps for this website are changing often. Here are some troubleshooting tips.
-
-* You might need to update the environment for the latest modules.
-```bash
-conda env update -f environment.yml
-```

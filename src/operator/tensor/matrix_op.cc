@@ -25,7 +25,7 @@
 // this will be invoked by gcc and compile CPU version
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../nn/mkldnn/mkldnn_base-inl.h"
 #include "../nn/mkldnn/mkldnn_slice-inl.h"
@@ -107,7 +107,7 @@ DMLC_REGISTER_PARAMETER(SqueezeParam);
 DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
 DMLC_REGISTER_PARAMETER(SplitParam);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
@@ -140,38 +140,49 @@ NNVM_REGISTER_OP(Reshape)
 Given an array and a shape, this function returns a copy of the array in the new shape.
 The shape is a tuple of integers such as (2,3,4). The size of the new shape should be same as the size of the input array.
 Example::
+
   reshape([1,2,3,4], shape=(2,2)) = [[1,2], [3,4]]
+
 Some dimensions of the shape can take special values from the set {0, -1, -2, -3, -4}. The significance of each is explained below:
-- ``0``  copy this dimension from the input to the output shape.
-  Example::
-  - input shape = (2,3,4), shape = (4,0,2), output shape = (4,3,2)
-  - input shape = (2,3,4), shape = (2,0,0), output shape = (2,3,4)
+- ``0``  copy this dimension from the input to the output shape. Example::
+
+      - input shape = (2,3,4), shape = (4,0,2), output shape = (4,3,2)
+      - input shape = (2,3,4), shape = (2,0,0), output shape = (2,3,4)
+
 - ``-1`` infers the dimension of the output shape by using the remainder of the input dimensions
   keeping the size of the new array same as that of the input array.
-  At most one dimension of shape can be -1.
-  Example::
-  - input shape = (2,3,4), shape = (6,1,-1), output shape = (6,1,4)
-  - input shape = (2,3,4), shape = (3,-1,8), output shape = (3,1,8)
-  - input shape = (2,3,4), shape=(-1,), output shape = (24,)
-- ``-2`` copy all/remainder of the input dimensions to the output shape.
-  Example::
-  - input shape = (2,3,4), shape = (-2,), output shape = (2,3,4)
-  - input shape = (2,3,4), shape = (2,-2), output shape = (2,3,4)
-  - input shape = (2,3,4), shape = (-2,1,1), output shape = (2,3,4,1,1)
+  At most one dimension of shape can be -1. Example::
+
+      - input shape = (2,3,4), shape = (6,1,-1), output shape = (6,1,4)
+      - input shape = (2,3,4), shape = (3,-1,8), output shape = (3,1,8)
+      - input shape = (2,3,4), shape=(-1,), output shape = (24,)
+
+- ``-2`` copy all/remainder of the input dimensions to the output shape. Example::
+
+      - input shape = (2,3,4), shape = (-2,), output shape = (2,3,4)
+      - input shape = (2,3,4), shape = (2,-2), output shape = (2,3,4)
+      - input shape = (2,3,4), shape = (-2,1,1), output shape = (2,3,4,1,1)
+
 - ``-3`` use the product of two consecutive dimensions of the input shape as the output dimension.
   Example::
-  - input shape = (2,3,4), shape = (-3,4), output shape = (6,4)
-  - input shape = (2,3,4,5), shape = (-3,-3), output shape = (6,20)
-  - input shape = (2,3,4), shape = (0,-3), output shape = (2,12)
-  - input shape = (2,3,4), shape = (-3,-2), output shape = (6,4)
+
+      - input shape = (2,3,4), shape = (-3,4), output shape = (6,4)
+      - input shape = (2,3,4,5), shape = (-3,-3), output shape = (6,20)
+      - input shape = (2,3,4), shape = (0,-3), output shape = (2,12)
+      - input shape = (2,3,4), shape = (-3,-2), output shape = (6,4)
+
 - ``-4`` split one dimension of the input into two dimensions passed subsequent to -4 in shape (can contain -1).
   Example::
-  - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
-  - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
+
+      - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
+      - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
+
 If the argument `reverse` is set to 1, then the special values are inferred from right to left.
   Example::
-  - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be (40,5)
-  - with reverse=1, output shape will be (50,4).
+
+      - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be (40,5)
+      - with reverse=1, output shape will be (50,4).
+
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -180,7 +191,7 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_reshape"})
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ReshapeComputeExCPU)
 .set_attr<FInferStorageType>("FInferStorageType", ReshapeStorageType)
@@ -200,7 +211,7 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void FlattenEx(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<NDArray>& inputs,
@@ -236,6 +247,7 @@ the input array into an output array of shape ``(d1, d2*...*dk)``.
 Note that the behavior of this function is different from numpy.ndarray.flatten,
 which behaves similar to mxnet.ndarray.reshape((-1,)).
 Example::
+
     x = [[
         [1,2,3],
         [4,5,6],
@@ -254,7 +266,7 @@ Example::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_copy" })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)
 .set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
@@ -273,7 +285,7 @@ Example::
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "Input array.");
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                   const OpContext& ctx,
                                   const std::vector<NDArray>& inputs,
@@ -289,7 +301,7 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
   if (SupportMKLDNNTranspose(param, inputs[0]) && req[0] == kWriteTo) {
-    MKLDNNTransposeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNTransposeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);
@@ -309,6 +321,7 @@ inline static bool TransposeStorageType(const nnvm::NodeAttrs& attrs,
 NNVM_REGISTER_OP(transpose)
 .describe(R"code(Permutes the dimensions of an array.
 Examples::
+
   x = [[ 1, 2],
        [ 3, 4]]
   transpose(x) = [[ 1.,  3.],
@@ -351,7 +364,11 @@ Examples::
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>)
-#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", TransposeComputeExCPU)
 .set_attr<FInferStorageType>("FInferStorageType", TransposeStorageType)
@@ -360,7 +377,7 @@ Examples::
 .add_arguments(TransposeParam::__FIELDS__());
 
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void ExpandDimEx(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
                         const std::vector<NDArray>& inputs,
@@ -408,7 +425,7 @@ will return a new array with shape ``(2,1,3,4)``.
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_reshape"})
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ExpandDimEx)
 .set_attr<FInferStorageType>("FInferStorageType", ExpandDimStorageType)
@@ -430,7 +447,7 @@ void SliceExCPU(const nnvm::NodeAttrs& attrs,
   auto in_stype = inputs[0].storage_type();
   if (in_stype == kCSRStorage) {
     SliceCsrImpl<cpu>(param, ctx, inputs[0], req[0], outputs[0]);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   } else if (in_stype == kDefaultStorage) {
     if (SupportMKLDNN(inputs[0])) {
       MKLDNNRun(MKLDNNSlice, attrs, ctx, inputs[0], req[0], outputs[0]);
@@ -447,7 +464,9 @@ NNVM_REGISTER_OP(slice)
 MXNET_ADD_SPARSE_OP_ALIAS(slice)
 .add_alias("crop")
 .describe(R"code(Slices a region of the array.
+
 .. note:: ``crop`` is deprecated. Use ``slice`` instead.
+
 This function returns a sliced array between the indices given
 by `begin` and `end` with the corresponding `step`.
 For an input array of ``shape=(d_0, d_1, ..., d_n-1)``,
@@ -464,13 +483,18 @@ and `step`, the following rule will be used to set default values.
 If `s_k` is `None`, set `s_k=1`. If `s_k > 0`, set `b_k=0`, `e_k=d_k`;
 else, set `b_k=d_k-1`, `e_k=-1`.
 The storage type of ``slice`` output depends on storage types of inputs
-- slice(csr) = csr
-- otherwise, ``slice`` generates output with default storage
-.. note:: When input data storage type is csr, it only supports
+* slice(csr) = csr
+* otherwise, ``slice`` generates output with default storage
+
+.. note::
+
+   When input data storage type is csr, it only supports
    step=(), or step=(None,), or step=(1,) to generate a csr output.
    For other step parameter values, it falls back to slicing
    a dense tensor.
+
 Example::
+
   x = [[  1.,   2.,   3.,   4.],
        [  5.,   6.,   7.,   8.],
        [  9.,  10.,  11.,  12.]]
@@ -494,7 +518,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SliceExCPU)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 #endif
 .add_argument("data", "NDArray-or-Symbol", "Source input")
@@ -557,6 +581,7 @@ NNVM_REGISTER_OP(slice_axis)
 Returns an array slice along a given `axis` starting from the `begin` index
 to the `end` index.
 Examples::
+
   x = [[  1.,   2.,   3.,   4.],
        [  5.,   6.,   7.,   8.],
        [  9.,  10.,  11.,  12.]]
@@ -608,6 +633,7 @@ is 3.
 The following is allowed in this situation:
 `` out = slice_like(a, b, axes=(0, 2))``
 Example::
+
   x = [[  1.,   2.,   3.,   4.],
        [  5.,   6.,   7.,   8.],
        [  9.,  10.,  11.,  12.]]
@@ -659,21 +685,25 @@ MXNET_ADD_SPARSE_OP_ALIAS(clip)
 .add_alias("_npi_clip")
 .describe(R"code(Clips (limits) the values in an array.
 Given an interval, values outside the interval are clipped to the interval edges.
-Clipping ``x`` between `a_min` and `a_max` would be::
+Clipping ``x`` between `a_min` and `a_max` would be
 .. math::
+
    clip(x, a_min, a_max) = \max(\min(x, a_max), a_min))
+
 Example::
+
     x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     clip(x,1,8) = [ 1.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  8.]
+
 The storage type of ``clip`` output depends on storage types of inputs and the a_min, a_max \
 parameter values:
-   - clip(default) = default
-   - clip(row_sparse, a_min <= 0, a_max >= 0) = row_sparse
-   - clip(csr, a_min <= 0, a_max >= 0) = csr
-   - clip(row_sparse, a_min < 0, a_max < 0) = default
-   - clip(row_sparse, a_min > 0, a_max > 0) = default
-   - clip(csr, a_min < 0, a_max < 0) = csr
-   - clip(csr, a_min > 0, a_max > 0) = csr
+* clip(default) = default
+* clip(row_sparse, a_min <= 0, a_max >= 0) = row_sparse
+* clip(csr, a_min <= 0, a_max >= 0) = csr
+* clip(row_sparse, a_min < 0, a_max < 0) = default
+* clip(row_sparse, a_min > 0, a_max > 0) = default
+* clip(csr, a_min < 0, a_max < 0) = csr
+* clip(csr, a_min > 0, a_max > 0) = csr
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -725,14 +755,17 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 NNVM_REGISTER_OP(repeat)
-.add_alias("_np_repeat")
+.add_alias("_npi_repeat")
 .describe(R"code(Repeats elements of an array.
 By default, ``repeat`` flattens the input array into 1-D and then repeats the
 elements::
+
   x = [[ 1, 2],
        [ 3, 4]]
   repeat(x, repeats=2) = [ 1.,  1.,  2.,  2.,  3.,  3.,  4.,  4.]
+
 The parameter ``axis`` specifies the axis along which to perform repeat::
+
   repeat(x, repeats=2, axis=1) = [[ 1.,  1.,  2.,  2.],
                                   [ 3.,  3.,  4.,  4.]]
   repeat(x, repeats=2, axis=0) = [[ 1.,  2.],
@@ -741,6 +774,7 @@ The parameter ``axis`` specifies the axis along which to perform repeat::
                                   [ 3.,  4.]]
   repeat(x, repeats=2, axis=-1) = [[ 1.,  1.,  2.,  2.],
                                    [ 3.,  3.,  4.,  4.]]
+
 )code" ADD_FILELINE)
 .set_num_outputs(1)
 .set_num_inputs(1)
@@ -773,18 +807,23 @@ NNVM_REGISTER_OP(tile)
 If ``reps`` has length *d*, and input array has dimension of *n*. There are
 three cases:
 - **n=d**. Repeat *i*-th dimension of the input by ``reps[i]`` times::
+
     x = [[1, 2],
          [3, 4]]
     tile(x, reps=(2,3)) = [[ 1.,  2.,  1.,  2.,  1.,  2.],
                            [ 3.,  4.,  3.,  4.,  3.,  4.],
                            [ 1.,  2.,  1.,  2.,  1.,  2.],
                            [ 3.,  4.,  3.,  4.,  3.,  4.]]
+
 - **n>d**. ``reps`` is promoted to length *n* by pre-pending 1's to it. Thus for
   an input shape ``(2,3)``, ``repos=(2,)`` is treated as ``(1,2)``::
+
     tile(x, reps=(2,)) = [[ 1.,  2.,  1.,  2.],
                           [ 3.,  4.,  3.,  4.]]
+
 - **n<d**. The input is promoted to be d-dimensional by prepending new axes. So a
   shape ``(2,2)`` array is promoted to ``(1,2,2)`` for 3-D replication::
+
     tile(x, reps=(2,2,3)) = [[[ 1.,  2.,  1.,  2.,  1.,  2.],
                               [ 3.,  4.,  3.,  4.,  3.,  4.],
                               [ 1.,  2.,  1.,  2.,  1.,  2.],
@@ -793,6 +832,7 @@ three cases:
                               [ 3.,  4.,  3.,  4.,  3.,  4.],
                               [ 1.,  2.,  1.,  2.,  1.,  2.],
                               [ 3.,  4.,  3.,  4.,  3.,  4.]]]
+
 )code" ADD_FILELINE)
 .set_num_outputs(1)
 .set_num_inputs(1)
@@ -823,12 +863,14 @@ NNVM_REGISTER_OP(reverse)
 .describe(R"code(Reverses the order of elements along given axis while preserving array shape.
 Note: reverse and flip are equivalent. We use reverse in the following examples.
 Examples::
+
   x = [[ 0.,  1.,  2.,  3.,  4.],
        [ 5.,  6.,  7.,  8.,  9.]]
   reverse(x, axis=0) = [[ 5.,  6.,  7.,  8.,  9.],
                         [ 0.,  1.,  2.,  3.,  4.]]
   reverse(x, axis=1) = [[ 4.,  3.,  2.,  1.,  0.],
                         [ 9.,  8.,  7.,  6.,  5.]]
+
 )code" ADD_FILELINE)
 .set_num_outputs(1)
 .set_num_inputs(1)
@@ -867,12 +909,14 @@ The axis parameter specifies the index of the new axis in the dimensions of the
 result. For example, if axis=0 it will be the first dimension and if axis=-1 it
 will be the last dimension.
 Examples::
+
   x = [1, 2]
   y = [3, 4]
   stack(x, y) = [[1, 2],
                  [3, 4]]
   stack(x, y, axis=1) = [[1, 3],
                          [2, 4]]
+
 )code")
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
     const StackParam& param = dmlc::get<StackParam>(attrs.parsed);
@@ -912,13 +956,14 @@ NNVM_REGISTER_OP(squeeze)
 Same behavior of defining the output tensor shape as numpy.squeeze for the most of cases.
 See the following note for exception.
 Examples::
+
   data = [[[0], [1], [2]]]
   squeeze(data) = [0, 1, 2]
   squeeze(data, axis=0) = [[0], [1], [2]]
   squeeze(data, axis=2) = [[0, 1, 2]]
   squeeze(data, axis=(0, 2)) = [0, 1, 2]
-.. Note::
-  The output of this operator will keep at least one dimension not removed. For example,
+
+.. note:: The output of this operator will keep at least one dimension not removed. For example,
   squeeze([[[4]]]) = [4], while in numpy.squeeze, the output will become a scalar.
 )code")
 .set_num_inputs(1)
@@ -948,15 +993,19 @@ Similar to ONNX DepthToSpace operator:
 https://github.com/onnx/onnx/blob/master/docs/Operators.md#DepthToSpace.
 The output is a new tensor where the values from depth dimension are moved in spatial blocks
 to height and width dimension. The reverse of this operation is ``space_to_depth``.
+
 .. math::
+
     \begin{gather*}
     x \prime = reshape(x, [N, block\_size, block\_size, C / (block\_size ^ 2), H * block\_size, W * block\_size]) \\
     x \prime \prime = transpose(x \prime, [0, 3, 4, 1, 5, 2]) \\
     y = reshape(x \prime \prime, [N, C / (block\_size ^ 2), H * block\_size, W * block\_size])
     \end{gather*}
+
 where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width]
 and :math:`y` is the output tensor of layout :math:`[N, C / (block\_size ^ 2), H * block\_size, W * block\_size]`
 Example::
+
   x = [[[[0, 1, 2],
          [3, 4, 5]],
         [[6, 7, 8],
@@ -969,6 +1018,7 @@ Example::
                             [12, 18, 13, 19, 14, 20],
                             [3, 9, 4, 10, 5, 11],
                             [15, 21, 16, 22, 17, 23]]]]
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DepthToSpaceParam>)
 .set_num_inputs(1)
@@ -996,14 +1046,17 @@ https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth
 The output is a new tensor where the values from height and width dimension are
 moved to the depth dimension. The reverse of this operation is ``depth_to_space``.
 .. math::
+
     \begin{gather*}
     x \prime = reshape(x, [N, C, H / block\_size, block\_size, W / block\_size, block\_size]) \\
     x \prime \prime = transpose(x \prime, [0, 3, 5, 1, 2, 4]) \\
     y = reshape(x \prime \prime, [N, C * (block\_size ^ 2), H / block\_size, W / block\_size])
     \end{gather*}
+
 where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width]
 and :math:`y` is the output tensor of layout :math:`[N, C * (block\_size ^ 2), H / block\_size, W / block\_size]`
 Example::
+
   x = [[[[0, 6, 1, 7, 2, 8],
          [12, 18, 13, 19, 14, 20],
          [3, 9, 4, 10, 5, 11],
@@ -1016,6 +1069,7 @@ Example::
                             [15, 16, 17]],
                            [[18, 19, 20],
                             [21, 22, 23]]]]
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DepthToSpaceParam>)
 .set_num_inputs(1)
@@ -1038,8 +1092,10 @@ Example::
 
 NNVM_REGISTER_OP(_split_v2)
 .add_alias("_npi_split")
+.add_alias("_npi_array_split")
 .describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 Example::
+
    x  = [[[ 1.]
           [ 2.]]
          [[ 3.]
@@ -1072,11 +1128,13 @@ Example::
          [6.]]]
   w[0].shape = (1, 2, 1)
   w[1].shape = (2, 2, 1)
+
 `squeeze_axis=True` removes the axis with length 1 from the shapes of the output arrays.
 **Note** that setting `squeeze_axis` to ``1`` removes axis with length 1 only
 along the `axis` which it is split.
 Also `squeeze_axis` can be set to true only if ``input.shape[axis] == indices_or_sections``.
 Example::
+
    z = split_v2(x, axis=0, indices_or_sections=3, squeeze_axis=1) // a list of 3 arrays with shape (2, 1)
    z = [[ 1.]
         [ 2.]]
@@ -1085,6 +1143,7 @@ Example::
        [[ 5.]
         [ 6.]]
    z[0].shape = (2, 1)
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<SplitParam>)
 .set_num_inputs(1)

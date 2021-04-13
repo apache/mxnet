@@ -30,11 +30,14 @@ Currently, we are supporting tests in the following systems:
 - Ubuntu 18.04
 - Cent OS 7
 
-All packages are currently built in `Ubuntu 14.04`. All Dockerfile used for publishing are available in `ci/docker/` with prefix `Dockerfile.publish`.
+All packages are currently built in `Cent OS 7` with Developer Toolset 7.
+Developer Toolset 7 provides `GCC 7` with C++17 support on `Cent OS 7`, enabling
+us to build binaries that support all major Linux distributions released after
+2014 (cf. Python Enhancement Proposals 599). All Dockerfile used for publishing
+are available in `ci/docker/` with prefix `Dockerfile.publish`.
 
 Apart from that, the script used to create the environment and publish are available under `ci/docker/install`:
 
-- `ubuntu_publish.sh` installs all required dependencies for Ubuntu 14.04 for publishing
 - `ubuntu_base.sh` installs minimum dependencies required to run the published packages
 
 ## Scala publishing

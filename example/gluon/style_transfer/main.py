@@ -24,7 +24,7 @@ np.set_printoptions(precision=2)
 from PIL import Image
 
 from mxnet import autograd, gluon
-from mxnet.gluon import nn, Block, HybridBlock, Parameter, ParameterDict
+from mxnet.gluon import nn, Block, HybridBlock, Parameter
 import mxnet.ndarray as F
 
 import net

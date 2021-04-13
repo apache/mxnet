@@ -131,13 +131,23 @@ NNVM_REGISTER_OP(_broadcast_backward)
   });
 
 NNVM_REGISTER_OP(broadcast_like)
+.add_alias("_npx_broadcast_like")
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
       return std::vector<std::string>{"lhs", "rhs"};
     })
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
+                                             std::vector<int> *in_attrs,
+                                             std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2) << " in operator " << attrs.name;
+  std::vector<int> checked_in_attrs = { (*in_attrs)[0] };
+  bool ret = !type_is_none((*in_attrs)[1]) &&
+             ElemwiseType<1, 1>(attrs, &checked_in_attrs, out_attrs);
+  (*in_attrs)[0] = checked_in_attrs[0];
+  return ret;
+})
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {

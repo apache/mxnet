@@ -26,6 +26,7 @@
 #include "./elemwise_binary_op.h"
 #include "./elemwise_binary_op-inl.h"
 #include "./indexing_op.h"
+#include "../../common/cuda/rtc.h"
 
 namespace mxnet {
 namespace op {
@@ -218,52 +219,47 @@ void ElemwiseBinaryOp::DnsCsrDnsOp(mshadow::Stream<gpu> *s,
 }
 
 NNVM_REGISTER_OP(elemwise_add)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, op::mshadow_op::plus>)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"add"})
 .set_attr<FComputeEx>("FComputeEx<gpu>", ElemwiseBinaryOp::ComputeEx<gpu, op::mshadow_op::plus>);
 
 NNVM_REGISTER_OP(_grad_add)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, op::mshadow_op::plus>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"add"});
 
 NNVM_REGISTER_OP(_backward_add)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::BackwardUseNoneWithHalf2<gpu, mshadow_op::identity,
-                    mshadow_op::identity>);
+                    ElemwiseBinaryRTCBwdUseNone{"identity", "identity"});
 
 NNVM_REGISTER_OP(elemwise_sub)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<
-  gpu, op::mshadow_op::minus>)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"sub"})
 .set_attr<FComputeEx>("FComputeEx<gpu>", ElemwiseBinaryOp::ComputeEx<gpu, op::mshadow_op::minus>);
 
 NNVM_REGISTER_OP(_backward_sub)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::BackwardUseNoneWithHalf2<gpu, mshadow_op::identity,
-                    mshadow_op::negation>);
+                    ElemwiseBinaryRTCBwdUseNone{"identity", "negation"});
 
 NNVM_REGISTER_OP(elemwise_mul)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, op::mshadow_op::mul>)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"mul"})
 .set_attr<FComputeEx>("FComputeEx<gpu>",
   ElemwiseBinaryOp::ComputeDnsLRValueEx<gpu, op::mshadow_op::mul, true, true>);
 
 NNVM_REGISTER_OP(_backward_mul)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::BackwardUseInWithHalf2<gpu, mshadow_op::right,
-                    mshadow_op::left>);
+                    ElemwiseBinaryRTCBwdUseIn{"right", "left"});
 
 NNVM_REGISTER_OP(elemwise_div)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::ElemwiseBinaryOp::ComputeWithHalf2<gpu, op::mshadow_op::div>);
+                    ElemwiseBinaryRTCCompute{"div"});
 
 NNVM_REGISTER_OP(_backward_div)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::BackwardUseInWithHalf2<gpu, mshadow_op::div_grad,
-                    mshadow_op::div_rgrad>);
+                    ElemwiseBinaryRTCBwdUseIn{"div_grad", "div_rgrad"});
 
 NNVM_REGISTER_OP(_mod)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, mshadow_op::mod>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"mod"});
 
 NNVM_REGISTER_OP(_backward_mod)
 .set_attr<FCompute>("FCompute<gpu>",
-  ElemwiseBinaryOp::BackwardUseInWithHalf2<gpu, mshadow_op::mod_grad, mshadow_op::mod_rgrad>);
+  ElemwiseBinaryRTCBwdUseIn{"mod_grad", "mod_rgrad"});
 
 }  // namespace op
 }  // namespace mxnet

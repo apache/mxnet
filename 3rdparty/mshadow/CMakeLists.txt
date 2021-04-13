@@ -4,8 +4,10 @@ project(mshadow C CXX)
 include(CMakeDependentOption)
 option(USE_CUDA "Build with CUDA support" ON)
 option(USE_CUDNN ON)
-cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
-option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
+cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
+  "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)
+cmake_dependent_option(USE_F16C "Build with x86 F16C instruction support" ON
+  "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)   # autodetects support if ON
 option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(MSHADOW_IN_CXX11 ON)
 
@@ -13,6 +15,19 @@ add_library(mshadow INTERFACE)
 file(GLOB_RECURSE MSHADOWSOURCE "mshadow/*.h")
 target_include_directories(mshadow INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_sources(mshadow INTERFACE ${MSHADOWSOURCE})
+if(UNIX)
+  target_compile_options(mshadow INTERFACE
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-braced-scalar-init>"
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-pass-failed>"
+    # TODO Replace Wno-unused-lambda-capture with [[maybe_unused]] annotation once requiring C++17
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-unused-lambda-capture>"
+    # TODO Fixing the warning leads to compile error on 4.8; fix once 4.8 support is dropped
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-undefined-var-template>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>"
+    "$<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>")
+endif()
 
 if(USE_CUDA)
   enable_language(CUDA)
@@ -44,6 +59,9 @@ endif()
 if(USE_CUDNN)
   target_compile_definitions(mshadow INTERFACE MSHADOW_USE_CUDNN)
 endif()
+if(USE_CUTENSOR)
+  target_compile_definitions(mshadow INTERFACE MSHADOW_USE_CUTENSOR)
+endif()
 if(MSHADOW_IN_CXX11)
   target_compile_definitions(mshadow INTERFACE MSHADOW_IN_CXX11)
 endif()
@@ -67,7 +85,8 @@ else()
 endif()
 
 set(mshadow_LINT_DIRS mshadow mshadow-ps)
+find_package(Python3)
 add_custom_target(mshadow_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC}
-  -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${mshadow_LINT_DIRS}
+  -DPYTHON_EXECUTABLE=${Python3_EXECUTABLE} -DLINT_DIRS=${mshadow_LINT_DIRS}
   -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mshadow
   -P ${PROJECT_SOURCE_DIR}/../dmlc-core/cmake/lint.cmake)

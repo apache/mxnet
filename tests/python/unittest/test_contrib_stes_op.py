@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from common import with_seed
+from common import xfail_when_nonstandard_decimal_separator
 import mxnet as mx
 from mxnet import nd, autograd, gluon
 from mxnet.test_utils import default_context
@@ -24,8 +24,7 @@ from mxnet.test_utils import default_context
 class RoundSTENET(gluon.HybridBlock):
     def __init__(self, w_init, **kwargs):
         super(RoundSTENET, self).__init__(**kwargs)
-        with self.name_scope():
-            self.w = self.params.get('w', shape=30, init=mx.initializer.Constant(w_init), grad_req='write')
+        self.w = gluon.Parameter('w', shape=30, init=mx.initializer.Constant(w_init), grad_req='write')
 
     @staticmethod
     def expected_grads(in_data, w_init):
@@ -48,8 +47,7 @@ class RoundSTENET(gluon.HybridBlock):
 class SignSTENET(gluon.HybridBlock):
     def __init__(self, w_init, **kwargs):
         super(SignSTENET, self).__init__(**kwargs)
-        with self.name_scope():
-            self.w = self.params.get('w', shape=30, init=mx.initializer.Constant(w_init), grad_req='write')
+        self.w = gluon.Parameter('w', shape=30, init=mx.initializer.Constant(w_init), grad_req='write')
 
     @staticmethod
     def expected_grads(in_data, w_init):
@@ -76,7 +74,7 @@ def check_ste(net_type_str, w_init, hybridize, in_data, ctx=None):
     if hybridize:
         net.hybridize()
     # Init
-    net.collect_params().initialize(mx.init.Constant([w_init]), ctx=ctx)
+    net.initialize(mx.init.Constant([w_init]), ctx=ctx)
 
     # Test:
     in_data = in_data.as_in_context(ctx)
@@ -98,7 +96,7 @@ def check_ste(net_type_str, w_init, hybridize, in_data, ctx=None):
                                                                      str(net.w.grad()) + " but expected " + \
                                                                      str(net.expected_grads(in_data, w_init))
 
-@with_seed()
+@xfail_when_nonstandard_decimal_separator
 def test_contrib_round_ste():
     # Test with random data
     in_data = nd.uniform(-10, 10, shape=30)  # 10 and 30 are arbitrary numbers
@@ -119,7 +117,7 @@ def test_contrib_round_ste():
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=False, in_data=in_data)
 
 
-@with_seed()
+@xfail_when_nonstandard_decimal_separator
 def test_contrib_sign_ste():
     in_data = nd.uniform(-10, 10, shape=30)  # 10 and 30 are arbitrary numbers
     w_init = float(nd.uniform(-10, 10, shape=1).asscalar())
@@ -132,6 +130,3 @@ def test_contrib_sign_ste():
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=True, in_data=in_data)
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=False, in_data=in_data)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

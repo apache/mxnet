@@ -18,7 +18,7 @@
  */
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_SUBGRAPH_BASE_INL_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_SUBGRAPH_BASE_INL_H_
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include "../subgraph_property.h"
 
@@ -29,7 +29,9 @@ static inline bool SupportMKLDNNAttr(const std::shared_ptr<NodeAttr>& node_attr)
   if (node_attr) {
     int ndim = node_attr->ishape[0].ndim();
     return (node_attr->dispatch_mode == DispatchMode::kFComputeEx) &&
-           (node_attr->itype[0] == mshadow::kFloat32) && (ndim == 1 || ndim == 2 || ndim == 4);
+           (node_attr->itype[0] == mshadow::kFloat32 ||
+            node_attr->itype[0] == mshadow::kBfloat16) &&
+           (ndim == 1 || ndim == 2 || ndim == 4 || ndim == 5);
   } else {
     return true;
   }
@@ -38,5 +40,5 @@ static inline bool SupportMKLDNNAttr(const std::shared_ptr<NodeAttr>& node_attr)
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_SUBGRAPH_BASE_INL_H_

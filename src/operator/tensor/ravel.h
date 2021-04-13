@@ -76,16 +76,24 @@ inline bool UnravelOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   CHECK_GT(shape.ndim(), 0) << "Empty shape parameter for unravel operator.";
-  if ((*in_attrs)[0].ndim() > 0) {
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, Shape2(shape.ndim(), (*in_attrs)[0][0]));
+  const mxnet::TShape &in_shape = (*in_attrs)[0];
+  if (in_shape.ndim() > 0) {
+    mxnet::TShape out_shape(in_shape.ndim() + 1, -1);
+    out_shape[0] = shape.ndim();
+    for (int i = 0; i < in_shape.ndim(); ++i) {
+      out_shape[i+1] = in_shape[i];
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape);
     return true;
   }
   if ((*out_attrs)[0].ndim() > 0) {
+    const mxnet::TShape &out_shape = (*out_attrs)[0];
     CHECK_EQ((*out_attrs)[0].ndim(), 2)
       << "Output of unravel operator must be two-dimensional.";
     CHECK_EQ((*out_attrs)[0][0], shape.ndim())
       << "First dimension of output of ravel operator does not match shape parameter dimension.";
-    SHAPE_ASSIGN_CHECK(*in_attrs, 0, Shape1((*out_attrs)[0][1]));
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, mxnet::TShape(
+          out_shape.data() + 1, out_shape.data() + out_shape.ndim()));
     return true;
   }
   return false;
@@ -93,7 +101,7 @@ inline bool UnravelOpShape(const nnvm::NodeAttrs& attrs,
 
 struct ravel_index {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, index_t N, index_t ndim, index_t *shape,
+  MSHADOW_XINLINE static void Map(index_t i, index_t N, index_t ndim, index_t *shape,
                                   DType *unravelled, DType *ravelled) {
     index_t ret = 0;
     #pragma unroll
@@ -156,8 +164,9 @@ void UnravelForward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
     Tensor<xpu, 1, OType> in = inputs[0].FlatTo1D<xpu, OType>(s);
     Tensor<xpu, 1, OType> out = outputs[0].FlatTo1D<xpu, OType>(s);
-    mxnet_op::Kernel<unravel_index, xpu>::Launch(s, in.size(0), in.size(0), out.size(0)/in.size(0),
-                                                 work.dptr_, out.dptr_, in.dptr_);
+    mxnet_op::Kernel<unravel_index, xpu>::Launch(
+        s, in.shape_.Size(), in.shape_.Size(), shape.ndim(),
+        work.dptr_, out.dptr_, in.dptr_);
   });
 }
 

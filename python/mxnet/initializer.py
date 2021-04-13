@@ -16,7 +16,6 @@
 # under the License.
 
 """Weight initializer."""
-from __future__ import absolute_import, print_function
 
 import re
 import logging
@@ -307,11 +306,9 @@ def register(klass):
     ...   def _init_bias(self, _, arr):
     ...     arr[:] = 1
     ...
-    >>> # Module is an instance of 'mxnet.module.Module'
+    >>> # block is an instance of 'mxnet.gluon.Block'
     ...
-    >>> module.init_params("custominit")
-    >>> # module.init_params("myinit")
-    >>> # module.init_params(CustomInit())
+    >>> block.initialize(CustomInit())
     """
     return _register(klass)
 
@@ -375,11 +372,11 @@ class Mixed(object):
 
     Example
     -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize biases to zero
+    >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize biases to zero
     ... # and every other parameter to random values with uniform distribution.
     ...
     >>> init = mx.initializer.Mixed(['bias', '.*'], [mx.init.Zero(), mx.init.Uniform(0.1)])
-    >>> module.init_params(init)
+    >>> block.initialize(init)
     >>>
     >>> for dictionary in module.get_params():
     ...     for key in dictionary:
@@ -411,10 +408,10 @@ class Zero(Initializer):
 
     Example
     -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights to zero.
+    >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize weights to zero.
     ...
     >>> init = mx.initializer.Zero()
-    >>> module.init_params(init)
+    >>> module.initialize(init)
     >>> for dictionary in module.get_params():
     ...     for key in dictionary:
     ...         print(key)
@@ -436,10 +433,10 @@ class One(Initializer):
 
     Example
     -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights to one.
+    >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize weights to one.
     ...
     >>> init = mx.initializer.One()
-    >>> module.init_params(init)
+    >>> module.initialize(init)
     >>> for dictionary in module.get_params():
     ...     for key in dictionary:
     ...         print(key)
@@ -491,11 +488,11 @@ class Uniform(Initializer):
 
     Example
     -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
+    >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize weights
     >>> # to random values uniformly sampled between -0.1 and 0.1.
     ...
     >>> init = mx.init.Uniform(0.1)
-    >>> module.init_params(init)
+    >>> module.initialize(init)
     >>> for dictionary in module.get_params():
     ...     for key in dictionary:
     ...         print(key)
@@ -510,7 +507,7 @@ class Uniform(Initializer):
 
     def _init_weight(self, _, arr):
         uniform_fn = _mx_np.random.uniform if is_np_array() else random.uniform
-        uniform_fn(-self.scale, self.scale, arr.shape, out=arr)
+        uniform_fn(-self.scale, self.scale, arr.shape, dtype=arr.dtype, out=arr)
 
 @register
 class Normal(Initializer):
@@ -525,11 +522,11 @@ class Normal(Initializer):
 
     Example
     -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
+    >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize weights
     >>> # to random values sampled from a normal distribution.
     ...
     >>> init = mx.init.Normal(0.5)
-    >>> module.init_params(init)
+    >>> module.initialize(init)
     >>> for dictionary in module.get_params():
     ...     for key in dictionary:
     ...         print(key)
@@ -544,7 +541,7 @@ class Normal(Initializer):
 
     def _init_weight(self, _, arr):
         normal_fn = _mx_np.random.normal if is_np_array() else random.normal
-        normal_fn(0, self.sigma, arr.shape, out=arr)
+        normal_fn(0, self.sigma, arr.shape, dtype=arr.dtype, out=arr)
 
 @register
 class Orthogonal(Initializer):
@@ -644,10 +641,10 @@ class Xavier(Initializer):
         scale = np.sqrt(self.magnitude / factor)
         if self.rnd_type == "uniform":
             uniform_fn = _mx_np.random.uniform if is_np_array() else random.uniform
-            uniform_fn(-scale, scale, arr.shape, out=arr)
+            uniform_fn(-scale, scale, arr.shape, dtype=arr.dtype, out=arr)
         elif self.rnd_type == "gaussian":
             normal_fn = _mx_np.random.normal if is_np_array() else random.normal
-            normal_fn(0, scale, arr.shape, out=arr)
+            normal_fn(0, scale, arr.shape, dtype=arr.dtype, out=arr)
         else:
             raise ValueError("Unknown random type")
 
@@ -714,57 +711,3 @@ class LSTMBias(Initializer):
         # gate of the 4 LSTM gates, we modify the according values.
         num_hidden = int(arr.shape[0] / 4)
         arr[num_hidden:2*num_hidden] = self.forget_bias
-
-
-@register
-class FusedRNN(Initializer):
-    """Initialize parameters for fused rnn layers.
-
-    Parameters
-    ----------
-    init : Initializer
-        initializer applied to unpacked weights. Fall back to global
-        initializer if None.
-    num_hidden : int
-        should be the same with arguments passed to FusedRNNCell.
-    num_layers : int
-        should be the same with arguments passed to FusedRNNCell.
-    mode : str
-        should be the same with arguments passed to FusedRNNCell.
-    bidirectional : bool
-        should be the same with arguments passed to FusedRNNCell.
-    forget_bias : float
-        should be the same with arguments passed to FusedRNNCell.
-    """
-    def __init__(self, init, num_hidden, num_layers, mode, bidirectional=False, forget_bias=1.0):
-        if isinstance(init, string_types):
-            klass, kwargs = json.loads(init)
-            init = registry._REGISTRY[klass.lower()](**kwargs)
-        super(FusedRNN, self).__init__(init=init.dumps() if init is not None else None,
-                                       num_hidden=num_hidden, num_layers=num_layers, mode=mode,
-                                       bidirectional=bidirectional, forget_bias=forget_bias)
-        self._init = init
-        self._num_hidden = num_hidden
-        self._num_layers = num_layers
-        self._mode = mode
-        self._bidirectional = bidirectional
-        self._forget_bias = forget_bias
-
-    def _init_weight(self, desc, arr): # pylint: disable=arguments-differ
-        from .rnn import rnn_cell
-        cell = rnn_cell.FusedRNNCell(self._num_hidden, self._num_layers,
-                                     self._mode, self._bidirectional,
-                                     forget_bias=self._forget_bias, prefix='')
-        args = cell.unpack_weights({'parameters': arr})
-        for name in args:
-            arg_desc = InitDesc(name, global_init=desc.global_init)
-            # for lstm bias, we use a custom initializer
-            # which adds a bias to the forget gate
-            if self._mode == 'lstm' and name.endswith("_f_bias"):
-                args[name][:] = self._forget_bias
-            elif self._init is None:
-                desc.global_init(arg_desc, args[name])
-            else:
-                self._init(arg_desc, args[name])
-
-        arr[:] = cell.pack_weights(args)['parameters']

@@ -38,6 +38,7 @@
 #include "../imperative/imperative_utils.h"
 #include "../imperative/cached_op.h"
 #include "../imperative/cached_op_threadsafe.h"
+#include "../profiler/profiler.h"
 
 using namespace mxnet;
 
@@ -57,9 +58,11 @@ void SetNDInputsOutputs(const nnvm::Op* op,
   for (int i = 0; i < num_inputs; ++i) {
     NDArray* inp = reinterpret_cast<NDArray*>(inputs[i]);
     if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-      CHECK_LT(inp->shape().Size(), (int64_t{1} << 31) - 1) <<
-                "[SetNDInputsOutputs] Size of tensor you are trying to allocate is larger than "
-                "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+      if (shape_is_known(inp->shape())) {  // Shape may be unknown after dynamic shape operators
+        CHECK_LT(inp->shape().Size(), (int64_t{1} << 31) - 1) <<
+          "[SetNDInputsOutputs] Size of tensor you are trying to allocate is larger than "
+          "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+      }
     }
     ndinputs->emplace_back(inp);
   }
@@ -98,6 +101,10 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
 
   nnvm::NodeAttrs attrs = imperative::ParseAttrs(op, num_inputs, num_params,
                                                  param_keys, param_vals);
+  attrs.dict["__profiler_scope__"] = profiler::ProfilerScope::Get()->GetCurrentProfilerScope();
+  if (attrs.op) {
+    attrs.name = attrs.op->name;
+  }
 
   int infered_num_outputs;
   int num_visible_outputs;
@@ -107,9 +114,16 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
   SetNDInputsOutputs(op, &ndinputs, &ndoutputs, num_inputs, inputs,
       num_outputs, infered_num_outputs, num_visible_outputs, outputs);
 
-  auto state = Imperative::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
-  if (Imperative::Get()->is_recording()) {
-    Imperative::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
+  if (Imperative::Get()->is_deferred_compute()) {
+    Imperative::Get()->RecordDeferredCompute(std::move(attrs), ndinputs, ndoutputs);
+  } else {
+    for (NDArray* input : ndinputs) {
+      Imperative::DCInfo::Compute(*input);
+    }
+    auto state = Imperative::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
+    if (Imperative::Get()->is_recording()) {
+      Imperative::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
+    }
   }
 
   for (int i = *num_outputs; i < infered_num_outputs; ++i) delete ndoutputs[i];
@@ -129,22 +143,8 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
                        NDArrayHandle **outputs,
                        int num_params,
                        const char **param_keys,
-                       const char **param_vals) {
-  API_BEGIN();
-  MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
-                         num_params, param_keys, param_vals);
-  API_END();
-}
-
-int MXImperativeInvokeEx(AtomicSymbolCreator creator,
-                         int num_inputs,
-                         NDArrayHandle *inputs,
-                         int *num_outputs,
-                         NDArrayHandle **outputs,
-                         int num_params,
-                         const char **param_keys,
-                         const char **param_vals,
-                         const int **out_stypes) {  // outputs storage types
+                       const char **param_vals,
+                       const int **out_stypes) {  // outputs storage types
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
@@ -160,44 +160,15 @@ int MXImperativeInvokeEx(AtomicSymbolCreator creator,
 }
 
 int MXCreateCachedOp(SymbolHandle handle,
-                     CachedOpHandle *out) {
-  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
-
-  API_BEGIN();
-  auto inputs = sym->ListInputs(nnvm::Symbol::kAll);
-  std::vector<std::string> input_names;
-  input_names.reserve(inputs.size());
-  for (const auto& i : inputs) input_names.push_back(i->attrs.name);
-  *out = new CachedOpPtr(new CachedOp(
-      *sym, std::vector<std::pair<std::string, std::string> >()));
-  API_END();
-}
-
-int MXCreateCachedOpEx(SymbolHandle handle,
-                       int num_flags,
-                       const char** keys,
-                       const char** vals,
-                       CachedOpHandle *out) {
-  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
-
-  API_BEGIN();
-  std::vector<std::pair<std::string, std::string> > flags;
-  for (int i = 0; i < num_flags; ++i) {
-    flags.emplace_back(keys[i], vals[i]);
-  }
-  *out = new CachedOpPtr(new CachedOp(*sym, flags));
-  API_END();
-}
-
-int MXCreateCachedOpEX(SymbolHandle handle,
-                       int num_flags,
-                       const char** keys,
-                       const char** vals,
-                       CachedOpHandle *out,
-                       bool thread_safe) {
+                     int num_flags,
+                     const char** keys,
+                     const char** vals,
+                     CachedOpHandle *out,
+                     bool thread_safe) {
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
   API_BEGIN();
   std::vector<std::pair<std::string, std::string> > flags;
+  flags.reserve(num_flags);
   for (int i = 0; i < num_flags; ++i) {
     flags.emplace_back(keys[i], vals[i]);
   }
@@ -216,11 +187,27 @@ int MXFreeCachedOp(CachedOpHandle handle) {
   API_END();
 }
 
+/*!
+ * \brief get optimized graph from the cached op
+ */
+int MXCachedOpGetOptimizedSymbol(CachedOpHandle handle,
+                                 SymbolHandle *out) {
+  auto s = new nnvm::Symbol();
+  API_BEGIN();
+  CachedOpPtr op = *static_cast<CachedOpPtr*>(handle);
+  *s = op->GetOptimizedSymbol();
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
 int MXInvokeCachedOp(CachedOpHandle handle,
                      int num_inputs,
                      NDArrayHandle *inputs,
+                     int default_dev_type,
+                     int default_dev_id,
                      int *num_outputs,
-                     NDArrayHandle **outputs) {
+                     NDArrayHandle **outputs,
+                     const int **out_stypes) {  // outputs storage types
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
 
   API_BEGIN();
@@ -247,8 +234,10 @@ int MXInvokeCachedOp(CachedOpHandle handle,
       ndoutputs.push_back(reinterpret_cast<NDArray*>((*outputs)[i]));
     }
   }
-
-  op->Forward(op_shared, ndinputs, ndoutputs);
+  // construct default context
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(default_dev_type),
+                                default_dev_id);
+  op->Forward(op_shared, ndinputs, ndoutputs, ctx);
 
   if (*outputs == nullptr) {
     ret->ret_handles.clear();
@@ -259,19 +248,6 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     *outputs = dmlc::BeginPtr(ret->ret_handles);
   }
 
-  API_END();
-}
-
-int MXInvokeCachedOpEx(CachedOpHandle handle,
-                       int num_inputs,
-                       NDArrayHandle *inputs,
-                       int *num_outputs,
-                       NDArrayHandle **outputs,
-                       const int **out_stypes) {  // outputs storage types
-  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
-  int err = MXInvokeCachedOp(handle, num_inputs, inputs, num_outputs, outputs);
-  if (err != 0) return err;
-  API_BEGIN();
   NDArray** out_array = reinterpret_cast<NDArray**>(*outputs);
   ret->out_types.clear();
   ret->out_types.reserve(*num_outputs);
@@ -279,6 +255,7 @@ int MXInvokeCachedOpEx(CachedOpHandle handle,
     ret->out_types.emplace_back(out_array[i]->storage_type());
   }
   *out_stypes = dmlc::BeginPtr(ret->out_types);
+
   API_END();
 }
 
@@ -315,6 +292,18 @@ int MXIsNumpyShape(int* curr) {
 int MXSetIsNumpyShape(int is_np_shape, int* prev) {
   API_BEGIN();
   *prev = Imperative::Get()->set_is_np_shape(is_np_shape);
+  API_END();
+}
+
+int MXIsNumpyDefaultDtype(bool* curr) {
+  API_BEGIN();
+  *curr = Imperative::Get()->is_np_default_dtype();
+  API_END();
+}
+
+int MXSetIsNumpyDefaultDtype(bool default_dtype, bool* prev) {
+  API_BEGIN();
+  *prev = Imperative::Get()->set_is_np_default_dtype(default_dtype);
   API_END();
 }
 
@@ -427,4 +416,38 @@ int MXCachedOpRegisterOpHook(NDArrayHandle handle,
   CachedOpPtr op = *static_cast<CachedOpPtr *>(handle);
   op->RegisterOpHook(clbk, monitor_all);
   API_END();
+}
+
+int MXNDArrayIsDeferredCompute(int *curr) {
+  API_BEGIN();
+  *curr = Imperative::Get()->is_deferred_compute();
+  API_END();
+}
+
+int MXNDArraySetIsDeferredCompute(int deferred_compute, int *prev) {
+  API_BEGIN();
+  *prev = Imperative::Get()->set_is_deferred_compute(static_cast<bool>(deferred_compute));
+  API_END();
+}
+
+int MXNDArraySetDeferredComputeVariable(NDArrayHandle *arrays, SymbolHandle *variables, int num) {
+  API_BEGIN();
+  Imperative::Get()->SetDeferredComputeVariable(arrays, variables, num);
+  API_END();
+}
+
+int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *output_handles, int num_outputs,
+                                      SymbolHandle *out) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  std::vector<NDArray *> outputs;
+  outputs.reserve(num_outputs);
+  for (int i = 0; i < num_outputs; ++i) {
+    NDArray *array = reinterpret_cast<NDArray *>(output_handles[i]);
+    outputs.emplace_back(array);
+  }
+  // Obtain Symbol
+  *s = Imperative::Get()->GetDeferredComputeSymbol(outputs);
+  *out = s;
+  API_END_HANDLE_ERROR(delete s;);
 }

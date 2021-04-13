@@ -204,7 +204,7 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
                    const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   const auto in_stype = inputs[0].storage_type();
   const auto out_stype = outputs[0].storage_type();
   if (inputs[0].IsMKLDNNData()) {
@@ -215,7 +215,7 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
       FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
   UnaryOp::IdentityComputeEx<cpu>(attrs, ctx, inputs, req, outputs);
 }
 
@@ -228,7 +228,7 @@ static inline bool CopyStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   bool ret = ElemwiseStorageType<1, 1, false, true, true>(attrs, dev_mask, dispatch_mode,
                                                           in_attrs, out_attrs);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   // We have to make sure all inputs are default layouts. Otherwise, we might
   // want to fallback.
   if (dev_mask == mshadow::cpu::kDevMask
@@ -236,7 +236,7 @@ static inline bool CopyStorageType(const nnvm::NodeAttrs& attrs,
       && out_attrs->at(0) == kDefaultStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
   return ret;
 }
 
@@ -246,12 +246,12 @@ MXNET_OPERATOR_REGISTER_UNARY(_copy)
 .set_attr<FInferStorageType>("FInferStorageType", CopyStorageType)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", CopyEx)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr<bool>("TIsMKLDNN", true)
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
@@ -269,11 +269,11 @@ NNVM_REGISTER_OP(_backward_copy)
 .set_attr<FInferStorageType>("FInferStorageType", CopyStorageType)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", CopyEx)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})  // MXNET_USE_MKLDNN == 1
+})  // MXNET_USE_ONEDNN == 1
 #endif
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){
@@ -296,6 +296,7 @@ NNVM_REGISTER_OP(_backward_reshape)
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 MXNET_ADD_SPARSE_OP_ALIAS(stop_gradient)
+.add_alias("_npx_stop_gradient")
 .add_alias("stop_gradient")
 .describe(R"code(Stops gradient computation.
 
@@ -756,9 +757,7 @@ The storage type of ``sign`` output depends upon the input storage type:
    - sign(csr) = csr
 
 )code" ADD_FILELINE)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
-
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sign, unary_bwd<mshadow_op::sign_grad>);
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // round
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(round, cpu, mshadow_op::round)
@@ -942,6 +941,21 @@ The storage type of ``gammaln`` output is always dense
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_gammaln,
                                                   unary_bwd<mshadow_op::gammaln_grad>);
+
+// digamma
+MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(digamma, cpu, mshadow_op::digamma)
+.add_alias("_npx_digamma")
+MXNET_ADD_SPARSE_OP_ALIAS(digamma)
+.describe(R"code(Returns element-wise log derivative of the gamma function \
+of the input.
+
+The storage type of ``digamma`` output is always dense
+
+)code")
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_digamma"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_digamma,
+                                                  unary_bwd<mshadow_op::trigamma>);
 
 MXNET_OPERATOR_REGISTER_UNARY(logical_not)
 .describe(R"code(Returns the result of logical NOT (!) function

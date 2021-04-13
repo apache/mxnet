@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-arguments,  global-statement
 """Symbolic configuration API."""
-from __future__ import absolute_import as _abs
 
 import ctypes
 from ..base import _LIB
@@ -32,7 +31,7 @@ _np_symbol_cls = None
 
 class SymbolBase(object):
     """Symbol is symbolic graph."""
-    __slots__ = ["handle"]
+    __slots__ = ["handle", "_alive"]
     # pylint: disable=no-member
     def __init__(self, handle):
         """Initialize the function with handle
@@ -43,9 +42,11 @@ class SymbolBase(object):
             the handle to the underlying C++ Symbol
         """
         self.handle = handle
+        self._alive = True
 
     def __del__(self):
         check_call(_LIB.NNSymbolFree(self.handle))
+        self._alive = False
 
     def _compose(self, *args, **kwargs):
         """Compose symbol on inputs.

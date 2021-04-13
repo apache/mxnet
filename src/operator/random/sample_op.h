@@ -29,6 +29,7 @@
 #include <mshadow/base.h>
 #include <string>
 #include <vector>
+#include "../../common/utils.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
@@ -275,6 +276,17 @@ struct SampleRandIntParam : public dmlc::Parameter<SampleRandIntParam>,
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to int32 if not defined (dtype=None).");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream low_s, high_s, dtype_s, shape_s;
+    low_s << low;
+    high_s << high;
+    dtype_s << dtype;
+    shape_s << shape;
+    (*dict)["low"] = low_s.str();
+    (*dict)["high"] = high_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    (*dict)["shape"] = shape_s.str();
   }
 };
 
@@ -746,7 +758,7 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
       dtype = param.dtype;
     } else {
       // Use default
-      dtype = mshadow::kFloat32;
+      dtype = mxnet::common::GetDefaultDtype();
     }
   }
   bool dtype_ok = (dtype == mshadow::kFloat16) || (dtype == mshadow::kFloat32) ||

@@ -16,11 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#include <memory>
 #include <unordered_set>
 #include <iostream>
 #include "./imperative_utils.h"
 #include "./cached_op.h"
-#include "../executor/exec_pass.h"
+#include "./exec_pass.h"
 #include "../profiler/profiler.h"
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
@@ -32,15 +33,16 @@ DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
 constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
 
-struct CachedOp::DynamicRuntime {
-  GraphInfo info;
-  std::vector<NDArray> buff;
-  std::vector<OpStatePtr> op_states;
-};
+nnvm::Symbol CachedOp::GetOptimizedSymbol() const {
+  nnvm::Symbol ret;
+  ret.outputs = std::vector<nnvm::NodeEntry>(full_graph_.outputs.begin(),
+                                             full_graph_.outputs.begin() + num_outputs());
+  return ret.Copy();
+}
 
 CachedOp::CachedOp(
     const nnvm::Symbol& sym,
-    const std::vector<std::pair<std::string, std::string> >& flags) {
+    const std::vector<std::pair<std::string, std::string> >& flags) : sym_(sym), flags_(flags) {
   config_.Init(flags);
   this->dynamic_shape_checked_ = false;
 
@@ -86,8 +88,7 @@ CachedOp::CachedOp(
   SetRefCounts(&fwd_graph_, full_graph_);
 }
 
-CachedOp::~CachedOp() {
-}
+CachedOp::~CachedOp() = default;
 
 std::vector<nnvm::NodeEntry> CachedOp::Gradient(
     const nnvm::ObjectPtr& node,
@@ -146,10 +147,9 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
   auto& state = state_ptr.get_state<CachedOpState>();
 
   nnvm::Graph& g = state.info.fwd_graph;
-  ShapeVector shape_inputs;
-  shape_inputs.reserve(inputs.size());
-  for (auto input : inputs) {
-    shape_inputs.emplace_back(input->shape());
+  ShapeVector shape_inputs(inputs.size());
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    shape_inputs[i] = inputs[state.info.input_map[i]]->shape();
   }
   // We leverage the shape inference pass to detect whether dynamic shape exists.
   // If so, the pass will fail with `contain_dynamic_shape = true`,
@@ -166,6 +166,7 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
 }
 
 bool CachedOp::SetForwardGraph(
+    const Context& default_ctx,
     GraphInfo* info,
     const bool recording,
     const std::vector<NDArray*>& inputs) {
@@ -174,16 +175,13 @@ bool CachedOp::SetForwardGraph(
   CHECK_EQ(inputs.size(), num_inputs());
   nnvm::Graph& g = info->fwd_graph;
 
-  ShapeVector shape_inputs;
-  DTypeVector dtype_inputs;
-  StorageTypeVector storage_type_inputs;
-  shape_inputs.reserve(inputs.size());
-  dtype_inputs.reserve(inputs.size());
-  storage_type_inputs.reserve(inputs.size());
-  for (auto input : inputs) {
-    shape_inputs.emplace_back(input->shape());
-    dtype_inputs.emplace_back(input->dtype());
-    storage_type_inputs.emplace_back(input->storage_type());
+  ShapeVector shape_inputs(inputs.size());
+  DTypeVector dtype_inputs(inputs.size());
+  StorageTypeVector storage_type_inputs(inputs.size());
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    shape_inputs[i] = inputs[info->input_map[i]]->shape();
+    dtype_inputs[i] = inputs[info->input_map[i]]->dtype();
+    storage_type_inputs[i] = inputs[info->input_map[i]]->storage_type();
   }
 
   bool match = true;
@@ -191,7 +189,7 @@ bool CachedOp::SetForwardGraph(
   match &= CheckAndInferShape(&g, std::move(shape_inputs), true,
                               {0, 0}, {0, 0}, &contain_dynamic_shape);
   match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
-  exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), inputs[0]->ctx().dev_mask());
+  exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), default_ctx.dev_mask());
   match &= CheckAndInferStorageType(&g, std::move(dev_mask),
                                     std::move(storage_type_inputs), true);
 
@@ -319,9 +317,10 @@ bool CachedOp::SetBackwardGraph(
     if (info->bwd_input_eid[i] == kEidNotExist) {
       continue;
     }
-    shapes[info->bwd_input_eid[i]] = inputs[i]->shape();
-    dtypes[info->bwd_input_eid[i]] = inputs[i]->dtype();
-    stypes[info->bwd_input_eid[i]] = inputs[i]->storage_type();
+    size_t oi = BwdOriginalInput(info->input_map, i);
+    shapes[info->bwd_input_eid[i]] = inputs[oi]->shape();
+    dtypes[info->bwd_input_eid[i]] = inputs[oi]->dtype();
+    stypes[info->bwd_input_eid[i]] = inputs[oi]->storage_type();
   }
 
   std::pair<uint32_t, uint32_t> node_range, entry_range;
@@ -612,6 +611,34 @@ void CachedOp::StaticRunOps(
   }
 }
 
+#define INIT_DETACHED(x, y)   if (!y->is_none()) x->InitDetached(y)
+
+static void PrepareOutputs(const nnvm::Graph& g, const Context& default_ctx,
+                           const std::vector<NDArray*> &outputs,
+                           std::vector<NDArray*> *pArrays, bool detach) {
+  using namespace nnvm;
+  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
+  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+
+  const auto& idx = g.indexed_graph();
+  auto &arrays = *pArrays;
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    const auto eid = idx.entry_id(idx.outputs()[i]);
+    // An input and an output may share the same array.
+    if (detach)
+      INIT_DETACHED(outputs[i], arrays[eid]);
+
+    arrays[eid] = outputs[i];
+    if (arrays[eid]->is_none())
+      arrays[eid]->ReInit(static_cast<NDArrayStorageType>(stypes[eid]),
+                          shapes[eid], default_ctx, dtypes[eid]);
+    const nnvm::NodeAttrs& attrs = idx[idx.outputs()[i].node_id].source->attrs;
+    outputs[i]->AssignStorageInfo(common::NodeAttrsGetProfilerScope(attrs),
+                                  attrs.name);
+  }
+}
+
 OpStatePtr CachedOp::StaticForward(
     const Context& default_ctx,
     const std::vector<NDArray*>& inputs,
@@ -630,7 +657,7 @@ OpStatePtr CachedOp::StaticForward(
   // and executors for multiple forward invokes of the same op.
   std::lock_guard<std::mutex> lock(state.mutex);
 
-  bool match = SetForwardGraph(&state.info, recording, inputs);
+  bool match = SetForwardGraph(default_ctx, &state.info, recording, inputs);
   match = match && state.recording == recording;
 
   nnvm::Graph& g = state.info.fwd_graph;
@@ -647,22 +674,22 @@ OpStatePtr CachedOp::StaticForward(
   if (config_.static_shape) {
     for (auto i : config_.param_indices) {
       auto nid = idx.input_nodes()[i];
-      if (!arrays[idx.entry_id(nid, 0)]->IsSame(*inputs[i])) {
+      if (!arrays[idx.entry_id(nid, 0)]->IsSame(*inputs[state.info.input_map[i]])) {
         match = false;
         auto ptr = &state.buff[idx.entry_id(nid, 0)];
         CHECK_EQ(arrays[idx.entry_id(nid, 0)], ptr);
-        *arrays[idx.entry_id(nid, 0)] = *inputs[i];
+        *arrays[idx.entry_id(nid, 0)] = *inputs[state.info.input_map[i]];
         state.dynamic_entries[idx.entry_id(nid, 0)] = false;
       }
     }
     for (auto i : config_.data_indices) {
       auto eid = idx.entry_id(idx.input_nodes()[i], 0);
-      arrays[eid] = inputs[i];
+      arrays[eid] = inputs[state.info.input_map[i]];
     }
   } else {
     for (size_t i = 0; i < num_inputs(); ++i) {
       auto nid = idx.input_nodes()[i];
-      arrays[idx.entry_id(nid, 0)] = inputs[i];
+      arrays[idx.entry_id(nid, 0)] = inputs[state.info.input_map[i]];
     }
   }
 
@@ -670,21 +697,7 @@ OpStatePtr CachedOp::StaticForward(
     StaticInitExec(state_ptr, recording, false);
   }
 
-  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    auto eid = idx.entry_id(idx.outputs()[i]);
-    // An input and an output may share the same array.
-    if (!arrays[eid]->is_none())
-      *outputs[i] = arrays[eid]->Detach();
-    arrays[eid] = outputs[i];
-    if (!outputs[i]->is_none()) continue;
-    *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                          shapes[eid], default_ctx, true, dtypes[eid]);
-  }
-
+  PrepareOutputs(g, default_ctx, outputs, &arrays, true);
   StaticRunOps(default_ctx, g, state_ptr, arrays, 0, idx.num_nodes());
 
   return recording ? state_ptr : OpStatePtr();
@@ -707,8 +720,9 @@ OpStatePtr CachedOp::DynamicForward(
     auto state_ptr = GetCachedOpState(default_ctx);
     auto& state = state_ptr.get_state<CachedOpState>();
     std::lock_guard<std::mutex> lock(state.mutex);
-    SetForwardGraph(&state.info, recording, inputs);
+    SetForwardGraph(default_ctx, &state.info, recording, inputs);
     runtime.info.fwd_graph = state.info.fwd_graph;
+    runtime.info.input_map = state.info.input_map;
   }
   nnvm::Graph& g = runtime.info.fwd_graph;
   const auto& idx = g.indexed_graph();
@@ -731,7 +745,7 @@ OpStatePtr CachedOp::DynamicForward(
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
-  CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
+  CollectInputOutputNDRefs(g, inputs, runtime.info.input_map, outputs, &arrays);
 
   if (!use_naive_run) {
     const auto& mem_plan = g.GetAttr<MemoryPlanVector >(AddPrefix(graph_type, MEM_PLAN));
@@ -762,12 +776,28 @@ OpStatePtr CachedOp::DynamicForward(
 OpStatePtr CachedOp::Forward(
     const std::shared_ptr<CachedOp>& op_ptr,
     const std::vector<NDArray*>& inputs,
-    const std::vector<NDArray*>& outputs) {
+    const std::vector<NDArray*>& outputs,
+    const Context& default_ctx) {
   static const auto cached_op = nnvm::Op::Get("_CachedOp");
 
   CHECK_EQ(inputs.size(), num_inputs());
+  // Assign the storage information for the input arguments. Similar to the
+  // implementation in `graph_executor.cc`, we use `mutable_input_nodes()` to
+  // distinguish between weight parameters and auxiliary states.
+  const auto& fwd_idx = fwd_graph_.indexed_graph();
+  const auto& mutable_input_nodes = fwd_idx.mutable_input_nodes();
+  for (size_t i = 0; i < fwd_idx.input_nodes().size(); ++i) {
+    const uint32_t nid = fwd_idx.input_nodes().at(i);
+    const nnvm::NodeAttrs& attrs = fwd_idx[nid].source->attrs;
+    const std::string& arg_name = attrs.name;
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(attrs);
+    if (mutable_input_nodes.count(nid)) {
+      inputs[i]->AssignStorageInfo(profiler_scope + "aux_state:", arg_name);
+    } else {
+      inputs[i]->AssignStorageInfo(profiler_scope + "in_arg:", arg_name);
+    }
+  }
 
-  Context default_ctx = inputs[0]->ctx();
   {
     auto state_ptr = GetCachedOpState(default_ctx);
     auto& state = state_ptr.get_state<CachedOpState>();
@@ -832,6 +862,7 @@ void CachedOp::DynamicBackward(
     auto& state = state_ptr.get_state<CachedOpState>();
     std::lock_guard<std::mutex> lock(state.mutex);
     state.info.fwd_graph = runtime.info.fwd_graph;
+    state.info.input_map = runtime.info.input_map;
     SetBackwardGraph(&state.info, reqs, inputs);
     runtime.info.full_graph = state.info.full_graph;
     runtime.info.bwd_input_eid = state.info.bwd_input_eid;
@@ -854,14 +885,13 @@ void CachedOp::DynamicBackward(
     if (runtime.info.bwd_input_eid[i] == kEidNotExist) {
       continue;
     }
-    arrays[runtime.info.bwd_input_eid[i]] = inputs[i];
+    arrays[runtime.info.bwd_input_eid[i]] = inputs[BwdOriginalInput(runtime.info.input_map, i)];
   }
   for (size_t i = 0, j = num_forward_outputs; i < reqs.size(); ++i) {
     if (reqs[i] == kNullOp) continue;
-    auto eid = idx.entry_id(idx.outputs()[j++]);
+    const auto eid = idx.entry_id(idx.outputs()[j++]);
     // An input and an output may share the same array.
-    if (!arrays[eid]->is_none())
-      *outputs[i] = arrays[eid]->Detach();
+    INIT_DETACHED(outputs[i], arrays[eid]);
     arrays[eid] = outputs[i];
   }
 
@@ -931,10 +961,8 @@ void CachedOp::StaticBackward(
   auto& arrays = state.arrays_with_in_out;
   for (size_t i = 0; i < state.info.bwd_input_eid.size(); ++i) {
     auto eid = state.info.bwd_input_eid[i];
-    if (eid == kEidNotExist) {
-      continue;
-    }
-    if (state.dynamic_entries[eid]) arrays[eid] = inputs[i];
+    if (eid == kEidNotExist || !state.dynamic_entries[eid]) continue;
+    arrays[eid] = inputs[BwdOriginalInput(state.info.input_map, i)];
   }
 
   if (config_.static_shape) {
@@ -944,13 +972,13 @@ void CachedOp::StaticBackward(
       auto entry = state.info.grad_graph.outputs[iter->second];
       if (!idx.exist(entry.node.get())) continue;
       auto eid = idx.entry_id(entry);
-      if (!arrays[eid]->IsSame(*outputs[iter->second]) ||
+      if ((!arrays[eid]->IsSame(*outputs[iter->second]) &&
+            state.array_reqs[eid] != kNullOp) ||
           !(state.array_reqs[eid] == reqs[iter->second])) {
         match = false;
         state.array_reqs[eid] = reqs[iter->second];
         // An input and an output may share the same array.
-        if (!arrays[eid]->is_none())
-          *outputs[iter->second] = arrays[eid]->Detach();
+        INIT_DETACHED(outputs[iter->second], arrays[eid]);
         *arrays[eid] = *outputs[iter->second];
         state.dynamic_entries[eid] = false;
       }
@@ -963,8 +991,7 @@ void CachedOp::StaticBackward(
       auto eid = idx.entry_id(entry);
       state.array_reqs[eid] = reqs[iter->second];
       // An input and an output may share the same array.
-      if (!arrays[eid]->is_none())
-        *outputs[iter->second] = arrays[eid]->Detach();
+      INIT_DETACHED(outputs[iter->second], arrays[eid]);
       arrays[eid] = outputs[iter->second];
     }
   } else {
@@ -974,8 +1001,7 @@ void CachedOp::StaticBackward(
       auto eid = idx.entry_id(entry);
       state.array_reqs[eid] = reqs[i];
       // An input and an output may share the same array.
-      if (!arrays[eid]->is_none())
-        *outputs[i] = arrays[eid]->Detach();
+      INIT_DETACHED(outputs[i], arrays[eid]);
       arrays[eid] = outputs[i];
     }
   }
@@ -993,6 +1019,27 @@ void CachedOp::Backward(
     const std::vector<NDArray*>& inputs,
     const std::vector<OpReqType>& reqs,
     const std::vector<NDArray*>& outputs) {
+  const auto& fwd_idx = fwd_graph_.indexed_graph();
+  const auto& full_idx = full_graph_.indexed_graph();
+  const auto& mutable_input_nodes = fwd_idx.mutable_input_nodes();
+  for (size_t i = 0, j = 0; i < fwd_idx.input_nodes().size(); ++i) {
+    const uint32_t nid = fwd_idx.input_nodes().at(i);
+    const std::string& arg_name = fwd_idx[nid].source->attrs.name;
+    const std::string profiler_scope =
+        common::NodeAttrsGetProfilerScope(fwd_idx[nid].source->attrs);
+    if (mutable_input_nodes.count(nid)) {
+      continue;
+    }
+    outputs[j++]->AssignStorageInfo(profiler_scope + "arg_grad:", arg_name);
+  }
+  for (size_t i = fwd_idx.input_nodes().size(), j = 0;
+       i < full_idx.input_nodes().size(); ++i) {
+    const nnvm::NodeAttrs& attrs = full_idx[full_idx.input_nodes().at(i)].source->attrs;
+    const std::string& entry_name = attrs.name;
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(attrs);
+    inputs[j++]->AssignStorageInfo(profiler_scope, entry_name);
+  }
+
   using namespace imperative;
   CHECK(!Imperative::Get()->is_recording())
       << "CachedOp does not support higher order gradients. "
@@ -1064,7 +1111,9 @@ void CachedOpForward(const OpStatePtr& state_ptr,
     orig_is_train = Imperative::Get()->set_is_training(true);
   else
     orig_is_train = Imperative::Get()->is_training();
-  s.forward_state = s.op->Forward(nullptr, in_ptrs, out_ptrs);
+  CHECK(inputs.size() > 0) << "cached op forward requires at least 1 input";
+  Context default_ctx = inputs[0].ctx();
+  s.forward_state = s.op->Forward(nullptr, in_ptrs, out_ptrs, default_ctx);
   Imperative::Get()->set_is_training(orig_is_train);
   Imperative::Get()->set_is_recording(orig_is_record);
   // The arrays in out_ptrs may be changed by CachedOp.
@@ -1244,8 +1293,15 @@ void CachedOpParamParser(nnvm::NodeAttrs* attrs) {
     std::vector<std::pair<std::string, std::string> > flags;
     for (const auto& attr : attrs->dict)
       flags.emplace_back(attr.first, attr.second);
-    attrs->parsed = CachedOpPtr(new CachedOp(sym, flags));
+    attrs->parsed = std::make_shared<CachedOp>(sym, flags);
   }
+}
+
+size_t CachedOp::BwdOriginalInput(const std::vector<size_t>& input_map, size_t new_i) {
+  CHECK_GE(input_map.size(), bwd_in_dep_.size());
+  if (new_i >= bwd_ograd_dep_.size() && new_i < bwd_ograd_dep_.size() + bwd_in_dep_.size())
+    return bwd_ograd_dep_.size() + input_map[new_i - bwd_ograd_dep_.size()];
+  return new_i;
 }
 
 NNVM_REGISTER_OP(_CachedOp)

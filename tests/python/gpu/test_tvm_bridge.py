@@ -33,11 +33,11 @@ def test_tvm_bridge():
 
     def check(target, dtype):
         shape = (20,)
-        scale = tvm.var("scale", dtype="float32")
-        x = tvm.placeholder(shape, dtype=dtype)
-        y = tvm.placeholder(shape, dtype=dtype)
-        z = tvm.compute(shape, lambda i: x[i] + y[i])
-        zz = tvm.compute(shape, lambda *i: z(*i) * scale.astype(dtype))
+        scale = tvm.te.var("scale", dtype="float32")
+        x = tvm.te.placeholder(shape, dtype=dtype)
+        y = tvm.te.placeholder(shape, dtype=dtype)
+        z = tvm.te.compute(shape, lambda i: x[i] + y[i])
+        zz = tvm.te.compute(shape, lambda *i: z(*i) * scale.astype(dtype))
         ctx = mx.gpu(0) if target == "cuda" else mx.cpu(0)
         target = tvm.target.create(target)
 
@@ -61,7 +61,3 @@ def test_tvm_bridge():
                       "float32", "float64"]:
             check(tgt, dtype)
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

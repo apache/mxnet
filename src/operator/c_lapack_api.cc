@@ -19,7 +19,7 @@
 
 #include "c_lapack_api.h"
 
-#if (MSHADOW_USE_MKL && MXNET_USE_LAPACK)
+#if (MXNET_USE_LAPACK && (MSHADOW_USE_MKL || MXNET_USE_LAPACKE_INTERFACE))
 #elif MXNET_USE_LAPACK
 #else
   // use pragma message instead of warning
@@ -98,6 +98,29 @@
     return 1; \
   }
 
+  #define MXNET_LAPACK_CWRAPPER10(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* a, \
+                          int lda, dtype* tau, dtype* work, int lwork) { \
+    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
+    return 1; \
+  }
+
+  #define MXNET_LAPACK_CWRAPPER11(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, int nrhs, \
+                          dtype *a, int lda, dtype *b, int ldb, \
+                          dtype *s, dtype rcond, int *rank, \
+                          dtype *work, int lwork, int *iwork) { \
+    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
+    return 1; \
+  }
+
+  #define MXNET_LAPACK_CWRAPPER12(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, int k, dtype* a, \
+                          int lda, dtype* tau, dtype* work, int lwork) { \
+    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
+    return 1; \
+  }
+
   #define MXNET_LAPACK_UNAVAILABLE(func) \
   int mxnet_lapack_##func(...) { \
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
@@ -136,5 +159,14 @@
 
   MXNET_LAPACK_CWRAPPER9(sgesdd, float)
   MXNET_LAPACK_CWRAPPER9(dgesdd, double)
+
+  MXNET_LAPACK_CWRAPPER10(sgeqrf, float)
+  MXNET_LAPACK_CWRAPPER10(dgeqrf, double)
+
+  MXNET_LAPACK_CWRAPPER11(sgelsd, float)
+  MXNET_LAPACK_CWRAPPER11(dgelsd, double)
+
+  MXNET_LAPACK_CWRAPPER12(sorgqr, float)
+  MXNET_LAPACK_CWRAPPER12(dorgqr, double)
 
 #endif  // MSHADOW_USE_MKL == 0

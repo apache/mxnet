@@ -17,7 +17,8 @@
 
 from mxnet.test_utils import *
 from mxnet.base import MXNetError
-from common import setup_module, with_seed, teardown, assertRaises
+import pytest
+from common import assertRaises
 import random
 import warnings
 
@@ -153,8 +154,12 @@ def gen_rsp_random_indices(shape, density=.5, force_indices=None):
 def all_zero(var):
     return 0
 
-@with_seed()
+@pytest.mark.skip(reason="https://github.com/apache/incubator-mxnet/issues/18740")
 def test_elemwise_binary_ops():
+    # skip testing on GPU because only CPU ops are implemented
+    if default_context().device_type is 'gpu':
+        return
+
     def test_elemwise_binary_op(name, lhs_stype, rhs_stype, shape,
                                 forward_mxnet_call, forward_numpy_call, backward_numpy_call,
                                 lhs_grad_stype,
@@ -302,8 +307,7 @@ def test_elemwise_binary_ops():
             assert igrads_result['lhs'].stype == lhs_grad_stype
         if rhs_grad_stype is not None:
             assert igrads_result['rhs'].stype == rhs_grad_stype
-
-        if skip_gradient_check is not True:
+        if not skip_gradient_check:
             check_numeric_gradient(test, location,
                                    grad_stype_dict=grad_stypes)
 
@@ -330,10 +334,6 @@ def test_elemwise_binary_ops():
             return 'row_sparse'
         elif lstype == 'row_sparse' and rstype == 'default':
             return 'row_sparse'
-        elif lstype == 'default' and rstype == 'csr':
-            return 'csr'
-        elif lstype == 'csr' and rstype == 'default':
-            return 'csr'
         else:
             return 'default'
 
@@ -361,7 +361,6 @@ def test_elemwise_binary_ops():
                                 verbose=False)
 
         if ((lhs_stype is 'default' and rhs_stype is 'row_sparse') or
-            (lhs_stype is 'default' and rhs_stype is 'csr') or
             (lhs_stype is 'row_sparse' and rhs_stype is 'row_sparse') and (rhs_density == 0.0)):
             test_elemwise_binary_op("elemwise_add", lhs_stype, rhs_stype, shape,
                                     lambda l, r: mx.sym.sparse.elemwise_add(l, r, out=l),
@@ -383,7 +382,6 @@ def test_elemwise_binary_ops():
                                     force_grad_overlap=force_grad_overlap,
                                     lhs_density=lhs_density, rhs_density=rhs_density,
                                     verbose=False)
-
         if ((lhs_stype is 'row_sparse' and rhs_stype is 'row_sparse') and (lhs_density == 0.0)):
             test_elemwise_binary_op("elemwise_add", lhs_stype, rhs_stype, shape,
                                     lambda l, r: mx.sym.sparse.elemwise_add(l, r, out=r),
@@ -508,25 +506,8 @@ def test_elemwise_binary_ops():
                         # Try row_sparse overlaps
                         for force_lr_overlap in [False, True]:
                             for force_grad_overlap in [False, True]:
-
                                 print("  force_lr_overlap={}, force_grad_overlap={}, shape={}".
                                       format(force_lr_overlap, force_grad_overlap, shape))
-
-                                # Left and right always overlap when one is default storage
-                                # (assuming the row_sparse one has some entries in it)
-                                if force_lr_overlap is False:
-                                    check_elemwise_binary_ops('default', 'row_sparse', shape,
-                                                              lhs_density=lhs_density,
-                                                              rhs_density=rhs_density,
-                                                              force_lr_overlap=force_lr_overlap,
-                                                              force_grad_overlap=force_grad_overlap,
-                                                              ograd_density=ograd_density)
-                                    check_elemwise_binary_ops('row_sparse', 'default', shape,
-                                                              lhs_density=lhs_density,
-                                                              rhs_density=rhs_density,
-                                                              force_lr_overlap=force_lr_overlap,
-                                                              force_grad_overlap=force_grad_overlap,
-                                                              ograd_density=ograd_density)
 
                                 # Back to left-right overlap possiblities
                                 check_elemwise_binary_ops('row_sparse', 'row_sparse', shape,
@@ -538,34 +519,7 @@ def test_elemwise_binary_ops():
                                                           force_grad_overlap=force_grad_overlap,
                                                           ograd_density=ograd_density)
 
-                        # No overlap flags for CSR
-                        check_elemwise_binary_ops('csr', 'csr', shape,
-                                                  lhs_grad_stype='csr',
-                                                  rhs_grad_stype='csr',
-                                                  lhs_density=lhs_density,
-                                                  rhs_density=rhs_density,
-                                                  ograd_density=ograd_density)
-                        check_elemwise_binary_ops('csr', 'csr', shape,
-                                                  lhs_grad_stype='default',
-                                                  rhs_grad_stype='default',
-                                                  lhs_density=lhs_density,
-                                                  rhs_density=rhs_density,
-                                                  ograd_density=ograd_density)
-                        check_elemwise_binary_ops('default', 'csr', shape,
-                                                  lhs_grad_stype='csr',
-                                                  rhs_grad_stype='csr',
-                                                  lhs_density=lhs_density,
-                                                  rhs_density=rhs_density,
-                                                  ograd_density=ograd_density)
-                        check_elemwise_binary_ops('csr', 'default', shape,
-                                                  lhs_grad_stype='csr',
-                                                  rhs_grad_stype='csr',
-                                                  lhs_density=lhs_density,
-                                                  rhs_density=rhs_density,
-                                                  ograd_density=ograd_density)
 
-
-@with_seed()
 def test_elemwise_csr_same_zeros():
     # Zeroes
     a = mx.nd.sparse.zeros('csr', (1,1))
@@ -679,9 +633,9 @@ def check_sparse_mathematical_core(name, stype,
     args.append(arr_data)
 
     if arr_grad is not None:
-        exe_test = test.bind(default_context(), args=args, args_grad=[arr_grad])
+        exe_test = test._bind(default_context(), args=args, args_grad=[arr_grad])
     else:
-        exe_test = test.bind(default_context(), args=args)
+        exe_test = test._bind(default_context(), args=args)
 
     exe_test.forward(is_train=True)
     assert exe_test.outputs[0].stype == expected_result_type
@@ -740,7 +694,8 @@ def check_sparse_mathematical_core(name, stype,
         assert_almost_equal(arr_grad, input_grad, equal_nan=True)
 
 
-@with_seed()
+@pytest.mark.serial
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18829')
 def test_sparse_mathematical_core():
     def util_sign(a):
         if np.isclose(a, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):
@@ -1205,7 +1160,7 @@ def test_sparse_mathematical_core():
 
 
 
-@with_seed()
+@pytest.mark.serial
 def test_elemwise_add_ex():
     def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
         lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
@@ -1235,7 +1190,7 @@ def test_elemwise_add_ex():
                               lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
 
-@with_seed()
+@pytest.mark.serial
 def test_cast_storage_ex():
     def check_cast_storage(shape, density, from_stype, to_stype, check_numeric_grad=True):
         x = mx.symbol.Variable('x', stype=from_stype)
@@ -1290,7 +1245,7 @@ def test_cast_storage_ex():
                                check_numeric_grad=False)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_sparse_dot():
     def test_infer_forward_stype(lhs_shape, rhs_shape, lhs_density, rhs_density, trans_a, trans_b):
         all_stypes = ["default", "csr", "row_sparse"]
@@ -1420,7 +1375,7 @@ def test_sparse_dot():
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), False, 40)
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)
 
-@with_seed()
+@pytest.mark.serial
 def test_sparse_dot_determinism():
     def check_dot_determinism(lhs_stype, rhs_stype, lhs_density, rhs_density, transpose_a, transpose_b, forward_stype):
         lhs_row = rnd.randint(50, 100)
@@ -1449,7 +1404,6 @@ def test_sparse_dot_determinism():
     check_dot_determinism('csr', 'default', 0.1, 1.0, True, False, 'default')
 
 
-@with_seed()
 def test_sparse_slice():
     def check_csr_slice(shape, slice_input):
         storage_type = 'csr'
@@ -1465,7 +1419,7 @@ def test_sparse_slice():
     check_csr_slice(shape, False)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_sparse_retain():
     def check_sparse_retain(shape, density, index_type=np.int64):
         num_rows = shape[0]
@@ -1498,7 +1452,6 @@ def test_sparse_retain():
             check_sparse_retain(shape_3d, density, itype)
 
 
-@with_seed()
 def test_sparse_unary_with_numerics():
     def check_sparse_simple(name, stype, mxnet_func, forward_numpy_call,
                             backward_numpy_call, output_grad_stype=None,
@@ -1576,7 +1529,7 @@ def test_sparse_unary_with_numerics():
                           backward_is_use_output=True)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
         zero = mx.nd.zeros(shape)
@@ -1589,7 +1542,7 @@ def test_sparse_nd_zeros():
     check_sparse_nd_zeros('default', shape)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_sparse_nd_zeros_like():
     def check_sparse_nd_zeros_like(stype, shape):
         zero = mx.nd.zeros(shape, stype=stype)
@@ -1601,7 +1554,7 @@ def test_sparse_nd_zeros_like():
     check_sparse_nd_zeros_like('csr', shape)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_sparse_axis_operations():
     def test_variations(func_name):
         dim0 = 30
@@ -1632,7 +1585,7 @@ def test_sparse_axis_operations():
     test_fallback(mx.nd.mean, axis=0, keepdims=True, exclude=True)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_sparse_square_sum():
     dim0 = 30
     dim1 = 30
@@ -1665,7 +1618,7 @@ def test_sparse_square_sum():
                     dns_data = mx.sym.Variable('data')
                     baseline = mx.sym.sum(mx.sym.square(dns_data), axis=axis, keepdims=keepdim)
                     igrad_expected = mx.nd.empty(dns.shape)
-                    baseline_exec = baseline.bind(default_context(), args=[dns],
+                    baseline_exec = baseline._bind(default_context(), args=[dns],
                                                   args_grad=[igrad_expected])
                     baseline_exec.forward(is_train=True)
                     baseline_exec.backward([ret_expected])
@@ -1679,7 +1632,7 @@ def test_sparse_square_sum():
                     # Need to add one more layer after square_sum to trigger the kernel for ograd
                     # with default stype in square_sum op.
                     baseline1 = baseline + 1
-                    baseline_exec1 = baseline1.bind(default_context(), args=[dns],
+                    baseline_exec1 = baseline1._bind(default_context(), args=[dns],
                                                     args_grad=[igrad_expected])
                     baseline_exec1.forward(is_train=True)
                     baseline_exec1.backward([ret_expected])
@@ -1692,7 +1645,8 @@ def test_sparse_square_sum():
                                        atol=1e-2, rtol=0.1)
 
 
-@with_seed()
+@pytest.mark.serial
+@pytest.mark.flaky
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):
@@ -1717,24 +1671,6 @@ def test_sparse_storage_fallback():
         x /= np.sum(x, axis=axis, keepdims=True)
         return x
 
-    def check_softmax_with_shape(lhs_stype, rhs_stype, shape, preserve_shape=False):
-        # bind with label
-        ctx = default_context()
-        X = mx.symbol.Variable('X', stype=lhs_stype)
-        L = mx.symbol.Variable('L', stype=rhs_stype)
-        Y = mx.symbol.SoftmaxOutput(data=X, label=L, preserve_shape=preserve_shape)
-        x = rand_ndarray(shape, lhs_stype)
-        l = rand_ndarray(shape, rhs_stype)
-        l[:] = np_softmax(l.asnumpy())
-        grad = mx.nd.empty(shape, ctx=ctx)
-        exec1 = Y.bind(ctx, args = [x, l], args_grad = {'X': grad})
-        exec1.forward(is_train=True)
-        out = exec1.outputs[0].asnumpy()
-        assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
-        exec1.backward()
-        assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(),
-                            rtol=1e-3, atol=1e-4)
-
     def check_concat(shape, lhs_stype, rhs_stype):
         x = mx.symbol.Variable('x', stype=lhs_stype)
         w = mx.symbol.Variable('w', stype=rhs_stype)
@@ -1758,11 +1694,9 @@ def test_sparse_storage_fallback():
         for rhs in stypes:
             check_broadcast_add(shape, lhs, rhs)
             check_concat(shape, lhs, rhs)
-            check_softmax_with_shape(lhs, rhs, shape, preserve_shape=False)
-            check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stypes, shape, n):
         # forward
@@ -1774,7 +1708,7 @@ def test_sparse_elementwise_sum():
         for stype in stypes:
             arr.append(rand_ndarray(shape, stype, densities[np.random.randint(0, len(densities))]))
 
-        exec1 = out.bind(default_context(),
+        exec1 = out._bind(default_context(),
                          args=arr,
                          args_grad=arr_grad)
         exec1.forward(is_train=True)
@@ -1806,69 +1740,23 @@ def test_sparse_elementwise_sum():
             check_sparse_elementwise_sum_with_shape(stypes, shape, test_len+1)
 
 
-@with_seed()
-def test_contrib_sparse_embedding():
-    ''' test sparse embedding operator '''
-    def check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, weight_stype):
-        # init executor
-        data = mx.sym.Variable("data")
-        weight = mx.sym.Variable("embed_weight", stype=weight_stype)
-        embed = mx.sym.contrib.SparseEmbedding(data=data, weight=weight, input_dim=in_dim,
-                                               output_dim=out_dim, deterministic=deterministic,
-                                               name="embed")
-        grad_req = {'data': 'null', 'embed_weight': 'write'}
-        exe_test = embed.simple_bind(default_context(), grad_req=grad_req, data=(batch,))
-        arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
-        grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
-        # init data
-        np_data = np.random.randint(low=0, high=in_dim, size=batch)
-        np_onehot = np.zeros((batch, in_dim)).astype(np.float32)
-        np_onehot[np.arange(batch), np_data] = 1.0
-        arg_map["data"][:] = np_data
-        # init grad
-        np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
-        grad = mx.nd.zeros(np_grad.shape)
-        grad[:] = np_grad
-        # weight
-        weight = arg_map["embed_weight"]
-        for density in densities:
-            # update weight based on density
-            weight[:] = rand_ndarray(weight.shape, weight_stype, density=density)
-            # check forward
-            exe_test.forward(is_train=True)
-            assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, weight.asnumpy()), atol=1e-4)
-            # check backward
-            exe_test.backward([grad])
-            assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, grad.asnumpy()), atol=1e-4)
-            # run twice to check if the result is deterministic when passing "deterministic=True" to SparseEmbedding
-            if deterministic:
-                grad_ref = grad_map["embed_weight"].asnumpy()
-                exe_test.backward([grad])
-                assert_almost_equal(grad_map["embed_weight"].asnumpy(), grad_ref, atol=0, rtol=0)
-
-    densities = [0, 0.5, 1]
-    in_dim = 50
-    out_dim = 3
-    batch = 8
-    stypes = ['default', 'row_sparse']
-    deterministics = [True, False]
-    for stype in stypes:
-        for deterministic in deterministics:
-            check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, stype)
-            check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, stype)
-
-@with_seed()
+@pytest.mark.serial
 def test_sparse_embedding():
     ''' test sparse embedding operator '''
-    def check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad, weight_stype):
+    def check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad):
         target_stype = 'row_sparse' if sparse_grad else 'default'
         # init executor
         data = mx.sym.Variable("data")
-        weight = mx.sym.Variable("embed_weight", stype=weight_stype)
+        weight = mx.sym.Variable("embed_weight")
         embed = mx.sym.sparse.Embedding(data=data, weight=weight, input_dim=in_dim,
                                         sparse_grad=sparse_grad, output_dim=out_dim, name='embed')
         grad_req = {'data': 'null', 'embed_weight': 'write'}
-        exe_test = embed.simple_bind(default_context(), grad_req=grad_req, data=(batch,))
+        args = {'embed_weight': mx.nd.zeros((in_dim, out_dim)), 'data': mx.nd.ones((batch,))}
+        weight_grad = mx.nd.zeros((in_dim, out_dim))
+        if sparse_grad:
+            weight_grad = weight_grad.tostype('row_sparse')
+        args_grad = {'embed_weight': weight_grad}
+        exe_test = embed._bind(default_context(), args=args, args_grad=args_grad, grad_req=grad_req)
         arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
         grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
         # init data
@@ -1876,17 +1764,17 @@ def test_sparse_embedding():
         np_onehot = np.zeros((batch, in_dim)).astype(np.float32)
         np_onehot[np.arange(batch), np_data] = 1.0
         arg_map["data"][:] = np_data
-        # init grad
-        np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
-        grad = mx.nd.zeros(np_grad.shape)
-        grad[:] = np_grad
         # weight
         weight = arg_map["embed_weight"]
         for density in densities:
             # update weight based on density
-            weight[:] = rand_ndarray(weight.shape, weight_stype, density=density)
+            weight[:] = rand_ndarray(weight.shape, 'default', density=density)
             # check forward
             exe_test.forward(is_train=True)
+            # init grad
+            np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
+            grad = mx.nd.zeros(np_grad.shape)
+            grad[:] = np_grad
             assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, weight.asnumpy()), atol=1e-4)
             # check backward
             exe_test.backward([grad])
@@ -1898,14 +1786,10 @@ def test_sparse_embedding():
     in_dim = 50
     out_dim = 3
     batch = 8
-    weight_stypes = ['default', 'row_sparse']
     sparse_grads = [True, False]
-    for weight_stype in weight_stypes:
-        for sparse_grad in sparse_grads:
-            check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad, weight_stype)
-            check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad, weight_stype)
+    for sparse_grad in sparse_grads:
+        check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad)
 
-@with_seed()
 def test_sparse_broadcast_add_sub():
     def check_broadcast_add(mx_lhs, mx_rhs, np_lhs, np_rhs, dtype):
         assert_almost_equal(mx.nd.sparse.add(mx_lhs, mx_rhs).asnumpy(), np.add(np_lhs, np_rhs), atol=1e-4)
@@ -1930,7 +1814,6 @@ def test_sparse_broadcast_add_sub():
             check_broadcast_add(mx_rhs, mx_lhs, np_rhs, np_lhs, np.float32)
             check_broadcast_sub(mx_rhs, mx_lhs, np_rhs, np_lhs, np.float32)
 
-@with_seed()
 def test_sparse_broadcast_mul_div():
     def check_broadcast_mul(mx_lhs, mx_rhs, np_lhs, np_rhs, dtype):
         assert_almost_equal(mx.nd.sparse.multiply(mx_lhs, mx_rhs).asnumpy(), np.multiply(np_lhs, np_rhs), atol=1e-4)
@@ -1953,153 +1836,6 @@ def test_sparse_broadcast_mul_div():
             check_broadcast_mul(mx_lhs, mx_rhs, np_lhs, np_rhs, np.float32)
             check_broadcast_div(mx_lhs, mx_rhs, np_lhs, np_rhs, np.float32)
 
-@with_seed()
-def test_scatter_ops():
-    def csr_get_seen_points(name, csr_array, verbose=False):
-        """Get a unique list of points int he CSR array as well as a
-        corresponding parallel list of points and values"""
-        seen_points = set()
-        seen_point_list = list()
-        values = list()
-        row_count = csr_array.shape[0]
-        row_pointers = csr_array.indptr.asnumpy()
-        col_indexes  = csr_array.indices.asnumpy()
-        data = csr_array.data.asnumpy()
-        for row in range(row_count):
-            start_pos = row_pointers[row]
-            end_pos = row_pointers[row + 1]
-            for col_index in range(start_pos, end_pos):
-                col = col_indexes[col_index]
-                val = data[col_index]
-                if verbose is True:
-                    print("{}: (row, col = ({}, {}) = {}".format(name, row, col, val))
-                seen_points.add((row, col))
-                seen_point_list.append((row, col))
-                values.append(val)
-        return seen_points, values, seen_point_list
-
-    def check_scatter_ops(name, shape, lhs_stype, rhs_stype, forward_mxnet_call, forward_numpy_call,
-                          density=0.25, rhs_is_scalar=False, verbose=False):
-        lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
-        if rhs_is_scalar is False:
-            rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
-
-        if verbose is True:
-            print(name)
-
-        if lhs_stype != 'default':
-            lhs_nd = create_sparse_array_zd(
-                shape, lhs_stype, density=density,
-                rsp_indices=gen_rsp_random_indices(
-                    shape,
-                    density=density,
-                    force_indices=[(shape[0]/2)]  # force at least one overlap
-                ))
-        else:
-            lhs_nd = rand_ndarray(shape, 'default')
-
-        if rhs_is_scalar is False:
-            if rhs_stype != 'default':
-                rhs_nd = create_sparse_array_zd(
-                    shape, rhs_stype, density=density,
-                    rsp_indices=gen_rsp_random_indices(
-                        shape,
-                        density=density,
-                        force_indices=[(shape[0]/2)]  # force at least one overlap
-                    ))
-            else:
-                rhs_nd = rand_ndarray(shape, 'default')
-        else:
-            rhs_nd = 9
-            rhs = rhs_nd
-
-        lhs_np = lhs_nd.asnumpy()
-        rhs_np = rhs_nd if rhs_is_scalar is True else rhs_nd.asnumpy()
-
-        if verbose is True:
-            print("lhs = {}".format(lhs_np))
-            print("rhs = {}".format(rhs_np))
-
-        out_np = forward_numpy_call(lhs_np, rhs_np)
-
-        if verbose is True:
-            print("Numpy: out_np = {}".format(out_np))
-
-        location = {'lhs': lhs_nd, 'rhs': rhs_nd}
-
-        out = forward_mxnet_call(lhs, rhs)
-        exe_test = out.bind(default_context(), args=location)
-        exe_test.forward(is_train=False)
-        out_nd = exe_test.outputs[0]
-
-        if verbose is True:
-            print("Sym: out_nd = {}".format(out_nd.asnumpy()))
-
-        # For row_sparse, check that rows only exist for rows that are
-        # either int lhs or rhs, and if they exist, they should equal
-        # the numpy values
-        if lhs_stype == 'default':
-            almost_equal(out_nd.asnumpy(), out_np, equal_nan=True)
-        elif lhs_stype == 'row_sparse':
-            seen_rows = set()
-            indices = lhs_nd.indices.asnumpy()
-            for i in range(len(indices)):
-                seen_rows.add(indices[i])
-            assert len(out_nd.indices.asnumpy()) == len(seen_rows)
-            out_nd_np = out_nd.asnumpy()
-            for row in seen_rows:
-                row_nd = out_nd_np[row]
-                row_np = out_np[row]
-                almost_equal(row_nd, row_np, equal_nan=True)
-        elif lhs_stype == 'csr' and rhs_is_scalar is False:
-            almost_equal(out_nd.asnumpy(), out_np, equal_nan=True)
-        else:
-            assert rhs_is_scalar
-            lhs_seen_points, _, _ = csr_get_seen_points("lhs", lhs_nd, verbose)
-            if rhs_is_scalar is False:
-                rhs_seen_points, _, _ = csr_get_seen_points("rhs", rhs_nd, verbose)
-            else:
-                rhs_seen_points = set()
-            input_seen_points = lhs_seen_points.union(rhs_seen_points)
-            out_seen_pounts, out_values, seen_point_list = csr_get_seen_points("out_nd", out_nd, verbose)
-            # Some may have been zero
-            assert len(out_seen_pounts) <= len(input_seen_points)
-            out_nd_np = out_nd.asnumpy()
-            val_index = 0
-            for row_col in seen_point_list:
-                row = row_col[0]
-                col = row_col[1]
-                val = out_values[val_index]
-                val_np = out_nd_np[row, col]
-                almost_equal(val, val_np, equal_nan=True)
-                val_index += 1
-
-    shape = (10, 5)
-
-    for lhs_stype in ['row_sparse', 'default', 'csr']:
-        for rhs_stype in ['row_sparse', 'default', 'csr']:
-            print("op: {}, lhs_stype: {}, rhs_stype: {}".format('_scatter_elemwise_div',
-                                                                lhs_stype, rhs_stype))
-            check_scatter_ops('_scatter_elemwise_div', shape, lhs_stype, rhs_stype,
-                              lambda l, r: mx.sym._internal._scatter_elemwise_div(l, r),
-                              lambda l, r: l / r,
-                              verbose=False)
-
-    for lhs_stype in ['row_sparse', 'default', 'csr']:
-        print("op: {}, lhs_stype: {}".format('_scatter_plus', lhs_stype))
-        check_scatter_ops('_scatter_plus', shape, lhs_stype, 'scalar',
-                          lambda l, r: mx.sym._internal._scatter_plus_scalar(l, r),
-                          lambda l, r: l + r,
-                          rhs_is_scalar=True, verbose=False)
-
-        print("op: {}, lhs_stype: {}".format('_scatter_minus', lhs_stype))
-        check_scatter_ops('_scatter_minus', shape, lhs_stype, 'scalar',
-                          lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
-                          lambda l, r: l + r,
-                          rhs_is_scalar=True, verbose=False, density=0.5)
-
-
-@with_seed()
 def test_batchnorm_fallback():
     # same test as test_operator.test_batchnorm_training, but tests fallback logic of batchnorm
     stype = 'row_sparse'
@@ -2170,7 +1906,7 @@ def test_batchnorm_fallback():
             check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-3, rtol=0.2, atol=0.01)
 
 
-@with_seed()
+@pytest.mark.serial
 def test_mkldnn_sparse():
     # This test is trying to create a race condition describedd in
     # https://github.com/apache/incubator-mxnet/issues/10189
@@ -2186,7 +1922,7 @@ def test_mkldnn_sparse():
     print(res1 - fc_res.asnumpy())
     almost_equal(res1, fc_res.asnumpy())
 
-@with_seed()
+@pytest.mark.serial
 def test_sparse_nd_where():
     def get_forward_expected_output(condition, x, y):
         original_shape = x.shape
@@ -2243,18 +1979,20 @@ def test_sparse_nd_where():
         grad_in_mx = mx.nd.array(grad_in_np, dtype=np.int32)
         where_sym = mx.sym.where(condition, x, y)
 
+        cond_nd = mx.nd.array(condition_np)
+        args = {'condition': cond_nd.tostype('csr'), 'x': mx.nd.array(x_np),
+                'y' : mx.nd.array(y_np)}
+        args_grad = {'condition': mx.nd.zeros_like(cond_nd),
+                     'x': mx.nd.array(x_np).tostype('csr'), 'y' : mx.nd.array(y_np)}
         # test req='write'
-        where_exe_write = where_sym.simple_bind(ctx=default_context(),
-                                                condition=condition_np.shape,
-                                                x=x_np.shape, y=y_np.shape,
-                                                grad_req='write')
+        where_exe_write = where_sym._bind(ctx=default_context(), args=args,
+                                         args_grad=args_grad, grad_req='write')
+
         # test forward req='write'
-        cond_nd = mx.nd.array(condition_np).tostype('csr')
-        outputs = where_exe_write.forward(is_train=True, \
-                                          condition=cond_nd, x=x_np, y=y_np)
+        outputs = where_exe_write.forward(is_train=True)
         assert same(outputs[0].asnumpy(), out_expected)
         # test backward req='write'
-        where_exe_write.backward(grad_in_mx)
+        where_exe_write.backward(grad_in_mx.astype('float32'))
         assert same(where_exe_write.grad_dict['x'].asnumpy(), grad_expected_x)
         assert same(where_exe_write.grad_dict['y'].asnumpy(), grad_expected_y)
         assert same(where_exe_write.grad_dict['condition'].asnumpy(), grad_expected_cond)
@@ -2262,14 +2000,12 @@ def test_sparse_nd_where():
         # test req='add'
         x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
         y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
-        where_exe_add = where_sym.simple_bind(ctx=default_context(),
-                                              condition=cond_nd.shape,
-                                              x=x_np.shape, y=y_np.shape,
-                                              grad_req='add')
+        where_exe_add = where_sym._bind(ctx=default_context(), args=args,
+                                       args_grad=args_grad, grad_req='add')
         where_exe_add.grad_dict['x'][:] = x_grad_init
         where_exe_add.grad_dict['y'][:] = y_grad_init
         # test forward req='add'
-        outputs = where_exe_add.forward(is_train=True, condition=cond_nd, x=x_np, y=y_np)
+        outputs = where_exe_add.forward(is_train=True)
         assert same(outputs[0].asnumpy(), out_expected)
 
     def test_where_numeric_gradient(shape):
@@ -2283,7 +2019,7 @@ def test_sparse_nd_where():
     test_where_helper((5, 9))
     test_where_numeric_gradient((5, 9))
 
-@with_seed()
+@pytest.mark.serial
 def test_sparse_quadratic_function():
     def f(x, a, b, c):
         return a * x**2 + b * x + c
@@ -2339,13 +2075,9 @@ def test_reshape_backward_fallback():
     out = mx.sym.sparse.dot(x, w_x, name='out_x')
 
     grad_w_nd = rand_ndarray(w_shape, 'row_sparse')
-    executor = out.bind(ctx=ctx, args={"x": x_nd, "w": w_nd},
+    executor = out._bind(ctx=ctx, args={"x": x_nd, "w": w_nd},
                         args_grad={"w": grad_w_nd})
     executor.forward(is_train=True)
     executor.backward(out_x_nd)
 
     assert_almost_equal(grad_w_nd.asnumpy(), expected_grad_nd)
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

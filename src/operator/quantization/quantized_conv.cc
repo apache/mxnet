@@ -24,7 +24,7 @@
  * \author Ziheng Jiang, Jun Wu
 */
 #include "../nn/convolution-inl.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
 #endif
 
@@ -40,27 +40,88 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), param.no_bias? 6U : 9U);
   CHECK_EQ(out_shape->size(), 3U);
   if (param.layout.has_value()) {
+#if MXNET_USE_ONEDNN == 1
+    CHECK(param.layout.value() == mshadow::kNCHW || param.layout.value() == mshadow::kNCDHW)
+          << "mkldnn quantized_conv now supports NCHW or NCDHW for now";
+#else
     CHECK_EQ(param.layout.value(), mshadow::kNCHW) << "quantized_conv only supports NCHW for now";
+#endif
   }
-  CHECK_EQ(param.kernel.ndim(), 2U) << "quantized_conv only supports 2D convolution for now";
-  CHECK(param.dilate.ndim() == 0U || param.dilate.Size() == 1U)
-    << "quantized_conv only supports dilation=1 for all dimensions";
-  const mxnet::TShape& dshape =  in_shape->at(0);
-  CHECK_EQ(dshape.ndim(), 4U);
-  if (dshape.ndim() == 0U) return false;
 
-  const int N = 0, H = 2, W = 3, C = 1;
-  CHECK_EQ(dshape[C] % 4,  0U)
+  const mxnet::TShape& dshape =  in_shape->at(0);
+  const int data_ndims = dshape.ndim();
+  const int kernel_ndims = param.kernel.ndim();
+  if (data_ndims == 0U) return false;
+
+#if MXNET_USE_ONEDNN == 1
+  CHECK(kernel_ndims == 2U || kernel_ndims == 3U)
+        << "mkldnn quantized_conv only supports 2d or 3d kernel for now";
+  CHECK(data_ndims == 4U || data_ndims == 5U)
+        << "mkldnn quantized_conv only supports 4d or 5d layout for now";
+#else
+  CHECK_EQ(kernel_ndims, 2U) << "quantized_conv only supports 2D convolution for now";
+  CHECK(param.dilate.ndim() == 0U || param.dilate.Size() == 1U)
+        << "quantized_conv only supports dilation=1 for all dimensions";
+  CHECK_EQ(data_ndims, 4U);
+  CHECK_EQ(dshape[1] % 4,  0U)
     << "for 8bit cudnn conv, the number of channel must be multiple of 4";
   CHECK_EQ(param.num_filter % 4, 0U)
     << "for 8bit cudnn conv, the number of channel must be multiple of 4";
+#endif
 
-  mxnet::TShape wshape{0, 0, 0, 0};
-  wshape[N] = param.num_filter;
-  wshape[H] = param.kernel[0];
-  wshape[W] = param.kernel[1];
-  wshape[C] = dshape[C];
-  SHAPE_ASSIGN_CHECK(*in_shape, 1, wshape);
+  auto AddPad = [](index_t dsize, index_t pad) { return dsize + 2 * pad; };
+  const int D = (data_ndims == 5) ? 2 : 1;
+  const int N = 0, H = D + 1, W = D + 2, C = 1;
+
+if (data_ndims == 4) {
+    // conv 2d
+    mxnet::TShape wshape(data_ndims, 0);
+    wshape[N] = param.num_filter;
+    wshape[H] = param.kernel[0];
+    wshape[W] = param.kernel[1];
+    wshape[C] = dshape[C];
+    SHAPE_ASSIGN_CHECK(*in_shape, 1, wshape);
+
+    mxnet::TShape oshape{1, 1, 1, 1};
+    oshape[N] = dshape[N];
+    oshape[C] = wshape[N];
+
+    const index_t dilated_ksize_y = param.DilatedKernelSize(0);
+    const index_t dilated_ksize_x = param.DilatedKernelSize(1);
+    oshape[H] = (AddPad(dshape[H], param.pad[0]) - dilated_ksize_y) / param.stride[0] + 1;
+    oshape[W] = (AddPad(dshape[W], param.pad[1]) - dilated_ksize_x) / param.stride[1] + 1;
+
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);
+    SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));
+    SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
+#if MXNET_USE_ONEDNN == 1
+  } else {
+    // conv 3d
+    mxnet::TShape wshape(data_ndims, 0);
+    wshape[N] = param.num_filter;
+    wshape[D] = param.kernel[0];
+    wshape[H] = param.kernel[1];
+    wshape[W] = param.kernel[2];
+    wshape[C] = dshape[C];
+    SHAPE_ASSIGN_CHECK(*in_shape, 1, wshape);
+
+    mxnet::TShape oshape{1, 1, 1, 1, 1};
+    oshape[N] = dshape[N];
+    oshape[C] = wshape[N];
+
+    const index_t dilated_ksize_d = param.DilatedKernelSize(0);
+    const index_t dilated_ksize_y = param.DilatedKernelSize(1);
+    const index_t dilated_ksize_x = param.DilatedKernelSize(2);
+    oshape[D] = (AddPad(dshape[D], param.pad[0]) - dilated_ksize_d) / param.stride[0] + 1;
+    oshape[H] = (AddPad(dshape[H], param.pad[1]) - dilated_ksize_y) / param.stride[1] + 1;
+    oshape[W] = (AddPad(dshape[W], param.pad[2]) - dilated_ksize_x) / param.stride[2] + 1;
+
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);
+    SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));
+    SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
+#endif
+  }
+
   const int start = param.no_bias? 2 : 3;
   const int end = param.no_bias? 6 : 9;
   for (int i = start; i < end; ++i) {
@@ -70,16 +131,6 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_shape, 2, Shape1(param.num_filter));
   }
 
-  auto AddPad = [](index_t dsize, index_t pad) { return dsize + 2 * pad; };
-  mxnet::TShape oshape{1, 1, 1, 1};
-  oshape[N] = dshape[N];
-  oshape[C] = wshape[N];
-  oshape[H] = (AddPad(dshape[H], param.pad[0]) - wshape[H]) / param.stride[0] + 1;
-  oshape[W] = (AddPad(dshape[W], param.pad[1]) - wshape[W]) / param.stride[1] + 1;
-
-  SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);
-  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));
-  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
   return true;
 }
 
@@ -89,7 +140,7 @@ bool QuantizedConvType(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   CHECK_EQ(in_type->size(), param.no_bias? 6U : 9U);
   CHECK_EQ(out_type->size(), 3U);
-#ifndef MXNET_USE_MKLDNN
+#ifndef MXNET_USE_ONEDNN
   TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
 #endif
   TYPE_ASSIGN_CHECK(*in_type, 1, mshadow::kInt8);
@@ -114,7 +165,7 @@ bool QuantizedConvStorageType(const nnvm::NodeAttrs& attrs,
                               std::vector<int> *in_attrs,
                               std::vector<int> *out_attrs) {
   *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }

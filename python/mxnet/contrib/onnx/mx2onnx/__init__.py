@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """ONNX Export module"""
-from __future__ import absolute_import
 
 from . import export_model
 from . import export_onnx

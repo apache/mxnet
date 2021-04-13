@@ -21,7 +21,6 @@
 
 """NDArray API of MXNet."""
 
-from __future__ import absolute_import, division
 
 try:
     from __builtin__ import slice as py_slice
@@ -33,14 +32,16 @@ import ctypes
 import warnings
 import operator
 from functools import reduce # pylint: disable=redefined-builtin
-import sys
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
-from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
-from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle, mx_int, mx_int64
+from ..base import c_array, c_array_buf, c_handle_array, mx_real_t
+from ..base import mx_uint, NDArrayHandle, check_call, mx_int, mx_int64
 from ..base import ctypes2buffer
+from ..dlpack import ndarray_to_dlpack_for_read, ndarray_to_dlpack_for_write
+from ..dlpack import ndarray_from_dlpack, ndarray_from_numpy
 from ..runtime import Features
 from ..context import Context, current_context
+from ..util import is_np_array
 from . import _internal
 from . import op
 from ._internal import NDArrayBase
@@ -71,7 +72,27 @@ _DTYPE_NP_TO_MX = {
     np.int8: 5,
     np.int64: 6,
     np.bool_: 7,
+    np.int16: 8,
+    np.uint16 : 9,
+    np.uint32 : 10,
+    np.uint64 : 11,
+    np.dtype([('bfloat16', np.uint16)]): 12,
 }
+
+def _register_platform_dependent_mx_dtype():
+    """Register platform dependent types to the fixed size counterparts."""
+    kind_map = {'i': 'int', 'u': 'uint', 'f': 'float'}
+    for np_type in [
+            np.byte, np.ubyte, np.short, np.ushort, np.intc, np.uintc, np.int_,
+            np.uint, np.longlong, np.ulonglong, np.half, np.float16, np.single,
+            np.double, np.longdouble]:
+        dtype = np.dtype(np_type)
+        kind, size = dtype.kind, dtype.itemsize
+        bits = size * 8
+        fixed_dtype = getattr(np, kind_map[kind]+str(bits))
+        if fixed_dtype in _DTYPE_NP_TO_MX:
+            _DTYPE_NP_TO_MX[np_type] = _DTYPE_NP_TO_MX[fixed_dtype]
+_register_platform_dependent_mx_dtype()
 
 _DTYPE_MX_TO_NP = {
     -1: None,
@@ -83,6 +104,11 @@ _DTYPE_MX_TO_NP = {
     5: np.int8,
     6: np.int64,
     7: np.bool_,
+    8: np.int16,
+    9: np.uint16,
+    10: np.uint32,
+    11: np.uint64,
+    12: np.dtype([('bfloat16', np.uint16)]),
 }
 
 _STORAGE_TYPE_STR_TO_ID = {
@@ -111,7 +137,11 @@ _NDARRAY_UNSUPPORTED_INDEXING = -1
 _NDARRAY_BASIC_INDEXING = 0
 _NDARRAY_ADVANCED_INDEXING = 1
 _NDARRAY_EMPTY_TUPLE_INDEXING = 2
-_NDARRAY_BOOLEAN_INDEXING = 3
+
+# Return code for 0-d boolean array handler
+_NDARRAY_NO_ZERO_DIM_BOOL_ARRAY = -1
+_NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE = 0
+_NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE = 1
 
 # Caching whether MXNet was built with INT64 support or not
 _INT64_TENSOR_SIZE_ENABLED = None
@@ -148,14 +178,18 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         A new empty `NDArray` handle.
     """
     hdl = NDArrayHandle()
-    if sys.version_info[0] > 2 and _int64_enabled():
-        check_call(_LIB.MXNDArrayCreateEx64(
+    if _int64_enabled():
+        if np.dtype(dtype) == np.dtype([('bfloat16', np.uint16)]):
+            dtype_type = np.dtype(dtype)
+        else:
+            dtype_type = np.dtype(dtype).type
+        check_call(_LIB.MXNDArrayCreate64(
             c_array_buf(mx_int64, native_array('q', shape)),
             ctypes.c_int(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
             ctypes.byref(hdl)))
     else:
         # When shape is larger than unit32 then there is an overflow error at python end itself.
@@ -167,20 +201,24 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
             raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
                             "larger than 2^31 elements. Please build with flag " +
                             "USE_INT64_TENSOR_SIZE=1")
-        check_call(_LIB.MXNDArrayCreateEx(
+        if np.dtype(dtype) == np.dtype([('bfloat16', np.uint16)]):
+            dtype_type = np.dtype(dtype)
+        else:
+            dtype_type = np.dtype(dtype).type
+        check_call(_LIB.MXNDArrayCreate(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
             ctypes.byref(hdl)))
     return hdl
 
 
 def _new_from_shared_mem(shared_pid, shared_id, shape, dtype):
     hdl = NDArrayHandle()
-    check_call(_LIB.MXNDArrayCreateFromSharedMemEx(
+    check_call(_LIB.MXNDArrayCreateFromSharedMem(
         ctypes.c_int(shared_pid),
         ctypes.c_int(shared_id),
         c_array(mx_int, shape),
@@ -244,10 +282,13 @@ fixed-size items.
 
     def __repr__(self):
         """Returns a string representation of the array."""
-        shape_info = 'x'.join(['%d' % x for x in self.shape])
-        return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
-                                      self.__class__.__name__,
-                                      shape_info, self.ctx)
+        if self._alive:
+            shape_info = 'x'.join(['%d' % x for x in self.shape])
+            return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
+                                          self.__class__.__name__,
+                                          shape_info, self.ctx)
+        else:
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __reduce__(self):
         return NDArray, (None,), self.__getstate__()
@@ -417,6 +458,13 @@ fixed-size items.
 
     __nonzero__ = __bool__
 
+    def __str__(self):
+        """Returns a readable string representation of the array."""
+        if self.dtype == np.dtype([('bfloat16', np.uint16)]):
+            return super(NDArray, self.astype(float)).__str__()
+        else:
+            return super(NDArray, self).__str__()
+
     def __len__(self):
         """Number of element along the first axis."""
         return self.shape[0]
@@ -517,7 +565,7 @@ fixed-size items.
             return
 
         else:
-            key = indexing_key_expand_implicit_axes(key, self.shape)
+            key, _ = indexing_key_expand_implicit_axes(key, self.shape)
             slc_key = tuple(idx for idx in key if idx is not None)
 
             if len(slc_key) < self.ndim:
@@ -710,7 +758,7 @@ fixed-size items.
             elif key.step == 0:
                 raise ValueError("slice step cannot be zero")
 
-        key = indexing_key_expand_implicit_axes(key, self.shape)
+        key, _ = indexing_key_expand_implicit_axes(key, self.shape)
         if len(key) == 0:
             raise ValueError('indexing key cannot be an empty tuple')
 
@@ -965,7 +1013,10 @@ fixed-size items.
                     value_nd.copyto(self)
 
             elif isinstance(value, numeric_types):
-                self._full(value)
+                if isinstance(value, bool):
+                    self._full(int(value))
+                else:
+                    self._full(value)
 
             elif isinstance(value, (np.ndarray, np.generic)):
                 tmp_shape = _shape_for_bcast(
@@ -1035,7 +1086,7 @@ fixed-size items.
             )
             handle = NDArrayHandle()
             flat_self = self.reshape(-1)
-            if sys.version_info[0] > 2 and _int64_enabled():
+            if _int64_enabled():
                 check_call(
                     _LIB.MXNDArraySlice64(
                         flat_self.handle,
@@ -1078,7 +1129,7 @@ fixed-size items.
 
         The ``ax_len`` is used to convert `slice` objects to integer arrays.
         """
-        if sys.version_info[0] > 2 and _int64_enabled():
+        if _int64_enabled():
             idx_dtype = 'int64'
         else:
             idx_dtype = 'int32'
@@ -1093,7 +1144,7 @@ fixed-size items.
         elif isinstance(idx, py_slice):
             start, stop, step = idx.indices(ax_len)
             return arange(start, stop, step, ctx=ctx, dtype=idx_dtype)
-        elif sys.version_info[0] > 2 and isinstance(idx, range):
+        elif isinstance(idx, range):
             return arange(idx.start, idx.stop, idx.step, ctx=ctx, dtype=idx_dtype)
         else:
             raise RuntimeError('illegal index type {}'.format(type(idx)))
@@ -1376,7 +1427,7 @@ fixed-size items.
             if idx < 0:
                 raise IndexError('index %d is out of bounds for axis 0 with size %d'
                                  % (idx-length, length))
-        if sys.version_info[0] > 2 and _int64_enabled():
+        if _int64_enabled():
             check_call(_LIB.MXNDArrayAt64(
                 self.handle, ctypes.c_int64(idx), ctypes.byref(handle)))
         else:
@@ -1505,7 +1556,12 @@ fixed-size items.
                                            c_array(ctypes.c_int64, shape),
                                            reverse,
                                            ctypes.byref(handle)))
-        return self.__class__(handle=handle, writable=self.writable)
+        res = self.__class__(handle=handle, writable=self.writable)
+
+        # Array size should not change
+        if np.prod(res.shape) != np.prod(self.shape):
+            raise ValueError('Cannot reshape array of size {} into shape {}'.format(np.prod(self.shape), shape))
+        return res
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -2385,11 +2441,11 @@ fixed-size items.
         ndim = mx_int()
         if _int64_enabled():
             pdata = ctypes.POINTER(mx_int64)()
-            check_call(_LIB.MXNDArrayGetShapeEx64(
+            check_call(_LIB.MXNDArrayGetShape64(
                 self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         else:
             pdata = ctypes.POINTER(mx_int)()
-            check_call(_LIB.MXNDArrayGetShapeEx(
+            check_call(_LIB.MXNDArrayGetShape(
                 self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         if ndim.value == -1:
             return None
@@ -2567,9 +2623,12 @@ fixed-size items.
         >>> type(x.asscalar())
         <type 'numpy.int32'>
         """
-        if self.shape != (1,):
+        if self.size != 1:
             raise ValueError("The current array is not a scalar")
-        return self.asnumpy()[0]
+        if self.ndim == 1:
+            return self.asnumpy()[0]
+        else:
+            return self.asnumpy()[()]
 
     def astype(self, dtype, copy=True):
         """Returns a copy of the array after casting to a specified type.
@@ -2599,12 +2658,12 @@ fixed-size items.
         <type 'numpy.int32'>
         """
 
+        if dtype is None:
+            dtype = mx_real_t
         if not copy and np.dtype(dtype) == self.dtype:
             return self
 
-        res = empty(self.shape, ctx=self.ctx, dtype=dtype)
-        self.copyto(res)
-        return res
+        return op.cast(self, dtype=dtype)
 
     def copyto(self, other):
         """Copies the value of this array to another array.
@@ -2801,7 +2860,7 @@ fixed-size items.
         """
         from . import zeros as _zeros
         if stype is not None:
-            grad = _zeros(self.shape, stype=stype)
+            grad = _zeros(self.shape, stype=stype, dtype=self.dtype)
         else:
             grad = op.zeros_like(self)  # pylint: disable=undefined-variable
         grad_req = _GRAD_REQ_MAP[grad_req]
@@ -2936,9 +2995,23 @@ fixed-size items.
             lhs=self, rhs=value_nd, indices=indices, shape=self.shape, out=self
         )
 
+def check_boolean_array_dimension(array_shape, axis, bool_shape):
+    """
+    Advanced boolean indexing is implemented through the use of `nonzero`.
+    Size check is necessary to make sure that the boolean array
+    has exactly as many dimensions as it is supposed to work with before the conversion
+    """
+    for i, val in enumerate(bool_shape):
+        if array_shape[axis + i] != val:
+            raise IndexError('boolean index did not match indexed array along axis {};'
+                             ' size is {} but corresponding boolean size is {}'
+                             .format(axis + i, array_shape[axis + i], val))
 
 def indexing_key_expand_implicit_axes(key, shape):
-    """Make implicit axes explicit by adding ``slice(None)``.
+    """
+    Make implicit axes explicit by adding ``slice(None)``
+    and convert boolean array to integer array through `nonzero`.
+
     Examples
     --------
     >>> shape = (3, 4, 5)
@@ -2950,6 +3023,11 @@ def indexing_key_expand_implicit_axes(key, shape):
     (0, slice(None, None, None), slice(None, None, None))
     >>> indexing_key_expand_implicit_axes(np.s_[:2, None, 0, ...], shape)
     (slice(None, 2, None), None, 0, slice(None, None, None))
+    >>> bool_array = np.array([[True, False, True, False],
+                               [False, True, False, True],
+                               [True, False, True, False]], dtype=np.bool)
+    >>> indexing_key_expand_implicit_axes(np.s_[bool_array, None, 0:2], shape)
+    (array([0, 0, 1, 1, 2, 2], dtype=int64), array([0, 2, 1, 3, 0, 2], dtype=int64), None, slice(None, 2, None))
     """
     if not isinstance(key, tuple):
         key = (key,)
@@ -2959,6 +3037,17 @@ def indexing_key_expand_implicit_axes(key, shape):
     ell_idx = None
     num_none = 0
     nonell_key = []
+
+    # For 0-d boolean indices: A new axis is added,
+    # but at the same time no axis is "used". So if we have True,
+    # we add a new axis (a bit like with np.newaxis). If it is
+    # False, we add a new axis, but this axis has 0 entries.
+    # prepend is defined to handle this case.
+    # prepend = _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY/-1 means there is no 0-d boolean scalar
+    # prepend = _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE/0 means an zero dim must be expanded
+    # prepend = _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE/1 means a new axis must be expanded
+    prepend = _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY
+    axis = 0
     for i, idx in enumerate(key):
         if idx is Ellipsis:
             if ell_idx is not None:
@@ -2967,14 +3056,38 @@ def indexing_key_expand_implicit_axes(key, shape):
                 )
             ell_idx = i
         else:
+            # convert primitive type boolean value to mx.np.bool type
+            # otherwise will be treated as 1/0
+            if isinstance(idx, bool):
+                idx = array(idx, dtype=np.bool_)
             if idx is None:
                 num_none += 1
-            if isinstance(idx, NDArrayBase) and idx.ndim == 0 and idx.dtype != np.bool_:
+            if isinstance(idx, NDArrayBase) and idx.ndim == 0 and idx.dtype == np.bool_:
+                if not idx: # array(False) has priority
+                    prepend = _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE
+                else:
+                    prepend = _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE
+            elif isinstance(idx, NDArrayBase) and idx.ndim == 0 and idx.dtype != np.bool_:
                 # This handles ndarray of zero dim. e.g array(1)
                 # while advoid converting zero dim boolean array
-                nonell_key.append(idx.item())
+                # float type will be converted to int
+                nonell_key.append(int(idx.item()))
+                axis += 1
+            elif isinstance(idx, NDArrayBase) and idx.dtype == np.bool_:
+                # Necessary size check before using `nonzero`
+                check_boolean_array_dimension(shape, axis, idx.shape)
+                # If the whole array is false and npx.set_np() is not set_up
+                # the program will throw infer shape error
+                if not is_np_array():
+                    raise ValueError('Cannot perform boolean indexing in legacy mode. Please activate'
+                                     ' numpy semantics by calling `npx.set_np()` in the global scope'
+                                     ' before calling this function.')
+                # Add the arrays from the nonzero result to the index
+                nonell_key.extend(idx.nonzero())
+                axis += idx.ndim
             else:
                 nonell_key.append(idx)
+                axis += 1
 
     nonell_key = tuple(nonell_key)
 
@@ -2988,7 +3101,7 @@ def indexing_key_expand_implicit_axes(key, shape):
                     (slice(None),) * ell_ndim +
                     nonell_key[ell_idx:])
 
-    return expanded_key
+    return expanded_key, prepend
 
 
 def _int_to_slice(idx):
@@ -3037,7 +3150,7 @@ def _is_advanced_index(idx):
         return True
     elif isinstance(idx, py_slice) or idx is None:
         return False
-    elif sys.version_info[0] > 2 and isinstance(idx, range):
+    elif isinstance(idx, range):
         return True
     else:
         raise RuntimeError('illegal index type {}'.format(type(idx)))
@@ -3046,32 +3159,18 @@ def _is_advanced_index(idx):
 def get_indexing_dispatch_code(key):
     """Returns a dispatch code for calling basic or advanced indexing functions."""
     assert isinstance(key, tuple)
-    num_bools = 0
-    basic_indexing = True
 
     for idx in key:
-        if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
+        if isinstance(idx, (NDArray, np.ndarray, list, tuple, range)):
             if isinstance(idx, tuple) and len(idx) == 0:
                 return _NDARRAY_EMPTY_TUPLE_INDEXING
-            if getattr(idx, 'dtype', None) == np.bool_:
-                num_bools += 1
-            basic_indexing = False
-        elif sys.version_info[0] > 2 and isinstance(idx, range):
-            basic_indexing = False
+            return _NDARRAY_ADVANCED_INDEXING
         elif not (isinstance(idx, (py_slice, integer_types)) or idx is None):
             raise ValueError(
                 'NDArray does not support slicing with key {} of type {}.'
                 ''.format(idx, type(idx))
             )
-    if basic_indexing and num_bools == 0:
-        return _NDARRAY_BASIC_INDEXING
-    elif not basic_indexing and num_bools == 0:
-        return _NDARRAY_ADVANCED_INDEXING
-    elif num_bools == 1:
-        return _NDARRAY_BOOLEAN_INDEXING
-    else:
-        raise TypeError('ndarray indexing does not more than one boolean ndarray'
-                        ' in a tuple of complex indices.')
+    return _NDARRAY_BASIC_INDEXING
 
 
 def _get_index_range(start, stop, length, step=1):
@@ -4580,6 +4679,11 @@ def concatenate(arrays, axis=0, always_copy=True):
     NDArray
         An `NDArray` that lives on the same context as `arrays[0].context`.
     """
+    # Unsupported in deferred compute mode due to use of inplace operations.
+    from .._deferred_compute import is_deferred_compute  # pylint: disable=wrong-import-position
+    assert not is_deferred_compute(), 'nd.concatenate is deprecated and ' \
+        'unsupported in deferred compute mode. Use nd.concat instead.'
+
     assert isinstance(arrays, list)
     assert len(arrays) > 0
     assert isinstance(arrays[0], NDArray)
@@ -4850,84 +4954,8 @@ def split_v2(ary, indices_or_sections, axis=0, squeeze_axis=False):
         raise ValueError('indices_or_sections must either int or tuple of ints')
     return _internal._split_v2(ary, indices, axis, squeeze_axis)
 
-PyCapsuleDestructor = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-_c_str_dltensor = c_str('dltensor')
-_c_str_used_dltensor = c_str('used_dltensor')
-
-def _dlpack_deleter(pycapsule):
-    pycapsule = ctypes.c_void_p(pycapsule)
-    if ctypes.pythonapi.PyCapsule_IsValid(pycapsule, _c_str_dltensor):
-        ptr = ctypes.c_void_p(
-            ctypes.pythonapi.PyCapsule_GetPointer(pycapsule, _c_str_dltensor))
-        check_call(_LIB.MXNDArrayCallDLPackDeleter(ptr))
-
-_c_dlpack_deleter = PyCapsuleDestructor(_dlpack_deleter)
-
-def to_dlpack_for_read(data):
-    """Returns a reference view of NDArray that represents as DLManagedTensor until
-       all previous write operations on the current array are finished.
-
-    Parameters
-    ----------
-    data: NDArray
-        input data.
-
-    Returns
-    -------
-    PyCapsule (the pointer of DLManagedTensor)
-        a reference view of NDArray that represents as DLManagedTensor.
-
-    Examples
-    --------
-    >>> x = mx.nd.ones((2,3))
-    >>> y = mx.nd.to_dlpack_for_read(x)
-    >>> type(y)
-    <class 'PyCapsule'>
-    >>> z = mx.nd.from_dlpack(y)
-    >>> z
-    [[1. 1. 1.]
-     [1. 1. 1.]]
-    <NDArray 2x3 @cpu(0)>
-    """
-    data.wait_to_read()
-    dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
-
-def to_dlpack_for_write(data):
-    """Returns a reference view of NDArray that represents as DLManagedTensor until
-       all previous read/write operations on the current array are finished.
-
-    Parameters
-    ----------
-    data: NDArray
-        input data.
-
-    Returns
-    -------
-    PyCapsule (the pointer of DLManagedTensor)
-        a reference view of NDArray that represents as DLManagedTensor.
-
-    Examples
-    --------
-    >>> x = mx.nd.ones((2,3))
-    >>> w = mx.nd.to_dlpack_for_write(x)
-    >>> type(w)
-    <class 'PyCapsule'>
-    >>> u = mx.nd.from_dlpack(w)
-    >>> u += 1
-    >>> x
-    [[2. 2. 2.]
-     [2. 2. 2.]]
-    <NDArray 2x3 @cpu(0)>
-    """
-    check_call(_LIB.MXNDArrayWaitToWrite(data.handle))
-    dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
-
-def from_dlpack(dlpack):
-    """Returns a NDArray backed by a dlpack tensor.
+from_dlpack = ndarray_from_dlpack(NDArray)
+from_dlpack_doc = """Returns a NDArray backed by a dlpack tensor.
 
     Parameters
     ----------
@@ -4963,69 +4991,10 @@ def from_dlpack(dlpack):
      [2. 2. 2.]]
     <NDArray 2x3 @cpu(0)>
     """
-    handle = NDArrayHandle()
-    dlpack = ctypes.py_object(dlpack)
-    assert ctypes.pythonapi.PyCapsule_IsValid(dlpack, _c_str_dltensor), ValueError(
-        'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
-    dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
-    check_call(_LIB.MXNDArrayFromDLPackEx(dlpack_handle, False, ctypes.byref(handle)))
-    # Rename PyCapsule (DLPack)
-    ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
-    # delete the deleter of the old dlpack
-    ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
-    return NDArray(handle=handle)
+from_dlpack.__doc__ = from_dlpack_doc
 
-class DLContext(ctypes.Structure):
-    _fields_ = [("device_type", ctypes.c_int),
-                ("device_id", ctypes.c_int)]
-
-
-class DLDataType(ctypes.Structure):
-    _fields_ = [("type_code", ctypes.c_uint8),
-                ("bits", ctypes.c_uint8),
-                ("lanes", ctypes.c_uint16)]
-    TYPE_MAP = {
-        "int32": (0, 32, 1),
-        "int64": (0, 64, 1),
-        "bool": (1, 1, 1),
-        "uint32": (1, 32, 1),
-        "uint64": (1, 64, 1),
-        'float16': (2, 16, 1),
-        "float32": (2, 32, 1),
-        "float64": (2, 64, 1),
-    }
-
-
-class DLTensor(ctypes.Structure):
-    _fields_ = [("data", ctypes.c_void_p),
-                ("ctx", DLContext),
-                ("ndim", ctypes.c_int),
-                ("dtype", DLDataType),
-                ("shape", ctypes.POINTER(ctypes.c_int64)),
-                ("strides", ctypes.POINTER(ctypes.c_int64)),
-                ("byte_offset", ctypes.c_uint64)]
-
-class DLManagedTensor(ctypes.Structure):
-    pass
-
-
-DeleterFunc = ctypes.CFUNCTYPE(None, ctypes.POINTER(DLManagedTensor))
-
-
-DLManagedTensor._fields_ = [("dl_tensor", DLTensor),           # pylint: disable=protected-access
-                            ("manager_ctx", ctypes.c_void_p),
-                            ("deleter", DeleterFunc)]
-
-
-@DeleterFunc
-def dl_managed_tensor_deleter(dl_managed_tensor_handle):
-    void_p = dl_managed_tensor_handle.contents.manager_ctx
-    pyobj = ctypes.cast(void_p, ctypes.py_object)
-    ctypes.pythonapi.Py_DecRef(pyobj)
-
-
-def from_numpy(ndarray, zero_copy=True):
-    """Returns an MXNet's ndarray backed by numpy's ndarray.
+from_numpy = ndarray_from_numpy(NDArray, array)
+from_numpy_doc = """Returns an MXNet's NDArray backed by numpy's ndarray.
     When `zero_copy` is set to be true,
     this API consumes numpy's ndarray and produces MXNet's ndarray
     without having to copy the content. In this case, we disallow
@@ -5034,9 +5003,8 @@ def from_numpy(ndarray, zero_copy=True):
 
     Parameters
     ----------
-    ndarray: numpy.ndarray
+    ndarray: NDArray
         input data
-
     zero_copy: bool
         Whether we use DLPack's zero-copy conversion to convert to MXNet's NDArray.
         This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
@@ -5045,42 +5013,63 @@ def from_numpy(ndarray, zero_copy=True):
     -------
     NDArray
         a NDArray backed by a dlpack tensor
+"""
+from_numpy.__doc__ = from_numpy_doc
 
-    """
 
-    def _make_manager_ctx(obj):
-        pyobj = ctypes.py_object(obj)
-        void_p = ctypes.c_void_p.from_buffer(pyobj)
-        ctypes.pythonapi.Py_IncRef(pyobj)
-        return void_p
+to_dlpack_for_read = ndarray_to_dlpack_for_read()
+to_dlpack_for_read_doc = """Returns a reference view of NDArray that represents as DLManagedTensor until
+all previous write operations on the current array are finished.
 
-    def _make_dl_tensor(array):
-        if str(array.dtype) not in DLDataType.TYPE_MAP:
-            raise ValueError(str(array.dtype) + " is not supported.")
-        dl_tensor = DLTensor()
-        dl_tensor.data = array.ctypes.data_as(ctypes.c_void_p)
-        dl_tensor.ctx = DLContext(1, 0)
-        dl_tensor.ndim = array.ndim
-        dl_tensor.dtype = DLDataType.TYPE_MAP[str(array.dtype)]
-        dl_tensor.shape = array.ctypes.shape_as(ctypes.c_int64)
-        dl_tensor.strides = None
-        dl_tensor.byte_offset = 0
-        return dl_tensor
+Parameters
+----------
+data: NDArray
+    input data.
 
-    def _make_dl_managed_tensor(array):
-        c_obj = DLManagedTensor()
-        c_obj.dl_tensor = _make_dl_tensor(array)
-        c_obj.manager_ctx = _make_manager_ctx(array)
-        c_obj.deleter = dl_managed_tensor_deleter
-        return c_obj
+Returns
+-------
+PyCapsule (the pointer of DLManagedTensor)
+    a reference view of NDArray that represents as DLManagedTensor.
 
-    if not zero_copy:
-        return array(ndarray, dtype=ndarray.dtype)
+Examples
+--------
+>>> x = mx.nd.ones((2,3))
+>>> y = mx.nd.to_dlpack_for_read(x)
+>>> type(y)
+<class 'PyCapsule'>
+>>> z = mx.nd.from_dlpack(y)
+>>> z
+[[1. 1. 1.]
+ [1. 1. 1.]]
+<NDArray 2x3 @cpu(0)>
+"""
+to_dlpack_for_read.__doc__ = to_dlpack_for_read_doc
 
-    if not ndarray.flags['C_CONTIGUOUS']:
-        raise ValueError("Only c-contiguous arrays are supported for zero-copy")
-    ndarray.flags['WRITEABLE'] = False
-    c_obj = _make_dl_managed_tensor(ndarray)
-    handle = NDArrayHandle()
-    check_call(_LIB.MXNDArrayFromDLPackEx(ctypes.byref(c_obj), True, ctypes.byref(handle)))
-    return NDArray(handle=handle)
+to_dlpack_for_write = ndarray_to_dlpack_for_write()
+to_dlpack_for_write_doc = """Returns a reference view of NDArray that represents as
+DLManagedTensor until all previous read/write operations on the current array are finished.
+
+Parameters
+----------
+data: NDArray
+    input data.
+
+Returns
+-------
+PyCapsule : the pointer of DLManagedTensor
+    a reference view of NDArray that represents as DLManagedTensor.
+
+Examples
+--------
+>>> x = mx.nd.ones((2,3))
+>>> w = mx.nd.to_dlpack_for_write(x)
+>>> type(w)
+<class 'PyCapsule'>
+>>> u = mx.nd.from_dlpack(w)
+>>> u += 1
+>>> x
+[[2. 2. 2.]
+ [2. 2. 2.]]
+<NDArray 2x3 @cpu(0)>
+"""
+to_dlpack_for_write.__doc__ = to_dlpack_for_write_doc

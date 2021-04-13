@@ -23,7 +23,7 @@
  *  \author Da Zheng
  */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <mkldnn_types.h>
 #include <cmath>
@@ -100,7 +100,7 @@ static void VerifyDefMem(const mkldnn::memory &mem) {
 
 TEST(MKLDNN_UTIL_FUNC, MemFormat) {
   // Check whether the number of format is correct.
-  CHECK_EQ(mkldnn_format_tag_last, 131);
+  CHECK_EQ(mkldnn_format_tag_last, 222);
   CHECK_EQ(mkldnn_nchw, 5);
   CHECK_EQ(mkldnn_oihw, 5);
 }
@@ -417,4 +417,4 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   }
 }
 
-#endif  // MXNET_USE_MKLDNN  == 1
+#endif  // MXNET_USE_ONEDNN  == 1

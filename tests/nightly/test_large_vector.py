@@ -22,20 +22,18 @@ import math
 import numpy as np
 import mxnet as mx
 
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, '../python/unittest/'))
-
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed
-from nose.tools import with_setup
-import unittest
+from common import with_seed
+import pytest
+
 
 # dimension constants
 LARGE_X = 4300000000
 MEDIUM_X = 1000000000
 
 
+@pytest.mark.timeout(0)
 def test_nn():
     def check_dense():
         data = mx.nd.ones(shape=LARGE_X)
@@ -43,34 +41,6 @@ def test_nn():
         linear.initialize()
         res = linear(data)
         assert res.shape == (LARGE_X, 2)
-
-    def check_regression():
-        shape = (LARGE_X, )
-        def check_regression(symbol, forward, shape):
-            # init executor
-            data_s = mx.symbol.Variable('data')
-            label_s = mx.symbol.Variable('label')
-            out_s = symbol(data=data_s, label=label_s)
-            exe = out_s.simple_bind(ctx=mx.cpu(0), data=shape, label=shape)
-            arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
-            # init data
-            data = mx.random.uniform(-1, -1, shape)
-            arg_map["data"][:] = data
-            atol = 1e-5
-            density = 0.5
-            stype = 'default'
-            label = arg_map["label"]
-            label[:] = rand_ndarray(shape, stype, density=density)
-            exe.forward(is_train=True)
-            exe.backward()
-            np_out = forward(data.asnumpy())
-            assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
-        check_regression(mx.symbol.LogisticRegressionOutput,
-                         lambda x: 1.0 / (1.0 + np.exp(-x)),
-                         shape)
-        check_regression(mx.symbol.LinearRegressionOutput,
-                         lambda x: x,
-                         shape)
 
     def check_sign():
         a = mx.nd.random.normal(-1, 1, shape=LARGE_X)
@@ -154,7 +124,6 @@ def test_nn():
 
     check_sequence_last()
     check_dense()
-    check_regression()
     check_sign()
     check_layer_norm()
     check_batchnorm()
@@ -162,6 +131,7 @@ def test_nn():
     check_sequence_reverse()
 
 
+@pytest.mark.timeout(0)
 def test_tensor():
     def check_ndarray_zeros():
         a = nd.zeros(shape=LARGE_X)
@@ -183,8 +153,7 @@ def test_tensor():
         a = nd.random.uniform(shape=LARGE_X)
         assert a[-1] != 0
 
-    @unittest.skip("Randint flaky, tracked at "
-                   "https://github.com/apache/incubator-mxnet/issues/16172")
+    @pytest.mark.skip(reason="Randint flaky, tracked at https://github.com/apache/incubator-mxnet/issues/16172")
     @with_seed()
     def check_ndarray_random_randint():
         # check if randint can generate value greater than 2**32 (large)
@@ -370,7 +339,7 @@ def test_tensor():
 
     def check_gather():
         arr = mx.nd.ones(LARGE_X)
-        # Passing dtype=np.int64 since randomly generated indices are 
+        # Passing dtype=np.int64 since randomly generated indices are
         # very large that exceeds int32 limits.
         idx = mx.nd.random.randint(0, LARGE_X, 10, dtype=np.int64)
         # Calls gather_nd internally
@@ -405,13 +374,13 @@ def test_tensor():
 
     def check_load_save():
         x = create_vector(size=LARGE_X)
-        tmp = tempfile.mkdtemp()
-        tmpfile = os.path.join(tmp, 'large_vector')
-        nd.save(tmpfile, [x])
-        y = nd.load(tmpfile)
-        y = y[0]
-        assert x[0] == y[0]
-        assert x[-1] == y[-1]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmpfile = os.path.join(tmp, 'large_vector')
+            nd.save(tmpfile, [x])
+            y = nd.load(tmpfile)
+            y = y[0]
+            assert x[0] == y[0]
+            assert x[-1] == y[-1]
 
     def check_binary_broadcast():
         def check_correctness(mxnet_op, numpy_op, atol=1e-3):
@@ -463,6 +432,7 @@ def test_tensor():
     check_binary_broadcast()
 
 
+@pytest.mark.timeout(0)
 def test_basic():
     def check_elementwise():
         a = nd.ones(shape=LARGE_X)
@@ -481,15 +451,15 @@ def test_basic():
         assert idx[0] == 0
         assert idx.shape[0] == 1
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_argsort():
         a = create_vector(size=LARGE_X)
         s = nd.argsort(a, axis=0, is_ascend=False, dtype=np.int64)
         assert s[0] == (LARGE_X - 1)
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_sort():
         a = create_vector(size=LARGE_X)
 
@@ -504,8 +474,8 @@ def test_basic():
         check_descend(a)
         check_ascend(a)
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_topk():
         a = create_vector(size=LARGE_X)
         ind = nd.topk(a, k=10, axis=0, dtype=np.int64)
@@ -1063,7 +1033,3 @@ def test_basic():
     check_maximum()
     check_minimum()
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

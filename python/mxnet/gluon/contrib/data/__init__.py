@@ -19,6 +19,4 @@
 # pylint: disable=wildcard-import
 """Contrib datasets."""
 
-from . import text
-
-from .sampler import *
+from . import vision

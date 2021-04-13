@@ -34,6 +34,7 @@
 #include <opencv2/opencv.hpp>
 #include <mxnet/c_predict_api.h>
 #include "mxnet-cpp/MxNetCpp.h"
+#include <random>
 
 const float DEFAULT_MEAN = 117.0;
 
@@ -225,9 +226,9 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
     flag_val_cstrs.emplace_back(flag_vals[i].c_str());
   }
 
-  int ret1 = MXCreateCachedOpEX(out.GetHandle(), flag_keys.size(),
-                                flag_key_cstrs.data(), flag_val_cstrs.data(),
-                                &hdl, true);
+  int ret1 = MXCreateCachedOp(out.GetHandle(), flag_keys.size(),
+                              flag_key_cstrs.data(), flag_val_cstrs.data(),
+                              &hdl, true);
   if (ret1 < 0) {
     LOG(FATAL) << MXGetLastError();
   }
@@ -248,13 +249,15 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
   auto func = [&](int num) {
     unsigned next = num;
     if (random_sleep) {
-      int sleep_time = rand_r(&next) % 5;
+      static thread_local std::mt19937 generator;
+      std::uniform_int_distribution<int> distribution(0, 5);
+      int sleep_time = distribution(generator);
       std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
     }
     int num_output = 0;
     const int *stypes;
-    int ret = MXInvokeCachedOpEx(hdl, arr_handles[num].size(), arr_handles[num].data(),
-                                 &num_output, &(cached_op_handles[num]), &stypes);
+    int ret = MXInvokeCachedOp(hdl, arr_handles[num].size(), arr_handles[num].data(),
+                               cpu::kDevMask, 0, &num_output, &(cached_op_handles[num]), &stypes);
     if (ret < 0) {
       LOG(FATAL) << MXGetLastError();
     }

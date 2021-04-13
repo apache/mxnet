@@ -22,37 +22,36 @@
  * \file elemwise_binary_op_logic.cu
  * \brief GPU Implementation of unary function.
  */
-#include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(_equal)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::eq>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"equal"});
 
 NNVM_REGISTER_OP(_not_equal)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::ne>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"not_equal"});
 
 NNVM_REGISTER_OP(_greater)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::gt>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"greater"});
 
 NNVM_REGISTER_OP(_greater_equal)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::ge>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"greater_equal"});
 
 NNVM_REGISTER_OP(_lesser)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::lt>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"less"});
 
 NNVM_REGISTER_OP(_lesser_equal)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::le>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"less_equal"});
 
 NNVM_REGISTER_OP(_logical_and)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::logical_and>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"logical_and"});
 
 NNVM_REGISTER_OP(_logical_or)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::logical_or>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"logical_or"});
 
 NNVM_REGISTER_OP(_logical_xor)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::logical_xor>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"logical_xor"});
 
 }  // namespace op
 }  // namespace mxnet

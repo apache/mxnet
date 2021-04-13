@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """ Key value store interface of MXNet for parameter synchronization."""
-from __future__ import absolute_import
 
 import pickle
 import ctypes
@@ -210,6 +209,7 @@ class KVStore(KVStoreBase):
         Examples
         --------
         >>> # push a single key-value pair
+        >>> shape = (2,3)
         >>> kv.push('3', mx.nd.ones(shape)*8)
         >>> kv.pull('3', out=a) # pull out the value
         >>> print a.asnumpy()
@@ -296,6 +296,7 @@ class KVStore(KVStoreBase):
         Examples
         --------
         >>> # pull a single key-value pair
+        >>> shape = (2,3)
         >>> a = mx.nd.zeros(shape)
         >>> kv.pull('3', out=a)
         >>> print a.asnumpy()
@@ -368,6 +369,7 @@ class KVStore(KVStoreBase):
         Examples
         --------
         >>> # pushpull a single key-value pair
+        >>> shape = (2,3)
         >>> kv.pushpull('3', mx.nd.ones(shape)*8, out=a)
         >>> print a.asnumpy()
         [[ 8.  8.  8.]
@@ -499,6 +501,9 @@ class KVStore(KVStoreBase):
         """ Specifies type of low-bit quantization for gradient compression \
          and additional arguments depending on the type of compression being used.
 
+        The 1bit compression works as follows: values which is above the threshold in the
+        gradient will be set to +1, whereas values below threshold will be set to -1.
+
         2bit Gradient Compression takes a positive float `threshold`.
         The technique works by thresholding values such that positive values in the
         gradient above threshold will be set to threshold. Negative values whose absolute
@@ -539,7 +544,7 @@ class KVStore(KVStoreBase):
             A dictionary specifying the type and parameters for gradient compression.
             The key `type` in this dictionary is a
             required string argument and specifies the type of gradient compression.
-            Currently `type` can be only `2bit`
+            Currently `type` can be only `1bit` and `2bit`
             Other keys in this dictionary are optional and specific to the type
             of gradient compression.
         """

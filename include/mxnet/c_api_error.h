@@ -21,6 +21,10 @@
  *  Copyright (c) 2018 by Contributors
  * \file c_api_error.h
  * \brief Error handling for C API.
+
+ *  WARNING: THIS IS NOT A C API. THE FILE IS TEMPORARILY KEPT UNDER THE NAME
+ *  C_API_ERROR.H FOR BACKWARDS COMPATIBILITY REASONS. DO NOT RELY ON THIS FILE
+ *  WHEN WRITING NEW CODE.
  */
 #include <string>
 

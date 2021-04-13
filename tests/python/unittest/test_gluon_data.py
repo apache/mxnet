@@ -17,20 +17,20 @@
 
 import os
 import tarfile
+import tempfile
 import unittest
 import mxnet as mx
 import numpy as np
 import random
 from mxnet import gluon
 import platform
-from common import setup_module, with_seed, teardown
 from mxnet.gluon.data import DataLoader
 import mxnet.ndarray as nd
 from mxnet import context
 from mxnet.gluon.data.dataset import Dataset
 from mxnet.gluon.data.dataset import ArrayDataset
+import pytest
 
-@with_seed()
 def test_array_dataset():
     X = np.random.uniform(size=(10, 20))
     Y = np.random.uniform(size=(10,))
@@ -46,28 +46,39 @@ def test_array_dataset():
     for i, x in enumerate(loader):
         assert mx.test_utils.almost_equal(x.asnumpy(), X[i*2:(i+1)*2])
 
-
-def prepare_record():
-    if not os.path.isdir("data/test_images"):
-        os.makedirs('data/test_images')
-    if not os.path.isdir("data/test_images/test_images"):
-        gluon.utils.download("http://data.mxnet.io/data/test_images.tar.gz", "data/test_images.tar.gz")
-        tarfile.open('data/test_images.tar.gz').extractall('data/test_images/')
-    if not os.path.exists('data/test.rec'):
-        imgs = os.listdir('data/test_images/test_images')
-        record = mx.recordio.MXIndexedRecordIO('data/test.idx', 'data/test.rec', 'w')
-        for i, img in enumerate(imgs):
-            str_img = open('data/test_images/test_images/'+img, 'rb').read()
+@pytest.fixture(scope="session")
+def prepare_record(tmpdir_factory):
+    test_images = tmpdir_factory.mktemp("test_images")
+    test_images_tar = test_images.join("test_images.tar.gz")
+    gluon.utils.download("https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz", str(test_images_tar))
+    tarfile.open(test_images_tar).extractall(str(test_images))
+    imgs = os.listdir(str(test_images.join("test_images")))
+    record = mx.recordio.MXIndexedRecordIO(str(test_images.join("test.idx")), str(test_images.join("test.rec")), 'w')
+    for i, img in enumerate(imgs):
+        with open(str(test_images.join("test_images").join(img)), 'rb') as f:
+            str_img = f.read()
             s = mx.recordio.pack((0, i, i, 0), str_img)
             record.write_idx(i, s)
-    return 'data/test.rec'
+    return str(test_images.join('test.rec'))
 
 
-@with_seed()
-def test_recordimage_dataset():
-    recfile = prepare_record()
+def test_recordimage_dataset(prepare_record):
+    recfile = prepare_record
     fn = lambda x, y : (x, y)
     dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(fn)
+    loader = gluon.data.DataLoader(dataset, 1)
+
+    for i, (x, y) in enumerate(loader):
+        assert x.shape[0] == 1 and x.shape[3] == 3
+        assert y.asscalar() == i
+
+def test_recordimage_dataset_handle(prepare_record):
+    recfile = prepare_record
+    class TmpTransform(mx.gluon.HybridBlock):
+        def hybrid_forward(self, F, x):
+            return x
+    fn = TmpTransform()
+    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform_first(fn).__mx_handle__()
     loader = gluon.data.DataLoader(dataset, 1)
 
     for i, (x, y) in enumerate(loader):
@@ -82,11 +93,10 @@ def _dataset_transform_first_fn(x):
     """Named transform function since lambda function cannot be pickled."""
     return x
 
-@with_seed()
-def test_recordimage_dataset_with_data_loader_multiworker():
-    recfile = prepare_record()
+def test_recordimage_dataset_with_data_loader_multiworker(prepare_record):
+    recfile = prepare_record
     dataset = gluon.data.vision.ImageRecordDataset(recfile)
-    loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
+    loader = gluon.data.DataLoader(dataset, 1, num_workers=5, try_nopython=False)
 
     for i, (x, y) in enumerate(loader):
         assert x.shape[0] == 1 and x.shape[3] == 3
@@ -94,7 +104,7 @@ def test_recordimage_dataset_with_data_loader_multiworker():
 
     # with transform
     dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(_dataset_transform_fn)
-    loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
+    loader = gluon.data.DataLoader(dataset, 1, num_workers=5, try_nopython=None)
 
     for i, (x, y) in enumerate(loader):
         assert x.shape[0] == 1 and x.shape[3] == 3
@@ -102,13 +112,12 @@ def test_recordimage_dataset_with_data_loader_multiworker():
 
     # with transform_first
     dataset = gluon.data.vision.ImageRecordDataset(recfile).transform_first(_dataset_transform_first_fn)
-    loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
+    loader = gluon.data.DataLoader(dataset, 1, num_workers=5, try_nopython=None)
 
     for i, (x, y) in enumerate(loader):
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
-@with_seed()
 def test_sampler():
     seq_sampler = gluon.data.SequentialSampler(10)
     assert list(seq_sampler) == list(range(10))
@@ -121,26 +130,89 @@ def test_sampler():
     rand_batch_keep = gluon.data.BatchSampler(rand_sampler, 3, 'keep')
     assert sorted(sum(list(rand_batch_keep), [])) == list(range(10))
 
-@with_seed()
-def test_datasets():
-    assert len(gluon.data.vision.MNIST(root='data/mnist')) == 60000
-    assert len(gluon.data.vision.MNIST(root='data/mnist', train=False)) == 10000
-    assert len(gluon.data.vision.FashionMNIST(root='data/fashion-mnist')) == 60000
-    assert len(gluon.data.vision.FashionMNIST(root='data/fashion-mnist', train=False)) == 10000
-    assert len(gluon.data.vision.CIFAR10(root='data/cifar10')) == 50000
-    assert len(gluon.data.vision.CIFAR10(root='data/cifar10', train=False)) == 10000
-    assert len(gluon.data.vision.CIFAR100(root='data/cifar100')) == 50000
-    assert len(gluon.data.vision.CIFAR100(root='data/cifar100', fine_label=True)) == 50000
-    assert len(gluon.data.vision.CIFAR100(root='data/cifar100', train=False)) == 10000
+def test_datasets(tmpdir):
+    p = tmpdir.mkdir("test_datasets")
+    assert len(gluon.data.vision.MNIST(root=str(p.join('mnist')))) == 60000
+    assert len(gluon.data.vision.MNIST(root=str(p.join('mnist')), train=False)) == 10000
+    assert len(gluon.data.vision.FashionMNIST(root=str(p.join('fashion-mnist')))) == 60000
+    assert len(gluon.data.vision.FashionMNIST(root=str(p.join('fashion-mnist')), train=False)) == 10000
+    assert len(gluon.data.vision.CIFAR10(root=str(p.join('cifar10')))) == 50000
+    assert len(gluon.data.vision.CIFAR10(root=str(p.join('cifar10')), train=False)) == 10000
+    assert len(gluon.data.vision.CIFAR100(root=str(p.join('cifar100')))) == 50000
+    assert len(gluon.data.vision.CIFAR100(root=str(p.join('cifar100')), fine_label=True)) == 50000
+    assert len(gluon.data.vision.CIFAR100(root=str(p.join('cifar100')), train=False)) == 10000
 
-@with_seed()
-def test_image_folder_dataset():
-    prepare_record()
-    dataset = gluon.data.vision.ImageFolderDataset('data/test_images')
+def test_datasets_handles(tmpdir):
+    p = tmpdir.mkdir("test_datasets_handles")
+    assert len(gluon.data.vision.MNIST(root=str(p.join('mnist'))).__mx_handle__()) == 60000
+    assert len(gluon.data.vision.MNIST(root=str(p.join('mnist')), train=False).__mx_handle__()) == 10000
+    assert len(gluon.data.vision.FashionMNIST(root=str(p.join('fashion-mnist'))).__mx_handle__()) == 60000
+    assert len(gluon.data.vision.FashionMNIST(root=str(p.join('fashion-mnist')), train=False).__mx_handle__()) == 10000
+    assert len(gluon.data.vision.CIFAR10(root=str(p.join('cifar10'))).__mx_handle__()) == 50000
+    assert len(gluon.data.vision.CIFAR10(root=str(p.join('cifar10')), train=False).__mx_handle__()) == 10000
+    assert len(gluon.data.vision.CIFAR100(root=str(p.join('cifar100'))).__mx_handle__()) == 50000
+    assert len(gluon.data.vision.CIFAR100(root=str(p.join('cifar100')), fine_label=True).__mx_handle__()) == 50000
+    assert len(gluon.data.vision.CIFAR100(root=str(p.join('cifar100')), train=False).__mx_handle__()) == 10000
+
+def test_image_folder_dataset(prepare_record):
+    dataset = gluon.data.vision.ImageFolderDataset(os.path.dirname(prepare_record))
     assert dataset.synsets == ['test_images']
     assert len(dataset.items) == 16
 
-@with_seed()
+def test_image_folder_dataset_handle(prepare_record):
+    dataset = gluon.data.vision.ImageFolderDataset(os.path.dirname(prepare_record))
+    hd = dataset.__mx_handle__()
+    assert len(hd) == 16
+    assert (hd[1][0] == dataset[1][0]).asnumpy().all()
+    assert hd[5][1] == dataset[5][1]
+
+def test_image_list_dataset(prepare_record):
+    root = os.path.join(os.path.dirname(prepare_record), 'test_images')
+    imlist = os.listdir(root)
+    imglist = [(0, path) for i, path in enumerate(imlist)]
+    dataset = gluon.data.vision.ImageListDataset(root=root, imglist=imglist)
+    assert len(dataset) == 16, len(dataset)
+    img, label = dataset[0]
+    assert len(img.shape) == 3
+    assert label == 0
+
+    # save to file as *.lst
+    imglist = ['\t'.join((str(i), '0', path)) for i, path in enumerate(imlist)]
+    with tempfile.NamedTemporaryFile('wt', delete=False) as fp:
+        for line in imglist:
+            fp.write(line + '\n')
+        fp.close()
+
+        dataset = gluon.data.vision.ImageListDataset(root=root, imglist=fp.name)
+        assert len(dataset) == 16, len(dataset)
+        img, label = dataset[0]
+        assert len(img.shape) == 3
+        assert label == 0
+
+def test_image_list_dataset_handle(prepare_record):
+    root = os.path.join(os.path.dirname(prepare_record), 'test_images')
+    imlist = os.listdir(root)
+    imglist = [(0, path) for i, path in enumerate(imlist)]
+    dataset = gluon.data.vision.ImageListDataset(root=root, imglist=imglist).__mx_handle__()
+    assert len(dataset) == 16, len(dataset)
+    img, label = dataset[0]
+    assert len(img.shape) == 3
+    assert label == 0
+
+    # save to file as *.lst
+    imglist = ['\t'.join((str(i), '0', path)) for i, path in enumerate(imlist)]
+    with tempfile.NamedTemporaryFile('wt', delete=False) as fp:
+        for line in imglist:
+            fp.write(line + '\n')
+        fp.close()
+
+        dataset = gluon.data.vision.ImageListDataset(root=root, imglist=fp.name).__mx_handle__()
+        assert len(dataset) == 16
+        img, label = dataset[0]
+        assert len(img.shape) == 3
+        assert label == 0
+
+@pytest.mark.garbage_expected
 def test_list_dataset():
     for num_worker in range(0, 3):
         data = mx.gluon.data.DataLoader([([1,2], 0), ([3, 4], 1)], batch_size=1, num_workers=num_worker)
@@ -148,22 +220,21 @@ def test_list_dataset():
             pass
 
 
-class Dataset(gluon.data.Dataset):
+class _Dataset(gluon.data.Dataset):
     def __len__(self):
         return 100
     def __getitem__(self, key):
         return mx.nd.full((10,), key)
 
-@with_seed()
+@pytest.mark.garbage_expected
 def test_multi_worker():
-    data = Dataset()
+    data = _Dataset()
     for thread_pool in [True, False]:
         loader = gluon.data.DataLoader(data, batch_size=1, num_workers=5, thread_pool=thread_pool)
         for i, batch in enumerate(loader):
             assert (batch.asnumpy() == i).all()
 
 
-@with_seed()
 def test_multi_worker_shape():
     for thread_pool in [True, False]:
         batch_size = 1024
@@ -249,7 +320,6 @@ def _batchify(data):
         nd.array(labels, dtype=labels.dtype, ctx=context.Context('cpu_shared', 0)),
         nd.array(y_lens, ctx=context.Context('cpu_shared', 0)))
 
-@with_seed()
 def test_multi_worker_forked_data_loader():
     data = _Dummy(False)
     loader = DataLoader(data, batch_size=40, batchify_fn=_batchify, num_workers=2)
@@ -263,12 +333,12 @@ def test_multi_worker_forked_data_loader():
         for i, data in enumerate(loader):
             pass
 
-@with_seed()
 def test_multi_worker_dataloader_release_pool():
     # will trigger too many open file if pool is not released properly
     if os.name == 'nt':
         print('Skip for windows since spawn on windows is too expensive.')
         return
+
     for _ in range(10):
         A = np.random.rand(999, 2000)
         D = mx.gluon.data.DataLoader(A, batch_size=8, num_workers=8)
@@ -276,7 +346,6 @@ def test_multi_worker_dataloader_release_pool():
         next(the_iter)
         del the_iter
         del D
-
 
 def test_dataloader_context():
     X = np.random.uniform(size=(10, 20))
@@ -294,11 +363,14 @@ def test_dataloader_context():
     for _, x in enumerate(loader2):
         assert x.context == context.cpu_pinned(default_dev_id)
 
-    # use pinned memory with custom device id
-    loader3 = gluon.data.DataLoader(dataset, 8, pin_memory=True,
-                                    pin_device_id=custom_dev_id)
-    for _, x in enumerate(loader3):
-        assert x.context == context.cpu_pinned(custom_dev_id)
+    if mx.context.num_gpus() <= 1:
+        print('Bypassing custom_dev_id pinned mem test on system with < 2 gpus.')
+    else:
+        # use pinned memory with custom device id
+        loader3 = gluon.data.DataLoader(dataset, 8, pin_memory=True,
+                                        pin_device_id=custom_dev_id)
+        for _, x in enumerate(loader3):
+            assert x.context == context.cpu_pinned(custom_dev_id)
 
 def batchify(a):
     return a
@@ -316,6 +388,19 @@ def test_dataset_filter():
     for idx, sample in enumerate(a_xform_filtered):
         assert sample % 10 == 0
 
+def test_dataset_filter_handle():
+    length = 100
+    a = mx.gluon.data.SimpleDataset(np.arange(length))
+    a_filtered = a.filter(lambda x: x % 10 == 0).__mx_handle__()
+    assert(len(a_filtered) == 10)
+    for idx, sample in enumerate(a_filtered):
+        assert sample % 10 == 0
+    a_xform_filtered = a.transform(lambda x: x + 1).filter(lambda x: x % 10 == 0)
+    assert(len(a_xform_filtered) == 10)
+    # the filtered data is already transformed
+    for idx, sample in enumerate(a_xform_filtered):
+        assert sample % 10 == 0
+
 def test_dataset_shard():
     length = 9
     a = mx.gluon.data.SimpleDataset([i for i in range(length)])
@@ -323,6 +408,24 @@ def test_dataset_shard():
     shard_1 = a.shard(4, 1)
     shard_2 = a.shard(4, 2)
     shard_3 = a.shard(4, 3)
+    assert len(shard_0) + len(shard_1) + len(shard_2) + len(shard_3) == length
+    assert len(shard_0) == 3
+    assert len(shard_1) == 2
+    assert len(shard_2) == 2
+    assert len(shard_3) == 2
+    total = 0
+    for shard in [shard_0, shard_1, shard_2, shard_3]:
+        for idx, sample in enumerate(shard):
+            total += sample
+    assert total == sum(a)
+
+def test_dataset_shard_handle():
+    length = 9
+    a = mx.gluon.data.SimpleDataset(np.arange(length))
+    shard_0 = a.shard(4, 0).__mx_handle__()
+    shard_1 = a.shard(4, 1).__mx_handle__()
+    shard_2 = a.shard(4, 2).__mx_handle__()
+    shard_3 = a.shard(4, 3).__mx_handle__()
     assert len(shard_0) + len(shard_1) + len(shard_2) + len(shard_3) == length
     assert len(shard_0) == 3
     assert len(shard_1) == 2
@@ -360,6 +463,33 @@ def test_dataset_take():
         total += sample
     assert total == expected_total
 
+def test_dataset_take_handle():
+    length = 100
+    a = mx.gluon.data.SimpleDataset(np.arange(length))
+    a_take_full = a.take(1000).__mx_handle__()
+    assert len(a_take_full) == length
+    a_take_full = a.take(None).__mx_handle__()
+    assert len(a_take_full) == length
+    count = 10
+    a_take_10 = a.take(count).__mx_handle__()
+    assert len(a_take_10) == count
+    expected_total = sum([i for i in range(count)])
+    total = 0
+    for idx, sample in enumerate(a_take_10):
+        assert sample < count
+        total += sample
+    assert total == expected_total
+
+    a_xform_take_10 = a.take(count).__mx_handle__()
+    assert len(a_xform_take_10) == count
+    expected_total = sum([i for i in range(count)])
+    total = 0
+    for idx, sample in enumerate(a_xform_take_10):
+        assert sample < count
+        total += sample
+    assert total == expected_total
+
+@pytest.mark.garbage_expected
 def test_dataloader_scope():
     """
     Bug: Gluon DataLoader terminates the process pool early while
@@ -381,7 +511,92 @@ def test_dataloader_scope():
 
     assert item is not None
 
+def test_mx_datasets_handle():
+    # _DownloadedDataset
+    mnist = mx.gluon.data.vision.MNIST(train=False).__mx_handle__()
+    assert len(mnist) == 10000
+    cifar10 = mx.gluon.data.vision.CIFAR10(train=False).__mx_handle__()
+    assert len(cifar10) == 10000
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    # _SampledDataset
+    s_mnist = mnist.take(100).__mx_handle__()
+    assert len(s_mnist) == 100
+    assert np.all(s_mnist[0][0].asnumpy() == mnist[0][0].asnumpy())
+    assert s_mnist[0][1] == mnist[0][1]
+
+    # ArrayDataset
+    mc = mx.gluon.data.ArrayDataset(mnist.take(100), cifar10.take(100)).__mx_handle__()
+    assert len(mc) == 100
+    assert len(mc[0]) == 4  # two from mnist, two from cifar10
+    assert mc[0][1] == mnist[0][1]
+    assert mc[0][3] == cifar10[0][1]
+
+def test_mx_data_loader():
+    from mxnet.gluon.data.dataloader import DataLoader
+
+    dataset = mx.gluon.data.vision.MNIST(train=False)
+    dl = DataLoader(num_workers=0, dataset=dataset, batch_size=32)
+    for _ in dl:
+        pass
+
+def test_mx_data_loader_nopython():
+    from mxnet.gluon.data.dataloader import DataLoader
+    from mxnet.gluon.data.vision.transforms import ToTensor
+    dataset = mx.gluon.data.vision.MNIST(train=False)
+    dl1 = DataLoader(dataset=dataset.transform_first(ToTensor()), batch_size=32, try_nopython=True, shuffle=False)
+    dl2 = DataLoader(dataset=dataset.transform_first(ToTensor()), batch_size=32, try_nopython=False, shuffle=False)
+    assert len(dl1) == len(dl2)
+    assert np.all(next(iter(dl1))[1].asnumpy() == next(iter(dl2))[1].asnumpy())
+    for _ in dl1:
+        pass
+
+def test_batchify_stack():
+    a = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    b = np.array([[5, 6, 7, 8], [1, 2, 3, 4]])
+    bf = mx.gluon.data.batchify.Stack()
+    bf_handle = bf.__mx_handle__()
+    c = bf([a, b])
+    d = bf_handle([a, b])
+    assert c.shape == d.shape
+    assert mx.test_utils.almost_equal(c.asnumpy(), d.asnumpy())
+    assert mx.test_utils.almost_equal(c.asnumpy(), np.stack((a, b)))
+
+def test_batchify_pad():
+    a = np.array([[1, 2, 3, 4], [11, 12, 13, 14]])
+    b = np.array([[4, 5, 6]])
+    c = np.array([[9, 10]])
+    bf = mx.gluon.data.batchify.Pad(val=-1)
+    bf_handle = bf.__mx_handle__()
+    d = bf([a, b, c])
+    e = bf_handle([a, b, c])
+    assert d.shape == e.shape
+    assert mx.test_utils.almost_equal(d.asnumpy(), e.asnumpy())
+    expected = np.array([[[ 1.,  2.,  3.,  4.], [11., 12., 13., 14.]],
+                         [[ 4.,  5.,  6., -1.], [-1., -1., -1., -1.]],
+                         [[ 9., 10., -1., -1.], [-1., -1., -1., -1.]]])
+    assert mx.test_utils.almost_equal(d.asnumpy(), expected)
+
+def test_batchify_group():
+    a = [np.array([[1, 2, 3, 4], [5, 6, 7, 8]]), np.array([[1, 2, 3, 4], [11, 12, 13, 14]])]
+    b = [np.array([[1, 2, 3, 4], [5, 6, 7, 8]]), np.array([[4, 5, 6]])]
+    c = [np.array([[1, 2, 3, 4], [5, 6, 7, 8]]), np.array([[9, 10]])]
+    bf = mx.gluon.data.batchify.Group(mx.gluon.data.batchify.Stack(), mx.gluon.data.batchify.Pad(val=-1))
+    bf_handle = bf.__mx_handle__()
+    d = bf([a, b, c])
+    e = bf_handle([a, b, c])
+    assert d[0].shape == e[0].shape
+    assert d[1].shape == e[1].shape
+    print(d[0].asnumpy(), ',', e[0].asnumpy(), ',', e[1].asnumpy())
+    assert mx.test_utils.almost_equal(d[0].asnumpy(), e[0].asnumpy())
+    assert mx.test_utils.almost_equal(d[1].asnumpy(), e[1].asnumpy())
+    assert mx.test_utils.almost_equal(d[0].asnumpy(), np.stack((a[0], b[0], c[0])))
+    expected = np.array([[[ 1.,  2.,  3.,  4.], [11., 12., 13., 14.]],
+                         [[ 4.,  5.,  6., -1.], [-1., -1., -1., -1.]],
+                         [[ 9., 10., -1., -1.], [-1., -1., -1., -1.]]])
+    assert mx.test_utils.almost_equal(d[1].asnumpy(), expected)
+
+def test_sampler():
+    interval_sampler = mx.gluon.data.IntervalSampler(10, 3)
+    assert sorted(list(interval_sampler)) == list(range(10))
+    interval_sampler = mx.gluon.data.IntervalSampler(10, 3, rollover=False)
+    assert list(interval_sampler) == [0, 3, 6, 9]

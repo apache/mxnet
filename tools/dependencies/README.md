@@ -49,12 +49,12 @@ MXNet is built on top of many dependencies. Managing these dependencies could be
 
 ## Overview
 
-The dependencies could be categorized by several groups: BLAS libraries, CPU-based performance boost library, i.e. MKLDNN and GPU-based performance boosting library including CUDA, cuDNN, NCCL. and others including OpenCV, Numpy, S3-related, PS-lite dependencies. The list below shows all the dependencies and their version. Except for CUDA, cuDNN, NCCL which the user is required to install on their environments, we statically link those dependencies into libmxnet.so when we build PyPi package. By doing this, the user can take advantage of these dependencies without being worry about it.
+The dependencies could be categorized by several groups: BLAS libraries, CPU-based performance boost library, i.e. ONEDNN and GPU-based performance boosting library including CUDA, cuDNN, NCCL. and others including OpenCV, Numpy, S3-related, PS-lite dependencies. The list below shows all the dependencies and their version. Except for CUDA, cuDNN, NCCL which the user is required to install on their environments, we statically link those dependencies into libmxnet.so when we build PyPi package. By doing this, the user can take advantage of these dependencies without being worry about it.
 
 | Dependencies  | MXNet Version |
 | :------------: |:-------------:| 
-|OpenBLAS| 0.3.3 |
-|MKLDNN| 0.19 | 
+|OpenBLAS| 0.3.9 |
+|ONEDNN| 2.0 | 
 |CUDA| 10.1 |
 |cuDNN| 7.5.1 |
 |NCCL| 2.4.2 |
@@ -102,7 +102,7 @@ sudo apt-get install -y git \
     pkg-config
 ```
 
-### MKL, MKLDNN
+### MKL, ONEDNN
 
 @pengzhao-intel (https://github.com/apache/incubator-mxnet/commits?author=pengzhao-intel) and his team are tracking and updating these versions. Kudos to them!
 
@@ -204,7 +204,7 @@ pip install -e python
 export NCCL_DEBUG=VERSION
 vim tests/python/gpu/test_nccl.py
 # Remove @unittest.skip("Test requires NCCL library installed and enabled during build") then run
-nosetests --verbose tests/python/gpu/test_nccl.py
+pytest --verbose tests/python/gpu/test_nccl.py
 # test_nccl.test_nccl_pushpull ... NCCL version 2.4.2+cuda10.0
 # ok
 # ----------------------------------------------------------------------
@@ -228,7 +228,6 @@ Please run performance test aginast the MXNet you build before raising the PR.
 - [ ] Python/setup.py
 - [ ] tools/pip/setup.py
 - [ ] ci/docker/install/requirements
-- [ ] ci/docker/install/ubuntu_publish.sh
 - [ ] ci/docker/install/ubuntu_python.sh
 - [ ] ci/qemu/mxnet_requirements.txt
 - [ ] docs/install/requirements.txt 

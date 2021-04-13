@@ -32,7 +32,7 @@ except ImportError:
 from . import symbol
 from ..base import _LIB, check_call
 from ..base import SymbolHandle, _as_list
-from ..attribute import AttrScope
+from ..attribute import AttrScope, current as current_attribute
 
 __all__ = ["rand_zipfian", "foreach", "while_loop", "cond"]
 
@@ -163,7 +163,7 @@ def _cut_subgraph(subg):
     return syms
 
 def _get_unique_subgraph_name(subgraph_name):
-    attrs = AttrScope._current.value._attr
+    attrs = current_attribute()._attr
     if attrs.get("__subgraph_name__", "") != "":
         subgraph_name = "".join([attrs["__subgraph_name__"], "$", subgraph_name])
     AttrScope._subgraph_names[subgraph_name] += 1

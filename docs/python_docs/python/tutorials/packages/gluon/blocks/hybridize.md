@@ -18,7 +18,9 @@
 # Hybridize
 
 <!-- adapted from diveintodeeplearning -->
+
 ## A Hybrid of Imperative and Symbolic Programming
+
 Imperative programming makes use of
 programming statements to change a program’s state. Consider the following
 example of simple imperative programming code.
@@ -79,10 +81,9 @@ The three functions defined above will only return the results of the computatio
 
 A comparison of these two programming methods shows that
 
-* imperative programming is easier. When imperative programming is used in Python, the majority of the code is straightforward and easy to write. At the same time, it is easier to debug imperative programming code. This is because it is easier to obtain and print all relevant intermediate variable values, or make use of Python’s built-in debugging tools.
+- imperative programming is easier. When imperative programming is used in Python, the majority of the code is straightforward and easy to write. At the same time, it is easier to debug imperative programming code. This is because it is easier to obtain and print all relevant intermediate variable values, or make use of Python’s built-in debugging tools.
 
-* Symbolic programming is more efficient and easier to port. Symbolic programming makes it easier to better optimize the system during compilation, while also having the ability to port the program into a format independent of Python. This allows the program to be run in a non-Python environment, thus avoiding any potential performance issues related to the Python interpreter.
-
+- Symbolic programming is more efficient and easier to port. Symbolic programming makes it easier to better optimize the system during compilation, while also having the ability to port the program into a format independent of Python. This allows the program to be run in a non-Python environment, thus avoiding any potential performance issues related to the Python interpreter.
 
 ## Hybrid programming provides the best of both worlds.
 
@@ -123,7 +124,6 @@ net(x)
 
 It should be noted that only the layers inheriting the HybridBlock class will be optimized during computation. For example, the HybridSequential and `Dense` classes provided by Gluon are all subclasses of HybridBlock class, meaning they will both be optimized during computation. A layer will not be optimized if it inherits from the Block class rather than the HybridBlock class.
 
-
 ### Computing Performance
 
 To demonstrate the performance improvement gained by the use of symbolic programming, we will compare the computation time before and after calling the `hybridize` function. Here we time 1000 `net` model computations. The model computations are based on imperative and symbolic programming, respectively, before and after `net` has called the `hybridize` function.
@@ -143,7 +143,6 @@ print('after hybridizing: %.4f sec' % (benchmark(net, x)))
 ```
 
 As is observed in the above results, after a HybridSequential instance calls the `hybridize` function, computing performance is improved through the use of symbolic programming.
-
 
 ### Achieving Symbolic Programming
 
@@ -219,13 +218,13 @@ We can see that the three lines of print statements defined in the `hybrid_forwa
 
 ## Key differences and limitations of hybridization
 
-The difference between a purely imperative `Block` and hybridizable `HybridBlock` can superficially appear to be simply the injection of the `F` function space (resolving to [mx.nd](/api/python/docs/api/ndarray/index.html) or [mx.sym](/api/python/docs/api/symbol/index.html)) in the forward function that is renamed from `forward` to `hybrid_forward`. However there are some limitations that apply when using hybrid blocks. In the following section we will review the main differences, giving example of code snippets that generate errors when such blocks get hybridized.
+The difference between a purely imperative `Block` and hybridizable `HybridBlock` can superficially appear to be simply the injection of the `F` function space (resolving to [mx.nd](../../../../api/legacy/ndarray/ndarray.rst) or [mx.sym](../../../../api/legacy/symbol/index.rst)) in the forward function that is renamed from `forward` to `hybrid_forward`. However there are some limitations that apply when using hybrid blocks. In the following section we will review the main differences, giving example of code snippets that generate errors when such blocks get hybridized.
 
 ### Indexing
 
 When trying to access specific elements in a tensor like this:
 
-```python
+```{.python .input}
 def hybrid_forward(self, F, x):
     return x[0,0]
 ```
@@ -234,13 +233,13 @@ Would generate the following error:
 
 `TypeError: Symbol only support integer index to fetch i-th output`
 
-There are however several operators that can help you with array manipulations like: [F.split](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.split), [F.slice](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.slice), [F.take](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.take),[F.pick](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.pick), [F.where](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.where), [F.reshape](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape) or [F.reshape_like](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape_like).
+There are however several operators that can help you with array manipulations like: [F.split](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.split), [F.slice](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.slice), [F.take](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.take),[F.pick](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.pick), [F.where](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.where), [F.reshape](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.reshape) or [F.reshape_like](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.reshape_like).
 
 ### Data Type
 
 Sometimes one can be tempted to use conditional logic on the type of the input tensors however the following block:
 
-```python
+```{.python .input}
 def hybrid_forward(self, F, x):
     if x.dtype =='float16':
         return x
@@ -255,7 +254,7 @@ You cannot use the `dtype` of the symbol at runtime. Symbols only describe opera
 
 Similarly you cannot use the compute context of symbol for the same reason that symbols only describe the operations on the data and not the data (or context). You cannot do this:
 
-```python
+```{.python .input}
 def hybrid_forward(self, F, x):
     if x.context == mx.cpu():
         return x
@@ -270,7 +269,7 @@ Accessing the current compute context is not possible with symbols. Consider pas
 
 Accessing shape information of tensors is very often used for example when trying to flatten a tensor and then reshape it back to its original shape.
 
-```python
+```{.python .input}
 def hybrid_forward(self, F, x):
     return x*x.shape[0]
 ```
@@ -280,13 +279,13 @@ Trying to access the shape of a tensor in a hybridized block would result in thi
 Again, you cannot use the shape of the symbol at runtime as symbols only describe operations and not the underlying data they operate on.
 Note: This will change in the future as Apache MXNet will support [dynamic shape inference](https://cwiki.apache.org/confluence/display/MXNET/Dynamic+shape), and the shapes of symbols will be symbols themselves
 
-There are also a lot of operators that support special indices to help with most of the use-cases where you would want to access the shape information. For example, `F.reshape(x, (0,0,-1))` will keep the first two dimensions unchanged and collapse all further dimensions into the third dimension. See the documentation of the [F.reshape](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape) for more details.
+There are also a lot of operators that support special indices to help with most of the use-cases where you would want to access the shape information. For example, `F.reshape(x, (0,0,-1))` will keep the first two dimensions unchanged and collapse all further dimensions into the third dimension. See the documentation of the [F.reshape](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.reshape) for more details.
 
 ### Item assignment
 
 Last but not least, you cannot directly assign values in tensor in a symbolic graph, the resulting tensors always needs to be the results of operations performed on the inputs of the computational graph. The following code:
 
-```python
+```{.python .input}
 def hybrid_forward(self, F, x):
     x[0] = 2
     return x
@@ -294,13 +293,21 @@ def hybrid_forward(self, F, x):
 
 Would get you this error `TypeError: 'Symbol' object does not support item assignment`.
 
-Direct item assignment is not possible in symbolic graph since it needs to be part of a computational graph. One way is to use add more inputs to your graph and use masking or the [F.where](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.where) operator.
+Direct item assignment is not possible in symbolic graph since it needs to be part of a computational graph. One way is to use add more inputs to your graph and use masking or the [F.where](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.where) operator.
 
 e.g to set the first element to 2 you can do:
 
-```python
+```{.python .input}
 x = mx.nd.array([1,2,3])
 value = mx.nd.ones_like(x)*2
 condition = mx.nd.array([0,1,1])
 mx.nd.where(condition=condition, x=x, y=value)
+```
+
+## Disabling Hybridization
+
+If we want to disable the `hybridize` function, we can do that by using the following code:
+
+```{.python .input}
+net.hybridize(active=False)
 ```

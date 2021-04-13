@@ -30,11 +30,11 @@
 #include <algorithm>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
-#include "../../src/operator/tensor/init_op.h"
+#include "./init_op.h"
 #ifdef __CUDACC__
 #include "./cast_storage-inl.cuh"
 #endif  // __CUDACC__
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../nn/mkldnn/mkldnn_base-inl.h"
 #endif
 
@@ -397,7 +397,7 @@ void CastStorageComputeImpl(const OpContext& ctx,
   } else if (src_stype == kRowSparseStorage && dst_stype == kRowSparseStorage) {
     NDArray ret = output;
     CastStorageRspRspImpl<xpu>(ctx, input, &ret);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   } else if (src_stype == kDefaultStorage && dst_stype == kDefaultStorage) {
     CHECK_EQ(output.ctx().dev_type, input.ctx().dev_type);
     // If one of them uses the MKLDNN layout.
@@ -449,7 +449,7 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && in_stype == kDefaultStorage && param_stype == kDefaultStorage) {
     // dns -> dns
     DispatchMode mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     // If we use MKLDNN and the arrays are in CPU memory, the array may store
     // MKLDNN layout, we should convert its layout explicitly.
     if (dev_mask == kCPU)

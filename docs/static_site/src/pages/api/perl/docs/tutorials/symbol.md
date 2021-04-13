@@ -37,16 +37,6 @@ Topics:
 The symbolic API provides a way to configure computation graphs.
 You can configure the graphs either at the level of neural network layer operations or as fine-grained operations.
 
-The following example configures a two-layer neural network.
-
-```perl
-pdl> use AI::MXNet qw(mx)
-pdl> $data = mx->symbol->Variable("data")
-pdl> $fc1  = mx->symbol->FullyConnected(data => $data, name => "fc1", num_hidden => 128)
-pdl> $act1 = mx->symbol->Activation(data => $fc1, name => "relu1", act_type => "relu")
-pdl> $fc2 =  mx->symbol->FullyConnected(data => $act1, name => "fc2", num_hidden => 64)
-pdl> $net =  mx->symbol->SoftmaxOutput(data => $fc2, name => "out")
-```
 
 The basic arithmetic operators (plus, minus, div, multiplication) are overloaded for
 *element-wise operations* of symbols.
@@ -126,26 +116,3 @@ input data, and the weights of the neural network that were learned during train
 
 To manually execute a set of symbols, you need to create an [`AI::MXNet::Executor`] object,
 which is typically constructed by calling the [`simple_bind(<parameters>)`] method on a AI::MXNet::Symbol.
-
-## Multiple Outputs
-
-To group the symbols together, use the [AI::MXNet::Symbol->Group](#mxnet.symbol.Group) function.
-
-```perl
-pdl> use AI::MXNet qw(mx)
-pdl> use Data::Dumper
-pdl> $data  = mx->sym->Variable("data")
-pdl> $fc1   = mx->sym->FullyConnected($data, name => "fc1", num_hidden => 128)
-pdl> $act1  = mx->sym->Activation($fc1, name => "relu1", act_type => "relu")
-pdl> $fc2   = mx->sym->FullyConnected($act1, name => "fc2", num_hidden => 64)
-pdl> $net   = mx->sym->SoftmaxOutput($fc2, name => "softmax")
-pdl> $group = mx->sym->Group([$fc1, $net])
-pdl> print Dumper($group->list_outputs())
-$VAR1 = [
-    'fc1_output',
-    'softmax_output'
-];
-```
-
-After you get the ```Group```, you can bind on ```group``` instead.
-The resulting executor will have two outputs, one for fc1_output and one for softmax_output.

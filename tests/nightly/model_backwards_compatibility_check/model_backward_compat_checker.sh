@@ -28,4 +28,4 @@ echo `pwd`
 
 echo '=========================='
 export MXNET_ENFORCE_DETERMINISM=1
-python model_backwards_compat_inference.py
+python3 model_backwards_compat_inference.py

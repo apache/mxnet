@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,29 +18,6 @@
 # under the License.
 
 from common import *
-
-
-def train_module_checkpoint_api():
-    model_name = 'module_checkpoint_api'
-    create_model_folder(model_name)
-    logging.info('Saving files for model %s' % model_name)
-    # Prepare data
-    test_data = mx.nd.array(np.random.uniform(-1, 1, size=(20, 1)))
-    test_label = mx.nd.array(np.random.randint(0, 2, size=(20,)), dtype='float32')
-    data_iter = mx.io.NDArrayIter(test_data, test_label, batch_size=10)
-
-    mod = get_module_api_model_definition()
-    mod.bind(data_shapes=data_iter.provide_data, label_shapes=data_iter.provide_label)
-    weights = mx.initializer.Xavier(magnitude=2.57)
-    mod.init_params(weights)
-
-    mod.save_checkpoint(os.path.join(get_model_path(model_name), model_name), 1)
-
-    inference_results = mod.predict(data_iter)
-    # Save inference_results
-    # Save the model files
-    save_data_and_labels(test_data, test_label, model_name)
-    save_inference_results(inference_results, model_name)
 
 
 def train_lenet_gluon_save_params_api():
@@ -120,8 +97,6 @@ def create_root_folder():
 
 if __name__ == '__main__':
     create_root_folder()
-
-    train_module_checkpoint_api()
     train_lenet_gluon_save_params_api()
     train_lenet_gluon_hybrid_export_api()
     train_lstm_gluon_save_parameters_api()

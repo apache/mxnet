@@ -25,10 +25,10 @@
 */
 
 #include "./leaky_relu-inl.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "./nn/mkldnn/mkldnn_base-inl.h"
 #include "./nn/mkldnn/mkldnn_ops-inl.h"
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 
 #include <nnvm/op_attr_types.h>
 namespace mxnet {
@@ -84,12 +84,13 @@ static bool LeakyReLUShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void LeakyReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
                                   const OpContext& ctx,
                                   const std::vector<NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<NDArray>& outputs) {
+  if (inputs[0].shape().Size() == 0U) return;
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   size_t expected = param.act_type == leakyrelu::kPReLU ? 2 : 1;
   CHECK_EQ(inputs.size(), expected);
@@ -107,6 +108,7 @@ void LeakyReLUGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const std::vector<NDArray>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<NDArray>& outputs) {
+  if (inputs[0].shape().Size() == 0U) return;
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   if (SupportMKLDNNLeakyRelu(param, inputs[0])) {
     std::vector<NDArray> in_data{inputs[0], inputs[1]};
@@ -139,7 +141,7 @@ inline static bool BackwardLeakyReLUStorageType(const nnvm::NodeAttrs& attrs,
   return MKLDNNStorageType(attrs, dev_mask, SupportMKLDNNLeakyRelu(param),
                            dispatch_mode, in_attrs, out_attrs);
 }
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 
 NNVM_REGISTER_OP(LeakyReLU)
 .describe(R"code(Applies Leaky rectified linear unit activation element-wise to the input.
@@ -150,6 +152,7 @@ when the input is negative and has a slope of one when input is positive.
 The following modified ReLU Activation functions are supported:
 
 - *elu*: Exponential Linear Unit. `y = x > 0 ? x : slope * (exp(x)-1)`
+- *gelu*: Gaussian Error Linear Unit. `y = 0.5 * x * (1 + erf(x / sqrt(2)))`
 - *selu*: Scaled Exponential Linear Unit. `y = lambda * (x > 0 ? x : alpha * (exp(x) - 1))` where
   *lambda = 1.0507009873554804934193349852946* and *alpha = 1.6732632423543772848170429916717*.
 - *leaky*: Leaky ReLU. `y = x > 0 ? x : slope * x`
@@ -169,7 +172,7 @@ The following modified ReLU Activation functions are supported:
   return param.act_type == leakyrelu::kRReLU ? 2 : 1;
 })
 .set_attr_parser(ParamParser<LeakyReLUParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", LeakyReLUStorageType)
 #endif
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -187,7 +190,7 @@ The following modified ReLU Activation functions are supported:
 .set_attr<mxnet::FInferShape>("FInferShape", LeakyReLUShape)
 .set_attr<nnvm::FInferType>("FInferType", LeakyReLUType)
 .set_attr<FCompute>("FCompute<cpu>", LeakyReLUCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", LeakyReLUComputeExCPU)
 #endif
@@ -201,7 +204,7 @@ The following modified ReLU Activation functions are supported:
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
     [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
       if (index == 1 && var->attrs.dict.find("__init__") == var->attrs.dict.end()) {
-        var->attrs.dict["__init__"] = "[\"Constant\", {\"value\": 0.25}]";
+        var->attrs.dict["__init__"] = R"(["Constant", {"value": 0.25}])";
       }
     });
 
@@ -224,7 +227,7 @@ NNVM_REGISTER_OP(_backward_LeakyReLU)
   return param.act_type == leakyrelu::kPReLU ? 2 : 1;
 })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", BackwardLeakyReLUStorageType)
 #endif
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
@@ -234,7 +237,7 @@ NNVM_REGISTER_OP(_backward_LeakyReLU)
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr_parser(ParamParser<LeakyReLUParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", LeakyReLUGradComputeExCPU)
 #endif

@@ -20,6 +20,7 @@ gluon.contrib
 
 This document lists the contrib APIs in Gluon:
 
+.. currentmodule:: mxnet.gluon.contrib
 
 .. autosummary::
     :nosignatures:
@@ -38,80 +39,19 @@ so that feature contributors can receive feedback.
 
 In the rest of this document, we list routines provided by the `gluon.contrib` package.
 
-Neural Network
---------------
-
-
-.. currentmodule:: mxnet.gluon.contrib.nn
+Vision Data
+-----------
 
 .. autosummary::
     :nosignatures:
 
-    Concurrent
-    HybridConcurrent
-    Identity
-    SparseEmbedding
-    SyncBatchNorm
-    PixelShuffle1D
-    PixelShuffle2D
-    PixelShuffle3D
-
-
-Convolutional Neural Network
-----------------------------
-
-.. currentmodule:: mxnet.gluon.contrib.cnn
-
-.. autosummary::
-    :nosignatures:
-
-    DeformableConvolution
-
-
-Recurrent Neural Network
-------------------------
-
-
-.. currentmodule:: mxnet.gluon.contrib.rnn
-
-.. autosummary::
-    :nosignatures:
-
-    VariationalDropoutCell
-    Conv1DRNNCell
-    Conv2DRNNCell
-    Conv3DRNNCell
-    Conv1DLSTMCell
-    Conv2DLSTMCell
-    Conv3DLSTMCell
-    Conv1DGRUCell
-    Conv2DGRUCell
-    Conv3DGRUCell
-    LSTMPCell
-
-
-Data
-----
-
-
-.. currentmodule:: mxnet.gluon.contrib.data.sampler
-
-.. autosummary::
-    :nosignatures:
-
-    IntervalSampler
-
-
-Text Dataset
-------------
-
-.. currentmodule:: mxnet.gluon.contrib.data.text
-
-.. autosummary::
-    :nosignatures:
-
-    WikiText2
-    WikiText103
+    data.vision.create_image_augment
+    data.vision.ImageDataLoader
+    data.vision.ImageBboxDataLoader
+    data.vision.ImageBboxRandomFlipLeftRight
+    data.vision.ImageBboxCrop
+    data.vision.ImageBboxRandomCropWithConstraints
+    data.vision.ImageBboxResize
 
 
 Estimator
@@ -144,23 +84,7 @@ Event Handler
 API Reference
 -------------
 
-
 .. automodule:: mxnet.gluon.contrib
-    :members:
-
-.. automodule:: mxnet.gluon.contrib.nn
-    :members:
-
-.. automodule:: mxnet.gluon.contrib.cnn
-    :members:
-
-.. automodule:: mxnet.gluon.contrib.rnn
-    :members:
-
-.. automodule:: mxnet.gluon.contrib.data.sampler
-    :members:
-
-.. automodule:: mxnet.gluon.contrib.data.text
     :members:
 
 .. automodule:: mxnet.gluon.contrib.estimator

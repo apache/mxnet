@@ -23,7 +23,7 @@
  * \brief
  */
 #include "./quantize-inl.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "./mkldnn/mkldnn_quantize-inl.h"
 #endif
 
@@ -37,7 +37,7 @@ bool QuantizeStorageType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
   *dispatch_mode = DispatchMode::kFCompute;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
@@ -49,6 +49,7 @@ bool QuantizeStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantize)
+.add_alias("_npx_contrib_quantize")
 .describe(R"code(Quantize a input tensor from float to `out_type`,
 with user-specified `min_range` and `max_range`.
 
@@ -85,7 +86,7 @@ where
 // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
 // will be reverted after the improvement of CachedOP is done.
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeCompute)
 #endif

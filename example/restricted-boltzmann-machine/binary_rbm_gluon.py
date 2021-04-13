@@ -62,8 +62,8 @@ ctx = mx.gpu(args.device_id) if args.cuda else mx.cpu()
 def data_transform(data, label):
     return data.astype(np.float32) / 255, label.astype(np.float32)
 
-mnist_train_dataset = mx.gluon.data.vision.MNIST(train=True, transform=data_transform)
-mnist_test_dataset = mx.gluon.data.vision.MNIST(train=False, transform=data_transform)
+mnist_train_dataset = mx.gluon.data.vision.MNIST(train=True).transform(data_transform)
+mnist_test_dataset = mx.gluon.data.vision.MNIST(train=False).transform(data_transform)
 img_height = mnist_train_dataset[0][0].shape[0]
 img_width = mnist_train_dataset[0][0].shape[1]
 num_visible = img_width * img_height

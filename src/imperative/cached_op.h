@@ -22,6 +22,7 @@
 
 #include <mxnet/imperative.h>
 #include <vector>
+#include <numeric>
 #include <atomic>
 #include <utility>
 #include <string>
@@ -30,6 +31,7 @@
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
 #include "./imperative_utils.h"
+#include "../nnvm/error.h"
 
 namespace mxnet {
 namespace {
@@ -46,22 +48,104 @@ std::string AddPrefix(const std::string& prefix,
   return prefix + "_" + s;
 }
 
+nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
+  using nnvm::Op;
+  static size_t inplace_sum_cap = dmlc::GetEnv("MXNET_EXEC_INPLACE_GRAD_SUM_CAP", 8);
+  static const Op* ewise_plus_op = Op::Get("_grad_add");
+  static const Op* ewise_sum_op = Op::Get("ElementWiseSum");
+  static const Op* identity_op = Op::Get("identity");
+  static const Op* zeros_op = Op::Get("_zeros");
+  static const Op* zeros_like_op = Op::Get("zeros_like");
+
+  if (v.empty()) {
+    nnvm::ObjectPtr ng = nnvm::Node::Create();
+    ng->attrs.op = Op::Get("_zeros_without_dtype");
+    ng->attrs.name = "zeros_without_dtype";
+    ng->attrs.op->attr_parser(&(ng->attrs));
+    return nnvm::NodeEntry(std::move(ng), 0, 0);
+  }
+
+  // remove zero in the sum. at least keep 1.
+  auto begin = std::remove_if(v.begin(), v.end(), [](const nnvm::NodeEntry& nodeEntry) {
+     CHECK(nodeEntry.node);
+     return nodeEntry.node->op() == zeros_op || nodeEntry.node->op() == zeros_like_op;
+  });
+  if (begin == v.begin()) ++begin;
+  v.erase(begin, v.end());
+  CHECK(!v.empty());
+
+  if (v.size() == 1) {
+    return std::move(v[0]);
+  } else {
+    if (v.size() < inplace_sum_cap) {
+      nnvm::ObjectPtr sum_node = nnvm::Node::Create();
+      sum_node->attrs.op = ewise_sum_op;
+      sum_node->attrs.name = "sum_grad";
+      sum_node->attrs.dict["num_args"] = std::to_string(v.size());
+      sum_node->attrs.op->attr_parser(&(sum_node->attrs));
+      sum_node->inputs = std::move(v);
+      return nnvm::NodeEntry(std::move(sum_node), 0, 0);
+    } else {
+      // use a stream line of plus instead
+      nnvm::NodeEntry ret = v[0];
+      for (size_t i = 1; i < v.size(); ++i) {
+        // Add control flow dependency from to previous node
+        // This enforces the gradient sum order will be in the inverse
+        // order of forward traversal
+        // NOTE: adding control dependency can be dangerous and cause cycle in the dep.
+        // The curent usage is correct, because of the following invariant:
+        // assert: v[i-1] do not depend on v[i]
+        // To put in plain text: v is gradient vector that get pushed in the order
+        // that can generate them, which means if v[i] is not yet pushed,
+        // all previous gradient cannot depend on it.
+        // Note: For a symbol like the following:
+        // data = mx.sym.Variable('data')
+        // sym = data + data + data + data + data + data + data
+        // the node entries v passed in here are of the same node of
+        // op _identity_with_attr_like_rhs. We should skip adding a node
+        // to its own control_deps.
+        if (v[i-1].node != v[i].node) {
+          v[i].node->control_deps.push_back(ret.node);
+        }
+
+        std::ostringstream os;
+        os << "sum_grad_" << i;
+        nnvm::ObjectPtr x = nnvm::Node::Create();
+        x->attrs.op = ewise_plus_op;
+        x->attrs.name = os.str();
+        x->inputs = {ret, v[i]};
+        ret = nnvm::NodeEntry(std::move(x), 0, 0);
+      }
+      // identity node is used to avoid exposure of dummy plus node
+      // when its output get assigned to another space.
+      nnvm::ObjectPtr id_node = nnvm::Node::Create();
+      id_node->attrs.op = identity_op;
+      id_node->attrs.name = "sum_grad_final";
+      id_node->inputs = {ret};
+      return nnvm::NodeEntry{id_node, 0, 0};
+    }
+  }
+}
+
+
 /* \brief collect pointers to input and output ndarrays
  * into a single data structure, this data structure can
  * be used for Memory allocation pass*/
 
 void CollectInputOutputNDRefs(const nnvm::Graph& g,
                               const std::vector<NDArray*>& inputs,
+                              const std::vector<size_t>& input_map,
                               const std::vector<NDArray*>& outputs,
                               std::vector<NDArray*>* arrays) DMLC_ATTRIBUTE_UNUSED;
 void CollectInputOutputNDRefs(const nnvm::Graph& g,
                               const std::vector<NDArray*>& inputs,
+                              const std::vector<size_t>& input_map,
                               const std::vector<NDArray*>& outputs,
                               std::vector<NDArray*>* arrays) {
   const auto& idx = g.indexed_graph();
   size_t num_inputs = idx.input_nodes().size();
   for (size_t i = 0; i < num_inputs; ++i) {
-    (*arrays)[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
+    (*arrays)[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[input_map[i]];
   }
   for (size_t i = 0; i < idx.outputs().size(); ++i) {
     auto eid = idx.entry_id(idx.outputs()[i]);
@@ -96,6 +180,10 @@ void CreateGraphNDs(const nnvm::Graph& g,
       continue;
     *((*arrays)[eid]) = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
                                 shapes[eid], default_ctx, true, dtypes[eid]);
+    const nnvm::NodeAttrs& attrs = idx[idx.outputs()[i].node_id].source->attrs;
+    (*arrays)[eid]->AssignStorageInfo(
+        common::NodeAttrsGetProfilerScope(attrs),
+        attrs.name);
   }
 }
 
@@ -136,7 +224,9 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
   ograd_entries->reserve(fwd_graph->outputs.size());
   for (size_t i = 0; i < fwd_graph->outputs.size(); ++i) {
     nnvm::ObjectPtr np = Node::Create();
-    np->attrs.name = "_head_grad_" + std::to_string(i);
+    const nnvm::NodeAttrs& attrs = fwd_graph->outputs[i].node->attrs;
+    np->attrs.name = attrs.name + "_head_grad";
+    np->attrs.dict["__profiler_scope__"] = common::NodeAttrsGetProfilerScope(attrs);
     ograd_entries->emplace_back(np);
   }
 
@@ -156,16 +246,22 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
     xs.emplace_back(indexed_graph[node_id].weak_ref.lock());
   }
 
-  CHECK(!xs.empty())
-    << "There are no inputs in computation graph that require gradients.";
-
-  *grad_graph = pass::MXGradient(
-    *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
-    exec::AggregateGradient, nullptr, nullptr,
-    zero_ops, "_copy");
+  // There are inputs in computation graph that require gradients
+  if (!xs.empty()) {
+    try {
+      *grad_graph = pass::MXGradient(
+           *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
+           mxnet::AggregateGradient, nullptr,
+           zero_ops, "_copy");
+    } catch (const nnvm::pass::InvalidGraphError &e) {
+      *grad_graph = nnvm::Graph();
+    }
+  } else {
+    *grad_graph = nnvm::Graph();
+  }
 }
 
-/* \brief construct  fwd_graph, grad_graph and full_graph from symbol */
+/* \brief construct fwd_graph, grad_graph and full_graph from symbol */
 void CreateFullGraph(const nnvm::Symbol& sym,
                      nnvm::Graph* fwd_graph,
                      nnvm::Graph* grad_graph,
@@ -183,15 +279,16 @@ void CreateFullGraph(const nnvm::Symbol& sym,
   CreateBackwardGraph(fwd_graph, grad_graph, ograd_entries,
                       fwd_input_to_grad_output);
 
-  // Add backward graph outputs to full graph
   full_graph->outputs = fwd_graph->outputs;
-  for (const auto &i : grad_graph->outputs) full_graph->outputs.emplace_back(i);
+  // add backward graph outputs to full graph
+  for (const auto &i : grad_graph->outputs) {
+    full_graph->outputs.emplace_back(i);
+  }
 }
 
 /* \brief Set Ref counts for node entries for forward graph */
 void SetForwardRefCounts(nnvm::Graph *fwd_graph) {
   const auto& idx = fwd_graph->indexed_graph();
-  CHECK_GE(idx.input_nodes().size(), 1) << "CachedOp requires at least 1 input";
 
   std::vector<uint32_t> ref_count(idx.num_node_entries(), 0);
   for (const auto& i : idx.input_nodes()) ++ref_count[idx.entry_id(i, 0)];
@@ -228,9 +325,12 @@ void SetRefCounts(nnvm::Graph* fwd_graph, const nnvm::Graph& full_graph) {
       std::make_shared<dmlc::any>(std::move(full_ref_count));
 }
 
-void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Graph * grad_graph,
-                   const Context& context, size_t num_forward_outputs, const bool inlining) {
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
+void OptimizeGraph(nnvm::Graph* full_graph, nnvm::Graph* fwd_graph, nnvm::Graph* grad_graph,
+                   std::vector<size_t>* input_map, const Context& context,
+                   size_t num_forward_outputs, const bool inlining) {
+  input_map->resize(full_graph->indexed_graph().input_nodes().size());
+  std::iota(input_map->begin(), input_map->end(), 0);
+#if MXNET_USE_CUDA && !defined(_WIN32)
   if (context.dev_mask() == kGPU &&
       !inlining &&
       dmlc::GetEnv("MXNET_USE_FUSION", true)) {
@@ -238,11 +338,8 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
     common::CopyGraph(&unoptimized_graph, *full_graph, false);
 
     if (common::CheckForInputNameDuplicates(unoptimized_graph.indexed_graph())) {
-      full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
-      *full_graph = exec::FusePointwiseForward(std::move(*full_graph));
-      full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
-      *full_graph = exec::FusePointwiseBackward(std::move(*full_graph));
-      // Check the topological order of inputs
+      *full_graph = exec::FusePointwise(*full_graph, num_forward_outputs);
+      // Fill in input_map - mapping from the new to the original input indices.
       const auto &original_inputs = unoptimized_graph.indexed_graph().input_nodes();
       const auto &new_inputs = full_graph->indexed_graph().input_nodes();
       if (original_inputs.size() != new_inputs.size()) {
@@ -251,13 +348,17 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
           << "This is most probably a bug. Disabling fusion for this run.";
         *full_graph = unoptimized_graph;
       } else {
+        std::unordered_map<std::string, size_t> original_input_map;
+        for (size_t i = 0; i < original_inputs.size(); ++i) {
+          auto r = original_input_map.insert(std::make_pair(
+              unoptimized_graph.indexed_graph()[original_inputs[i]].source->attrs.name, i));
+          CHECK(r.second);
+        }
         for (size_t i = 0; i < new_inputs.size(); ++i) {
-          if (unoptimized_graph.indexed_graph()[original_inputs[i]].source->attrs.name !=
-              full_graph->indexed_graph()[new_inputs[i]].source->attrs.name) {
-            LOG(WARNING) << "Disabling fusion due to altered topological order of inputs.";
-            *full_graph = unoptimized_graph;
-            break;
-          }
+          auto it = original_input_map.find(
+              full_graph->indexed_graph()[new_inputs[i]].source->attrs.name);
+          CHECK(it != original_input_map.end());
+          (*input_map)[i] = it->second;
         }
       }
     } else {
@@ -271,7 +372,7 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
       dmlc::GetEnv("MXNET_USE_FUSION", false)) {
     exec::WarnFusionNotSupported();
   }
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
+#endif  // MXNET_USE_CUDA && !defined(_WIN32)
 
   *fwd_graph = nnvm::Graph();
   fwd_graph->outputs = std::vector<nnvm::NodeEntry>(full_graph->outputs.begin(),
@@ -294,7 +395,7 @@ void SetInputIndices(const nnvm::Graph& fwd_graph,
   const auto& indexed_graph = fwd_graph.indexed_graph();
   if (data_indices->ndim() || param_indices.ndim()) {
     CHECK_EQ(data_indices->ndim() + param_indices.ndim(),
-             indexed_graph.input_nodes().size());
+             static_cast<const int>(indexed_graph.input_nodes().size()));
   } else {
     std::vector<uint32_t> tmp;
     tmp.reserve(indexed_graph.input_nodes().size());
@@ -352,6 +453,10 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   }
 };
 
+namespace io {
+class LazyTransformDataset;
+}
+
 class CachedOp {
   using CachedOpMonCallback =
       std::function<void(const char *, const char *, void *)>;
@@ -360,7 +465,8 @@ class CachedOp {
   CachedOp(
       const nnvm::Symbol& sym,
       const std::vector<std::pair<std::string, std::string> >& flags);
-  ~CachedOp();
+  virtual ~CachedOp();
+  nnvm::Symbol GetOptimizedSymbol() const;
   uint32_t num_inputs() const {
     return fwd_graph_.indexed_graph().input_nodes().size();
   }
@@ -389,7 +495,8 @@ class CachedOp {
   virtual OpStatePtr Forward(
       const std::shared_ptr<CachedOp>& op_ptr,
       const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs);
+      const std::vector<NDArray*>& outputs,
+      const Context &default_context);
   virtual void Backward(
       const bool retain_graph,
       const OpStatePtr& state,
@@ -424,6 +531,7 @@ class CachedOp {
     nnvm::Graph fwd_graph;
     nnvm::Graph grad_graph;
     nnvm::Graph full_graph;
+    std::vector<size_t> input_map;  // the original index of an input
     std::vector<nnvm::NodeEntry> ograd_entries;
     std::unordered_map<uint32_t, uint32_t> fwd_input_to_grad_output;
     std::vector<OpReqType> bwd_output_reqs;
@@ -440,7 +548,7 @@ class CachedOp {
                       &info.full_graph, &info.ograd_entries,
                       &info.fwd_input_to_grad_output);
 
-      OptimizeGraph(&info.full_graph, &info.fwd_graph, &info.grad_graph,
+      OptimizeGraph(&info.full_graph, &info.fwd_graph, &info.grad_graph, &info.input_map,
                     context_, fwd_graph_.outputs.size(), inlining_);
 
       size_t max_nodes = info.full_graph.indexed_graph().num_nodes();
@@ -486,6 +594,7 @@ class CachedOp {
 
   OpStatePtr GetCachedOpState(const Context& ctx);
   bool SetForwardGraph(
+      const Context& default_ctx,
       GraphInfo* info,
       const bool recording,
       const std::vector<NDArray*>& inputs);
@@ -517,11 +626,9 @@ class CachedOp {
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,
       const std::vector<NDArray*>& outputs);
-
-
- private:
   struct DynamicRuntime;
 
+ private:
   OpStatePtr DynamicForward(
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,
@@ -539,6 +646,7 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  size_t BwdOriginalInput(const std::vector<size_t>& input_map, size_t new_i);
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;
@@ -555,6 +663,16 @@ class CachedOp {
 
   std::mutex mutex_;
   std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
+
+  friend class ::mxnet::io::LazyTransformDataset;
+  nnvm::Symbol sym_;
+  std::vector<std::pair<std::string, std::string> > flags_;
+};
+
+struct CachedOp::DynamicRuntime {
+  GraphInfo info;
+  std::vector<NDArray> buff;
+  std::vector<OpStatePtr> op_states;
 };
 
 using CachedOpPtr = std::shared_ptr<CachedOp>;

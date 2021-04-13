@@ -83,7 +83,7 @@
 #include "./pool_utils.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 
 namespace mxnet {
 namespace op {

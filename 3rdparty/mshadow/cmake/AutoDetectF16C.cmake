@@ -25,7 +25,6 @@ if(AUTO_DETECT_F16_CMAKE_INCLUDED)
   return()
 endif()
 set(AUTO_DETECT_F16_CMAKE_INCLUDED True)
-
 set(SUPPORT_F16C False)
 if(MSVC)
     message("F16C instruction set is not yet supported for MSVC")

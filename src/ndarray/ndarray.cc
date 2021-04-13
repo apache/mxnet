@@ -36,6 +36,7 @@
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tensor/init_op.h"
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../profiler/storage_profiler.h"
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
@@ -47,53 +48,59 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
-NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx,
-    bool delay_alloc, int dtype, std::vector<int> aux_types,
-    mxnet::ShapeVector aux_shapes, mxnet::TShape storage_shape) : shape_(shape),
-  dtype_(dtype), storage_type_(stype), entry_(nullptr) {
-  // Assign default aux types if not given
-  if (aux_types.size() == 0
-      && stype != kDefaultStorage) {
-    if (stype == kRowSparseStorage) {
-      aux_types = {mshadow::kInt64};
-    } else if (stype == kCSRStorage) {
-      aux_types = {mshadow::kInt64, mshadow::kInt64};
-    } else {
+void NDArray::ReInit(const NDArrayStorageType stype, const mxnet::TShape &shape,
+                     Context ctx, int dtype, bool delay_alloc, const std::vector<int> *pAux_types,
+                     const mxnet::ShapeVector *pAux_shapes, const mxnet::TShape *pStorage_shapes) {
+  Init(stype, shape, dtype);
+  if (stype != kDefaultStorage) {
+    const auto sparseStorage = stype == kRowSparseStorage;
+    if (!sparseStorage && stype != kCSRStorage)
       LOG(FATAL) << "Unknown storage type " << stype;
-    }
-  }
-  // Assign default shapes if not given
-  // unknown shapes are intialized as {0} such that Size() would return 0
-  if (aux_shapes.size() == 0
-      && stype != kDefaultStorage) {
-    if (stype == kRowSparseStorage) {
-      aux_shapes = {mxnet::TShape(mshadow::Shape1(0))};
-    } else if (stype == kCSRStorage) {
-      // aux shapes for indptr and indices
-      aux_shapes = {mxnet::TShape(mshadow::Shape1(0)), mxnet::TShape(mshadow::Shape1(0))};
+
+    const auto &aux_types = (pAux_types && pAux_types->size())? *pAux_types :
+                             std::vector<int>(sparseStorage? 1 : 2, mshadow::kInt64);
+
+    const auto &aux_shapes = (pAux_shapes && pAux_shapes->size()) ? *pAux_shapes :
+                             ShapeVector(sparseStorage? 1 : 2, TShape(mshadow::Shape1(0)));
+
+    mxnet::TShape storage_shape;
+    if (!pStorage_shapes || !pStorage_shapes->Size()) {
+      if (sparseStorage) {
+        storage_shape = shape;
+        storage_shape[0] = aux_shapes[rowsparse::kIdx][0];
+      } else {
+        storage_shape = aux_shapes[csr::kIdx];
+      }
     } else {
-      LOG(FATAL) << "Unknown storage type " << stype;
+      storage_shape = *pStorage_shapes;
     }
-  }
-  if (storage_shape.Size() == 0
-      && stype != kDefaultStorage) {
-    if (stype == kRowSparseStorage) {
-      storage_shape = shape;
-      storage_shape[0] = aux_shapes[rowsparse::kIdx][0];
-    } else if (stype == kCSRStorage) {
-      storage_shape = aux_shapes[csr::kIdx];
-    } else {
-      LOG(FATAL) << "Unknown storage type " << stype;
-    }
-  }
-  if (stype == kDefaultStorage)
-    ptr_ = std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype);
-  else
     ptr_ = std::make_shared<Chunk>(stype, storage_shape, ctx, delay_alloc,
-        dtype, aux_types, aux_shapes);
+                                   dtype, aux_types, aux_shapes);
+  } else {
+    ptr_ = std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype);
+  }
 }
 
-void NDArray::SetShapeFromChunk() {
+void NDArray::AssignStorageInfo(const std::string& profiler_scope,
+                                const std::string& name) {
+  if (is_none()) {
+    return;
+  }
+  ptr_->shandle.profiler_scope = profiler_scope;
+  ptr_->shandle.name = name;
+#if MXNET_USE_CUDA
+  profiler::GpuDeviceStorageProfiler::Get()->UpdateStorageInfo(ptr_->shandle);
+#endif  // MXNET_USE_CUDA
+  for (Storage::Handle& aux_handle : ptr_->aux_handles) {
+    aux_handle.profiler_scope = profiler_scope;
+    aux_handle.name = name + "_aux_data";
+#if MXNET_USE_CUDA
+    profiler::GpuDeviceStorageProfiler::Get()->UpdateStorageInfo(aux_handle);
+#endif  // MXNET_USE_CUDA
+  }
+}
+
+void NDArray::SetShapeFromChunk() const {
   if (Imperative::Get()->is_np_shape() ||
       !(ptr_->storage_shape.ndim() == 1 && ptr_->storage_shape[0] == 0)) {
     shape_ = ptr_->storage_shape;
@@ -103,7 +110,7 @@ void NDArray::SetShapeFromChunk() {
 struct ChunkMem {
   Storage::Handle h;
   std::vector<Storage::Handle> aux_h;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   std::shared_ptr<MKLDNNMemory> mem;
 #endif
 };
@@ -113,14 +120,14 @@ NDArray::Chunk::~Chunk() {
   ChunkMem mem;
   mem.h = this->shandle;
   mem.aux_h = this->aux_handles;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   // We want to delete mkldnn memory after deleting the variable.
   mem.mem = this->mkl_mem_;
 #endif
   if (auto engine = engine_ref_.lock()) {
     engine->DeleteVariable([mem, skip_free](RunContext s) {
       if (skip_free == false) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
         if (mem.mem) {
           CHECK_LE(mem.mem->GetSize(), mem.h.size);
           CHECK_EQ(mem.mem->GetDataHandle(), mem.h.dptr);
@@ -148,8 +155,9 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
     // free storage
     Storage::Get()->Free(shandle);
     // init storage
-    shandle = Storage::Get()->Alloc(dbytes, ctx);
-#if MXNET_USE_MKLDNN == 1
+    shandle.size = dbytes;
+    Storage::Get()->Alloc(&shandle);
+#if MXNET_USE_ONEDNN == 1
     mkl_mem_ = nullptr;
 #endif
   }
@@ -161,7 +169,7 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
 
 NDArray NDArray::grad() const {
   if (Imperative::AGInfo::IsNone(*this)) return NDArray();
-  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(autograd_entry_.node);
   if (info.out_grads.size()) {
     CHECK_EQ(info.out_grads.size(), 1);
     return info.out_grads[0];
@@ -173,14 +181,14 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
   CHECK(!Imperative::AGInfo::IsNone(*this))
     << "NDArray is not part of a computation graph. Did you forget to turn on recording?";
   nnvm::Symbol ret;
-  ret.outputs.emplace_back(entry_);
+  ret.outputs.emplace_back(autograd_entry_);
   return ret;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 NDArray::NDArray(const mkldnn::memory::desc &md)
-    : storage_type_(kDefaultStorage), entry_(nullptr) {
+    : storage_type_(kDefaultStorage), autograd_entry_(nullptr) {
   shape_ = mxnet::TShape(md.data.dims, md.data.dims + md.data.ndims);
   dtype_ = get_mxnet_type(md.data.data_type);
   ptr_ = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
@@ -189,7 +197,7 @@ NDArray::NDArray(const mkldnn::memory::desc &md)
 }
 
 NDArray::NDArray(const std::shared_ptr<mkldnn::memory> &mkldnn_mem)
-    : storage_type_(kDefaultStorage), entry_(nullptr) {
+    : storage_type_(kDefaultStorage), autograd_entry_(nullptr) {
   auto mem_desc = mkldnn_mem->get_desc();
   shape_ = mxnet::TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
   dtype_ = get_mxnet_type(mem_desc.data.data_type);
@@ -263,20 +271,52 @@ NDArray NDArray::Reshape(const mxnet::TShape &shape) const {
 }
 
 NDArray NDArray::ReshapeWithRecord(const mxnet::TShape &shape) {
-  NDArray ret = this->Reshape(shape);
-  if (!Imperative::Get()->is_recording()) return ret;
+  bool is_recording = Imperative::Get()->is_recording();
+  bool is_deferred_compute = Imperative::Get()->is_deferred_compute();
+  NDArray ret;
+  if (!is_deferred_compute) {
+    // The new array shares memory with this array, thus make sure this array
+    // has been computed already computed. (noop if this array is not deferred)
+    Imperative::DCInfo::Compute(*this);
+    ret = this->Reshape(shape);
+    if (!is_recording) {
+      return ret;
+    }
+  } else {
+    if (shape_is_known(this->shape())) {
+      // Imperative reshape only works if shape is already known.
+      ret = this->Reshape(shape);
+    } else {
+      // Reshape called on after dynamic shape operator.
+      ret = this->Detach();
+    }
+  }
 
-  CHECK_EQ(shape_.Size(), shape.Size())
-    << "NDArray.Reshape: target shape must have the same size as "
-    << "current shape when recording with autograd.";
+  if (!is_deferred_compute || shape_is_known(this->shape())) {
+    CHECK_EQ(shape_.Size(), shape.Size())
+        << "NDArray.Reshape: target shape must have the same size as "
+        << "current shape when recording with autograd "
+        << "or in deferred compute mode.";
+  }
+
   nnvm::NodeAttrs attrs;
-  attrs.op = nnvm::Op::Get("Reshape");;
   std::ostringstream os;
   os << shape;
-  attrs.dict.insert({"shape", os.str()});
+  if (!Imperative::Get()->is_np_shape()) {
+      attrs.op = nnvm::Op::Get("Reshape");;
+      attrs.dict.insert({"shape", os.str()});
+  } else {
+      attrs.op = nnvm::Op::Get("_np_reshape");;
+      attrs.dict.insert({"newshape", os.str()});
+  }
   attrs.op->attr_parser(&attrs);
   std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
-  Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+
+  if (is_recording) {
+    Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+  } else if (is_deferred_compute) {
+    Imperative::Get()->RecordDeferredCompute(std::move(attrs), inputs, outputs);
+  }
   return ret;
 }
 
@@ -297,8 +337,27 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
 }
 
 NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
-  NDArray ret = this->Slice(begin, end);
-  if (!Imperative::Get()->is_recording()) return ret;
+  bool is_recording = Imperative::Get()->is_recording();
+  bool is_deferred_compute = Imperative::Get()->is_deferred_compute();
+  NDArray ret;
+  if (!is_deferred_compute) {
+    // The new array shares memory with this array, thus make sure this array
+    // has been computed already computed. (noop if this array is not deferred)
+    Imperative::DCInfo::Compute(*this);
+    ret = this->Slice(begin, end);
+    if (!is_recording) {
+      return ret;
+    }
+  } else {
+    if (shape_is_known(this->shape())) {
+      // Imperative slice only works if shape is already known.
+      ret = this->Slice(begin, end);
+    } else {
+      // Slice called on after dynamic shape operator.
+      ret = this->Detach();
+    }
+  }
+
   // fake a slice op
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("slice");
@@ -306,7 +365,13 @@ NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
   attrs.dict.insert({"end", std::to_string(end)});
   attrs.op->attr_parser(&attrs);
   std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
-  Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+
+  if (is_recording) {
+    Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+  } else if (is_deferred_compute) {
+    Imperative::Get()->RecordDeferredCompute(std::move(attrs), inputs, outputs);
+  }
+
   return ret;
 }
 
@@ -324,11 +389,38 @@ NDArray NDArray::At(index_t idx) const {
 NDArray NDArray::AtWithRecord(index_t idx) {
   CHECK(storage_type() == kDefaultStorage)
       << "Storage type " << storage_type() << " doesn't support At()";
-  NDArray ret = this->SliceWithRecord(idx, idx+1);
+  NDArray sliced = this->SliceWithRecord(idx, idx+1);
   if (shape_.ndim() > 1 || Imperative::Get()->is_np_shape()) {
-    return ret.ReshapeWithRecord(mxnet::TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
+    // Imperative reshape with concrete shape
+    NDArray reshaped = sliced.Reshape(mxnet::TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
+
+    // Record reshape with magic numbers
+    nnvm::NodeAttrs attrs;
+    std::ostringstream os;
+    if (!Imperative::Get()->is_np_shape()) {
+        os << mxnet::TShape({-3, -2});  // See ndarray.py reshape for definition of magic numbers
+        attrs.op = nnvm::Op::Get("Reshape");;
+        attrs.dict.insert({"shape", os.str()});
+    } else {
+        // See NumpyXReshapeInferShape for definition of magic numbers
+        os << mxnet::TShape({-3, -4});
+        attrs.op = nnvm::Op::Get("_npx_reshape");;
+        attrs.dict.insert({"newshape", os.str()});
+    }
+    attrs.op->attr_parser(&attrs);
+    std::vector<NDArray*> inputs(1, &sliced), outputs(1, &reshaped);
+
+    bool is_recording = Imperative::Get()->is_recording();
+    bool is_deferred_compute = Imperative::Get()->is_deferred_compute();
+    if (is_recording) {
+        Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+    } else if (is_deferred_compute) {
+        Imperative::Get()->RecordDeferredCompute(std::move(attrs), inputs, outputs);
+    }
+
+    return reshaped;
   } else {
-    return ret;
+    return sliced;
   }
 }
 
@@ -385,7 +477,7 @@ NDArray NDArray::FromDLPack(const DLManagedTensor* tensor, bool transient_handle
 
 bool NDArray::fresh_out_grad() const {
   if (Imperative::AGInfo::IsNone(*this)) return false;
-  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(autograd_entry_.node);
   return info.fresh_out_grad;
 }
 
@@ -393,11 +485,11 @@ bool NDArray::fresh_out_grad() const {
 void NDArray::set_fresh_out_grad(bool state) const {
   CHECK(!Imperative::AGInfo::IsNone(*this))
     << "NDArray has not been marked as a variable and does not have gradient state";
-  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(autograd_entry_.node);
   info.fresh_out_grad = state;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 bool NDArray::Chunk::IsMKLDNN() const {
   if (storage_type != kDefaultStorage)
@@ -529,10 +621,6 @@ const mkldnn::memory *NDArray::GetMKLDNNData(const mkldnn::memory::desc &desc) c
 
 const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
     const mkldnn::memory::desc &new_desc) const {
-  if (new_desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
-    LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
-    return nullptr;
-  }
   CHECK(storage_type() == kDefaultStorage);
 
   const mkldnn::memory *mem = GetMKLDNNData();
@@ -602,6 +690,37 @@ NDArray NDArray::Reorder2Default() const {
   return ret;
 }
 
+void NDArray::SelfReorder2Default() {
+  if (!IsMKLDNNData())
+    return;
+
+  CHECK(storage_type() == kDefaultStorage);
+
+  const auto mkl_mem = ptr_->mkl_mem_;
+  if (mkl_mem == nullptr || !mkl_mem->IsMKLDNN())
+    return;
+
+  // create new ndarray from  mkldnn layout
+  mkldnn::memory::desc from_desc = mkl_mem->GetDesc();
+  mxnet::TShape tshape(from_desc.data.ndims, -1);
+  for (int i = 0; i < from_desc.data.ndims; i++)
+    tshape[i] = from_desc.data.dims[i];
+
+  const auto saved_shape = shape_;
+  const auto saved_byte_offset = byte_offset_;
+  this->ReInit(kDefaultStorage, tshape,  ctx(), dtype(), false);
+
+  mkldnn_format_tag_t format = mkl_mem->GetDefaultFormat();
+  mkldnn::memory::desc def_desc = mkl_mem->GetDesc(format);
+  CHECK(ptr_->shandle.size >= def_desc.get_size());
+  mkldnn::memory def_mem(def_desc, CpuEngine::Get()->get_engine(), ptr_->shandle.dptr);
+  mkl_mem->ReorderTo(&def_mem);
+  // reshape as needed
+  shape_ = saved_shape;
+  byte_offset_ = saved_byte_offset;
+  reuse_ = false;
+}
+
 void NDArray::Reorder2DefaultAsync() const {
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
@@ -612,6 +731,20 @@ void NDArray::Reorder2DefaultAsync() const {
       on_complete();
     }, ctx(), const_vars, mutable_vars,
     FnProperty::kNormal, 0, "Reorder2Default");
+}
+
+// now just support bf16->fp32
+NDArray NDArray::Reorder2DefaultFloatFormat() const {
+  CHECK(storage_type() == kDefaultStorage && IsView() == false);
+  if (dtype() !=  mshadow::kBfloat16) {
+    return Reorder2Default();
+  }
+  NDArray ret(shape(), ctx(), false, mshadow::DataType<float>::kFlag);
+  auto src_mem = GetMKLDNNData();
+  auto dst_mem = ret.GetMKLDNNData();
+  ReorderTo(src_mem, dst_mem);
+
+  return ret;
 }
 
 void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::desc &desc) const {
@@ -633,7 +766,7 @@ void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::desc &desc) const {
 
 const mkldnn::memory *NDArray::GetMKLDNNData() const {
   CHECK(storage_type() == kDefaultStorage);
-  bool is_view = IsView();
+  const auto is_view = IsView();
   if (IsMKLDNNData()) {
     // If this array uses MKLDNN layout, we have to make sure it's not a view.
     // Otherwise, we'll have to change the layout inside the array.
@@ -642,32 +775,32 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
     // If this array uses MKLDNN format, we should return now. Otherwise,
     // SetMKLMem may mess up mkl_mem_.
     return ptr_->mkl_mem_->GetRaw();
-  } else if (is_view) {
+  }
+
+  CheckAndAlloc();
+  if (is_view) {
     // If this is a view, we can't create a MKLDNN memory for the chunk
     // because we don't have the complete data type and shape information for
     // the chunk.
-    CheckAndAlloc();
     void *off_addr = static_cast<char *>(ptr_->shandle.dptr) + byte_offset_;
     // Create the primitive desc for the new mkldnn memory.
     mkldnn::memory::dims dims(shape().ndim());
     for (size_t i = 0; i < dims.size(); i++)
       dims[i] = shape()[i];
-    mkldnn::memory::format_tag cpp_format = static_cast<mkldnn::memory::format_tag>(
+
+    const auto cpp_format = static_cast<mkldnn::memory::format_tag>(
         GetDefaultFormat(shape().ndim()));
-    mkldnn::memory::data_type cpp_type = get_mkldnn_type(dtype_);
-    mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
+    mkldnn::memory::desc data_md(dims, get_mkldnn_type(dtype_), cpp_format);
     std::shared_ptr<mkldnn::memory> ret(
         new mkldnn::memory(data_md, CpuEngine::Get()->get_engine(), off_addr));
     MKLDNNStream::Get()->RegisterMem(ret);
     return ret.get();
-  } else {
-    // If this isn't a view, we can create a MKLDNN memory and store it in the
-    // chunk.
-    CheckAndAlloc();
-    ptr_->SetMKLMem(shape_, dtype_);
-    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
-    return ptr_->mkl_mem_->GetRaw();
   }
+
+  // If this isn't a view, we can create a MKLDNN memory and store it in the chunk
+  ptr_->SetMKLMem(shape_, dtype_);
+  MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
+  return ptr_->mkl_mem_->GetRaw();
 }
 
 void NDArray::InvalidateMKLDNNData() {
@@ -753,7 +886,7 @@ void NDArray::SetTBlob() const {
   char *dptr = static_cast<char*>(ptr_->shandle.dptr);
   auto stype = storage_type();
   if (stype == kDefaultStorage) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     CHECK(!IsMKLDNNData()) << "We can't generate TBlob for MKLDNN data. "
         << "Please use Reorder2Default() to generate a new NDArray first";
 #endif
@@ -1095,7 +1228,7 @@ inline void CopyFromToRspImpl(const NDArray& from, const NDArray& to, RunContext
 // Make a copy of a dense NDArray
 template<typename from_xpu, typename to_xpu>
 inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext ctx) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   // If neither is MKLDNN, we can copy data normally.
   if (!from.IsMKLDNNData() && !to.IsMKLDNNData()) {
 #endif
@@ -1104,7 +1237,7 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
     TBlob tmp = to.data();
     ndarray::Copy<from_xpu, to_xpu>(from.data(), &tmp,
                                     from.ctx(), to.ctx(), ctx);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   } else if (SupportMKLDNN(from.dtype(), from.shape())
              && SupportMKLDNN(to.dtype(), to.shape())
              && from.ctx().dev_mask() == cpu::kDevMask
@@ -1201,7 +1334,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
     return;
   }
   CHECK(from.shape() == to.shape())
-      << "operands shape mismatch"
+      << "operands shape mismatch "
       << "from.shape = " << from.shape() << " to.shape=" << to.shape();
   CHECK(!mxnet::op::shape_is_none(from.shape()))
       << "source operands have undefined shape";
@@ -1630,7 +1763,7 @@ void NDArray::Save(dmlc::Stream *strm) const {
   } else {
     this->WaitToRead();
     nd_cpu = *this;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     if (nd_cpu.IsMKLDNNData())
       nd_cpu = nd_cpu.Reorder2Default();
 #endif
@@ -1859,9 +1992,9 @@ void NDArray::Load(dmlc::Stream* fi,
 NDArray NDArray::Copy(Context ctx) const {
   NDArray ret;
   if (kDefaultStorage == storage_type()) {
-    ret = NDArray(shape(), ctx, true, dtype_);
+    ret = NDArray(shape(), ctx, false, dtype_);
   } else if (kUndefinedStorage != storage_type()) {
-    ret = NDArray(storage_type(), shape(), ctx, true, dtype_,
+    ret = NDArray(storage_type(), shape(), ctx, false, dtype_,
                   ptr_->aux_types, ptr_->aux_shapes, storage_shape());
   } else {
     LOG(FATAL) << "NDArray::Copy cannot copy undefined storage-type ndarray to ctx.dev_type="
@@ -2026,11 +2159,12 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   }
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
+  this->WaitToRead();
+
   if (this->ctx().dev_mask() == cpu::kDevMask) {
-    this->WaitToRead();
     RunContext rctx{this->ctx(), nullptr, nullptr, false};
     NDArray src = *this;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     if (src.IsMKLDNNData())
       src = this->Reorder2Default();
 #endif
@@ -2088,6 +2222,22 @@ void NDArray::SyncCheckFormat(const bool full_check) const {
   CHECK_EQ(err, kNormalErr) << "Check the validity of this sparse NDArray";
 }
 
+void NDArray::WaitToRead() const {
+  if (is_none()) return;
+  Imperative::DCInfo::Compute(*this);
+  Engine::Get()->WaitForVar(ptr_->var);
+}
+
+void NDArray::WaitToWrite() const {
+  if (is_none()) return;
+  Imperative::DCInfo::Compute(*this);
+  // Push an empty mutable function to flush all preceding reads to the variable.
+  Engine::Get()->PushAsync(
+      [](RunContext, Engine::CallbackOnComplete on_complete) { on_complete(); },
+      Context{}, {}, {ptr_->var});
+  Engine::Get()->WaitForVar(ptr_->var);
+}
+
 #if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
@@ -2117,6 +2267,17 @@ void CopyFromToSimple(
   CopyFromTo(inputs[0], outputs[0], 0, true);
 }
 
+bool CopyToType(const nnvm::NodeAttrs &attrs, std::vector<int> *in_attrs,
+                   std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  int in_type = in_attrs->at(0);
+  if (out_attrs->at(0) == -1) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_type);
+  }
+  return out_attrs->at(0) != -1;
+}
+
 // copy function is special
 // that we need to remove kAcceptEmptyMutateTarget from it
 NNVM_REGISTER_OP(_copyto)
@@ -2124,10 +2285,7 @@ NNVM_REGISTER_OP(_copyto)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", op::ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType",
-  [](const NodeAttrs& attrs, std::vector<int> *in_type, std::vector<int> *out_type) {
-    return !op::type_is_none((*in_type)[0]) && !op::type_is_none((*out_type)[0]);
-  })
+.set_attr<nnvm::FInferType>("FInferType", CopyToType)
 .set_attr<FInferStorageType>("FInferStorageType",
   [](const NodeAttrs& attrs,
      const int dev_mask,

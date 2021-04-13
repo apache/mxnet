@@ -32,7 +32,7 @@
 #include "./c_api_common.h"
 #include "../common/exec_utils.h"
 #include "../operator/operator_common.h"
-#include "../executor/exec_pass.h"
+#include "../imperative/exec_pass.h"
 #include "../operator/subgraph/subgraph_property.h"
 
 namespace mxnet {
@@ -41,10 +41,20 @@ void RegisterLegacyOpProp();
 void RegisterLegacyNDFunc();
 }
 const std::vector<std::string> kHiddenKeys = {
-  "ctx_group", "lr_mult", "wd_mult", "force_mirroring", "mirror_stage"
+  "ctx_group",
+  "lr_mult",
+  "wd_mult",
+  "force_mirroring",
+  "mirror_stage",
+  "profiler_scope"
 };
 const std::vector<std::string> kReplacedHiddenKeys = {
-  "__ctx_group__", "__lr_mult__", "__wd_mult__", "__force_mirroring__", "__mirror_stage__"
+  "__ctx_group__",
+  "__lr_mult__",
+  "__wd_mult__",
+  "__force_mirroring__",
+  "__mirror_stage__",
+  "__profiler_scope__"
 };
 const char *kNamespaceSeparator = "$";
 
@@ -165,6 +175,20 @@ int MXSymbolGetOutput(SymbolHandle symbol,
                       uint32_t index,
                       SymbolHandle *out) {
   return NNSymbolGetOutput(symbol, index, out);
+}
+
+int MXSymbolGetInputs(SymbolHandle symbol,
+                      SymbolHandle *out) {
+    nnvm::Symbol *s = new nnvm::Symbol();
+    API_BEGIN();
+    std::vector<nnvm::ObjectPtr> inputs = static_cast<nnvm::Symbol*>(symbol)->ListInputs(
+        nnvm::Symbol::ListInputOption(0));
+    for (const nnvm::ObjectPtr &o : inputs) {
+        nnvm::NodeEntry e(o);
+        s->outputs.push_back(e);
+    }
+    *out = s;
+    API_END_HANDLE_ERROR(delete s);
 }
 
 int MXSymbolGetInternals(SymbolHandle symbol,
@@ -547,79 +571,6 @@ void MatchArguments(
 
 }  // namespace mxnet
 
-int MXSymbolInferShape(SymbolHandle sym,
-                       uint32_t num_args,
-                       const char** keys,
-                       const uint32_t *arg_ind_ptr,
-                       const uint32_t *arg_shape_data,
-                       uint32_t *in_shape_size,
-                       const uint32_t **in_shape_ndim,
-                       const uint32_t ***in_shape_data,
-                       uint32_t *out_shape_size,
-                       const uint32_t **out_shape_ndim,
-                       const uint32_t ***out_shape_data,
-                       uint32_t *aux_shape_size,
-                       const uint32_t **aux_shape_ndim,
-                       const uint32_t ***aux_shape_data,
-                       int *complete) {
-  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
-  API_BEGIN();
-  nnvm::Graph g = Symbol2Graph(*s);
-  mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
-  if (keys == nullptr && num_args != 0) {
-    std::vector<uint32_t> read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
-    CHECK_LE(num_args, read_only_args.size());
-    for (uint32_t i = 0; i < num_args; ++i) {
-      arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(
-          arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
-    }
-  } else {
-    std::unordered_map<std::string, mxnet::TShape> kwargs;
-    for (uint32_t i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] = mxnet::ShapeTypeCast(
-          arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
-    }
-    mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_shapes, "InferShape");
-  }
-
-  try {
-    g = mxnet::exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
-  } catch (const mxnet::op::InferShapeError &err) {
-    throw dmlc::Error(err.msg);
-  }
-
-  // if use legacy shape definition, need to convert numpy shape to legacy shape
-  mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  if (!Imperative::Get()->is_np_shape()) {
-    common::ConvertToLegacyShape(&shapes);
-  }
-
-  // copy back
-  CopyAttr(g.indexed_graph(), shapes,
-           &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
-
-  // copy data back
-  MXAPIThreadLocalEntry<>::SetupShapeArrayReturnWithBuffer(ret->arg_shapes,
-      &(ret->arg_shape_ndim), &(ret->arg_shape_data), &(ret->arg_shape_buffer));
-  MXAPIThreadLocalEntry<>::SetupShapeArrayReturnWithBuffer(ret->out_shapes,
-      &(ret->out_shape_ndim), &(ret->out_shape_data), &(ret->out_shape_buffer));
-  MXAPIThreadLocalEntry<>::SetupShapeArrayReturnWithBuffer(ret->aux_shapes,
-      &(ret->aux_shape_ndim), &(ret->aux_shape_data), &(ret->aux_shape_buffer));
-  *in_shape_size = static_cast<uint32_t>(ret->arg_shapes.size());
-  *in_shape_ndim = dmlc::BeginPtr(ret->arg_shape_ndim);
-  *in_shape_data = dmlc::BeginPtr(ret->arg_shape_data);
-  *out_shape_size = static_cast<uint32_t>(ret->out_shapes.size());
-  *out_shape_ndim = dmlc::BeginPtr(ret->out_shape_ndim);
-  *out_shape_data = dmlc::BeginPtr(ret->out_shape_data);
-  *aux_shape_size = static_cast<uint32_t>(ret->aux_shapes.size());
-  *aux_shape_ndim = dmlc::BeginPtr(ret->aux_shape_ndim);
-  *aux_shape_data = dmlc::BeginPtr(ret->aux_shape_data);
-  // mark complete
-  *complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
-  API_END();
-}
-
 template<typename dtype, typename stype, typename itype>
 inline void SymbolInferShape(const char** keys,
                              uint32_t num_args,
@@ -693,7 +644,7 @@ inline void SymbolInferShape(const char** keys,
 }
 
 /*!
- * \brief Executor for Symbol Shape Inference
+ * \brief Symbol shape Inference
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  * \param sym symbol handle
@@ -713,21 +664,21 @@ inline void SymbolInferShape(const char** keys,
  * \param complete indicates completion of Shape Inference
  * \return 0 when success, -1 when failure happens
  */
-int MXSymbolInferShapeEx(SymbolHandle sym,
-                         uint32_t num_args,
-                         const char** keys,
-                         const uint32_t *arg_ind_ptr,
-                         const int *arg_shape_data,
-                         uint32_t *in_shape_size,
-                         const int **in_shape_ndim,
-                         const int ***in_shape_data,
-                         uint32_t *out_shape_size,
-                         const int **out_shape_ndim,
-                         const int ***out_shape_data,
-                         uint32_t *aux_shape_size,
-                         const int **aux_shape_ndim,
-                         const int ***aux_shape_data,
-                         int *complete) {
+int MXSymbolInferShape(SymbolHandle sym,
+                       uint32_t num_args,
+                       const char** keys,
+                       const uint32_t *arg_ind_ptr,
+                       const int *arg_shape_data,
+                       uint32_t *in_shape_size,
+                       const int **in_shape_ndim,
+                       const int ***in_shape_data,
+                       uint32_t *out_shape_size,
+                       const int **out_shape_ndim,
+                       const int ***out_shape_data,
+                       uint32_t *aux_shape_size,
+                       const int **aux_shape_ndim,
+                       const int ***aux_shape_data,
+                       int *complete) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
@@ -771,21 +722,21 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
  * \param complete indicates completion of Shape Inference
  * \return 0 when success, -1 when failure happens
  */
-int MXSymbolInferShapeEx64(SymbolHandle sym,
-                           uint32_t num_args,
-                           const char** keys,
-                           const int64_t *arg_ind_ptr,
-                           const int64_t *arg_shape_data,
-                           size_t *in_shape_size,
-                           const int **in_shape_ndim,
-                           const int64_t ***in_shape_data,
-                           size_t *out_shape_size,
-                           const int **out_shape_ndim,
-                           const int64_t ***out_shape_data,
-                           size_t *aux_shape_size,
-                           const int **aux_shape_ndim,
-                           const int64_t ***aux_shape_data,
-                           int *complete) {
+int MXSymbolInferShape64(SymbolHandle sym,
+                         uint32_t num_args,
+                         const char** keys,
+                         const int64_t *arg_ind_ptr,
+                         const int64_t *arg_shape_data,
+                         size_t *in_shape_size,
+                         const int **in_shape_ndim,
+                         const int64_t ***in_shape_data,
+                         size_t *out_shape_size,
+                         const int **out_shape_ndim,
+                         const int64_t ***out_shape_data,
+                         size_t *aux_shape_size,
+                         const int **aux_shape_ndim,
+                         const int64_t ***aux_shape_data,
+                         int *complete) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
   MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
   API_BEGIN();
@@ -806,31 +757,6 @@ int MXSymbolInferShapeEx64(SymbolHandle sym,
                                                  aux_shape_size,
                                                  complete);
   API_END();
-}
-
-int MXSymbolInferShapePartial(SymbolHandle sym,
-                              uint32_t num_args,
-                              const char** keys,
-                              const uint32_t *arg_ind_ptr,
-                              const uint32_t *arg_shape_data,
-                              uint32_t *in_shape_size,
-                              const uint32_t **in_shape_ndim,
-                              const uint32_t ***in_shape_data,
-                              uint32_t *out_shape_size,
-                              const uint32_t **out_shape_ndim,
-                              const uint32_t ***out_shape_data,
-                              uint32_t *aux_shape_size,
-                              const uint32_t **aux_shape_ndim,
-                              const uint32_t ***aux_shape_data,
-                              int *complete) {
-  int succ = 0;
-  *complete = 1;
-  return MXSymbolInferShape(sym, num_args, keys,
-                            arg_ind_ptr, arg_shape_data,
-                            in_shape_size, in_shape_ndim, in_shape_data,
-                            out_shape_size, out_shape_ndim, out_shape_data,
-                            aux_shape_size, aux_shape_ndim, aux_shape_data,
-                            &succ);
 }
 
 /*!
@@ -854,29 +780,29 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
  * \param complete indicates completion of Shape Inference
  * \return 0 when success, -1 when failure happens
  */
-int MXSymbolInferShapePartialEx(SymbolHandle sym,
-                                uint32_t num_args,
-                                const char** keys,
-                                const uint32_t *arg_ind_ptr,
-                                const int *arg_shape_data,
-                                uint32_t *in_shape_size,
-                                const int **in_shape_ndim,
-                                const int ***in_shape_data,
-                                uint32_t *out_shape_size,
-                                const int **out_shape_ndim,
-                                const int ***out_shape_data,
-                                uint32_t *aux_shape_size,
-                                const int **aux_shape_ndim,
-                                const int ***aux_shape_data,
-                                int *complete) {
+int MXSymbolInferShapePartial(SymbolHandle sym,
+                              uint32_t num_args,
+                              const char** keys,
+                              const uint32_t *arg_ind_ptr,
+                              const int *arg_shape_data,
+                              uint32_t *in_shape_size,
+                              const int **in_shape_ndim,
+                              const int ***in_shape_data,
+                              uint32_t *out_shape_size,
+                              const int **out_shape_ndim,
+                              const int ***out_shape_data,
+                              uint32_t *aux_shape_size,
+                              const int **aux_shape_ndim,
+                              const int ***aux_shape_data,
+                              int *complete) {
   int succ = 0;
   *complete = 1;
-  return MXSymbolInferShapeEx(sym, num_args, keys,
-                              arg_ind_ptr, arg_shape_data,
-                              in_shape_size, in_shape_ndim, in_shape_data,
-                              out_shape_size, out_shape_ndim, out_shape_data,
-                              aux_shape_size, aux_shape_ndim, aux_shape_data,
-                              &succ);
+  return MXSymbolInferShape(sym, num_args, keys,
+                            arg_ind_ptr, arg_shape_data,
+                            in_shape_size, in_shape_ndim, in_shape_data,
+                            out_shape_size, out_shape_ndim, out_shape_data,
+                            aux_shape_size, aux_shape_ndim, aux_shape_data,
+                            &succ);
 }
 
 /*!
@@ -900,29 +826,29 @@ int MXSymbolInferShapePartialEx(SymbolHandle sym,
  * \param complete indicates completion of Shape Inference
  * \return 0 when success, -1 when failure happens
  */
-int MXSymbolInferShapePartialEx64(SymbolHandle sym,
-                                  uint32_t num_args,
-                                  const char** keys,
-                                  const int64_t *arg_ind_ptr,
-                                  const int64_t *arg_shape_data,
-                                  size_t *in_shape_size,
-                                  const int **in_shape_ndim,
-                                  const int64_t ***in_shape_data,
-                                  size_t *out_shape_size,
-                                  const int **out_shape_ndim,
-                                  const int64_t ***out_shape_data,
-                                  size_t *aux_shape_size,
-                                  const int **aux_shape_ndim,
-                                  const int64_t ***aux_shape_data,
-                                  int *complete) {
+int MXSymbolInferShapePartial64(SymbolHandle sym,
+                                uint32_t num_args,
+                                const char** keys,
+                                const int64_t *arg_ind_ptr,
+                                const int64_t *arg_shape_data,
+                                size_t *in_shape_size,
+                                const int **in_shape_ndim,
+                                const int64_t ***in_shape_data,
+                                size_t *out_shape_size,
+                                const int **out_shape_ndim,
+                                const int64_t ***out_shape_data,
+                                size_t *aux_shape_size,
+                                const int **aux_shape_ndim,
+                                const int64_t ***aux_shape_data,
+                                int *complete) {
   int succ = 0;
   *complete = 1;
-  return MXSymbolInferShapeEx64(sym, num_args, keys,
-                                arg_ind_ptr, arg_shape_data,
-                                in_shape_size, in_shape_ndim, in_shape_data,
-                                out_shape_size, out_shape_ndim, out_shape_data,
-                                aux_shape_size, aux_shape_ndim, aux_shape_data,
-                                &succ);
+  return MXSymbolInferShape64(sym, num_args, keys,
+                              arg_ind_ptr, arg_shape_data,
+                              in_shape_size, in_shape_ndim, in_shape_data,
+                              out_shape_size, out_shape_ndim, out_shape_data,
+                              aux_shape_size, aux_shape_ndim, aux_shape_data,
+                              &succ);
 }
 
 int MXSymbolInferType(SymbolHandle sym,
@@ -1042,7 +968,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   g = ApplyPass(std::move(g), "QuantizeGraph");
   const auto& calib_nodes = g.GetAttr<std::vector<std::string>>("calib_nodes");
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
-  ret->ret_vec_str = std::move(calib_nodes);
+  ret->ret_vec_str = calib_nodes;
   *out_num_calib_names = ret->ret_vec_str.size();
   ret->ret_vec_charp.clear();
   ret->ret_vec_charp.reserve(ret->ret_vec_str.size());
@@ -1106,21 +1032,21 @@ static void _UpdateSymDTypeAttrs(
   // Update args to have the right dtype attrs
   if (model_params.size() > 0) {
     // if model params provided, set dtype only for model params
-    for (size_t i = 0; i < args.size(); ++i) {
-      const std::string& node_name = args[i]->attrs.name;
+    for (const auto & arg : args) {
+      const std::string& node_name = arg->attrs.name;
       auto it_model_params = model_params.find(node_name);
       auto it_with_dtype = node_name_dtype_map.find(node_name);
       auto it_without_dtype = node_without_dtype_map.find(node_name);
       if (it_model_params != model_params.end()) {
         // need to update __dtype__ attribute if already set, else set it
         if (it_with_dtype != node_name_dtype_map.end()) {
-          args[i]->attrs.dict[dtype_keyword] =
+          arg->attrs.dict[dtype_keyword] =
               std::to_string(it_with_dtype->second);
         } else {
           CHECK(it_without_dtype != node_without_dtype_map.end())
               << "make sure all nodes without dtype have properly been added "
                  "in node_without_dtype_map";
-          args[i]->attrs.dict[dtype_keyword] =
+          arg->attrs.dict[dtype_keyword] =
               std::to_string(it_without_dtype->second);
         }
       }
@@ -1128,12 +1054,12 @@ static void _UpdateSymDTypeAttrs(
   } else {
     // if model params not provided, update __dtype__ for all inputs,
     // which already had it set, don't touch the rest
-    for (size_t i = 0; i < args.size(); ++i) {
-      auto it = node_name_dtype_map.find(args[i]->attrs.name);
+    for (const auto & arg : args) {
+      auto it = node_name_dtype_map.find(arg->attrs.name);
       if (it != node_name_dtype_map.end()) {
-        if (args[i]->attrs.dict.find(dtype_keyword) !=
-            args[i]->attrs.dict.end()) {
-          args[i]->attrs.dict[dtype_keyword] = std::to_string(it->second);
+        if (arg->attrs.dict.find(dtype_keyword) !=
+            arg->attrs.dict.end()) {
+          arg->attrs.dict[dtype_keyword] = std::to_string(it->second);
         }
       }
     }
@@ -1222,6 +1148,8 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   g.attrs["excluded_syms"] =
       std::make_shared<nnvm::any>(std::move(excluded_syms));
   g.attrs["target_dtype"] = std::make_shared<nnvm::any>(target_dt);
+  g.attrs["data_name_types"] = std::make_shared<nnvm::any>(kwargs);
+  g.attrs["cast_optional_params"] = std::make_shared<nnvm::any>(cast_optional_params);
 
   g = ApplyPass(std::move(g), "ReducePrecision");
   // Need to run type inference since it is possible that inferred
@@ -1230,7 +1158,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   const nnvm::DTypeVector &inferred_dtypes =
       g.GetAttr<nnvm::DTypeVector>("dtype");
 
-  g.attrs["inferred_dtypes"] = std::make_shared<dmlc::any>(std::move(inferred_dtypes));
+  g.attrs["inferred_dtypes"] = std::make_shared<dmlc::any>(inferred_dtypes);
   g.attrs["target_dtype"] = std::make_shared<nnvm::any>(target_dt);
 
   if (cast_optional_params) {
@@ -1341,61 +1269,239 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                          const char* backend_name,
                          const int dev_type,
                          SymbolHandle* ret_sym_handle,
-                         const mx_uint len,
+                         const mx_uint args_len,
                          NDArrayHandle* in_args_handle,
+                         const mx_uint aux_len,
+                         NDArrayHandle* in_aux_handle,
                          const mx_uint num_options,
                          const char** keys,
-                         const char** vals) {
+                         const char** vals,
+                         const uint32_t num_input_shapes,
+                         const char** input_shape_names,
+                         const int64_t* input_shape_data,
+                         const uint32_t* input_shape_idx,
+                         const uint32_t num_input_dtypes,
+                         const char** input_dtype_names,
+                         const int* input_dtypes,
+                         const uint32_t num_input_stypes,
+                         const char** input_stype_names,
+                         const int* input_stypes,
+                         bool skip_infer,
+                         int* new_args_cnt,
+                         NDArrayHandle** new_args_handle,
+                         char*** new_arg_names_handle,
+                         int* new_aux_cnt,
+                         NDArrayHandle** new_aux_handle,
+                         char*** new_aux_names_handle) {
+  // create copy of input symbol
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
-  nnvm::Graph g = Symbol2Graph(*s);
-  if (len) {
-    NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
-    Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
-    mxnet::ShapeVector arg_shapes(len);
-    nnvm::DTypeVector arg_dtypes(len);
-    StorageTypeVector arg_stypes(len);
-    for (mx_uint i = 0; i < len; i++) {
-      const auto &in_arg = *(in_args_ptr[i]);
-      arg_shapes[i] = in_arg.shape();
-      arg_dtypes[i] = in_arg.dtype();
-      arg_stypes[i] = in_arg.storage_type();
-    }
+
+  // create a data structure from pointer array
+  std::unordered_map<std::string, std::string> options_map;
+  for (mx_uint i = 0; i < num_options; ++i)
+    options_map.emplace(keys[i], vals[i]);
+
+  NDArray ***new_args_ptr = reinterpret_cast<NDArray***>(new_args_handle);
+  NDArray ***new_aux_ptr = reinterpret_cast<NDArray***>(new_aux_handle);
+  NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
+  NDArray **in_aux_ptr = reinterpret_cast<NDArray**>(in_aux_handle);
+
+  auto init_graph = [&](auto s) {
+    nnvm::Graph g = Symbol2Graph(*s);
     const auto& indexed_graph = g.indexed_graph();
-    const auto num_forward_inputs = indexed_graph.input_nodes().size();
-    g.attrs["context"] = std::make_shared<nnvm::any>(
-        exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
-    // infer shapes
-    g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
-    // infer dtypes
-    g = exec::InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
-    if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
-      common::HandleInferTypeError(num_forward_inputs, indexed_graph,
-                                   g.GetAttr<nnvm::DTypeVector>("dtype"));
+    const auto& mutable_nodes = indexed_graph.mutable_input_nodes();
+    std::vector<std::string> input_names = s->ListInputNames(nnvm::Symbol::kAll);
+    size_t num_forward_inputs = input_names.size();
+
+    if (args_len || aux_len) {
+      if (!skip_infer) {
+        Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
+        mxnet::ShapeVector arg_shapes(args_len + aux_len);
+        nnvm::DTypeVector arg_dtypes(args_len + aux_len);
+        StorageTypeVector arg_stypes(args_len + aux_len);
+
+        // create the input shape, dtype and stype maps
+        std::unordered_map<std::string, mxnet::TShape> input_shape_map(num_input_shapes);
+        for (uint32_t i = 0; i < num_input_shapes; ++i) {
+          input_shape_map.emplace(input_shape_names[i],
+                    mxnet::TShape(input_shape_data + input_shape_idx[i],
+                    input_shape_data + input_shape_idx[i+1]));
+        }
+        std::unordered_map<std::string, int> input_dtype_map(num_input_dtypes);
+        for (uint32_t i = 0; i < num_input_dtypes; ++i) {
+          input_dtype_map.emplace(input_dtype_names[i], input_dtypes[i]);
+        }
+        std::unordered_map<std::string, int> input_stype_map(num_input_stypes);
+        for (uint32_t i = 0; i < num_input_stypes; ++i) {
+          input_stype_map.emplace(input_stype_names[i], input_stypes[i]);
+        }
+
+        size_t args_top = 0, aux_top = 0;
+        // loop over inputs to symbol in order and add to args/aux if mutable
+        for (size_t i = 0; i < num_forward_inputs; ++i) {
+          const uint32_t nid = indexed_graph.input_nodes().at(i);
+          if (mutable_nodes.count(nid)) {
+            CHECK_LT(aux_top, aux_len)
+              << "Cannot find aux '" << input_names[i] << "' in provided aux to optimize_for";
+            if (in_aux_ptr[aux_top] != nullptr) {
+              const auto &in_arg = *(in_aux_ptr[aux_top]);
+              arg_shapes[i] = in_arg.shape();
+              arg_dtypes[i] = in_arg.dtype();
+              arg_stypes[i] = in_arg.storage_type();
+            }
+            aux_top++;
+          } else {
+            auto name = input_names[i];
+            CHECK_LT(args_top, args_len)
+              << "Cannot find arg '" << name << "' in provided args to optimize_for";
+            if (in_args_ptr[args_top] != nullptr) {
+              const auto &in_arg = *(in_args_ptr[args_top]);
+              arg_shapes[i] = in_arg.shape();
+              arg_dtypes[i] = in_arg.dtype();
+              arg_stypes[i] = in_arg.storage_type();
+            } else {
+              // input_names[i] is not in args but can be in the optional
+              // shape/type/stype attribute dicts.
+              auto it_shape = input_shape_map.find(name);
+              if (it_shape != input_shape_map.end()) {
+                arg_shapes[i] = it_shape->second;
+              }
+              auto it_type = input_dtype_map.find(name);
+              if (it_type != input_dtype_map.end()) {
+                arg_dtypes[i] = it_type->second;
+              }
+              it_type = input_stype_map.find(name);
+              if (it_type != input_stype_map.end()) {
+                arg_stypes[i] = it_type->second;
+              }
+            }
+            args_top++;
+          }
+        }
+
+        g.attrs["context"] = std::make_shared<nnvm::any>(
+          exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
+
+        // infer shapes
+        g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
+        // infer dtypes
+        g = exec::InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
+        // infer stypes
+        g = exec::InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
+      }
+      // set args/aux as attributes on graph so that subgraph property can use them
+      std::vector<std::string> arg_names = s->ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+      g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
+      g.attrs["in_arg_names"] = std::make_shared<nnvm::any>(arg_names);
+
+      std::vector<std::string> aux_names = s->ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+      g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
+      g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
+    } else {
+      // args/aux were not specified, so set nullptr/empty-lists
+      NDArray **in_args_ptr = static_cast<NDArray**>(nullptr);
+      std::vector<std::string> arg_names;
+      g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
+      g.attrs["in_arg_names"] = std::make_shared<nnvm::any>(arg_names);
+
+      NDArray **in_aux_ptr = static_cast<NDArray**>(nullptr);
+      std::vector<std::string> aux_names;
+      g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
+      g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
     }
-    // infer stypes
-    g = exec::InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
-    if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
-      common::HandleInferStorageTypeError(num_forward_inputs, indexed_graph,
-                                          g.GetAttr<StorageTypeVector>("storage_type"));
+
+    // set dedup option as attribute on graph to enable dedup during partitioning
+    if (options_map.count("dedup_subgraph") > 0 &&
+        options_map.at("dedup_subgraph").compare("True") == 0)
+      g.attrs["dedup_subgraph"] = std::make_shared<nnvm::any>(std::string("True"));
+    return g;
+  };
+
+  if (mxnet::op::SubgraphBackendRegistry::Get()->backend_map_.count(backend_name) > 0) {
+    // use subgraph backend
+    const auto backend = mxnet::op::SubgraphBackendRegistry
+                                      ::Get()->GetSubgraphBackend(backend_name);
+    const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+    for (auto property : subgraph_prop_list) {
+      nnvm::Graph g = init_graph(s);
+      property->PrePartition(g, options_map);
+      g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+      g = ApplyPass(std::move(g), "BuildSubgraph");
+      g.attrs.erase("subgraph_property");
+      property->PostPartition(g);
+      s->outputs = g.outputs;
     }
+  } else if (dmlc::Registry<nnvm::PassFunctionReg>::Find(backend_name) != nullptr) {
+    // use graph pass
+    nnvm::Graph g = init_graph(s);
+    g.attrs["options_map"] = std::make_shared<nnvm::any>(options_map);
+    g.attrs["pass_name"] = std::make_shared<nnvm::any>(backend_name);
+    g = ApplyPass(std::move(g), backend_name);
+
+    std::vector<NDArray*> new_args = g.GetAttr<std::vector<NDArray*>>("new_args");
+    std::vector<NDArray*> new_aux = g.GetAttr<std::vector<NDArray*>>("new_aux");
+    std::vector<std::string> new_arg_names = g.GetAttr<std::vector<std::string>>("new_arg_names");
+    std::vector<std::string> new_aux_names = g.GetAttr<std::vector<std::string>>("new_aux_names");
+    g.attrs.erase("new_args");
+    g.attrs.erase("new_aux");
+    g.attrs.erase("new_arg_names");
+    g.attrs.erase("new_aux_names");
+    s->outputs = g.outputs;
+
+    NDArray** new_arg_arr = new NDArray*[new_arg_names.size()];
+    NDArray** new_aux_arr = new NDArray*[new_aux_names.size()];
+    char** new_arg_cstr = new char*[new_arg_names.size()];
+    char** new_aux_cstr = new char*[new_aux_names.size()];
+    for (unsigned i = 0; i < new_arg_names.size(); i++) {
+      new_arg_arr[i] = new_args[i];
+      std::string& s = new_arg_names[i];
+      char* tmp = new char[s.length()+1];
+      s.copy(tmp, s.length());
+      tmp[s.length()] = '\0';
+      new_arg_cstr[i] = tmp;
+    }
+    for (unsigned i = 0; i < new_aux_names.size(); i++) {
+      new_aux_arr[i] = new_aux[i];
+      std::string& s = new_aux_names[i];
+      char* tmp = new char[s.length()+1];
+      s.copy(tmp, s.length());
+      tmp[s.length()] = '\0';
+      new_aux_cstr[i] = tmp;
+    }
+    *new_args_cnt = new_arg_names.size();
+    *new_aux_cnt = new_aux_names.size();
+    *new_arg_names_handle = new_arg_cstr;
+    *new_aux_names_handle = new_aux_cstr;
+    *new_args_ptr = new_arg_arr;
+    *new_aux_ptr = new_aux_arr;
+  } else {
+    // cannot find graph pass or subgraph backend registered in this name
+    LOG(ERROR) << "Error optimizing for backend '" << backend_name << "' cannot be found";
   }
-  std::vector<std::pair<std::string, std::string>> options_map;
-  for (mx_uint i = 0; i < num_options; ++i) {
-    options_map.emplace_back(keys[i], vals[i]);
-  }
-  const auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
-  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
-  for (auto property : subgraph_prop_list) {
-    property->PrePartition(g, options_map);
-    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
-    g = ApplyPass(std::move(g), "BuildSubgraph");
-    g.attrs.erase("subgraph_property");
-    property->PostPartition(g);
-  }
-  s->outputs = g.outputs;
+
   *ret_sym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXCheckDynamicShapeOp(SymbolHandle sym_handle,
+                          bool* has_dynamic_shape) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  *has_dynamic_shape = false;
+  // traverse the symbol and check if any dynamic shape is present
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
+  *s = sym->Copy();
+  nnvm::Graph g = Symbol2Graph(*s);
+  const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
+  DFSVisit(g.outputs, [infershape, has_dynamic_shape](const nnvm::ObjectPtr n) {
+    if (*has_dynamic_shape) return;
+    if (!n->is_variable() && !infershape.count(n->op())) {
+      *has_dynamic_shape = true;
+      return;
+    }
+  });
   API_END_HANDLE_ERROR(delete s);
 }

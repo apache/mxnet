@@ -20,6 +20,12 @@
 # This script builds the static library of lz4 that can be used as dependency of mxnet.
 set -ex
 LZ4_VERSION=r130
+if [[ $PLATFORM == 'darwin' ]]; then
+    DY_EXT="dylib"
+else
+    DY_EXT="so"
+fi
+
 if [[ ! -f $DEPS_PATH/lib/liblz4.a ]]; then
     # Download and build lz4
     >&2 echo "Building lz4..."
@@ -31,5 +37,6 @@ if [[ ! -f $DEPS_PATH/lib/liblz4.a ]]; then
     cd $DEPS_PATH/lz4-$LZ4_VERSION
     $MAKE
     $MAKE PREFIX=$DEPS_PATH install
+    rm $DEPS_PATH/lib/*lz4*$DY_EXT*
     popd
 fi

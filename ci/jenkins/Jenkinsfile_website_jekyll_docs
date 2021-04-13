@@ -35,7 +35,6 @@ utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Jekyll Website Docs', [
     custom_steps.docs_jekyll()
-
   ])
 
 }

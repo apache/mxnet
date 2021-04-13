@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_NUMPY_LINALG_NP_EIG_INL_H_
 
 #include <vector>
+#include <string>
 #include "./np_eigvals-inl.h"
 
 namespace mxnet {
@@ -216,6 +217,11 @@ struct EighParam : public dmlc::Parameter<EighParam> {
     .set_default('L')
     .describe("Specifies whether the calculation is done with the lower or upper triangular part.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream UPLO_s;
+    UPLO_s << UPLO;
+    (*dict)["UPLO"] = UPLO_s.str();
+  }
 };
 
 template<typename xpu>
@@ -317,7 +323,7 @@ void EighOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& v = outputs[1];
   const char UPLO = nnvm::get<EighParam>(attrs.parsed).UPLO;
 
-  if (kNullOp == req[0] && kNullOp == req[0]) { return; }
+  if (kNullOp == req[0]) { return; }
   // Zero-size output, no need to launch kernel
   if (0U == a.Size()) { return; }
 

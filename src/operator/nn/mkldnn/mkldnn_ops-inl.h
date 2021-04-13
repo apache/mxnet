@@ -36,7 +36,7 @@
 #include <dmlc/optional.h>
 #include <vector>
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include <mkldnn.hpp>
 
 namespace mxnet {
@@ -98,11 +98,15 @@ void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                            const std::vector<OpReqType> &req,
                            const std::vector<NDArray> &out_data);
 
-/* For softmax_output */
-void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                                const std::vector<NDArray> &in_data,
-                                const std::vector<OpReqType> &req,
-                                const std::vector<NDArray> &out_data);
+/* For log_softmax */
+void MKLDNNLogSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                             const NDArray &in_data, const OpReqType &req,
+                             const NDArray &out_data);
+void MKLDNNLogSoftmaxBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                              const std::vector<NDArray> &in_data,
+                              const std::vector<OpReqType> &req,
+                              const std::vector<NDArray> &out_data);
+
 
 /* For sum */
 void MKLDNNSumForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
@@ -141,5 +145,5 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_

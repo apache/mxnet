@@ -52,6 +52,48 @@ struct helper_numeric_limits<float> {
   }
 };
 
+template<typename DType>
+MSHADOW_XINLINE static DType trigamma(DType x);
+
+template<>
+MSHADOW_XINLINE double trigamma<double>(double x) {
+  double PI(3.14159265358979323846);
+  double sign = +1;
+  double result = 0;
+  if (x < 0.5) {
+    sign = -1;
+    const double sin_pi_x = sin(PI * x);
+    result -= (PI * PI) / (sin_pi_x * sin_pi_x);
+    x = 1 - x;
+  }
+  for (int i = 0; i < 6; ++i) {
+    result += 1 / (x * x);
+    x += 1;
+  }
+  const double ixx = 1 / (x*x);
+  result += (1 + 1 / (2*x) + ixx * (1./6 - ixx * (1./30 - ixx * (1./42)))) / x;
+  return sign * result;
+}
+
+template<>
+MSHADOW_XINLINE float trigamma<float>(float x) {
+  float PI(3.14159265358979323846);
+  float sign = +1;
+  float result = 0;
+  if (x < 0.5f) {
+    sign = -1;
+    const float sin_pi_x = sinf(PI * x);
+    result -= (PI * PI) / (sin_pi_x * sin_pi_x);
+    x = 1 - x;
+  }
+  for (int i = 0; i < 6; ++i) {
+    result += 1 / (x * x);
+    x += 1;
+  }
+  const float ixx = 1 / (x*x);
+  result += (1 + 1 / (2*x) + ixx * (1.f/6 - ixx * (1.f/30 - ixx * (1.f/42)))) / x;
+  return sign * result;
+}
 
 // This code is based on the Cephes Library availible at http://www.netlib.org/cephes
 // The original author, Stephen Moshier, has kindly given permission to use this code

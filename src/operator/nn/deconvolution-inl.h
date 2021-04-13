@@ -85,11 +85,11 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
                   "`adj` will be ignored and computed accordingly.");
     DMLC_DECLARE_FIELD(target_shape).set_default(mxnet::TShape(0, 0))
         .describe("Shape of the output tensor: (w,), (h, w) or (d, h, w).");
-    DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
+    DMLC_DECLARE_FIELD(num_filter).set_lower_bound(1)
         .describe("Number of output filters.");
     DMLC_DECLARE_FIELD(num_group).set_default(1)
         .describe("Number of groups partition.");
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
+    DMLC_DECLARE_FIELD(workspace).set_default(512).set_lower_bound(0)
         .describe("Maximum temporary workspace allowed (MB) in deconvolution."
                   "This parameter has two usages. When CUDNN is not used, it determines the "
                   "effective batch size of the deconvolution kernel. When CUDNN is used, "
@@ -169,6 +169,79 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
            this->cudnn_tune == other.cudnn_tune &&
            this->cudnn_off == other.cudnn_off &&
            this->layout == other.layout;
+  }
+
+  std::string CudnnTune2String(int cudnn_tune) {
+    switch (cudnn_tune) {
+      case deconv::kOff:
+        return "off";
+      case deconv::kLimited:
+        return "limited_workspace";
+      case deconv::kFastest:
+        return "fastest";
+      default:
+        LOG(FATAL) << "Unknown cudnn_tune enum " << cudnn_tune;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  std::string Layout2String(int layout) {
+    switch (layout) {
+      case mshadow::kNCW:
+        return "NCW";
+      case mshadow::kNCHW:
+        return "NCHW";
+      case mshadow::kNCDHW:
+        return "NCDHW";
+      case mshadow::kNHWC:
+        return "NHWC";
+      case mshadow::kNDHWC:
+        return "NDHWC";
+      default:
+        LOG(FATAL) << "Unknown layout enum " << layout;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream kernel_s, stride_s, dilate_s, pad_s, adj_s,
+                       target_shape_s, num_filter_s, num_group_s, workspace_s,
+                       no_bias_s, cudnn_tune_s, cudnn_off_s, layout_s;
+    kernel_s << kernel;
+    stride_s << stride;
+    dilate_s << dilate;
+    pad_s << pad;
+    adj_s << adj;
+    target_shape_s << target_shape;
+    num_filter_s << num_filter;
+    num_group_s << num_group;
+    workspace_s << workspace;
+    no_bias_s << no_bias;
+    cudnn_tune_s << cudnn_tune;
+    cudnn_off_s << cudnn_off;
+    layout_s << layout;
+    (*dict)["kernel"] = kernel_s.str();
+    (*dict)["stride"] = stride_s.str();
+    (*dict)["dilate"] = dilate_s.str();
+    (*dict)["pad"] = pad_s.str();
+    (*dict)["adj"] = adj_s.str();
+    (*dict)["target_shape"] = target_shape_s.str();
+    (*dict)["num_filter"] = num_filter_s.str();
+    (*dict)["num_group"] = num_group_s.str();
+    (*dict)["workspace"] = workspace_s.str();
+    (*dict)["no_bias"] = no_bias_s.str();
+    if (cudnn_tune.has_value()) {
+      (*dict)["cudnn_tune"] = CudnnTune2String(cudnn_tune.value());
+    } else {
+      (*dict)["cudnn_tune"] = cudnn_tune_s.str();
+    }
+    (*dict)["cudnn_off"] = cudnn_off_s.str();
+    if (layout.has_value()) {
+      (*dict)["layout"] = Layout2String(layout.value());
+    } else {
+      (*dict)["layout"] = layout_s.str();
+    }
   }
 };
 
@@ -454,7 +527,7 @@ class DeconvolutionOp {
  private:
   inline index_t InitTemp(const mshadow::Shape<4> &ishape,
                           const mshadow::Shape<4> &oshape) {
-    const int ksize = param_.kernel.Size();
+    const index_t ksize = param_.kernel.Size();
     shape_colunit_ = mshadow::Shape2(ishape[1] * ksize,
                                      oshape[2] * oshape[3]);
     shape_dstunit_ = mshadow::Shape3(param_.num_group,

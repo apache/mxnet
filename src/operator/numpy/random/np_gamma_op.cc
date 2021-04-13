@@ -38,7 +38,7 @@ inline bool NumpyGammaOpType(const nnvm::NodeAttrs& attrs,
   if (otype != -1) {
     (*out_attrs)[0] = otype;
   } else {
-    (*out_attrs)[0] = mshadow::kFloat32;
+    (*out_attrs)[0] = mxnet::common::GetDefaultDtype(param.dtype);
   }
   return true;
 }
@@ -75,10 +75,39 @@ NNVM_REGISTER_OP(_npi_gamma)
         ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", NumpyGammaForward<cpu, double>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_gamma_sample"})
 .add_argument("input1", "NDArray-or-Symbol", "Source input")
 .add_argument("input2", "NDArray-or-Symbol", "Source input")
 .add_arguments(NumpyGammaParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_gamma_sample)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr_parser(ParamParser<NumpyGammaParam>)
+.set_num_inputs(
+  [](const nnvm::NodeAttrs& attrs) {
+    const NumpyGammaParam& param = nnvm::get<NumpyGammaParam>(attrs.parsed);
+    int num_inputs = 4;
+    if (param.shape.has_value()) num_inputs -= 1;
+    if (param.scale.has_value()) num_inputs -= 1;
+    return num_inputs;
+  }
+)
+.set_num_outputs(
+  [](const nnvm::NodeAttrs& attrs) {
+    const NumpyGammaParam& param = nnvm::get<NumpyGammaParam>(attrs.parsed);
+    int num_outputs = 2;
+    if (param.shape.has_value()) num_outputs -= 1;
+    if (param.scale.has_value()) num_outputs -= 1;
+    return num_outputs;
+  }
+)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", NumpyGammaGrad<cpu>)
+.add_arguments(NumpyGammaParam::__FIELDS__());
+
 
 }  // namespace op
 }  // namespace mxnet

@@ -23,7 +23,7 @@ from mxnet.base import MXNetError
 import numpy as np
 import os
 import gzip
-import pickle as pickle
+import pickle
 import time
 try:
     import h5py
@@ -31,21 +31,25 @@ except ImportError:
     h5py = None
 import sys
 from common import assertRaises
-import unittest
-try:
-    from itertools import izip_longest as zip_longest
-except:
-    from itertools import zip_longest
+import pytest
+from itertools import zip_longest
+
+@pytest.fixture(scope="session")
+def cifar10(tmpdir_factory):
+    path = str(tmpdir_factory.mktemp('cifar'))
+    get_cifar10(path)
+    return path
 
 
-def test_MNISTIter():
+def test_MNISTIter(tmpdir):
     # prepare data
-    get_mnist_ubyte()
+    path = str(tmpdir)
+    get_mnist_ubyte(path)
 
     batch_size = 100
     train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
+        image=os.path.join(path, 'train-images-idx3-ubyte'),
+        label=os.path.join(path, 'train-labels-idx1-ubyte'),
         data_shape=(784,),
         batch_size=batch_size, shuffle=1, flat=1, silent=0, seed=10)
     # test_loop
@@ -66,13 +70,12 @@ def test_MNISTIter():
     train_dataiter.iter_next()
     label_1 = train_dataiter.getlabel().asnumpy().flatten()
     assert(sum(label_0 - label_1) == 0)
+    mx.nd.waitall()
 
-
-def test_Cifar10Rec():
-    get_cifar10()
+def test_Cifar10Rec(cifar10):
     dataiter = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         rand_crop=False,
         and_mirror=False,
         shuffle=False,
@@ -92,24 +95,23 @@ def test_Cifar10Rec():
     for i in range(10):
         assert(labelcount[i] == 5000)
 
-def test_inter_methods_in_augmenter():
-    def test_Cifar10Rec():
-        get_cifar10()
-        for inter_method in [0,1,2,3,4,9,10]:
-            dataiter = mx.io.ImageRecordIter(
-                path_imgrec="data/cifar/train.rec",
-                mean_img="data/cifar/cifar10_mean.bin",
-                max_rotate_angle=45,
-                inter_method=inter_method)
-            for batch in dataiter:
-                pass
+@pytest.mark.parametrize('inter_method', [0,1,2,3,4,9,10])
+def test_inter_methods_in_augmenter(inter_method, cifar10):
+    dataiter = mx.io.ImageRecordIter(
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
+        max_rotate_angle=45,
+        data_shape=(3, 28, 28),
+        batch_size=100,
+        inter_method=inter_method)
+    for batch in dataiter:
+        pass
 
-def test_image_iter_exception():
-    def check_cifar10_exception():
-        get_cifar10()
+def test_image_iter_exception(cifar10):
+    with pytest.raises(MXNetError):
         dataiter = mx.io.ImageRecordIter(
-            path_imgrec="data/cifar/train.rec",
-            mean_img="data/cifar/cifar10_mean.bin",
+            path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+            mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
             rand_crop=False,
             and_mirror=False,
             shuffle=False,
@@ -121,7 +123,6 @@ def test_image_iter_exception():
         batchcount = 0
         for batch in dataiter:
             pass
-    assertRaises(MXNetError, check_cifar10_exception)
 
 def _init_NDArrayIter_data(data_type, is_image=False):
     if is_image:
@@ -149,7 +150,7 @@ def _test_last_batch_handle(data, labels=None, is_image=False):
         batch_count_list = [40, 39, 39]
     else:
         batch_count_list = [8, 7, 7]
-    
+
     for idx in range(len(last_batch_handle_list)):
         dataiter = mx.io.NDArrayIter(
             data, labels, 128, False, last_batch_handle=last_batch_handle_list[idx])
@@ -168,7 +169,7 @@ def _test_last_batch_handle(data, labels=None, is_image=False):
                        labelcount[int(label[i])] += 1
             else:
                 assert not batch.label, 'label is not empty list'
-            # keep the last batch of 'pad' to be used later 
+            # keep the last batch of 'pad' to be used later
             # to test first batch of roll_over in second iteration
             batch_count += 1
             if last_batch_handle_list[idx] == 'pad' and \
@@ -243,7 +244,7 @@ def test_NDArrayIter_h5py():
     with h5py.File('ndarraytest.h5') as f:
         f.create_dataset('data', data=data)
         f.create_dataset('label', data=labels)
-        
+
         _test_last_batch_handle(f['data'], f['label'])
         _test_last_batch_handle(f['data'], [])
         _test_last_batch_handle(f['data'])
@@ -285,7 +286,7 @@ def test_NDArrayIter_csr():
                      {'data': train_data}, dns, batch_size)
     except ImportError:
         pass
-    
+
     # scipy.sparse.csr_matrix with shuffle
     csr_iter = iter(mx.io.NDArrayIter({'data': train_data}, dns, batch_size,
                                       shuffle=True, last_batch_handle='discard'))
@@ -320,12 +321,11 @@ def test_NDArrayIter_csr():
         begin += batch_size
 
 
-def test_LibSVMIter():
+def test_LibSVMIter(tmpdir):
 
     def check_libSVMIter_synthetic():
-        cwd = os.getcwd()
-        data_path = os.path.join(cwd, 'data.t')
-        label_path = os.path.join(cwd, 'label.t')
+        data_path = os.path.join(str(tmpdir), 'data.t')
+        label_path = os.path.join(str(tmpdir), 'label.t')
         with open(data_path, 'w') as fout:
             fout.write('1.0 0:0.5 2:1.2\n')
             fout.write('-2.0\n')
@@ -338,7 +338,7 @@ def test_LibSVMIter():
             fout.write('-3.0 2:1.2\n')
             fout.write('4 1:1.0 2:-1.2\n')
 
-        data_dir = os.path.join(cwd, 'data')
+        data_dir = os.path.join(str(tmpdir), 'data')
         data_train = mx.io.LibSVMIter(data_libsvm=data_path, label_libsvm=label_path,
                                       data_shape=(3, ), label_shape=(3, ), batch_size=3)
 
@@ -363,7 +363,7 @@ def test_LibSVMIter():
         }
         batch_size = 33
         num_examples = news_metadata['num_examples']
-        data_dir = os.path.join(os.getcwd(), 'data')
+        data_dir = os.path.join(str(tmpdir), 'data')
         get_bz2_data(data_dir, news_metadata['name'], news_metadata['url'],
                      news_metadata['origin_name'])
         path = os.path.join(data_dir, news_metadata['name'])
@@ -384,9 +384,8 @@ def test_LibSVMIter():
             data_train.reset()
 
     def check_libSVMIter_exception():
-        cwd = os.getcwd()
-        data_path = os.path.join(cwd, 'data.t')
-        label_path = os.path.join(cwd, 'label.t')
+        data_path = os.path.join(str(tmpdir), 'data.t')
+        label_path = os.path.join(str(tmpdir), 'label.t')
         with open(data_path, 'w') as fout:
             fout.write('1.0 0:0.5 2:1.2\n')
             fout.write('-2.0\n')
@@ -399,7 +398,7 @@ def test_LibSVMIter():
             fout.write('-2.0 0:0.125\n')
             fout.write('-3.0 2:1.2\n')
             fout.write('4 1:1.0 2:-1.2\n')
-        data_dir = os.path.join(cwd, 'data')
+        data_dir = os.path.join(str(tmpdir), 'data')
         data_train = mx.io.LibSVMIter(data_libsvm=data_path, label_libsvm=label_path,
                                       data_shape=(3, ), label_shape=(3, ), batch_size=3)
         for batch in iter(data_train):
@@ -411,23 +410,22 @@ def test_LibSVMIter():
 
 
 def test_DataBatch():
-    from nose.tools import ok_
     from mxnet.io import DataBatch
     import re
     batch = DataBatch(data=[mx.nd.ones((2, 3))])
-    ok_(re.match(
-        'DataBatch: data shapes: \[\(2L?, 3L?\)\] label shapes: None', str(batch)))
+    assert re.match(
+        r'DataBatch: data shapes: \[\(2L?, 3L?\)\] label shapes: None', str(batch))
     batch = DataBatch(data=[mx.nd.ones((2, 3)), mx.nd.ones(
         (7, 8))], label=[mx.nd.ones((4, 5))])
-    ok_(re.match(
-        'DataBatch: data shapes: \[\(2L?, 3L?\), \(7L?, 8L?\)\] label shapes: \[\(4L?, 5L?\)\]', str(batch)))
+    assert re.match(
+        r'DataBatch: data shapes: \[\(2L?, 3L?\), \(7L?, 8L?\)\] label shapes: \[\(4L?, 5L?\)\]', str(batch))
 
 
-def test_CSVIter():
+@pytest.mark.skip(reason="https://github.com/apache/incubator-mxnet/issues/18382")
+def test_CSVIter(tmpdir):
     def check_CSVIter_synthetic(dtype='float32'):
-        cwd = os.getcwd()
-        data_path = os.path.join(cwd, 'data.t')
-        label_path = os.path.join(cwd, 'label.t')
+        data_path = os.path.join(str(tmpdir), 'data.t')
+        label_path = os.path.join(str(tmpdir), 'label.t')
         entry_str = '1'
         if dtype is 'int32':
             entry_str = '200000001'
@@ -451,8 +449,7 @@ def test_CSVIter():
     for dtype in ['int32', 'int64', 'float32']:
         check_CSVIter_synthetic(dtype=dtype)
 
-def test_ImageRecordIter_seed_augmentation():
-    get_cifar10()
+def test_ImageRecordIter_seed_augmentation(cifar10):
     seed_aug = 3
 
     def assert_dataiter_items_equals(dataiter1, dataiter2):
@@ -462,7 +459,7 @@ def test_ImageRecordIter_seed_augmentation():
         are the equal.
         """
         for batch1, batch2 in zip_longest(dataiter1, dataiter2):
-            
+
             # ensure iterators contain the same number of batches
             # zip_longest will return None if on of the iterators have run out of batches
             assert batch1 and batch2, 'The iterators do not contain the same number of batches'
@@ -501,8 +498,8 @@ def test_ImageRecordIter_seed_augmentation():
 
     # check whether to get constant images after fixing seed_aug
     dataiter1 = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
@@ -518,8 +515,8 @@ def test_ImageRecordIter_seed_augmentation():
         seed_aug=seed_aug)
 
     dataiter2 = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
@@ -533,14 +530,14 @@ def test_ImageRecordIter_seed_augmentation():
         random_h=10,
         max_shear_ratio=2,
         seed_aug=seed_aug)
-    
+
     assert_dataiter_items_equals(dataiter1, dataiter2)
 
     # check whether to get different images after change seed_aug
     dataiter1.reset()
     dataiter2 = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
@@ -559,31 +556,19 @@ def test_ImageRecordIter_seed_augmentation():
 
     # check whether seed_aug changes the iterator behavior
     dataiter1 = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
         seed_aug=seed_aug)
 
     dataiter2 = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(cifar10, 'cifar', 'train.rec'),
+        mean_img=os.path.join(cifar10, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
         seed_aug=seed_aug)
-    
-    assert_dataiter_items_equals(dataiter1, dataiter2)
 
-if __name__ == "__main__":
-    test_NDArrayIter()
-    if h5py:
-        test_NDArrayIter_h5py()
-    test_MNISTIter()
-    test_Cifar10Rec()
-    test_LibSVMIter()
-    test_NDArrayIter_csr()
-    test_CSVIter()
-    test_ImageRecordIter_seed_augmentation()
-    test_image_iter_exception()
+    assert_dataiter_items_equals(dataiter1, dataiter2)

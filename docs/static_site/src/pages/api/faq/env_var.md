@@ -59,9 +59,6 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_CPU_PRIORITY_NTHREADS
   - Values: Int ```(default=4)```
   - The number of threads given to prioritized CPU jobs.
-* MXNET_CPU_NNPACK_NTHREADS
-  - Values: Int ```(default=4)```
-  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK]({{'/api/faq/nnpack'|relative_url}}) to know more about it.
 * MXNET_MP_WORKER_NTHREADS
   - Values: Int ```(default=1)```
   - The number of scheduling threads on CPU given to multiprocess workers. Enlarge this number allows more operators to run in parallel in individual workers but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
@@ -85,28 +82,67 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Setting this to a small number can save GPU memory. It will also likely decrease the level of parallelism, which is usually acceptable.
     - MXNet internally uses graph coloring algorithm to [optimize memory consumption]({{'/api/architecture/note_memory'|relative_url}}).
   - This parameter is also used to get number of matching colors in graph and in turn how much parallelism one can get in each GPU. Color based match usually costs more memory but also enables more parallelism.
+* MXNET_GPU_MEM_POOL_TYPE
+  - Values: String ```(default=Naive)```
+  - The type of GPU memory pool.
+  - Choices:
+    - *Naive*: A simple memory pool that allocates memory for the requested size and cache memory buffers, when this memory is released. The size of memory chunk is defined by rounding the requested memory size to the nearest bigger multiple of MXNET_GPU_MEM_POOL_PAGE_SIZE (or MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE, when the result of rounding for MXNET_GPU_MEM_POOL_PAGE_SIZE is bigger than MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE) and allocates memory of the rounded size.
+    - *Round*: A memory pool that try to rounds the requested memory size to the nearest bigger power of 2. When this rounded number is bigger that 2**MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF, the *Naive* rounding algorithm is used. Caching and allocating buffered memory works in the same way as the naive memory pool.
+    - *Unpooled*: No memory pool is used.
 * MXNET_GPU_MEM_POOL_RESERVE
   - Values: Int ```(default=5)```
   - The percentage of GPU memory to reserve for things other than the GPU array, such as kernel launch or cudnn handle space.
+  - The value is used only by the GPU memory pool. If it is not possible to allocate new memory AND still save this reserve, the memory pool will free the cached memory.
   - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.
-
-* MXNET_GPU_MEM_POOL_TYPE
-  - Values: String ```(default=Naive)```
-  - The type of memory pool.
-  - Choices:
-    - Naive: A simple memory pool that allocates memory for the exact requested size and cache memory buffers. If a buffered memory chunk matches the size of a new request, the chunk from the memory pool will be returned and reused.
-    - Round: A memory pool that always rounds the requested memory size and allocates memory of the rounded size. MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF defines how to round up a memory size. Caching and allocating buffered memory works in the same way as the naive memory pool.
-    - Unpooled: No memory pool is used.
-
-* MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
-  - Values: Int ```(default=24)```
-  - The cutoff threshold that decides the rounding strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
-
 * MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE
   - Values: Int ```(default=2097152)```
-  - When using the naive pool type, memory allocations larger than this threshhold are rounded up to a multiple of this value.
-  - The default was chosen to minimize global memory fragmentation within the GPU driver.  Set this to 1 to disable.
-
+  - When the rounded size of memory allocations calculated by the pool of *Naive* type is larger than this threshold, it will be rounded up to a multiple of this value.
+  - The default was chosen to minimize global memory fragmentation within the GPU driver. Set this to 1 to disable.
+* MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
+  - Values: Int ```(default=24)```
+  - The cutoff threshold used by *Round* strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
+* MXNET_CPU_MEM_POOL_TYPE
+  - Values: String ```(default=Naive)```
+  - The type of CPU memory pool.
+  - Choices:
+    - *Naive*: A simple memory pool that allocates memory for the requested size and cache memory buffers, when this memory is released. The size of memory chunk is defined by rounding the requested memory size to the nearest bigger multiple of MXNET_CPU_MEM_POOL_PAGE_SIZE (or MXNET_CPU_MEM_LARGE_ALLOC_ROUND_SIZE, when the result of rounding for MXNET_CPU_MEM_POOL_PAGE_SIZE is bigger than MXNET_CPU_MEM_LARGE_ALLOC_ROUND_SIZE) and allocates memory of the rounded size.
+    - *Round*: A memory pool that try to rounds the requested memory size to the nearest bigger power of 2. When this rounded number is bigger that 2**MXNET_CPU_MEM_POOL_ROUND_LINEAR_CUTOFF, the the *Naive* rounding algorithm is used. Caching and allocating buffered memory works in the same way as the naive memory pool.
+    - *Unpooled*: No memory pool is used.
+* MXNET_CPU_MEM_POOL_RESERVE
+  - Values: Int ```(default=5)```
+  - The percentage of CPU memory to reserve for things other than the CPU array.
+  - The value is used only by the CPU memory pool. If it is not possible to allocate new memory AND still save this reserve, the memory pool will free the cached memory.
+  - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.
+* MXNET_CPU_MEM_LARGE_ALLOC_ROUND_SIZE
+  - Values: Int ```(default=2097152)```
+  - When the rounded size of memory allocations calculated by the pool of *Naive* type is larger than this threshold, it will be rounded up to a multiple of this value.
+  - Set this to 1 to disable.
+* MXNET_CPU_MEM_POOL_ROUND_LINEAR_CUTOFF
+  - Values: Int ```(default=24)```
+  - The cutoff threshold used by *Round* strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
+* MXNET_CPU_PINNED_MEM_POOL_TYPE
+  - Values: String ```(default=Naive)```
+  - The type of CPU_PINNED memory pool.
+  - Choices:
+    - *Naive*: A simple memory pool that allocates memory for the requested size and cache memory buffers, when this memory is released. The size of memory chunk is defined by rounding the requested memory size to the nearest bigger multiple of MXNET_CPU_PINNED_MEM_POOL_PAGE_SIZE (or MXNET_CPU_PINNED_MEM_LARGE_ALLOC_ROUND_SIZE, when the result of rounding for MXNET_CPU_PINNED_MEM_POOL_PAGE_SIZE is bigger than MXNET_CPU_PINNED_MEM_LARGE_ALLOC_ROUND_SIZE) and allocates memory of the rounded size.
+    - *Round*: A memory pool that try to rounds the requested memory size to the nearest bigger power of 2. When this rounded number is bigger that 2**MXNET_CPU_PINNED_MEM_POOL_ROUND_LINEAR_CUTOFF, the the *Naive* rounding algorithm is used. Caching and allocating buffered memory works in the same way as the naive memory pool.
+    - *Unpooled*: No memory pool is used.
+* MXNET_CPU_PINNED_MEM_POOL_RESERVE
+  - Values: Int ```(default=5)```
+  - The percentage of GPU memory to reserve for things other than the GPU array.
+  - The value is used only by the CPU memory pool. If it is not possible to allocate new memory AND still save this reserve, the memory pool will free the cached memory.
+  - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.
+* MXNET_CPU_PINNED_MEM_LARGE_ALLOC_ROUND_SIZE
+  - Values: Int ```(default=2097152)```
+  - When the rounded size of memory allocations calculated by the pool of *Naive* type is larger than this threshold, it will be rounded up to a multiple of this value.
+  - Set this to 1 to disable.
+* MXNET_CPU_PINNED_MEM_POOL_ROUND_LINEAR_CUTOFF
+  - Values: Int ```(default=24)```
+  - The cutoff threshold used by *Round* strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
+* MXNET_USE_NAIVE_STORAGE_MANAGERS
+  - Values: Int ```(default=0)```
+  - When value is not 0, no memory pools will be used for any of the following three types of memory: GPU, CPU, CPU_PINNED.
+   
 ## Engine Type
 
 * MXNET_ENGINE_TYPE
@@ -189,7 +225,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - The maximum size of an NDArray slice in terms of number of parameters.
   - This parameter is used to slice an NDArray before synchronizing through P3Store (dist_p3).
 
-## Memonger
+## Memory Optimizations
 
 * MXNET_BACKWARD_DO_MIRROR
   - Values: 0(false) or 1(true) ```(default=0)```
@@ -198,6 +234,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - When set to `1`, during forward propagation, graph executor will `mirror` some layer's feature map and drop others, but it will re-compute this dropped feature maps when needed.
   - `MXNET_BACKWARD_DO_MIRROR=1` will save 30%~50% of device memory, but retains about 95% of running speed.
   - One extension of `mirror` in MXNet is called [memonger technology](https://arxiv.org/abs/1604.06174), it will only use O(sqrt(N)) memory at 75% running speed. Checkout the code [here](https://github.com/dmlc/mxnet-memonger).
+
+* MXNET_MEMORY_OPT
+  - Values: 0(no optimizations) or 1(highest optimization level) ```(default=0)```
+  - If set to '1', various optimizations on memory consumption will be enabled.
 
 ## Control the profiler
 
@@ -208,9 +248,14 @@ The following environments can be used to profile the application without changi
   - Set to 1, MXNet starts the profiler automatically. The profiling result is stored into profile.json in the working directory.
 
 * MXNET_PROFILER_MODE
-  - Values: 0(false) or 1(true) ```(default=0)```
-  - If set to '0', profiler records the events of the symbolic operators.
-  - If set to '1', profiler records the events of all operators.
+  - Values: 0(false) to 15(profile everything) ```(default=13)```
+  - If set to '0', turns off all profiling.
+  - If set to '1', profiler records the events of symbolic operators.
+  - If set to '2', profiler records the events of imperative operators.
+  - If set to '4', profiler records the C API events.
+  - If set to '8', profiler records the events of memory (i.e. storage alloc and free calls).
+  - You need to sum the values above for a custom combination. For example, for symbolic and imperative operators, set ```MXNET_PROFILER_MODE=3```(2 + 1).
+  - If set to '15', profiler records all the above listed events (API, Memory, Symbolic, Imperative).
 
 ## Interface between Python and the C API
 
@@ -279,14 +324,14 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Data directory in the filesystem for storage, for example when downloading gluon models.
   - Default in *nix is .mxnet APPDATA/mxnet in windows.
 
-* MXNET_MKLDNN_ENABLED
+* MXNET_ONEDNN_ENABLED
   - Values: 0, 1 ```(default=1)```
-  - Flag to enable or disable MKLDNN accelerator. On by default.
-  - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
+  - Flag to enable or disable ONEDNN accelerator. On by default.
+  - Only applies to mxnet that has been compiled with ONEDNN (```pip install mxnet``` or built from source with ```USE_ONEDNN=1```)
 
-* MXNET_MKLDNN_CACHE_NUM
+* MXNET_ONEDNN_CACHE_NUM
   - Values: Int ```(default=-1)```
-  - Flag to set num of elements that MKLDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use MKLDNN and different input shape.
+  - Flag to set num of elements that ONEDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use ONEDNN and different input shape.
 
 * MXNET_ENFORCE_DETERMINISM
   - Values: 0(false) or 1(true) ```(default=0)```
@@ -326,13 +371,13 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
 
 * MXNET_SUBGRAPH_BACKEND
-  - Values: String ```(default="MKLDNN")``` if MKLDNN is avaliable, otherwise ```(default="")```
+  - Values: String ```(default="MKLDNN")``` if ONEDNN is avaliable, otherwise ```(default="")```
   - This variable controls the subgraph partitioning in MXNet.
-  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
+  - This variable is used to perform ONEDNN FP32 operator fusion and quantization. Please refer to the [ONEDNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
   - Set ```MXNET_SUBGRAPH_BACKEND=NONE``` to disable subgraph backend.
 
 * MXNET_SAFE_ACCUMULATION
-  - Values: Values: 0(false) or 1(true) ```(default=0)```
+  - Values: Values: 0(false) or 1(true) ```(default=1)```
   - If this variable is set, the accumulation will enter the safe mode, meaning accumulation is done in a data type of higher precision than
     the input data type, leading to more accurate accumulation results with a possible performance loss and backward compatibility loss.
     For example, when the variable is set to 1(true), if the input data type is float16, then the accumulation will be done
@@ -345,18 +390,26 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - It works in Symbolic execution as well as in Gluon models hybridized with ```static_alloc=True``` option.
   - Only applies to MXNet that has been compiled with CUDA (```pip install mxnet-cuXX``` or built from source with ```USE_CUDA=1```) and running on GPU.
 
-* MXNET_FUSION_VERBOSE
+* MXNET_RTC_VERBOSE
   - Values: 0(false) or 1(true) ```(default=0)```
-  - Only applies to MXNet that has been compiled with CUDA and when ```MXNET_USE_FUSION``` option is enabled.
-  - If this variable is set, MXNet will print the code for fused operators that it generated.
+  - Only applies to MXNet that has been compiled with CUDA.
+  - If this variable is set, MXNet will print the code for operators compiled at runtime.
 
 * MXNET_ELIMINATE_COMMON_EXPR
   - Values: 0(false) or 1(true) ```(default=1)```
   - If this variable is set, MXNet will simplify the computation graph, eliminating duplicated operations on the same inputs.
 
-* MXNET_USE_MKLDNN_RNN
+* MXNET_USE_ONEDNN_RNN
   - Values: 0(false) or 1(true) ```(default=1)```
-  - This variable controls whether to use the MKL-DNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The MKL-DNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
+  - This variable controls whether to use the ONEDNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The ONEDNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
+
+* MXNET_FC_TRUE_FP16
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - If this variable is set to true, MXNet will perform fp16 accumulation when using cuBLAS and input datatype is set to float16. This could increase the speed of the computation, but might result in loss of accuracy. This makes this setting useful mainly for inference usecases.
+
+* MXNET_RNN_USE_WEIGHT_CACHE
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - If this variable is set, MXNet will ignore the altering of the version of NDArray which is the input parameter of the RNN operator. In Gluon API, there is a `_rnn_param_concat` operator concatenating the weights and bias of RNN into a single parameter tensor that changes the version number. Since the values of the parameters are invariant in inference pass, the RNN operator could ignore the altering of the version to escape much overhead from re-initializing the parameters.
 
 Settings for Minimum Memory Usage
 ---------------------------------

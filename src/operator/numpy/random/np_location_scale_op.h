@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <unordered_map>
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -44,13 +45,13 @@ namespace op {
 struct NumpyLocationScaleParam : public dmlc::Parameter<NumpyLocationScaleParam> {
   dmlc::optional<float> loc;
   dmlc::optional<float> scale;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   std::string ctx;
   DMLC_DECLARE_PARAMETER(NumpyLocationScaleParam) {
     DMLC_DECLARE_FIELD(loc);
     DMLC_DECLARE_FIELD(scale);
     DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe(
           "Output shape. If the given shape is, "
           "e.g., (m, n, k), then m * n * k samples are drawn. "
@@ -58,6 +59,15 @@ struct NumpyLocationScaleParam : public dmlc::Parameter<NumpyLocationScaleParam>
     DMLC_DECLARE_FIELD(ctx).set_default("cpu").describe(
         "Context of output, in format [cpu|gpu|cpu_pinned](n)."
         " Only used for imperative calls.");
+  }
+    void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream loc_s, scale_s, size_s;
+    loc_s << loc;
+    scale_s << scale;
+    size_s << size;
+    (*dict)["loc"] = loc_s.str();
+    (*dict)["scale"] = scale_s.str();
+    (*dict)["size"] = size_s.str();
   }
 };
 
@@ -286,10 +296,10 @@ inline void LocationScaleReparamBackwardImpl(const OpContext& ctx,
   const TBlob rhs = inputs[3].reshape(new_rshape);
   const TBlob samples = inputs[4].reshape(new_oshape);
   const TBlob noise = inputs[5].reshape(new_oshape);
-  size_t workspace_size_l = ReduceWorkspaceSize<ndim, DType>(
-    s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_, rhs.shape_);
-  size_t workspace_size_r = ReduceWorkspaceSize<ndim, DType>(
-    s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_, rhs.shape_);
+  size_t workspace_size_l = ReduceWorkspaceSize(
+    s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_, rhs.shape_, sizeof(DType));
+  size_t workspace_size_r = ReduceWorkspaceSize(
+    s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_, rhs.shape_, sizeof(DType));
   size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
   Tensor<xpu, 1, char> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
@@ -319,7 +329,7 @@ inline void ScalarLocationScaleReparamBackwardImpl(const OpContext& ctx,
   const TBlob samples = inputs[3].reshape(new_oshape);
   const TBlob noise = inputs[4].reshape(new_oshape);
   size_t workspace_size =
-    ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
+    ReduceWorkspaceSize(s, igrad.shape_, req[0], ograd.shape_, sizeof(DType));
   Tensor<xpu, 1, char> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   if (loc_is_tensor) {

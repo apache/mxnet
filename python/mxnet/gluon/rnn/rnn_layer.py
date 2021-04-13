@@ -20,14 +20,12 @@
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network layers."""
-from __future__ import print_function
-import re
 
 __all__ = ['RNN', 'LSTM', 'GRU']
 
 from ... import ndarray, symbol
 from .. import HybridBlock, tensor_types
-from . import rnn_cell
+from ..parameter import Parameter
 from ...util import is_np_array
 
 
@@ -61,6 +59,7 @@ class _RNNLayer(HybridBlock):
         self._lstm_state_clip_nan = lstm_state_clip_nan
         self._dtype = dtype
         self._use_sequence_length = use_sequence_length
+        self.skip_states = None
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
@@ -103,8 +102,7 @@ class _RNNLayer(HybridBlock):
                 ni = np * self._dir
 
     def _register_param(self, name, shape, init, dtype):
-        p = self.params.get(name, shape=shape, init=init,
-                            allow_deferred_init=True, dtype=dtype)
+        p = Parameter(name, shape=shape, init=init, allow_deferred_init=True, dtype=dtype)
         setattr(self, name, p)
         return p
 
@@ -123,65 +121,8 @@ class _RNNLayer(HybridBlock):
                         mapping=mapping,
                         **self.__dict__)
 
-    def _collect_params_with_prefix(self, prefix=''):
-        if prefix:
-            prefix += '.'
-        pattern = re.compile(r'(l|r)(\d)_(i2h|h2h|h2r)_(weight|bias)\Z')
-        def convert_key(m, bidirectional): # for compatibility with old parameter format
-            d, l, g, t = [m.group(i) for i in range(1, 5)]
-            if bidirectional:
-                return '_unfused.{}.{}_cell.{}_{}'.format(l, d, g, t)
-            else:
-                return '_unfused.{}.{}_{}'.format(l, g, t)
-        bidirectional = any(pattern.match(k).group(1) == 'r' for k in self._reg_params)
-
-        ret = {prefix + convert_key(pattern.match(key), bidirectional) : val
-               for key, val in self._reg_params.items()}
-        for name, child in self._children.items():
-            ret.update(child._collect_params_with_prefix(prefix + name))
-        return ret
-
     def state_info(self, batch_size=0):
         raise NotImplementedError
-
-    def _unfuse(self):
-        """Unfuses the fused RNN in to a stack of rnn cells."""
-        assert not self._projection_size, "_unfuse does not support projection layer yet!"
-        assert not self._lstm_state_clip_min and not self._lstm_state_clip_max, \
-                "_unfuse does not support state clipping yet!"
-        get_cell = {'rnn_relu': lambda **kwargs: rnn_cell.RNNCell(self._hidden_size,
-                                                                  activation='relu',
-                                                                  **kwargs),
-                    'rnn_tanh': lambda **kwargs: rnn_cell.RNNCell(self._hidden_size,
-                                                                  activation='tanh',
-                                                                  **kwargs),
-                    'lstm': lambda **kwargs: rnn_cell.LSTMCell(self._hidden_size,
-                                                               **kwargs),
-                    'gru': lambda **kwargs: rnn_cell.GRUCell(self._hidden_size,
-                                                             **kwargs)}[self._mode]
-
-        stack = rnn_cell.HybridSequentialRNNCell(prefix=self.prefix, params=self.params)
-        with stack.name_scope():
-            ni = self._input_size
-            for i in range(self._num_layers):
-                kwargs = {'input_size': ni,
-                          'i2h_weight_initializer': self._i2h_weight_initializer,
-                          'h2h_weight_initializer': self._h2h_weight_initializer,
-                          'i2h_bias_initializer': self._i2h_bias_initializer,
-                          'h2h_bias_initializer': self._h2h_bias_initializer}
-                if self._dir == 2:
-                    stack.add(rnn_cell.BidirectionalCell(
-                        get_cell(prefix='l%d_'%i, **kwargs),
-                        get_cell(prefix='r%d_'%i, **kwargs)))
-                else:
-                    stack.add(get_cell(prefix='l%d_'%i, **kwargs))
-
-                if self._dropout > 0 and i != self._num_layers - 1:
-                    stack.add(rnn_cell.DropoutCell(self._dropout))
-
-                ni = self._hidden_size * self._dir
-
-        return stack
 
     def cast(self, dtype):
         super(_RNNLayer, self).cast(dtype)
@@ -219,7 +160,7 @@ class _RNNLayer(HybridBlock):
                 info.update(kwargs)
             else:
                 info = kwargs
-            state = func(name='%sh0_%d' % (self.prefix, i), **info)
+            state = func(name='h0_%d' % (i), **info)
             if is_np_array():
                 state = state.as_np_ndarray()
             states.append(state)
@@ -348,10 +289,6 @@ class RNN(_RNNLayer):
         If not specified, it will be inferred from input.
     dtype : str, default 'float32'
         Type to initialize the parameters and default states to
-    prefix : str or None
-        Prefix of this `Block`.
-    params : ParameterDict or None
-        Shared Parameters for this `Block`.
 
 
     Inputs:
@@ -468,10 +405,6 @@ class LSTM(_RNNLayer):
     input_size: int, default 0
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
-    prefix : str or None
-        Prefix of this `Block`.
-    params : `ParameterDict` or `None`
-        Shared Parameters for this `Block`.
 
 
     Inputs:
@@ -582,10 +515,6 @@ class GRU(_RNNLayer):
     input_size: int, default 0
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
-    prefix : str or None
-        Prefix of this `Block`.
-    params : ParameterDict or None
-        Shared Parameters for this `Block`.
 
 
     Inputs:

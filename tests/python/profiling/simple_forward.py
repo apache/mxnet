@@ -26,10 +26,9 @@ def simple_forward():
 
     # define simple gluon network with random weights
     net = nn.Sequential()
-    with net.name_scope():
-        net.add(nn.Dense(128, activation='relu'))
-        net.add(nn.Dense(64, activation='relu'))
-        net.add(nn.Dense(10))
+    net.add(nn.Dense(128, activation='relu'))
+    net.add(nn.Dense(64, activation='relu'))
+    net.add(nn.Dense(10))
     net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
 
     input = mx.nd.zeros((128,), ctx=ctx)

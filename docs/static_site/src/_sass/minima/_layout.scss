@@ -1,3 +1,20 @@
+/* Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License. */
+
 /**
  * Site header
  */
@@ -36,6 +53,14 @@
 
   .nav-trigger {
     display: none;
+  }
+  
+  #global-search-mobile-border {
+    display: none;
+  }
+
+  .gs-search-border {
+    display: inline-block;
   }
 
   .menu-icon {
@@ -79,6 +104,14 @@
       height: 36px;
       z-index: 2;
       cursor: pointer;
+    }
+
+    .gs-search-border {
+      display: none;
+    }
+
+    #global-search-mobile-border {
+      display: block;
     }
 
     .menu-icon {
@@ -234,14 +267,14 @@
 
 .page-content {
   height: 100%;
-  padding: $spacing-unit 0, 0;
+  padding: $spacing-unit 0 0;
   flex: 1;
   margin-top: 100px;
 }
 
 .page-content-home {
   height: 100%;
-  padding: $spacing-unit 0, 0;
+  padding: $spacing-unit 0 0;
   margin-top: 100px;
 }
 
@@ -347,4 +380,13 @@
     background-color: $color-mxnet;
     color: $grey-color-light;
   }
+}
+
+:target::before {
+  display: block;
+  content: " ";
+  margin-top: -86px;
+  height: 86px;
+  visibility: hidden;
+  pointer-events: none;
 }

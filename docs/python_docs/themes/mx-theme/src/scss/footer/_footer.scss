@@ -119,6 +119,8 @@ footer.mdl-mini-footer {
   border-top: 1px solid $grey-color-light;
   padding: $spacing-unit 0;
   background-color: #424242;
+  position: relative;
+  z-index: 10;
   .footer-category-title {
     color: $color-mxnet;
   }
@@ -136,6 +138,8 @@ footer.mdl-mini-footer {
   background-color: #424242;
   padding-top: 40px;
   padding-bottom: 10px;
+  position: relative;
+  z-index: 10;
 }
 
 .footer-heading {

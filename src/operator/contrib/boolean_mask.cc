@@ -68,8 +68,8 @@ bool BooleanMaskBackStorageType(const nnvm::NodeAttrs& attrs,
   for (int &attr : *out_attrs) {
     attr = kDefaultStorage;
   }
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    out_attrs->at(i) = kDefaultStorage;
+  for (int & out_attr : *out_attrs)
+    out_attr = kDefaultStorage;
   *dispatch_mode = DispatchMode::kFComputeEx;
   return true;
 }
@@ -85,11 +85,16 @@ struct BooleanMaskBackwardCPUWriteKernel {
     // i is row id already
     int32_t prev = (i == 0) ? 0 : idx[i - 1];
     int32_t curr = idx[i];
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     if (prev != curr) {
       std::memcpy(igrad + i * col_size, ograd + prev * col_size, col_size * sizeof(DType));
     } else {
       std::memset(igrad + i * col_size, 0, col_size * sizeof(DType));
     }
+#pragma GCC diagnostic pop
   }
 };
 

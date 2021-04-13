@@ -26,7 +26,7 @@ and pull data out.
 Let's consider a simple example: initializing
 a (`int`, `NDArray`) pair into the store, and then pulling the value out:
 
-```python
+```{.python .input}
 import mxnet as mx
 
 kv = mx.kv.create('local') # create a local kv store.
@@ -43,7 +43,7 @@ print(a.asnumpy())
 
 For any key that has been initialized, you can push a new value with the same shape to the key:
 
-```python
+```{.python .input}
 kv.push(3, mx.nd.ones(shape)*8)
 kv.pull(3, out = a) # pull out the value
 print(a.asnumpy())
@@ -56,7 +56,7 @@ values into the same key, where KVStore will first sum all of these
 values and then push the aggregated value. Here we will just demonstrate pushing a list of values on CPU.
 Please note summation only happens if the value list is longer than one
 
-```python
+```{.python .input}
 contexts = [mx.cpu(i) for i in range(4)]
 b = [mx.nd.ones(shape, ctx) for ctx in contexts]
 kv.push(3, b)
@@ -70,7 +70,7 @@ For each push, KVStore combines the pushed value with the value stored using an
 `updater`. The default updater is `ASSIGN`. You can replace the default to
 control how data is merged:
 
-```python
+```{.python .input}
 def update(key, input, stored):
     print("update on key: %d" % key)
     stored += input * 2
@@ -81,7 +81,7 @@ print(a.asnumpy())
 
 `[[ 4.  4.  4.],[ 4.  4.  4.]]`<!--notebook-skip-line-->
 
-```python
+```{.python .input}
 kv.push(3, mx.nd.ones(shape))
 kv.pull(3, out=a)
 print(a.asnumpy())
@@ -97,7 +97,7 @@ print(a.asnumpy())
 You've already seen how to pull a single key-value pair. Similarly, to push, you can
 pull the value onto several devices with a single call:
 
-```python
+```{.python .input}
 b = [mx.nd.ones(shape, ctx) for ctx in contexts]
 kv.pull(3, out = b)
 print(b[1].asnumpy())
@@ -112,7 +112,7 @@ an interface for a list of key-value pairs.
 
 For a single device:
 
-```python
+```{.python .input}
 keys = [5, 7, 9]
 kv.init(keys, [mx.nd.ones(shape)]*len(keys))
 kv.push(keys, [mx.nd.ones(shape)]*len(keys))
@@ -131,7 +131,7 @@ print(b[1].asnumpy())
 
 For multiple devices:
 
-```python
+```{.python .input}
 b = [[mx.nd.ones(shape, ctx) for ctx in contexts]] * len(keys)
 kv.push(keys, b)
 kv.pull(keys, out = b)
@@ -166,6 +166,6 @@ When the distributed version is ready, we will update this section.
 <!-- flexibly as your choice.  -->
 
 ## Next Steps
-* [MXNet tutorials index](/api/python/docs/tutorials/)
+* [MXNet tutorials index](../../index.rst)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

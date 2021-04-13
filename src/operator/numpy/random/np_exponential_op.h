@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <unordered_map>
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -43,19 +44,26 @@ namespace op {
 
 struct NumpyExponentialParam : public dmlc::Parameter<NumpyExponentialParam> {
   dmlc::optional<float> scale;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   std::string ctx;
   DMLC_DECLARE_PARAMETER(NumpyExponentialParam) {
       DMLC_DECLARE_FIELD(scale)
       .set_default(dmlc::optional<float>(1.0));
       DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe("Output shape. If the given shape is, "
           "e.g., (m, n, k), then m * n * k samples are drawn. "
           "Default is None, in which case a single value is returned.");
       DMLC_DECLARE_FIELD(ctx).set_default("cpu").describe(
         "Context of output, in format [cpu|gpu|cpu_pinned](n)."
         " Only used for imperative calls.");
+  }
+    void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream scale_s, size_s;
+    scale_s << scale;
+    size_s << size;
+    (*dict)["scale"] = scale_s.str();
+    (*dict)["size"] = size_s.str();
   }
 };
 
@@ -145,12 +153,12 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
 }
 
 template<typename xpu, int ndim, typename DType>
-inline void ScalarExponentialReparamBackwardImpl(const OpContext& ctx,
-                                                 const std::vector<TBlob>& inputs,
-                                                 const std::vector<OpReqType>& req,
-                                                 const std::vector<TBlob>& outputs,
-                                                 const mxnet::TShape& new_ishape,
-                                                 const mxnet::TShape& new_oshape) {
+inline void ExponentialReparamBackwardImpl(const OpContext& ctx,
+                                           const std::vector<TBlob>& inputs,
+                                           const std::vector<OpReqType>& req,
+                                           const std::vector<TBlob>& outputs,
+                                           const mxnet::TShape& new_ishape,
+                                           const mxnet::TShape& new_oshape) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace broadcast;
@@ -163,7 +171,7 @@ inline void ScalarExponentialReparamBackwardImpl(const OpContext& ctx,
   const TBlob samples = inputs[3].reshape(new_oshape);
   const TBlob noise = inputs[4].reshape(new_oshape);
   size_t workspace_size =
-      ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
+      ReduceWorkspaceSize(s, igrad.shape_, req[0], ograd.shape_, sizeof(DType));
   Tensor<xpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::left>(
@@ -191,7 +199,7 @@ void ExponentialReparamBackward(const nnvm::NodeAttrs& attrs,
                          &new_ishape, &new_ishape, &new_oshape);
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
-        ScalarExponentialReparamBackwardImpl<xpu, NDim, DType>(
+        ExponentialReparamBackwardImpl<xpu, NDim, DType>(
           ctx, inputs, req, outputs, new_ishape, new_oshape);
       });
     });

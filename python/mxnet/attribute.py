@@ -14,17 +14,13 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-# coding: utf-8
 """Attribute scoping support for symbolic API."""
-from __future__ import absolute_import
-import threading
-import warnings
+import contextvars
 from collections import defaultdict
 
-from .base import string_types, classproperty, with_metaclass, _MXClassPropertyMetaClass
+from .base import string_types
 
-class AttrScope(with_metaclass(_MXClassPropertyMetaClass, object)):
+class AttrScope:
     """Attribute manager for scoping.
 
     User can also inherit this object to change naming behavior.
@@ -34,7 +30,6 @@ class AttrScope(with_metaclass(_MXClassPropertyMetaClass, object)):
     kwargs
         The attributes to set for all symbol creations in the scope.
     """
-    _current = threading.local()
     _subgraph_names = defaultdict(int)
 
     def __init__(self, **kwargs):
@@ -66,37 +61,23 @@ class AttrScope(with_metaclass(_MXClassPropertyMetaClass, object)):
         else:
             return attr if attr else {}
 
-    def __enter__(self):
-        # pylint: disable=protected-access
-        if not hasattr(AttrScope._current, "value"):
-            AttrScope._current.value = AttrScope()
-        self._old_scope = AttrScope._current.value
-        attr = AttrScope._current.value._attr.copy()
+    def __enter__(self):  # pylint: disable=protected-access
+        attr = _current.get()._attr.copy()
         attr.update(self._attr)
         self._attr = attr
-        AttrScope._current.value = self
+        # Token can't be pickled and Token.old_value is Token.MISSING if _current.get() uses default value
+        self._old_scope = _current.get()
+        _current.set(self)
         return self
 
     def __exit__(self, ptype, value, trace):
         assert self._old_scope
-        AttrScope._current.value = self._old_scope
+        _current.set(self._old_scope)
 
-    #pylint: disable=no-self-argument
-    @classproperty
-    def current(cls):
-        warnings.warn("AttrScope.current has been deprecated. "
-                      "It is advised to use the `with` statement with AttrScope.",
-                      DeprecationWarning)
-        if not hasattr(AttrScope._current, "value"):
-            cls._current.value = AttrScope()
-        return cls._current.value
 
-    @current.setter
-    def current(cls, val):
-        warnings.warn("AttrScope.current has been deprecated. "
-                      "It is advised to use the `with` statement with AttrScope.",
-                      DeprecationWarning)
-        cls._current.value = val
-    #pylint: enable=no-self-argument
+_current = contextvars.ContextVar('namemanager', default=AttrScope())
 
-AttrScope._current.value = AttrScope()
+
+def current():
+    """Returns the current name manager."""
+    return _current.get()

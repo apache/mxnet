@@ -16,8 +16,7 @@
    under the License.
 
 gluon.SymbolBlock
-===========
-
+=================
 
 .. autoclass:: mxnet.gluon.SymbolBlock
     :members:

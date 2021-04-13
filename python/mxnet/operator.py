@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except, too-many-lines, unnecessary-pass
 """numpy interface for operators."""
-from __future__ import absolute_import
 
 import traceback
 import warnings
@@ -734,7 +733,13 @@ def register(reg_name):
         def creator(op_type, argc, keys, vals, ret):
             """internal function"""
             assert py_str(op_type) == reg_name
-            kwargs = dict([(py_str(keys[i]), py_str(vals[i])) for i in range(argc)])
+            kwargs = {}
+            for i in range(argc):
+                key = py_str(keys[i])
+                if key not in ['__ctx_group__', '__lr_mult__', '__wd_mult__',
+                               '__force_mirroring__',
+                               '__mirror_stage__', '__profiler_scope__']:
+                    kwargs[key] = py_str(vals[i])
             op_prop = prop_cls(**kwargs)
 
             def infer_shape_entry(num_tensor, tensor_dims,
@@ -1136,6 +1141,32 @@ def get_all_registered_operators():
 
     mx_registered_operator_names = [py_str(plist[i]) for i in range(size.value)]
     return mx_registered_operator_names
+
+
+def get_all_registered_operators_grouped():
+    """Get all registered MXNet operator names, grouped by 'original' operator.
+
+    Returns
+    -------
+    names : a dictionary, mapping op name to the list of all its aliases (including the original).
+    """
+    ret = {}
+    for aname in get_all_registered_operators():
+        op_handle = OpHandle()
+        check_call(_LIB.NNGetOpHandle(c_str(aname), ctypes.byref(op_handle)))
+        name = ctypes.c_char_p()
+        desc = ctypes.c_char_p()
+        num_args = mx_uint()
+        arg_names = ctypes.POINTER(ctypes.c_char_p)()
+        arg_types = ctypes.POINTER(ctypes.c_char_p)()
+        arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+        ret_types = ctypes.POINTER(ctypes.c_char_p)()
+        check_call(_LIB.NNGetOpInfo(op_handle, ctypes.byref(name), ctypes.byref(desc),
+                                    ctypes.byref(num_args), ctypes.byref(arg_names),
+                                    ctypes.byref(arg_types), ctypes.byref(arg_descs),
+                                    ctypes.byref(ret_types)))
+        ret.setdefault(py_str(name.value), []).append(aname)
+    return ret
 
 
 OperatorArguments = collections.namedtuple('OperatorArguments', ['narg', 'names', 'types'])

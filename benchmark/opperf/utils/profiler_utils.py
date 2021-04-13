@@ -47,10 +47,10 @@ def _get_operator_profile(operator_name, operator_profile_results):
 
     # alias map : dictionary of the form {"alias" : "registered_name"}
     # allows to retrieve alias operator profile from the profiler results
-    # TODO handling - "identity" : "_copy"
     alias_map = {"broadcast_plus": "broadcast_add", "broadcast_minus": "broadcast_sub", "flatten": "Flatten", "max_axis": "max", "Custom": "CustomAddOne",
                  "swapaxes": "SwapAxis", "flip": "reverse", "reshape": "Reshape", "crop": "slice", "sum_axis": "sum", "min_axis": "min", "ctc_loss": "CTCLoss",
-                 "fill_element_0index": "TernaryOp", "identity": "_copy", "ElementWiseSum": "add_n", "choose_element_0index": "pick", "stop_gradient": "BlockGrad"}
+                 "fill_element_0index": "TernaryOp", "identity": "_copy", "ElementWiseSum": "add_n", "choose_element_0index": "pick", "stop_gradient": "BlockGrad",
+                 "broadcast_axes": "broadcast_axis"}
 
     op_name = None
 
@@ -117,7 +117,7 @@ def parse_profiler_dump(operator_name, profiler_dump):
     MXNDArrayFree                          49           1.1220           0.0170           0.0360           0.0229
     MXAutogradBackwardEx                   50          11.5460           0.1980           0.3360           0.2309
     MXNet C API Calls                     399           1.9990           1.6010           1.9990           0.1990
-    MXImperativeInvokeEx                   50           4.4810           0.0700           0.1330           0.0896
+    MXImperativeInvoke                     50           4.4810           0.0700           0.1330           0.0896
     MXNDArrayWaitAll                       50         769.0570          14.0200          24.5030          15.3811
     MXAutogradSetIsTraining               100           0.0190           0.0000           0.0010           0.0002
     MXAutogradSetIsRecording              100           0.0400           0.0000           0.0010           0.0004
@@ -248,7 +248,7 @@ def python_profile(func):
     @functools.wraps(func)
     def python_profile_it(*args, **kwargs):
         runs = args[1]
-        modified_args = (args[0], 1, args[2])
+        modified_args = (args[0], 1)
         times = []
 
         for _ in range(runs):

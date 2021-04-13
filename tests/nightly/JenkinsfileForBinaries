@@ -18,9 +18,7 @@
 //
 //This is a Jenkinsfile for nightly tests. The format and some functions have been picked up from the top-level Jenkinsfile
 
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_lib_cpp_example_mkl = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, build/cpp-package/example/imagenet_inference'
+mx_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so'
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -34,10 +32,10 @@ core_logic: {
   stage('Build') {
     parallel 'GPU: CUDA10.1+cuDNN7': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-mkldnn-gpu') {
+        ws('workspace/build-onednn-gpu') {
           utils.init_git()
-          utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn', false)
-          utils.pack_lib('gpu', mx_lib_cpp_example_mkl)
+          utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_onednn', false)
+          utils.pack_lib('gpu', mx_lib)
         }
       }
     },
@@ -45,44 +43,27 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/build-cpu-int64') {
           utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'build_ubuntu_cpu_large_tensor', false)
-          utils.pack_lib('cpu_int64', mx_cmake_lib)
+          utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_large_tensor', false)
+          utils.pack_lib('cpu_int64', mx_lib)
         }
       }
     }
   }
 
   stage('NightlyTests'){
-    parallel 'ImageClassification: GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/nt-ImageClassificationTest') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_image_classification', true)
-        }
-      }
-    },
-    'ImageNet Inference: GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/nt-ImageInferenceTest') {
-          utils.unpack_and_init('gpu', mx_lib_cpp_example_mkl)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_imagenet_inference', true)
-        }
-      }
-    },
-    'KVStore_SingleNode: GPU': {
+    parallel 'KVStore_SingleNode: GPU': {
       node('mxnetlinux-gpu-p3-8xlarge') {
         ws('workspace/nt-KVStoreTest') {
           utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true)
+          utils.docker_run('ubuntu_gpu_cu111', 'nightly_test_KVStore_singleNode', true)
         }
       }
     },
     'Test Large Tensor Size: CPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/large_tensor-cpu') {
-            utils.unpack_and_init('cpu_int64', mx_cmake_lib)
-            utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_large_tensor', false)
-            utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_large_vector', false)
+            utils.unpack_and_init('cpu_int64', mx_lib)
+            utils.docker_run('ubuntu_cpu', 'nightly_test_large_tensor', false)
         }
       }
     },
@@ -90,7 +71,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/estimator-test-gpu') {
           utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator', true)
+          utils.docker_run('ubuntu_gpu_cu111', 'nightly_estimator', true)
         }
       }
     }

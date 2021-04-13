@@ -125,6 +125,28 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     }
     return flag;
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream eps_s, momentum_s, fix_gamma_s, use_global_stats_s, output_mean_var_s,
+                       axis_s, cudnn_off_s, min_calib_range_s, max_calib_range_s;
+    eps_s << eps;
+    momentum_s << momentum;
+    fix_gamma_s << fix_gamma;
+    use_global_stats_s << use_global_stats;
+    output_mean_var_s << output_mean_var;
+    axis_s << axis;
+    cudnn_off_s << cudnn_off;
+    min_calib_range_s << min_calib_range;
+    max_calib_range_s << max_calib_range;
+    (*dict)["eps"] = eps_s.str();
+    (*dict)["momentum"] = momentum_s.str();
+    (*dict)["fix_gamma"] = fix_gamma_s.str();
+    (*dict)["use_global_stats"] = use_global_stats_s.str();
+    (*dict)["output_mean_var"] = output_mean_var_s.str();
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["cudnn_off"] = cudnn_off_s.str();
+    (*dict)["min_calib_range"] = min_calib_range_s.str();
+    (*dict)["max_calib_range"] = max_calib_range_s.str();
+  }
 };
 
 }  // namespace op
@@ -259,6 +281,7 @@ void BatchNormBackward(const OpContext &ctx, const BatchNormParam& param,
                        const std::vector<TBlob> &outputs) {
   CHECK_EQ(inputs.size(), 8U);
   CHECK_EQ(outputs.size(), 3U);
+
   std::vector<TBlob> out_grad(1);
   std::vector<TBlob> out_data(3);
   std::vector<TBlob> in_data(3);

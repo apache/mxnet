@@ -56,7 +56,8 @@ NNVM_REGISTER_OP(_npi_cholesky)
   { return std::vector<std::pair<int, int>>{{0, 0}}; })
 .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, potrf>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_potrf"})
-.add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be decomposed");
+.add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be decomposed")
+.add_arguments(LaCholeskyParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

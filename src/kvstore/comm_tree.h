@@ -400,6 +400,9 @@ class CommDeviceTree : public CommDevice {
     bool delay_alloc = true;
     std::map<int, int> key_dist;
 
+    const std::string profiler_scope =
+        profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "comm_dev_tree:";
+
     for (auto& tree_sorted_key_attr : tree_sorted_key_attrs_) {
       const int key  = std::get<0>(tree_sorted_key_attr);
       const mxnet::TShape& shape = std::get<1>(tree_sorted_key_attr);
@@ -457,6 +460,8 @@ class CommDeviceTree : public CommDevice {
               if (row == devs_.size()-1)
                 shape_copy[0] = last_slice;
               buf.merged[row] = NDArray(shape_copy, ctx, delay_alloc, type);
+              buf.merged[row].AssignStorageInfo(
+                  profiler_scope, "merged_" + std::to_string(key));
               buf.copy_buf.emplace_back();
               if (buf.copy_buf[row].empty()) {
                 buf.copy_buf[row].resize(kBranch-1);
@@ -465,18 +470,23 @@ class CommDeviceTree : public CommDevice {
                                                    buf.merged[row].ctx(),
                                                    delay_alloc,
                                                    buf.merged[row].dtype());
+                  buf.copy_buf[row][col].AssignStorageInfo(profiler_scope, "copy_buf");
                 }
               }
             }
           } else {
             buf.merged.emplace_back(shape, ctx, false, type);
+            buf.merged.back().AssignStorageInfo(
+                profiler_scope, "merged_" + std::to_string(key));
             if (buf.copy_buf.empty()) {
               buf.copy_buf.emplace_back();
               buf.copy_buf[0].resize(kBranch-1);
               for (size_t col = 0; col < buf.copy_buf[0].size(); ++col) {
                 buf.copy_buf[0][col] = NDArray(buf.merged[0].shape(),
-                                               buf.merged[0].ctx(), delay_alloc,
+                                               buf.merged[0].ctx(),
+                                               delay_alloc,
                                                buf.merged[0].dtype());
+                buf.copy_buf[0][col].AssignStorageInfo(profiler_scope, "copy_buf");
               }
             }
           }

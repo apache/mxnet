@@ -1,24 +1,20 @@
+WARNING: the following links and names of binary distributions are provided for
+your convenience but they point to packages that are *not* provided nor endorsed
+by the Apache Software Foundation. As such, they might contain software
+components with more restrictive licenses than the Apache License and you'll
+need to decide whether they are appropriate for your usage. The packages linked
+here contain proprietary parts of the NVidia CUDA SDK and GPL GCC Runtime
+Library components. Like all Apache Releases, the official Apache MXNet
+(incubating) releases consist of source code only and are found at the [Download
+page](https://mxnet.apache.org/get_started/download).
+
 Docker images with *MXNet* are available at [DockerHub](https://hub.docker.com/r/mxnet/).
 
-**Step 1** Install Docker on your machine by following the [docker installation
-instructions](https://docs.docker.com/engine/installation/linux/ubuntu/#install-using-the-repository).
+Please follow the [NVidia Docker installation
+instructions](https://github.com/NVIDIA/nvidia-docker/wiki) to enable the usage
+of GPUs from the docker containers.
 
-*Note* - You can install Community Edition (CE) to get started with *MXNet*.
-
-**Step 2** [Optional] Post installation steps to manage Docker as a non-root user.
-
-Follow the four steps in this [docker
-documentation](https://docs.docker.com/engine/installation/linux/linux-postinstall/#manage-docker-as-a-non-root-user)
-to allow managing docker containers without *sudo*.
-
-If you skip this step, you need to use *sudo* each time you invoke Docker.
-
-**Step 3** Install *nvidia-docker-plugin* following the [installation
-instructions](https://github.com/NVIDIA/nvidia-docker/wiki). *nvidia-docker-plugin*
-is required to
-enable the usage of GPUs from the docker containers.
-
-**Step 4** Pull the MXNet docker image.
+After you installed Docker on your machine, you can use them via:
 
 {% highlight bash %}
 $ docker pull mxnet/python:gpu # Use sudo if you skip Step 2
@@ -33,16 +29,4 @@ REPOSITORY TAG IMAGE ID CREATED SIZE
 mxnet/python gpu 493b2683c269 3 weeks ago 4.77 GB
 {% endhighlight %}
 
-Using the latest MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) is
-recommended for the
-fastest inference speeds with MXNet.
-
-{% highlight bash %}
-$ docker pull mxnet/python:1.3.0_cpu_mkl # Use sudo if you skip Step 2
-$ docker images # Use sudo if you skip Step 2
-
-REPOSITORY TAG IMAGE ID CREATED SIZE
-mxnet/python 1.3.0_gpu_cu92_mkl adcb3ab19f50 4 days ago 4.23 GB
-{% endhighlight %}
-
-**Step 5** <a href="get_started/validate_mxnet">Validate the installation</a>.
+You can then <a href="/get_started/validate_mxnet.html">validate the installation</a>.

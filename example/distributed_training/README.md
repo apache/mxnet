@@ -117,7 +117,7 @@ We can then create a `DataLoader` using the `SplitSampler` like shown below:
 
 ```python
 # Load the training data
-train_data = gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=True, transform=transform),
+train_data = gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=True).transform(transform),
                                       batch_size,
                                       sampler=SplitSampler(50000, store.num_workers, store.rank))
 ```
@@ -141,7 +141,7 @@ def train_batch(batch, ctx, net, trainer):
     # Split and load data into multiple GPUs
     data = batch[0]
     data = gluon.utils.split_and_load(data, ctx)
-    
+
     # Split and load label into multiple GPUs
     label = batch[1]
     label = gluon.utils.split_and_load(label, ctx)
@@ -204,7 +204,7 @@ python ~/mxnet/tools/launch.py -n 2 -s 2 -H hosts \
 Let's take a look at the `hosts` file.
 
 ```
-~/dist$ cat hosts 
+~/dist$ cat hosts
 d1
 d2
 ```
@@ -232,7 +232,7 @@ Last login: Wed Jan 31 18:06:45 2018 from 72.21.198.67
 Note that no authentication information was provided to login to the host. This can be done using multiple methods. One easy way is to specify the ssh certificates in `~/.ssh/config`. Example:
 
 ```
-~$ cat ~/.ssh/config 
+~$ cat ~/.ssh/config
 Host d1
     HostName ec2-34-201-108-233.compute-1.amazonaws.com
     port 22
@@ -269,4 +269,3 @@ Epoch 4: Test_acc 0.687900
 ```
 
 Note that the output from all hosts are merged and printed to the console.
-

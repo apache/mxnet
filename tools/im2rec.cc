@@ -247,7 +247,7 @@ int main(int argc, char *argv[]) {
 
     if (unchanged != 1) {
       cv::Mat img = cv::imdecode(decode_buf, color_mode);
-      CHECK(img.data != NULL) << "OpenCV decode fail:" << path;
+      CHECK(img.data != nullptr) << "OpenCV decode fail:" << path;
       cv::Mat res = img;
       if (new_size > 0) {
         if (center_crop) {
