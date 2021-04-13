@@ -58,7 +58,7 @@ class GPUPooledStorageManager final : public StorageManager {
    * \param initial_context context used by this Storage Manager
    */
   explicit GPUPooledStorageManager(Context initial_context) :
-   free_list_size_(0), initial_context_(initial_context) {
+  free_list_size_(0), initial_context_(initial_context) {
     reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
     large_alloc_round_size_ = dmlc::GetEnv("MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE", 2 * 1024 * 1024);
