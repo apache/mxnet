@@ -46,7 +46,7 @@ The docs are hosted on the website in each language API's section. You can find 
 
 ## How to Build the MXNet Website for Development and QA
 
-If you only need to make changes to tutorials or other pages that are not generated from one of the API source code folders, then you can install a pre-build MXNet binary. But if you want edit the API source and have the reference API docs update, you also need to build MXNet from source. Refer to the build from source instructions for this requirement.
+If you only need to make changes to tutorials or other pages that are not generated from one of the API source code folders, then you can install a pre-build MXNet binary. But if you want edit the API source and have the reference API docs update, you also need to build MXNet from source. Refer to the [build from source instructions for this requirement](https://mxnet.apache.org/versions/master/get_started/build_from_source.html).
 
 ### Caveat for Rendering Outputs
 
