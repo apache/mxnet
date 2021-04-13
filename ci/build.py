@@ -120,6 +120,8 @@ def container_run(platform: str,
         'CCACHE_LOGFILE': '/tmp/ccache.log',  # a container-scoped log, useful for ccache verification.
     })
     environment.update({k: os.environ[k] for k in ['CCACHE_MAXSIZE'] if k in os.environ})
+    if 'RELEASE_BUILD' not in environment:
+        environment['RELEASE_BUILD'] = 'false'
 
     tag = get_docker_tag(platform=platform, registry=docker_registry)
     mx_root = get_mxnet_root()
@@ -128,6 +130,9 @@ def container_run(platform: str,
     os.makedirs(local_build_folder, exist_ok=True)
     os.makedirs(local_ccache_dir, exist_ok=True)
     logging.info("Using ccache directory: %s", local_ccache_dir)
+
+    # Log enviroment
+    logging.info("environment ---> {0}".format(environment))
 
     # Build docker command
     docker_arg_list = [
@@ -144,9 +149,11 @@ def container_run(platform: str,
         # temp dir should be local and not shared
         '-e', 'CCACHE_TEMPDIR={}'.format(environment['CCACHE_TEMPDIR']),
         # this path is inside the container as /work/ccache is mounted
-        '-e', "CCACHE_DIR={}".format(environment['CCACHE_DIR']),
+        '-e', 'CCACHE_DIR={}'.format(environment['CCACHE_DIR']),
         # a container-scoped log, useful for ccache verification.
-        '-e', "CCACHE_LOGFILE={}".format(environment['CCACHE_LOGFILE']),
+        '-e', 'CCACHE_LOGFILE={}'.format(environment['CCACHE_LOGFILE']),
+        # whether this is a release build or not
+        '-e', 'RELEASE_BUILD={}'.format(environment['RELEASE_BUILD']),
     ]
     docker_arg_list += [tag]
     docker_arg_list.extend(command)

@@ -19,7 +19,6 @@
 used in Gluon dispatched by F=ndarray module."""
 
 import numpy as _np
-from .. import numpy as np  # pylint: disable=reimported
 from .._internal import NDArrayBase
 from . import _api_internal
 from ...util import set_module
@@ -135,7 +134,7 @@ def log_softmax(data, axis=-1, length=None, temperature=None, use_length=False, 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.ndarray.numpy_extension')
-def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
+def masked_softmax(data, mask, axis=-1, temperature=1.0, normalize=True):
     r"""Applies the softmax function masking elements according to the mask provided
 
     Parameters
@@ -148,9 +147,6 @@ def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
         The axis along which to compute softmax.
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
-    dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
-        DType of the output in case this can't be inferred. Defaults to
-        the same as input's dtype if not defined (dtype=None).
     normalize : boolean or None, optional, default=1
         Whether to normalize input data x: x = x - max(x)
 
@@ -168,22 +164,15 @@ def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
     >>> data = np.arange(10).reshape((2, 5))
     >>> npx.masked_softmax(data, mask, axis=0)
     array([[0.00669285, 0.        , 0.00669285, 0.        , 0.00669285],
-        [0.9933072 , 0.        , 0.9933072 , 0.        , 0.9933072 ]])
+           [0.9933072 , 0.        , 0.9933072 , 0.        , 0.9933072 ]])
     """
-    if mask is not None:
-        neg = -1e18
-        if _np.dtype(dtype) == _np.float16:
-            neg = -1e4
-        data = np.where(mask, data, neg)
-        logits = (softmax(data, axis=axis) / temperature) * mask
-    else:
-        logits = softmax(data, axis=axis) / temperature
-    return logits
+    assert data is not None and mask is not None, "Missing input data and mask"
+    return _api_internal.masked_softmax(data, mask, axis, temperature, normalize)
 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.ndarray.numpy_extension')
-def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
+def masked_log_softmax(data, mask, axis=-1, temperature=1.0, normalize=True):
     r"""Computes the masked log softmax of the input.
     This is equivalent to computing masked softmax followed by log.
 
@@ -197,9 +186,6 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
         The axis along which to compute softmax.
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
-    dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
-        DType of the output in case this can't be inferred. Defaults to
-        the same as input's dtype if not defined (dtype=None).
     normalize : boolean or None, optional, default=1
         Whether to normalize input data x: x = x - max(x)
 
@@ -217,18 +203,10 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
     >>> data = np.arange(10).reshape((2, 5))
     >>> npx.masked_log_softmax(data, mask, axis=0)
     array([[-5.0067153 ,        -inf, -5.0067153 ,        -inf, -5.0067153 ],
-       [-0.00671535,        -inf, -0.00671535,        -inf, -0.00671535]])
+           [-0.00671535,        -inf, -0.00671535,        -inf, -0.00671535]])
     """
-    if mask is not None:
-        neg = -1e18
-        inf = -_np.inf
-        if _np.dtype(dtype) == _np.float16:
-            neg = -1e4
-        data = np.where(mask, data, neg)
-        logits = np.where(mask, log_softmax(data, axis=axis) / temperature, inf)
-    else:
-        logits = log_softmax(data, axis=axis) / temperature
-    return logits
+    assert data is not None and mask is not None, "Missing input data and mask"
+    return _api_internal.masked_log_softmax(data, mask, axis, temperature, normalize)
 
 
 # pylint: disable=too-many-arguments, unused-argument
@@ -811,7 +789,7 @@ def pooling(data=None, kernel=None, stride=None, pad=None, pool_type="max",
 
 # pylint: disable=too-many-arguments, unused-argument
 @set_module('mxnet.ndarray.numpy_extension')
-def dropout(data, p=0.5, mode="training", axes=None, cudnn_off=True, **kwargs):
+def dropout(data, p=0.5, mode="training", axes=None, cudnn_off=False, **kwargs):
     r"""Applies dropout operation to input array.
 
     - During training, each element of the input is set to zero with probability p.
@@ -892,10 +870,8 @@ def one_hot(data, depth=None, on_value=1.0, off_value=0.0, dtype="float32"):
     >>> npx.one_hot(data, 3)
     array([[[0., 1., 0.],
             [1., 0., 0.]],
-
            [[0., 1., 0.],
             [1., 0., 0.]],
-
            [[0., 0., 1.],
             [1., 0., 0.]]], dtype=float64)
     """

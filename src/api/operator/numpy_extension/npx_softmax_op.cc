@@ -53,15 +53,17 @@ MXNET_REGISTER_API("_npx.softmax")
   // parse axis
   if (args[args_size - 4].type_code() == kDLInt) {
     param.axis = args[args_size - 4].operator int();
-  } else {
+  } else if (args[args_size - 4].type_code() == kDLFloat) {
     param.axis = static_cast<int>(args[args_size - 4].operator double());
+  } else {
+    param.axis = -1;
   }
 
   // parse temperature
   if (args[args_size - 3].type_code() == kNull) {
     param.temperature = dmlc::nullopt;
   } else {
-    param.temperature = args[args_size - 3].operator int64_t();
+    param.temperature = args[args_size - 3].operator double();
   }
 
   // parse dtype
@@ -106,15 +108,17 @@ MXNET_REGISTER_API("_npx.log_softmax")
   // parse axis
   if (args[args_size - 4].type_code() == kDLInt) {
     param.axis = args[args_size - 4].operator int();
-  } else {
+  } else if (args[args_size - 4].type_code() == kDLFloat) {
     param.axis = static_cast<int>(args[args_size - 4].operator double());
+  } else {
+    param.axis = -1;
   }
 
   // parse temperature
   if (args[args_size - 3].type_code() == kNull) {
     param.temperature = dmlc::nullopt;
   } else {
-    param.temperature = args[args_size - 3].operator int64_t();
+    param.temperature = args[args_size - 3].operator double();
   }
 
   // parse dtype
@@ -127,6 +131,94 @@ MXNET_REGISTER_API("_npx.log_softmax")
   attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::SoftmaxParam>(&attrs);
+
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npx.masked_softmax")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  nnvm::NodeAttrs attrs;
+  static const nnvm::Op* op = Op::Get("_npx_masked_softmax");
+  op::MaskedSoftmaxParam param;
+
+  // inputs
+  int num_inputs = 2;
+  std::vector<NDArray*> inputs;
+  inputs.reserve(num_inputs);
+  for (int i = 0; i < num_inputs; ++i) {
+    inputs.push_back(args[i].operator mxnet::NDArray*());
+  }
+  // parse axis
+  if (args[2].type_code() == kDLInt) {
+    param.axis = args[2].operator int();
+  } else if (args[2].type_code() == kDLFloat) {
+    param.axis = static_cast<int>(args[2].operator double());
+  } else {
+    param.axis = -1;
+  }
+  // parse temperature
+  if (args[3].type_code() == kNull) {
+    param.temperature = dmlc::nullopt;
+  } else {
+    param.temperature = args[3].operator double();
+  }
+  // parse normalize
+  if (args[4].type_code() == kNull) {
+    param.normalize = true;
+  } else {
+    param.normalize = args[4].operator bool();
+  }
+
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::MaskedSoftmaxParam>(&attrs);
+
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npx.masked_log_softmax")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  nnvm::NodeAttrs attrs;
+  static const nnvm::Op* op = Op::Get("_npx_masked_log_softmax");
+  op::MaskedSoftmaxParam param;
+
+  // inputs
+  int num_inputs = 2;
+  std::vector<NDArray*> inputs;
+  inputs.reserve(num_inputs);
+  for (int i = 0; i < num_inputs; ++i) {
+    inputs.push_back(args[i].operator mxnet::NDArray*());
+  }
+  // parse axis
+  if (args[2].type_code() == kDLInt) {
+    param.axis = args[2].operator int();
+  } else if (args[2].type_code() == kDLFloat) {
+    param.axis = static_cast<int>(args[2].operator double());
+  } else {
+    param.axis = -1;
+  }
+  // parse temperature
+  if (args[3].type_code() == kNull) {
+    param.temperature = dmlc::nullopt;
+  } else {
+    param.temperature = args[3].operator double();
+  }
+  // parse normalize
+  if (args[4].type_code() == kNull) {
+    param.normalize = true;
+  } else {
+    param.normalize = args[4].operator bool();
+  }
+
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::MaskedSoftmaxParam>(&attrs);
 
   int num_outputs = 0;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
