@@ -1,0 +1,96 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Platforms>AnyCPU;x64</Platforms>
+    <Version>2.0.0.1</Version>
+    <Authors>@deepakkumar1984, @horker</Authors>
+    <Product />
+    <Description>C# Binding for the Apache MxNet library. NDArray, Symbolic and Gluon Supported
+
+MxNet is a deep learning framework designed for both efficiency and flexibility. It allows you to mix symbolic and imperative programming to maximize efficiency and productivity. At its core, MXNet contains a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly. A graph optimization layer on top of that makes symbolic execution fast and memory efficient. MXNet is portable and lightweight, scaling effectively to multiple GPUs and multiple machines.
+
+MXNet is more than a deep learning project. It is a collection of blue prints and guidelines for building deep learning systems, and interesting insights of DL systems for hackers.</Description>
+    <PackageProjectUrl>https://github.com/deepakkumar1984/MxNet.Sharp/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/deepakkumar1984/MxNet.Sharp/</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>deep learning, mxnet, csharp, .net, neural network, gluon</PackageTags>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageIconUrl></PackageIconUrl>
+    <PackageLicenseUrl></PackageLicenseUrl>
+    <PackageId>MxNet.Sharp</PackageId>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageIcon>icon_64.PNG</PackageIcon>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Gluon\Contrib\NN\**" />
+    <Compile Remove="Modules\**" />
+    <Compile Remove="NN\**" />
+    <Compile Remove="RNN\**" />
+    <EmbeddedResource Remove="Gluon\Contrib\NN\**" />
+    <EmbeddedResource Remove="Modules\**" />
+    <EmbeddedResource Remove="NN\**" />
+    <EmbeddedResource Remove="RNN\**" />
+    <None Remove="Gluon\Contrib\NN\**" />
+    <None Remove="Modules\**" />
+    <None Remove="NN\**" />
+    <None Remove="RNN\**" />
+    <Compile Remove="DataParallelExecutorGroup.cs" />
+    <Compile Remove="DataParallelExecutorManager.cs" />
+    <Compile Remove="ExecuterManager.cs" />
+    <None Include="..\..\icon_64.PNG">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CsvHelper" Version="26.1.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.7.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="NumpyDotNet" Version="0.9.70" />
+    <PackageReference Include="Onnx.Net" Version="0.3.1" />
+    <PackageReference Include="OpenCvSharp4.Windows" Version="4.5.2.20210404" />
+    <PackageReference Include="protobuf-net" Version="3.0.101" />
+    <PackageReference Include="System.Memory" Version="4.5.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp">
+      <HintPath>..\..\..\..\..\Program Files\dotnet\sdk\NuGetFallbackFolder\microsoft.netcore.app\2.1.0\ref\netcoreapp2.1\Microsoft.CSharp.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Contrib\ONNX\ONNX2Mx\" />
+  </ItemGroup>
+</Project>
