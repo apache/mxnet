@@ -1317,9 +1317,12 @@ def test_onnx_export_scalar_op(tmp_path, dtype, shape, func):
     op_export_test('_scalar', M, [A], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float16'])
-@pytest.mark.parametrize('shape', [(2, 3, 4)])
-def test_onnx_export_argmax(tmp_path, dtype, shape):
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32'])
+@pytest.mark.parametrize('shape', [(1, 1, 1), (2, 3, 4), (5, 6, 7, 8)])
+@pytest.mark.parametrize('axis', ['None', 0, 1, 2, -1, -2])
+@pytest.mark.parametrize('keepdims', [True, False])
+@pytest.mark.parametrize('op_name', ['argmax', 'argmin'])
+def test_onnx_export_arg_max_min(tmp_path, dtype, shape, axis, keepdims, op_name):
     A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
-    M = def_model('argmax', keepdims=True)
-    op_export_test('argmax', M, [A], tmp_path)
+    M = def_model(op_name, axis=axis, keepdims=keepdims)
+    op_export_test(op_name, M, [A], tmp_path)
