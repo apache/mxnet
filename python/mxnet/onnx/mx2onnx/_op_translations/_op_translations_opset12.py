@@ -171,6 +171,8 @@ def create_const_scalar_node(input_name, value, kwargs):
     from onnx.helper import make_tensor
     initializer = kwargs["initializer"]
     input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
+    if value.dtype == np.float16:
+        value = value.view(dtype=np.uint16)
     tensor_node = make_tensor(input_name, input_type, (), ([value]))
     initializer.append(tensor_node)
 
@@ -276,67 +278,95 @@ def convert_convolution(node, **kwargs):
     return nodes
 
 
-@mx_op.register("Deconvolution")
+@mx_op.register('Deconvolution')
 def convert_deconvolution(node, **kwargs):
     """Map MXNet's deconvolution operator attributes to onnx's ConvTranspose operator
     and return the created node.
     """
-    name, inputs, attrs = get_inputs(node, kwargs)
+    name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    kernel_dims = list(parse_helper(attrs, "kernel"))
-    stride_dims = list(parse_helper(attrs, "stride", [1, 1]))
-    pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
-    num_group = int(attrs.get("num_group", 1))
-    dilations = list(parse_helper(attrs, "dilate", [1, 1]))
-    adj_dims = list(parse_helper(attrs, "adj", [0, 0]))
+    kernel_shape = convert_string_to_list(attrs.get('kernel', '()'))
+    strides = convert_string_to_list(attrs.get('stride', '()'))
+    pads = convert_string_to_list(attrs.get('pad', '()'))
+    group = int(attrs.get("num_group", 1))
+    dilations = convert_string_to_list(attrs.get('dilate', '()'))
+    output_padding = convert_string_to_list(attrs.get('adj', '()'))
+    layout = attrs.get('layout', 'NCHW')
+    target_shape = attrs.get('target_shape', '')
+    no_bias = attrs.get('no_bias', 'False')
 
-    pad_dims = pad_dims + pad_dims
+    pads = pads + pads
+
+    if target_shape != '':
+        raise NotImplementedError('Deconvolution currently does not support target_shape')
+
+    if layout not in ['NCHW', 'NCDHW', 'NCW']:
+        raise NotImplementedError('Deconvolution currently does not support layout not in '
+                                  '[\'NCHW\', \'NCDHW\', \'NCW\']')
+
+    if no_bias == 'True':
+        assert len(input_nodes) == 2, 'Deconvolution takes 2 input if no_bias==True'
+    else:
+        assert len(input_nodes) == 3, 'Deconvolution takes 3 input if no_bias==False'
+
+    kwargs_ = {}
+    if kernel_shape:
+        kwargs_['kernel_shape'] = kernel_shape
+    if pads:
+        kwargs_['pads'] = pads
+    if strides:
+        kwargs_['strides'] = strides
+    if dilations:
+        kwargs_['dilations'] = dilations
+    if output_padding:
+        kwargs_['output_padding'] = output_padding
 
     deconv_node = onnx.helper.make_node(
         "ConvTranspose",
-        inputs=inputs,
+        inputs=input_nodes,
         outputs=[name],
-        kernel_shape=kernel_dims,
-        strides=stride_dims,
-        dilations=dilations,
-        output_padding=adj_dims,
-        pads=pad_dims,
-        group=num_group,
-        name=name
+        group=group,
+        **kwargs_
     )
 
     return [deconv_node]
 
 
-@mx_op.register("Crop")
+@mx_op.register('Crop')
 def convert_crop(node, **kwargs):
-    """Map MXNet's crop operator attributes to onnx's Crop operator
-    and return the created node.
+    """Map MXNet's crop operator attributes to onnx's Slice operator
     """
+    from onnx.helper import make_node
     name, inputs, attrs = get_inputs(node, kwargs)
+
     num_inputs = len(inputs)
+    y, x = convert_string_to_list(attrs.get('offset', '(0, 0)'))
+    h, w = convert_string_to_list(attrs.get('h_w', '(0, 0)'))
+    center_crop = attrs.get('center_crop', 'False')
 
-    y, x = list(parse_helper(attrs, "offset", [0, 0]))
-    h, w = list(parse_helper(attrs, "h_w", [0, 0]))
-    if num_inputs > 1:
-        h, w = kwargs["out_shape"][-2:]
-    border = [x, y, x + w, y + h]
+    if center_crop in ['True', '1']:
+        raise NotImplementedError('Crop does not currently support center_crop==True')
 
-    crop_node = onnx.helper.make_node(
-        "Crop",
-        inputs=[inputs[0]],
-        outputs=[name],
-        border=border,
-        scale=[1, 1],
-        name=name
-    )
+    nodes = []
+    create_tensor([y, x], name+'_starts', kwargs['initializer'])
+    create_tensor([2, 3], name+'_axes', kwargs['initializer'])
+    if num_inputs == 1:
+        create_tensor([y + h, x + w], name+'_ends', kwargs['initializer'])
+    else:
+        create_tensor([0], name+'_0', kwargs['initializer'])
+        create_tensor([2], name+'_2', kwargs['initializer'])
+        create_tensor([4], name+'_4', kwargs['initializer'])
+        nodes += [
+            make_node('Shape', [inputs[1]], [name+'_shape']),
+            make_node('Slice', [name+'_shape', name+'_2', name+'_4', name+'_0'], [name+'_h_w']),
+            make_node('Add', [name+'_starts', name+'_h_w'], [name+'_ends'])
 
-    logging.warning(
-        "Using an experimental ONNX operator: Crop. " \
-        "Its definition can change.")
+        ]
+    nodes += [
+        make_node('Slice', [inputs[0], name+'_starts', name+'_ends', name+'_axes'], [name])
+    ]
 
-    return [crop_node]
-
+    return nodes
 
 @mx_op.register("FullyConnected")
 def convert_fully_connected(node, **kwargs):
@@ -529,12 +559,16 @@ def convert_pad(node, **kwargs):
     from onnx.helper import make_node
     opset_version = kwargs["opset_version"]
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
 
     mxnet_pad_width = convert_string_to_list(attrs.get("pad_width"))
     onnx_pad_width = transform_padding(mxnet_pad_width)
 
     pad_mode = attrs.get("mode")
-    pad_value = np.float32(attrs.get("constant_value", 0.0))
+    pad_value = float(attrs.get("constant_value", 0.0))
+    pad_value = dtype.type(pad_value)
 
     if opset_version >= 11:
         # starting with opset 11, pads and constant_value are inputs instead of attributes
@@ -584,31 +618,58 @@ def create_helper_trans_node(node_name, input_node):
     return trans_node
 
 
+# Note that due to ONNX limitation, the behavior for when inputs > 2-D is different from that of
+# MXNet
 @mx_op.register("dot")
 def convert_dot(node, **kwargs):
     """Map MXNet's dot operator attributes to onnx's
     MatMul and Transpose operators based on the values set for
     transpose_a, transpose_b attributes."""
-    name, input_nodes, attrs = get_inputs(node, kwargs)
-
+    logging.warning('Converting dot operator... Please note that due to ONNX limitation, the '
+                    'behavior for when inputs > 2-D is different from that of MXNet dot.')
+    
+    name, inputs, attrs = get_inputs(node, kwargs)
     trans_a = get_boolean_attribute_value(attrs, "transpose_a")
     trans_b = get_boolean_attribute_value(attrs, "transpose_b")
-
+    
     nodes = []
     input_nodes = []
     if trans_a:
-        nodes.append(create_helper_trans_node(name+"_a", input_nodes[0]))
+        nodes.append(create_helper_trans_node(name+"_a", inputs[0]))
         input_nodes.append(name+"_a")
     else:
-        input_nodes.append(input_nodes[0])
+        input_nodes.append(inputs[0])
 
     if trans_b:
-        nodes.append(create_helper_trans_node(name+"_b", input_nodes[1]))
+        nodes.append(create_helper_trans_node(name+"_b", inputs[1]))
         input_nodes.append(name+"_b")
     else:
-        input_nodes.append(input_nodes[1])
+        input_nodes.append(inputs[1])
 
-    nodes.appennd(onnx.helper.make_node('MatMul', input_nodes, [name], name=name))
+    nodes.append(onnx.helper.make_node('MatMul', input_nodes, [name], name=name))
+    return nodes
+
+
+def transpose_last_two_dim(name, kwargs):
+    from onnx.helper import make_node
+    create_tensor([0], name+'_0', kwargs['initializer'])
+    create_tensor([1], name+'_1', kwargs['initializer'])
+    create_tensor([10], name+'_10', kwargs['initializer'])
+    perm = [i for i in range(10)]
+    perm[8], perm[9] = 9, 8
+    nodes = [
+        make_node('Shape', [name], [name+'_shape']),
+        make_node('Shape', [name+'_shape'], [name+'_dim']),
+        make_node('Sub', [name+'_10', name+'_dim'], [name+'_sub']),
+        make_node('Concat', [name+'_sub', name+'_0'], [name+'_concat'], axis=0),
+        make_node('Pad', [name+'_shape', name+'_concat', name+'_1'], [name+'_shape_10_dim']),
+        make_node('Reshape', [name, name+'_shape_10_dim'], [name+'_data_10_dim']),
+        make_node('Transpose', [name+'_data_10_dim'], [name+'_data_t'], perm=perm),
+        make_node('Shape', [name+'_data_t'], [name+'_new_shape_']),
+        make_node('Slice', [name+'_new_shape_', name+'_sub', name+'_10', name+'_0'],
+                  [name+'_new_shape']),
+        make_node('Reshape', [name+'_data_t', name+'_new_shape'], [name+'_transposed']),
+    ]
     return nodes
 
 
@@ -619,84 +680,47 @@ def convert_linalg_gemm2(node, **kwargs):
     transpose_a, transpose_b attributes.
     Return multiple nodes created.
     """
-    name, input_nodes, attrs = get_inputs(node, kwargs)
+    from onnx.helper import make_node
+    name, inputs, attrs = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
 
     # Getting the attributes and assigning default values.
-    alpha = float(attrs.get("alpha", 1.0))
-    trans_a = get_boolean_attribute_value(attrs, "transpose_a")
-    trans_b = get_boolean_attribute_value(attrs, "transpose_b")
+    alpha = float(attrs.get('alpha', 1.0))
+    axis = attrs.get('axis', 'None')
+    trans_a = get_boolean_attribute_value(attrs, 'transpose_a')
+    trans_b = get_boolean_attribute_value(attrs, 'transpose_b')
 
-    op_name = "transpose" + str(kwargs["idx"])
+    if axis != 'None':
+        raise NotImplementedError('_linalg_gemm2 does not currently support axis!=None')
 
-    if alpha == 1.0 and trans_a == 0 and trans_b == 0:
-        matmul_node = onnx.helper.make_node(
-            'MatMul',
-            inputs=input_nodes,
-            outputs=[name],
-            name=name
-        )
-        return [matmul_node]
-    elif trans_a == 1 and trans_b == 0:
-        op_name = "transpose" + str(kwargs["idx"])
-        node_name = op_name+"_a"
-        trans_a_node = onnx.helper.make_node(
-            'Transpose',
-            inputs=[input_nodes[0]],
-            outputs=[op_name+"_a"],
-            name=node_name
-        )
-
-        matmul_node = onnx.helper.make_node(
-            'MatMul',
-            inputs=[node_name, input_nodes[1]],
-            outputs=[name],
-            name=name
-        )
-        return [trans_a_node, matmul_node]
-
-    elif trans_a == 0 and trans_b == 1:
-        node_name = op_name + "_b"
-        trans_b_node = onnx.helper.make_node(
-            'Transpose',
-            inputs=[input_nodes[1]],
-            outputs=[op_name+"_b"],
-            name=node_name
-        )
-
-        matmul_node = onnx.helper.make_node(
-            'MatMul',
-            inputs=[input_nodes[0], node_name],
-            outputs=[name],
-            name=name
-        )
-
-        return [trans_b_node, matmul_node]
+    nodes = []
+    input_nodes = []
+    if trans_a:
+        nodes += transpose_last_two_dim(inputs[0], kwargs)
+        input_nodes.append(inputs[0]+'_transposed')
     else:
-        node_name_a = op_name+"_a"
-        trans_a_node = onnx.helper.make_node(
-            'Transpose',
-            inputs=[input_nodes[0]],
-            outputs=[op_name+"_a"],
-            name=node_name_a
-        )
+        input_nodes.append(inputs[0])
 
-        node_name_b = op_name + "_b"
-        trans_b_node = onnx.helper.make_node(
-            'Transpose',
-            inputs=[input_nodes[1]],
-            outputs=[op_name+"_b"],
-            name=node_name_b
-        )
+    if trans_b:
+        nodes += transpose_last_two_dim(inputs[1], kwargs)
+        input_nodes.append(inputs[1]+'_transposed')
+    else:
+        input_nodes.append(inputs[1])
 
-        matmul_node = onnx.helper.make_node(
-            'MatMul',
-            inputs=input_nodes,
-            outputs=[name],
-            name=name
-        )
-
-        return [trans_a_node, trans_b_node, matmul_node]
-
+    if alpha == 1:
+        nodes += [
+            make_node('MatMul', input_nodes, [name])
+        ]
+        return nodes
+    
+    create_const_scalar_node(name+"_alpha", dtype.type(alpha), kwargs)
+    nodes += [
+        make_node('MatMul', input_nodes, [name+'_matmul']),
+        make_node('Mul', [name+'_matmul', name+'_alpha'], [name])
+    ]
+    return nodes
 
 @mx_op.register('Pooling')
 def convert_pooling(node, **kwargs):
