@@ -39,6 +39,18 @@ def def_model(op_name, dummy_input=False, **params):
                 return func(*inputs, **params)
     return Model
 
+def def_model_from_func(func, dummy_input=False, **params):
+    class Model(HybridBlock):
+        def __init__(self, **kwargs):
+            super(Model, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, *inputs):
+            if dummy_input:
+                return func(**params), inputs[0]
+            else:
+                return func(*inputs, **params)
+    return Model
+
 def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_map=None, mx_map=None):
     def export_to_onnx(model, model_name, inputs):
         model_path = '{}/{}'.format(tmp_path, model_name)
@@ -1275,3 +1287,31 @@ def test_onnx_export_contrib_div_sqrt_dim(tmp_path, dtype, shape):
     A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
     M = def_model('contrib.div_sqrt_dim')
     op_export_test('contrib_div_sqrt_dim', M, [A], tmp_path)
+
+
+# onnxruntime currently does not support int32
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int64'])
+@pytest.mark.parametrize('shape', [(1,), (2, 3), (4, 5, 6)])
+def test_onnx_export_clip(tmp_path, dtype, shape):
+    A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
+    a_min = mx.nd.min(A).astype('float32').asnumpy()[0] + 5
+    a_max = mx.nd.max(A).astype('float32').asnumpy()[0] - 5
+    print(a_min)
+    M = def_model('clip', a_min=a_min, a_max=a_max)
+    op_export_test('clip', M, [A], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [(3, 4, 5), (6, 7), (8,)])
+@pytest.mark.parametrize('func', [lambda x : x + np.random.rand(1)[0]*100,
+                                  lambda x : x * np.random.rand(1)[0]*100,
+                                  lambda x : x - np.random.rand(1)[0]*100,
+                                  lambda x : np.random.rand(1)[0]*100 - x,
+                                  lambda x : x / (np.random.rand(1)[0]*100 + 1),
+                                  lambda x : np.random.rand(1)[0]*100 / x,
+                                  lambda x : x ** np.random.rand(1)[0]*10,
+                                 ])
+def test_onnx_export_scalar_op(tmp_path, dtype, shape, func):
+    A = mx.nd.random.uniform(1, 100, shape).astype(dtype)
+    M = def_model_from_func(func)
+    op_export_test('_scalar', M, [A], tmp_path)

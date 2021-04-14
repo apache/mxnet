@@ -170,7 +170,11 @@ def create_const_scalar_node(input_name, value, kwargs):
     initializer tensor node with constant value."""
     from onnx.helper import make_tensor
     initializer = kwargs["initializer"]
-    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
+    dtype = value.dtype
+    if dtype == 'float16':
+        # when using float16, we must convert it to np.uint16 view first
+        value = np.float16(value).view(np.uint16)
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     tensor_node = make_tensor(input_name, input_type, (), ([value]))
     initializer.append(tensor_node)
 
@@ -179,7 +183,11 @@ def create_const_node(input_name, value, kwargs):
     initializer tensor node with constant value."""
     from onnx.helper import make_tensor
     initializer = kwargs["initializer"]
-    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
+    dtype = value.dtype
+    if dtype == 'float16':
+        # when using float16, we must convert it to np.uint16 view first
+        value = np.float16(value).view(np.uint16)
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     input_shape = value.shape
     tensor_node = make_tensor(input_name, input_type, input_shape, value)
     initializer.append(tensor_node)
@@ -1162,8 +1170,9 @@ def convert_clip(node, **kwargs):
 
     if opset_version >= 11:
         # opset >= 11 requires min/max to be inputs
-        create_const_scalar_node(name+"_min", np.float32(a_min), kwargs)
-        create_const_scalar_node(name+"_max", np.float32(a_max), kwargs)
+        input_dtype = get_input_dtypes(node, kwargs)[0]
+        create_const_scalar_node(name+"_min", np.float32(a_min).astype(input_dtype), kwargs)
+        create_const_scalar_node(name+"_max", np.float32(a_max).astype(input_dtype), kwargs)
         nodes = [
             make_node("Clip", [input_nodes[0], name+"_min", name+"_max"], [name], name=name)
         ]
@@ -1183,8 +1192,15 @@ def scalar_op_helper(node, op_name, **kwargs):
     dtype = input_dtypes[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
-    scalar_value = np.array([attrs.get("scalar", 1)],
-                            dtype=dtype)
+    scalar_value = float(attrs.get('scalar', '1'))
+    if str(dtype).startswith('int'):
+        scalar_value = int(scalar_value)
+    else:
+        if dtype == 'float16':
+            # when using float16, we must convert it to np.uint16 view first
+            scalar_value = np.float16(scalar_value).view(np.uint16)
+    scalar_value = [scalar_value]
+
     initializer = kwargs["initializer"]
     flag = True
     # If the input value is in initializer, just multiply with scalar input
@@ -1213,7 +1229,6 @@ def scalar_op_helper(node, op_name, **kwargs):
     # else create a new tensor of the scalar value, add it in initializer
     if flag is True:
         dims = np.shape(scalar_value)
-
         scalar_op_name = "scalar_op" + str(kwargs["idx"])
         tensor_node = onnx.helper.make_tensor_value_info(scalar_op_name, dtype_t, dims)
 
@@ -1226,14 +1241,21 @@ def scalar_op_helper(node, op_name, **kwargs):
                 raw=False,
             )
         )
-
-        mul_node = onnx.helper.make_node(
-            op_name,
-            [input_nodes[0], scalar_op_name],
-            [name],
-            name=name
-        )
-
+        # reverse op
+        if "_r" in name:
+            mul_node = onnx.helper.make_node(
+                op_name,
+                [scalar_op_name, input_nodes[0]],
+                [name],
+                name=name
+            )
+        else:
+            mul_node = onnx.helper.make_node(
+                op_name,
+                [input_nodes[0], scalar_op_name],
+                [name],
+                name=name
+            )
         return [tensor_node, mul_node]
     else:
         dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[new_initializer.dtype]
