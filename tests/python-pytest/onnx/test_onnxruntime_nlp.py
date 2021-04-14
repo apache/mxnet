@@ -131,8 +131,8 @@ def test_bert_inference_onnxruntime(tmp_path, model):
         input_dict = dict((session.get_inputs()[i].name, onnx_inputs[i].asnumpy()) for i in range(len(onnx_inputs)))
         pred_onx, cls_onx = session.run(None, input_dict)
 
-        assert_almost_equal(seq_encoding, pred_onx)
-        assert_almost_equal(cls_encoding, cls_onx)
+        assert_almost_equal(seq_encoding, pred_onx, rtol = 0.0001, atol = 0.0025)
+        assert_almost_equal(cls_encoding, cls_onx, rtol = 0.0001, atol = 0.0025)
 
     finally:
         shutil.rmtree(tmp_path)
