@@ -70,11 +70,11 @@ class GPUPooledStorageManager final : public StorageManager {
       LOG(FATAL) << "MXNET_GPU_MEM_POOL_PAGE_SIZE cannot be set to a value smaller than " << NDEV \
                  << ". Got " << page_size_ << ".";
     }
-    memory_limit_percentage_ = dmlc::GetEnv<double>("EIA_MXNET_GPU_MEM_LIMIT", 100.0);
-     if (memory_limit_percentage_ <= 0 || memory_limit_percentage_ > 100) {
-       LOG(FATAL) << "Invalid memory limit percentage given: " << memory_limit_percentage_
-                  << std::endl;
-     }
+    memory_limit_percentage_ = dmlc::GetEnv<double>("MXNET_GPU_MEM_LIMIT", 100.0);
+    if (memory_limit_percentage_ <= 0 || memory_limit_percentage_ > 100) {
+      LOG(FATAL) << "Invalid memory limit percentage given: " << memory_limit_percentage_
+                 << std::endl;
+    }
   }
   /*!
    * \brief Default destructor.
@@ -167,7 +167,9 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
       // This calls abort() unless
       // DMLC_LOG_FATAL_THROW != 0, then it
       // throws std::runtime_error()
-      LOG(FATAL) << "EIA memory limit reached";
+      LOG(FATAL) << "memory limit reached, used: " << used_memory_ << "  limit: "
+                 << mem_limit_in_bytes << " (" << memory_limit_percentage_ << "% of "
+                 << total << ")";
     }
 
     void* ret = nullptr;
@@ -220,6 +222,7 @@ void GPUPooledStorageManager::ReleaseAll() {
     }
   }
   memory_pool_.clear();
+  free_list_size_ = 0;
 }
 
 /*!
