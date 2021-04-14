@@ -155,18 +155,19 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
   auto&& reuse_it = memory_pool_.find(size);
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
     mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
-    size_t free, total;
-    cudaMemGetInfo(&free, &total);
-    /*
+    size_t real_free, total;
+    cudaMemGetInfo(&real_free, &total);
     double mem_limit_in_bytes = total * memory_limit_percentage_ / 100.0;
-    free = mem_limit_in_bytes - used_memory_;
+    size_t calc_free = mem_limit_in_bytes - used_memory_;
+    size_t free = (calc_free < real_free) ? calc_free : real_free;
     if (free <= mem_limit_in_bytes * reserve_ / 100 ||
         size > free - mem_limit_in_bytes * reserve_ / 100)
-    */
+      ReleaseAll();
+    /*
     if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
       ReleaseAll();
+    */
 
-    /*
     if (used_memory_ + size > mem_limit_in_bytes) {
       // This calls abort() unless
       // DMLC_LOG_FATAL_THROW != 0, then it
@@ -175,7 +176,6 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
                  << mem_limit_in_bytes << " (" << memory_limit_percentage_ << "% of "
                  << total << ")";
     }
-    */
 
     void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
