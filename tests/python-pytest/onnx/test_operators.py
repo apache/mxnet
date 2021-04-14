@@ -1326,3 +1326,11 @@ def test_onnx_export_space_to_depth(tmp_path, dtype, params):
     M = def_model('space_to_depth', block_size=block_size)
     x = mx.nd.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
     op_export_test('space_to_depth', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
+def test_onnx_export_square(tmp_path, dtype, shape):
+    M = def_model('square')
+    x = mx.nd.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
+    op_export_test('square', M, [x], tmp_path)
