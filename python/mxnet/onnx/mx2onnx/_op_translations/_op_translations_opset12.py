@@ -1341,20 +1341,21 @@ def convert_argmax(node, **kwargs):
     """Map MXNet's argmax operator attributes to onnx's ArgMax operator
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    axis = int(attrs.get("axis"))
+    axis = int(attrs.get("axis", 0))
     keepdims = get_boolean_attribute_value(attrs, "keepdims")
+    
+    input_dtype = get_input_dtypes(node, kwargs)[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_dtype]
+    print(dtype_t)
+    nodes = [
+        make_node('ArgMax', [input_nodes[0]], [name+'_argmax'], axis=axis, keepdims=keepdims,),
+        make_node('Cast', [name+'_argmax'], [name], to=dtype_t, name=name)
+    ]
+    return nodes
 
-    node = onnx.helper.make_node(
-        'ArgMax',
-        inputs=input_nodes,
-        axis=axis,
-        keepdims=keepdims,
-        outputs=[name],
-        name=name
-    )
-    return [node]
 
 @mx_op.register("argmin")
 def convert_argmin(node, **kwargs):
