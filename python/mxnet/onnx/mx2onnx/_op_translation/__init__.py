@@ -18,6 +18,5 @@
 # coding: utf-8
 """ONNX Export module"""
 
-from ._export_model import export_model, get_operator_support
-from ._op_translation import _op_translations_opset12
-from ._op_translation import _op_translations_opset13
+from . import _op_translations_opset12
+from . import _op_translations_opset13
