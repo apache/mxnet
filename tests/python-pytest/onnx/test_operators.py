@@ -1275,3 +1275,54 @@ def test_onnx_export_contrib_div_sqrt_dim(tmp_path, dtype, shape):
     A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
     M = def_model('contrib.div_sqrt_dim')
     op_export_test('contrib_div_sqrt_dim', M, [A], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('shape', [(100,), (3, 4, 5), (6, 7)])
+def test_onnx_export_reciprocal(tmp_path, dtype, shape):
+    A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
+    M = def_model('reciprocal')
+    op_export_test('reciprocal', M, [A], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize('shape', [(1, 3), (3, 4, 5)])
+def test_onnx_export_power(tmp_path, shape, dtype):
+    x = mx.nd.random.uniform(-5, 5, shape).astype(dtype)
+    y = mx.nd.random.uniform(-10, 10, shape).astype(dtype)
+    M = def_model('_internal._power')
+    op_export_test('_internal._power', M, [x, y], tmp_path)
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize('shape', [(1, 3), (3, 4, 5)])
+def test_onnx_export_broadcast_power(tmp_path, shape, dtype):
+    x = mx.nd.random.uniform(-5, 5, shape).astype(dtype)
+    y = mx.nd.random.uniform(-10, 10, shape).astype(dtype)
+    M = def_model('broadcast_power')
+    op_export_test('broadcast_power', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
+@pytest.mark.parametrize('shape', [(3, 4, 5), (6, 7), (8,)])
+def test_onnx_export_sqrt(tmp_path, dtype, shape):
+    A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
+    M = def_model('sqrt')
+    op_export_test('sqrt', M, [A], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+@pytest.mark.parametrize("params", [[(1,4,2,3), 1], [(1,4,2,3), 2]])
+def test_onnx_export_depth_to_space(tmp_path, dtype, params):
+    shape, block_size = params
+    M = def_model('depth_to_space', block_size=block_size)
+    x = mx.nd.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
+    op_export_test('depth_to_space', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+@pytest.mark.parametrize("params", [[(1,4,2,3), 1], [(1,1,4,6),2]])
+def test_onnx_export_space_to_depth(tmp_path, dtype, params):
+    shape, block_size = params
+    M = def_model('space_to_depth', block_size=block_size)
+    x = mx.nd.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
+    op_export_test('space_to_depth', M, [x], tmp_path)
