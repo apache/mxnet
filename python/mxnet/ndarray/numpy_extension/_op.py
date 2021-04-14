@@ -19,7 +19,6 @@
 used in Gluon dispatched by F=ndarray module."""
 
 import numpy as _np
-from .. import numpy as np  # pylint: disable=reimported
 from .._internal import NDArrayBase
 from . import _api_internal
 from ...util import set_module
@@ -28,7 +27,8 @@ from ...util import set_module
 __all__ = ['softmax', 'log_softmax', 'masked_softmax', 'masked_log_softmax',
            'activation', 'batch_norm', 'fully_connected', 'pick', 'convolution',
            'deconvolution', 'pooling', 'dropout', 'one_hot', 'rnn', 'embedding',
-           'topk', 'layer_norm', 'leaky_relu']
+           'topk', 'layer_norm', 'leaky_relu', 'batch_dot', 'broadcast_like',
+           'arange_like']
 
 
 # pylint: disable=too-many-arguments
@@ -135,7 +135,7 @@ def log_softmax(data, axis=-1, length=None, temperature=None, use_length=False, 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.ndarray.numpy_extension')
-def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
+def masked_softmax(data, mask, axis=-1, temperature=1.0, normalize=True):
     r"""Applies the softmax function masking elements according to the mask provided
 
     Parameters
@@ -148,9 +148,6 @@ def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
         The axis along which to compute softmax.
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
-    dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
-        DType of the output in case this can't be inferred. Defaults to
-        the same as input's dtype if not defined (dtype=None).
     normalize : boolean or None, optional, default=1
         Whether to normalize input data x: x = x - max(x)
 
@@ -168,22 +165,15 @@ def masked_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
     >>> data = np.arange(10).reshape((2, 5))
     >>> npx.masked_softmax(data, mask, axis=0)
     array([[0.00669285, 0.        , 0.00669285, 0.        , 0.00669285],
-        [0.9933072 , 0.        , 0.9933072 , 0.        , 0.9933072 ]])
+           [0.9933072 , 0.        , 0.9933072 , 0.        , 0.9933072 ]])
     """
-    if mask is not None:
-        neg = -1e18
-        if _np.dtype(dtype) == _np.float16:
-            neg = -1e4
-        data = np.where(mask, data, neg)
-        logits = (softmax(data, axis=axis) / temperature) * mask
-    else:
-        logits = softmax(data, axis=axis) / temperature
-    return logits
+    assert data is not None and mask is not None, "Missing input data and mask"
+    return _api_internal.masked_softmax(data, mask, axis, temperature, normalize)
 
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.ndarray.numpy_extension')
-def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
+def masked_log_softmax(data, mask, axis=-1, temperature=1.0, normalize=True):
     r"""Computes the masked log softmax of the input.
     This is equivalent to computing masked softmax followed by log.
 
@@ -197,9 +187,6 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
         The axis along which to compute softmax.
     temperature : double or None, optional, default=None
         Temperature parameter in softmax
-    dtype : {None, 'float16', 'float32', 'float64'},optional, default='None'
-        DType of the output in case this can't be inferred. Defaults to
-        the same as input's dtype if not defined (dtype=None).
     normalize : boolean or None, optional, default=1
         Whether to normalize input data x: x = x - max(x)
 
@@ -217,18 +204,10 @@ def masked_log_softmax(data, mask, axis=-1, temperature=1.0, dtype=None):
     >>> data = np.arange(10).reshape((2, 5))
     >>> npx.masked_log_softmax(data, mask, axis=0)
     array([[-5.0067153 ,        -inf, -5.0067153 ,        -inf, -5.0067153 ],
-       [-0.00671535,        -inf, -0.00671535,        -inf, -0.00671535]])
+           [-0.00671535,        -inf, -0.00671535,        -inf, -0.00671535]])
     """
-    if mask is not None:
-        neg = -1e18
-        inf = -_np.inf
-        if _np.dtype(dtype) == _np.float16:
-            neg = -1e4
-        data = np.where(mask, data, neg)
-        logits = np.where(mask, log_softmax(data, axis=axis) / temperature, inf)
-    else:
-        logits = log_softmax(data, axis=axis) / temperature
-    return logits
+    assert data is not None and mask is not None, "Missing input data and mask"
+    return _api_internal.masked_log_softmax(data, mask, axis, temperature, normalize)
 
 
 # pylint: disable=too-many-arguments, unused-argument
@@ -814,7 +793,7 @@ def pooling(data=None, kernel=None, stride=None, pad=None, pool_type="max",
 
 # pylint: disable=too-many-arguments, unused-argument
 @set_module('mxnet.ndarray.numpy_extension')
-def dropout(data, p=0.5, mode="training", axes=None, cudnn_off=True, **kwargs):
+def dropout(data, p=0.5, mode="training", axes=None, cudnn_off=False, **kwargs):
     r"""Applies dropout operation to input array.
 
     - During training, each element of the input is set to zero with probability p.
@@ -895,10 +874,8 @@ def one_hot(data, depth=None, on_value=1.0, off_value=0.0, dtype="float32"):
     >>> npx.one_hot(data, 3)
     array([[[0., 1., 0.],
             [1., 0., 0.]],
-
            [[0., 1., 0.],
             [1., 0., 0.]],
-
            [[0., 0., 1.],
             [1., 0., 0.]]], dtype=float64)
     """
@@ -1335,3 +1312,132 @@ def leaky_relu(data=None, gamma=None, act_type="leaky", slope=0.25, lower_bound=
         return list(out)
     else:
         return _api_internal.leaky_relu(data, act_type, slope, lower_bound, upper_bound)
+
+
+# pylint: disable=too-many-arguments
+@set_module('mxnet.ndarray.numpy_extension')
+def batch_dot(a, b, transpose_a=False, transpose_b=False, forward_stype="default"):
+    r"""Batchwise dot product.
+
+    ``batch_dot`` is used to compute dot product of ``x`` and ``y`` when ``x`` and
+    ``y`` are data in batch, namely N-D (N >= 3) arrays in shape of `(B0, ..., B_i, :, :)`.
+
+    For example, given ``x`` with shape `(B_0, ..., B_i, N, M)` and ``y`` with shape
+    `(B_0, ..., B_i, M, K)`, the result array will have shape `(B_0, ..., B_i, N, K)`,
+    which is computed by::
+
+       batch_dot(x,y)[b_0, ..., b_i, :, :] = dot(x[b_0, ..., b_i, :, :], y[b_0, ..., b_i, :, :])
+
+    Parameters
+    ----------
+    lhs : NDArray
+        The first input
+    rhs : NDArray
+        The second input
+    transpose_a : boolean, optional, default=0
+        If true then transpose the first input before dot.
+    transpose_b : boolean, optional, default=0
+        If true then transpose the second input before dot.
+    forward_stype : {None, 'csr', 'default', 'row_sparse'},optional, default='None'
+        The desired storage type of the forward output given by user,
+        if thecombination of input storage types and this hint does not matchany implemented ones,
+        the dot operator will perform fallback operationand still produce
+        an output of the desired storage type.
+
+    Returns
+    -------
+    out : NDArray or list of NDArrays
+        The output of this function.
+    """
+    return _api_internal.batch_dot(a, b, transpose_a, transpose_b, forward_stype)
+
+
+# pylint: disable=too-many-arguments
+@set_module('mxnet.ndarray.numpy_extension')
+def broadcast_like(lhs, rhs, lhs_axes=None, rhs_axes=None):
+    r"""Broadcasts lhs to have the same shape as rhs.
+
+    Broadcasting is a mechanism that allows NDArrays to perform arithmetic operations
+    with arrays of different shapes efficiently without creating multiple copies of arrays.
+    Also see, `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_
+    for more explanation.
+
+    Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+    `(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
+
+    Parameters
+    ----------
+    lhs : NDArray
+        First input.
+    rhs : NDArray
+        Second input.
+    lhs_axes : Shape or None, optional, default=None
+        Axes to perform broadcast on in the first input array
+    rhs_axes : Shape or None, optional, default=None
+        Axes to copy from the second input array
+
+    Returns
+    -------
+    out : NDArray or list of NDArrays
+        The output of this function.
+
+    example
+    -------
+    >>> a = np.array([[1,2,3]])
+    >>> b = np.array([[5,6,7],[7,8,9]])
+    >>> npx.broadcast_like(a, b)
+    array([[1., 2., 3.],
+           [1., 2., 3.]])
+    >>> a = np.array([9])
+    >>> b = np.array([1,2,3,4,5])
+    >>> npx.broadcast_like(a, b, lhs_axes=(0,), rhs_axes=(-1,))
+    array([9., 9., 9., 9., 9.])
+    """
+    return _api_internal.broadcast_like(lhs, rhs, lhs_axes, rhs_axes)
+
+
+# pylint: disable=too-many-arguments
+@set_module('mxnet.ndarray.numpy_extension')
+def arange_like(data, start=0.0, step=1.0, repeat=1, ctx=None, axis=None):
+    r"""Return an array with evenly spaced values. If axis is not given, the output will
+    have the same shape as the input array. Otherwise, the output will be a 1-D array with size of
+    the specified axis in input shape.
+
+    Parameters
+    ----------
+    data : NDArray
+        The input
+    start : double, optional, default=0
+        Start of interval. The interval includes this value. The default start value is 0.
+    step : double, optional, default=1
+        Spacing between values.
+    repeat : int, optional, default='1'
+        The repeating time of all elements.
+        E.g repeat=3, the element a will be repeated three times --> a, a, a.
+    ctx : string, optional, default=''
+        Context of output, in format [cpu|gpu|cpu_pinned](n).Only used for imperative calls.
+    axis : int or None, optional, default='None'
+        Arange elements according to the size of a certain axis of input array.
+        The negative numbers are interpreted counting from the backward.
+        If not provided, will arange elements according to the input shape.
+
+    Returns
+    -------
+    out : NDArray or list of NDArrays
+        The output of this function.
+
+    Example
+    -------
+    >>> x = np.random.uniform(0, 1, size=(3,4))
+    >>> x
+    array([[0.5488135 , 0.5928446 , 0.71518934, 0.84426576],
+           [0.60276335, 0.8579456 , 0.5448832 , 0.8472517 ],
+           [0.4236548 , 0.6235637 , 0.6458941 , 0.3843817 ]])
+    >>> npx.arange_like(x, start=0)
+    array([[ 0.,  1.,  2.,  3.],
+           [ 4.,  5.,  6.,  7.],
+           [ 8.,  9., 10., 11.]])
+    >>> npx.arange_like(x, start=0, axis=-1)
+    array([0., 1., 2., 3.])
+    """
+    return _api_internal.arange_like(data, start, step, repeat, ctx, axis)
