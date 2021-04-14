@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-"""ONNX Export module"""
+"""ONNX export op translation"""
 
 from . import _op_translations_opset12
 from . import _op_translations_opset13
