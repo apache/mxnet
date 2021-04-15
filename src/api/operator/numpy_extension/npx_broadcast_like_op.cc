@@ -44,14 +44,18 @@ MXNET_REGISTER_API("_npx.broadcast_like")
   // lhs_axes
   if (args[2].type_code() == kNull) {
     param.lhs_axes = dmlc::optional<mxnet::TShape>();
+  } else if (args[2].type_code() == kDLInt) {
+    param.lhs_axes = TShape(1, args[2].operator int64_t());
   } else {
     param.lhs_axes = mxnet::TShape(args[2].operator ObjectRef());
   }
   // rhs_axes
-  if (args[2].type_code() == kNull) {
+  if (args[3].type_code() == kNull) {
     param.rhs_axes = dmlc::optional<mxnet::TShape>();
+  } else if (args[3].type_code() == kDLInt) {
+    param.rhs_axes = TShape(1, args[3].operator int64_t());
   } else {
-    param.rhs_axes = mxnet::TShape(args[2].operator ObjectRef());
+    param.rhs_axes = mxnet::TShape(args[3].operator ObjectRef());
   }
 
   attrs.op = op;
