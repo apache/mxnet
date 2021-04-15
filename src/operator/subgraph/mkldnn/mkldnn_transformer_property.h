@@ -48,8 +48,6 @@ const std::map<std::string, std::string> NameMapping = {
 
 class SgMKLDNNTransformerSelector : public SubgraphSelector {
  public:
-  explicit SgMKLDNNTransformerSelector() {}
-
   bool Select(const nnvm::Node &n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() == Op::Get(SELFATT_QK) ||
         n.op() == Op::Get(SELFATT_VALATT)) {
@@ -93,7 +91,7 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
     std::string op_name;
     MKLDNNSelfAttParam new_param;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
-      if (node->op() && 
+      if (node->op() &&
           (node->op()->name == SELFATT_QK ||
            node->op()->name == SELFATT_VALATT)) {
         op_name = node->op()->name;

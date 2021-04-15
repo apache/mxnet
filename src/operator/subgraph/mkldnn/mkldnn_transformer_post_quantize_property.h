@@ -53,7 +53,7 @@ class SgMKLDNNTransformerPostQuantizeSelector : public SubgraphSelector {
         disable_float_output(dis_float_output) {}
 
   bool Select(const nnvm::Node &n) override {
-    if ((!disable_all) && 
+    if ((!disable_all) &&
         (n.op() == Op::Get("_sg_mkldnn_selfatt_qk") ||
          n.op() == Op::Get("_sg_mkldnn_selfatt_valatt"))) {
       status = disable_all ? kSuccess : kStart;
@@ -174,8 +174,8 @@ class SgMKLDNNTransformerPostQuantizeProperty : public SubgraphProperty {
     CHECK(requantize_param.max_calib_range.has_value());
 
     // When only fusing quantized_interleaved_matmul and requantize, set min/max_cablib_range,
-    // When fusing quantized_interleaved_matmul + requantize + dequantize, set dequantize flag to true.
-    // auto& param = nnvm::get<MKLDNNSelfAttParam>(interleaved_node->attrs.parsed);
+    // When fusing quantized_interleaved_matmul + requantize + dequantize,
+    // set dequantize flag to true.
     if (dequantize_node != nullptr) {
       interleaved_node->attrs.dict["enable_float_output"] = "True";
     } else {

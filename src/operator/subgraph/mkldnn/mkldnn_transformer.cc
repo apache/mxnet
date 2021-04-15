@@ -22,7 +22,6 @@
 #include <utility>
 #include <vector>
 #include <string>
-#include <mxnet/base.h>
 #include "../common.h"
 #include "./mkldnn_transformer-inl.h"
 #include "../../contrib/transformer-inl.h"
@@ -44,7 +43,7 @@ static bool SgMKLDNNSelfAttShape(const NodeAttrs& attrs,
     mxnet::ShapeVector base_in_shapes;
     mxnet::ShapeVector base_out_shapes = {out_shapes->at(0)};
 
-    for(int i=0; i < base_num_inputs; i++) {
+    for (int i = 0; i < base_num_inputs; i++) {
       base_in_shapes.emplace_back(in_shapes->at(i));
     }
     bool ret = DefaultSubgraphOpShape(attrs, &base_in_shapes, &base_out_shapes);
@@ -77,8 +76,8 @@ static bool SgMKLDNNSelfAttQKInferType(const nnvm::NodeAttrs &attrs,
         << "QuantizedInterleavedMatMulSelfAttQK only supports int8 input, while "
         << in_types->at(0) << " is given.";
 
-    TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32); // min value
-    TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32); // max value
+    TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);  // min value
+    TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32);  // max value
 
     if (param.enable_float_output) {
       TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);     // output
@@ -108,7 +107,7 @@ static bool SgMKLDNNSelfAttStorageType(const nnvm::NodeAttrs &attrs,
     std::vector<int> base_in_attrs;
     std::vector<int> base_out_attrs{out_attrs->at(0)};
 
-    for(int i=0; i < base_num_inputs; i++) {
+    for (int i = 0; i < base_num_inputs; i++) {
       base_in_attrs.emplace_back(in_attrs->at(i));
     }
     bool ret = DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
@@ -188,7 +187,7 @@ static void SgMKLDNNSelfAttQKForward(const OpStatePtr &state_pointer,
                                      const std::vector<OpReqType> &req,
                                      const std::vector<NDArray> &outputs) {
   SgMKLDNNSelfAttQKOp &op = state_pointer.get_state<SgMKLDNNSelfAttQKOp>();
-  if(!op.IsInitialized()) {
+  if (!op.IsInitialized()) {
     op.Initialize(ctx, inputs, req, outputs);
   }
   op.Forward(ctx, inputs, req, outputs);
@@ -229,7 +228,7 @@ void SgMKLDNNSelfAttQKOp::Initialize(const OpContext &ctx,
 
     memory::dims query_strides = {batch_stride, lead_dim, 1};
     memory::dims key_strides   = {batch_stride, 1, lead_dim};
-    
+
     auto query_md = memory::desc(query_dims, qkv_dtype, query_strides);
     auto key_md   = memory::desc(key_dims, qkv_dtype, key_strides);
 
@@ -243,7 +242,7 @@ void SgMKLDNNSelfAttQKOp::Initialize(const OpContext &ctx,
           param_.max_calib_range.has_value()) {
         min_output_ = param_.min_calib_range.value();
         max_output_ = param_.max_calib_range.value();
-        oscale = 
+        oscale =
             GetQuantizeScale(out_tensor.dtype(), min_output_, max_output_) /
             (data_scale_ * data_scale_);
         out_md = memory::desc(out_dims, memory::data_type::s8, memory::format_tag::abc);
@@ -260,7 +259,7 @@ void SgMKLDNNSelfAttQKOp::Initialize(const OpContext &ctx,
     } else {
       out_md = dnnl::memory::desc(out_dims, memory::data_type::f32, memory::format_tag::abc);
     }
-    oscale /= sqrt(static_cast<float>(head_dim)); // combine quantized scale and sqrt(head_dim)
+    oscale /= sqrt(static_cast<float>(head_dim));  // combine quantized scale and sqrt(head_dim)
 
     dnnl::primitive_attr attr;
     attr.set_output_scales(0, {oscale});
@@ -290,7 +289,6 @@ void SgMKLDNNSelfAttQKOp::Forward(const OpContext &ctx,
                                   const std::vector<NDArray> &inputs,
                                   const std::vector<OpReqType> &req,
                                   const std::vector<NDArray> &outputs) {
-
     const size_t head_dim = inputs[0].shape()[2] / 3 / param_.heads;
 
     MSHADOW_TYPE_SWITCH(inputs[0].dtype(), DType, {
@@ -391,10 +389,10 @@ static bool SgMKLDNNSelfAttValAttInferType(const nnvm::NodeAttrs &attrs,
                                          std::vector<int> *out_types) {
   const auto& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
-    TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kInt8);  // qkv input
-    TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kUint8); // att input
+    TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kInt8);   // qkv input
+    TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kUint8);  // att input
 
-    //min qkv, max qkv, min att, max att
+    // min qkv, max qkv, min att, max att
     for (size_t i = 2; i < in_types->size(); ++i) {
       TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
     }
@@ -490,7 +488,7 @@ static void MKLDNNSelfAttValAttForward(const OpStatePtr &state_pointer,
                                        const std::vector<OpReqType> &req,
                                        const std::vector<NDArray> &outputs) {
   MKLDNNSelfAttValAttOp &op = state_pointer.get_state<MKLDNNSelfAttValAttOp>();
-  if(!op.IsInitialized()) {
+  if (!op.IsInitialized()) {
     op.Initialize(ctx, inputs, req, outputs);
   }
   op.Forward(ctx, inputs, req, outputs);
@@ -500,7 +498,6 @@ void MKLDNNSelfAttValAttOp::Initialize(const OpContext &ctx,
                                        const std::vector<NDArray> &inputs,
                                        const std::vector<OpReqType> &req,
                                        const std::vector<NDArray> &outputs) {
-
   const dnnl::memory::dim qkv_seq_len    = inputs[0].shape()[0];
   const dnnl::memory::dim sequences      = inputs[0].shape()[1];
   const dnnl::memory::dim output_lin_dim = inputs[0].shape()[2];
@@ -584,7 +581,6 @@ void MKLDNNSelfAttValAttOp::Forward(const OpContext &ctx,
                                     const std::vector<NDArray> &inputs,
                                     const std::vector<OpReqType> &req,
                                     const std::vector<NDArray> &outputs) {
-
   const auto engine = CpuEngine::Get()->get_engine();
   const size_t head_dim = inputs[0].shape()[2] / param_.heads / 3;
   MSHADOW_TYPE_SWITCH(inputs[1].dtype(), DType, {
