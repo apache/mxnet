@@ -39,7 +39,7 @@ namespace MxNet.Gluon.RNN
             return "conv_rnn";
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var prefix = $"t{this._counter}_";
             var states = args[0];

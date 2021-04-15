@@ -35,11 +35,11 @@ namespace MxNet.Gluon.Probability
             }
         }
 
-        public override NDArrayOrSymbol Forward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList Forward(NDArrayOrSymbolList inputs)
         {
             foreach (var (k, block) in this._childrens)
             {
-                x = block.Call(x, args);
+                inputs = block.Call(inputs);
                 //var newargs = new NDArrayOrSymbolList();
                 //if (x is tuple || x is list)
                 //{
@@ -57,7 +57,8 @@ namespace MxNet.Gluon.Probability
             {
                 this.AddLoss(((StochasticBlock)block)._losses);
             }
-            return x;
+
+            return inputs;
         }
     }
 }

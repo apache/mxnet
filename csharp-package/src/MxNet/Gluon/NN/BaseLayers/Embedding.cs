@@ -38,7 +38,7 @@ namespace MxNet.Gluon.NN
         public bool Sparse_Grad { get; }
         public Parameter Weight { get; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var weight = args[0];
 

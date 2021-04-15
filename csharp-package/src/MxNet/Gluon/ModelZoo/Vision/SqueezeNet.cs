@@ -76,7 +76,7 @@ namespace MxNet.Gluon.ModelZoo.Vision
         public HybridSequential Features { get; set; }
         public HybridSequential Output { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             x = Features.Call(x, args);
             x = Output.Call(x, args);

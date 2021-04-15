@@ -39,7 +39,7 @@ namespace MxNet.Gluon.RNN
         }
 
         public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
-            params NDArrayOrSymbol[] args)
+            NDArrayOrSymbolList args)
         {
             if (_rate > 0)
             {
@@ -48,7 +48,7 @@ namespace MxNet.Gluon.RNN
                 else
                     x = sym.Dropout(x, _rate, axes: _axes, symbol_name: $"t{_counter}_fwd");
             }
-
+            
             return (x, args);
         }
 

@@ -41,7 +41,7 @@ namespace MxNet.Gluon.RNN
         }
 
         public override (NDArrayOrSymbol, NDArrayOrSymbol[]) Call(NDArrayOrSymbol inputs,
-            params NDArrayOrSymbol[] states)
+            NDArrayOrSymbolList states)
         {
             _counter++;
             var next_states = new List<NDArrayOrSymbol>();
@@ -58,7 +58,7 @@ namespace MxNet.Gluon.RNN
                 next_states.AddRange(state);
             }
 
-            return (inputs, new[] {next_states.Sum()});
+            return (inputs, new[] { next_states.Sum() });
         }
 
         public override StateInfo[] StateInfo(int batch_size = 0)
@@ -93,7 +93,7 @@ namespace MxNet.Gluon.RNN
             return (inputs, next_states.ToArray());
         }
 
-        public override NDArrayOrSymbol Forward(NDArrayOrSymbol input, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList Forward(NDArrayOrSymbolList args)
         {
             throw new NotImplementedException();
         }

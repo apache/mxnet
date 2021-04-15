@@ -174,16 +174,10 @@ namespace MxNet.Gluon.RNN
 
         public abstract StateInfo[] StateInfo(int batch_size = 0);
 
-        public new virtual (NDArrayOrSymbol, NDArrayOrSymbol[]) Call(NDArrayOrSymbol inputs,
-            params NDArrayOrSymbol[] states)
-        {
-            return default;
-        }
-
-        public override NDArrayOrSymbol Forward(NDArrayOrSymbol input, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList Forward(NDArrayOrSymbolList inputs)
         {
             _counter++;
-            return input;
+            return inputs;
         }
 
         public virtual NDArrayOrSymbol[] BeginState(int batch_size = 0, string func = null, FuncArgs args = null)

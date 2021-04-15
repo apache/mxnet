@@ -54,7 +54,7 @@ namespace MxNet.Gluon.RecurrentNN
             throw new NotImplementedException();
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             throw new NotImplementedException();
         }

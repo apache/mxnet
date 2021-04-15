@@ -40,7 +40,7 @@ namespace MxNet.Gluon.RNN.ConvRNNCell
             return "conv_lstm";
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var states = args[0];
             var i2h_weight = args[1];

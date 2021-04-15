@@ -17,7 +17,7 @@ namespace MxNet.Gluon.NN
 {
     public class HybridLambda : HybridBlock
     {
-        public delegate NDArrayOrSymbol LambdaFn(NDArrayOrSymbol x, params NDArrayOrSymbol[] args);
+        public delegate NDArrayOrSymbol LambdaFn(NDArrayOrSymbol x, NDArrayOrSymbolList args);
 
         public HybridLambda(LambdaFn function) : base()
         {
@@ -26,7 +26,7 @@ namespace MxNet.Gluon.NN
 
         public LambdaFn Function { get; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             return Function(x, args);
         }

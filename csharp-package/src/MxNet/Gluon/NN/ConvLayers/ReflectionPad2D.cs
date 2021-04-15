@@ -24,7 +24,7 @@ namespace MxNet.Gluon.NN
 
         public int Padding { get; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             if (x.IsNDArray)
                 return nd.Pad(x.NdX, PadMode.Reflect, new Shape(Padding));

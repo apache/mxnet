@@ -189,14 +189,14 @@ namespace MxNet.Gluon
 
                 DeferredCompute.SetVariable(real_args, symbol_inputs);
                 args = Regroup(new List<NDArrayOrSymbol[]> { flatten_args.ToArray() }, this._in_format).Item1;
-                NDArrayOrSymbol @out;
+                NDArrayOrSymbolList @out;
                 using(var ag = Autograd.Pause())
                 {
                     DeferredCompute.Context();
-                    @out = base.Call(args[0], args.Length > 1 ? args.Skip(1).ToArray() : null);
+                    @out = base.Call(args);
                 }
 
-                var (flatten_out, out_format) = Flatten(new NDArrayOrSymbolList { @out }, "output");
+                var (flatten_out, out_format) = Flatten(@out, "output");
                 this._out_format = out_format.ToList();
                 var symbol_outputs = DeferredCompute.GetSymbol(flatten_out.NDArrays);
                 this._cached_graph = (symbol_inputs, symbol_outputs);
@@ -821,14 +821,10 @@ namespace MxNet.Gluon
             }
         }
 
-        public override NDArrayOrSymbol Forward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList Forward(NDArrayOrSymbolList inputs)
         {
             var @params = new Dictionary<string, NDArrayOrSymbol>();
-            var argsList = args.ToList();
-            var list = args.ToList();
-            list.Insert(0, x);
-
-            var (has_symbol, has_ndarray, ctx_set, first_ctx)  = GatherTypeCtxInfo(list);
+            var (has_symbol, has_ndarray, ctx_set, first_ctx)  = GatherTypeCtxInfo(inputs);
             if (has_symbol && has_ndarray)
             {
                 throw new Exception("In HybridBlock, we do not support mixed NDArrays and Symbols types for the input. Please check the type of the args.\n");
@@ -850,7 +846,7 @@ namespace MxNet.Gluon
                             $"You can print the ele.ctx in the input arguments to inspect their contexts. Find all contexts = {string.Join(",", ctx_set.Select(i => i.ToString()))}");
                     }
 
-                    return CallCachedOp(list).FirstOrDefault();
+                    return CallCachedOp(inputs);
                 }
 
                 try
@@ -860,13 +856,13 @@ namespace MxNet.Gluon
                 catch (DeferredInitializationException ex)
                 {
                     @params.Clear();
-                    DeferredInferShape(list);
+                    DeferredInferShape(inputs);
                     foreach (var p in Params.Items()) p.Value.FinishDeferredInit();
 
                     foreach (var p in _reg_params) @params[p.Key] = p.Value.Data(ctx);
                 }
 
-                argsList.AddRange(@params.Values.ToArray());
+                inputs.Add(@params.Values.ToArray());
                 return HybridForward(x, argsList.ToArray());
             }
 
@@ -878,20 +874,19 @@ namespace MxNet.Gluon
             }
         }
 
-        public override NDArrayOrSymbol Call(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList Call(NDArrayOrSymbolList inputs)
         {
             if (!this._v2)
             {
                 // Gluon 1 based on F:  hybrid_forward is defined by user
-                return base.Call(x, args);
+                return base.Call(inputs);
             }
             else
             {
                 // Gluon 2 based on deferred compute mode
                 //Debug.Assert(this.forward != HybridBlock.forward);
                 //Debug.Assert("Must either define {name}.forward or {name}.hybrid_forward. Defining {name}.hybrid_forward is deprecated.".format(name: type(this).@__name__));
-                var inputs = new NDArrayOrSymbolList() { x };
-                inputs.Add(args);
+             
                 this.InferShape(inputs);
 
                 if (!this._called_infer_shape_already)
@@ -906,14 +901,14 @@ namespace MxNet.Gluon
                 if (!this._active)
                 {
                     // Normal imperative computation of forward()
-                    return base.Call(x, args);
+                    return base.Call(inputs);
                 }
 
                 if (DeferredCompute.IsDeferredCompute())
                 {
                     // Deferred compute is already enabled. This typically means that the current
                     // HybridBlock is a child block of a HybridBlock that has been hybridized.
-                    return base.Call(x, args);
+                    return base.Call(inputs);
                 }
 
                 return this.CallCachedOp(inputs).FirstOrDefault();
@@ -921,9 +916,9 @@ namespace MxNet.Gluon
         }
 
 
-        public virtual NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public virtual NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
-            return x;
+            return args;
         }
 
         public override void ResetCtx(Context ctx)

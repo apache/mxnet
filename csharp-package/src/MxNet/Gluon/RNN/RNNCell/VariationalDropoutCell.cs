@@ -32,7 +32,7 @@ namespace MxNet.Gluon.RNN.Cell
             throw new NotImplementedException();
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             throw new NotImplementedException();
         }

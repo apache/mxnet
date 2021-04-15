@@ -122,7 +122,7 @@ namespace MxNet.Gluon.RNN
         }
 
         public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
-            params NDArrayOrSymbol[] args)
+            NDArrayOrSymbolList args)
         {
             return default;
         }

@@ -20,7 +20,7 @@ namespace MxNet.Gluon.NN
             return "modulated_deformable_conv";
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             return base.HybridForward(x, args);
         }

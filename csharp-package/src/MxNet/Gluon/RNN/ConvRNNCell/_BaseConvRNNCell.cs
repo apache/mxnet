@@ -83,7 +83,7 @@ namespace MxNet.Gluon.RNN
             this["h2h_bias"] = new Parameter("h2h_bias", shape: new Shape(hidden_channels * this.NumGates), init: h2h_bias_initializer, allow_deferred_init: true);
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             throw new NotSupportedException();
         }

@@ -40,7 +40,7 @@ namespace MxNet.Gluon.NN
             return num_devices;
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var gamma = args.Length > 0 ? args[0] : null;
             var beta = args.Length > 1 ? args[1] : null;

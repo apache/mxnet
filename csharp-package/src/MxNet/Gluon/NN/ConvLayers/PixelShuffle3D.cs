@@ -26,7 +26,7 @@ namespace MxNet.Gluon.NN
             this.factor = factor;
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var (f1, f2, f3) = factor;
             x = F.reshape(x, new Shape(-2, -6, -1, f1 * f2 * f3, -2, -2, -2));

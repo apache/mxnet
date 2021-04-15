@@ -44,7 +44,5 @@ namespace MxNet.Gluon.Losses
             loss = ApplyWeighting(loss, Weight, sample_weight);
             return F.mean(loss, BatchAxis.Value);
         }
-
-       
     }
 }

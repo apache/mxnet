@@ -95,7 +95,7 @@ namespace MxNet.Gluon.NN
             return conv.InferShapePartial(new Dictionary<string, Shape>()).Item1;
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var weight = args[0];
             var bias = args.Length > 1 ? args[1] : null;

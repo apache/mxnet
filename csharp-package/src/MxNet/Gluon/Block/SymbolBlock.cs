@@ -96,29 +96,24 @@ namespace MxNet.Gluon
             }
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
-            return x;
+            return args;
         }
 
-        public override NDArrayOrSymbol Forward(NDArrayOrSymbol x, NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList Forward(NDArrayOrSymbolList inputs)
         {
             if (DeferredCompute.IsDeferredCompute())
             {
                 throw new Exception("Calling a SymbolBlock from within HybridBlock is not yet supported in Gluon 2.");
             }
 
-            if (x.IsNDArray)
+            if (inputs[0].IsNDArray)
             {
-                return CallCachedOp(args)[0];
+                return CallCachedOp(inputs);
             }
 
-            int[] in_fmt = null;
-            var inputs = new List<NDArrayOrSymbol>();
-            inputs.Add(x);
-            inputs.AddRange(args);
-
-            (args, in_fmt) = Flatten(inputs.ToArray(), "input");
+            var (args, in_fmt) = Flatten(inputs.ToArray(), "input");
             if (in_fmt != _in_format.ToArray())
                 throw new Exception("Invalid input format");
 

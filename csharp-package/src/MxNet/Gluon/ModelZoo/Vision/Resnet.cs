@@ -167,13 +167,13 @@ namespace MxNet.Gluon.ModelZoo.Vision
             RegisterChild(body, "body");
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList inputs)
         {
-            var residual = x;
+            var residual = inputs[0];
 
-            x = body.Call(x, args);
+            inputs = body.Call(inputs);
             if (ds != null)
-                residual = ds.Call(residual, args);
+                residual = ds.Call(residual, inputs);
 
             if (x.IsNDArray)
                 x = nd.Activation(x.NdX + residual.NdX, ActivationType.Relu);
@@ -213,7 +213,7 @@ namespace MxNet.Gluon.ModelZoo.Vision
                 ds = null;
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var residual = x;
             x = bn1.Call(x, args);
@@ -275,7 +275,7 @@ namespace MxNet.Gluon.ModelZoo.Vision
             RegisterChild(body, "body");
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var residual = x;
 
@@ -329,7 +329,7 @@ namespace MxNet.Gluon.ModelZoo.Vision
 
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var residual = x;
             x = bn1.Call(x, args);
@@ -403,7 +403,7 @@ namespace MxNet.Gluon.ModelZoo.Vision
         public HybridSequential Features { get; set; }
         public Dense Output { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             x = Features.Call(x, args);
             x = Output.Call(x, args);
@@ -476,7 +476,7 @@ namespace MxNet.Gluon.ModelZoo.Vision
         public HybridSequential Features { get; set; }
         public Dense Output { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             x = Features.Call(x, args);
             x = Output.Call(x, args);

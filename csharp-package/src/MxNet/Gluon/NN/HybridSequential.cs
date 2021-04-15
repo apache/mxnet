@@ -65,7 +65,7 @@ namespace MxNet.Gluon.NN
             }
         }
 
-        public override NDArrayOrSymbol Call(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList Call(NDArrayOrSymbolList inputs)
         {
             if (this._active && !this._v2_checked && !DeferredCompute.IsDeferredCompute())
             {
@@ -80,23 +80,23 @@ namespace MxNet.Gluon.NN
                 }
             }
 
-            return base.Call(x, args);
+            return base.Call(inputs);
         }
 
-        public override NDArrayOrSymbol Forward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList Forward(NDArrayOrSymbolList inputs)
         {
             if (_forward)
             {
-                foreach (var item in _childrens) x = item.Value.Call(x, args);
-                return x;
+                foreach (var item in _childrens) inputs = item.Value.Call(inputs);
+                return inputs;
             }
             else
             {
-                return base.Forward(x, args);
+                return base.Forward(inputs);
             }
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             foreach (var item in _childrens) x = item.Value.Call(x, args);
 

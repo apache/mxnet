@@ -17,13 +17,13 @@ namespace MxNet.Gluon.RNN
 {
     public abstract class HybridRecurrentCell : RecurrentCell
     {
-        public override NDArrayOrSymbol Forward(NDArrayOrSymbol input, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol Forward(NDArrayOrSymbol input, NDArrayOrSymbolList args)
         {
             return input;
         }
 
         public abstract (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
-            params NDArrayOrSymbol[] args);
+            NDArrayOrSymbolList args);
 
         public override StateInfo[] StateInfo(int batch_size = 0)
         {

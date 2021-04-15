@@ -25,7 +25,7 @@ namespace MxNet.Gluon.RNN
         }
 
         public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
-            params NDArrayOrSymbol[] args)
+            NDArrayOrSymbolList args)
         {
             var (output, states) = BaseCell.Call(x, args);
             if (x.IsNDArray)

@@ -57,7 +57,7 @@ namespace MxNet.Gluon.RNN
         }
 
         public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
-            params NDArrayOrSymbol[] args)
+            NDArrayOrSymbolList args)
         {
             var prefix = $"t{_counter}_";
             var states_0 = args[0];

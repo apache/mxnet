@@ -47,7 +47,7 @@ namespace MxNet.Gluon.RNN
             return RNNCell.CellsBeginState(_childrens.Values.ToArray(), batch_size, func);
         }
 
-        public new (NDArrayOrSymbol, NDArrayOrSymbol[]) Call(NDArrayOrSymbol inputs, params NDArrayOrSymbol[] states)
+        public override NDArrayOrSymbolList Call(NDArrayOrSymbolList inputs)
         {
             _counter++;
             var next_states = new List<NDArrayOrSymbol>();
@@ -95,7 +95,7 @@ namespace MxNet.Gluon.RNN
         }
 
         public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
-            params NDArrayOrSymbol[] args)
+            NDArrayOrSymbolList args)
         {
             return default;
         }

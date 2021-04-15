@@ -28,9 +28,9 @@ namespace MxNet.Gluon.NN
 
         public LambdaFn Function { get; }
 
-        public override NDArrayOrSymbol Forward(NDArrayOrSymbol input, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol Forward(NDArrayOrSymbolList inputs)
         {
-            return Function(input);
+            return Function(inputs[0]);
         }
 
         public override string ToString()

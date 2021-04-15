@@ -29,7 +29,7 @@ namespace MxNet.Gluon.NN
 
         public float Alpha { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             if (x.IsNDArray)
                 return nd.LeakyReLU(x.NdX, slope: Alpha);

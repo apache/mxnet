@@ -115,7 +115,7 @@ namespace MxNet.Gluon.NN
             return "deformable_conv";
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             //object act;
             //object offset;

@@ -51,14 +51,14 @@ namespace MxNet.Gluon.NN
             }
         }
 
-        public override NDArrayOrSymbol Forward(NDArrayOrSymbol input, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList Forward(NDArrayOrSymbolList inputs)
         {
             foreach (var block in this._childrens.Values)
             {
-                input = block.Call(input, args);
+                inputs = block.Call(inputs);
             }
 
-            return input;
+            return inputs;
         }
 
         public override string ToString()

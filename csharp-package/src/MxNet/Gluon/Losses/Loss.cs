@@ -27,9 +27,9 @@ namespace MxNet.Gluon.Losses
         public float? Weight { get; }
         public int? BatchAxis { get; internal set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
-            return HybridForward(x, args[0], args.Length > 1 ? args[1] : null);
+            return HybridForward(args[0], args.Length > 2 ? args[1] : null, args.Length > 3 ? args[2] : null);
         }
 
         public virtual NDArrayOrSymbol HybridForward(NDArrayOrSymbol pred, NDArrayOrSymbol label,

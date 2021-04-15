@@ -41,7 +41,7 @@ namespace MxNet.Gluon.NN
         public Parameter Gamma { get; set; }
         public Parameter Beta { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var gamma = args[0];
             var beta = args[1];

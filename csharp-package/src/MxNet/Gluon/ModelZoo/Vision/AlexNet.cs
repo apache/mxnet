@@ -47,11 +47,11 @@ namespace MxNet.Gluon.ModelZoo.Vision
         public HybridSequential Features { get; set; }
         public Dense Output { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
-            x = Features.Call(x, args);
-            x = Output.Call(x, args);
-            return x;
+            args = Features.Call(args);
+            args = Output.Call(args);
+            return args;
         }
 
         public static AlexNet GetAlexNet(bool pretrained = false, Context ctx = null, string root = "")

@@ -47,7 +47,7 @@ namespace MxNet.Gluon.Probability
             return inner;
         }
 
-        public override NDArrayOrSymbol Call(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol Call(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             this._flag = false;
             var @out = base.Call(x, args);

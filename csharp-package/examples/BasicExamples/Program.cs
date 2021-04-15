@@ -1,6 +1,7 @@
 ﻿using MxNet;
 using MxNet.Numpy;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -12,14 +13,15 @@ namespace BasicExamples
         static void Main(string[] args)
         {
             //Console.WriteLine("Runnin XOR Example......");
-            //XORGate.Run();
+            //XORGate.Run();bjn
             //CrashCourse_NN.Run();
             //LogisticRegressionExplained.Run();
             var methods = mx.GetAllRegisteredOperators();
             var y = np.full(new Shape(3, 3), 0.6);
             var x = np.random.power(y, new Shape(3, 3));
-            
+
             var z = np.linalg.cholesky(x);
+            NDArrayOrSymbolList list = (x, y);
         }
 
         private static void GenerateFOps()

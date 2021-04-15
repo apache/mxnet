@@ -46,7 +46,7 @@ namespace MxNet.Gluon.NN
 
         public bool? CountIncludePad { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             if (x.IsNDArray)
                 return nd.Pooling(x, new Shape(Kernel), PoolType, GlobalPool, stride: new Shape(Strides),

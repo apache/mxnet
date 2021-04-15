@@ -49,7 +49,7 @@ namespace MxNet.Gluon.NN
 
         public int InUnits { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, params NDArrayOrSymbol[] args)
+        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             NDArrayOrSymbol output = null;
             var weight = args[0];
