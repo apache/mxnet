@@ -114,7 +114,6 @@ def get_git_commit_hash() {
 def publish_test_coverage() {
     // disabling codecov
     // sh "curl -s https://codecov.io/bash | bash"
-    sh "env"
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {
