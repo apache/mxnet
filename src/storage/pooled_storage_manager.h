@@ -59,21 +59,21 @@ class GPUPooledStorageManager final : public StorageManager {
    */
   explicit GPUPooledStorageManager(Context initial_context) :
   free_list_size_(0), initial_context_(initial_context) {
-    reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
+    reserve_ = dmlc::GetEnv<double>("MXNET_GPU_MEM_POOL_RESERVE", 5.0);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
     large_alloc_round_size_ = dmlc::GetEnv("MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE", 2 * 1024 * 1024);
-    if (large_alloc_round_size_ <= 0) {
+    memory_limit_percentage_ = dmlc::GetEnv<double>("MXNET_GPU_MEM_POOL_LIMIT", 100.0);
+    if (large_alloc_round_size_ <= 0)
       LOG(FATAL) << "MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE cannot be set to a value <= 0, found: "
                  << large_alloc_round_size_;
-    }
-    if (page_size_ < NDEV) {
+
+    if (page_size_ < NDEV)
       LOG(FATAL) << "MXNET_GPU_MEM_POOL_PAGE_SIZE cannot be set to a value smaller than " << NDEV \
                  << ". Got " << page_size_ << ".";
-    }
-    memory_limit_percentage_ = dmlc::GetEnv<double>("MXNET_GPU_MEM_LIMIT", 100.0);
-    if (memory_limit_percentage_ <= 0 || memory_limit_percentage_ > 100) {
-      LOG(FATAL) << "Invalid memory limit percentage given: " << memory_limit_percentage_
-                 << std::endl;
+
+    if (memory_limit_percentage_ <= 0 || memory_limit_percentage_ > 100)
+      LOG(FATAL) << "MXNET_GPU_MEM_POOL_LIMIT invalid: " << memory_limit_percentage_
+                 << " must be 0 <= x < 100" << std::endl;
     }
   }
   /*!
@@ -130,10 +130,12 @@ class GPUPooledStorageManager final : public StorageManager {
   size_t page_size_;
   // size that large allocations should be rounded to, for proper freeing.
   size_t large_alloc_round_size_;
+  // amount of free memory in pool
   size_t free_list_size_;
+  // percentage of GPU memory to use
   double memory_limit_percentage_;
   // percentage of reserved memory
-  int reserve_;
+  double reserve_;
   // number of devices
   const size_t NDEV = 32;
   // context used by this Storage Manager
@@ -152,31 +154,31 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
 
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   size_t size = RoundAllocSize(handle->size);
+  // try to find array in the pool
   auto&& reuse_it = memory_pool_.find(size);
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
+    // if cant find array of right size in the pool...
     mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
+    // get memory info from CUDA
     size_t real_free, total;
     cudaMemGetInfo(&real_free, &total);
+    // compute artificial limit
     double mem_limit_in_bytes = total * memory_limit_percentage_ / 100.0;
     size_t calc_free = mem_limit_in_bytes - used_memory_;
+    // amount of free memory is from calc if there is more real free memory
     size_t free = (calc_free < real_free) ? calc_free : real_free;
-    if (free <= mem_limit_in_bytes * reserve_ / 100 ||
-        size > free - mem_limit_in_bytes * reserve_ / 100)
+    // release pool memory if theres not enough to alloc this array
+    if (free <= mem_limit_in_bytes * reserve_ / 100.0 ||
+        size > free - mem_limit_in_bytes * reserve_ / 100.0)
       ReleaseAll();
-    /*
-    if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
-      ReleaseAll();
-    */
 
-    if (used_memory_ + size > mem_limit_in_bytes) {
-      // This calls abort() unless
-      // DMLC_LOG_FATAL_THROW != 0, then it
-      // throws std::runtime_error()
+    // enforce artificial memory limit
+    if (used_memory_ + size > mem_limit_in_bytes)
       LOG(FATAL) << "memory limit reached, used: " << used_memory_ << "  limit: "
                  << mem_limit_in_bytes << " (" << memory_limit_percentage_ << "% of "
                  << total << ")";
-    }
 
+    // try allocating a new array with CUDA
     void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
     if (e != cudaSuccess) {
@@ -193,16 +195,21 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
     used_memory_ += size;
     handle->dptr = ret;
   } else {
+    // reuse array from pool
     auto&& reuse_pool = reuse_it->second;
     auto ret = reuse_pool.back();
     reuse_pool.pop_back();
-    // Decrement the free list size as memory pool is getting used.
+    // decrement the free list size as memory pool is getting used.
     free_list_size_ -= size;
     handle->dptr = ret;
   }
 }
 
 void GPUPooledStorageManager::Free(Storage::Handle handle) {
+  // This method doesn't actually free array
+  // but instead adds to the pool for re-use later
+
+
   // Do nothing if dptr is nullptr. Otherwise, nullptr may be reused
   // which can cause illegal memory access error.
   if (handle.dptr == nullptr) return;
@@ -211,8 +218,7 @@ void GPUPooledStorageManager::Free(Storage::Handle handle) {
   size_t size = RoundAllocSize(handle.size);
   auto&& reuse_pool = memory_pool_[size];
   reuse_pool.push_back(handle.dptr);
-  // This method doesn't actually free
-  // but instead adds to the free list of the given size
+  // increment free list size as memory pool is growing
   free_list_size_ += size;
 }
 
@@ -227,6 +233,7 @@ void GPUPooledStorageManager::ReleaseAll() {
     }
   }
   memory_pool_.clear();
+  // clear list size as memory pool is now empty
   free_list_size_ = 0;
 }
 
