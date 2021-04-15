@@ -22,6 +22,7 @@
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <map>
 #include <string>
 #include <vector>
 #include "../common.h"
