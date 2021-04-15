@@ -201,6 +201,21 @@ struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
     DMLC_DECLARE_FIELD(rhs_axes).set_default(dmlc::optional<mxnet::TShape>())
       .describe("Axes to copy from the second input array");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream lhs_axes_s, rhs_axes_s;
+    if (lhs_axes.has_value()) {
+      lhs_axes_s << lhs_axes.value();
+    } else {
+      lhs_axes_s << lhs_axes;
+    }
+    (*dict)["lhs_axes"] = lhs_axes_s.str();
+    if (rhs_axes.has_value()) {
+      rhs_axes_s << rhs_axes.value();
+    } else {
+      rhs_axes_s << rhs_axes;
+    }
+    (*dict)["rhs_axes"] = rhs_axes_s.str();
+  }
 };
 
 /*
