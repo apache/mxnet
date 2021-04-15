@@ -843,6 +843,9 @@ def convert_contrib_box_nms(node, **kwargs):
 
     center_point_box = 0 if in_format == 'corner' else 1
 
+    if topk == -1:
+        topk = 2**31-1
+
     if in_format != out_format:
         raise NotImplementedError('box_nms does not currently support in_fomat != out_format')
 

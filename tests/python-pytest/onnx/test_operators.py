@@ -483,7 +483,7 @@ def test_onnx_export_contrib_BilinearResize2D(tmp_path, dtype, params):
     op_export_test('contrib_BilinearResize2D', M, [x], tmp_path)
 
 
-@pytest.mark.parametrize('topk', [2, 3, 4])
+@pytest.mark.parametrize('topk', [-1, 2, 3, 4])
 @pytest.mark.parametrize('valid_thresh', [0.3, 0.4, 0.8])
 @pytest.mark.parametrize('overlap_thresh', [0.4, 0.7, 1.0])
 def test_onnx_export_contrib_box_nms(tmp_path, topk, valid_thresh, overlap_thresh):
@@ -574,12 +574,15 @@ def test_onnx_export_equal_scalar(tmp_path, dtype, scalar):
     op_export_test('_internal._equal_scalar', M, [x], tmp_path)
 
 
-@pytest.mark.parametrize("dtype", ["float16", "float32", "int32", "int64"])
-@pytest.mark.parametrize("shape", [(1,1), (3,3), (10,2), (20,30,40)])
-def test_onnx_export_where(tmp_path, dtype, shape):
+@pytest.mark.parametrize('dtype', ["float16", "float32", "int32", "int64"])
+@pytest.mark.parametrize('shape', [(5,), (3,3), (10,2), (20,30,40)])
+@pytest.mark.parametrize('broadcast', [True, False])
+def test_onnx_export_where(tmp_path, dtype, shape, broadcast):
     M = def_model('where')
     x = mx.nd.zeros(shape, dtype=dtype)
     y = mx.nd.ones(shape, dtype=dtype)
+    if broadcast:
+        shape = shape[0:1]
     cond = mx.nd.random.randint(low=0, high=1, shape=shape, dtype='int32')
     op_export_test('where', M, [cond, x, y], tmp_path)
 
