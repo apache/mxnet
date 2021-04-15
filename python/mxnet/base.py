@@ -273,7 +273,7 @@ class MXCallbackList(ctypes.Structure):
         ]
 
 
-# pylint: disable=line-too-long, 
+# pylint: disable=line-too-long
 def _load_lib():
     """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
