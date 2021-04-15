@@ -273,6 +273,7 @@ class MXCallbackList(ctypes.Structure):
         ]
 
 
+# pylint: disable=line-too-long, 
 def _load_lib():
     """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
@@ -290,12 +291,11 @@ def _load_lib():
             e.args = (e.args[0]+'\nNotes: Starting from version 1.8.0, cuDNN and NCCL should be installed by users in advance.\
                       \nPlease follow the instructions in https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html to install cuDNN.',)
             raise OSError(e) from None
-        elif "libnccl" in e.args[0]:
+        if "libnccl" in e.args[0]:
             e.args = (e.args[0]+'\nNotes: Starting from version 1.8.0, cuDNN and NCCL should be installed by users in advance.\
                       \nPlease follow the instructions in https://docs.nvidia.com/deeplearning/nccl/install-guide/index.html to install NCCL.',)
             raise OSError(e) from None
-        else:
-            raise
+        raise
     else:
         return lib
 
