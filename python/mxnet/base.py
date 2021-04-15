@@ -276,15 +276,28 @@ class MXCallbackList(ctypes.Structure):
 def _load_lib():
     """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
-    if sys.version_info >= (3, 8) and os.name == "nt":
-        # use LOAD_WITH_ALTERED_SEARCH_PATH, For simplicity, let's just fill the numbers.
-        # pylint: disable=E1123
-        lib = ctypes.CDLL(lib_path[0], winmode=0x00000008)
+    try:
+        if sys.version_info >= (3, 8) and os.name == "nt":
+            # use LOAD_WITH_ALTERED_SEARCH_PATH, For simplicity, let's just fill the numbers.
+            # pylint: disable=E1123
+            lib = ctypes.CDLL(lib_path[0], winmode=0x00000008)
+        else:
+            lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
+        # DMatrix functions
+        lib.MXGetLastError.restype = ctypes.c_char_p
+    except OSError as e:
+        if "libcudnn" in e.args[0]:
+            e.args = (e.args[0]+'\nNotes: Starting from version 1.8.0, cuDNN and NCCL should be installed by users in advance.\
+                      \nPlease follow the instructions in https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html to install cuDNN.',)
+            raise OSError(e) from None
+        elif "libnccl" in e.args[0]:
+            e.args = (e.args[0]+'\nNotes: Starting from version 1.8.0, cuDNN and NCCL should be installed by users in advance.\
+                      \nPlease follow the instructions in https://docs.nvidia.com/deeplearning/nccl/install-guide/index.html to install NCCL.',)
+            raise OSError(e) from None
+        else:
+            raise
     else:
-        lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
-    # DMatrix functions
-    lib.MXGetLastError.restype = ctypes.c_char_p
-    return lib
+        return lib
 
 
 # version number
