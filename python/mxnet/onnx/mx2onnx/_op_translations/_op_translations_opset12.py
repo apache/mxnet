@@ -1242,7 +1242,8 @@ def scalar_op_helper(node, op_name, **kwargs):
             )
         )
         # reverse op
-        if "_r" in name:
+        if "_rminusscalar" in name or "_rdivscalar" in name:
+            print(name)
             mul_node = onnx.helper.make_node(
                 op_name,
                 [scalar_op_name, input_nodes[0]],
@@ -1273,6 +1274,7 @@ def scalar_op_helper(node, op_name, **kwargs):
             )
         )
         return [tensor_node]
+
 
 # Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_mul_scalar")
