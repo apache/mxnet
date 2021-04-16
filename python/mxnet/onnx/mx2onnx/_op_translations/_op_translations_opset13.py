@@ -1494,7 +1494,7 @@ def convert_prod(node, **kwargs):
                 make_node('ScatterND', [name+'_tile', name+'_unsqueeze', name+'_where1'], [name+'_SND']),
                 make_node('Reshape', [name+'_reduce', name+'_SND'], [name]),
             ]
-            return nodes     
+            return nodes
     else:
         if keepdims:
             node = make_node('ReduceProd', input_nodes, [name], keepdims=keepdims)
