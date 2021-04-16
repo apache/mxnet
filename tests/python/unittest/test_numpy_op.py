@@ -10338,3 +10338,14 @@ def test_modulated_deformable_convolution(num_batch, num_channel_data, num_defor
         rtol, atol = 1.0, 1e-2
     else:
         rtol, atol = 0.05, 1e-3
+
+
+@use_np
+def test_broadcast_like_different_types():
+    x = mx.np.zeros((2, 1))
+    y = mx.np.ones((2, 2))
+
+    y = mx.np.array(y).astype('int32')
+    z = mx.npx.broadcast_like(x, y, 1, 1)
+    assert_almost_equal(z.asnumpy(), np.array([[0,0],[0,0]]))
+    assert x.dtype == z.dtype
