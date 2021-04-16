@@ -347,15 +347,6 @@ def test_onnx_export_Concat(tmp_path, dtype):
     op_export_test('Concat_2', M2, [y, z], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float32', 'float64', 'float16'])
-@pytest.mark.parametrize('shape', [(1,), (3,), (4, 5), (3, 4, 5)])
-def test_onnx_export_elemwise_add(tmp_path, dtype, shape):
-    M = def_model('elemwise_add')
-    x = mx.nd.random.uniform(-0.5, 0.5, shape=shape, dtype=dtype)
-    y = mx.nd.random.uniform(-0.5, 0.5, shape=shape, dtype=dtype)
-    op_export_test('elmwise_add', M, [x, y], tmp_path)
-
-
 @pytest.mark.parametrize('dtype', ['float32', 'float16'])
 @pytest.mark.parametrize('shape', [(1,), (3,), (4, 5), (3, 4, 5)])
 @pytest.mark.parametrize('act_type', ['tanh', 'relu', 'sigmoid', 'softrelu', 'softsign'])
@@ -1326,3 +1317,83 @@ def test_onnx_export_arg_max_min(tmp_path, dtype, shape, axis, keepdims, op_name
     A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
     M = def_model(op_name, axis=axis, keepdims=keepdims)
     op_export_test(op_name, M, [A], tmp_path)
+
+
+# onnx max and min have issue comparing negative float16 values
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [[(2, 3), (2, 3)], [(5, 4), (5, 4)]])
+@pytest.mark.parametrize('op_name', ['maximum', 'minimum'])
+def test_onnx_export_maximum_minimum(tmp_path, dtype, shape, op_name):
+    lhs = mx.nd.random.uniform(1, 100, shape[0]).astype(dtype)
+    rhs = mx.nd.random.uniform(1, 100, shape[1]).astype(dtype)
+    M = def_model(op_name)
+    op_export_test(op_name, M, [lhs, rhs], tmp_path)
+
+
+
+# onnx reduce ops do not support float64
+@pytest.mark.parametrize('dtype', ['float16', 'float32','int32', 'int64'])
+@pytest.mark.parametrize('shape', [(2, 3), (4, 5, 6)])
+@pytest.mark.parametrize('axis', [None, 0, 1, -1, (0, 1)])
+@pytest.mark.parametrize('keepdims', [True, False])
+@pytest.mark.parametrize('op_name', ['max', 'min', 'mean', 'prod'])
+def test_onnx_export_reduce_op(tmp_path, dtype, shape, axis, keepdims, op_name):
+    if dtype != 'int64' or op_name != 'mean':
+        # onnx ReduceMean does not support int 64
+        x = mx.nd.random.uniform(1, 100, shape=shape).astype(dtype)
+        M = def_model(op_name, axis=axis, keepdims=keepdims)
+        op_export_test(op_name, M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [(1,), (3, ), (4, 5), (3, 4, 5)])
+@pytest.mark.parametrize('op_name', ['elemwise_add', 'elemwise_sub', 'elemwise_mul', 'elemwise_div'])
+def test_onnx_export_elemwise_op(tmp_path, dtype, shape, op_name):
+    x = mx.nd.random.uniform(1, 100, shape=shape).astype(dtype)
+    y = mx.nd.random.uniform(1, 100, shape=shape).astype(dtype)
+    M = def_model(op_name)
+    op_export_test(op_name, M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [[(3, 4), (3, 4)], [(3, 4), (3, 1)], [(3, 4), (4)]])
+@pytest.mark.parametrize('op_name', ['broadcast_sub', 'broadcast_div'])
+def test_onnx_export_broadcast_op(tmp_path, dtype, shape, op_name):
+    x = mx.nd.random.uniform(1, 100, shape=shape[0]).astype(dtype)
+    y = mx.nd.random.uniform(1, 100, shape=shape[1]).astype(dtype)
+    M = def_model(op_name)
+    op_export_test(op_name, M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [(1,), (3, ), (4, 5), (3, 4, 5)])
+def test_onnx_export_negative(tmp_path, dtype, shape):
+    x = mx.nd.random.uniform(-100, 100, shape=shape).astype(dtype)
+    M = def_model('negative')
+    op_export_test('negative', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+@pytest.mark.parametrize('shape', [(1,), (3, ), (4, 5), (3, 4, 5)])
+def test_onnx_export_addn(tmp_path, dtype, shape):
+    x = mx.nd.random.uniform(-100, 100, shape=shape).astype(dtype)
+    M = def_model('add_n')
+    op_export_test('add_n', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+@pytest.mark.parametrize('shape', [(1,), (3, ), (4, 5), (3, 4, 5)])
+@pytest.mark.parametrize('op_name', ['ceil', 'floor', 'log'])
+def test_onnx_export_ufunc(tmp_path, dtype, shape, op_name):
+    x = mx.nd.random.uniform(-100, 100, shape=shape).astype(dtype)
+    M = def_model(op_name)
+    op_export_test(op_name, M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape_axis', [[(1, 1), None], [(3, 1, 2, 1), (None)], [(3, 1, 2, 1), (1)], 
+                            [(3, 1, 2, 1), (1, 3)]])
+def test_onnx_export_squeeze(tmp_path, dtype, shape_axis):
+    x = mx.nd.random.uniform(1, 100, shape=shape_axis[0]).astype(dtype)
+    M = def_model('squeeze', axis=shape_axis[1])
+    op_export_test('squeeze', M, [x], tmp_path)

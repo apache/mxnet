@@ -156,7 +156,6 @@ def create_basic_op_node(op_name, node, kwargs):
     """Helper function to create a basic operator
     node that doesn't contain op specific attrs"""
     name, input_nodes, _ = get_inputs(node, kwargs)
-
     node = onnx.helper.make_node(
         op_name,
         input_nodes,
@@ -1441,34 +1440,40 @@ def convert_min(node, **kwargs):
     """Map MXNet's min operator attributes to onnx's ReduceMin operator
     and return the created node.
     """
+    from onnx.helper import make_node, make_graph
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    mx_axis = attrs.get("axis", None)
-    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
 
     keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
-        node = onnx.helper.make_node(
-            'ReduceMin',
-            inputs=input_nodes,
-            outputs=[name],
-            axes=axes,
-            keepdims=keepdims,
-            name=name
-        )
-
-        return [node]
+        if keepdims:
+            node = make_node('ReduceMin', input_nodes, [name], axes=axes, keepdims=keepdims)
+            return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMin', input_nodes, [name+'_reduce'], axes=axes, keepdims=keepdims),
+                make_node('Shape', [name+'_reduce'], [name+'_reduce_shape']),
+                make_node('Concat', [name+'_1', name+'_reduce_shape'], [name+'_concat'], axis=0),
+                make_node('Reshape', [name+'_reduce', name+'_concat'], [name+'_reshape']),
+                make_node('Squeeze', [name+'_reshape'], [name], axes=[0]),
+            ]
+            return nodes     
     else:
-        node = onnx.helper.make_node(
-            'ReduceMin',
-            inputs=input_nodes,
-            outputs=[name],
-            keepdims=keepdims,
-            name=name
-        )
+        if keepdims:
+            node = make_node('ReduceMin', input_nodes, [name], keepdims=keepdims)
+            return [node]
 
-        return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMin', input_nodes, [name+'_rmin'], keepdims=keepdims),
+                make_node('Reshape', [name+'_rmin', name+'_1'], [name])
+            ]
+            return nodes
 
 
 @mx_op.register("max")
@@ -1476,34 +1481,40 @@ def convert_max(node, **kwargs):
     """Map MXNet's max operator attributes to onnx's ReduceMax operator
     and return the created node.
     """
+    from onnx.helper import make_node, make_graph
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    mx_axis = attrs.get("axis", None)
-    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
 
     keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
-        node = onnx.helper.make_node(
-            'ReduceMax',
-            inputs=input_nodes,
-            outputs=[name],
-            axes=axes,
-            keepdims=keepdims,
-            name=name
-        )
-
-        return [node]
+        if keepdims:
+            node = make_node('ReduceMax', input_nodes, [name], axes=axes, keepdims=keepdims)
+            return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMax', input_nodes, [name+'_reduce'], axes=axes, keepdims=keepdims),
+                make_node('Shape', [name+'_reduce'], [name+'_reduce_shape']),
+                make_node('Concat', [name+'_1', name+'_reduce_shape'], [name+'_concat'], axis=0),
+                make_node('Reshape', [name+'_reduce', name+'_concat'], [name+'_reshape']),
+                make_node('Squeeze', [name+'_reshape'], [name], axes=[0]),
+            ]
+            return nodes    
     else:
-        node = onnx.helper.make_node(
-            'ReduceMax',
-            inputs=input_nodes,
-            outputs=[name],
-            keepdims=keepdims,
-            name=name
-        )
+        if keepdims:
+            node = make_node('ReduceMax', input_nodes, [name], keepdims=keepdims)
+            return [node]
 
-        return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMax', input_nodes, [name+'_rmax'], keepdims=keepdims),
+                make_node('Reshape', [name+'_rmax', name+'_1'], [name])
+            ]
+            return nodes
 
 
 @mx_op.register("mean")
@@ -1511,34 +1522,40 @@ def convert_mean(node, **kwargs):
     """Map MXNet's mean operator attributes to onnx's ReduceMean operator
     and return the created node.
     """
+    from onnx.helper import make_node, make_graph
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    mx_axis = attrs.get("axis", None)
-    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
 
     keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
-        node = onnx.helper.make_node(
-            'ReduceMean',
-            inputs=input_nodes,
-            outputs=[name],
-            axes=axes,
-            keepdims=keepdims,
-            name=name
-        )
-
-        return [node]
+        if keepdims:
+            node = make_node('ReduceMean', input_nodes, [name], axes=axes, keepdims=keepdims)
+            return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMean', input_nodes, [name+'_reduce'], axes=axes, keepdims=keepdims),
+                make_node('Shape', [name+'_reduce'], [name+'_reduce_shape']),
+                make_node('Concat', [name+'_1', name+'_reduce_shape'], [name+'_concat'], axis=0),
+                make_node('Reshape', [name+'_reduce', name+'_concat'], [name+'_reshape']),
+                make_node('Squeeze', [name+'_reshape'], [name], axes=[0]),
+            ]
+            return nodes
     else:
-        node = onnx.helper.make_node(
-            'ReduceMean',
-            inputs=input_nodes,
-            outputs=[name],
-            keepdims=keepdims,
-            name=name
-        )
+        if keepdims:
+            node = make_node('ReduceMean', input_nodes, [name], keepdims=keepdims)
+            return [node]
 
-        return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMean', input_nodes, [name+'_reduce'], keepdims=keepdims),
+                make_node('Reshape', [name+'_reduce', name+'_1'], [name])
+            ]
+            return nodes
 
 
 @mx_op.register("prod")
@@ -1546,34 +1563,40 @@ def convert_prod(node, **kwargs):
     """Map MXNet's prod operator attributes to onnx's ReduceProd operator
     and return the created node.
     """
+    from onnx.helper import make_node, make_graph
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    mx_axis = attrs.get("axis", None)
-    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
 
     keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
-        node = onnx.helper.make_node(
-            'ReduceProd',
-            inputs=input_nodes,
-            outputs=[name],
-            axes=axes,
-            keepdims=keepdims,
-            name=name
-        )
-
-        return [node]
+        if keepdims:
+            node = make_node('ReduceProd', input_nodes, [name], axes=axes, keepdims=keepdims)
+            return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceProd', input_nodes, [name+'_reduce'], axes=axes, keepdims=keepdims),
+                make_node('Shape', [name+'_reduce'], [name+'_reduce_shape']),
+                make_node('Concat', [name+'_1', name+'_reduce_shape'], [name+'_concat'], axis=0),
+                make_node('Reshape', [name+'_reduce', name+'_concat'], [name+'_reshape']),
+                make_node('Squeeze', [name+'_reshape'], [name], axes=[0]),
+            ]
+            return nodes     
     else:
-        node = onnx.helper.make_node(
-            'ReduceProd',
-            inputs=input_nodes,
-            outputs=[name],
-            keepdims=keepdims,
-            name=name
-        )
+        if keepdims:
+            node = make_node('ReduceProd', input_nodes, [name], keepdims=keepdims)
+            return [node]
 
-        return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceProd', input_nodes, [name+'_reduce'], keepdims=keepdims),
+                make_node('Reshape', [name+'_reduce', name+'_1'], [name])
+            ]
+            return nodes
 
 
 # Arithmetic Operations
@@ -1966,8 +1989,10 @@ def convert_squeeze(node, **kwargs):
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    axis = attrs.get("axis", None)
-    if not axis:
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
+
+    if not axes:
         node = onnx.helper.make_node(
             "Squeeze",
             input_nodes,
@@ -1975,13 +2000,11 @@ def convert_squeeze(node, **kwargs):
             name=name
         )
     else:
-        axis = convert_string_to_list(axis)
-
         node = onnx.helper.make_node(
             "Squeeze",
             input_nodes,
             [name],
-            axes=axis,
+            axes=axes,
             name=name,
         )
     return [node]
