@@ -21,16 +21,18 @@ namespace MxNet.Gluon.NN
     {
         public delegate ndarray LambdaFn(ndarray x, params object[] args);
 
-        public Lambda(LambdaFn function) : base()
+        private object[] _args;
+        public Lambda(LambdaFn function, params object[] args) : base()
         {
             Function = function;
+            _args = args;
         }
 
         public LambdaFn Function { get; }
 
-        public override NDArrayOrSymbol Forward(NDArrayOrSymbolList inputs)
+        public override NDArrayOrSymbolList Forward(NDArrayOrSymbolList inputs)
         {
-            return Function(inputs[0]);
+            return Function(inputs[0], _args);
         }
 
         public override string ToString()

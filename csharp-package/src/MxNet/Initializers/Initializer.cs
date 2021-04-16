@@ -69,6 +69,12 @@ namespace MxNet.Initializers
                     return new Zero();
                 case "ones":
                     return new One();
+                case "normal":
+                    return new Normal();
+                case "uniform":
+                    return new Uniform();
+                case "orthogonal":
+                    return new Orthogonal();
                 default:
                     return null;
             }

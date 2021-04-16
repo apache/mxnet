@@ -48,11 +48,11 @@ namespace MxNet.Gluon.ModelZoo.Vision
         public HybridSequential Features { get; set; }
         public Dense Output { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList inputs)
         {
-            x = Features.Call(x, args);
-            x = Output.Call(x, args);
-            return x;
+            inputs = Features.Call(inputs);
+            inputs = Output.Call(inputs);
+            return inputs;
         }
 
         private HybridSequential MakeFeatures(int[] layers, int[] filters, bool batch_norm = false)

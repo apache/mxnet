@@ -51,15 +51,16 @@ namespace MxNet.Gluon.ModelZoo.Vision
             RegisterChild(output, "out");
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
-            var @out = output.Call(x, args);
+            var x = args[0];
+            var @out = output.Call(args);
             if (use_shortcut)
             {
                 if (x.IsNDArray)
-                    @out = nd.ElemwiseAdd(@out, x.NdX);
+                    @out = nd.ElemwiseAdd(@out[0], x.NdX);
                 else
-                    @out = sym.ElemwiseAdd(@out, x.SymX);
+                    @out = sym.ElemwiseAdd(@out[0], x.SymX);
             }
 
             return @out;
@@ -97,11 +98,11 @@ namespace MxNet.Gluon.ModelZoo.Vision
         public HybridSequential Features { get; set; }
         public Dense Output { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList inputs)
         {
-            x = Features.Call(x, args);
-            x = Output.Call(x, args);
-            return x;
+            inputs = Features.Call(inputs);
+            inputs = Output.Call(inputs);
+            return inputs;
         }
 
         internal static void AddConv(HybridSequential @out, int channels = 1, int kernel = 1, int stride = 1,

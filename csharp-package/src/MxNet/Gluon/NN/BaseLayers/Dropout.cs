@@ -27,8 +27,9 @@ namespace MxNet.Gluon.NN
 
         public Shape Axes { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
+            var x = args[0];
             if (Rate > 0)
             {
                 if (x.IsNDArray)

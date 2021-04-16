@@ -23,12 +23,12 @@ namespace MxNet.Gluon.NN
             return F.concatenate(@out, axis: this.axis);
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
             var @out = new NDArrayOrSymbolList();
             foreach (var block in this._childrens.Values)
             {
-                @out.Add(block.Call(x));
+                @out.Add(block.Call(args));
             }
 
             return F.concatenate(@out, axis: this.axis);

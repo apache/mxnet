@@ -608,10 +608,9 @@ namespace MxNet.Numpy
 
         public void Constant(float scalar)
         {
-            using (var op = new Operator("_set_value"))
-            {
-                op.Set(scalar).Invoke(this);
-            }
+            var x = np.full(this.shape, scalar, this.dtype, ctx: this.ctx);
+            this.NativePtr = x.NativePtr;
+            x.Dispose();
         }
 
         public ndarray SliceAxis(int axis, int begin, int? end)

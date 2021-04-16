@@ -47,14 +47,15 @@ namespace MxNet.Gluon.Probability
             return inner;
         }
 
-        public override NDArrayOrSymbol Call(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList Call(NDArrayOrSymbolList args)
         {
             this._flag = false;
-            var @out = base.Call(x, args);
+            var @out = base.Call(args);
             if (!this._flag)
             {
                 throw new Exception("The forward function should be decorated by " + "StochasticBlock.collectLoss");
             }
+
             this._losses = @out[1];
             return @out[0];
         }

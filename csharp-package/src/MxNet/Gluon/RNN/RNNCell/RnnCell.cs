@@ -54,7 +54,7 @@ namespace MxNet.Gluon.RNN
             return "rnn";
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x,
             NDArrayOrSymbolList args)
         {
             var prefix = $"t{_counter}_";
@@ -80,7 +80,7 @@ namespace MxNet.Gluon.RNN
                 output = Activation(i2h_plus_h2h, _activation, name: prefix + "out");
             }
 
-            return (output, new[] {output});
+            return (output, output);
         }
 
         internal static StateInfo[] CellsStateInfo(RecurrentCell[] cells, int batch_size)
@@ -91,16 +91,16 @@ namespace MxNet.Gluon.RNN
             return ret.ToArray();
         }
 
-        internal static NDArrayOrSymbol[] CellsBeginState(RecurrentCell[] cells, int batch_size, string state_func,
+        internal static NDArrayOrSymbolList CellsBeginState(RecurrentCell[] cells, int batch_size, string state_func,
             FuncArgs args = null)
         {
-            var ret = new List<NDArrayOrSymbol>();
-            foreach (var item in cells) ret.AddRange(item.BeginState(batch_size, state_func, args));
+            var ret = new NDArrayOrSymbolList();
+            foreach (var item in cells) ret.Add(item.BeginState(batch_size, state_func, args));
 
-            return ret.ToArray();
+            return ret;
         }
 
-        internal static NDArrayOrSymbol[] GetBeginState(RecurrentCell cell, NDArrayOrSymbol[] begin_state,
+        internal static NDArrayOrSymbolList GetBeginState(RecurrentCell cell, NDArrayOrSymbolList begin_state,
             NDArrayOrSymbol inputs, int batch_size)
         {
             if (begin_state != null)
@@ -121,8 +121,8 @@ namespace MxNet.Gluon.RNN
             return begin_state;
         }
 
-        internal static NDArrayOrSymbol[] GetBeginState(RecurrentCell cell, NDArrayOrSymbol[] begin_state,
-            NDArrayOrSymbol[] inputs, int batch_size)
+        internal static NDArrayOrSymbolList GetBeginState(RecurrentCell cell, NDArrayOrSymbolList begin_state,
+            NDArrayOrSymbolList inputs, int batch_size)
         {
             if (begin_state != null)
             {
@@ -142,14 +142,14 @@ namespace MxNet.Gluon.RNN
             return begin_state;
         }
 
-        internal static (NDArrayOrSymbol[], int, int) FormatSequence(int? length, NDArrayOrSymbol inputs, string layout,
+        internal static (NDArrayOrSymbolList, int, int) FormatSequence(int? length, NDArrayOrSymbol inputs, string layout,
             bool merge, string in_layout = null)
         {
             var axis = layout.IndexOf('T');
             var batch_axis = layout.IndexOf('N');
             var batch_size = 0;
             var in_axis = !string.IsNullOrWhiteSpace(in_layout) ? in_layout.IndexOf('T') : axis;
-            NDArrayOrSymbol[] data_inputs = null;
+            NDArrayOrSymbolList data_inputs = null;
             if (inputs.IsSymbol)
             {
                 if (!merge)
@@ -157,7 +157,7 @@ namespace MxNet.Gluon.RNN
                     if (inputs.SymX.ListOutputs().Count != 1)
                         throw new Exception("unroll doesn't allow grouped symbol as input. Please convert " +
                                             "to list with list(inputs) first or let unroll handle splitting.");
-                    data_inputs = new NDArrayOrSymbol[] {sym.Split(inputs.SymX, length.Value, in_axis, true)};
+                    data_inputs = new NDArrayOrSymbolList {sym.Split(inputs.SymX, length.Value, in_axis, true)};
                 }
             }
             else if (inputs.IsNDArray)
@@ -175,23 +175,23 @@ namespace MxNet.Gluon.RNN
             return (data_inputs, axis, batch_size);
         }
 
-        internal static (NDArrayOrSymbol[], int, int) FormatSequence(int? length, NDArrayOrSymbol[] inputs,
+        internal static (NDArrayOrSymbolList, int, int) FormatSequence(int? length, NDArrayOrSymbolList inputs,
             string layout, bool merge, string in_layout = null)
         {
             var axis = layout.IndexOf('T');
             NDArrayOrSymbol data_inputs = null;
             if (inputs[0].IsSymbol)
-                data_inputs = sym.Stack(inputs.ToList().ToSymbols(), inputs.Length, axis);
-            else if (inputs[0].IsNDArray) data_inputs = nd.Stack(inputs.ToList().ToNDArrays(), inputs.Length, axis);
+                data_inputs = sym.Stack(inputs.ToSymbols(), inputs.Length, axis);
+            else if (inputs[0].IsNDArray) data_inputs = nd.Stack(inputs.ToNDArrays(), inputs.Length, axis);
 
             return FormatSequence(length, data_inputs, layout, merge, in_layout);
         }
 
-        internal static NDArrayOrSymbol[] MaskSequenceVariableLength(NDArrayOrSymbol data, int length,
+        internal static NDArrayOrSymbolList MaskSequenceVariableLength(NDArrayOrSymbol data, int length,
             NDArrayOrSymbol valid_length, int time_axis, bool merge)
         {
             NDArrayOrSymbol outputs = null;
-            NDArrayOrSymbol[] ret = null;
+            NDArrayOrSymbolList ret = null;
             if (data.IsNDArray)
                 outputs = nd.SequenceMask(data, valid_length, true, time_axis);
             else
@@ -200,29 +200,29 @@ namespace MxNet.Gluon.RNN
             if (!merge)
             {
                 if (data.IsSymbol)
-                    ret = new NDArrayOrSymbol[] {sym.Split(data.SymX, length, time_axis, true)};
+                    ret = new NDArrayOrSymbolList {sym.Split(data.SymX, length, time_axis, true)};
                 else if (data.IsNDArray) ret = nd.Split(data, length, time_axis, true).NDArrayOrSymbols;
             }
 
             return ret;
         }
 
-        internal static NDArrayOrSymbol[] MaskSequenceVariableLength(NDArrayOrSymbol[] data, int length,
+        internal static NDArrayOrSymbolList MaskSequenceVariableLength(NDArrayOrSymbolList data, int length,
             NDArrayOrSymbol valid_length, int time_axis, bool merge)
         {
             NDArrayOrSymbol outputs = null;
             if (data[0].IsNDArray)
-                outputs = nd.Stack(data.ToList().ToNDArrays(), data.Length, time_axis);
+                outputs = nd.Stack(data.ToNDArrays(), data.Length, time_axis);
             else
-                outputs = sym.Stack(data.ToList().ToSymbols(), data.Length, time_axis);
+                outputs = sym.Stack(data.ToSymbols(), data.Length, time_axis);
 
             return MaskSequenceVariableLength(outputs, length, valid_length, time_axis, merge);
         }
 
-        internal static NDArrayOrSymbol[] _reverse_sequences(NDArrayOrSymbol[] sequences, int unroll_step,
+        internal static NDArrayOrSymbolList _reverse_sequences(NDArrayOrSymbolList sequences, int unroll_step,
             NDArrayOrSymbol valid_length = null)
         {
-            NDArrayOrSymbol[] reversed_sequences = null;
+            NDArrayOrSymbolList reversed_sequences = null;
             if (valid_length == null)
             {
                 reversed_sequences = sequences;
@@ -232,10 +232,10 @@ namespace MxNet.Gluon.RNN
             {
                 NDArrayOrSymbol seqRev = null;
                 if (sequences[0].IsNDArray)
-                    seqRev = nd.SequenceReverse(nd.Stack(sequences.ToList().ToNDArrays(), sequences.Length),
+                    seqRev = nd.SequenceReverse(nd.Stack(sequences.ToNDArrays(), sequences.Length),
                         valid_length, true);
                 else
-                    seqRev = sym.SequenceReverse(sym.Stack(sequences.ToList().ToSymbols(), sequences.Length),
+                    seqRev = sym.SequenceReverse(sym.Stack(sequences.ToSymbols(), sequences.Length),
                         valid_length, true);
 
 
@@ -244,19 +244,19 @@ namespace MxNet.Gluon.RNN
                     if (sequences[0].IsNDArray)
                         reversed_sequences = nd.Split(seqRev, unroll_step, 0, true).NDArrayOrSymbols;
                     else
-                        reversed_sequences = new NDArrayOrSymbol[] {sym.Split(seqRev, unroll_step, 0, true)};
+                        reversed_sequences = new NDArrayOrSymbolList {sym.Split(seqRev, unroll_step, 0, true)};
                 }
                 else
                 {
-                    reversed_sequences = new[] {seqRev};
+                    reversed_sequences = seqRev;
                 }
             }
 
             return reversed_sequences;
         }
 
-        internal static (NDArrayOrSymbol[], NDArrayOrSymbol[]) DynamicUnroll(RecurrentCell cell, NDArrayOrSymbol[] inputs,
-            NDArrayOrSymbol[] begin_state = null, int drop_inputs = 0, int drop_outputs = 0, string layout = "NTC", _Symbol valid_length = null)
+        internal static (NDArrayOrSymbolList, NDArrayOrSymbolList) DynamicUnroll(RecurrentCell cell, NDArrayOrSymbolList inputs,
+            NDArrayOrSymbolList begin_state = null, int drop_inputs = 0, int drop_outputs = 0, string layout = "NTC", _Symbol valid_length = null)
         {
             throw new NotImplementedException();
         }

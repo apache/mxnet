@@ -31,8 +31,9 @@ namespace MxNet.Gluon.NN
             return Enum.GetName(typeof(ActivationType), ActType);
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
+            var x = args[0];
             if (x.IsNDArray)
                 return nd.Activation(x.NdX, ActType);
 

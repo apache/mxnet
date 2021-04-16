@@ -38,9 +38,9 @@ namespace MxNet.Gluon.NN
         public bool Sparse_Grad { get; }
         public Parameter Weight { get; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
-            var weight = args[0];
+            var (x, weight) = args;
 
             if (x.IsNDArray)
                 return nd.Embedding(x.NdX, weight.NdX, Input_Dim, Output_Dim, Dtype, Sparse_Grad);

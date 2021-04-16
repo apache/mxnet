@@ -169,11 +169,12 @@ namespace MxNet.Gluon.ModelZoo.Vision
 
         public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList inputs)
         {
-            var residual = inputs[0];
+            var x = inputs[0];
+            var residual = F.copy(x);
 
             inputs = body.Call(inputs);
             if (ds != null)
-                residual = ds.Call(residual, inputs);
+                residual = ds.Call((residual, inputs));
 
             if (x.IsNDArray)
                 x = nd.Activation(x.NdX + residual.NdX, ActivationType.Relu);
@@ -213,26 +214,27 @@ namespace MxNet.Gluon.ModelZoo.Vision
                 ds = null;
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
-            var residual = x;
-            x = bn1.Call(x, args);
+            var x = args[0];
+            var residual = F.copy(x);
+            x = bn1.Call(x);
             if (x.IsNDArray)
                 x = nd.Activation(x.NdX, ActivationType.Relu);
             else
                 x = sym.Activation(x.SymX, ActivationType.Relu);
 
             if (ds != null)
-                residual = ds.Call(x, args);
+                residual = ds.Call(x);
 
-            x = conv1.Call(x, args);
+            x = conv1.Call(x);
 
-            x = bn2.Call(x, args);
+            x = bn2.Call(x);
             if (x.IsNDArray)
                 x = nd.Activation(x.NdX, ActivationType.Relu);
             else
                 x = sym.Activation(x.SymX, ActivationType.Relu);
-            x = conv2.Call(x, args);
+            x = conv2.Call(x);
 
             if (x.IsNDArray)
                 return x.NdX + residual.NdX;
@@ -275,13 +277,14 @@ namespace MxNet.Gluon.ModelZoo.Vision
             RegisterChild(body, "body");
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
-            var residual = x;
+            var x = args[0];
+            var residual = F.copy(x);
 
-            x = body.Call(x, args);
+            x = body.Call(x);
             if (ds != null)
-                residual = ds.Call(residual, args);
+                residual = ds.Call((residual, args));
 
             if (x.IsNDArray)
                 x = nd.Activation(x.NdX + residual.NdX, ActivationType.Relu);
@@ -329,38 +332,36 @@ namespace MxNet.Gluon.ModelZoo.Vision
 
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList inputs)
         {
-            var residual = x;
-            x = bn1.Call(x, args);
-            if (x.IsNDArray)
-                x = nd.Activation(x.NdX, ActivationType.Relu);
+            var residual =F.copy(inputs[0]);
+
+            inputs = bn1.Call(inputs);
+            if (inputs.IsNDArray)
+                inputs = nd.Activation(inputs[0], ActivationType.Relu);
             else
-                x = sym.Activation(x.SymX, ActivationType.Relu);
+                inputs = sym.Activation(inputs[0], ActivationType.Relu);
 
             if (ds != null)
-                residual = ds.Call(x, args);
+                residual = ds.Call(inputs);
 
-            x = conv1.Call(x, args);
+            inputs = conv1.Call(inputs);
 
-            x = bn2.Call(x, args);
-            if (x.IsNDArray)
-                x = nd.Activation(x.NdX, ActivationType.Relu);
+            inputs = bn2.Call(inputs);
+            if (inputs.IsNDArray)
+                inputs = nd.Activation(inputs[0], ActivationType.Relu);
             else
-                x = sym.Activation(x.SymX, ActivationType.Relu);
-            x = conv2.Call(x, args);
+                inputs = sym.Activation(inputs[0], ActivationType.Relu);
+            inputs = conv2.Call(inputs);
 
-            x = bn3.Call(x, args);
-            if (x.IsNDArray)
-                x = nd.Activation(x.NdX, ActivationType.Relu);
+            inputs = bn3.Call(inputs);
+            if (inputs.IsNDArray)
+                inputs = nd.Activation(inputs[0], ActivationType.Relu);
             else
-                x = sym.Activation(x.SymX, ActivationType.Relu);
-            x = conv3.Call(x, args);
+                inputs = sym.Activation(inputs[0], ActivationType.Relu);
+            inputs = conv3.Call(inputs);
 
-            if (x.IsNDArray)
-                return x.NdX + residual.NdX;
-
-            return x.SymX + residual.SymX;
+            return inputs[0] + residual;
         }
     }
 
@@ -403,11 +404,11 @@ namespace MxNet.Gluon.ModelZoo.Vision
         public HybridSequential Features { get; set; }
         public Dense Output { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList inputs)
         {
-            x = Features.Call(x, args);
-            x = Output.Call(x, args);
-            return x;
+            inputs = Features.Call(inputs);
+            inputs = Output.Call(inputs);
+            return inputs;
         }
 
         private HybridSequential MakeLayer(string block, int layers, int channels, int stride, int stage_index,
@@ -476,11 +477,11 @@ namespace MxNet.Gluon.ModelZoo.Vision
         public HybridSequential Features { get; set; }
         public Dense Output { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList inputs)
         {
-            x = Features.Call(x, args);
-            x = Output.Call(x, args);
-            return x;
+            inputs = Features.Call(inputs);
+            inputs = Output.Call(inputs);
+            return inputs;
         }
 
         private HybridSequential MakeLayer(string block, int layers, int channels, int stride, int stage_index,

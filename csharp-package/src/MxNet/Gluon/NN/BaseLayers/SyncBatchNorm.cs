@@ -40,12 +40,9 @@ namespace MxNet.Gluon.NN
             return num_devices;
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
-            var gamma = args.Length > 0 ? args[0] : null;
-            var beta = args.Length > 1 ? args[1] : null;
-            var running_mean = args.Length > 2 ? args[2] : null;
-            var running_var = args.Length > 3 ? args[3] : null;
+            var (x, gamma, beta, running_mean, running_var) = args;
 
             if (x.IsNDArray)
                 return nd.Contrib.SyncBatchNorm(x, gamma, beta, running_mean, running_var, "", Epsilon, Momentum, FixGamma,

@@ -42,13 +42,13 @@ namespace MxNet.Gluon.RNN
             return RNNCell.CellsStateInfo(_childrens.Values.ToArray(), batch_size);
         }
 
-        public override NDArrayOrSymbol[] BeginState(int batch_size = 0, string func = null, FuncArgs args = null)
+        public override NDArrayOrSymbolList BeginState(int batch_size = 0, string func = null, FuncArgs args = null)
         {
             return RNNCell.CellsBeginState(_childrens.Values.ToArray(), batch_size, func);
         }
 
-        public override (NDArrayOrSymbol[], NDArrayOrSymbol[]) Unroll(int length, NDArrayOrSymbol[] inputs,
-            NDArrayOrSymbol[] begin_state = null, string layout = "NTC", bool? merge_outputs = null,
+        public override (NDArrayOrSymbolList, NDArrayOrSymbolList) Unroll(int length, NDArrayOrSymbolList inputs,
+            NDArrayOrSymbolList begin_state = null, string layout = "NTC", bool? merge_outputs = null,
             _Symbol valid_length = null)
         {
             Reset();
@@ -61,9 +61,9 @@ namespace MxNet.Gluon.RNN
             var l_cell = _childrens["l_cell"];
             var r_cell = _childrens["r_cell"];
 
-            var (l_outputs, l_states) = l_cell.Unroll(length, inputs, states.Take(l_cell.StateInfo().Length).ToArray(),
+            var (l_outputs, l_states) = l_cell.Unroll(length, inputs, states.Take(l_cell.StateInfo().Length).ToList(),
                 layout, merge_outputs, valid_length);
-            var (r_outputs, r_states) = r_cell.Unroll(length, inputs, states.Skip(l_cell.StateInfo().Length).ToArray(),
+            var (r_outputs, r_states) = r_cell.Unroll(length, inputs, states.Skip(l_cell.StateInfo().Length).ToList(),
                 layout, merge_outputs, valid_length);
 
             var reversed_r_outputs = RNNCell._reverse_sequences(r_outputs, length, valid_length);
@@ -76,26 +76,26 @@ namespace MxNet.Gluon.RNN
                     RNNCell.FormatSequence(null, reversed_r_outputs, layout, merge_outputs.Value);
             }
 
-            NDArrayOrSymbol[] outputs = null;
+            NDArrayOrSymbolList outputs = null;
             if (merge_outputs.Value)
             {
                 if (reversed_r_outputs[0].IsNDArray)
-                    reversed_r_outputs = new NDArrayOrSymbol[]
-                        {nd.Stack(reversed_r_outputs.ToList().ToNDArrays(), reversed_r_outputs.Length, axis)};
+                    reversed_r_outputs = new NDArrayOrSymbolList
+                        {nd.Stack(reversed_r_outputs.ToNDArrays(), reversed_r_outputs.Length, axis)};
                 else
-                    reversed_r_outputs = new NDArrayOrSymbol[]
-                        {sym.Stack(reversed_r_outputs.ToList().ToSymbols(), reversed_r_outputs.Length, axis)};
+                    reversed_r_outputs = new NDArrayOrSymbolList
+                        {sym.Stack(reversed_r_outputs.ToSymbols(), reversed_r_outputs.Length, axis)};
 
-                var concatList = l_outputs.ToList();
-                concatList.AddRange(reversed_r_outputs);
+                var concatList = l_outputs;
+                concatList.Add(reversed_r_outputs);
                 if (reversed_r_outputs[0].IsNDArray)
-                    outputs = new NDArrayOrSymbol[] {nd.Concat(concatList.ToList().ToNDArrays(), 2)};
+                    outputs = new NDArrayOrSymbolList {nd.Concat(concatList.ToNDArrays(), 2)};
                 else
-                    outputs = new NDArrayOrSymbol[] {sym.Concat(concatList.ToList().ToSymbols(), 2)};
+                    outputs = new NDArrayOrSymbolList {sym.Concat(concatList.ToSymbols(), 2)};
             }
             else
             {
-                var outputs_temp = new List<NDArrayOrSymbol>();
+                var outputs_temp = new NDArrayOrSymbolList();
                 for (var i = 0; i < l_outputs.Length; i++)
                 {
                     var l_o = l_outputs[i];
@@ -106,8 +106,8 @@ namespace MxNet.Gluon.RNN
                         outputs_temp.Add(sym.Concat(new SymbolList {l_o, r_o}, 1, symbol_name: $"{_output_prefix}t{i}"));
                 }
 
-                outputs = outputs_temp.ToArray();
-                outputs_temp.Clear();
+                outputs = outputs_temp;
+                outputs_temp = new NDArrayOrSymbolList();
             }
 
 
@@ -118,10 +118,10 @@ namespace MxNet.Gluon.RNN
             states.AddRange(l_states);
             states.AddRange(r_states);
 
-            return (outputs, states.ToArray());
+            return (outputs, states);
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x,
             NDArrayOrSymbolList args)
         {
             return default;

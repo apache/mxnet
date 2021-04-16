@@ -83,7 +83,7 @@ namespace MxNet.Gluon.RNN
             this["h2h_bias"] = new Parameter("h2h_bias", shape: new Shape(hidden_channels * this.NumGates), init: h2h_bias_initializer, allow_deferred_init: true);
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             throw new NotSupportedException();
         }
@@ -169,7 +169,7 @@ namespace MxNet.Gluon.RNN
         {
             var i2h = F.convolution(data: inputs, num_filter: this._hidden_channels * this.NumGates, kernel: this._i2h_kernel, stride: this._stride, pad: this._i2h_pad, dilate: this._i2h_dilate, weight: i2h_weight, bias: i2h_bias, layout: this._conv_layout);
             var h2h = F.convolution(data: states[0], num_filter: this._hidden_channels * this.NumGates, kernel: this._h2h_kernel, dilate: this._h2h_dilate, pad: this._h2h_pad, stride: this._stride, weight: h2h_weight, bias: h2h_bias, layout: this._conv_layout);
-            return new NDArrayOrSymbol[] { i2h, h2h };
+            return new NDArrayOrSymbolList() { i2h, h2h };
         }
     }
 }

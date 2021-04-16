@@ -41,10 +41,9 @@ namespace MxNet.Gluon.NN
         public Parameter Gamma { get; set; }
         public Parameter Beta { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
-            var gamma = args[0];
-            var beta = args[1];
+            var (x, gamma, beta) = args;
 
             if (x.IsNDArray)
                 return nd.GroupNorm(x.NdX, gamma.NdX, beta.NdX, Epsilon);

@@ -180,13 +180,13 @@ namespace MxNet.Gluon.RNN
             return inputs;
         }
 
-        public virtual NDArrayOrSymbol[] BeginState(int batch_size = 0, string func = null, FuncArgs args = null)
+        public virtual NDArrayOrSymbolList BeginState(int batch_size = 0, string func = null, FuncArgs args = null)
         {
             if (_modified)
                 throw new Exception("After applying modifier cells (e.g. ZoneoutCell) the base " +
                                     "cell cannot be called directly. Call the modifier cell instead.");
 
-            var states = new List<NDArrayOrSymbol>();
+            var states = new NDArrayOrSymbolList();
             var state_info = StateInfo(batch_size);
             for (var i = 0; i < state_info.Length; i++)
             {
@@ -216,11 +216,11 @@ namespace MxNet.Gluon.RNN
                 }
             }
 
-            return states.ToArray();
+            return states;
         }
 
-        public virtual (NDArrayOrSymbol[], NDArrayOrSymbol[]) Unroll(int length, NDArrayOrSymbol[] inputs,
-            NDArrayOrSymbol[] begin_state = null,
+        public virtual (NDArrayOrSymbolList, NDArrayOrSymbolList) Unroll(int length, NDArrayOrSymbolList inputs,
+            NDArrayOrSymbolList begin_state = null,
             string layout = "NTC", bool? merge_outputs = null, _Symbol valid_length = null)
         {
             if (!inputs[0].IsSymbol)
@@ -230,11 +230,11 @@ namespace MxNet.Gluon.RNN
             var (f_inputs, axis, batch_size) = RNNCell.FormatSequence(length, inputs, layout, false);
             begin_state = RNNCell.GetBeginState(this, begin_state, f_inputs, batch_size);
             var states = begin_state;
-            var outputs = new List<NDArrayOrSymbol>();
-            var all_states = new List<NDArrayOrSymbol[]>();
+            var outputs = new NDArrayOrSymbolList();
+            var all_states = new List<NDArrayOrSymbolList>();
             for (var i = 0; i < length; i++)
             {
-                var (output, u_states) = Unroll(1, new[] {inputs[i]}, states);
+                var (output, u_states) = Unroll(1, inputs[i], states);
                 outputs.Add(output[0]);
                 if (valid_length != null)
                     all_states.Add(u_states);
@@ -242,16 +242,15 @@ namespace MxNet.Gluon.RNN
 
             if (valid_length != null)
             {
-                states = all_states
-                    .Select(ele_list => sym.SequenceLast(sym.Stack(ele_list.ToList().ToSymbols(), ele_list.Length),
-                        valid_length, true)).ToList().ToNDArrayOrSymbols();
+                states = new NDArrayOrSymbolList(all_states
+                    .Select(ele_list => sym.SequenceLast(sym.Stack(ele_list.ToSymbols(), ele_list.Length),
+                        valid_length, true)).ToArray());
 
-                outputs = RNNCell.MaskSequenceVariableLength(outputs.ToArray(), length, valid_length, axis, true)
-                    .ToList();
+                outputs = RNNCell.MaskSequenceVariableLength(outputs, length, valid_length, axis, true);
             }
 
-            outputs = RNNCell.FormatSequence(length, outputs.ToArray(), layout, merge_outputs.Value).Item1.ToList();
-            return (outputs.ToArray(), states);
+            outputs = RNNCell.FormatSequence(length, outputs, layout, merge_outputs.Value).Item1;
+            return (outputs, states);
         }
 
         internal _Symbol Activation(_Symbol input, string activation, FuncArgs args = null, string name = "")

@@ -93,7 +93,7 @@ namespace MxNet
 
         }
 
-        public NDArrayOrSymbol[] NDArrayOrSymbols => data.Select(x => new NDArrayOrSymbol(x)).ToArray();
+        public NDArrayOrSymbolList NDArrayOrSymbols => data.Select(x => new NDArrayOrSymbol(x)).ToList();
 
         public ndarray this[int i]
         {
@@ -146,7 +146,7 @@ namespace MxNet
             return new NDArrayList(x.ToArray());
         }
 
-        public static implicit operator NDArrayList(NDArrayOrSymbol[] x)
+        public static implicit operator NDArrayList(NDArrayOrSymbolList x)
         {
             return new NDArrayList(x.Select(i => i.NdX).ToArray());
         }
@@ -154,11 +154,6 @@ namespace MxNet
         public static implicit operator NDArrayList(NDArrayOrSymbol x)
         {
             return new NDArrayList(x);
-        }
-
-        public static implicit operator NDArrayList(List<NDArrayOrSymbol> x)
-        {
-            return new NDArrayList(x.Select(i => i.NdX).ToArray());
         }
 
         public static implicit operator ndarray(NDArrayList x)

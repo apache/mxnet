@@ -22,7 +22,7 @@ using MxNet.Numpy;
 
 namespace MxNet.Gluon
 {
-    public class ParameterDict : Dictionary<string, Parameter>
+    public class ParameterDict : IEnumerable<KeyValuePair<string, Parameter>>
     {
         private readonly Dictionary<string, Parameter> _params;
 
@@ -37,7 +37,7 @@ namespace MxNet.Gluon
 
         public ParameterDict Shared { get; }
 
-        public new Parameter this[string name]
+        public Parameter this[string name]
         {
             get
             {
@@ -50,15 +50,22 @@ namespace MxNet.Gluon
 
                 return null;
             }
-            set => _params[name] = value;
+            set
+            {
+                if (_params.ContainsKey(name))
+                    _params[name] = value;
+                else
+                    _params.Add(name, value);
+
+            }
         }
 
-        public new string[] Keys()
+        public string[] Keys()
         {
             return _params.Keys.ToArray();
         }
 
-        public new Parameter[] Values()
+        public Parameter[] Values()
         {
             return _params.Values.ToArray();
         }
@@ -71,6 +78,21 @@ namespace MxNet.Gluon
         public bool Contains(string key)
         {
             return _params.ContainsKey(key);
+        }
+
+        public bool Contains(Parameter value)
+        {
+            return _params.Values.Where(x => x.Name == value.Name).Count() > 0;
+        }
+
+        public void Add(string name, Parameter value)
+        {
+            _params.Add(name, value);
+        }
+
+        public void Clear()
+        {
+            _params.Clear();
         }
 
         public Parameter GetConstant(string name, ndarray value = null)
@@ -233,6 +255,16 @@ namespace MxNet.Gluon
 
                 this[name].LoadInit(arg_dict[name], ctx, cast_dtype, dtype_source);
             }
+        }
+
+        public IEnumerator<KeyValuePair<string, Parameter>> GetEnumerator()
+        {
+            return _params.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

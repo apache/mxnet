@@ -100,7 +100,7 @@ namespace MxNet.Gluon
                 var inputs = new SymbolList();
                 var (flatten_args, _in_format) = Flatten(args, "input");
 
-                var flatten_inputs = new List<NDArrayOrSymbol[]>();
+                var flatten_inputs = new List<NDArrayOrSymbolList>();
                 var symbol_inputs = new List<_Symbol>();
                 var cnt = 0;
                 var real_arg_num = flatten_args.Select(x => x != null).Count();
@@ -124,7 +124,7 @@ namespace MxNet.Gluon
                         }
 
                         cnt += 1;
-                        flatten_inputs.Add(new NDArrayOrSymbol[] { arg_sym });
+                        flatten_inputs.Add(new NDArrayOrSymbolList { arg_sym });
                         symbol_inputs.Add(arg_sym);
                     }
                     else
@@ -134,18 +134,18 @@ namespace MxNet.Gluon
                 }
 
                 var grouped_inputs = Regroup(flatten_inputs, this._in_format).Item1;
-                var outputs = new List<NDArrayOrSymbol>();
+                var outputs = new NDArrayOrSymbolList();
                 using (var _ = new _BlockScope(this))
                 {
                     var @params = new SymbolDict();
                     foreach (var item in _reg_params) @params[item.Key] = item.Value.Var();
 
                     foreach (var input in grouped_inputs)
-                        outputs.Add(HybridForward(input, @params.Values.ToNDArrayOrSymbols()));
+                        outputs.Add(HybridForward((input, new NDArrayOrSymbol(@params.Values))));
                 }
 
-                var (@out, _out_format) = Flatten(outputs.ToArray(), "output");
-                _cached_graph = (inputs, _Symbol.Group(@out.ToList().ToSymbols()));
+                var (@out, _out_format) = Flatten(outputs, "output");
+                _cached_graph = (inputs, _Symbol.Group(@out.ToSymbols()));
             }
 
             return _cached_graph.Value;
@@ -159,36 +159,36 @@ namespace MxNet.Gluon
                 var inputs = new SymbolList();
                 var (flatten_args, _in_format) = Flatten(args, "input");
                 flatten_args = new NDArrayOrSymbolList((from ele in flatten_args
-                                                        select ele != null ? ele.NdX.Detach() : null).ToArray()).ToArray();
-                var real_args = (from ele in flatten_args
+                                                        select ele != null ? ele.NdX.Detach() : null).ToArray());
+                NDArrayOrSymbolList real_args = (from ele in flatten_args
                                  where ele != null
                                  select ele).ToList();
-                if (real_args.Count == 0)
+                if (real_args.Length == 0)
                 {
                     throw new Exception("All args are None and we do not support such a case.");
                 }
-                if (real_args.Count == 1)
+                if (real_args.Length == 1)
                 {
                     arg_names = new List<string> { "data" };
                 }
                 else
                 {
-                    for(int i = 0; i<real_args.Count; i++)
+                    for (int i = 0; i < real_args.Length; i++)
                     {
                         arg_names.Add($"data{i}");
                     }
                 }
 
                 SymbolList symbol_inputs = new SymbolList();
-                for(int i = 0; i< real_args.Count; i++)
+                for(int i = 0; i< real_args.Length; i++)
                 {
                     var name = arg_names[i];
                     var arg = real_args[i];
                     symbol_inputs.Add(_Symbol.Var(name));
                 }
 
-                DeferredCompute.SetVariable(real_args, symbol_inputs);
-                args = Regroup(new List<NDArrayOrSymbol[]> { flatten_args.ToArray() }, this._in_format).Item1;
+                DeferredCompute.SetVariable(real_args.NDArrays, symbol_inputs);
+                args = Regroup(new List<NDArrayOrSymbolList> { flatten_args }, this._in_format).Item1;
                 NDArrayOrSymbolList @out;
                 using(var ag = Autograd.Pause())
                 {
@@ -508,7 +508,7 @@ namespace MxNet.Gluon
                          select is_arg ? args_without_none[_tup_4.Index].NdX : _tup_4.Param.Data()).ToList();
 
             var @out = _cached_op.Call(cargs);
-            return Regroup(new List<NDArrayOrSymbol[]> { @out.NDArrayOrSymbols }, _out_format).Item1;
+            return Regroup(new List<NDArrayOrSymbolList> { @out.NDArrayOrSymbols }, _out_format).Item1;
         }
 
         public void OptimizeFor(ndarray x, string backend = null, bool clear = false, bool partition_if_dynamic = true, bool static_alloc = false,
@@ -529,7 +529,7 @@ namespace MxNet.Gluon
             };
 
             if (args != null)
-                inputs.Add(args.ToNDArrayOrSymbols());
+                inputs.Add(args);
 
             // do part of forward API call
             var _tup_1 = GatherTypeCtxInfo(inputs);
@@ -677,7 +677,7 @@ namespace MxNet.Gluon
             }
             else
             {
-                var @params = (from p in this._reg_params.Values
+                var @params = (from p in this._reg_params.Values()
                               where !Utils.ShapeIsKnown(p.Shape)
                               select p).ToList();
 
@@ -862,15 +862,15 @@ namespace MxNet.Gluon
                     foreach (var p in _reg_params) @params[p.Key] = p.Value.Data(ctx);
                 }
 
-                inputs.Add(@params.Values.ToArray());
-                return HybridForward(x, argsList.ToArray());
+                inputs.Add(@params.Values.ToList());
+                return HybridForward(inputs);
             }
 
             using (var b = new _BlockScope(this))
             {
                 foreach (var p in _reg_params) @params[p.Key] = p.Value.Var();
-                argsList.AddRange(@params.Values.ToArray());
-                return HybridForward(x, argsList.ToArray());
+                inputs.Add(@params.Values.ToList());
+                return HybridForward(inputs);
             }
         }
 
@@ -891,7 +891,7 @@ namespace MxNet.Gluon
 
                 if (!this._called_infer_shape_already)
                 {
-                    foreach (var p in this._reg_params.Values)
+                    foreach (var p in this._reg_params.Values())
                     {
                         p.FinishDeferredInit();
                     }

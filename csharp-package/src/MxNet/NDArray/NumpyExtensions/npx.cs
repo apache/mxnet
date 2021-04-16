@@ -52,12 +52,12 @@ namespace MxNet.ND.Numpy
 
         public static ndarray fully_connected(ndarray x, ndarray weight, ndarray bias, int num_hidden, bool no_bias= true, bool flatten= true)
         {
-            return _api_internal.dropout(data: x, weight: weight, bias: bias, num_hidden: num_hidden, no_bias: no_bias, flatten: flatten);
+            return _api_internal.fully_connected(data: x, weight: weight, bias: bias, num_hidden: num_hidden, no_bias: no_bias, flatten: flatten);
         }
 
         public static ndarray layer_norm(ndarray data, ndarray gamma, ndarray beta, int axis= -1, float eps= 9.99999975e-06f, bool output_mean_var= false)
         {
-            return _api_internal.dropout(data: data, gamma: gamma, beta: beta, axis: axis, eps: eps, output_mean_var: output_mean_var);
+            return _api_internal.layer_norm(data: data, gamma: gamma, beta: beta, axis: axis, eps: eps, output_mean_var: output_mean_var);
         }
 
         public static ndarray pooling(ndarray data, int[] kernel, int[] stride = null, int[] pad = null, string pool_type = "max",
@@ -115,7 +115,7 @@ namespace MxNet.ND.Numpy
 
         public static ndarray smooth_l1(ndarray data, float scalar)
         {
-            return _api_internal.roi_pooling(data: data, scalar: scalar);
+            return _api_internal.smooth_l1(data: data, scalar: scalar);
         }
 
         public static ndarray sigmoid(ndarray data)
@@ -160,7 +160,7 @@ namespace MxNet.ND.Numpy
 
         public static ndarray pick(ndarray data, ndarray index, int axis= -1, string mode= "clip", bool keepdims= false)
         {
-            return _api_internal.one_hot(data: data, index: index, axis: axis, mode: keepdims, dtype: keepdims);
+            return _api_internal.pick(data: data, index: index, axis: axis, mode: keepdims, dtype: keepdims);
         }
 
         public static ndarray reshape_like(ndarray lhs, ndarray rhs, int? lhs_begin = null, int? lhs_end = null, int? rhs_begin = null, int? rhs_end = null)

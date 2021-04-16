@@ -39,7 +39,7 @@ namespace MxNet.Gluon.RNN
             return "conv_rnn";
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var prefix = $"t{this._counter}_";
             var states = args[0];
@@ -51,7 +51,7 @@ namespace MxNet.Gluon.RNN
             var i2h = _tup_1[0];
             var h2h = _tup_1[1];
             var output = F.activation(i2h + h2h, this._activation);
-            return (output, new NDArrayOrSymbol[] { output });
+            return (output, new NDArrayOrSymbolList { output });
         }
     }
 }

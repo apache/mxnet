@@ -21,8 +21,9 @@ namespace MxNet.Gluon.NN
         {
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
+            var x = args[0];
             return x * F.sigmoid(x);
         }
 

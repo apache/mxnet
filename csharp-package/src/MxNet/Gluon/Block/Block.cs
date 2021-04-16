@@ -37,7 +37,7 @@ namespace MxNet.Gluon
         public Dictionary<string, Block> _childrens;
         internal Dictionary<int, Hook> _forward_hooks;
         internal Dictionary<int, Hook> _forward_pre_hooks;
-        internal Dictionary<string, Parameter> _reg_params;
+        internal ParameterDict _reg_params;
         internal bool _monitor_all;
         internal Action<string, string, ndarray> _callback;
         public List<int> _in_format;
@@ -47,7 +47,7 @@ namespace MxNet.Gluon
         {
             
             _childrens = new Dictionary<string, Block>();
-            _reg_params = new Dictionary<string, Parameter>();
+            _reg_params = new ParameterDict();
             _forward_hooks = new Dictionary<int, Hook>();
             _forward_pre_hooks = new Dictionary<int, Hook>();
             Params = new ParameterDict();
@@ -95,7 +95,7 @@ namespace MxNet.Gluon
 
         public void SetAttr(string name, Parameter value)
         {
-            if (_reg_params.ContainsKey(name))
+            if (_reg_params.Contains(name))
                 throw new Exception("Overriding Parameter attribute %s is not allowed. " +
                                     "If you want to share parameters between blocks, please set " +
                                     "'params' at Block construction instead.");
@@ -201,7 +201,7 @@ namespace MxNet.Gluon
                 ParameterDict reverse_params = new ParameterDict();
                 foreach (var item in collected_params)
                 {
-                    if(!reverse_params.ContainsValue(item.Value))
+                    if(!reverse_params.Contains(item.Value))
                     {
                         reverse_params.Add(item.Key, item.Value);
                     }
@@ -265,11 +265,11 @@ namespace MxNet.Gluon
 
             foreach (var name in loaded.Keys)
             {
-                if (!ignore_extra && !@params.ContainsKey(name)) {
+                if (!ignore_extra && !@params.Contains(name)) {
                     throw new Exception($"Parameter '{name}' loaded from '{error_str}' is not present in Dict, which contains parameters {string.Join(",", loaded.Keys)}. Set ignore_extra=True to ignore. ");
                 }
 
-                if (@params.ContainsKey(name)) {
+                if (@params.Contains(name)) {
                     var param = loaded[name];
                     @params[name].LoadInit(param, new Context[] { ctx }, cast_dtype: cast_dtype, dtype_source: dtype_source);
                 }
@@ -471,7 +471,7 @@ namespace MxNet.Gluon
                     var g = grads[i];
                     if (g.stype == StorageStype.RowSparse)
                     {
-                        g = nd.ZerosLike(g);
+                        g = np.zeros_like(g);
                     }
                     else
                     {
@@ -531,7 +531,7 @@ namespace MxNet.Gluon
 
         internal static (NDArrayOrSymbolList, int[]) Flatten(NDArrayOrSymbolList args, string inout_str)
         {
-            var flat = new List<NDArrayOrSymbol>();
+            var flat = new NDArrayOrSymbolList();
             var fmts = new List<int>();
             foreach (var arg in args)
                 if (arg.IsNDArray)
@@ -546,32 +546,32 @@ namespace MxNet.Gluon
                     fmts.Add(len);
                 }
 
-            return (flat.ToArray(), fmts.ToArray());
+            return (flat, fmts.ToArray());
         }
 
-        internal static (NDArrayOrSymbol[], NDArrayOrSymbol[]) Regroup(List<NDArrayOrSymbol[]> args, List<int> fmt)
+        internal static (NDArrayOrSymbolList, NDArrayOrSymbolList) Regroup(List<NDArrayOrSymbolList> args, List<int> fmt)
         {
-            var ret = new List<NDArrayOrSymbol>();
-            var args_ret = new List<NDArrayOrSymbol>();
+            var ret = new NDArrayOrSymbolList();
+            var args_ret = new NDArrayOrSymbolList();
 
             foreach (var i in fmt)
             {
                 if (i == 0)
                 {
-                    ret.AddRange(args[0]);
-                    foreach (var item in args.Skip(1)) args_ret.AddRange(item);
+                    ret.Add(args[0]);
+                    foreach (var item in args.Skip(1)) args_ret.Add(item);
 
                     continue;
                 }
 
                 for (var j = 0; j < i; j++)
-                    ret.AddRange(args[j]);
+                    ret.Add(args[j]);
 
                 for (var j = i; j < args.Count; j++)
-                    args_ret.AddRange(args[j]);
+                    args_ret.Add(args[j]);
             }
 
-            return (ret.ToArray(), args_ret.ToArray());
+            return (ret, args_ret);
         }
 
         internal static string CommonPrefix(string[] names)

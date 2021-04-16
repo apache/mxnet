@@ -76,11 +76,11 @@ namespace MxNet.Gluon.ModelZoo.Vision
         public HybridSequential Features { get; set; }
         public HybridSequential Output { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList inputs)
         {
-            x = Features.Call(x, args);
-            x = Output.Call(x, args);
-            return x;
+            inputs = Features.Call(inputs);
+            inputs = Output.Call(inputs);
+            return inputs;
         }
 
         private HybridSequential MakeFire(int squeeze_channels, int expand1x1_channels, int expand3x3_channels)

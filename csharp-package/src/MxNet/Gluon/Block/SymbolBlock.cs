@@ -33,10 +33,10 @@ namespace MxNet.Gluon
             SymbolList syms = null;
             _Symbol @out = null;
 
-            var (s, _in_format) = Flatten(inputs.ToNDArrayOrSymbols(), "input");
-            var (o, _out_format) = Flatten(outputs.ToNDArrayOrSymbols(), "output");
-            syms = s.ToList().ToSymbols();
-            @out = _Symbol.Group(o.ToList().ToSymbols());
+            var (s, _in_format) = Flatten(inputs, "input");
+            var (o, _out_format) = Flatten(outputs, "output");
+            syms = s.ToSymbols();
+            @out = _Symbol.Group(o.ToSymbols());
 
             List<string> input_names = new List<string>();
             foreach (var item in syms)
@@ -89,7 +89,7 @@ namespace MxNet.Gluon
 
             _cached_graph = (syms, @out);
             int len_prefix = CommonPrefix(Params.Keys()).Length;
-            _reg_params = new Dictionary<string, Parameter>();
+            _reg_params = new ParameterDict();
             foreach (var item in Params)
             {
                 _reg_params.Add(item.Key.Remove(0, len_prefix), item.Value);
@@ -113,7 +113,7 @@ namespace MxNet.Gluon
                 return CallCachedOp(inputs);
             }
 
-            var (args, in_fmt) = Flatten(inputs.ToArray(), "input");
+            var (args, in_fmt) = Flatten(inputs, "input");
             if (in_fmt != _in_format.ToArray())
                 throw new Exception("Invalid input format");
 
@@ -126,7 +126,7 @@ namespace MxNet.Gluon
 
             ret.Compose(composeArgs);
 
-            return Regroup(new List<NDArrayOrSymbol[]>() { new NDArrayOrSymbol[] { ret } }, _out_format.ToList()).Item1[0];
+            return Regroup(new List<NDArrayOrSymbolList>() { new NDArrayOrSymbolList { ret } }, _out_format.ToList()).Item1[0];
         }
 
         public static SymbolBlock Imports(string symbol_file, string[] input_names, string param_file = null,

@@ -49,16 +49,11 @@ namespace MxNet.Gluon.NN
 
         public int InUnits { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
             NDArrayOrSymbol output = null;
-            var weight = args[0];
-            var bias = args.Length > 1 ? args[1] : null;
-            if (x.IsNDArray)
-                output = nd.FullyConnected(x.NdX, weight, bias, Units, !UseBias, Flatten_);
-
-            if (x.IsSymbol)
-                output = sym.FullyConnected(x.SymX, weight, bias, Units, !UseBias, Flatten_);
+            var (x, weight, bias) = args;
+            output = F.fully_connected(x, weight, bias, Units, !UseBias, Flatten_);
 
             if (Act != null)
                 output = Act.HybridForward(output);

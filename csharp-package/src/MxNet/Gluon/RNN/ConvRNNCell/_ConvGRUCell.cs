@@ -40,7 +40,7 @@ namespace MxNet.Gluon.RNN.ConvRNNCell
             return "conv_gru";
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var states = args[0];
             var i2h_weight = args[1];

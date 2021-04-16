@@ -24,20 +24,19 @@ namespace MxNet.Gluon.RNN
         {
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
-            NDArrayOrSymbolList args)
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
-            var (output, states) = BaseCell.Call(x, args);
+            var (output, states) = BaseCell.Call((x, args));
             if (x.IsNDArray)
                 output = nd.ElemwiseAdd(output, x);
             else
                 output = sym.ElemwiseAdd(output, x, $"t{_counter}_fwd");
 
-            return (output, states);
+            return (output, states.List);
         }
 
-        public override (NDArrayOrSymbol[], NDArrayOrSymbol[]) Unroll(int length, NDArrayOrSymbol[] inputs,
-            NDArrayOrSymbol[] begin_state = null, string layout = "NTC", bool? merge_outputs = null,
+        public override (NDArrayOrSymbolList, NDArrayOrSymbolList) Unroll(int length, NDArrayOrSymbolList inputs,
+            NDArrayOrSymbolList begin_state = null, string layout = "NTC", bool? merge_outputs = null,
             _Symbol valid_length = null)
         {
             Reset();
@@ -54,7 +53,7 @@ namespace MxNet.Gluon.RNN
                         return new NDArrayOrSymbol(nd.ElemwiseAdd(i, j));
 
                     return new NDArrayOrSymbol(sym.ElemwiseAdd(i, j));
-                }).ToArray();
+                }).ToList();
 
             return (outputs, states);
         }

@@ -56,7 +56,7 @@ namespace MxNet.Gluon.RNN
             return "lstmp";
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x,
             NDArrayOrSymbolList args)
         {
             throw new NotImplementedException();

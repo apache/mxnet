@@ -162,6 +162,17 @@ namespace MxNet
             }
         }
 
+        public NDArrayOrSymbolList List
+        {
+            get
+            {
+                if (IsNDArray)
+                    return NdXList;
+
+                return SymXList;
+            }
+        }
+
         public NDArrayOrSymbol Reshape(params int[] shape)
         {
             return F.reshape(this, new Shape(shape));
@@ -209,31 +220,15 @@ namespace MxNet
             return x.SymX;
         }
 
+        public static implicit operator NDArrayOrSymbol(NDArrayOrSymbolList x)
+        {
+            return x[0];
+        }
+
         public static implicit operator NDArrayOrSymbol(float x)
         {
             ndarray array = new ndarray(new float[] { x });
             return array;
-        }
-
-        public void Deconstruct(out NDArrayOrSymbol x0, out NDArrayOrSymbol x1)
-        {
-            x0 = this[0];
-            x1 = this[1];
-        }
-
-        public void Deconstruct(out NDArrayOrSymbol x0, out NDArrayOrSymbol x1, out NDArrayOrSymbol x2)
-        {
-            x0 = this[0];
-            x1 = this[1];
-            x2 = this[2];
-        }
-
-        public void Deconstruct(out NDArrayOrSymbol x0, out NDArrayOrSymbol x1, out NDArrayOrSymbol x2, out NDArrayOrSymbol x3)
-        {
-            x0 = this[0];
-            x1 = this[1];
-            x2 = this[2];
-            x3 = this[3];
         }
 
         #region Operators
@@ -442,7 +437,7 @@ namespace MxNet
             data = new List<NDArrayOrSymbol>();
         }
 
-        public NDArrayOrSymbolList(NDArrayOrSymbolList args)
+        public NDArrayOrSymbolList(NDArrayOrSymbol[] args)
         {
             data = args.ToList();
         }
@@ -465,9 +460,29 @@ namespace MxNet
             }
         }
 
+        public NDArrayOrSymbolList(params Symbol[] args)
+        {
+            data = new List<NDArrayOrSymbol>();
+            foreach (var item in args)
+            {
+                data.Add(item);
+            }
+        }
+
+        public NDArrayOrSymbolList(NDArrayOrSymbol x)
+        {
+            data = new List<NDArrayOrSymbol>() { x };
+        }
+
         public NDArrayOrSymbolList((NDArrayOrSymbol, NDArrayOrSymbol) args)
         {
             data = new List<NDArrayOrSymbol> { args.Item1, args.Item2 };
+        }
+
+        public NDArrayOrSymbolList((NDArrayOrSymbolList, NDArrayOrSymbol) args)
+        {
+            data.Add(new NDArrayOrSymbol(args.Item1));
+            data.Add(args.Item2);
         }
 
         public NDArrayOrSymbolList((NDArrayOrSymbol, NDArrayOrSymbolList) args)
@@ -562,10 +577,34 @@ namespace MxNet
             }
         }
 
-
-        public static implicit operator NDArrayOrSymbolList(NDArrayOrSymbol[] x)
+        public void Deconstruct(out NDArrayOrSymbol x0, out NDArrayOrSymbol x1)
         {
-            return new NDArrayOrSymbolList(x);
+            x0 = this[0];
+            x1 = this.Length > 2 ? this[1] : null;
+        }
+
+        public void Deconstruct(out NDArrayOrSymbol x0, out NDArrayOrSymbol x1, out NDArrayOrSymbol x2)
+        {
+            x0 = this[0];
+            x1 = this.Length > 2 ? this[1] : null;
+            x2 = this.Length > 2 ? this[2] : null;
+        }
+
+        public void Deconstruct(out NDArrayOrSymbol x0, out NDArrayOrSymbol x1, out NDArrayOrSymbol x2, out NDArrayOrSymbol x3)
+        {
+            x0 = this[0];
+            x1 = this.Length > 2 ? this[1] : null;
+            x2 = this.Length > 2 ? this[2] : null;
+            x3 = this.Length > 3 ? this[3] : null;
+        }
+
+        public void Deconstruct(out NDArrayOrSymbol x0, out NDArrayOrSymbol x1, out NDArrayOrSymbol x2, out NDArrayOrSymbol x3, out NDArrayOrSymbol x4)
+        {
+            x0 = this[0];
+            x1 = this.Length > 2 ? this[1] : null;
+            x2 = this.Length > 2 ? this[2] : null;
+            x3 = this.Length > 3 ? this[3] : null;
+            x4 = this.Length > 4 ? this[4] : null;
         }
 
         public static implicit operator NDArrayOrSymbol[](NDArrayOrSymbolList x)
@@ -575,22 +614,38 @@ namespace MxNet
 
         public static implicit operator NDArrayOrSymbolList(NDArray x)
         {
-            return x;
+            return new NDArrayOrSymbolList(new NDArrayOrSymbol(x));
+        }
+
+        public static implicit operator NDArray(NDArrayOrSymbolList x)
+        {
+            if(x.Length > 0)
+                return x.FirstOrDefault().NdX;
+
+            return null;
+        }
+
+        public static implicit operator ndarray(NDArrayOrSymbolList x)
+        {
+            if (x.Length > 0)
+                return x.FirstOrDefault().NdX;
+
+            return null;
         }
 
         public static implicit operator NDArrayOrSymbolList(ndarray x)
         {
-            return x;
+            return new NDArrayOrSymbolList(x);
         }
 
         public static implicit operator NDArrayOrSymbolList(_Symbol x)
         {
-            return x;
+            return new NDArrayOrSymbolList(x);
         }
 
         public static implicit operator NDArrayOrSymbolList(Symbol x)
         {
-            return x;
+            return new NDArrayOrSymbolList(new NDArrayOrSymbol(x));
         }
 
         public static implicit operator NDArrayOrSymbolList(NDArrayOrSymbol x)

@@ -32,7 +32,7 @@ namespace MxNet.Gluon.RNN
             return BaseCell.StateInfo(batch_size);
         }
 
-        public override NDArrayOrSymbol[] BeginState(int batch_size = 0, string func = null, FuncArgs args = null)
+        public override NDArrayOrSymbolList BeginState(int batch_size = 0, string func = null, FuncArgs args = null)
         {
             BaseCell._modified = false;
             var begin = BaseCell.BeginState(batch_size, func, args);
@@ -40,7 +40,7 @@ namespace MxNet.Gluon.RNN
             return begin;
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x,
             NDArrayOrSymbolList args)
         {
             return default;

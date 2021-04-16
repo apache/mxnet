@@ -1046,6 +1046,24 @@ namespace MxNet
             return sym_np_ops.full(shape, fill_value, dtype, order, ctx, @out);
         }
 
+        public static NDArrayOrSymbol zeros(Shape shape, DType dtype = null, String order = "C", Context ctx = null, NDArrayOrSymbol @out = null, bool is_symbol = false)
+        {
+            if (!is_symbol)
+            {
+                return nd_np_ops.full(shape, 0, dtype, order, ctx, @out);
+            }
+            return sym_np_ops.full(shape, 0, dtype, order, ctx, @out);
+        }
+
+        public static NDArrayOrSymbol ones(Shape shape, DType dtype = null, String order = "C", Context ctx = null, NDArrayOrSymbol @out = null, bool is_symbol = false)
+        {
+            if (!is_symbol)
+            {
+                return nd_np_ops.full(shape, 1, dtype, order, ctx, @out);
+            }
+            return sym_np_ops.full(shape, 1, dtype, order, ctx, @out);
+        }
+
         public static NDArrayOrSymbol full_like(NDArrayOrSymbol prototype, DType dtype, String order = "C")
         {
             if (prototype.IsNDArray)

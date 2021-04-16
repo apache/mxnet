@@ -43,11 +43,12 @@ namespace MxNet.Gluon.RNN
             _prev_output = null;
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
-            NDArrayOrSymbolList args)
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var (cell, p_outputs, p_states) = (BaseCell, ZoneoutOutputs, ZoneoutStates);
-            var (next_output, next_states) = cell.Call(x, args);
+            var @out = cell.Call((x, args));
+            NDArrayOrSymbol next_output = @out[0];
+            NDArrayOrSymbolList next_states = @out[1].List;
 
             NDArrayOrSymbol mask(float p, NDArrayOrSymbol like)
             {
@@ -63,12 +64,12 @@ namespace MxNet.Gluon.RNN
                     : new NDArrayOrSymbol(sym.ZerosLike(next_output));
 
             NDArrayOrSymbol output = null;
-            NDArrayOrSymbol[] states = null;
+            NDArrayOrSymbolList states = null;
             if (x.IsNDArray)
             {
                 output = p_outputs != 0
-                    ? new NDArrayOrSymbol(nd.Where(mask(p_outputs, next_output), next_output, prev_output))
-                    : next_output;
+                                        ? new NDArrayOrSymbol(nd.Where(mask(p_outputs, next_output), next_output, prev_output))
+                                        : next_output;
 
                 if (p_states == 0)
                     states = next_states;

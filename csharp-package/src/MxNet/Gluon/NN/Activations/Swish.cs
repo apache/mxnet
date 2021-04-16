@@ -24,8 +24,9 @@ namespace MxNet.Gluon.NN
 
         public float Beta { get; set; }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList args)
         {
+            var x = args[0];
             return x * F.sigmoid(x * Beta);
         }
 

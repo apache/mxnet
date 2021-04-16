@@ -21,7 +21,6 @@ namespace MxNet.Gluon.NN
     public class HybridSequential : HybridBlock
     {
         private List<Block> _layers;
-        private bool _v2;
         private bool _v2_checked;
         private bool _forward;
 
@@ -96,11 +95,11 @@ namespace MxNet.Gluon.NN
             }
         }
 
-        public override NDArrayOrSymbol HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override NDArrayOrSymbolList HybridForward(NDArrayOrSymbolList inputs)
         {
-            foreach (var item in _childrens) x = item.Value.Call(x, args);
+            foreach (var item in _childrens) inputs = item.Value.Call(inputs);
 
-            return x;
+            return inputs;
         }
 
         public override string ToString()

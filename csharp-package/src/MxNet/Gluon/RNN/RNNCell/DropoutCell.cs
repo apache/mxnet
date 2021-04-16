@@ -38,7 +38,7 @@ namespace MxNet.Gluon.RNN
             return "dropout";
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x,
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x,
             NDArrayOrSymbolList args)
         {
             if (_rate > 0)
@@ -52,8 +52,8 @@ namespace MxNet.Gluon.RNN
             return (x, args);
         }
 
-        public override (NDArrayOrSymbol[], NDArrayOrSymbol[]) Unroll(int length, NDArrayOrSymbol[] inputs,
-            NDArrayOrSymbol[] begin_state = null, string layout = "NTC", bool? merge_outputs = null,
+        public override (NDArrayOrSymbolList, NDArrayOrSymbolList) Unroll(int length, NDArrayOrSymbolList inputs,
+            NDArrayOrSymbolList begin_state = null, string layout = "NTC", bool? merge_outputs = null,
             _Symbol valid_length = null)
         {
             return base.Unroll(length, inputs, begin_state, layout);

@@ -40,7 +40,7 @@ namespace MxNet.Gluon.RNN.ConvRNNCell
             return "conv_lstm";
         }
 
-        public override (NDArrayOrSymbol, NDArrayOrSymbol[]) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
+        public override (NDArrayOrSymbol, NDArrayOrSymbolList) HybridForward(NDArrayOrSymbol x, NDArrayOrSymbolList args)
         {
             var states = args[0];
             var i2h_weight = args[1];
@@ -64,7 +64,7 @@ namespace MxNet.Gluon.RNN.ConvRNNCell
             var out_gate = F.activation(slice_gates[3], act_type: "sigmoid");
             var next_c = F.add(forget_gate * states[1], in_gate * in_transform);
             var next_h = F.multiply(out_gate,F.activation(next_c, this._activation));
-            return (next_h, new NDArrayOrSymbol[] {
+            return (next_h, new NDArrayOrSymbolList {
                     next_h,
                     next_c
                 });
