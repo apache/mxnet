@@ -199,8 +199,6 @@ def obj_detection_test_images(tmpdir_factory):
     tmpdir = tmpdir_factory.mktemp("obj_det_data")
     from urllib.parse import urlparse
     test_image_urls = [
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/car.jpg',
-        'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/duck.jpg',
         'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/fieldhockey.jpg',
         'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/flower.jpg',
         'https://github.com/apache/incubator-mxnet-ci/raw/master/test-data/images/runners.jpg',
@@ -240,14 +238,20 @@ def obj_detection_test_images(tmpdir_factory):
     'faster_rcnn_resnet101_v1d_coco',
     'yolo3_darknet53_coco',
     'yolo3_mobilenet1.0_coco',
+    'mask_rcnn_resnet18_v1b_coco',
+    'mask_rcnn_fpn_resnet18_v1b_coco',
+    'mask_rcnn_resnet50_v1b_coco',
+    'mask_rcnn_fpn_resnet50_v1b_coco',
+    'mask_rcnn_resnet101_v1d_coco',
+    'mask_rcnn_fpn_resnet101_v1d_coco',
 ])
 def test_obj_detection_model_inference_onnxruntime(tmp_path, model, obj_detection_test_images):
     def assert_obj_detetion_result(mx_ids, mx_scores, mx_boxes,
                                    onnx_ids, onnx_scores, onnx_boxes,
-                                   score_thresh=0.6, score_tol=1e-4):
-        def assert_bbox(mx_boxe, onnx_boxe, box_tol=1e-2):
-            def assert_scalar(a, b, tol=box_tol):
-                return np.abs(a-b) <= tol
+                                   score_thresh=0.6, score_tol=0.0001, box_tol=0.01):
+        def assert_bbox(mx_boxe, onnx_boxe):
+            def assert_scalar(a, b):
+                return np.abs(a-b) <= box_tol
             return assert_scalar(mx_boxe[0], onnx_boxe[0]) and assert_scalar(mx_boxe[1], onnx_boxe[1]) \
                       and assert_scalar(mx_boxe[2], onnx_boxe[2]) and assert_scalar(mx_boxe[3], onnx_boxe[3])
 
@@ -256,7 +260,7 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model, obj_detectio
             onnx_id = onnx_ids[i][0]
             onnx_score = onnx_scores[i][0]
             onnx_boxe = onnx_boxes[i]
-
+            print('onnx id', onnx_id)
             if onnx_score < score_thresh:
                 break
             for j in range(len(mx_ids)):
@@ -267,7 +271,7 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model, obj_detectio
                 if onnx_score < mx_score - score_tol:
                     continue
                 if onnx_score > mx_score + score_tol:
-                    return False
+                    assert found_match, 'match not found'
                 # check id
                 if onnx_id != mx_id:
                     continue
@@ -275,10 +279,8 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model, obj_detectio
                 if assert_bbox(mx_boxe, onnx_boxe):
                     found_match = True
                     break
-            if not found_match:
-                return False
+            assert found_match, 'match not found'
             found_match = False
-        return True
 
     def normalize_image(imgfile):
         img = mx.image.imread(imgfile)
@@ -298,7 +300,10 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model, obj_detectio
 
         for img in obj_detection_test_images:
             img_data = normalize_image(img)
-            mx_class_ids, mx_scores, mx_boxes = M.predict(img_data)
+            if model.startswith('mask_rcnn'):
+                mx_class_ids, mx_scores, mx_boxes, _ = M.predict(img_data)
+            else:
+                mx_class_ids, mx_scores, mx_boxes = M.predict(img_data)
             # center_net_resnet models have different output format
             if 'center_net_resnet' in model:
                 onnx_scores, onnx_class_ids, onnx_boxes = session.run([], {input_name: img_data.asnumpy()})
@@ -306,10 +311,15 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model, obj_detectio
                 assert_almost_equal(mx_scores, onnx_scores)
                 assert_almost_equal(mx_boxes, onnx_boxes)
             else:
-                onnx_class_ids, onnx_scores, onnx_boxes = session.run([], {input_name: img_data.asnumpy()})
-                if not assert_obj_detetion_result(mx_class_ids[0], mx_scores[0], mx_boxes[0], \
-                        onnx_class_ids[0], onnx_scores[0], onnx_boxes[0]):
-                    raise AssertionError("Assertion error on model: " + model)
+                if model.startswith('mask_rcnn'):
+                    onnx_class_ids, onnx_scores, onnx_boxes, _ = session.run([], {input_name: img_data.asnumpy()})
+                    assert_obj_detetion_result(mx_class_ids[0], mx_scores[0], mx_boxes[0],
+                                               onnx_class_ids[0], onnx_scores[0], onnx_boxes[0],
+                                               score_thresh=0.8, score_tol=0.05, box_tol=15)
+                else:
+                    onnx_class_ids, onnx_scores, onnx_boxes = session.run([], {input_name: img_data.asnumpy()})
+                    assert_obj_detetion_result(mx_class_ids[0], mx_scores[0], mx_boxes[0],
+                                               onnx_class_ids[0], onnx_scores[0], onnx_boxes[0])
 
     finally:
         shutil.rmtree(tmp_path)
