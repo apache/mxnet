@@ -1347,10 +1347,10 @@ def convert_argmax(node, **kwargs):
 
     axis = str(attrs.get('axis', 'None'))
     keepdims = get_boolean_attribute_value(attrs, 'keepdims')
-    
+
     input_dtype = get_input_dtypes(node, kwargs)[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_dtype]
-    
+
     if axis == 'None':
         create_tensor([-1], name+'_-1', kwargs['initializer'])
         if keepdims:
@@ -1389,10 +1389,10 @@ def convert_argmin(node, **kwargs):
 
     axis = str(attrs.get('axis', 'None'))
     keepdims = get_boolean_attribute_value(attrs, 'keepdims')
-    
+
     input_dtype = get_input_dtypes(node, kwargs)[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_dtype]
-    
+
     if axis == 'None':
         create_tensor([-1], name+'_-1', kwargs['initializer'])
         if keepdims:
@@ -1440,7 +1440,7 @@ def convert_min(node, **kwargs):
     """Map MXNet's min operator attributes to onnx's ReduceMin operator
     and return the created node.
     """
-    from onnx.helper import make_node, make_graph
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     mx_axis = str(attrs.get("axis", 'None'))
@@ -1461,7 +1461,7 @@ def convert_min(node, **kwargs):
                 make_node('Reshape', [name+'_reduce', name+'_concat'], [name+'_reshape']),
                 make_node('Squeeze', [name+'_reshape'], [name], axes=[0]),
             ]
-            return nodes     
+            return nodes
     else:
         if keepdims:
             node = make_node('ReduceMin', input_nodes, [name], keepdims=keepdims)
@@ -1481,7 +1481,7 @@ def convert_max(node, **kwargs):
     """Map MXNet's max operator attributes to onnx's ReduceMax operator
     and return the created node.
     """
-    from onnx.helper import make_node, make_graph
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     mx_axis = str(attrs.get("axis", 'None'))
@@ -1502,7 +1502,7 @@ def convert_max(node, **kwargs):
                 make_node('Reshape', [name+'_reduce', name+'_concat'], [name+'_reshape']),
                 make_node('Squeeze', [name+'_reshape'], [name], axes=[0]),
             ]
-            return nodes    
+            return nodes
     else:
         if keepdims:
             node = make_node('ReduceMax', input_nodes, [name], keepdims=keepdims)
@@ -1522,7 +1522,7 @@ def convert_mean(node, **kwargs):
     """Map MXNet's mean operator attributes to onnx's ReduceMean operator
     and return the created node.
     """
-    from onnx.helper import make_node, make_graph
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     mx_axis = str(attrs.get("axis", 'None'))
@@ -1563,7 +1563,7 @@ def convert_prod(node, **kwargs):
     """Map MXNet's prod operator attributes to onnx's ReduceProd operator
     and return the created node.
     """
-    from onnx.helper import make_node, make_graph
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     mx_axis = str(attrs.get("axis", 'None'))
@@ -1584,7 +1584,7 @@ def convert_prod(node, **kwargs):
                 make_node('Reshape', [name+'_reduce', name+'_concat'], [name+'_reshape']),
                 make_node('Squeeze', [name+'_reshape'], [name], axes=[0]),
             ]
-            return nodes     
+            return nodes
     else:
         if keepdims:
             node = make_node('ReduceProd', input_nodes, [name], keepdims=keepdims)
