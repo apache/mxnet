@@ -260,7 +260,6 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model, obj_detectio
             onnx_id = onnx_ids[i][0]
             onnx_score = onnx_scores[i][0]
             onnx_boxe = onnx_boxes[i]
-            print('onnx id', onnx_id)
             if onnx_score < score_thresh:
                 break
             for j in range(len(mx_ids)):
