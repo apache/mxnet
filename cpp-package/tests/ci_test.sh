@@ -24,40 +24,40 @@ ls -l /work/build/
 
 ./get_data.sh
 
-cp ../../build/cpp-package/example/lenet .
+cp ../../../build/cpp-package/example/lenet .
 ./lenet 1
 
-cp ../../build/cpp-package/example/alexnet .
+cp ../../../build/cpp-package/example/alexnet .
 ./alexnet 1
 
-cp ../../build/cpp-package/example/lenet_with_mxdataiter .
+cp ../../../build/cpp-package/example/lenet_with_mxdataiter .
 ./lenet_with_mxdataiter 1
 
-cp ../../build/cpp-package/example/resnet .
+cp ../../../build/cpp-package/example/resnet .
 ./resnet 1
 
-cp ../../build/cpp-package/example/inception_bn .
+cp ../../../build/cpp-package/example/inception_bn .
 ./inception_bn 1
 
-cp ../../build/cpp-package/example/mlp .
+cp ../../../build/cpp-package/example/mlp .
 ./mlp 150
 
-cp ../../build/cpp-package/example/mlp_cpu .
+cp ../../../build/cpp-package/example/mlp_cpu .
 ./mlp_cpu
 
-cp ../../build/cpp-package/example/mlp_gpu .
+cp ../../../build/cpp-package/example/mlp_gpu .
 ./mlp_gpu
 
-cp ../../build/cpp-package/example/test_optimizer .
+cp ../../../build/cpp-package/example/test_optimizer .
 ./test_optimizer
 
-cp ../../build/cpp-package/example/test_kvstore .
+cp ../../../build/cpp-package/example/test_kvstore .
 ./test_kvstore
 
-cp ../../build/cpp-package/example/test_score .
+cp ../../../build/cpp-package/example/test_score .
 ./test_score 0.93
 
-cp ../../build/cpp-package/example/test_ndarray_copy .
+cp ../../../build/cpp-package/example/test_ndarray_copy .
 ./test_ndarray_copy
 
 # skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/20011
@@ -68,6 +68,6 @@ sh unittests/unit_test_mlp_csv.sh
 
 cd inference
 
-cp ../../../build/cpp-package/example/sentiment_analysis_rnn .
+cp ../../../../build/cpp-package/example/sentiment_analysis_rnn .
 ./unit_test_sentiment_analysis_rnn.sh
 cd ..

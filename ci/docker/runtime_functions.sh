@@ -320,6 +320,7 @@ build_ubuntu_cpu_openblas() {
         -DUSE_BLAS=Open \
         -DUSE_ONEDNN=OFF \
         -DUSE_CUDA=OFF \
+        -DUSE_CPP_PACKAGE=ON \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
@@ -625,7 +626,7 @@ build_ubuntu_gpu_onednn_nocudnn() {
 build_ubuntu_gpu() {
     set -ex
     cd /work/build
-    ln -f -s /usr/local/cuda-11.1/targets/x86_64-linux/lib/stubs/libcuda.so libcuda.so.1
+    ln -s libcuda.so.1 /usr/local/cuda-11.1/targets/x86_64-linux/lib/stubs/libcuda.so 
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11.1/targets/x86_64-linux/lib/stubs/
     CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
@@ -881,7 +882,7 @@ unittest_centos7_gpu() {
     pytest --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu/test_amp_init.py
 }
 
-integrationtest_ubuntu_gpu_cpp_package() {
+integrationtest_ubuntu_cpp_package() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cpp-package/tests/ci_test.sh

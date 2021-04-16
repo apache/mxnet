@@ -804,6 +804,20 @@ def test_unix_onnx_cpu(lib_name) {
     }]
 }
 
+def test_unix_cpp_package_cpu(lib_name) {
+    return ['cpp-package CPU Makefile': {
+      node(NODE_LINUX_GPU_G4) {
+        ws('workspace/it-cpp-package-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_lib_cpp_examples)
+            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpp_package', false)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_distributed_kvstore_cpu(lib_name) {
     return ['dist-kvstore tests CPU': {
       node(NODE_LINUX_CPU) {
@@ -849,10 +863,10 @@ def test_unix_distributed_kvstore_gpu(lib_name) {
 def test_unix_cpp_package_gpu(lib_name) {
     return ['cpp-package GPU Makefile': {
       node(NODE_LINUX_GPU_G4) {
-        ws('workspace/it-cpp-package') {
+        ws('workspace/it-cpp-package-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cpp_examples)
-            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_gpu_cpp_package', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_cpp_package', true)
             utils.publish_test_coverage()
           }
         }
