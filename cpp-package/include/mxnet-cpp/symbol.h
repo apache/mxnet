@@ -204,9 +204,6 @@ class Symbol {
   * some known arrays.
   * \param context the context of all the infered arrays
   * \param arg_arrays infered input arguments arrays.
-  * \param arad_arrays infered arrays to store the gradient output of the input
-  * arguments.
-  * \param aux_arrays infered arrays that is used as internal state in op.
   * \param args_map map of some given arguments arrays.
   * \param args_grad_store map of some gradient given store arrays.
   * \param args_req_type map of some given type of gradient saving. Can only be
@@ -215,8 +212,7 @@ class Symbol {
   */
   void InferExecutorArrays(
       const Context &context, std::vector<NDArray> *arg_arrays,
-      std::vector<NDArray> *grad_arrays, std::vector<OpReqType> *grad_reqs,
-      std::vector<NDArray> *aux_arrays,
+      bool &require_grad,
       const std::map<std::string, NDArray> &args_map,
       const std::map<std::string, NDArray> &arg_grad_store =
           std::map<std::string, NDArray>(),
@@ -267,11 +263,7 @@ class Symbol {
   *
   * \param context the context of binding.
   * \param arg_arrays the NDArray that stores the input arguments to the symbol.
-  * \param grad_arrays NDArray that is used to store the gradient output of the
-  *input arguments.
-  * \param grad_reqs requirment type of gradient saving. Can only be in
-  *{kNullOp, kAddTo, kWriteTo}.
-  * \param aux_arrays NDArray that is used as internal state in op
+  * \param require_grad if require to do backward propogation.
   * \param group_to_ctx dict of string to mx.Context
   * \param shared_exec Executor to share memory with. This is intended for
   *runtime reshaping, variable length sequencesn etc.  The returned executor
@@ -279,9 +271,7 @@ class Symbol {
   * \return a new executor, which need to be free manually.
   */
   Executor *Bind(const Context &context, const std::vector<NDArray> &arg_arrays,
-                 const std::vector<NDArray> &grad_arrays,
-                 const std::vector<OpReqType> &grad_reqs,
-                 const std::vector<NDArray> &aux_arrays,
+                 bool require_grad,
                  const std::map<std::string, Context> &group_to_ctx =
                      std::map<std::string, Context>(),
                  Executor *shared_exec = nullptr);

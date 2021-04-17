@@ -46,9 +46,7 @@ class Executor {
  public:
   Executor(const Symbol &symbol, Context context,
            const std::vector<NDArray> &arg_arrays,
-           const std::vector<NDArray> &grad_arrays,
-           const std::vector<OpReqType> &grad_reqs,
-           const std::vector<NDArray> &aux_arrays,
+           bool require_grad,
            const std::map<std::string, Context> &group_to_ctx =
                std::map<std::string, Context>(),
            Executor *shared_exec = nullptr);
@@ -75,7 +73,6 @@ class Executor {
         });
     int out_size = 0;
     NDArrayHandle *out_array = nullptr;
-    bool out_initialized = false;
     CHECK_EQ(MXInvokeCachedOp(handle_, arg_handles.size(), arg_handles.data(),
                               device_type, device_id, &out_size, &out_array, nullptr),
              0);

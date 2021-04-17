@@ -146,18 +146,18 @@ Predictor::Predictor(const std::string& model_json,
   highest_bucket_key = *(std::max_element(bucket_keys.begin(), bucket_keys.end()));
   args_map["data0"] = NDArray(Shape(highest_bucket_key, 1), global_ctx, false);
   args_map["data1"] = NDArray(Shape(1), global_ctx, false);
+  bool require_grad;
 
-  net.InferExecutorArrays(global_ctx, &arg_arrays, &grad_arrays, &grad_reqs,
-                          &aux_arrays, args_map, std::map<std::string, NDArray>(),
+  net.InferExecutorArrays(global_ctx, &arg_arrays, require_grad, args_map, std::map<std::string, NDArray>(),
                               std::map<std::string, OpReqType>(), aux_map);
-  Executor *master_executor = net.Bind(global_ctx, arg_arrays, grad_arrays, grad_reqs, aux_arrays,
+  Executor *master_executor = net.Bind(global_ctx, arg_arrays, require_grad,
                                  std::map<std::string, Context>(), nullptr);
   executor_buckets[highest_bucket_key] = master_executor;
 
   for (int bucket : bucket_keys) {
     if (executor_buckets.find(bucket) == executor_buckets.end()) {
       arg_arrays[0]  = NDArray(Shape(bucket, 1), global_ctx, false);
-      Executor *executor = net.Bind(global_ctx, arg_arrays, grad_arrays, grad_reqs, aux_arrays,
+      Executor *executor = net.Bind(global_ctx, arg_arrays, require_grad,
                                     std::map<std::string, Context>(), master_executor);
       executor_buckets[bucket] = executor;
     }

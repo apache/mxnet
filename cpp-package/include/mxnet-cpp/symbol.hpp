@@ -287,16 +287,28 @@ inline void Symbol::InferShape(
   }
 }
 
+inline std::map<std::string, std::vector<mx_uint> > GetDict(const std::vector<std::string> &names,
+                                                            const std::vector<std::vector<mx_uint> > &shapes) {
+    std::map<std::string, std::vector<mx_uint> > ret;
+    CHECK_EQ(names.size(), shapes.size())
+        << "names size not equal to shapes size";
+    for (size_t i = 0; i < names.size(); ++i) {
+      ret[names[i]] = shapes[i];
+    }
+    return ret;
+}
+
 inline void Symbol::InferExecutorArrays(
     const Context &context, std::vector<NDArray> *arg_arrays,
-    std::vector<NDArray> *grad_arrays, std::vector<OpReqType> *grad_reqs,
-    std::vector<NDArray> *aux_arrays,
+    bool &require_grad,
     const std::map<std::string, NDArray> &args_map,
     const std::map<std::string, NDArray> &arg_grad_store,
     const std::map<std::string, OpReqType> &grad_req_type,
     const std::map<std::string, NDArray> &aux_map) const {
 
   const auto arg_name_list = ListArguments();
+  const auto input_name_list = ListInputs();
+  const auto aux_name_list = ListAuxiliaryStates();
   std::vector<std::vector<mx_uint> > in_shapes, aux_shapes, out_shapes;
   std::map<std::string, std::vector<mx_uint> > arg_shapes;
 
@@ -308,44 +320,66 @@ inline void Symbol::InferExecutorArrays(
   }
 
   InferShape(arg_shapes, &in_shapes, &aux_shapes, &out_shapes);
+  std::map<std::string, std::vector<mx_uint> > inshape_map = GetDict(arg_name_list, in_shapes);
+  std::map<std::string, std::vector<mx_uint> > auxshape_map = GetDict(aux_name_list, aux_shapes);
 
-  for (size_t i = 0; i < in_shapes.size(); ++i) {
-    const auto &shape = in_shapes[i];
-    const auto &arg_name = arg_name_list[i];
-    auto iter_arg = args_map.find(arg_name);
+  for (size_t i = 0; i < input_name_list.size(); ++i) {
+    const auto &input_name = input_name_list[i];
+    std::vector<mx_uint> shape;
+    auto iter_arg = args_map.find(input_name);
     if (iter_arg != args_map.end()) {
-      arg_arrays->push_back(iter_arg->second);
+      arg_arrays->push_back((iter_arg->second).Copy(context));
     } else {
-      arg_arrays->push_back(NDArray(shape, context, false));
-      NDArray::SampleGaussian(0, 1, &arg_arrays->back());
+      auto iter_inshape = inshape_map.find(input_name);
+      if (iter_inshape != inshape_map.end()) {
+        shape = iter_inshape->second;
+        arg_arrays->push_back(NDArray(shape, context, false));
+        NDArray::SampleGaussian(0, 1, &arg_arrays->back());
+      } else {
+        auto iter_aux = arg_grad_store.find(input_name);
+        if (iter_aux != arg_grad_store.end()) {
+          arg_arrays->push_back((iter_aux->second).Copy(context));
+        } else {
+          auto iter_auxshape = auxshape_map.find(input_name);
+          CHECK(iter_auxshape != auxshape_map.end())
+              << "Can not find name in args array and aux array";
+          shape = iter_auxshape->second;
+          arg_arrays->push_back(NDArray(shape, context, false));
+          NDArray::SampleGaussian(0, 1, &arg_arrays->back());
+        }
+      }
     }
-    auto iter_grad = arg_grad_store.find(arg_name);
-    if (iter_grad != arg_grad_store.end()) {
-      grad_arrays->push_back(iter_grad->second);
-    } else {
-      grad_arrays->push_back(NDArray(shape, context, false));
-    }
-    auto iter_req = grad_req_type.find(arg_name);
+    auto iter_req = grad_req_type.find(input_name);
+    auto req = OpReqType::kNullOp;
     if (iter_req != grad_req_type.end()) {
-      grad_reqs->push_back(iter_req->second);
-    } else if (arg_name.rfind("data") != std::string::npos
-            || arg_name.rfind("label") != std::string::npos) {
-      grad_reqs->push_back(OpReqType::kNullOp);
+      req = iter_req->second;
+    } else if (input_name.rfind("data") != std::string::npos
+            || input_name.rfind("label") != std::string::npos) {
+      req = OpReqType::kNullOp;
     } else {
-      grad_reqs->push_back(OpReqType::kWriteTo);
+      req = OpReqType::kWriteTo;
     }
-  }
-
-  const auto aux_name_list = ListAuxiliaryStates();
-  for (size_t i = 0; i < aux_shapes.size(); ++i) {
-    const auto &shape = aux_shapes[i];
-    const auto &aux_name = aux_name_list[i];
-    auto iter_aux = aux_map.find(aux_name);
-    if (iter_aux != aux_map.end()) {
-      aux_arrays->push_back(iter_aux->second);
+    if (req != OpReqType::kNullOp) {
+      require_grad = true;
+      std::vector<NDArrayHandle> arg_handles;
+      std::vector<NDArrayHandle> grad_handles;
+      std::vector<mx_uint> grad_reqs_uint;
+      auto iter_grad = arg_grad_store.find(input_name);
+      if (iter_grad != arg_grad_store.end()) {
+        arg_handles.push_back(&arg_arrays->back());
+        grad_reqs_uint.push_back(req);
+        grad_handles.push_back(((iter_grad->second).Copy(context)).GetHandle());
+        CHECK_EQ(MXAutogradMarkVariables(1, arg_handles.data(),
+                                         grad_reqs_uint.data(),
+                                         grad_handles.data()),0);
     } else {
-      aux_arrays->push_back(NDArray(shape, context, false));
-      NDArray::SampleGaussian(0, 1, &aux_arrays->back());
+        arg_handles.push_back(&arg_arrays->back());
+        grad_reqs_uint.push_back(req);
+        grad_handles.push_back(NDArray(shape, context, false).GetHandle());
+        CHECK_EQ(MXAutogradMarkVariables(1, arg_handles.data(),
+                                         grad_reqs_uint.data(),
+                                         grad_handles.data()),0);
+      }
     }
   }
 }
@@ -385,27 +419,20 @@ inline Executor *Symbol::SimpleBind(
     const std::map<std::string, OpReqType> &grad_req_type,
     const std::map<std::string, NDArray> &aux_map) {
   std::vector<NDArray> arg_arrays;
-  std::vector<NDArray> grad_arrays;
-  std::vector<OpReqType> grad_reqs;
-  std::vector<NDArray> aux_arrays;
+  bool require_grad = false;
 
-  InferExecutorArrays(context, &arg_arrays, &grad_arrays, &grad_reqs,
-                      &aux_arrays, args_map, arg_grad_store, grad_req_type,
+  InferExecutorArrays(context, &arg_arrays, require_grad, args_map, arg_grad_store, grad_req_type,
                       aux_map);
 
-  return new Executor(*this, context, arg_arrays, grad_arrays, grad_reqs,
-                      aux_arrays);
+  return new Executor(*this, context, arg_arrays, require_grad);
 }
 
 inline Executor *Symbol::Bind(const Context &context,
                        const std::vector<NDArray> &arg_arrays,
-                       const std::vector<NDArray> &grad_arrays,
-                       const std::vector<OpReqType> &grad_reqs,
-                       const std::vector<NDArray> &aux_arrays,
+                       bool require_grad,
                        const std::map<std::string, Context> &group_to_ctx,
                        Executor *shared_exec) {
-  return new Executor(*this, context, arg_arrays, grad_arrays, grad_reqs,
-                      aux_arrays, group_to_ctx, shared_exec);
+  return new Executor(*this, context, arg_arrays, require_grad, group_to_ctx, shared_exec);
 }
 inline Symbol operator+(mx_float lhs, const Symbol &rhs) { return rhs + lhs; }
 inline Symbol operator-(mx_float lhs, const Symbol &rhs) {
