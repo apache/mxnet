@@ -141,7 +141,8 @@ void MLP(int max_epoch) {
   std::vector<NDArray> aux_states;
 
   std::cout << "make the Executor" << std::endl;
-  Executor* exe = new Executor(sym_out, ctx_dev, in_args, true);
+  Executor* exe = new Executor(sym_out, ctx_dev, in_args, arg_grad_store,
+                               grad_req_type, aux_states);
 
   std::cout << "Training" << std::endl;
   mx_float learning_rate = 0.0001;

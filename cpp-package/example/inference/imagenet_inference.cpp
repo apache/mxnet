@@ -210,13 +210,18 @@ Predictor::Predictor(const std::string& model_json_file,
   Shape label_shape(input_shape_[0]);
   args_map_["softmax_label"] = NDArray(label_shape, global_ctx_, false);
   std::vector<NDArray> arg_arrays;
-  bool require_grad;
+  std::vector<NDArray> grad_arrays;
+  std::vector<OpReqType> grad_reqs;
+  std::vector<NDArray> aux_arrays;
+
   // infer and create ndarrays according to the given input ndarrays.
-  net_.InferExecutorArrays(global_ctx_, &arg_arrays, require_grad, args_map_, std::map<std::string, NDArray>(),
+  net_.InferExecutorArrays(global_ctx_, &arg_arrays, &grad_arrays, &grad_reqs,
+                           &aux_arrays, args_map_, std::map<std::string, NDArray>(),
                            std::map<std::string, OpReqType>(), aux_map_);
+  for (auto& i : grad_reqs) i = OpReqType::kNullOp;
 
   // Create an executor after binding the model to input parameters.
-  executor_ = new Executor(net_, global_ctx_, arg_arrays, false);
+  executor_ = new Executor(net_, global_ctx_, arg_arrays, grad_arrays, grad_reqs, aux_arrays);
 }
 
 /*
