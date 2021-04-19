@@ -1429,6 +1429,15 @@ def test_onnx_export_broadcast_logical_xor(tmp_path, dtype, shape):
     op_export_test('broadcast_logical_xor', M, [x, y], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize("shapes", [[(1,3),(2,3)], [(2,1,3,1),(2,8,3,9)], [(1,3,6),(5,3,6)]])
+def test_onnx_export_broadcast_to(tmp_path, dtype, shapes):
+    in_shape, to_shape = shapes
+    M = def_model('broadcast_to', shape=to_shape)
+    x = mx.nd.random.uniform(-100, 100, in_shape).astype(dtype)
+    op_export_test('broadcast_to', M, [x], tmp_path)
+
+
 # onnxruntime currently does not support int32
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'int64'])
 @pytest.mark.parametrize('shape', [(1,), (2, 3), (4, 5, 6)])
@@ -1546,3 +1555,11 @@ def test_onnx_export_squeeze(tmp_path, dtype, shape_axis):
     x = mx.nd.random.uniform(1, 100, shape=shape_axis[0]).astype(dtype)
     M = def_model('squeeze', axis=shape_axis[1])
     op_export_test('squeeze', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize("shape", [(10,), (2,3), (4,5,6)])
+def test_onnx_export_logical_not(tmp_path, dtype, shape):
+    M = def_model('logical_not')
+    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('logical_not', M, [x], tmp_path)
