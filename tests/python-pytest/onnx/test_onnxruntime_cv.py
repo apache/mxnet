@@ -238,6 +238,8 @@ def obj_detection_test_images(tmpdir_factory):
     'faster_rcnn_resnet101_v1d_coco',
     'yolo3_darknet53_coco',
     'yolo3_mobilenet1.0_coco',
+    'faster_rcnn_fpn_resnet50_v1b_coco',
+    'faster_rcnn_fpn_resnet101_v1d_coco',
     'mask_rcnn_resnet18_v1b_coco',
     'mask_rcnn_fpn_resnet18_v1b_coco',
     'mask_rcnn_resnet50_v1b_coco',
@@ -315,6 +317,11 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model, obj_detectio
                     assert_obj_detetion_result(mx_class_ids[0], mx_scores[0], mx_boxes[0],
                                                onnx_class_ids[0], onnx_scores[0], onnx_boxes[0],
                                                score_thresh=0.8, score_tol=0.05, box_tol=15)
+                elif model.startswith('faster_rcnn_fpn'):
+                    onnx_class_ids, onnx_scores, onnx_boxes = session.run([], {input_name: img_data.asnumpy()})
+                    assert_obj_detetion_result(mx_class_ids[0], mx_scores[0], mx_boxes[0],
+                                               onnx_class_ids[0], onnx_scores[0], onnx_boxes[0],
+                                               score_thresh=0.8, score_tol=0.05, box_tol=30)
                 else:
                     onnx_class_ids, onnx_scores, onnx_boxes = session.run([], {input_name: img_data.asnumpy()})
                     assert_obj_detetion_result(mx_class_ids[0], mx_scores[0], mx_boxes[0],
