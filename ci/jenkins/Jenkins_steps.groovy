@@ -805,8 +805,8 @@ def test_unix_onnx_cpu(lib_name) {
 }
 
 def test_unix_cpp_package_cpu(lib_name) {
-    return ['cpp-package CPU Makefile': {
-      node(NODE_LINUX_GPU_G4) {
+    return ['cpp-package CPU': {
+      node(NODE_LINUX_CPU) {
         ws('workspace/it-cpp-package-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cpp_examples)

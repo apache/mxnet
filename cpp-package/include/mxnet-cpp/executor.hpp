@@ -51,7 +51,6 @@ inline Executor::Executor(const Symbol &symbol, Context context,
 
   std::vector<NDArrayHandle> arg_handles;
   std::vector<NDArrayHandle> grad_handles;
-  std::vector<NDArrayHandle> aux_handles;
 
   for (const auto &array : arg_arrays) {
     arg_handles.push_back(array.GetHandle());
@@ -70,32 +69,28 @@ inline Executor::Executor(const Symbol &symbol, Context context,
   }
   CHECK_EQ(MXAutogradMarkVariables(arg_handles.size(), arg_handles.data(),
                                    grad_reqs_uint.data(), grad_handles.data()),0);
-  // std::vector<const char *> map_keys;
-  // std::vector<int> dev_types, dev_ids;
-  // for (const auto &s : group_to_ctx) {
-  //   map_keys.push_back(s.first.c_str());
-  //   dev_types.push_back(s.second.GetDeviceType());
-  //   dev_ids.push_back(s.second.GetDeviceId());
-  // }
+
+  std::map<std::string, NDArray> arg_map = arg_dict();
+  std::map<std::string, NDArray> aux_map = aux_dict();
+  const auto input_name_list = symbol_.ListInputs();
+  std::vector<NDArray> combined_arrays;
+  for (size_t i = 0; i < input_name_list.size(); ++i) {
+    const auto &input_name = input_name_list[i];
+    auto iter_arg = arg_map.find(input_name);
+    if (iter_arg != arg_map.end()) {
+      combined_arrays.push_back(iter_arg->second);
+    } else {
+      auto iter_aux = aux_map.find(input_name);
+      CHECK(iter_aux != aux_map.end())
+          << "Can not find name in args array and aux array";
+      combined_arrays.push_back(iter_aux->second);
+    }
+  }
+  this->combined_arrays = combined_arrays;
 
   CHECK_EQ(MXCreateCachedOp(symbol.GetHandle(), 0, nullptr, nullptr, &handle_, false), 0);
 }
 
-inline mx_uint GradType2Int(OpReqType t) {
-  if (t == OpReqType::kNullOp) {
-    return 0;
-  } else if (t == OpReqType::kWriteTo) {
-    return 1;
-  } else if (t == OpReqType::kWriteInplace) {
-    return 2;
-  } else if (t == OpReqType::kAddTo) {
-    return 3;
-  } else {
-    LOG(FATAL) << "unknown grad type " << t;
-  }
-  LOG(FATAL) << "should not reach here ";
-  return 0;
-}
 
 }  // namespace cpp
 }  // namespace mxnet

@@ -59,7 +59,7 @@ class Executor {
   */
   void Forward(bool is_train) {
     std::vector<NDArrayHandle> arg_handles;
-    for (const auto &array : arg_arrays) {
+    for (const auto &array : combined_arrays) {
       arg_handles.push_back(array.GetHandle());
     }
     int prev_is_record = 0;
@@ -75,7 +75,6 @@ class Executor {
         });
     int out_size = 0;
     NDArrayHandle *out_array = nullptr;
-    bool out_initialized = false;
     CHECK_EQ(MXInvokeCachedOp(handle_, arg_handles.size(), arg_handles.data(),
                               device_type, device_id, &out_size, &out_array, nullptr),
              0);
@@ -144,6 +143,7 @@ class Executor {
   std::vector<NDArray> arg_arrays;
   std::vector<NDArray> grad_arrays;
   std::vector<NDArray> aux_arrays;
+  std::vector<NDArray> combined_arrays;
   int device_type;
   int device_id;
   bool require_grad;
