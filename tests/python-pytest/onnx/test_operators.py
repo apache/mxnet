@@ -486,7 +486,7 @@ def test_onnx_export_contrib_BilinearResize2D(tmp_path, dtype, params):
     op_export_test('contrib_BilinearResize2D', M, [x], tmp_path)
 
 
-@pytest.mark.parametrize('topk', [2, 3, 4])
+@pytest.mark.parametrize('topk', [-1, 2, 3, 4])
 @pytest.mark.parametrize('valid_thresh', [0.3, 0.4, 0.8])
 @pytest.mark.parametrize('overlap_thresh', [0.4, 0.7, 1.0])
 def test_onnx_export_contrib_box_nms(tmp_path, topk, valid_thresh, overlap_thresh):
@@ -577,12 +577,15 @@ def test_onnx_export_equal_scalar(tmp_path, dtype, scalar):
     op_export_test('_internal._equal_scalar', M, [x], tmp_path)
 
 
-@pytest.mark.parametrize("dtype", ["float16", "float32", "int32", "int64"])
-@pytest.mark.parametrize("shape", [(1,1), (3,3), (10,2), (20,30,40)])
-def test_onnx_export_where(tmp_path, dtype, shape):
+@pytest.mark.parametrize('dtype', ["float16", "float32", "int32", "int64"])
+@pytest.mark.parametrize('shape', [(5,), (3,3), (10,2), (20,30,40)])
+@pytest.mark.parametrize('broadcast', [True, False])
+def test_onnx_export_where(tmp_path, dtype, shape, broadcast):
     M = def_model('where')
     x = mx.nd.zeros(shape, dtype=dtype)
     y = mx.nd.ones(shape, dtype=dtype)
+    if broadcast:
+        shape = shape[0:1]
     cond = mx.nd.random.randint(low=0, high=1, shape=shape, dtype='int32')
     op_export_test('where', M, [cond, x, y], tmp_path)
 
@@ -795,8 +798,9 @@ def test_onnx_export_broadcast_like(tmp_path, dtype, lhs_axes, rhs_axes):
 @pytest.mark.parametrize('spatial_scale', [1, 0.5, 0.0625])
 @pytest.mark.parametrize('spatial_ratio', [1, 2, 3, 5])
 def test_onnx_export_contrib_ROIAlign(tmp_path, dtype, pooled_size, spatial_scale, spatial_ratio):
-    data = mx.random.uniform(0, 1, (5, 3, 128, 128)).astype(dtype)
-    rois = mx.nd.array([[0, 0, 0, 63, 63],
+    data = mx.random.uniform(0, 1, (5, 3, 512, 512)).astype(dtype)
+    rois = mx.nd.array([[-1, 0, 0, 0, 0],
+                        [0, 0, 0, 63, 63],
                         [1, 34, 52, 25, 85],
                         [2, 50, 50, 100, 100],
                         [3, 0, 0, 127, 127],
@@ -804,7 +808,13 @@ def test_onnx_export_contrib_ROIAlign(tmp_path, dtype, pooled_size, spatial_scal
                         [0, 0, 0, 1, 1]]).astype(dtype)
     M = def_model('contrib.ROIAlign', pooled_size=pooled_size, spatial_scale=spatial_scale,
                   sample_ratio=spatial_ratio)
-    op_export_test('_contrib_ROIAlign', M, [data, rois], tmp_path)
+    # according to https://mxnet.apache.org/versions/1.7.0/api/python/docs/api/contrib/symbol/index.html#mxnet.contrib.symbol.ROIAlign
+    # the returned value for when batch_id < 0 should be all 0's
+    # however mxnet 1.8 does always behave this way so we set the first roi to 0's manually
+    def mx_map(x):
+        x[0] = 0
+        return x
+    op_export_test('_contrib_ROIAlign', M, [data, rois], tmp_path, mx_map=mx_map)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
