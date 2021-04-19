@@ -10041,7 +10041,10 @@ def test_scalarop_locale_invariance():
     finally:
         locale.setlocale(locale.LC_NUMERIC, prev)
 
-@with_seed()
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
+
 def test_take_grads():
     # Test for https://github.com/apache/incubator-mxnet/issues/19817
     from mxnet.gluon.nn import HybridBlock, Conv1D, HybridSequential, HybridLambda, Dense
@@ -10131,7 +10134,3 @@ def test_take_grads():
 
     for i in range(len(grads1)):
         assert_almost_equal(grads1[i], grads2[i])
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
