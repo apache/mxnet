@@ -3405,6 +3405,9 @@ def convert_contrib_box_nms(node, **kwargs):
 
     center_point_box = 0 if in_format == 'corner' else 1
 
+    if topk == -1:
+        topk = 2**31-1
+
     if in_format != out_format:
         raise NotImplementedError('box_nms does not currently support in_fomat != out_format')
 
@@ -3560,7 +3563,7 @@ def convert_equal_scalar(node, **kwargs):
     return nodes
 
 
-@mx_op.register("where")
+@mx_op.register('where')
 def convert_where(node, **kwargs):
     """Map MXNet's where operator attributes to onnx's Where
     operator and return the created node.
@@ -3568,9 +3571,21 @@ def convert_where(node, **kwargs):
     from onnx.helper import make_node
     from onnx import TensorProto
     name, input_nodes, _ = get_inputs(node, kwargs)
+    # note that in mxnet the condition tensor can either have the same shape as x and y OR
+    # have shape (first dim of x,)
+    create_tensor([0], name+'_0', kwargs['initializer'])
+    create_tensor([1], name+'_1', kwargs['initializer'])
     nodes = [
-        make_node("Cast", [input_nodes[0]], [name+"_bool"], to=int(TensorProto.BOOL)),
-        make_node("Where", [name+"_bool", input_nodes[1], input_nodes[2]], [name], name=name)
+        make_node('Shape', [input_nodes[0]], [name+'_cond_shape']),
+        make_node('Shape', [name+'_cond_shape'], [name+'_cond_dim']),
+        make_node('Shape', [input_nodes[1]], [name+'_x_shape']),
+        make_node('Shape', [name+'_x_shape'], [name+'_x_dim']),
+        make_node('Sub', [name+'_x_dim', name+'_cond_dim'], [name+'_sub']),
+        make_node('Concat', [name+'_0', name+'_sub'], [name+'_concat'], axis=0),
+        make_node('Pad', [name+'_cond_shape', name+'_concat', name+'_1'], [name+'_cond_new_shape']),
+        make_node('Reshape', [input_nodes[0], name+'_cond_new_shape'], [name+'_cond']),
+        make_node('Cast', [name+'_cond'], [name+'_bool'], to=int(TensorProto.BOOL)),
+        make_node('Where', [name+'_bool', input_nodes[1], input_nodes[2]], [name], name=name)
     ]
     return nodes
 
@@ -4066,17 +4081,22 @@ def convert_contrib_roialign(node, **kwargs):
                                    aligned!=False')
 
     create_tensor([0], name+'_0', kwargs['initializer'])
+    create_tensor([0], name+'_0_s', kwargs['initializer'], dtype='float32')
     create_tensor([1], name+'_1', kwargs['initializer'])
     create_tensor([5], name+'_5', kwargs['initializer'])
 
     nodes = [
         make_node('Slice', [input_nodes[1], name+'_1', name+'_5', name+'_1'], [name+'_rois']),
-        make_node('Slice', [input_nodes[1], name+'_0', name+'_1', name+'_1'], [name+'_inds__']),
-        make_node('Squeeze', [name+'_inds__'], [name+'_inds_'], axes=[1]),
+        make_node('Slice', [input_nodes[1], name+'_0', name+'_1', name+'_1'], [name+'_inds___']),
+        make_node('Squeeze', [name+'_inds___'], [name+'_inds__'], axes=[1]),
+        make_node('Relu', [name+'_inds__'], [name+'_inds_']),
         make_node('Cast', [name+'_inds_'], [name+'_inds'], to=int(TensorProto.INT64)),
-        make_node('RoiAlign', [input_nodes[0], name+'_rois', name+'_inds'], [name],
+        make_node('RoiAlign', [input_nodes[0], name+'_rois', name+'_inds'], [name+'_roi'],
                   mode='avg', output_height=pooled_size[0], output_width=pooled_size[1],
-                  sampling_ratio=sample_ratio, spatial_scale=spatial_scale)
+                  sampling_ratio=sample_ratio, spatial_scale=spatial_scale),
+        make_node('Unsqueeze', [name+'_inds___'], [name+'_unsq'], axes=(2, 3)),
+        make_node('Less', [name+'_unsq', name+'_0_s'], [name+'_less']),
+        make_node('Where', [name+'_less', name+'_0_s', name+'_roi'], [name])
     ]
 
     return nodes
