@@ -1563,3 +1563,37 @@ def test_onnx_export_logical_not(tmp_path, dtype, shape):
     M = def_model('logical_not')
     x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
     op_export_test('logical_not', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
+@pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
+def test_onnx_export_random_uniform_like(tmp_path, dtype, shape):
+    M = def_model('random.uniform_like')
+    low = -10
+    high = 10
+    x = mx.nd.zeros(shape=shape).astype(dtype)
+    def rand_check(out):
+        for i in out:
+            if i.any() < low or i.any() >= high:
+                raise Exception("Invalid value")
+        return np.zeros_like(out)
+    def rand_check_nd(out):
+        return rand_check(out.asnumpy())
+    op_export_test('random.uniform_like', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
+def test_onnx_export_random_uniform(tmp_path, dtype, shape):
+    low = -10
+    high = 10
+    M = def_model('random_uniform', low=low, high=high, shape=shape, dtype=dtype, dummy_input=True)
+    x = mx.nd.array([1], dtype='float32')
+    def rand_check(out):
+        for i in out:
+            if i.any() < low or i.any() >= high:
+                raise Exception("Invalid value")
+        return np.zeros_like(out)
+    def rand_check_nd(out):
+        return rand_check(out.asnumpy())
+    op_export_test('random_uniform', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check, dummy_input=True)
