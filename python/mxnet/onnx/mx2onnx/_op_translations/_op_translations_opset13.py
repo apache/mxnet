@@ -171,7 +171,11 @@ def create_const_scalar_node(input_name, value, kwargs):
     initializer tensor node with constant value."""
     from onnx.helper import make_tensor
     initializer = kwargs["initializer"]
-    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
+    dtype = value.dtype
+    if dtype == 'float16':
+        # when using float16, we must convert it to np.uint16 view first
+        value = np.float16(value).view(np.uint16)
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     tensor_node = make_tensor(input_name, input_type, (), ([value]))
     initializer.append(tensor_node)
 
@@ -180,7 +184,11 @@ def create_const_node(input_name, value, kwargs):
     initializer tensor node with constant value."""
     from onnx.helper import make_tensor
     initializer = kwargs["initializer"]
-    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
+    dtype = value.dtype
+    if dtype == 'float16':
+        # when using float16, we must convert it to np.uint16 view first
+        value = np.float16(value).view(np.uint16)
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     input_shape = value.shape
     tensor_node = make_tensor(input_name, input_type, input_shape, value)
     initializer.append(tensor_node)
@@ -1282,7 +1290,7 @@ def convert_slice_channel(node, **kwargs):
     squeeze_axis = attrs.get('squeeze_axis', 'False')
 
     create_tensor([axis], name+'_axis', kwargs['initializer'])
-    
+
     nodes = []
     if squeeze_axis in ['True', '1']:
         nodes += [
@@ -1300,3 +1308,230 @@ def convert_slice_channel(node, **kwargs):
         ]
 
     return nodes
+
+
+@mx_op.register("max", OPSET_VERSION)
+def convert_max(node, **kwargs):
+    """Map MXNet's max operator attributes to onnx's ReduceMax operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
+
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
+
+    if axes is not None:
+        if keepdims:
+            node = make_node('ReduceMax', input_nodes, [name], axes=axes, keepdims=keepdims)
+            return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            create_tensor([0], name+'_0', kwargs['initializer'])
+            create_tensor([len(axes)], name+'_axes_dim', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMax', input_nodes, [name+'_rmax'], axes=axes, keepdims=keepdims),
+                make_node('Shape', [name+'_rmax'], [name+'_rmax_shape']),
+                make_node('Shape', [name+'_rmax_shape'], [name+'_rmax_dim']),
+                make_node('Shape', [input_nodes[0]], [name+'_in_shape']),
+                make_node('Shape', [name+'_in_shape'], [name+'_in_dim']),
+                make_node('Equal', [name+'_axes_dim', name+'_in_dim'], [name+'_equal']),
+                make_node('Where', [name+'_equal', name+'_1', name+'_rmax_dim'], [name+'_where0']),
+                make_node('Tile', [name+'_0', name+'_where0'], [name+'_tile']),
+                make_node('Unsqueeze', [name+'_0', name+'_0'], [name+'_unsqueeze']),
+                make_node('Where', [name+'_equal', name+'_1', name+'_0'], [name+'_where1']),
+                make_node('ScatterND', [name+'_tile', name+'_unsqueeze', name+'_where1'], [name+'_SND']),
+                make_node('Reshape', [name+'_rmax', name+'_SND'], [name]),
+            ]
+            return nodes
+    else:
+        if keepdims:
+            node = make_node('ReduceMax', input_nodes, [name], keepdims=keepdims)
+            return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMax', input_nodes, [name+'_rmax'], keepdims=keepdims),
+                make_node('Reshape', [name+'_rmax', name+'_1'], [name])
+            ]
+            return nodes
+
+
+@mx_op.register("min", OPSET_VERSION)
+def convert_min(node, **kwargs):
+    """Map MXNet's min operator attributes to onnx's ReduceMin operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
+
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
+
+    if axes is not None:
+        if keepdims:
+            node = make_node('ReduceMin', input_nodes, [name], axes=axes, keepdims=keepdims)
+            return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            create_tensor([0], name+'_0', kwargs['initializer'])
+            create_tensor([len(axes)], name+'_axes_dim', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMin', input_nodes, [name+'_rmin'], axes=axes, keepdims=keepdims),
+                make_node('Shape', [name+'_rmin'], [name+'_rmin_shape']),
+                make_node('Shape', [name+'_rmin_shape'], [name+'_rmin_dim']),
+                make_node('Shape', [input_nodes[0]], [name+'_in_shape']),
+                make_node('Shape', [name+'_in_shape'], [name+'_in_dim']),
+                make_node('Equal', [name+'_axes_dim', name+'_in_dim'], [name+'_equal']),
+                make_node('Where', [name+'_equal', name+'_1', name+'_rmin_dim'], [name+'_where0']),
+                make_node('Tile', [name+'_0', name+'_where0'], [name+'_tile']),
+                make_node('Unsqueeze', [name+'_0', name+'_0'], [name+'_unsqueeze']),
+                make_node('Where', [name+'_equal', name+'_1', name+'_0'], [name+'_where1']),
+                make_node('ScatterND', [name+'_tile', name+'_unsqueeze', name+'_where1'], [name+'_SND']),
+                make_node('Reshape', [name+'_rmin', name+'_SND'], [name]),
+            ]
+            return nodes
+    else:
+        if keepdims:
+            node = make_node('ReduceMin', input_nodes, [name], keepdims=keepdims)
+            return [node]
+
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMin', input_nodes, [name+'_rmin'], keepdims=keepdims),
+                make_node('Reshape', [name+'_rmin', name+'_1'], [name])
+            ]
+            return nodes
+
+
+@mx_op.register("mean", OPSET_VERSION)
+def convert_mean(node, **kwargs):
+    """Map MXNet's mean operator attributes to onnx's ReduceMean operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
+
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
+
+    if axes is not None:
+        if keepdims:
+            node = make_node('ReduceMean', input_nodes, [name], axes=axes, keepdims=keepdims)
+            return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            create_tensor([0], name+'_0', kwargs['initializer'])
+            create_tensor([len(axes)], name+'_axes_dim', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMean', input_nodes, [name+'_reduce'], axes=axes, keepdims=keepdims),
+                make_node('Shape', [name+'_reduce'], [name+'_reduce_shape']),
+                make_node('Shape', [name+'_reduce_shape'], [name+'_reduce_dim']),
+                make_node('Shape', [input_nodes[0]], [name+'_in_shape']),
+                make_node('Shape', [name+'_in_shape'], [name+'_in_dim']),
+                make_node('Equal', [name+'_axes_dim', name+'_in_dim'], [name+'_equal']),
+                make_node('Where', [name+'_equal', name+'_1', name+'_reduce_dim'], [name+'_where0']),
+                make_node('Tile', [name+'_0', name+'_where0'], [name+'_tile']),
+                make_node('Unsqueeze', [name+'_0', name+'_0'], [name+'_unsqueeze']),
+                make_node('Where', [name+'_equal', name+'_1', name+'_0'], [name+'_where1']),
+                make_node('ScatterND', [name+'_tile', name+'_unsqueeze', name+'_where1'], [name+'_SND']),
+                make_node('Reshape', [name+'_reduce', name+'_SND'], [name]),
+            ]
+            return nodes
+    else:
+        if keepdims:
+            node = make_node('ReduceMean', input_nodes, [name], keepdims=keepdims)
+            return [node]
+
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceMean', input_nodes, [name+'_reduce'], keepdims=keepdims),
+                make_node('Reshape', [name+'_reduce', name+'_1'], [name])
+            ]
+            return nodes
+
+
+@mx_op.register("prod", OPSET_VERSION)
+def convert_prod(node, **kwargs):
+    """Map MXNet's prod operator attributes to onnx's ReduceProd operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
+
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
+
+    if axes is not None:
+        if keepdims:
+            node = make_node('ReduceProd', input_nodes, [name], axes=axes, keepdims=keepdims)
+            return [node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            create_tensor([0], name+'_0', kwargs['initializer'])
+            create_tensor([len(axes)], name+'_axes_dim', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceProd', input_nodes, [name+'_reduce'], axes=axes, keepdims=keepdims),
+                make_node('Shape', [name+'_reduce'], [name+'_reduce_shape']),
+                make_node('Shape', [name+'_reduce_shape'], [name+'_reduce_dim']),
+                make_node('Shape', [input_nodes[0]], [name+'_in_shape']),
+                make_node('Shape', [name+'_in_shape'], [name+'_in_dim']),
+                make_node('Equal', [name+'_axes_dim', name+'_in_dim'], [name+'_equal']),
+                make_node('Where', [name+'_equal', name+'_1', name+'_reduce_dim'], [name+'_where0']),
+                make_node('Tile', [name+'_0', name+'_where0'], [name+'_tile']),
+                make_node('Unsqueeze', [name+'_0', name+'_0'], [name+'_unsqueeze']),
+                make_node('Where', [name+'_equal', name+'_1', name+'_0'], [name+'_where1']),
+                make_node('ScatterND', [name+'_tile', name+'_unsqueeze', name+'_where1'], [name+'_SND']),
+                make_node('Reshape', [name+'_reduce', name+'_SND'], [name]),
+            ]
+            return nodes
+    else:
+        if keepdims:
+            node = make_node('ReduceProd', input_nodes, [name], keepdims=keepdims)
+            return [node]
+
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('ReduceProd', input_nodes, [name+'_reduce'], keepdims=keepdims),
+                make_node('Reshape', [name+'_reduce', name+'_1'], [name])
+            ]
+            return nodes
+
+
+@mx_op.register("squeeze", OPSET_VERSION)
+def convert_squeeze(node, **kwargs):
+    """Map MXNet's squeeze operator attributes to onnx's squeeze operator
+    and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
+
+    if not axes:
+        node = onnx.helper.make_node(
+            "Squeeze",
+            input_nodes,
+            [name],
+            name=name
+        )
+    else:
+        create_tensor(axes, name+'_axes', kwargs['initializer'])
+        node = onnx.helper.make_node(
+            "Squeeze",
+            [input_nodes[0], name+'_axes'],
+            [name],
+            name=name,
+        )
+    return [node]
