@@ -1334,3 +1334,83 @@ def test_onnx_export_square(tmp_path, dtype, shape):
     M = def_model('square')
     x = mx.nd.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
     op_export_test('square', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
+def test_onnx_export_shape_array(tmp_path, dtype, shape):
+    M = def_model('shape_array')
+    x = mx.nd.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
+    op_export_test('shape_array', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+@pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
+@pytest.mark.parametrize("alpha", [None, 0.1, 0.4567, 0.9])
+@pytest.mark.parametrize("beta", [None, 0.1, 0.4567, 0.5, 0.9])
+def test_onnx_export_hard_sigmoid(tmp_path, dtype, shape, alpha, beta):
+    kwargs = { }
+    if alpha is not None:
+        kwargs['alpha'] = alpha
+    if beta is not None:
+        kwargs['beta'] = beta
+    M = def_model('hard_sigmoid', **kwargs)
+    x = mx.nd.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
+    op_export_test('hard_sigmoid', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
+def test_onnx_export_broadcast_lesser(tmp_path, dtype, shape):
+    M = def_model('broadcast_lesser')
+    x = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
+    y = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
+    op_export_test('broadcast_lesser', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
+def test_onnx_export_broadcast_greater(tmp_path, dtype, shape):
+    M = def_model('broadcast_greater')
+    x = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
+    y = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
+    op_export_test('broadcast_greater', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
+@pytest.mark.parametrize("shape", [(10,5), (1,2,3), (4,5,6)])
+@pytest.mark.parametrize('axis', [None, 1])
+def test_onnx_export_log_softmax(tmp_path, dtype, shape, axis):
+    x = mx.nd.random.uniform(0, 1, shape, dtype=dtype)
+    kwargs = {}
+    if axis is not None:
+        kwargs['axis'] = axis
+    M = def_model('log_softmax', **kwargs)
+    op_export_test('log_softmax', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize("shape", [(10,), (2,3), (4,5,6)])
+def test_onnx_export_broadcast_logical_and(tmp_path, dtype, shape):
+    M = def_model('broadcast_logical_and')
+    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    y = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('broadcast_logical_and', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize("shape", [(10,), (2,3), (4,5,6)])
+def test_onnx_export_broadcast_logical_or(tmp_path, dtype, shape):
+    M = def_model('broadcast_logical_or')
+    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    y = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('broadcast_logical_or', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize("shape", [(10,), (2,3), (4,5,6)])
+def test_onnx_export_broadcast_logical_xor(tmp_path, dtype, shape):
+    M = def_model('broadcast_logical_xor')
+    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    y = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('broadcast_logical_xor', M, [x, y], tmp_path)
