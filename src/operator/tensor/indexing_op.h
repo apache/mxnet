@@ -1055,12 +1055,12 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 2, DType> grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
           Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
 
+      if (req[take_::kArr] == kWriteTo) {
+        grad_in = scalar<DType>(0.0f);
+      }
       // re-using the previous code for axis = 0 case
       if (actual_axis == 0) {
         if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
-          if (req[take_::kArr] == kWriteTo) {
-            grad_in = scalar<DType>(0.0f);
-          }
           if (param.mode == take_::kClip) {
             AddTakeGrad(grad_in, idx, grad_out);
           } else {
