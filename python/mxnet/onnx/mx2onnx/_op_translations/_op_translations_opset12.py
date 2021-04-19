@@ -2183,10 +2183,22 @@ def convert_broadcast_equal(node, **kwargs):
 
 @mx_op.register("broadcast_logical_and")
 def convert_broadcast_logical_and(node, **kwargs):
-    """Map MXNet's broadcast logical and operator attributes to onnx's Add operator
+    """Map MXNet's broadcast logical and operator attributes to onnx's And operator
     and return the created node.
     """
-    return create_basic_op_node('And', node, kwargs)
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+    nodes = [
+        make_node("Cast", [input_nodes[0]], [name+"_cast0"], to=int(TensorProto.BOOL)),
+        make_node("Cast", [input_nodes[1]], [name+"_cast1"], to=int(TensorProto.BOOL)),
+        make_node("And", [name+"_cast0", name+"_cast1"], [name+"_and"]),
+        make_node("Cast", [name+"_and"], [name], name=name, to=int(dtype_t))
+    ]
+    return nodes
 
 
 @mx_op.register("broadcast_logical_or")
@@ -2194,7 +2206,19 @@ def convert_broadcast_logical_or(node, **kwargs):
     """Map MXNet's broadcast logical or operator attributes to onnx's Or operator
     and return the created node.
     """
-    return create_basic_op_node('Or', node, kwargs)
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+    nodes = [
+        make_node("Cast", [input_nodes[0]], [name+"_cast0"], to=int(TensorProto.BOOL)),
+        make_node("Cast", [input_nodes[1]], [name+"_cast1"], to=int(TensorProto.BOOL)),
+        make_node("Or", [name+"_cast0", name+"_cast1"], [name+"_or"]),
+        make_node("Cast", [name+"_or"], [name], name=name, to=int(dtype_t))
+    ]
+    return nodes
 
 
 @mx_op.register("broadcast_logical_xor")
@@ -2202,7 +2226,19 @@ def convert_broadcast_logical_xor(node, **kwargs):
     """Map MXNet's broadcast logical xor operator attributes to onnx's Xor operator
     and return the created node.
     """
-    return create_basic_op_node('Xor', node, kwargs)
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+    nodes = [
+        make_node("Cast", [input_nodes[0]], [name+"_cast0"], to=int(TensorProto.BOOL)),
+        make_node("Cast", [input_nodes[1]], [name+"_cast1"], to=int(TensorProto.BOOL)),
+        make_node("Xor", [name+"_cast0", name+"_cast1"], [name+"_xor"]),
+        make_node("Cast", [name+"_xor"], [name], name=name, to=int(dtype_t))
+    ]
+    return nodes
 
 
 @mx_op.register("logical_not")
