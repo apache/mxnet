@@ -1428,3 +1428,20 @@ def test_onnx_export_size_array(tmp_path, dtype, shape):
     M = def_model('size_array')
     x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
     op_export_test('size_array', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+@pytest.mark.parametrize("shape", [(1,5), (2,10), (4,5)])
+@pytest.mark.parametrize("sample_shape", [(1), (2)])
+def test_onnx_export_sample_multinomial(tmp_path, dtype, shape, sample_shape):
+    kwargs = {}
+    if sample_shape is not None:
+        kwargs['shape'] = sample_shape
+    M = def_model('sample_multinomial', **kwargs)
+    a = mx.nd.random.uniform(0, 1, shape).astype(dtype)
+    x = a/a.sum(axis=1, keepdims=1)
+    def rand_check(out):
+        return np.zeros_like(out)
+    def rand_check_nd(out):
+        return rand_check(out.asnumpy())
+    op_export_test('sample_multinomial', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check)
