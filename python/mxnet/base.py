@@ -288,12 +288,18 @@ def _load_lib():
         lib.MXGetLastError.restype = ctypes.c_char_p
     except OSError as e:
         if "libcudnn" in e.args[0]:
-            e.args = (e.args[0]+'\nNotes: Starting from version 1.8.0, cuDNN and NCCL should be installed by users in advance.\
+            e.args = (e.args[0]+'\nNotes: Starting from version 1.8.0, cuDNN and NCCL should be installed by users in advance. \
                       \nPlease follow the instructions in https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html to install cuDNN.',)
             raise OSError(e) from None
         if "libnccl" in e.args[0]:
-            e.args = (e.args[0]+'\nNotes: Starting from version 1.8.0, cuDNN and NCCL should be installed by users in advance.\
+            e.args = (e.args[0]+'\nNotes: Starting from version 1.8.0, cuDNN and NCCL should be installed by users in advance. \
                       \nPlease follow the instructions in https://docs.nvidia.com/deeplearning/nccl/install-guide/index.html to install NCCL.',)
+            raise OSError(e) from None
+        if "libquadmath" in e.args[0]:
+            e.args = (e.args[0]+'\nNotes: As libquadmath.so.0 is a GPL library and MXNet part of the Apache Software Foundation, \
+                      \nMXNet must not redistribute libquadmath.so.0 as part of the Pypi package and users must manually install it. \
+                      \nOn Debian based systems, including Ubuntu, run sudo apt install libquadmath0 to install the shared library. \
+                      \nOn RHEL based systems, including CentOS, run sudo yum install libquadmath to install the shared library. ')
             raise OSError(e) from None
         raise
     else:
