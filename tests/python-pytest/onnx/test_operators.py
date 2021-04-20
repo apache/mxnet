@@ -1407,3 +1407,24 @@ def test_onnx_export_squeeze(tmp_path, dtype, shape_axis):
     x = mx.nd.random.uniform(1, 100, shape=shape_axis[0]).astype(dtype)
     M = def_model('squeeze', axis=shape_axis[1])
     op_export_test('squeeze', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("shape", [(1,2,3), (1,10)])
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_onnx_export_rnn_param_concat(tmp_path, dtype, shape, axis):
+    kwargs = {}
+    if axis is not None:
+        kwargs['dim'] = axis
+    M = def_model('_internal._rnn_param_concat', **kwargs)
+    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    y = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('_internal._rnn_param_concat', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
+def test_onnx_export_size_array(tmp_path, dtype, shape):
+    M = def_model('size_array')
+    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('size_array', M, [x], tmp_path)
