@@ -1290,7 +1290,7 @@ def test_onnx_export_contrib_div_sqrt_dim(tmp_path, dtype, shape):
     op_export_test('contrib_div_sqrt_dim', M, [A], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('dtype', ['float16', 'float32'])
 @pytest.mark.parametrize('shape', [(100,), (3, 4, 5), (6, 7)])
 def test_onnx_export_reciprocal(tmp_path, dtype, shape):
     A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
