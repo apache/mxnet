@@ -903,7 +903,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     while True:
         try:
             network(*data_nd)
-        except TypeError:
+        except (ValueError, TypeError):
             del data_nd[-1]
             del calib_data.provide_data[-1]
             continue
@@ -946,6 +946,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
 
     if ctx == mx.cpu():
         symnet = symnet.get_backend_symbol('MKLDNN_QUANTIZE')
+        symnet = symnet.get_backend_symbol('MKLDNN_BERT')
 
     qsym, qarg_params, aux_params, collector = quantize_graph(
         sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
@@ -983,6 +984,8 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
 
     if ctx == mx.cpu():
         qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
+        qsym = qsym.get_backend_symbol('MKLDNN_BERT_QUANTIZE')
+
 
     from ..gluon import SymbolBlock
     data_sym = []

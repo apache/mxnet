@@ -17,28 +17,25 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2019 by Contributors
- * \file mkldnn_fc_property.cc
- * \brief Partition gragph property for FullyConnected operator
- * \author Ciyong Chen
-*/
-
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <memory>
+#include <unordered_set>
+#include <utility>
 #include <string>
 #include <vector>
+
 #include "../common.h"
 #include "../../tensor/matrix_op-inl.h"
-#include "mkldnn_subgraph_base-inl.h"
-#include "mkldnn_fc-inl.h"
+#include "./mkldnn_subgraph_base-inl.h"
+#include "./mkldnn_fc-inl.h"
 
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNFCSelector : public SubgraphSelector {
+class SgMKLDNNFCPostQuantize2Selector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
@@ -54,16 +51,19 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
   std::vector<const nnvm::Node *> matched_list_;
 
  public:
-  explicit SgMKLDNNFCSelector(const bool dis_fc_eltwise, bool quantized) :
-      disable_fc_eltwise_(dis_fc_eltwise),
-      quantized_(quantized) {}
+  explicit SgMKLDNNFCPostQuantize2Selector(const bool dis_fc_eltwise,
+                                           bool quantized)
+      : disable_fc_eltwise_(dis_fc_eltwise), quantized_(quantized) {}
 
   bool Select(const nnvm::Node &n, const std::shared_ptr<NodeAttr>& node_attr) override {
-    if (n.op() == Op::Get("FullyConnected") && SupportMKLDNNAttr(node_attr)) {
-      status_ = disable_fc_eltwise_ ? kSuccess : kStart;
-      matched_list_.clear();
-      matched_list_.push_back(&n);
-      return true;
+    if (n.op() == Op::Get("_sg_mkldnn_fully_connected") && SupportMKLDNNAttr(node_attr)) {
+      auto const &fc_param = nnvm::get<MKLDNNFCFullParam>(n.attrs.parsed);
+      if (fc_param.mkldnn_param.enable_float_output) {
+        status_ = disable_fc_eltwise_ ? kSuccess : kStart;
+        matched_list_.clear();
+        matched_list_.push_back(&n);
+        return true;
+      }
     }
     return false;
   }
@@ -75,7 +75,6 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
     if (status_ == kFail || status_ == kSuccess || new_node.is_variable())
       return false;
-
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list_.back() != &n) {
@@ -85,7 +84,6 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
           matched_list_.pop_back();
         }
       }
-
       status_ = kSuccess;
       return false;
     }
@@ -102,15 +100,6 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
             return true;
           }
         }
-        // if (new_node.op() == Op::Get("LeakyReLU")) {
-        //   const LeakyReLUParam &param = nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
-        //   if (param.act_type == leakyrelu::kLeakyReLU ||
-        //       param.act_type == leakyrelu::kGELU) {
-        //     matched_list_.push_back(&new_node);
-        //     status_ = kSuccess;
-        //     return true;
-        //   }
-        // }
         if (!quantized_ && (new_node.op() == Op::Get("square") ||
             new_node.op() == Op::Get("sqrt") ||
             new_node.op() == Op::Get("exp"))) {
@@ -132,6 +121,11 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
           }
           status_ = kSuccess;
           return false;
+        }
+        if (new_node.op()->name == "elemwise_add") {
+          matched_list_.push_back(&new_node);
+          status_ = kSuccess;
+          return true;
         }
       default:
         status_ = kSuccess;
@@ -158,60 +152,69 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list_.size(), 1);
-    auto new_selector = SgMKLDNNFCSelector(disable_fc_eltwise_, quantized_);
+    auto new_selector = SgMKLDNNFCPostQuantize2Selector(disable_fc_eltwise_, quantized_);
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
 };
 
-class SgMKLDNNFCProperty : public SubgraphProperty {
+class SgMKLDNNFC_PostQuantize_2_Property : public SubgraphProperty {
  public:
-  SgMKLDNNFCProperty() {
+  SgMKLDNNFC_PostQuantize_2_Property() {
     disable_fc_eltwise_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_FC_ELTWISE", false);
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string &name = "MKLDNN FullyConnected optimization pass";
-    auto property = std::make_shared<SgMKLDNNFCProperty>();
+    static const std::string &name = "MKLDNN FullyConnected post quantization second pass";
+    auto property = std::make_shared<SgMKLDNNFC_PostQuantize_2_Property>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
-    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FC_OPT", 0)) {
+    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FC_SUM_OPT", 0)) {
       property->SetAttr<bool>("disable", true);
     }
     return property;
   }
 
+
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id = 0) const override {
-    nnvm::ObjectPtr n = nnvm::Node::Create();
-    // This op has single output, remove duplicated.
-    auto last_node = sym.outputs[0].node;
-    nnvm::Symbol new_sym;
-    new_sym.outputs.emplace_back(last_node);
-    std::ostringstream node_name;
-    node_name << "sg_mkldnn_";
-    DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
+    nnvm::ObjectPtr fc_node = nullptr;
+    nnvm::ObjectPtr ew_add_node = nullptr;
+
+    DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->is_variable()) return;
       auto &sub_name = node->op()->name;
-      if (sub_name == "FullyConnected") {
-        node_name << "fully_connected_";
-      } else if (SupportMKLDNNFCEltwiseFusion(sub_name)) {
-          node_name << "eltwise_";
-          n->attrs.dict["with_eltwise"] = "True";
+      if (sub_name == "_sg_mkldnn_fully_connected") {
+        fc_node = node;
+      } else if (sub_name == "elemwise_add") {
+        ew_add_node = node;
       }
     });
-    node_name << std::to_string(subgraph_id);
-    n->attrs.name = node_name.str();
-    n->attrs.op = Op::Get("_sg_mkldnn_fully_connected");
-    CHECK(n->attrs.op);
-    n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
-    n->op()->attr_parser(&(n->attrs));
-    return n;
+
+    CHECK_NOTNULL(fc_node);
+    if (ew_add_node != nullptr) {
+      CHECK_NOTNULL(fc_node->attrs.subgraphs[0]);
+      auto fc_orginal = fc_node->attrs.subgraphs[0]->outputs[0].node;
+      if (fc_orginal->op() == Op::Get("FullyConnected")) {
+        nnvm::Symbol new_sym;
+        nnvm::NodeEntry &ew_input_with_fc = (ew_add_node->inputs[1].node == fc_node) ?
+                                        ew_add_node->inputs[1] :
+                                        ew_add_node->inputs[0];
+        ew_input_with_fc.node = fc_orginal;
+        new_sym.outputs.emplace_back(ew_add_node);
+        fc_node->attrs.subgraphs.clear();
+        fc_node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
+        fc_node->attrs.dict["with_sum"] = "True";
+        fc_node->op()->attr_parser(&(fc_node->attrs));
+      }
+    }
+    return fc_node;
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     bool quantized = HasAttr("quantize") ? GetAttr<bool>("quantize") : false;
-    auto selector = std::make_shared<SgMKLDNNFCSelector>(disable_fc_eltwise_, quantized);
+    auto selector =
+      std::make_shared<SgMKLDNNFCPostQuantize2Selector>(disable_fc_eltwise_, quantized);
     return selector;
   }
 
@@ -225,6 +228,43 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
     }
   }
 
+  void ConnectSubgraphInputs(
+      const nnvm::ObjectPtr n, std::vector<nnvm::NodeEntry *> *input_entries,
+      std::vector<nnvm::NodeEntry> *orig_input_entries) const override {
+    auto sym = n->attrs.subgraphs[0];
+    auto const &fc_param = nnvm::get<MKLDNNFCFullParam>(n->attrs.parsed);
+    std::unordered_set<const nnvm::Node *> node_sets;
+    DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr &node) {
+        if (node->is_variable()) return;
+        node_sets.insert(node.get());
+        if (node->op()->name == "elemwise_add") {
+          const size_t base_inputs = fc_param.default_param.no_bias ? 3 : 4;
+
+          // Make sure n is the left operand of sum, if not,
+          // switch sum operands sequence to ensure that
+          // the extra sum operand stays in the last of inputs.
+          if (node_sets.count(node->inputs[1].node.get())) {
+            std::swap(node->inputs[0], node->inputs[1]);
+
+            std::rotate(input_entries->begin(),
+                        input_entries->begin() + 1,
+                        input_entries->begin() + base_inputs);
+            std::rotate(orig_input_entries->begin(),
+                        orig_input_entries->begin() + 1,
+                        orig_input_entries->begin() + base_inputs);
+          } else {
+            std::rotate(input_entries->begin() + base_inputs - 1 ,
+                        input_entries->end() - 1,
+                        input_entries->end());
+            std::rotate(orig_input_entries->begin() + base_inputs - 1,
+                        orig_input_entries->end() - 1 ,
+                        orig_input_entries->end());
+          }
+        }
+      });
+    n->inputs = *orig_input_entries;
+  }
+
  private:
   bool disable_fc_eltwise_;
 };
@@ -233,4 +273,4 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_2_PROPERTY_H_

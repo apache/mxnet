@@ -41,8 +41,12 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   bool quantized;
   bool enable_float_output;
   bool with_eltwise;
+  bool with_sum;
+  float sum_scale = 1.0f;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
+  dmlc::optional<int32_t> shift_value;
+  dmlc::optional<bool> shifted_output;
   dmlc::optional<bool> channel_wise_quantize;
 
   DMLC_DECLARE_PARAMETER(MKLDNNFCParam) {
@@ -52,6 +56,8 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
     .describe("Whether to enable float32 output");
     DMLC_DECLARE_FIELD(with_eltwise).set_default(false)
     .describe("Whether there's a post with_eltwise after FullyConnected operator");
+    DMLC_DECLARE_FIELD(with_sum).set_default(false)
+    .describe("Add post sum");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -62,6 +68,12 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
     .describe("The maximum scalar value in the form of float32 obtained "
               "through calibration. If present, it will be used to by "
               "quantized fullyconnected op to calculate primitive scale");
+    DMLC_DECLARE_FIELD(shift_value)
+    .set_default(dmlc::optional<int32_t>())
+    .describe("Shift value of FC input to be compensated by recalculating bias.");
+    DMLC_DECLARE_FIELD(shifted_output)
+    .set_default(dmlc::optional<bool>())
+    .describe("Whether quantized output should be shifted to u8.");
     DMLC_DECLARE_FIELD(channel_wise_quantize)
     .set_default(dmlc::optional<bool>())
     .describe("Whether support channel-wise-quantize for weight.");

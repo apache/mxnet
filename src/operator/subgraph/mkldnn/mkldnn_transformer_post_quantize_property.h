@@ -17,39 +17,27 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2019 by Contributors
- * \file mkldnn_fc_post_quantize_property.cc
- * \brief Partition gragph property for MKLDNN Quantized FullyConnected operator
- * \author Ciyong Chen
-*/
-
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_POST_QUANTIZE_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <memory>
 #include <string>
 #include <vector>
-#include "../../nn/fully_connected-inl.h"
 #include "../../quantization/requantize-inl.h"
-#include "../../quantization/quantize_v2-inl.h"
 #include "../common.h"
 #include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
-#define QUANTIZED_FC_NAME "_sg_mkldnn_fully_connected"
-
-class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
+class SgMKLDNNTransformerPostQuantizeSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
     kFail = 0,
     kStart,
     kRequantize,
-    kLeakyRelu,
-    kQuantizeAgain,
     kSuccess,
   };
 
@@ -60,13 +48,15 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
   std::vector<const nnvm::Node *> matched_list;
 
  public:
-  explicit SgMKLDNNFCPostQuantizeSelector(const bool dis_all,
-                                          const bool dis_float_output)
+  explicit SgMKLDNNTransformerPostQuantizeSelector(const bool dis_all,
+                                                   const bool dis_float_output)
       : disable_all(dis_all),
         disable_float_output(dis_float_output) {}
 
   bool Select(const nnvm::Node &n) override {
-    if ((!disable_all) && n.op() == Op::Get(QUANTIZED_FC_NAME)) {
+    if ((!disable_all) && 
+        (n.op() == Op::Get("_sg_mkldnn_contrib_interleaved_matmul_selfatt_qk") ||
+         n.op() == Op::Get("_sg_mkldnn_contrib_interleaved_matmul_selfatt_valatt"))) {
       status = disable_all ? kSuccess : kStart;
       matched_list.clear();
       matched_list.push_back(&n);
@@ -110,20 +100,8 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
       case kRequantize:
         if ((!disable_float_output) && (new_node.op() == Op::Get("_contrib_dequantize"))) {
             matched_list.push_back(&new_node);
-            status = kLeakyRelu;
-            return true;
-        }
-      case kLeakyRelu:
-        if ((new_node.op() == Op::Get("LeakyReLU")) && status == kLeakyRelu) {
-            matched_list.push_back(&new_node);
-            status = kQuantizeAgain;
-            return true;
-        }
-      case kQuantizeAgain:
-        if ((new_node.op() == Op::Get("_contrib_quantize_v2")) && status == kQuantizeAgain) {
-            matched_list.push_back(&new_node);
             status = kSuccess;
-          return true;
+            return true;
         }
       default:
         status = kSuccess;
@@ -150,22 +128,22 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list.size(), 1);
-    auto new_selector = SgMKLDNNFCPostQuantizeSelector(disable_all, disable_float_output);
+    auto new_selector = SgMKLDNNTransformerPostQuantizeSelector(disable_all, disable_float_output);
     new_selector.Select(*matched_list[0]);
     *this = new_selector;
   }
 };
 
-class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
+class SgMKLDNNTransformerPostQuantizeProperty : public SubgraphProperty {
  public:
-  SgMKLDNNFCPostQuantizeProperty() {
-    disable_fuse_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QFC_FUSE_ALL", false);
-    disable_float_output = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QFC_FLOAT_OUTPUT", false);
+  SgMKLDNNTransformerPostQuantizeProperty() {
+    disable_fuse_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QTRANSFORMER_FUSE_ALL", false);
+    disable_float_output = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QTRANSFORMER_FLOAT_OUTPUT", false);
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string &name = "MKLDNN FullyConected post-quantization optimization pass";
-    auto property = std::make_shared<SgMKLDNNFCPostQuantizeProperty>();
+    static const std::string &name = "MKLDNN Transformer post-quantization optimization pass";
+    auto property = std::make_shared<SgMKLDNNTransformerPostQuantizeProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
@@ -173,83 +151,46 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
 
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id = 0) const override {
-    nnvm::ObjectPtr fc_node = nullptr;
+    nnvm::ObjectPtr interleaved_node = nullptr;
     nnvm::ObjectPtr requantize_node = nullptr;
     nnvm::ObjectPtr dequantize_node = nullptr;
-    nnvm::ObjectPtr leaky_relu_node = nullptr;
-    nnvm::ObjectPtr quantize_again_node = nullptr;
 
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->is_variable()) return;
-      if (node->op() == Op::Get(QUANTIZED_FC_NAME)) {
-        fc_node = node;
+      if (node->op() == Op::Get("_sg_mkldnn_contrib_interleaved_matmul_selfatt_qk") ||
+          node->op() == Op::Get("_sg_mkldnn_contrib_interleaved_matmul_selfatt_valatt")) {
+        interleaved_node = node;
       } else if (node->op() == Op::Get("_contrib_requantize")) {
         requantize_node = node;
       } else if (node->op() == Op::Get("_contrib_dequantize")) {
         dequantize_node = node;
-      } else if (node->op() == Op::Get("LeakyReLU")) {
-        leaky_relu_node = node;
-      } else if (node->op() == Op::Get("_contrib_quantize_v2")) {
-        quantize_again_node = node;
       }
     });
 
-    CHECK_NOTNULL(fc_node);
+    CHECK_NOTNULL(interleaved_node);
     CHECK_NOTNULL(requantize_node);
     auto const &requantize_param =
         nnvm::get<RequantizeParam>(requantize_node->attrs.parsed);
     CHECK(requantize_param.min_calib_range.has_value());
     CHECK(requantize_param.max_calib_range.has_value());
 
-    if (leaky_relu_node != nullptr) {
-          fc_node->attrs.dict["with_eltwise"] = "True";
-      nnvm::Symbol new_sym;
-      DFSVisit(fc_node->attrs.subgraphs[0]->outputs, [&](const nnvm::ObjectPtr &node) {
-        if (node->is_variable()) return;
-        auto &op_name = node->op()->name;
-        if (op_name == "FullyConnected") {
-          leaky_relu_node->inputs.resize(1);
-          leaky_relu_node->inputs[0].node = node;
-          leaky_relu_node->inputs[0].index = 0;
-          new_sym.outputs.emplace_back(leaky_relu_node);
-          return; //exit lambda
-        }
-      });
-
-      fc_node->attrs.subgraphs.clear();
-      fc_node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
-
-      if(quantize_again_node != nullptr) {
-        fc_node->attrs.dict["enable_float_output"] = "False";
-        dequantize_node = nullptr;
-        auto const &quantize_param =
-            nnvm::get<QuantizeV2Param>(quantize_again_node->attrs.parsed);
-        fc_node->attrs.dict["min_calib_range"] =
-          std::to_string(quantize_param.min_calib_range.value());
-        fc_node->attrs.dict["max_calib_range"] =
-            std::to_string(quantize_param.max_calib_range.value());
-      }
-    } else {
-
-    
     // When only fused quantized_fullyconnected and requantize, set min/max_cablib_range,
     // When fused quantized_fullyconnected + requantize + dequantize, set dequantize flag to true.
-      if (dequantize_node != nullptr) {
-        fc_node->attrs.dict["enable_float_output"] = "True";
-      } else {
-        fc_node->attrs.dict["min_calib_range"] =
-            std::to_string(requantize_param.min_calib_range.value());
-        fc_node->attrs.dict["max_calib_range"] =
-            std::to_string(requantize_param.max_calib_range.value());
-      }
+    if (dequantize_node != nullptr) {
+      interleaved_node->attrs.dict["enable_float_output"] = "True";
+    } else {
+      interleaved_node->attrs.dict["min_calib_range"] =
+          std::to_string(requantize_param.min_calib_range.value());
+      interleaved_node->attrs.dict["max_calib_range"] =
+          std::to_string(requantize_param.max_calib_range.value());
     }
-    fc_node->op()->attr_parser(&(fc_node->attrs));
-    return fc_node;
+    interleaved_node->op()->attr_parser(&(interleaved_node->attrs));
+    return interleaved_node;
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     auto selector =
-        std::make_shared<SgMKLDNNFCPostQuantizeSelector>(disable_fuse_all,
+        std::make_shared<SgMKLDNNTransformerPostQuantizeSelector>(disable_fuse_all,
                                                          disable_float_output);
     return selector;
   }
@@ -272,4 +213,4 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_POST_QUANTIZE_PROPERTY_H_
