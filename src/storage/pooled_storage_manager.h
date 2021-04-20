@@ -74,7 +74,6 @@ class GPUPooledStorageManager final : public StorageManager {
     if (memory_limit_percentage_ <= 0 || memory_limit_percentage_ > 100)
       LOG(FATAL) << "MXNET_GPU_MEM_POOL_LIMIT invalid: " << memory_limit_percentage_
                  << " must be 0 <= x < 100" << std::endl;
-    }
   }
   /*!
    * \brief Default destructor.
