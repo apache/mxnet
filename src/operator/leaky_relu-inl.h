@@ -73,6 +73,37 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
     DMLC_DECLARE_FIELD(upper_bound).set_default(0.334f)
     .describe("Upper bound of random slope. (For rrelu only)");
   }
+  std::string ActType2String(int act_type) {
+    switch (act_type) {
+      case leakyrelu::kRReLU:
+        return "rrelu";
+      case leakyrelu::kLeakyReLU:
+        return "leaky";
+      case leakyrelu::kPReLU:
+        return "prelu";
+      case leakyrelu::kELU:
+        return "elu";
+      case leakyrelu::kSELU:
+        return "selu";
+      case leakyrelu::kGELU:
+        return "gelu";
+      default:
+        LOG(FATAL) << "Unknown act_type enum " << act_type;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream act_type_s, slope_s, lower_bound_s, upper_bound_s;
+    act_type_s << act_type;
+    slope_s << slope;
+    lower_bound_s << lower_bound;
+    upper_bound_s << upper_bound;
+    (*dict)["act_type"] = ActType2String(act_type);
+    (*dict)["slope"] = slope_s.str();
+    (*dict)["lower_bound"] = lower_bound_s.str();
+    (*dict)["upper_bound"] = upper_bound_s.str();
+  }
 };
 
 template<typename xpu, typename DType>

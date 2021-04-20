@@ -602,3 +602,56 @@ def test_pixelshuffle3d():
             [64, 88, 65, 89, 66, 90, 67, 91],
             [68, 92, 69, 93, 70, 94, 71, 95]]]]]
     )
+
+@use_np
+def test_embedding():
+    def check_embedding():
+        layer = gluon.nn.Embedding(10, 100)
+        layer.initialize()
+        x = mx.np.array([3,4,2,0,1])
+        with mx.autograd.record():
+            y = layer(x)
+            y.backward()
+        assert (layer.weight.grad().asnumpy()[:5] == 1).all()
+        assert (layer.weight.grad().asnumpy()[5:] == 0).all()
+
+    def check_embedding_large_input():
+        embedding = mx.gluon.nn.Embedding(10, 1)
+        embedding.initialize()
+        embedding.hybridize()
+        shape = (20481,)
+        with mx.autograd.record():
+            emb_in = embedding(mx.np.ones(shape))
+            loss = emb_in.sum()
+        loss.backward()
+        assert embedding.weight.grad().sum().item() == 20481
+
+    check_embedding()
+    check_embedding_large_input()
+
+
+@use_np
+@pytest.mark.parametrize('dshape', [(10, ), (2, 10, 10, 10)])
+def test_layernorm(dshape):
+    layer = nn.LayerNorm(in_channels=10)
+    print("checking layer {}\nshape: {}.".format(layer, dshape))
+    layer.initialize()
+    x = mx.np.ones(shape=dshape)
+    x.attach_grad()
+    with mx.autograd.record():
+        out = layer(x)
+    out.backward()
+
+    np_out = out.asnumpy()
+    np_dx = x.grad.asnumpy()
+
+    layer.hybridize()
+
+    x = mx.np.ones(shape=dshape)
+    x.attach_grad()
+    with mx.autograd.record():
+        out = layer(x)
+    out.backward()
+
+    mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-5, atol=1e-6)
+    mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
