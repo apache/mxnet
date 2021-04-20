@@ -1597,3 +1597,26 @@ def test_onnx_export_random_uniform(tmp_path, dtype, shape):
     def rand_check_nd(out):
         return rand_check(out.asnumpy())
     op_export_test('random_uniform', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check, dummy_input=True)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
+@pytest.mark.parametrize("loc", [None, 0, 1, 2])
+@pytest.mark.parametrize("scale", [None, 1, 2])
+def test_onnx_export_random_normal(tmp_path, dtype, loc, scale, shape):
+    kwargs = {
+        'dtype': dtype,
+        'shape': shape,
+        'dummy_input': True
+    }
+    if loc is not None:
+        kwargs['loc'] = loc
+    if scale is not None:
+        kwargs['scale'] = scale
+    M = def_model('random_normal', **kwargs)
+    x = mx.nd.array([1], dtype='float32')
+    def rand_check(out):
+        return np.zeros_like(out)
+    def rand_check_nd(out):
+        return rand_check(out.asnumpy())
+    op_export_test('random_normal', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check, dummy_input=True)

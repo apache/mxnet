@@ -2393,6 +2393,9 @@ def convert_norm(node, **kwargs):
     keepdims = get_boolean_attribute_value(attrs, "keepdims")
     ord = int(attrs.get("ord", 2))
 
+    if ord != 1 and ord != 2:
+        raise AttributeError("norm export operator only supports ord=1 or ord=2.")
+
     onnx_op_name = "ReduceL1" if ord == 1 else "ReduceL2"
 
     if axes:
@@ -2476,7 +2479,8 @@ def convert_random_normal(node, **kwargs):
     mean = float(attrs.get("loc", 0))
     scale = float(attrs.get("scale", 1.0))
     shape = convert_string_to_list(attrs.get('shape', '[]'))
-    dtype = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(attrs.get('dtype', 'float32'))]
+    dtype = np.dtype(attrs.get('dtype', 'float32'))
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
 
     node = onnx.helper.make_node(
         'RandomNormal',
@@ -2484,11 +2488,11 @@ def convert_random_normal(node, **kwargs):
         [name],
         mean=mean,
         scale=scale,
-        dtype=dtype,
+        dtype=dtype_t,
         shape=shape,
         name=name
     )
-    return [node]
+    return [node], (dtype,)
 
 
 @mx_op.register("ROIPooling")
