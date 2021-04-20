@@ -2393,7 +2393,7 @@ def convert_norm(node, **kwargs):
     keepdims = get_boolean_attribute_value(attrs, "keepdims")
     ord = int(attrs.get("ord", 2))
 
-    if ord not in [1,2]:
+    if ord not in [1, 2]:
         raise AttributeError("norm export operator only supports ord=1 or ord=2.")
 
     onnx_op_name = "ReduceL1" if ord == 1 else "ReduceL2"

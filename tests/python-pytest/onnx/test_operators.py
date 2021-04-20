@@ -1620,3 +1620,12 @@ def test_onnx_export_random_normal(tmp_path, dtype, loc, scale, shape):
     def rand_check_nd(out):
         return rand_check(out.asnumpy())
     op_export_test('random_normal', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check, dummy_input=True)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+@pytest.mark.parametrize("spatial_scale", [0.7, 1.0])
+def test_onnx_export_roi_pooling(tmp_path, dtype, spatial_scale):
+    M = def_model('ROIPooling', pooled_size=(2,2), spatial_scale=spatial_scale)
+    x = mx.nd.arange(start=0, stop=48, dtype=dtype).reshape((1,1,8,6))
+    y = mx.nd.array([[0,0,0,4,4]], dtype=dtype)
+    op_export_test('ROIPooling', M, [x, y], tmp_path)
