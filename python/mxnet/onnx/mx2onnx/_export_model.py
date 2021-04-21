@@ -154,7 +154,7 @@ def export_model(sym, arg_params, aux_params, in_shapes=None, in_types=np.float3
                  dynamic_input_shapes=None, run_shape_inference=False, input_type=None,
                  input_shape=None):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
-    Accepts symbol, arg_params and aux_params. 
+    Accepts symbol, arg_params and aux_params.
     Operator support and coverage -
     https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#operator-support-matrix
 
@@ -195,21 +195,15 @@ def export_model(sym, arg_params, aux_params, in_shapes=None, in_types=np.float3
     This method is available when you ``import mxnet.onnx``
 
     """
-    try:
-        from onnx import helper, mapping, shape_inference
-        from onnx.defs import onnx_opset_version
-    except ImportError:
-        raise ImportError("Onnx and protobuf need to be installed. "
-                          + "Instructions to install - https://github.com/onnx/onnx")
-
-    if isinstance(sym, symbol.Symbol) and isinstance(params, dict):
+    if isinstance(sym, symbol.Symbol) and isinstance(arg_params, dict) and isinstance(aux_params, dict):
         # Merging arg and aux parameters
         params = {}
         params.update(arg_params)
         params.update(aux_params)
         return export_model(sym, params, in_shapes=in_shapes, in_types=in_types,
-                 onnx_file_path=onnx_file_path, verbose=verbose, dynamic=dynamic,
-                 dynamic_input_shapes=dynamic_input_shapes, run_shape_inference=run_shape_inference, input_type=input_type,
-                 input_shape=input_shape)
+                            onnx_file_path=onnx_file_path, verbose=verbose, dynamic=dynamic, 
+                            dynamic_input_shapes=dynamic_input_shapes, 
+                            run_shape_inference=run_shape_inference, input_type=input_type,
+                            input_shape=input_shape)
     else:
         raise ValueError("Input sym should be symbol object, arg_params and aux_params should be dict objects")
