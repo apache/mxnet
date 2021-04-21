@@ -1488,7 +1488,6 @@ def test_onnx_export_maximum_minimum(tmp_path, dtype, shape, op_name):
     op_export_test(op_name, M, [lhs, rhs], tmp_path)
 
 
-
 # onnx reduce ops do not support float64
 @pytest.mark.parametrize('dtype', ['float16', 'float32','int32', 'int64'])
 @pytest.mark.parametrize('shape', [(2, 3), (4, 5, 6)])
@@ -1555,6 +1554,24 @@ def test_onnx_export_squeeze(tmp_path, dtype, shape_axis):
     x = mx.nd.random.uniform(1, 100, shape=shape_axis[0]).astype(dtype)
     M = def_model('squeeze', axis=shape_axis[1])
     op_export_test('squeeze', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+@pytest.mark.parametrize("order", [1, 2])
+@pytest.mark.parametrize("keepdims", [0, 1])
+@pytest.mark.parametrize("axis", [None, 0, 1, 2, -1, (0, 2), (0, 1, 2)])
+@pytest.mark.parametrize("shape", [(4, 5, 6), (3, 4, 5, 6)])
+def test_onnx_export_norm(tmp_path, dtype, order, axis, shape, keepdims):
+    kwargs = {}
+    if order is not None:
+        kwargs['ord'] = order
+    if axis is not None:
+        kwargs['axis'] = axis
+    if keepdims is not None:
+        kwargs['keepdims'] = keepdims
+    M = def_model('norm', **kwargs)
+    x = mx.random.normal(0, 10, shape).astype(dtype)
+    op_export_test('norm', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
