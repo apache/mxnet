@@ -207,7 +207,7 @@ def export_model(sym, arg_params, aux_params, in_shapes=None, in_types=np.float3
         params = {}
         params.update(arg_params)
         params.update(aux_params)
-        export_model(sym, params, in_shapes=in_shapes, in_types=in_types,
+        return export_model(sym, params, in_shapes=in_shapes, in_types=in_types,
                  onnx_file_path=onnx_file_path, verbose=verbose, dynamic=dynamic,
                  dynamic_input_shapes=dynamic_input_shapes, run_shape_inference=run_shape_inference, input_type=input_type,
                  input_shape=input_shape):
