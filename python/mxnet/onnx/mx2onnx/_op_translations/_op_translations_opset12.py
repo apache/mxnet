@@ -345,8 +345,8 @@ def convert_crop(node, **kwargs):
     name, inputs, attrs = get_inputs(node, kwargs)
 
     num_inputs = len(inputs)
-    y, x = convert_string_to_list(attrs.get('offset', '(0, 0)'))
-    h, w = convert_string_to_list(attrs.get('h_w', '(0, 0)'))
+    y, x = convert_string_to_list(attrs.get('offset', '(0, 0)')) # pylint: disable=unbalanced-tuple-unpacking
+    h, w = convert_string_to_list(attrs.get('h_w', '(0, 0)')) # pylint: disable=unbalanced-tuple-unpacking
     center_crop = attrs.get('center_crop', 'False')
 
     if center_crop in ['True', '1']:
@@ -632,11 +632,11 @@ def convert_dot(node, **kwargs):
     transpose_a, transpose_b attributes."""
     logging.warning('Converting dot operator... Please note that due to ONNX limitation, the '
                     'behavior for when inputs > 2-D is different from that of MXNet dot.')
-    
+
     name, inputs, attrs = get_inputs(node, kwargs)
     trans_a = get_boolean_attribute_value(attrs, "transpose_a")
     trans_b = get_boolean_attribute_value(attrs, "transpose_b")
-    
+
     nodes = []
     input_nodes = []
     if trans_a:
@@ -656,6 +656,8 @@ def convert_dot(node, **kwargs):
 
 
 def transpose_last_two_dim(name, kwargs):
+    """Helper function to transpose the last two dims of the input tensor
+    """
     from onnx.helper import make_node
     create_tensor([0], name+'_0', kwargs['initializer'])
     create_tensor([1], name+'_1', kwargs['initializer'])
@@ -719,7 +721,7 @@ def convert_linalg_gemm2(node, **kwargs):
             make_node('MatMul', input_nodes, [name])
         ]
         return nodes
-    
+
     create_const_scalar_node(name+"_alpha", dtype.type(alpha), kwargs)
     nodes += [
         make_node('MatMul', input_nodes, [name+'_matmul']),
