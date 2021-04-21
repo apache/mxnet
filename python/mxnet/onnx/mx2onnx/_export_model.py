@@ -61,8 +61,10 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
     ----------
     sym : str or symbol object
         Path to the json file or Symbol object
-    params : str or symbol object
-        Path to the params file or params dictionary. (Including both arg_params and aux_params)
+    params : str or dict or list of dict
+        str - Path to the params file
+        dict - params dictionary (Including both arg_params and aux_params)
+        list - list of length 2 that contains arg_params and aux_params
     in_shapes : List of tuple
         Input shape of the model e.g [(1,3,224,224)]
     in_types : data type or list of data types
@@ -126,6 +128,16 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
                                                        in_types_t,
                                                        verbose=verbose, opset_version=opset_version,
                                                        dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes)
+    elif isinstance(sym, symbol.Symbol) and isinstance(params, list) and len(params) == 2
+        and isinstance(params[0], dict) and isinstance(params[1], dict):
+        # when params contains arg_params and aux_params
+        p = {}
+        p.update(params[0])
+        p.update(params[1])
+        onnx_graph = converter.create_onnx_graph_proto(sym, p, in_shapes,
+                                                       in_types_t,
+                                                       verbose=verbose, opset_version=opset_version,
+                                                       dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes)
     else:
         raise ValueError("Input sym and params should either be files or objects")
 
@@ -147,63 +159,3 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
         logging.info("Exported ONNX file %s saved to disk", onnx_file_path)
 
     return onnx_file_path
-
-
-def export_model(sym, arg_params, aux_params, in_shapes=None, in_types=np.float32,
-                 onnx_file_path='model.onnx', verbose=False, dynamic=False,
-                 dynamic_input_shapes=None, run_shape_inference=False, input_type=None,
-                 input_shape=None):
-    """Exports the MXNet model file, passed as a parameter, into ONNX model.
-    Accepts symbol, arg_params and aux_params.
-    Operator support and coverage -
-    https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#operator-support-matrix
-
-    Parameters
-    ----------
-    sym : symbol object
-        Symbol object
-    arg_params : dict of str to NDArray
-        Model parameter, dict of name to NDArray of net's weights.
-    aux_params : dict of str to NDArray
-        Model parameter, dict of name to NDArray of net's auxiliary states.
-    in_shapes : List of tuple
-        Input shape of the model e.g [(1,3,224,224)]
-    in_types : data type or list of data types
-        Input data type e.g. np.float32, or [np.float32, np.int32]
-    onnx_file_path : str
-        Path where to save the generated onnx file
-    verbose : Boolean
-        If True will print logs of the model conversion
-    dynamic: Boolean
-        If True will allow for dynamic input shapes to the model
-    dynamic_input_shapes: list of tuple
-        Specifies the dynamic input_shapes. If None then all dimensions are set to None
-    run_shape_inference : Boolean
-        If True will run shape inference on the model
-    input_type : data type or list of data types
-        This is the old name of in_types. We keep this parameter name for backward compatibility
-    in_shapes : List of tuple
-        This is the old name of in_shapes. We keep this parameter name for backward compatibility
-
-    Returns
-    -------
-    onnx_file_path : str
-        Onnx file path
-
-    Notes
-    -----
-    This method is available when you ``import mxnet.onnx``
-
-    """
-    if isinstance(sym, symbol.Symbol) and isinstance(arg_params, dict) and isinstance(aux_params, dict):
-        # Merging arg and aux parameters
-        params = {}
-        params.update(arg_params)
-        params.update(aux_params)
-        return export_model(sym, params, in_shapes=in_shapes, in_types=in_types,
-                            onnx_file_path=onnx_file_path, verbose=verbose, dynamic=dynamic, 
-                            dynamic_input_shapes=dynamic_input_shapes, 
-                            run_shape_inference=run_shape_inference, input_type=input_type,
-                            input_shape=input_shape)
-    else:
-        raise ValueError("Input sym should be symbol object, arg_params and aux_params should be dict objects")
