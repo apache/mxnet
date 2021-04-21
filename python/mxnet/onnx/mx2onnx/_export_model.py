@@ -55,7 +55,7 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
     Operator support and coverage -
-    https://cwiki.apache.org/confluence/display/MXNET/ONNX+Operator+Coverage
+    https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#operator-support-matrix
 
     Parameters
     ----------
@@ -89,7 +89,7 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
 
     Notes
     -----
-    This method is available when you ``import mxnet.contrib.onnx``
+    This method is available when you ``import mxnet.onnx``
 
     """
 
@@ -147,3 +147,69 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
         logging.info("Exported ONNX file %s saved to disk", onnx_file_path)
 
     return onnx_file_path
+
+
+def export_model(sym, arg_params, aux_params, in_shapes=None, in_types=np.float32,
+                 onnx_file_path='model.onnx', verbose=False, dynamic=False,
+                 dynamic_input_shapes=None, run_shape_inference=False, input_type=None,
+                 input_shape=None):
+    """Exports the MXNet model file, passed as a parameter, into ONNX model.
+    Accepts symbol, arg_params and aux_params. 
+    Operator support and coverage -
+    https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#operator-support-matrix
+
+    Parameters
+    ----------
+    sym : symbol object
+        Symbol object
+    arg_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's weights.
+    aux_params : dict of str to NDArray
+        Model parameter, dict of name to NDArray of net's auxiliary states.
+    in_shapes : List of tuple
+        Input shape of the model e.g [(1,3,224,224)]
+    in_types : data type or list of data types
+        Input data type e.g. np.float32, or [np.float32, np.int32]
+    onnx_file_path : str
+        Path where to save the generated onnx file
+    verbose : Boolean
+        If True will print logs of the model conversion
+    dynamic: Boolean
+        If True will allow for dynamic input shapes to the model
+    dynamic_input_shapes: list of tuple
+        Specifies the dynamic input_shapes. If None then all dimensions are set to None
+    run_shape_inference : Boolean
+        If True will run shape inference on the model
+    input_type : data type or list of data types
+        This is the old name of in_types. We keep this parameter name for backward compatibility
+    in_shapes : List of tuple
+        This is the old name of in_shapes. We keep this parameter name for backward compatibility
+
+    Returns
+    -------
+    onnx_file_path : str
+        Onnx file path
+
+    Notes
+    -----
+    This method is available when you ``import mxnet.onnx``
+
+    """
+    try:
+        from onnx import helper, mapping, shape_inference
+        from onnx.defs import onnx_opset_version
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          + "Instructions to install - https://github.com/onnx/onnx")
+
+    if isinstance(sym, symbol.Symbol) and isinstance(params, dict):
+        # Merging arg and aux parameters
+        params = {}
+        params.update(arg_params)
+        params.update(aux_params)
+        export_model(sym, params, in_shapes=in_shapes, in_types=in_types,
+                 onnx_file_path=onnx_file_path, verbose=verbose, dynamic=dynamic,
+                 dynamic_input_shapes=dynamic_input_shapes, run_shape_inference=run_shape_inference, input_type=input_type,
+                 input_shape=input_shape):
+    else:
+        raise ValueError("Input sym should be symbol object, arg_params and aux_params should be dict objects")
