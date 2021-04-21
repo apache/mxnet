@@ -210,6 +210,6 @@ def export_model(sym, arg_params, aux_params, in_shapes=None, in_types=np.float3
         return export_model(sym, params, in_shapes=in_shapes, in_types=in_types,
                  onnx_file_path=onnx_file_path, verbose=verbose, dynamic=dynamic,
                  dynamic_input_shapes=dynamic_input_shapes, run_shape_inference=run_shape_inference, input_type=input_type,
-                 input_shape=input_shape):
+                 input_shape=input_shape)
     else:
         raise ValueError("Input sym should be symbol object, arg_params and aux_params should be dict objects")

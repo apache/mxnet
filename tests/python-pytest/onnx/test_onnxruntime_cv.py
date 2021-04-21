@@ -200,7 +200,7 @@ def test_obj_class_model_inference_onnxruntime(tmp_path, model, obj_class_test_i
     try:
         tmp_path = str(tmp_path)
         M = GluonModel(model, (1,3,inlen,inlen), 'float32', tmp_path)
-        if model == 'resnet152_v2':
+        if model == 'resnet50_v2':
             # testing export for arg/aux
             onnx_file = M.export_onnx_argaux()
         else:
