@@ -81,8 +81,8 @@ class GluonModel():
             raise
 
         sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)
-        mx.onnx.export_model(sym, arg_params, aux_params, 
-                            [self.input_shape], self.input_dtype, onnx_file)
+        params = [arg_params, aux_params]
+        mx.onnx.export_model(sym, params, [self.input_shape], self.input_dtype, onnx_file)
         return onnx_file
 
     def predict(self, data):
