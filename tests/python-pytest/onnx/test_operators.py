@@ -1355,13 +1355,13 @@ def test_onnx_export_pad(tmp_path, dtype, mode, params):
 # Note that due to ONNX limitation, the behavior for when inputs > 2-D is different from that of
 # MXNet
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
-@pytest.mark.parametrize('params', [((4,), (4,), False, False),
-                                    ((4, 5), (5, 6), False, False),
+@pytest.mark.parametrize('params', [((4, 5), (5, 6), False, False),
                                     ((5, 4), (5, 6), True, False),
                                     ((5, 4), (6, 5), True, True),
                                     ((4, 5), (6, 5), False, True),
                                     ((4, 5), (5), False, False),
-                                    ((4), (4, 5), False, False)])
+                                    ((4,), (4, 5), False, False),
+                                    ((4, 5), (5,), False, False)])
 def test_onnx_export_dot(tmp_path, dtype, params):
     A = mx.random.uniform(0, 1, params[0], dtype=dtype)
     B = mx.random.uniform(0, 1, params[1], dtype=dtype)
@@ -1403,7 +1403,7 @@ def test_onnx_export_LogisticRegressionOutput(tmp_path, dtype, shape):
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
-@pytest.mark.parametrize('shape', [(3, 4, 5), (6, 7), (3, 4, 5, 6, 7)])
+@pytest.mark.parametrize('shape', [(4, 5, 6), (6, 7), (3, 4, 5, 6, 7)])
 def test_onnx_export_SoftmaxOutput(tmp_path, dtype, shape):
     x = mx.random.uniform(0, 1, shape, dtype=dtype)
     y = mx.nd.zeros(shape[:-1], dtype=dtype)
@@ -1451,7 +1451,7 @@ def test_onnx_export_LRN(tmp_path, dtype, shape, alpha, beta, knorm, nsize):
 @pytest.mark.parametrize('shape2', [None, (10, 10, 16, 16)])
 def test_onnx_export_Crop(tmp_path, dtype, shape, h_w, offset, shape2):
     x = mx.random.uniform(0, 1, shape, dtype=dtype)
-    M = def_model('Crop', h_w=h_w, offset=offset, center_crop=True)
+    M = def_model('Crop', h_w=h_w, offset=offset, center_crop=False)
     if shape2 is not None:
         y = mx.random.uniform(0, 1, shape2, dtype=dtype)
         op_export_test('Crop', M, [x, y], tmp_path)
