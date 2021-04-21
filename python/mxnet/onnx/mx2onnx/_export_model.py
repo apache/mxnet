@@ -128,8 +128,7 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
                                                        in_types_t,
                                                        verbose=verbose, opset_version=opset_version,
                                                        dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes)
-    elif isinstance(sym, symbol.Symbol) and isinstance(params, list) and len(params) == 2
-        and isinstance(params[0], dict) and isinstance(params[1], dict):
+    elif isinstance(sym, symbol.Symbol) and isinstance(params, list) and len(params) == 2:
         # when params contains arg_params and aux_params
         p = {}
         p.update(params[0])
