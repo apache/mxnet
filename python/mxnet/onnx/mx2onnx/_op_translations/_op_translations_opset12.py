@@ -2425,7 +2425,7 @@ def convert_norm(node, **kwargs):
                 make_node('Reshape', [name+'_norm', name+'_1'], [name])
             ]
             return nodes
-            
+
 
 @mx_op.register("_sample_multinomial")
 def convert_multinomial(node, **kwargs):
