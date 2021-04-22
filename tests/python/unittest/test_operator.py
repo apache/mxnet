@@ -9453,3 +9453,93 @@ def test_zero_sized_dim():
     seq_last()
     seq_reverse()
     seq_mask()
+
+def test_take_grads():
+    # Test for https://github.com/apache/incubator-mxnet/issues/19817
+    from mxnet.gluon.nn import HybridBlock, Conv1D, HybridSequential, HybridLambda, Dense
+    from mxnet import autograd, nd
+    from mxnet.gluon.loss import L2Loss
+
+    def get_grads(model, grads, ctx=mx.cpu()):
+        pd = model.collect_params()
+        total_grad_l2 = 0
+        total_grad_l1 = 0
+        total_grad_linf = 0
+        for p in pd:
+            try:
+                g = pd[p].grad(ctx) / N
+                g2 = (g**2).sum().as_in_context(mx.cpu()).asscalar()
+                g1 = g.abs().sum().as_in_context(mx.cpu()).asscalar()
+                ginf = g.max().as_in_context(mx.cpu()).asscalar()
+                total_grad_linf = max(total_grad_linf, ginf)
+                total_grad_l2 += g2
+                total_grad_l1 += g1
+                print(f"||g_param||_2: {g2**0.5:.2E} | Param: {p}")
+            except Exception:
+                pass
+
+        grads.append(total_grad_l1)
+        grads.append(total_grad_l2)
+        grads.append(total_grad_linf)
+
+    def run_model(model, loss, X, Y, num_iters=5):
+        grads = []
+        for i in range(num_iters):
+            with autograd.record():
+                Y_hat = model(X)
+                ll = loss(Y_hat, Y)
+                ll = ll.sum()
+            ll.backward()
+            get_grads(model, grads)
+        return grads
+
+    def conv_layer(atrous_rates, num_channels):
+        convs = HybridSequential()
+        for rate in atrous_rates:
+            convs.add(Conv1D(num_channels, 3, padding=rate, dilation=rate, activation='tanh'))
+        return convs
+
+    class Model(HybridBlock):
+        def __init__(self, conv_units, atrous_rates, use_take=False, **kwargs):
+            super().__init__(prefix=kwargs.get('prefix', None), params=kwargs.get('params', None))
+            self.use_take = use_take
+            with self.name_scope():
+                self.convs = conv_layer(atrous_rates, conv_units)
+                self.dense_out = Dense(1, flatten=False, activation='tanh')
+
+        def hybrid_forward(self, F, X, axis=-1):
+            X1 = X
+            X2 = self.convs(X1)
+            if self.use_take:
+                X3 = F.take(X2, nd.array([0]), axis=axis)
+            else:
+                X3 = F.slice_axis(X2, begin=0, end=1, axis=axis)
+            return X3
+
+    N = 30
+    T = 20
+    C = 8
+    conv_units = 5
+    atrous_rates = [1]
+
+    X = np.random.normal(size=(N, T, C))
+    Y = np.random.normal(size=(N, T))
+    Y = np.random.normal(size=(N, conv_units))
+    X, Y = nd.array(X), nd.array(Y)
+    seed = np.random.randint(1000)
+
+    # Using F.take
+    mx.random.seed(seed)
+    model = Model(conv_units, atrous_rates, use_take=True)
+    model.initialize()
+    loss = L2Loss()
+    grads1 = run_model(model, loss, X, Y)
+
+    # Using F.slice_axis
+    mx.random.seed(seed)
+    model2 = Model(conv_units, atrous_rates, use_take=False)
+    model2.initialize()
+    grads2 = run_model(model2, loss, X, Y)
+
+    for i in range(len(grads1)):
+        assert_almost_equal(grads1[i], grads2[i])
