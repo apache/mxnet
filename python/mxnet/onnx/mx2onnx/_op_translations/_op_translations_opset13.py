@@ -1562,3 +1562,56 @@ def convert_softmax_output(node, **kwargs):
     ]
 
     return nodes
+
+
+@mx_op.register("norm", OPSET_VERSION)
+def convert_norm(node, **kwargs):
+    """Map MXNet's norm operator attributes to onnx's ReduceL1 and ReduceL2 operators
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    mx_axis = attrs.get("axis", None)
+    axes = convert_string_to_list(str(mx_axis)) if mx_axis else None
+
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
+    ord = int(attrs.get("ord", 2))
+
+    onnx_op_name = "ReduceL1" if ord == 1 else "ReduceL2"
+
+    if axes:
+        if keepdims:
+            reduce_node = make_node(onnx_op_name, input_nodes, [name], axes=axes, keepdims=keepdims)
+            return [reduce_node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            create_tensor([0], name+'_0', kwargs['initializer'])
+            create_tensor([len(axes)], name+'_axes_dim', kwargs['initializer'])
+            nodes = [
+                make_node(onnx_op_name, input_nodes, [name+'_reduce'], axes=axes, keepdims=keepdims),
+                make_node('Shape', [name+'_reduce'], [name+'_reduce_shape']),
+                make_node('Shape', [name+'_reduce_shape'], [name+'_reduce_dim']),
+                make_node('Shape', [input_nodes[0]], [name+'_in_shape']),
+                make_node('Shape', [name+'_in_shape'], [name+'_in_dim']),
+                make_node('Equal', [name+'_axes_dim', name+'_in_dim'], [name+'_equal']),
+                make_node('Where', [name+'_equal', name+'_1', name+'_reduce_dim'], [name+'_where0']),
+                make_node('Tile', [name+'_0', name+'_where0'], [name+'_tile']),
+                make_node('Unsqueeze', [name+'_0', name+'_0'], [name+'_unsqueeze']),
+                make_node('Where', [name+'_equal', name+'_1', name+'_0'], [name+'_where1']),
+                make_node('ScatterND', [name+'_tile', name+'_unsqueeze', name+'_where1'], [name+'_SND']),
+                make_node('Reshape', [name+'_reduce', name+'_SND'], [name]),
+            ]
+            return nodes
+    else:
+
+        if keepdims:
+            reduce_node = make_node(onnx_op_name, input_nodes, [name], keepdims=keepdims)
+            return [reduce_node]
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node(onnx_op_name, input_nodes, [name+'_norm'], keepdims=keepdims),
+                make_node('Reshape', [name+'_norm', name+'_1'], [name])
+            ]
+            return nodes
