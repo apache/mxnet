@@ -626,7 +626,6 @@ build_ubuntu_gpu_onednn_nocudnn() {
 build_ubuntu_gpu() {
     set -ex
     cd /work/build
-    sudo ln -s -f /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1
     export LIBRARY_PATH=${LIBRARY_PATH}:/usr/local/cuda-11.1/targets/x86_64-linux/lib/stubs:/usr/lib/x86_64-linux-gnu
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda-11.1/targets/x86_64-linux/lib/stubs:/usr/lib/x86_64-linux-gnu
     CC=gcc-7 CXX=g++-7 cmake \

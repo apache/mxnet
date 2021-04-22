@@ -136,6 +136,8 @@ RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install cmake==3.16.6 && \
     python3 -m pip install -r /work/requirements
 
+RUN ln -s -f /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1
+
 ARG USER_ID=0
 COPY install/docker_filepermissions.sh /work/
 RUN /work/docker_filepermissions.sh
