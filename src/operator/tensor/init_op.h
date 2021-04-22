@@ -273,6 +273,17 @@ struct RangeLikeParam : public dmlc::Parameter<RangeLikeParam> {
               " The negative numbers are interpreted counting from the backward."
               " If not provided, will arange elements according to the input shape.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream start_s, step_s, repeat_s, axis_s;
+    start_s << start;
+    step_s << step;
+    repeat_s << repeat;
+    axis_s << axis;
+    (*dict)["start"] = start_s.str();
+    (*dict)["step"] = step_s.str();
+    (*dict)["repeat"] = repeat_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 /*! \brief Initialize and fill output with an arbitrary value */

@@ -171,5 +171,5 @@ coverage.xml
 cmake_options.yml
 
 # header file generated at compile time
-include/mkldnn/oneapi/dnnl/dnnl_version.h
-include/mkldnn/oneapi/dnnl/dnnl_config.h
+include/onednn/oneapi/dnnl/dnnl_version.h
+include/onednn/oneapi/dnnl/dnnl_config.h

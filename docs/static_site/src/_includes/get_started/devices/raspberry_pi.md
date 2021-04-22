@@ -27,9 +27,9 @@ mkdir -p build && cd build
 cmake \
   -DUSE_SSE=OFF \
   -DUSE_CUDA=OFF \
+  -DUSE_BLAS=Open \
   -DUSE_OPENCV=ON \
   -DUSE_OPENMP=ON \
-  -DUSE_MKL_IF_AVAILABLE=OFF \
   -DUSE_SIGNAL_HANDLER=ON \
   -DCMAKE_BUILD_TYPE=Release \
   -GNinja ..
@@ -116,12 +116,12 @@ mkdir build; cd build
 cmake -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
   -DUSE_CUDA=OFF \
   -DSUPPORT_F16C=OFF \
+  -DUSE_BLAS=Open \
   -DUSE_OPENCV=OFF \
   -DUSE_OPENMP=ON \
   -DUSE_LAPACK=OFF \
   -DUSE_SIGNAL_HANDLER=ON \
   -DCMAKE_BUILD_TYPE=Release \
-  -DUSE_MKL_IF_AVAILABLE=OFF \
   -G Ninja ..
 ninja
 cd ..

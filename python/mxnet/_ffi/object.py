@@ -22,20 +22,27 @@ import ctypes
 from ..base import _LIB, check_call, c_str
 
 try:
+    # pylint: disable=wrong-import-position,unused-import
     if int(os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from ._ctypes.function import _set_class_object
+        from ._ctypes.function import _set_class_object, _set_node_generic
         from ._ctypes.object import ObjectBase as _ObjectBase
-        from ._ctypes.object import _register_object
+        from ._ctypes.object import _register_object, PyNativeObject
     else:
-        from ._cy3.core import _set_class_object
+        from ._cy3.core import _set_class_object, _set_node_generic
         from ._cy3.core import ObjectBase as _ObjectBase
-        from ._cy3.core import _register_object
+        from ._cy3.core import _register_object, PyNativeObject
 except ImportError:
     if int(os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from ._ctypes.function import _set_class_object
+    from ._ctypes.function import _set_class_object, _set_node_generic
     from ._ctypes.object import ObjectBase as _ObjectBase
-    from ._ctypes.object import _register_object
+    from ._ctypes.object import _register_object, PyNativeObject
+
+
+def _new_object(cls):
+    """Helper function for pickle"""
+    return cls.__new__(cls)
+
 
 class Object(_ObjectBase):
     """Base class for all mxnet's runtime objects."""

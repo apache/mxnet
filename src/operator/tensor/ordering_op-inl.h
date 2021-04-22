@@ -95,6 +95,35 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
               "An error will be raised if the selected data type cannot precisely represent the "
               "indices.");
   }
+  std::string ReturnType2String(int ret_typ) {
+    switch (ret_typ) {
+      case topk_enum::kReturnValue:
+        return "value";
+      case topk_enum::kReturnIndices:
+        return "indices";
+      case topk_enum::kReturnMask:
+        return "mask";
+      case topk_enum::kReturnBoth:
+        return "both";
+      default:
+        LOG(FATAL) << "Unknown return type enum " << ret_typ;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, k_s, ret_typ_s, is_ascend_s, dtype_s;
+    axis_s << axis;
+    k_s << k;
+    dtype_s << dtype;
+    ret_typ_s << ret_typ;
+    is_ascend_s << is_ascend;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["k"] = k_s.str();
+    (*dict)["ret_typ"] = ReturnType2String(ret_typ);
+    (*dict)["is_ascend"] = is_ascend_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+  }
 };
 
 struct SortParam : public dmlc::Parameter<SortParam> {
@@ -150,13 +179,14 @@ struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
   }
 };
 
+template<typename IDXType = index_t>
 inline void ParseTopKParam(const TShape& src_shape,
                            const TopKParam& param,
                            TShape *target_shape,
                            size_t *batch_size,
-                           index_t *element_num,
+                           IDXType *element_num,
                            int *axis,
-                           index_t *k,
+                           IDXType *k,
                            bool *do_transpose,
                            bool *is_ascend) {
   *do_transpose = false;
@@ -208,59 +238,59 @@ using namespace mshadow;
 
 
 struct fill_ind_to_one {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const index_t* indices, DType* out) {
+  template<typename DType, typename IDXType>
+  MSHADOW_XINLINE static void Map(index_t i, const IDXType* indices, DType* out) {
     out[indices[i]] = static_cast<DType>(1);
   }
 };
 
 struct fill_ind {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const index_t* indices, const DType* val,
+  template<typename DType, typename IDXType>
+  MSHADOW_XINLINE static void Map(index_t i, const IDXType* indices, const DType* val,
                                   int req, DType* out) {
     KERNEL_ASSIGN(out[indices[i]], req, val[i]);
   }
 };
 
-template<typename DType>
+template<typename DType, typename IDXType>
 MSHADOW_FORCE_INLINE void TopKSort(const Tensor<cpu, 1, DType>& dat,
-                                   const Tensor<cpu, 1, index_t>& ind,
+                                   const Tensor<cpu, 1, IDXType>& ind,
                                    const Tensor<cpu, 1, char>& work,
-                                   index_t K, index_t N, bool is_ascend,
+                                   IDXType K, IDXType N, bool is_ascend,
                                    Stream<cpu> *s) {
   // Use full sort when K is relatively large.
   const bool full_sort(K*8 > N);
   // Batch size.
-  const index_t M(work.size(0)/(sizeof(DType)*N));
+  const size_t M(work.size(0)/(sizeof(DType)*N));
   const int omp_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
   #pragma omp parallel for num_threads(omp_threads)
-  for (index_t i = 0; i < M; ++i) {
+  for (index_t i = 0; i < static_cast<index_t>(M); ++i) {
     // Tensor `work` stores the flattened source data, while `dat` stores the sorted result.
     DType *vals = reinterpret_cast<DType*>(work.dptr_);
     DType *sorted_vals = dat.dptr_+i*N;
-    index_t *indices = ind.dptr_+i*N;
+    IDXType *indices = ind.dptr_+i*N;
     if (is_ascend) {
       if (full_sort) {
         std::sort(indices, indices+N,
-                  [&](const index_t& i1, const index_t& i2){
+                  [&](const IDXType& i1, const IDXType& i2){
           return vals[i1] < vals[i2]; });
       } else {
         std::partial_sort(indices, indices+K, indices+N,
-                          [&](const index_t& i1, const index_t& i2){
+                          [&](const IDXType& i1, const IDXType& i2){
           return vals[i1] < vals[i2]; });
       }
     } else {
       if (full_sort) {
         std::sort(indices, indices+N,
-                  [&](const index_t& i1, const index_t& i2){
+                  [&](const IDXType& i1, const IDXType& i2){
           return vals[i1] > vals[i2]; });
       } else {
         std::partial_sort(indices, indices+K, indices+N,
-                          [&](const index_t& i1, const index_t& i2){
+                          [&](const IDXType& i1, const IDXType& i2){
           return vals[i1] > vals[i2]; });
       }
     }
-    for (index_t j = 0; j < K; ++j) {
+    for (IDXType j = 0; j < K; ++j) {
       sorted_vals[j] = vals[indices[j]];
     }
   }
@@ -268,20 +298,20 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<cpu, 1, DType>& dat,
 
 #ifdef __CUDACC__
 
-template<typename DType>
-MSHADOW_XINLINE bool TopKCompare(DType val1, index_t ind1, DType val2, index_t ind2,
+template<typename DType, typename IDXType>
+MSHADOW_XINLINE bool TopKCompare(DType val1, IDXType ind1, DType val2, IDXType ind2,
                                  bool is_ascend) {
   // Negative indices denote undefined values which are considered arbitrary small resp. large.
   return (ind2 < 0) || (ind1 >= 0 && ((is_ascend && val1 < val2) || (!is_ascend && val1 > val2)));
 }
 
-template<typename DType>
-MSHADOW_XINLINE void MergeTopK(index_t K, DType *val1, index_t *ind1, DType *val2, index_t *ind2,
+template<typename DType, typename IDXType>
+MSHADOW_XINLINE void MergeTopK(IDXType K, DType *val1, IDXType *ind1, DType *val2, IDXType *ind2,
                                bool is_ascend) {
   // In-place merge of two sorted top-K lists into val1/ind1. First determine the intervals
   // [0,..,i1], [0,..i2] of the two lists that will be part of the merged list.
-  index_t i1(K-1), i2(K-1);
-  for (index_t i = 0; i < K; ++i) {
+  IDXType i1(K-1), i2(K-1);
+  for (IDXType i = 0; i < K; ++i) {
     if (TopKCompare(val1[i1], ind1[i1], val2[i2], ind2[i2], is_ascend)) {
       --i2;
     } else {
@@ -289,7 +319,7 @@ MSHADOW_XINLINE void MergeTopK(index_t K, DType *val1, index_t *ind1, DType *val
     }
   }
   // Now merge the lists from back to front.
-  for (index_t i = K; i--;) {
+  for (IDXType i = K; i--;) {
     if (i2 < 0 || i1 >= 0 && TopKCompare(val2[i2], ind2[i2], val1[i1], ind1[i1], is_ascend)) {
       val1[i] = val1[i1];
       ind1[i] = ind1[i1];
@@ -302,29 +332,32 @@ MSHADOW_XINLINE void MergeTopK(index_t K, DType *val1, index_t *ind1, DType *val
   }
 }
 
-template<typename DType>
-__global__ void PartialSortSmallK(index_t K, index_t N, DType *val, index_t *ind, bool is_ascend) {
+template<typename DType, typename IDXType>
+__global__ void PartialSortSmallK(IDXType K, IDXType N, DType *val, IDXType *ind, bool is_ascend) {
   // Buffer for pairwise reduction.
-  extern __shared__ index_t buff[];
+  extern __shared__ __align__(sizeof(IDXType)) unsigned char temp_smem[];
+  IDXType *buff = reinterpret_cast<IDXType *>(temp_smem);
+
+
   // Start of buffer sections associated with this thread.
-  const index_t offset(threadIdx.x*K);
-  index_t *ind_buff = &buff[offset];
+  const IDXType offset(threadIdx.x*K);
+  IDXType *ind_buff = reinterpret_cast<IDXType*>(&buff[offset]);
   DType *val_buff = reinterpret_cast<DType*>(&buff[blockDim.x*K])+offset;
   // Initialize top-K values for this thread.
-  for (index_t i = 0; i < K; ++i) {
+  for (IDXType i = 0; i < K; ++i) {
     ind_buff[i] = -1;
   }
   // Range of values this thread cares about. Each thread block processes
   // a different batch item (i.e. a different set of ind/val where we
   // have to select the top-K elements). All threads within the same
   // block work on the same batch item.
-  const index_t first(blockIdx.x*N+threadIdx.x), last((blockIdx.x+1)*N);
+  const IDXType first(blockIdx.x*N+threadIdx.x), last((blockIdx.x+1)*N);
   // Select top-K from this range and store it sorted in the buffer.
   // We assume a small K, so linear insertion is o.k.
-  for (index_t i = first; i < last; i += blockDim.x) {
+  for (IDXType i = first; i < last; i += blockDim.x) {
     DType cur_val(val[i]);
-    index_t cur_ind(ind[i]);
-    for (index_t j = K; j-- && TopKCompare(cur_val, cur_ind, val_buff[j],
+    IDXType cur_ind(ind[i]);
+    for (IDXType j = K; j-- && TopKCompare(cur_val, cur_ind, val_buff[j],
                                            ind_buff[j], is_ascend); ) {
       if (j+1 < K) {
         val_buff[j+1] = val_buff[j];
@@ -336,7 +369,7 @@ __global__ void PartialSortSmallK(index_t K, index_t N, DType *val, index_t *ind
   }
   // Recursive merge of sorted lists for this thread block. Note that blockDim.x is not
   // necessary a power of two, therefore the additional checks for last_s.
-  for (index_t s = (blockDim.x+1)/2, last_s = blockDim.x;
+  for (IDXType s = (blockDim.x+1)/2, last_s = blockDim.x;
        last_s > 1; last_s = s, s = (s+1)/2) {
     __syncthreads();
     if (threadIdx.x < s && threadIdx.x+s < last_s) {
@@ -345,29 +378,29 @@ __global__ void PartialSortSmallK(index_t K, index_t N, DType *val, index_t *ind
   }
   // Final updates on master thread.
   if (threadIdx.x == 0) {
-    for (index_t i = 0; i < K; ++i) {
+    for (IDXType i = 0; i < K; ++i) {
       ind[blockIdx.x*N+i] = ind_buff[i];
       val[blockIdx.x*N+i] = val_buff[i];
     }
   }
 }
 
-template<typename DType>
+template<typename DType, typename IDXType>
 MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
-                                   const Tensor<gpu, 1, index_t>& ind,
+                                   const Tensor<gpu, 1, IDXType>& ind,
                                    const Tensor<gpu, 1, char>& work,
-                                   index_t K, index_t N, bool is_ascend,
+                                   IDXType K, IDXType N, bool is_ascend,
                                    Stream<gpu> *s) {
   // Use full sort for all but very small K for which we
   // can do a partial sort entirely within shared memory.
   const bool full_sort(K > 5);
   // Batch size.
-  const index_t M(dat.size(0)/N);
+  const size_t M(dat.size(0)/N);
   if (full_sort) {
     // Divide workspace into two parts. The first one is needed to store batch ids.
-    size_t alignment = std::max(sizeof(DType), sizeof(index_t));
-    size_t id_size = PadBytes(sizeof(index_t) * ind.size(0), alignment);
-    Tensor<gpu, 1, index_t> batch_id(reinterpret_cast<index_t*>(work.dptr_),
+    size_t alignment = std::max(sizeof(DType), sizeof(IDXType));
+    size_t id_size = PadBytes(sizeof(IDXType) * ind.size(0), alignment);
+    Tensor<gpu, 1, IDXType> batch_id(reinterpret_cast<IDXType*>(work.dptr_),
                                      Shape1(ind.size(0)), s);
     Tensor<gpu, 1, char> sort_work(work.dptr_+id_size, Shape1(work.size(0)-id_size), s);
     mxnet::op::SortByKey(dat, ind, is_ascend, &sort_work);
@@ -379,8 +412,8 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
       mxnet::op::SortByKey(batch_id, ind, true, &sort_work);
     }
   } else {
-    const int nthreads(mshadow::cuda::kBaseThreadNum);
-    PartialSortSmallK<<<M, nthreads, nthreads*K*(sizeof(index_t)+sizeof(DType)),
+    const IDXType nthreads(mshadow::cuda::kBaseThreadNum);
+    PartialSortSmallK<<<M, nthreads, nthreads*K*(sizeof(IDXType)+sizeof(DType)),
                         mshadow::Stream<gpu>::GetStream(s)>>>
                         (K, N, dat.dptr_, ind.dptr_, is_ascend);
   }
@@ -402,7 +435,7 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
    * \tparam DType type of the output value/mask.
    * \tparam IDType type of the output indices.
    */
-template<typename xpu, typename DType, typename IDType>
+template<typename xpu, typename DType, typename IDType, typename IDXType>
 void TopKImpl(const RunContext &ctx,
               const Resource &resource,
               const std::vector<OpReqType>& req,
@@ -418,53 +451,53 @@ void TopKImpl(const RunContext &ctx,
   Tensor<xpu, 1, char> workspace;
   Tensor<xpu, 1, char> temp_workspace;
   Tensor<xpu, 1, DType> sorted_dat;
-  Tensor<xpu, 1, index_t> indices, sel_indices;
+  Tensor<xpu, 1, IDXType> indices, sel_indices;
   size_t batch_size = 0;
-  index_t element_num = 0;  // number of batches + the size of each batch
+  IDXType element_num = 0;  // number of batches + the size of each batch
   int axis = 0;
   bool do_transpose = false;
   bool is_ascend = false;
-  index_t k = 0;
-  size_t alignment = std::max(sizeof(DType), sizeof(index_t));
+  IDXType k = 0;
+  size_t alignment = std::max(sizeof(DType), sizeof(IDXType));
   mxnet::TShape target_shape;
   ParseTopKParam(src.shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
-  CHECK_LE(element_num, mxnet::common::MaxIntegerValue<index_t>())
+  CHECK_LE(element_num, mxnet::common::MaxIntegerValue<IDXType>())
     << "'index_t' does not have a sufficient precision to represent "
     << "the indices of the input array. The total element_num is "
     << element_num << ", but the selected index_t can only represent "
-    << mxnet::common::MaxIntegerValue<index_t>() << " elements";
+    << mxnet::common::MaxIntegerValue<IDXType>() << " elements";
   Tensor<xpu, 3, DType> dat = src.FlatTo3D<xpu, DType>(axis, axis, s);
   // Temp space needed by the full sorts.
   size_t temp_size = std::max(
-      mxnet::op::SortByKeyWorkspaceSize<index_t, DType, xpu>(src.Size()),
-      mxnet::op::SortByKeyWorkspaceSize<DType, index_t, xpu>(src.Size()));
+      mxnet::op::SortByKeyWorkspaceSize<IDXType, DType, xpu>(src.Size()),
+      mxnet::op::SortByKeyWorkspaceSize<DType, IDXType, xpu>(src.Size()));
 
   temp_size = std::max(temp_size,
-      mxnet::op::SortByKeyWorkspaceSize<index_t, index_t, xpu>(src.Size()));
+      mxnet::op::SortByKeyWorkspaceSize<IDXType, IDXType, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
-  temp_size += PadBytes(sizeof(index_t) * src.Size(), alignment);
+  temp_size += PadBytes(sizeof(IDXType) * src.Size(), alignment);
   // Temp space for cpu sorts.
   temp_size = std::max(temp_size, sizeof(DType) * src.Size());
 
   size_t workspace_size = temp_size + PadBytes(sizeof(DType) * src.Size(), alignment)
-                                    + PadBytes(sizeof(index_t) * src.Size(), alignment);
+                                    + PadBytes(sizeof(IDXType) * src.Size(), alignment);
   if (param.ret_typ == topk_enum::kReturnMask) {
-    workspace_size += PadBytes(sizeof(index_t) * batch_size * k, alignment);
+    workspace_size += PadBytes(sizeof(IDXType) * batch_size * k, alignment);
   }
   workspace = resource.get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   char* workspace_curr_ptr = workspace.dptr_;
   sorted_dat = Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace_curr_ptr),
       Shape1(src.Size()), s);  // contain sorted dat
   workspace_curr_ptr += PadBytes(sizeof(DType) * src.Size(), alignment);
-  indices = Tensor<xpu, 1, index_t>(reinterpret_cast<index_t*>(workspace_curr_ptr),
+  indices = Tensor<xpu, 1, IDXType>(reinterpret_cast<IDXType*>(workspace_curr_ptr),
       Shape1(src.Size()), s);  // indices in the original matrix
-  workspace_curr_ptr += PadBytes(sizeof(index_t) * src.Size(), alignment);
+  workspace_curr_ptr += PadBytes(sizeof(IDXType) * src.Size(), alignment);
 
   if (param.ret_typ == topk_enum::kReturnMask) {
-    sel_indices = Tensor<xpu, 1, index_t>(reinterpret_cast<index_t*>(workspace_curr_ptr),
+    sel_indices = Tensor<xpu, 1, IDXType>(reinterpret_cast<IDXType*>(workspace_curr_ptr),
                                       Shape1(batch_size * k), s);
-    workspace_curr_ptr += PadBytes(sizeof(index_t) * batch_size * k, alignment);
+    workspace_curr_ptr += PadBytes(sizeof(IDXType) * batch_size * k, alignment);
     CHECK_EQ(sel_indices.CheckContiguous(), true);
   }
 
@@ -494,8 +527,8 @@ void TopKImpl(const RunContext &ctx,
     workspace_curr_ptr += temp_size;
   }
 
-  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size * element_num, 1, index_t{0}, index_t{1},
-    kWriteTo, indices.dptr_);
+  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size * element_num, 1, IDXType{0}, IDXType{1},
+    kWriteTo, reinterpret_cast<IDXType*>(indices.dptr_));
   CHECK_EQ(indices.CheckContiguous(), true);
 
   // 2. Perform inplace batch sort.
@@ -540,7 +573,7 @@ void TopKImpl(const RunContext &ctx,
                                                Shape3(ret_indices.shape_[0],
                                                       ret_indices.shape_[2],
                                                       element_num)),
-                               0, k),
+                          0, k),
                       Shape3(0, 2, 1)), element_num)));
     } else {
       Tensor<xpu, 2, IDType> ret_indices =
@@ -778,16 +811,29 @@ void TopK(const nnvm::NodeAttrs& attrs,
           const std::vector<TBlob>& inputs,
           const std::vector<OpReqType>& req,
           const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   if (param.ret_typ == topk_enum::kReturnIndices || param.ret_typ == topk_enum::kReturnBoth) {
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
-        TopKImpl<xpu, DType, IDType>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
-      })
+      MXNET_NO_BFLOAT16_TYPE_SWITCH(param.dtype, IDType, {
+        if (inputs[0].Size() >= INT_MAX) {
+          TopKImpl<xpu, DType, IDType, index_t>(ctx.run_ctx, ctx.requested[0], req,
+                                                inputs[0], outputs, param);
+        } else {
+          TopKImpl<xpu, DType, IDType, int32_t>(ctx.run_ctx, ctx.requested[0], req,
+                                                inputs[0], outputs, param);
+        }
+      });
     });
   } else {
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      TopKImpl<xpu, DType, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
+      if (inputs[0].Size() >= INT_MAX) {
+        TopKImpl<xpu, DType, index_t, index_t>(ctx.run_ctx, ctx.requested[0], req,
+                                               inputs[0], outputs, param);
+      } else {
+        TopKImpl<xpu, DType, index_t, int32_t>(ctx.run_ctx, ctx.requested[0], req,
+                                               inputs[0], outputs, param);
+      }
     });
   }
 }
@@ -805,8 +851,13 @@ void Sort(const nnvm::NodeAttrs& attrs,
   topk_param.k = 0;
   topk_param.ret_typ = topk_enum::kReturnValue;
   MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    TopKImpl<xpu, DType, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0],
-                                  outputs, topk_param);
+    if (inputs[0].Size() >= INT_MAX) {
+      TopKImpl<xpu, DType, index_t, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0],
+                                    outputs, topk_param);
+    } else {
+      TopKImpl<xpu, DType, index_t, int32_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0],
+                                    outputs, topk_param);
+    }
   });
 }
 
@@ -825,13 +876,18 @@ void ArgSort(const nnvm::NodeAttrs& attrs,
   topk_param.ret_typ = topk_enum::kReturnIndices;
   MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
-      TopKImpl<xpu, DType, IDType>(ctx.run_ctx,
-                                   ctx.requested[0], req, inputs[0], outputs, topk_param);
+      if (inputs[0].Size() >= INT_MAX) {
+        TopKImpl<xpu, DType, IDType, index_t>(ctx.run_ctx,
+                                     ctx.requested[0], req, inputs[0], outputs, topk_param);
+      } else {
+        TopKImpl<xpu, DType, IDType, int32_t>(ctx.run_ctx,
+                                     ctx.requested[0], req, inputs[0], outputs, topk_param);
+      }
     });
   });
 }
 
-template<typename xpu, typename DType, typename IDType>
+template<typename xpu, typename DType, typename IDType, typename IDXType>
 void TopKBackwardImpl(const OpContext &ctx,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
@@ -843,31 +899,31 @@ void TopKBackwardImpl(const OpContext &ctx,
   Stream<xpu> *s = ctx.run_ctx.get_stream<xpu>();
   CHECK(param.ret_typ == topk_enum::kReturnValue || param.ret_typ == topk_enum::kReturnBoth);
   size_t batch_size = 0;
-  index_t element_num = 0;  // number of batches + the size of each batch
+  IDXType element_num = 0;  // number of batches + the size of each batch
   int axis = 0;
   bool do_transpose = false;
   bool is_ascend = false;
-  index_t k = 0;
+  IDXType k = 0;
   mxnet::TShape target_shape;
   ParseTopKParam(outputs[0].shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
-  CHECK_LE(element_num, mxnet::common::MaxIntegerValue<IDType>())
+  CHECK_LE(element_num, mxnet::common::MaxIntegerValue<IDXType>())
     << "'IDType' does not have a sufficient precision to represent "
     << "the indices of the input array. The total element_num is " << element_num
     << ", but the selected index_t can only represent "
-    << mxnet::common::MaxIntegerValue<IDType>() << " elements";
-  Tensor<xpu, 1, index_t> workspace =
-    ctx.requested[0].get_space_typed<xpu, 1, index_t>(Shape1(batch_size * k + batch_size), s);
-  Tensor<xpu, 1, index_t> sel_indices =
-    Tensor<xpu, 1, index_t>(workspace.dptr_, Shape1(batch_size * k), s);
-  Tensor<xpu, 1, index_t> batch_shift =
-    Tensor<xpu, 1, index_t>(workspace.dptr_ + batch_size * k, Shape1(batch_size), s);
+    << mxnet::common::MaxIntegerValue<IDXType>() << " elements";
+  Tensor<xpu, 1, IDXType> workspace =
+    ctx.requested[0].get_space_typed<xpu, 1, IDXType>(Shape1(batch_size * k + batch_size), s);
+  Tensor<xpu, 1, IDXType> sel_indices =
+    Tensor<xpu, 1, IDXType>(workspace.dptr_, Shape1(batch_size * k), s);
+  Tensor<xpu, 1, IDXType> batch_shift =
+    Tensor<xpu, 1, IDXType>(workspace.dptr_ + batch_size * k, Shape1(batch_size), s);
 
   Tensor<xpu, 2, DType> out_grad =
     inputs[0].get_with_shape<xpu, 2, DType>(Shape2(inputs[0].shape_.Size(), 1), s);
   Tensor<xpu, 2, DType> in_grad =
     outputs[0].get_with_shape<xpu, 2, DType>(Shape2(outputs[0].shape_.Size(), 1), s);
-  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1, index_t{0}, element_num, kWriteTo,
+  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1, IDXType{0}, element_num, kWriteTo,
                                            batch_shift.dptr_);
   if (do_transpose) {
     Tensor<xpu, 1, IDType> indices = inputs[2].FlatTo1D<xpu, IDType>(s);
@@ -878,13 +934,13 @@ void TopKBackwardImpl(const OpContext &ctx,
                                          mxnet::TShape(Shape3(src_shape[0], src_shape[2], k))),
                             Shape3(0, 2, 1)),
                           Shape1(batch_size * k));
-    sel_indices += tcast<index_t>(indices);
+    sel_indices += tcast<IDXType>(indices);
     sel_indices = transpose_indices(sel_indices, Shape3(src_shape[0], src_shape[2], src_shape[1]),
                                     Shape3(0, 2, 1));
   } else {
     Tensor<xpu, 2, IDType> indices =
       inputs[2].get_with_shape<xpu, 2, IDType>(Shape2(batch_size, k), s);
-    sel_indices = reshape(tcast<index_t>(indices) +
+    sel_indices = reshape(tcast<IDXType>(indices) +
                           broadcast_to(inplace_reshape(batch_shift, Shape2(batch_size, 1)),
                                        mxnet::TShape(Shape2(batch_size, k))),
                           Shape1(batch_size * k));
@@ -914,12 +970,20 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
   if (param.ret_typ == topk_enum::kReturnBoth) {
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
-        TopKBackwardImpl<xpu, DType, IDType>(ctx, inputs, req, outputs, param);
+        if (inputs[0].Size() >= INT_MAX) {
+          TopKBackwardImpl<xpu, DType, IDType, index_t>(ctx, inputs, req, outputs, param);
+        } else {
+          TopKBackwardImpl<xpu, DType, IDType, int32_t>(ctx, inputs, req, outputs, param);
+        }
       });
     });
   } else if (param.ret_typ == topk_enum::kReturnValue) {
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      TopKBackwardImpl<xpu, DType, index_t>(ctx, inputs, req, outputs, param);
+      if (inputs[0].Size() >= INT_MAX) {
+        TopKBackwardImpl<xpu, DType, index_t, index_t>(ctx, inputs, req, outputs, param);
+      } else {
+        TopKBackwardImpl<xpu, DType, index_t, int32_t>(ctx, inputs, req, outputs, param);
+      }
     });
   } else {
     LOG(FATAL) << "Not Implemented";

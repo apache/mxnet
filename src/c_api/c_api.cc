@@ -155,7 +155,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
     NDArray const* in_nd = &(inputs[i]);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     // reorder data if in MKLDNN format
     if (in_nd->IsMKLDNNData()) {
       // convert from MKLDNN
@@ -1392,7 +1392,7 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
           arg_names.push_back(in_arg_names[i].c_str());
           const NDArray &in_arg = *(in_args_ptr[i]);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
           // reorder data if in MKLDNN format
           if (in_arg.IsMKLDNNData()) {
             in_arg.Reorder2DefaultAsync();
@@ -1418,7 +1418,7 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
           aux_names.push_back(in_aux_names[i].c_str());
           const auto &in_aux = *(in_aux_ptr[i]);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
           // reorder data if in MKLDNN format
           if (in_aux.IsMKLDNNData()) {
             in_aux.Reorder2DefaultAsync();
@@ -2237,7 +2237,7 @@ int MXNDArrayGetData(NDArrayHandle handle,
                      void **out_pdata) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   if (arr->IsMKLDNNData()) {
     arr->Reorder2DefaultAsync();
     arr->WaitToRead();

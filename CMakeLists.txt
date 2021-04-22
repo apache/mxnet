@@ -60,12 +60,11 @@ cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
   "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
-option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
-option(USE_MKL_LAYERNORM "Use layer normalization from MKL, which is currently slower than internal.  No effect unless USE_MKL_IF_AVAILABLE is set." OFF)
-if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
-  option(USE_MKLDNN "Build with MKL-DNN support" ON)
+option(USE_MKL_LAYERNORM "Use layer normalization from MKL, which is currently slower than internal. No effect unless USE_BLAS=MKL (or mkl)." OFF)
+if((NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
+  option(USE_ONEDNN "Build with ONEDNN support" ON)
 else()
-  option(USE_MKLDNN "Build with MKL-DNN support" OFF)
+  option(USE_ONEDNN "Build with ONEDNN support" OFF)
 endif()
 cmake_dependent_option(USE_INTGEMM "Build with x86_64 intgemm library for low-precision multiplication" ON "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64" OFF)
 if(NOT MSVC)
@@ -258,7 +257,7 @@ endif()
 if(USE_MKL_LAYERNORM)
   add_definitions(-DMXNET_USE_MKL_LAYERNORM=1)
 endif()
-if(USE_MKLDNN)
+if(USE_ONEDNN)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
@@ -273,7 +272,7 @@ if(USE_MKLDNN)
     endif()
   endif()
 
-  function(load_mkldnn)
+  function(load_onednn)
     set(MKLDNN_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
     set(MKLDNN_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
     set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
@@ -286,13 +285,13 @@ if(USE_MKLDNN)
       set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
     endif()
 
-    set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/mkldnn")
-    add_subdirectory(3rdparty/mkldnn)
+    set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/onednn")
+    add_subdirectory(3rdparty/onednn)
   endfunction()
-  load_mkldnn()
-  include_directories(3rdparty/mkldnn/include)
-  include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
-  add_definitions(-DMXNET_USE_MKLDNN=1)
+  load_onednn()
+  include_directories(3rdparty/onednn/include)
+  include_directories(${PROJECT_BINARY_DIR}/3rdparty/onednn/include)
+  add_definitions(-DMXNET_USE_ONEDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
   set_target_properties(dnnl PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
@@ -399,56 +398,26 @@ endif()
 
 # ---[ OpenMP
 if(USE_OPENMP)
-  function(load_omp)
-    # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
-    set(OPENMP_STANDALONE_BUILD TRUE)
-    set(LIBOMP_ENABLE_SHARED TRUE)
-    set(CMAKE_BUILD_TYPE Release)
-    set(OPENMP_ENABLE_LIBOMPTARGET OFF CACHE BOOL "LLVM OpenMP offloading support")  # Requires CMP0077 CMake 3.13
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
-    # Disable warnings
-    target_compile_options(omp PRIVATE
-      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:-w>
-      $<$<CXX_COMPILER_ID:MSVC>:/w>)
-  endfunction()
-
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
-     AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
-     AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution"
-     AND NOT BLAS STREQUAL "MKL"
-     AND NOT MSVC
-     AND NOT CMAKE_CROSSCOMPILING)
-    load_omp()
-    list(APPEND mxnet_LINKER_LIBS omp)
-    set_target_properties(omp PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
-    if(UNIX)
-      list(APPEND mxnet_LINKER_LIBS pthread)
-    endif()
+  find_package(OpenMP REQUIRED)
+  if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    add_definitions(-DMXNET_USE_OPENMP=1)
-  else()
-    find_package(OpenMP REQUIRED)
-    if(OPENMP_FOUND)
-      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-      # Enable pragma omp simd
-      # "While the name of this switch is 'experimental', the switch itself, and
-      # the functionality it enables is fully supported and production-ready.
-      # The name reflects that it doesn’t enable any complete subset or
-      # version of an OpenMP standard."
-      # -- https://devblogs.microsoft.com/cppblog/simd-extension-to-c-openmp-in-visual-studio/
-      if(MSVC)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -openmp:experimental")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:experimental")
-      endif()
-      if(NOT BLAS STREQUAL "MKL")
-        # Linker flags for Intel OMP are already set in case MKL is used. Only set if not MKL
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-      endif()
-      add_definitions(-DMXNET_USE_OPENMP=1)
+    # Enable pragma omp simd
+    # "While the name of this switch is 'experimental', the switch itself, and
+    # the functionality it enables is fully supported and production-ready.
+    # The name reflects that it doesn’t enable any complete subset or
+    # version of an OpenMP standard."
+    # -- https://devblogs.microsoft.com/cppblog/simd-extension-to-c-openmp-in-visual-studio/
+    if(MSVC)
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -openmp:experimental")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -openmp:experimental")
     endif()
+    if(NOT BLAS STREQUAL "MKL")
+      # Linker flags for Intel OMP are already set in case MKL is used. Only set if not MKL
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+    endif()
+    add_definitions(-DMXNET_USE_OPENMP=1)
   endif()
 elseif(UNIX)
   # Prefer compiler pthread flag. This is the recommended way, but not backwards
@@ -867,12 +836,12 @@ if(USE_DIST_KVSTORE)
   set_target_properties(pslite PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
 
-if(USE_MKLDNN)
+if(USE_ONEDNN)
     add_custom_command(TARGET mxnet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/
+      ${CMAKE_BINARY_DIR}/3rdparty/onednn/include/oneapi/dnnl/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/onednn/oneapi/dnnl/
       COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/oneapi/dnnl/)
+      ${CMAKE_BINARY_DIR}/3rdparty/onednn/include/oneapi/dnnl/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/onednn/oneapi/dnnl/)
 endif()
 
 if(USE_INTGEMM)
@@ -1010,3 +979,12 @@ if(BUILD_CYTHON_MODULES)
   endif()
 endif()
 
+# https://github.com/apache/incubator-mxnet/issues/20145
+if(UNIX)
+    if(USE_NVML)
+      find_package(NVML)
+      if(NVML_FOUND)
+         target_compile_definitions(mxnet PRIVATE NVML_NO_UNVERSIONED_FUNC_DEFS)
+    endif()
+  endif()
+endif()

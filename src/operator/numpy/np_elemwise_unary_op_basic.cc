@@ -30,8 +30,11 @@ namespace op {
 
 MXNET_OPERATOR_REGISTER_UNARY(_npx_relu)
 .describe(R"code(Computes rectified linear activation.
+
 .. math::
+
    max(features, 0)
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::relu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_relu"});

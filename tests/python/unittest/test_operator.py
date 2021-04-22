@@ -4334,8 +4334,7 @@ def test_cast_float32_to_float16():
                     fp32_val, model_fp16_val, np_fp16_val)
 
     check_cast(mx.sym.Cast, input_np, expected_output)
-    if default_context().device_type == 'gpu':
-        check_cast(mx.sym.amp_cast, input_np, expected_output)
+    check_cast(mx.sym.amp_cast, input_np, expected_output)
 
 
 def test_amp_multicast():
@@ -4974,6 +4973,7 @@ def np_masked_log_softmax_grad(out, grad_out, mask, axis=-1, temperature=1.0):
 @pytest.mark.parametrize('n_broadcast_axis', [0, 1, 2])
 @pytest.mark.parametrize('temperature', [1, 5, 9 ,11])
 @pytest.mark.parametrize('normalize', [True])
+@pytest.mark.flaky
 def test_masked_softmax(dtype, axis, ndims, n_broadcast_axis, temperature, normalize):
     n_broadcast_axis = min(n_broadcast_axis, ndims - 1)
     shape = rand_shape_nd(ndims, dim=10)
@@ -9428,3 +9428,28 @@ def test_sldwin_selfatten_operators():
             test_sldwin_atten_op_impl(2, 128, 2, 8, 16, symmetric, d)
             test_sldwin_atten_op_impl(1, 8, 2, 4, 2, symmetric, d)
 
+def test_zero_sized_dim():
+
+    mx.util.set_np_shape(True)  # Must be done to prevent zero-sized dimension conversion to 'unknown'
+
+    def seq_last():
+        """Test for issue: https://github.com/apache/incubator-mxnet/issues/18938"""
+        data = mx.nd.array(np.random.rand(1, 0, 0))
+        res = mx.nd.op.SequenceLast(data)
+        assert data.shape[1:] == res.shape
+
+    def seq_mask():
+        """Test for issue: https://github.com/apache/incubator-mxnet/issues/18939"""
+        data = mx.nd.array(np.random.rand(0, 1, 1))
+        res = mx.nd.op.SequenceMask(data)
+        assert data.shape == res.shape
+
+    def seq_reverse():
+        """Test for issue: https://github.com/apache/incubator-mxnet/issues/18940"""
+        data = mx.nd.array(np.random.rand(0, 1, 1))
+        res = mx.nd.op.SequenceReverse(data)
+        assert data.shape == res.shape
+
+    seq_last()
+    seq_reverse()
+    seq_mask()

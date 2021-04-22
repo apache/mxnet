@@ -242,7 +242,7 @@ class MXerrorMsgs {
 };
 
 // Add a new error message, example: MX_ERROR_MSG << "my error msg";
-#define MX_ERROR_MSG MXerrorMsgs::get()->add(__FILE__, __LINE__)
+#define MX_ERROR_MSG mxnet::ext::MXerrorMsgs::get()->add(__FILE__, __LINE__)
 
 /*!
  * \brief Tensor data type, consistent with mshadow data type

@@ -1488,6 +1488,12 @@ def _add_workload_lcm():
     OpArgMngr.add_workload('lcm', np.array(195225786*2, dtype=np.int32), np.array(195225786*5, dtype=np.int32))
 
 
+def _add_workload_gcd():
+    OpArgMngr.add_workload('gcd', np.array([24, 30], dtype=np.int8), np.array([20, 75], dtype=np.int8))
+    OpArgMngr.add_workload('gcd', np.array([24, 30], dtype=np.uint8), np.array([20, 75], dtype=np.uint8))
+    OpArgMngr.add_workload('gcd', np.array(195225786*2, dtype=np.int32), np.array(195225786*5, dtype=np.int32))
+
+
 def _add_workload_bitwise_or():
     OpArgMngr.add_workload('bitwise_or', np.array([False, False, True, True], dtype=np.bool),
                            np.array([False, True, False, True], dtype=np.bool))
@@ -3071,6 +3077,7 @@ def _prepare_workloads():
     _add_workload_interp()
     _add_workload_hypot()
     _add_workload_lcm()
+    _add_workload_gcd()
     _add_workload_bitwise_and()
     _add_workload_bitwise_xor()
     _add_workload_bitwise_or()

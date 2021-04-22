@@ -245,6 +245,8 @@ FP16_FP32_FUNCS = [
     '_npi_logistic',
     '_npi_lcm',
     '_npi_lcm_scalar',
+    '_npi_gcd',
+    '_npi_gcd_scalar',
     '_npi_linspace',
     '_npi_logical_not',
     '_npi_logical_and_scalar',
@@ -598,7 +600,7 @@ FP32_FUNCS = [
     '_contrib_sldwin_atten_context',
     ]
 
-if Features().is_enabled('MKLDNN'):
+if Features().is_enabled('ONEDNN'):
     FP32_FUNCS.extend([
         '_sg_mkldnn_conv',
         '_sg_mkldnn_fully_connected',

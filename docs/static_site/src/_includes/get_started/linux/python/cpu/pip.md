@@ -9,7 +9,7 @@ page](https://mxnet.apache.org/get_started/download).
 
 Run the following command:
 
-<div class="v1-7-0">
+<div class="v1-8-0">
 {% highlight bash %}
 pip install mxnet
 {% endhighlight %}
@@ -29,13 +29,44 @@ interested in improving application performance on Intel CPUs and GPUs, more
 details can be found <a href="https://github.com/oneapi-src/oneDNN">here</a>.
 
 You can find performance numbers in the
-<a href="https://mxnet.apache.org/versions/1.6/api/faq/perf.html#intel-cpu">
+<a href="https://mxnet.apache.org/versions/1.8.0/api/faq/perf.html#intel-cpu">
 MXNet tuning guide</a>.
 
 To install native MXNet without oneDNN, run the following command:
 
 {% highlight bash %}
 pip install mxnet-native
+{% endhighlight %}
+
+</div> <!-- End of v1-8-0 -->
+
+<div class="v1-7-0">
+{% highlight bash %}
+pip install mxnet==1.7.0.post2
+{% endhighlight %}
+
+Start from 1.7.0 release, oneDNN(previously known as: MKL-DNN/DNNL) is enabled
+in pip packages by default.
+
+oneAPI Deep Neural Network Library (oneDNN) is an open-source cross-platform
+performance library of basic building blocks for deep learning applications.
+The library is optimized for Intel Architecture Processors, Intel Processor
+Graphics and Xe architecture-based Graphics. Support for other architectures
+such as Arm* 64-bit Architecture (AArch64) and OpenPOWER* Power ISA (PPC64) is
+experimental.
+
+oneDNN is intended for deep learning applications and framework developers
+interested in improving application performance on Intel CPUs and GPUs, more
+details can be found <a href="https://github.com/oneapi-src/oneDNN">here</a>.
+
+You can find performance numbers in the
+<a href="https://mxnet.apache.org/versions/1.7.0/api/faq/perf.html#intel-cpu">
+MXNet tuning guide</a>.
+
+To install native MXNet without oneDNN, run the following command:
+
+{% highlight bash %}
+pip install mxnet-native==1.7.0
 {% endhighlight %}
 
 </div> <!-- End of v1-7-0 -->

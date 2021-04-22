@@ -62,9 +62,18 @@ struct LayerNormParam : public dmlc::Parameter<LayerNormParam> {
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
       .describe("Output the mean and std calculated along the given axis.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, eps_s, output_mean_var_s;
+    axis_s << axis;
+    eps_s << eps;
+    output_mean_var_s << output_mean_var;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["eps"] = eps_s.str();
+    (*dict)["output_mean_var"] = output_mean_var_s.str();
+  }
 };
 
-static int GetRealAxis(int axis, int ndim) {
+inline int GetRealAxis(int axis, int ndim) {
   return axis < 0 ? (axis + ndim) : axis;
 }
 
@@ -122,7 +131,7 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
   // Calculate mean
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      if (safe_acc) {
+      if (!safe_acc) {
         broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
           s, mean_data, req[0], workspace, in_data);
       } else {
@@ -141,7 +150,7 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
   const TBlob centered_out = outputs[0].reshape(red_src_shape);
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      if (safe_acc) {
+      if (!safe_acc) {
         broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::square, false>(
           s, std_data, req[0], workspace, centered_out);
       } else {
@@ -266,7 +275,7 @@ void LayerNormGradComputeGeneralImpl<cpu>(const nnvm::NodeAttrs& attrs,
   if (req[2] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[2].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
-        if (safe_acc) {
+        if (!safe_acc) {
           broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
             s, outputs[2].reshape(red_exclude_dst_shape), req[2], workspace,
             ograd.reshape(red_exclude_src_shape));
@@ -284,7 +293,7 @@ void LayerNormGradComputeGeneralImpl<cpu>(const nnvm::NodeAttrs& attrs,
   if (req[1] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[1].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
-        if (safe_acc) {
+        if (!safe_acc) {
           broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
             s, outputs[1].reshape(red_exclude_dst_shape), req[1], workspace,
             ograd_mult.reshape(red_exclude_src_shape));
@@ -309,7 +318,7 @@ void LayerNormGradComputeGeneralImpl<cpu>(const nnvm::NodeAttrs& attrs,
                                                     {kWriteTo}, {ograd_mult});
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-        if (safe_acc) {
+        if (!safe_acc) {
           broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
             s, red_out.reshape(red_dst_shape), kWriteTo, workspace,
             ograd_mult.reshape(red_src_shape));
@@ -329,7 +338,7 @@ void LayerNormGradComputeGeneralImpl<cpu>(const nnvm::NodeAttrs& attrs,
                                                         {kWriteTo}, {ograd_mult});
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-        if (safe_acc) {
+        if (!safe_acc) {
           broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
             s, red_out.reshape(red_dst_shape), kWriteTo, workspace,
             ograd_mult.reshape(red_src_shape));

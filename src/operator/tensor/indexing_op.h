@@ -82,6 +82,17 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
     .describe("Compute row sparse gradient in the backward calculation. If set to True, "
               "the grad's storage type is row_sparse.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream input_dim_s, output_dim_s, dtype_s, sparse_grad_s;
+    input_dim_s << input_dim;
+    output_dim_s << output_dim;
+    dtype_s << dtype;
+    sparse_grad_s << sparse_grad;
+    (*dict)["input_dim"] = input_dim_s.str();
+    (*dict)["output_dim"] = output_dim_s.str();
+    (*dict)["sparse_grad"] = sparse_grad_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+  }
 };
 
 /*!
@@ -1159,6 +1170,17 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
       MXNET_ADD_ALL_TYPES
       .describe("DType of the output");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream depth_s, on_value_s, off_value_s, axis_s, dtype_s;
+    depth_s << depth;
+    on_value_s << on_value;
+    off_value_s << off_value;
+    dtype_s << dtype;
+    (*dict)["depth"] = depth_s.str();
+    (*dict)["on_value"] = on_value_s.str();
+    (*dict)["off_value"] = off_value_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 

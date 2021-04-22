@@ -27,7 +27,7 @@
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RNN_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RNN_INL_H_
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <vector>
 #include "../../rnn-inl.h"
@@ -467,7 +467,7 @@ class MKLDNNRnnOp {
 };
 
 inline bool SupportMKLDNNRnn(const int input_dtype) {
-  if (input_dtype == mshadow::kFloat32 && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
+  if (input_dtype == mshadow::kFloat32 && dmlc::GetEnv("MXNET_USE_ONEDNN_RNN", 1)) {
     return true;
   }
   return false;
@@ -481,5 +481,5 @@ inline bool SupportMKLDNNRnn(const RNNParam &param, const int input_dtype) {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RNN_INL_H_

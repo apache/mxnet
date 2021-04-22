@@ -106,7 +106,7 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [Kaggle 2nd national data science bowl](kaggle-ndsb2) - a tutorial for Kaggle Second Nation Data Science Bowl
 * [Multi-task Learning](multi-task) - how to use MXNet for multi-task learning
 * [Profiling](profiler) - generate profiling results in json files
-* [Quantization and Calibration Examples](quantization) - examples of quantizing a FP32 model to INT8 and performing low-precision inference with Intel MKL-DNN on CPU or cuDNN on GPU
+* [Quantization and Calibration Examples](quantization) - examples of quantizing a FP32 model to INT8 and performing low-precision inference with Intel ONEDNN on CPU or cuDNN on GPU
 * [Recommender Systems](recommenders) - examples of how to build various kinds of recommender systems
 * [Restricted Boltzmann Machine](restricted-boltzmann-machine) - an example of the binary restricted Boltzmann machine learning MNIST
 * [Single Shot MultiBox Detector](ssd) - SSD object recognition example

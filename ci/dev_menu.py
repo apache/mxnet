@@ -122,7 +122,7 @@ COMMANDS = OrderedDict([
         "pytest -v tests/python/unittest/"
     ),
     ('[Docker] Build the MXNet binary - outputs to "lib/"',
-        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_docs"),
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu"),
     ('[Docker] Build the Jekyll website - outputs to "docs/static_site/build/html/"',
         "ci/build.py --platform ubuntu_cpu_jekyll /work/runtime_functions.sh build_jekyll_docs"),
     ('[Docker] Build the Python API docs - outputs to "docs/python_docs/python/build/_build/html/"',
@@ -141,20 +141,20 @@ COMMANDS = OrderedDict([
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
-    ('[Docker] Python3 GPU+MKLDNN unittests',
+    ('[Docker] Python3 GPU+ONEDNN unittests',
     [
-        "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake_mkldnn",
+        "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_onednn",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
-    ('[Docker] Python3 CPU Intel MKLDNN unittests',
+    ('[Docker] Python3 CPU Intel ONEDNN unittests',
     [
-        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_mkldnn",
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_onednn",
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_python3_cpu",
     ]),
     ('[Docker] Python3 ARMv7 unittests (QEMU)',
     [
         "ci/build.py -p armv7",
-        "ci/build.py -p test.armv7 /work/runtime_functions.sh unittest_ubuntu_python3_armv7"
+        "ci/build.py -p test.armv7 /work/runtime_functions.sh unittest_ubuntu_python3_arm"
     ]),
     ('Clean (RESET HARD) repository (Warning! erases local changes / DATA LOSS)',
        Confirm("ci/docker/runtime_functions.sh clean_repo"))

@@ -138,6 +138,86 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     }
     return ret_val;
   }
+
+  std::string PoolType2String(int pool_type) {
+    switch (pool_type) {
+      case pool_enum::kMaxPooling:
+        return "max";
+      case pool_enum::kAvgPooling:
+        return "avg";
+      case pool_enum::kSumPooling:
+        return "sum";
+      case pool_enum::kLpPooling:
+        return "lp";
+      default:
+        LOG(FATAL) << "Unknown pool type enum " << pool_type;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  std::string Convention2String(int pool_convention) {
+    switch (pool_convention) {
+      case pool_enum::kFull:
+        return "full";
+      case pool_enum::kValid:
+        return "valid";
+      case pool_enum::kSame:
+        return "same";
+      default:
+        LOG(FATAL) << "Unknown pool convention enum " << pool_convention;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  std::string Layout2String(int layout) {
+    switch (layout) {
+      case mshadow::kNCW:
+        return "NCW";
+      case mshadow::kNCHW:
+        return "NCHW";
+      case mshadow::kNCDHW:
+        return "NCDHW";
+      case mshadow::kNWC:
+        return "NWC";
+      case mshadow::kNHWC:
+        return "NHWC";
+      case mshadow::kNDHWC:
+        return "NDHWC";
+      default:
+        LOG(FATAL) << "Unknown layout enum " << layout;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream kernel_s, stride_s, pad_s, pool_type_s,
+                       pooling_convention_s, global_pool_s, cudnn_off_s,
+                       p_value_s, count_include_pad_s, layout_s;
+    kernel_s << kernel;
+    stride_s << stride;
+    pad_s << pad;
+    pool_type_s << pool_type;
+    pooling_convention_s << pooling_convention;
+    global_pool_s << global_pool;
+    cudnn_off_s << cudnn_off;
+    p_value_s << p_value;
+    count_include_pad_s << count_include_pad;
+    layout_s << layout;
+    (*dict)["kernel"] = kernel_s.str();
+    (*dict)["stride"] = stride_s.str();
+    (*dict)["pad"] = pad_s.str();
+    (*dict)["pool_type"] = PoolType2String(pool_type);
+    (*dict)["pooling_convention"] = Convention2String(pooling_convention);
+    (*dict)["global_pool"] = global_pool_s.str();
+    (*dict)["cudnn_off"] = cudnn_off_s.str();
+    (*dict)["p_value"] = p_value_s.str();
+    (*dict)["count_include_pad"] = count_include_pad_s.str();
+    if (layout.has_value()) {
+      (*dict)["layout"] = Layout2String(layout.value());
+    } else {
+      (*dict)["layout"] = layout_s.str();
+    }
+  }
 };
 
 }  // namespace op

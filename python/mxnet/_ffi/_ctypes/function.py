@@ -24,17 +24,34 @@ import ctypes
 from numbers import Number, Integral
 import numpy as onp
 
-from ...base import get_last_ffi_error, _LIB
+from ...base import get_last_ffi_error, _LIB, check_call
 from ..base import c_str
 from .types import MXNetValue, TypeCode
 from .types import RETURN_SWITCH
-from ..node_generic import convert_to_node
 from ..._ctypes.ndarray import NDArrayBase
-from .object import ObjectBase, _set_class_object
+from .object import ObjectBase, PyNativeObject, _set_class_object
 from . import object as _object
 
 ObjectHandle = ctypes.c_void_p
+FunctionHandle = ctypes.c_void_p
 
+def _make_packed_func(handle, is_global):
+    """Make a packed function class"""
+    obj = _CLASS_PACKED_FUNC.__new__(_CLASS_PACKED_FUNC)
+    obj.is_global = is_global
+    obj.handle = handle
+    return obj
+
+def _get_global_func(name, allow_missing=False):
+    handle = FunctionHandle()
+    check_call(_LIB.MXNetFuncGetGlobal(c_str(name), ctypes.byref(handle)))
+    if handle.value:
+        return _make_packed_func(handle, False)
+
+    if allow_missing:
+        return None
+
+    raise ValueError("Cannot find global function %s" % name)
 
 def _make_mxnet_args(args, temp_args):
     """Pack arguments into c args mxnet call accept"""
@@ -42,29 +59,32 @@ def _make_mxnet_args(args, temp_args):
     values = (MXNetValue * num_args)()
     type_codes = (ctypes.c_int * num_args)()
     for i, arg in enumerate(args):
-        if isinstance(arg, ObjectBase):
+        if isinstance(arg, NDArrayBase):
+            values[i].v_handle = arg.handle
+            type_codes[i] = TypeCode.NDARRAYHANDLE
+        elif isinstance(arg, Integral):
+            values[i].v_int64 = arg
+            type_codes[i] = TypeCode.INT
+        elif isinstance(arg, ObjectBase):
             values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.OBJECT_HANDLE
         elif arg is None:
             values[i].v_handle = None
             type_codes[i] = TypeCode.NULL
-        elif isinstance(arg, Integral):
-            values[i].v_int64 = arg
-            type_codes[i] = TypeCode.INT
+        elif isinstance(arg, PyNativeObject):
+            values[i].v_handle = arg.__mxnet_object__.handle
+            type_codes[i] = TypeCode.OBJECT_HANDLE
         elif isinstance(arg, Number):
             values[i].v_float64 = arg
             type_codes[i] = TypeCode.FLOAT
         elif isinstance(arg, str):
             values[i].v_str = c_str(arg)
             type_codes[i] = TypeCode.STR
-        elif isinstance(arg, (list, tuple)):
-            arg = convert_to_node(arg)
+        elif isinstance(arg, (list, tuple, dict)):
+            arg = _FUNC_CONVERT_TO_NODE(arg)
             values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.OBJECT_HANDLE
             temp_args.append(arg)
-        elif isinstance(arg, NDArrayBase):
-            values[i].v_handle = arg.handle
-            type_codes[i] = TypeCode.NDARRAYHANDLE
         elif isinstance(arg, ctypes.c_void_p):
             values[i].v_handle = arg
             type_codes[i] = TypeCode.HANDLE
@@ -136,3 +156,16 @@ def __init_handle_by_constructor__(fconstructor, args):
     return handle
 
 _object.__init_by_constructor__ = __init_handle_by_constructor__
+
+_CLASS_PACKED_FUNC = None
+_FUNC_CONVERT_TO_NODE = None
+
+def _set_class_packed_func(packed_func_class):
+    """Initialize packed function defined in cython"""
+    global _CLASS_PACKED_FUNC
+    _CLASS_PACKED_FUNC = packed_func_class
+
+def _set_node_generic(func_convert_to_node):
+    """Initialize packed function type conversion function in cython"""
+    global _FUNC_CONVERT_TO_NODE
+    _FUNC_CONVERT_TO_NODE = func_convert_to_node

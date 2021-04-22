@@ -23,7 +23,7 @@
  * \author Wenting Jiang, Xinyu Chen
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../nn/mkldnn/mkldnn_convolution-inl.h"
 #include "../../nn/convolution-inl.h"
@@ -91,4 +91,4 @@ NNVM_REGISTER_OP(_contrib_quantized_conv)
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

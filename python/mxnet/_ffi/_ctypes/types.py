@@ -19,6 +19,7 @@ Acknowledgement: This file originates from incubator-tvm
 """
 # pylint: disable=invalid-name
 import ctypes
+from ..base import py_str
 from ...base import NDArrayHandle
 from ... import _global_var
 
@@ -51,6 +52,8 @@ RETURN_SWITCH = {
     TypeCode.INT: lambda x: x.v_int64,
     TypeCode.FLOAT: lambda x: x.v_float64,
     TypeCode.NULL: lambda x: None,
+    TypeCode.STR: lambda x: py_str(x.v_str),
     TypeCode.NDARRAYHANDLE: lambda x: _global_var._np_ndarray_cls(handle=NDArrayHandle(x.v_handle)),
+    TypeCode.HANDLE: lambda x: x.v_handle,
     TypeCode.PYARG: lambda x, args: args[x.v_int64],
 }

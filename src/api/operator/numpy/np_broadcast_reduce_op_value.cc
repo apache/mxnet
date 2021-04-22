@@ -118,6 +118,8 @@ MXNET_REGISTER_API("_npi.mean")
   op::NumpyReduceAxesParam param;
   if (args[1].type_code() == kNull) {
     param.axis = dmlc::optional<mxnet::Tuple<int>>();
+  } else if (args[1].type_code() == kDLInt) {
+    param.axis = Tuple<int>(1, args[1].operator int64_t());
   } else {
     param.axis = mxnet::Tuple<int>(args[1].operator ObjectRef());
   }
