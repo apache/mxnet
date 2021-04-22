@@ -55,14 +55,16 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
     Operator support and coverage -
-    https://cwiki.apache.org/confluence/display/MXNET/ONNX+Operator+Coverage
+    https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#operator-support-matrix
 
     Parameters
     ----------
     sym : str or symbol object
         Path to the json file or Symbol object
-    params : str or symbol object
-        Path to the params file or params dictionary. (Including both arg_params and aux_params)
+    params : str or dict or list of dict
+        str - Path to the params file
+        dict - params dictionary (Including both arg_params and aux_params)
+        list - list of length 2 that contains arg_params and aux_params
     in_shapes : List of tuple
         Input shape of the model e.g [(1,3,224,224)]
     in_types : data type or list of data types
@@ -89,7 +91,7 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
 
     Notes
     -----
-    This method is available when you ``import mxnet.contrib.onnx``
+    This method is available when you ``import mxnet.onnx``
 
     """
 
@@ -123,6 +125,15 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
                                                        dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes)
     elif isinstance(sym, symbol.Symbol) and isinstance(params, dict):
         onnx_graph = converter.create_onnx_graph_proto(sym, params, in_shapes,
+                                                       in_types_t,
+                                                       verbose=verbose, opset_version=opset_version,
+                                                       dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes)
+    elif isinstance(sym, symbol.Symbol) and isinstance(params, list) and len(params) == 2:
+        # when params contains arg_params and aux_params
+        p = {}
+        p.update(params[0])
+        p.update(params[1])
+        onnx_graph = converter.create_onnx_graph_proto(sym, p, in_shapes,
                                                        in_types_t,
                                                        verbose=verbose, opset_version=opset_version,
                                                        dynamic=dynamic, dynamic_input_shapes=dynamic_input_shapes)

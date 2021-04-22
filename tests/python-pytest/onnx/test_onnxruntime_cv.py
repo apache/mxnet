@@ -61,6 +61,30 @@ class GluonModel():
                              dynamic_input_shapes=dynamic_input_shapes)
         return onnx_file
 
+    def export_onnx_argaux(self):
+        onnx_file = self.modelpath + ".onnx"
+        sym_file = self.modelpath + "-symbol.json"
+        params_file = self.modelpath + "-0000.params"
+        if not (os.path.isfile(sym_file) and os.path.isfile(params_file)):
+            raise ValueError("Symbol and params files provided are invalid")
+
+        try:
+            # reads symbol.json file from given path and
+            # retrieves model prefix and number of epochs
+            model_name = sym_file.rsplit('.', 1)[0].rsplit('-', 1)[0]
+            params_file_list = params_file.rsplit('.', 1)[0].rsplit('-', 1)
+            # Setting num_epochs to 0 if not present in filename
+            num_epochs = 0 if len(params_file_list) == 1 else int(params_file_list[1])
+        except IndexError:
+            logging.info("Model and params name should be in format: "
+                         "prefix-symbol.json, prefix-epoch.params")
+            raise
+
+        sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)
+        params = [arg_params, aux_params]
+        mx.onnx.export_model(sym, params, [self.input_shape], self.input_dtype, onnx_file)
+        return onnx_file
+
     def predict(self, data):
         return self.model(data)
 
@@ -176,7 +200,11 @@ def test_obj_class_model_inference_onnxruntime(tmp_path, model, obj_class_test_i
     try:
         tmp_path = str(tmp_path)
         M = GluonModel(model, (1,3,inlen,inlen), 'float32', tmp_path)
-        onnx_file = M.export_onnx()
+        if model == 'resnet50_v2':
+            # testing export for arg/aux
+            onnx_file = M.export_onnx_argaux()
+        else:
+            onnx_file = M.export_onnx()
 
         # create onnxruntime session using the generated onnx file
         ses_opt = onnxruntime.SessionOptions()
