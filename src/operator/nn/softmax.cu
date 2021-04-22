@@ -25,6 +25,7 @@
 #include <string>
 #include "./softmax-inl.h"
 #include "../../common/cuda/utils.h"
+#include "../../common/utils.h"
 #include "../../common/cuda/rtc.h"
 #include "../../common/cuda/rtc/vectorization-inl.h"
 
@@ -186,7 +187,6 @@ __global__ void softmax_stride1_compute_kernel(const softmax_params param,
                                       typename OType::type>;
   __shared__ AType scratch[vectorized_kernel_thread_num];
   __shared__ AType persistent_storage[20 * 1024 / sizeof(AType)];
-  const int warp_size = 32;
   const int threads_per_row = vectorized_kernel_thread_num / param.rows_per_block;
   const int my_local_row = threadIdx.x / threads_per_row;
   const int base_row = blockIdx.x * param.rows_per_block;
@@ -347,33 +347,16 @@ __global__ void softmax_stride1_compute_kernel(const softmax_params param,
 }
 )code";
 
-bool IsPower2(size_t N) {
-  return ((N & (N - 1)) == 0) && N != 0;
-}
-
-index_t RoundToPower2(index_t N) {
-  size_t ret = 1;
-  size_t copyN = N;
-  while (N >= 2) {
-    ret *= 2;
-    N /= 2;
-  }
-  if (ret < copyN) {
-    ret *= 2;
-  }
-  return ret;
-}
-
 int get_rows_per_block(const index_t row_size, const int nvec,
                        const index_t max_storage, const int num_threads_per_block,
                        const index_t total_rows, const int dev_id) {
-  CHECK(IsPower2(num_threads_per_block))
+  CHECK(common::IsPower2(num_threads_per_block))
     << "Number of threads in a block must be power of 2 to use get_rows_per_block function";
   // How many read instructions should 1 thread at least do
   const int read_instructions = 16;
   const size_t row_size_in_vec = (row_size + nvec - 1) / nvec;
   int desired_num_threads_per_row = (row_size_in_vec + read_instructions - 1) / read_instructions;
-  desired_num_threads_per_row = RoundToPower2(desired_num_threads_per_row);
+  desired_num_threads_per_row = common::RoundToPower2(desired_num_threads_per_row);
   desired_num_threads_per_row = std::min(desired_num_threads_per_row, num_threads_per_block);
   const int desired_rows_per_block = num_threads_per_block / desired_num_threads_per_row;
   int actual_rows_per_block = desired_rows_per_block;
@@ -438,9 +421,9 @@ void SoftmaxRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
   int rows_per_block = get_rows_per_block(M, nvec, max_opt_M,
                                           vectorized_kernel_thread_num,
                                           N, ctx.run_ctx.ctx.dev_id);
+  constexpr int warp_size = common::cuda::warp_size;
   if (stride == 1 &&
       static_cast<size_t>(M * rows_per_block) <= max_opt_M) {
-    const int warp_size = 32;
     code += "const bool only_full_blocks = " + std::to_string(N % rows_per_block == 0) + ";\n"
             "const bool reduction_inside_warp = " +
             std::to_string(vectorized_kernel_thread_num / rows_per_block <= warp_size) + ";\n";
@@ -458,14 +441,13 @@ void SoftmaxRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
     std::vector<const void*> args;
     args.emplace_back(&params);
     args.emplace_back(&M);
-    const int warp_size = 32;
-    int num_threads = std::min(static_cast<index_t>(128),
-                               RoundToPower2(div_round(M, warp_size) * warp_size));
+    int num_threads = std::min(static_cast<size_t>(128),
+                               common::RoundToPower2(div_round(M, warp_size) * warp_size));
     if (stride != 1) {
       const int num_sms = MultiprocessorCount(ctx.run_ctx.ctx.dev_id);
       const index_t rows_per_sm = div_round(N, (512 / num_threads) * num_sms);
-      params.rows_per_block = std::min(static_cast<index_t>(warp_size),
-                                       RoundToPower2(rows_per_sm));
+      params.rows_per_block = std::min(static_cast<size_t>(warp_size),
+                                       common::RoundToPower2(rows_per_sm));
     }
     const auto& kernel_func = get_function(code + softmax_common_functions,
                                            "simple_softmax_kernel",
