@@ -85,7 +85,7 @@ def compile_unix_cpu_openblas(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            utils.pack_lib(lib_name, mx_lib_cython, true)
+            utils.pack_lib(lib_name, mx_lib_cpp_examples, true)
           }
         }
       }
