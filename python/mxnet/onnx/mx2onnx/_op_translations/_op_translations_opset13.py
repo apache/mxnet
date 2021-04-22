@@ -1552,7 +1552,7 @@ def convert_softmax_output(node, **kwargs):
     and return the created node.
     """
     from onnx.helper import make_node
-    name, input_nodes, attrs = get_inputs(node, kwargs)
+    name, input_nodes, _ = get_inputs(node, kwargs)
 
     nodes = [
         make_node('Shape', [input_nodes[0]], [name+'_shape']),
@@ -1562,4 +1562,3 @@ def convert_softmax_output(node, **kwargs):
     ]
 
     return nodes
-
