@@ -1629,3 +1629,41 @@ def test_onnx_export_roi_pooling(tmp_path, dtype, spatial_scale):
     x = mx.nd.arange(start=0, stop=48, dtype=dtype).reshape((1,1,8,6))
     y = mx.nd.array([[0,0,0,4,4]], dtype=dtype)
     op_export_test('ROIPooling', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("shape", [(1,2,3), (1,10)])
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_onnx_export_rnn_param_concat(tmp_path, dtype, shape, axis):
+    kwargs = {}
+    if axis is not None:
+        kwargs['dim'] = axis
+    M = def_model('_internal._rnn_param_concat', **kwargs)
+    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    y = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('_internal._rnn_param_concat', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
+@pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
+def test_onnx_export_size_array(tmp_path, dtype, shape):
+    M = def_model('size_array')
+    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('size_array', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+@pytest.mark.parametrize("shape", [(1,5), (2,10), (4,5)])
+@pytest.mark.parametrize("sample_shape", [(1), (2)])
+def test_onnx_export_sample_multinomial(tmp_path, dtype, shape, sample_shape):
+    kwargs = {}
+    if sample_shape is not None:
+        kwargs['shape'] = sample_shape
+    M = def_model('sample_multinomial', **kwargs)
+    a = mx.nd.random.uniform(0, 1, shape).astype(dtype)
+    x = a/a.sum(axis=1, keepdims=1)
+    def rand_check(out):
+        return np.zeros_like(out)
+    def rand_check_nd(out):
+        return rand_check(out.asnumpy())
+    op_export_test('sample_multinomial', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check)

@@ -2355,7 +2355,15 @@ def convert_size(node, **kwargs):
     """Map MXNet's size_array operator attributes to onnx's Size operator
     and return the created node.
     """
-    return create_basic_op_node('Size', node, kwargs)
+    from onnx.helper import make_node
+    name, input_nodes, _ = get_inputs(node, kwargs)
+
+    create_tensor([1], name+'_1', kwargs['initializer'])
+    nodes = [
+        make_node('Size', [input_nodes[0]], [name+'_size']),
+        make_node('Reshape', [name+'_size', name+'_1'], [name], name=name)
+    ]
+    return nodes
 
 
 @mx_op.register("log_softmax")
