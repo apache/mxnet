@@ -33,7 +33,7 @@ MXNET_REGISTER_GLOBAL("ndarray_handle._GetNDArrayHandleValue")
 .set_body([](MXNetArgs args, MXNetRetValue* rv) {
   ObjectRef obj = args[0];
   const auto& handle = Downcast<NDArrayHandle>(obj);
-  *rv = handle->value;
+  *rv = &(handle->value);
 });
 
 MXNET_REGISTER_OBJECT_TYPE(NDArrayHandleObj);

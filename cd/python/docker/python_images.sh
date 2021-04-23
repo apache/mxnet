@@ -23,7 +23,7 @@
 
 set -xe
 
-usage="Usage: python_images.sh <build|test|publish> MXNET-VARIANT"
+usage="Usage: python_images.sh <build|test|push> MXNET-VARIANT"
 
 command=${1:?$usage}
 mxnet_variant=${2:?$usage}
@@ -39,8 +39,8 @@ image_name="${repository}:${main_tag}"
 
 resources_path='cd/python/docker'
 
-if [ ! -z "${RELEASE_DOCKERHUB_REPOSITORY}" ]; then
-    image_name="${RELEASE_DOCKERHUB_REPOSITORY}/${image_name}"
+if [ ! -z "${RELEASE_PUBLIC_ECR_REPOSITORY}" ]; then
+    image_name="${RELEASE_PUBLIC_ECR_REPOSITORY}/${image_name}"
 fi
 
 build() {
@@ -57,33 +57,19 @@ test() {
 
     # Ensure the correct context root is passed in when building - Dockerfile.test expects ci directory
     docker build -t "${test_image_name}" --build-arg USER_ID=`id -u` --build-arg GROUP_ID=`id -g` --build-arg BASE_IMAGE="${image_name}" -f ${resources_path}/Dockerfile.test ./ci
-    python3 ci/safe_docker_run.py ${runtime_param} --cap-add "SYS_PTRACE" -u `id -u`:`id -g` -v `pwd`:/work/mxnet "${test_image_name}" ${resources_path}/test_python_image.sh "${mxnet_variant}"
 }
 
 push() {
-    if [ -z "${RELEASE_DOCKERHUB_REPOSITORY}" ]; then
-        echo "Cannot publish image without RELEASE_DOCKERHUB_REPOSITORY environment variable being set."
+    if [ -z "${RELEASE_PUBLIC_ECR_REPOSITORY}" ]; then
+        echo "Cannot publish image without RELEASE_PUBLIC_ECR_REPOSITORY environment variable being set."
         exit 1
     fi
 
-    # The secret name env var is set in the Jenkins configuration
-    # Manage Jenkins -> Configure System
-    python3 ${ci_utils}/docker_login.py --secret-name "${RELEASE_DOCKERHUB_SECRET_NAME}"
+    # Retrieve an authentication token and authenticate Docker client to registry
+    aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/w6z5f7h2
 
     # Push image
     docker push "${image_name}"
-
-    # Iterate over remaining tags, if any
-    for ((i=1;i<${#docker_tags[@]};i++)); do
-        local docker_tag="${docker_tags[${i}]}"
-        local latest_image_name="${RELEASE_DOCKERHUB_REPOSITORY}/${repository}:${docker_tag}_py3"
-
-        docker tag "${image_name}" "${latest_image_name}"
-        docker push "${latest_image_name}"
-        echo "Successfully pushed ${latest_image_name}. Pull it with:"
-        echo "docker pull ${latest_image_name}"
-        echo "For a complete list of tags see https://hub.docker.com/u/${RELEASE_DOCKERHUB_REPOSITORY}/${repository}"
-    done
 }
 
 case ${command} in

@@ -1973,7 +1973,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Add back R tests and fix typo around R and perl tests (#13940)
 * Fix document build (#13927)
 * Temporarily disables windows pipeline to unblock PRs (#14261)
-* Fix USE_MKLDNN check in Makefile (#13775)
+* Fix USE_ONEDNN check in Makefile (#13775)
 * Fix spelling in threaded_engine_test (#14709)
 * Fix cmake options parsing in dev_menu (#13458)
 * Add Local test stage and option to jump directly to menu item from commandline (#13809)

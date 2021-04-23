@@ -19,6 +19,9 @@ Acknowledgement: This file originates from incubator-tvm"""
 # pylint: disable=unused-import
 from numbers import Number, Integral
 from .. import _api_internal
+from ..ndarray._internal import NDArrayBase
+from .object import _ObjectBase, PyNativeObject, _set_node_generic
+from .base import string_types
 
 def _scalar_type_inference(value):
     if hasattr(value, 'dtype'):
@@ -50,13 +53,26 @@ def convert_to_node(value):
     node : Node
         The corresponding node value.
     """
-    if isinstance(value, Integral):
+    if isinstance(value, (_ObjectBase, NDArrayBase, PyNativeObject)):
+        return value
+    elif isinstance(value, Integral):
         return _api_internal._Integer(value)
     elif isinstance(value, float):
         return _api_internal._Float(value)
+    elif isinstance(value, string_types):
+        return _api_internal._String(value)
     elif isinstance(value, (list, tuple)):
         value = [convert_to_node(x) for x in value]
         return _api_internal._ADT(*value)
+    elif isinstance(value, dict):
+        vlist = []
+        for item in value.items():
+            if (not isinstance(item[0], (_ObjectBase, NDArrayBase, PyNativeObject)) and
+                    not isinstance(item[0], string_types)):
+                raise ValueError("key of map must already been a container type")
+            vlist.append(item[0])
+            vlist.append(convert_to_node(item[1]))
+        return _api_internal._Map(*vlist)
     raise ValueError("don't know how to convert type %s to node" % type(value))
 
 
@@ -79,3 +95,5 @@ def const(value, dtype=None):
     if dtype is None:
         dtype = _scalar_type_inference(value)
     return _api_internal._const(value, dtype)
+
+_set_node_generic(convert_to_node)

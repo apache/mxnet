@@ -790,9 +790,17 @@ ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
 _NP_OP_PREFIX = '_np_'
 _NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
+_NP_OP_IMPLEMENTED_SET = {'_np_reshape'}
 
 _NP_EXT_OP_PREFIX = '_npx_'
 _NP_EXT_OP_SUBMODULE_LIST = ['_image_', '_random_']
+_NP_EXT_OP_IMPLEMENTED_SET = {'_npx_softmax', '_npx_log_softmax', '_npx_masked_softmax',
+                              '_npx_masked_log_softmax', '_npx_activation',
+                              '_npx_batch_norm', '_npx_fully_connected', '_npx_pick',
+                              '_npx_convolution', '_npx_deconvolution', '_npx_pooling',
+                              '_npx_dropout', '_npx_one_hot', '_npx_rnn', '_npx_embedding',
+                              '_npx_topk', '_npx_layer_norm', '_npx_leaky_relu', '_npx_batch_dot',
+                              '_npx_broadcast_like', '_npx_arange_like'}
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
 
@@ -850,12 +858,15 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
     if np_module_name == 'numpy':
         op_name_prefix = _NP_OP_PREFIX
         submodule_name_list = _NP_OP_SUBMODULE_LIST
+        op_implemented_set = _NP_OP_IMPLEMENTED_SET
     elif np_module_name == 'numpy_extension':
         op_name_prefix = _NP_EXT_OP_PREFIX
         submodule_name_list = _NP_EXT_OP_SUBMODULE_LIST
+        op_implemented_set = _NP_EXT_OP_IMPLEMENTED_SET
     elif np_module_name == 'numpy._internal':
         op_name_prefix = _NP_INTERNAL_OP_PREFIX
         submodule_name_list = []
+        op_implemented_set = set()
     else:
         raise ValueError('unsupported np module name {}'.format(np_module_name))
 
@@ -865,8 +876,12 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
     op_names = []
     for i in range(size.value):
         name = py_str(plist[i])
-        if name.startswith(op_name_prefix):
-            op_names.append(name)
+        if mx_module_name != 'symbol':
+            if name.startswith(op_name_prefix) and name not in op_implemented_set:
+                op_names.append(name)
+        else:
+            if name.startswith(op_name_prefix):
+                op_names.append(name)
 
     if mx_module_name is None:
         # register np/npx ops for imperative programming

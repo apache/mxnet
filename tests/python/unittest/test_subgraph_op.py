@@ -16,6 +16,7 @@
 # under the License.
 
 import os
+import sys
 import ctypes
 import mxnet as mx
 from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array, c_str, mx_real_t
@@ -122,6 +123,7 @@ def get_graphs():
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe1(sym, subgraph_backend, op_names):
     """Use the partitioned sym to _simple_bind an executor and compare the outputs
     with those of the original executor"""
@@ -154,6 +156,7 @@ def test_subgraph_exe1(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe2(sym, subgraph_backend, op_names):
     """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in _simple_bind
     and compare results of the partitioned sym and the original sym."""
@@ -185,6 +188,7 @@ def test_subgraph_exe2(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe3(sym, subgraph_backend, op_names):
     """Use the partitioned sym to bind an executor and compare the outputs
     with those of the original executor"""
@@ -215,6 +219,7 @@ def test_subgraph_exe3(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe4(sym, subgraph_backend, op_names):
     """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in bind
     and compare results of the partitioned sym and the original sym."""
@@ -266,6 +271,7 @@ def copy_inputs_between_executors(exe1, exe2, input_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe5(sym, subgraph_backend, op_names):
     """Call optimize_for to trigger graph partitioning without infer shapes/types before,
     then _simple_bind and compare results of the partitioned sym and the original sym."""
@@ -295,6 +301,7 @@ def test_subgraph_exe5(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe6(sym, subgraph_backend, op_names):
     """Call optimize_for to trigger graph partitioning with shapes/types, then _simple_bind
     and compare results of the partitioned sym and the original sym."""
@@ -324,6 +331,7 @@ def test_subgraph_exe6(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe7(sym, subgraph_backend, op_names):
     """Call optimize_for to trigger graph partitioning without infer shapes/types before,
     then bind and compare results of the partitioned sym and the original sym."""
@@ -353,6 +361,7 @@ def test_subgraph_exe7(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe8(sym, subgraph_backend, op_names):
     """Call optimize_for to infer shapes, types and dtypes followed by graph partitioning,
     then bind and compare results of the partitioned sym and the original sym."""
@@ -384,6 +393,7 @@ def test_subgraph_exe8(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_exe9(sym, subgraph_backend, op_names):
     """Call optimize_for to infer shapes, types and dtypes followed by graph partitioning and
     dedup subgraph, then bind and compare results of the partitioned sym and the original sym."""
@@ -415,6 +425,7 @@ def test_subgraph_exe9(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+@pytest.mark.skipif(sys.platform == "win32", reason='https://github.com/apache/incubator-mxnet/issues/19915')
 def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmp_path):
     """Call hybridize() to partition the graph, and then compare results of the partitioned
     sym and the original sym. Here do an inference before hybridizing with the subgraph_backend

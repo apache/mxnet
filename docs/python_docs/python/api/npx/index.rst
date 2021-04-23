@@ -82,6 +82,7 @@ More operators
    :toctree: generated/
 
    sigmoid
+   relu
    smooth_l1
    softmax
    log_softmax

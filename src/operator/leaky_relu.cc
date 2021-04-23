@@ -25,10 +25,10 @@
 */
 
 #include "./leaky_relu-inl.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "./nn/mkldnn/mkldnn_base-inl.h"
 #include "./nn/mkldnn/mkldnn_ops-inl.h"
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 
 #include <nnvm/op_attr_types.h>
 namespace mxnet {
@@ -84,7 +84,7 @@ static bool LeakyReLUShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void LeakyReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
                                   const OpContext& ctx,
                                   const std::vector<NDArray>& inputs,
@@ -141,7 +141,7 @@ inline static bool BackwardLeakyReLUStorageType(const nnvm::NodeAttrs& attrs,
   return MKLDNNStorageType(attrs, dev_mask, SupportMKLDNNLeakyRelu(param),
                            dispatch_mode, in_attrs, out_attrs);
 }
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 
 NNVM_REGISTER_OP(LeakyReLU)
 .describe(R"code(Applies Leaky rectified linear unit activation element-wise to the input.
@@ -172,7 +172,7 @@ The following modified ReLU Activation functions are supported:
   return param.act_type == leakyrelu::kRReLU ? 2 : 1;
 })
 .set_attr_parser(ParamParser<LeakyReLUParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", LeakyReLUStorageType)
 #endif
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -190,7 +190,7 @@ The following modified ReLU Activation functions are supported:
 .set_attr<mxnet::FInferShape>("FInferShape", LeakyReLUShape)
 .set_attr<nnvm::FInferType>("FInferType", LeakyReLUType)
 .set_attr<FCompute>("FCompute<cpu>", LeakyReLUCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", LeakyReLUComputeExCPU)
 #endif
@@ -227,7 +227,7 @@ NNVM_REGISTER_OP(_backward_LeakyReLU)
   return param.act_type == leakyrelu::kPReLU ? 2 : 1;
 })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", BackwardLeakyReLUStorageType)
 #endif
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
@@ -237,7 +237,7 @@ NNVM_REGISTER_OP(_backward_LeakyReLU)
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr_parser(ParamParser<LeakyReLUParam>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", LeakyReLUGradComputeExCPU)
 #endif

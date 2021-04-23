@@ -23,19 +23,16 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-ARG PYTHON=python3
-ARG PIP=pip3
-ARG PYTHON_VERSION=3.7.9
 RUN apt-get update && \
-    wget -q https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz && \
-    tar -xzf Python-$PYTHON_VERSION.tgz && \
-    cd Python-$PYTHON_VERSION && \
-    ./configure --enable-shared --prefix=/usr/local && \
-    make -j $(nproc) && make install && \
-    cd .. && rm -rf ../Python-$PYTHON_VERSION* && \
-    ln -s /usr/local/bin/pip3 /usr/bin/pip && \
-    ln -s /usr/local/bin/$PYTHON /usr/local/bin/python && \
-    ${PIP} --no-cache-dir install --upgrade pip setuptools
+    apt-get install -y software-properties-common && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y python3.7-dev python3.7-distutils virtualenv wget && \
+    ln -sf /usr/bin/python3.7 /usr/local/bin/python3 && \
+    wget -nv https://bootstrap.pypa.io/get-pip.py && \
+    python3 get-pip.py
+
+RUN apt-get install -y libgomp1 libquadmath0
 
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}

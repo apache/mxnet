@@ -120,7 +120,7 @@ class ContextHelperCPU : public ContextHelper {
   }
 
  private:
-#if MXNET_USE_MKLDNN == 1 || MXNET_USE_INTGEMM == 1
+#if MXNET_USE_ONEDNN == 1 || MXNET_USE_INTGEMM == 1
   // MKLDNN requires special alignment. 64 is used by the MKLDNN library in
   // memory allocation.
   static constexpr size_t alignment_ = kMKLDNNAlign;

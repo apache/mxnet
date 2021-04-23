@@ -27,6 +27,16 @@
 
 namespace mxnet {
 namespace kvstore {
+void Quantize1BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
+                      const float threshold) {
+  Quantize1BitKernelLaunch(s, inputs, threshold);
+}
+
+void Dequantize1BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
+                        const float threshold) {
+  Dequantize1BitKernelLaunch(s, inputs, threshold);
+}
+
 void Quantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
                       const float threshold) {
   Quantize2BitKernelLaunch(s, inputs, threshold);

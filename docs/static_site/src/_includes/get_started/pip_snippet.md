@@ -1,7 +1,7 @@
 You can then <a href="/get_started/validate_mxnet.html">validate your MXNet installation</a>.
 
 <div style="text-align: center">
-    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.7.0.png"
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.8.0.png"
     alt="pip packages"/>
 </div>
 

@@ -52,12 +52,12 @@ def is_test_for_gpu():
 
 def is_test_for_mkldnn():
     return (mx.current_context().device_type == 'cpu'
-            and os.environ.get('ENABLE_MKLDNN_QUANTIZATION_TEST') == '1')
+            and os.environ.get('ENABLE_ONEDNN_QUANTIZATION_TEST') == '1')
 
 
 def is_test_for_native_cpu():
     return (mx.current_context().device_type == 'cpu'
-            and os.environ.get('ENABLE_MKLDNN_QUANTIZATION_TEST') == None)
+            and os.environ.get('ENABLE_ONEDNN_QUANTIZATION_TEST') == None)
 
 
 def test_quantize_float32_to_int8():

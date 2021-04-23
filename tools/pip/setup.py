@@ -45,7 +45,7 @@ LIB_PATH = libinfo['find_lib_path']()
 __version__ = libinfo['__version__']
 
 # set by the CD pipeline
-is_release = os.environ.get("IS_RELEASE", "").strip()
+is_release = os.environ.get("RELEASE_BUILD", "False").strip().lower() in ['true', '1']
 
 # set by the travis build pipeline
 travis_tag = os.environ.get("TRAVIS_TAG", "").strip()
@@ -57,7 +57,6 @@ if not travis_tag and not is_release:
 # patch build tag
 elif travis_tag.startswith('patch-'):
     __version__ = os.environ['TRAVIS_TAG'].split('-')[1]
-
 
 DEPENDENCIES = [
     'numpy<2.0.0,>1.16.0',
@@ -141,16 +140,16 @@ else:
         libraries.append('CUDA-10.1')
 
 from mxnet.runtime import Features
-if Features().is_enabled("MKLDNN"):
-    libraries.append('MKLDNN')
+if Features().is_enabled("ONEDNN"):
+    libraries.append('ONEDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
-if Features().is_enabled("MKLDNN"):
-    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
-                    os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
+if Features().is_enabled("ONEDNN"):
+    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/onednn/include'),
+                    os.path.join(CURRENT_DIR, 'mxnet/include/onednn'))
 if platform.system() == 'Linux':
     libdir, mxdir = os.path.dirname(LIB_PATH[0]), os.path.join(CURRENT_DIR, 'mxnet')
     if os.path.exists(os.path.join(libdir, 'libgfortran.so.3')):

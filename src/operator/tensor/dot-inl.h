@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include <utility>
 #include <type_traits>
@@ -63,6 +64,33 @@ struct DotParam : public dmlc::Parameter<DotParam> {
       .add_enum("row_sparse", kRowSparseStorage)
       .add_enum("csr", kCSRStorage)
       .set_default(dmlc::optional<int>());
+  }
+  std::string ForwardStype2String(int forward_stype) {
+    switch (forward_stype) {
+      case kDefaultStorage:
+        return "default";
+      case kRowSparseStorage:
+        return "row_sparse";
+      case kCSRStorage:
+        return "csr";
+      default:
+        LOG(FATAL) << "Unknown forward stype enum " << forward_stype;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream transpose_a_s, transpose_b_s, forward_stype_s;
+    transpose_a_s << transpose_a;
+    transpose_b_s << transpose_b;
+    forward_stype_s << forward_stype;
+    (*dict)["transpose_a"] = transpose_a_s.str();
+    (*dict)["transpose_b"] = transpose_b_s.str();
+    if (forward_stype.has_value()) {
+      (*dict)["forward_stype"] = ForwardStype2String(forward_stype.value());
+    } else {
+      (*dict)["forward_stype"] = forward_stype_s.str();
+    }
   }
 };
 

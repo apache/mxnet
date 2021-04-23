@@ -79,15 +79,19 @@ def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
            [3, 2, 2, 0]])
     """
     if dtype is None:
-        dtype = 'int'
+        dtype = 'int64'
+    elif not isinstance(dtype, str):
+        dtype = np.dtype(dtype).name
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size is None:
         size = ()
     if high is None:
         high = low
         low = 0
-    return _npi.random_randint(low, high, shape=size, dtype=dtype, ctx=ctx, out=out)
+    return _api_internal.randint(low, high, size, dtype, ctx, out)
 
 
 def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):

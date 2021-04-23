@@ -29,18 +29,19 @@ from .base import py_str, c_str
 try:
     if int(os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from ._ctypes.function import FunctionBase as _FunctionBase
+        from ._ctypes.function import _set_class_packed_func, _get_global_func
         # To set RETURN_SWITCH for OBJECT_HANDLE
         from . import object
     else:
         from ._cy3.core import FunctionBase as _FunctionBase
+        from ._cy3.core import _set_class_packed_func, _get_global_func
 except ImportError:
     if int(os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.function import FunctionBase as _FunctionBase
+    from ._ctypes.function import _set_class_packed_func, _get_global_func
     # To set RETURN_SWITCH for OBJECT_HANDLE
     from . import object
-
-FunctionHandle = ctypes.c_void_p
 
 
 class Function(_FunctionBase):
@@ -84,15 +85,7 @@ def get_global_func(name, allow_missing=False):
     func : tvm.Function
         The function to be returned, None if function is missing.
     """
-    handle = FunctionHandle()
-    check_call(_LIB.MXNetFuncGetGlobal(c_str(name), ctypes.byref(handle)))
-    if handle.value:
-        return Function(handle, False)
-
-    if allow_missing:
-        return None
-
-    raise ValueError("Cannot find global function %s" % name)
+    return _get_global_func(name, allow_missing)
 
 
 def list_global_func_names():
@@ -160,3 +153,5 @@ def _init_api_prefix(module_name, prefix):
         ff.__name__ = fname
         ff.__doc__ = ("MXNet PackedFunc %s. " % fname)
         setattr(target_module, ff.__name__, ff)
+
+_set_class_packed_func(Function)

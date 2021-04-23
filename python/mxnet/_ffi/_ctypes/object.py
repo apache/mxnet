@@ -32,6 +32,7 @@ OBJECT_TYPE = {}
 _CLASS_OBJECT = None
 
 def _set_class_object(object_class):
+    """Initialize object class defined in python"""
     global _CLASS_OBJECT
     _CLASS_OBJECT = object_class
 
@@ -50,6 +51,10 @@ def _return_object(x):
     tindex = ctypes.c_uint()
     check_call(_LIB.MXNetObjectGetTypeIndex(handle, ctypes.byref(tindex)))
     cls = OBJECT_TYPE.get(tindex.value, _CLASS_OBJECT)
+    if issubclass(cls, PyNativeObject):
+        obj = _CLASS_OBJECT.__new__(_CLASS_OBJECT)
+        obj.handle = handle
+        return cls.__from_mxnet_object__(cls, obj)
     # Avoid calling __init__ of cls, instead directly call __new__
     # This allows child class to implement their own __init__
     obj = cls.__new__(cls)
@@ -58,6 +63,31 @@ def _return_object(x):
 
 RETURN_SWITCH[TypeCode.OBJECT_HANDLE] = _return_object
 
+class PyNativeObject:
+    """Base class of all MXNet objects that also subclass python's builtin types."""
+
+    __slots__ = []
+
+    def __init_mxnet_object_by_constructor__(self, fconstructor, *args):
+        """Initialize the internal mxnet_object by calling constructor function.
+
+        Parameters
+        ----------
+        fconstructor : Function
+            Constructor function.
+
+        args: list of objects
+            The arguments to the constructor
+
+        Note
+        ----
+        We have a special calling convention to call constructor functions.
+        So the return object is directly set into the object
+        """
+        # pylint: disable=assigning-non-slot
+        obj = _CLASS_OBJECT.__new__(_CLASS_OBJECT)
+        obj.__init_handle_by_constructor__(fconstructor, *args)
+        self.__mxnet_object__ = obj
 
 class ObjectBase(object):
     """Base object for all object types"""
@@ -90,3 +120,22 @@ class ObjectBase(object):
         if not isinstance(handle, ObjectHandle):
             handle = ObjectHandle(handle)
         self.handle = handle
+
+    def same_as(self, other):
+        """Check object identity.
+
+        Parameters
+        ----------
+        other : object
+            The other object to compare against.
+
+        Returns
+        -------
+        result : bool
+             The comparison result.
+        """
+        if not isinstance(other, ObjectBase):
+            return False
+        if self.handle is None:
+            return other.handle is None
+        return self.handle.value == other.handle.value

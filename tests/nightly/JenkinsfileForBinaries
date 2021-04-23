@@ -18,7 +18,7 @@
 //
 //This is a Jenkinsfile for nightly tests. The format and some functions have been picked up from the top-level Jenkinsfile
 
-mx_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so'
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -32,9 +32,9 @@ core_logic: {
   stage('Build') {
     parallel 'GPU: CUDA10.1+cuDNN7': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-mkldnn-gpu') {
+        ws('workspace/build-onednn-gpu') {
           utils.init_git()
-          utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_mkldnn', false)
+          utils.docker_run('ubuntu_gpu_cu111', 'build_ubuntu_gpu_onednn', false)
           utils.pack_lib('gpu', mx_lib)
         }
       }

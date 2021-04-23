@@ -30,6 +30,7 @@
 #include <mxnet/runtime/object.h>
 #include <mxnet/runtime/ndarray.h>
 #include <mxnet/runtime/container.h>
+#include <mxnet/runtime/container_ext.h>
 #include <mxnet/runtime/ndarray_handle.h>
 #include <mxnet/runtime/ffi_helper.h>
 #include <mxnet/runtime/data_type.h>
@@ -383,6 +384,23 @@ struct extension_type_info {
 };
 
 /*!
+ * \brief Type traits for runtime type check during FFI conversion.
+ * \tparam T the type to be checked.
+ */
+template <typename T>
+struct ObjectTypeChecker {
+  static bool Check(const Object* ptr) {
+    using ContainerType = typename T::ContainerType;
+    if (ptr == nullptr) return T::_type_is_nullable;
+    return ptr->IsInstance<ContainerType>();
+  }
+  static std::string TypeName() {
+    using ContainerType = typename T::ContainerType;
+    return ContainerType::_type_key;
+  }
+};
+
+/*!
  * \brief Internal base class to
  *  handle conversion to POD values.
  */
@@ -433,6 +451,8 @@ class MXNetPODValue_ {
            typename = typename std::enable_if<
              std::is_class<TObjectRef>::value>::type>
   inline bool IsObjectRef() const;
+  template <typename TObjectRef>
+  inline TObjectRef AsObjectRef() const;
   int type_code() const {
     return type_code_;
   }
@@ -487,6 +507,7 @@ class MXNetArgValue : public MXNetPODValue_ {
   using MXNetPODValue_::operator void*;
   using MXNetPODValue_::operator ObjectRef;
   using MXNetPODValue_::IsObjectRef;
+  using MXNetPODValue_::AsObjectRef;
 
   // conversion operator.
   operator std::string() const {
@@ -528,9 +549,6 @@ class MXNetArgValue : public MXNetPODValue_ {
   const MXNetValue& value() const {
     return value_;
   }
-  // Deferred extension handler.
-  template<typename TObjectRef>
-  inline TObjectRef AsObjectRef() const;
   template<typename T,
            typename = typename std::enable_if<
            std::is_class<T>::value>::type>
@@ -571,6 +589,7 @@ class MXNetRetValue : public MXNetPODValue_ {
   using MXNetPODValue_::operator void*;
   using MXNetPODValue_::operator ObjectRef;
   using MXNetPODValue_::IsObjectRef;
+  using MXNetPODValue_::AsObjectRef;
 
   MXNetRetValue(const MXNetRetValue& other) : MXNetPODValue_() {
     this->Assign(other);
@@ -681,7 +700,8 @@ class MXNetRetValue : public MXNetPODValue_ {
   }
   MXNetRetValue& operator=(NDArrayHandle value) {
     this->SwitchToPOD(kNDArrayHandle);
-    value_.v_handle = reinterpret_cast<void*>(value->value);
+    NDArray* arr = new NDArray(value->value);
+    value_.v_handle = reinterpret_cast<void*>(arr);
     return *this;
   }
   MXNetRetValue& operator=(const PythonArg& value) {
@@ -725,8 +745,6 @@ class MXNetRetValue : public MXNetPODValue_ {
            typename = typename std::enable_if<
              std::is_class<T>::value>::type>
   inline operator T() const;
-  template<typename TObjectRef>
-  inline TObjectRef AsObjectRef() const;
 
  private:
   template<typename T>
@@ -1173,13 +1191,88 @@ struct MXNetValueCast {
 
 }  // namespace detail
 
-template<typename T, typename>
-inline MXNetRetValue::operator T() const {
-  return detail::
-      MXNetValueCast<T, MXNetRetValue,
-                   (extension_type_info<T>::code != 0),
-                   (array_type_info<T>::code > 0)>
-      ::Apply(this);
+/*!
+ * \brief Type trait to specify special value conversion rules from
+ *        MXNetArgValue and MXNetRetValue.
+ *
+ *  The trait can be specialized to add type specific conversion logic
+ *  from the TVMArgvalue and TVMRetValue.
+ *
+ * \tparam TObjectRef the specific ObjectRefType.
+ */
+template <typename TObjectRef>
+struct PackedFuncValueConverter {
+  /*!
+   * \brief Convert a TObjectRef from an argument value.
+   * \param val The argument value.
+   * \return the converted result.
+   */
+  static TObjectRef From(const MXNetArgValue& val) { return val.AsObjectRef<TObjectRef>(); }
+  /*!
+   * \brief Convert a TObjectRef from a return value.
+   * \param val The argument value.
+   * \return the converted result.
+   */
+  static TObjectRef From(const MXNetRetValue& val) { return val.AsObjectRef<TObjectRef>(); }
+};
+
+template <>
+struct PackedFuncValueConverter<::mxnet::runtime::String> {
+  static String From(const MXNetArgValue& val) {
+    if (val.IsObjectRef<mxnet::runtime::String>()) {
+      return val.AsObjectRef<mxnet::runtime::String>();
+    } else {
+      return mxnet::runtime::String(val.operator std::string());
+    }
+  }
+
+  static String From(const MXNetRetValue& val) {
+    if (val.IsObjectRef<mxnet::runtime::String>()) {
+      return val.AsObjectRef<mxnet::runtime::String>();
+    } else {
+      return mxnet::runtime::String(val.operator std::string());
+    }
+  }
+};
+
+template <typename TObjectRef>
+inline TObjectRef MXNetPODValue_::AsObjectRef() const {
+  static_assert(std::is_base_of<ObjectRef, TObjectRef>::value,
+                "Conversion only works for ObjectRef");
+  using ContainerType = typename TObjectRef::ContainerType;
+
+  if (type_code_ == kNull) {
+    CHECK(TObjectRef::_type_is_nullable)
+        << "Expect a not null value of " << ContainerType::_type_key;
+    return TObjectRef(ObjectPtr<Object>(nullptr));
+  }
+  if (type_code_ == kObjectHandle) {
+    // normal object type check.
+    Object* ptr = static_cast<Object*>(value_.v_handle);
+    CHECK(ObjectTypeChecker<TObjectRef>::Check(ptr))
+        << "Expect " << ObjectTypeChecker<TObjectRef>::TypeName() << " but get "
+        << ptr->GetTypeKey();
+    return TObjectRef(GetObjectPtr<Object>(ptr));
+  } else {
+    MXNET_CHECK_TYPE_CODE(type_code_, kObjectHandle);
+    return TObjectRef(ObjectPtr<Object>(nullptr));
+  }
+}
+
+template <typename T, typename>
+inline MXNetArgValue::operator T() const {
+  return PackedFuncValueConverter<T>::From(*this);
+}
+
+template <typename TObjectRef, typename>
+inline bool MXNetPODValue_::IsObjectRef() const {
+  using ContainerType = typename TObjectRef::ContainerType;
+  return  type_code_ == kObjectHandle &&
+          ObjectTypeChecker<TObjectRef>::Check(static_cast<Object*>(value_.v_handle));
+}
+
+inline bool String::CanConvertFrom(const MXNetArgValue& val) {
+  return val.type_code() == kStr || val.IsObjectRef<mxnet::runtime::String>();
 }
 
 }  // namespace runtime

@@ -124,23 +124,3 @@ cdef extern from "mxnet/c_api.h":
                            const char **param_vals,
                            const int **out_stypes);
     int MXNDArrayFree(NDArrayHandle handle);
-    int MXCreateCachedOp(SymbolHandle handle,
-                          int num_flags,
-                          const char** keys,
-                          const char** vals,
-                          CachedOpHandle *out,
-                          _bool thread_safe);
-    int MXFreeCachedOp(CachedOpHandle handle);
-    int MXInvokeCachedOp(CachedOpHandle handle,
-                         int num_inputs,
-                         NDArrayHandle *inputs,
-                         int default_ctx_type,
-                         int default_ctx_dev_id,
-                         int *num_outputs,
-                         NDArrayHandle **outputs,
-                         const int **out_stypes);
-    int MXCachedOpRegisterOpHook(NDArrayHandle handle,
-                                 CachedOpMonitorCallback callback,
-                                 _bool monitor_all);
-    int MXCachedOpGetOptimizedSymbol(CachedOpHandle handle,
-                                     SymbolHandle *out);

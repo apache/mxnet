@@ -80,6 +80,15 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
            this->no_bias == other.no_bias &&
            this->flatten == other.flatten;
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_hidden_s, no_bias_s, flatten_s;
+    num_hidden_s << num_hidden;
+    no_bias_s << no_bias;
+    flatten_s << flatten;
+    (*dict)["num_hidden"] = num_hidden_s.str();
+    (*dict)["no_bias"] = no_bias_s.str();
+    (*dict)["flatten"] = flatten_s.str();
+  }
 };
 
 /**
@@ -133,20 +142,36 @@ namespace {
   inline int ceil_div(int x, int y) {
     return (x + y - 1) / y;
   }
+
+  inline int FindNumRowsPerBlock(size_t bias_length, size_t lead_dim) {
+    int ret = 1;
+    while (bias_length < nthreads_addbias &&
+           lead_dim % 2 == 0) {
+      bias_length *= 2;
+      ret *= 2;
+      lead_dim /= 2;
+    }
+    return ret;
+  }
 }  // namespace
 
 template <typename DType, typename LType>
-__global__ void add_bias_kernel(DType* mat, DType* bias, size_t lead_dim, size_t bias_length) {
+__global__ void add_bias_kernel(DType* const mat, const DType* const bias,
+                                const size_t lead_dim, const size_t bias_length,
+                                const int rows) {
   __shared__ LType scratch[nthreads_addbias * 2];
+  const int threads_per_row = nthreads_addbias / rows;
+  const int threadId_in_row = threadIdx.x & (threads_per_row - 1);
+  const int row_id = threadIdx.x * rows / nthreads_addbias;
   const index_t N = bias_length * sizeof(DType)/sizeof(LType);
-  const index_t base = blockIdx.x * N;
+  const index_t base = (blockIdx.x * rows + row_id) * N;
   LType* const mat_aligned = reinterpret_cast<LType*>(mat) + base;
-  const LType* const bias_aligned = reinterpret_cast<LType*>(bias);
+  const LType* const bias_aligned = reinterpret_cast<const LType*>(bias);
   LType* const scratch_bias_load = scratch + threadIdx.x;
   DType* const scratch_bias = reinterpret_cast<DType*>(scratch_bias_load);
   LType* const scratch_mat_load = scratch_bias_load + nthreads_addbias;
   DType* const scratch_mat = reinterpret_cast<DType*>(scratch_mat_load);
-  for (index_t i = threadIdx.x; i < N; i += blockDim.x) {
+  for (index_t i = threadId_in_row; i < N; i += threads_per_row) {
     *scratch_bias_load = bias_aligned[i];
     *scratch_mat_load = mat_aligned[i];
 #pragma unroll
@@ -162,13 +187,15 @@ void AddBias(Tensor<gpu, 1, DType> bias, Tensor<gpu, 2, DType> data,
              Tensor<gpu, 2, DType> out, Stream<gpu>* s) {
     int ltype = mxnet::common::cuda::get_load_type(bias.shape_[0] * sizeof(DType));
     MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
-    add_bias_kernel<DType, LType><<<data.size(0),
-                                    nthreads_addbias,
-                                    0,
-                                    Stream<gpu>::GetStream(s)>>>(out.dptr_,
-                                                                 bias.dptr_,
-                                                                 data.size(0),
-                                                                 bias.shape_[0]);
+      int rows = FindNumRowsPerBlock(bias.shape_[0] * sizeof(DType) / sizeof(LType), data.size(0));
+      add_bias_kernel<DType, LType><<<data.size(0) / rows,
+                                      nthreads_addbias,
+                                      0,
+                                      Stream<gpu>::GetStream(s)>>>(out.dptr_,
+                                                                   bias.dptr_,
+                                                                   data.size(0),
+                                                                   bias.shape_[0],
+                                                                   rows);
     });
 }
 

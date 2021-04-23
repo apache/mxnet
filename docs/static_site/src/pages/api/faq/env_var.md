@@ -324,14 +324,14 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Data directory in the filesystem for storage, for example when downloading gluon models.
   - Default in *nix is .mxnet APPDATA/mxnet in windows.
 
-* MXNET_MKLDNN_ENABLED
+* MXNET_ONEDNN_ENABLED
   - Values: 0, 1 ```(default=1)```
-  - Flag to enable or disable MKLDNN accelerator. On by default.
-  - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
+  - Flag to enable or disable ONEDNN accelerator. On by default.
+  - Only applies to mxnet that has been compiled with ONEDNN (```pip install mxnet``` or built from source with ```USE_ONEDNN=1```)
 
-* MXNET_MKLDNN_CACHE_NUM
+* MXNET_ONEDNN_CACHE_NUM
   - Values: Int ```(default=-1)```
-  - Flag to set num of elements that MKLDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use MKLDNN and different input shape.
+  - Flag to set num of elements that ONEDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use ONEDNN and different input shape.
 
 * MXNET_ENFORCE_DETERMINISM
   - Values: 0(false) or 1(true) ```(default=0)```
@@ -371,9 +371,9 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
 
 * MXNET_SUBGRAPH_BACKEND
-  - Values: String ```(default="MKLDNN")``` if MKLDNN is avaliable, otherwise ```(default="")```
+  - Values: String ```(default="MKLDNN")``` if ONEDNN is avaliable, otherwise ```(default="")```
   - This variable controls the subgraph partitioning in MXNet.
-  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
+  - This variable is used to perform ONEDNN FP32 operator fusion and quantization. Please refer to the [ONEDNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
   - Set ```MXNET_SUBGRAPH_BACKEND=NONE``` to disable subgraph backend.
 
 * MXNET_SAFE_ACCUMULATION
@@ -399,9 +399,9 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Values: 0(false) or 1(true) ```(default=1)```
   - If this variable is set, MXNet will simplify the computation graph, eliminating duplicated operations on the same inputs.
 
-* MXNET_USE_MKLDNN_RNN
+* MXNET_USE_ONEDNN_RNN
   - Values: 0(false) or 1(true) ```(default=1)```
-  - This variable controls whether to use the MKL-DNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The MKL-DNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
+  - This variable controls whether to use the ONEDNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The ONEDNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
 
 * MXNET_FC_TRUE_FP16
   - Values: 0(false) or 1(true) ```(default=0)```

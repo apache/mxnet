@@ -30,7 +30,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(AMPCastParam);
 DMLC_REGISTER_PARAMETER(AMPMultiCastParam);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
                     const std::vector<NDArray>& inputs,
@@ -41,25 +41,29 @@ static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
   if (req[0] == kWriteInplace) {
     return;
   }
-  mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
   auto data = inputs[0];
-  if (data.IsView() && data.IsMKLDNNData())
-    data = data.Reorder2Default();
-  const auto i_mem = data.GetMKLDNNData();
-  const size_t i_ndim = data.shape().ndim();
-  mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
-  for (size_t i = 0; i < i_ndim; i++) {
-    i_dims[i] = static_cast<int>(data.shape()[i]);
+  if (data.dtype() != mshadow::kFloat16 && outputs[0].dtype() != mshadow::kFloat16) {
+    mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+    if (data.IsView() && data.IsMKLDNNData())
+      data = data.Reorder2Default();
+    const auto i_mem = data.GetMKLDNNData();
+    const size_t i_ndim = data.shape().ndim();
+    mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
+    for (size_t i = 0; i < i_ndim; i++) {
+      i_dims[i] = static_cast<int>(data.shape()[i]);
+    }
+    const auto o_desc =
+        mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[0].dtype()),
+                            static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(i_ndim)));
+    const auto out_mem = CreateMKLDNNMem(outputs[0], o_desc, req[0]);
+    mkldnn_args_map_t reorder_args;
+    reorder_args[MKLDNN_ARG_SRC] = *i_mem;
+    reorder_args[MKLDNN_ARG_DST] = *out_mem.second;
+    MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(*i_mem, *out_mem.second), reorder_args);
+    MKLDNNStream::Get()->Submit();
+    return;
   }
-  const auto o_desc =
-      mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[0].dtype()),
-                           static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(i_ndim)));
-  const auto out_mem = CreateMKLDNNMem(outputs[0], o_desc, req[0]);
-  mkldnn_args_map_t reorder_args;
-  reorder_args[MKLDNN_ARG_SRC] = *i_mem;
-  reorder_args[MKLDNN_ARG_DST] = *out_mem.second;
-  MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(*i_mem, *out_mem.second), reorder_args);
-  MKLDNNStream::Get()->Submit();
+  FallBackCompute(AMPCastCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 inline static bool AMPCastStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
@@ -112,7 +116,7 @@ inline static bool AMPMultiCastStorageType(const nnvm::NodeAttrs& attrs, const i
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 
 NNVM_REGISTER_OP(amp_cast)
 .add_alias("_npi_amp_cast")
@@ -132,7 +136,7 @@ It casts only between low precision float/FP32 and does not do anything for othe
     return std::vector<bool>{true};
   })
 .set_attr<FCompute>("FCompute<cpu>", AMPCastCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FInferStorageType>("FInferStorageType", AMPCastStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", AMPCastExCPU)
@@ -151,7 +155,7 @@ NNVM_REGISTER_OP(_backward_amp_cast)
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FInferStorageType>("FInferStorageType", AMPCastStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", AMPCastExCPU)
@@ -204,7 +208,7 @@ It casts only between low precision float/FP32 and does not do anything for othe
     return std::vector<bool>(num_args, true);
   })
 .set_attr<FCompute>("FCompute<cpu>", AMPMultiCastCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FInferStorageType>("FInferStorageType", AMPMultiCastStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", AMPMultiCastExCPU)
@@ -248,7 +252,7 @@ NNVM_REGISTER_OP(_backward_amp_multicast)
     int num_args = dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
     return std::vector<bool>(num_args, true);
   })
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FInferStorageType>("FInferStorageType", AMPMultiCastStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", AMPMultiCastExCPU)

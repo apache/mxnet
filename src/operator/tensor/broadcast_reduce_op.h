@@ -142,6 +142,27 @@ struct PickParam : public dmlc::Parameter<PickParam> {
               " they are replaced by the index that addresses the last element along an axis. "
               " \"wrap\" means to wrap around.");
   }
+  std::string PickMode2String(int mode) {
+    switch (mode) {
+      case kWrap:
+        return "wrap";
+      case kClip:
+        return "clip";
+      default:
+        LOG(FATAL) << "Unknown mode enum " << mode;
+    }
+    LOG(FATAL) << "should not reach here ";
+    return "";
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, mode_s, keepdims_s;
+    axis_s << axis;
+    mode_s << mode;
+    keepdims_s << keepdims;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["mode"] = PickMode2String(mode);
+    (*dict)["keepdims"] = keepdims_s.str();
+  }
 };
 
 struct BroadcastAxesParam : public dmlc::Parameter<BroadcastAxesParam> {
@@ -179,6 +200,21 @@ struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
       .describe("Axes to perform broadcast on in the first input array");
     DMLC_DECLARE_FIELD(rhs_axes).set_default(dmlc::optional<mxnet::TShape>())
       .describe("Axes to copy from the second input array");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream lhs_axes_s, rhs_axes_s;
+    if (lhs_axes.has_value()) {
+      lhs_axes_s << lhs_axes.value();
+    } else {
+      lhs_axes_s << lhs_axes;
+    }
+    (*dict)["lhs_axes"] = lhs_axes_s.str();
+    if (rhs_axes.has_value()) {
+      rhs_axes_s << rhs_axes.value();
+    } else {
+      rhs_axes_s << rhs_axes;
+    }
+    (*dict)["rhs_axes"] = rhs_axes_s.str();
   }
 };
 
