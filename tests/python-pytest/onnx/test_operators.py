@@ -1393,7 +1393,7 @@ def test_onnx_export_linalg_gemm2(tmp_path, dtype, alpha, params):
     op_export_test('_linalg_gemm2', M, [A, B], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (6, 7), (8,)])
 def test_onnx_export_LogisticRegressionOutput(tmp_path, dtype, shape):
     x = mx.random.uniform(0, 1, shape, dtype=dtype)
@@ -1412,7 +1412,7 @@ def test_onnx_export_SoftmaxOutput(tmp_path, dtype, shape):
 
 
 # Due to ONNX limitation, L2Normalization only supports channel mode for now
-@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (3, 4, 5, 6, 7)])
 def test_onnx_export_L2Normalization(tmp_path, dtype, shape):
     x = mx.random.uniform(0, 1, shape, dtype=dtype)
