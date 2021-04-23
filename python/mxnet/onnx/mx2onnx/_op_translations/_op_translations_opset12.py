@@ -2371,22 +2371,28 @@ def convert_logsoftmax(node, **kwargs):
     """Map MXNet's log_softmax operator attributes to onnx's LogSoftMax operator
     and return the created node.
     """
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     # Converting to int
     axis = int(attrs.get("axis", -1))
-    temp = attrs.get("temperature", 'None')
+    temp = attrs.get('temperature', 'None')
+    use_length = attrs.get('use_length', 'False')
+    
     if temp != 'None':
-        raise AttributeError("LogSoftMax: ONNX supports only temperature=None")
+        raise AttributeError('LogSoftMax currently does not support temperature!=None')
 
-    node = onnx.helper.make_node(
-        'LogSoftmax',
-        input_nodes,
-        [name],
-        axis=axis,
-        name=name
-    )
-    return [node]
+    if use_length in ['1', 'True']:
+        raise AttributeError('LogSoftMax currently does not support use_length==True')
+    
+    nodes = [
+        make_node('Exp', [input_nodes[0]], [name+'_exp']),
+        make_node('ReduceSum', [name+'_exp'], [name+'_rsum'], axes=[axis], keepdims=1),
+        make_node('Div', [name+'_exp', name+'_rsum'], [name+'_div']),
+        make_node('Log', [name+'_div'], [name])
+    ]
+
+    return nodes
 
 @mx_op.register("norm")
 def convert_norm(node, **kwargs):

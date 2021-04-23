@@ -1597,4 +1597,33 @@ def convert_norm(node, **kwargs):
                 make_node('Reshape', [name+'_norm', name+'_1'], [name])
             ]
             return nodes
-            
+
+
+@mx_op.register("log_softmax", OPSET_VERSION)
+def convert_logsoftmax(node, **kwargs):
+    """Map MXNet's log_softmax operator attributes to onnx's LogSoftMax operator
+    and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    # Converting to int
+    axis = int(attrs.get("axis", -1))
+    temp = attrs.get('temperature', 'None')
+    use_length = attrs.get('use_length', 'False')
+
+    if temp != 'None':
+        raise AttributeError('LogSoftMax currently does not support temperature!=None')
+
+    if use_length in ['1', 'True']:
+        raise AttributeError('LogSoftMax currently does not support use_length==True')
+
+    node = onnx.helper.make_node(
+        'LogSoftmax',
+        input_nodes,
+        [name],
+        axis=axis,
+        name=name
+    )
+
+    return [node]
+
