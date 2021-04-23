@@ -1546,6 +1546,24 @@ def convert_squeeze(node, **kwargs):
     return [node]
 
 
+@mx_op.register("SoftmaxOutput", OPSET_VERSION)
+def convert_softmax_output(node, **kwargs):
+    """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, _ = get_inputs(node, kwargs)
+
+    nodes = [
+        make_node('Shape', [input_nodes[0]], [name+'_shape']),
+        make_node('Flatten', [input_nodes[0]], [name+'_flat'], axis=1),
+        make_node('Softmax', [name+'_flat'], [name+'_sm'], axis=1),
+        make_node('Reshape', [name+'_sm', name+'_shape'], [name])
+    ]
+
+    return nodes
+
+
 @mx_op.register("norm", OPSET_VERSION)
 def convert_norm(node, **kwargs):
     """Map MXNet's norm operator attributes to onnx's ReduceL1 and ReduceL2 operators
@@ -1597,4 +1615,3 @@ def convert_norm(node, **kwargs):
                 make_node('Reshape', [name+'_norm', name+'_1'], [name])
             ]
             return nodes
-            
