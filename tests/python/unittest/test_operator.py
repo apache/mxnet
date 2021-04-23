@@ -9501,7 +9501,7 @@ def test_take_grads():
 
     class Model(HybridBlock):
         def __init__(self, conv_units, atrous_rates, use_take=False, **kwargs):
-            super().__init__(prefix=kwargs.get('prefix', None), params=kwargs.get('params', None))
+            super().__init__()
             self.use_take = use_take
             with self.name_scope():
                 self.convs = conv_layer(atrous_rates, conv_units)
