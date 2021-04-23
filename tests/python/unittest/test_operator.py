@@ -9503,9 +9503,7 @@ def test_take_grads():
         def __init__(self, conv_units, atrous_rates, use_take=False, **kwargs):
             super().__init__()
             self.use_take = use_take
-            with self.name_scope():
-                self.convs = conv_layer(atrous_rates, conv_units)
-                self.dense_out = Dense(1, flatten=False, activation='tanh')
+            self.convs = conv_layer(atrous_rates, conv_units)
 
         def hybrid_forward(self, F, X, axis=-1):
             X1 = X
