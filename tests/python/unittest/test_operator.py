@@ -9474,7 +9474,6 @@ def test_take_grads():
                 total_grad_linf = max(total_grad_linf, ginf)
                 total_grad_l2 += g2
                 total_grad_l1 += g1
-                print(f"||g_param||_2: {g2**0.5:.2E} | Param: {p}")
             except Exception:
                 pass
 
@@ -9506,22 +9505,20 @@ def test_take_grads():
             self.convs = conv_layer(atrous_rates, conv_units)
 
         def hybrid_forward(self, F, X, axis=-1):
-            X1 = X
-            X2 = self.convs(X1)
+            X1 = self.convs(X)
             if self.use_take:
-                X3 = F.take(X2, nd.array([0]), axis=axis)
+                X2 = F.take(X1, nd.array([0]), axis=axis)
             else:
-                X3 = F.slice_axis(X2, begin=0, end=1, axis=axis)
-            return X3
+                X2 = F.slice_axis(X1, begin=0, end=1, axis=axis)
+            return X2
 
     N = 30
     T = 20
-    C = 8
+    C = 20
     conv_units = 5
     atrous_rates = [1]
 
     X = np.random.normal(size=(N, T, C))
-    Y = np.random.normal(size=(N, T))
     Y = np.random.normal(size=(N, conv_units))
     X, Y = nd.array(X), nd.array(Y)
     seed = np.random.randint(1000)
