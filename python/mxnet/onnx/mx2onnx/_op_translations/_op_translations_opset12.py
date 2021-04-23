@@ -2378,13 +2378,13 @@ def convert_logsoftmax(node, **kwargs):
     axis = int(attrs.get("axis", -1))
     temp = attrs.get('temperature', 'None')
     use_length = attrs.get('use_length', 'False')
-    
+
     if temp != 'None':
         raise AttributeError('LogSoftMax currently does not support temperature!=None')
 
     if use_length in ['1', 'True']:
         raise AttributeError('LogSoftMax currently does not support use_length==True')
-    
+
     nodes = [
         make_node('Exp', [input_nodes[0]], [name+'_exp']),
         make_node('ReduceSum', [name+'_exp'], [name+'_rsum'], axes=[axis], keepdims=1),
