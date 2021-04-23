@@ -259,7 +259,7 @@ def obj_detection_test_images(tmpdir_factory):
     'yolo3_mobilenet1.0_voc',
     'ssd_300_vgg16_atrous_coco',
     'ssd_512_vgg16_atrous_coco',
-    # 'ssd_300_resnet34_v1b_coco', #cannot import
+    'ssd_300_resnet34_v1b_coco',
     'ssd_512_resnet50_v1_coco',
     'ssd_512_mobilenet1.0_coco',
     'faster_rcnn_resnet50_v1b_coco',
@@ -391,8 +391,7 @@ def img_segmentation_test_images(tmpdir_factory):
     'deeplab_resnet101_ade',
     'deeplab_resnest50_ade',
     'deeplab_resnest101_ade',
-    # cannot download this model, skipping for now
-    #'deeplab_resnest200_ade',
+    'deeplab_resnest200_ade',
     'deeplab_resnest269_ade',
     'fcn_resnet101_coco',
     'deeplab_resnet101_coco',
@@ -401,7 +400,9 @@ def img_segmentation_test_images(tmpdir_factory):
     'deeplab_resnet152_voc',
     pytest.param('deeplab_resnet50_citys', marks=pytest.mark.integration),
     'deeplab_resnet101_citys',
-    'deeplab_v3b_plus_wideresnet_citys'
+    'deeplab_v3b_plus_wideresnet_citys',
+    'danet_resnet50_citys',
+    'danet_resnet101_citys'
 ])
 def test_img_segmentation_model_inference_onnxruntime(tmp_path, model, img_segmentation_test_images):
     def normalize_image(imgfile):
