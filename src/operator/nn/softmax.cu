@@ -784,13 +784,13 @@ void SoftmaxRTCGradCompute::operator()(const nnvm::NodeAttrs& attrs,
     args.emplace_back(&params);
     args.emplace_back(&M);
     const int warp_size = 32;
-    int num_threads = std::min(static_cast<index_t>(128),
-                               RoundToPower2(div_round(M, warp_size) * warp_size));
+    int num_threads = std::min(static_cast<size_t>(128),
+                               common::RoundToPower2(div_round(M, warp_size) * warp_size));
     if (stride != 1) {
       const int num_sms = MultiprocessorCount(ctx.run_ctx.ctx.dev_id);
       const index_t rows_per_sm = div_round(N, (512 / num_threads) * num_sms);
-      params.rows_per_block = std::min(static_cast<index_t>(warp_size),
-                                       RoundToPower2(rows_per_sm));
+      params.rows_per_block = std::min(static_cast<size_t>(warp_size),
+                                       common::RoundToPower2(rows_per_sm));
     }
     const auto& kernel_func = get_function(code + softmax_common_functions,
                                            "simple_softmax_grad_kernel",
