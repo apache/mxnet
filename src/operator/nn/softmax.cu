@@ -740,7 +740,7 @@ void SoftmaxRTCGradCompute::operator()(const nnvm::NodeAttrs& attrs,
   softmax_params params = {{inputs[out_idx].dptr_, inputs[0].dptr_, length_ptr},
                            {outputs[0].dptr_},
                            stride, M,
-                           temperature, 0, N};
+                           temperature, 1, N};
   std::string code = "#define OP1 " + OP1 + "\n"
                      "#define OP2 " + OP2 + "\n"
                      "const OpReqType req = " + util::to_string(req[0]) + ";\n"
@@ -755,6 +755,7 @@ void SoftmaxRTCGradCompute::operator()(const nnvm::NodeAttrs& attrs,
   int rows_per_block = get_rows_per_block(M, nvec, max_opt_M,
                                           vectorized_kernel_thread_num,
                                           N, ctx.run_ctx.ctx.dev_id);
+  params.rows_per_block = rows_per_block;
   bool debug_softmax = dmlc::GetEnv("DEBUG_SOFTMAX_GRAD", false);
   if (!debug_softmax && stride == 1 &&
       static_cast<size_t>(M * rows_per_block) <= max_opt_M) {
@@ -762,7 +763,6 @@ void SoftmaxRTCGradCompute::operator()(const nnvm::NodeAttrs& attrs,
     code += "const bool only_full_blocks = " + std::to_string(N % rows_per_block == 0) + ";\n"
             "const bool reduction_inside_warp = " +
             std::to_string(vectorized_kernel_thread_num / rows_per_block <= warp_size) + ";\n";
-    params.rows_per_block = rows_per_block;
     int nblocks = div_round(N, rows_per_block);
     std::vector<TBlob> new_inputs = {inputs[out_idx], inputs[0]};
     if (softmax_use_length(attrs)) {
