@@ -1364,8 +1364,7 @@ struct minimum {
   default:                                          \
     LOG(FATAL) << "Unknown type enum " << type;     \
   }
-// amp_cast.h is using this MSHADOW_TYPE_SWITCH_WITH_BOOL in order to
-// avoid 'Unsupport enum type 12' error.
+
 #define MSHADOW_TYPE_SWITCH_WITH_BOOL(type, DType, ...)       \
   switch (type) {                                             \
   case mshadow::kFloat32:                                     \
