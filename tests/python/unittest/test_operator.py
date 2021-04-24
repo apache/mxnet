@@ -9492,20 +9492,19 @@ def test_take_grads():
             get_grads(model, grads)
         return grads
 
-    def conv_layer(atrous_rates, num_channels):
-        convs = HybridSequential()
-        for rate in atrous_rates:
-            convs.add(Conv1D(num_channels, 3, padding=rate, dilation=rate, activation='tanh'))
-        return convs
+    def dense_layer():
+        den = HybridSequential()
+        den.add(Dense(10, flatten=True, activation='tanh'))
+        return den
 
     class Model(HybridBlock):
-        def __init__(self, conv_units, atrous_rates, use_take=False, **kwargs):
+        def __init__(self, use_take=False, **kwargs):
             super().__init__()
             self.use_take = use_take
-            self.convs = conv_layer(atrous_rates, conv_units)
+            self.den = dense_layer()
 
-        def hybrid_forward(self, F, X, axis=-1):
-            X1 = self.convs(X)
+        def hybrid_forward(self, F, X, axis=1):
+            X1 = self.den(X)
             if self.use_take:
                 X2 = F.take(X1, nd.array([0]), axis=axis)
             else:
@@ -9514,25 +9513,23 @@ def test_take_grads():
 
     N = 30
     T = 20
-    C = 20
-    conv_units = 5
-    atrous_rates = [1]
+    C = 10
 
     X = np.random.normal(size=(N, T, C))
-    Y = np.random.normal(size=(N, conv_units))
+    Y = np.random.normal(size=(N, 1))
     X, Y = nd.array(X), nd.array(Y)
     seed = np.random.randint(1000)
 
     # Using F.take
     mx.random.seed(seed)
-    model = Model(conv_units, atrous_rates, use_take=True)
+    model = Model(use_take=True)
     model.initialize()
     loss = L2Loss()
     grads1 = run_model(model, loss, X, Y)
 
     # Using F.slice_axis
     mx.random.seed(seed)
-    model2 = Model(conv_units, atrous_rates, use_take=False)
+    model2 = Model(use_take=False)
     model2.initialize()
     grads2 = run_model(model2, loss, X, Y)
 
