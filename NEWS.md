@@ -1663,7 +1663,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 
 #### Python
 * Python BucketingModule bind() with grad_req = 'add' (#13984)
-* Refine runtime feature discovery python API and add documentation to … (#14130)
+* Refine runtime feature discovery python API and add documentation to ... (#14130)
 * Runtime feature detection (#13549)
 * Add dtype visualization to plot_network (#14066)
 * [MXNET-1359] Adds a multiclass-MCC metric derived from Pearson (#14461)
@@ -2187,7 +2187,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Fix crash in random.shuffle operator (#15041)
 * [MXNET-1406] [BUG] Fix DLManagedTensor deleter (#15016)
 * Fixes lint issue in AMP (#15015)
-* Fixed issue where the estimator was printing beyond the dataset size … (#14464)
+* Fixed issue where the estimator was printing beyond the dataset size ... (#14464)
 * Fixes cuDNN version for CUDA 9.0 build environment (#15001)
 * Fix the incorrect MKLDNN/MKL logic in cmake  (#14877)
 * Fixed and re-enables TensorRT steps (#14960)
