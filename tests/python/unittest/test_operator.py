@@ -9453,3 +9453,85 @@ def test_zero_sized_dim():
     seq_last()
     seq_reverse()
     seq_mask()
+
+def test_take_grads():
+    # Test for https://github.com/apache/incubator-mxnet/issues/19817
+    from mxnet.gluon.nn import HybridBlock, Conv1D, HybridSequential, HybridLambda, Dense
+    from mxnet import autograd, nd
+    from mxnet.gluon.loss import L2Loss
+
+    def get_grads(model, grads, ctx=mx.cpu()):
+        pd = model.collect_params()
+        total_grad_l2 = 0
+        total_grad_l1 = 0
+        total_grad_linf = 0
+        for p in pd:
+            try:
+                g = pd[p].grad(ctx) / N
+                g2 = (g**2).sum().as_in_context(mx.cpu()).asscalar()
+                g1 = g.abs().sum().as_in_context(mx.cpu()).asscalar()
+                ginf = g.max().as_in_context(mx.cpu()).asscalar()
+                total_grad_linf = max(total_grad_linf, ginf)
+                total_grad_l2 += g2
+                total_grad_l1 += g1
+            except Exception:
+                pass
+
+        grads.append(total_grad_l1)
+        grads.append(total_grad_l2)
+        grads.append(total_grad_linf)
+
+    def run_model(model, loss, X, Y, num_iters=5):
+        grads = []
+        for i in range(num_iters):
+            with autograd.record():
+                Y_hat = model(X)
+                ll = loss(Y_hat, Y)
+                ll = ll.sum()
+            ll.backward()
+            get_grads(model, grads)
+        return grads
+
+    def dense_layer():
+        den = HybridSequential()
+        den.add(Dense(10, flatten=True, activation='tanh'))
+        return den
+
+    class Model(HybridBlock):
+        def __init__(self, use_take=False, **kwargs):
+            super().__init__()
+            self.use_take = use_take
+            self.den = dense_layer()
+
+        def hybrid_forward(self, F, X, axis=1):
+            X1 = self.den(X)
+            if self.use_take:
+                X2 = F.take(X1, nd.array([0]), axis=axis)
+            else:
+                X2 = F.slice_axis(X1, begin=0, end=1, axis=axis)
+            return X2
+
+    N = 30
+    T = 20
+    C = 10
+
+    X = np.random.normal(size=(N, T, C))
+    Y = np.random.normal(size=(N, 1))
+    X, Y = nd.array(X), nd.array(Y)
+    seed = np.random.randint(1000)
+
+    # Using F.take
+    mx.random.seed(seed)
+    model = Model(use_take=True)
+    model.initialize()
+    loss = L2Loss()
+    grads1 = run_model(model, loss, X, Y)
+
+    # Using F.slice_axis
+    mx.random.seed(seed)
+    model2 = Model(use_take=False)
+    model2.initialize()
+    grads2 = run_model(model2, loss, X, Y)
+
+    for i in range(len(grads1)):
+        assert_almost_equal(grads1[i], grads2[i])
