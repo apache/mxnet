@@ -270,11 +270,11 @@ def obj_detection_test_images(tmpdir_factory):
     # Those two models were failing in nightly ci due to anticipated mxnet onnx nms numerical differences.
     # Model ouputs look good to human eyes. We will need to rewrite the bbox check
     #'faster_rcnn_fpn_resnet101_v1d_coco',
-    #'mask_rcnn_resnet18_v1b_coco',
-    'mask_rcnn_fpn_resnet18_v1b_coco',
+    #'mask_rcnn_fpn_resnet18_v1b_coco',
+    'mask_rcnn_resnet18_v1b_coco',
     'mask_rcnn_resnet50_v1b_coco',
-    'mask_rcnn_fpn_resnet50_v1b_coco',
     'mask_rcnn_resnet101_v1d_coco',
+    'mask_rcnn_fpn_resnet50_v1b_coco',
     'mask_rcnn_fpn_resnet101_v1d_coco',
 ])
 def test_obj_detection_model_inference_onnxruntime(tmp_path, model, obj_detection_test_images):
