@@ -31,6 +31,7 @@
 #include <mxnet/engine.h>
 #include <mxnet/op_attr_types.h>
 #include <algorithm>
+#include <limits>
 #include "./operator_tune.h"
 #include "../engine/openmp.h"
 
@@ -367,40 +368,30 @@ struct AccType<mshadow::half::half_t> {
     break;                                                 \
   case mshadow::kUint8:                                    \
     {                                                      \
-      typedef uint8_t DType;                               \
-      typedef uint8_t AType;                               \
       LOG(FATAL) << "This operation only support "         \
                     "floating point types not uint8";      \
     }                                                      \
     break;                                                 \
   case mshadow::kInt8:                                     \
     {                                                      \
-      typedef int8_t DType;                                \
-      typedef int8_t AType;                                \
       LOG(FATAL) << "This operation only support "         \
                     "floating point types not int8";       \
     }                                                      \
     break;                                                 \
   case mshadow::kInt32:                                    \
     {                                                      \
-      typedef int32_t DType;                               \
-      typedef int32_t AType;                               \
       LOG(FATAL) << "This operation only support "         \
                     "floating point types, not int32";     \
     }                                                      \
     break;                                                 \
   case mshadow::kInt64:                                    \
     {                                                      \
-      typedef int64_t DType;                               \
-      typedef int64_t AType;                               \
       LOG(FATAL) << "This operation only support "         \
                     "floating point types, not int64";     \
     }                                                      \
     break;                                                 \
   case mshadow::kBool:                                     \
     {                                                      \
-      typedef bool DType;                                  \
-      typedef int64_t AType;                               \
       LOG(FATAL) << "This operation only support "         \
                     "floating point types, not bool";      \
     }                                                      \
@@ -475,21 +466,18 @@ struct AccType<mshadow::half::half_t> {
   switch (type) {                                          \
   case mshadow::kFloat32:                                  \
     {                                                      \
-      typedef float DType;                                 \
       LOG(FATAL) << "This operation only support "         \
                     "integer types, not float32";          \
     }                                                      \
     break;                                                 \
   case mshadow::kFloat64:                                  \
     {                                                      \
-      typedef double DType;                                \
       LOG(FATAL) << "This operation only support "         \
                     "integer types, not float64";          \
     }                                                      \
     break;                                                 \
   case mshadow::kFloat16:                                  \
     {                                                      \
-      typedef mshadow::half::half_t DType;                 \
       LOG(FATAL) << "This operation only support "         \
                     "integer types, not float16";          \
     }                                                      \
@@ -532,21 +520,18 @@ struct AccType<mshadow::half::half_t> {
   switch (type) {                                          \
   case mshadow::kFloat32:                                  \
     {                                                      \
-      typedef float DType;                                 \
       LOG(FATAL) << "This operation only support "         \
                     "integer types, not float32";          \
     }                                                      \
     break;                                                 \
   case mshadow::kFloat64:                                  \
     {                                                      \
-      typedef double DType;                                \
       LOG(FATAL) << "This operation only support "         \
                     "integer types, not float64";          \
     }                                                      \
     break;                                                 \
   case mshadow::kFloat16:                                  \
     {                                                      \
-      typedef mshadow::half::half_t DType;                 \
       LOG(FATAL) << "This operation only support "         \
                     "integer types, not float16";          \
     }                                                      \

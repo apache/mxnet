@@ -811,6 +811,14 @@ __device__ inline T warp_reduce(T value, OP redfun) {
   return value;
 }
 
+template <typename OP, typename T>
+__device__ inline T grouped_warp_allreduce(T value, OP redfun, const int group_size) {
+  for (int i = 1; i < group_size; i *= 2) {
+    value = redfun(value, __shfl_down_sync(0xffffffff, value, i));
+  }
+  return __shfl_sync(0xffffffff, value, 0, group_size);
+}
+
 template <int NValues = warp_size, typename OP>
 __device__ inline mshadow::half::half_t warp_reduce(mshadow::half::half_t value, OP redfun) {
   float v = static_cast<float>(value);

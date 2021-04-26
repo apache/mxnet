@@ -977,6 +977,27 @@ inline void AlignedMemFree(void* ptr) {
 }
 
 
+inline index_t div_round(const index_t a, const index_t b) {
+  return (a + b - 1) / b;
+}
+
+inline bool IsPower2(size_t N) {
+  return ((N & (N - 1)) == 0) && N != 0;
+}
+
+inline size_t RoundToPower2(size_t N) {
+  size_t ret = 1;
+  size_t copyN = N;
+  while (N >= 2) {
+    ret *= 2;
+    N /= 2;
+  }
+  if (ret < copyN) {
+    ret *= 2;
+  }
+  return ret;
+}
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_
