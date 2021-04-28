@@ -4480,7 +4480,7 @@ def convert_RNN(node, **kwargs):
     data = input_nodes[0]
     param = input_nodes[1]
     initial_h = input_nodes[2]
-    
+
     nodes = []
     create_tensor([0], name+'_0', kwargs['initializer'])
 
@@ -4715,7 +4715,7 @@ def convert_RNN(node, **kwargs):
             ]
         else:
             raise NotImplementedError('Currently RNN onnx export only supports num_layers equals to 1 or 2')
-        
+
     elif mode in ['rnn_tanh', 'rnn_relu']:
         activations = ['Tanh']
         if mode == 'rnn_relu':
@@ -4750,9 +4750,8 @@ def convert_RNN(node, **kwargs):
                 make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
                 make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
                 # Layer 0 RNN
-                make_node('RNN', [data, name+'_W0', name+'_R0', name+'_B0', name+'_seq_len',
-                                name+'_initial_h0'],
-                        [name+'_rnn0_out_', name+'_rnn0_h'], hidden_size=state_size, activations=activations),
+                make_node('RNN', [data, name+'_W0', name+'_R0', name+'_B0', name+'_seq_len', name+'_initial_h0'],
+                                 [name+'_rnn0_out_', name+'_rnn0_h'], hidden_size=state_size, activations=activations),
                 make_node('Squeeze', [name+'_rnn0_out_'], [name+'_rnn0_out'], axes=[1]),
 
                 # Layer 1
@@ -4768,9 +4767,8 @@ def convert_RNN(node, **kwargs):
                 make_node('Slice', [param, name+'_B0_offset', name+'_B1_offset'], [name+'_B1_1d']),
                 make_node('Reshape', [name+'_B1_1d', name+'_B_shape'], [name+'_B1']),
                 # Layer 1 RNN
-                make_node('RNN', [name+'_rnn0_out', name+'_W1', name+'_R1', name+'_B1', name+'_seq_len',
-                                name+'_initial_h1'],
-                        [name+'_rnn1_out_', name+'_rnn1_h'], hidden_size=state_size, activations=activations),
+                make_node('RNN', [name+'_rnn0_out', name+'_W1', name+'_R1', name+'_B1', name+'_seq_len', name+'_initial_h1'],
+                                 [name+'_rnn1_out_', name+'_rnn1_h'], hidden_size=state_size, activations=activations),
                 make_node('Squeeze', [name+'_rnn1_out_'], [name], axes=[1]),
                 make_node('Concat', [name+'_rnn0_h', name+'_rnn1_h'], [name+'1'], axis=0)
             ]
@@ -4786,7 +4784,8 @@ def convert_RNN(node, **kwargs):
 
             nodes += [
                 make_node('Shape', [data], [name+'_data_shape']),
-                make_node('Split', [name+'_data_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size'], name='split0'),
+                make_node('Split', [name+'_data_shape'], [name+'_seq_length', 
+                                    name+'_batch_size', name+'_input_size'], name='split0'),
                 # get W
                 make_node('Mul', [name+'_state_size', name+'_input_size'], [name+'_mul0']),
                 make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_1d']),
@@ -4805,7 +4804,7 @@ def convert_RNN(node, **kwargs):
                 make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
                 # compute RNN
                 make_node('RNN', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h],
-                        [name+'0_', name+'1'], hidden_size=state_size, activations=activations),
+                                 [name+'0_', name+'1'], hidden_size=state_size, activations=activations),
                 make_node('Squeeze', [name+'0_'], [name], axes=[1]),
             ]
         else:
