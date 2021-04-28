@@ -1047,16 +1047,17 @@ def test_onnx_export_log2(tmp_path, dtype):
 
 @pytest.mark.parametrize('dtype', ['int32', 'int64', 'float16', 'float32', 'float64'])
 @pytest.mark.parametrize('axis', [None, 1, [1,2], -1])
-def test_onnx_export_sum(tmp_path, dtype, axis):
+@pytest.mark.parametrize('operator', ['sum', 'sum_axis'])
+def test_onnx_export_sum(tmp_path, dtype, axis, operator):
     if 'int' in dtype:
         x = mx.nd.random.randint(0, 10, (5, 6, 7, 8), dtype=dtype)
     else:
         x = mx.nd.random.normal(0, 10, (5, 6, 7, 8), dtype=dtype)
     if axis is not None:
-        M = def_model('sum', axis=axis)
+        M = def_model(operator, axis=axis)
     else:
-        M = def_model('sum')
-    op_export_test('sum', M, [x], tmp_path)
+        M = def_model(operator)
+    op_export_test(operator, M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
