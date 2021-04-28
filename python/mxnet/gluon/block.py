@@ -1072,11 +1072,10 @@ class HybridBlock(Block):
 
         # try to reuse cached_op_args for params
         if len(self._cached_op_args) > 0:
-            params = {param_tuple[1].name:param_tuple[1] for param_tuple in self._cached_op_args}
+            params = {param_tuple[1].name:param_tuple[1] for param_tuple in self._cached_op_args if isinstance(param_tuple[1], Parameter)}
         else:
             params = self.collect_params()
         param_names = set(params.keys())
-
         for name in expected_names:
             assert name in param_names or name in data_names, \
                 "Unknown input to HybridBlock: %s" %name
@@ -1287,10 +1286,11 @@ class HybridBlock(Block):
         """
         if len(kwargs) > 0:
             self._backend_opts = kwargs
+        if not backend:
+            raise ValueError('Must specify "backend" to optimize_for')
 
-        if clear or not self._active:
-            self.hybridize(True, backend, clear, static_alloc, static_shape,
-                           inline_limit, forward_bulk_size, backward_bulk_size)
+        self.hybridize(True, backend, clear, static_alloc, static_shape,
+                       inline_limit, forward_bulk_size, backward_bulk_size)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
