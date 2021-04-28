@@ -51,7 +51,7 @@ def def_model_from_func(func, dummy_input=False, **params):
                 return func(*inputs, **params)
     return Model
 
-def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_map=None, mx_map=None):
+def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_map=None, mx_map=None, rtol=None, atol=None):
     def export_to_onnx(model, model_name, inputs):
         model_path = '{}/{}'.format(tmp_path, model_name)
         model.export(model_path, epoch=0)
@@ -82,11 +82,11 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_
         for i in range(len(pred_mx)):
             pred_onx_i = onnx_map(pred_onx[i]) if onnx_map else pred_onx[i]
             pred_mx_i = mx_map(pred_mx[i]) if mx_map else pred_mx[i]
-            assert_almost_equal(pred_onx_i, pred_mx_i, equal_nan=True)
+            assert_almost_equal(pred_onx_i, pred_mx_i, equal_nan=True, rtol=rtol, atol=atol)
     else:
         pred_onx = onnx_map(pred_onx[0]) if onnx_map else pred_onx[0]
         pred_mx = mx_map(pred_mx) if mx_map else pred_mx
-        assert_almost_equal(pred_onx, pred_mx, equal_nan=True)
+        assert_almost_equal(pred_onx, pred_mx, equal_nan=True, rtol=rtol, atol=atol)
 
 
 def test_onnx_export_abs(tmp_path):
@@ -1234,21 +1234,22 @@ def test_onnx_export_sequence_reverse(tmp_path, dtype, params):
 
 
 # onnx LSTM from opset 11 does not support float64
-@pytest.mark.parametrize('mode', ['lstm', 'gru'])
+@pytest.mark.parametrize('mode', ['lstm', 'gru', 'rnn_tanh', 'rnn_relu'])
 @pytest.mark.parametrize('dtype', ['float32'])
-@pytest.mark.parametrize('state_size', [16, 32])
+@pytest.mark.parametrize('state_size', [16, 32, 64])
 @pytest.mark.parametrize('input_size', [16, 32, 64])
 @pytest.mark.parametrize('num_layers', [1, 2])
 @pytest.mark.parametrize('batch_size', [1, 2, 4])
-@pytest.mark.parametrize('seq_length', [16, 32])
+@pytest.mark.parametrize('seq_length', [16])
 def test_onnx_export_RNN(tmp_path, mode, dtype, state_size, input_size, num_layers, batch_size, seq_length):
     # TODO: The current implementation fails assertion checks for large parm/state_size. 
-
     # for num_layers >= 2, input_size must equal to state_size
     if num_layers >= 2 and input_size != state_size:
         return
-    factor = 3
-    if mode == 'lstm':
+    factor = 1
+    if mode == 'gru':
+        factor = 3
+    elif mode == 'lstm':
         factor = 4
 
     M = def_model('RNN', mode=mode, state_size=state_size, state_outputs=True,  num_layers=num_layers, p=0)
@@ -1260,8 +1261,11 @@ def test_onnx_export_RNN(tmp_path, mode, dtype, state_size, input_size, num_laye
     if mode == 'lstm':
         cell = mx.nd.random.uniform(-1, 1, [num_layers, batch_size, state_size], dtype=dtype)
         op_export_test('rnn', M, [x, param, state, cell], tmp_path)
+    elif mode == 'rnn_relu':
+        # set large atol as relu can outputs big numbers
+        op_export_test('rnn', M, [x, param, state], tmp_path, atol=1e20)
     else:
-        op_export_test('rnn', M, [x, param, state], tmp_path)
+        op_export_test('rnn', M, [x, param, state], tmp_path, atol=1e-2)
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
