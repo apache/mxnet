@@ -1072,7 +1072,9 @@ class HybridBlock(Block):
 
         # try to reuse cached_op_args for params
         if len(self._cached_op_args) > 0:
-            params = {param_tuple[1].name:param_tuple[1] for param_tuple in self._cached_op_args if isinstance(param_tuple[1], Parameter)}
+            params = {param_tuple[1].name:param_tuple[1]
+                      for param_tuple in self._cached_op_args
+                      if isinstance(param_tuple[1], Parameter)}
         else:
             params = self.collect_params()
         param_names = set(params.keys())
