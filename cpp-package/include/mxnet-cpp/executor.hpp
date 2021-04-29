@@ -52,11 +52,13 @@ inline Executor::Executor(const Symbol &symbol, Context context,
   std::vector<NDArrayHandle> arg_handles;
   std::vector<NDArrayHandle> grad_handles;
 
-  for (const auto &array : arg_arrays) {
-    arg_handles.push_back(array.GetHandle());
-  }
-  for (const auto &array : grad_arrays) {
-    grad_handles.push_back(array.GetHandle());
+  CHECK_EQ(arg_arrays.size(), grad_arrays.size())
+      << "Number of input arg_arrays is different from the number of input grad_arrays";
+  for (int i = 0; i < arg_arrays.size(); i++) {
+    if (grad_arrays[i].GetShape().size() != 0) {
+      grad_handles.push_back(grad_arrays[i].GetHandle());
+      arg_handles.push_back(arg_arrays[i].GetHandle());
+    }
   }
 
   this->require_grad = false;

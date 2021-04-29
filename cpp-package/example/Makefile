@@ -24,7 +24,7 @@ endif
 prebuild :
 	@mkdir -p build
 	$(shell ./get_data.sh)
-	$(shell cp -r ../../lib ./)
+	$(shell cp -r ../../build ./)
 CPPEX_SRC = $(wildcard *.cpp)
 CPPEX_EXE = $(patsubst %.cpp, %, $(CPPEX_SRC))
 
