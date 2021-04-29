@@ -2137,7 +2137,9 @@ def convert_square(node, **kwargs):
     )
     return [tensor_node, node]
 
+# sum_axis is equivalent to sum in MXNet
 @mx_op.register("sum")
+@mx_op.register("sum_axis")
 def convert_sum(node, **kwargs):
     """Map MXNet's sum operator attributes to onnx's ReduceSum operator
     and return the created node.
@@ -2168,12 +2170,6 @@ def convert_sum(node, **kwargs):
         )
     return [node]
 
-@mx_op.register("sum_axis")
-def convert_sum_axis(node, **kwargs):
-    """Map MXNet's sum_axis operator.
-       sum_axis is equivalent to sum in MXNet
-    """
-    return convert_sum(node, **kwargs)
 
 @mx_op.register("shape_array")
 def convert_shape(node, **kwargs):
