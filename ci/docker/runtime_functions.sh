@@ -629,6 +629,7 @@ build_ubuntu_gpu() {
     ln -s -f /usr/local/cuda/targets/x86_64-linux/lib/stubs/libcuda.so libcuda.so.1
     export LIBRARY_PATH=${LIBRARY_PATH}:/work/build
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/work/build
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_CUDA=ON \
         -DUSE_NVML=OFF \
