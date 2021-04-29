@@ -4768,8 +4768,8 @@ def convert_RNN(node, **kwargs):
                 make_node('Reshape', [name+'_B1_1d', name+'_B_shape'], [name+'_B1']),
                 # Layer 1 RNN
                 make_node('RNN', [name+'_rnn0_out', name+'_W1', name+'_R1', name+'_B1', name+'_seq_len',
-                                  name+'_initial_h1'], [name+'_rnn1_out_', name+'_rnn1_h'], 
-                                  hidden_size=state_size, activations=activations),
+                                  name+'_initial_h1'], [name+'_rnn1_out_', name+'_rnn1_h'],
+                          hidden_size=state_size, activations=activations),
                 make_node('Squeeze', [name+'_rnn1_out_'], [name], axes=[1]),
                 make_node('Concat', [name+'_rnn0_h', name+'_rnn1_h'], [name+'1'], axis=0)
             ]
@@ -4786,7 +4786,7 @@ def convert_RNN(node, **kwargs):
             nodes += [
                 make_node('Shape', [data], [name+'_data_shape']),
                 make_node('Split', [name+'_data_shape'],
-                                   [name+'_seq_length', name+'_batch_size', name+'_input_size'], name='split0'),
+                          [name+'_seq_length', name+'_batch_size', name+'_input_size'], name='split0'),
                 # get W
                 make_node('Mul', [name+'_state_size', name+'_input_size'], [name+'_mul0']),
                 make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_1d']),

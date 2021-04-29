@@ -1313,7 +1313,7 @@ def convert_RNN(node, **kwargs):
                 # Layer 0 RNN
                 make_node('RNN', [data, name+'_W0', name+'_R0', name+'_B0', name+'_seq_len',
                                   name+'_initial_h0'], [name+'_rnn0_out_', name+'_rnn0_h'],
-                                  hidden_size=state_size, activations=activations),
+                          hidden_size=state_size, activations=activations),
                 make_node('Squeeze', [name+'_rnn0_out_', name+'_1'], [name+'_rnn0_out']),
 
                 # Layer 1
@@ -1331,7 +1331,7 @@ def convert_RNN(node, **kwargs):
                 # Layer 1 RNN
                 make_node('RNN', [name+'_rnn0_out', name+'_W1', name+'_R1', name+'_B1', name+'_seq_len',
                                   name+'_initial_h1'], [name+'_rnn1_out_', name+'_rnn1_h'],
-                                  hidden_size=state_size, activations=activations),
+                          hidden_size=state_size, activations=activations),
                 make_node('Squeeze', [name+'_rnn1_out_', name+'_1'], [name]),
                 make_node('Concat', [name+'_rnn0_h', name+'_rnn1_h'], [name+'1'], axis=0)
             ]
