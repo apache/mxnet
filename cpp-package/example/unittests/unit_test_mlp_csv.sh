@@ -28,7 +28,7 @@ set -e # exit on the first error
 export EXE_NAME=mlp_csv
 
 cd $(dirname $(readlink -f $0))/../
-export LD_LIBRARY_PATH=$(readlink -f ../../lib):$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$(readlink -f ../../build):$LD_LIBRARY_PATH
 
 if [ ! -f ../../build/cpp-package/example/${EXE_NAME} ];
 then
