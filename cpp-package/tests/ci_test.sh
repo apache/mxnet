@@ -51,8 +51,8 @@ cp /work/build/cpp-package/example/mlp_gpu .
 cp /work/build/cpp-package/example/test_optimizer .
 ./test_optimizer
 
-# cp /work/build/cpp-package/example/test_kvstore .
-# ./test_kvstore
+cp /work/build/cpp-package/example/test_kvstore .
+./test_kvstore
 
 cp /work/build/cpp-package/example/test_score .
 ./test_score 0.93
@@ -64,10 +64,10 @@ cp /work/build/cpp-package/example/test_ndarray_copy .
 #cp ../../build/cpp-package/example/test_regress_label .
 #./test_regress_label
 
-sh unittests/unit_test_mlp_csv.sh
+# sh unittests/unit_test_mlp_csv.sh
 
 cd inference
 
-cp /work/build/cpp-package/example/sentiment_analysis_rnn .
+cp /work/build/cpp-package/example/inference/sentiment_analysis_rnn .
 ./unit_test_sentiment_analysis_rnn.sh
 cd ..

@@ -57,11 +57,11 @@ target_link_libraries(test_ndarray_copy mxnet_cpp)
 add_executable(test_score test_score.cpp)
 target_link_libraries(test_score mxnet_cpp)
 
-add_executable(sentiment_analysis_rnn sentiment_analysis_rnn.cpp)
-target_link_libraries(sentiment_analysis_rnn mxnet_cpp)
+add_executable(mlp_csv mlp_csv.cpp)
+target_link_libraries(mlp_csv mxnet_cpp)
 
-add_executable(test_packed_func test_packed_func.cpp)
-target_link_libraries(test_packed_func mxnet_cpp)
+add_executable(test_kvstore test_kvstore.cpp)
+target_link_libraries(test_kvstore mxnet_cpp)
 
 if(MSVC)
   add_custom_target(cpp_package_deploy_library ALL
