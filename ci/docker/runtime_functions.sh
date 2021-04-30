@@ -321,6 +321,7 @@ build_ubuntu_cpu_openblas() {
         -DUSE_ONEDNN=OFF \
         -DUSE_CUDA=OFF \
         -DUSE_CPP_PACKAGE=ON \
+        -DMXNET_USE_CPU=ON \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \
@@ -886,14 +887,12 @@ unittest_centos7_gpu() {
 integrationtest_ubuntu_cpp_package_cpu() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export MXNET_USE_CPU=1
     cpp-package/tests/ci_test.sh
 }
 
 integrationtest_ubuntu_cpp_package_gpu() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export MXNET_USE_CPU=0
     cpp-package/tests/ci_test.sh
 }
 
