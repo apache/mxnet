@@ -20,6 +20,3 @@ set_property(SOURCE ${CMAKE_CURRENT_LIST_DIR}/../../include/mxnet-cpp/op.h PROPE
 
 add_executable(imagenet_inference "imagenet_inference.cpp")
 target_link_libraries(imagenet_inference mxnet_cpp)
-
-add_executable(sentiment_analysis_rnn "sentiment_analysis_rnn.cpp")
-target_link_libraries(sentiment_analysis_rnn mxnet_cpp)

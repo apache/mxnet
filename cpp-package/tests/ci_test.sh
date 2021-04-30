@@ -68,6 +68,6 @@ cp /work/build/cpp-package/example/test_ndarray_copy .
 
 cd inference
 
-cp /work/build/cpp-package/example/inference/sentiment_analysis_rnn .
+cp /work/build/cpp-package/example/sentiment_analysis_rnn .
 ./unit_test_sentiment_analysis_rnn.sh
 cd ..
