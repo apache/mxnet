@@ -850,17 +850,9 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     pytest --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu/test_amp_init.py
 }
 
-unittest_cpp_cpu() {
+unittest_cpp() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=100
-    export MXNET_USE_CPU=1
-    build/tests/mxnet_unit_tests
-}
-
-unittest_cpp_gpu() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=100
-    export MXNET_USE_CPU=0
     build/tests/mxnet_unit_tests
 }
 
@@ -889,6 +881,20 @@ unittest_centos7_gpu() {
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu/test_amp_init.py
+}
+
+integrationtest_ubuntu_cpp_package_cpu() {
+    set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export MXNET_USE_CPU=1
+    cpp-package/tests/ci_test.sh
+}
+
+integrationtest_ubuntu_cpp_package_gpu() {
+    set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export MXNET_USE_CPU=0
+    cpp-package/tests/ci_test.sh
 }
 
 integrationtest_ubuntu_cpu_onnx() {
