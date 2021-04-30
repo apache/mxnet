@@ -180,7 +180,7 @@ If you are a user of earlier MXNet versions and do not want to upgrade MXNet, yo
 |where|1.7 1.8 |
 |zeros_like|1.7 1.8 |
 
-### GluonCV Pretrained Model Support Matrix
+### [GluonCV Pretrained Model Support Matrix](https://cv.gluon.ai/model_zoo/index.html)
 |Image Classification|
 |:-|
 |alexnet|
@@ -337,7 +337,7 @@ If you are a user of earlier MXNet versions and do not want to upgrade MXNet, yo
 |inceptionv3_kinetics400|
 |inceptionv3_ucf101|
 
-### GluonNLP Pretrained Model Support Matrix
+### [GluonNLP Pretrained Model Support Matrix](https://nlp.gluon.ai/model_zoo/catalog.html)
 |NLP Models|
 |:-|
 |awd_lstm_lm_600|

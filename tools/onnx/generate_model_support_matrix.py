@@ -202,10 +202,10 @@ type_to_list = {
 }
 
 def generate_model_support_matrix():
-    md_string = '### GluonCV Pretrained Model Support Matrix\n'
+    md_string = '*** [GluonCV Pretrained Model Support Matrix](https://cv.gluon.ai/model_zoo/index.html)\n'
     for modle_type in type_to_list:
         if modle_type == 'NLP Models':
-            md_string += '### GluonNLP Pretrained Model Support Matrix\n'
+            md_string += '### [GluonNLP Pretrained Model Support Matrix](https://nlp.gluon.ai/model_zoo/catalog.html)\n'
         model_list = type_to_list[modle_type]
         md_string += '|%s|\n|:-|\n' % modle_type
         for model in model_list:
