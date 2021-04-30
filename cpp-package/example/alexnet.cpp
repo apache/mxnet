@@ -251,11 +251,11 @@ int main(int argc, char const *argv[]) {
   /*if fine tune from some pre-trained model, we should load the parameters*/
   // NDArray::Load("./model/alex_params_3", nullptr, &args_map);
   /*else, we should use initializer Xavier to init the params*/
-  Xavier xavier = Xavier(Xavier::gaussian, Xavier::in, 2.34);
+  auto initializer = Uniform(0.07);
   for (auto &arg : args_map) {
     /*be careful here, the arg's name must has some specific ends or starts for
      * initializer to call*/
-    xavier(arg.first, &arg.second);
+    initializer(arg.first, &arg.second);
   }
 
   /*these binary files should be generated using im2rc tools, which can be found

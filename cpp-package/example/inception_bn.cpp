@@ -200,9 +200,9 @@ int main(int argc, char const *argv[]) {
   }
 
   // initialize parameters
-  Xavier xavier = Xavier(Xavier::gaussian, Xavier::in, 2);
-  for (auto &arg : args_map) {
-    xavier(arg.first, &arg.second);
+  auto initializer = Uniform(0.07);
+  for (auto& arg : args_map) {
+    initializer(arg.first, &arg.second);
   }
 
   Optimizer* opt = OptimizerRegistry::Find("sgd");

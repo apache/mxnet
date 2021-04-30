@@ -810,7 +810,7 @@ def test_unix_cpp_package_cpu(lib_name) {
         ws('workspace/it-cpp-package-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cpp_examples)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpp_package', false)
+            utils.docker_run('ubuntu_cpu', 'unittest_cpp_cpu', false)
             utils.publish_test_coverage()
           }
         }
@@ -866,7 +866,7 @@ def test_unix_cpp_package_gpu(lib_name) {
         ws('workspace/it-cpp-package-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cpp_examples)
-            utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_cpp_package', true)
+            utils.docker_run('ubuntu_gpu_cu111', 'unittest_cpp_gpu', true)
             utils.publish_test_coverage()
           }
         }

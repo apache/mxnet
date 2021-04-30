@@ -461,9 +461,10 @@ void train(const std::string file, int batch_size, int max_epoch, int start_epoc
   Executor* exe = RNN.SimpleBind(device, args_map);
 
   if (start_epoch == -1) {
-    Xavier xavier = Xavier(Xavier::gaussian, Xavier::in, 2.34);
-    for (auto &arg : exe->arg_dict())
-      xavier(arg.first, &arg.second);
+    auto initializer = Uniform(0.07);
+    for (auto &arg : exe->arg_dict()) {
+      initializer(arg.first, &arg.second);
+    }
   } else {
     LoadCheckpoint(prefix + "-" + std::to_string(start_epoch) + ".params", exe);
   }
