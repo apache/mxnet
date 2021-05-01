@@ -1,6 +1,6 @@
-CUDA should be installed first.
+CUDA should be installed first.  Starting from version 1.8.0, CUDNN and NCCL should be installed as well.
 
-**Important:** Make sure your installed CUDA version matches the CUDA version in the pip package.
+**Important:** Make sure your installed CUDA (CUDNN/NCCL if applicable) version matches the CUDA version in the pip package.
 
 Check your CUDA version with the following command:
 
