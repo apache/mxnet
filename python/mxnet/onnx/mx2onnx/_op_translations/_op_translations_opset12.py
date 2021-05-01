@@ -943,11 +943,11 @@ def convert_softmax(node, **kwargs):
     nodes = [
         make_node("Div", [data, name+"_tmp"], [name+'_data']),
         make_node("Exp", [name+'_data'], [name+"_exp_out"]),
-        make_node("ReduceSum", [name+"_exp_out"], [name+"_rsum_out"], axes=[axis], keepdims=1)
+        make_node("ReduceSum", [name+"_exp_out"], [name+"_rsum_out"], axes=[axis], keepdims=1),
     ]
     if len(input_nodes) == 1:
         nodes += [
-            make_node("Div", [name+"_exp_out", name+"_rsum_out"], [name], name=name)
+            make_node("Div", [name+"_exp_out", name+"_rsum_out"], [name], name=name),
         ]
         return nodes
     elif use_length == "True":
