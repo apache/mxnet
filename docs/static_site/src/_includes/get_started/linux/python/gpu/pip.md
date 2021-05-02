@@ -8,6 +8,9 @@ Like all Apache Releases, the official Apache MXNet (incubating) releases
 consist of source code only and are found at the [Download
 page](https://mxnet.apache.org/get_started/download).
 
+Note that CUDA 11 is recommended for windows platform as you might see intermittent compilation failure when you build from source against CUDA version 10.x due to a NVCC bug.
+You can find more detail on [thrust/thrust#1090](https://github.com/thrust/thrust/issues/1090).
+
 Run the following command:
 
 <div class="v1-8-0">
