@@ -10353,7 +10353,7 @@ def test_broadcast_like_different_types():
 
 @use_np
 def test_np_apply_along_axis_fallback():
-    data = np.array([[1, 2, 3.], [4., 5., 6]])
+    data = np.random.randint(-100, 100, (2, 3))
     axis = 1
     func1d = lambda x: x.mean()
     np_y = _np.apply_along_axis(func1d, 1, data.asnumpy())

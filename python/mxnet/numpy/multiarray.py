@@ -199,7 +199,7 @@ def _as_mx_np_array(object, ctx=None, zero_copy=False):
 
 
 def _as_onp_array(object, cur_ctx=None):
-    """Convert object to mxnet.numpy.ndarray."""
+    """Convert object to numpy.ndarray."""
     def _update_ctx(cur_ctx, tmp_ctx):
         if cur_ctx is None:
             cur_ctx = tmp_ctx
