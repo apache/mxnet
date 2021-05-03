@@ -221,7 +221,7 @@ int main(int argc, char const *argv[]) {
   int num_gpu;
   MXGetGPUCount(&num_gpu);
   int batch_size = 32;
-#if !MXNET_USE_CPU
+#if USE_CUDA
   if (num_gpu > 0) {
     ctx = Context::gpu();
     batch_size = 256;

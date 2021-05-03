@@ -30,8 +30,8 @@ CPPEX_EXE = $(patsubst %.cpp, %, $(CPPEX_SRC))
 
 CFLAGS += -I../../include -I../../3rdparty/tvm/nnvm/include -I../../3rdparty/dmlc-core/include  -I../include
 
-ifeq ($(MXNET_USE_CPU),1)
-	CFLAGS += -D MXNET_USE_CPU
+ifeq ($(USE_CUDA),1)
+	CFLAGS += -D USE_CUDA
 endif
 
 # CPPEX_CFLAGS += -I../include
