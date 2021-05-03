@@ -10349,3 +10349,17 @@ def test_broadcast_like_different_types():
     z = mx.npx.broadcast_like(x, y, 1, 1)
     assert_almost_equal(z.asnumpy(), np.array([[0,0],[0,0]]))
     assert x.dtype == z.dtype
+
+
+@use_np
+def test_np_apply_along_axis_fallback():
+    data = np.random.randint(-100, 100, (2, 3))
+    axis = 1
+    func1d = lambda x: x.mean()
+    np_y = _np.apply_along_axis(func1d, 1, data.asnumpy())
+    y1 = np.apply_along_axis(func1d, 1, data)
+    y2 = np.apply_along_axis(func1d, 1, arr=data)
+    assert_almost_equal(y1.asnumpy(), np_y)
+    assert y1.asnumpy().dtype == np_y.dtype
+    assert_almost_equal(y2.asnumpy(), np_y)
+    assert y2.asnumpy().dtype == np_y.dtype
