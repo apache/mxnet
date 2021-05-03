@@ -2,7 +2,7 @@ MXNet is available on several cloud providers with GPU support. You can also
 find GPU/CPU-hybrid support for use cases like scalable inference, or even
 fractional GPU support with AWS Elastic Inference.
 
-WARNING: the following cloud provider packages are provided for your convenience
+**WARNING**: the following cloud provider packages are provided for your convenience
 but they point to packages that are *not* provided nor endorsed by the Apache
 Software Foundation. As such, they might contain software components with more
 restrictive licenses than the Apache License and you'll need to decide whether

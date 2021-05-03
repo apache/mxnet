@@ -1,4 +1,4 @@
-WARNING: the following links and names of binary distributions are provided for
+**WARNING**: the following links and names of binary distributions are provided for
 your convenience but they point to packages that are *not* provided nor endorsed
 by the Apache Software Foundation. As such, they might contain software
 components with more restrictive licenses than the Apache License and you'll
