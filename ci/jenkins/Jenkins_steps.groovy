@@ -804,20 +804,6 @@ def test_unix_onnx_cpu(lib_name) {
     }]
 }
 
-def test_unix_cpp_package_cpu(lib_name) {
-    return ['cpp-package CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/it-cpp-package-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_cpp_examples)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpp_package_cpu', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_distributed_kvstore_cpu(lib_name) {
     return ['dist-kvstore tests CPU': {
       node(NODE_LINUX_CPU) {

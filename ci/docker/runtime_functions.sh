@@ -320,7 +320,6 @@ build_ubuntu_cpu_openblas() {
         -DUSE_BLAS=Open \
         -DUSE_ONEDNN=OFF \
         -DUSE_CUDA=OFF \
-        -DUSE_CPP_PACKAGE=ON \
         -DMXNET_USE_CPU=ON \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
@@ -882,12 +881,6 @@ unittest_centos7_gpu() {
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu/test_amp_init.py
-}
-
-integrationtest_ubuntu_cpp_package_cpu() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    cpp-package/tests/ci_test.sh
 }
 
 integrationtest_ubuntu_cpp_package_gpu() {

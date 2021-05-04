@@ -48,7 +48,6 @@ core_logic: {
     custom_steps.test_unix_python3_mkl_cpu('cpu_mkl'),
     custom_steps.test_unix_python3_onednn_cpu('onednn_cpu'),
     custom_steps.test_unix_python3_onednn_mkl_cpu('onednn_mkl_cpu'),
-    custom_steps.test_unix_cpp_package_cpu('cpu'),
     /* disable onnx tests for now, until onnx work is forwarded-ported to master
     custom_steps.test_unix_onnx_cpu('cpu'),
     */
