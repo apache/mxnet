@@ -21,17 +21,17 @@
 
 In this tutorial, we will show how you can save MXNet models to the ONNX format.
 
-MXNet-ONNX operators coverage and features are updated regularly. Visit the [ONNX operator coverage](https://cwiki.apache.org/confluence/display/MXNET/ONNX+Operator+Coverage) page for the latest information.
+MXNet-ONNX operators coverage and features are updated regularly. Visit the [ONNX operator coverage](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#operator-support-matrix) page for the latest information.
 
 In this tutorial, we will learn how to use MXNet to ONNX exporter on pre-trained models.
 
 ## Prerequisites
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet >= 1.3.0](/get_started)
-- [onnx]( https://github.com/onnx/onnx#installation) v1.2.1 (follow the install guide)
+- [MXNet >= 1.6.0](/get_started)
+- [onnx >= 1.7.0](https://github.com/onnx/onnx#installation)
 
-*Note:* MXNet-ONNX importer and exporter follows version 7 of ONNX operator set which comes with ONNX v1.2.1.
+*Note:* MXNet-ONNX exporter works with ONNX opset version later than 12, which comes with ONNX v1.7.0
 
 
 ```python
