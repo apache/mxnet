@@ -321,6 +321,7 @@ build_ubuntu_cpu_openblas() {
         -DUSE_ONEDNN=OFF \
         -DUSE_CUDA=OFF \
         -DUSE_CPP_PACKAGE=ON \
+        -DMXNET_USE_CPU=ON \
         -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -DBUILD_EXTENSION_PATH=/work/mxnet/example/extensions/lib_external_ops \

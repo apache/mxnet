@@ -166,7 +166,7 @@ int main(int argc, char const *argv[]) {
   auto ctx = Context::cpu();
   int num_gpu;
   MXGetGPUCount(&num_gpu);
-#if USE_CUDA
+#if !MXNET_USE_CPU
   if (num_gpu > 0) {
     ctx = Context::gpu();
   }
