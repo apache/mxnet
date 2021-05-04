@@ -1630,7 +1630,7 @@ def test_onnx_export_clip(tmp_path, dtype, shape):
                                   lambda x : x * np.random.rand(1)[0]*100,
                                   lambda x : x - np.random.rand(1)[0]*100,
                                   lambda x : np.random.rand(1)[0]*100 - x,
-                                  lambda x : x / (np.random.rand(1)[0]*100),
+                                  lambda x : x / (np.random.rand(1)[0]*100 + 1),
                                   lambda x : np.random.rand(1)[0]*100 / x,
                                   lambda x : x ** np.random.rand(1)[0]*10,
                                  ])
