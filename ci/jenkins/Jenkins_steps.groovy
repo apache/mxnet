@@ -1062,6 +1062,23 @@ def docs_python(lib_name) {
     }]
 }
 
+// Call this function from Jenkins to generate just the C and C++ API microsite artifacts.
+def docs_c(lib_name) {
+    return ['C Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_lib, false)
+            utils.docker_run('ubuntu_cpu', 'build_c_docs', false)
+            if (should_pack_website()) {
+              utils.pack_lib('c-artifacts', 'docs/_build/c-artifacts.tgz', false)
+            }
+          }
+        }
+      }
+    }]
+}
+
 
 // Call this function from Jenkins to generate just the main website artifacts.
 def docs_jekyll() {
@@ -1092,6 +1109,7 @@ def docs_prepare() {
             utils.init_git()
 
             unstash 'jekyll-artifacts'
+            unstash 'c-artifacts'
             unstash 'python-artifacts'
 
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
@@ -1118,6 +1136,7 @@ def docs_full_website() {
             utils.init_git()
 
             unstash 'jekyll-artifacts'
+            unstash 'c-artifacts'
             unstash 'python-artifacts'
 
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
@@ -1140,6 +1159,7 @@ def docs_prepare_beta() {
             utils.init_git()
 
             unstash 'jekyll-artifacts'
+            unstash 'c-artifacts'
             unstash 'python-artifacts'
 
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_beta', false)
