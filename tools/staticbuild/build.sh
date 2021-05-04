@@ -66,7 +66,7 @@ mkdir -p licenses
 cp tools/dependencies/LICENSE.binary.dependencies licenses/
 cp NOTICE licenses/
 cp LICENSE licenses/
-cp DISCLAIMER-WIP licenses/
+cp DISCLAIMER licenses/
 
 # Build mxnet
 source tools/staticbuild/build_lib.sh
