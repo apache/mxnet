@@ -96,7 +96,7 @@ TEST(Storage_GPU, Basic_GPU) {
     assert(storage->GetMemoryInUseInBytes(context_gpu) >= used_mem_in_bytes + kSize);
     auto ptr = handle.dptr;
     storage->Free(handle);
-    
+
     handle = storage->Alloc(kSize, context_gpu);
     EXPECT_EQ(handle.ctx, context_gpu);
     EXPECT_EQ(handle.size, kSize);
