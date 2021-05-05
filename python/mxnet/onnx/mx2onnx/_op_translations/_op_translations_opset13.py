@@ -1129,14 +1129,14 @@ def convert_RNN(node, **kwargs):
 
                 nodes += [
                     make_node('Shape', [data], [name+'_data_shape']),
-                    make_node('Split', [name+'_data_shape'], 
+                    make_node('Split', [name+'_data_shape'],
                               [name+'_seq_length', name+'_batch_size', name+'_input_size']),
                     # get W
                     make_node('Mul', [name+'_4*state_size', name+'_input_size'], [name+'_mul0']),
                     make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_1d']),
                     make_node('Split', [name+'_W_1d'], [name+'_W0', name+'_W1', name+'_W2', name+'_W3']),
                     make_node('Concat', [name+'_W0', name+'_W3', name+'_W1', name+'_W2'], [name+'_W_'], axis=0),
-                    make_node('Concat', [name+'_1', name+'_4*state_size', name+'_input_size'], 
+                    make_node('Concat', [name+'_1', name+'_4*state_size', name+'_input_size'],
                               [name+'_W_shape'], axis=0),
                     make_node('Reshape', [name+'_W_', name+'_W_shape'], [name+'_W']),
                     # get R
