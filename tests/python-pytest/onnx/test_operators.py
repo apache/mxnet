@@ -1237,7 +1237,7 @@ def test_onnx_export_sequence_reverse(tmp_path, dtype, params):
 
 @pytest.mark.parametrize('mode', ['lstm', 'gru', 'rnn_tanh', 'rnn_relu'])
 @pytest.mark.parametrize('dtype', ['float32'])
-@pytest.mark.parametrize('state_size', [16, 32, 64])
+@pytest.mark.parametrize('state_size', [16, 32])
 @pytest.mark.parametrize('input_size', [16, 32, 64])
 @pytest.mark.parametrize('num_layers', [1, 2])
 @pytest.mark.parametrize('batch_size', [1, 2, 4])
