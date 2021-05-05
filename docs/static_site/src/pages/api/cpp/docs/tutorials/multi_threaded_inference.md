@@ -3,7 +3,7 @@ layout: page_api
 title: Multi Threaded Inference
 action: Get Started
 action_url: /get_started
-permalink: /api/cpp/docs/tutorials/multi_threaded_inference
+permalink: /api/cpp/docs/tutorials/multi_threaded_inference.html
 is_tutorial: true
 tag: cpp
 ---
