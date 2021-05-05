@@ -89,9 +89,11 @@ TEST(Storage_GPU, Basic_GPU) {
     constexpr size_t kSize = 1024;
     mxnet::Context context_gpu = mxnet::Context::GPU(0);
     auto &&storage = mxnet::Storage::Get();
+    size_t used_mem_in_bytes = storage->GetMemoryInUseInBytes();
     auto &&handle = storage->Alloc(kSize, context_gpu);
     assert(handle.ctx == context_gpu);
     assert(handle.size == kSize);
+    assert(storage->GetMemoryInUseInBytes() >= used_mem_in_bytes + kSize);
     auto ptr = handle.dptr;
     storage->Free(handle);
     handle = storage->Alloc(kSize, context_gpu);
