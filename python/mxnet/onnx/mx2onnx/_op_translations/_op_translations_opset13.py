@@ -1791,9 +1791,9 @@ def convert_contrib_split_v2(node, **kwargs):
             nodes += [
                 make_node('Split', [input_nodes[0], name+'_split'], output_nodes_, axis=axis),
             ]
-            for i in range(len(output_nodes)):
+            for i, output_node in enumerate(output_nodes):
                 nodes += [
-                    make_node("Squeeze", [output_nodes_[i], name+'_axis'], [output_nodes[i]]),
+                    make_node("Squeeze", [output_nodes_[i], name+'_axis'], [output_node]),
                 ]
 
     return nodes
