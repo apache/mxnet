@@ -19,20 +19,22 @@
 # coding: utf-8
 """GluonNLP BERT specific translation logics"""
 import numpy as np
+import logging
 from .._export_onnx import MXNetGraph as mx_op
 try:
     import onnx
 except ImportError:
     onnx = None
 
-
-def get_cheat_sheet():
-    cheat_sheet = {
-        'qkv_hidden': 768,
-        'num_heads': 12,
-        'head_dim': 64
-    }
-
+def get_cheat_sheet(kwargs):
+    cheat_sheet = kwargs.get('cheat_sheet', None)
+    if cheat_sheet is None:
+        logging.warning('cheat_sheet not found, using default vallues')
+        cheat_sheet = {
+            'qkv_hidden': 768,
+            'num_heads': 12,
+            'head_dim': 64
+         } 
     return cheat_sheet
 
 
@@ -117,7 +119,7 @@ def create_tensor(tensor_list, tensor_name, initializer, dtype='int64'):
     )
 
 
-@mx_op.register("FullyConnected", opset_version='gluonnlp_bert')
+@mx_op.register("FullyConnected", opset_version='gluonnlp_bert_uninterleaved')
 def convert_fully_connected(node, **kwargs):
     """Map MXNet's FullyConnected operator attributes to onnx's Gemm operator
     and return the created node.
@@ -133,7 +135,7 @@ def convert_fully_connected(node, **kwargs):
     nodes = []
 
     if 'dotproductselfattentioncell' in name:
-        cheat_sheet = get_cheat_sheet()
+        cheat_sheet = get_cheat_sheet(kwargs)
         qkv_hidden = cheat_sheet['qkv_hidden']
         num_heads = cheat_sheet['num_heads']
         head_dim = cheat_sheet['head_dim']
@@ -200,7 +202,7 @@ def convert_fully_connected(node, **kwargs):
     return nodes
 
 
-@mx_op.register("_contrib_interleaved_matmul_selfatt_qk", opset_version='gluonnlp_bert')
+@mx_op.register("_contrib_interleaved_matmul_selfatt_qk", opset_version='gluonnlp_bert_uninterleaved')
 def convert_matmul_selfatt_qk(node, **kwargs):
     """Map MXNet's _contrib_interleaved_matmul_selfatt_qk operator
     """
@@ -213,7 +215,7 @@ def convert_matmul_selfatt_qk(node, **kwargs):
     node['inputs'] = [inp0, inp1]
     name, input_nodes, _ = get_inputs(node, kwargs)
 
-    cheat_sheet = get_cheat_sheet()
+    cheat_sheet = get_cheat_sheet(kwargs)
     num_heads = cheat_sheet['num_heads']
     head_dim = cheat_sheet['head_dim']
 
@@ -236,7 +238,7 @@ def convert_matmul_selfatt_qk(node, **kwargs):
     return nodes
 
 
-@mx_op.register("_contrib_interleaved_matmul_selfatt_valatt", opset_version='gluonnlp_bert')
+@mx_op.register("_contrib_interleaved_matmul_selfatt_valatt", opset_version='gluonnlp_bert_uninterleaved')
 def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
     """Map MXNet's _contrib_interleaved_matmul_selfatt_valatt operator attributes to onnx's operator.
     """
@@ -247,7 +249,7 @@ def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
     node['inputs'] = [inp0, inp1]
     name, input_nodes, _ = get_inputs(node, kwargs)
 
-    cheat_sheet = get_cheat_sheet()
+    cheat_sheet = get_cheat_sheet(kwargs)
     num_heads = cheat_sheet['num_heads']
     head_dim = cheat_sheet['head_dim']
 

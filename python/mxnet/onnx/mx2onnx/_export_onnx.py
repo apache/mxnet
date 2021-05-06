@@ -249,8 +249,9 @@ class MXNetGraph(object):
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy())
                      for k, v in weights_dict.items()])
 
-    def create_onnx_graph_proto(self, sym, params, in_shapes, in_types, verbose=False, opset_version=None,
-                                dynamic=True, dynamic_input_shapes=None, model_specific_logics=None):
+    def create_onnx_graph_proto(self, sym, params, in_shapes, in_types, verbose=False,
+                                opset_version=None, dynamic=True, dynamic_input_shapes=None,
+                                model_specific_logics=None, cheat_sheet=None):
         """Convert MXNet graph to ONNX graph
 
         Parameters
@@ -363,7 +364,8 @@ class MXNetGraph(object):
                     outputs_lookup=outputs_lookup,
                     idx=idx,
                     opset_version=opset_version,
-                    model_specific_logics=model_specific_logics
+                    model_specific_logics=model_specific_logics,
+                    cheat_sheet=cheat_sheet
                 )
             if isinstance(converted, list):
                 # Collect all the node's output names
