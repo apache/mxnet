@@ -1779,7 +1779,9 @@ def convert_contrib_split_v2(node, **kwargs):
                 make_node('Shape', input_nodes, [name+'_shape']),
                 make_node('Slice', [name+'_shape', name+'_axis', name+'_axis+1', name+'_0'], [name+'_dim']),
                 make_node('Sub', [name+'_dim', name+'_sum'], [name+'_sub']),
-                make_node('Concat', [name+'_split_', name+'_sub'], [name+'_split'], axis=0),
+                make_node('Concat', [name+'_split_', name+'_sub'], [name+'_concat'], axis=0),
+                make_node('Less', [name+'_concat', name+'_0'], [name+'_less']),
+                make_node('Where', [name+'_less', name+'_0', name+'_concat'], [name+'_split']),
             ]
         if squeeze_axis == 'False':
             nodes += [
