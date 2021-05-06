@@ -18,10 +18,6 @@
 
 # coding: utf-8
 """GluonNLP BERT specific translation logics"""
-
-
-import re
-import logging
 import numpy as np
 from .._export_onnx import MXNetGraph as mx_op
 try:
@@ -72,6 +68,34 @@ def get_boolean_attribute_value(attrs, attr_name):
     parameters.
     """
     return 1 if attrs.get(attr_name, 0) in ["True", "1"] else 0
+
+
+def create_const_scalar_node(input_name, value, kwargs):
+    """Helper function to create a tensor value node and a
+    initializer tensor node with constant value."""
+    from onnx.helper import make_tensor
+    initializer = kwargs["initializer"]
+    dtype = value.dtype
+    if dtype == 'float16':
+        # when using float16, we must convert it to np.uint16 view first
+        value = np.float16(value).view(np.uint16)
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+    tensor_node = make_tensor(input_name, input_type, (), ([value]))
+    initializer.append(tensor_node)
+
+def create_const_node(input_name, value, kwargs):
+    """Helper function to create a tensor value node and a
+    initializer tensor node with constant value."""
+    from onnx.helper import make_tensor
+    initializer = kwargs["initializer"]
+    dtype = value.dtype
+    if dtype == 'float16':
+        # when using float16, we must convert it to np.uint16 view first
+        value = np.float16(value).view(np.uint16)
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+    input_shape = value.shape
+    tensor_node = make_tensor(input_name, input_type, input_shape, value)
+    initializer.append(tensor_node)
 
 
 def create_tensor(tensor_list, tensor_name, initializer, dtype='int64'):
@@ -181,17 +205,15 @@ def convert_matmul_selfatt_qk(node, **kwargs):
     """Map MXNet's _contrib_interleaved_matmul_selfatt_qk operator
     """
     from onnx.helper import make_node
-    from onnx import TensorProto
     import copy
 
     inp0 = node['inputs'][0]
     inp1 = copy.deepcopy(inp0)
     inp1[1] = 1
     node['inputs'] = [inp0, inp1]
-    name, input_nodes, attrs = get_inputs(node, kwargs)
+    name, input_nodes, _ = get_inputs(node, kwargs)
 
     cheat_sheet = get_cheat_sheet()
-    qkv_hidden = cheat_sheet['qkv_hidden']
     num_heads = cheat_sheet['num_heads']
     head_dim = cheat_sheet['head_dim']
 
@@ -223,10 +245,9 @@ def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
     inp0[1] = 2
     inp1 = node['inputs'][1]
     node['inputs'] = [inp0, inp1]
-    name, input_nodes, attrs = get_inputs(node, kwargs)
+    name, input_nodes, _ = get_inputs(node, kwargs)
 
     cheat_sheet = get_cheat_sheet()
-    qkv_hidden = cheat_sheet['qkv_hidden']
     num_heads = cheat_sheet['num_heads']
     head_dim = cheat_sheet['head_dim']
 
@@ -251,4 +272,3 @@ def convert_contrib_interleaved_matmul_selfatt_valatt(node, **kwargs):
     ]
 
     return nodes
-
