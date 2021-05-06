@@ -1762,7 +1762,6 @@ def convert_contrib_split_v2(node, **kwargs):
                     make_node("Squeeze", [output_nodes_[i], name+'_axis'], [output_nodes[i]]),
                 ]
     else:
-        # indices += [0]
         indices.sort()
         split = []
         for i in range(1, len(indices)):
@@ -1776,12 +1775,12 @@ def convert_contrib_split_v2(node, **kwargs):
         create_tensor(split, name+'_split_', kwargs['initializer'])
         create_tensor([sum(split)], name+'_sum', kwargs['initializer'])
         nodes = [
-                make_node('Shape', input_nodes, [name+'_shape']),
-                make_node('Slice', [name+'_shape', name+'_axis', name+'_axis+1', name+'_0'], [name+'_dim']),
-                make_node('Sub', [name+'_dim', name+'_sum'], [name+'_sub']),
-                make_node('Concat', [name+'_split_', name+'_sub'], [name+'_concat'], axis=0),
-                make_node('Less', [name+'_concat', name+'_0'], [name+'_less']),
-                make_node('Where', [name+'_less', name+'_0', name+'_concat'], [name+'_split']),
+            make_node('Shape', input_nodes, [name+'_shape']),
+            make_node('Slice', [name+'_shape', name+'_axis', name+'_axis+1', name+'_0'], [name+'_dim']),
+            make_node('Sub', [name+'_dim', name+'_sum'], [name+'_sub']),
+            make_node('Concat', [name+'_split_', name+'_sub'], [name+'_concat'], axis=0),
+            make_node('Less', [name+'_concat', name+'_0'], [name+'_less']),
+            make_node('Where', [name+'_less', name+'_0', name+'_concat'], [name+'_split']),
             ]
         if squeeze_axis == 'False':
             nodes += [
