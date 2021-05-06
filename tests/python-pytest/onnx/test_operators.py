@@ -1858,3 +1858,19 @@ def test_onnx_export_sample_multinomial(tmp_path, dtype, shape, sample_shape):
     def rand_check_nd(out):
         return rand_check(out.asnumpy())
     op_export_test('sample_multinomial', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check)
+
+
+@pytest.mark.parametrize("dtype", ['float32', 'int32', 'int64'])
+@pytest.mark.parametrize('params', [((2, 4, 6), (1, ), 0, True),
+                                    ((4, 5, 6), (2, 4), 1, False),
+                                    ((4, 5, 6, 7), (0, 2, 4), 2, False),
+                                    ((4, 5, 6, 7), 3, -2, False),
+                                    ((2, 6, 8), 8, -1, True)])
+def test_onnx_export_split_v2(tmp_path, dtype, params):
+    from onnx.defs import onnx_opset_version
+    if onnx_opset_version() < 13 and not isinstance(params[1], int):
+        # opset12 only supports sections. indices is supported since opset13
+        return
+    M = def_model('split_v2', indices_or_sections=params[1], axis=params[2], squeeze_axis=params[3])
+    x = mx.nd.random.uniform(0, 10, params[0]).astype(dtype)
+    op_export_test('split_v2', M, [x], tmp_path)
