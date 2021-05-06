@@ -136,7 +136,6 @@ def get_inputs(node, kwargs):
     outputs_lookup = kwargs["outputs_lookup"]
     inputs = node["inputs"]
     attrs = node.get("attrs", {})
-
     input_nodes = []
     for ip in inputs:
         input_node_name = outputs_lookup[ip[0]][ip[1]].name
@@ -1732,3 +1731,69 @@ def convert_logsoftmax(node, **kwargs):
     )
 
     return [node]
+
+
+@mx_op.register('_split_v2', OPSET_VERSION)
+def convert_contrib_split_v2(node, **kwargs):
+    """Map MXNet's _split_v2 operator
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    axis = int(attrs.get('axis', 0))
+    squeeze_axis = attrs.get('squeeze_axis', 'False')
+    sections = int(attrs.get('sections', 0))
+    indices = convert_string_to_list(attrs.get('indices', '[]'))
+    if sections <= 0 and len(indices) == 0:
+        raise NotImplementedError('section or indices must be set')
+    if sections > 0:
+        output_nodes = [name+str(i) for i in range(sections)]
+        if squeeze_axis == 'False':
+            nodes = [
+                make_node('Split', input_nodes, output_nodes, axis=axis),
+            ]
+        else:
+            output_nodes_ = [name+str(i)+'_' for i in range(sections)]
+            create_tensor([axis], name+'_axis', kwargs['initializer'])
+            nodes = [
+                make_node('Split', input_nodes, output_nodes_, axis=axis),
+            ]
+            for i in range(sections):
+                nodes += [
+                    make_node("Squeeze", [output_nodes_[i], name+'_axis'], [output_nodes[i]]),
+                ]
+    else:
+        indices.sort()
+        split = []
+        for i in range(1, len(indices)):
+            if indices[i] >= indices[i-1]:
+                split.append(indices[i] - indices[i-1])
+
+        output_nodes = [name+str(i) for i in range(len(split)+1)]
+        create_tensor([0], name+'_0', kwargs['initializer'])
+        create_tensor([axis], name+'_axis', kwargs['initializer'])
+        create_tensor([axis+1], name+'_axis+1', kwargs['initializer'])
+        create_tensor(split, name+'_split_', kwargs['initializer'])
+        create_tensor([sum(split)], name+'_sum', kwargs['initializer'])
+        nodes = [
+            make_node('Shape', input_nodes, [name+'_shape']),
+            make_node('Slice', [name+'_shape', name+'_axis', name+'_axis+1', name+'_0'], [name+'_dim']),
+            make_node('Sub', [name+'_dim', name+'_sum'], [name+'_sub']),
+            make_node('Concat', [name+'_split_', name+'_sub'], [name+'_concat'], axis=0),
+            make_node('Less', [name+'_concat', name+'_0'], [name+'_less']),
+            make_node('Where', [name+'_less', name+'_0', name+'_concat'], [name+'_split']),
+            ]
+        if squeeze_axis == 'False':
+            nodes += [
+                make_node('Split', [input_nodes[0], name+'_split'], output_nodes, axis=axis),
+            ]
+        else:
+            output_nodes_ = [name+str(i)+'_' for i in range(len(split)+1)]
+            nodes += [
+                make_node('Split', [input_nodes[0], name+'_split'], output_nodes_, axis=axis),
+            ]
+            for i, output_node in enumerate(output_nodes):
+                nodes += [
+                    make_node("Squeeze", [output_nodes_[i], name+'_axis'], [output_node]),
+                ]
+
+    return nodes
