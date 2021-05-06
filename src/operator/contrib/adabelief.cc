@@ -18,55 +18,55 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
- * \file adamw.cc
+ *  Copyright (c) 2021 by Contributors
+ * \file adabelief.cc
  * \brief Optimizer operators
- * \author Haibin Lin, Moises Hernandez, Andrei Ivanov
+ * \author khaotik
  */
-#include "./adamw-inl.h"
+#include "./adabelief-inl.h"
 
 namespace mxnet {
 namespace op {
-namespace adamw {
+namespace adabelief {
 
-DMLC_REGISTER_PARAMETER(AdamWParam);
-DMLC_REGISTER_PARAMETER(MultiAdamWParam);
+DMLC_REGISTER_PARAMETER(AdaBeliefParam);
+DMLC_REGISTER_PARAMETER(MultiAdaBeliefParam);
 
-NNVM_REGISTER_OP(_mp_adamw_update)
-.describe(R"code(Update function for multi-precision AdamW optimizer.
+NNVM_REGISTER_OP(_mp_adabelief_update)
+.describe(R"code(Update function for multi-precision AdaBelief optimizer.
 
-AdamW is seen as a modification of Adam by decoupling the weight decay from the
-optimization steps taken w.r.t. the loss function.
+AdaBelief is seen as a modification of Adam with a different variance 
+estimator.
 
-Adam update consists of the following steps, where g represents gradient and m, v
+Adam update consists of the following steps, where g represents gradient and m, s
 are 1st and 2nd order moment estimates (mean and variance).
 
 .. math::
 
- g_t = \nabla J(W_{t-1})\\
+ g_t = \nabla J(W_{t-1}) + w * wd \\
  m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t\\
- v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2\\
- W_t = W_{t-1} - \eta_t (\alpha \frac{ m_t }{ \sqrt{ v_t } + \epsilon } + wd W_{t-1})
+ s_t = \beta_2 v_{t-1} + (1 - \beta_2) (g_t - m_t)^2 + \epsilon\\
+ W_t = W_{t-1} - \eta_t (\alpha \frac{ m_t }{ \sqrt{ v_t } + \epsilon })
 
 It updates the weights using::
 
  m = beta1*m + (1-beta1)*grad
- v = beta2*v + (1-beta2)*(grad**2)
- w -= eta * (learning_rate * m / (sqrt(v) + epsilon) + w * wd)
+ s = beta2*v + (1-beta2)*(grad**2)
+ w -= eta * (learning_rate * m / (sqrt(s) + epsilon))
 
 Note that gradient is rescaled to grad = rescale_grad * grad. If rescale_grad is NaN, Inf, or 0,
 the update is skipped.
 )code" ADD_FILELINE)
 .set_num_inputs(6)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<AdamWParam>)
+.set_attr_parser(ParamParser<AdaBeliefParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", MPUpdateInferShape<2, 1, 6>)
 .set_attr<nnvm::FInferType>("FInferType", MPUpdateInferType<2, 1, 6>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2, 3, 4};
   })
-.set_attr<FCompute>("FCompute<cpu>", adamw::MPUpdate<cpu, MPAdamWUpdate<cpu>>)
+.set_attr<FCompute>("FCompute<cpu>", MPUpdate<cpu, MPAdaBeliefUpdate<cpu>>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("mean", "NDArray-or-Symbol", "Moving mean")
@@ -75,41 +75,43 @@ the update is skipped.
 .add_argument("rescale_grad", "NDArray-or-Symbol",
               "Rescale gradient to rescale_grad * grad. If NaN, Inf, or 0, "
               "the update is skipped.")
-.add_arguments(AdamWParam::__FIELDS__());
+.add_arguments(AdaBeliefParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_adamw_update)
-.describe(R"code(Update function for AdamW optimizer. AdamW is seen as a modification of
-Adam by decoupling the weight decay from the optimization steps taken w.r.t. the loss function.
+NNVM_REGISTER_OP(_adabelief_update)
+.describe(R"code(Update function for AdaBelief optimizer.
 
-Adam update consists of the following steps, where g represents gradient and m, v
+AdaBelief is seen as a modification of Adam with a different variance 
+estimator.
+
+Adam update consists of the following steps, where g represents gradient and m, s
 are 1st and 2nd order moment estimates (mean and variance).
 
 .. math::
 
- g_t = \nabla J(W_{t-1})\\
+ g_t = \nabla J(W_{t-1}) + w * wd \\
  m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t\\
- v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2\\
- W_t = W_{t-1} - \eta_t (\alpha \frac{ m_t }{ \sqrt{ v_t } + \epsilon } + wd W_{t-1})
+ s_t = \beta_2 v_{t-1} + (1 - \beta_2) (g_t - m_t)^2 + \epsilon\\
+ W_t = W_{t-1} - \eta_t (\alpha \frac{ m_t }{ \sqrt{ v_t } + \epsilon })
 
 It updates the weights using::
 
  m = beta1*m + (1-beta1)*grad
- v = beta2*v + (1-beta2)*(grad**2)
- w -= eta * (learning_rate * m / (sqrt(v) + epsilon) + w * wd)
+ s = beta2*v + (1-beta2)*(grad**2)
+ w -= eta * (learning_rate * m / (sqrt(s) + epsilon))
 
 Note that gradient is rescaled to grad = rescale_grad * grad. If rescale_grad is NaN, Inf, or 0,
 the update is skipped.
-)code" ADD_FILELINE)
+))code" ADD_FILELINE)
 .set_num_inputs(5)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<AdamWParam>)
+.set_attr_parser(ParamParser<AdaBeliefParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", MPUpdateInferShape<4, 1, 5>)
 .set_attr<nnvm::FInferType>("FInferType", MPUpdateInferType<4, 1, 5>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2, 3};
   })
-.set_attr<FCompute>("FCompute<cpu>", adamw::MPUpdate<cpu, AdamWUpdate<cpu>>)
+.set_attr<FCompute>("FCompute<cpu>", MPUpdate<cpu, AdaBeliefUpdate<cpu>>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("mean", "NDArray-or-Symbol", "Moving mean")
@@ -117,7 +119,7 @@ the update is skipped.
 .add_argument("rescale_grad", "NDArray-or-Symbol",
               "Rescale gradient to rescale_grad * grad. If NaN, Inf, or 0, "
               "the update is skipped.")
-.add_arguments(AdamWParam::__FIELDS__());
+.add_arguments(AdaBeliefParam::__FIELDS__());
 
 template<>
 void GetScaleFloat<cpu>(mshadow::Stream<cpu> *s, const TBlob &scale_blob, float *pScalef) {
@@ -139,42 +141,42 @@ ParamToVector(uint32_t num_args, const char *pName[], size_t nParams) {
 }
 
 inline uint32_t num_weights(const nnvm::NodeAttrs& attrs) {
-  return static_cast<uint32_t>(dmlc::get<MultiAdamWParam>(attrs.parsed).num_weights);
+  return static_cast<uint32_t>(dmlc::get<MultiAdaBeliefParam>(attrs.parsed).num_weights);
 }
 
-NNVM_REGISTER_OP(_multi_adamw_update)
-.describe(R"code(Update function for AdamW optimizer.
+NNVM_REGISTER_OP(_multi_adabelief_update)
+.describe(R"code(Update function for AdaBelief optimizer.
 
-AdamW is seen as a modification of Adam by decoupling the weight decay from the
-optimization steps taken w.r.t. the loss function.
+AdaBelief is seen as a modification of Adam with a different variance 
+estimator.
 
-Adam update consists of the following steps, where g represents gradient and m, v
+Adam update consists of the following steps, where g represents gradient and m, s
 are 1st and 2nd order moment estimates (mean and variance).
 
 .. math::
 
- g_t = \nabla J(W_{t-1})\\
+ g_t = \nabla J(W_{t-1}) + w * wd \\
  m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t\\
- v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2\\
- W_t = W_{t-1} - \eta_t (\alpha \frac{ m_t }{ \sqrt{ v_t } + \epsilon } + wd W_{t-1})
+ s_t = \beta_2 v_{t-1} + (1 - \beta_2) (g_t - m_t)^2\\
+ W_t = W_{t-1} - \eta_t (\alpha \frac{ m_t }{ \sqrt{ v_t } + \epsilon })
 
 It updates the weights using::
 
  m = beta1*m + (1-beta1)*grad
- v = beta2*v + (1-beta2)*(grad**2)
- w -= eta * (learning_rate * m / (sqrt(v) + epsilon) + w * wd)
+ s = beta2*v + (1-beta2)*(grad**2)
+ w -= eta * (learning_rate * m / (sqrt(s) + epsilon))
 
 Note that gradient is rescaled to grad = rescale_grad * grad. If rescale_grad is NaN, Inf, or 0,
 the update is skipped.
-)code" ADD_FILELINE)
+))code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
     return num_weights(attrs) * 4 + 1;
   })
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
     return num_weights(attrs);
   })
-.set_attr_parser(ParamParser<MultiAdamWParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", MP_MultiAdamW_InferShape<MultiAdamWParam, 4>)
+.set_attr_parser(ParamParser<MultiAdaBeliefParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", MP_MultiAdaBelief_InferShape<MultiAdaBeliefParam, 4>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, -1>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
@@ -193,45 +195,45 @@ the update is skipped.
     return ret;
   })
 
-.set_attr<FCompute>("FCompute<cpu>", adamw::multiMPUpdate<cpu, false>)
+.set_attr<FCompute>("FCompute<cpu>", multiMPUpdate<cpu, false>)
 .add_argument("data", "NDArray-or-Symbol[]", "data")
-.add_arguments(MultiAdamWParam::__FIELDS__());
+.add_arguments(MultiAdaBeliefParam::__FIELDS__());
 
 
-NNVM_REGISTER_OP(_multi_mp_adamw_update)
-.describe(R"code(Update function for multi-precision AdamW optimizer.
+NNVM_REGISTER_OP(_multi_mp_adabelief_update)
+.describe(R"code(Update function for multi-precision AdaBelief optimizer.
 
-AdamW is seen as a modification of Adam by decoupling the weight decay from the
-optimization steps taken w.r.t. the loss function.
+AdaBelief is seen as a modification of Adam with a different variance 
+estimator.
 
-Adam update consists of the following steps, where g represents gradient and m, v
+Adam update consists of the following steps, where g represents gradient and m, s
 are 1st and 2nd order moment estimates (mean and variance).
 
 .. math::
 
- g_t = \nabla J(W_{t-1})\\
+ g_t = \nabla J(W_{t-1}) + w * wd \\
  m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t\\
- v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2\\
- W_t = W_{t-1} - \eta_t (\alpha \frac{ m_t }{ \sqrt{ v_t } + \epsilon } + wd W_{t-1})
+ s_t = \beta_2 v_{t-1} + (1 - \beta_2) (g_t - m_t)^2 + \epsilon\\
+ W_t = W_{t-1} - \eta_t (\alpha \frac{ m_t }{ \sqrt{ v_t } + \epsilon })
 
 It updates the weights using::
 
  m = beta1*m + (1-beta1)*grad
- v = beta2*v + (1-beta2)*(grad**2)
- w -= eta * (learning_rate * m / (sqrt(v) + epsilon) + w * wd)
+ s = beta2*v + (1-beta2)*(grad**2)
+ w -= eta * (learning_rate * m / (sqrt(s) + epsilon))
 
 Note that gradient is rescaled to grad = rescale_grad * grad. If rescale_grad is NaN, Inf, or 0,
 the update is skipped.
-)code" ADD_FILELINE)
+))code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
     return num_weights(attrs) * 5 + 1;
   })
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
     return num_weights(attrs);
   })
-.set_attr_parser(ParamParser<MultiAdamWParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", MP_MultiAdamW_InferShape<MultiAdamWParam, 5>)
-.set_attr<nnvm::FInferType>("FInferType", MP_MultiAdamW_InferType<MultiAdamWParam, 5, 1>)
+.set_attr_parser(ParamParser<MultiAdaBeliefParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", MP_MultiAdaBelief_InferShape<MultiAdaBeliefParam, 5>)
+.set_attr<nnvm::FInferType>("FInferType", MP_MultiAdaBelief_InferType<MultiAdaBeliefParam, 5, 1>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const char *paramName[] = {"weight_", "grad_", "mean_", "var_", "weight32_", "rescale_grad_"};
@@ -250,11 +252,10 @@ the update is skipped.
     return ret;
   })
 
-.set_attr<FCompute>("FCompute<cpu>", adamw::multiMPUpdate<cpu, true>)
+.set_attr<FCompute>("FCompute<cpu>", multiMPUpdate<cpu, true>)
 .add_argument("data", "NDArray-or-Symbol[]", "data")
-.add_arguments(MultiAdamWParam::__FIELDS__());
+.add_arguments(MultiAdaBeliefParam::__FIELDS__());
 
-
-}  // namespace adamw
+}  // namespace adabelief
 }  // namespace op
 }  // namespace mxnet

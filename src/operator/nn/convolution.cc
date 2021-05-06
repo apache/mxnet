@@ -99,6 +99,8 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
     // 1d conv
     CHECK_EQ(dshp.ndim(), 3U) << "Input data should be 3D in batch-num_filter-x";
     Shape<3> dshape = ConvertLayout(dshp.get<3>(), param_.layout.value(), kNCW);
+    CHECK_GT(param_.num_group, 0U) \
+      << "Range only supports num_group > 0, received " << param_.num_group;
     Shape<3> wshape = Shape3(param_.num_filter / param_.num_group,
         mxnet::dim_size_is_known(dshape, 1) ? dshape[1] / param_.num_group : -1,
         param_.kernel[0]);
@@ -149,6 +151,8 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(dshp.ndim(), 4U) \
       << "Input data should be 4D in batch-num_filter-y-x";
     Shape<4> dshape = ConvertLayout(dshp.get<4>(), param_.layout.value(), kNCHW);
+    CHECK_GT(param_.num_group, 0U) \
+      << "Range only supports num_group > 0, received " << param_.num_group;
     Shape<4> wshape = Shape4(param_.num_filter / param_.num_group,
         mxnet::dim_size_is_known(dshape, 1) ? dshape[1] / param_.num_group : -1,
         param_.kernel[0], param_.kernel[1]);
@@ -208,6 +212,8 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(dshp.ndim(), 5U) \
       << "Input data should be 5D in batch-num_filter-depth-y-x";
     Shape<5> dshape = ConvertLayout(dshp.get<5>(), param_.layout.value(), kNCDHW);
+    CHECK_GT(param_.num_group, 0U) \
+      << "Range only supports num_group > 0, received " << param_.num_group;
     Shape<5> wshape = Shape5(param_.num_filter / param_.num_group,
         mxnet::dim_size_is_known(dshape, 1) ? dshape[1] / param_.num_group : -1,
         param_.kernel[0], param_.kernel[1], param_.kernel[2]);

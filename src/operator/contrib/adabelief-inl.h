@@ -18,13 +18,13 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
- * \file adamw-inl.h
+ *  Copyright (c) 2021 by Contributors
+ * \file adabelief-inl.h
  * \brief Optimizer operators
- * \author Haibin Lin, Moises Hernandez, Andrei Ivanov
+ * \author khaotik
  */
-#ifndef MXNET_OPERATOR_CONTRIB_ADAMW_INL_H_
-#define MXNET_OPERATOR_CONTRIB_ADAMW_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_ADABELIEF_INL_H_
+#define MXNET_OPERATOR_CONTRIB_ADABELIEF_INL_H_
 #include <mxnet/operator.h>
 #include <vector>
 #include "../mshadow_op.h"
@@ -32,9 +32,9 @@
 
 namespace mxnet {
 namespace op {
-namespace adamw {
+namespace adabelief {
 
-struct AdamWParam : public dmlc::Parameter<AdamWParam> {
+struct AdaBeliefParam : public dmlc::Parameter<AdaBeliefParam> {
   float lr;
   float beta1;
   float beta2;
@@ -42,7 +42,7 @@ struct AdamWParam : public dmlc::Parameter<AdamWParam> {
   float wd;
   float eta;
   float clip_gradient;
-  DMLC_DECLARE_PARAMETER(AdamWParam) {
+  DMLC_DECLARE_PARAMETER(AdaBeliefParam) {
     DMLC_DECLARE_FIELD(lr)
     .describe("Learning rate");
     DMLC_DECLARE_FIELD(beta1)
@@ -99,7 +99,7 @@ inline bool MPUpdateInferType(const nnvm::NodeAttrs& attrs,
 }
 
 template<int req>
-struct MPAdamWKernel {
+struct MPAdaBeliefKernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, float* mean_data,
     float* var_data, const DType* weight_data, const DType* grad_data, float* weight32,
@@ -108,22 +108,24 @@ struct MPAdamWKernel {
     const float param_rescale_grad, const float param_epsilon) {
     float w = weight32[i];
     float scaled_grad = param_rescale_grad*static_cast<float>(grad_data[i]);
-    if (param_clip_gradient >= 0.0f)
+    scaled_grad += param_wd * w;
+    if (param_clip_gradient >= 0.f)
       scaled_grad = mshadow_op::clip::Map(scaled_grad, param_clip_gradient);
 
-    float mean = mean_data[i] = param_beta1 * mean_data[i] + (1.0f - param_beta1) * scaled_grad;
-    float var = var_data[i] = param_beta2 * var_data[i] +
-                  (1.0f - param_beta2) * mshadow_op::square::Map(scaled_grad);
+    const float mean = param_beta1 * (mean_data[i] - scaled_grad) + scaled_grad;
+    const float adj = mshadow_op::square::Map(scaled_grad - mean);
+    const float var = param_beta2*(var_data[i] - adj) + adj + param_epsilon;
 
-    w -= param_eta * (param_lr * mean / (mshadow_op::square_root::Map(var) + param_epsilon)
-                         + param_wd * w);
+    w -= param_eta * (param_lr * mean / (mshadow_op::square_root::Map(var) + param_epsilon));
+    mean_data[i] = mean;
+    var_data[i] = var;
     weight32[i] = w;
     KERNEL_ASSIGN(out_data[i], req, w);
   }
 };
 
 template<typename xpu>
-struct MPAdamWUpdate {
+struct MPAdaBeliefUpdate {
   static inline void Forward(const nnvm::NodeAttrs& attrs,
                const OpContext &ctx,
                const std::vector<TBlob> &inputs,
@@ -131,7 +133,7 @@ struct MPAdamWUpdate {
                const std::vector<TBlob> &outputs,
                const float rescale_grad) {
     using namespace mxnet_op;
-    const auto& param = nnvm::get<AdamWParam>(attrs.parsed);
+    const auto& param = nnvm::get<AdaBeliefParam>(attrs.parsed);
     Stream<xpu>* s = ctx.get_stream<xpu>();
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
@@ -141,19 +143,22 @@ struct MPAdamWUpdate {
       Tensor<xpu, 2, float> weight32 = inputs[4].FlatTo2D<xpu, float>(s);
       Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        Kernel<MPAdamWKernel<req_type>, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mean.dptr_,
-          var.dptr_, weight.dptr_, grad.dptr_, weight32.dptr_, param.clip_gradient, param.beta1,
-          param.beta2, param.eta, param.lr, param.wd, rescale_grad, param.epsilon);
+        Kernel<MPAdaBeliefKernel<req_type>, xpu>::Launch(
+            s, weight.shape_.Size(), out.dptr_, mean.dptr_, var.dptr_,
+            weight.dptr_, grad.dptr_, weight32.dptr_,
+            param.clip_gradient, param.beta1, param.beta2, param.eta,
+            param.lr, param.wd, rescale_grad, param.epsilon);
       });
     });
   }
 };
 
 /*
- * \brief adam_w update.
+ * \brief adabelief update.
+ *
  */
 template<typename xpu>
-struct AdamWUpdate {
+struct AdaBeliefUpdate {
   static inline void Forward(const nnvm::NodeAttrs& attrs,
                              const OpContext &ctx,
                              const std::vector<TBlob> &inputs,
@@ -163,7 +168,7 @@ struct AdamWUpdate {
     using namespace mshadow;
     using namespace mshadow::expr;
     using namespace mshadow_op;
-    const auto &param = nnvm::get<AdamWParam>(attrs.parsed);
+    const auto &param = nnvm::get<AdaBeliefParam>(attrs.parsed);
     Stream<xpu>* s = ctx.get_stream<xpu>();
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       const Tensor<xpu, 2, DType> &weight = inputs[0].FlatTo2D<xpu, DType>(s);
@@ -172,18 +177,19 @@ struct AdamWUpdate {
       Tensor<xpu, 2, DType> var = inputs[3].FlatTo2D<xpu, DType>(s);
       Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
 
-      grad = scalar<DType>(rescale_grad) * grad;
+      grad = scalar<DType>(rescale_grad) * grad + scalar<DType>(param.wd) * weight;
       if (param.clip_gradient >= 0.0f)
         grad = F<clip>(grad, DType(param.clip_gradient));
 
       mean = scalar<DType>(param.beta1) * mean + scalar<DType>(1.f-param.beta1) * grad;
-      var = scalar<DType>(param.beta2) * var + scalar<DType>(1.f-param.beta2) * F<square>(grad);
+      var = scalar<DType>(param.beta2) * var +
+            scalar<DType>(1.f-param.beta2) * F<square>(grad - mean) +
+            scalar<DType>(param.epsilon);
 
       Assign(out, req[0],
              weight -
              scalar<DType>(param.eta) * (scalar<DType>(param.lr) *
-             mean / (F<square_root>(var) + scalar<DType>(param.epsilon)) +
-             (scalar<DType>(param.wd) * weight)));
+             mean / (F<square_root>(var) + scalar<DType>(param.epsilon))));
     });
   }
 };
@@ -191,7 +197,7 @@ struct AdamWUpdate {
 ////
 // Multiple gradients in single kernel
 ////
-struct MultiAdamWParam : public dmlc::Parameter<MultiAdamWParam> {
+struct MultiAdaBeliefParam : public dmlc::Parameter<MultiAdaBeliefParam> {
   mxnet::Tuple<float> lrs;
   mxnet::Tuple<float> wds;
   mxnet::Tuple<float> etas;
@@ -200,7 +206,7 @@ struct MultiAdamWParam : public dmlc::Parameter<MultiAdamWParam> {
   float epsilon;
   float clip_gradient;
   int num_weights;
-  DMLC_DECLARE_PARAMETER(MultiAdamWParam) {
+  DMLC_DECLARE_PARAMETER(MultiAdaBeliefParam) {
     DMLC_DECLARE_FIELD(lrs)
     .describe("Learning rates");
     DMLC_DECLARE_FIELD(beta1)
@@ -231,7 +237,7 @@ struct MultiAdamWParam : public dmlc::Parameter<MultiAdamWParam> {
 
 
 template<typename ParamType, int input_stride>
-inline bool MP_MultiAdamW_InferShape(const nnvm::NodeAttrs& attrs,
+inline bool MP_MultiAdaBelief_InferShape(const nnvm::NodeAttrs& attrs,
                                           mxnet::ShapeVector *in_attrs,
                                           mxnet::ShapeVector *out_attrs) {
   const ParamType& param = dmlc::get<ParamType>(attrs.parsed);
@@ -273,7 +279,7 @@ inline bool MP_MultiAdamW_InferShape(const nnvm::NodeAttrs& attrs,
 }
 
 template <typename ParamType, int input_stride, int num_fp32_inputs>
-inline bool MP_MultiAdamW_InferType(const nnvm::NodeAttrs& attrs,
+inline bool MP_MultiAdaBelief_InferType(const nnvm::NodeAttrs& attrs,
                                     std::vector<int> *in_attrs,
                                     std::vector<int> *out_attrs) {
   const ParamType& param = dmlc::get<ParamType>(attrs.parsed);
@@ -313,20 +319,20 @@ inline bool MP_MultiAdamW_InferType(const nnvm::NodeAttrs& attrs,
 
 
 template<typename T>
-class Adam_type_identity {
+class _type_identity {
  public:
   using type = T;
 };
 
 
 template<typename T>
-class Adam_single_precision {
+class _single_precision {
  public:
   using type = float;
 };
 
 template<typename DType, typename MPDType>
-struct MultiAdamKernelParam {
+struct MultiKernelParam {
   static const int N = 50;
   int count;
   size_t max_size;
@@ -347,9 +353,9 @@ struct MultiAdamKernelParam {
 };
 
 template<typename MPDType, bool has_mixed_precision>
-struct MultiMPAdamWKernel {
+struct MultiMPAdaBeliefKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const MultiAdamKernelParam<DType, MPDType>& param,
+  MSHADOW_XINLINE static void Map(int i, const MultiKernelParam<DType, MPDType>& param,
                                   const OpReqType req, const float rescale_grad) {
     for (int index = 0; index < param.count; ++index) {
       if ((size_t)i < param.sizes[index]) {
@@ -358,18 +364,18 @@ struct MultiMPAdamWKernel {
         MPDType scaled_grad = static_cast<MPDType>(rescale_grad)*
                               static_cast<MPDType>(param.grad_data[index][i]);
 
-        if (param.clip_gradient >= 0.0f)
+        scaled_grad += param.wds[index] * w;
+        if (param.clip_gradient >= 0.f)
           scaled_grad = mshadow_op::clip::Map(scaled_grad, param.clip_gradient);
 
-        const auto mean = param.beta1 * (param.mean_data[index][i]- scaled_grad) + scaled_grad;
-        const auto adj = mshadow_op::square::Map(scaled_grad);
-        const auto var = param.beta2 * (param.var_data[index][i] - adj) + adj;
+        const auto mean = param.beta1 * (param.mean_data[index][i] - scaled_grad) + scaled_grad;
+        const auto adj = mshadow_op::square::Map(mean - scaled_grad);
+        const auto var = param.beta2 * (param.var_data[index][i] - adj) + adj + param.epsilon;
 
         param.mean_data[index][i] = mean;
         param.var_data[index][i] = var;
         w = w - param.etas[index] * (param.lrs[index] *
-            mean / (mshadow_op::square_root::Map(var) + param.epsilon)
-            + param.wds[index] * w);
+            mean / (mshadow_op::square_root::Map(var) + param.epsilon));
         if (has_mixed_precision)
           param.weights32[index][i] = w;
 
@@ -382,13 +388,13 @@ struct MultiMPAdamWKernel {
 template<typename xpu,
          typename DType,
          typename MPDType,
-         typename ParamType = MultiAdamWParam,
+         typename ParamType = MultiAdaBeliefParam,
          int input_stride = 4>
-void FillMultiAdamKernelParam(const nnvm::NodeAttrs& attrs,
+void FillMultiKernelParam(const nnvm::NodeAttrs& attrs,
                               const OpContext &ctx,
                               const std::vector<TBlob> &inputs,
                               const std::vector<TBlob> &outputs,
-                              MultiAdamKernelParam<DType, MPDType> *pParam) {
+                              MultiKernelParam<DType, MPDType> *pParam) {
   const ParamType& p = nnvm::get<ParamType>(attrs.parsed);
   mxnet_op::Stream<xpu>* s = ctx.get_stream<xpu>();
   pParam->clip_gradient = p.clip_gradient;
@@ -423,7 +429,7 @@ void FillMultiAdamKernelParam(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, template<typename> class MPTypeChooser, int input_stride>
-static inline void MultiAdamWUpdate(const nnvm::NodeAttrs& attrs,
+static inline void MultiAdaBeliefUpdate(const nnvm::NodeAttrs& attrs,
                                     const OpContext &ctx,
                                     const std::vector<TBlob> &inputs,
                                     const std::vector<OpReqType> &req,
@@ -433,17 +439,17 @@ static inline void MultiAdamWUpdate(const nnvm::NodeAttrs& attrs,
   Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     using MPDType = typename MPTypeChooser<DType>::type;
-    MultiAdamKernelParam<DType, MPDType> param;
-    FillMultiAdamKernelParam<xpu, DType, MPDType, MultiAdamWParam, input_stride>
+    MultiKernelParam<DType, MPDType> param;
+    FillMultiKernelParam<xpu, DType, MPDType, MultiAdaBeliefParam, input_stride>
             (attrs, ctx, inputs, outputs, &param);
 
-    Kernel<MultiMPAdamWKernel<MPDType, !std::is_same<DType, MPDType>::value>, xpu>::
+    Kernel<MultiMPAdaBeliefKernel<MPDType, !std::is_same<DType, MPDType>::value>, xpu>::
                               Launch(s, param.max_size, param, req[0], rescale_grad);
   });
 }
 
 template<typename xpu>
-static void GetScaleFloat(mshadow::Stream<xpu> *s, const TBlob &scale_blob, float *pScalef);
+void GetScaleFloat(mshadow::Stream<xpu> *s, const TBlob &scale_blob, float *pScalef);
 
 template<typename xpu>
 bool PrepareInputBlobs(const OpContext &ctx,
@@ -451,7 +457,7 @@ bool PrepareInputBlobs(const OpContext &ctx,
                        std::vector<TBlob> *inputs_wo_scale,
                        float *pScalef) {
   const size_t num_in = inputs.size() - 1;
-  adamw::GetScaleFloat<xpu>(ctx.get_stream<xpu>(), inputs[num_in], pScalef);
+  adabelief::GetScaleFloat<xpu>(ctx.get_stream<xpu>(), inputs[num_in], pScalef);
   if (!std::isfinite(*pScalef) || *pScalef == 0)
     return false;
 
@@ -488,15 +494,15 @@ inline void multiMPUpdate(const nnvm::NodeAttrs& attrs,
     return;
 
   if (!MP)
-    MultiAdamWUpdate<xpu, Adam_type_identity, 4>
+    MultiAdaBeliefUpdate<xpu, _type_identity, 4>
       (attrs, ctx, inputs_wo_scale, req, outputs, scalef);
   else
-    MultiAdamWUpdate<xpu, Adam_single_precision, 5>
+    MultiAdaBeliefUpdate<xpu, _single_precision, 5>
       (attrs, ctx, inputs_wo_scale, req, outputs, scalef);
 }
 
-}  // namespace adamw
+}  // namespace adabelief
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_CONTRIB_ADAMW_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_ADABELIEF_INL_H_

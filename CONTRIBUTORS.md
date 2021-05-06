@@ -101,6 +101,7 @@ healthy project. The PPMC actively seeks to appoint new committers from the list
 * [Aaron Markham](https://github.com/aaronmarkham)
 * [Alex Zai](https://github.com/azai91)
 * [Anirudh Acharya](https://github.com/anirudhacharya)
+* [Anna Karbownik]((https://github.com/akarbown)
 * [Aston Zhang](https://github.com/astonzhang)
 * [Chaitanya Bapat](https://github.com/ChaiBapchya)
 * [Ciyong Chen](https://github.com/ciyongch)
@@ -119,6 +120,7 @@ healthy project. The PPMC actively seeks to appoint new committers from the list
 * [Lin Yuan](https://github.com/apeforest)
   - Lin supports MXNet distributed training using Horovod and is also a major contributor to higher order gradients.
 * [Manu Seth](https://github.com/mseth10/)
+* [Moises Hernandez](https://github.com/MoisesHer/)
 * [Nicolas Modrzyk](https://github.com/hellonico)
 * [Patric Zhao](https://github.com/pengzhao-intel)
   - Patric is a parallel computing expert and a major contributor to the MXNet MKL-DNN backend.

@@ -133,9 +133,9 @@ void AMPCastCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DstDType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, DstDType, {
     Tensor<xpu, 1, DstDType> out = outputs[0].FlatTo1D<xpu, DstDType>(s);
-    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, SrcDType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, SrcDType, {
       Tensor<xpu, 1, SrcDType> data = inputs[0].FlatTo1D<xpu, SrcDType>(s);
       if (outputs[0].type_flag_ != inputs[0].type_flag_ ||
           req[0] != kWriteInplace) {
@@ -155,9 +155,9 @@ void AMPMultiCastCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   for (size_t i = 0; i < outputs.size(); ++i) {
-    MSHADOW_TYPE_SWITCH(outputs[i].type_flag_, DstDType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[i].type_flag_, DstDType, {
       Tensor<xpu, 1, DstDType> out = outputs[i].FlatTo1D<xpu, DstDType>(s);
-      MSHADOW_TYPE_SWITCH(inputs[i].type_flag_, SrcDType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[i].type_flag_, SrcDType, {
         Tensor<xpu, 1, SrcDType> data = inputs[i].FlatTo1D<xpu, SrcDType>(s);
         if (outputs[i].type_flag_ != inputs[i].type_flag_ ||
             req[i] != kWriteInplace) {

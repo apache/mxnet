@@ -82,6 +82,17 @@ struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
     .describe("Compute row sparse gradient in the backward calculation. If set to True, "
               "the grad's storage type is row_sparse.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream input_dim_s, output_dim_s, dtype_s, sparse_grad_s;
+    input_dim_s << input_dim;
+    output_dim_s << output_dim;
+    dtype_s << dtype;
+    sparse_grad_s << sparse_grad;
+    (*dict)["input_dim"] = input_dim_s.str();
+    (*dict)["output_dim"] = output_dim_s.str();
+    (*dict)["sparse_grad"] = sparse_grad_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+  }
 };
 
 /*!
@@ -1020,12 +1031,12 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 2, DType> grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
           Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
 
+      if (req[take_::kArr] == kWriteTo) {
+        grad_in = scalar<DType>(0.0f);
+      }
       // re-using the previous code for axis = 0 case
       if (actual_axis == 0) {
         if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
-          if (req[take_::kArr] == kWriteTo) {
-            grad_in = scalar<DType>(0.0f);
-          }
           if (safe_acc) {
             // Temporary storage for safe accumulation
             size_t temp_space_size = grad_in.size(0) * grad_in.size(1) * sizeof(AType);

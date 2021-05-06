@@ -1,4 +1,4 @@
-WARNING: the following PyPI package names are provided for your convenience but
+**WARNING**: the following PyPI package names are provided for your convenience but
 they point to packages that are *not* provided nor endorsed by the Apache
 Software Foundation. As such, they might contain software components with more
 restrictive licenses than the Apache License and you'll need to decide whether
@@ -7,6 +7,8 @@ proprietary parts of the NVidia CUDA SDK and GPL GCC Runtime Library components.
 Like all Apache Releases, the official Apache MXNet (incubating) releases
 consist of source code only and are found at the [Download
 page](https://mxnet.apache.org/get_started/download).
+
+**PREREQUISITES**: [CUDA](https://developer.nvidia.com/cuda-downloads) should be installed first. Starting from version 1.8.0, [CUDNN](https://developer.nvidia.com/cudnn) and [NCCL](https://developer.nvidia.com/nccl) should be installed as well.
 
 Run the following command:
 

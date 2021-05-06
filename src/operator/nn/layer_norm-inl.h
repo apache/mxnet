@@ -61,9 +61,18 @@ struct LayerNormParam : public dmlc::Parameter<LayerNormParam> {
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
       .describe("Output the mean and std calculated along the given axis.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, eps_s, output_mean_var_s;
+    axis_s << axis;
+    eps_s << eps;
+    output_mean_var_s << output_mean_var;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["eps"] = eps_s.str();
+    (*dict)["output_mean_var"] = output_mean_var_s.str();
+  }
 };
 
-static int GetRealAxis(int axis, int ndim) {
+inline int GetRealAxis(int axis, int ndim) {
   return axis < 0 ? (axis + ndim) : axis;
 }
 

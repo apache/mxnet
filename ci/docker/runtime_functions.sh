@@ -96,7 +96,7 @@ gather_licenses() {
     cp tools/dependencies/LICENSE.binary.dependencies licenses/
     cp NOTICE licenses/
     cp LICENSE licenses/
-    cp DISCLAIMER-WIP licenses/
+    cp DISCLAIMER licenses/
 }
 
 # Compiles the dynamic mxnet library

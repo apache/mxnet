@@ -618,6 +618,35 @@ def test_concat():
     for stype in stypes:
         check_concat_training(stype)
 
+def test_concat_blocked():
+    ctx = mx.cpu()
+    axis = 1
+    filters = 32  # must be a multiple of 16
+    kernel = (3, 3)
+    for in_dim_size in range(1, 17):  # check cases with and without padding
+        in_shape = (1, in_dim_size, 64, 64)
+        in_data = mx.nd.random.uniform(-1, 1, in_shape, ctx=ctx)
+        conv_weights = mx.nd.random.uniform(-1, 1, (filters, in_shape[1], kernel[0], kernel[1]), ctx=ctx)
+
+        def calc_output_of_layer(layer):
+            ex = layer._simple_bind(ctx, x=in_shape)
+            in_data.copyto(ex.arg_arrays[0])
+            conv_weights.copyto(ex.arg_arrays[1])
+            return ex.forward()[0].asnumpy()
+
+        x = mx.sym.Variable('x')
+        w = mx.sym.Variable('w')
+        # convolution, so a blocked format is selected
+        conv = mx.sym.Convolution(data=x, weight=w, num_filter=filters, kernel=kernel, pad=(1, 1), no_bias=True)
+        conc = mx.sym.concat(conv, x, dim=axis)
+
+        # first calculate the output of the convolution to determine ref_out
+        conv_out = calc_output_of_layer(conv)
+        ref_out = np.concatenate((conv_out, in_data.asnumpy()), axis=axis)
+
+        out = calc_output_of_layer(conc)
+        assert_almost_equal(out, ref_out)
+
 def test_elemwise_add():
     def ref_add(a, b):
       return np.add(a, b)

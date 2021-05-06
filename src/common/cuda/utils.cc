@@ -29,31 +29,13 @@
 #include <algorithm>
 
 #include "utils.h"
+#include "../utils.h"
 
 #if MXNET_USE_CUDA
 
 namespace mxnet {
 namespace common {
 namespace cuda {
-
-namespace {
-  bool IsPower2(size_t N) {
-    return ((N & (N - 1)) == 0) && N != 0;
-  }
-
-  size_t RoundToPower2(size_t N) {
-    size_t ret = 1;
-    size_t copyN = N;
-    while (N >= 2) {
-      ret *= 2;
-      N /= 2;
-    }
-    if (ret < copyN) {
-      ret *= 2;
-    }
-    return ret;
-  }
-}  // namespace
 
 int get_load_type(size_t N) {
   using namespace mshadow;

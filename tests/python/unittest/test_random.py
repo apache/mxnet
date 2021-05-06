@@ -27,6 +27,8 @@ import scipy.stats as ss
 import unittest
 import pytest
 from mxnet.test_utils import *
+from mxnet.base import MXNetError
+from common import assertRaises
 
 def same(a, b):
     return np.sum(a != b) == 0
@@ -1029,3 +1031,52 @@ def test_sample_multinomial_num_outputs():
     assert isinstance(out, list)
     assert len(out) == 2
 
+
+@use_np
+def test_dirichlet_zero_size_dim():
+    """ Tests for no error when dealing with zero-size array in calculating PDF of Poisson distribution
+    Issue: https://github.com/apache/incubator-mxnet/issues/18936
+    """
+
+    def test_valid_zero_dim():
+        alpha = mx.nd.array(np.random.rand(0))
+        sample = mx.nd.array(np.random.rand(4, 0))
+        res = mx.nd.op.random_pdf_dirichlet(sample=sample, alpha=alpha)
+        assert res.shape == sample.shape[:-1]
+
+    def test_valid_zero_multi_dim():
+        alpha = mx.nd.array(np.random.rand(4, 0))
+        sample = mx.nd.array(np.random.rand(4, 3, 0))
+        res = mx.nd.op.random_pdf_dirichlet(sample=sample, alpha=alpha)
+        assert res.shape == sample.shape[:-1]
+
+    def test_invalid_zero_dim():
+        """The shape of *alpha* must match the left-most part of the *sample* shape"""
+        alpha = mx.nd.array(np.random.rand(1))
+        sample = mx.nd.array(np.random.rand(4, 0))
+        assertRaises(MXNetError, mx.nd.op.random_pdf_dirichlet, sample, alpha)
+        
+    test_valid_zero_dim()
+    test_valid_zero_multi_dim()
+    test_invalid_zero_dim()
+
+@use_np
+def test_poisson_zero_size_dim():
+    """ Tests for no error when dealing with zero-size array in calculating PDF of Poisson distribution
+    Issue: https://github.com/apache/incubator-mxnet/issues/18937
+    """
+
+    def test_valid_zero_dim():
+        lam = mx.nd.array(np.random.rand(0))
+        sample = mx.nd.array(np.random.rand(0, 2))
+        res = mx.nd.op.random_pdf_poisson(sample=sample, lam=lam)
+        assert res.shape == sample.shape
+
+    def test_invalid_zero_dim():
+        """The shape of *lam* must match the leftmost part of the *sample* shape"""
+        lam = mx.nd.array(np.random.rand(0))
+        sample = mx.nd.array(np.random.rand(1, 2))
+        assertRaises(MXNetError, mx.nd.op.random_pdf_poisson, sample, lam)
+
+    test_valid_zero_dim()
+    test_invalid_zero_dim()
