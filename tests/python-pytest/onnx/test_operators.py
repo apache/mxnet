@@ -250,6 +250,8 @@ def test_onnx_export_reshape(tmp_path, dtype):
     op_export_test('reshape_2', M2, [x], tmp_path)
     M3 = def_model('reshape', shape=(5, 1, 1, 1, 1, 0 -1, 0), reverse=True)
     op_export_test('reshape_3', M3, [x], tmp_path)
+    M4 = def_model('reshape', shape=(-3, -1))
+    op_export_test('reshape_4', M4, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
@@ -1233,34 +1235,41 @@ def test_onnx_export_sequence_reverse(tmp_path, dtype, params):
     M1 = def_model('SequenceReverse', use_sequence_length=True)
     op_export_test('SequenceReverse1', M1, [x, seq_len], tmp_path)
 
-
-# onnx LSTM from opset 11 does not support float64
 @pytest.mark.parametrize('mode', ['lstm', 'gru', 'rnn_tanh', 'rnn_relu'])
 @pytest.mark.parametrize('dtype', ['float32'])
-@pytest.mark.parametrize('state_size', [16, 32, 64])
+@pytest.mark.parametrize('state_size', [16, 32])
 @pytest.mark.parametrize('input_size', [16, 32, 64])
 @pytest.mark.parametrize('num_layers', [1, 2])
 @pytest.mark.parametrize('batch_size', [1, 2, 4])
 @pytest.mark.parametrize('seq_length', [16])
-def test_onnx_export_RNN(tmp_path, mode, dtype, state_size, input_size, num_layers, batch_size, seq_length):
+@pytest.mark.parametrize('bidirectional', [True, False])
+def test_onnx_export_RNN(tmp_path, mode, dtype, state_size, input_size, num_layers, batch_size, seq_length, bidirectional):
     # TODO: The current implementation fails assertion checks for large parm/state_size. 
     # for num_layers >= 2, input_size must equal to state_size
     if num_layers >= 2 and input_size != state_size:
         return
+    # Currently only bidirectional supports lstm with num_layers = 1
+    if bidirectional and (mode != 'lstm' or num_layers != 1):
+        return
+
+    b = 1
+    if bidirectional:
+        b = 2
+
     factor = 1
     if mode == 'gru':
         factor = 3
     elif mode == 'lstm':
         factor = 4
 
-    M = def_model('RNN', mode=mode, state_size=state_size, state_outputs=True,  num_layers=num_layers, p=0)
+    M = def_model('RNN', mode=mode, state_size=state_size, state_outputs=True,  num_layers=num_layers, p=0, bidirectional=bidirectional)
     x = mx.nd.random.normal(0, 10, (seq_length, batch_size, input_size), dtype=dtype)
-    param = mx.nd.random.normal(0, 1, [num_layers*factor*state_size*input_size +
-                                       num_layers*factor*state_size*state_size +
-                                       num_layers*2*factor*state_size], dtype=dtype)
-    state = mx.nd.random.uniform(-1, 1, [num_layers, batch_size, state_size], dtype=dtype)
+    param = mx.nd.random.normal(0, 1, [b*num_layers*factor*state_size*input_size +
+                                       b*num_layers*factor*state_size*state_size +
+                                       b*num_layers*2*factor*state_size], dtype=dtype)
+    state = mx.nd.random.uniform(-1, 1, [b*num_layers, batch_size, state_size], dtype=dtype)
     if mode == 'lstm':
-        cell = mx.nd.random.uniform(-1, 1, [num_layers, batch_size, state_size], dtype=dtype)
+        cell = mx.nd.random.uniform(-1, 1, [b*num_layers, batch_size, state_size], dtype=dtype)
         op_export_test('rnn', M, [x, param, state, cell], tmp_path)
     elif mode == 'rnn_relu':
         # set large atol as relu can outputs big numbers
