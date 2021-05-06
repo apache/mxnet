@@ -18,8 +18,8 @@
 
 # coding: utf-8
 """GluonNLP BERT specific translation logics"""
-import numpy as np
 import logging
+import numpy as np
 from .._export_onnx import MXNetGraph as mx_op
 try:
     import onnx
@@ -33,8 +33,7 @@ def get_cheat_sheet(kwargs):
         cheat_sheet = {
             'qkv_hidden': 768,
             'num_heads': 12,
-            'head_dim': 64
-         } 
+            'head_dim': 64}
     return cheat_sheet
 
 
