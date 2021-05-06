@@ -78,7 +78,7 @@ def create_const_scalar_node(input_name, value, kwargs):
     dtype = value.dtype
     if dtype == 'float16':
         # when using float16, we must convert it to np.uint16 view first
-        value = np.float16(value).view(np.uint16)
+        value = np.float16(value).view(np.uint16) #pylint: disable=too-many-function-args
     input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     tensor_node = make_tensor(input_name, input_type, (), ([value]))
     initializer.append(tensor_node)
@@ -91,7 +91,7 @@ def create_const_node(input_name, value, kwargs):
     dtype = value.dtype
     if dtype == 'float16':
         # when using float16, we must convert it to np.uint16 view first
-        value = np.float16(value).view(np.uint16)
+        value = np.float16(value).view(np.uint16) #pylint: disable=too-many-function-args
     input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     input_shape = value.shape
     tensor_node = make_tensor(input_name, input_type, input_shape, value)
