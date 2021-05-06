@@ -274,6 +274,9 @@ class MXNetGraph(object):
             Specifies the dynamic input_shapes. If None then all dimensions are set to None
         model_specific_logics: str
             Specifies if model-specific conversion logic should be used. Refer to ./_op_translations/
+        cheat_sheet : dict of str to str
+            This is a dict that stors some hyperparameters values or additional info about the model that
+            would be used in model-specific conversion functions
 
         Returns
         -------

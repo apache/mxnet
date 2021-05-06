@@ -83,8 +83,11 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
         This is the old name of in_types. We keep this parameter name for backward compatibility
     in_shapes : List of tuple
         This is the old name of in_shapes. We keep this parameter name for backward compatibility
-    model_specific_logics: str
+    model_specific_logics : str
         Specifies if model-specific conversion logic should be used. Refer to ./_op_translations/
+    cheat_sheet : dict of str to str
+        This is a dict that stors some hyperparameters values or additional info about the model that
+        would be used in model-specific conversion functions
 
     Returns
     -------
