@@ -393,6 +393,17 @@ def test_onnx_export_broadcast_equal(tmp_path, dtype):
     op_export_test('broadcast_equal', M, [x, y], tmp_path)
 
 
+@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_broadcast_not_equal(tmp_path, dtype):
+    M = def_model('broadcast_not_equal')
+    x = mx.nd.zeros((4,5,6), dtype=dtype)
+    y = mx.nd.ones((4,5,6), dtype=dtype)
+    op_export_test('broadcast_not_equal', M, [x, y], tmp_path)
+    x1 = mx.nd.ones((4,5,6), dtype=dtype)
+    y1 = mx.nd.ones((5,6), dtype=dtype)
+    op_export_test('broadcast_not_equal', M, [x1, y1], tmp_path)
+
+
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 def test_onnx_export_broadcast_minimum(tmp_path, dtype):
     M = def_model('broadcast_minimum')

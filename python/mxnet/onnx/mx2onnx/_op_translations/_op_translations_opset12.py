@@ -2314,6 +2314,26 @@ def convert_broadcast_equal(node, **kwargs):
     return nodes
 
 
+@mx_op.register("broadcast_not_equal")
+def convert_broadcast_not_equal(node, **kwargs):
+    """Map MXNet's broadcast_not_equal operator attributes to onnx's Equal operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+
+    dtype = input_dtypes[0]
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+
+    nodes = [
+        make_node("Equal", input_nodes, [name+"_equal"]),
+        make_node("Not", [name+"_equal"], [name+"_not"]),
+        make_node("Cast", [name+"_not"], [name], name=name, to=int(dtype_t))
+    ]
+    return nodes
+
+
 @mx_op.register("broadcast_logical_and")
 def convert_broadcast_logical_and(node, **kwargs):
     """Map MXNet's broadcast logical and operator attributes to onnx's And operator
