@@ -73,12 +73,11 @@ Returns:
 When the model has multiple input, all the input shapes and dtypes should be provided with `in_shapes` and `in_dtypes`. Note that the shape/dtype in `in_shapes`/`in_dtypes` must follow the same order as in the MXNet model symbol file. If `in_dtypes` is provided as a single data type, the type will be applied to all input nodes.
 
 #### Dynamic Shape Input
-By setting up optional flags in export_model API, users have the control of partially/fully dynamic shape input export. The flag `dynamic` is set to switch on dynamic shape input export, and `dynamic_input_shapes` is used to specify which dimensions are dynamic (None for dynamic shape).
+By setting up optional flags in export_model API, users have the control of partially/fully dynamic shape input export. The flag `dynamic` is set to switch on dynamic shape input export, and `dynamic_input_shapes` is used to specify which dimensions are dynamic `None` or any string variable can be used to represent a dynamic shape dimension.
 
 ```python
-# None indicating dynamic shape at a certain dimension
 # The first input dimension will be dynamic in this case
-dynamic_input_shapes = [((None, 3, 224, 224))]
+dynamic_input_shapes = [(None, 3, 224, 224)]
 mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file,
                      dynamic=True, dynamic_input_shapes=dynamic_input_shapes)
 ```

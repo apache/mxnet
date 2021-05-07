@@ -144,6 +144,16 @@ converted_model_path = mx.onnx.export_model(sym, params, input_shape, input_dtyp
 
 This API returns path of the converted model which you can later use to import the model into other frameworks. Please refer to [mx2onnx](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#apis) for more details about the API.
 
+### Dynamic Shape Input
+MXNet to ONNX export also supports dynamic input shapes. By setting up optional flags in `export_model`, users have the control of partially/fully dynamic shape input export. For example, setting the batch dimension to dynamic enables dynamic batching inference; setting the width and height dimension to dynamic allows inference on images with different shapes. Below is a code example for dynamic shape on batch dimension. The flag `dynamic` is set to switch on dynamic shape input export, and `dynamic_input_shapes` is used to specify which dimensions are dynamic. `None` or any string variable can be used to represent a dynamic shape dimension.
+
+```python
+# The first input dimension will be dynamic in this case
+dynamic_input_shapes = [(None, 3, 224, 224)]
+mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file,
+                     dynamic=True, dynamic_input_shapes=dynamic_input_shapes)
+```
+
 ## Check validity of ONNX model
 
 Now we can check validity of the converted ONNX model by using ONNX checker tool. The tool will validate the model by checking if the content contains valid protobuf:
@@ -161,4 +171,4 @@ checker.check_graph(model_proto.graph)
 
 If the converted protobuf format doesn't qualify to ONNX proto specifications, the checker will throw errors, but in this case it successfully passes. 
 
-This method confirms exported model protobuf is valid. Now, the model is ready to be imported in other frameworks for inference! 
+This method confirms exported model protobuf is valid. Now, the model is ready to be imported in other frameworks for inference! Users may consider to further optimize the ONNX model file using various tools such as [onnx-simplifier](https://github.com/daquexian/onnx-simplifier).
