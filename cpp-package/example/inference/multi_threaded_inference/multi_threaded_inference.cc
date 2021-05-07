@@ -32,7 +32,6 @@
 #include <chrono>
 #include <mxnet/ndarray.h>
 #include <opencv2/opencv.hpp>
-#include <mxnet/c_predict_api.h>
 #include "mxnet-cpp/MxNetCpp.h"
 #include <random>
 
@@ -151,12 +150,12 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
                    int num_threads = 1, bool static_alloc = false,
                    bool static_shape = false,
                    bool is_gpu = false) {
-  LOG(INFO) << "Running inference for " + model_name +
-               " num_threads: " + std::to_string(num_threads) +
-               " num_inf_per_thread: " + std::to_string(num_inf_per_thread) +
-               " random_sleep: " + std::to_string(random_sleep) +
-               " static_alloc: " + std::to_string(static_alloc) +
-               " static_shape: " + std::to_string(static_shape);
+    LOG(INFO) << "Running inference for " + model_name +
+                 " num_threads: " + std::to_string(num_threads) +
+                 " num_inf_per_thread: " + std::to_string(num_inf_per_thread) +
+                 " random_sleep: " + std::to_string(random_sleep) +
+                 " static_alloc: " + std::to_string(static_alloc) +
+                 " static_shape: " + std::to_string(static_shape);
   std::string json_file = model_name + "-symbol.json";
   std::string param_file = model_name + "-0000.params";
   auto out = mxnet::cpp::Symbol::Load(json_file);
@@ -257,7 +256,7 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
     int num_output = 0;
     const int *stypes;
     int ret = MXInvokeCachedOp(hdl, arr_handles[num].size(), arr_handles[num].data(),
-                               cpu::kDevMask, 0, &num_output, &(cached_op_handles[num]), &stypes);
+                               ctx.GetDeviceType(), 0, &num_output, &(cached_op_handles[num]), &stypes);
     if (ret < 0) {
       LOG(FATAL) << MXGetLastError();
     }

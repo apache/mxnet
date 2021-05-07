@@ -70,4 +70,10 @@ cd inference
 
 cp /work/build/cpp-package/example/sentiment_analysis_rnn .
 ./unit_test_sentiment_analysis_rnn.sh
-cd ..
+
+cd multi_threaded_inference
+
+cp ../../../../build/cpp-package/example/multi_threaded_inference .
+./unit_test_multi_threaded_inference.sh
+
+cd ../..

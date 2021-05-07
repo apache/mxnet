@@ -66,6 +66,9 @@ target_link_libraries(test_kvstore mxnet_cpp)
 add_executable(sentiment_analysis_rnn ./inference/sentiment_analysis_rnn.cpp)
 target_link_libraries(sentiment_analysis_rnn mxnet_cpp)
 
+add_executable(multi_threaded_inference ./inference/multi_threaded_inference/multi_threaded_inference.cc)
+target_link_libraries(multi_threaded_inference mxnet_cpp)
+
 if(MSVC)
   add_custom_target(cpp_package_deploy_library ALL
     DEPENDS mxnet
