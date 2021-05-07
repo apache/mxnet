@@ -299,11 +299,11 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 5) {
+  if (argc < 4) {
     std::cout << "Please provide a model name, is_gpu, test_image" << std::endl
               << "Usage: ./multi_threaded_inference [model_name] [is_gpu] [file_names]"
               << std::endl
-              << "Example: ./.multi_threaded_inference imagenet1k-inception-bn 1 0 apple.jpg"
+              << "Example: ./.multi_threaded_inference imagenet1k-inception-bn 0 apple.jpg"
               << std::endl
               << "NOTE: Thread number ordering will be based on the ordering of file inputs" << std::endl
               << "NOTE: Epoch is assumed to be 0" << std::endl;
