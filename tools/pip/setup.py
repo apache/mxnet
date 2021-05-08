@@ -125,7 +125,7 @@ with open('doc/PYPI_README.md') as readme_file:
 with open('doc/{0}_ADDITIONAL.md'.format(variant)) as variant_doc:
     long_description = long_description + skip_markdown_comments(variant_doc.read())
 
-short_description = 'MXNet is an ultra-scalable deep learning framework.'
+short_description = 'Apache MXNet is an ultra-scalable deep learning framework.'
 libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
