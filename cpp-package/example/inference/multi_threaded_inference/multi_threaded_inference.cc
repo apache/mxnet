@@ -30,10 +30,10 @@
 #include <thread>
 #include <iomanip>
 #include <chrono>
+#include <random>
 #include <mxnet/ndarray.h>
 #include <opencv2/opencv.hpp>
 #include "mxnet-cpp/MxNetCpp.h"
-#include <random>
 
 const float DEFAULT_MEAN = 117.0;
 
@@ -144,7 +144,8 @@ void prepare_input_data(const mxnet::cpp::Shape& shape, const mxnet::cpp::Contex
 }
 
 // Run inference on a model
-void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::NDArray>& input_arrs,
+void run_inference(const std::string& model_name,
+                   const std::vector<mxnet::cpp::NDArray>& input_arrs,
                    std::vector<mxnet::NDArray*> *output_mx_arr,
                    int num_inf_per_thread = 1, bool random_sleep = false,
                    int num_threads = 1, bool static_alloc = false,
@@ -256,7 +257,8 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
     int num_output = 0;
     const int *stypes;
     int ret = MXInvokeCachedOp(hdl, arr_handles[num].size(), arr_handles[num].data(),
-                               ctx.GetDeviceType(), 0, &num_output, &(cached_op_handles[num]), &stypes);
+                               ctx.GetDeviceType(), 0, &num_output,
+                               &(cached_op_handles[num]), &stypes);
     if (ret < 0) {
       LOG(FATAL) << MXGetLastError();
     }
@@ -293,9 +295,7 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
   if (ret2 < 0) {
     LOG(FATAL) << MXGetLastError();
   }
-
   mxnet::cpp::NDArray::WaitAll();
-
 }
 
 int main(int argc, char *argv[]) {
@@ -305,15 +305,14 @@ int main(int argc, char *argv[]) {
               << std::endl
               << "Example: ./.multi_threaded_inference imagenet1k-inception-bn 0 apple.jpg"
               << std::endl
-              << "NOTE: Thread number ordering will be based on the ordering of file inputs" << std::endl
+              << "NOTE: Thread number ordering will be based on the ordering of file inputs"
+              << std::endl
               << "NOTE: Epoch is assumed to be 0" << std::endl;
     return EXIT_FAILURE;
   }
   std::string model_name = std::string(argv[1]);
-  //int num_threads = std::atoi(argv[2]);
   bool is_gpu = std::atoi(argv[2]);
   CHECK(argc >= 4) << "Number of files provided should be atleast 1";
-  //CHECK(num_threads == argc - 3) << "Number of files provided, should be same as num_threads";
   int num_threads = argc - 3;
   std::vector<std::string> test_files;
   for (size_t i = 0; i < argc - 3; ++i) {
@@ -340,7 +339,8 @@ int main(int argc, char *argv[]) {
     files[i].resize(image_size);
     GetImageFile(test_files[i], files[i].data(), channels,
                  cv::Size(width, height));
-    input_arrs.emplace_back(mxnet::cpp::NDArray(files[i].data(), input_shape, mxnet::cpp::Context::cpu(0)));
+    input_arrs.emplace_back(mxnet::cpp::NDArray(files[i].data(),
+                            input_shape, mxnet::cpp::Context::cpu(0)));
   }
 
   // load symbol
