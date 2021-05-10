@@ -23,6 +23,8 @@
  * \brief Multi Threaded inference example with CachedOp
 */
 
+#include <mxnet/ndarray.h>
+
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -31,9 +33,8 @@
 #include <iomanip>
 #include <chrono>
 #include <random>
-#include <mxnet/ndarray.h>
-#include <opencv2/opencv.hpp>
 #include "mxnet-cpp/MxNetCpp.h"
+#include <opencv2/opencv.hpp>
 
 const float DEFAULT_MEAN = 117.0;
 
