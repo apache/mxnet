@@ -4622,7 +4622,8 @@ def convert_RNN(node, **kwargs):
                     make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
                     make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
                     # compute LSTM
-                    make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', name+'initial_h', name+'initial_c'],
+                    make_node('LSTM', [data, name+'_W', name+'_R', name+'_B',
+                                       name+'_seq_len', name+'initial_h', name+'initial_c'],
                               [name+'0_', name+'1', name+'2'], hidden_size=state_size),
                     make_node('Squeeze', [name+'0_'], [name], axes=[1]),
                 ]
@@ -4691,7 +4692,8 @@ def convert_RNN(node, **kwargs):
                     make_node('Concat', [name+'_W_fwd', name+'_W_bwd'], [name+'_W'], axis=0),
                     make_node('Concat', [name+'_R_fwd', name+'_R_bwd'], [name+'_R'], axis=0),
                     make_node('Concat', [name+'_B_fwd', name+'_B_bwd'], [name+'_B'], axis=0),
-                    make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', name+'initial_h', name+'initial_c'],
+                    make_node('LSTM', [data, name+'_W', name+'_R', name+'_B',
+                                       name+'_seq_len', name+'initial_h', name+'initial_c'],
                               [name+'0_', name+'1', name+'2'], hidden_size=state_size, direction='bidirectional'),
                     make_node('Transpose', [name+'0_'], [name+'0_t'], perm=[0, 2, 1, 3]),
                     make_node('Concat', [name+'_seq_length', name+'_batch_size', name+'_-1'],
@@ -4865,7 +4867,6 @@ def convert_RNN(node, **kwargs):
             ]
 
         elif num_layers == 1:
-            # create_tensor([state_size], name+'_state_size', kwargs['initializer'])
             create_tensor([2*state_size], name+'_2*state_size', kwargs['initializer'])
             create_tensor([state_size*state_size], name+'_state_size^2', kwargs['initializer'])
             create_tensor([1, state_size, state_size], name+'_R_shape', kwargs['initializer'])
