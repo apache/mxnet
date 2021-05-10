@@ -199,15 +199,15 @@ def create_tensor(tensor_list, tensor_name, initializer, dtype='int64'):
     dims = np.shape(tensor_np)
     if dtype == np.float16:
         tensor_np = tensor_np.view(dtype=np.uint16)
-    initializer.append(
-        onnx.helper.make_tensor(
-            name=tensor_name,
-            data_type=data_type,
-            dims=dims,
-            vals=tensor_np.flatten().tolist(),
-            raw=False
-        )
+    tensor = onnx.helper.make_tensor(
+        name=tensor_name,
+        data_type=data_type,
+        dims=dims,
+        vals=tensor_np.flatten().tolist(),
+        raw=False
     )
+    initializer.append(tensor)
+    return tensor
 
 @mx_op.register("null")
 def convert_weights_and_inputs(node, **kwargs):
@@ -4467,8 +4467,8 @@ def convert_RNN(node, **kwargs):
     from onnx import TensorProto
 
     name, input_nodes, attrs = get_inputs(node, kwargs)
-    mode = str(attrs.get('mode'))
 
+    mode = str(attrs.get('mode'))
     bidirectional = str(attrs.get('bidirectional', 'False'))
     if bidirectional != 'False' and mode not in ['lstm']:
         raise NotImplementedError('Currently RNN onnx export only supports bidirectional is False')
@@ -4488,18 +4488,38 @@ def convert_RNN(node, **kwargs):
         raise NotImplementedError('Currently RNN onnx export only supports state_outputs equals to True')
 
     state_size = int(attrs.get('state_size'))
+
+    direction = 1
+    if bidirectional != 'False':
+        direction = 2
+
     data = input_nodes[0]
     param = input_nodes[1]
-    initial_h = input_nodes[2]
+    dtype = get_input_dtypes(node, kwargs)[2]
 
-    nodes = []
     create_tensor([0], name+'_0', kwargs['initializer'])
+    create_tensor([1], name+'_1', kwargs['initializer'])
+    create_tensor([state_size], name+'_state_size', kwargs['initializer'])
+    create_tensor([direction], name+'_direction', kwargs['initializer'])
+    tensor_1 = create_tensor([1], name+'_1_f', kwargs['initializer'], dtype)
+
+    nodes = [
+        make_node('Shape', [data], [name+'_data_shape']),
+        make_node('Split', [name+'_data_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size']),
+        make_node('Concat', [name+'_direction', name+'_batch_size', name+'_state_size'], [name+'_concat'], axis=0),
+        make_node('ConstantOfShape', [name+'_concat'], [name+'_COS'], value=tensor_1),
+        make_node('Mul', [input_nodes[2], name+'_COS'], [name+'initial_h']),
+
+    ]
 
     if mode == 'lstm':
-        initial_c = input_nodes[3]
+        nodes += [
+            make_node('Mul', [input_nodes[3], name+'_COS'], [name+'initial_c']),
+        ]
+
         if num_layers == 2:
             if bidirectional != 'False':
-                raise NotImplementedError('Currently RNN onnx export only supports bidirectional is False')
+                raise NotImplementedError('Currently lstm onnx export only supports bidirectional when num_layers = 1')
             create_tensor([8*state_size], name+'_8*state_size', kwargs['initializer'])
             create_tensor([4*state_size*state_size], name+'_4*state_size^2', kwargs['initializer'])
             create_tensor([1, 4*state_size, state_size], name+'_WR_shape', kwargs['initializer'])
@@ -4507,9 +4527,6 @@ def convert_RNN(node, **kwargs):
             create_tensor([4*4*state_size*state_size], name+'_WR_offset', kwargs['initializer'])
 
             nodes += [
-                make_node('Shape', [data], [name+'_data_shape']),
-                make_node('Split', [name+'_data_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size']),
-
                 # Layer 0
                 # get W
                 make_node('Slice', [param, name+'_0', name+'_4*state_size^2'], [name+'_W0_1d']),
@@ -4531,8 +4548,8 @@ def convert_RNN(node, **kwargs):
                                      name+'_B04', name+'_B07', name+'_B05', name+'_B06'], [name+'_B0_'], axis=0),
                 make_node('Reshape', [name+'_B0_', name+'_B_shape'], [name+'_B0']),
                 # get initial states
-                make_node('Split', [initial_h], [name+'_initial_h0', name+'_initial_h1'], axis=0),
-                make_node('Split', [initial_c], [name+'_initial_c0', name+'_initial_c1'], axis=0),
+                make_node('Split', [name+'initial_h'], [name+'_initial_h0', name+'_initial_h1'], axis=0),
+                make_node('Split', [name+'initial_c'], [name+'_initial_c0', name+'_initial_c1'], axis=0),
                 # get seq_len
                 make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
                 make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
@@ -4572,7 +4589,6 @@ def convert_RNN(node, **kwargs):
             ]
         elif num_layers == 1:
             if bidirectional == 'False':
-                create_tensor([1], name+'_1', kwargs['initializer'])
                 create_tensor([4*state_size], name+'_4*state_size', kwargs['initializer'])
                 create_tensor([8*state_size], name+'_8*state_size', kwargs['initializer'])
                 create_tensor([4*state_size*state_size], name+'_4*state_size^2', kwargs['initializer'])
@@ -4580,9 +4596,6 @@ def convert_RNN(node, **kwargs):
                 create_tensor([1, 8*state_size], name+'_B_shape', kwargs['initializer'])
 
                 nodes += [
-                    make_node('Shape', [data], [name+'_data_shape']),
-                    make_node('Split', [name+'_data_shape'],
-                              [name+'_seq_length', name+'_batch_size', name+'_input_size']),
                     # get W
                     make_node('Mul', [name+'_4*state_size', name+'_input_size'], [name+'_mul0']),
                     make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_1d']),
@@ -4609,12 +4622,11 @@ def convert_RNN(node, **kwargs):
                     make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
                     make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
                     # compute LSTM
-                    make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c],
+                    make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', name+'initial_h', name+'initial_c'],
                               [name+'0_', name+'1', name+'2'], hidden_size=state_size),
                     make_node('Squeeze', [name+'0_'], [name], axes=[1]),
                 ]
             else:
-                create_tensor([1], name+'_1', kwargs['initializer'])
                 create_tensor([-1], name+'_-1', kwargs['initializer'])
                 create_tensor([4*state_size], name+'_4*state_size', kwargs['initializer'])
                 create_tensor([8*state_size], name+'_8*state_size', kwargs['initializer'])
@@ -4623,9 +4635,6 @@ def convert_RNN(node, **kwargs):
                 create_tensor([1, 8*state_size], name+'_B_shape', kwargs['initializer'])
 
                 nodes += [
-                    make_node('Shape', [data], [name+'_data_shape']),
-                    make_node('Split', [name+'_data_shape'],
-                              [name+'_seq_length', name+'_batch_size', name+'_input_size']),
                     # get W_fwd
                     make_node('Mul', [name+'_4*state_size', name+'_input_size'], [name+'_mul0']),
                     make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_1d']),
@@ -4682,7 +4691,7 @@ def convert_RNN(node, **kwargs):
                     make_node('Concat', [name+'_W_fwd', name+'_W_bwd'], [name+'_W'], axis=0),
                     make_node('Concat', [name+'_R_fwd', name+'_R_bwd'], [name+'_R'], axis=0),
                     make_node('Concat', [name+'_B_fwd', name+'_B_bwd'], [name+'_B'], axis=0),
-                    make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h, initial_c],
+                    make_node('LSTM', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', name+'initial_h', name+'initial_c'],
                               [name+'0_', name+'1', name+'2'], hidden_size=state_size, direction='bidirectional'),
                     make_node('Transpose', [name+'0_'], [name+'0_t'], perm=[0, 2, 1, 3]),
                     make_node('Concat', [name+'_seq_length', name+'_batch_size', name+'_-1'],
@@ -4701,9 +4710,6 @@ def convert_RNN(node, **kwargs):
             create_tensor([4*3*state_size*state_size], name+'_WR_offset', kwargs['initializer'])
 
             nodes += [
-                make_node('Shape', [data], [name+'_data_shape']),
-                make_node('Split', [name+'_data_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size']),
-
                 # Layer 0
                 # get W
                 make_node('Slice', [param, name+'_0', name+'_3*state_size^2'], [name+'_W0_1d']),
@@ -4725,7 +4731,7 @@ def convert_RNN(node, **kwargs):
                                      name+'_B04', name+'_B03', name+'_B05'], [name+'_B0_'], axis=0),
                 make_node('Reshape', [name+'_B0_', name+'_B_shape'], [name+'_B0']),
                 # get initial states
-                make_node('Split', [initial_h], [name+'_initial_h0', name+'_initial_h1'], axis=0),
+                make_node('Split', [name+'initial_h'], [name+'_initial_h0', name+'_initial_h1'], axis=0),
                 # get seq_len
                 make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
                 make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
@@ -4764,8 +4770,6 @@ def convert_RNN(node, **kwargs):
             ]
 
         elif num_layers == 1:
-
-            create_tensor([1], name+'_1', kwargs['initializer'])
             create_tensor([3*state_size], name+'_3*state_size', kwargs['initializer'])
             create_tensor([6*state_size], name+'_6*state_size', kwargs['initializer'])
             create_tensor([3*state_size*state_size], name+'_3*state_size^2', kwargs['initializer'])
@@ -4773,8 +4777,6 @@ def convert_RNN(node, **kwargs):
             create_tensor([1, 6*state_size], name+'_B_shape', kwargs['initializer'])
 
             nodes += [
-                make_node('Shape', [data], [name+'_data_shape']),
-                make_node('Split', [name+'_data_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size']),
                 # get W
                 make_node('Mul', [name+'_3*state_size', name+'_input_size'], [name+'_mul0']),
                 make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_1d']),
@@ -4799,8 +4801,8 @@ def convert_RNN(node, **kwargs):
                 # get seq_len
                 make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
                 make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
-                # compute LSTM
-                make_node('GRU', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h],
+                # compute GRU
+                make_node('GRU', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', name+'initial_h'],
                           [name+'0_', name+'1'], hidden_size=state_size, linear_before_reset=1),
                 make_node('Squeeze', [name+'0_'], [name], axes=[1]),
             ]
@@ -4812,7 +4814,6 @@ def convert_RNN(node, **kwargs):
         if mode == 'rnn_relu':
             activations = ['Relu']
         if num_layers == 2:
-
             create_tensor([2*state_size], name+'_2*state_size', kwargs['initializer'])
             create_tensor([state_size*state_size], name+'_state_size^2', kwargs['initializer'])
             create_tensor([1, state_size, state_size], name+'_WR_shape', kwargs['initializer'])
@@ -4820,9 +4821,6 @@ def convert_RNN(node, **kwargs):
             create_tensor([4*state_size*state_size], name+'_WR_offset', kwargs['initializer'])
 
             nodes += [
-                make_node('Shape', [data], [name+'_data_shape']),
-                make_node('Split', [name+'_data_shape'], [name+'_seq_length', name+'_batch_size', name+'_input_size']),
-
                 # Layer 0
                 # get W
                 make_node('Slice', [param, name+'_0', name+'_state_size^2'], [name+'_W0_1d']),
@@ -4836,13 +4834,14 @@ def convert_RNN(node, **kwargs):
                 make_node('Slice', [param, name+'_WR_offset', name+'_B0_offset'], [name+'_B0_1d']),
                 make_node('Reshape', [name+'_B0_1d', name+'_B_shape'], [name+'_B0']),
                 # get initial states
-                make_node('Split', [initial_h], [name+'_initial_h0', name+'_initial_h1'], axis=0),
+                make_node('Split', [name+'initial_h'], [name+'_initial_h0', name+'_initial_h1'], axis=0),
                 # get seq_len
                 make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
                 make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
                 # Layer 0 RNN
-                make_node('RNN', [data, name+'_W0', name+'_R0', name+'_B0', name+'_seq_len', name+'_initial_h0'],
-                          [name+'_rnn0_out_', name+'_rnn0_h'], hidden_size=state_size, activations=activations),
+                make_node('RNN', [data, name+'_W0', name+'_R0', name+'_B0', name+'_seq_len',
+                                  name+'_initial_h0'], [name+'_rnn0_out_', name+'_rnn0_h'],
+                          hidden_size=state_size, activations=activations),
                 make_node('Squeeze', [name+'_rnn0_out_'], [name+'_rnn0_out'], axes=[1]),
 
                 # Layer 1
@@ -4866,18 +4865,13 @@ def convert_RNN(node, **kwargs):
             ]
 
         elif num_layers == 1:
-
-            create_tensor([1], name+'_1', kwargs['initializer'])
-            create_tensor([state_size], name+'_state_size', kwargs['initializer'])
+            # create_tensor([state_size], name+'_state_size', kwargs['initializer'])
             create_tensor([2*state_size], name+'_2*state_size', kwargs['initializer'])
             create_tensor([state_size*state_size], name+'_state_size^2', kwargs['initializer'])
             create_tensor([1, state_size, state_size], name+'_R_shape', kwargs['initializer'])
             create_tensor([1, 2*state_size], name+'_B_shape', kwargs['initializer'])
 
             nodes += [
-                make_node('Shape', [data], [name+'_data_shape']),
-                make_node('Split', [name+'_data_shape'],
-                          [name+'_seq_length', name+'_batch_size', name+'_input_size'], name='split0'),
                 # get W
                 make_node('Mul', [name+'_state_size', name+'_input_size'], [name+'_mul0']),
                 make_node('Slice', [param, name+'_0', name+'_mul0'], [name+'_W_1d']),
@@ -4895,7 +4889,7 @@ def convert_RNN(node, **kwargs):
                 make_node('Tile', [name+'_seq_length', name+'_batch_size'], [name+'_seq_len_']),
                 make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
                 # compute RNN
-                make_node('RNN', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', initial_h],
+                make_node('RNN', [data, name+'_W', name+'_R', name+'_B', name+'_seq_len', name+'initial_h'],
                           [name+'0_', name+'1'], hidden_size=state_size, activations=activations),
                 make_node('Squeeze', [name+'0_'], [name], axes=[1]),
             ]
