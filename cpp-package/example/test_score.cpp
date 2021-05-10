@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
   auto net = mlp(layers);
 
   Context ctx = Context::gpu();  // Use GPU for training
-#if MXNET_USE_CPU
+#if !MXNET_USE_CUDA
   ctx = Context::cpu();
 #endif
 

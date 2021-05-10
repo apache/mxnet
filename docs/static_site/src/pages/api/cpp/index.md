@@ -40,9 +40,9 @@ The cpp-package directory contains the implementation of C++ API. As mentioned a
 	git clone --recursive https://github.com/apache/incubator-mxnet mxnet
 	```
 
-3.  Install the [prerequisites](<https://mxnet.apache.org/get_started/build_from_source#prerequisites>), desired [BLAS libraries](<https://mxnet.apache.org/get_started/build_from_source#blas-library>) and optional [OpenCV, CUDA, and cuDNN](<https://mxnet.apache.org/get_started/build_from_source#optional>) for building MXNet from source.
+3.  Install the [recommended dependencies](https://mxnet.apache.org/versions/master/get_started/build_from_source.html#installing-mxnet's-recommended-dependencies) and [optional dependencies](https://mxnet.apache.org/versions/master/get_started/build_from_source.html#overview-of-optional-dependencies-and-optional-features) for building MXNet from source.
 4.  There is a configuration file for cmake, [config/*.cmake](<https://github.com/apache/incubator-mxnet/tree/master/config>) that contains all the compilation options. You can edit this file and set the appropriate options prior to running the **cmake** command.
-5.  Please refer to  [platform specific build instructions](<https://mxnet.apache.org/get_started/build_from_source#build-instructions-by-operating-system>) and available [build configurations](https://mxnet.apache.org/get_started/build_from_source#build-configurations) for more details.
+5.  Please refer to  [cmake configuration files](https://github.com/apache/incubator-mxnet/blob/970a2cfbe77d09ee610fdd70afca1a93247cf4fb/config/linux_gpu.cmake#L18-L37) for more details on how to configure and compile MXNet.
 6.  For enabling the build of C++ Package, set the **-DUSE\_CPP\_PACKAGE = 1** in cmake options.
 
 ### Cross-Compilation steps:

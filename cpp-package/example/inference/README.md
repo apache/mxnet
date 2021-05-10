@@ -19,12 +19,7 @@
 
 ## Building C++ Inference examples
 
-The examples in this folder demonstrate the **inference** workflow. Please build the MXNet C++ Package as explained in the [README](<https://github.com/apache/incubator-mxnet/tree/master/cpp-package#building-c-package>) File before building these examples.
-To build examples use following commands:
-
--  Release: **make all**
--  Debug: **make debug all**
-
+The examples in this folder demonstrate the **inference** workflow. Please build the MXNet C++ Package as explained in the [README](<https://github.com/apache/incubator-mxnet/tree/master/cpp-package#building-c-package>) File. You can get the executable files by just copying them from ```incubator-mxnet/build/cpp-package/example```
 
 ## Examples demonstrating inference workflow
 

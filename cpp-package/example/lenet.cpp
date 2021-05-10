@@ -33,7 +33,7 @@ class Lenet {
  public:
   Lenet()
       : ctx_cpu(Context(DeviceType::kCPU, 0)),
-#if MXNET_USE_CPU
+#if !MXNET_USE_CUDA
         ctx_dev(Context(DeviceType::kCPU, 0))
 #else
         ctx_dev(Context(DeviceType::kGPU, 0))

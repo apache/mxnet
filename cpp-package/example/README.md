@@ -20,26 +20,14 @@
 ## Building C++ examples
 
 The examples in this folder demonstrate the **training** workflow. The **inference workflow** related examples can be found in [inference](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference>) folder.
-Please build the MXNet C++ Package as explained in the [README](<https://github.com/apache/incubator-mxnet/tree/master/cpp-package#building-c-package>) File before building these examples manually.
-The examples in this folder are built while building the MXNet library and cpp-package from source. However, they can be built manually as follows
-
-From cpp-package/examples directory
-
--  Build all examples in release mode: **make all**
--  Build all examples in debug mode: **make debug**
-
-By default, the examples are built to be run on GPU. To build examples to run on CPU:
-
--  Release: **make all MXNET\_USE\_CPU=1**
--  Debug: **make debug MXNET\_USE\_CPU=1**
+Please build the MXNet C++ Package as explained in the [README](<https://github.com/apache/incubator-mxnet/tree/master/cpp-package#building-c-package>) File.
+The examples in this folder are built while building the MXNet library and cpp-package from source. You can get the executable files by just copying them from ```incubator-mxnet/build/cpp-package/example```
 
 The examples that are built to be run on GPU may not work on the non-GPU machines.
-The makefile will also download the necessary data files and store in a data folder. (The download will take couple of minutes, but will be done only once on a fresh installation.)
-
 
 ## Examples demonstrating training workflow
 
-This directory contains following examples. In order to run the examples, ensure that the path to the MXNet shared library is added to the OS specific environment variable viz. **LD\_LIBRARY\_PATH** for Linux, Mac and Ubuntu OS and **PATH** for Windows OS. For example `export LD_LIBRARY_PATH=/usr/local/cuda/lib64:/home/ubuntu/incubator-mxnet/lib` on ubuntu using gpu.
+This directory contains following examples. In order to run the examples, ensure that the path to the MXNet shared library is added to the OS specific environment variable viz. **LD\_LIBRARY\_PATH** for Linux, Mac and Ubuntu OS and **PATH** for Windows OS. For example `export LD_LIBRARY_PATH=/usr/local/cuda/lib64:/home/ubuntu/incubator-mxnet/build` on ubuntu using gpu.
 
 ### [alexnet.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/alexnet.cpp>)
 
