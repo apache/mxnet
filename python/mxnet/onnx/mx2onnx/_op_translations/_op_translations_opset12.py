@@ -3332,6 +3332,8 @@ def convert_contrib_BilinearResize2D(node, **kwargs):
                                    not supported')
 
     create_tensor([], name+'_roi', kwargs['initializer'], dtype='float32')
+    create_tensor([], name+'_scales_empty', kwargs['initializer'],
+                  dtype='float32'),
 
     nodes = []
     if scale_height == 0:
@@ -3341,21 +3343,21 @@ def convert_contrib_BilinearResize2D(node, **kwargs):
         nodes += [
             make_node('Shape', [input_nodes[0]], [name+'_shape']),
             make_node('Slice', [name+'_shape', name+'_0', name+'_2'], [name+'_shape_01']),
-            make_node('Concat', [name+'_shape_01', name+'_h_w'], [name+'_new_shape'], axis=0),
-            make_node('Cast', [name+'_shape'], [name+'_shape_f'], to=int(TensorProto.FLOAT)),
-            make_node('Cast', [name+'_new_shape'], [name+'_new_shape_f'],
-                      to=int(TensorProto.FLOAT)),
-            make_node('Div', [name+'_new_shape_f', name+'_shape_f'], [name+'_scales']),
-            make_node('Resize', [input_nodes[0], name+'_roi', name+'_scales'], [name],
-                      mode='linear', coordinate_transformation_mode='align_corners', name=name)
+            make_node('Concat', [name+'_shape_01', name+'_h_w'], [name+'_sizes'], axis=0),
         ]
     else:
         create_tensor([1, 1, scale_height, scale_width], name+'_scales', kwargs['initializer'],
                       dtype='float32')
         nodes += [
-            make_node('Resize', [input_nodes[0], name+'_roi', name+'_scales'], [name],
-                      mode='linear', coordinate_transformation_mode='align_corners', name=name)
+            make_node('Shape', [input_nodes[0]], [name+'_shape']),
+            make_node('Cast', [name+'_shape'], [name+'_shape_f'], to=int(TensorProto.FLOAT)),
+            make_node('Mul', [name+'_shape_f', name+'_scales'], [name+'_sizes_']),
+            make_node('Cast', [name+'_sizes_'], [name+'_sizes'], to=int(TensorProto.INT64)),
         ]
+    nodes += [
+        make_node('Resize', [input_nodes[0], name+'_roi', name+'_scales_empty', name+'_sizes'], [name],
+                  mode='linear', coordinate_transformation_mode='align_corners', name=name)
+    ]
 
     return nodes
 
@@ -3858,7 +3860,7 @@ def convert_contrib_box_decode(node, **kwargs):
 
 @mx_op.register("_contrib_AdaptiveAvgPooling2D")
 def convert_contrib_AdaptiveAvgPooling2D(node, **kwargs):
-    """Map MXNet's _contrib_BilinearResize2D operator attributes to onnx's operator.
+    """Map MXNet's _contrib_AdaptiveAvgPooling2D operator
     """
     from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
