@@ -706,11 +706,11 @@ def convert_reverse(node, **kwargs):
 
     axis = int(attrs.get('axis', 0))
 
-    # Transpose takes perm as a parameter, so we must 'pad' the input to a known dim (10 here)
-    perm = [i for i in range(10)]
+    # Transpose takes perm as a parameter, so we must 'pad' the input to a known dim (8 here)
+    perm = [i for i in range(8)]
     perm[0], perm[axis] = axis, 0
 
-    create_tensor([10], name+'_10', kwargs['initializer'])
+    create_tensor([8], name+'_8', kwargs['initializer'])
     create_tensor([0], name+'_0', kwargs['initializer'])
     create_tensor([1], name+'_1', kwargs['initializer'])
     create_tensor([-1], name+'_m1', kwargs['initializer'])
@@ -721,11 +721,11 @@ def convert_reverse(node, **kwargs):
     nodes = [
         make_node('Shape', [input_nodes[0]], [name+'_shape']),
         make_node('Shape', [name+'_shape'], [name+'_dim']),
-        make_node('Sub', [name+'_10', name+'_dim'], [name+'_sub']),
+        make_node('Sub', [name+'_8', name+'_dim'], [name+'_sub']),
         make_node('Concat', [name+'_0', name+'_sub'], [name+'_concat'], axis=0),
-        make_node('Pad', [name+'_shape', name+'_concat', name+'_1'], [name+'_shape_10_dim']),
-        make_node('Reshape', [input_nodes[0], name+'_shape_10_dim'], [name+'_data_10_dim']),
-        make_node('Transpose', [name+'_data_10_dim'], [name+'_data_t'], perm=perm),
+        make_node('Pad', [name+'_shape', name+'_concat', name+'_1'], [name+'_shape_8_dim']),
+        make_node('Reshape', [input_nodes[0], name+'_shape_8_dim'], [name+'_data_8_dim']),
+        make_node('Transpose', [name+'_data_8_dim'], [name+'_data_t'], perm=perm),
         make_node('Slice', [name+'_shape', name+'_axis', name+'_axis_p1'], [name+'_axis_len']),
         make_node('Sub', [name+'_axis_len', name+'_1'], [name+'_axis_len_m1']),
         make_node('Squeeze', [name+'_axis_len_m1', name+'_0'], [name+'_axis_len_m1_s']),
