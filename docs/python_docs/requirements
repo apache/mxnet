@@ -18,7 +18,7 @@
 jupyter
 sphinx==2.4.0
 matplotlib
-notebook
+notebook==6.2.0
 nbconvert==5.6.1
 nbsphinx==0.4.3
 recommonmark==0.6.0
