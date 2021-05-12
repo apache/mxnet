@@ -352,7 +352,7 @@ class MXNetGraph(object):
                 )
             if isinstance(converted, list):
                 # Collect all the node's output names
-                node_possible_names = [name] + [name + str(i) for i in range(10)]
+                node_possible_names = [name] + [name + str(i) for i in range(100)]
                 node_output_names = []
                 # Collect all the graph's output names
                 graph_output_names = []
