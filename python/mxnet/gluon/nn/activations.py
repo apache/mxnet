@@ -20,10 +20,10 @@
 """Basic neural network layers."""
 __all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish', 'GELU', 'SiLU']
 
-from ... import initializer
+from ... import initializer, np, npx
 from ..block import HybridBlock
 from ..parameter import Parameter
-from ...util import is_np_array
+from ...util import is_np_array, use_np
 
 
 class Activation(HybridBlock):
@@ -49,9 +49,9 @@ class Activation(HybridBlock):
     def _alias(self):
         return self._act_type
 
-    def hybrid_forward(self, F, x):
-        act = F.npx.activation if is_np_array() else F.Activation
-        return act(x, act_type=self._act_type, name='fwd')
+    @use_np
+    def forward(self, x):
+        return npx.activation(x, act_type=self._act_type, name='fwd')
 
     def __repr__(self):
         s = '{name}({_act_type})'
@@ -90,9 +90,9 @@ class LeakyReLU(HybridBlock):
         super(LeakyReLU, self).__init__(**kwargs)
         self._alpha = alpha
 
-    def hybrid_forward(self, F, x):
-        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
-        return leaky_relu(x, act_type='leaky', slope=self._alpha, name='fwd')
+    @use_np
+    def forward(self, x):
+        return npx.leaky_relu(x, act_type='leaky', slope=self._alpha, name='fwd')
 
     def __repr__(self):
         s = '{name}({alpha})'
@@ -137,9 +137,13 @@ class PReLU(HybridBlock):
         super(PReLU, self).__init__(**kwargs)
         self.alpha = Parameter('alpha', shape=(in_channels,), init=alpha_initializer)
 
-    def hybrid_forward(self, F, x, alpha):
-        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
-        return leaky_relu(x, gamma=alpha, act_type='prelu', name='fwd')
+    @use_np
+    def forward(self, x):
+        ctx = x.context
+        return npx.leaky_relu(x, gamma=self.alpha.data(ctx), act_type='prelu', name='fwd')
+
+    def infer_shape(self, x, *args):
+        self.alpha.shape = (x.shape[1],)
 
 
 class ELU(HybridBlock):
@@ -166,9 +170,9 @@ class ELU(HybridBlock):
         super(ELU, self).__init__(**kwargs)
         self._alpha = alpha
 
-    def hybrid_forward(self, F, x):
-        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
-        return leaky_relu(x, act_type='elu', slope=self._alpha)
+    @use_np
+    def forward(self, x):
+        return npx.leaky_relu(x, act_type='elu', slope=self._alpha)
 
 
 class SELU(HybridBlock):
@@ -187,9 +191,9 @@ class SELU(HybridBlock):
     def __init__(self, **kwargs):
         super(SELU, self).__init__(**kwargs)
 
-    def hybrid_forward(self, F, x):
-        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
-        return leaky_relu(x, act_type='selu', name='fwd')
+    @use_np
+    def forward(self, x):
+        return npx.leaky_relu(x, act_type='selu', name='fwd')
 
 
 class GELU(HybridBlock):
@@ -208,9 +212,9 @@ class GELU(HybridBlock):
     def __init__(self, **kwargs):
         super(GELU, self).__init__(**kwargs)
 
-    def hybrid_forward(self, F, x):
-        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
-        return leaky_relu(x, act_type='gelu', name='fwd')
+    @use_np
+    def forward(self, x):
+        return npx.leaky_relu(x, act_type='gelu', name='fwd')
 
 
 class Swish(HybridBlock):
@@ -235,11 +239,9 @@ class Swish(HybridBlock):
         super(Swish, self).__init__(**kwargs)
         self._beta = beta
 
-    def hybrid_forward(self, F, x):
-        if is_np_array():
-            return x * F.npx.sigmoid(self._beta * x)
-        else:
-            return x * F.sigmoid(self._beta * x, name='fwd')
+    @use_np
+    def forward(self, x):
+        return x * npx.sigmoid(self._beta * x)
 
 
 class SiLU(HybridBlock):
@@ -264,8 +266,6 @@ class SiLU(HybridBlock):
     def __init__(self, **kwargs):
         super(SiLU, self).__init__(**kwargs)
 
-    def hybrid_forward(self, F, x):
-        if is_np_array():
-            return x * F.npx.sigmoid(x)
-        else:
-            return x * F.sigmoid(x, name='fwd')
+    @use_np
+    def forward(self, x):
+        return x * npx.sigmoid(x)

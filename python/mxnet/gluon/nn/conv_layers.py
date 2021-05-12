@@ -29,10 +29,10 @@ __all__ = ['Conv1D', 'Conv2D', 'Conv3D',
 
 from ..block import HybridBlock
 from ..parameter import Parameter
-from ... import symbol
+from ... import symbol, np, npx
 from ...base import numeric_types
 from .activations import Activation
-from ...util import is_np_array, np_array
+from ...util import is_np_array, np_array, use_np
 
 
 def _infer_weight_shape(op_name, data_shape, kwargs):
@@ -139,13 +139,14 @@ class _Conv(HybridBlock):
         else:
             self.act = None
 
-    def hybrid_forward(self, F, x, weight, bias=None):
-        if is_np_array():
-            F = F.npx
-        if bias is None:
-            act = getattr(F, self._op_name)(x, weight, name='fwd', **self._kwargs)
+    @use_np
+    def forward(self, x):
+        ctx = x.context
+        if self.bias is None:
+            act = getattr(npx, self._op_name)(x, self.weight.data(ctx), name='fwd', **self._kwargs)
         else:
-            act = getattr(F, self._op_name)(x, weight, bias, name='fwd', **self._kwargs)
+            act = getattr(npx, self._op_name)(x, self.weight.data(ctx), self.bias.data(ctx),
+                                              name='fwd', **self._kwargs)
         if self.act is not None:
             act = self.act(act)
         return act
@@ -730,9 +731,9 @@ class _Pooling(HybridBlock):
     def _alias(self):
         return 'pool'
 
-    def hybrid_forward(self, F, x):
-        pooling = F.npx.pooling if is_np_array() else F.Pooling
-        return pooling(x, name='fwd', **self._kwargs)
+    @use_np
+    def forward(self, x):
+        return npx.pooling(x, name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{name}(size={kernel}, stride={stride}, padding={pad}, ceil_mode={ceil_mode}'
@@ -1239,8 +1240,9 @@ class ReflectionPad2D(HybridBlock):
         assert(len(padding) == 8)
         self._padding = padding
 
-    def hybrid_forward(self, F, x):
-        return F.pad(x, mode='reflect', pad_width=self._padding)
+    @use_np
+    def forward(self, x):
+        return npx.pad(x, mode='reflect', pad_width=self._padding)
 
 
 class DeformableConvolution(HybridBlock):
@@ -1392,32 +1394,28 @@ class DeformableConvolution(HybridBlock):
         else:
             self.act = None
 
-    def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
-        if not is_np_array():
-            x = x.as_np_ndarray()
-            offset_weight = offset_weight.as_np_ndarray()
-            deformable_conv_weight = deformable_conv_weight.as_np_ndarray()
-            if offset_bias is not None:
-                offset_bias = offset_bias.as_np_ndarray()
-            if deformable_conv_bias is not None:
-                deformable_conv_bias = deformable_conv_bias.as_np_ndarray()
-        if offset_bias is None:
-            offset = F.npx.convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
+    @use_np
+    def forward(self, x):
+        ctx = x.context
+        if self.offset_bias is None:
+            offset = npx.convolution(x, self.offset_weight.data(ctx), cudnn_off=True, **self._kwargs_offset)
         else:
-            offset = F.npx.convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
+            offset = npx.convolution(x, self.offset_weight.data(ctx), self.offset_bias.data(ctx),
+                                     cudnn_off=True, **self._kwargs_offset)
 
-        if deformable_conv_bias is None:
-            act = F.npx.deformable_convolution(data=x, offset=offset, weight=deformable_conv_weight,
-                                               name='fwd', **self._kwargs_deformable_conv)
+        if self.deformable_conv_bias is None:
+            act = npx.deformable_convolution(data=x, offset=offset,
+                                             weight=self.deformable_conv_weight.data(ctx),
+                                             name='fwd', **self._kwargs_deformable_conv)
         else:
-            act = F.npx.deformable_convolution(data=x, offset=offset, weight=deformable_conv_weight,
-                                               bias=deformable_conv_bias, name='fwd',
-                                               **self._kwargs_deformable_conv)
+            act = npx.deformable_convolution(data=x, offset=offset,
+                                             weight=self.deformable_conv_weight.data(ctx),
+                                             bias=self.deformable_conv_bias.data(ctx), name='fwd',
+                                             **self._kwargs_deformable_conv)
 
         if self.act:
-            with np_array(True):
-                act = self.act(act)
-        return act if is_np_array() else act.as_nd_ndarray()
+            act = self.act(act)
+        return act
 
     def _alias(self):
         return 'deformable_conv'
@@ -1594,38 +1592,33 @@ class ModulatedDeformableConvolution(HybridBlock):
         else:
             self.act = None
 
-    def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
-        if not is_np_array():
-            x = x.as_np_ndarray()
-            offset_weight = offset_weight.as_np_ndarray()
-            deformable_conv_weight = deformable_conv_weight.as_np_ndarray()
-            if offset_bias is not None:
-                offset_bias = offset_bias.as_np_ndarray()
-            if deformable_conv_bias is not None:
-                deformable_conv_bias = deformable_conv_bias.as_np_ndarray()
-        if offset_bias is None:
-            offset = F.npx.convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
+    @use_np
+    def forward(self, x):
+        ctx = x.context
+        if self.offset_bias is None:
+            offset = npx.convolution(x, self.offset_weight.data(ctx),
+                                     cudnn_off=True, **self._kwargs_offset)
         else:
-            offset = F.npx.convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
+            offset = npx.convolution(x, self.offset_weight.data(ctx),
+                                     self.offset_bias.data(ctx), cudnn_off=True, **self._kwargs_offset)
 
-        offset_t = F.npx.slice_axis(offset, axis=1, begin=0, end=self.offset_split_index)
-        mask = F.npx.slice_axis(offset, axis=1, begin=self.offset_split_index, end=None)
-        mask = F.npx.sigmoid(mask) * 2
+        offset_t = npx.slice_axis(offset, axis=1, begin=0, end=self.offset_split_index)
+        mask = npx.slice_axis(offset, axis=1, begin=self.offset_split_index, end=None)
+        mask = npx.sigmoid(mask) * 2
 
-        if deformable_conv_bias is None:
-            act = F.npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
-                                                         weight=deformable_conv_weight,
-                                                         name='fwd', **self._kwargs_deformable_conv)
+        if self.deformable_conv_bias is None:
+            act = npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
+                                                       weight=self.deformable_conv_weight.data(ctx),
+                                                       name='fwd', **self._kwargs_deformable_conv)
         else:
-            act = F.npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
-                                                         weight=deformable_conv_weight,
-                                                         bias=deformable_conv_bias, name='fwd',
-                                                         **self._kwargs_deformable_conv)
+            act = npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
+                                                       weight=self.deformable_conv_weight.data(ctx),
+                                                       bias=self.deformable_conv_bias.data(ctx), name='fwd',
+                                                       **self._kwargs_deformable_conv)
 
         if self.act:
-            with np_array(True):
-                act = self.act(act)
-        return act if is_np_array() else act.as_nd_ndarray()
+            act = self.act(act)
+        return act
 
     def _alias(self):
         return 'modulated_deformable_conv'
@@ -1666,16 +1659,14 @@ class PixelShuffle1D(HybridBlock):
         super(PixelShuffle1D, self).__init__()
         self._factor = int(factor)
 
-    def hybrid_forward(self, F, x):
+    @use_np
+    def forward(self, x):
         """Perform pixel-shuffling on the input."""
-        f = self._factor
-        if not is_np_array():
-            x = x.as_np_ndarray()
-                                             # (N, C*f, W)
-        x = F.npx.reshape(x, (-2, -6, -1, f, -2))  # (N, C, f, W)
-        x = F.np.transpose(x, (0, 1, 3, 2))     # (N, C, W, f)
-        x = F.npx.reshape(x, (-2, -2, -5))         # (N, C, W*f)
-        return x if is_np_array() else x.as_nd_ndarray()
+        f = self._factor                                             # (N, C*f, W)
+        x = npx.reshape(x, (-2, -6, -1, f, -2))  # (N, C, f, W)
+        x = np.transpose(x, (0, 1, 3, 2))     # (N, C, W, f)
+        x = npx.reshape(x, (-2, -2, -5))         # (N, C, W*f)
+        return x
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self._factor)
@@ -1729,17 +1720,16 @@ class PixelShuffle2D(HybridBlock):
             self._factors = tuple(int(fac) for fac in factor)
             assert len(self._factors) == 2, "wrong length {}".format(len(self._factors))
 
-    def hybrid_forward(self, F, x):
+    @use_np
+    def forward(self, x):
         """Perform pixel-shuffling on the input."""
         f1, f2 = self._factors
-        if not is_np_array():
-            x = x.as_np_ndarray()
                                                       # (N, f1*f2*C, H, W)
-        x = F.npx.reshape(x, (-2, -6, -1, f1 * f2, -2, -2))  # (N, C, f1*f2, H, W)
-        x = F.npx.reshape(x, (-2, -2, -6, f1, f2, -2, -2))    # (N, C, f1, f2, H, W)
-        x = F.np.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
-        x = F.npx.reshape(x, (-2, -2, -5, -5))              # (N, C, H*f1, W*f2)
-        return x if is_np_array() else x.as_nd_ndarray()
+        x = npx.reshape(x, (-2, -6, -1, f1 * f2, -2, -2))  # (N, C, f1*f2, H, W)
+        x = npx.reshape(x, (-2, -2, -6, f1, f2, -2, -2))    # (N, C, f1, f2, H, W)
+        x = np.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
+        x = npx.reshape(x, (-2, -2, -5, -5))              # (N, C, H*f1, W*f2)
+        return x
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self._factors)
@@ -1793,23 +1783,22 @@ class PixelShuffle3D(HybridBlock):
             self._factors = tuple(int(fac) for fac in factor)
             assert len(self._factors) == 3, "wrong length {}".format(len(self._factors))
 
-    def hybrid_forward(self, F, x):
+    @use_np
+    def hybrid_forward(self, x):
         """Perform pixel-shuffling on the input."""
         # `transpose` doesn't support 8D, need other implementation
         f1, f2, f3 = self._factors
-        if not is_np_array():
-            x = x.as_np_ndarray()
                                                               # (N, C*f1*f2*f3, D, H, W)
-        x = F.npx.reshape(x, (-2, -6, -1, f1 * f2 * f3, -2, -2, -2))  # (N, C, f1*f2*f3, D, H, W)
-        x = F.np.swapaxes(x, 2, 3)                               # (N, C, D, f1*f2*f3, H, W)
-        x = F.npx.reshape(x, (-2, -2, -2, -6, f1, f2*f3, -2, -2))      # (N, C, D, f1, f2*f3, H, W)
-        x = F.npx.reshape(x, (-2, -2, -5, -2, -2, -2))                 # (N, C, D*f1, f2*f3, H, W)
-        x = F.np.swapaxes(x, 3, 4)                               # (N, C, D*f1, H, f2*f3, W)
-        x = F.npx.reshape(x, (-2, -2, -2, -2, -6, f2, f3, -2))         # (N, C, D*f1, H, f2, f3, W)
-        x = F.npx.reshape(x, (-2, -2, -2, -5, -2, -2))                 # (N, C, D*f1, H*f2, f3, W)
-        x = F.np.swapaxes(x, 4, 5)                               # (N, C, D*f1, H*f2, W, f3)
-        x = F.npx.reshape(x, (-2, -2, -2, -2, -5))                    # (N, C, D*f1, H*f2, W*f3)
-        return x if is_np_array() else x.as_nd_ndarray()
+        x = npx.reshape(x, (-2, -6, -1, f1 * f2 * f3, -2, -2, -2))  # (N, C, f1*f2*f3, D, H, W)
+        x = np.swapaxes(x, 2, 3)                               # (N, C, D, f1*f2*f3, H, W)
+        x = npx.reshape(x, (-2, -2, -2, -6, f1, f2*f3, -2, -2))      # (N, C, D, f1, f2*f3, H, W)
+        x = npx.reshape(x, (-2, -2, -5, -2, -2, -2))                 # (N, C, D*f1, f2*f3, H, W)
+        x = np.swapaxes(x, 3, 4)                               # (N, C, D*f1, H, f2*f3, W)
+        x = npx.reshape(x, (-2, -2, -2, -2, -6, f2, f3, -2))         # (N, C, D*f1, H, f2, f3, W)
+        x = npx.reshape(x, (-2, -2, -2, -5, -2, -2))                 # (N, C, D*f1, H*f2, f3, W)
+        x = np.swapaxes(x, 4, 5)                               # (N, C, D*f1, H*f2, W, f3)
+        x = npx.reshape(x, (-2, -2, -2, -2, -5))                    # (N, C, D*f1, H*f2, W*f3)
+        return x
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self._factors)
