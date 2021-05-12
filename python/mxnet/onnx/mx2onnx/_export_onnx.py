@@ -45,7 +45,7 @@
 
 # coding: utf-8
 # pylint: disable=invalid-name,too-many-locals,no-self-use,too-many-arguments,
-# pylint: disable=maybe-no-member,too-many-nested-blocks
+# pylint: disable=maybe-no-member,too-many-nested-blocks,logging-not-lazy
 """MXNet to ONNX graph converter functions"""
 import logging
 import json
@@ -96,7 +96,7 @@ class MXNetGraph(object):
                             'which is lower than then lowest tested op set (12), please consider '
                             'updating ONNX')
             opset_version = 12
-        # fallback to older opset versions if op is not registered in current version
+        # Fallback to older opset versions if op is not registered in current version
         convert_func = None
         for op_version in range(opset_version, 11, -1):
             if op_version not in MXNetGraph.registry_ or op not in MXNetGraph.registry_[op_version]:
@@ -104,6 +104,7 @@ class MXNetGraph(object):
             convert_func = MXNetGraph.registry_[op_version][op]
             break
 
+        # The conversion logic is not implemented
         if convert_func is None:
             raise AttributeError("No conversion function registered for op type %s yet." % op)
 
