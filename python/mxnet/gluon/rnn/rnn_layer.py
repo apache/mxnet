@@ -81,14 +81,14 @@ class _RNNLayer(HybridBlock):
                                          init=h2h_bias_initializer, dtype=dtype)
                 ni = nh * self._dir
         else:
-            np = self._projection_size
+            ps = self._projection_size
             for i in range(num_layers):
                 for j in ['l', 'r'][:self._dir]:
                     self._register_param('{}{}_i2h_weight'.format(j, i),
                                          shape=(ng*nh, ni),
                                          init=i2h_weight_initializer, dtype=dtype)
                     self._register_param('{}{}_h2h_weight'.format(j, i),
-                                         shape=(ng*nh, np),
+                                         shape=(ng*nh, ps),
                                          init=h2h_weight_initializer, dtype=dtype)
                     self._register_param('{}{}_i2h_bias'.format(j, i),
                                          shape=(ng*nh,),
@@ -97,9 +97,9 @@ class _RNNLayer(HybridBlock):
                                          shape=(ng*nh,),
                                          init=h2h_bias_initializer, dtype=dtype)
                     self._register_param('{}{}_h2r_weight'.format(j, i),
-                                         shape=(np, nh),
+                                         shape=(ps, nh),
                                          init=h2r_weight_initializer, dtype=dtype)
-                ni = np * self._dir
+                ni = ps * self._dir
 
     def _register_param(self, name, shape, init, dtype):
         p = Parameter(name, shape=shape, init=init, allow_deferred_init=True, dtype=dtype)
@@ -241,6 +241,7 @@ class _RNNLayer(HybridBlock):
         return outputs, states
 
 
+#pylint: disable=W0223
 class RNN(_RNNLayer):
     r"""Applies a multi-layer Elman RNN with `tanh` or `ReLU` non-linearity to an input sequence.
 

@@ -32,20 +32,18 @@ from ..parameter import Parameter
 from ... import symbol, np, npx
 from ...base import numeric_types
 from .activations import Activation
-from ...util import is_np_array, np_array, use_np
+from ...util import use_np
 
 
 def _infer_weight_shape(op_name, data_shape, kwargs):
     data = symbol.var('data', shape=data_shape)
-    if is_np_array():
-        op = getattr(symbol.npx, op_name)
-        data = data.as_np_ndarray()
-    else:
-        op = getattr(symbol, op_name)
+    op = getattr(symbol.npx, op_name)
+    data = data.as_np_ndarray()
     sym = op(data, **kwargs)
     return sym.infer_shape_partial()[0]
 
 
+#pylint: disable=W0223
 class _Conv(HybridBlock):
     """Abstract nD convolution layer (private, used as implementation base).
 
@@ -116,10 +114,7 @@ class _Conv(HybridBlock):
         if adj is not None:
             self._kwargs['adj'] = adj
 
-        if is_np_array():
-            dshape = [-1]*(len(kernel_size) + 2)
-        else:
-            dshape = [0]*(len(kernel_size) + 2)
+        dshape = [-1]*(len(kernel_size) + 2)
 
         dshape[layout.find('N')] = 1
         dshape[layout.find('C')] = in_channels
@@ -180,6 +175,7 @@ class _Conv(HybridBlock):
                         **self._kwargs)
 
 
+#pylint: disable=W0223
 class Conv1D(_Conv):
     r"""1D convolution layer (e.g. temporal convolution).
 
@@ -253,15 +249,14 @@ class Conv1D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
-        op_name = kwargs.pop('op_name', 'Convolution')
-        if is_np_array():
-            op_name = 'convolution'
+        op_name = 'convolution'
         super(Conv1D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
             op_name, **kwargs)
 
 
+#pylint: disable=W0223
 class Conv2D(_Conv):
     r"""2D convolution layer (e.g. spatial convolution over images).
 
@@ -337,15 +332,14 @@ class Conv2D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
-        op_name = kwargs.pop('op_name', 'Convolution')
-        if is_np_array():
-            op_name = 'convolution'
+        op_name = 'convolution'
         super(Conv2D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
             op_name, **kwargs)
 
 
+#pylint: disable=W0223
 class Conv3D(_Conv):
     """3D convolution layer (e.g. spatial convolution over volumes).
 
@@ -422,15 +416,14 @@ class Conv3D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
-        op_name = kwargs.pop('op_name', 'Convolution')
-        if is_np_array():
-            op_name = 'convolution'
+        op_name = 'convolution'
         super(Conv3D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
             op_name, **kwargs)
 
 
+#pylint: disable=W0223
 class Conv1DTranspose(_Conv):
     """Transposed 1D convolution layer (sometimes called Deconvolution).
 
@@ -510,9 +503,7 @@ class Conv1DTranspose(_Conv):
             output_padding = (output_padding,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         assert len(output_padding) == 1, "output_padding must be a number or a list of 1 ints"
-        op_name = kwargs.pop('op_name', 'Deconvolution')
-        if is_np_array():
-            op_name = 'deconvolution'
+        op_name = 'deconvolution'
         super(Conv1DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
@@ -520,6 +511,7 @@ class Conv1DTranspose(_Conv):
         self.outpad = output_padding
 
 
+#pylint: disable=W0223
 class Conv2DTranspose(_Conv):
     """Transposed 2D convolution layer (sometimes called Deconvolution).
 
@@ -604,9 +596,7 @@ class Conv2DTranspose(_Conv):
             output_padding = (output_padding,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         assert len(output_padding) == 2, "output_padding must be a number or a list of 2 ints"
-        op_name = kwargs.pop('op_name', 'Deconvolution')
-        if is_np_array():
-            op_name = 'deconvolution'
+        op_name = 'deconvolution'
         super(Conv2DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
@@ -614,6 +604,7 @@ class Conv2DTranspose(_Conv):
         self.outpad = output_padding
 
 
+#pylint: disable=W0223
 class Conv3DTranspose(_Conv):
     """Transposed 3D convolution layer (sometimes called Deconvolution).
 
@@ -699,9 +690,7 @@ class Conv3DTranspose(_Conv):
             output_padding = (output_padding,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         assert len(output_padding) == 3, "output_padding must be a number or a list of 3 ints"
-        op_name = kwargs.pop('op_name', 'Deconvolution')
-        if is_np_array():
-            op_name = 'deconvolution'
+        op_name = 'deconvolution'
         super(Conv3DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
@@ -709,6 +698,7 @@ class Conv3DTranspose(_Conv):
         self.outpad = output_padding
 
 
+#pylint: disable=W0223
 class _Pooling(HybridBlock):
     """Abstract class for different pooling layers."""
     def __init__(self, pool_size, strides, padding, ceil_mode, global_pool,
@@ -743,6 +733,7 @@ class _Pooling(HybridBlock):
                         **self._kwargs)
 
 
+#pylint: disable=W0223
 class MaxPool1D(_Pooling):
     """Max pooling operation for one dimensional data.
 
@@ -789,6 +780,7 @@ class MaxPool1D(_Pooling):
             pool_size, strides, padding, ceil_mode, False, 'max', layout, **kwargs)
 
 
+#pylint: disable=W0223
 class MaxPool2D(_Pooling):
     """Max pooling operation for two dimensional (spatial) data.
 
@@ -838,6 +830,7 @@ class MaxPool2D(_Pooling):
             pool_size, strides, padding, ceil_mode, False, 'max', layout, **kwargs)
 
 
+#pylint: disable=W0223
 class MaxPool3D(_Pooling):
     """Max pooling operation for 3D data (spatial or spatio-temporal).
 
@@ -889,6 +882,7 @@ class MaxPool3D(_Pooling):
             pool_size, strides, padding, ceil_mode, False, 'max', layout, **kwargs)
 
 
+#pylint: disable=W0223
 class AvgPool1D(_Pooling):
     """Average pooling operation for temporal data.
 
@@ -937,6 +931,7 @@ class AvgPool1D(_Pooling):
             **kwargs)
 
 
+#pylint: disable=W0223
 class AvgPool2D(_Pooling):
     """Average pooling operation for spatial data.
 
@@ -988,6 +983,7 @@ class AvgPool2D(_Pooling):
             **kwargs)
 
 
+#pylint: disable=W0223
 class AvgPool3D(_Pooling):
     """Average pooling operation for 3D data (spatial or spatio-temporal).
 
@@ -1041,6 +1037,7 @@ class AvgPool3D(_Pooling):
             **kwargs)
 
 
+#pylint: disable=W0223
 class GlobalMaxPool1D(_Pooling):
     """Gloabl max pooling operation for one dimensional (temporal) data.
 
@@ -1068,6 +1065,7 @@ class GlobalMaxPool1D(_Pooling):
             (1,), None, 0, True, True, 'max', layout, **kwargs)
 
 
+#pylint: disable=W0223
 class GlobalMaxPool2D(_Pooling):
     """Global max pooling operation for two dimensional (spatial) data.
 
@@ -1096,6 +1094,7 @@ class GlobalMaxPool2D(_Pooling):
             (1, 1), None, 0, True, True, 'max', layout, **kwargs)
 
 
+#pylint: disable=W0223
 class GlobalMaxPool3D(_Pooling):
     """Global max pooling operation for 3D data (spatial or spatio-temporal).
 
@@ -1125,6 +1124,7 @@ class GlobalMaxPool3D(_Pooling):
             (1, 1, 1), None, 0, True, True, 'max', layout, **kwargs)
 
 
+#pylint: disable=W0223
 class GlobalAvgPool1D(_Pooling):
     """Global average pooling operation for temporal data.
 
@@ -1150,6 +1150,7 @@ class GlobalAvgPool1D(_Pooling):
             (1,), None, 0, True, True, 'avg', layout, **kwargs)
 
 
+#pylint: disable=W0223
 class GlobalAvgPool2D(_Pooling):
     """Global average pooling operation for spatial data.
 
@@ -1177,6 +1178,7 @@ class GlobalAvgPool2D(_Pooling):
             (1, 1), None, 0, True, True, 'avg', layout, **kwargs)
 
 
+#pylint: disable=W0223
 class GlobalAvgPool3D(_Pooling):
     """Global average pooling operation for 3D data (spatial or spatio-temporal).
 
@@ -1205,6 +1207,7 @@ class GlobalAvgPool3D(_Pooling):
             (1, 1, 1), None, 0, True, True, 'avg', layout, **kwargs)
 
 
+#pylint: disable=W0223
 class ReflectionPad2D(HybridBlock):
     r"""Pads the input tensor using the reflection of the input boundary.
 
@@ -1245,6 +1248,7 @@ class ReflectionPad2D(HybridBlock):
         return npx.pad(x, mode='reflect', pad_width=self._padding)
 
 
+#pylint: disable=W0223
 class DeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v_1 (Dai, 2017).
     Normal Convolution uses sampling points in a regular grid, while the sampling
@@ -1358,7 +1362,7 @@ class DeformableConvolution(HybridBlock):
         dshape[layout.find('N')] = 1
         dshape[layout.find('C')] = in_channels
 
-        op_name = 'convolution' if is_np_array() else 'Convolution'
+        op_name = 'convolution'
         offsetshapes = _infer_weight_shape(op_name, dshape, self._kwargs_offset)
 
         self.offset_weight = Parameter('offset_weight', shape=offsetshapes[1],
@@ -1442,6 +1446,7 @@ class DeformableConvolution(HybridBlock):
                         **self._kwargs_deformable_conv)
 
 
+#pylint: disable=W0223
 class ModulatedDeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v2 (Dai, 2018).
 
@@ -1624,6 +1629,7 @@ class ModulatedDeformableConvolution(HybridBlock):
         return 'modulated_deformable_conv'
 
 
+#pylint: disable=W0223
 class PixelShuffle1D(HybridBlock):
 
     r"""Pixel-shuffle layer for upsampling in 1 dimension.
@@ -1672,6 +1678,7 @@ class PixelShuffle1D(HybridBlock):
         return "{}({})".format(self.__class__.__name__, self._factor)
 
 
+#pylint: disable=W0223
 class PixelShuffle2D(HybridBlock):
 
     r"""Pixel-shuffle layer for upsampling in 2 dimensions.
@@ -1735,6 +1742,7 @@ class PixelShuffle2D(HybridBlock):
         return "{}({})".format(self.__class__.__name__, self._factors)
 
 
+#pylint: disable=W0223
 class PixelShuffle3D(HybridBlock):
 
     r"""Pixel-shuffle layer for upsampling in 3 dimensions.
@@ -1784,7 +1792,7 @@ class PixelShuffle3D(HybridBlock):
             assert len(self._factors) == 3, "wrong length {}".format(len(self._factors))
 
     @use_np
-    def hybrid_forward(self, x):
+    def forward(self, x):
         """Perform pixel-shuffling on the input."""
         # `transpose` doesn't support 8D, need other implementation
         f1, f2, f3 = self._factors

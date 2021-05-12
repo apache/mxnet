@@ -20,12 +20,13 @@
 """Basic neural network layers."""
 __all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish', 'GELU', 'SiLU']
 
-from ... import initializer, np, npx
+from ... import initializer, npx
 from ..block import HybridBlock
 from ..parameter import Parameter
-from ...util import is_np_array, use_np
+from ...util import use_np
 
 
+#pylint: disable=W0223
 class Activation(HybridBlock):
     r"""Applies an activation function to input.
 
@@ -59,6 +60,7 @@ class Activation(HybridBlock):
                         **self.__dict__)
 
 
+#pylint: disable=W0223
 class LeakyReLU(HybridBlock):
     r"""Leaky version of a Rectified Linear Unit.
 
@@ -100,6 +102,7 @@ class LeakyReLU(HybridBlock):
                         alpha=self._alpha)
 
 
+#pylint: disable=W0223
 class PReLU(HybridBlock):
     r"""Parametric leaky version of a Rectified Linear Unit.
     <https://arxiv.org/abs/1502.01852>`_ paper.
@@ -146,6 +149,7 @@ class PReLU(HybridBlock):
         self.alpha.shape = (x.shape[1],)
 
 
+#pylint: disable=W0223
 class ELU(HybridBlock):
     r"""
     Exponential Linear Unit (ELU)
@@ -175,6 +179,7 @@ class ELU(HybridBlock):
         return npx.leaky_relu(x, act_type='elu', slope=self._alpha)
 
 
+#pylint: disable=W0223
 class SELU(HybridBlock):
     r"""
     Scaled Exponential Linear Unit (SELU)
@@ -196,6 +201,7 @@ class SELU(HybridBlock):
         return npx.leaky_relu(x, act_type='selu', name='fwd')
 
 
+#pylint: disable=W0223
 class GELU(HybridBlock):
     r"""
     Gaussian Exponential Linear Unit (GELU)
@@ -217,6 +223,7 @@ class GELU(HybridBlock):
         return npx.leaky_relu(x, act_type='gelu', name='fwd')
 
 
+#pylint: disable=W0223
 class Swish(HybridBlock):
     r"""
     Swish Activation function (SiLU with a hyperparameter)
@@ -244,6 +251,7 @@ class Swish(HybridBlock):
         return x * npx.sigmoid(self._beta * x)
 
 
+#pylint: disable=W0223
 class SiLU(HybridBlock):
     r"""
     Sigmoid Linear Units

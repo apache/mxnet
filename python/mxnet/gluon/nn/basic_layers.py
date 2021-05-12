@@ -30,7 +30,7 @@ from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from ... import np, npx, ndarray as nd, symbol as sym, context, _deferred_compute as dc
-from ...util import is_np_array, use_np
+from ...util import use_np
 from ..parameter import Parameter
 
 
@@ -101,6 +101,7 @@ class Sequential(Block):
         super(Sequential, self).hybridize(active, **kwargs)
 
 
+#pylint: disable=W0223
 class HybridSequential(HybridBlock):
     """Stacks HybridBlocks sequentially.
 
@@ -165,6 +166,7 @@ class HybridSequential(HybridBlock):
         return len(self._children)
 
 
+#pylint: disable=W0223
 class Dense(HybridBlock):
     r"""Just your regular densely-connected NN layer.
 
@@ -237,8 +239,8 @@ class Dense(HybridBlock):
     @use_np
     def forward(self, x):
         ctx = x.context
-        act = npx.fully_connected(x, self.weight.data(ctx), self.bias.data(ctx), no_bias=self.bias is None, num_hidden=self._units,
-                                  flatten=self._flatten, name='fwd')
+        act = npx.fully_connected(x, self.weight.data(ctx), self.bias.data(ctx), no_bias=self.bias is None,
+                                  num_hidden=self._units, flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
         return act
@@ -254,6 +256,7 @@ class Dense(HybridBlock):
                         layout='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]))
 
 
+#pylint: disable=W0223
 class Dropout(HybridBlock):
     """Applies Dropout to the input.
 
@@ -297,6 +300,7 @@ class Dropout(HybridBlock):
                         **self.__dict__)
 
 
+#pylint: disable=W0223
 class _BatchNorm(HybridBlock):
     """Abstract BatchNorm layer (private, used as implementation base).
     Batch normalization layer (Ioffe and Szegedy, 2014).
@@ -409,6 +413,7 @@ class _BatchNorm(HybridBlock):
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))
 
+#pylint: disable=W0223
 class BatchNorm(_BatchNorm):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
     Normalizes the input at each batch, i.e. applies a transformation
@@ -473,6 +478,7 @@ class BatchNorm(_BatchNorm):
             in_channels=in_channels, **kwargs)
 
 
+#pylint: disable=W0223
 class BatchNormReLU(_BatchNorm):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
     Normalizes the input at each batch, i.e. applies a transformation
@@ -537,6 +543,7 @@ class BatchNormReLU(_BatchNorm):
             in_channels=in_channels, **kwargs)
 
 
+#pylint: disable=W0223
 class Embedding(HybridBlock):
     r"""Turns non-negative integers (indexes/tokens) into dense vectors
     of fixed size. eg. [4, 20] -> [[0.25, 0.1], [0.6, -0.2]]
@@ -589,6 +596,7 @@ class Embedding(HybridBlock):
                         **self._kwargs)
 
 
+#pylint: disable=W0223
 class Flatten(HybridBlock):
     r"""Flattens the input to two dimensional.
 
@@ -609,6 +617,7 @@ class Flatten(HybridBlock):
         return self.__class__.__name__
 
 
+#pylint: disable=W0223
 class InstanceNorm(HybridBlock):
     r"""
     Applies instance normalization to the n-dimensional input array.
@@ -711,6 +720,7 @@ class InstanceNorm(HybridBlock):
                                            for k, v in self._kwargs.items()]))
 
 
+#pylint: disable=W0223
 class LayerNorm(HybridBlock):
     r"""
     Applies layer normalization to the n-dimensional input array.
@@ -803,6 +813,7 @@ class LayerNorm(HybridBlock):
                                            for k, v in self._kwargs.items()]))
 
 
+#pylint: disable=W0223
 class GroupNorm(HybridBlock):
     r"""
     Applies group normalization to the n-dimensional input array.
@@ -944,6 +955,7 @@ class Lambda(Block):
                                            function=self._func_impl.__name__)
 
 
+#pylint: disable=W0223
 class HybridLambda(HybridBlock):
     r"""Wraps an operator or an expression as a HybridBlock object.
 
@@ -1024,6 +1036,7 @@ class Concatenate(Sequential):
         return out
 
 
+#pylint: disable=W0223
 class HybridConcatenate(HybridSequential):
     """Lays `HybridBlock` s concurrently.
 
@@ -1056,6 +1069,7 @@ class HybridConcatenate(HybridSequential):
         return out
 
 
+#pylint: disable=W0223
 class Identity(HybridBlock):
     """Block that passes through the input directly.
 
