@@ -1235,6 +1235,7 @@ def test_onnx_export_sequence_reverse(tmp_path, dtype, params):
     M1 = def_model('SequenceReverse', use_sequence_length=True)
     op_export_test('SequenceReverse1', M1, [x, seq_len], tmp_path)
 
+
 @pytest.mark.parametrize('mode', ['lstm', 'gru', 'rnn_tanh', 'rnn_relu'])
 @pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('state_size', [16, 32])
@@ -1263,13 +1264,13 @@ def test_onnx_export_RNN(tmp_path, mode, dtype, state_size, input_size, num_laye
         factor = 4
 
     M = def_model('RNN', mode=mode, state_size=state_size, state_outputs=True,  num_layers=num_layers, p=0, bidirectional=bidirectional)
-    x = mx.nd.random.normal(0, 10, (seq_length, batch_size, input_size), dtype=dtype)
+    x = mx.nd.random.normal(0, 10, (seq_length, batch_size, input_size)).astype(dtype)
     param = mx.nd.random.normal(0, 1, [b*num_layers*factor*state_size*input_size +
                                        b*num_layers*factor*state_size*state_size +
-                                       b*num_layers*2*factor*state_size], dtype=dtype)
-    state = mx.nd.random.uniform(-1, 1, [b*num_layers, batch_size, state_size], dtype=dtype)
+                                       b*num_layers*2*factor*state_size]).astype(dtype)
+    state = mx.nd.random.uniform(-1, 1, [b*num_layers, batch_size, state_size]).astype(dtype)
     if mode == 'lstm':
-        cell = mx.nd.random.uniform(-1, 1, [b*num_layers, batch_size, state_size], dtype=dtype)
+        cell = mx.nd.random.uniform(-1, 1, [b*num_layers, batch_size, state_size]).astype(dtype)
         op_export_test('rnn', M, [x, param, state, cell], tmp_path)
     elif mode == 'rnn_relu':
         # set large atol as relu can outputs big numbers
