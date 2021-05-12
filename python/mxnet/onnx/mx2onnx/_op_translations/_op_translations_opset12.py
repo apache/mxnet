@@ -207,7 +207,7 @@ def create_tensor(tensor_list, tensor_name, initializer, dtype='int64'):
         raw=False
     )
     initializer.append(tensor)
-    return tensor
+
 
 @mx_op.register("null")
 def convert_weights_and_inputs(node, **kwargs):
@@ -3333,7 +3333,7 @@ def convert_contrib_BilinearResize2D(node, **kwargs):
 
     create_tensor([], name+'_roi', kwargs['initializer'], dtype='float32')
     create_tensor([], name+'_scales_empty', kwargs['initializer'],
-                  dtype='float32'),
+                  dtype='float32')
 
     nodes = []
     if scale_height == 0:
