@@ -137,10 +137,10 @@ class _Conv(HybridBlock):
         x = x.as_np_ndarray()
         ctx = x.context
         if self.bias is None:
-            act = getattr(npx, self._op_name)(x, self.weight.data(ctx), name='fwd', **self._kwargs)
+            act = getattr(npx, self._op_name)(x, self.weight.data(ctx), **self._kwargs)
         else:
             act = getattr(npx, self._op_name)(x, self.weight.data(ctx), self.bias.data(ctx),
-                                              name='fwd', **self._kwargs)
+                                              **self._kwargs)
         if self.act is not None:
             act = self.act(act)
         return act

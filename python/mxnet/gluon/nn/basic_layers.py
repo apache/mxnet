@@ -29,7 +29,7 @@ import numpy as _np
 from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
-from ... import np, npx, ndarray as nd, symbol as sym, context, _deferred_compute as dc
+from ... import np, npx, ndarray as nd, context, _deferred_compute as dc
 from ...util import use_np
 from ..parameter import Parameter
 

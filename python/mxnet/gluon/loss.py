@@ -24,7 +24,6 @@ __all__ = ['Loss', 'L2Loss', 'L1Loss',
            'KLDivLoss', 'CTCLoss', 'HuberLoss', 'HingeLoss',
            'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss', 'PoissonNLLLoss', 'CosineEmbeddingLoss', 'SDMLLoss']
 
-from random import sample
 import numpy as _np
 from ..base import numeric_types
 from .block import HybridBlock
