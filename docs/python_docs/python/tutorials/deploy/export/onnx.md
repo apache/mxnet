@@ -17,14 +17,14 @@
 
 # Exporting to ONNX format
 
-[Open Neural Network Exchange (ONNX)](https://github.com/onnx/onnx) provides an open source format for AI models. It defines an extensible computation graph model, as well as definitions of built-in operators and standard data types. The MXNet-to-ONNX export module (mx2onnx) has been updated with new features such as dynamic input shapes and better operator and model coverages in the MXNet 1.9 release. Please visit the [ONNX Export Support for MXNet](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#onnx-export-support-for-mxnet) page for more information.
+[Open Neural Network Exchange (ONNX)](https://github.com/onnx/onnx) provides an open source format for AI models. It defines an extensible computation graph model, as well as definitions of built-in operators and standard data types. In the MXNet 1.9 release, the MXNet-to-ONNX export module (mx2onnx) has received a major update with new features such as dynamic input shapes and better operator and model coverages. Please visit the [ONNX Export Support for MXNet](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#onnx-export-support-for-mxnet) page for more information.
 
 In this tutorial, we will learn how to use the mx2onnx exporter on pre-trained models.
 
 ## Prerequisites
 
 To run the tutorial we will need to have installed the following python modules:
-- [MXNet >= 1.9.0](/get_started) _OR_ an earlier mxnet version + [the mx2onnx wheel](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#installation)
+- [MXNet >= 1.9.0](/get_started) _OR_ an earlier MXNet version + [the mx2onnx wheel](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#installation)
 - [onnx >= 1.7.0](https://github.com/onnx/onnx#installation)
 
 *Note:* The latest mx2onnx exporting module is tested with ONNX op set version 12 or later, which corresponds to ONNX version 1.7 or later. Use of ealier ONNX versions may still work on some simple models, but again this is not tested.
@@ -93,7 +93,7 @@ export_model(sym, params, in_shapes=None, in_types=<class 'numpy.float32'>, onnx
         If True will run shape inference on the model
     input_type : data type or list of data types
         This is the old name of in_types. We keep this parameter name for backward compatibility
-    in_shapes : List of tuple
+    input_shape : List of tuple
         This is the old name of in_shapes. We keep this parameter name for backward compatibility
     
     Returns
@@ -106,7 +106,7 @@ export_model(sym, params, in_shapes=None, in_types=<class 'numpy.float32'>, onnx
     This method is available when you ``import mxnet.onnx``
 ```
 
-`export_model` API can accept a MXNet model in one of the following ways.
+The `export_model` API can accept a MXNet model in one of the following ways.
 
 1. MXNet's exported json and params files:
     * This is useful if we have pre-trained models and we want to convert them to ONNX format.
@@ -117,7 +117,7 @@ Since we have downloaded pre-trained model files, we will use the `export_model`
 
 ## Use mx2onnx to eport the model
 
-We will use the downloaded pre-trained model files (sym, params) and define a few extra parameters.
+We will use the downloaded pre-trained model files (sym, params) and define a few more parameters.
 
 ```python
 # Downloaded input symbol and params files
@@ -125,8 +125,8 @@ sym = './resnet-18-symbol.json'
 params = './resnet-18-0000.params'
 
 # Standard Imagenet input - 3 channels, 224 * 224
-input_shape = [(1, 3, 224, 224)]
-input_dtypes = [np.float32]
+in_shapes = [(1, 3, 224, 224)]
+in_types = [np.float32]
 
 # Path of the output file
 onnx_file = './mxnet_exported_resnet18.onnx'
@@ -136,7 +136,7 @@ We have defined the input parameters required for the `export_model` API. Now, w
 
 ```python
 # Invoke export model API. It returns path of the converted onnx model
-converted_model_path = mx.onnx.export_model(sym, params, input_shape, input_dtypes, onnx_file)
+converted_model_path = mx.onnx.export_model(sym, params, in_shapes, in_types, onnx_file)
 ```
 
 This API returns the path of the converted model which you can later use to run inference with or import the model into other frameworks. Please refer to [mx2onnx](https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx#apis) for more details about the API.
@@ -170,4 +170,4 @@ Now that the model passes the check (hopefully :)), we can run it with inference
 
 ## Simplify the exported ONNX model
 
-Okay, we already have the exporeted ONNX model now, but it may not be the end of the story. Due to the differences in MXNet's and ONNX's operator specifications, sometimes helper operartors/nodes will need to be created to help construct the ONNX graph from the MXNet blueprint. In that sense, we recommend our users to checkout [onnx-simplifier](https://github.com/daquexian/onnx-simplifier), which can greatly simply the exported ONNX model by techniques such as constant folding, operator fussion and more.
+Okay, we already have the exporeted ONNX model now, but it may not be the end of the story. Due to differences in MXNet's and ONNX's operator specifications, sometimes helper operartors/nodes will need to be created to help construct the ONNX graph from the MXNet blueprint. In that sense, we recommend our users to checkout [onnx-simplifier](https://github.com/daquexian/onnx-simplifier), which can greatly simply the exported ONNX model by techniques such as constant folding, operator fussion and more.

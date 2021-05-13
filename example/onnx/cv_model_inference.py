@@ -64,14 +64,14 @@ onnx_file = prefix + '.onnx'
 # list of shape for all inputs
 in_shapes = [in_shape]
 # list of data type for all inputs
-in_dtypes = [in_dtype]
+in_types = [in_dtype]
 # export onnx model
-mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file)
+mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_types, onnx_file)
 
 # # example for dynamic input shape (optional)
 # # None indicating dynamic shape at a certain dimension
 # dynamic_input_shapes = [((None, 3, 224, 224))]
-# mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file,
+# mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_types, onnx_file,
 #                      dynamic=True, dynamic_input_shapes=dynamic_input_shapes)
 
 # download and process the input image

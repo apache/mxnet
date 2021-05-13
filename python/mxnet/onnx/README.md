@@ -61,7 +61,7 @@ Parameters:
         If True will run shape inference on the model
     input_type : data type or list of data types
         This is the old name of in_types. We keep this parameter name for backward compatibility
-    in_shapes : List of tuple
+    input_shape : List of tuple
         This is the old name of in_shapes. We keep this parameter name for backward compatibility
 
 Returns:
@@ -79,7 +79,7 @@ We can set `dynamic=True` to turn on support for dynamic input shapes. Note that
 # The batch dimension will be dynamic in this case
 in_shapes = [(1, 3, 224, 224)]
 dynamic_input_shapes = [(None, 3, 224, 224)]
-mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file,
+mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_types, onnx_file,
                      dynamic=True, dynamic_input_shapes=dynamic_input_shapes)
 ```
 
