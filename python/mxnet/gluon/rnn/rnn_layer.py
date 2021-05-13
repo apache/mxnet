@@ -29,6 +29,7 @@ from ..parameter import Parameter
 from ...util import is_np_array, use_np
 
 
+@use_np
 class _RNNLayer(HybridBlock):
     """Implementation of recurrent layers."""
     def __init__(self, hidden_size, num_layers, layout,
@@ -182,8 +183,11 @@ class _RNNLayer(HybridBlock):
         else:
             return super(_RNNLayer, self).__call__(inputs, states, **kwargs)
 
-    @use_np
     def forward(self, inputs, states, sequence_length=None, **kwargs):
+        inputs = inputs.as_np_ndarray()
+        states = states.as_np_ndarray()
+        if sequence_length:
+            sequence_length = sequence_length.as_np_ndarray()
         batch_size = inputs.shape[self._layout.find('N')]
 
         for state, info in zip(states, self.state_info(batch_size)):

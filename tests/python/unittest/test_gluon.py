@@ -737,8 +737,8 @@ def test_sync_batchnorm():
             mx.autograd.backward(loss1)
             mx.autograd.backward(loss2)
 
-        output2 = mx.nd.concat(*[output.as_in_context(input.context)
-                                 for output in output2], dim=0)
+        output2 = _mx_np.concatenate(*[output.as_in_context(input.context)
+                                     for output in output2], dim=0)
         # check bn1
 
         momentum = 0.9

@@ -44,6 +44,7 @@ def _infer_weight_shape(op_name, data_shape, kwargs):
 
 
 #pylint: disable=W0223
+@use_np
 class _Conv(HybridBlock):
     """Abstract nD convolution layer (private, used as implementation base).
 
@@ -96,10 +97,13 @@ class _Conv(HybridBlock):
     def __init__(self, channels, kernel_size, strides, padding, dilation,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 op_name='Convolution', adj=None):
+                 op_name='convolution', adj=None):
         super(_Conv, self).__init__()
         self._channels = channels
         self._in_channels = in_channels
+        self._kernel_size = kernel_size
+        self._layout = layout
+        self._groups = groups
         if isinstance(strides, numeric_types):
             strides = (strides,)*len(kernel_size)
         if isinstance(padding, numeric_types):
@@ -114,16 +118,11 @@ class _Conv(HybridBlock):
         if adj is not None:
             self._kwargs['adj'] = adj
 
-        dshape = [-1]*(len(kernel_size) + 2)
-
-        dshape[layout.find('N')] = 1
-        dshape[layout.find('C')] = in_channels
-        wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
-        self.weight = Parameter('weight', shape=wshapes[1],
+        self.weight = Parameter('weight', shape=(),
                                 init=weight_initializer,
                                 allow_deferred_init=True)
         if use_bias:
-            self.bias = Parameter('bias', shape=wshapes[2],
+            self.bias = Parameter('bias', shape=(channels,),
                                   init=bias_initializer,
                                   allow_deferred_init=True)
         else:
@@ -134,8 +133,8 @@ class _Conv(HybridBlock):
         else:
             self.act = None
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         ctx = x.context
         if self.bias is None:
             act = getattr(npx, self._op_name)(x, self.weight.data(ctx), name='fwd', **self._kwargs)
@@ -145,6 +144,59 @@ class _Conv(HybridBlock):
         if self.act is not None:
             act = self.act(act)
         return act
+
+    def infer_shape(self, x):
+        x = x.as_np_ndarray()
+        dshape1 = x.shape[self._layout.find('C')]
+        wshape = [-1]*(len(self._kernel_size) + 2)
+        if self._op_name == "convolution":
+            if len(self._kernel_size) == 1:
+                wshape[self._layout.find('N')] = self._channels / self._groups
+                wshape[self._layout.find('C')] = dshape1 / self._groups if dshape1 != -1 else -1
+                wshape[self._layout.find('W')] = self._kernel_size[0]
+                wshape[0] *= self._groups
+                self.weight.shape = tuple(wshape)
+            elif len(self._kernel_size) == 2:
+                wshape[self._layout.find('N')] = self._channels / self._groups
+                wshape[self._layout.find('C')] = dshape1 / self._groups if dshape1 != -1 else -1
+                wshape[self._layout.find('H')] = self._kernel_size[0]
+                wshape[self._layout.find('W')] = self._kernel_size[1]
+                wshape[0] *= self._groups
+                self.weight.shape = tuple(wshape)
+            else:
+                assert len(self._kernel_size) == 3, "kernel_size must be 1, 2 or 3"
+                wshape[self._layout.find('N')] = self._channels / self._groups
+                wshape[self._layout.find('C')] = dshape1 / self._groups if dshape1 != -1 else -1
+                wshape[self._layout.find('D')] = self._kernel_size[0]
+                wshape[self._layout.find('H')] = self._kernel_size[1]
+                wshape[self._layout.find('W')] = self._kernel_size[2]
+                wshape[0] *= self._groups
+                self.weight.shape = tuple(wshape)
+        else:
+            assert self._op_name == "deconvolution", \
+                "Only support operator name with convolution and deconvolution"
+            if len(self._kernel_size) == 1:
+                wshape[self._layout.find('C')] = self._channels / self._groups
+                wshape[self._layout.find('N')] = dshape1
+                wshape[self._layout.find('W')] = self._kernel_size[0]
+                wshape[0] *= self._groups
+                self.weight.shape = tuple(wshape)
+            elif len(self._kernel_size) == 2:
+                wshape[self._layout.find('C')] = self._channels / self._groups
+                wshape[self._layout.find('N')] = dshape1
+                wshape[self._layout.find('H')] = self._kernel_size[0]
+                wshape[self._layout.find('W')] = self._kernel_size[1]
+                wshape[0] *= self._groups
+                self.weight.shape = tuple(wshape)
+            else:
+                assert len(self._kernel_size) == 3, "kernel_size must be 1, 2 or 3"
+                wshape[self._layout.find('C')] = self._channels / self._groups
+                wshape[self._layout.find('N')] = dshape1
+                wshape[self._layout.find('D')] = self._kernel_size[0]
+                wshape[self._layout.find('H')] = self._kernel_size[1]
+                wshape[self._layout.find('W')] = self._kernel_size[2]
+                wshape[0] *= self._groups
+                self.weight.shape = tuple(wshape)
 
     def _alias(self):
         return 'conv'
@@ -699,6 +751,7 @@ class Conv3DTranspose(_Conv):
 
 
 #pylint: disable=W0223
+@use_np
 class _Pooling(HybridBlock):
     """Abstract class for different pooling layers."""
     def __init__(self, pool_size, strides, padding, ceil_mode, global_pool,
@@ -721,8 +774,8 @@ class _Pooling(HybridBlock):
     def _alias(self):
         return 'pool'
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         return npx.pooling(x, name='fwd', **self._kwargs)
 
     def __repr__(self):
@@ -1208,6 +1261,7 @@ class GlobalAvgPool3D(_Pooling):
 
 
 #pylint: disable=W0223
+@use_np
 class ReflectionPad2D(HybridBlock):
     r"""Pads the input tensor using the reflection of the input boundary.
 
@@ -1243,12 +1297,13 @@ class ReflectionPad2D(HybridBlock):
         assert(len(padding) == 8)
         self._padding = padding
 
-    @use_np
     def forward(self, x):
-        return npx.pad(x, mode='reflect', pad_width=self._padding)
+        x = x.as_np_ndarray()
+        return np.pad(x, mode='reflect', pad_width=self._padding)
 
 
 #pylint: disable=W0223
+@use_np
 class DeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v_1 (Dai, 2017).
     Normal Convolution uses sampling points in a regular grid, while the sampling
@@ -1398,8 +1453,8 @@ class DeformableConvolution(HybridBlock):
         else:
             self.act = None
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         ctx = x.context
         if self.offset_bias is None:
             offset = npx.convolution(x, self.offset_weight.data(ctx), cudnn_off=True, **self._kwargs_offset)
@@ -1447,6 +1502,7 @@ class DeformableConvolution(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class ModulatedDeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v2 (Dai, 2018).
 
@@ -1597,8 +1653,8 @@ class ModulatedDeformableConvolution(HybridBlock):
         else:
             self.act = None
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         ctx = x.context
         if self.offset_bias is None:
             offset = npx.convolution(x, self.offset_weight.data(ctx),
@@ -1630,6 +1686,7 @@ class ModulatedDeformableConvolution(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class PixelShuffle1D(HybridBlock):
 
     r"""Pixel-shuffle layer for upsampling in 1 dimension.
@@ -1665,9 +1722,9 @@ class PixelShuffle1D(HybridBlock):
         super(PixelShuffle1D, self).__init__()
         self._factor = int(factor)
 
-    @use_np
     def forward(self, x):
         """Perform pixel-shuffling on the input."""
+        x = x.as_np_ndarray()
         f = self._factor                                             # (N, C*f, W)
         x = npx.reshape(x, (-2, -6, -1, f, -2))  # (N, C, f, W)
         x = np.transpose(x, (0, 1, 3, 2))     # (N, C, W, f)
@@ -1679,6 +1736,7 @@ class PixelShuffle1D(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class PixelShuffle2D(HybridBlock):
 
     r"""Pixel-shuffle layer for upsampling in 2 dimensions.
@@ -1727,9 +1785,9 @@ class PixelShuffle2D(HybridBlock):
             self._factors = tuple(int(fac) for fac in factor)
             assert len(self._factors) == 2, "wrong length {}".format(len(self._factors))
 
-    @use_np
     def forward(self, x):
         """Perform pixel-shuffling on the input."""
+        x = x.as_np_ndarray()
         f1, f2 = self._factors
                                                       # (N, f1*f2*C, H, W)
         x = npx.reshape(x, (-2, -6, -1, f1 * f2, -2, -2))  # (N, C, f1*f2, H, W)
@@ -1743,6 +1801,7 @@ class PixelShuffle2D(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class PixelShuffle3D(HybridBlock):
 
     r"""Pixel-shuffle layer for upsampling in 3 dimensions.
@@ -1791,10 +1850,10 @@ class PixelShuffle3D(HybridBlock):
             self._factors = tuple(int(fac) for fac in factor)
             assert len(self._factors) == 3, "wrong length {}".format(len(self._factors))
 
-    @use_np
     def forward(self, x):
         """Perform pixel-shuffling on the input."""
         # `transpose` doesn't support 8D, need other implementation
+        x = x.as_np_ndarray()
         f1, f2, f3 = self._factors
                                                               # (N, C*f1*f2*f3, D, H, W)
         x = npx.reshape(x, (-2, -6, -1, f1 * f2 * f3, -2, -2, -2))  # (N, C, f1*f2*f3, D, H, W)

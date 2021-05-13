@@ -154,7 +154,7 @@ MXNET_REGISTER_API("_npx.pooling")
   if (args[10].type_code() == kNull) {
     param.layout = dmlc::nullopt;
   } else {
-    param.layout = String2Layout(args[num_inputs + 10]);
+    param.layout = String2Layout(args[10]);
   }
 
   if (param.global_pool == false) {

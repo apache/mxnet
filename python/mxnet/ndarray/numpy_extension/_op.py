@@ -1124,8 +1124,8 @@ def embedding(data, weight, input_dim=None, output_dim=None, dtype="float32", sp
            [[ 0.,  1.,  2.,  3.,  4.],
             [10., 11., 12., 13., 14.]]])
     """
-    assert input_dim > 1, "Vocabulary size of the input indices should be greater than 1."
-    assert output_dim > 1, "Dimension of the embedding vectors should greater than 1."
+    assert input_dim > 0, "Vocabulary size of the input indices should be greater than 0."
+    assert output_dim > 0, "Dimension of the embedding vectors should greater than 0."
     return _api_internal.embedding(data, weight, input_dim, output_dim, dtype, sparse_grad)
 
 

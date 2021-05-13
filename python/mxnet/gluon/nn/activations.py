@@ -27,6 +27,7 @@ from ...util import use_np
 
 
 #pylint: disable=W0223
+@use_np
 class Activation(HybridBlock):
     r"""Applies an activation function to input.
 
@@ -50,8 +51,8 @@ class Activation(HybridBlock):
     def _alias(self):
         return self._act_type
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         return npx.activation(x, act_type=self._act_type, name='fwd')
 
     def __repr__(self):
@@ -61,6 +62,7 @@ class Activation(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class LeakyReLU(HybridBlock):
     r"""Leaky version of a Rectified Linear Unit.
 
@@ -92,8 +94,8 @@ class LeakyReLU(HybridBlock):
         super(LeakyReLU, self).__init__(**kwargs)
         self._alpha = alpha
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         return npx.leaky_relu(x, act_type='leaky', slope=self._alpha, name='fwd')
 
     def __repr__(self):
@@ -103,6 +105,7 @@ class LeakyReLU(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class PReLU(HybridBlock):
     r"""Parametric leaky version of a Rectified Linear Unit.
     <https://arxiv.org/abs/1502.01852>`_ paper.
@@ -140,8 +143,8 @@ class PReLU(HybridBlock):
         super(PReLU, self).__init__(**kwargs)
         self.alpha = Parameter('alpha', shape=(in_channels,), init=alpha_initializer)
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         ctx = x.context
         return npx.leaky_relu(x, gamma=self.alpha.data(ctx), act_type='prelu', name='fwd')
 
@@ -150,6 +153,7 @@ class PReLU(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class ELU(HybridBlock):
     r"""
     Exponential Linear Unit (ELU)
@@ -174,12 +178,13 @@ class ELU(HybridBlock):
         super(ELU, self).__init__(**kwargs)
         self._alpha = alpha
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         return npx.leaky_relu(x, act_type='elu', slope=self._alpha)
 
 
 #pylint: disable=W0223
+@use_np
 class SELU(HybridBlock):
     r"""
     Scaled Exponential Linear Unit (SELU)
@@ -196,12 +201,13 @@ class SELU(HybridBlock):
     def __init__(self, **kwargs):
         super(SELU, self).__init__(**kwargs)
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         return npx.leaky_relu(x, act_type='selu', name='fwd')
 
 
 #pylint: disable=W0223
+@use_np
 class GELU(HybridBlock):
     r"""
     Gaussian Exponential Linear Unit (GELU)
@@ -218,12 +224,13 @@ class GELU(HybridBlock):
     def __init__(self, **kwargs):
         super(GELU, self).__init__(**kwargs)
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         return npx.leaky_relu(x, act_type='gelu', name='fwd')
 
 
 #pylint: disable=W0223
+@use_np
 class Swish(HybridBlock):
     r"""
     Swish Activation function (SiLU with a hyperparameter)
@@ -246,12 +253,13 @@ class Swish(HybridBlock):
         super(Swish, self).__init__(**kwargs)
         self._beta = beta
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         return x * npx.sigmoid(self._beta * x)
 
 
 #pylint: disable=W0223
+@use_np
 class SiLU(HybridBlock):
     r"""
     Sigmoid Linear Units
@@ -274,6 +282,6 @@ class SiLU(HybridBlock):
     def __init__(self, **kwargs):
         super(SiLU, self).__init__(**kwargs)
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         return x * npx.sigmoid(x)

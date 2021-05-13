@@ -102,6 +102,7 @@ class Sequential(Block):
 
 
 #pylint: disable=W0223
+@use_np
 class HybridSequential(HybridBlock):
     """Stacks HybridBlocks sequentially.
 
@@ -134,8 +135,9 @@ class HybridSequential(HybridBlock):
 
         return super().__call__(*args, **kwargs)
 
-    @use_np
     def forward(self, x, *args):
+        x = x.as_np_ndarray()
+        args = [arg.as_np_ndarray() for arg in args]
         for block in self._children.values():
             x = block()(x, *args)
             args = []
@@ -167,6 +169,7 @@ class HybridSequential(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class Dense(HybridBlock):
     r"""Just your regular densely-connected NN layer.
 
@@ -236,8 +239,8 @@ class Dense(HybridBlock):
         else:
             self.act = None
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         ctx = x.context
         act = npx.fully_connected(x, self.weight.data(ctx), self.bias.data(ctx), no_bias=self.bias is None,
                                   num_hidden=self._units, flatten=self._flatten, name='fwd')
@@ -246,6 +249,7 @@ class Dense(HybridBlock):
         return act
 
     def infer_shape(self, x, *args):
+        x = x.as_np_ndarray()
         self.weight.shape = (self.weight.shape[0], x.shape[1])
 
     def __repr__(self):
@@ -257,6 +261,7 @@ class Dense(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class Dropout(HybridBlock):
     """Applies Dropout to the input.
 
@@ -287,8 +292,8 @@ class Dropout(HybridBlock):
         self._rate = rate
         self._axes = axes
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         if self._rate > 0:
             return npx.dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
         else:
@@ -301,6 +306,7 @@ class Dropout(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class _BatchNorm(HybridBlock):
     """Abstract BatchNorm layer (private, used as implementation base).
     Batch normalization layer (Ioffe and Szegedy, 2014).
@@ -389,15 +395,16 @@ class _BatchNorm(HybridBlock):
             dtype = 'float32'
         super(_BatchNorm, self).cast(dtype)
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         ctx = x.context
         return npx.batch_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
                               self.running_mean.data(ctx), self.running_var.data(ctx),
                               name='fwd', **self._kwargs)
 
     def infer_shape(self, x, *args):
-        channel_axis = self._axis if self._axis >= 0 else self._axis + x.ndim()
+        x = x.as_np_ndarray()
+        channel_axis = self._axis if self._axis >= 0 else self._axis + x.ndim
         channel_count = x.shape[channel_axis]
         self.gamma.shape = (channel_count,)
         self.beta.shape = (channel_count,)
@@ -544,6 +551,7 @@ class BatchNormReLU(_BatchNorm):
 
 
 #pylint: disable=W0223
+@use_np
 class Embedding(HybridBlock):
     r"""Turns non-negative integers (indexes/tokens) into dense vectors
     of fixed size. eg. [4, 20] -> [[0.25, 0.1], [0.6, -0.2]]
@@ -585,8 +593,8 @@ class Embedding(HybridBlock):
                                 init=weight_initializer, dtype=dtype,
                                 allow_deferred_init=True, grad_stype=grad_stype)
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         ctx = x.context
         return npx.embedding(x, self.weight.data(ctx), name='fwd', **self._kwargs)
 
@@ -597,6 +605,7 @@ class Embedding(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class Flatten(HybridBlock):
     r"""Flattens the input to two dimensional.
 
@@ -609,8 +618,8 @@ class Flatten(HybridBlock):
     def __init__(self, **kwargs):
         super(Flatten, self).__init__(**kwargs)
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         return npx.flatten(x)
 
     def __repr__(self):
@@ -618,6 +627,7 @@ class Flatten(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class InstanceNorm(HybridBlock):
     r"""
     Applies instance normalization to the n-dimensional input array.
@@ -696,8 +706,8 @@ class InstanceNorm(HybridBlock):
                               shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True)
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         ctx = x.context
         if self._axis == 1:
             return npx.InstanceNorm(x, self.gamma.data(ctx), self.beta.data(ctx),
@@ -707,6 +717,7 @@ class InstanceNorm(HybridBlock):
                                 name='fwd', eps=self._epsilon).swapaxes(1, self._axis)
 
     def infer_shape(self, x, *args):
+        x = x.as_np_ndarray()
         self.gamma.shape = (x.shape[1],)
         self.beta.shape = (x.shape[1],)
 
@@ -721,6 +732,7 @@ class InstanceNorm(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class LayerNorm(HybridBlock):
     r"""
     Applies layer normalization to the n-dimensional input array.
@@ -791,14 +803,15 @@ class LayerNorm(HybridBlock):
                               shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True)
 
-    @use_np
     def forward(self, data):
+        data = data.as_np_ndarray()
         ctx = data.context
         return npx.layer_norm(data, gamma=self.gamma.data(ctx),
                               beta=self.beta.data(ctx), axis=self._axis, eps=self._epsilon)
 
     def infer_shape(self, data, *args):
-        channel_axis = self._axis if self._axis >= 0 else self._axis + data.ndim()
+        data = data.as_np_ndarray()
+        channel_axis = self._axis if self._axis >= 0 else self._axis + data.ndim
         channel_count = data.shape[channel_axis]
         self.gamma.shape = (channel_count,)
         self.beta.shape = (channel_count,)
@@ -814,6 +827,7 @@ class LayerNorm(HybridBlock):
 
 
 #pylint: disable=W0223
+@use_np
 class GroupNorm(HybridBlock):
     r"""
     Applies group normalization to the n-dimensional input array.
@@ -891,14 +905,15 @@ class GroupNorm(HybridBlock):
                               shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True)
 
-    @use_np
     def forward(self, data):
+        data = data.as_np_ndarray()
         ctx = data.context
         norm_data = npx.GroupNorm(data, gamma=self.gamma.data(ctx), beta=self.beta.data(ctx),
                                   num_groups=self._num_groups, eps=self._epsilon)
         return norm_data
 
     def infer_shape(self, data, *args):
+        data = data.as_np_ndarray()
         self.gamma.shape = (data.shape[1],)
         self.beta.shape = (data.shape[1],)
 
@@ -956,6 +971,7 @@ class Lambda(Block):
 
 
 #pylint: disable=W0223
+@use_np
 class HybridLambda(HybridBlock):
     r"""Wraps an operator or an expression as a HybridBlock object.
 
@@ -982,10 +998,12 @@ class HybridLambda(HybridBlock):
     def __init__(self, function):
         super(HybridLambda, self).__init__()
         if isinstance(function, str):
-            assert hasattr(nd, function) and hasattr(sym, function), \
-                   "Function name %s is not found in symbol/ndarray." % function
-            func_dict = {sym: getattr(sym, function), nd: getattr(nd, function)}
-            self._func = lambda F, *args: func_dict[F](*args)
+            if hasattr(np, function):
+                self._func = getattr(np, function)
+            elif hasattr(npx, function):
+                self._func = getattr(npx, function)
+            else:
+                raise Exception("Function name %s is not found in np/npx." % function)
             self._func_name = function
         elif callable(function):
             self._func = function
@@ -995,8 +1013,9 @@ class HybridLambda(HybridBlock):
                 "Unrecognized function in lambda: {} of type {}"
                 .format(function, type(function)))
 
-    @use_np
     def forward(self, x, *args):
+        x = x.as_np_ndarray()
+        args = [arg.as_np_ndarray() for arg in args]
         return self._func(x, *args)
 
     def __repr__(self):
@@ -1004,6 +1023,7 @@ class HybridLambda(HybridBlock):
                                            function=self._func_name)
 
 
+@use_np
 class Concatenate(Sequential):
     """Lays `Block` s concurrently.
 
@@ -1027,8 +1047,8 @@ class Concatenate(Sequential):
         super(Concatenate, self).__init__()
         self.axis = axis
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         out = []
         for block in self._children.values():
             out.append(block()(x))
@@ -1037,6 +1057,7 @@ class Concatenate(Sequential):
 
 
 #pylint: disable=W0223
+@use_np
 class HybridConcatenate(HybridSequential):
     """Lays `HybridBlock` s concurrently.
 
@@ -1060,8 +1081,8 @@ class HybridConcatenate(HybridSequential):
         super().__init__()
         self.axis = axis
 
-    @use_np
     def forward(self, x):
+        x = x.as_np_ndarray()
         out = []
         for block in self._children.values():
             out.append(block()(x))
@@ -1070,6 +1091,7 @@ class HybridConcatenate(HybridSequential):
 
 
 #pylint: disable=W0223
+@use_np
 class Identity(HybridBlock):
     """Block that passes through the input directly.
 
@@ -1086,9 +1108,8 @@ class Identity(HybridBlock):
     def __init__(self):
         super(Identity, self).__init__()
 
-    @use_np
     def forward(self, x):
-        return x
+        return x.as_np_ndarray()
 
 
 class SyncBatchNorm(BatchNorm):

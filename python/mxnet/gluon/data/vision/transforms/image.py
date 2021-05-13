@@ -21,9 +21,9 @@
 import numpy as np
 
 from ....block import Block, HybridBlock
-from ..... import image
+from ..... import image, npx
 from .....base import numeric_types
-from .....util import is_np_array
+from .....util import is_np_array, use_np
 
 __all__ = ['ToTensor', 'Normalize', 'Rotate', 'RandomRotation',
            'RandomResizedCrop', 'CropResize', 'CropResize', 'RandomCrop',
@@ -42,6 +42,8 @@ def _append_return(*args):
     return None
 
 
+#pylint: disable=W0223
+@use_np
 class ToTensor(HybridBlock):
     """Converts an image NDArray or batch of image NDArray to a tensor NDArray.
 
@@ -80,12 +82,13 @@ class ToTensor(HybridBlock):
     def __init__(self):
         super(ToTensor, self).__init__()
 
-    def hybrid_forward(self, F, x, *args):
-        if is_np_array():
-            F = F.npx
-        return _append_return(F.image.to_tensor(x), *args)
+    def forward(self, x, *args):
+        x = x.as_np_ndarray()
+        return _append_return(npx.image.to_tensor(x), *args)
 
 
+#pylint: disable=W0223
+@use_np
 class Normalize(HybridBlock):
     """Normalize an tensor of shape (C x H x W) or (N x C x H x W) with mean and
     standard deviation.
@@ -135,10 +138,9 @@ class Normalize(HybridBlock):
         self._mean = mean
         self._std = std
 
-    def hybrid_forward(self, F, x, *args):
-        if is_np_array():
-            F = F.npx
-        return _append_return(F.image.normalize(x, self._mean, self._std), *args)
+    def forward(self, x, *args):
+        x = x.as_np_ndarray()
+        return _append_return(npx.image.normalize(x, self._mean, self._std), *args)
 
 
 class Rotate(Block):

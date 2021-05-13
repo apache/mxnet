@@ -534,7 +534,7 @@ def test_dc_hybridblock_graph_partition():
             self.dense = mx.gluon.nn.Dense(units=4)
 
         def forward(self, x, idx):
-            return mx.nd.sum(mx.nd.sum(mx.nd.contrib.boolean_mask(self.dense(x), idx)))
+            return mx.np.sum(mx.np.sum(mx.nd.np._internal.boolean_mask(self.dense(x), idx)))
 
     def setup(*, nd):
         x = mx.nd.array([[0, 1], [2, 3], [4, 5], [6, 7]])
