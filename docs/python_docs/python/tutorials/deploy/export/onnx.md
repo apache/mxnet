@@ -147,8 +147,8 @@ The mx2onnx module also supports dynamic input shapes. We can set `dynamic=True`
 ```python
 # The first input dimension will be dynamic in this case
 dynamic_input_shapes = [(None, 3, 224, 224)]
-mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file,
-                     dynamic=True, dynamic_input_shapes=dynamic_input_shapes)
+converted_model_path = mx.onnx.export_model(sym, params, in_shapes, in_types, onnx_file,
+                                            dynamic=True, dynamic_input_shapes=dynamic_input_shapes)
 ```
 
 ## Validate the exported ONNX model
