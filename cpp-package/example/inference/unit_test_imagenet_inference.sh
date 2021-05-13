@@ -42,22 +42,22 @@ cd ..
 # Running inference on imagenet.
 if [ "$(uname)" == "Darwin" ]; then
     echo ">>> INFO: FP32 real data"
-    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --params_file "./model/Inception-BN-0126.params" --dataset "./data/val_256_q90.rec" --rgb_mean "123.68 116.779 103.939" --batch_size 1 --num_skipped_batches 50 --num_inference_batches 500
+    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../build ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --params_file "./model/Inception-BN-0126.params" --dataset "./data/val_256_q90.rec" --rgb_mean "123.68 116.779 103.939" --batch_size 1 --num_skipped_batches 50 --num_inference_batches 500
 
     echo ">>> INFO: FP32 dummy data"
-    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --batch_size 1 --num_inference_batches 500 --benchmark
+    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../build ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --batch_size 1 --num_inference_batches 500 --benchmark
 else
     echo ">>> INFO: FP32 real data"
-    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --params_file "./model/Inception-BN-0126.params" --dataset "./data/val_256_q90.rec" --rgb_mean "123.68 116.779 103.939" --batch_size 1 --num_skipped_batches 50 --num_inference_batches 500
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../build ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --params_file "./model/Inception-BN-0126.params" --dataset "./data/val_256_q90.rec" --rgb_mean "123.68 116.779 103.939" --batch_size 1 --num_skipped_batches 50 --num_inference_batches 500
 
     echo ">>> INFO: FP32 dummy data"
-    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --batch_size 1 --num_inference_batches 500 --benchmark
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../build ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --batch_size 1 --num_inference_batches 500 --benchmark
 
-    lib_name=$(ls -a ../../../lib | grep -oE 'mkldnn' | tail -1)
-    if [[ -n ${lib_name} ]] && [[ 'mkldnn' =~ ${lib_name} ]]; then
+    lib_name=$(ls -a ../../../build | grep -oE 'onednn' | tail -1)
+    if [[ -n ${lib_name} ]] && [[ 'onednn' =~ ${lib_name} ]]; then
         echo ">>> INFO: INT8 dummy data"
-        LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/resnet50_v1_int8-symbol.json" --batch_size 1 --num_inference_batches 500 --benchmark
+        LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../build ./imagenet_inference --symbol_file "./model/resnet50_v1_int8-symbol.json" --batch_size 1 --num_inference_batches 500 --benchmark
     else
-        echo "Skipped INT8 test because mkldnn was not found which is required for running inference with quantized models."
+        echo "Skipped INT8 test because onednn was not found which is required for running inference with quantized models."
     fi
 fi

@@ -30,8 +30,8 @@ The users of these bindings are required to build this package as mentioned belo
 
 ## Building C++ Package
 
-The cpp-package directory contains the implementation of C++ API. As mentioned above, users are required to build this directory or package before using it.
-**The cpp-package is built while building the MXNet shared library, *libmxnet.so*.**
+The cpp-package directory contains the implementation of C++ API. Users are required to build this directory or package before using it. 
+**The cpp-package is built while building the MXNet shared library, *libmxnet.so*, with *USE\_CPP\_PACKAGE* option turned on. Please follow the steps to build the C++ package**
 
 ### Steps to build the C++ package:
 1.  Building the MXNet C++ package requires building MXNet from source.

@@ -625,6 +625,8 @@ build_ubuntu_gpu_onednn_nocudnn() {
 build_ubuntu_gpu() {
     set -ex
     cd /work/build
+    # Work around to link libcuda to libmxnet
+    # should be removed after https://github.com/apache/incubator-mxnet/issues/17858 is resolved. 
     ln -s -f /usr/local/cuda/targets/x86_64-linux/lib/stubs/libcuda.so libcuda.so.1
     export LIBRARY_PATH=${LIBRARY_PATH}:/work/build
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/work/build

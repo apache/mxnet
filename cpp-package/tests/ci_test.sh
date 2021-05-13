@@ -61,10 +61,10 @@ cp /work/build/cpp-package/example/test_ndarray_copy .
 ./test_ndarray_copy
 
 # skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/20011
-#cp ../../build/cpp-package/example/test_regress_label .
-#./test_regress_label
+cp /work/build/cpp-package/example/test_regress_label .
+./test_regress_label
 
-# sh unittests/unit_test_mlp_csv.sh
+sh unittests/unit_test_mlp_csv.sh
 
 cd inference
 
