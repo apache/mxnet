@@ -16,9 +16,10 @@
 # under the License.
 
 jupyter
+Jinja2==2.11.3
 sphinx==2.4.0
 matplotlib
-notebook==6.2.0
+notebook
 nbconvert==5.6.1
 nbsphinx==0.4.3
 recommonmark==0.6.0
