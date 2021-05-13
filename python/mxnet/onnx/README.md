@@ -25,7 +25,7 @@ ONNX 1.7 & 1.8
 ### Installation
 From MXNet 1.9 release and on, the ONNX export module has become an offical, built-in feature in MXNet. You can access the module at `mxnet.onnx`.
 
-If you are a user of earlier MXNet versions and do not want to upgrade MXNet, you can still enjoy the latest ONNX suppor by pulling the MXNet source code and building the wheel for only the mx2onnx module. Just do `cd python/mxnet/onnx` and then build the wheel with `python3 -m build`. You should be able to find the wheel under `python/mxnet/onnx/dist/mx2onnx-0.0.0-py3-none-any.whl` and install it with `pip install mx2onnx-0.0.0-py3-none-any.whl`. You should can then access the module with `import mx2onnx`. The `mx2onnx` namespace is equivalent to `mxnet.onnx`.
+If you are a user of earlier MXNet versions and do not want to upgrade MXNet, you can still enjoy the latest ONNX support by pulling the MXNet source code and building the wheel for only the mx2onnx module. Just do `cd python/mxnet/onnx` and then build the wheel with `python3 -m build`. You should be able to find the wheel under `python/mxnet/onnx/dist/mx2onnx-0.0.0-py3-none-any.whl` and install it with `pip install mx2onnx-0.0.0-py3-none-any.whl`. You can then access the module with `import mx2onnx`. The `mx2onnx` namespace is equivalent to `mxnet.onnx`.
 
 ### APIs
 The main API is `export_model`, which, as the name suggests, exports an MXNet model to the ONNX format.
@@ -70,7 +70,7 @@ Returns:
         Onnx file path
 
 #### Model with Multiple Input
-When the model has multiple input, all the input shapes and dtypes must be provided with `in_shapes` and `in_dtypes`. Note that the shape/dtype in `in_shapes`/`in_dtypes` must follow the same order as in the MXNet model symbol file. If `in_dtypes` is provided as a single data type, then that type will be applied to all input nodes.
+When the model has multiple inputs, all the input shapes and dtypes must be provided with `in_shapes` and `in_dtypes`. Note that the shape/dtype in `in_shapes`/`in_dtypes` must follow the same order as in the MXNet model symbol file. If `in_dtypes` is provided as a single data type, then that type will be applied to all input nodes.
 
 #### Dynamic Shape Input
 We can set `dynamic=True` to turn on support for dynamic input shapes. Note that even with dynamic shapes, a set of static input shapes still need to be specified in `in_shapes`; on top of that, we'll also need to specify which dimensions of the input shapes are dynamic in `dynamic_input_shapes`. We can simply set the dynamic dimensions as `None`, e.g. `(1, 3, None, None)`, or use strings in place of the `None`'s for better understandability in the exported onnx graph, e.g. `(1, 3, 'Height', 'Width')`

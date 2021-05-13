@@ -115,7 +115,7 @@ The `export_model` API can accept a MXNet model in one of the following ways.
 
 Since we have downloaded pre-trained model files, we will use the `export_model` API by passing in the paths of the symbol and params files.
 
-## Use mx2onnx to eport the model
+## Use mx2onnx to export the model
 
 We will use the downloaded pre-trained model files (sym, params) and define a few more parameters.
 
@@ -170,4 +170,4 @@ Now that the model passes the check (hopefully :)), we can run it with inference
 
 ## Simplify the exported ONNX model
 
-Okay, we already have the exporeted ONNX model now, but it may not be the end of the story. Due to differences in MXNet's and ONNX's operator specifications, sometimes helper operartors/nodes will need to be created to help construct the ONNX graph from the MXNet blueprint. In that sense, we recommend our users to checkout [onnx-simplifier](https://github.com/daquexian/onnx-simplifier), which can greatly simply the exported ONNX model by techniques such as constant folding, operator fussion and more.
+Okay, we already have the exported ONNX model now, but it may not be the end of the story. Due to differences in MXNet's and ONNX's operator specifications, sometimes helper operators/nodes will need to be created to help construct the ONNX graph from the MXNet blueprint. In that sense, we recommend our users to checkout [onnx-simplifier](https://github.com/daquexian/onnx-simplifier), which can greatly simplify the exported ONNX model by techniques such as constant folding, operator fusion and more.
