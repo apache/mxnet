@@ -442,5 +442,4 @@ class MXNetGraph(object):
 
         graph.initializer.extend(initializer)
 
-        checker.check_graph(graph)
         return graph

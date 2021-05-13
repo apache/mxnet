@@ -21,6 +21,7 @@
 """Exports an MXNet model to the ONNX model format"""
 import logging
 import numpy as np
+import onnx
 
 from mxnet.base import string_types
 from mxnet import symbol
@@ -51,7 +52,7 @@ def get_operator_support(opset_version=None):
 def export_model(sym, params, in_shapes=None, in_types=np.float32,
                  onnx_file_path='model.onnx', verbose=False, dynamic=False,
                  dynamic_input_shapes=None, run_shape_inference=False, input_type=None,
-                 input_shape=None):
+                 input_shape=None, large_model=False):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
     Operator support and coverage -
@@ -83,6 +84,9 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
         This is the old name of in_types. We keep this parameter name for backward compatibility
     input_shape : List of tuple
         This is the old name of in_shapes. We keep this parameter name for backward compatibility
+    large_model : Boolean
+        Whether the model is larger than 2 GB. If true will save large param tensors in a seperate file with .data suffix. 
+        e.g. the output will be model.onnx and model.onnx.data
 
     Returns
     -------
@@ -150,11 +154,10 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
         except: # pylint: disable=bare-except
             logging.info("Shape inference failed, original export is kept.")
 
-    # Save model on disk
-    with open(onnx_file_path, "wb") as file_handle:
-        serialized = onnx_model.SerializeToString()
-        file_handle.write(serialized)
-        logging.info("Input shape of the model %s ", in_shapes)
-        logging.info("Exported ONNX file %s saved to disk", onnx_file_path)
-
+    large_model = True
+    if large_model:
+        from onnx.external_data_helper import convert_model_to_external_data
+        convert_model_to_external_data(onnx_model, all_tensors_to_one_file=True, location=onnx_file_path+'.data', size_threshold=1024)
+    onnx.save_model(onnx_model, onnx_file_path)
+    onnx.checker.check_model(onnx_file_path)
     return onnx_file_path

@@ -223,15 +223,9 @@ def convert_weights_and_inputs(node, **kwargs):
 
         tensor_node = onnx.helper.make_tensor_value_info(name, data_type, dims)
 
-        initializer.append(
-            onnx.helper.make_tensor(
-                name=name,
-                data_type=data_type,
-                dims=dims,
-                vals=np_arr.flatten().tolist(),
-                raw=False
-            )
-        )
+        from onnx import numpy_helper
+        tensor = numpy_helper.from_array(np_arr, name=name)
+        initializer.append(tensor)
 
         return [tensor_node], (np_arr.dtype,)
     else:
