@@ -4486,7 +4486,7 @@ def convert_RNN(node, **kwargs):
     """Map MXNet's RNN operator attributes to onnx's operators
     and return the created node.
     """
-    from onnx.helper import make_node
+    from onnx.helper import make_node, make_tensor
     from onnx import TensorProto
 
     name, input_nodes, attrs = get_inputs(node, kwargs)
