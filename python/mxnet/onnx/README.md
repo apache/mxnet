@@ -148,6 +148,7 @@ mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file,
 |_rminus_scalar|1.7 1.8 |
 |_rnn_param_concat|1.7 1.8 |
 |_sample_multinomial|1.7 1.8 |
+|_split_v2|1.7 1.8 |
 |_zeros|1.7 1.8 |
 |abs|1.7 1.8 |
 |add_n|1.7 1.8 |
@@ -173,6 +174,7 @@ mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file,
 |broadcast_minimum|1.7 1.8 |
 |broadcast_mod|1.7 1.8 |
 |broadcast_mul|1.7 1.8 |
+|broadcast_not_equal|1.7 1.8 |
 |broadcast_power|1.7 1.8 |
 |broadcast_sub|1.7 1.8 |
 |broadcast_to|1.7 1.8 |
