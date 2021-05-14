@@ -1046,7 +1046,7 @@ def convert_RNN(node, **kwargs):
     create_tensor([1], name+'_1', kwargs['initializer'])
     create_tensor([state_size], name+'_state_size', kwargs['initializer'])
     create_tensor([direction], name+'_direction', kwargs['initializer'])
-    
+
     tensor_1 = make_tensor(name+'_1_f', onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype], [1], [1])
 
     nodes = [
