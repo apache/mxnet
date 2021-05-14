@@ -17,25 +17,25 @@
 # ONNX Export Support for MXNet
 
 ### Overview
-[ONNX](https://onnx.ai/), or Open Neural Network Exchange, is an open source deep learning model format that acts as a framework neutral graph representation between DL frameworks or between training and inference. With the ability to export models to the ONNX format, MXNet users can enjoy faster inference and a wider range of deployment device choices, including edge and mobile devices where MXNet installation may be constrained. Popular hardware-accelerated and/or cross-platform ONNX runtime frameworks include Nvidia [TensorRT](https://github.com/onnx/onnx-tensorrt), Microsoft [ONNXRuntime](https://github.com/microsoft/onnxruntime), Apple [CoreML](https://github.com/onnx/onnx-coreml) and [TVM](https://tvm.apache.org/docs/tutorials/frontend/from_onnx.html), etc. 
+[ONNX](https://onnx.ai/), or Open Neural Network Exchange, is an open source deep learning model format that acts as a framework neutral graph representation between DL frameworks or between training and inference. With the ability to export models to the ONNX format, MXNet users can enjoy faster inference and a wider range of deployment device choices, including edge and mobile devices where MXNet installation may be constrained. Popular hardware-accelerated and/or cross-platform ONNX runtime frameworks include Nvidia [TensorRT](https://github.com/onnx/onnx-tensorrt), Microsoft [ONNXRuntime](https://github.com/microsoft/onnxruntime), Apple [CoreML](https://github.com/onnx/onnx-coreml), etc.
 
 ### ONNX Versions Supported
-ONNX 1.7 -- Fully Supported
-ONNX 1.8 -- Work in Progress
+ONNX 1.7 & 1.8
 
 ### Installation
-From the 1.9 release and on, the ONNX export module has become an offical, built-in module in MXNet. You can access the module at `mxnet.onnx`. 
+From MXNet 1.9 release and on, the ONNX export module has become an offical, built-in feature in MXNet. You can access the module at `mxnet.onnx`.
 
-If you are a user of earlier MXNet versions and do not want to upgrade MXNet, you can still enjoy the latest ONNX suppor by pulling the MXNet source code and building the wheel for only the mx2onnx module. Just do `cd python/mxnet/onnx` and then build the wheel with `python3 -m build`. You should be able to find the wheel under `python/mxnet/onnx/dist/mx2onnx-0.0.0-py3-none-any.whl` and install it with `pip install mx2onnx-0.0.0-py3-none-any.whl`. You should be able to access the module with `import mx2onnx` then.
+If you are a user of earlier MXNet versions and do not want to upgrade MXNet, you can still enjoy the latest ONNX support by pulling the MXNet source code and building the wheel for only the mx2onnx module. Just do `cd python/mxnet/onnx` and then build the wheel with `python3 -m build`. You should be able to find the wheel under `python/mxnet/onnx/dist/mx2onnx-0.0.0-py3-none-any.whl` and install it with `pip install mx2onnx-0.0.0-py3-none-any.whl`. You can then access the module with `import mx2onnx`. The `mx2onnx` namespace is equivalent to `mxnet.onnx`.
 
 ### APIs
+The main API is `export_model`, which, as the name suggests, exports an MXNet model to the ONNX format.
+
 ```python
 mxnet.onnx.export_model(sym, params, in_shapes=None, in_types=np.float32,
                  onnx_file_path='model.onnx', verbose=False, dynamic=False,
                  dynamic_input_shapes=None, run_shape_inference=False, input_type=None,
                  input_shape=None)
 ```
-Exports the MXNet model file into ONNX model.
 
 Parameters:
 
@@ -61,7 +61,7 @@ Parameters:
         If True will run shape inference on the model
     input_type : data type or list of data types
         This is the old name of in_types. We keep this parameter name for backward compatibility
-    in_shapes : List of tuple
+    input_shape : List of tuple
         This is the old name of in_shapes. We keep this parameter name for backward compatibility
 
 Returns:
@@ -70,19 +70,22 @@ Returns:
         Onnx file path
 
 #### Model with Multiple Input
-When the model has multiple input, all the input shapes and dtypes should be provided with `in_shapes` and `in_dtypes`. Note that the shape/dtype in `in_shapes`/`in_dtypes` must follow the same order as in the MXNet model symbol file. If `in_dtypes` is provided as a single data type, the type will be applied to all input nodes.
+When the model has multiple inputs, all the input shapes and dtypes must be provided with `in_shapes` and `in_dtypes`. Note that the shape/dtype in `in_shapes`/`in_dtypes` must follow the same order as in the MXNet model symbol file. If `in_dtypes` is provided as a single data type, then that type will be applied to all input nodes.
 
 #### Dynamic Shape Input
-By setting up optional flags in export_model API, users have the control of partially/fully dynamic shape input export. The flag `dynamic` is set to switch on dynamic shape input export, and `dynamic_input_shapes` is used to specify which dimensions are dynamic `None` or any string variable can be used to represent a dynamic shape dimension.
+We can set `dynamic=True` to turn on support for dynamic input shapes. Note that even with dynamic shapes, a set of static input shapes still need to be specified in `in_shapes`; on top of that, we'll also need to specify which dimensions of the input shapes are dynamic in `dynamic_input_shapes`. We can simply set the dynamic dimensions as `None`, e.g. `(1, 3, None, None)`, or use strings in place of the `None`'s for better understandability in the exported onnx graph, e.g. `(1, 3, 'Height', 'Width')`
 
 ```python
-# The first input dimension will be dynamic in this case
+# The batch dimension will be dynamic in this case
+in_shapes = [(1, 3, 224, 224)]
 dynamic_input_shapes = [(None, 3, 224, 224)]
-mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file,
+mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_types, onnx_file,
                      dynamic=True, dynamic_input_shapes=dynamic_input_shapes)
 ```
 
 ### Operator Support Matrix
+We have implemented export logics for a wide range of MXNet operators, and thus supported most CV and NLP use cases. Below is our most up-to-date operator support matrix.
+
 |MXNet Op|ONNX Version|
 |:-|:-:|
 |Activation|1.7 1.8 |
@@ -234,7 +237,9 @@ mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file,
 |where|1.7 1.8 |
 |zeros_like|1.7 1.8 |
 
-### [GluonCV Pretrained Model Support Matrix](https://cv.gluon.ai/model_zoo/index.html)
+### [GluonCV](https://cv.gluon.ai/model_zoo/index.html) Pretrained Model Support Matrix
+GluonCV is a popular CV toolkit built on top of MXNet. Below is the model support matrix for GluonCV (v0.10.0) models.
+
 |Image Classification|
 |:-|
 |alexnet|
@@ -391,7 +396,9 @@ mx.onnx.export_model(mx_sym, mx_params, in_shapes, in_dtypes, onnx_file,
 |inceptionv3_kinetics400|
 |inceptionv3_ucf101|
 
-### [GluonNLP Pretrained Model Support Matrix](https://nlp.gluon.ai/model_zoo/catalog.html)
+### [GluonNLP](https://nlp.gluon.ai/model_zoo/catalog.html) Pretrained Model Support Matrix]
+GluonNLP is a popular NLP toolkit built on top of MXNet. Below is the model support matrix for GluonNLP (v0.10.0) models.
+
 |NLP Models|
 |:-|
 |awd_lstm_lm_600|

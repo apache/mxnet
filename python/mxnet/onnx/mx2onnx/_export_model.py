@@ -81,7 +81,7 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
         If True will run shape inference on the model
     input_type : data type or list of data types
         This is the old name of in_types. We keep this parameter name for backward compatibility
-    in_shapes : List of tuple
+    input_shape : List of tuple
         This is the old name of in_shapes. We keep this parameter name for backward compatibility
 
     Returns

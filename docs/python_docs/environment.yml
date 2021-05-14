@@ -26,6 +26,7 @@ dependencies:
 - sphinx==2.4.0
 - matplotlib
 - notebook
+- Jinja2==2.11.3
 - pip:
   - nbconvert==5.6.1
   - nbsphinx==0.4.3
