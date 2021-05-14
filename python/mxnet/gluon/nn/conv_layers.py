@@ -118,7 +118,7 @@ class _Conv(HybridBlock):
         if adj is not None:
             self._kwargs['adj'] = adj
 
-        self.weight = Parameter('weight', shape=(),
+        self.weight = Parameter('weight', shape=self.pre_infer(),
                                 init=weight_initializer,
                                 allow_deferred_init=True)
         if use_bias:
@@ -135,7 +135,7 @@ class _Conv(HybridBlock):
 
     def forward(self, x):
         x = x.as_np_ndarray()
-        ctx = x.context
+        ctx = x.ctx
         if self.bias is None:
             act = getattr(npx, self._op_name)(x, self.weight.data(ctx), **self._kwargs)
         else:
@@ -145,58 +145,53 @@ class _Conv(HybridBlock):
             act = self.act(act)
         return act
 
-    def infer_shape(self, x):
-        x = x.as_np_ndarray()
-        dshape1 = x.shape[self._layout.find('C')]
+    def pre_infer(self):
         wshape = [-1]*(len(self._kernel_size) + 2)
         if self._op_name == "convolution":
             if len(self._kernel_size) == 1:
-                wshape[self._layout.find('N')] = self._channels / self._groups
-                wshape[self._layout.find('C')] = dshape1 / self._groups if dshape1 != -1 else -1
+                wshape[self._layout.find('N')] = self._channels // self._groups
                 wshape[self._layout.find('W')] = self._kernel_size[0]
                 wshape[0] *= self._groups
-                self.weight.shape = tuple(wshape)
             elif len(self._kernel_size) == 2:
-                wshape[self._layout.find('N')] = self._channels / self._groups
-                wshape[self._layout.find('C')] = dshape1 / self._groups if dshape1 != -1 else -1
+                wshape[self._layout.find('N')] = self._channels // self._groups
                 wshape[self._layout.find('H')] = self._kernel_size[0]
                 wshape[self._layout.find('W')] = self._kernel_size[1]
                 wshape[0] *= self._groups
-                self.weight.shape = tuple(wshape)
             else:
                 assert len(self._kernel_size) == 3, "kernel_size must be 1, 2 or 3"
-                wshape[self._layout.find('N')] = self._channels / self._groups
-                wshape[self._layout.find('C')] = dshape1 / self._groups if dshape1 != -1 else -1
+                wshape[self._layout.find('N')] = self._channels // self._groups
                 wshape[self._layout.find('D')] = self._kernel_size[0]
                 wshape[self._layout.find('H')] = self._kernel_size[1]
                 wshape[self._layout.find('W')] = self._kernel_size[2]
                 wshape[0] *= self._groups
-                self.weight.shape = tuple(wshape)
         else:
             assert self._op_name == "deconvolution", \
                 "Only support operator name with convolution and deconvolution"
             if len(self._kernel_size) == 1:
-                wshape[self._layout.find('C')] = self._channels / self._groups
-                wshape[self._layout.find('N')] = dshape1
+                wshape[self._layout.find('C')] = self._channels // self._groups
                 wshape[self._layout.find('W')] = self._kernel_size[0]
-                wshape[0] *= self._groups
-                self.weight.shape = tuple(wshape)
             elif len(self._kernel_size) == 2:
-                wshape[self._layout.find('C')] = self._channels / self._groups
-                wshape[self._layout.find('N')] = dshape1
+                wshape[self._layout.find('C')] = self._channels // self._groups
                 wshape[self._layout.find('H')] = self._kernel_size[0]
                 wshape[self._layout.find('W')] = self._kernel_size[1]
-                wshape[0] *= self._groups
-                self.weight.shape = tuple(wshape)
             else:
                 assert len(self._kernel_size) == 3, "kernel_size must be 1, 2 or 3"
-                wshape[self._layout.find('C')] = self._channels / self._groups
-                wshape[self._layout.find('N')] = dshape1
+                wshape[self._layout.find('C')] = self._channels // self._groups
                 wshape[self._layout.find('D')] = self._kernel_size[0]
                 wshape[self._layout.find('H')] = self._kernel_size[1]
                 wshape[self._layout.find('W')] = self._kernel_size[2]
-                wshape[0] *= self._groups
-                self.weight.shape = tuple(wshape)
+        return tuple(wshape)
+
+    def infer_shape(self, x):
+        x = x.as_np_ndarray()
+        dshape1 = x.shape[self._layout.find('C')]
+        if self._op_name == "convolution":
+            self.weight.shape[self._layout.find('C')] = \
+                dshape1 // self._groups if dshape1 != -1 else -1
+        else:
+            assert self._op_name == "deconvolution", \
+                "Only support operator name with convolution and deconvolution"
+            self.weight.shape[self._layout.find('N')] = dshape1
 
     def _alias(self):
         return 'conv'
@@ -1293,8 +1288,10 @@ class ReflectionPad2D(HybridBlock):
     def __init__(self, padding=0, **kwargs):
         super(ReflectionPad2D, self).__init__(**kwargs)
         if isinstance(padding, numeric_types):
-            padding = (0, 0, 0, 0, padding, padding, padding, padding)
-        assert(len(padding) == 8)
+            padding = ((0, 0), (0, 0), (padding, padding), (padding, padding))
+        assert(len(padding) == 4), "padding size should be tuple with shape (4, 2)"
+        for pad in padding:
+            assert(len(pad) == 2), "padding size should be tuple with shape (4, 2)"
         self._padding = padding
 
     def forward(self, x):
@@ -1455,7 +1452,7 @@ class DeformableConvolution(HybridBlock):
 
     def forward(self, x):
         x = x.as_np_ndarray()
-        ctx = x.context
+        ctx = x.ctx
         if self.offset_bias is None:
             offset = npx.convolution(x, self.offset_weight.data(ctx), cudnn_off=True, **self._kwargs_offset)
         else:
@@ -1655,7 +1652,7 @@ class ModulatedDeformableConvolution(HybridBlock):
 
     def forward(self, x):
         x = x.as_np_ndarray()
-        ctx = x.context
+        ctx = x.ctx
         if self.offset_bias is None:
             offset = npx.convolution(x, self.offset_weight.data(ctx),
                                      cudnn_off=True, **self._kwargs_offset)

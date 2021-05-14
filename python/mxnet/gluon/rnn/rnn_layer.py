@@ -129,7 +129,7 @@ class _RNNLayer(HybridBlock):
         super(_RNNLayer, self).cast(dtype)
         self._dtype = dtype
 
-    def begin_state(self, batch_size=0, func=ndarray.zeros, **kwargs):
+    def begin_state(self, batch_size=0, func=np.zeros, **kwargs):
         """Initial state for this cell.
 
         Parameters
@@ -162,8 +162,6 @@ class _RNNLayer(HybridBlock):
             else:
                 info = kwargs
             state = func(name='h0_%d' % (i), **info)
-            if is_np_array():
-                state = state.as_np_ndarray()
             states.append(state)
         return states
 

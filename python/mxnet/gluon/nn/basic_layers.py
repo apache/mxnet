@@ -241,7 +241,7 @@ class Dense(HybridBlock):
 
     def forward(self, x):
         x = x.as_np_ndarray()
-        ctx = x.context
+        ctx = x.ctx
         act = npx.fully_connected(x, self.weight.data(ctx), self.bias.data(ctx), no_bias=self.bias is None,
                                   num_hidden=self._units, flatten=self._flatten, name='fwd')
         if self.act is not None:
@@ -250,7 +250,13 @@ class Dense(HybridBlock):
 
     def infer_shape(self, x, *args):
         x = x.as_np_ndarray()
-        self.weight.shape = (self.weight.shape[0], x.shape[1])
+        if self._flatten:
+            num_input = 1
+            for i in range(1, x.ndim):
+                num_input *= x.shape[i]
+            self.weight.shape = (self.weight.shape[0], num_input)
+        else:
+            self.weight.shape = (self.weight.shape[0], x.shape[x.ndim - 1])
 
     def __repr__(self):
         s = '{name}({layout}, {act})'
@@ -397,7 +403,7 @@ class _BatchNorm(HybridBlock):
 
     def forward(self, x):
         x = x.as_np_ndarray()
-        ctx = x.context
+        ctx = x.ctx
         return npx.batch_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
                               self.running_mean.data(ctx), self.running_var.data(ctx),
                               name='fwd', **self._kwargs)
@@ -586,6 +592,7 @@ class Embedding(HybridBlock):
     def __init__(self, input_dim, output_dim, dtype='float32',
                  weight_initializer=None, sparse_grad=False, **kwargs):
         super(Embedding, self).__init__(**kwargs)
+        assert not sparse_grad, "Currently, sparse feature is not supported in Gluon2.0"
         grad_stype = 'row_sparse' if sparse_grad else 'default'
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype, 'sparse_grad': sparse_grad}
@@ -595,7 +602,7 @@ class Embedding(HybridBlock):
 
     def forward(self, x):
         x = x.as_np_ndarray()
-        ctx = x.context
+        ctx = x.ctx
         return npx.embedding(x, self.weight.data(ctx), name='fwd', **self._kwargs)
 
     def __repr__(self):
@@ -708,7 +715,7 @@ class InstanceNorm(HybridBlock):
 
     def forward(self, x):
         x = x.as_np_ndarray()
-        ctx = x.context
+        ctx = x.ctx
         if self._axis == 1:
             return npx.InstanceNorm(x, self.gamma.data(ctx), self.beta.data(ctx),
                                     name='fwd', eps=self._epsilon)
@@ -805,7 +812,7 @@ class LayerNorm(HybridBlock):
 
     def forward(self, data):
         data = data.as_np_ndarray()
-        ctx = data.context
+        ctx = data.ctx
         return npx.layer_norm(data, gamma=self.gamma.data(ctx),
                               beta=self.beta.data(ctx), axis=self._axis, eps=self._epsilon)
 
@@ -907,7 +914,7 @@ class GroupNorm(HybridBlock):
 
     def forward(self, data):
         data = data.as_np_ndarray()
-        ctx = data.context
+        ctx = data.ctx
         norm_data = npx.GroupNorm(data, gamma=self.gamma.data(ctx), beta=self.beta.data(ctx),
                                   num_groups=self._num_groups, eps=self._epsilon)
         return norm_data
@@ -1112,6 +1119,7 @@ class Identity(HybridBlock):
         return x.as_np_ndarray()
 
 
+@use_np
 class SyncBatchNorm(BatchNorm):
     """Cross-GPU Synchronized Batch normalization (SyncBN)
 
@@ -1192,6 +1200,11 @@ class SyncBatchNorm(BatchNorm):
         num_devices = num_devices if num_devices > 0 else 1
         return num_devices
 
-    def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
-        return F.contrib.SyncBatchNorm(x, gamma, beta, running_mean, running_var,
-                                       name='fwd', **self._kwargs)
+    def forward(self, x):
+        ctx = x.ctx
+        return nd.contrib.SyncBatchNorm(x.as_nd_ndarray(),
+                                        self.gamma.data(ctx).as_nd_ndarray(),
+                                        self.beta.data(ctx).as_nd_ndarray(),
+                                        self.running_mean.data(ctx).as_nd_ndarray(),
+                                        self.running_var.data(ctx).as_nd_ndarray(),
+                                        name='fwd', **self._kwargs).as_np_ndarray()

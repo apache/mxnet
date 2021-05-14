@@ -534,7 +534,7 @@ def test_dc_hybridblock_graph_partition():
             self.dense = mx.gluon.nn.Dense(units=4)
 
         def forward(self, x, idx):
-            return mx.np.sum(mx.np.sum(mx.nd.np._internal.boolean_mask(self.dense(x), idx)))
+            return mx.nd.sum(mx.nd.sum(mx.nd.contrib.boolean_mask(self.dense(x).as_nd_ndarray(), idx)))
 
     def setup(*, nd):
         x = mx.nd.array([[0, 1], [2, 3], [4, 5], [6, 7]])
@@ -544,40 +544,6 @@ def test_dc_hybridblock_graph_partition():
     net = MyBlock()
     net.initialize()
     _assert_dc_gluon(setup, net, numpy=False, autograd=False)
-
-def test_dc_hybridblock_symbolblock_error():
-    model = mx.gluon.nn.HybridSequential()
-    model.add(mx.gluon.nn.Dense(128, activation='tanh'))
-    model.add(mx.gluon.nn.Dropout(0.5))
-    model.add(mx.gluon.nn.Dense(64, activation='tanh'),
-              mx.gluon.nn.Dense(32, in_units=64))
-    model.add(mx.gluon.nn.Activation('relu'))
-    model.initialize()
-
-    inputs = mx.sym.var('data')
-    outputs = model(inputs).get_internals()
-    smodel = mx.gluon.SymbolBlock(outputs, inputs)
-    smodel.initialize()
-
-    assert len(smodel(mx.nd.zeros((16, 10)))) == 14
-
-    class Net(mx.gluon.HybridBlock):
-        def __init__(self, model):
-            super(Net, self).__init__()
-            self.model = model
-
-        def forward(self, x):
-            out = self.model(x)
-            return mx.nd.add_n(*[i.sum() for i in out])
-
-    net = Net(smodel)
-    data = mx.nd.zeros((16, 10))
-    out = net(data)
-    out.asnumpy()
-
-    net.hybridize()
-    with pytest.raises(RuntimeError):
-        out_hybrid = net(data)  # Raises RuntimeError
 
 
 def test_indexing_shape_change():

@@ -145,11 +145,8 @@ class PReLU(HybridBlock):
 
     def forward(self, x):
         x = x.as_np_ndarray()
-        ctx = x.context
+        ctx = x.ctx
         return npx.leaky_relu(x, gamma=self.alpha.data(ctx), act_type='prelu', name='fwd')
-
-    def infer_shape(self, x, *args):
-        self.alpha.shape = (x.shape[1],)
 
 
 #pylint: disable=W0223

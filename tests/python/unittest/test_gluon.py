@@ -27,7 +27,7 @@ from mxnet.test_utils import assert_almost_equal, default_context, assert_allclo
 from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
-import mxnet.numpy as _mx_np
+import mxnet.numpy as _mx_np, mxnet.numpy_extension as _mx_npx
 from common import assertRaises, assert_raises_cudnn_not_satisfied, \
     xfail_when_nonstandard_decimal_separator, environment
 import numpy as np
@@ -208,10 +208,6 @@ def test_basic():
     model.add(nn.Dense(64, activation='tanh', in_units=256),
               nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
-    # symbol
-    x = mx.sym.var('data')
-    y = model(x)
-    assert len(y.list_arguments()) == 7
 
     # ndarray
     model.initialize(mx.init.Xavier(magnitude=2.24))
@@ -224,119 +220,6 @@ def test_basic():
     model.setattr('grad_req', 'write')
     assert list(model.collect_params().values())[0]._grad is not None
 
-
-def test_dense():
-    model = nn.Dense(128, activation='tanh', in_units=10, flatten=False)
-    inputs = mx.sym.Variable('data')
-    outputs = model(inputs)
-    assert set(model.collect_params().keys()) == set(['weight', 'bias'])
-    args, outs, auxs = outputs.infer_shape(data=(2, 3, 10))
-    assert outs == [(2, 3, 128)]
-
-    model = nn.Dense(128, activation='relu', in_units=30, flatten=True)
-    inputs = mx.sym.Variable('data')
-    outputs = model(inputs)
-    assert set(model.collect_params().keys()) == set(['weight', 'bias'])
-    args, outs, auxs = outputs.infer_shape(data=(17, 2, 5, 3))
-    assert outs == [(17, 128)]
-
-
-def test_hybrid_sequential_unique_internals():
-    net = mx.gluon.nn.HybridSequential()
-    net.add(mx.gluon.nn.Dense(100, activation='relu'), mx.gluon.nn.Dense(10))
-    assert len(set(s.name for s in net(mx.sym.Variable('data')).get_internals())) == 8
-
-
-@pytest.mark.parametrize('compute_before_cast', [True, False])
-def test_symbol_block(tmpdir, compute_before_cast):
-    model = nn.HybridSequential()
-    model.add(nn.Dense(128, activation='tanh'))
-    model.add(nn.Dropout(0.5))
-    model.add(nn.Dense(64, activation='tanh'),
-              nn.Dense(32, in_units=64))
-    model.add(nn.Activation('relu'))
-
-    model.initialize()
-
-    inputs = mx.sym.var('data')
-    outputs = model(inputs).get_internals()
-    params = {p.var().name: p for p in model.collect_params().values()}
-    smodel = gluon.SymbolBlock(outputs, inputs, params=params)
-
-    assert len(smodel(mx.nd.zeros((16, 10)))) == 14
-
-    out = smodel(mx.sym.var('in'))
-    assert len(out) == len(outputs.list_outputs())
-
-    class Net(nn.HybridBlock):
-        def __init__(self, model):
-            super(Net, self).__init__()
-            self.model = model
-
-        def hybrid_forward(self, F, x):
-            out = self.model(x)
-            return F.add_n(*[i.sum() for i in out])
-
-    net = Net(smodel)
-    net.hybridize()
-    assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
-
-    inputs = mx.sym.var('data')
-    outputs = model(inputs)
-    params = {p.var().name: p for p in model.collect_params().values()}
-    smodel = gluon.SymbolBlock(outputs, inputs, params=params)
-    net = Net(smodel)
-    net.hybridize()
-    assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
-
-    # Test case to verify if initializing the SymbolBlock from a model with params
-    # other than fp32 param dtype.
-
-    # 1. Load a resnet model, cast it to fp64 and export
-    tmp = str(tmpdir)
-    tmpfile = os.path.join(tmp, 'resnet34_fp64')
-    ctx = mx.cpu(0)
-
-    net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx, root=tmp)
-    if compute_before_cast:
-        # Compute before casting to catch bugs where symbol dtype isn't casted correctly GH-18843
-        net_fp32.initialize()
-        net_fp32(mx.nd.zeros((1,3,224,224), ctx=ctx))
-    net_fp32.cast('float64')
-    net_fp32.hybridize()
-    data = mx.nd.zeros((1,3,224,224), dtype='float64', ctx=ctx)
-    net_fp32(data)
-    sym_file, params_file = net_fp32.export(tmpfile, 0)
-
-    # 2.a Load the saved model and verify if all the params are loaded correctly.
-    # and choose one of the param to verify the type if fp64.\
-    sm = mx.sym.load(sym_file)
-    inputs = mx.sym.var('data', dtype='float64')
-    net_fp64 = mx.gluon.SymbolBlock(sm, inputs)
-    net_fp64.load_parameters(params_file, ctx=ctx)
-    # Get a conv layer's weight parameter name. Conv layer's weight param is
-    # expected to be of dtype casted, fp64.
-    for param_name in net_fp64.params.keys():
-        if 'conv' in param_name and 'weight' in param_name:
-            break
-    assert np.dtype(net_fp64.params[param_name].dtype) == np.dtype(np.float64)
-
-    # 3.b Verify same functionnality with the imports API
-    net_fp_64 = mx.gluon.SymbolBlock.imports(sym_file, 'data', params_file, ctx=ctx)
-
-    # Get a conv layer's weight parameter name. Conv layer's weight param is
-    # expected to be of dtype casted, fp64.
-    for param_name in net_fp_64.params.keys():
-        if 'conv' in param_name and 'weight' in param_name:
-            break
-    assert np.dtype(net_fp_64.params[param_name].dtype) == np.dtype(np.float64)
-
-    # Cast the symbol block to FP32 and try to forward a FP32 data.
-    # This will verify SymbolBlock.cast() functionality.
-    net_fp64.cast('float32')
-    fp32_data = mx.nd.zeros((1,3,224,224), dtype='float32', ctx=ctx)
-    prediction = net_fp64.forward(fp32_data)
-    assert np.dtype(prediction.dtype) == np.dtype(np.float32)
 
 def test_sparse_symbol_block():
     data = mx.sym.var('data')
@@ -737,8 +620,8 @@ def test_sync_batchnorm():
             mx.autograd.backward(loss1)
             mx.autograd.backward(loss2)
 
-        output2 = _mx_np.concatenate(*[output.as_in_context(input.context)
-                                     for output in output2], dim=0)
+        output2 = mx.nd.concat(*[output.as_nd_ndarray().as_in_context(input.context)
+                               for output in output2], dim=0)
         # check bn1
 
         momentum = 0.9
@@ -819,7 +702,7 @@ def test_layernorm():
         layer.initialize()
         if hybridize:
             layer.hybridize()
-        pytest.raises(MXNetError, lambda: layer(mx.nd.ones((2, 11))))
+        pytest.raises(AssertionError, lambda: layer(mx.nd.ones((2, 11))))
 
 def test_groupnorm():
     layer = nn.GroupNorm()
@@ -1084,8 +967,8 @@ def test_global_norm_clip():
             check_global_norm_clip(stype, check_isfinite)
 
 def test_embedding():
-    def check_embedding(sparse_grad):
-        layer = gluon.nn.Embedding(10, 100, sparse_grad=sparse_grad)
+    def check_embedding():
+        layer = gluon.nn.Embedding(10, 100)
         layer.initialize()
         x = mx.nd.array([3,4,2,0,1])
         with mx.autograd.record():
@@ -1094,8 +977,8 @@ def test_embedding():
         assert (layer.weight.grad().asnumpy()[:5] == 1).all()
         assert (layer.weight.grad().asnumpy()[5:] == 0).all()
 
-    def check_embedding_large_input(sparse_grad):
-        embedding = mx.gluon.nn.Embedding(10, 1, sparse_grad=True)
+    def check_embedding_large_input():
+        embedding = mx.gluon.nn.Embedding(10, 1)
         embedding.initialize()
         embedding.hybridize()
         shape = (20481,)
@@ -1103,12 +986,10 @@ def test_embedding():
             emb_in = embedding(mx.nd.ones(shape))
             loss = emb_in.sum()
         loss.backward()
-        assert embedding.weight.grad().data.sum().asscalar() == 20481
+        assert embedding.weight.grad().sum().item() == 20481
 
-    check_embedding(True)
-    check_embedding(False)
-    check_embedding_large_input(True)
-    check_embedding_large_input(False)
+    check_embedding()
+    check_embedding_large_input()
 
 def test_export(tmpdir):
     tmpfile = os.path.join(str(tmpdir), 'gluon')
@@ -1178,7 +1059,7 @@ def test_lambda():
              nn.LeakyReLU(0.1))
 
     net2 = mx.gluon.nn.HybridSequential()
-    op3 = lambda F, x, *args: F.LeakyReLU(x, *args, slope=0.1)
+    op3 = lambda x, *args: _mx_npx.leaky_relu(x, *args, slope=0.1)
     net2.add(nn.HybridLambda('tanh'),
              nn.HybridLambda(op3))
 
@@ -3133,12 +3014,6 @@ def test_concatenate(dc, hybridize):
     model2.add(MyBlock(128, activation='tanh', in_units=10))
     model2.add(MyBlock(64, activation='tanh', in_units=10))
     model2.add(MyBlock(32, in_units=10))
-
-    # symbol
-    if not dc:
-        x = mx.sym.var('data')
-        y = model(x)
-        assert len(y.list_arguments()) == 7
 
     # ndarray
     model.initialize(mx.init.Xavier(magnitude=2.24))
