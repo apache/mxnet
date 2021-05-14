@@ -43,6 +43,7 @@ rm -rf lib; mkdir lib;
 if [[ $PLATFORM == 'linux' ]]; then
     cp -L build/libmxnet.so lib/libmxnet.so
     cp -L $(ldd lib/libmxnet.so | grep libgfortran |  awk '{print $3}') lib/
+    cp -L $(ldd lib/libmxnet.so | grep libgomp | awk '{print $3}') lib/
 elif [[ $PLATFORM == 'darwin' ]]; then
     cp -L build/libmxnet.dylib lib/libmxnet.dylib
 fi

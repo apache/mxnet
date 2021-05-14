@@ -164,6 +164,9 @@ if platform.system() == 'Linux':
     if os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
         shutil.copy(os.path.join(libdir, 'libopenblas.so.0'), mxdir)
         package_data['mxnet'].append('mxnet/libopenblas.so.0')
+    if os.path.exists(os.path.join(libdir, 'libgomp.so.1')):
+        shutil.copy(os.path.join(libdir, 'libgomp.so.1'), mxdir)
+        package_data['mxnet'].append('mxnet/libgomp.so.1')
 
 # Copy licenses and notice
 for f in os.listdir('mxnet/licenses'):
