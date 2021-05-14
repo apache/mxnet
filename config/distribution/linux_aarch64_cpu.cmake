@@ -30,17 +30,13 @@ set(USE_F16C OFF CACHE BOOL "Build with x86 F16C instruction support")
 set(USE_DIST_KVSTORE OFF CACHE BOOL "Build with DIST_KVSTORE support")
 
 set(USE_MKLDNN ON CACHE BOOL "Build with MKL-DNN support")
-# Uncomment the following line to build MKLDNN with APL support
-# APL can be downloaded from https://developer.arm.com/tools-and-software/server-and-hpc/downloads/arm-performance-libraries
-# APL needs to be added to LD_LIBRARY_PATH
-## set(DNNL_BLAS_VENDOR “ARMPL” CACHE STRING “Build MKLDNN with Arm Performance Libraries as the BLAS library”)
-# Uncomment the following lines to build MKLDNN with ACL support
-# C++ 14 is requried to build with ACL and MKLDNN recommends building ACL from source rather than
-# using the pre-built binaries from https://github.com/ARM-software/ComputeLibrary/releases
-# If pre-built binaries are used anyways, make sure to copy and rename the appropriate binaries
-# folder from <acl_root>/lib/<binaries_folder> to <acl_root>/build
+# Pre-built binaries are available from  https://github.com/ARM-software/ComputeLibrary/releases
+# Make sure to copy and rename the appropriate binaries folder
+# from <acl_root>/lib/<binaries_folder_for_your_arch> to <acl_root>/build
 # The resulting acl root folder should look something like:
 # LICENSE README.md arm_compute build examples include lib scripts support utils
-## set(CMAKE_CXX_STANDARD 14)
-## set(ENV{ACL_ROOT_DIR} ~/arm_compute-v21.02-bin-linux)
-## set(DNNL_AARCH64_USE_ACL ON CACHE BOOL “Build MKLDNN with Arm Compute Library integration”)
+set(ENV{ACL_ROOT_DIR} "")
+set(MKLDNN_USE_ACL OFF CACHE BOOL "Integrate MKLDNN with Arm Compute Library")
+# APL can be downloaded from https://developer.arm.com/tools-and-software/server-and-hpc/downloads/arm-performance-libraries
+# Note that APL needs to be added to LD_LIBRARY_PATH
+set(MKLDNN_USE_APL OFF CACHE BOOL "Integrate MKLDNN with Arm Performance Libraries")

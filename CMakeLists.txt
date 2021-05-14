@@ -299,6 +299,16 @@ if(USE_MKLDNN)
   endif()
 
   function(load_mkldnn)
+    if (MKLDNN_USE_ACL)
+      # C++ 14 is requried to build with ACL
+      # Also ACL_ROOT_DIR need to be set
+      set(CMAKE_CXX_STANDARD 14)
+      set(DNNL_AARCH64_USE_ACL ON CACHE INTERNAL "" FORCE)
+    endif()
+    if (MKLDNN_USE_APL)
+      # APL needs to be added to LD_LIBRARY_PATH
+      set(DNNL_BLAS_VENDOR "ARMPL" CACHE INTERNAL "" FORCE)
+    endif()
     set(MKLDNN_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
     set(MKLDNN_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
     set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
