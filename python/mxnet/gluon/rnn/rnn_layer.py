@@ -26,7 +26,7 @@ __all__ = ['RNN', 'LSTM', 'GRU']
 from ... import ndarray, symbol, np, npx
 from .. import HybridBlock, tensor_types
 from ..parameter import Parameter
-from ...util import is_np_array, use_np
+from ...util import use_np
 
 
 @use_np

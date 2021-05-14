@@ -146,6 +146,9 @@ class _Conv(HybridBlock):
         return act
 
     def pre_infer(self):
+        """
+        Pre-infer the shape of weight parameter based on kernel size, group size and channels
+        """
         wshape = [-1]*(len(self._kernel_size) + 2)
         if self._op_name == "convolution":
             if len(self._kernel_size) == 1:
