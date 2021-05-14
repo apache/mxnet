@@ -208,7 +208,6 @@ def create_tensor(tensor_list, tensor_name, initializer, dtype='int64'):
         raw=False
     )
     initializer.append(tensor)
-    return tensor
 
 
 def create_helper_trans_node(node_name, input_node):
@@ -1009,7 +1008,7 @@ def convert_RNN(node, **kwargs):
     """Map MXNet's RNN operator attributes to onnx's operators
     and return the created node.
     """
-    from onnx.helper import make_node
+    from onnx.helper import make_node, make_tensor
     from onnx import TensorProto
 
     name, input_nodes, attrs = get_inputs(node, kwargs)
@@ -1047,7 +1046,8 @@ def convert_RNN(node, **kwargs):
     create_tensor([1], name+'_1', kwargs['initializer'])
     create_tensor([state_size], name+'_state_size', kwargs['initializer'])
     create_tensor([direction], name+'_direction', kwargs['initializer'])
-    tensor_1 = create_tensor([1], name+'_1_f', kwargs['initializer'], dtype)
+    
+    tensor_1 = make_tensor(name+'_1_f', onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype], [1], [1])
 
     nodes = [
         make_node('Shape', [data], [name+'_data_shape']),
