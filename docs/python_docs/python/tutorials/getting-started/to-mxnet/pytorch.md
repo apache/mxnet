@@ -147,7 +147,7 @@ With a Sequential block, layers are executed one after the other. To have a diff
 
 ### 3. Loss function and optimization algorithm
 
-The next step is to define the loss function and pick an optimization algorithm. Both PyTorch and Apache MXNet provide multiple options to chose from, and for our particular case we are going to use the cross-entropy loss function and the Stochastic Gradient Descent (SGD) optimization algorithm.
+The next step is to define the loss function and pick an optimization algorithm. Both PyTorch and Apache MXNet provide multiple options to choose from, and for our particular case we are going to use the cross-entropy loss function and the Stochastic Gradient Descent (SGD) optimization algorithm.
 
 **PyTorch:**
 
@@ -249,7 +249,7 @@ Here is the list of function names in PyTorch Tensor that are different from Apa
 | Element-wise division of t1, t2, multiply v, and add t | `torch.addcdiv(t, v, t1, t2)` | `t + v*(t1/t2)`                              |
 | Matrix product and accumulation| `torch.addmm(M, mat1, mat2)`             | `nd.linalg_gemm(M, mat1, mat2)`                           |
 | Outer-product of two vector add a matrix | `m.addr(vec1, vec2)`           | Not available                                             |
-| Element-wise applies function | `x.apply_(calllable)`                     | Not available, but there is `nd.custom(x, 'op')`          |
+| Element-wise applies function | `x.apply_(callable)`                     | Not available, but there is `nd.custom(x, 'op')`          |
 | Element-wise inverse sine     | `x.asin()` or `torch.asin(x)`             | `nd.arcsin(x)`                                            |
 | Element-wise inverse tangent  | `x.atan()` or `torch.atan(x)`             | `nd.arctan(x)`                                            |
 | Tangent of two tensor         | `x.atan2(y)` or `torch.atan2(x, y)`       | Not available                                             |
@@ -272,7 +272,7 @@ Here is the list of function names in PyTorch Tensor that are different from Apa
 | Fractional portion of a tensor| `x.frac()`                                | `x - nd.trunc(x)`                                         |
 | Gathers values along an axis specified by dim | `torch.gather(x, 1,  torch.LongTensor([[0,0],[1,0]]))` | `nd.gather_nd(x, nd.array([[[0,0],[1,1]],[[0,0],[1,0]]]))`  |
 | Solves least square & least norm | `B.gels(A)`                            | Not available                                             |
-| Draws from geometirc distribution | `x.geometric_(p)`                     | Not available                                             |
+| Draws from geometric distribution | `x.geometric_(p)`                     | Not available                                             |
 | Device context of a tensor    | `print(x)` will print which device x is on| `x.context`                                               |
 | Repeats tensor                | `x.repeat(4,2)`                           | `x.tile(4,2)`                                             |
 | Data type of a tensor         | `x.type()`                                | `x.dtype`                                                 |
@@ -283,9 +283,9 @@ Here is the list of function names in PyTorch Tensor that are different from Apa
 | Eigendecomposition for symmetric matrix | `e, v = a.symeig()`             | `v, e = nd.linalg.syevd(a)`                               |
 | Transpose                     | `x.t()`                                   | `x.T`                                                     |
 | Sample uniformly              | `torch.uniform_()`                        | `nd.sample_uniform()`                                     |
-| Inserts a new dimesion        | `x.unsqueeze()`                           | `nd.expand_dims(x)`                                       |
+| Inserts a new dimension        | `x.unsqueeze()`                           | `nd.expand_dims(x)`                                       |
 | Reshape                       | `x.view(16)`                              | `x.reshape((16,))`                                          |
-| Veiw as a specified tensor    | `x.view_as(y)`                            | `x.reshape_like(y)`                                       |
+| View as a specified tensor    | `x.view_as(y)`                            | `x.reshape_like(y)`                                       |
 | Returns a copy of the tensor after casting to a specified type | `x.type(type)` | `x.astype(dtype)`                                   |
 | Copies the value of one tensor to another | `dst.copy_(src)`              | `src.copyto(dst)`                                         |
 | Returns a zero tensor with specified shape | `x = torch.zeros(2,3)`       | `x = nd.zeros((2,3))`                                     |
@@ -411,7 +411,7 @@ Gluon provide several predefined metrics which can online evaluate the performan
 
 | Function               | PyTorch                           | MXNet Gluon                              |
 |------------------------|-----------------------------------|------------------------------------------|
-| metric |  Not available   | `metric = mx.metric.Accuracy()`<br/>`with autograd.record():`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`output = net(data)`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`L = loss(ouput, label)`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`loss(ouput, label).backward()`<br/>`trainer.step(batch_size)`<br/>`metric.update(label, output)`  |
+| metric |  Not available   | `metric = mx.metric.Accuracy()`<br/>`with autograd.record():`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`output = net(data)`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`L = loss(output, label)`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`loss(output, label).backward()`<br/>`trainer.step(batch_size)`<br/>`metric.update(label, output)`  |
 
 ### Data visualization
 

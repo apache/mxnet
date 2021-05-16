@@ -121,7 +121,7 @@ input_shape = (1,3,224,224)
 onnx_file = './mxnet_exported_resnet50.onnx'
 ```
 
-We have defined the input parameters required for the `export_model` API. Now, we are ready to covert the MXNet model into ONNX format.
+We have defined the input parameters required for the `export_model` API. Now, we are ready to convert the MXNet model into ONNX format.
 
 ```{.python .input}
 # Invoke export model API. It returns path of the converted onnx model

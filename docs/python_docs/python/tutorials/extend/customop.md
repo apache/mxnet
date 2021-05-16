@@ -91,7 +91,7 @@ class SigmoidProp(mx.operator.CustomOpProp):
 
     def infer_shape(self, in_shapes):
         """Calculate output shapes from input shapes. This can be
-        omited if all your inputs and outputs have the same shape.
+        omitted if all your inputs and outputs have the same shape.
 
         in_shapes : list of shape. Shape is described by a tuple of int.
         """

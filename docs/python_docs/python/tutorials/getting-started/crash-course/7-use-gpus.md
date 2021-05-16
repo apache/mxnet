@@ -36,7 +36,7 @@ npx.num_gpus() #This command provides the number of GPUs MXNet can access
 
 ## Allocate data to a GPU
 
-MXNet's ndarray is very similar to NumPy's. One major difference is that MXNet's ndarray has a `context` attribute specifieing which device an array is on. By default, arrays are stored on `npx.cpu()`. To change it to the first GPU, you can use the following code, `npx.gpu()` or `npx.gpu(0)` to indicate the first GPU.
+MXNet's ndarray is very similar to NumPy's. One major difference is that MXNet's ndarray has a `context` attribute specifying which device an array is on. By default, arrays are stored on `npx.cpu()`. To change it to the first GPU, you can use the following code, `npx.gpu()` or `npx.gpu(0)` to indicate the first GPU.
 
 ```{.python .input}
 gpu = npx.gpu() if npx.num_gpus() > 0 else npx.cpu()
@@ -53,7 +53,7 @@ gpu_1 = npx.gpu(1) if npx.num_gpus() > 1 else npx.cpu()
 x.copyto(gpu_1)
 ```
 
-MXNet requries that users explicitly move data between devices. But several operators such as `print`, and `asnumpy`, will implicitly move data to main memory.
+MXNet requires that users explicitly move data between devices. But several operators such as `print`, and `asnumpy`, will implicitly move data to main memory.
 
 ## Choosing GPU Ids
 If you have multiple GPUs on your machine, MXNet can access each of them through 0-indexing with `npx`. As you saw before, the first GPU was accessed using `npx.gpu(0)`, and the second using `npx.gpu(1)`. This extends to however many GPUs your machine has. So if your machine has eight GPUs, the last GPU is accessed using `npx.gpu(7)`. This allows you to select which GPUs to use for operations and training. You might find it particularly useful when you want to leverage multiple GPUs while training neural networks.
@@ -130,7 +130,7 @@ net(x)
 
 ## Training with multiple GPUs
 
-Finally, you will see how you can use multiple GPUs to jointly train a neural network through data parallelism. To elaborate on what data parallelism is, assume there are *n* GPUs, then you can split each data batch into *n* parts, and use a GPU on each of these parts to run the forward and backward passes on the seperate chunks of the data.
+Finally, you will see how you can use multiple GPUs to jointly train a neural network through data parallelism. To elaborate on what data parallelism is, assume there are *n* GPUs, then you can split each data batch into *n* parts, and use a GPU on each of these parts to run the forward and backward passes on the separate chunks of the data.
 
 First copy the data definitions with the following commands, and the transform functions from the tutorial [Training Neural Networks](6-train-nn.md).
 

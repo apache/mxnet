@@ -211,11 +211,11 @@ Let's zoom in to check the time taken by operators
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
 
 ### Profiling ONEDNN Operators
-Reagrding ONEDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `MKLDNN_VERBOSE=1` to enable internal profiler.
+Regarding ONEDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `MKLDNN_VERBOSE=1` to enable internal profiler.
 
 `$ MKLDNN_VERBOSE=1 python my_script.py > mkldnn_verbose.log`
 
-Now, the detailed profiling insights of each ONEDNN prmitive are saved into `mkldnn_verbose.log` (like below).
+Now, the detailed profiling insights of each ONEDNN primitive are saved into `mkldnn_verbose.log` (like below).
 
 ```
 dnnl_verbose,info,DNNL v1.1.2 (commit cb2cc7ac17ff4e2ef50805c7048d33256d82be4d)
@@ -286,7 +286,7 @@ Here, we have created a custom operator called `MyAddOne`, and within its `forwa
 
 As shown by the screenshot, in the **Custom Operator** domain where all the custom operator-related events fall into, we can easily visualize the execution time of each segment of `MyAddOne`. We can tell that `MyAddOne::pure_python` is executed first. We also know that `CopyCPU2CPU` and `_plus_scalr` are two "sub-operators" of `MyAddOne` and the sequence in which they are executed.
 
-Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.apache.org/versions/master/tutorials/basic/symbol.html) (refer to the code snippet below, which is the symbolic-mode equivelent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively. 
+Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.apache.org/versions/master/tutorials/basic/symbol.html) (refer to the code snippet below, which is the symbolic-mode equivalent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively. 
 
 ```{.python .input} 
 # Set profile_all to True

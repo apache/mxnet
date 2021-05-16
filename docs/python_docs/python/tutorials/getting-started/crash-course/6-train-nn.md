@@ -173,8 +173,8 @@ This class is very useful to create a transformation pipeline for your images.
 
 You have to compose two different transformation pipelines, one for training
 and the other one for validating and testing. This is because each pipeline
-serves different pursposes. You need to downsize, convert to tensor and normalize
-images across all the different datsets; however, you typically do not want to randomly flip
+serves different purposes. You need to downsize, convert to tensor and normalize
+images across all the different datasets; however, you typically do not want to randomly flip
 or add color jitter to the validation or test images since you could reduce performance.
 
 ```{.python .input}

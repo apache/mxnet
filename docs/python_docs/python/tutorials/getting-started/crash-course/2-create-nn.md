@@ -24,7 +24,7 @@ import the neural network modules from `gluon`. Gluon includes built-in neural
 network layers in the following two modules:
 
 1. `mxnet.gluon.nn`: NN module that maintained by the mxnet team
-2. `mxnet.gluon.contrib.nn`: Experiemental module that is contributed by the
+2. `mxnet.gluon.contrib.nn`: Experimental module that is contributed by the
 community
 
 Use the following commands to import the packages required for this step.

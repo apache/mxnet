@@ -115,8 +115,8 @@ LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew -
 
 <h2 id="3">Windows</h2>
 
-On Windows, you can use [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) to compile MXNet with Intel ONEDNN.
-[Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is recommended.
+On Windows, you can use [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) to compile MXNet with Intel ONEDNN.
+[Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is recommended.
 
 **Visual Studio 2015**
 
@@ -154,7 +154,7 @@ msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 ```
    These commands produce mxnet library called ```libmxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder. Also ```libmkldnn.dll``` with be in the ```./build/3rdparty/onednn/src/Release/```
 
-5. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml*.dll`, `libiomp5.dll`, `libopenblas*.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading MXNet.
+5. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml*.dll`, `libiomp5.dll`, `libopenblas*.dll`, etc) are added to the system PATH. For convenience, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading MXNet.
 
 **Visual Studio 2017**
 
@@ -227,7 +227,7 @@ You can find step-by-step guidance to do profiling for ONEDNN primitives in [Pro
 
 <h2 id="5">Enable MKL BLAS</h2>
 
-With MKL BLAS, the performace is expected to furtherly improved with variable range depending on the computation load of the models.
+With MKL BLAS, the performance is expected to furtherly improved with variable range depending on the computation load of the models.
 You can redistribute not only dynamic libraries but also headers, examples and static libraries on accepting the license [Intel Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license).
 Installing the full MKL installation enables MKL support for all operators under the linalg namespace.
 

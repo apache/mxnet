@@ -15,7 +15,7 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Image Classication using pretrained ResNet-50 model on Jetson module
+# Image Classification using pretrained ResNet-50 model on Jetson module
 
 This tutorial shows how to install MXNet v1.6 with Jetson support and use it to deploy a pre-trained MXNet model for image classification on a Jetson module.
 
@@ -25,7 +25,7 @@ This tutorial shows how to:
 
 1. Install MXNet v1.6 along with its dependencies on a Jetson module (This tutorial has been tested on Jetson Xavier AGX and Jetson Nano modules)
 
-2. Deploy a pre-trained MXNet model for image classifcation on the module
+2. Deploy a pre-trained MXNet model for image classification on the module
 
 ## Who's this tutorial for?
 
@@ -71,7 +71,7 @@ And we are done. You can test the installation now by importing mxnet from pytho
 
 ## Running a pre-trained ResNet-50 model on Jetson
 
-We are now ready to run a pre-trained model and run inference on a Jetson module. In this tutorial we are using ResNet-50 model trained on Imagenet dataset. We run the following classification script with either cpu/gpu context using python3.
+We are now ready to run a pre-trained model and run inference on a Jetson module. In this tutorial we are using ResNet-50 model trained on ImageNet dataset. We run the following classification script with either cpu/gpu context using python3.
 
 ```{.python .input}
 from mxnet import gluon

@@ -249,7 +249,7 @@ In the previous example output, we trained the model using an [AWS p3.8xlarge in
 ### Save the fine-tuned model
 
 
-We now have a trained our custom model. This can be serialized into model files using the export function. The export function will export the model architecture into a `.json` file and model parameters into a `.params` file.
+We now have trained our custom model. This can be serialized into model files using the export function. The export function will export the model architecture into a `.json` file and model parameters into a `.params` file.
 
 
 

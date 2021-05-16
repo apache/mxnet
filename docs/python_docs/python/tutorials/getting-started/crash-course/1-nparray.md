@@ -77,7 +77,7 @@ NumPy arrays.
 (x.shape, x.size, x.dtype)
 ```
 
-You could also specifiy the datatype when you create your ndarray.
+You could also specify the datatype when you create your ndarray.
 
 ```{.python .input}
 x = np.full((2, 3), 1, dtype="int8") 
