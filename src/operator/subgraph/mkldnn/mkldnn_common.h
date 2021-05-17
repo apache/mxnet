@@ -28,6 +28,7 @@
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_
 #if MXNET_USE_ONEDNN == 1
 #include <vector>
+#include "../../numpy/np_matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -129,6 +130,37 @@ static void ConvertWeightBias2MKLDNN(NDArray *weight, NDArray *bias, bool has_bi
     stream->Submit();
   *weight = new_weight;
   if (has_bias && data_scale) *bias = new_bias;
+}
+
+
+static inline bool CheckReshapeConditions(const nnvm::Node& node, index_t out_index) {
+  int split_output_index = node.inputs[0].index;
+  if (split_output_index != out_index)
+    return false;
+
+  auto const &reshape_param = nnvm::get<NumpyXReshapeParam>(node.attrs.parsed);
+  auto newshape = reshape_param.newshape;
+
+  if(newshape.ndim() != 4 || !(newshape[0] == newshape[1] && newshape[0] == -2))
+    return false;
+
+  return true;
+}
+
+static inline bool CheckSwapAxisConditions(const nnvm::Node& node) {
+  auto params = node.attrs.dict;
+  int dim1, dim2 = 0;
+  if(params.count("dim1") && params.count("dim2")) {
+    dim1 = std::stoi(params.at("dim1"));
+    dim2 = std::stoi(params.at("dim2"));
+  } else {
+    return false;
+  }
+
+  if((dim1 == 1 && dim2 == 2) || (dim1 == 2 && dim2 == 1))
+    return true;
+
+  return false;
 }
 
 }  // namespace op

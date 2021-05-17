@@ -855,7 +855,7 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
     while True:
         try:
             network(*data_nd)
-        except TypeError as err:
+        except (ValueError, TypeError) as err:
             if logger:
                 logger.warning(err)
                 logger.warning("Deduced input data descriptors failed to run forward pass."
