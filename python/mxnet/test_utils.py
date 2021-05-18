@@ -2551,6 +2551,11 @@ def is_cd_run():
     return os.environ.get("CD_JOB", 0) == "1"
 
 
+def is_aarch64_run():
+    """Checks if the test is running on aarch64 instance"""
+    return platform.machine() == "aarch64"
+
+
 _features = Features()
 
 
