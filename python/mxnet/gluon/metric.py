@@ -1712,6 +1712,7 @@ class PCC(EvalMetric):
 
 
 @register
+@use_np
 class Loss(EvalMetric):
     """Dummy metric for directly printing loss.
 
@@ -1737,7 +1738,7 @@ class Loss(EvalMetric):
             preds = [preds]
 
         for pred in preds:
-            loss = ndarray.sum(pred).asscalar()
+            loss = pred.sum().item()
             self.sum_metric += loss
             self.num_inst += pred.size
 

@@ -27,7 +27,6 @@ from mxnet.test_utils import assert_almost_equal, default_context, assert_allclo
 from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
-import mxnet.numpy as _mx_np, mxnet.numpy_extension as _mx_npx
 from common import assertRaises, assert_raises_cudnn_not_satisfied, \
     xfail_when_nonstandard_decimal_separator, environment
 import numpy as np
@@ -63,7 +62,7 @@ def test_invalid_parameter_grad_stype():
 def test_sparse_parameter():
     p = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
-    row_id = mx.nd.arange(0, 10, ctx=mx.cpu(1))
+    row_id = mx.np.arange(0, 10, ctx=mx.cpu(1))
     assert len(p.list_grad()) == 2
     # getting row_sparse data without trainer throws an exception
     assertRaises(RuntimeError, p.list_row_sparse_data, row_id)
@@ -85,7 +84,7 @@ def test_parameter_invalid_access():
     p0.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
     assertRaises(RuntimeError, p0.data)
     assertRaises(RuntimeError, p0.list_data)
-    row_id = mx.nd.arange(0, 10)
+    row_id = mx.np.arange(0, 10)
     # cannot call row_sparse_data on dense parameters
     p1 = gluon.Parameter('weight', shape=(10, 10))
     p1.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
@@ -118,6 +117,7 @@ def test_parameter_row_sparse_data():
     mx.test_utils.assert_almost_equal(retained_2[0].asnumpy(), retained_target_2.asnumpy())
 
 
+@use_np
 def test_constant():
     class Test(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -125,7 +125,7 @@ def test_constant():
             self.value = np.asarray([[1,2], [3,4]])
             self.const = gluon.Constant(self.value)
 
-        def hybrid_forward(self, F, x, const):
+        def forward(self, x, const):
             return x + const
 
     test = Test()
@@ -134,7 +134,7 @@ def test_constant():
                             {'learning_rate': 1.0, 'momentum': 0.5})
 
     with mx.autograd.record():
-        x = mx.nd.ones((2,2))
+        x = mx.np.ones((2,2))
         x.attach_grad()
         y = test(x)
         y.backward()
@@ -145,6 +145,7 @@ def test_constant():
     assert (x.grad.asnumpy() == 1).all()
 
 
+@use_np
 def test_parameter_sharing():
     class Net(gluon.Block):
         def __init__(self, in_units=0, **kwargs):
@@ -158,7 +159,7 @@ def test_parameter_sharing():
     net1 = Net(in_units=5)
     net2 = Net().share_parameters(net1.collect_params())
     net1.initialize()
-    net2(mx.nd.zeros((3, 5)))
+    net2(mx.np.zeros((3, 5)))
 
     net1.save_parameters('net1.params')
 
@@ -168,7 +169,7 @@ def test_parameter_sharing():
     net4 = Net()
     net5 = Net(in_units=5).share_parameters(net4.collect_params())
     net4.initialize()
-    net5(mx.nd.zeros((3, 5)))
+    net5(mx.np.zeros((3, 5)))
 
     net4.save_parameters('net4.params')
 
@@ -211,7 +212,7 @@ def test_basic():
 
     # ndarray
     model.initialize(mx.init.Xavier(magnitude=2.24))
-    x = model(mx.nd.zeros((32, 2, 10)))
+    x = model(mx.np.zeros((32, 2, 10)))
     assert x.shape == (32, 32)
     x.wait_to_read()
 
@@ -236,14 +237,15 @@ def test_sparse_hybrid_block():
     params['bias'] = gluon.Parameter('bias', shape=(5), dtype='float32')
     net = gluon.nn.Dense(5).share_parameters(params)
     net.initialize()
-    x = mx.nd.ones((2,5))
+    x = mx.np.ones((2,5))
     with pytest.raises(RuntimeError):
         # an exception is expected when forwarding a HybridBlock w/ sparse param
         y = net(x)
 
+@use_np
 def test_hybrid_block_none_args():
     class Foo(gluon.HybridBlock):
-        def hybrid_forward(self, F, a, b):
+        def forward(self, a, b):
             if a is None and b is not None:
                 return b
             elif b is None and a is not None:
@@ -254,7 +256,7 @@ def test_hybrid_block_none_args():
                 raise NotImplementedError
 
     class FooDefault(gluon.HybridBlock):
-        def hybrid_forward(self, F, a, b=None):
+        def forward(self, a, b=None):
             if a is None and b is not None:
                 return b
             elif b is None and a is not None:
@@ -272,15 +274,15 @@ def test_hybrid_block_none_args():
             self.f2 = Foo()
             self.f3 = Foo()
 
-        def hybrid_forward(self, F, a, b):
+        def forward(self, a, b):
             data = self.f1(a, b)
             data = self.f2(a, data)
             data = self.f3(data, b)
             return data
 
-    for arg_inputs in [(None, mx.nd.ones((10,))),
-                       (mx.nd.ones((10,)), mx.nd.ones((10,))),
-                       (mx.nd.ones((10,)), None)]:
+    for arg_inputs in [(None, mx.np.ones((10,))),
+                       (mx.np.ones((10,)), mx.np.ones((10,))),
+                       (mx.np.ones((10,)), None)]:
         foo1 = FooNested()
         foo1.hybridize()
         foo2 = FooNested()
@@ -301,35 +303,36 @@ def test_hybrid_block_none_args():
     # Make sure the ValueError is correctly raised
     foo = FooNested()
     foo.hybridize()
-    foo(None, mx.nd.ones((10,)))  # Pass for the first time to initialize the cached op
-    pytest.raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.nd.ones((10,))))
+    foo(None, mx.np.ones((10,)))  # Pass for the first time to initialize the cached op
+    pytest.raises(ValueError, lambda: foo(mx.np.ones((10,)), mx.np.ones((10,))))
     foo = FooNested()
-    pytest.raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.sym.var('a')))
+    pytest.raises(ValueError, lambda: foo(mx.np.ones((10,)), mx.sym.var('a')))
     foo = FooNested()
-    pytest.raises(ValueError, lambda: foo(mx.sym.var('a'), mx.nd.ones((10,))))
+    pytest.raises(ValueError, lambda: foo(mx.sym.var('a'), mx.np.ones((10,))))
 
     # Test the case of the default values
     foo1 = FooDefault()
     foo1.hybridize()
     foo2 = FooDefault()
-    out1 = foo1(mx.nd.ones((10,)))
-    out2 = foo2(mx.nd.ones((10,)))
-    out3 = foo1(mx.nd.ones((10,)), None)
-    out4 = foo2(mx.nd.ones((10,)), None)
+    out1 = foo1(mx.np.ones((10,)))
+    out2 = foo2(mx.np.ones((10,)))
+    out3 = foo1(mx.np.ones((10,)), None)
+    out4 = foo2(mx.np.ones((10,)), None)
     assert_almost_equal(out1.asnumpy(), out2.asnumpy())
     assert_almost_equal(out1.asnumpy(), out3.asnumpy())
     assert_almost_equal(out1.asnumpy(), out4.asnumpy())
     foo1 = FooDefault()
     foo1.hybridize()
-    out1 = foo1(mx.nd.ones((10,)), None)
-    out2 = foo1(mx.nd.ones((10,)))
+    out1 = foo1(mx.np.ones((10,)), None)
+    out2 = foo1(mx.np.ones((10,)))
     assert_almost_equal(out1.asnumpy(), out2.asnumpy())
-    pytest.raises(ValueError, lambda: foo1(mx.nd.ones((10,)), mx.nd.ones((10,))))
+    pytest.raises(ValueError, lambda: foo1(mx.np.ones((10,)), mx.np.ones((10,))))
 
 
+@use_np
 def test_hybrid_block_hybrid_no_hybrid():
     class FooHybrid(gluon.HybridBlock):
-        def hybrid_forward(self, F, a, b):
+        def forward(self, a, b):
             if isinstance(a, (list, tuple)):
                 a = sum(a)
             if isinstance(b, (list, tuple)):
@@ -346,11 +349,11 @@ def test_hybrid_block_hybrid_no_hybrid():
     # When hybridize is not called, HybridBlock acts the same as Block
     foo_hybrid = FooHybrid()
     foo = Foo()
-    for a, b in [(mx.nd.ones((10,)), 1),
-                 (mx.nd.ones((20,)), 2),
-                 ([mx.nd.ones((10,)), mx.nd.ones((10,))],
-                  [mx.nd.ones((10)), mx.nd.ones((10,)), mx.nd.ones((10,))]),
-                 ([mx.nd.ones((10,)), mx.nd.ones((10,))], 3)]:
+    for a, b in [(mx.np.ones((10,)), 1),
+                 (mx.np.ones((20,)), 2),
+                 ([mx.np.ones((10,)), mx.np.ones((10,))],
+                  [mx.np.ones((10)), mx.np.ones((10,)), mx.np.ones((10,))]),
+                 ([mx.np.ones((10,)), mx.np.ones((10,))], 3)]:
         hybrid_block_out = foo_hybrid(a, b)
         block_out = foo(a, b)
         assert_almost_equal(hybrid_block_out.asnumpy(), block_out.asnumpy())
@@ -361,20 +364,20 @@ def test_hybrid_block_hybrid_no_hybrid():
     # 4. Allow mixing of cpu_pinned and cpu
     foo_hybrid = FooHybrid()
     foo_hybrid.hybridize()
-    pytest.raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), 1))
+    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,)), 1))
     foo_hybrid = FooHybrid()
     foo_hybrid.hybridize()
-    pytest.raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), mx.sym.var('a')))
+    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,)), mx.sym.var('a')))
     foo_hybrid = FooHybrid()
     foo_hybrid.hybridize()
-    pytest.raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.cpu(1)),
-                                                 mx.nd.ones((10,), ctx=mx.cpu(2))))
+    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,), ctx=mx.cpu(1)),
+                                                 mx.np.ones((10,), ctx=mx.cpu(2))))
 
 
 def check_layer_forward(layer, dshape):
     print("checking layer {}\nshape: {}.".format(layer, dshape))
     layer.initialize()
-    x = mx.nd.ones(shape=dshape)
+    x = mx.np.ones(shape=dshape)
     x.attach_grad()
     with mx.autograd.record():
         out = layer(x)
@@ -385,7 +388,7 @@ def check_layer_forward(layer, dshape):
 
     layer.hybridize()
 
-    x = mx.nd.ones(shape=dshape)
+    x = mx.np.ones(shape=dshape)
     x.attach_grad()
     with mx.autograd.record():
         out = layer(x)
@@ -526,7 +529,7 @@ def test_pool():
             noceil_out_shape = transpose(noceil_out_shape)
             ceil_out_shape = transpose(ceil_out_shape)
 
-        x = mx.nd.zeros(xshape)
+        x = mx.np.zeros(xshape)
 
         layer = nn.MaxPool2D(3, ceil_mode=False, layout=layout)
         layer.initialize()
@@ -549,7 +552,7 @@ def test_batchnorm_backward_synchronization(variable):
         layer = nn.BatchNorm()
         layer.initialize(ctx=ctx)
         for _ in range(3):
-            data = mx.nd.random.normal(loc=10, scale=2, shape=(1, 3, 10, 10), ctx=ctx)
+            data = mx.np.random.normal(loc=10, scale=2, size=(1, 3, 10, 10), ctx=ctx)
             with mx.autograd.record():
                 out = layer(data)
             out.backward()
@@ -620,23 +623,23 @@ def test_sync_batchnorm():
             mx.autograd.backward(loss1)
             mx.autograd.backward(loss2)
 
-        output2 = mx.nd.concat(*[output.as_nd_ndarray().as_in_context(input.context)
-                               for output in output2], dim=0)
+        output2 = mx.np.concatenate([output.as_in_context(input.context)
+                                    for output in output2], dim=0)
         # check bn1
 
         momentum = 0.9
         epsilon = 1e-5
         axis = 1
         data = input1
-        running_mean = mx.nd.zeros(nch, ctx=data.context)
-        running_var = mx.nd.ones(nch, ctx=data.context)
+        running_mean = mx.np.zeros(nch, ctx=data.context)
+        running_var = mx.np.ones(nch, ctx=data.context)
 
-        data_mean = data.mean(
-            axis=axis, exclude=True, keepdims=True)
-        data_var = (data - data_mean).square().mean(axis=axis,
-                                                    exclude=True, keepdims=True)
+        axes = list(range(data.ndim))
+        del axes[axis]
+        data_mean = data.mean(axis=axes, keepdims=True)
+        data_var = mx.np.square(data - data_mean).mean(axis=axes, keepdims=True)
 
-        target_output = (data - data_mean) / (data_var + epsilon).sqrt()
+        target_output = (data - data_mean) / mx.np.sqrt(data_var + epsilon)
 
         # squeeze data_mean and data_var
         data_mean_flat = data_mean.squeeze()
@@ -668,8 +671,8 @@ def test_sync_batchnorm():
         assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
                             _find_bn(bn2).running_var.data(ctx_list[0]).asnumpy(),
                             atol=atol, rtol=rtol)
-        input2grad = mx.nd.concat(
-            *[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
+        input2grad = mx.np.concatenate(
+            [output.grad.as_in_context(input.ctx) for output in inputs2], dim=0)
         assert_almost_equal(input1.grad.asnumpy(),
                             input2grad.asnumpy(), atol=atol, rtol=rtol)
 
@@ -684,7 +687,7 @@ def test_sync_batchnorm():
         for shape in [(batch_size, 2), (batch_size, 3, 4), (batch_size, 4, 4, 4), (batch_size, 5, 6, 4, 4)]:
             print(str((ndev, cuda, shape)))
             for i in range(10):
-                _check_batchnorm_result(mx.nd.random.uniform(shape=shape,
+                _check_batchnorm_result(mx.np.random.uniform(size=shape,
                                                              ctx=mx.cpu(0)),
                                         num_devices=ndev, cuda=cuda)
 
@@ -702,7 +705,7 @@ def test_layernorm():
         layer.initialize()
         if hybridize:
             layer.hybridize()
-        pytest.raises(AssertionError, lambda: layer(mx.nd.ones((2, 11))))
+        pytest.raises(AssertionError, lambda: layer(mx.np.ones((2, 11))))
 
 def test_groupnorm():
     layer = nn.GroupNorm()
@@ -718,7 +721,7 @@ def test_reflectionpad():
 
 
 def test_reshape():
-    x = mx.nd.ones((2, 4, 10, 10))
+    x = mx.np.ones((2, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_channels=4)
     layer.initialize()
     with mx.autograd.record():
@@ -729,7 +732,7 @@ def test_reshape():
 
 
 def test_slice():
-    x = mx.nd.ones((5, 4, 10, 10))
+    x = mx.np.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_channels=4)
     layer.initialize()
     with mx.autograd.record():
@@ -740,7 +743,7 @@ def test_slice():
 
 
 def test_at():
-    x = mx.nd.ones((5, 4, 10, 10))
+    x = mx.np.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_channels=4)
     layer.initialize()
     with mx.autograd.record():
@@ -751,22 +754,19 @@ def test_at():
 
 
 def test_deferred_init():
-    x = mx.nd.ones((5, 4, 10, 10))
+    x = mx.np.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2)
     layer.initialize()
     layer(x)
 
 
 
+@use_np
 def check_split_data(x, num_slice, batch_axis, **kwargs):
     res = gluon.utils.split_data(x, num_slice, batch_axis, **kwargs)
     assert len(res) == num_slice
-    if not is_np_array():
-        mx.test_utils.assert_almost_equal(mx.nd.concat(*res, dim=batch_axis).asnumpy(),
-                                          x.asnumpy())
-    else:
-        mx.test_utils.assert_almost_equal(_mx_np.concatenate(res, axis=batch_axis).asnumpy(),
-                                          x.asnumpy())
+    mx.test_utils.assert_almost_equal(mx.np.concatenate(res, axis=batch_axis).asnumpy(),
+                                      x.asnumpy())
     np_res = np.array_split(x.asnumpy(), num_slice, axis=batch_axis)
     res_asnp = [s.asnumpy() for s in res]
     for r1, r2 in zip(np_res, res_asnp):
@@ -775,7 +775,7 @@ def check_split_data(x, num_slice, batch_axis, **kwargs):
 
 @use_np
 def test_split_data_np():
-    x = _mx_np.random.uniform(size=(128, 33, 64))
+    x = mx.np.random.uniform(size=(128, 33, 64))
     check_split_data(x, 8, 0)
     check_split_data(x, 3, 1)
     check_split_data(x, 4, 1, even_split=False)
@@ -787,7 +787,7 @@ def test_split_data_np():
     assert False, "Should have failed"
 
 def test_split_data():
-    x = mx.nd.random.uniform(shape=(128, 33, 64))
+    x = mx.np.random.uniform(size=(128, 33, 64))
     check_split_data(x, 8, 0)
     check_split_data(x, 3, 1)
     check_split_data(x, 4, 1, even_split=False)
@@ -800,11 +800,11 @@ def test_split_data():
 
 def test_flatten():
     flatten = nn.Flatten()
-    x = mx.nd.zeros((3,4,5,6))
+    x = mx.np.zeros((3,4,5,6))
     assert flatten(x).shape == (3, 4*5*6)
-    x = mx.nd.zeros((3,6))
+    x = mx.np.zeros((3,6))
     assert flatten(x).shape == (3, 6)
-    x = mx.nd.zeros((3,))
+    x = mx.np.zeros((3,))
     assert flatten(x).shape == (3, 1)
 
 def test_block_attr_hidden():
@@ -896,7 +896,7 @@ def check_sequential(net):
     net.add(dense3)
     net.initialize()
 
-    net(mx.nd.zeros((10, 10)))
+    net(mx.np.zeros((10, 10)))
     net.hybridize()
     assert net[1] is dense2
     assert net[-1] is dense3
@@ -904,6 +904,7 @@ def check_sequential(net):
     assert len(slc) == 2 and slc[0] is dense2 and slc[1] is dense3
     assert isinstance(slc, type(net))
 
+@use_np
 def check_sequential_dc(net):
     class MyBlock(mx.gluon.HybridBlock):
         def __init__(self):
@@ -923,7 +924,7 @@ def check_sequential_dc(net):
 
     net.initialize()
     net.hybridize()
-    net(mx.nd.zeros((10, 10)))
+    net(mx.np.zeros((10, 10)))
     assert net[1] is dense2
     assert net[-1] is dense3
     slc = net[1:3]
@@ -946,31 +947,11 @@ def test_sequential_warning():
         assert len(w) == 1
 
 
-def test_global_norm_clip():
-    stypes = ['default', 'row_sparse']
-    def check_global_norm_clip(stype, check_isfinite):
-        x1 = mx.nd.ones((3,3)).tostype(stype)
-        x2 = mx.nd.ones((4,4)).tostype(stype)
-        norm = gluon.utils.clip_global_norm([x1, x2], 1.0, check_isfinite=check_isfinite)
-        assert norm == 5.0
-        assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
-        assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
-
-        x3 = mx.nd.array([1.0, 2.0, float('nan')]).tostype(stype)
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            gluon.utils.clip_global_norm([x1, x3], 2.0, check_isfinite=check_isfinite)
-            assert len(w) == check_isfinite
-
-    for stype in stypes:
-        for check_isfinite in [True, False]:
-            check_global_norm_clip(stype, check_isfinite)
-
 def test_embedding():
     def check_embedding():
         layer = gluon.nn.Embedding(10, 100)
         layer.initialize()
-        x = mx.nd.array([3,4,2,0,1])
+        x = mx.np.array([3,4,2,0,1])
         with mx.autograd.record():
             y = layer(x)
             y.backward()
@@ -983,7 +964,7 @@ def test_embedding():
         embedding.hybridize()
         shape = (20481,)
         with mx.autograd.record():
-            emb_in = embedding(mx.nd.ones(shape))
+            emb_in = embedding(mx.np.ones(shape))
             loss = emb_in.sum()
         loss.backward()
         assert embedding.weight.grad().sum().item() == 20481
@@ -998,7 +979,7 @@ def test_export(tmpdir):
         ctx=ctx, pretrained=False)
     model.initialize()
     model.hybridize()
-    data = mx.nd.random.normal(shape=(1, 3, 32, 32))
+    data = mx.np.random.normal(size=(1, 3, 32, 32))
     out = model(data)
 
     symbol_filename, params_filename = model.export(tmpfile)
@@ -1011,7 +992,7 @@ def test_import():
         ctx=ctx, pretrained=False)
     net1.initialize()
     net1.hybridize()
-    data = mx.nd.random.normal(shape=(1, 3, 32, 32))
+    data = mx.np.random.normal(size=(1, 3, 32, 32))
     out1 = net1(data)
 
     net1.export('net1', epoch=1)
@@ -1033,10 +1014,10 @@ def test_hybrid_stale_cache():
 
     net.hybridize()
     net.initialize()
-    net(mx.nd.ones((2,3,5)))
+    net(mx.np.ones((2,3,5)))
 
     net.add(mx.gluon.nn.Flatten())
-    assert net(mx.nd.ones((2,3,5))).shape == (2, 30)
+    assert net(mx.np.ones((2,3,5))).shape == (2, 30)
 
     net = mx.gluon.nn.HybridSequential()
     net.fc1 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
@@ -1045,12 +1026,12 @@ def test_hybrid_stale_cache():
                                 bias_initializer='ones', flatten=False)
     net.hybridize()
     net.initialize()
-    net(mx.nd.ones((2,3,5)))
+    net(mx.np.ones((2,3,5)))
 
     net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
                                 bias_initializer='ones', flatten=True)
     net.initialize()
-    assert net(mx.nd.ones((2,3,5))).shape == (2, 10)
+    assert net(mx.np.ones((2,3,5))).shape == (2, 10)
 
 
 def test_lambda():
@@ -1059,21 +1040,22 @@ def test_lambda():
              nn.LeakyReLU(0.1))
 
     net2 = mx.gluon.nn.HybridSequential()
-    op3 = lambda x, *args: _mx_npx.leaky_relu(x, *args, slope=0.1)
+    op3 = lambda x, *args: mx.npx.leaky_relu(x, *args, slope=0.1)
     net2.add(nn.HybridLambda('tanh'),
              nn.HybridLambda(op3))
 
-    op4 = lambda x: mx.nd.LeakyReLU(x, slope=0.1)
+    op4 = lambda x: mx.npx.leaky_relu(x, slope=0.1)
     net3 = mx.gluon.nn.Sequential()
     net3.add(nn.Lambda('tanh'),
              nn.Lambda(op4))
 
-    input_data = mx.nd.random.uniform(shape=(2, 3, 5, 7))
+    input_data = mx.np.random.uniform(size=(2, 3, 5, 7))
     out1, out2, out3 = net1(input_data), net2(input_data), net3(input_data)
     assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-3, atol=1e-3)
     assert_almost_equal(out1.asnumpy(), out3.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
+@use_np
 def test_fill_shape_deferred():
     net = nn.HybridSequential()
     net.add(nn.Conv2D(64, kernel_size=2, padding=1),
@@ -1082,29 +1064,30 @@ def test_fill_shape_deferred():
     net
     net.hybridize()
     net.initialize()
-    net(mx.nd.ones((2,3,5,7)))
+    net(mx.np.ones((2,3,5,7)))
     assert net[0].weight.shape[1] == 3, net[0].weight.shape[1]
     assert net[1].gamma.shape[0] == 64, net[1].gamma.shape[0]
     assert net[2].weight.shape[1] == 3072, net[2].weight.shape[1]
 
 
+@use_np
 def test_dtype():
     net = mx.gluon.model_zoo.vision.resnet18_v1()
     net.initialize()
     net.cast('float64')
     with mx.autograd.record():
-        y = net(mx.nd.ones((16, 3, 32, 32), dtype='float64'))
+        y = net(mx.np.ones((16, 3, 32, 32), dtype='float64'))
         y.backward()
 
     net = mx.gluon.model_zoo.vision.resnet18_v1()
     net.initialize()
     net.hybridize()
-    net(mx.nd.ones((16, 3, 32, 32), dtype='float32'))
+    net(mx.np.ones((16, 3, 32, 32), dtype='float32'))
 
     net.cast('float64')
-    net(mx.nd.ones((16, 3, 32, 32), dtype='float64'))
+    net(mx.np.ones((16, 3, 32, 32), dtype='float64'))
 
-    mx.nd.waitall()
+    mx.npx.waitall()
 
     class Net(gluon.Block):
         def __init__(self, in_dim, output_dim):
@@ -1121,8 +1104,8 @@ def test_dtype():
 
     net = Net(5, 10)
     net.initialize()
-    out = net(mx.nd.ones((3,), dtype=np.float64))
-    mx.nd.waitall()
+    out = net(mx.np.ones((3,), dtype=np.float64))
+    mx.npx.waitall()
 
 def test_fill_shape_load():
     ctx = mx.context.current_context()
@@ -1133,7 +1116,7 @@ def test_fill_shape_load():
     net1
     net1.hybridize()
     net1.initialize(ctx=ctx)
-    net1(mx.nd.ones((2,3,5,7), ctx))
+    net1(mx.np.ones((2,3,5,7), ctx))
     net1.save_parameters('net_fill.params')
 
     net2 = nn.HybridSequential()
@@ -1157,14 +1140,14 @@ def test_inline():
     net.initialize()
     net.hybridize(inline_limit=3)
     with mx.autograd.record():
-        y = net(mx.nd.zeros((1,10)))
+        y = net(mx.np.zeros((1,10)))
 
     len_1 = len(json.loads(mx.autograd.get_symbol(y).tojson())['nodes'])
     y.backward()
 
     net.hybridize(inline_limit=0)
     with mx.autograd.record():
-        y = net(mx.nd.zeros((1,10)))
+        y = net(mx.np.zeros((1,10)))
 
     len_2 = len(json.loads(mx.autograd.get_symbol(y).tojson())['nodes'])
     y.backward()
@@ -1174,18 +1157,18 @@ def test_inline():
 
 @xfail_when_nonstandard_decimal_separator
 def test_activations():
-    point_to_validate = mx.nd.array([-0.1, 0.1] * 3)
+    point_to_validate = mx.np.array([-0.1, 0.1] * 3)
 
     swish = mx.gluon.nn.Swish()
     def swish_test(x):
-        return x * mx.nd.sigmoid(x)
+        return x * mx.npx.sigmoid(x)
 
     for test_point, ref_point in zip(swish_test(point_to_validate), swish(point_to_validate)):
         assert test_point == ref_point
 
     silu = mx.gluon.nn.SiLU()
     def silu_test(x):
-        return x * mx.nd.sigmoid(x)
+        return x * mx.npx.sigmoid(x)
 
     for test_point, ref_point in zip(silu_test(point_to_validate), silu(point_to_validate)):
         assert test_point == ref_point
@@ -1193,7 +1176,7 @@ def test_activations():
     elu = mx.gluon.nn.ELU()
     def elu_test(x):
         def elu(x):
-            return mx.nd.expm1(x) if x <= 0.0 else x
+            return mx.np.expm1(x) if x <= 0.0 else x
         return [elu(x_i) for x_i in x]
 
     for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):
@@ -1203,7 +1186,7 @@ def test_activations():
     def selu_test(x):
         def selu(x):
             scale, alpha = 1.0507009873554804934193349852946, 1.6732632423543772848170429916717
-            return scale * x if x >= 0 else scale * alpha * mx.nd.expm1(x)
+            return scale * x if x >= 0 else scale * alpha * mx.np.expm1(x)
         return [selu(x_i) for x_i in x]
 
     for test_point, ref_point in zip(selu_test(point_to_validate), selu(point_to_validate)):
@@ -1212,9 +1195,9 @@ def test_activations():
     prelu = mx.gluon.nn.PReLU()
     prelu.initialize()
     x = point_to_validate.reshape((1, 3, 2))
-    assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
+    assert_almost_equal(prelu(x).asnumpy(), mx.np.where(x >= 0, x, 0.25 * x).asnumpy())
 
-    multichannel_init = mx.initializer.Constant(mx.nd.array([0.1, 0.25, 0.5]))
+    multichannel_init = mx.initializer.Constant(mx.np.array([0.1, 0.25, 0.5]))
     prelu_multichannel = mx.gluon.nn.PReLU(alpha_initializer=multichannel_init, in_channels=3)
     prelu_multichannel.initialize()
     assert_almost_equal(prelu_multichannel(x).asnumpy(), np.array([[-0.01, 0.1], [-0.025, 0.1], [-0.05, 0.1]]))
@@ -1275,8 +1258,8 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
 
 def test_req():
-    data = mx.nd.random.uniform(shape=(1,3,224,224))
-    label = mx.nd.random.uniform(shape=(1))
+    data = mx.np.random.uniform(size=(1,3,224,224))
+    label = mx.np.random.uniform(size=(1))
     label[:] = 1
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
@@ -1310,10 +1293,11 @@ def test_req():
     assert_almost_equal(grad * 2, grad_double)
 
 
+@use_np
 def test_save_load(tmpdir):
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=False, root=str(tmpdir))
     net.initialize()
-    net(mx.nd.ones((1,3,224,224)))
+    net(mx.np.ones((1,3,224,224)))
     net.save_parameters(os.path.join(str(tmpdir), 'test_save_load.params'))
 
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
@@ -1321,10 +1305,10 @@ def test_save_load(tmpdir):
 
     net.load_parameters(os.path.join(str(tmpdir), 'test_save_load.params'))
 
-    class Network(gluon.Block):
+    class Network(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Network, self).__init__(**kwargs)
-            self.encoders = gluon.nn.Sequential()
+            self.encoders = gluon.nn.HybridSequential()
             for _ in range(2):
                 lstm = mx.gluon.rnn.LSTM(200, 1, bidirectional=True)
                 self.encoders.add(lstm)
@@ -1337,13 +1321,14 @@ def test_save_load(tmpdir):
     net.initialize(mx.init.Xavier(), ctx=mx.cpu())
     net.hybridize()
     x = np.random.rand(32, 10, 10)
-    x = mx.nd.array(x).as_in_context(mx.cpu())
+    x = mx.np.array(x).as_in_context(mx.cpu())
     net(x)
     _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
     net.save_parameters(param_path)
     net2 = Network()
     net2.load_parameters(param_path)
 
+@use_np
 def test_save_load_deduplicate_with_shared_params(tmpdir):
     class B(mx.gluon.Block):
         def __init__(self):
@@ -1363,7 +1348,7 @@ def test_save_load_deduplicate_with_shared_params(tmpdir):
     _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
     c.save_parameters(param_path, deduplicate=True)
 
-    params = mx.nd.load(param_path)
+    params = mx.npx.load(param_path)
     assert len(params) == 1  # Only a single copy of the shared parameter is saved
 
     b1 = B()
@@ -1374,7 +1359,7 @@ def test_save_load_deduplicate_with_shared_params(tmpdir):
     # Test default behavior
     c.save_parameters(param_path, deduplicate=False)
 
-    params = mx.nd.load(param_path)
+    params = mx.npx.load(param_path)
     assert len(params) == 2  # Only a single copy of the shared parameter is saved
 
     b1 = B()
@@ -1382,47 +1367,16 @@ def test_save_load_deduplicate_with_shared_params(tmpdir):
     c = C(b1, b2)
     c.load_parameters(param_path)
 
-def test_symbol_block_save_load(tmpdir):
-    tmp = str(tmpdir)
-    tmpfile = os.path.join(tmp, 'resnet34_fp64')
-
-    class Net(gluon.HybridBlock):
-        def __init__(self):
-            super(Net, self).__init__()
-            backbone = gluon.model_zoo.vision.resnet18_v1()
-            backbone.initialize()
-            backbone.hybridize()
-            backbone(mx.nd.random.normal(shape=(1, 3, 32, 32)))
-            sym, params = backbone.export(None)
-            data = mx.sym.var('data')
-            self.backbone = gluon.SymbolBlock(sym, data)
-            self.backbone.load_dict(params)
-            self.body = nn.Conv2D(3, 1)
-
-        def hybrid_forward(self, F, x):
-            x = self.body(x)
-            return self.backbone(x)
-
-    net1 = Net()
-    net1.initialize(mx.init.Normal())
-    net1.hybridize()
-    net1(mx.nd.random.normal(shape=(1, 3, 32, 32)))
-
-    params_file = os.path.join(tmp, './test_symbol_block_save_load.params')
-    net1.save_parameters(params_file)
-    net2 = Net()
-    net2.load_parameters(params_file)
-
 
 def test_hybrid_multi_context():
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
     net.initialize(ctx=[mx.cpu(0), mx.cpu(1)])
     net.hybridize()
-    net(mx.nd.zeros((1, 3, 32, 32), ctx=mx.cpu(0))).asnumpy()
+    net(mx.np.zeros((1, 3, 32, 32), ctx=mx.cpu(0))).asnumpy()
 
 def test_zero_grad():
     def _test_grad_reset(ctx, dtype='float32', sparse=False, embeddingType=None):
-        data = mx.nd.random.uniform(shape=(3,3), dtype=dtype, ctx=ctx)
+        data = mx.np.random.uniform(size=(3,3), dtype=dtype, ctx=ctx)
         if embeddingType is None:
             embeddingType = dtype
         net = nn.Embedding(3, 4, sparse_grad=sparse, dtype=embeddingType)
@@ -1465,8 +1419,7 @@ def test_zero_grad():
     with environment('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
         for type in ['float16', 'float32', 'float64']:
             for embType in ['float32', 'float64']:
-                for sparse in [True, False]:
-                    _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
+                _test_grad_reset(ctx, dtype=type, sparse=False, embeddingType=embType)
 
 
 @pytest.mark.parametrize('static_alloc', [False, True])
@@ -1474,7 +1427,7 @@ def test_zero_grad():
 def test_hybrid_static_memory(static_alloc, static_shape):
     if static_shape and not static_alloc:
         pytest.skip()
-    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
+    x = mx.np.random.uniform(size=(2, 3, 32, 32))
     x.attach_grad()
 
     net = gluon.model_zoo.vision.get_resnet(
@@ -1510,17 +1463,17 @@ def test_hybrid_static_memory_switching(static_alloc, static_shape):
     net.initialize()
     net.hybridize(static_alloc=static_alloc, static_shape=static_shape)
 
-    x = mx.nd.random.uniform(shape=(4, 3, 32, 32))
+    x = mx.np.random.uniform(size=(4, 3, 32, 32))
     net(x)
     with mx.autograd.record():
         y = net(x)
         y.backward()
-    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
+    x = mx.np.random.uniform(size=(2, 3, 32, 32))
     net(x)
     with mx.autograd.record():
         y = net(x)
         y.backward()
-    mx.nd.waitall()
+    mx.npx.waitall()
 
 def test_hook():
     global hook_call_count
@@ -1540,19 +1493,19 @@ def test_hook():
     block.initialize()
     handle = block.register_forward_hook(call_hook)
     pre_handle = block.register_forward_pre_hook(call_pre_hook)
-    block(mx.nd.ones((3, 5)))
+    block(mx.np.ones((3, 5)))
 
     assert hook_call_count == 1
     assert pre_hook_call_count == 1
 
     handle.detach()
-    block(mx.nd.ones((3, 5)))
+    block(mx.np.ones((3, 5)))
 
     assert hook_call_count == 1
     assert pre_hook_call_count == 2
 
     pre_handle.detach()
-    block(mx.nd.ones((3, 5)))
+    block(mx.np.ones((3, 5)))
     assert hook_call_count == 1
     assert pre_hook_call_count == 2
 
@@ -1568,7 +1521,7 @@ def test_op_hook_output_names():
 
         block.register_op_hook(mon_callback, monitor_all)
         if not inputs:
-            block(mx.nd.ones((2, 3, 4)))
+            block(mx.np.ones((2, 3, 4)))
         else:
             block(inputs)
 
@@ -1640,23 +1593,26 @@ def test_apply():
 def test_summary():
     net = gluon.model_zoo.vision.resnet50_v1()
     net.initialize()
-    net.summary(mx.nd.ones((32, 3, 224, 224)))
+    net.summary(mx.np.ones((32, 3, 224, 224)))
 
     net2 = nn.Sequential()
     net2.add(nn.Embedding(40, 30))
     net2.add(gluon.rnn.LSTM(30))
     net2.add(nn.Dense(40, flatten=False).share_parameters(net2[0].params))
     net2.initialize()
-    net2.summary(mx.nd.ones((80, 32)))
+    with mx.util.np_shape(True), mx.util.np_array(True):
+        net2.summary(mx.np.ones((80, 32)))
 
     net3 = gluon.rnn.LSTM(30)
     net3.initialize()
     begin_state = net3.begin_state(32)
-    net3.summary(mx.nd.ones((80, 32, 5)), begin_state)
+    net3.summary(mx.np.ones((80, 32, 5)), begin_state)
 
     net.hybridize()
-    pytest.raises(AssertionError, net.summary, mx.nd.ones((32, 3, 224, 224)))
+    pytest.raises(AssertionError, net.summary, mx.np.ones((32, 3, 224, 224)))
 
+@use_np
+@pytest.mark.skip(reason='Currently, sparse feature is not supported in Gluon2.0')
 def test_sparse_hybrid_block_grad():
     class Embedding(mx.gluon.HybridBlock):
         def __init__(self, num_tokens, embedding_size):
@@ -1666,44 +1622,46 @@ def test_sparse_hybrid_block_grad():
             self.embedding = mx.gluon.nn.Embedding(
                 num_tokens, embedding_size, sparse_grad=True)
 
-        def hybrid_forward(self, F, words):
+        def forward(self, words):
             emb = self.embedding(words)
-            return emb + F.ones_like(emb)
+            return emb + mx.np.ones_like(emb)
 
     embedding = Embedding(20, 3)
     embedding.initialize()
     embedding.hybridize()
 
     with mx.autograd.record():
-        emb0 = embedding(mx.nd.arange(10)).sum()
-        emb1 = embedding(mx.nd.arange(10)).sum()
+        emb0 = embedding(mx.np.arange(10)).sum()
+        emb1 = embedding(mx.np.arange(10)).sum()
         loss = emb0 + emb1
     loss.backward()
     grad = embedding.embedding.weight.grad().asnumpy()
     assert (grad[:10] == 2).all()
     assert (grad[10:] == 0).all()
 
+@use_np
+@pytest.mark.skip(reason='Currently, sparse feature is not supported in Gluon2.0')
 def test_sparse_hybrid_block():
     class Linear(mx.gluon.HybridBlock):
         def __init__(self, units):
             super(Linear, self).__init__()
             self.w = gluon.Parameter('w', shape=(units, units))
 
-        def hybrid_forward(self, F, x, w):
-            return F.dot(x, w)
+        def forward(self, x, w):
+            return np.dot(x, w)
 
     class SparseBlock(mx.gluon.HybridBlock):
         def __init__(self, units):
             super(SparseBlock, self).__init__()
             self.net = Linear(units)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             return self.net(x) * x
 
     block = SparseBlock(2)
     block.initialize()
     block.hybridize()
-    x = mx.nd.ones((2,2)).tostype('csr')
+    x = mx.np.ones((2,2)).tostype('csr')
     with mx.autograd.record():
         z = block(x) + block(x)
     z.backward()
@@ -1715,29 +1673,30 @@ def test_hybrid_static_memory_recording():
     net.initialize()
     net.hybridize(static_alloc=True)
 
-    x = mx.nd.random.uniform(shape=(1, 3, 32, 32))
+    x = mx.np.random.uniform(size=(1, 3, 32, 32))
     with mx.autograd.record(True):
         net(x)
     net(x)
 
 
+@use_np
 def test_share_inputs_outputs():
     class TestIOBackward(gluon.HybridBlock):
         def __init__(self):
             super(TestIOBackward, self).__init__()
 
-        def hybrid_forward(self, F, in1, in2):
+        def forward(self, in1, in2):
             return in1 + in2
 
     class TestIOForward(gluon.HybridBlock):
         def __init__(self):
             super(TestIOForward, self).__init__()
 
-        def hybrid_forward(self, F, in1):
+        def forward(self, in1):
             return in1
 
-    d1 = mx.nd.arange(10)
-    d2 = mx.nd.arange(10)
+    d1 = mx.np.arange(10)
+    d2 = mx.np.arange(10)
 
     params=[{'inline_limit':0},
             {'inline_limit':0, 'static_alloc':True},
@@ -1748,7 +1707,7 @@ def test_share_inputs_outputs():
         t.hybridize(**param)
         for i in range(5):
             d1.attach_grad()
-            out_grad = mx.nd.random.uniform(shape=(10))
+            out_grad = mx.np.random.uniform(size=(10))
             res = t(d1)
             assert_almost_equal(res.asnumpy(), d1.asnumpy())
 
@@ -1759,7 +1718,7 @@ def test_share_inputs_outputs():
         for i in range(5):
             d1.attach_grad()
             d2.attach_grad()
-            out_grad = mx.nd.random.uniform(shape=(10))
+            out_grad = mx.np.random.uniform(size=(10))
             with mx.autograd.record():
                 res = t(d1, d2)
             res.backward(out_grad=out_grad)
@@ -1767,13 +1726,14 @@ def test_share_inputs_outputs():
             assert_almost_equal(out_grad.asnumpy(), d2.grad.asnumpy())
 
 
+@use_np
 def test_grad_graph_change():
     class Model(mx.gluon.HybridBlock):
-        def hybrid_forward(self, F, array, index):
+        def forward(self, array, index):
             row = array.take(index)
             return row, index
-    array = mx.nd.arange(3)
-    index = mx.nd.array([2])
+    array = mx.np.arange(3)
+    index = mx.np.array([2])
     array.attach_grad()
     model = Model()
     model.hybridize(inline_limit=0)
@@ -1797,6 +1757,7 @@ def check_layer_forward_withinput(net, x):
     mx.test_utils.assert_almost_equal(x.grad.asnumpy(), x_hybrid.grad.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
+@use_np
 @pytest.mark.parametrize('chn_num', [16, 256])
 @pytest.mark.parametrize('kernel', [1, 3, 224])
 def test_conv2d_16c(chn_num, kernel):
@@ -1809,14 +1770,15 @@ def test_conv2d_16c(chn_num, kernel):
             super(Net, self).__init__(**kwargs)
             self.conv0 = gluon.nn.Conv2D(chn_num, (kernel, kernel))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             out = self.conv0(x)
             return out
 
-    x = mx.nd.random.uniform(-1.0, 1.0, shape=(batch_size, 3, 224, 224))
+    x = mx.np.random.uniform(-1.0, 1.0, size=(batch_size, 3, 224, 224))
     net = Net(chn_num, kernel)
     check_layer_forward_withinput(net, x)
 
+@use_np
 @pytest.mark.parametrize('grp', [16])
 @pytest.mark.parametrize('kernel_size', [1, 3])
 def test_group_conv2d_16c(grp, kernel_size):
@@ -1831,16 +1793,17 @@ def test_group_conv2d_16c(grp, kernel_size):
             self.conv0 = gluon.nn.Conv2D(chn_num, (1, 1))
             self.conv1 = gluon.nn.Conv2D(chn_num, (kernel, kernel), groups=chn_num)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             y = self.conv0(x)
             out = self.conv1(y)
             return out
 
     for i in range(len(input_size_list)):
-        x = mx.nd.random.uniform(-1.0, 1.0, shape=(batch_size, 3, input_size_list[i], input_size_list[i]))
+        x = mx.np.random.uniform(-1.0, 1.0, size=(batch_size, 3, input_size_list[i], input_size_list[i]))
         net = Net(grp, kernel_size)
         check_layer_forward_withinput(net, x)
 
+@use_np
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_deconv2d_16c():
     in_chn_list = [1024, 512, 256, 128, 64, 32, 16]
@@ -1853,16 +1816,17 @@ def test_deconv2d_16c():
             super(Net, self).__init__(**kwargs)
             self.deconv0 = gluon.nn.Conv2DTranspose(chn_num, (kernel, kernel))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             out = self.deconv0(x)
             return out
     for i in range(len(in_shape)):
-        x = mx.nd.random.uniform(-1.0, 1.0, shape=(batch_size, in_chn_list[i], in_shape[i], in_shape[i]))
+        x = mx.np.random.uniform(-1.0, 1.0, size=(batch_size, in_chn_list[i], in_shape[i], in_shape[i]))
         for j in range(len(kernel_list)):
             net = Net(out_chn_list[i], kernel_list[j])
             check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_batchnorm_16c():
     chn_list = [16, 1024]
@@ -1881,7 +1845,7 @@ def test_batchnorm_16c():
             self.conv0 = gluon.nn.Conv2D(chn_num, (kernel, kernel))
             self.bn0   = gluon.nn.BatchNorm(axis=axis)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             conv = self.conv0(x)
             out = self.bn0(conv)
             return out
@@ -1889,11 +1853,12 @@ def test_batchnorm_16c():
     for i in range(len(chn_list)):
         for j in range(len(shape_list)):
             shape = (batch_size, ) + (3,) + shape_list[j]
-            x = mx.nd.random.uniform(-1.0, 1.0, shape=shape)
+            x = mx.np.random.uniform(-1.0, 1.0, size=shape)
             net = Net(chn_list[i], 1, 1)
             check_layer_forward_withinput(net, x)
 
 
+@use_np
 def test_batchnorm_chnls():
     chn_list = [1024, 512, 256, 128, 64, 45, 32, 16, 3]
     class Net(gluon.HybridBlock):
@@ -1914,7 +1879,7 @@ def test_batchnorm_chnls():
                     )
             self.bn1 = gluon.nn.BatchNorm(in_channels=chn_num, **({} if norm_kwargs is None else norm_kwargs))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             """Hybrid forward of R2+1D net"""
             conv = self.conv1(x)
             out = self.bn1(conv)
@@ -1923,10 +1888,11 @@ def test_batchnorm_chnls():
     for i in range(len(chn_list)):
         net = Net(chn_list[i])
         net.initialize(init=init.Constant(1))
-        x = mx.nd.zeros((1, 3, 8, 160, 160))
+        x = mx.np.zeros((1, 3, 8, 160, 160))
         net(x).asnumpy()
 
 
+@use_np
 def test_concat():
     chn_list = [16, 64]
     shapes = [1, 3, 5]
@@ -1947,32 +1913,34 @@ def test_concat():
             for i in range(input_num):
                 self.concat.add(gluon.nn.Conv2D(chn_num, (kernel, kernel)))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             return self.concat(x)
 
     for s in range(len(shape_list)):
         shape = (batch_size,) + (3,) + shape_list[i]
-        x = mx.nd.random.uniform(-1.0, 1.0, shape=shape)
+        x = mx.np.random.uniform(-1.0, 1.0, size=shape)
         for i in range(len(chn_list)):
             for axis in range(4):
                 net = Net(axis, input_num, chn_list[i], 1)
                 check_layer_forward_withinput(net, x)
 
+@use_np
 def test_reshape_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             self.conv0 = nn.Conv2D(64, (3, 3))
 
-        def hybrid_forward(self, F, x):
-            x_reshape = x.reshape((0, 0, 128, 32))
+        def forward(self, x):
+            x_reshape = x.reshape((-1, 3, 128, 32))
             out = self.conv0(x_reshape)
             return out
-    x = mx.nd.random.uniform(shape=(4, 3, 64, 64))
+    x = mx.np.random.uniform(size=(4, 3, 64, 64))
     net = Net()
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_conv_reshape_conv():
     class Net(gluon.HybridBlock):
@@ -1981,32 +1949,34 @@ def test_reshape_conv_reshape_conv():
             self.conv0 = nn.Conv2D(64, (3, 3))
             self.conv1 = nn.Conv2D(128, (3, 3))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape((0, 0, 128, 32))
             y = self.conv0(x_reshape)
             "spatial shape of y is (62, 62)"
             y_reshape = y.reshape((0, 0, 124, 31))
             out = self.conv1(y_reshape)
             return out
-    x = mx.nd.random.uniform(shape=(4, 3, 64, 64))
+    x = mx.np.random.uniform(size=(4, 3, 64, 64))
     net = Net()
     check_layer_forward_withinput(net, x)
 
+@use_np
 def test_slice_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             self.conv0 = nn.Conv2D(16, (3, 3))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_slice = x.slice(begin=(0, 2, 0, 0), end=(4, 5, 32, 32))
             out = self.conv0(x_slice)
             return out
-    x = mx.nd.random.uniform(shape=(8, 6, 32, 32))
+    x = mx.np.random.uniform(size=(8, 6, 32, 32))
     net = Net()
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 def test_slice_conv_slice_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -2014,18 +1984,19 @@ def test_slice_conv_slice_conv():
             self.conv0 = nn.Conv2D(32, (3, 3))
             self.conv1 = nn.Conv2D(16, (1, 1))
 
-        def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=(0, 0, 0, 0), end=(4, 16, 16, 16))
+        def forward(self, x):
+            x_slice = mx.npx.slice(x, begin=(0, 0, 0, 0), end=(4, 16, 16, 16))
             y = self.conv0(x_slice)
             "shape of y is (4, 32, 14, 14)"
-            y_slice = y.slice(begin=(0, 0, 0, 0), end=(4, 16, 3, 3))
+            y_slice = mx.npx.slice(y, begin=(0, 0, 0, 0), end=(4, 16, 3, 3))
             out = self.conv1(y_slice)
             return out
-    x = mx.nd.random.uniform(shape=(4, 32, 32, 32))
+    x = mx.np.random.uniform(size=(4, 32, 32, 32))
     net = Net()
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_slice_conv_reshape_conv():
     class Net(gluon.HybridBlock):
@@ -2034,18 +2005,19 @@ def test_slice_conv_reshape_conv():
             self.conv0 = nn.Conv2D(64, (3, 3))
             self.conv1 = nn.Conv2D(128, (3, 3))
 
-        def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=(0, 0, 1, 1), end=(4, 16, 33, 33))
+        def forward(self, x):
+            x_slice = mx.npx.slice(x, begin=(0, 0, 1, 1), end=(4, 16, 33, 33))
             y = self.conv0(x_slice)
             "shape of y is (4, 64, 30, 30)"
             y_reshape = y.reshape((0, 0, 60, 15))
             out = self.conv1(y_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(4, 32, 64, 64))
+    x = mx.np.random.uniform(size=(4, 32, 64, 64))
     net = Net()
     check_layer_forward_withinput(net, x)
 
+@use_np
 def test_reshape_conv_slice_conv():
     """
     This test will test gluon Conv2d computation with ndarray reshape and slice
@@ -2056,17 +2028,18 @@ def test_reshape_conv_slice_conv():
             self.conv0 = nn.Conv2D(16, (3, 3))
             self.conv1 = nn.Conv2D(32, (3, 3))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape((0, 0, 64, 16))
             y = self.conv0(x_reshape)
             "shape of y is (4, 16, 62, 14)"
-            y_slice = y.slice(begin=(0, 0, 0, 0), end=(2, 16, 14, 14))
+            y_slice = mx.npx.slice(y, begin=(0, 0, 0, 0), end=(2, 16, 14, 14))
             out = self.conv1(y_slice)
             return out
-    x = mx.nd.random.uniform(shape=(4, 3, 32, 32))
+    x = mx.np.random.uniform(size=(4, 3, 32, 32))
     net = Net()
     check_layer_forward_withinput(net, x)
 
+@use_np
 def test_reshape_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -2074,16 +2047,17 @@ def test_reshape_dense():
             channel0 = np.random.randint(1, 17)
             self.dense0 = nn.Dense(channel0)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape((8, 64, 128, -1))
             out = self.dense0(x_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(4, 32, 64, 64))
+    x = mx.np.random.uniform(size=(4, 32, 64, 64))
     net = Net()
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 def test_slice_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2092,17 +2066,18 @@ def test_slice_dense():
             self.dense0 = nn.Dense(channel0)
             self.slice = slice
 
-        def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=tuple(self.slice[0]),
+        def forward(self, x):
+            x_slice = mx.npx.slice(x, begin=tuple(self.slice[0]),
                               end=tuple(self.slice[1]))
             out = self.dense0(x_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 32, 64, 64))
+    x = mx.np.random.uniform(size=(16, 32, 64, 64))
     slice = [[0, 16, 0, 0], [4, 32, 32, 32]]
     net = Net(slice)
     check_layer_forward_withinput(net, x)
 
+@use_np
 def test_slice_dense_slice_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2113,18 +2088,19 @@ def test_slice_dense_slice_dense():
             self.dense1 = nn.Dense(channel1)
             self.slice = slice
 
-        def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=tuple(self.slice[0]), end=tuple(self.slice[1]))
+        def forward(self, x):
+            x_slice = mx.npx.slice(x, begin=tuple(self.slice[0]), end=tuple(self.slice[1]))
             y = self.dense0(x_slice)
-            y_slice = y.slice(begin=(1, 0), end=(3, 10))
+            y_slice = mx.npx.slice(y, begin=(1, 0), end=(3, 10))
             out = self.dense1(y_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 32, 64, 64))
+    x = mx.np.random.uniform(size=(16, 32, 64, 64))
     slice = [[0, 16, 0, 0], [4, 32, 32, 32]]
     net = Net(slice)
     check_layer_forward_withinput(net, x)
 
+@use_np
 def test_reshape_dense_reshape_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -2134,18 +2110,19 @@ def test_reshape_dense_reshape_dense():
             self.dense0 = nn.Dense(channel0)
             self.dense1 = nn.Dense(channel1)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape((4, 16, 128, 32))
             y = self.dense0(x_reshape)
             y_reshape = y.reshape((1, -1))
             out = self.dense1(y_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(4, 16, 64, 64))
+    x = mx.np.random.uniform(size=(4, 16, 64, 64))
     net = Net()
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 def test_slice_dense_reshape_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2156,19 +2133,20 @@ def test_slice_dense_reshape_dense():
             self.dense1 = nn.Dense(channel1)
             self.slice = slice
 
-        def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=tuple(self.slice[0]), end=tuple(self.slice[1]))
+        def forward(self, x):
+            x_slice = mx.npx.slice(x, begin=tuple(self.slice[0]), end=tuple(self.slice[1]))
             y = self.dense0(x_slice)
             y_reshape = y.reshape((1, -1))
             out = self.dense1(y_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 32, 64, 64))
+    x = mx.np.random.uniform(size=(16, 32, 64, 64))
     slice = [[0, 16, 0, 0], [4, 32, 32, 32]]
     net = Net(slice)
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 def test_reshape_dense_slice_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -2178,18 +2156,19 @@ def test_reshape_dense_slice_dense():
             self.dense0 = nn.Dense(channel0)
             self.dense1 = nn.Dense(channel1)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape((4, 16, 128, 32))
             y = self.dense0(x_reshape)
-            y_slice = y.slice(begin=(1, 32), end=(3, 64))
+            y_slice = mx.npx.slice(y, begin=(1, 32), end=(3, 64))
             out = self.dense1(y_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(4, 16, 64, 64))
+    x = mx.np.random.uniform(size=(4, 16, 64, 64))
     net = Net()
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_batchnorm():
     class Net(gluon.HybridBlock):
@@ -2199,18 +2178,19 @@ def test_reshape_batchnorm():
             self.bn0 = nn.BatchNorm()
             self.reshape = shape
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_in = self.conv0(x)
             x_reshape = x_in.reshape(self.reshape)
             out = self.bn0(x_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(4, 32, 64, 64))
+    x = mx.np.random.uniform(size=(4, 32, 64, 64))
     shape = (4, 64, 64, -1)
     net = Net(shape)
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.serial
 def test_slice_batchnorm():
     class Net(gluon.HybridBlock):
@@ -2220,19 +2200,20 @@ def test_slice_batchnorm():
             self.bn0 = nn.BatchNorm()
             self.slice = slice
 
-        def hybrid_forward(self, F, x):
+        def forward(self, F, x):
             x_in = self.conv0(x)
-            x_slice = x_in.slice(begin=tuple(self.slice[0]),
+            x_slice = mx.npx.slice(x_in, begin=tuple(self.slice[0]),
                               end=tuple(self.slice[1]))
             out = self.bn0(x_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 256, 256))
+    x = mx.np.random.uniform(size=(16, 128, 256, 256))
     slice = [[0, 0, 0, 0], [4, 32, 32, 32]]
     net = Net(slice)
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 @pytest.mark.serial
 def test_slice_batchnorm_slice_batchnorm():
@@ -2244,20 +2225,21 @@ def test_slice_batchnorm_slice_batchnorm():
             self.bn1 = nn.BatchNorm()
             self.slice = slice
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_in = self.conv0(x)
-            x_slice = x_in.slice(begin=tuple(self.slice[0][0]), end=tuple(self.slice[0][1]))
+            x_slice = mx.npx.slice(x_in, begin=tuple(self.slice[0][0]), end=tuple(self.slice[0][1]))
             y = self.bn0(x_slice)
-            y_slice = y.slice(begin=tuple(self.slice[1][0]), end=tuple(self.slice[1][1]))
+            y_slice = mx.npx.slice(y, begin=tuple(self.slice[1][0]), end=tuple(self.slice[1][1]))
             out = self.bn1(y_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 256, 256))
+    x = mx.np.random.uniform(size=(16, 128, 256, 256))
     slice = [[[0, 0, 0, 0], [4, 32, 32, 32]], [[0, 0, 0, 0], [2, 64, 16, 16]]]
     net = Net(slice)
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_batchnorm_reshape_batchnorm():
     class Net(gluon.HybridBlock):
@@ -2268,7 +2250,7 @@ def test_reshape_batchnorm_reshape_batchnorm():
             self.bn1 = nn.BatchNorm()
             self.reshape = shape
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_in = self.conv0(x)
             x_reshape = x_in.reshape(self.reshape[0])
             y = self.bn0(x_reshape)
@@ -2276,12 +2258,13 @@ def test_reshape_batchnorm_reshape_batchnorm():
             out = self.bn1(y_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(4, 32, 64, 64))
+    x = mx.np.random.uniform(size=(4, 32, 64, 64))
     shape = [(4, 64, 64, -1), (4, 128, -1, 32)]
     net = Net(shape)
     check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.serial
 def test_slice_batchnorm_reshape_batchnorm():
     class Net(gluon.HybridBlock):
@@ -2293,15 +2276,15 @@ def test_slice_batchnorm_reshape_batchnorm():
             self.reshape = shape
             self.slice = slice
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_in = self.conv0(x)
-            x_slice = x_in.slice(begin=tuple(self.slice[0]), end=tuple(self.slice[1]))
+            x_slice = mx.npx.slice(x_in, begin=tuple(self.slice[0]), end=tuple(self.slice[1]))
             y = self.bn0(x_slice)
             y_reshape = y.reshape(self.reshape)
             out = self.bn1(y_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 256, 256))
+    x = mx.np.random.uniform(size=(16, 128, 256, 256))
     slice = [[0, 0, 0, 0], [4, 32, 32, 32]]
     shape = (1, 128, 64, -1)
     net = Net(shape, slice)
@@ -2319,7 +2302,7 @@ def test_reshape_batchnorm_slice_batchnorm():
             self.reshape = shape
             self.slice = slice
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_in = self.conv0(x)
             x_reshape = x_in.reshape(self.reshape)
             y = self.bn0(x_reshape)
@@ -2327,7 +2310,7 @@ def test_reshape_batchnorm_slice_batchnorm():
             out = self.bn1(y_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(4, 32, 64, 64))
+    x = mx.np.random.uniform(size=(4, 32, 64, 64))
     slice = [[0, 0, 0, 0], [2, 64, 32, 32]]
     shape = (4, 64, 64, -1)
     net = Net(shape, slice)
@@ -2349,12 +2332,12 @@ def test_reshape_pooling2d():
             self.reshape = shape
             self.pool0 = pooling_layer
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape(self.reshape)
             out = self.pool0(x_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(4, 32, 32, 32))
+    x = mx.np.random.uniform(size=(4, 32, 32, 32))
     shape = (4, 64, 64, -1)
     for i in range(len(pooling_layers)):
         net = Net(shape, pooling_layers[i])
@@ -2381,7 +2364,7 @@ def test_slice_pooling2d():
                 self.slice = slice
                 self.pool0 = pooling_layer
 
-            def hybrid_forward(self, F, x):
+            def forward(self, x):
                 x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
                 out = self.pool0(x_slice)
                 return out
@@ -2391,7 +2374,7 @@ def test_slice_pooling2d():
         if layout == 'NHWC':
             xshape = transpose(xshape)
             slice_shape = transpose(slice_shape)
-        x = mx.nd.random.uniform(shape=xshape)
+        x = mx.np.random.uniform(size=xshape)
         slice = [(0, 0, 0, 0), slice_shape]
         for i in range(len(pooling_layers)):
             net = Net(slice, pooling_layers[i])
@@ -2415,14 +2398,14 @@ def test_reshape_pooling2d_reshape_pooling2d():
             self.pool0 = pooling_layer1
             self.pool1 = pooling_layer2
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape(self.reshape[0])
             y = self.pool0(x_reshape)
             y_reshape = y.reshape(self.reshape[1])
             out = self.pool1(y_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 256, 256))
+    x = mx.np.random.uniform(size=(16, 128, 256, 256))
     shape = [(128, 256, 64, -1), (128, 256, 11, -1)]
     for i in range(len(pooling_layers)):
         for j in range(len(pooling_layers)):
@@ -2449,14 +2432,14 @@ def test_slice_pooling2d_slice_pooling2d():
             self.pool0 = pooling_layer1
             self.pool1 = pooling_layer2
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_slice = x.slice(begin=self.slice[0][0], end=self.slice[0][1])
             y = self.pool0(x_slice)
             y_slice = y.slice(begin=self.slice[1][0], end=self.slice[1][1])
             out = self.pool1(y_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 256, 256))
+    x = mx.np.random.uniform(size=(16, 128, 256, 256))
     slice = [[(8, 0, 100, 50), (16, -1, -1, -1)], [(0, 64, 0, 50), (2, -1, -1, -1)]]
     for i in range(len(pooling_layers)):
         for j in range(len(pooling_layers)):
@@ -2485,14 +2468,14 @@ def test_slice_pooling2d_reshape_pooling2d():
             self.pool0 = pooling_layer1
             self.pool1 = pooling_layer2
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
             y = self.pool0(x_slice)
             y_reshape = y.reshape(self.reshape)
             out = self.pool1(y_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 256, 256))
+    x = mx.np.random.uniform(size=(16, 128, 256, 256))
     slice = [(8, 0, 100, 50), (16, 128, 256, 256)]
     shape = (32, -1, 0, 0)
     for i in range(len(pooling_layers)):
@@ -2521,14 +2504,14 @@ def test_reshape_pooling2d_slice_pooling2d():
             self.pool0 = pooling_layer1
             self.pool1 = pooling_layer2
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape(self.reshape)
             y = self.pool0(x_reshape)
             y_slice = y.slice(begin=self.slice[0], end=self.slice[1])
             out = self.pool1(y_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 256, 256))
+    x = mx.np.random.uniform(size=(16, 128, 256, 256))
     shape = (0, 512, 64, -1)
     slice = [(8, 256, 10, 20), (-1, -1, -1, 70)]
     for i in range(len(pooling_layers)):
@@ -2547,11 +2530,11 @@ def test_reshape_deconv():
             self.reshape = shape
             self.conv0 = nn.Conv2DTranspose(64, (3, 3))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape(self.reshape)
             out = self.conv0(x_reshape)
             return out
-    x = mx.nd.random.uniform(shape=(4, 16, 32, 32))
+    x = mx.np.random.uniform(size=(4, 16, 32, 32))
     shape = (4, 16, 64, -1)
     net = Net(shape)
     check_layer_forward_withinput(net, x)
@@ -2565,11 +2548,11 @@ def test_slice_deconv():
             self.slice = slice
             self.conv0 = nn.Conv2DTranspose(64, (3, 3))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
             out = self.conv0(x_slice)
             return out
-    x = mx.nd.random.uniform(shape=(8, 32, 64, 64))
+    x = mx.np.random.uniform(size=(8, 32, 64, 64))
     slice = [(0, 16, 0, 0), (4, 32, 32, 32)]
     net = Net(slice)
     check_layer_forward_withinput(net, x)
@@ -2584,14 +2567,14 @@ def test_reshape_deconv_reshape_deconv():
             self.conv0 = nn.Conv2DTranspose(32, (3, 3))
             self.conv1 = nn.Conv2DTranspose(64, (3, 3), strides=(2, 2))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape(self.reshape[0])
             y = self.conv0(x_reshape)
             "shape of y is (4, 32, 66, 18)"
             y_reshape = y.reshape(self.reshape[1])
             out = self.conv1(y_reshape)
             return out
-    x = mx.nd.random.uniform(shape=(4, 16, 32, 32))
+    x = mx.np.random.uniform(size=(4, 16, 32, 32))
     shape = [(4, 16, 64, -1), (4, 32, 33, -1)]
     net = Net(shape)
     check_layer_forward_withinput(net, x)
@@ -2606,14 +2589,14 @@ def test_slice_deconv_slice_deconv():
             self.conv0 = nn.Conv2DTranspose(32, (3, 3))
             self.conv1 = nn.Conv2DTranspose(64, (3, 3), strides=(2, 2))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_slice = x.slice(begin=self.slice[0][0], end=self.slice[0][1])
             y = self.conv0(x_slice)
             "shape of y is (4, 32, 66, 18)"
             y_slice = y.slice(begin=self.slice[1][0], end=self.slice[1][1])
             out = self.conv1(y_slice)
             return out
-    x = mx.nd.random.uniform(shape=(8, 32, 64, 64))
+    x = mx.np.random.uniform(size=(8, 32, 64, 64))
     slice = [[(0, 0, 0, 0), (4, 16, 32, 32)], [(0, 0, 0, 0), (2, 16, 16, 16)]]
     net = Net(slice)
     check_layer_forward_withinput(net, x)
@@ -2629,14 +2612,14 @@ def test_reshape_deconv_slice_deconv():
             self.conv0 = nn.Conv2DTranspose(32, (3, 3))
             self.conv1 = nn.Conv2DTranspose(64, (3, 3), strides=(2, 2))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape(self.reshape)
             y = self.conv0(x_reshape)
             "shape of y is (4, 32, 66, 18)"
             y_slice = y.slice(begin=self.slice[0], end=self.slice[1])
             out = self.conv1(y_slice)
             return out
-    x = mx.nd.random.uniform(shape=(4, 16, 32, 32))
+    x = mx.np.random.uniform(size=(4, 16, 32, 32))
     shape = (4, 16, 64, -1)
     slice = [(0, 0, 0, 0), (2, 16, 16, 16)]
     net = Net(shape, slice)
@@ -2653,19 +2636,20 @@ def test_slice_deconv_reshape_deconv():
             self.conv0 = nn.Conv2DTranspose(32, (3, 3))
             self.conv1 = nn.Conv2DTranspose(96, (3, 3), strides=(2, 2))
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
             y = self.conv0(x_slice)
             "shape of y is (4, 32, 34, 34)"
             y_reshape = y.reshape(self.reshape)
             out = self.conv1(y_reshape)
             return out
-    x = mx.nd.random.uniform(shape=(8, 32, 64, 64))
+    x = mx.np.random.uniform(size=(8, 32, 64, 64))
     shape = (4, 64, 34, -1)
     slice = [(4, 0, 0, 0), (8, 16, 32, 32)]
     net = Net(shape, slice)
     check_layer_forward_withinput(net, x)
 
+@use_np
 @pytest.mark.serial
 def test_reshape_activation():
     class Net(gluon.HybridBlock):
@@ -2674,18 +2658,19 @@ def test_reshape_activation():
             self.reshape = shape
             self.act = nn.Activation(act)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape(self.reshape)
             out = self.act(x_reshape)
             return out
     acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for act in acts:
-        x = mx.nd.random.uniform(-1, 1, shape=(4, 16, 32, 32))
+        x = mx.np.random.uniform(-1, 1, size=(4, 16, 32, 32))
         shape = (4, 32, 32, -1)
         net = Net(act, shape)
         check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.serial
 def test_slice_activation():
     class Net(gluon.HybridBlock):
@@ -2694,19 +2679,20 @@ def test_slice_activation():
             self.slice = slice
             self.act = nn.Activation(act)
 
-        def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
+        def forward(self, x):
+            x_slice = mx.npx.slice(x, begin=self.slice[0], end=self.slice[1])
             out = self.act(x_slice)
             return out
 
     acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for act in acts:
-        x = mx.nd.random.uniform(-1, 1, shape=(8, 32, 64, 64))
+        x = mx.np.random.uniform(-1, 1, size=(8, 32, 64, 64))
         slice = [(0, 16, 32, 32), (4, 32, 64, 64)]
         net = Net(act, slice)
         check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.serial
 def test_reshape_activation_reshape_activation():
     class Net(gluon.HybridBlock):
@@ -2716,7 +2702,7 @@ def test_reshape_activation_reshape_activation():
             self.act0 = nn.Activation(act0)
             self.act1 = nn.Activation(act1)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape(self.reshape[0])
             y = self.act0(x_reshape)
             y_reshape = y.reshape(self.reshape[1])
@@ -2727,12 +2713,13 @@ def test_reshape_activation_reshape_activation():
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
                 continue
-            x = mx.nd.random.uniform(-1, 1, shape=(4, 16, 32, 32))
+            x = mx.np.random.uniform(-1, 1, size=(4, 16, 32, 32))
             shape = [(4, 32, 32, -1), (4, 32, 16, -1)]
             net = Net(act0, act1, shape)
             check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.serial
 def test_slice_activation_slice_activation():
     class Net(gluon.HybridBlock):
@@ -2742,10 +2729,10 @@ def test_slice_activation_slice_activation():
             self.act0 = nn.Activation(act0)
             self.act1 = nn.Activation(act1)
 
-        def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=self.slice[0][0], end=self.slice[0][1])
+        def forward(self, x):
+            x_slice = mx.npx.slice(x, begin=self.slice[0][0], end=self.slice[0][1])
             y = self.act0(x_slice)
-            y_slice = y.slice(begin=self.slice[1][0], end=self.slice[1][1])
+            y_slice = mx.npx.slice(y, begin=self.slice[1][0], end=self.slice[1][1])
             out = self.act1(y_slice)
             return out
     acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
@@ -2753,12 +2740,13 @@ def test_slice_activation_slice_activation():
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
                 continue
-            x = mx.nd.random.uniform(-1, 1, shape=(8, 32, 64, 64))
+            x = mx.np.random.uniform(-1, 1, size=(8, 32, 64, 64))
             slice = [[(0, 16, 32, 32), (4, 32, 64, 64)], [(2, 0, 16, 16), (4, 16, 32, 32)]]
             net = Net(act0, act1, slice)
             check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.serial
 def test_reshape_activation_slice_activation():
     class Net(gluon.HybridBlock):
@@ -2769,10 +2757,10 @@ def test_reshape_activation_slice_activation():
             self.act0 = nn.Activation(act0)
             self.act1 = nn.Activation(act1)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x_reshape = x.reshape(self.reshape)
             y = self.act0(x_reshape)
-            y_slice = y.slice(begin=self.slice[0], end=self.slice[1])
+            y_slice = mx.npx.slice(y, begin=self.slice[0], end=self.slice[1])
             out = self.act1(y_slice)
             return out
     acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
@@ -2780,13 +2768,14 @@ def test_reshape_activation_slice_activation():
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
                 continue
-            x = mx.nd.random.uniform(-1, 1, shape=(4, 16, 32, 32))
+            x = mx.np.random.uniform(-1, 1, size=(4, 16, 32, 32))
             shape = (4, 32, 32, -1)
             slice = [(0, 0, 0, 0), (2, 16, 16, 16)]
             net = Net(act0, act1, shape, slice)
             check_layer_forward_withinput(net, x)
 
 
+@use_np
 @pytest.mark.serial
 def test_slice_activation_reshape_activation():
     class Net(gluon.HybridBlock):
@@ -2797,8 +2786,8 @@ def test_slice_activation_reshape_activation():
             self.act0 = nn.Activation(act0)
             self.act1 = nn.Activation(act1)
 
-        def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
+        def forward(self, x):
+            x_slice = mx.npx.slice(x, begin=self.slice[0], end=self.slice[1])
             y = self.act0(x_slice)
             y_reshape = y.reshape(self.reshape)
             out = self.act1(y_reshape)
@@ -2808,12 +2797,13 @@ def test_slice_activation_reshape_activation():
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
                 continue
-            x = mx.nd.random.uniform(-1, 1, shape=(8, 32, 64, 64))
+            x = mx.np.random.uniform(-1, 1, size=(8, 32, 64, 64))
             slice = [(0, 16, 32, 32), (4, 32, 64, 64)]
             shape = (4, 32, 32, -1)
             net = Net(act0, act1, shape, slice)
             check_layer_forward_withinput(net, x)
 
+@use_np
 @pytest.mark.serial
 def test_np_shape_parameters():
     class Foo(gluon.Block):
@@ -2824,7 +2814,7 @@ def test_np_shape_parameters():
             return self.dense(x)
 
     with mx.np_shape(True):
-        z = mx.nd.zeros((2,2016))
+        z = mx.np.zeros((2,2016))
         print(z.shape)
         foo = Foo()
         foo.initialize()
@@ -2836,7 +2826,7 @@ def test_gluon_param_load():
     net.save_parameters('test_gluon_param_load.params')
     net.cast('float16')
     net.load_parameters('test_gluon_param_load.params', cast_dtype=True)
-    mx.nd.waitall()
+    mx.npx.waitall()
 
 def test_gluon_param_load_dtype_source():
     net = mx.gluon.nn.Dense(10, in_units=10)
@@ -2846,8 +2836,9 @@ def test_gluon_param_load_dtype_source():
     net.cast('float32')
     net.load_parameters('test_gluon_param_load_dtype_source.params', cast_dtype=True, dtype_source="saved")
     assert net.weight.dtype == np.float16
-    mx.nd.waitall()
+    mx.npx.waitall()
 
+@use_np
 def test_squeeze_consistency():
     class Foo(gluon.HybridBlock):
         def __init__(self, inplace, **kwargs):
@@ -2861,7 +2852,7 @@ def test_squeeze_consistency():
         block = Foo(inplace)
         block.hybridize()
         shape = (np.random.randint(1, 10), np.random.randint(1, 10), 1)
-        block(mx.nd.ones(shape))
+        block(mx.np.ones(shape))
 
 def test_shared_parameters_with_non_default_initializer():
     class MyBlock(gluon.HybridBlock):
@@ -2877,20 +2868,21 @@ def test_shared_parameters_with_non_default_initializer():
     assert bl.param is not bl3.param
     assert bl.param.init == bl3.param.init
 
+@use_np
 def test_reqs_switching_training_inference():
     class Foo(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Foo, self).__init__(**kwargs)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             y = 2 * x
             return F.sqrt(x) + F.sqrt(y)
 
     f = Foo()
     f.hybridize(static_alloc=True)
-    x = mx.nd.ones(shape=(10,10))
+    x = mx.np.ones(shape=(10,10))
     x.attach_grad()
-    x2 = mx.nd.ones(shape=x.shape) * 2
+    x2 = mx.np.ones(shape=x.shape) * 2
     x2.attach_grad()
 
     # Call first in training mode
@@ -2933,7 +2925,7 @@ def test_DeformableConvolution():
     """
     try:
         ctx = mx.gpu()
-        _ = mx.nd.array([0], ctx=ctx)
+        _ = mx.np.array([0], ctx=ctx)
     except mx.base.MXNetError:
         pytest.skip("deformable_convolution only supports GPU")
     net = nn.HybridSequential()
@@ -2954,7 +2946,7 @@ def test_DeformableConvolution():
     net.initialize(force_reinit=True, ctx=ctx)
     net.hybridize()
 
-    x = mx.nd.random.uniform(shape=(8, 5, 30, 31), ctx=ctx)
+    x = mx.np.random.uniform(size=(8, 5, 30, 31), ctx=ctx)
     with mx.autograd.record():
         y = net(x)
         y.backward()
@@ -2986,11 +2978,12 @@ def test_ModulatedDeformableConvolution():
     net.initialize(force_reinit=True, ctx=ctx)
     net.hybridize()
 
-    x = mx.nd.random.uniform(shape=(8, 5, 30, 31), ctx=ctx)
+    x = mx.np.random.uniform(size=(8, 5, 30, 31), ctx=ctx)
     with mx.autograd.record():
         y = net(x)
 
 
+@use_np
 @pytest.mark.parametrize('dc', [True, False])
 @pytest.mark.parametrize('hybridize', [True, False])
 @pytest.mark.garbage_expected
@@ -3021,8 +3014,8 @@ def test_concatenate(dc, hybridize):
     if hybridize:
         model.hybridize()
         model2.hybridize()
-    x = model(mx.nd.zeros((32, 10)))
-    x2 = model2(mx.nd.zeros((32, 10)))
+    x = model(mx.np.zeros((32, 10)))
+    x2 = model2(mx.np.zeros((32, 10)))
     assert x.shape == (32, 224)
     assert x2.shape == (32, 224)
     x.wait_to_read()
@@ -3030,7 +3023,7 @@ def test_concatenate(dc, hybridize):
 
 def test_identity():
     model = nn.Identity()
-    x = mx.nd.random.uniform(shape=(128, 33, 64))
+    x = mx.np.random.uniform(size=(128, 33, 64))
     assert_almost_equal(model(x), x)
 
 def test_pixelshuffle1d():
@@ -3040,7 +3033,7 @@ def test_pixelshuffle1d():
     shape_before = (1, nchan * up_x, nx)
     shape_after = (1, nchan, nx * up_x)
     layer = nn.PixelShuffle1D(up_x)
-    x = mx.nd.arange(np.prod(shape_before)).reshape(shape_before)
+    x = mx.np.arange(np.prod(shape_before)).reshape(shape_before)
     y = layer(x)
     assert y.shape == shape_after
     assert_allclose(
@@ -3058,7 +3051,7 @@ def test_pixelshuffle2d():
     shape_before = (1, nchan * up_x * up_y, nx, ny)
     shape_after = (1, nchan, nx * up_x, ny * up_y)
     layer = nn.PixelShuffle2D((up_x, up_y))
-    x = mx.nd.arange(np.prod(shape_before)).reshape(shape_before)
+    x = mx.np.arange(np.prod(shape_before)).reshape(shape_before)
     y = layer(x)
     assert y.shape == shape_after
     # - Channels are reshaped to form 2x3 blocks
@@ -3090,7 +3083,7 @@ def test_pixelshuffle3d():
     shape_before = (1, nchan * up_x * up_y * up_z, nx, ny, nz)
     shape_after = (1, nchan, nx * up_x, ny * up_y, nz * up_z)
     layer = nn.PixelShuffle3D((up_x, up_y, up_z))
-    x = mx.nd.arange(np.prod(shape_before)).reshape(shape_before)
+    x = mx.np.arange(np.prod(shape_before)).reshape(shape_before)
     y = layer(x)
     assert y.shape == shape_after
     # - Channels are reshaped to form 2x1x2 blocks

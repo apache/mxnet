@@ -421,7 +421,8 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
     _all_same(ys_np, ys_hybrid_np)
 
     with tempfile.TemporaryDirectory() as root:
-        net.export(root)
+        with mx.util.np_shape(True), mx.util.np_array(True):
+            net.export(root)
 
 def _dc_gluon_simple_setup(shape=(8, 10), *, nd):
     return [nd.ones(shape=shape, ctx=mx.context.current_context())]

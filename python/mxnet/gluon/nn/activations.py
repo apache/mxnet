@@ -52,7 +52,6 @@ class Activation(HybridBlock):
         return self._act_type
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         return npx.activation(x, act_type=self._act_type, name='fwd')
 
     def __repr__(self):
@@ -95,7 +94,6 @@ class LeakyReLU(HybridBlock):
         self._alpha = alpha
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         return npx.leaky_relu(x, act_type='leaky', slope=self._alpha, name='fwd')
 
     def __repr__(self):
@@ -144,7 +142,6 @@ class PReLU(HybridBlock):
         self.alpha = Parameter('alpha', shape=(in_channels,), init=alpha_initializer)
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         ctx = x.ctx
         return npx.leaky_relu(x, gamma=self.alpha.data(ctx), act_type='prelu', name='fwd')
 
@@ -176,7 +173,6 @@ class ELU(HybridBlock):
         self._alpha = alpha
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         return npx.leaky_relu(x, act_type='elu', slope=self._alpha)
 
 
@@ -199,7 +195,6 @@ class SELU(HybridBlock):
         super(SELU, self).__init__(**kwargs)
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         return npx.leaky_relu(x, act_type='selu', name='fwd')
 
 
@@ -222,7 +217,6 @@ class GELU(HybridBlock):
         super(GELU, self).__init__(**kwargs)
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         return npx.leaky_relu(x, act_type='gelu', name='fwd')
 
 
@@ -251,7 +245,6 @@ class Swish(HybridBlock):
         self._beta = beta
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         return x * npx.sigmoid(self._beta * x)
 
 
@@ -280,5 +273,4 @@ class SiLU(HybridBlock):
         super(SiLU, self).__init__(**kwargs)
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         return x * npx.sigmoid(x)

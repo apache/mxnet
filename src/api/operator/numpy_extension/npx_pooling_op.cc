@@ -28,7 +28,7 @@
 
 namespace mxnet {
 
-inline int String2Layout(const std::string& s) {
+inline int String2PoolingLayout(const std::string& s) {
   using namespace op;
   if (s == "NCW") {
     return mshadow::kNCW;
@@ -157,7 +157,7 @@ MXNET_REGISTER_API("_npx.pooling")
   if (args[10].type_code() == kNull) {
     param.layout = dmlc::nullopt;
   } else {
-    param.layout = String2Layout(args[10]);
+    param.layout = String2PoolingLayout(args[10]);
   }
 
   attrs.parsed = param;

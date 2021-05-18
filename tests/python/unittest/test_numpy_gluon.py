@@ -312,10 +312,10 @@ def test_symbolic_basic_slicing():
                                               (a[()][index1] + b[()][index1])[index2])
         # Test for split/hsplit/vsplit
         class TestSlicingWithSplit(gluon.HybridBlock):
-            def hybrid_forward(self, F, x):
-                x = F.np.split(x, shape[2], axis=2)
+            def forward(self, x):
+                x = mx.np.split(x, shape[2], axis=2)
                 x = x[1:-1]
-                x = F.np.concatenate(x, axis=2)
+                x = mx.np.concatenate(x, axis=2)
                 return x
 
         class TestSlicingWithSplit2(gluon.HybridBlock):
@@ -323,23 +323,23 @@ def test_symbolic_basic_slicing():
                 super(TestSlicingWithSplit2, self).__init__()
                 self.layer = gluon.nn.Dense(16, flatten=False)
 
-            def hybrid_forward(self, F, x, y):
-                x = F.np.split(x, 1)
+            def forward(self, x, y):
+                x = mx.np.split(x, 1)
                 x = x[0]
                 return self.layer(x[:, -1, :] + y[:, -1, :])
 
         class TestSlicingWithHSplit(gluon.HybridBlock):
-            def hybrid_forward(self, F, x):
-                x = F.np.hsplit(x, shape[1])
+            def forward(self, x):
+                x = mx.np.hsplit(x, shape[1])
                 x = x[1:-1]
-                x = F.np.concatenate(x, axis=1)
+                x = mx.np.concatenate(x, axis=1)
                 return x
 
         class TestSlicingWithVSplit(gluon.HybridBlock):
-            def hybrid_forward(self, F, x):
-                x = F.np.vsplit(x, shape[0])
+            def forward(self, x):
+                x = mx.np.vsplit(x, shape[0])
                 x = x[1:-1]
-                x = F.np.concatenate(x, axis=0)
+                x = mx.np.concatenate(x, axis=0)
                 return x
 
         if len(shape) > 2 and shape[2] > 2:
@@ -377,8 +377,8 @@ def test_net_symbol_save_load():
             super(Case1, self).__init__()
             self.layer = gluon.nn.Dense(64, flatten=False)
 
-        def hybrid_forward(self, F, x, y):
-            x = F.np.split(x, 1)
+        def forward(self, x, y):
+            x = mx.np.split(x, 1)
             x = x[0]
             return self.layer(x[:, -1, :] + y[:, -1, :])
     check_gluon_save_load(Case1, [mx.np.random.normal(0, 1, (10, 5, 8, 6)),
@@ -390,8 +390,8 @@ def test_net_symbol_save_load():
             self.layer1 = gluon.nn.Dense(64, flatten=False)
             self.layer2 = gluon.nn.Dense(64, flatten=False)
 
-        def hybrid_forward(self, F, x, y):
-            x = F.np.split(x, 1)
+        def forward(self, x, y):
+            x = mx.np.split(x, 1)
             x = x[0]
             return self.layer1(x[:, -1, :]) + self.layer2(y[:, -1, :])
     check_gluon_save_load(Case2, [mx.np.random.normal(0, 1, (10, 5, 8)),
@@ -424,20 +424,20 @@ def test_optimize_for():
         def __init__(self):
             super(TestBlock, self).__init__()
             self.d = mx.gluon.nn.Dense(1)
-        def hybrid_forward(self, F, a, b, *args):
-            res = self.d.hybrid_forward(F, a, b)
+        def forward(self, a):
+            res = self.d(a)
             return res
 
     a = mx.np.random.uniform(low=-1, high=1, size=(1,1))
-    b = mx.np.random.uniform(low=-1, high=1, size=(1,1))
 
     net = TestBlock()
     net.initialize()
     net.hybridize()
 
-    out = net(a, b)
+    out = net(a)
+    b = net.collect_params().pop('d.weight').data()
     net.optimize_for(a, b, backend="MKLDNN")
-    out2 = net(a, b)
+    out2 = net(a)
 
 
 @use_np

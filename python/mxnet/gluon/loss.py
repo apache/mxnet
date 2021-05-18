@@ -147,8 +147,6 @@ class L2Loss(Loss):
         super(L2Loss, self).__init__(weight, batch_axis, **kwargs)
 
     def forward(self, pred, label, sample_weight=None):
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
         label = npx.reshape_like(label, pred)
         loss = np.square(label - pred)
         loss = _apply_weighting(loss, self._weight / 2, sample_weight)
@@ -190,8 +188,6 @@ class L1Loss(Loss):
         super(L1Loss, self).__init__(weight, batch_axis, **kwargs)
 
     def forward(self, pred, label, sample_weight=None):
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
         label = npx.reshape_like(label, pred)
         loss = np.abs(label - pred)
         loss = _apply_weighting(loss, self._weight, sample_weight)
@@ -263,12 +259,6 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
         self._from_sigmoid = from_sigmoid
 
     def forward(self, pred, label, sample_weight=None, pos_weight=None):
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
-        if pos_weight:
-            pos_weight = pos_weight.as_np_ndarray()
         label = npx.reshape_like(label, pred)
         if not self._from_sigmoid:
             if pos_weight is None:
@@ -369,10 +359,6 @@ class SoftmaxCrossEntropyLoss(Loss):
         self._from_logits = from_logits
 
     def forward(self, pred, label, sample_weight=None):
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
         if not self._from_logits:
             pred = npx.log_softmax(pred, axis=self._axis)
         if self._sparse_label:
@@ -457,10 +443,6 @@ class KLDivLoss(Loss):
         self._axis = axis
 
     def forward(self, pred, label, sample_weight=None):
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
         if not self._from_logits:
             pred = npx.log_softmax(pred, self._axis)
         loss = label * (np.log(label + 1e-12) - pred)
@@ -539,14 +521,6 @@ class CTCLoss(Loss):
         super(CTCLoss, self).__init__(weight, batch_axis, **kwargs)
 
     def forward(self, pred, label, pred_lengths=None, label_lengths=None, sample_weight=None):
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
-        if pred_lengths:
-            pred_lengths = pred_lengths.as_np_ndarray()
-        if label_lengths:
-            label_lengths = label_lengths.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
         if self._layout == 'NTC':
             pred = np.swapaxes(pred, 0, 1)
         if self._batch_axis == 1:
@@ -602,10 +576,6 @@ class HuberLoss(Loss):
         self._rho = rho
 
     def forward(self, pred, label, sample_weight=None):
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
         label = npx.reshape_like(label, pred)
         loss = np.abs(label - pred)
         loss = np.where(loss > self._rho, loss - 0.5 * self._rho,
@@ -655,10 +625,6 @@ class HingeLoss(Loss):
         self._margin = margin
 
     def forward(self, pred, label, sample_weight=None):
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
         label = npx.reshape_like(label, pred)
         loss = npx.relu(self._margin - pred * label)
         loss = _apply_weighting(loss, self._weight, sample_weight)
@@ -706,10 +672,6 @@ class SquaredHingeLoss(Loss):
         self._margin = margin
 
     def forward(self, pred, label, sample_weight=None):
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
         label = npx.reshape_like(label, pred)
         loss = np.square(npx.relu(self._margin - pred * label))
         loss = _apply_weighting(loss, self._weight, sample_weight)
@@ -761,10 +723,6 @@ class LogisticLoss(Loss):
                              % label_format)
 
     def forward(self, pred, label, sample_weight=None):
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
         label = npx.reshape_like(label, pred)
         if self._label_format == 'signed':
             label = (label + 1.0) / 2.0  # Transform label to be either 0 or 1
@@ -816,11 +774,6 @@ class TripletLoss(Loss):
 
     @use_np
     def forward(self, pred, positive, negative, sample_weight=None):
-        pred = pred.as_np_ndarray()
-        positive = positive.as_np_ndarray()
-        negative = negative.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
         positive = npx.reshape_like(positive, pred)
         negative = npx.reshape_like(negative, pred)
         loss = _batch_sum(np.square(positive - pred) - np.square(negative - pred), self._batch_axis)
@@ -876,10 +829,6 @@ class PoissonNLLLoss(Loss):
         self._compute_full = compute_full
 
     def forward(self, pred, target, sample_weight=None, epsilon=1e-08):
-        pred = pred.as_np_ndarray().as_in_ctx(target.ctx)
-        target = target.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
         target = npx.reshape_like(target, pred)
         if self._from_logits:
             loss = np.exp(pred) - target * pred
@@ -939,11 +888,6 @@ class CosineEmbeddingLoss(Loss):
         self._margin = margin
 
     def forward(self, input1, input2, label, sample_weight=None):
-        input1 = input1.as_np_ndarray().as_in_ctx(label.ctx)
-        input2 = input2.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray()
-        if sample_weight:
-            sample_weight = sample_weight.as_np_ndarray()
         input1 = npx.reshape_like(input1, input2)
         cos_sim = self._cosine_similarity(input1, input2)
         label = npx.reshape_like(label, cos_sim)
@@ -1064,8 +1008,6 @@ class SDMLLoss(Loss):
         learn to predict french president comparing it with all the other
         vectors in batch 2
         """
-        x1 = x1.as_np_ndarray()
-        x2 = x2.as_np_ndarray()
         batch_size = x1.shape[0]
         labels = self._compute_labels(batch_size)
         distances = self._compute_distances(x1, x2)

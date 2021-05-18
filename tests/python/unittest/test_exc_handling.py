@@ -85,8 +85,6 @@ def test_exc_gluon():
         model.add(nn.Dense(64, activation='tanh', in_units=256),
                   nn.Dense(32, in_units=64))
         model.initialize(ctx=[default_context()])
-        x = mx.sym.var('data')
-        y = model(x)
         z = model(mx.nd.random.normal(10, -10, (32, 2, 10), ctx=default_context()))
         if waitall:
             mx.nd.waitall()

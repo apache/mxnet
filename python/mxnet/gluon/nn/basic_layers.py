@@ -136,8 +136,6 @@ class HybridSequential(HybridBlock):
         return super().__call__(*args, **kwargs)
 
     def forward(self, x, *args):
-        x = x.as_np_ndarray()
-        args = [arg.as_np_ndarray() for arg in args]
         for block in self._children.values():
             x = block()(x, *args)
             args = []
@@ -240,7 +238,6 @@ class Dense(HybridBlock):
             self.act = None
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         ctx = x.ctx
         act = npx.fully_connected(x, self.weight.data(ctx), self.bias.data(ctx), no_bias=self.bias is None,
                                   num_hidden=self._units, flatten=self._flatten, name='fwd')
@@ -249,7 +246,6 @@ class Dense(HybridBlock):
         return act
 
     def infer_shape(self, x, *args):
-        x = x.as_np_ndarray()
         if self._flatten:
             num_input = 1
             for i in range(1, x.ndim):
@@ -299,7 +295,6 @@ class Dropout(HybridBlock):
         self._axes = axes
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         if self._rate > 0:
             return npx.dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
         else:
@@ -402,14 +397,12 @@ class _BatchNorm(HybridBlock):
         super(_BatchNorm, self).cast(dtype)
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         ctx = x.ctx
         return npx.batch_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
                               self.running_mean.data(ctx), self.running_var.data(ctx),
                               name='fwd', **self._kwargs)
 
     def infer_shape(self, x, *args):
-        x = x.as_np_ndarray()
         channel_axis = self._axis if self._axis >= 0 else self._axis + x.ndim
         channel_count = x.shape[channel_axis]
         self.gamma.shape = (channel_count,)
@@ -601,7 +594,6 @@ class Embedding(HybridBlock):
                                 allow_deferred_init=True, grad_stype=grad_stype)
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         ctx = x.ctx
         return npx.embedding(x, self.weight.data(ctx), name='fwd', **self._kwargs)
 
@@ -626,8 +618,7 @@ class Flatten(HybridBlock):
         super(Flatten, self).__init__(**kwargs)
 
     def forward(self, x):
-        x = x.as_np_ndarray()
-        return npx.flatten(x)
+        return npx.batch_flatten(x)
 
     def __repr__(self):
         return self.__class__.__name__
@@ -714,17 +705,15 @@ class InstanceNorm(HybridBlock):
                               allow_deferred_init=True)
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         ctx = x.ctx
         if self._axis == 1:
-            return npx.InstanceNorm(x, self.gamma.data(ctx), self.beta.data(ctx),
-                                    name='fwd', eps=self._epsilon)
+            return npx.instance_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
+                                     name='fwd', eps=self._epsilon)
         x = x.swapaxes(1, self._axis)
-        return npx.InstanceNorm(x, self.gamma.data(ctx), self.beta.data(ctx),
-                                name='fwd', eps=self._epsilon).swapaxes(1, self._axis)
+        return npx.instance_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
+                                 name='fwd', eps=self._epsilon).swapaxes(1, self._axis)
 
     def infer_shape(self, x, *args):
-        x = x.as_np_ndarray()
         self.gamma.shape = (x.shape[1],)
         self.beta.shape = (x.shape[1],)
 
@@ -811,13 +800,11 @@ class LayerNorm(HybridBlock):
                               allow_deferred_init=True)
 
     def forward(self, data):
-        data = data.as_np_ndarray()
         ctx = data.ctx
         return npx.layer_norm(data, gamma=self.gamma.data(ctx),
                               beta=self.beta.data(ctx), axis=self._axis, eps=self._epsilon)
 
     def infer_shape(self, data, *args):
-        data = data.as_np_ndarray()
         channel_axis = self._axis if self._axis >= 0 else self._axis + data.ndim
         channel_count = data.shape[channel_axis]
         self.gamma.shape = (channel_count,)
@@ -913,14 +900,13 @@ class GroupNorm(HybridBlock):
                               allow_deferred_init=True)
 
     def forward(self, data):
-        data = data.as_np_ndarray()
-        ctx = data.ctx
-        norm_data = npx.GroupNorm(data, gamma=self.gamma.data(ctx), beta=self.beta.data(ctx),
-                                  num_groups=self._num_groups, eps=self._epsilon)
+        ctx = data.context
+        norm_data = nd.GroupNorm(data.as_nd_ndarray(), gamma=self.gamma.data(ctx).as_nd_ndarray(),
+                                 beta=self.beta.data(ctx).as_nd_ndarray(),
+                                 num_groups=self._num_groups, eps=self._epsilon).as_np_ndarray()
         return norm_data
 
     def infer_shape(self, data, *args):
-        data = data.as_np_ndarray()
         self.gamma.shape = (data.shape[1],)
         self.beta.shape = (data.shape[1],)
 
@@ -959,9 +945,13 @@ class Lambda(Block):
     def __init__(self, function):
         super(Lambda, self).__init__()
         if isinstance(function, str):
-            assert hasattr(nd, function), \
-                   "Function name %s is not found in ndarray." % function
-            self._func_impl = getattr(nd, function)
+            if hasattr(np, function):
+                self._func_impl = getattr(np, function)
+            elif hasattr(npx, function):
+                self._func_impl = getattr(npx, function)
+            else:
+                raise Exception("Function name %s is not found in np/npx." % function)
+            self._func_name = function
         elif callable(function):
             self._func_impl = function
         else:
@@ -1021,8 +1011,6 @@ class HybridLambda(HybridBlock):
                 .format(function, type(function)))
 
     def forward(self, x, *args):
-        x = x.as_np_ndarray()
-        args = [arg.as_np_ndarray() for arg in args]
         return self._func(x, *args)
 
     def __repr__(self):
@@ -1055,7 +1043,6 @@ class Concatenate(Sequential):
         self.axis = axis
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         out = []
         for block in self._children.values():
             out.append(block()(x))
@@ -1089,7 +1076,6 @@ class HybridConcatenate(HybridSequential):
         self.axis = axis
 
     def forward(self, x):
-        x = x.as_np_ndarray()
         out = []
         for block in self._children.values():
             out.append(block()(x))
@@ -1116,7 +1102,7 @@ class Identity(HybridBlock):
         super(Identity, self).__init__()
 
     def forward(self, x):
-        return x.as_np_ndarray()
+        return x
 
 
 @use_np

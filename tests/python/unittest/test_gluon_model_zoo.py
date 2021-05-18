@@ -48,7 +48,7 @@ def test_models(model_name):
     print(model)
     if not test_pretrain:
         model.initialize()
-    model(mx.nd.random.uniform(shape=data_shape)).wait_to_read()
+    model(mx.np.random.uniform(size=data_shape)).wait_to_read()
 
 def parallel_download(model_name):
     model = get_model(model_name, pretrained=True, root='./parallel_download')

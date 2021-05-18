@@ -23,7 +23,7 @@
 
 __all__ = ['RNN', 'LSTM', 'GRU']
 
-from ... import ndarray, symbol, np, npx
+from ... import ndarray, np, npx
 from .. import HybridBlock, tensor_types
 from ..parameter import Parameter
 from ...util import use_np
@@ -161,18 +161,17 @@ class _RNNLayer(HybridBlock):
                 info.update(kwargs)
             else:
                 info = kwargs
-            state = func(name='h0_%d' % (i), **info)
+            state = func(shape=info.pop("shape", ()),
+                         ctx=info.pop("ctx", context.cpu()),
+                         dtype=info.pop("dtype", "float32"))
             states.append(state)
         return states
 
     def __call__(self, inputs, states=None, sequence_length=None, **kwargs):
         self.skip_states = states is None
         if states is None:
-            if isinstance(inputs, ndarray.NDArray):
-                batch_size = inputs.shape[self._layout.find('N')]
-                states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
-            else:
-                states = self.begin_state(0, func=symbol.zeros)
+            batch_size = inputs.shape[self._layout.find('N')]
+            states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
         if isinstance(states, tensor_types):
             states = [states]
 
@@ -181,11 +180,7 @@ class _RNNLayer(HybridBlock):
         else:
             return super(_RNNLayer, self).__call__(inputs, states, **kwargs)
 
-    def forward(self, inputs, states, sequence_length=None, **kwargs):
-        inputs = inputs.as_np_ndarray()
-        states = states.as_np_ndarray()
-        if sequence_length:
-            sequence_length = sequence_length.as_np_ndarray()
+    def forward(self, inputs, states, sequence_length=None):
         batch_size = inputs.shape[self._layout.find('N')]
 
         for state, info in zip(states, self.state_info(batch_size)):
@@ -193,23 +188,32 @@ class _RNNLayer(HybridBlock):
                 raise ValueError(
                     "Invalid recurrent state shape. Expecting %s, got %s."%(
                         str(info['shape']), str(state.shape)))
-        out = self._forward_kernel(inputs, states, sequence_length, **kwargs)
+        out = self._forward_kernel(inputs, states, sequence_length)
 
         # out is (output, state)
         return out[0] if self.skip_states else out
 
-    def _forward_kernel(self, inputs, states, sequence_length, **kwargs):
+    def infer_shape(self, inputs, *args):
+        assert inputs.ndim == 3, \
+            "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]"
+        for i in range(self._num_layers):
+            for j in ['l', 'r'][:self._dir]:
+                name = '{}{}_i2h_weight'.format(j, i)
+                getattr(self, name).shape = (self._gates*self._hidden_size, inputs.shape[2])
+
+    def _forward_kernel(self, inputs, states, sequence_length):
         """ forward using CUDNN or CPU kenrel"""
+        ctx = inputs.ctx
         if self._layout == 'NTC':
             inputs = np.swapaxes(inputs, 0, 1)
         if self._projection_size is None:
-            params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+            params = (getattr(self, '{}{}_{}_{}'.format(d, l, g, t)).data(ctx).reshape(-1)
                       for t in ['weight', 'bias']
                       for l in range(self._num_layers)
                       for d in ['l', 'r'][:self._dir]
                       for g in ['i2h', 'h2h'])
         else:
-            params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+            params = (getattr(self, '{}{}_{}_{}'.format(d, l, g, t)).data(ctx).reshape(-1)
                       for t in ['weight', 'bias']
                       for l in range(self._num_layers)
                       for d in ['l', 'r'][:self._dir]
