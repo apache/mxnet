@@ -314,6 +314,8 @@ class TensorrtProperty : public SubgraphProperty {
     const std::unordered_map<std::string, std::string>& options_map) override {
     auto it_precision = options_map.find("precision");
     if (it_precision != options_map.end()) {
+      fp16_mode_ = false;
+      int8_mode_ = false;
       auto precision_string = it_precision->second;
       std::replace(precision_string.begin(), precision_string.end(), '_', ' ');
       std::istringstream iss(precision_string);
