@@ -23,7 +23,7 @@
 
 __all__ = ['RNN', 'LSTM', 'GRU']
 
-from ... import ndarray, np, npx
+from ... import ndarray, np, npx, context
 from .. import HybridBlock, tensor_types
 from ..parameter import Parameter
 from ...util import use_np
@@ -156,7 +156,7 @@ class _RNNLayer(HybridBlock):
             Starting states for the first RNN step.
         """
         states = []
-        for i, info in enumerate(self.state_info(batch_size)):
+        for info in self.state_info(batch_size):
             if info is not None:
                 info.update(kwargs)
             else:
