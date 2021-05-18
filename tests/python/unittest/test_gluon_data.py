@@ -539,6 +539,7 @@ def test_mx_data_loader():
     for _ in dl:
         pass
 
+@mx.util.use_np
 def test_mx_data_loader_nopython():
     from mxnet.gluon.data.dataloader import DataLoader
     from mxnet.gluon.data.vision.transforms import ToTensor

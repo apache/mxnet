@@ -41,12 +41,12 @@ set_default_context(mx.gpu(0))
 def check_rnn_layer(layer):
     layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     with mx.gpu(0):
-        x = mx.nd.ones((10, 16, 30))
+        x = mx.np.ones((10, 16, 30))
         states = layer.begin_state(16)
         go, gs = layer(x, states)
 
     with mx.cpu(0):
-        x = mx.nd.ones((10, 16, 30))
+        x = mx.np.ones((10, 16, 30))
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
@@ -57,7 +57,7 @@ def check_rnn_layer(layer):
 
 def check_rnn_layer_w_rand_inputs(layer):
     layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
-    x = mx.nd.uniform(shape=(10, 16, 30))
+    x = mx.np.uniform(size=(10, 16, 30))
     with mx.gpu(0):
         x = x.copyto(mx.gpu(0))
         states = layer.begin_state(16)
@@ -80,8 +80,8 @@ def test_lstmp():
     batch_size, seq_len = 7, 11
     input_size = 5
     ctx = mx.gpu(0)
-    lstm_input = mx.nd.uniform(
-        shape=(seq_len, batch_size, input_size), ctx=ctx)
+    lstm_input = mx.np.uniform(
+        size=(seq_len, batch_size, input_size), ctx=ctx)
     shapes = {'i2h_weight': (hidden_size * 4, input_size),
               'h2h_weight': (hidden_size * 4, projection_size),
               'i2h_bias': (hidden_size * 4,),
@@ -114,14 +114,14 @@ def test_lstmp():
         print('checking gradient for {}'.format('lstm0_l0_' + k))
         assert_almost_equal(layer_grad, cell_grad, rtol=rtol, atol=atol)
     check_rnn_layer_forward(gluon.rnn.LSTM(
-        10, 2, projection_size=5), mx.nd.ones((8, 3, 20)), ctx=ctx)
-    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, projection_size=5, bidirectional=True), mx.nd.ones(
-        (8, 3, 20)), [mx.nd.ones((4, 3, 5)), mx.nd.ones((4, 3, 10))], ctx=ctx)
-    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, dropout=0.5, projection_size=5), mx.nd.ones((8, 3, 20)),
+        10, 2, projection_size=5), mx.np.ones((8, 3, 20)), ctx=ctx)
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, projection_size=5, bidirectional=True), mx.np.ones(
+        (8, 3, 20)), [mx.np.ones((4, 3, 5)), mx.np.ones((4, 3, 10))], ctx=ctx)
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, dropout=0.5, projection_size=5), mx.np.ones((8, 3, 20)),
                             run_only=True, ctx=ctx)
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, bidirectional=True, dropout=0.5, projection_size=5),
-                            mx.nd.ones((8, 3, 20)),
-                            [mx.nd.ones((4, 3, 5)), mx.nd.ones((4, 3, 10))], run_only=True, ctx=ctx)
+                            mx.np.ones((8, 3, 20)),
+                            [mx.np.ones((4, 3, 5)), mx.np.ones((4, 3, 10))], run_only=True, ctx=ctx)
     lstm_layer.save_parameters('gpu_tmp.params')
     lstm_layer.load_parameters('gpu_tmp.params')
 
@@ -133,10 +133,10 @@ def test_lstm_clip():
     batch_size, seq_len = 32, 80
     input_size = 50
     clip_min, clip_max, clip_nan = -5, 5, True
-    lstm_input = mx.nd.uniform(
-        shape=(seq_len, batch_size, input_size), ctx=mx.gpu(0))
-    lstm_states = [mx.nd.uniform(shape=(2, batch_size, projection_size), ctx=mx.gpu(0)),
-                   mx.nd.uniform(shape=(2, batch_size, hidden_size), ctx=mx.gpu(0))]
+    lstm_input = mx.np.uniform(
+        size=(seq_len, batch_size, input_size), ctx=mx.gpu(0))
+    lstm_states = [mx.np.uniform(size=(2, batch_size, projection_size), ctx=mx.gpu(0)),
+                   mx.np.uniform(size=(2, batch_size, hidden_size), ctx=mx.gpu(0))]
     lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
                                 input_size=input_size,
                                 bidirectional=True,
@@ -174,10 +174,10 @@ def check_layer_bidirectional(size, in_size, proj_size):
 
         def forward(self, inpt):
             fwd = self._lstm_fwd(inpt)
-            bwd_inpt = nd.flip(inpt, 0)
+            bwd_inpt = mx.np.flip(inpt, 0)
             bwd = self._lstm_bwd(bwd_inpt)
-            bwd = nd.flip(bwd, 0)
-            return nd.concat(fwd, bwd, dim=2)
+            bwd = mx.np.flip(bwd, 0)
+            return mx.np.concatenate([fwd, bwd], dim=2)
     weights = {}
     for d in ['l', 'r']:
         weights['{}0_i2h_weight'.format(d)] = mx.random.uniform(
@@ -248,7 +248,7 @@ def check_layer_bidirectional_varseqlen(size, in_size):
         net_output = net(data.copy(), sequence_length=sequence_length.copy())
 
         for b in range(batch_size):
-            data_slice = mx.nd.array(data_np[:sequence_length_np[b], b, :]).reshape(sequence_length_np[b], 1, in_size)
+            data_slice = mx.np.array(data_np[:sequence_length_np[b], b, :]).reshape(sequence_length_np[b], 1, in_size)
             ref_output_slice = ref_net(data_slice)
             ref_net_output.append(ref_output_slice)
 
@@ -301,10 +301,10 @@ def test_rnn_layer_begin_state_type():
 
 def test_gluon_ctc_consistency():
     loss = mx.gluon.loss.CTCLoss()
-    data = mx.nd.arange(0, 4, repeat=40, ctx=mx.gpu(0)
+    data = mx.np.arange(0, 4, repeat=40, ctx=mx.gpu(0)
                         ).reshape((2, 20, 4)).flip(axis=0)
-    cpu_label = mx.nd.array([[2, 1, -1, -1], [3, 2, 2, -1]], ctx=mx.cpu(0))
-    gpu_label = mx.nd.array([[2, 1, -1, -1], [3, 2, 2, -1]], ctx=mx.gpu(0))
+    cpu_label = mx.np.array([[2, 1, -1, -1], [3, 2, 2, -1]], ctx=mx.cpu(0))
+    gpu_label = mx.np.array([[2, 1, -1, -1], [3, 2, 2, -1]], ctx=mx.gpu(0))
 
     cpu_data = data.copy().as_in_context(mx.cpu(0))
     cpu_data.attach_grad()
@@ -323,10 +323,10 @@ def test_gluon_ctc_consistency():
 
 def test_global_norm_clip_multi_device():
     for check_isfinite in [True, False]:
-        x1 = mx.nd.ones((3, 3), ctx=mx.gpu(0))
-        x2 = mx.nd.ones((4, 4), ctx=mx.cpu(0))
-        x3 = mx.nd.ones((7, 4), ctx=mx.gpu(0))
-        x4 = mx.nd.ones((7, 4), ctx=mx.cpu(0))
+        x1 = mx.np.ones((3, 3), ctx=mx.gpu(0))
+        x2 = mx.np.ones((4, 4), ctx=mx.cpu(0))
+        x3 = mx.np.ones((7, 4), ctx=mx.gpu(0))
+        x4 = mx.np.ones((7, 4), ctx=mx.cpu(0))
         norm = gluon.utils.clip_global_norm(
             [x1, x2, x3, x4], 1.0, check_isfinite=check_isfinite)
         if check_isfinite:
@@ -388,7 +388,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
         mx.autograd.backward(loss1)
         mx.autograd.backward(loss2)
 
-    output2 = mx.nd.concat(*[output.as_in_context(input.context) for output in output2], dim=0)
+    output2 = mx.np.concatenate([output.as_in_context(input.context) for output in output2], dim=0)
     # assert forwarding
     assert_almost_equal(input1, input2, atol=1e-3, rtol=1e-3)
     assert_almost_equal(output1, output2, atol=1e-3, rtol=1e-3)
@@ -398,14 +398,14 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
     assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]),
                         _find_bn(bn2).running_var.data(ctx_list[0]),
                         atol=1e-3, rtol=1e-3)
-    input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
+    input2grad = mx.np.concatenate(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
     assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
 
 def test_sync_batchnorm():
     def get_num_devices():
         for i in range(100):
             try:
-                mx.nd.zeros((1,), ctx=mx.gpu(i))
+                mx.np.zeros((1,), ctx=mx.gpu(i))
             except:
                 return i
     # no need to use SyncBN with 1 gpu
@@ -414,7 +414,7 @@ def test_sync_batchnorm():
     ndev = 2
     # check with unsync version
     for i in range(10):
-        _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
+        _check_batchnorm_result(mx.np.random.uniform(size=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
 
 def test_symbol_block_fp16(tmpdir):
@@ -430,7 +430,7 @@ def test_symbol_block_fp16(tmpdir):
         pretrained=True, ctx=ctx, root=tmp)
     net_fp32.cast('float16')
     net_fp32.hybridize()
-    data = mx.nd.zeros((1, 3, 224, 224), dtype='float16', ctx=ctx)
+    data = mx.np.zeros((1, 3, 224, 224), dtype='float16', ctx=ctx)
     net_fp32.forward(data)
     symbol_file, param_file = net_fp32.export(tmpfile, 0)
 
@@ -518,9 +518,9 @@ def _test_bulking_in_process(seed, time_per_iteration):
     num_iterations = 20
 
     # build model
-    x = mx.ndarray.zeros(data_shape)
+    x = mx.np.zeros(data_shape)
     x.attach_grad()
-    dy = mx.ndarray.ones(data_shape)
+    dy = mx.np.ones(data_shape)
     net = get_net(num_ops)
     net.hybridize(static_alloc=True, static_shape=True)
 
@@ -589,8 +589,8 @@ def test_hybridblock_mix_ctx_raise():
             return a + b
     foo_hybrid = FooHybrid()
     foo_hybrid.hybridize()
-    pytest.raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.gpu()),
-                                                 mx.nd.ones((10,), ctx=mx.cpu())))
+    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,), ctx=mx.gpu()),
+                                                 mx.np.ones((10,), ctx=mx.cpu())))
 
 def test_symbol_block_symbolic_bn_fp16_cast():
     with mx.gpu(0):
@@ -602,7 +602,7 @@ def test_symbol_block_symbolic_bn_fp16_cast():
         net.add(mx.gluon.nn.SymbolBlock([internals['bn_test_output']], [mx.sym.var('data')]))
         net.add(mx.gluon.nn.Conv2D(10, kernel_size=1))
         net.initialize()
-        x = mx.nd.zeros((1, 3, 32, 32), dtype='float32')
+        x = mx.np.zeros((1, 3, 32, 32), dtype='float32')
         y = net(x)
         assert np.dtype(y.dtype).name == 'float32'
         net.cast('float16')
@@ -612,8 +612,8 @@ def test_symbol_block_symbolic_bn_fp16_cast():
 
 def test_gemms_true_fp16():
     ctx = mx.gpu(0)
-    input = mx.nd.random.uniform(shape=(1, 512), dtype='float16', ctx=ctx)
-    weights = mx.nd.random.uniform(shape=(128, 512), ctx=ctx)
+    input = mx.np.random.uniform(size=(1, 512), dtype='float16', ctx=ctx)
+    weights = mx.np.random.uniform(size=(128, 512), ctx=ctx)
 
     net = nn.Dense(128, in_units=512, use_bias=False)
     net.cast('float16')

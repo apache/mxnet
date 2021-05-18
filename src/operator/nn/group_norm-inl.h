@@ -62,6 +62,15 @@ struct GroupNormParam : public dmlc::Parameter<GroupNormParam> {
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
       .describe("Output the mean and std calculated along the given axis.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_groups_s, eps_s, output_mean_var_s;
+    num_groups_s << num_groups;
+    eps_s << eps;
+    output_mean_var_s << output_mean_var;
+    (*dict)["num_groups"] = num_groups_s.str();
+    (*dict)["eps"] = eps_s.str();
+    (*dict)["output_mean_var"] = output_mean_var_s.str();
+  }
 };
 
 

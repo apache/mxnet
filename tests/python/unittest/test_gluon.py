@@ -125,8 +125,8 @@ def test_constant():
             self.value = np.asarray([[1,2], [3,4]])
             self.const = gluon.Constant(self.value)
 
-        def forward(self, x, const):
-            return x + const
+        def forward(self, x):
+            return x + self.const.data()
 
     test = Test()
     test.initialize()
@@ -241,137 +241,6 @@ def test_sparse_hybrid_block():
     with pytest.raises(RuntimeError):
         # an exception is expected when forwarding a HybridBlock w/ sparse param
         y = net(x)
-
-@use_np
-def test_hybrid_block_none_args():
-    class Foo(gluon.HybridBlock):
-        def forward(self, a, b):
-            if a is None and b is not None:
-                return b
-            elif b is None and a is not None:
-                return a
-            elif a is not None and b is not None:
-                return a + b
-            else:
-                raise NotImplementedError
-
-    class FooDefault(gluon.HybridBlock):
-        def forward(self, a, b=None):
-            if a is None and b is not None:
-                return b
-            elif b is None and a is not None:
-                return a
-            elif a is not None and b is not None:
-                return a + b
-            else:
-                raise NotImplementedError
-
-
-    class FooNested(gluon.HybridBlock):
-        def __init__(self):
-            super(FooNested, self).__init__()
-            self.f1 = Foo()
-            self.f2 = Foo()
-            self.f3 = Foo()
-
-        def forward(self, a, b):
-            data = self.f1(a, b)
-            data = self.f2(a, data)
-            data = self.f3(data, b)
-            return data
-
-    for arg_inputs in [(None, mx.np.ones((10,))),
-                       (mx.np.ones((10,)), mx.np.ones((10,))),
-                       (mx.np.ones((10,)), None)]:
-        foo1 = FooNested()
-        foo1.hybridize()
-        foo2 = FooNested()
-        for _ in range(2): # Loop for 2 times to trigger forwarding of the cached version
-            out1 = foo1(*arg_inputs)
-            out2 = foo2(*arg_inputs)
-            if isinstance(out1, tuple):
-                for lhs, rhs in zip(out1, out2):
-                    assert_almost_equal(lhs.asnumpy(), rhs.asnumpy())
-            else:
-                assert_almost_equal(out1.asnumpy(), out2.asnumpy())
-    for do_hybridize in [True, False]:
-        foo = FooNested()
-        if do_hybridize:
-            foo.hybridize()
-        pytest.raises(ValueError, foo, None, None)
-
-    # Make sure the ValueError is correctly raised
-    foo = FooNested()
-    foo.hybridize()
-    foo(None, mx.np.ones((10,)))  # Pass for the first time to initialize the cached op
-    pytest.raises(ValueError, lambda: foo(mx.np.ones((10,)), mx.np.ones((10,))))
-    foo = FooNested()
-    pytest.raises(ValueError, lambda: foo(mx.np.ones((10,)), mx.sym.var('a')))
-    foo = FooNested()
-    pytest.raises(ValueError, lambda: foo(mx.sym.var('a'), mx.np.ones((10,))))
-
-    # Test the case of the default values
-    foo1 = FooDefault()
-    foo1.hybridize()
-    foo2 = FooDefault()
-    out1 = foo1(mx.np.ones((10,)))
-    out2 = foo2(mx.np.ones((10,)))
-    out3 = foo1(mx.np.ones((10,)), None)
-    out4 = foo2(mx.np.ones((10,)), None)
-    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
-    assert_almost_equal(out1.asnumpy(), out3.asnumpy())
-    assert_almost_equal(out1.asnumpy(), out4.asnumpy())
-    foo1 = FooDefault()
-    foo1.hybridize()
-    out1 = foo1(mx.np.ones((10,)), None)
-    out2 = foo1(mx.np.ones((10,)))
-    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
-    pytest.raises(ValueError, lambda: foo1(mx.np.ones((10,)), mx.np.ones((10,))))
-
-
-@use_np
-def test_hybrid_block_hybrid_no_hybrid():
-    class FooHybrid(gluon.HybridBlock):
-        def forward(self, a, b):
-            if isinstance(a, (list, tuple)):
-                a = sum(a)
-            if isinstance(b, (list, tuple)):
-                b = sum(b)
-            return a + b
-
-    class Foo(gluon.Block):
-        def forward(self, a, b):
-            if isinstance(a, (list, tuple)):
-                a = sum(a)
-            if isinstance(b, (list, tuple)):
-                b = sum(b)
-            return a + b
-    # When hybridize is not called, HybridBlock acts the same as Block
-    foo_hybrid = FooHybrid()
-    foo = Foo()
-    for a, b in [(mx.np.ones((10,)), 1),
-                 (mx.np.ones((20,)), 2),
-                 ([mx.np.ones((10,)), mx.np.ones((10,))],
-                  [mx.np.ones((10)), mx.np.ones((10,)), mx.np.ones((10,))]),
-                 ([mx.np.ones((10,)), mx.np.ones((10,))], 3)]:
-        hybrid_block_out = foo_hybrid(a, b)
-        block_out = foo(a, b)
-        assert_almost_equal(hybrid_block_out.asnumpy(), block_out.asnumpy())
-    # When hybridize is called, we need to make sure that the model raises for the unsupported cases
-    # 1. Scalar values in the input
-    # 2. No mixing of sym/ndarray
-    # 3. No mixing of cpu ndarray and gpu ndarray  (Tested in gpu/test_gluon_gpu.py)
-    # 4. Allow mixing of cpu_pinned and cpu
-    foo_hybrid = FooHybrid()
-    foo_hybrid.hybridize()
-    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,)), 1))
-    foo_hybrid = FooHybrid()
-    foo_hybrid.hybridize()
-    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,)), mx.sym.var('a')))
-    foo_hybrid = FooHybrid()
-    foo_hybrid.hybridize()
-    pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,), ctx=mx.cpu(1)),
-                                                 mx.np.ones((10,), ctx=mx.cpu(2))))
 
 
 def check_layer_forward(layer, dshape):
@@ -570,6 +439,7 @@ def test_batchnorm():
     check_layer_forward(layer, (2, 10, 10, 10))
 
 
+@use_np
 @xfail_when_nonstandard_decimal_separator
 def test_sync_batchnorm():
     def _check_batchnorm_result(input, num_devices=1, cuda=False):
@@ -624,7 +494,7 @@ def test_sync_batchnorm():
             mx.autograd.backward(loss2)
 
         output2 = mx.np.concatenate([output.as_in_context(input.context)
-                                    for output in output2], dim=0)
+                                    for output in output2], axis=1)
         # check bn1
 
         momentum = 0.9
@@ -672,7 +542,7 @@ def test_sync_batchnorm():
                             _find_bn(bn2).running_var.data(ctx_list[0]).asnumpy(),
                             atol=atol, rtol=rtol)
         input2grad = mx.np.concatenate(
-            [output.grad.as_in_context(input.ctx) for output in inputs2], dim=0)
+            [output.grad.as_in_context(input.ctx) for output in inputs2], axis=0)
         assert_almost_equal(input1.grad.asnumpy(),
                             input2grad.asnumpy(), atol=atol, rtol=rtol)
 
@@ -1116,7 +986,7 @@ def test_fill_shape_load():
     net1
     net1.hybridize()
     net1.initialize(ctx=ctx)
-    net1(mx.np.ones((2,3,5,7), ctx))
+    net1(mx.np.ones((2,3,5,7), ctx=ctx))
     net1.save_parameters('net_fill.params')
 
     net2 = nn.HybridSequential()
@@ -1589,6 +1459,7 @@ def test_apply():
     assert called_blocks == [type(block[0]), type(block[1]), type(block)]
 
 
+@use_np
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_summary():
     net = gluon.model_zoo.vision.resnet50_v1()
@@ -1968,7 +1839,7 @@ def test_slice_conv():
             self.conv0 = nn.Conv2D(16, (3, 3))
 
         def forward(self, x):
-            x_slice = x.slice(begin=(0, 2, 0, 0), end=(4, 5, 32, 32))
+            x_slice = mx.npx.slice(x, begin=(0, 2, 0, 0), end=(4, 5, 32, 32))
             out = self.conv0(x_slice)
             return out
     x = mx.np.random.uniform(size=(8, 6, 32, 32))
@@ -2029,7 +1900,7 @@ def test_reshape_conv_slice_conv():
             self.conv1 = nn.Conv2D(32, (3, 3))
 
         def forward(self, x):
-            x_reshape = x.reshape((0, 0, 64, 16))
+            x_reshape = x.reshape((-1, 3, 64, 16))
             y = self.conv0(x_reshape)
             "shape of y is (4, 16, 62, 14)"
             y_slice = mx.npx.slice(y, begin=(0, 0, 0, 0), end=(2, 16, 14, 14))
@@ -2841,18 +2712,16 @@ def test_gluon_param_load_dtype_source():
 @use_np
 def test_squeeze_consistency():
     class Foo(gluon.HybridBlock):
-        def __init__(self, inplace, **kwargs):
+        def __init__(self, **kwargs):
             super(Foo, self).__init__(**kwargs)
-            self.inplace = inplace
 
         def forward(self, x):
-            return x.squeeze(inplace=self.inplace)
+            return x.squeeze()
 
-    for inplace in (True, False):
-        block = Foo(inplace)
-        block.hybridize()
-        shape = (np.random.randint(1, 10), np.random.randint(1, 10), 1)
-        block(mx.np.ones(shape))
+    block = Foo()
+    block.hybridize()
+    shape = (np.random.randint(1, 10), np.random.randint(1, 10), 1)
+    block(mx.np.ones(shape))
 
 def test_shared_parameters_with_non_default_initializer():
     class MyBlock(gluon.HybridBlock):
@@ -2876,7 +2745,7 @@ def test_reqs_switching_training_inference():
 
         def forward(self, x):
             y = 2 * x
-            return F.sqrt(x) + F.sqrt(y)
+            return mx.np.sqrt(x) + mx.np.sqrt(y)
 
     f = Foo()
     f.hybridize(static_alloc=True)

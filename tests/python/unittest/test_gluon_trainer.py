@@ -371,7 +371,7 @@ def test_trainer_share_parameters():
     ctxes = [mx.cpu(0), mx.cpu(1)]
     net.initialize(mx.init.One(), ctx=ctxes)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 1})
-    data = mx.nd.array([[1, 1], [1, 1]])
+    data = mx.np.array([[1, 1], [1, 1]])
     xs = gluon.utils.split_and_load(data, ctxes)
     ys = []
     with mx.autograd.record():

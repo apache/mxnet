@@ -26,7 +26,7 @@ from .. import numpy
 from ..util import use_np
 
 from ..base import numeric_types, string_types
-from .. import ndarray
+from .. import ndarray, npx
 from .. import registry
 
 
@@ -1414,10 +1414,8 @@ class CrossEntropy(EvalMetric):
                 "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
             label = label.reshape((label.size,))
             if self.from_logits:
-                pred = ndarray.softmax(pred, axis=self.axis)
-            pred = ndarray.pick(pred.as_in_context(label.ctx), label.astype(dtype='int32'), axis=self.axis)
-            label = label.as_np_ndarray()
-            pred = pred.as_np_ndarray()
+                pred = npx.softmax(pred, axis=self.axis)
+            pred = npx.pick(pred.as_in_context(label.ctx), label.astype(dtype='int32'), axis=self.axis)
             if self.ignore_label is not None:
                 ignore = (label == self.ignore_label).astype(pred.dtype)
                 num -= ignore.sum()

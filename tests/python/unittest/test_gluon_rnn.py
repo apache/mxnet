@@ -660,7 +660,7 @@ def test_rnn_layers_fp16():
 
 
 def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=False, rtol=1e-2, atol=1e-4):
-    x = nd.random.normal(shape=(1, 5, input_size))
+    x = np.random.normal(size=(1, 5, input_size))
     fused_begin_state = fused_layer.begin_state(1)
     stack_states = stack_layer.begin_state(batch_size=1)
     fused_layer.infer_shape(x, fused_begin_state)
@@ -669,9 +669,9 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
 
     for name, value in fused_layer_params.items():
         if 'weight' in name:
-            w = mx.nd.zeros(shape=value.shape)
+            w = mx.np.zeros(shape=value.shape)
         else:
-            w = mx.nd.random.normal(shape=value.shape)
+            w = mx.np.random.normal(size=value.shape)
         value.set_data(w.copy())
         cur = name.split('_')[0]
         num = cur[1:]
@@ -680,7 +680,7 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
 
     fx = x.copy()
     sx = x.copy()
-    y = nd.random.uniform(shape=(1, 5, hidden_size * 2 if bidirectional else hidden_size))
+    y = np.random.uniform(size=(1, 5, hidden_size * 2 if bidirectional else hidden_size))
 
     fx.attach_grad()
     with mx.autograd.record():

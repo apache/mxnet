@@ -239,7 +239,9 @@ class Dense(HybridBlock):
 
     def forward(self, x):
         ctx = x.ctx
-        act = npx.fully_connected(x, self.weight.data(ctx), self.bias.data(ctx), no_bias=self.bias is None,
+        act = npx.fully_connected(x, self.weight.data(ctx),
+                                  self.bias.data(ctx) if self.bias is not None else None,
+                                  no_bias=self.bias is None,
                                   num_hidden=self._units, flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
@@ -900,10 +902,9 @@ class GroupNorm(HybridBlock):
                               allow_deferred_init=True)
 
     def forward(self, data):
-        ctx = data.context
-        norm_data = nd.GroupNorm(data.as_nd_ndarray(), gamma=self.gamma.data(ctx).as_nd_ndarray(),
-                                 beta=self.beta.data(ctx).as_nd_ndarray(),
-                                 num_groups=self._num_groups, eps=self._epsilon).as_np_ndarray()
+        ctx = data.ctx
+        norm_data = npx.group_norm(data, gamma=self.gamma.data(ctx), beta=self.beta.data(ctx),
+                                 num_groups=self._num_groups, eps=self._epsilon)
         return norm_data
 
     def infer_shape(self, data, *args):

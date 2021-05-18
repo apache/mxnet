@@ -223,7 +223,7 @@ def test_transformer():
         transforms.RandomRotation([-10., 10.]),
         transforms.Normalize([0, 0, 0], [1, 1, 1])])
 
-    transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
+    transform(mx.np.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
 def test_random_crop():
     x = mx.nd.ones((245, 480, 3), dtype='uint8')
@@ -253,7 +253,7 @@ def test_hybrid_transformer():
         transforms.ToTensor(),
         transforms.Normalize([0, 0, 0], [1, 1, 1])])
 
-    transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
+    transform(mx.np.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
 def test_rotate():
     transformer = transforms.Rotate(10.)
