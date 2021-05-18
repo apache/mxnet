@@ -18,13 +18,13 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 "Image transforms."
-import numpy as np
+import numpy as onp
 
 from ....block import Block, HybridBlock
 from ..... import image
 from .....base import numeric_types
-from .....util import is_np_array, use_np
-from ..... import np as _np, npx
+from .....util import use_np
+from ..... import np, npx
 
 __all__ = ['ToTensor', 'Normalize', 'Rotate', 'RandomRotation',
            'RandomResizedCrop', 'CropResize', 'CropResize', 'RandomCrop',
@@ -168,7 +168,7 @@ class Rotate(Block):
         self._args = (rotation_degrees, zoom_in, zoom_out)
 
     def forward(self, x, *args):
-        if np.dtype(x.dtype) is not np.dtype(np.float32):
+        if onp.dtype(x.dtype) is not onp.dtype(onp.float32):
             raise TypeError("This transformation only supports float32. "
                             "Consider calling it after ToTensor, given: {}".format(x.dtype))
         return _append_return(image.imrotate(x, *self._args), *args)
@@ -209,9 +209,9 @@ class RandomRotation(Block):
         self._rotate_with_proba = rotate_with_proba
 
     def forward(self, x, *args):
-        if np.random.random() > self._rotate_with_proba:
+        if onp.random.random() > self._rotate_with_proba:
             return x
-        if np.dtype(x.dtype) is not np.dtype(np.float32):
+        if onp.dtype(x.dtype) is not onp.dtype(onp.float32):
             raise TypeError("This transformation only supports float32. "
                             "Consider calling it after ToTensor")
         return _append_return(image.random_rotate(x, *self._args), *args)
@@ -322,7 +322,7 @@ class CropResize(HybridBlock):
             out = npx.image.resize(out, self._size, False, self._interpolation)
         return _append_return(out, *args)
 
-#pylint: disable=W0223
+#pylint: disable=W0223, E1121
 @use_np
 class RandomCrop(HybridBlock):
     """Randomly crop `src` with `size` (width, height).
@@ -369,10 +369,10 @@ class RandomCrop(HybridBlock):
 
     def forward(self, x, *args):
         if self.np_pad:
-            x = _np.pad(x, pad_width=self.np_pad, mode='constant', constant_values=self._pad_value)
+            x = np.pad(x, pad_width=self.np_pad, mode='constant', constant_values=self._pad_value)
         return _append_return(npx.image.random_crop(x, *self._args), *args)
 
-#pylint: disable=W0223
+#pylint: disable=W0223, E1121
 @use_np
 class CenterCrop(HybridBlock):
     """Crops the image `src` to the given `size` by trimming on all four
@@ -690,9 +690,9 @@ class RandomGray(HybridBlock):
         self.p = p
 
     def forward(self, x, *args):
-        mat = _np.concatenate((_np.full((3, 1), 0.2989),
-                                _np.full((3, 1), 0.5870),
-                                _np.full((3, 1), 0.114)), axis=1)
+        mat = np.concatenate((np.full((3, 1), 0.2989),
+                              np.full((3, 1), 0.5870),
+                              np.full((3, 1), 0.114)), axis=1)
         x = x.astype(dtype='float32')
-        gray = _np.where(self.p < _np.random.uniform(), x, _np.dot(x, mat))
+        gray = np.where(self.p < np.random.uniform(), x, np.dot(x, mat))
         return _append_return(gray, *args)

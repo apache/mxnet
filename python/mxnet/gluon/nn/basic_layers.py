@@ -904,7 +904,7 @@ class GroupNorm(HybridBlock):
     def forward(self, data):
         ctx = data.ctx
         norm_data = npx.group_norm(data, gamma=self.gamma.data(ctx), beta=self.beta.data(ctx),
-                                 num_groups=self._num_groups, eps=self._epsilon)
+                                   num_groups=self._num_groups, eps=self._epsilon)
         return norm_data
 
     def infer_shape(self, data, *args):
