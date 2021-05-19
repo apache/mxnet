@@ -39,6 +39,9 @@ def get_environment(mxnet_variant) {
   if (mxnet_variant.startsWith('cu')) {
     environment = "ubuntu_gpu_${mxnet_variant}".replace("mkl", "")
   }
+  if (mxnet_variant.startsWith('aarch64')) {
+    environment = 'publish.ubuntu1804_aarch64_cpu'
+  }
   return environment
 }
 

@@ -35,6 +35,9 @@ def get_environment(mxnet_variant) {
     // Remove 'mkl' suffix from variant to properly format test environment
     return "ubuntu_gpu_${mxnet_variant.replace('mkl', '')}"
   }
+  if (mxnet_variant.startsWith('aarch64')) {
+    return 'publish.ubuntu1804_aarch64_cpu'
+  }
   return "ubuntu_cpu"
 }
 

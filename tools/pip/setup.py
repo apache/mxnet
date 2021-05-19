@@ -127,7 +127,7 @@ shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/src/lib_api.cc'),
 package_name = 'mxnet'
 
 variant = os.environ['mxnet_variant'].upper()
-if variant != 'CPU':
+if not variant.endswith('CPU'):
     package_name = 'mxnet_{0}'.format(variant.lower())
 
 def skip_markdown_comments(md):
@@ -145,7 +145,7 @@ with open('doc/{0}_ADDITIONAL.md'.format(variant)) as variant_doc:
 
 short_description = 'Apache MXNet is an ultra-scalable deep learning framework.'
 libraries = []
-if variant == 'CPU':
+if variant.endswith('CPU'):
     libraries.append('openblas')
 else:
     if variant.startswith('CU112'):
