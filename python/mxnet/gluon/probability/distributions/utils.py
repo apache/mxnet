@@ -18,7 +18,7 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """Distribution utilities"""
-__all__ = ['getF', 'prob2logit', 'logit2prob', 'cached_property', 'sample_n_shape_converter',
+__all__ = ['prob2logit', 'logit2prob', 'cached_property', 'sample_n_shape_converter',
            'constraint_check', 'digamma', 'gammaln', 'erfinv', 'erf']
 
 from functools import update_wrapper
