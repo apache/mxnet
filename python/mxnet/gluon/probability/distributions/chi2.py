@@ -32,16 +32,13 @@ class Chi2(Gamma):
     ----------
     df : Tensor or scalar, default 0
         Shape parameter of the distribution.
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
     arg_constraints = {'df': Positive()}
 
-    def __init__(self, df, F=None, validate_args=None):
-        super(Chi2, self).__init__(df / 2, 2, F, validate_args)
+    def __init__(self, df, validate_args=None):
+        super(Chi2, self).__init__(df / 2, 2, validate_args)
 
     @property
     def df(self):

@@ -22,6 +22,7 @@ __all__ = ['TransformedDistribution']
 from ..transformation import Transformation
 from .distribution import Distribution
 from .utils import sum_right_most
+from .... import np
 
 
 class TransformedDistribution(Distribution):
@@ -42,14 +43,10 @@ class TransformedDistribution(Distribution):
         if isinstance(transforms, Transformation):
             transforms = [transforms, ]
         self._transforms = transforms
-        _F = base_dist.F
-        # Overwrite the F in transform
-        for t in self._transforms:
-            t.F = _F
         event_dim = max([self._base_dist.event_dim] +
                         [t.event_dim for t in self._transforms])
         super(TransformedDistribution, self).__init__(
-            _F, event_dim=event_dim, validate_args=validate_args)
+            event_dim=event_dim, validate_args=validate_args)
 
     def sample(self, size=None):
         x = self._base_dist.sample(size)
@@ -87,7 +84,7 @@ class TransformedDistribution(Distribution):
         """
         Compute the cumulative distribution function(CDF) p(Y < `value`)
         """
-        sign = self.F.np.ones_like(value)
+        sign = np.ones_like(value)
         for t in reversed(self._transforms):
             value = t.inv(value)
             sign = sign * t.sign
@@ -95,7 +92,7 @@ class TransformedDistribution(Distribution):
         return sign * (value - 0.5) + 0.5
 
     def icdf(self, value):
-        sign = self.F.np.ones_like(value)
+        sign = np.ones_like(value)
         for t in self._transforms:
             sign = sign * t.sign
         value = sign * (value - 0.5) + 0.5  # value or (1 - value)

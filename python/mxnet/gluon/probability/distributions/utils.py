@@ -30,9 +30,10 @@ except ImportError:
     sc = None
 from .... import symbol as sym
 from .... import ndarray as nd
+from .... import np, npx
 
 
-def constraint_check(F):
+def constraint_check():
     """Unified check_constraint interface for both scalar and tensor
     """
     def _check(condition, err_msg):
@@ -40,11 +41,11 @@ def constraint_check(F):
             if not condition:
                 raise ValueError(err_msg)
             return 1.0
-        return F.npx.constraint_check(condition, err_msg)
+        return npx.constraint_check(condition, err_msg)
     return _check
 
 
-def digamma(F):
+def digamma():
     """Unified digamma interface for both scalar and tensor
     """
     def compute(value):
@@ -55,11 +56,11 @@ def digamma(F):
                 return sc.digamma(value, dtype='float32')
             else:
                 raise ValueError('Numbers are not supported as input if scipy is not installed')
-        return F.npx.digamma(value)
+        return npx.digamma(value)
     return compute
 
 
-def gammaln(F):
+def gammaln():
     """Unified gammaln interface for both scalar and tensor
     """
     def compute(value):
@@ -70,11 +71,11 @@ def gammaln(F):
                 return sc.gammaln(value, dtype='float32')
             else:
                 raise ValueError('Numbers are not supported as input if scipy is not installed')
-        return F.npx.gammaln(value)
+        return npx.gammaln(value)
     return compute
 
 
-def erf(F):
+def erf():
     """Unified erf interface for both scalar and tensor
     """
     def compute(value):
@@ -83,11 +84,11 @@ def erf(F):
                 return sc.erf(value)
             else:
                 raise ValueError('Numbers are not supported as input if scipy is not installed')
-        return F.npx.erf(value)
+        return npx.erf(value)
     return compute
 
 
-def erfinv(F):
+def erfinv():
     """Unified erfinv interface for both scalar and tensor
     """
     def compute(value):
@@ -96,7 +97,7 @@ def erfinv(F):
                 return sc.erfinv(value)
             else:
                 raise ValueError('Numbers are not supported as input if scipy is not installed')
-        return F.npx.erfinv(value)
+        return npx.erfinv(value)
     return compute
 
 
@@ -161,42 +162,38 @@ def sum_right_most(x, ndim):
     return x.sum(axes)
 
 
-def _clip_prob(prob, F):
+def _clip_prob(prob):
     eps = onp.finfo('float32').eps
-    return F.np.clip(prob, eps, 1 - eps)
+    return np.clip(prob, eps, 1 - eps)
 
 
-def _clip_float_eps(value, F):
+def _clip_float_eps(value):
     eps = onp.finfo('float32').eps
-    return F.np.maximum(value, eps)
+    return np.maximum(value, eps)
 
 
-def prob2logit(prob, binary=True, F=None):
+def prob2logit(prob, binary=True):
     r"""Convert probability to logit form.
     For the binary case, the logit stands for log(p / (1 - p)).
     Whereas for the multinomial case, the logit denotes log(p).
     """
-    if F is None:
-        F = getF(prob)
-    _clipped_prob = _clip_prob(prob, F)
+    _clipped_prob = _clip_prob(prob)
     if binary:
-        return F.np.log(_clipped_prob) - F.np.log1p(-_clipped_prob)
+        return np.log(_clipped_prob) - np.log1p(-_clipped_prob)
     # The clipped prob would cause numerical error in the categorical case,
     # no idea about the reason behind.
-    return F.np.log(_clipped_prob)
+    return np.log(_clipped_prob)
 
 
-def logit2prob(logit, binary=True, F=None):
+def logit2prob(logit, binary=True):
     r"""Convert logit into probability form.
     For the binary case, `sigmoid()` is applied on the logit tensor.
     Whereas for the multinomial case, `softmax` is applied along the last
     dimension of the logit tensor.
     """
-    if F is None:
-        F = getF(logit)
     if binary:
-        return F.npx.sigmoid(logit)
-    return F.npx.softmax(logit)
+        return npx.sigmoid(logit)
+    return npx.softmax(logit)
 
 
 class _CachedProperty(object):

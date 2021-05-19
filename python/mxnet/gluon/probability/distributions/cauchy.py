@@ -25,7 +25,8 @@ from numbers import Number
 from numpy import nan, pi
 from .constraint import Real
 from .distribution import Distribution
-from .utils import getF, sample_n_shape_converter
+from .utils import sample_n_shape_converter
+from .... import np
 
 
 class Cauchy(Distribution):
@@ -37,9 +38,6 @@ class Cauchy(Distribution):
         mode or median of the distribution
     scale : Tensor or scalar, default 1
         half width at half maximum
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
@@ -47,12 +45,11 @@ class Cauchy(Distribution):
     support = Real()
     arg_constraints = {'loc': Real(), 'scale': Real()}
 
-    def __init__(self, loc=0.0, scale=1.0, F=None, validate_args=None):
-        _F = F if F is not None else getF(loc, scale)
+    def __init__(self, loc=0.0, scale=1.0, validate_args=None):
         self.loc = loc
         self.scale = scale
         super(Cauchy, self).__init__(
-            F=_F, event_dim=0, validate_args=validate_args)
+            event_dim=0, validate_args=validate_args)
 
     @property
     def mean(self):
@@ -64,12 +61,11 @@ class Cauchy(Distribution):
 
     def sample(self, size=None):
         # TODO: Implement sampling op in the backend.
-        F = self.F
         # `np.zeros_like` does not support scalar at this moment.
         if (isinstance(self.loc, Number), isinstance(self.scale, Number)) == (True, True):
-            u = F.np.random.uniform(size=size)
+            u = np.random.uniform(size=size)
         else:
-            u = F.np.random.uniform(F.np.zeros_like(
+            u = np.random.uniform(np.zeros_like(
                 self.loc + self.scale), size=size)
         return self.icdf(u)
 
@@ -79,18 +75,16 @@ class Cauchy(Distribution):
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        log = self.F.np.log
-        return (-log(pi) - log(self.scale) -
-                log(1 + ((value - self.loc) / self.scale) ** 2))
+        return (-np.log(pi) - np.log(self.scale) -
+                np.log(1 + ((value - self.loc) / self.scale) ** 2))
 
     def cdf(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        return self.F.np.arctan((value - self.loc) / self.scale) / pi + 0.5
+        return np.arctan((value - self.loc) / self.scale) / pi + 0.5
 
     def icdf(self, value):
-        return self.F.np.tan(pi * (value - 0.5)) * self.scale + self.loc
+        return np.tan(pi * (value - 0.5)) * self.scale + self.loc
 
     def entropy(self):
-        log = self.F.np.log
-        return log(4 * pi) + log(self.scale)
+        return np.log(4 * pi) + np.log(self.scale)
