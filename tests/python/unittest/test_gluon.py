@@ -1379,6 +1379,7 @@ def test_hook():
     assert hook_call_count == 1
     assert pre_hook_call_count == 2
 
+@use_np
 def test_op_hook_output_names():
     def check_name(block, expected_names, inputs=None, expected_opr_names=None, monitor_all=False):
         opr_names = []
@@ -1408,21 +1409,21 @@ def test_op_hook_output_names():
     model.add(mx.gluon.nn.Dense(2))
     model.initialize()
     model.hybridize()
-    check_name(model, ["hybridsequential_dense0_fwd_output"])
+    check_name(model, ["node_0_output"])
 
     # Test with Activation, FListInputNames not registered, input name will have _input appended
     model = mx.gluon.nn.HybridSequential()
     model.add(mx.gluon.nn.Activation("relu"))
     model.initialize()
     model.hybridize()
-    check_name(model, ["hybridsequential_activation0_fwd_output"])
+    check_name(model, ["node_1_output"])
 
     # Test with Pooling, monitor_all is set to True
     model = mx.gluon.nn.HybridSequential()
     model.add(mx.gluon.nn.AvgPool1D())
     model.initialize()
     model.hybridize()
-    check_name(model, ['hybridsequential_avgpool1d0_fwd_data', 'hybridsequential_avgpool1d0_fwd_output'],
+    check_name(model, ['node_2_data', 'node_2_output'],
                expected_opr_names=["Pooling"], monitor_all=True)
 
     # stack two layers and test
@@ -1432,16 +1433,16 @@ def test_op_hook_output_names():
     model.initialize()
     model.hybridize()
     check_name(model,
-               ['hybridsequential_dense0_fwd_data', 'hybridsequential_dense0_fwd_weight',
-                'hybridsequential_dense0_fwd_bias', 'hybridsequential_dense0_fwd_output',
-                'hybridsequential_activation0_fwd_input0', 'hybridsequential_activation0_fwd_output'], monitor_all=True)
+               ['node_3_data', 'node_3_weight',
+                'node_3_bias', 'node_3_output',
+                'node_4_input0', 'node_4_output'], monitor_all=True)
 
     # check with different hybridize modes
     model.hybridize(static_alloc=True)
     check_name(model,
-               ['hybridsequential_dense0_fwd_data', 'hybridsequential_dense0_fwd_weight',
-                'hybridsequential_dense0_fwd_bias', 'hybridsequential_dense0_fwd_output',
-                'hybridsequential_activation0_fwd_input0', 'hybridsequential_activation0_fwd_output'], monitor_all=True)
+               ['node_5_data', 'node_5_weight',
+                'node_5_bias', 'node_5_output',
+                'node_6_input0', 'node_6_output'], monitor_all=True)
 
 def test_apply():
     global called_blocks

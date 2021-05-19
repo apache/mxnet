@@ -352,6 +352,7 @@ def test_trainer_allreduce_hybridsequential():
     trainer.allreduce_grads()
 
 
+@mx.util.use_np
 def test_trainer_share_parameters():
     class Net(gluon.Block):
         def __init__(self, **kwargs):

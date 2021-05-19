@@ -21,7 +21,6 @@ import time
 import mxnet as mx
 import multiprocessing as mp
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray, environment
-import mxnet.ndarray as nd
 import numpy as np
 import math
 from mxnet import autograd
@@ -80,7 +79,7 @@ def test_lstmp():
     batch_size, seq_len = 7, 11
     input_size = 5
     ctx = mx.gpu(0)
-    lstm_input = mx.np.uniform(
+    lstm_input = mx.np.random.uniform(
         size=(seq_len, batch_size, input_size), ctx=ctx)
     shapes = {'i2h_weight': (hidden_size * 4, input_size),
               'h2h_weight': (hidden_size * 4, projection_size),
@@ -133,10 +132,10 @@ def test_lstm_clip():
     batch_size, seq_len = 32, 80
     input_size = 50
     clip_min, clip_max, clip_nan = -5, 5, True
-    lstm_input = mx.np.uniform(
+    lstm_input = mx.np.random.uniform(
         size=(seq_len, batch_size, input_size), ctx=mx.gpu(0))
-    lstm_states = [mx.np.uniform(size=(2, batch_size, projection_size), ctx=mx.gpu(0)),
-                   mx.np.uniform(size=(2, batch_size, hidden_size), ctx=mx.gpu(0))]
+    lstm_states = [mx.np.random.uniform(size=(2, batch_size, projection_size), ctx=mx.gpu(0)),
+                   mx.np.random.uniform(size=(2, batch_size, hidden_size), ctx=mx.gpu(0))]
     lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
                                 input_size=input_size,
                                 bidirectional=True,
@@ -180,20 +179,20 @@ def check_layer_bidirectional(size, in_size, proj_size):
             return mx.np.concatenate([fwd, bwd], dim=2)
     weights = {}
     for d in ['l', 'r']:
-        weights['{}0_i2h_weight'.format(d)] = mx.random.uniform(
-            shape=(size * 4, in_size))
+        weights['{}0_i2h_weight'.format(d)] = mx.np.random.uniform(
+            size=(size * 4, in_size))
         if proj_size:
-            weights['{}0_h2h_weight'.format(d)] = mx.random.uniform(
-                shape=(size * 4, proj_size))
-            weights['{}0_h2r_weight'.format(d)] = mx.random.uniform(
-                shape=(proj_size, size))
+            weights['{}0_h2h_weight'.format(d)] = mx.np.random.uniform(
+                size=(size * 4, proj_size))
+            weights['{}0_h2r_weight'.format(d)] = mx.np.random.uniform(
+                size=(proj_size, size))
         else:
             weights['{}0_h2h_weight'.format(
-                d)] = mx.random.uniform(shape=(size * 4, size))
+                d)] = mx.np.random.uniform(size=(size * 4, size))
         weights['{}0_i2h_bias'.format(
-            d)] = mx.random.uniform(shape=(size * 4,))
+            d)] = mx.np.random.uniform(size=(size * 4,))
         weights['{}0_h2h_bias'.format(
-            d)] = mx.random.uniform(shape=(size * 4,))
+            d)] = mx.np.random.uniform(size=(size * 4,))
 
     net = gluon.rnn.LSTM(size, projection_size=proj_size,
                          bidirectional=True)
@@ -207,7 +206,7 @@ def check_layer_bidirectional(size, in_size, proj_size):
         ref_net_params[k.replace('l0', '_lstm_fwd.l0').replace(
             'r0', '_lstm_bwd.l0')].set_data(weights[k])
 
-    data = mx.random.uniform(shape=(11, 10, in_size))
+    data = mx.np.random.uniform(size=(11, 10, in_size))
     mx.test_utils.assert_allclose(net(data), ref_net(data), rtol=1e-6)
 
 
@@ -215,10 +214,10 @@ def check_layer_bidirectional(size, in_size, proj_size):
 def check_layer_bidirectional_varseqlen(size, in_size):
     weights = {}
     for d in ['l', 'r']:
-        weights['{}0_i2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, in_size))
-        weights['{}0_h2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, size))
-        weights['{}0_i2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
-        weights['{}0_h2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
+        weights['{}0_i2h_weight'.format(d)] = mx.np.random.uniform(size=(size*4, in_size))
+        weights['{}0_h2h_weight'.format(d)] = mx.np.random.uniform(size=(size*4, size))
+        weights['{}0_i2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
+        weights['{}0_h2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
 
     net = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=True)
     ref_net  = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=False)
@@ -232,10 +231,10 @@ def check_layer_bidirectional_varseqlen(size, in_size):
 
     batch_size = 10
     num_timesteps = 11
-    data = mx.random.uniform(shape=(num_timesteps, batch_size, in_size))
+    data = mx.np.random.uniform(size=(num_timesteps, batch_size, in_size))
     data_np = data.asnumpy()
 
-    sequence_length = nd.random.randint(1, num_timesteps+1, shape=(batch_size)).astype("int32")
+    sequence_length = mx.np.random.randint(1, num_timesteps+1, size=(batch_size)).astype("int32")
     sequence_length_np = sequence_length.asnumpy().astype("int32")
 
     # Reference net is processing batch elements one at a time, so that it is "perfectly sized"
@@ -291,7 +290,7 @@ def test_layer_bidirectional_varseqlength():
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnn_layer_begin_state_type():
-    fake_data = nd.random.uniform(shape=(3, 5, 7), dtype='float16')
+    fake_data = mx.np.random.uniform(size=(3, 5, 7), dtype='float16')
     modeling_layer = gluon.rnn.LSTM(
         hidden_size=11, num_layers=2, dropout=0.2, bidirectional=True)
     modeling_layer.cast('float16')
@@ -490,7 +489,7 @@ def test_large_models():
         (height, width) = (sz, sz)
         sys.stderr.write(" {}x{} ".format(height, width))
         sys.stderr.flush()
-        data_in = nd.random_uniform(low=0, high=255, shape=(1, 3, height, width),
+        data_in = mx.np.random_uniform(low=0, high=255, size=(1, 3, height, width),
                                     ctx=ctx, dtype="float32")
         # Evaluate model
         net(data_in).asnumpy()

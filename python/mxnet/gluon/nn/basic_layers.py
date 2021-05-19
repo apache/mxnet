@@ -1189,9 +1189,6 @@ class SyncBatchNorm(BatchNorm):
 
     def forward(self, x):
         ctx = x.ctx
-        return nd.contrib.SyncBatchNorm(x.as_nd_ndarray(),
-                                        self.gamma.data(ctx).as_nd_ndarray(),
-                                        self.beta.data(ctx).as_nd_ndarray(),
-                                        self.running_mean.data(ctx).as_nd_ndarray(),
-                                        self.running_var.data(ctx).as_nd_ndarray(),
-                                        name='fwd', **self._kwargs).as_np_ndarray()
+        return npx.sync_batch_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
+                                   self.running_mean.data(ctx), self.running_var.data(ctx),
+                                   name='fwd', **self._kwargs)

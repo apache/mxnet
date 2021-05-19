@@ -192,6 +192,9 @@ The storage type of ``softsign`` output is always dense
   .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::softsign>)
   .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_softsign"});
 
+NNVM_REGISTER_OP(softsign)
+.add_alias("_npx_softsign");
+
 MXNET_OPERATOR_REGISTER_BINARY(_backward_softsign)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu,
   unary_bwd<mshadow_op::softsign_grad> >);

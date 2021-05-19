@@ -28,7 +28,7 @@ from mxnet.test_utils import almost_equal, same
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import assertRaises
-from test_gluon_data_vision import test_to_tensor, test_normalize, test_crop_resize
+from test_numpy_gluon_data_vision import test_to_tensor, test_normalize, test_crop_resize
 
 set_default_context(mx.gpu(0))
 

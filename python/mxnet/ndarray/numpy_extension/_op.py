@@ -397,12 +397,15 @@ def fully_connected(x, weight, bias=None, num_hidden=None,
         The output of this function.
     """
     assert num_hidden is not None, "Please provide number of hidden nodes"
+    if bias is not None:
+        return _api_internal.fully_connected(x, weight, bias, num_hidden,
+                                             False, flatten)
     if no_bias:
-        return _api_internal.fully_connected(x, weight, num_hidden, no_bias, flatten)
+        return _api_internal.fully_connected(x, weight, num_hidden, True, flatten)
     else:
         assert bias is not None, "Missing bias parameter"
         return _api_internal.fully_connected(x, weight, bias, num_hidden,
-                                             no_bias, flatten)
+                                             False, flatten)
 
 
 # pylint: disable=too-many-arguments

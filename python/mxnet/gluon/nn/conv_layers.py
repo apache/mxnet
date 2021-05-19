@@ -1287,8 +1287,11 @@ class ReflectionPad2D(HybridBlock):
         self._padding = padding
 
     def forward(self, x):
-        x = x.as_nd_ndarray()
-        return nd.pad(x, mode='reflect', pad_width=self._padding).as_np_ndarray()
+        """
+        Use pad operator in numpy extension module,
+        which has backward support for reflect mode
+        """
+        return npx.pad(x, mode='reflect', pad_width=self._padding)
 
 
 #pylint: disable=W0223
