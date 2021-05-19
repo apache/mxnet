@@ -23,7 +23,7 @@ __all__ = ['Dirichlet']
 from .exp_family import ExponentialFamily
 from .constraint import Positive, Simplex
 from .utils import gammaln, digamma, sample_n_shape_converter, _clip_float_eps
-from .... import np, npx
+from .... import np
 
 
 class Dirichlet(ExponentialFamily):
@@ -40,7 +40,7 @@ class Dirichlet(ExponentialFamily):
     support = Simplex()
     arg_constraints = {'alpha': Positive()}
 
-    def __init__(self, alpha, F=None, validate_args=None):
+    def __init__(self, alpha, validate_args=None):
         self.alpha = alpha
         super(Dirichlet, self).__init__(
             event_dim=1, validate_args=validate_args)

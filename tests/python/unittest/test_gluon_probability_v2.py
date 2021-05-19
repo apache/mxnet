@@ -1629,7 +1629,6 @@ def test_relaxed_one_hot_categorical():
 
 
 @use_np
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/20282')
 def test_gluon_mvn():
     class TestMVN(HybridBlock):
         def __init__(self, func, param_type):
@@ -2110,7 +2109,6 @@ def test_gluon_kl():
         loc = np.random.randn(*(loc_shape + (event_shape,)))
         _s = np.random.randn(*(cov_shape + (event_shape, event_shape)))
         sigma = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(event_shape)
-        pytest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/20282')
         dist = mgp.MultivariateNormal(loc, cov=sigma)
         desired_shape = (loc + sigma[..., 0]).shape[:-1]
         _test_zero_kl(dist, desired_shape)

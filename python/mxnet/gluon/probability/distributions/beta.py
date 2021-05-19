@@ -22,7 +22,7 @@ __all__ = ['Beta']
 
 from .exp_family import ExponentialFamily
 from .constraint import UnitInterval, Positive
-from .utils import getF, sample_n_shape_converter, gammaln, digamma, _clip_prob
+from .utils import sample_n_shape_converter, gammaln, digamma, _clip_prob
 from .... import np
 
 
@@ -50,7 +50,6 @@ class Beta(ExponentialFamily):
             event_dim=0, validate_args=validate_args)
 
     def sample(self, size=None):
-        F = self.F
         X = np.random.gamma(self.alpha, 1, size=size)
         Y = np.random.gamma(self.beta, 1, size=size)
         out = X / (X + Y)

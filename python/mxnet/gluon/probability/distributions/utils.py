@@ -115,33 +115,6 @@ def sample_n_shape_converter(size):
     return size
 
 
-def getF(*params):
-    """Get running mode from parameters,
-    return mx.ndarray if inputs are python scalar.
-
-    Returns
-    -------
-    ndarray or _Symbol
-        the running mode inferred from `*params`
-    """
-    mode_flag = 0
-    for param in params:
-        if isinstance(param, nd.NDArray):
-            if mode_flag < 0:
-                raise TypeError("Expect parameters to have consistent running mode," +
-                                " got {}".format([type(p) for p in params]))
-            mode_flag = 1
-        elif isinstance(param, sym.Symbol):
-            if mode_flag > 0:
-                raise TypeError("Expect parameters to have consistent running mode," +
-                                " got {}".format([type(p) for p in params]))
-            mode_flag = -1
-    # In case of scalar params, we choose to use the imperative mode.
-    if mode_flag < 0:
-        return sym
-    return nd
-
-
 def sum_right_most(x, ndim):
     """Sum along the right most `ndim` dimensions of `x`,
 

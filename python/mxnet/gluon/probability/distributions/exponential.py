@@ -66,7 +66,7 @@ class Exponential(ExponentialFamily):
 
     def sample_n(self, size=None):
         return np.random.exponential(self.scale,
-                                            size=sample_n_shape_converter(size))
+                                     size=sample_n_shape_converter(size))
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))

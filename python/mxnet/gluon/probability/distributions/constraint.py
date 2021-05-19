@@ -27,8 +27,8 @@ __all__ = ["Constraint", "Real", "Boolean",
            "Simplex", "LowerTriangular", "LowerCholesky", "PositiveDefinite",
            "Cat", "Stack"]
 
-from .utils import getF, constraint_check
-from .... import ndarray as nd, np
+from .utils import constraint_check
+from .... import np
 
 
 class Constraint(object):

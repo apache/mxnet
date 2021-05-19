@@ -105,7 +105,6 @@ class Normal(ExponentialFamily):
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
-        F = self.F
         new_instance.loc = np.broadcast_to(self.loc, batch_shape)
         new_instance.scale = np.broadcast_to(self.scale, batch_shape)
         super(Normal, new_instance).__init__(event_dim=self.event_dim,
