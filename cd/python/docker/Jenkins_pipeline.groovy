@@ -23,23 +23,34 @@
 // NOTE: 
 // ci_utils and cd_utils are loaded by the originating Jenkins job, e.g. jenkins/Jenkinsfile_release_job
 
+def get_node(mxnet_variant) {
+  if (mxnet_variant.startsWith('aarch64')) {
+    return NODE_LINUX_AARCH64_CPU
+  }
+  if (mxnet_variant.startsWith('cu')) {
+    return NODE_LINUX_GPU
+  }
+  return NODE_LINUX_CPU
+}
+
 def get_pipeline(mxnet_variant) {
-  def node_type = mxnet_variant.startsWith('cu') ? NODE_LINUX_GPU : NODE_LINUX_CPU
+  def node_type = get_node(mxnet_variant)
   return cd_utils.generic_pipeline(mxnet_variant, this, node_type)
 }
 
 // Returns the (Docker) environment for the given variant
 // The environment corresponds to the docker files in the 'docker' directory
 def get_environment(mxnet_variant) {
-  if (mxnet_variant.startsWith("cu")) {
-    // Remove 'mkl' suffix from variant to properly format test environment
-    return "ubuntu_gpu_${mxnet_variant.replace('mkl', '')}"
-  }
   if (mxnet_variant.startsWith('aarch64')) {
-    return 'publish.ubuntu1804_aarch64_cpu'
+    return "publish.ubuntu1804_aarch64_cpu"
+  }
+  if (mxnet_variant.startsWith('cu')) {
+    return "ubuntu_gpu_${mxnet_variant}"
   }
   return "ubuntu_cpu"
 }
+
+
 
 
 def build(mxnet_variant) {
