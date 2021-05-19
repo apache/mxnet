@@ -28,8 +28,6 @@ try:
     import scipy.special as sc
 except ImportError:
     sc = None
-from .... import symbol as sym
-from .... import ndarray as nd
 from .... import np, npx
 
 
