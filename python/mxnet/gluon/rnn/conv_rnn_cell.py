@@ -688,7 +688,6 @@ class _ConvGRUCell(_BaseConvRNNCell):
         return ['_r', '_z', '_o']
 
     def forward(self, inputs, states):
-        prefix = 't%d_'%self._counter
         i2h, h2h = self._conv_forward(inputs, states)
 
         i2h_r, i2h_z, i2h = npx.slice_channel(i2h, num_outputs=3,

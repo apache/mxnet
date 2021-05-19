@@ -398,7 +398,7 @@ class RNNCell(HybridRecurrentCell):
         output = self._get_activation(i2h_plus_h2h, self._activation)
 
         return output, [output]
-    
+
     def infer_shape(self, i, input_size, is_bidirect):
         if i == 0:
             self.i2h_weight.shape = (self._hidden_size, input_size)
@@ -630,7 +630,6 @@ class GRUCell(HybridRecurrentCell):
 
     def forward(self, inputs, states):
         # pylint: disable=too-many-locals
-        prefix = 't%d_'%self._counter
         ctx = inputs.ctx
         prev_state_h = states[0]
         i2h = npx.fully_connected(inputs,
@@ -745,8 +744,8 @@ class SequentialRNNCell(RecurrentCell):
     def forward(self, *args, **kwargs):
         # pylint: disable=missing-docstring
         raise NotImplementedError
-    
-    def infer_shape(self, x, *args):
+
+    def infer_shape(self, x):
         for i, child in enumerate(self._layers):
             child.infer_shape(i, x.shape[x.ndim-1], False)
 
@@ -1088,7 +1087,7 @@ class BidirectionalCell(HybridRecurrentCell):
             merge_outputs = isinstance(l_outputs, tensor_types)
             l_outputs, _, _ = _format_sequence(None, l_outputs, layout, merge_outputs)
             reversed_r_outputs, _, _ = _format_sequence(None, reversed_r_outputs, layout,
-                                                           merge_outputs)
+                                                        merge_outputs)
 
         if merge_outputs:
             reversed_r_outputs = np.stack(reversed_r_outputs, axis=axis)
@@ -1104,6 +1103,7 @@ class BidirectionalCell(HybridRecurrentCell):
         return outputs, states
 
     def infer_shape(self, i, input_size, is_bidirect):
+        assert is_bidirect == False
         l_cell, r_cell = [c() for c in self._children.values()]
         l_cell.infer_shape(i, input_size, True)
         r_cell.infer_shape(i, input_size, True)
@@ -1384,7 +1384,6 @@ class LSTMPCell(HybridRecurrentCell):
     # pylint: disable= arguments-differ
     def forward(self, inputs, states):
         ctx = inputs.ctx
-        prefix = 't%d_'%self._counter
         i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
                                   num_hidden=self._hidden_size*4)

@@ -29,7 +29,7 @@ __all__ = ['Conv1D', 'Conv2D', 'Conv3D',
 
 from ..block import HybridBlock
 from ..parameter import Parameter
-from ... import nd, np, npx
+from ... import np, npx
 from ...base import numeric_types
 from .activations import Activation
 from ...util import use_np
