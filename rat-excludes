@@ -104,7 +104,7 @@ R-package/*
 
 # Specific files
 # Files that don't support comment
-DISCLAIMER-WIP
+DISCLAIMER
 MANIFEST
 .codecov.yml
 

@@ -230,8 +230,62 @@ void EvalRandom<DEVICE, GaussianDistribution>(
   }
 }
 
+#if defined(__CUDACC__)
+
 template<>
-void EvalRandom<DEVICE, GammaDistribution>(
+void EvalRandom<gpu, GammaDistribution>(
+    const real_t &alpha,
+    const real_t &beta,
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  EvalRandom<cpu, GammaDistribution>(alpha, beta, resource, ret, ctx);
+}
+
+template<>
+void EvalRandom<gpu, ExponentialDistribution>(
+    const real_t &lambda,
+    const real_t &dummy,  // this is to satisfy the SampleOp lambda signature
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  EvalRandom<cpu, ExponentialDistribution>(lambda, dummy, resource, ret, ctx);
+}
+
+template<>
+void EvalRandom<gpu, PoissonDistribution>(
+    const real_t &lambda,
+    const real_t &dummy,  // this is to satisfy the SampleOp lambda signature
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  EvalRandom<cpu, PoissonDistribution>(lambda, dummy, resource, ret, ctx);
+}
+
+template<>
+void EvalRandom<gpu, NegBinomialDistribution>(
+    const real_t &k,
+    const real_t &p,
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  EvalRandom<cpu, NegBinomialDistribution>(k, p, resource, ret, ctx);
+}
+
+template<>
+void EvalRandom<gpu, GenNegBinomialDistribution>(
+    const real_t &mu,
+    const real_t &alpha,
+    const Resource &resource,
+    TBlob *ret,
+    RunContext ctx) {
+  EvalRandom<cpu, GenNegBinomialDistribution>(mu, alpha, resource, ret, ctx);
+}
+
+#else
+
+template<>
+void EvalRandom<cpu, GammaDistribution>(
     const real_t &alpha,
     const real_t &beta,
     const Resource &resource,
@@ -259,9 +313,8 @@ void EvalRandom<DEVICE, GammaDistribution>(
   }
 }
 
-
 template<>
-void EvalRandom<DEVICE, ExponentialDistribution>(
+void EvalRandom<cpu, ExponentialDistribution>(
     const real_t &lambda,
     const real_t &dummy,  // this is to satisfy the SampleOp lambda signature
     const Resource &resource,
@@ -290,7 +343,7 @@ void EvalRandom<DEVICE, ExponentialDistribution>(
 }
 
 template<>
-void EvalRandom<DEVICE, PoissonDistribution>(
+void EvalRandom<cpu, PoissonDistribution>(
     const real_t &lambda,
     const real_t &dummy,  // this is to satisfy the SampleOp lambda signature
     const Resource &resource,
@@ -319,7 +372,7 @@ void EvalRandom<DEVICE, PoissonDistribution>(
 }
 
 template<>
-void EvalRandom<DEVICE, NegBinomialDistribution>(
+void EvalRandom<cpu, NegBinomialDistribution>(
     const real_t &k,
     const real_t &p,
     const Resource &resource,
@@ -348,7 +401,7 @@ void EvalRandom<DEVICE, NegBinomialDistribution>(
 }
 
 template<>
-void EvalRandom<DEVICE, GenNegBinomialDistribution>(
+void EvalRandom<cpu, GenNegBinomialDistribution>(
     const real_t &mu,
     const real_t &alpha,
     const Resource &resource,
@@ -375,6 +428,8 @@ void EvalRandom<DEVICE, GenNegBinomialDistribution>(
     LOG(FATAL) << "Random only support float32 and float64";
   }
 }
+
+#endif  // #ifndef __CUDACC__
 
 template<>
 void Eval<DEVICE>(const real_t &rhs, TBlob *ret, RunContext ctx) {

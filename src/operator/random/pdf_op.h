@@ -514,6 +514,12 @@ void PdfOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_NE(req[0], kAddTo);
   CHECK_EQ(inputs.size(), pnum + 1);
   CHECK_EQ(outputs.size(), 1);
+
+  // Skip kernel launch for zero-size tensors
+  if (inputs[1].shape_.Size() == 0U || outputs[0].Size() == 0U) {
+    return;
+  }
+
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const PdfParam& param = nnvm::get<PdfParam>(attrs.parsed);
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {

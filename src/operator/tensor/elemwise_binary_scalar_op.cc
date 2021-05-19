@@ -50,6 +50,7 @@ __global__ void binary_scalar_kernel(const binary_scalar_kernel_params params,
                                      const index_t N,
                                      const index_t num_aligned_elements) {
   using namespace vector;
+  using type_util::mixed_type;
   VectorizedLoader<InputType0, nvec, aligned> loader(
     reinterpret_cast<const InputType0*>(params.inputs[0]), N);
   VectorizedStorer<OutputType0, nvec, aligned> storer(
@@ -72,9 +73,8 @@ __global__ void binary_scalar_kernel(const binary_scalar_kernel_params params,
       const auto input = IType::from(loader.separate()[i]);
       // enables returning different type
       const auto temp = OP(input,
-                           static_cast<typename type_util::mixed_type<typename IType::type,
-                                                                      typename OType::type>::type>
-                             (params.scalar));
+                           static_cast<mixed_type<typename IType::type,
+                                                  typename OType::type>>(params.scalar));
 
       if (req == OpReqType::kAddTo) {
         // temp2 may have a wider type than either temp
@@ -171,6 +171,7 @@ __global__ void binary_scalar_kernel_bwd(const binary_scalar_kernel_params param
                                          const index_t N,
                                          const index_t num_aligned_elements) {
   using namespace vector;
+  using type_util::mixed_type;
   VectorizedLoader<InputType0, nvec, aligned> ograd_loader(
     reinterpret_cast<const InputType0*>(params.inputs[0]), N);
   VectorizedLoader<InputType1, nvec, aligned> input_loader(
@@ -199,9 +200,8 @@ __global__ void binary_scalar_kernel_bwd(const binary_scalar_kernel_params param
       // enables returning different type
       const auto temp = op::mul(ograd,
                                 OP(input,
-                                   static_cast<typename type_util::mixed_type<typename IType::type,
-                                                                              typename OType::type>
-                                               ::type>(params.scalar)));
+                                   static_cast<mixed_type<typename IType::type,
+                                                          typename OType::type>>(params.scalar)));
 
       if (req == OpReqType::kAddTo) {
         // temp2 may have a wider type than either temp

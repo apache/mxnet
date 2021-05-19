@@ -41,6 +41,8 @@ const char vectorization_support_string[] = R"code(
 
 namespace vector {
 
+constexpr int vectorized_kernel_thread_num = 512;
+
 template <int size>
 struct VectorType {
     static_assert(size <= 32, "VectorType needs to have size of at most 32B");
@@ -166,7 +168,7 @@ class VectorizedAccessor {
     if (aligned) {
       alignment_ = 0;
       aligned_ptr_ = reinterpret_cast<LType*>(ptr);
-      n_elems_ = (size + nvec- 1) / nvec;
+      n_elems_ = (size + nvec - 1) / nvec;
     } else {
       size_t ptr_as_number = reinterpret_cast<size_t>(ptr);
       alignment_ = (ptr_as_number % sizeof(LType)) / sizeof(DType);
@@ -360,6 +362,8 @@ constexpr int vectorized_kernel_thread_num = 512;
  *  \param lead_input_num number of input to use for checking alignment
  *                        (in case only a subset of inputs is used vectorized).
  *                        Default is 0.
+ *  \param blocks if provided and not 0, will launch the specified number of thread blocks.
+ *                Default is 0.
  */
 template <typename Params>
 void VectorizedKernelRTCLauncher(const std::string &parameters,
@@ -373,7 +377,8 @@ void VectorizedKernelRTCLauncher(const std::string &parameters,
                                  const std::vector<TBlob> &inputs,
                                  const std::vector<TBlob> &outputs,
                                  const int dev_id,
-                                 const int lead_input_num = 0) {
+                                 const int lead_input_num = 0,
+                                 const index_t blocks = 0) {
   const index_t N = lead_dim * other_dim;
   nvec = std::min(nvec, 4);  // Use at most 4-wide vectors
   if (N != 0) {
@@ -435,11 +440,16 @@ void VectorizedKernelRTCLauncher(const std::string &parameters,
                                     lead_dim, nvec,
                                     common::mshadow_type_info(
                                       inputs[lead_input_num].type_flag_).size);
-    size_t num_elements = other_dim * num_aligned_elements;
     constexpr int threads = vectorized_kernel_thread_num;
-    constexpr int max_blocks = 65535;
-    index_t blocks = std::min(static_cast<int>((num_elements + threads - 1) / threads),
-                              max_blocks);
+    index_t num_blocks;
+    if (blocks != 0) {
+      num_blocks = blocks;
+    } else {
+      size_t num_elements = other_dim * num_aligned_elements;
+      num_blocks = (num_elements + threads - 1) / threads;
+      constexpr int max_blocks = 65535;
+      num_blocks = std::min(static_cast<int>(num_blocks), max_blocks);
+    }
     std::vector<const void*> args = {&params, &lead_dim, &other_dim,
                                      &N, &num_aligned_elements};
     auto function = common::cuda::rtc::get_function(kernel_builder,
@@ -448,7 +458,7 @@ void VectorizedKernelRTCLauncher(const std::string &parameters,
                                                     dev_id);
 
     common::cuda::rtc::launch(function,
-                              {static_cast<unsigned int>(blocks), 1, 1},
+                              {static_cast<unsigned int>(num_blocks), 1, 1},
                               {static_cast<unsigned int>(threads), 1, 1},
                               0, s, &args);
   }
