@@ -1102,8 +1102,8 @@ class BidirectionalCell(HybridRecurrentCell):
         states = l_states + r_states
         return outputs, states
 
+    #pylint: disable=W0613
     def infer_shape(self, i, input_size, is_bidirect):
-        assert is_bidirect == False
         l_cell, r_cell = [c() for c in self._children.values()]
         l_cell.infer_shape(i, input_size, True)
         r_cell.infer_shape(i, input_size, True)

@@ -196,10 +196,16 @@ class _RNNLayer(HybridBlock):
     def infer_shape(self, inputs, *args):
         assert inputs.ndim == 3, \
             "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]"
+        if not self._projection_size:
+            step = self._hidden_size
+        else:
+            step = self._projection_size
+        ni = inputs.shape[2]
         for i in range(self._num_layers):
             for j in ['l', 'r'][:self._dir]:
                 name = '{}{}_i2h_weight'.format(j, i)
-                getattr(self, name).shape = (self._gates*self._hidden_size, inputs.shape[2])
+                getattr(self, name).shape = (self._gates*self._hidden_size, ni)
+            ni = step * self._dir
 
     def _forward_kernel(self, inputs, states, sequence_length):
         """ forward using CUDNN or CPU kenrel"""
@@ -220,8 +226,7 @@ class _RNNLayer(HybridBlock):
                       for g in ['i2h', 'h2h', 'h2r']
                       if g != 'h2r' or t != 'bias')
 
-        rnn_param_concat = ndarray.np._internal.rnn_param_concat
-        params = rnn_param_concat(*params, dim=0)
+        params = ndarray.np._internal.rnn_param_concat(*params, dim=0)
 
         if self._use_sequence_length:
             rnn_args = states + [sequence_length]

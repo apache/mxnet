@@ -1397,8 +1397,9 @@ def test_op_hook_output_names():
             block(inputs)
 
         for output_name, expected_name in zip(output_names, expected_names):
-            print(output_name)
-            assert output_name == expected_name
+            output_name_list = output_name.split('_').pop(1)
+            expected_name_list = expected_name.split('_').pop(1)
+            assert output_name_list == expected_name_list
 
         if expected_opr_names:
             for opr_name, expected_opr_name in zip(opr_names, expected_opr_names):
