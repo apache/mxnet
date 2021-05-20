@@ -46,7 +46,7 @@ struct NumpyFillDiagonalParam : public dmlc::Parameter<NumpyFillDiagonalParam> {
                 "its type must be compatible with that of the array a.");
     DMLC_DECLARE_FIELD(wrap)
     .set_default(false)
-    .describe("The diagonal “wrapped” after N columns."
+    .describe("The diagonal 'wrapped' after N columns."
               "You can have this behavior with this option. "
               "This affects only tall matrices.");
   }
