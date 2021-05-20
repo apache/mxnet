@@ -26,6 +26,7 @@ import mxnet as mx
 import scipy.stats as ss
 import scipy.special as scipy_special
 import pytest
+import mxnet.ndarray.numpy._internal as _npi
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
@@ -2058,7 +2059,7 @@ def test_npi_boolean_assign():
             self._start_axis = start_axis
 
         def forward(self, a, mask):
-            return np._internal.boolean_mask_assign_scalar(a, mask, self._val, start_axis=self._start_axis, out=a)
+            return _npi.boolean_mask_assign_scalar(a, mask, self._val, start_axis=self._start_axis, out=a)
 
     class TestBooleanAssignTensor(HybridBlock):
         def __init__(self, start_axis):
@@ -2066,7 +2067,7 @@ def test_npi_boolean_assign():
             self._start_axis = start_axis
 
         def forward(self, a, mask, value):
-            return np._internal.boolean_mask_assign_tensor(a, mask, value, start_axis=self._start_axis, out=a)
+            return _npi.boolean_mask_assign_tensor(a, mask, value, start_axis=self._start_axis, out=a)
 
     configs = [
         ((3, 4), (3, 4), 0),
@@ -9282,7 +9283,9 @@ def test_np_nan_to_num():
     dtype_list = ['float16', 'float32', 'float64']
     # [nan, inf, -inf]
     param_list = [[None, None, None], [0, 1000, -100], [0.0, 9999.9, -9999.9]]
-    copy_list = [True, False]
+    # Inplace operations are not supported when recording in deferred compute mode
+    # copy_list = [True, False]
+    copy_list = [True]
     hybridize_list = [True, False]
     atol, rtol = 1e-5, 1e-3
 

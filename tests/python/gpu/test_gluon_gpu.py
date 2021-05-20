@@ -72,6 +72,7 @@ def check_rnn_layer_w_rand_inputs(layer):
         assert_almost_equal(g, c)
 
 
+@mx.util.use_np
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 def test_lstmp():
     hidden_size, projection_size = 3, 2
@@ -145,7 +146,7 @@ def test_lstm_clip():
     lstm_layer.initialize(ctx=mx.gpu(0))
     with autograd.record():
         _, layer_output_states = lstm_layer(lstm_input, lstm_states)
-    cell_states = layer_output_states[0].asnumpy()
+    cell_states = layer_output_states[0]
     assert (cell_states >= clip_min).all() and (cell_states <= clip_max).all()
     assert not np.isnan(cell_states).any()
 
@@ -400,6 +401,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
     input2grad = mx.np.concatenate(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
     assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
 
+@mx.util.use_np
 def test_sync_batchnorm():
     def get_num_devices():
         for i in range(100):
@@ -593,6 +595,7 @@ def test_hybridblock_mix_ctx_raise():
     pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,), ctx=mx.gpu()),
                                                  mx.np.ones((10,), ctx=mx.cpu())))
 
+@mx.util.use_np
 def test_symbol_block_symbolic_bn_fp16_cast():
     with mx.gpu(0):
         net = mx.gluon.nn.HybridSequential()
@@ -611,6 +614,7 @@ def test_symbol_block_symbolic_bn_fp16_cast():
         y1 = net(x)
         assert np.dtype(y1.dtype).name == 'float16'
 
+@mx.util.use_np
 def test_gemms_true_fp16():
     ctx = mx.gpu(0)
     input = mx.np.random.uniform(size=(1, 512), dtype='float16', ctx=ctx)
@@ -632,6 +636,7 @@ def test_gemms_true_fp16():
     assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
                         atol=atol, rtol=rtol)
 
+@mx.util.use_np
 def test_cudnn_dropout_reproducibility():
     d = nn.Dropout(0.5)
     d.initialize()
