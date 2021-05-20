@@ -27,6 +27,7 @@ from mxnet.base import _as_list
 from mxnet.attribute import AttrScope
 
 
+@mx.util.use_np
 def test_while_loop_simple_forward():
 
     class _TestBlock(gluon.HybridBlock):
@@ -37,8 +38,8 @@ def test_while_loop_simple_forward():
             self.func = func
             self.max_iterations = max_iterations
 
-        def hybrid_forward(self, F, *loop_vars):
-            return F.contrib.while_loop(
+        def forward(self, *loop_vars):
+            return mx.npx.while_loop(
                 cond=self.cond,
                 func=self.func,
                 loop_vars=loop_vars,
@@ -55,11 +56,11 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         _, result = model(
-            mx.nd.array([1], dtype="int64"), # i
-            mx.nd.array([0], dtype="int64"), # s
+            mx.np.array([1], dtype="int64"), # i
+            mx.np.array([0], dtype="int64"), # s
         )
-        assert result[0].asscalar() == 6
-        assert result[1].asscalar() == 15
+        assert result[0].item() == 6
+        assert result[1].item() == 15
         # Case 1.2: result should be sum([1, 2, 3 ... 1000])
         model = _TestBlock(
             cond=lambda i, s, true: true,
@@ -69,13 +70,13 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         _, result = model(
-            mx.nd.array([1], dtype="int64"), # i
-            mx.nd.array([0], dtype="int64"), # s
-            mx.nd.array([1], dtype="int64"), # true
+            mx.np.array([1], dtype="int64"), # i
+            mx.np.array([0], dtype="int64"), # s
+            mx.np.array([1], dtype="int64"), # true
         )
-        assert result[0].asscalar() == 1001
-        assert result[1].asscalar() == 500500
-        assert result[2].asscalar() == 1
+        assert result[0].item() == 1001
+        assert result[1].item() == 500500
+        assert result[2].item() == 1
         # Case 1.3: result should be sum([])
         model = _TestBlock(
             cond=lambda i, s, false: false,
@@ -85,13 +86,13 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         _, result = model(
-            mx.nd.array([1], dtype="int64"), # i
-            mx.nd.array([0], dtype="int64"), # s
-            mx.nd.array([0], dtype="int64"), # false
+            mx.np.array([1], dtype="int64"), # i
+            mx.np.array([0], dtype="int64"), # s
+            mx.np.array([0], dtype="int64"), # false
         )
-        assert result[0].asscalar() == 1
-        assert result[1].asscalar() == 0
-        assert result[2].asscalar() == 0
+        assert result[0].item() == 1
+        assert result[1].item() == 0
+        assert result[2].item() == 0
         # Case 2.1: result should be sum([1, 2, 3 ... 100])
         model = _TestBlock(
             cond=lambda i, s: i <= 100,
@@ -101,12 +102,12 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         outputs, (result_i, result_s) = model(
-            mx.nd.array([1], dtype="int64"), # i
-            mx.nd.array([0], dtype="int64"), # s
+            mx.np.array([1], dtype="int64"), # i
+            mx.np.array([0], dtype="int64"), # s
         )
         assert all(outputs.asnumpy()[ : 100] == np.arange(1, 101).reshape(100, 1))
-        assert result_i.asscalar() == 101
-        assert result_s.asscalar() == 5050
+        assert result_i.item() == 101
+        assert result_s.item() == 5050
         # Case 2.2: result should be sum([1, 2, 3 ... 1000])
         model = _TestBlock(
             cond=lambda i, s, true: true,
@@ -116,13 +117,13 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         outputs, (result_i, result_s, _) = model(
-            mx.nd.array([1], dtype="int64"), # i
-            mx.nd.array([0], dtype="int64"), # s
-            mx.nd.array([1], dtype="int64"), # true
+            mx.np.array([1], dtype="int64"), # i
+            mx.np.array([0], dtype="int64"), # s
+            mx.np.array([1], dtype="int64"), # true
         )
         assert all(outputs.asnumpy() == np.arange(1, 1001).reshape(1000, 1))
-        assert result_i.asscalar() == 1001
-        assert result_s.asscalar() == 500500
+        assert result_i.item() == 1001
+        assert result_s.item() == 500500
         # Case 2.3: a corner case, in which loop body is never executed
         model = _TestBlock(
             cond=lambda i, s, false: false,
@@ -132,12 +133,12 @@ def test_while_loop_simple_forward():
         if hybridize:
             model.hybridize()
         _, (result_i, result_s, _) = model(
-            mx.nd.array([1], dtype="int64"), # i
-            mx.nd.array([0], dtype="int64"), # s
-            mx.nd.array([0], dtype="int64"), # false
+            mx.np.array([1], dtype="int64"), # i
+            mx.np.array([0], dtype="int64"), # s
+            mx.np.array([0], dtype="int64"), # false
         )
-        assert result_i.asscalar() == 1
-        assert result_s.asscalar() == 0
+        assert result_i.item() == 1
+        assert result_s.item() == 0
 
 
 def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, max_iterations, is_for, n_steps):
@@ -1432,18 +1433,18 @@ def test_cut_subgraph_foreach():
         def __init__(self):
             super(TestLayer, self).__init__()
 
-        def hybrid_forward(self, F, inputs, states):
+        def forward(self, inputs, states):
             def step1(data, states):
                 return data + 1, states
-            out1, states1 = F.contrib.foreach(step1, inputs, states)
-            out2, states2 = F.contrib.foreach(step1, out1, states)
+            out1, states1 = mx.npx.foreach(step1, inputs, states)
+            out2, states2 = mx.npx.foreach(step1, out1, states)
             def step2(data, states):
                 return data + states[0], states1
-            out, states = F.contrib.foreach(step2, out2, states)
+            out, states = mx.npx.foreach(step2, out2, states)
             return out
 
-    data = mx.nd.normal(loc=0, scale=1, shape=(5, 10))
-    states = mx.nd.normal(loc=0, scale=1, shape=(10))
+    data = mx.np.random.normal(loc=0, scale=1, size=(5, 10))
+    states = mx.np.random.normal(loc=0, scale=1, size=(10))
     layer = TestLayer()
     layer.initialize(ctx=default_context())
     res1 = layer(data, [states])
@@ -1461,73 +1462,74 @@ def test_cut_subgraph_foreach():
     assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
+@mx.util.use_np
 def test_uniq_name():
     class ForeachLayer1(gluon.HybridBlock):
         def __init__(self):
             super(ForeachLayer1, self).__init__()
 
-        def hybrid_forward(self, F, inputs, states):
+        def forward(self, inputs, states):
             def step1(data, states):
                 return data + 1, states
-            out1, states1 = F.contrib.foreach(step1, inputs, states)
+            out1, states1 = mx.npx.foreach(step1, inputs, states)
             # The input variables have the same symbol name.
-            out, states = F.contrib.foreach(step1, out1, states1)
+            out, states = mx.npx.foreach(step1, out1, states1)
             return out
 
     class ForeachLayer2(gluon.HybridBlock):
         def __init__(self):
             super(ForeachLayer2, self).__init__()
 
-        def hybrid_forward(self, F, inputs, states):
+        def forward(self, inputs, states):
             def step1(data, states):
                 return data + 1, states
-            out1, states1 = F.contrib.foreach(step1, inputs, states)
+            out1, states1 = mx.npx.foreach(step1, inputs, states)
             def step2(data, states):
-                return data, [states[0] + states1[0] + F.squeeze(out1.slice_axis(axis=0, begin=0, end=1))]
+                return data, [states[0] + states1[0] + mx.np.squeeze(mx.npx.slice(out1, begin=0, end=1))]
             # The input variables have the same symbol names.
             # The free variables have the same symbol names as the input variables.
-            out, states = F.contrib.foreach(step2, out1, states1)
+            out, states = mx.npx.foreach(step2, out1, states1)
             return out
 
     class WhileLayer1(gluon.HybridBlock):
         def __init__(self):
             super(WhileLayer1, self).__init__()
 
-        def hybrid_forward(self, F, inputs, states):
+        def forward(self, inputs, states):
             def cond(state1, state2):
-                s = F.squeeze(state1.slice_axis(axis=0, begin=0, end=1))
+                s = mx.np.squeeze(mx.npx.slice(state1, begin=0, end=1))
                 return s == s
             def step(state1, state2):
                 return state1 + 1, [state1, state2]
             states = [states[0], states[0] + 1]
-            out1, states1 = F.contrib.while_loop(cond, step, states, max_iterations=5)
+            out1, states1 = mx.npx.while_loop(cond, step, states, max_iterations=5)
             # The input variables have the same symbol name.
-            out, states = F.contrib.while_loop(cond, step, states1, max_iterations=5)
+            out, states = mx.npx.while_loop(cond, step, states1, max_iterations=5)
             return out
 
     class WhileLayer2(gluon.HybridBlock):
         def __init__(self):
             super(WhileLayer2, self).__init__()
 
-        def hybrid_forward(self, F, inputs, states):
+        def forward(self, inputs, states):
             def cond(state1, state2):
-                s = F.squeeze(state1.slice_axis(axis=0, begin=0, end=1))
+                s = mx.np.squeeze(mx.npx.slice(state1, begin=0, end=1))
                 return s == s
             def step1(state1, state2):
                 return state1 + 1, [state1, state2]
             states = [states[0], states[0] + 1]
-            out1, states1 = F.contrib.while_loop(cond, step1, states, max_iterations=5)
+            out1, states1 = mx.npx.while_loop(cond, step1, states, max_iterations=5)
             def step2(state1, state2):
                 return state1 + 1, [state1 + states1[0], state2 + states1[1]]
             # The input variables have the same symbol name.
-            out, states = F.contrib.while_loop(cond, step2, states1, max_iterations=5)
+            out, states = mx.npx.while_loop(cond, step2, states1, max_iterations=5)
             return out
 
     TestLayers = [ForeachLayer1, ForeachLayer2,
             WhileLayer1, WhileLayer2]
 
-    data = mx.nd.normal(loc=0, scale=1, shape=(2, 5))
-    states = mx.nd.normal(loc=0, scale=1, shape=(5))
+    data = mx.np.random.normal(loc=0, scale=1, size=(2, 5))
+    states = mx.np.random.normal(loc=0, scale=1, size=(5))
     for TestLayer in TestLayers:
         layer = TestLayer()
         layer.initialize(ctx=default_context())
@@ -1546,25 +1548,26 @@ def test_uniq_name():
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
 
 
+@mx.util.use_np
 def test_cut_subgraph_while_loop():
     class TestLayer(gluon.HybridBlock):
         def __init__(self):
             super(TestLayer, self).__init__()
-        def hybrid_forward(self, F, data):
-            out1, data1 = F.contrib.while_loop(
+        def forward(self, data):
+            out1, data1 = mx.npx.while_loop(
                 cond=lambda i: i <= 5,
                 func=lambda i: (None, (i + 1, )),
                 loop_vars=(data, ),
                 max_iterations=10,
             )
-            out2, data2 = F.contrib.while_loop(
+            out2, data2 = mx.npx.while_loop(
                 cond=lambda i: data1[0],
                 func=lambda i: (None, (i + 1, )),
                 loop_vars=data1[0],
                 max_iterations=10,
             )
             return data2[0]
-    data = mx.nd.normal(loc=0, scale=1, shape=(1, ))
+    data = mx.np.random.normal(loc=0, scale=1, size=(1, ))
     layer = TestLayer()
     layer.initialize(ctx=default_context())
     res1 = layer(data)
@@ -1579,23 +1582,24 @@ def test_cut_subgraph_while_loop():
     assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
+@mx.util.use_np
 def test_cut_subgraph_cond():
     class TestLayer(gluon.HybridBlock):
         def __init__(self):
             super(TestLayer, self).__init__()
-        def hybrid_forward(self, F, data):
-            data1 = F.contrib.cond(
+        def forward(self, data):
+            data1 = mx.npx.cond(
                 data > 0.5,
                 then_func=lambda: data * 2,
                 else_func=lambda: data * 3,
             )
-            data2 = F.contrib.cond(
+            data2 = mx.npx.cond(
                 data1 > 0.5,
                 then_func=lambda: data1 * 2,
                 else_func=lambda: data1 * 3,
             )
             return data2
-    data = mx.nd.normal(loc=0, scale=1, shape=(1, ))
+    data = mx.np.random.normal(loc=0, scale=1, size=(1, ))
     layer = TestLayer()
     layer.initialize(ctx=default_context())
     res1 = layer(data)
@@ -1610,52 +1614,14 @@ def test_cut_subgraph_cond():
     assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-def test_scope():
-    class TestBlock1(gluon.HybridBlock):
-        def __init__(self):
-            super(TestBlock1, self).__init__()
-        def hybrid_forward(self, F, data):
-            (new_data, ) = F.contrib.cond(
-                data > 0.5,
-                then_func=lambda: data * 2,
-                else_func=lambda: data * 3,
-                name="my_cond",
-            )
-            return new_data
-    class TestBlock2(gluon.HybridBlock):
-        def __init__(self):
-            super(TestBlock2, self).__init__()
-        def hybrid_forward(self, F, data):
-            (new_data, ) = F.contrib.cond(
-                data > 0.5,
-                then_func=lambda: data * 2,
-                else_func=lambda: data * 3,
-                name="my_cond",
-            )
-            return new_data
-    AttrScope._subgraph_names = defaultdict(int)
-    data = mx.nd.normal(loc=0, scale=1, shape=(1, ))
-    block1 = TestBlock1()
-    block1.initialize(ctx=default_context())
-    block1.hybridize()
-    _ = block1(data)
-    block2 = TestBlock2()
-    block2.initialize(ctx=default_context())
-    block2.hybridize()
-    _ = block2(data)
-    assert len(AttrScope._subgraph_names) == 3
-    assert AttrScope._subgraph_names['my_cond_else'] == 2
-    assert AttrScope._subgraph_names['my_cond_pred'] == 2
-    assert AttrScope._subgraph_names['my_cond_then'] == 2
-
-
+@mx.util.use_np
 def test_output_format_foreach():
     class TestLayer1(gluon.HybridBlock):
         def __init__(self, step):
             super(TestLayer1, self).__init__()
             self.step = step
-        def hybrid_forward(self, F, ins, states):
-            out, states = F.contrib.foreach(self.step, ins, states)
+        def forward(self, ins, states):
+            out, states = mx.npx.foreach(self.step, ins, states)
             return out, states
 
     def step1(data, state):
@@ -1674,8 +1640,8 @@ def test_output_format_foreach():
             return [data, state], state
 
     steps = [step1, step2, step3, step4]
-    data = mx.nd.normal(loc=0, scale=1, shape=(10, 2))
-    state = mx.nd.normal(loc=0, scale=1, shape=(2))
+    data = mx.np.random.normal(loc=0, scale=1, size=(10, 2))
+    state = mx.np.random.normal(loc=0, scale=1, size=(2))
     for step in steps:
         layer1 = TestLayer1(step)
         layer1.initialize(ctx=default_context())
@@ -1748,6 +1714,7 @@ def test_output_format_foreach():
                         rtol=0.001, atol=0.0001)
 
 
+@mx.util.use_np
 def test_output_format_while():
     class TestLayer1(gluon.HybridBlock):
         def __init__(self, step, use_list, nested_list=False):
@@ -1755,20 +1722,20 @@ def test_output_format_while():
             self.step = step
             self.use_list = use_list
             self.nested_list = nested_list
-        def hybrid_forward(self, F, states):
+        def forward(self, states):
             def cond(state1):
-                scalar = state1.slice_axis(axis=0, begin=0, end=1)
+                scalar = mx.npx.slice(state1, begin=0, end=1)
                 return scalar == scalar
             cond_func = cond
             if self.use_list:
                 states = [states]
             elif self.nested_list:
                 def cond2(state1, state2):
-                    scalar = state1.slice_axis(axis=0, begin=0, end=1)
+                    scalar = mx.npx.slice(state1, begin=0, end=1)
                     return scalar == scalar
                 cond_func = cond2
                 states = [states, [states + 1]]
-            out, states = F.contrib.while_loop(cond_func, self.step, states, max_iterations=5)
+            out, states = mx.npx.while_loop(cond_func, self.step, states, max_iterations=5)
             return out, states
 
     def step1(state):
@@ -1782,7 +1749,7 @@ def test_output_format_while():
         return [], state
 
     steps = [step1, step2, step3]
-    state = mx.nd.normal(loc=0, scale=1, shape=(2))
+    state = mx.np.random.normal(loc=0, scale=1, size=(2))
     for step in steps:
         layer1 = TestLayer1(step, False)
         layer1.initialize(ctx=default_context())
@@ -1859,17 +1826,18 @@ def test_output_format_while():
                                     rtol=0.001, atol=0.0001)
 
 
+@mx.util.use_np
 def test_output_format_cond():
     class TestLayer1(gluon.HybridBlock):
         def __init__(self, func):
             super(TestLayer1, self).__init__()
             self.func = func
-        def hybrid_forward(self, F, data):
+        def forward(self, data):
             def then_func():
                 return self.func(data)
             def else_func():
                 return self.func(data)
-            return F.contrib.cond(data.slice_axis(axis=0, begin=0, end=1),
+            return mx.npx.cond(mx.npx.slice(data, begin=0, end=1),
                     then_func, else_func)
 
     def func1(data):
@@ -1880,7 +1848,7 @@ def test_output_format_cond():
         return [data, data]
 
     funcs = [func1, func2, func3]
-    data = mx.nd.normal(loc=0, scale=1, shape=(2))
+    data = mx.np.random.normal(loc=0, scale=1, size=(2))
     for func in funcs:
         layer1 = TestLayer1(func)
         layer1.initialize(ctx=default_context())
@@ -1906,4 +1874,3 @@ def test_foreach_with_unkown_dim():
     outs, states = mx.sym.contrib.foreach(step, data, states)
     _, output_shape, _ = outs.infer_shape_partial()
     assert_allclose((0, 3, 32, 32), output_shape[0])
-
