@@ -85,8 +85,8 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
     input_shape : List of tuple
         This is the old name of in_shapes. We keep this parameter name for backward compatibility
     large_model : Boolean
-        Whether to export a model that is larger than 2 GB. If true will save param tensors in seperate files along with .onnx model file.
-        This feature is supported since onnx 1.8.0
+        Whether to export a model that is larger than 2 GB. If true will save param tensors in seperate 
+        files along with .onnx model file. This feature is supported since onnx 1.8.0
 
     Returns
     -------
