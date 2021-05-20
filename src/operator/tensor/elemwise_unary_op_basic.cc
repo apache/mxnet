@@ -203,6 +203,7 @@ MXNET_ADD_SPARSE_OP_ALIAS(log_sigmoid)
 
 .. math::
    y = log(1 / (1 + exp(-x)))
+
 The storage type of ``log_sigmoid`` output is always dense
 
 )code" ADD_FILELINE)
