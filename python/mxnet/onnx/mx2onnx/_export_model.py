@@ -21,7 +21,6 @@
 """Exports an MXNet model to the ONNX model format"""
 import logging
 import numpy as np
-import onnx
 
 from mxnet.base import string_types
 from mxnet import symbol
@@ -100,6 +99,7 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
     """
 
     try:
+        import onnx
         from onnx import helper, mapping, shape_inference
         from onnx.defs import onnx_opset_version
     except ImportError:
@@ -157,6 +157,7 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
     if large_model:
         from onnx.external_data_helper import convert_model_to_external_data
         convert_model_to_external_data(onnx_model, all_tensors_to_one_file=False, location=onnx_file_path+'.data')
+
     onnx.save_model(onnx_model, onnx_file_path)
     onnx.checker.check_model(onnx_file_path)
     return onnx_file_path
