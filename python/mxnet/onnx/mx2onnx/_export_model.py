@@ -85,8 +85,8 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
     input_shape : List of tuple
         This is the old name of in_shapes. We keep this parameter name for backward compatibility
     large_model : Boolean
-        Whether the model is larger than 2 GB. If true will save large param tensors in a seperate file with .data suffix. 
-        e.g. the output will be model.onnx and model.onnx.data
+        Whether to export a model that is larger than 2 GB. If true will save param tensors in seperate files along with .onnx model file.
+        This feature is supported since onnx 1.8.0
 
     Returns
     -------
@@ -154,10 +154,9 @@ def export_model(sym, params, in_shapes=None, in_types=np.float32,
         except: # pylint: disable=bare-except
             logging.info("Shape inference failed, original export is kept.")
 
-    large_model = True
     if large_model:
         from onnx.external_data_helper import convert_model_to_external_data
-        convert_model_to_external_data(onnx_model, all_tensors_to_one_file=True, location=onnx_file_path+'.data', size_threshold=1024)
+        convert_model_to_external_data(onnx_model, all_tensors_to_one_file=False, location=onnx_file_path+'.data')
     onnx.save_model(onnx_model, onnx_file_path)
     onnx.checker.check_model(onnx_file_path)
     return onnx_file_path
