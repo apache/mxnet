@@ -26,7 +26,7 @@ __all__ = ['RecurrentCell', 'HybridRecurrentCell',
            'ModifierCell', 'ZoneoutCell', 'ResidualCell',
            'BidirectionalCell', 'VariationalDropoutCell', 'LSTMPCell']
 
-from ... import ndarray, np, npx, context
+from ... import np, npx, context
 from ...util import use_np
 from ...base import string_types, numeric_types, _as_list
 from ..block import Block, HybridBlock

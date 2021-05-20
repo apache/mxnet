@@ -154,6 +154,7 @@ def foreach(body, data, init_states):
     return (outputs, states)
 
 
+#pylint: disable=W0621
 @set_module('mxnet.numpy_extension')
 def while_loop(cond, func, loop_vars, max_iterations=None):
     """Run a while loop with user-defined computation and loop condition.

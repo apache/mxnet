@@ -2075,7 +2075,7 @@ def test_slice_batchnorm():
             self.bn0 = nn.BatchNorm()
             self.slice = slice
 
-        def forward(self, F, x):
+        def forward(self, x):
             x_in = self.conv0(x)
             x_slice = mx.npx.slice(x_in, begin=tuple(self.slice[0]),
                               end=tuple(self.slice[1]))
@@ -2240,7 +2240,7 @@ def test_slice_pooling2d():
                 self.pool0 = pooling_layer
 
             def forward(self, x):
-                x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
+                x_slice = mx.npx.slice(x, begin=self.slice[0], end=self.slice[1])
                 out = self.pool0(x_slice)
                 return out
 
@@ -2298,7 +2298,7 @@ def test_slice_pooling2d_slice_pooling2d():
     pooling_layers = [max_pooling, avg_pooling, global_maxpooling, global_avgpooling]
     class Net(gluon.HybridBlock):
         def __init__(self,
-                     slice,
+                     slice,  
                      pooling_layer1,
                      pooling_layer2,
                      **kwargs):
@@ -2308,9 +2308,9 @@ def test_slice_pooling2d_slice_pooling2d():
             self.pool1 = pooling_layer2
 
         def forward(self, x):
-            x_slice = x.slice(begin=self.slice[0][0], end=self.slice[0][1])
+            x_slice = mx.npx.slice(x, begin=self.slice[0][0], end=self.slice[0][1])
             y = self.pool0(x_slice)
-            y_slice = y.slice(begin=self.slice[1][0], end=self.slice[1][1])
+            y_slice = mx.npx.slice(y, begin=self.slice[1][0], end=self.slice[1][1])
             out = self.pool1(y_slice)
             return out
 
