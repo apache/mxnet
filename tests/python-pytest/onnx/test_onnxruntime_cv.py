@@ -61,6 +61,12 @@ class GluonModel():
                              dynamic_input_shapes=dynamic_input_shapes)
         return onnx_file
 
+    def export_onnx_large_model(self):
+        onnx_file = self.modelpath + ".onnx"
+        mx.onnx.export_model(self.modelpath + "-symbol.json", self.modelpath + "-0000.params",
+                             [self.input_shape], self.input_dtype, onnx_file, large_model=True)
+        return onnx_file
+
     def export_onnx_argaux(self):
         onnx_file = self.modelpath + ".onnx"
         sym_file = self.modelpath + "-symbol.json"
@@ -322,7 +328,11 @@ def test_obj_detection_model_inference_onnxruntime(tmp_path, model, obj_detectio
     try:
         tmp_path = str(tmp_path)
         M = GluonModel(model, (1,3,512,512), 'float32', tmp_path)
-        onnx_file = M.export_onnx()
+        if model in ['yolo3_darknet53_coco']:
+            # test for large_model feature
+            onnx_file = M.export_onnx_large_model()
+        else:
+            onnx_file = M.export_onnx()
         # create onnxruntime session using the generated onnx file
         ses_opt = onnxruntime.SessionOptions()
         ses_opt.log_severity_level = 3
