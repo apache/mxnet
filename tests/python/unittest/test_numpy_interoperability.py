@@ -3067,7 +3067,7 @@ def test_np_memory_array_function():
 
 @with_seed()
 @use_np
-@unittest.skipIf(is_aarch64_run(), "test fails on aarch64 - tracked in #ISSUE")
+@unittest.skipIf(is_aarch64_run(), "test fails on aarch64 - tracked in #20289")
 @with_array_function_protocol
 def test_np_array_function_protocol():
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)

@@ -1285,7 +1285,7 @@ def test_output():
 
 
 @with_seed()
-@unittest.skipIf(is_aarch64_run(), "test fails on aarch64 - tracked in #ISSUE")
+@unittest.skipIf(is_aarch64_run(), "test fails on aarch64 - tracked in #20289")
 def test_ndarray_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split', 'split_v2',
