@@ -16,6 +16,7 @@
 # under the License.
 
 jupyter
+Jinja2==2.11.3
 sphinx==2.4.0
 matplotlib
 notebook
