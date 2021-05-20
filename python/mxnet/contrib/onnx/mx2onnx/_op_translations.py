@@ -243,7 +243,6 @@ def convert_deconvolution(node, **kwargs):
     pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
     num_group = int(attrs.get("num_group", 1))
     dilations = list(parse_helper(attrs, "dilate", [1, 1]))
-    # adj_dims = list(parse_helper(attrs, "adj", [0, 0]))
     adj_dims = list(parse_helper(attrs, "adj", [0]*(2*len(kernel_dims))))  # modified for wrong "output_padding" converting while "adj" not setted in "deconvolution"
 
     pad_dims = pad_dims + pad_dims
