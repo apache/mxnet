@@ -47,7 +47,7 @@ namespace activation {
 enum ActivationOpInputs {kData};
 enum ActivationOpOutputs {kOut};
 enum ActivationOpResource {kTempSpace};
-enum ActivationOpType {kReLU, kSigmoid, kTanh, kSoftReLU, kSoftSign, kLogSigmoid};
+enum ActivationOpType {kReLU, kSigmoid, kLogSigmoid, kTanh, kSoftReLU, kSoftSign};
 
 // Get the number of inputs to the gradient depending on the activation type
 int GradNumInputs(int act_type);

@@ -225,7 +225,6 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
     DMLC_DECLARE_FIELD(act_type)
     .add_enum("relu", activation::kReLU)
     .add_enum("sigmoid", activation::kSigmoid)
-    .add_enum("log_sigmoid", activation::kLogSigmoid)
     .add_enum("tanh", activation::kTanh)
     .add_enum("softrelu", activation::kSoftReLU)
     .describe("Activation function to be applied.");

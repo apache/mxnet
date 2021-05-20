@@ -170,10 +170,10 @@ The following activation functions are supported:
 
 - `relu`: Rectified Linear Unit, :math:`y = max(x, 0)`
 - `sigmoid`: :math:`y = \frac{1}{1 + exp(-x)}`
+- `log_sigmoid`: :math:`y = log(\frac{1}{1 + exp(-x)})`
 - `tanh`: Hyperbolic tangent, :math:`y = \frac{exp(x) - exp(-x)}{exp(x) + exp(-x)}`
 - `softrelu`: Soft ReLU, or SoftPlus, :math:`y = log(1 + exp(x))`
 - `softsign`: :math:`y = \frac{x}{1 + abs(x)}`
-- `log_sigmoid`: :math:`y = log(\frac{1}{1 + exp(-x)})`
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ActivationParam>)

@@ -2260,6 +2260,14 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute log1p')
 
+    def log_sigmoid(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`log_sigmoid`.
+
+        The arguments are the same as for :py:func:`log_sigmoid`, with
+        this array as data.
+        """
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute log_sigmoid')
+
     def sqrt(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sqrt`.
 
