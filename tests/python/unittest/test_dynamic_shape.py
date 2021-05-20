@@ -17,6 +17,7 @@
 
 import numpy as np
 import mxnet as mx
+import mxnet.ndarray.numpy._internal as _npi
 from mxnet import gluon
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
@@ -24,6 +25,7 @@ from mxnet.base import _as_list
 from mxnet.attribute import AttrScope
 
 
+@mx.util.use_np
 def test_dynamic_shape():
 
     class _TestBlock(gluon.HybridBlock):
@@ -31,13 +33,13 @@ def test_dynamic_shape():
         def __init__(self):
             super(_TestBlock, self).__init__()
 
-        def hybrid_forward(self, F, data, index):
-            return F.contrib.boolean_mask(data, index)
+        def forward(self, data, index):
+            return _npi.boolean_mask(data, index)
 
     block = _TestBlock()
     block.hybridize()
-    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
-    index = mx.nd.array([0, 1, 1])
+    data = mx.np.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.np.array([0, 1, 1])
     data.attach_grad()
     with mx.autograd.record():
         result = block(data, index)
@@ -47,6 +49,7 @@ def test_dynamic_shape():
     assert_almost_equal(result.asnumpy(), result_nd)
     assert_almost_equal(data.grad.asnumpy(), data_grad_nd)
 
+@mx.util.use_np
 def test_dynamic_shape_with_reshape():
     # test dynamic shape op followed by reshape op
     class _TestBlock(gluon.HybridBlock):
@@ -54,13 +57,13 @@ def test_dynamic_shape_with_reshape():
         def __init__(self):
             super(_TestBlock, self).__init__()
 
-        def hybrid_forward(self, F, data, index):
-            return F.contrib.boolean_mask(data, index).reshape((-1, ))
+        def forward(self, data, index):
+            return _npi.boolean_mask(data, index).reshape((-1, ))
 
     block = _TestBlock()
     block.hybridize()
-    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
-    index = mx.nd.array([0, 1, 1])
+    data = mx.np.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.np.array([0, 1, 1])
     data.attach_grad()
     with mx.autograd.record():
         result = block(data, index)
@@ -70,6 +73,7 @@ def test_dynamic_shape_with_reshape():
     assert_almost_equal(result.asnumpy(), result_nd)
     assert_almost_equal(data.grad.asnumpy(), data_grad_nd)
 
+@mx.util.use_np
 def test_dynamic_shape_multiple_hybridize():
     # test multiple hybridize calls for the same block
     class _TestBlock(gluon.HybridBlock):
@@ -77,12 +81,12 @@ def test_dynamic_shape_multiple_hybridize():
         def __init__(self):
             super(_TestBlock, self).__init__()
 
-        def hybrid_forward(self, F, data, index):
-            return F.sum(F.contrib.boolean_mask(data, index)) - 5
+        def forward(self, data, index):
+            return mx.np.sum(_npi.boolean_mask(data, index)) - 5
 
     block = _TestBlock()
-    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
-    index = mx.nd.array([0, 1, 0])
+    data = mx.np.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.np.array([0, 1, 0])
     result_nd = np.array([10])
 
     block.hybridize()
@@ -97,18 +101,19 @@ def test_dynamic_shape_multiple_hybridize():
     result = block(data, index)
     assert_almost_equal(result.asnumpy(), result_nd)
 
+@mx.util.use_np
 def test_dynamic_shape_switch_hybridize():
     # test hybridize switch on and off for the same block 
     class _TestBlock(gluon.HybridBlock):
         def __init__(self):
             super(_TestBlock, self).__init__()
 
-        def hybrid_forward(self, F, data, index):
-            return F.sum(F.contrib.boolean_mask(data, index)) - 5
+        def forward(self, data, index):
+            return mx.np.sum(_npi.boolean_mask(data, index)) - 5
 
     block = _TestBlock()
-    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
-    index = mx.nd.array([0, 1, 0])
+    data = mx.np.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.np.array([0, 1, 0])
     result_nd = np.array([10])
 
     block.hybridize()
@@ -123,26 +128,27 @@ def test_dynamic_shape_switch_hybridize():
     result = block(data, index)
     assert_almost_equal(result.asnumpy(), result_nd)
 
+@mx.util.use_np
 def test_dynamic_shape_backward():
     # test dynamic shape ops with backward prop
     class _TestBlock(gluon.HybridBlock):
         def __init__(self):
             super(_TestBlock, self).__init__()
 
-        def hybrid_forward(self, F, data, index):
-            return F.contrib.boolean_mask(F.sum(F.transpose(data)), index)
+        def forward(self, data, index):
+            return mx.np.sum(_npi.boolean_mask(data, index)) - 5
 
     block = _TestBlock()
     for static_alloc in [True, False]:
-      block.hybridize(static_alloc=static_alloc)
-      data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
-      index = mx.nd.array([1])
-      data.attach_grad()
-      with mx.autograd.record():
-        result = block(data, index)
-      result.backward()
-      result_nd = np.array([45.])
-      data_grad_nd = np.array([[1., 1., 1.], [1., 1., 1.], [1., 1., 1.]])
-      assert_almost_equal(result.asnumpy(), result_nd)
-      assert_almost_equal(data.grad.asnumpy(), data_grad_nd)
+        block.hybridize(static_alloc=static_alloc)
+        data = mx.np.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+        index = mx.np.array([0, 1, 0])
+        data.attach_grad()
+        with mx.autograd.record():
+            result = block(data, index)
+        result.backward()
+        result_nd = np.array([10.])
+        data_grad_nd = np.array([[0., 0., 0.], [1., 1., 1.], [0., 0., 0.]])
+        assert_almost_equal(result.asnumpy(), result_nd)
+        assert_almost_equal(data.grad.asnumpy(), data_grad_nd)
 

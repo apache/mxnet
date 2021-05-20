@@ -99,6 +99,7 @@ def test_mkldnn_reshape():
         test_reshape_after_conv(test_case)
 
 
+@use_np
 def test_reshape_before_conv():
     class Net(gluon.HybridBlock):
         """
@@ -109,13 +110,14 @@ def test_reshape_before_conv():
             self.conv0 = nn.Conv2D(10, (3, 3))
             self.conv1 = nn.Conv2D(5, (3, 3))
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            x_reshape = x.reshape((0, 0, 20, 5))
+        def forward(self, x, *args, **kwargs):
+            x_reshape = x.reshape((2, 4, 20, 5))
             y = self.conv0(x_reshape)
-            y_reshape = y.reshape((0, 0, 9, 6))
+            y_reshape = y.reshape((2, 10, 9, 6))
             out = self.conv1(y_reshape)
             return out
-    x = mx.nd.random.uniform(shape=(2, 4, 10, 10))
+
+    x = mx.np.random.uniform(size=(2, 4, 10, 10))
     x.attach_grad()
     net = Net()
     net.initialize()
@@ -131,6 +133,7 @@ def test_reshape_before_conv():
     assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
+@use_np
 def test_slice_before_conv():
     class Net(gluon.HybridBlock):
         """
@@ -141,13 +144,14 @@ def test_slice_before_conv():
             self.conv0 = nn.Conv2D(4, (3, 3))
             self.conv1 = nn.Conv2D(4, (3, 3))
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            x_slice = x.slice(begin=(0, 0, 0, 0), end=(2, 4, 10, 10))
+        def forward(self, x, *args, **kwargs):
+            x_slice = mx.npx.slice(x, begin=(0, 0, 0, 0), end=(2, 4, 10, 10))
             y = self.conv0(x_slice)
-            y_slice = y.slice(begin=(1, 0, 2, 2), end=(2, 1, 7, 7))
+            y_slice = mx.npx.slice(y, begin=(1, 0, 2, 2), end=(2, 1, 7, 7))
             out = self.conv1(y_slice)
             return out
-    x = mx.nd.random.uniform(shape=(2, 10, 10, 10))
+
+    x = mx.np.random.uniform(size=(2, 10, 10, 10))
     x.attach_grad()
     net = Net()
     net.initialize()
@@ -163,6 +167,7 @@ def test_slice_before_conv():
     assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
+@use_np
 def test_slice_reshape_before_conv():
     class Net(gluon.HybridBlock):
         """
@@ -173,13 +178,14 @@ def test_slice_reshape_before_conv():
             self.conv0 = nn.Conv2D(4, (3, 3))
             self.conv1 = nn.Conv2D(4, (3, 3))
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            x_slice = x.slice(begin=(0, 0, 0, 0), end=(2, 4, 8, 9))
+        def forward(self, x, *args, **kwargs):
+            x_slice = mx.npx.slice(x, begin=(0, 0, 0, 0), end=(2, 4, 8, 9))
             y = self.conv0(x_slice)
-            y_reshape = y.reshape((0, 0, 14, 3))
+            y_reshape = y.reshape((2, 4, 14, 3))
             out = self.conv1(y_reshape)
             return out
-    x = mx.nd.random.uniform(shape=(2, 10, 10, 10))
+
+    x = mx.np.random.uniform(size=(2, 10, 10, 10))
     x.attach_grad()
     net = Net()
     net.initialize()
@@ -550,19 +556,23 @@ def test_conv_transpose():
 
 
 # This test case is contributed by @awsbillz in https://github.com/apache/incubator-mxnet/issues/14766
+@use_np
 def test_reshape_transpose_6d():
     class Reshape2D(gluon.HybridBlock):
         def __init__(self, factor):
             super(Reshape2D, self).__init__()
             self._factors = (int(factor),) * 2
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             f1, f2 = self._factors
+            N = 1
+            C = 2
+            H = W = 596
                                                           # (N, f1*f2*C, H, W)
-            x = F.reshape(x, (0, -4, -1, f1 * f2, 0, 0))  # (N, C, f1*f2, H, W)
-            x = F.reshape(x, (0, 0, -4, f1, f2, 0, 0))    # (N, C, f1, f2, H, W)
-            x = F.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
-            x = F.reshape(x, (0, 0, -3, -3))              # (N, C, H*f1, W*f2)
+            x = mx.np.reshape(x, (N, C, f1 * f2, H, W))  # (N, C, f1*f2, H, W)
+            x = mx.np.reshape(x, (N, C, f1, f2, H, W))    # (N, C, f1, f2, H, W)
+            x = mx.np.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
+            x = mx.np.reshape(x, (N, C, H*f1, W*f2))              # (N, C, H*f1, W*f2)
             return x
 
 
@@ -572,7 +582,7 @@ def test_reshape_transpose_6d():
             self.conv1 = nn.Conv2D(8, kernel_size=5)
             self.reshape2D = Reshape2D(2)
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             x = self.conv1(x)
             x = self.reshape2D(x)
             return x
@@ -580,7 +590,7 @@ def test_reshape_transpose_6d():
     net = Net()
     net.initialize(mx.init.Xavier(), ctx=mx.cpu())
     net.hybridize()
-    data = mx.nd.random_normal(shape=(1, 3, 600, 600))
+    data = mx.np.random.normal(size=(1, 3, 600, 600))
     output = net(data)
     a = output.asnumpy()
 

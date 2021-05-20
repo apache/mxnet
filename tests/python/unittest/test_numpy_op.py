@@ -70,8 +70,8 @@ def test_np_tensordot(a_shape, b_shape, axes, hybridize, dtype):
             super(TestTensordot, self).__init__()
             self._axes = axes
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.tensordot(a, b, self._axes)
+        def forward(self, a, b):
+            return np.tensordot(a, b, self._axes)
 
     def tensordot_backward(out_grad, a, b, axes=2):
         if (a.ndim < 1) or (b.ndim < 1):
@@ -263,8 +263,8 @@ def test_np_vdot(shape, dtype, hybridize):
         def __init__(self):
             super(TestVdot, self).__init__()
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.vdot(a, b)
+        def forward(self, a, b):
+            return np.vdot(a, b)
 
     def vdot_backward(a, b):
         return [b, a]
@@ -314,8 +314,8 @@ def test_np_inner(a_shape, b_shape, dtype, hybridize):
         def __init__(self):
             super(TestInner, self).__init__()
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.inner(a, b)
+        def forward(self, a, b):
+            return np.inner(a, b)
 
     def inner_backward(a, b):
         a_axes_summed = [a.ndim - 1]
@@ -406,8 +406,8 @@ def test_np_outer(a_shape, b_shape, dtype, hybridize):
         def __init__(self):
             super(TestOuter, self).__init__()
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.outer(a, b)
+        def forward(self, a, b):
+            return np.outer(a, b)
 
     test_outer = TestOuter()
     if hybridize:
@@ -461,8 +461,8 @@ def test_np_matmul(shape_a, shape_b, grad_req_a, grad_req_b,
         def __init__(self):
             super(TestMatmul, self).__init__()
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.matmul(a, b)
+        def forward(self, a, b):
+            return np.matmul(a, b)
 
     def matmul_backward(a, b):
         def ShapeInfer(mat_a, mat_b):
@@ -612,8 +612,8 @@ def test_np_kron(a_shape, b_shape, dtype, hybridize):
         def __init__(self):
             super(TestKron, self).__init__()
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.kron(a, b)
+        def forward(self, a, b):
+            return np.kron(a, b)
 
     test_kron = TestKron()
     if hybridize:
@@ -671,8 +671,8 @@ def test_np_sum(shape, axis, keepdims, itype, acc_type, dtype, hybridize):
             self._dtype = dtype
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+        def forward(self, a, *args, **kwargs):
+            return np.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
 
     class TestSumConv(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
@@ -681,7 +681,7 @@ def test_np_sum(shape, axis, keepdims, itype, acc_type, dtype, hybridize):
             self._dtype = dtype
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
+        def forward(self, a, *args, **kwargs):
             return a.sum(axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
 
     def is_int(dtype):
@@ -764,8 +764,8 @@ def test_np_bool_agg(bool_agg, shape, axis, keepdim, dtype, hybridize):
             self._axis = axis
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a):
-            return getattr(F.np, bool_agg)(a, axis=self._axis, keepdims=self._keepdims)
+        def forward(self, a):
+            return getattr(np, bool_agg)(a, axis=self._axis, keepdims=self._keepdims)
 
     ndim = len(shape)
     samples = random.randint(0, ndim)
@@ -797,7 +797,7 @@ def test_np_max_min(func, in_data_dim, itype, keepdims, hybridize):
             self._axis = axis
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
+        def forward(self, a, *args, **kwargs):
             return getattr(a, func)(axis=self._axis, keepdims=self._keepdims)
 
     def is_int(dtype):
@@ -901,8 +901,8 @@ def test_np_average(a_shape, w_shape, axes, is_weighted, req_a,
             self._axis = axis
             self._returned = returned
 
-        def hybrid_forward(self, F, a, weights):
-            return F.np.average(a, weights=weights, axis=self._axis, returned=self._returned)
+        def forward(self, a, weights):
+            return np.average(a, weights=weights, axis=self._axis, returned=self._returned)
 
     def avg_backward(a, w, avg, axes, init_a_grad=None, init_w_grad=None):
         # avg = sum(a * w) / sum(w)
@@ -997,7 +997,7 @@ def test_np_mean():
             self._dtype = dtype
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
+        def forward(self, a, *args, **kwargs):
             return a.mean(axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
 
     def is_int(dtype):
@@ -1093,7 +1093,7 @@ def test_np_moment():
             self._keepdims = keepdims
             self._ddof = ddof
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
+        def forward(self, a, *args, **kwargs):
             return getattr(a, self._moment_name)(axis=self._axis, dtype=self._dtype,
                                                  keepdims=self._keepdims, ddof=self._ddof)
 
@@ -1209,11 +1209,11 @@ def test_np_linspace_gluon(config, dtype, endpoint, hybridize):
             self._retstep = retstep
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             if self._retstep:
                 raise ValueError("linspace didn't support retstep = True inside HybridBlock")
             else:
-                return x + F.np.linspace(self._start, self._stop, self._num, \
+                return x + np.linspace(self._start, self._stop, self._num, \
                 self._endpoint, self._retstep, self._dtype)
 
     x = np.zeros(shape=(), dtype=dtype)
@@ -1269,8 +1269,8 @@ def test_np_logspace(config, dtype, endpoint, hybridize, base):
             self._dtype = dtype
             self.axis = axis
 
-        def hybrid_forward(self, F, x):
-            return x + F.np.logspace(self._start, self._stop, self._num, self._endpoint, self._base, self._dtype, self.axis)
+        def forward(self, x):
+            return x + np.logspace(self._start, self._stop, self._num, self._endpoint, self._base, self._dtype, self.axis)
 
     x = np.zeros(shape=(), dtype=dtype)
     net = TestLogspace(*config, endpoint=endpoint, base=base, dtype=dtype)
@@ -1315,8 +1315,8 @@ def test_npx_slice(start, end, step, hybridize):
             self._end = end
             self._step = step
 
-        def hybrid_forward(self, F, a):
-            return F.npx.slice(a, begin=self._begin, end=self._end, step=self._step)
+        def forward(self, a):
+            return npx.slice(a, begin=self._begin, end=self._end, step=self._step)
 
     shape = (8, 16, 9, 9)
     np_array = _np.arange(_np.prod(shape), dtype='int32').reshape(shape)
@@ -1349,8 +1349,8 @@ def test_npx_index_add():
         def __init__(self):
             super(TestIndexAdd, self).__init__()
 
-        def hybrid_forward(self, F, a, ind, val):
-            return F.npx.index_add(a, ind, val)
+        def forward(self, a, ind, val):
+            return npx.index_add(a, ind, val)
 
     def index_add_forward(a, ind, val, ind_ndim, ind_num):
         if val.dtype != a.dtype:
@@ -1502,8 +1502,8 @@ def test_npx_index_update():
         def __init__(self):
             super(TestIndexUpdate, self).__init__()
 
-        def hybrid_forward(self, F, a, ind, val):
-            return F.npx.index_update(a, ind, val)
+        def forward(self, a, ind, val):
+            return npx.index_update(a, ind, val)
 
     def check_index_update_forward(mx_ret, a, ind, val, ind_ndim, ind_num, eps):
         if val.dtype != a.dtype:
@@ -1670,8 +1670,8 @@ def test_npx_batch_dot():
             self._transpose_a = transpose_a
             self._transpose_b = transpose_b
 
-        def hybrid_forward(self, F, lhs, rhs):
-            return F.npx.batch_dot(lhs, rhs,
+        def forward(self, lhs, rhs):
+            return npx.batch_dot(lhs, rhs,
                                    transpose_a=self._transpose_a,
                                    transpose_b=self._transpose_b)
 
@@ -1792,9 +1792,9 @@ def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
             self.fix_gamma = fix_gamma
             self.momentum = momentum
             self.kwargs = kwargs
-        def hybrid_forward(self, F, data, bn_gamma, bn_beta,
+        def forward(self, data, bn_gamma, bn_beta,
                            bn_running_mean, bn_running_var):
-            op = F.npx.batch_norm
+            op = npx.batch_norm
             output = op(data, bn_gamma, bn_beta,
                         bn_running_mean, bn_running_var,
                         momentum=self.momentum, eps=self.eps,
@@ -1950,16 +1950,17 @@ def test_npx_softmax():
             super(TestSoftmax, self).__init__()
             self._axis = axis
 
-        def hybrid_forward(self, F, a):
-            return F.npx.softmax(a, axis=axis)
+        def forward(self, a):
+            return npx.softmax(a, axis=axis)
 
     class TestLogSoftmax(HybridBlock):
         def __init__(self, axis):
             super(TestLogSoftmax, self).__init__()
             self._axis = axis
 
-        def hybrid_forward(self, F, a):
-            return F.npx.log_softmax(a, axis=axis)
+        def forward(self, a):
+            return npx.log_softmax(a, axis=axis)
+
 
     #(operator, function) tuples
     tested_ops = [(TestSoftmax, np_softmax),
@@ -2013,16 +2014,16 @@ def test_npx_masked_softmax(hybridize, shape):
             super(TestMaskedSoftmax, self).__init__()
             self._axis = axis
 
-        def hybrid_forward(self, F, a, mask):
-            return F.npx.masked_softmax(a, mask, axis=self._axis)
+        def forward(self, a, mask):
+            return npx.masked_softmax(a, mask, axis=self._axis)
 
     class TestMaskedLogSoftmax(HybridBlock):
         def __init__(self, axis):
             super(TestMaskedLogSoftmax, self).__init__()
             self._axis = axis
 
-        def hybrid_forward(self, F, a, mask):
-            return F.npx.masked_log_softmax(a, mask, axis=self._axis)
+        def forward(self, a, mask):
+            return npx.masked_log_softmax(a, mask, axis=self._axis)
 
     #(operator, function) tuples
     tested_ops = [(TestMaskedSoftmax, np_masked_softmax),
@@ -2056,16 +2057,16 @@ def test_npi_boolean_assign():
             self._val = val
             self._start_axis = start_axis
 
-        def hybrid_forward(self, F, a, mask):
-            return F.np._internal.boolean_mask_assign_scalar(a, mask, self._val, start_axis=self._start_axis, out=a)
+        def forward(self, a, mask):
+            return np._internal.boolean_mask_assign_scalar(a, mask, self._val, start_axis=self._start_axis, out=a)
 
     class TestBooleanAssignTensor(HybridBlock):
         def __init__(self, start_axis):
             super(TestBooleanAssignTensor, self).__init__()
             self._start_axis = start_axis
 
-        def hybrid_forward(self, F, a, mask, value):
-            return F.np._internal.boolean_mask_assign_tensor(a, mask, value, start_axis=self._start_axis, out=a)
+        def forward(self, a, mask, value):
+            return np._internal.boolean_mask_assign_tensor(a, mask, value, start_axis=self._start_axis, out=a)
 
     configs = [
         ((3, 4), (3, 4), 0),
@@ -2142,8 +2143,8 @@ def test_np_reshape():
             super(TestReshape, self).__init__()
             self._newshape = newshape
 
-        def hybrid_forward(self, F, a):
-            return F.np.reshape(a, self._newshape)
+        def forward(self, a):
+            return np.reshape(a, self._newshape)
 
     shape_pairs = [((2, 6), (6, 2)), ((2, 6), (3, 4)), ((1, 0), (0,)), ((0, 0), (0,)), ((), (1, 1, 1))]
     for hybridize in [True, False]:
@@ -2175,8 +2176,8 @@ def test_np_argsort():
             super(TestArgsort, self).__init__()
             self._axis = axis
 
-        def hybrid_forward(self, F, x):
-            return F.np.argsort(x, axis=self._axis)
+        def forward(self, x):
+            return np.argsort(x, axis=self._axis)
 
     shapes = [
         (),
@@ -2232,8 +2233,8 @@ def test_np_sort(kind, shape, dtype, hybridize):
             self._axis = axis
             self._kind = kind
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return F.np.sort(x, self._axis, self._kind)
+        def forward(self, x, *args, **kwargs):
+            return np.sort(x, self._axis, self._kind)
 
     a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
     axis_list = list(range(len(shape)))
@@ -2269,8 +2270,8 @@ def test_np_squeeze():
             super(TestSqueeze, self).__init__()
             self._axis = axis
 
-        def hybrid_forward(self, F, x):
-            return F.np.squeeze(x, self._axis)
+        def forward(self, x):
+            return np.squeeze(x, self._axis)
 
     for shape, axis in config:
         data_np = _np.random.uniform(size=shape)
@@ -2303,8 +2304,8 @@ def test_np_tri():
             self._k = k
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x):
-            return x + F.np.tri(self._N, self._M, self._k, self._dtype)
+        def forward(self, x):
+            return x + np.tri(self._N, self._M, self._k, self._dtype)
 
     dtypes = ['float16', 'float32', 'float64', 'int32', 'int64', 'int8', 'uint8', None]
     hybrids = [False, True]
@@ -2335,8 +2336,8 @@ def test_np_prod():
             self._dtype = dtype
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.prod(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+        def forward(self, a, *args, **kwargs):
+            return np.prod(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
 
     in_data_dim = random.choice([3, 4])
     shape = rand_shape_nd(in_data_dim, dim=3)
@@ -2380,7 +2381,7 @@ def test_np_prod():
 @use_np
 def test_np_flatten():
     class TestFlatten(HybridBlock):
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             return x.flatten()
 
     shapes = [(), (2, 0, 1), (3, 4, 5), 6, (0,), (0, 0, 0)]
@@ -2417,8 +2418,8 @@ def test_np_broadcast_to(src_shape, dst_shape, hybridize):
             super(TestBroadcastTo, self).__init__()
             self._dst_shape = dst_shape
 
-        def hybrid_forward(self, F, x):
-            return F.np.broadcast_to(x, self._dst_shape)
+        def forward(self, x):
+            return np.broadcast_to(x, self._dst_shape)
 
     class TestScalarBroadcastTo(HybridBlock):
         def __init__(self, scalar, dst_shape):
@@ -2426,8 +2427,8 @@ def test_np_broadcast_to(src_shape, dst_shape, hybridize):
             self._scalar = scalar
             self._dst_shape = dst_shape
 
-        def hybrid_forward(self, F, x):
-            return F.np.broadcast_to(self._scalar, self._dst_shape)
+        def forward(self, x):
+            return np.broadcast_to(self._scalar, self._dst_shape)
 
     test_broadcast_to = TestBroadcastTo(dst_shape)
     if hybridize:
@@ -2468,8 +2469,8 @@ def test_np_broadcast_to_npx(src_shape, npx_dst_shape, np_dst_shape, hybridize):
             super(TestBroadcastTo, self).__init__()
             self._dst_shape = dst_shape
 
-        def hybrid_forward(self, F, x):
-            return F.np.broadcast_to(x, self._dst_shape)
+        def forward(self, x):
+            return np.broadcast_to(x, self._dst_shape)
 
     class TestScalarBroadcastTo(HybridBlock):
         def __init__(self, scalar, dst_shape):
@@ -2477,8 +2478,8 @@ def test_np_broadcast_to_npx(src_shape, npx_dst_shape, np_dst_shape, hybridize):
             self._scalar = scalar
             self._dst_shape = dst_shape
 
-        def hybrid_forward(self, F, x):
-            return F.np.broadcast_to(self._scalar, self._dst_shape)
+        def forward(self, x):
+            return np.broadcast_to(self._scalar, self._dst_shape)
 
     test_broadcast_to = TestBroadcastTo(npx_dst_shape)
     if hybridize:
@@ -2530,8 +2531,8 @@ def test_np_transpose(data_shape, axes_workload, hybridize, dtype, grad_req):
             super(TestTranspose, self).__init__()
             self.axes = axes
 
-        def hybrid_forward(self, F, a):
-            return F.np.transpose(a, self.axes)
+        def forward(self, a):
+            return np.transpose(a, self.axes)
 
     for axes in axes_workload:
         test_trans = TestTranspose(axes)
@@ -2623,8 +2624,8 @@ def test_np_tile():
             super(TestTile, self).__init__()
             self._reps = reps
 
-        def hybrid_forward(self, F, x):
-            return F.np.tile(x, reps=self._reps)
+        def forward(self, x):
+            return np.tile(x, reps=self._reps)
 
     for shape, reps in config:
         data_np = _np.random.randint(low=0, high=1000, size=shape)
@@ -2672,8 +2673,8 @@ def test_np_tril():
             super(TestTril, self).__init__()
             self._k = k
 
-        def hybrid_forward(self, F, x):
-            return F.np.tril(x, k=self._k)
+        def forward(self, x):
+            return np.tril(x, k=self._k)
 
     for prefix in [1, -1]:
         for shape, k in config:
@@ -2732,8 +2733,8 @@ def test_np_triu():
             super(TestTriu, self).__init__()
             self._k = k
 
-        def hybrid_forward(self, F, x):
-            return F.np.triu(x, k=self._k)
+        def forward(self, x):
+            return np.triu(x, k=self._k)
 
     for prefix in [1, -1]:
         for shape, k in config:
@@ -2769,8 +2770,8 @@ def test_np_unary_funcs():
                 super(TestUnary, self).__init__()
                 self._func = func
 
-            def hybrid_forward(self, F, a, *args, **kwargs):
-                return getattr(F.np, self._func)(a)
+            def forward(self, a, *args, **kwargs):
+                return getattr(np, self._func)(a)
 
         np_func = getattr(_np, func)
         np_test_data = _np.random.uniform(low, high, shape).astype(_np.float32)
@@ -2829,7 +2830,7 @@ def test_np_unary_funcs():
 @use_np
 def test_negation():
     class TestNegation(HybridBlock):
-        def hybrid_forward(self, F, a):
+        def forward(self, a):
             return -a
     mx_func = TestNegation()
     for dtype in [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64]:
@@ -2883,8 +2884,8 @@ def test_np_mixedType_unary_funcs(func, ref_grad, low, high, ndim, dtype):
             super(TestMixedUnary, self).__init__()
             self._func = func
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return getattr(F.np, self._func)(a)
+        def forward(self, a, *args, **kwargs):
+            return getattr(np, self._func)(a)
 
     import math
 
@@ -2949,8 +2950,8 @@ def test_np_bitwise_not(func, low, high, ndim):
                 super(TestUnary, self).__init__()
                 self._func = func
 
-            def hybrid_forward(self, F, a, *args, **kwargs):
-                return getattr(F.np, self._func)(a)
+            def forward(self, a, *args, **kwargs):
+                return getattr(np, self._func)(a)
 
         np_func = getattr(_np, func)
         mx_func = TestUnary(func)
@@ -2994,8 +2995,8 @@ def test_np_binary_funcs():
                 super(TestBinary, self).__init__()
                 self._func = func
 
-            def hybrid_forward(self, F, a, b, *args, **kwargs):
-                return getattr(F.np, self._func)(a, b)
+            def forward(self, a, b, *args, **kwargs):
+                return getattr(np, self._func)(a, b)
 
         np_func = getattr(_np, func)
         mx_func = TestBinary(func)
@@ -3137,8 +3138,8 @@ def test_np_mixed_precision_binary_funcs():
                 super(TestMixedBinary, self).__init__()
                 self._func = func
 
-            def hybrid_forward(self, F, a, b, *args, **kwargs):
-                return getattr(F.np, self._func)(a, b)
+            def forward(self, a, b, *args, **kwargs):
+                return getattr(np, self._func)(a, b)
 
         if (func in ['multiply', 'mod', 'equal', 'not_equal', 'greater',
                     'greater_equal', 'less', 'less_equal']) and \
@@ -3308,8 +3309,8 @@ def test_np_binary_scalar_funcs():
                 self._func = func
                 self._scalar = scalar
 
-            def hybrid_forward(self, F, a, *args, **kwargs):
-                return getattr(F.np, self._func)(a, self._scalar)
+            def forward(self, a, *args, **kwargs):
+                return getattr(np, self._func)(a, self._scalar)
 
         np_test_x1 = _np.random.uniform(low, high, lshape).astype(ltype)
         np_test_x2 = int(_np.random.uniform(low, high)) if scalar_is_int else _np.random.uniform(low, high)
@@ -3366,8 +3367,8 @@ def test_np_boolean_binary_funcs():
                 super(TestBooleanBinary, self).__init__()
                 self._func = func
 
-            def hybrid_forward(self, F, a, b, *args, **kwargs):
-                return getattr(F.np, self._func)(a, b)
+            def forward(self, a, b, *args, **kwargs):
+                return getattr(np, self._func)(a, b)
 
         np_x1 = mx_x1.asnumpy()
         np_x2 = mx_x2.asnumpy()
@@ -3422,8 +3423,8 @@ def test_npx_relu():
         def __init__(self):
             super(TestReLU, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.npx.relu(a)
+        def forward(self, a):
+            return npx.relu(a)
 
     shapes = [(), (2, 3, 4), (2, 0, 3), (1, 0, 0)]
     for hybridize in [True, False]:
@@ -3458,8 +3459,8 @@ def test_npx_sigmoid():
         def __init__(self):
             super(TestSigmoid, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.npx.sigmoid(a)
+        def forward(self, a):
+            return npx.sigmoid(a)
 
     shapes = [(), (2, 3, 4), (2, 0, 3), (1, 0, 0)]
     for hybridize in [True, False]:
@@ -3490,13 +3491,13 @@ def test_np_atleast_nd():
             super(TestAtleastND, self).__init__()
             self._n = n
 
-        def hybrid_forward(self, F, *arys):
+        def forward(self, *arys):
             if self._n == 1:
-                return F.np.atleast_1d(*arys)
+                return np.atleast_1d(*arys)
             elif self._n == 2:
-                return F.np.atleast_2d(*arys)
+                return np.atleast_2d(*arys)
             elif self._n == 3:
-                return F.np.atleast_3d(*arys)
+                return np.atleast_3d(*arys)
 
     tensor_shapes = [
         ((), (2,), (3, 4, 5)),
@@ -3579,8 +3580,8 @@ def test_np_arange():
             self._step = step
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x):
-            return x + F.np.arange(self._start, self._stop, self._step, dtype=self._dtype)
+        def forward(self, x):
+            return x + np.arange(self._start, self._stop, self._step, dtype=self._dtype)
 
     for dtype in dtypes:
         x = np.zeros(shape=(), dtype=dtype)
@@ -3606,8 +3607,8 @@ def test_np_insert():
             self._obj = obj
             self._axis = axis
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.insert(a, self._obj, b, axis=self._axis)
+        def forward(self, a, b):
+            return np.insert(a, self._obj, b, axis=self._axis)
 
     def GetSize(tp):
         res = 1
@@ -3718,8 +3719,8 @@ def test_np_split():
             self._axis = axis
             self._indices_or_sections = indices_or_sections
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.split(a, indices_or_sections=self._indices_or_sections,
+        def forward(self, a, *args, **kwargs):
+            return np.split(a, indices_or_sections=self._indices_or_sections,
                               axis=self._axis)
 
     def get_indices(axis_size):
@@ -3770,8 +3771,8 @@ def test_np_array_split():
             self._axis = axis
             self._indices_or_sections = indices_or_sections
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.array_split(a, indices_or_sections=self._indices_or_sections,
+        def forward(self, a, *args, **kwargs):
+            return np.array_split(a, indices_or_sections=self._indices_or_sections,
                               axis=self._axis)
 
     def get_indices(axis_size):
@@ -3825,8 +3826,8 @@ def test_np_vsplit():
             super(TestVsplit, self).__init__()
             self._indices_or_sections = indices_or_sections
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.vsplit(a, indices_or_sections=self._indices_or_sections)
+        def forward(self, a, *args, **kwargs):
+            return np.vsplit(a, indices_or_sections=self._indices_or_sections)
 
     def get_indices(axis_size):
         if axis_size is 0:
@@ -3879,8 +3880,8 @@ def test_np_concat():
             super(TestConcat, self).__init__()
             self._axis = axis
 
-        def hybrid_forward(self, F, a, *args):
-            return F.np.concatenate([a] + list(args), axis=self._axis)
+        def forward(self, a, *args):
+            return np.concatenate([a] + list(args), axis=self._axis)
 
     def get_new_shape(shape, axis):
         shape_lst = list(shape)
@@ -3947,8 +3948,8 @@ def test_np_append():
             super(TestAppend, self).__init__()
             self._axis = axis
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.append(a, b, axis=self._axis)
+        def forward(self, a, b):
+            return np.append(a, b, axis=self._axis)
 
     def get_new_shape(shape, axis):
         shape_lst = list(shape)
@@ -4002,8 +4003,8 @@ def test_np_stack():
             super(TestStack, self).__init__()
             self._axis = axis
 
-        def hybrid_forward(self, F, a, *args):
-            return F.np.stack([a] + list(args), axis=self._axis)
+        def forward(self, a, *args):
+            return np.stack([a] + list(args), axis=self._axis)
 
     a, b, c, d = mx.sym.Variable("a"), mx.sym.Variable("b"), mx.sym.Variable("c"), mx.sym.Variable("d")
     ret = mx.sym.np.stack([a.as_np_ndarray(), b.as_np_ndarray(), c.as_np_ndarray(), d.as_np_ndarray()])
@@ -4050,8 +4051,8 @@ def test_np_hstack():
         def __init__(self):
             super(TestHStack, self).__init__()
 
-        def hybrid_forward(self, F, a, *args):
-            return F.np.hstack([a] + list(args))
+        def forward(self, a, *args):
+            return np.hstack([a] + list(args))
 
     def get_new_shape(shape):
         if len(shape) == 0:
@@ -4113,8 +4114,8 @@ def test_np_dstack():
         def __init__(self):
             super(TestDStack, self).__init__()
 
-        def hybrid_forward(self, F, a, *args):
-            return F.np.dstack([a] + list(args))
+        def forward(self, a, *args):
+            return np.dstack([a] + list(args))
 
     def get_new_shape(shape):
         if len(shape) < 3:
@@ -4173,8 +4174,8 @@ def test_np_ravel():
         def __init__(self):
             super(TestRavel, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.np.ravel(a)
+        def forward(self, a):
+            return np.ravel(a)
 
     types = ['float64', 'float32', 'float16', 'int64', 'int32', 'int8']
     for oneType in types:
@@ -4259,8 +4260,8 @@ def test_np_swapaxes():
             self._axis1 = axis1
             self._axis2 = axis2
 
-        def hybrid_forward(self, F, x):
-            return F.np.swapaxes(x, self._axis1, self._axis2)
+        def forward(self, x):
+            return np.swapaxes(x, self._axis1, self._axis2)
 
     for shape, axis1, axis2 in config:
         data_np = _np.random.uniform(size=shape)
@@ -4286,8 +4287,8 @@ def test_np_delete():
             self._obj = obj
             self._axis = axis
 
-        def hybrid_forward(self, F, a):
-            return F.np.delete(a, self._obj, axis=self._axis)
+        def forward(self, a):
+            return np.delete(a, self._obj, axis=self._axis)
 
     def GetSize(shp):
         if len(shp) == 0:
@@ -4381,7 +4382,7 @@ def test_np_argmin_argmax():
             self._op_name = op_name
             self._axis = axis
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             return getattr(x, self._op_name)(self._axis)
 
     for op_name in ops:
@@ -4462,7 +4463,7 @@ def test_np_clip():
             self._a_min = a_min
             self._a_max = a_max
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             return x.clip(self._a_min, self._a_max)
 
     # Test scalar case
@@ -4551,15 +4552,15 @@ def test_npx_constraint_check():
         def __init__(self):
             super(TestConstraintViolatedCheck, self).__init__()
 
-        def hybrid_forward(self, F, boolean_tensor):
-            return F.npx.constraint_check(boolean_tensor, msg)
+        def forward(self, boolean_tensor):
+            return npx.constraint_check(boolean_tensor, msg)
 
     class TestConstraintNotViolatedCheck(HybridBlock):
         def __init__(self):
             super(TestConstraintNotViolatedCheck, self).__init__()
 
-        def hybrid_forward(self, F, input, boolean_tensor):
-            return input * F.npx.constraint_check(boolean_tensor, msg)
+        def forward(self, input, boolean_tensor):
+            return input * npx.constraint_check(boolean_tensor, msg)
 
     def raiseFunc(block):
         def executor(boolean_tensor):
@@ -4592,8 +4593,8 @@ def test_npx_special_unary_func():
                 super(TestUnary, self).__init__()
                 self._func = func
 
-            def hybrid_forward(self, F, a, *args, **kwargs):
-                return getattr(F.npx, self._func)(a)
+            def forward(self, a, *args, **kwargs):
+                return getattr(npx, self._func)(a)
 
         np_func = getattr(scipy_special, func)
         mx_func = TestUnary(func)
@@ -4645,8 +4646,8 @@ def test_np_random_grad():
             super(TestRandomGrad, self).__init__()
             self._shape = shape
             self._dist_name = op_name
-        def hybrid_forward(self, F, loc, scale):
-            op = getattr(F.np.random, self._dist_name, None)
+        def forward(self, loc, scale):
+            op = getattr(np.random, self._dist_name, None)
             assert op is not None
             return op(loc=loc, scale=scale, size=self._shape)
 
@@ -4695,8 +4696,8 @@ def test_np_lognormal_grad():
             super(TestLognormalGrad, self).__init__()
             self._shape = shape
 
-        def hybrid_forward(self, F, mean, sigma):
-            return F.np.random.lognormal(mean, sigma, self._shape)
+        def forward(self, mean, sigma):
+            return np.random.lognormal(mean, sigma, self._shape)
 
     param_shape = [
         [(3, 2), (3, 2)],
@@ -4753,8 +4754,8 @@ def test_npx_sample_n():
             self._shape = shape
             self._op_name = op_name
 
-        def hybrid_forward(self, F, param1, param2):
-            op = getattr(F.npx.random, self._op_name, None)
+        def forward(self, param1, param2):
+            op = getattr(npx.random, self._op_name, None)
             assert op is not None
             return op(param1, param2, batch_shape=self._shape)
 
@@ -4801,8 +4802,8 @@ def test_np_random():
             # In case parameters are not optional
             self._param = param
 
-        def hybrid_forward(self, F, x):
-            op = getattr(F.np.random, self._op_name, None)
+        def forward(self, x):
+            op = getattr(np.random, self._op_name, None)
             assert op is not None
             if self._param is not None:
                 return x + op(self._param, size=self._shape)
@@ -4861,8 +4862,8 @@ def test_gamma_grad(shape, a, b):
             self._size = size
             self._beta = beta
 
-        def hybrid_forward(self, F, a):
-            return F.np.random.gamma(a, self._beta, size=self._size)
+        def forward(self, a):
+            return np.random.gamma(a, self._beta, size=self._size)
 
     for hybridize in [True, False]:
         param = np.ones(shape) * a
@@ -4899,8 +4900,8 @@ def test_np_random_beta():
             self._dtype = dtype
             self._ctx = ctx
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.random.beta(a, b, size=self._size, dtype=self._dtype, ctx=self._ctx)
+        def forward(self, a, b):
+            return np.random.beta(a, b, size=self._size, dtype=self._dtype, ctx=self._ctx)
 
     def _test_random_beta_range(output):
         bigger_than_zero = _np.all(output > 0)
@@ -4941,8 +4942,8 @@ def test_np_random_f():
             super(TestRandomF, self).__init__()
             self._size = size
 
-        def hybrid_forward(self, F, dfnum, dfden):
-            return F.np.random.f(dfnum, dfden, size=self._size)
+        def forward(self, dfnum, dfden):
+            return np.random.f(dfnum, dfden, size=self._size)
 
     shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     hybridize_list = [False, True]
@@ -4974,8 +4975,8 @@ def test_np_random_chisquare():
             self._dtype = dtype
             self._ctx = ctx
 
-        def hybrid_forward(self, F, df):
-            return F.np.random.chisquare(df, size=self._size, dtype=self._dtype, ctx=self._ctx)
+        def forward(self, df):
+            return np.random.chisquare(df, size=self._size, dtype=self._dtype, ctx=self._ctx)
 
     shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
 
@@ -5006,8 +5007,8 @@ def test_np_random_rayleigh():
             super(TestRayleigh, self).__init__()
             self._shape = shape
 
-        def hybrid_forward(self, F, scale):
-            return F.np.random.rayleigh(scale, self._shape)
+        def forward(self, scale):
+            return np.random.rayleigh(scale, self._shape)
 
     shapes = [(2, 3), (4, 0, 5), (7, 8)]
     for hybridize in [False, True]:
@@ -5043,8 +5044,8 @@ def test_np_exponential():
             super(TestRandomExp, self).__init__()
             self._shape = shape
 
-        def hybrid_forward(self, F, scale):
-            return F.np.random.exponential(scale, self._shape)
+        def forward(self, scale):
+            return np.random.exponential(scale, self._shape)
 
     output_shapes = [
         (3, 2),
@@ -5102,8 +5103,8 @@ def test_np_random_a():
             self._shape = shape
             self._op_name = op_name
 
-        def hybrid_forward(self, F, a):
-            op = getattr(F.np.random, self._op_name, None)
+        def forward(self, a):
+            op = getattr(np.random, self._op_name, None)
             assert op is not None
             return op(a, size=self._shape)
 
@@ -5146,8 +5147,8 @@ def test_np_weibull_grad():
             super(TestRandomW, self).__init__()
             self._shape = shape
 
-        def hybrid_forward(self, F, a):
-            return F.np.random.weibull(a, self._shape)
+        def forward(self, a):
+            return np.random.weibull(a, self._shape)
 
     output_shapes = [
         (3, 2),
@@ -5178,8 +5179,8 @@ def test_np_pareto_grad():
             super(TestRandomP, self).__init__()
             self._shape = shape
 
-        def hybrid_forward(self, F, a):
-            return F.np.random.pareto(a, self._shape)
+        def forward(self, a):
+            return np.random.pareto(a, self._shape)
 
     output_shapes = [
         (3, 2),
@@ -5233,8 +5234,8 @@ def test_np_multivariate_normal():
             super(TestMultivariateNormal, self).__init__()
             self.size = size
 
-        def hybrid_forward(self, F, mean, cov):
-            return F.np.random.multivariate_normal(mean, cov, self.size)
+        def forward(self, mean, cov):
+            return np.random.multivariate_normal(mean, cov, self.size)
 
     hybridize_list = [True, False]
     dtypes = ['float16', 'float32', 'float64']
@@ -5278,10 +5279,10 @@ def test_npx_categorical():
             super(TestNumpyCategorical, self).__init__()
             self.size = size
 
-        def hybrid_forward(self, F, prob):
+        def forward(self, prob):
             if self.size is None:
-                return F.npx.random.categorical(prob)
-            return F.npx.random.categorical(prob, shape=self.size)
+                return npx.random.categorical(prob)
+            return npx.random.categorical(prob, shape=self.size)
 
     batch_sizes = [(2,), (2, 3)]
     event_shapes = [None, (10,), (10, 12)]
@@ -5318,7 +5319,7 @@ def test_np_cumsum():
             self._axis = axis
             self._dtype = dtype
 
-        def hybrid_forward(self, F, a):
+        def forward(self, a):
             return a.cumsum(axis=self._axis, dtype=self._dtype)
 
     shapes = [(2, 3, 4), (2, 0, 3), ()]
@@ -5383,8 +5384,8 @@ def test_np_choice():
             self.sample_size = sample_size
             self.replace = replace
 
-        def hybrid_forward(self, F, a):
-            return F.np.random.choice(a=a, size=self.sample_size, replace=self.replace, p=None)
+        def forward(self, a):
+            return np.random.choice(a=a, size=self.sample_size, replace=self.replace, p=None)
 
     class TestWeightedChoice(HybridBlock):
         def __init__(self, sample_size, replace):
@@ -5392,9 +5393,9 @@ def test_np_choice():
             self.sample_size = sample_size
             self.replace = replace
 
-        def hybrid_forward(self, F, a, p):
-            op = getattr(F.np.random, "choice", None)
-            return F.np.random.choice(a, self.sample_size, self.replace, p)
+        def forward(self, a, p):
+            op = getattr(np.random, "choice", None)
+            return np.random.choice(a, self.sample_size, self.replace, p)
 
     def test_sample_with_replacement(sampler, num_classes, shape, weight=None):
         samples = sampler(num_classes, shape, replace=True, p=weight).asnumpy()
@@ -5520,8 +5521,8 @@ def test_np_eye():
             self._k = k
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x):
-            return x + F.np.eye(self._N, self._M, self._k, dtype=self._dtype)
+        def forward(self, x):
+            return x + np.eye(self._N, self._M, self._k, dtype=self._dtype)
 
     for dtype in dtypes:
         x = np.zeros(shape=(), dtype=dtype)
@@ -5567,8 +5568,8 @@ def test_np_indices():
             self._dimensions = dimensions
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x):
-            return x + F.np.indices(dimensions=self._dimensions, dtype=self._dtype)
+        def forward(self, x):
+            return x + np.indices(dimensions=self._dimensions, dtype=self._dtype)
 
     for dtype in dtypes:
         for shape in shapes:
@@ -5602,7 +5603,7 @@ def test_np_repeat():
             self._repeats = repeats
             self._axis = axis
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             return x.repeat(self._repeats, self._axis)
 
     for shape, repeats, axis in config:
@@ -5629,8 +5630,8 @@ def test_np_linalg_norm():
             self._axis = axis
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, x):
-            return F.np.linalg.norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
+        def forward(self, x):
+            return np.linalg.norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
 
     configs = [
         ((2, 3, 4), 1, (2, 1)),
@@ -5762,8 +5763,8 @@ def test_np_linalg_svd(shape, dtype, hybridize):
         def __init__(self):
             super(TestSVD, self).__init__()
 
-        def hybrid_forward(self, F, data):
-            return F.np.linalg.svd(data)
+        def forward(self, data):
+            return np.linalg.svd(data)
 
     def get_grad(UT, L, V):
         m = V.shape[-2]
@@ -5849,8 +5850,8 @@ def test_np_linalg_qr():
         def __init__(self):
             super(TestQR, self).__init__()
 
-        def hybrid_forward(self, F, data):
-            return F.np.linalg.qr(data)
+        def forward(self, data):
+            return np.linalg.qr(data)
 
     def get_expected_grad(a, q, r, dq, dr):
         # for all input shapes (..., m, n)
@@ -5988,8 +5989,8 @@ def test_np_linalg_cholesky():
         def __init__(self):
             super(TestCholesky, self).__init__()
 
-        def hybrid_forward(self, F, data):
-            return F.np.linalg.cholesky(data)
+        def forward(self, data):
+            return np.linalg.cholesky(data)
 
     def get_grad(L):
         # shape of m is [batch, n, n]
@@ -6126,8 +6127,8 @@ def test_np_linalg_inv(hybridize, dtype, shape):
         def __init__(self):
             super(TestInverse, self).__init__()
 
-        def hybrid_forward(self, F, data):
-            return F.np.linalg.inv(data)
+        def forward(self, data):
+            return np.linalg.inv(data)
 
     def get_grad(A):
         if 0 in A.shape:
@@ -6194,8 +6195,8 @@ def test_np_linalg_solve():
         def __init__(self):
             super(TestSolve, self).__init__()
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.linalg.solve(a, b)
+        def forward(self, a, b):
+            return np.linalg.solve(a, b)
 
     def check_solve(x, a_np, b_np):
         try:
@@ -6295,8 +6296,8 @@ def test_np_linalg_tensorinv():
             super(TestTensorinv, self).__init__()
             self._ind = ind
 
-        def hybrid_forward(self, F, a):
-            return F.np.linalg.tensorinv(a, ind=self._ind)
+        def forward(self, a):
+            return np.linalg.tensorinv(a, ind=self._ind)
 
     def check_tensorinv(inv_a, a_np, ind):
         try:
@@ -6391,8 +6392,8 @@ def test_np_linalg_tensorsolve():
             super(TestTensorsolve, self).__init__()
             self._axes = axes
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.linalg.tensorsolve(a, b, axes=self._axes)
+        def forward(self, a, b):
+            return np.linalg.tensorsolve(a, b, axes=self._axes)
 
     def get_tensorsolve_backward(a_np, b_np, mx_out_np, a_axes, a_origin_axes, a_trans_shape):
         if (a_np.ndim == 0 or b_np.ndim == 0) or (a_np.ndim == b_np.ndim):
@@ -6542,8 +6543,8 @@ def test_np_linalg_lstsq():
             super(TestLstsq, self).__init__()
             self._rcond = rcond
 
-        def hybrid_forward(self, F, a, b, rcond='warn'):
-            return F.np.linalg.lstsq(a, b, rcond=self._rcond)
+        def forward(self, a, b, rcond='warn'):
+            return np.linalg.lstsq(a, b, rcond=self._rcond)
 
     def check_lstsq(a_np, b_np, rcond_np, x, residuals, rank, s):
         try:
@@ -6617,8 +6618,8 @@ def test_np_linalg_matrix_rank():
             super(TestMatrixRank, self).__init__()
             self._hermitian = hermitian
 
-        def hybrid_forward(self, F, M, tol=None):
-            return F.np.linalg.matrix_rank(M, tol, hermitian=self._hermitian)
+        def forward(self, M, tol=None):
+            return np.linalg.matrix_rank(M, tol, hermitian=self._hermitian)
 
     def check_matrix_rank(rank, a_np, tol, hermitian):
         try:
@@ -6693,8 +6694,8 @@ def test_np_linalg_pinv():
             super(TestPinv, self).__init__()
             self._hermitian = hermitian
 
-        def hybrid_forward(self, F, a, rcond=1e-15):
-            return F.np.linalg.pinv(a, rcond, hermitian=self._hermitian)
+        def forward(self, a, rcond=1e-15):
+            return np.linalg.pinv(a, rcond, hermitian=self._hermitian)
 
     def check_pinv(x, a_np, rcond_np, hermitian, use_rcond):
         try:
@@ -6770,8 +6771,8 @@ def test_np_linalg_eigvals():
         def __init__(self):
             super(TestEigvals, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.np.linalg.eigvals(a)
+        def forward(self, a):
+            return np.linalg.eigvals(a)
 
     def check_eigvals(x, a_np):
         try:
@@ -6838,8 +6839,8 @@ def test_np_linalg_eigvalsh():
             super(TestEigvalsh, self).__init__()
             self._UPLO = UPLO
 
-        def hybrid_forward(self, F, a):
-            return F.np.linalg.eigvalsh(a, UPLO=self._UPLO)
+        def forward(self, a):
+            return np.linalg.eigvalsh(a, UPLO=self._UPLO)
 
     def check_eigvalsh(w, a_np, UPLO):
         try:
@@ -6913,8 +6914,8 @@ def test_np_linalg_eig():
         def __init__(self):
             super(TestEig, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.np.linalg.eig(a)
+        def forward(self, a):
+            return np.linalg.eig(a)
 
     def check_eig(w, v, a_np):
         try:
@@ -6993,8 +6994,8 @@ def test_np_linalg_eigh():
             super(TestEigh, self).__init__()
             self._UPLO = UPLO
 
-        def hybrid_forward(self, F, a):
-            return F.np.linalg.eigh(a, UPLO=self._UPLO)
+        def forward(self, a):
+            return np.linalg.eigh(a, UPLO=self._UPLO)
 
     def check_eigh(w, v, a_np, UPLO):
         try:
@@ -7097,8 +7098,8 @@ def test_np_linalg_det():
         def __init__(self):
             super(TestDet, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.np.linalg.det(a)
+        def forward(self, a):
+            return np.linalg.det(a)
 
     # test non zero size input
     tensor_shapes = [
@@ -7160,8 +7161,8 @@ def test_np_linalg_slogdet(a_shape, grad_req, dtype, hybridize):
         def __init__(self):
             super(TestSlogdet, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.np.linalg.slogdet(a)
+        def forward(self, a):
+            return np.linalg.slogdet(a)
 
     test_slogdet = TestSlogdet()
     if hybridize:
@@ -7192,8 +7193,8 @@ def test_np_vstack():
         def __init__(self):
             super(TestVstack, self).__init__()
 
-        def hybrid_forward(self, F, a, *args):
-            return F.np.vstack([a] + list(args))
+        def forward(self, a, *args):
+            return np.vstack([a] + list(args))
 
     def g(data):
         return _np.ones_like(data)
@@ -7249,8 +7250,8 @@ def test_np_full():
             self._shape = shape
             self._dtype = dtype
 
-        def hybrid_forward(self, F, a):
-            return F.np.full(self._shape, a, dtype=self._dtype)
+        def forward(self, a):
+            return np.full(self._shape, a, dtype=self._dtype)
 
     configs = [
         ((3, 4), 2.0),
@@ -7301,8 +7302,8 @@ def test_np_full_like():
             self._dtype = dtype
             self._ctx = ctx
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return F.np.full_like(x, self._fill_value, dtype=self._dtype, ctx=self._ctx)
+        def forward(self, x, *args, **kwargs):
+            return np.full_like(x, self._fill_value, dtype=self._dtype, ctx=self._ctx)
 
     if StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
         return
@@ -7346,8 +7347,8 @@ def test_np_roll():
             self._shift = shift
             self._axis = axis
 
-        def hybrid_forward(self, F, x):
-            return F.np.roll(x, shift=self._shift, axis=self._axis)
+        def forward(self, x):
+            return np.roll(x, shift=self._shift, axis=self._axis)
 
     dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
     configs = [
@@ -7404,8 +7405,8 @@ def test_np_trace():
             self._axis2 = axis2
             self._offset = offset
 
-        def hybrid_forward(self, F, data):
-            return F.np.trace(data, axis1=self._axis1, axis2=self._axis2, offset=self._offset)
+        def forward(self, data):
+            return np.trace(data, axis1=self._axis1, axis2=self._axis2, offset=self._offset)
 
     def g(data, axis1, axis2, offset):
         idx = _np.indices(data.shape)
@@ -7484,8 +7485,8 @@ def test_np_windows():
             self._func = func
             self._M = M
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            op = getattr(F.np, self._func)
+        def forward(self, x, *args, **kwargs):
+            op = getattr(np, self._func)
             assert op is not None
             return x + op(M=self._M)
 
@@ -7517,8 +7518,8 @@ def test_np_flip():
             super(TestFlip, self).__init__()
             self.axis = axis
 
-        def hybrid_forward(self, F, x):
-            return F.np.flip(x, self.axis)
+        def forward(self, x):
+            return np.flip(x, self.axis)
 
     shapes = [(1, 2, 3), (1, 0), ()]
     types = ['int32', 'int64', 'float16', 'float32', 'float64']
@@ -7555,15 +7556,15 @@ def test_np_flipud_fliplr():
         def __init__(self):
             super(TestFlipud, self).__init__()
 
-        def hybrid_forward(self, F, x):
-            return F.np.flipud(x)
+        def forward(self, x):
+            return np.flipud(x)
 
     class TestFliplr(HybridBlock):
         def __init__(self):
             super(TestFliplr, self).__init__()
 
-        def hybrid_forward(self, F, x):
-            return F.np.fliplr(x)
+        def forward(self, x):
+            return np.fliplr(x)
 
     shapes = [(1, 2, 3), (1, 0)]
     types = ['int32', 'int64', 'float16', 'float32', 'float64']
@@ -7610,8 +7611,8 @@ def test_np_around():
             super(TestAround, self).__init__()
             self.decimals = decimals
 
-        def hybrid_forward(self, F, x):
-            return F.np.around(x, self.decimals)
+        def forward(self, x):
+            return np.around(x, self.decimals)
 
     shapes = [(), (1, 2, 3), (1, 0)]
     types = ['int32', 'int64', 'float32', 'float64']
@@ -7640,8 +7641,8 @@ def test_np_flatnonzero():
         def __init__(self):
             super(TestFlatnonzero, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.np.flatnonzero(a)
+        def forward(self, a):
+            return np.flatnonzero(a)
 
     shapes = [(1,), (4, 3), (4, 5), (2, 1), (6, 5, 6), (4, 2, 1, 2),
               (5, 1, 3, 3), (3, 3, 1, 0),]
@@ -7671,8 +7672,8 @@ def test_np_round():
             self.func = func
             self.decimals = decimals
 
-        def hybrid_forward(self, F, x):
-            return getattr(F.np, self.func)(x, self.decimals)
+        def forward(self, x):
+            return getattr(np, self.func)(x, self.decimals)
 
     shapes = [(), (1, 2, 3), (1, 0)]
     types = ['int32', 'int64', 'float32', 'float64']
@@ -7701,8 +7702,8 @@ def test_np_nonzero():
         def __init__(self):
             super(TestNonzero, self).__init__()
 
-        def hybrid_forward(self, F, x):
-            return F.npx.nonzero(x)
+        def forward(self, x):
+            return npx.nonzero(x)
 
     types = ['int32', 'int64', 'float64', 'float32', 'float16']
     for hybridize in [True, False]:
@@ -7736,8 +7737,8 @@ def test_np_unique():
             self._return_counts = return_counts
             self._axis = axis
 
-        def hybrid_forward(self, F, a):
-            return F.np.unique(a, self._return_index, self._return_inverse, self._return_counts, self._axis)
+        def forward(self, a):
+            return np.unique(a, self._return_index, self._return_inverse, self._return_counts, self._axis)
 
     configs = [
         ((), True, True, True, None),
@@ -7808,8 +7809,8 @@ def test_np_take():
             self._axis = axis
             self._mode = mode
 
-        def hybrid_forward(self, F, a, indices):
-            return F.np.take(a, indices, axis=self._axis, mode=self._mode)
+        def forward(self, a, indices):
+            return np.take(a, indices, axis=self._axis, mode=self._mode)
 
     def grad_helper(grad_in, axis, idx, mode):
         k = grad_in.shape[axis]
@@ -7915,8 +7916,8 @@ def test_np_tril_indices():
                 m = n
             self._m = m
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return x, F.np.tril_indices(n=self._n, k=self._k, m=self._m)
+        def forward(self, x, *args, **kwargs):
+            return x, np.tril_indices(n=self._n, k=self._k, m=self._m)
 
     for n in _np.random.random_integers(-10, 50, 2):
         for k in _np.random.random_integers(-50, 50, 2):
@@ -7948,8 +7949,8 @@ def test_np_fill_diagonal():
             self._val = val
             self._wrap= wrap
 
-        def hybrid_forward(self, F, x):
-            return F.np.fill_diagonal(x, val=self._val, wrap=self._wrap)
+        def forward(self, x):
+            return np.fill_diagonal(x, val=self._val, wrap=self._wrap)
 
     configs = [
         ((10, 10), 2),
@@ -7992,8 +7993,8 @@ def test_np_moveaxis():
             self._source = source
             self._destination= destination
 
-        def hybrid_forward(self, F, x):
-            return F.np.moveaxis(x, source=self._source, destination=self._destination)
+        def forward(self, x):
+            return np.moveaxis(x, source=self._source, destination=self._destination)
 
     dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
     for hybridize in [False, True]:
@@ -8035,8 +8036,8 @@ def test_np_rot90():
             self._k = k
             self._axes = axes
 
-        def hybrid_forward(self, F, a, *args):
-            return F.np.rot90(a, self._k, self._axes)
+        def forward(self, a, *args):
+            return np.rot90(a, self._k, self._axes)
 
     configs = [
         ((2, 3), 1, (0, 1)),
@@ -8086,8 +8087,8 @@ def test_np_hsplit():
             super(TestHSplit, self).__init__()
             self._indices_or_sections = indices_or_sections
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.hsplit(a, indices_or_sections=self._indices_or_sections)
+        def forward(self, a, *args, **kwargs):
+            return np.hsplit(a, indices_or_sections=self._indices_or_sections)
 
     shapes = [
         (10,),
@@ -8136,8 +8137,8 @@ def test_np_dsplit():
             super(TestDSplit, self).__init__()
             self._indices_or_sections = indices_or_sections
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.dsplit(a, indices_or_sections=self._indices_or_sections)
+        def forward(self, a, *args, **kwargs):
+            return np.dsplit(a, indices_or_sections=self._indices_or_sections)
 
     shapes = [
         (2, 4, 6),
@@ -8185,8 +8186,8 @@ def test_np_einsum():
             self.subscripts = subscripts
             self.optimize = optimize
 
-        def hybrid_forward(self, F, *operands):
-            return F.np.einsum(self.subscripts, *operands, optimize=self.optimize)
+        def forward(self, *operands):
+            return np.einsum(self.subscripts, *operands, optimize=self.optimize)
 
     def dbg(name, data):
         print('type of {} = {}'.format(name, type(data)))
@@ -8341,8 +8342,8 @@ def test_np_diagflat():
         def __init__(self, k=0):
             super(TestDiagflat,self).__init__()
             self._k = k
-        def hybrid_forward(self,F,a):
-            return F.np.diagflat(a, k=self._k)
+        def forward(self, a):
+            return np.diagflat(a, k=self._k)
     shapes = [(2,),5 , (1,5), (2,2), (2,5), (3,3), (4,3),(4,4,5)] # test_shapes, remember to include zero-dim shape and zero-size shapes
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64] # remember to include all meaningful data types for the operator
     range_k = 6
@@ -8383,8 +8384,8 @@ def test_np_pad():
             super(TestPad,self).__init__()
             self._pad_width = pad_width
             self._mode = mode
-        def hybrid_forward(self,F,A,**kwargs):
-            return F.np.pad(A, self._pad_width, mode=self._mode, **kwargs)
+        def forward(self, A, **kwargs):
+            return np.pad(A, self._pad_width, mode=self._mode, **kwargs)
 
     shapes = [6, (1,5), (2,2), (2,2), (3,3), (2,3), (3,4,5)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
@@ -8555,8 +8556,8 @@ def test_np_column_stack():
         def __init__(self):
             super(TestColumnStack, self).__init__()
 
-        def hybrid_forward(self, F, a, *args):
-            return F.np.column_stack([a] + list(args))
+        def forward(self, a, *args):
+            return np.column_stack([a] + list(args))
 
     def g(data):
         return _np.ones_like(data)
@@ -8609,8 +8610,8 @@ def test_npx_reshape():
             self._newshape = newshape
             self._reverse = reverse
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.npx.reshape(a, self._newshape, reverse=self._reverse)
+        def forward(self, a, *args, **kwargs):
+            return npx.reshape(a, self._newshape, reverse=self._reverse)
 
     test_cases = [
         [(2, 3, 5, 5),  (-2, -1),         False, (2, 75)],
@@ -8692,8 +8693,8 @@ def test_np_median():
             self._axis = axis
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a):
-            return F.np.median(a, axis=self._axis, keepdims=self._keepdims)
+        def forward(self, a):
+            return np.median(a, axis=self._axis, keepdims=self._keepdims)
 
     flags = [True, False]
     dtypes = ['float16', 'float32', 'float64']
@@ -8734,8 +8735,8 @@ def test_np_quantile():
             self._interpolation = interpolation
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a, q):
-            return F.np.quantile(a, q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
+        def forward(self, a, q):
+            return np.quantile(a, q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
 
     class TestQuantileScalar(HybridBlock):
         def __init__(self, q=None, axis=None, interpolation='linear', keepdims=False):
@@ -8745,8 +8746,8 @@ def test_np_quantile():
             self._interpolation = interpolation
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a):
-            return F.np.quantile(a, self._q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
+        def forward(self, a):
+            return np.quantile(a, self._q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
 
     flags = [True, False]
     interpolation_options = ['linear', 'lower', 'higher', 'nearest', 'midpoint']
@@ -8794,8 +8795,8 @@ def test_np_percentile():
             self._interpolation = interpolation
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a, q):
-            return F.np.percentile(a, q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
+        def forward(self, a, q):
+            return np.percentile(a, q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
 
     class TestPercentileScalar(HybridBlock):
         def __init__(self, q=None, axis=None, interpolation='linear', keepdims=False):
@@ -8805,8 +8806,8 @@ def test_np_percentile():
             self._interpolation = interpolation
             self._keepdims = keepdims
 
-        def hybrid_forward(self, F, a):
-            return F.np.percentile(a, self._q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
+        def forward(self, a):
+            return np.percentile(a, self._q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
 
     flags = [True, False]
     interpolation_options = ['linear', 'lower', 'higher', 'nearest', 'midpoint']
@@ -8861,8 +8862,8 @@ def test_np_diff():
             self._n = n
             self._axis = axis
 
-        def hybrid_forward(self, F, a):
-            return F.np.diff(a, n=self._n, axis=self._axis)
+        def forward(self, a):
+            return np.diff(a, n=self._n, axis=self._axis)
 
     shapes = [tuple(random.randrange(10) for i in range(random.randrange(6))) for j in range(5)]
     for hybridize in [True, False]:
@@ -8912,8 +8913,8 @@ def test_np_ediff1d():
         def __init__(self):
             super(TestEDiff1DCASE1, self).__init__()
 
-        def hybrid_forward(self, F, a, b, c):
-            return F.np.ediff1d(a, to_end=b, to_begin=c)
+        def forward(self, a, b, c):
+            return np.ediff1d(a, to_end=b, to_begin=c)
 
     # case 2: only `to_end` is array but `to_begin` is scalar/None
     class TestEDiff1DCASE2(HybridBlock):
@@ -8921,8 +8922,8 @@ def test_np_ediff1d():
             super(TestEDiff1DCASE2, self).__init__()
             self._to_begin = to_begin
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.ediff1d(a, to_end=b, to_begin=self._to_begin)
+        def forward(self, a, b):
+            return np.ediff1d(a, to_end=b, to_begin=self._to_begin)
 
     # case 3: only `to_begin` is array but `to_end` is scalar/None
     class TestEDiff1DCASE3(HybridBlock):
@@ -8930,8 +8931,8 @@ def test_np_ediff1d():
             super(TestEDiff1DCASE3, self).__init__()
             self._to_end = to_end
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.ediff1d(a, to_end=self._to_end, to_begin=b)
+        def forward(self, a, b):
+            return np.ediff1d(a, to_end=self._to_end, to_begin=b)
 
     # case 4: both `to_begin` and `to_end` are scalar/None
     class TestEDiff1DCASE4(HybridBlock):
@@ -8940,8 +8941,8 @@ def test_np_ediff1d():
             self._to_begin = to_begin
             self._to_end = to_end
 
-        def hybrid_forward(self, F, a):
-            return F.np.ediff1d(a, to_end=self._to_end, to_begin=self._to_begin)
+        def forward(self, a):
+            return np.ediff1d(a, to_end=self._to_end, to_begin=self._to_begin)
 
     rtol = 1e-3
     atol = 1e-5
@@ -9017,8 +9018,8 @@ def test_np_column_stack():
         def __init__(self):
             super(TestColumnStack, self).__init__()
 
-        def hybrid_forward(self, F, a, *args):
-            return F.np.column_stack([a] + list(args))
+        def forward(self, a, *args):
+            return np.column_stack([a] + list(args))
 
     def g(data):
         return _np.ones_like(data)
@@ -9072,8 +9073,8 @@ def test_np_resize():
             super(TestResize, self).__init__()
             self._new_shape = new_shape
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return F.np.resize(x, self._new_shape)
+        def forward(self, x, *args, **kwargs):
+            return np.resize(x, self._new_shape)
 
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool_]
     shape_config = [
@@ -9106,8 +9107,8 @@ def test_np_diag():
             super(TestDiag, self).__init__()
             self._k = k
 
-        def hybrid_forward(self, F, a):
-            return F.np.diag(a, k=self._k)
+        def forward(self, a):
+            return np.diag(a, k=self._k)
 
     shapes = [(), (2,), (1, 5), (2, 2), (2, 5), (3, 3), (4, 3)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
@@ -9179,11 +9180,11 @@ def test_np_diagonal(config, k, dtype, hybridize, call_by_instance):
             self._axis2 = axis2
             self._call_by_instance = call_by_instance
 
-        def hybrid_forward(self, F, a):
+        def forward(self, a):
             if self._call_by_instance:
                 return a.diagonal(self._k, self._axis1, self._axis2)
             else:
-                return F.np.diagonal(a, self._k, self._axis1, self._axis2)
+                return np.diagonal(a, self._k, self._axis1, self._axis2)
 
     rtol = 1e-2 if dtype == np.float16 else 1e-3
     atol = 1e-4 if dtype == np.float16 else 1e-5
@@ -9259,8 +9260,8 @@ def test_np_nan_to_num():
             self.neginf = neginf
             # necessary initializations
 
-        def hybrid_forward(self, F, a):
-            return F.np.nan_to_num(a, self.copy, self.nan, self.posinf, self.neginf)
+        def forward(self, a):
+            return np.nan_to_num(a, self.copy, self.nan, self.posinf, self.neginf)
 
     src_list = [
         _np.nan,
@@ -9348,8 +9349,8 @@ def test_np_unary_bool_funcs():
                 super(TestUnary, self).__init__()
                 self._func = func
 
-            def hybrid_forward(self, F, a):
-                return getattr(F.np, self._func)(a)
+            def forward(self, a):
+                return getattr(np, self._func)(a)
 
         src_list = [
             _np.nan,
@@ -9452,8 +9453,8 @@ def test_np_polyval():
         def __init__(self):
             super(TestPolyval, self).__init__()
 
-        def hybrid_forward(self, F, p, x, *args, **kwargs):
-            return F.np.polyval(p, x)
+        def forward(self, p, x, *args, **kwargs):
+            return np.polyval(p, x)
 
     def polyval_grad(p, x):
         x_shape = x.shape
@@ -9518,8 +9519,8 @@ def test_np_where():
         def __init__(self):
             super(TestWhere, self).__init__()
 
-        def hybrid_forward(self, F, cond, x, y):
-            return F.np.where(cond, x, y)
+        def forward(self, cond, x, y):
+            return np.where(cond, x, y)
 
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
     shape_configs = [
@@ -9586,8 +9587,8 @@ def test_np_expand_dims():
             super(TestExpandDims, self).__init__()
             self._axis = axis
 
-        def hybrid_forward(self, F, x):
-            return F.np.expand_dims(x, self._axis)
+        def forward(self, x):
+            return np.expand_dims(x, self._axis)
 
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
     shapes = [
@@ -9641,8 +9642,8 @@ def test_np_unravel_index():
             self._shape = shape
             self._order = order
 
-        def hybrid_forward(self, F, a):
-            return F.np.unravel_index(a, self._shape, self._order)
+        def forward(self, a):
+            return np.unravel_index(a, self._shape, self._order)
 
     in_shapes = [
         2, 5,
@@ -9690,8 +9691,8 @@ def test_np_diag_indices_from():
         def __init__(self) :
             super(TestDiag_indices_from, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.np.diag_indices_from(a)
+        def forward(self, a):
+            return np.diag_indices_from(a)
 
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     shapes = [(2, 2), (4, 4), (5, 5, 5), (6, 6, 6, 6), (8, 8, 8, 8)]
@@ -9729,8 +9730,8 @@ def test_np_interp():
             self._right = right
             self._period = period
 
-        def hybrid_forward(self, F, x, xp, fp):
-            return F.np.interp(x, xp, fp, left=self._left, right=self._right, period=self._period)
+        def forward(self, x, xp, fp):
+            return np.interp(x, xp, fp, left=self._left, right=self._right, period=self._period)
 
     class TestInterpScalar(HybridBlock):
         def __init__(self, x=None, left=None, right=None, period=None):
@@ -9740,8 +9741,8 @@ def test_np_interp():
             self._right = right
             self._period = period
 
-        def hybrid_forward(self, F, xp, fp):
-            return F.np.interp(self._x, xp, fp, left=self._left, right=self._right, period=self._period)
+        def forward(self, xp, fp):
+            return np.interp(self._x, xp, fp, left=self._left, right=self._right, period=self._period)
 
     xtypes = [np.int64, np.float32, np.float64]
     dtypes = [np.int32, np.int64, np.float32, np.float64]
@@ -9793,16 +9794,16 @@ def test_np_bincount():
             super(TestBincount, self).__init__()
             self._minlength = minlength
 
-        def hybrid_forward(self, F, a):
-            return F.np.bincount(a, None, self._minlength)
+        def forward(self, a):
+            return np.bincount(a, None, self._minlength)
 
     class TestBincountWeights(HybridBlock):
         def __init__(self, minlength=0):
             super(TestBincountWeights, self).__init__()
             self._minlength = minlength
 
-        def hybrid_forward(self, F, a, weights):
-            return F.np.bincount(a, weights, self._minlength)
+        def forward(self, a, weights):
+            return np.bincount(a, weights, self._minlength)
 
     dtypes = [np.int8, np.uint8, np.int32, np.int64]
     weight_types = [np.int32, np.int64, np.float16, np.float32, np.float64]
@@ -9845,8 +9846,8 @@ def test_np_empty_like():
             self._order = order
             self._subok = subok
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return F.np.empty_like(x, self._dtype, self._order, self._subok)
+        def forward(self, x, *args, **kwargs):
+            return np.empty_like(x, self._dtype, self._order, self._subok)
 
     if StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
         return
@@ -9981,8 +9982,8 @@ def test_np_cross(a_shape, b_shape, axes, dtype, hybridize):
             self._axisc = axisc
             self._axis = axis
 
-        def hybrid_forward(self, F, a, b):
-            return F.np.cross(a, b, self._axisa, self._axisb, self._axisc, self._axis)
+        def forward(self, a, b):
+            return np.cross(a, b, self._axisa, self._axisb, self._axisc, self._axis)
 
     def check_np_cross(x, a_np, b_np, axises):
         try:
@@ -10157,8 +10158,8 @@ def test_np_rollaxis():
             self._axis = axis
             self._start = start
 
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.rollaxis(a, axis=self._axis, start=self._start)
+        def forward(self, a, *args, **kwargs):
+            return np.rollaxis(a, axis=self._axis, start=self._start)
 
     dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
     for hybridize in [False, True]:
@@ -10191,8 +10192,8 @@ def test_np_rollaxis():
 @use_np
 def test_npx_stop_gradient():
     class TestStopGradient(HybridBlock):
-        def hybrid_forward(self, F, a):
-            return F.npx.stop_gradient(a)
+        def forward(self, a):
+            return npx.stop_gradient(a)
     dtypes = ['float16', 'float32', 'float64']
     for hybridize in [False, True]:
         for dtype in dtypes:

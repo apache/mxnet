@@ -497,14 +497,15 @@ def test_large_models():
 # isolated execution bulking test function to be invoked with different env var settings
 
 
+@mx.util.use_np
 def _test_bulking_in_process(seed, time_per_iteration):
     # Use flip since it's a simple function with same-sized I/O unlikely to ever be fused.
     class Flip(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Flip, self).__init__(**kwargs)
 
-        def hybrid_forward(self, F, x):
-            return F.flip(x, axis=0)
+        def forward(self, x):
+            return mx.np.flip(x, axis=0)
 
     def get_net(num_ops):
         net = nn.HybridSequential()
@@ -578,9 +579,10 @@ def test_bulking_gluon_gpu():
     _test_bulking(_test_bulking_in_process)
 
 
+@mx.util.use_np
 def test_hybridblock_mix_ctx_raise():
     class FooHybrid(gluon.HybridBlock):
-        def hybrid_forward(self, F, a, b):
+        def forward(self, a, b):
             if isinstance(a, (list, tuple)):
                 a = sum(a)
             if isinstance(b, (list, tuple)):

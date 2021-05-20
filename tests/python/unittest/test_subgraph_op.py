@@ -25,7 +25,7 @@ import numpy as np
 from mxnet.test_utils import assert_almost_equal, environment
 from mxnet import gluon
 from mxnet.gluon import nn
-from mxnet import nd
+from mxnet import nd, npx
 import pytest
 import tempfile
 
@@ -490,6 +490,7 @@ def test_subgraph_backend_gluon_ext1(tmpdir):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridBlock.
+@mx.util.use_np
 @pytest.mark.serial
 def test_subgraph_backend_gluon_ext2(tmpdir):
     class Net(gluon.HybridBlock):
@@ -499,12 +500,12 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
             self.fc2 = nn.Dense(128)
             self.fc3 = nn.Dense(2)
 
-        def hybrid_forward(self, F, x):
-            x = F.relu(self.fc1(x))
-            x = F.relu(self.fc2(x))
+        def forward(self, x):
+            x = npx.relu(self.fc1(x))
+            x = npx.relu(self.fc2(x))
             return self.fc3(x)
     # regular inference
-    x = nd.random.normal(shape=(1, 512),ctx=mx.current_context())
+    x = mx.np.random.normal(size=(1, 512),ctx=mx.current_context())
     net = Net()
     net.initialize(ctx=mx.current_context())
     outputs1 = net(x)
@@ -525,7 +526,7 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
     # compare outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal(mx.np.abs(outputs1[i] - outputs2[i]).sum().asnumpy(), np.zeros(shape=(1,)))
 
 
 if __name__ == "__main__":
