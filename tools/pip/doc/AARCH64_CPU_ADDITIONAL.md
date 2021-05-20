@@ -41,5 +41,5 @@ Installation
 ------------
 To install, use:
 ```bash
-pip install mxnet-aarch64
+pip install mxnet
 ```
