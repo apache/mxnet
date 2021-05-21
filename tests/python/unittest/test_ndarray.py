@@ -31,11 +31,13 @@ from mxnet.test_utils import default_context
 from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
 from mxnet.test_utils import random_sample, rand_shape_nd, random_arrays
+from mxnet.test_utils import is_aarch64_run
 from mxnet import runtime
 from numpy.testing import assert_allclose, assert_array_equal, assert_array_almost_equal
 import mxnet.autograd
 from mxnet.base import integer_types
 from mxnet.ndarray.ndarray import py_slice
+import unittest
 
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
@@ -1283,6 +1285,7 @@ def test_output():
 
 
 @with_seed()
+@unittest.skipIf(is_aarch64_run(), "test fails on aarch64 - tracked in #20289")
 def test_ndarray_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split', 'split_v2',

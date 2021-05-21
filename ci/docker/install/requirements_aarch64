@@ -1,6 +1,3 @@
-#!/usr/bin/env bash
-# -*- coding: utf-8 -*-
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,36 +14,21 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
-mxnet_variant=${1:?"Please specify the mxnet variant as the first parameter"}
-
-case ${mxnet_variant} in
-    cu100*)
-    echo "nvidia/cuda:10.0-cudnn7-runtime-ubuntu18.04"
-    ;;
-    cu101*)
-    echo "nvidia/cuda:10.1-cudnn7-runtime-ubuntu18.04"
-    ;;
-    cu102*)
-    echo "nvidia/cuda:10.2-cudnn8-runtime-ubuntu18.04"
-    ;;
-    cu110*)
-    echo "nvidia/cuda:11.0-cudnn8-runtime-ubuntu18.04"
-    ;;
-    cu112*)
-    echo "nvidia/cuda:11.2.1-cudnn8-runtime-ubuntu18.04"
-    ;;
-    cpu)
-    echo "ubuntu:18.04"
-    ;;
-    native)
-    echo "ubuntu:18.04"
-    ;;
-    aarch64_cpu)
-    echo "arm64v8/ubuntu:18.04"
-    ;;
-    *)
-    echo "Error: Unrecognized mxnet-variant: '${mxnet_variant}'"
-    exit 1
-    ;;
-esac
+boto3==1.9.229
+cpplint==1.3.0
+Cython
+decorator==4.4.0
+mock==2.0.0
+nose==1.3.7
+nose-timer==0.7.3
+numpy
+pylint==2.3.1  # pylint and astroid need to be aligned
+astroid==2.3.3  # pylint and astroid need to be aligned
+requests<2.19.0,>=2.18.4
+scipy
+setuptools
+coverage

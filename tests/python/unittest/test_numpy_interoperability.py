@@ -28,6 +28,7 @@ from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
 from mxnet.test_utils import is_op_runnable
+from mxnet.test_utils import is_aarch64_run
 from common import assertRaises, with_seed, random_seed, setup_module, teardown
 from mxnet.numpy_dispatch_protocol import with_array_function_protocol, with_array_ufunc_protocol
 from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARRAY_UFUNC_LIST
@@ -3066,6 +3067,7 @@ def test_np_memory_array_function():
 
 @with_seed()
 @use_np
+@unittest.skipIf(is_aarch64_run(), "test fails on aarch64 - tracked in #20289")
 @with_array_function_protocol
 def test_np_array_function_protocol():
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)

@@ -36,6 +36,8 @@ elif [[ ${mxnet_variant} == "native" ]]; then
     tag_suffix="native"
 elif [[ ${mxnet_variant} == cu* ]]; then
     tag_suffix="gpu_${mxnet_variant}"
+elif [[ ${mxnet_variant} == aarch64* ]]; then
+    tag_suffix="aarch64_cpu"
 
 else
     echo "Error: Unrecognized mxnet variant: '${mxnet_variant}'."
