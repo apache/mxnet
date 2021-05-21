@@ -1308,8 +1308,8 @@ def test_deconvolution_forward_with_bias():
         y_b = mx.sym.Deconvolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group, kernel=kernel, no_bias=False, pad=pad)
         
         
-        exe_nb = y_nb.simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
-        exe_b = y_b.simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
+        exe_nb = y_nb._simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
+        exe_b = y_b._simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
 
         
         data = np.random.uniform(-5, 5, size=exe_b.arg_arrays[0].shape)
