@@ -312,6 +312,8 @@ class TensorrtProperty : public SubgraphProperty {
 
   void PrePartition(const nnvm::Graph& g,
     const std::unordered_map<std::string, std::string>& options_map) override {
+    fp16_mode_ = false;
+    int8_mode_ = false;
     auto it_precision = options_map.find("precision");
     if (it_precision != options_map.end()) {
       auto precision_string = it_precision->second;
