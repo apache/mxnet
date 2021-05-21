@@ -23,7 +23,7 @@ from mxnet.contrib import quantization
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal_with_err
 
-fc_post_ops_list=['relu', 'sigmoid', 'tanh', 'softrelu', 'gelu', 'elu', 'leaky',
+fc_post_ops_list=['relu', 'sigmoid', 'log_sigmoid', 'tanh', 'softrelu', 'gelu', 'elu', 'leaky',
                   'square', 'square_root', 'abs', 'exp', 'bounded_relu']
 
 def test_float64_fallback():
@@ -71,7 +71,7 @@ def test_fc_eltwise(data_shape, use_bias, flatten, alg):
 
     def forward(self, x):
       fc_out = self.fc(x)
-      if self.alg in ['relu', 'sigmoid', 'tanh', 'softrelu']:
+      if self.alg in ['relu', 'sigmoid', 'log_sigmoid', 'tanh', 'softrelu']:
         out = mx.npx.activation(fc_out, act_type=self.alg)
       elif self.alg in ['gelu', 'elu', 'leaky']:
         out = mx.npx.leaky_relu(fc_out, act_type=self.alg)
