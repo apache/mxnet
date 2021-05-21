@@ -232,7 +232,7 @@ class _RNNLayer(HybridBlock):
             rnn_args = states + [sequence_length]
         else:
             rnn_args = states
-        
+
         for args in rnn_args:
             args.as_in_context(ctx)
 
