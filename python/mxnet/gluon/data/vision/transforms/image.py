@@ -363,6 +363,7 @@ class RandomCrop(HybridBlock):
     def forward(self, x, *args):
         if self.np_pad:
             x = np.pad(x, pad_width=self.np_pad, mode='constant', constant_values=self._pad_value)
+        # pylint: disable=too-many-function-args
         return _append_return(npx.image.random_crop(x, *self._args), *args)
 
 @use_np
@@ -400,6 +401,7 @@ class CenterCrop(HybridBlock):
         self._args = (size[0], size[1], interpolation)
 
     def forward(self, x, *args):
+        # pylint: disable=too-many-function-args
         return _append_return(npx.image.random_crop(x, (0.5, 0.5), (0.5, 0.5), *self._args), *args)
 
 

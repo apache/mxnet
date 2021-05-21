@@ -23,14 +23,12 @@ __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
            'Flatten', 'Lambda', 'HybridLambda', 'Concatenate', 'HybridConcatenate', 'Identity']
 import warnings
 import uuid
-import inspect
-from mxnet.base import _NP_OP_PREFIX
 import numpy as _np
 
 from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
-from ... import np, npx, ndarray as nd, context, _deferred_compute as dc
+from ... import np, npx, context
 from ...util import use_np
 from ..parameter import Parameter
 
@@ -885,7 +883,7 @@ class GroupNorm(HybridBlock):
     def forward(self, data):
         ctx = data.ctx
         norm_data = npx.group_norm(data, gamma=self.gamma.data(ctx), beta=self.beta.data(ctx),
-                                 num_groups=self._num_groups, eps=self._epsilon)
+                                   num_groups=self._num_groups, eps=self._epsilon)
         return norm_data
 
     def infer_shape(self, data, *args):

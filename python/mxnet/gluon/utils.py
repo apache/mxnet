@@ -140,7 +140,7 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
             groups[ctx].append(arr)
         return groups
     def multi_sum_sq(*args, ctx=None):
-        sum = _mx_np.array([0])
+        sum = _mx_np.array([0], ctx=ctx)
         for arg in args:
             sum += _mx_np.square(arg).sum().item()
         return sum

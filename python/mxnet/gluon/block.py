@@ -21,7 +21,6 @@
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import copy
-import inspect
 import warnings
 import weakref
 from collections import OrderedDict, defaultdict
@@ -1451,6 +1450,7 @@ class HybridBlock(Block):
 
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
+        # pylint: disable=unused-argument
         # In Gluon 2, users must implement infer_shape, if any deferred
         # initialized parameters are associated with the HybridBlock
         params = [p for p in self._reg_params.values() if not shape_is_known(p.shape)]
@@ -1790,16 +1790,16 @@ class SymbolBlock(HybridBlock):
                 self._reg_params[aux]._var_name = aux
 
         self._cached_graph = syms, out
-    
-    def __call__(self, *args):
+
+    def __call__(self, x, *args):
         """Calls forward. Only accepts positional arguments."""
         for hook in self._forward_pre_hooks.values():
-            hook(self, args)
+            hook(self, [x] + args)
 
-        out = self.forward(*args)
+        out = self.forward(x, *args)
 
         for hook in self._forward_hooks.values():
-            hook(self, args, out)
+            hook(self, [x] + args, out)
         _check_all_np_ndarrays(out)
         return out
 
