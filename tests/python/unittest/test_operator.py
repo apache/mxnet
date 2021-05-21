@@ -677,6 +677,21 @@ def test_sigmoid():
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
 
+def test_log_sigmoid():
+    def flog_sigmoid(a):
+        return np.log(np.divide(1.0, np.add(1.0, np.exp(-a))))
+    def flog_sigmoid_grad(a):
+        return np.divide(1.0, np.add(1.0, np.exp(a)))
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.log_sigmoid(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = flog_sigmoid(xa)
+    ya_grad = flog_sigmoid_grad(xa)
+    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_symbolic_forward(y, [xa], [ya])
+    check_symbolic_backward(y, [xa], [np.ones(shape)], [ya_grad])
+
 def test_shape_array():
     for i in range(1,6):
         shape = rand_shape_nd(i)
@@ -8697,7 +8712,7 @@ def test_get_operator_arguments():
     assert isinstance(operator_arguments, OperatorArguments)
     assert operator_arguments.names == ['data', 'act_type']
     assert operator_arguments.types \
-        == ['NDArray-or-Symbol', "{'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"]
+        == ['NDArray-or-Symbol', "{'log_sigmoid', 'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"]
     assert operator_arguments.narg == 2
 
 

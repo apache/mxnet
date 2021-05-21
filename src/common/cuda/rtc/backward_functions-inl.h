@@ -40,8 +40,14 @@ backward_relu(const DTypeGrad grad, const DType val) {
 
 template <typename DType, typename DTypeGrad>
 __device__ inline mixed_type<DTypeGrad, DType>
-backward_sigmoid(const DTypeGrad grad, const DType out) {
-  return grad * out * (1 - out);
+backward_sigmoid(const DTypeGrad grad, const DType val) {
+  return grad * val * (1 - val);
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline mixed_type<DTypeGrad, DType>
+backward_log_sigmoid(const DTypeGrad grad, const DType val) {
+  return grad * 1 / (1 + op::exp(val));
 }
 
 template <typename DType, typename DTypeGrad>

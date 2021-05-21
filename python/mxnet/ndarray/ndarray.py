@@ -2171,6 +2171,14 @@ fixed-size items.
         """
         return op.log1p(self, *args, **kwargs)
 
+    def log_sigmoid(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`log_sigmoid`.
+
+        The arguments are the same as for :py:func:`log_sigmoid`, with
+        this array as data.
+        """
+        return op.log_sigmoid(self, *args, **kwargs)
+
     def sqrt(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sqrt`.
 

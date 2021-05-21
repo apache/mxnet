@@ -686,6 +686,15 @@ __device__ inline DType sigmoid(const DType val) {
 }
 
 template <typename DType>
+__device__ inline DType log_sigmoid(const DType val) {
+  if (type_util::has_double_or_integral<DType>::value) {
+    return ::log(1./(1 + ::exp(-val)));
+  } else {
+    return ::logf(1.f/(1 + expf(-val)));
+  }
+}
+
+template <typename DType>
 __device__ inline DType softrelu(const DType val) {
   if (type_util::has_double_or_integral<DType>::value) {
     return ::log(1 + ::exp(val));
