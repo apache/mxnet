@@ -312,7 +312,7 @@ def test_rnn_cells_export_import():
             self.cell.infer_shape(0, input.shape[input.ndim-1], False)
 
     for hybrid in [RNNLayer(), LSTMLayer(), GRULayer()]:
-        input = mx.np.ones(shape=(1, 2, 1))
+        input = mx.np.ones(shape=(1, 2, 1), ctx=mx.context.current_context())
         hybrid.infer_shape(input)
         hybrid.initialize()
         hybrid.hybridize()

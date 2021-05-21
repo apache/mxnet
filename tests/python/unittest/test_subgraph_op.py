@@ -456,6 +456,7 @@ def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmp_path):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridSequential.
+@mx.util.use_np
 @pytest.mark.serial
 def test_subgraph_backend_gluon_ext1(tmpdir):
     def get_net():  
@@ -466,7 +467,7 @@ def test_subgraph_backend_gluon_ext1(tmpdir):
         return net
 
     # regular inference
-    x = nd.random.normal(shape=(1, 512),ctx=mx.current_context())
+    x = mx.np.random.normal(size=(1, 512),ctx=mx.current_context())
     net = get_net()
     net.initialize(ctx=mx.current_context())
     outputs1 = net(x)
@@ -487,7 +488,7 @@ def test_subgraph_backend_gluon_ext1(tmpdir):
     # compare outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal(mx.np.abs((outputs1[i] - outputs2[i])).sum().asnumpy(), np.zeros(shape=(1,)))
 
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridBlock.
 @mx.util.use_np

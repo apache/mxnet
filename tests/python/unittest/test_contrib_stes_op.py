@@ -29,11 +29,11 @@ class RoundSTENET(gluon.HybridBlock):
 
     @staticmethod
     def expected_grads(self, in_data, w_init):
-        return (in_data * w_init).round() + (in_data * w_init)
+        return mx.np.sign(in_data * w_init) + (in_data * w_init)
 
     @staticmethod
     def expected_output(self, in_data, w_init):
-        return (in_data * w_init).round() * w_init
+        return mx.np.sign(in_data * w_init) * w_init
 
     def forward(self, x):
         # Simple forward function: round_ste(w*x)*w

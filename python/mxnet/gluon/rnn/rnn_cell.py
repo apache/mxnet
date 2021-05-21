@@ -391,7 +391,8 @@ class RNNCell(HybridRecurrentCell):
         i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
                                   num_hidden=self._hidden_size)
-        h2h = npx.fully_connected(states[0], weight=self.h2h_weight.data(ctx),
+        h2h = npx.fully_connected(states[0].as_in_context(ctx),
+                                  weight=self.h2h_weight.data(ctx),
                                   bias=self.h2h_bias.data(ctx),
                                   num_hidden=self._hidden_size)
         i2h_plus_h2h = i2h + h2h
@@ -512,7 +513,8 @@ class LSTMCell(HybridRecurrentCell):
         i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
                                   num_hidden=self._hidden_size*4)
-        h2h = npx.fully_connected(states[0], weight=self.h2h_weight.data(ctx),
+        h2h = npx.fully_connected(states[0].as_in_context(ctx),
+                                  weight=self.h2h_weight.data(ctx),
                                   bias=self.h2h_bias.data(ctx),
                                   num_hidden=self._hidden_size*4)
         gates = i2h + h2h
@@ -631,7 +633,7 @@ class GRUCell(HybridRecurrentCell):
     def forward(self, inputs, states):
         # pylint: disable=too-many-locals
         ctx = inputs.ctx
-        prev_state_h = states[0]
+        prev_state_h = states[0].as_in_context(ctx)
         i2h = npx.fully_connected(inputs,
                                   weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
@@ -1387,7 +1389,8 @@ class LSTMPCell(HybridRecurrentCell):
         i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
                                   num_hidden=self._hidden_size*4)
-        h2h = npx.fully_connected(states[0], weight=self.h2h_weight.data(ctx),
+        h2h = npx.fully_connected(states[0].as_in_context(ctx),
+                                  weight=self.h2h_weight.data(ctx),
                                   bias=self.h2h_bias.data(ctx),
                                   num_hidden=self._hidden_size*4)
         gates = i2h + h2h

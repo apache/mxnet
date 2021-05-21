@@ -163,6 +163,7 @@ def test_rnn_layer():
         100, num_layers=3, bidirectional=True))
 
 
+@mx.util.use_np
 def check_layer_bidirectional(size, in_size, proj_size):
     class RefBiLSTM(gluon.Block):
         def __init__(self, size, proj_size, **kwargs):
@@ -432,7 +433,7 @@ def test_symbol_block_fp16(tmpdir):
     net_fp32.cast('float16')
     net_fp32.hybridize()
     data = mx.np.zeros((1, 3, 224, 224), dtype='float16', ctx=ctx)
-    net_fp32.forward(data)
+    net_fp32(data)
     symbol_file, param_file = net_fp32.export(tmpfile, 0)
 
     # 2. Load the saved model and verify if all the params are loaded correctly.
@@ -595,24 +596,6 @@ def test_hybridblock_mix_ctx_raise():
     pytest.raises(ValueError, lambda: foo_hybrid(mx.np.ones((10,), ctx=mx.gpu()),
                                                  mx.np.ones((10,), ctx=mx.cpu())))
 
-@mx.util.use_np
-def test_symbol_block_symbolic_bn_fp16_cast():
-    with mx.gpu(0):
-        net = mx.gluon.nn.HybridSequential()
-        sym = mx.sym.var('data')
-        conv = mx.sym.Convolution(sym, kernel=(3, 3), num_filter=16)
-        bn = mx.sym.BatchNorm(conv, name='bn_test')
-        internals = bn.get_internals()
-        net.add(mx.gluon.nn.SymbolBlock([internals['bn_test_output']], [mx.sym.var('data')]))
-        net.add(mx.gluon.nn.Conv2D(10, kernel_size=1))
-        net.initialize()
-        x = mx.np.zeros((1, 3, 32, 32), dtype='float32')
-        y = net(x)
-        assert np.dtype(y.dtype).name == 'float32'
-        net.cast('float16')
-        x = x.astype('float16')
-        y1 = net(x)
-        assert np.dtype(y1.dtype).name == 'float16'
 
 @mx.util.use_np
 def test_gemms_true_fp16():
@@ -640,19 +623,19 @@ def test_gemms_true_fp16():
 def test_cudnn_dropout_reproducibility():
     d = nn.Dropout(0.5)
     d.initialize()
-    a = mx.random.uniform(shape=(100,100))
+    a = mx.np.random.uniform(size=(100,100))
     b = a.copy()
     a.attach_grad()
     b.attach_grad()
     seed = np.random.randint(0, 100000)
     N = 10
-    mx.random.seed(seed)
+    mx.np.random.seed(seed)
     out1 = []
     for _ in range(N):
         with autograd.record():
             out1.append(d(a))
     out1[0].backward()
-    mx.random.seed(seed)
+    mx.np.random.seed(seed)
     out2 = []
     for _ in range(N):
         with autograd.record():

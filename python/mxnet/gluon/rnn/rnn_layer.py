@@ -232,6 +232,9 @@ class _RNNLayer(HybridBlock):
             rnn_args = states + [sequence_length]
         else:
             rnn_args = states
+        
+        for args in rnn_args:
+            args.as_in_context(ctx)
 
         rnn = npx.rnn(inputs, params, *rnn_args, use_sequence_length=self._use_sequence_length,
                       state_size=self._hidden_size, projection_size=self._projection_size,
