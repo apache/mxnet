@@ -293,7 +293,7 @@ class DeconvolutionOp {
 
     if (param_.kernel.ndim() > 2) {
       LOG(FATAL) << "Only 1D or 2D Deconvolution is natively supported. "
-                 << ((MXNET_USE_MKLDNN || MXNET_USE_CUDNN)
+                 << ((MXNET_USE_ONEDNN || MXNET_USE_CUDNN)
                          ? "Fallback to native implementation (if occurred) is therefore "
                            "impossible for 3D Deconvolution."
                          : "");
