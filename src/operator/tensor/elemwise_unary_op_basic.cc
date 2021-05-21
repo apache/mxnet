@@ -149,6 +149,23 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
       return ret;
     });
 
+// log_sigmoid
+MXNET_OPERATOR_REGISTER_UNARY(log_sigmoid)
+MXNET_ADD_SPARSE_OP_ALIAS(log_sigmoid)
+.describe(R"code(Computes log_sigmoid of x element-wise.
+
+.. math::
+   y = log(1 / (1 + exp(-x)))
+
+The storage type of ``log_sigmoid`` output is always dense
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::log_sigmoid>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log_sigmoid"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_log_sigmoid,
+                                               unary_bwd<mshadow_op::log_sigmoid_grad>);
+
 
 
 DMLC_REGISTER_PARAMETER(HardSigmoidParam);
