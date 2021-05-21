@@ -64,7 +64,7 @@ Parameters:
     input_shape : List of tuple
         This is the old name of in_shapes. We keep this parameter name for backward compatibility
     large_model : Boolean
-        Whether to export a model that is larger than 2 GB. If true will save param tensors in seperate
+        Whether to export a model that is larger than 2 GB. If true will save param tensors in separate
         files along with .onnx model file. This feature is supported since onnx 1.8.0
 
 Returns:
@@ -79,7 +79,7 @@ When the model has multiple inputs, all the input shapes and dtypes must be prov
 We can set `dynamic=True` to turn on support for dynamic input shapes. Note that even with dynamic shapes, a set of static input shapes still need to be specified in `in_shapes`; on top of that, we'll also need to specify which dimensions of the input shapes are dynamic in `dynamic_input_shapes`. We can simply set the dynamic dimensions as `None`, e.g. `(1, 3, None, None)`, or use strings in place of the `None`'s for better understandability in the exported onnx graph, e.g. `(1, 3, 'Height', 'Width')`
 
 #### Export Large Model
-Uses can set `large_model=True` to exoprt models that are larger than 2GB. In this case, all parameter tensors will be saved into seperate files along with the .onnx model file.
+Uses can set `large_model=True` to export models that are larger than 2GB. In this case, all parameter tensors will be saved into separate files along with the .onnx model file.
 
 ```python
 # The batch dimension will be dynamic in this case
