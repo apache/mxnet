@@ -51,8 +51,6 @@ def get_environment(mxnet_variant) {
 }
 
 
-
-
 def build(mxnet_variant) {
   ws("workspace/python_docker/${mxnet_variant}/${env.BUILD_NUMBER}") {
     ci_utils.init_git()

@@ -1,4 +1,3 @@
-# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,23 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Python MXNet Dockerfile
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
-# NOTE: Assumes 'ci' directory is root of the context when building
-
-ARG BASE_IMAGE
-FROM ${BASE_IMAGE}
-
-ARG USER_ID=1001
-ARG GROUP_ID=1001
-
-RUN mkdir -p /work
-
-COPY ./docker/install/ubuntu_adduser.sh /work/ubuntu_adduser.sh
-RUN /work/ubuntu_adduser.sh
-
-ARG REQUIREMENTS_FILE
-COPY ${REQUIREMENTS_FILE} /work/requirements
-RUN pip install -r /work/requirements
-
-WORKDIR /work/mxnet
+boto3==1.9.229
+cpplint==1.3.0
+Cython
+decorator==4.4.0
+mock==2.0.0
+nose==1.3.7
+nose-timer==0.7.3
+numpy
+pylint==2.3.1  # pylint and astroid need to be aligned
+astroid==2.3.3  # pylint and astroid need to be aligned
+requests<2.19.0,>=2.18.4
+scipy
+setuptools
+coverage

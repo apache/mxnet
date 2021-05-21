@@ -35,7 +35,7 @@ RUN apt-get update && \
 RUN apt-get install -y libgomp1
 
 ARG MXNET_VARIANT
-RUN if [[ ${MXNET_VARIANT} != "aarch64_cpu" ]]; then apt-get install -y libquadmath0 ; fi
+RUN if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; then echo "not installing libquadmath0 on aarch64" ; else apt-get install -y libquadmath0 ; fi
 
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
