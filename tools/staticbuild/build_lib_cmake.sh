@@ -20,11 +20,7 @@
 set -eo pipefail
 
 # This script builds the libraries of mxnet.
-if [[ $ARCH == 'aarch64' ]]; then
-    cmake_config=${CURDIR}/config/distribution/${PLATFORM}_${ARCH}_${VARIANT}.cmake
-else
-    cmake_config=${CURDIR}/config/distribution/${PLATFORM}_${VARIANT}.cmake
-fi
+cmake_config=${CURDIR}/config/distribution/${PLATFORM}_${VARIANT}.cmake
 
 if [[ ! -f $cmake_config ]]; then
     >&2 echo "Couldn't find cmake config $make_config for the current settings."

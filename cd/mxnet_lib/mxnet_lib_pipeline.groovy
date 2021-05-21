@@ -75,7 +75,9 @@ def get_stash(mxnet_variant) {
 // Returns the (Docker) environment for the given variant
 // The environment corresponds to the docker files in the 'docker' directory
 def get_environment(mxnet_variant) {
-  if (mxnet_variant.startsWith("cu")) {
+  if (mxnet_variant.startsWith("aarch64")) {
+    return "publish.ubuntu1804_aarch64_cpu"
+  } else if (mxnet_variant.startsWith("cu")) {
     // Remove 'mkl' suffix from variant to properly format test environment
     return "ubuntu_gpu_${mxnet_variant.replace('mkl', '')}"
   }
@@ -85,6 +87,9 @@ def get_environment(mxnet_variant) {
 // Returns the variant appropriate jenkins node test in which
 // to run a step
 def get_jenkins_node_label(mxnet_variant) {
+  if (mxnet_variant.startsWith("aarch64")) {
+    return NODE_LINUX_AARCH64_CPU
+  }
   if (mxnet_variant.startsWith('cu')) {
     return NODE_LINUX_GPU
   }
@@ -105,9 +110,9 @@ def unittest_py3(mxnet_variant) {
   }
 }
 
-// Tests quantization in P3 instance using Python 3
+// Tests quantization in G4 instance using Python 3
 def test_gpu_quantization_py3(mxnet_variant) {
-  node(NODE_LINUX_GPU_P3) {
+  node(NODE_LINUX_GPU_G4) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
       ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)

@@ -43,7 +43,7 @@ pipeline {
     // any disruption caused by different COMMIT_ID values chaning the job parameter configuration on
     // Jenkins.
     string(defaultValue: "mxnet_lib", description: "Pipeline to build", name: "RELEASE_JOB_TYPE")
-    string(defaultValue: "cpu,native,cu100,cu101,cu102,cu110,cu112", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
+    string(defaultValue: "cpu,native,cu100,cu101,cu102,cu110,cu112,aarch64_cpu", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
     booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
     string(defaultValue: "nightly_v1.x", description: "String used for naming docker images", name: "VERSION")
   }
@@ -56,9 +56,10 @@ pipeline {
           ci_utils = load('ci/Jenkinsfile_utils.groovy')
           ci_utils.assign_node_labels(
             utility: 'restricted-utility',
+            linux_aarch64_cpu: 'restricted-ub18-c6g',
             linux_cpu: 'restricted-mxnetlinux-cpu',
             linux_gpu: 'restricted-mxnetlinux-gpu',
-            linux_gpu_p3: 'restricted-mxnetlinux-gpu-p3',
+            linux_gpu_g4: 'restricted-mxnetlinux-gpu-g4',
             windows_cpu: 'restricted-mxnetwindows-cpu',
             windows_gpu: 'restricted-mxnetwindows-gpu'
           )
