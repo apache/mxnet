@@ -486,7 +486,7 @@ def rand_ndarray(shape, stype='default', density=None, dtype=None, modifier_func
     """Generate a random sparse ndarray. Returns the generated ndarray."""
     ctx = ctx if ctx else default_context()
     if stype == 'default':
-        arr = mx.nd.array(random_arrays(shape), dtype=dtype, ctx=ctx)
+        arr = mx.np.array(random_arrays(shape), dtype=dtype, ctx=ctx)
     else:
         arr, _ = rand_sparse_ndarray(shape, stype, density=density,
                                      modifier_func=modifier_func, dtype=dtype,

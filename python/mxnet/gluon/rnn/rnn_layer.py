@@ -233,10 +233,12 @@ class _RNNLayer(HybridBlock):
         else:
             rnn_args = states
 
+        rnn_args_ctx = []
         for args in rnn_args:
-            args.as_in_context(ctx)
+            new_args = args.as_in_context(ctx)
+            rnn_args_ctx.append(new_args)
 
-        rnn = npx.rnn(inputs, params, *rnn_args, use_sequence_length=self._use_sequence_length,
+        rnn = npx.rnn(inputs, params, *rnn_args_ctx, use_sequence_length=self._use_sequence_length,
                       state_size=self._hidden_size, projection_size=self._projection_size,
                       num_layers=self._num_layers, bidirectional=self._dir == 2,
                       p=self._dropout, state_outputs=True, mode=self._mode,
@@ -255,7 +257,6 @@ class _RNNLayer(HybridBlock):
         return outputs, states
 
 
-#pylint: disable=W0223
 class RNN(_RNNLayer):
     r"""Applies a multi-layer Elman RNN with `tanh` or `ReLU` non-linearity to an input sequence.
 

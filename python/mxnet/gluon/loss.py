@@ -112,7 +112,6 @@ class Loss(HybridBlock):
         raise NotImplementedError
 
 
-#pylint: disable=W0223
 @use_np
 class L2Loss(Loss):
     r"""Calculates the mean squared error between `label` and `pred`.
@@ -153,7 +152,7 @@ class L2Loss(Loss):
         return _batch_mean(loss, self._batch_axis)
 
 
-#pylint: disable=W0223
+
 @use_np
 class L1Loss(Loss):
     r"""Calculates the mean absolute error between `label` and `pred`.
@@ -194,7 +193,7 @@ class L1Loss(Loss):
         return _batch_mean(loss, self._batch_axis)
 
 
-#pylint: disable=W0223
+
 @use_np
 class SigmoidBinaryCrossEntropyLoss(Loss):
     r"""The cross-entropy loss for binary classification. (alias: SigmoidBCELoss)
@@ -286,7 +285,8 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
 SigmoidBCELoss = SigmoidBinaryCrossEntropyLoss
 
 
-#pylint: disable=W0223
+
+
 @use_np
 class SoftmaxCrossEntropyLoss(Loss):
     r"""Computes the softmax cross entropy loss. (alias: SoftmaxCELoss)
@@ -373,7 +373,6 @@ class SoftmaxCrossEntropyLoss(Loss):
 SoftmaxCELoss = SoftmaxCrossEntropyLoss
 
 
-#pylint: disable=W0223
 @use_np
 class KLDivLoss(Loss):
     r"""The Kullback-Leibler divergence loss.
@@ -450,7 +449,6 @@ class KLDivLoss(Loss):
         return _batch_mean(loss, self._batch_axis)
 
 
-#pylint: disable=W0223
 @use_np
 class CTCLoss(Loss):
     r"""Connectionist Temporal Classification Loss.
@@ -532,7 +530,6 @@ class CTCLoss(Loss):
         return _apply_weighting(loss, self._weight, sample_weight)
 
 
-#pylint: disable=W0223
 @use_np
 class HuberLoss(Loss):
     r"""Calculates smoothed L1 loss that is equal to L1 loss if absolute error
@@ -584,7 +581,6 @@ class HuberLoss(Loss):
         return _batch_mean(loss, self._batch_axis)
 
 
-#pylint: disable=W0223
 @use_np
 class HingeLoss(Loss):
     r"""Calculates the hinge loss function often used in SVMs:
@@ -631,7 +627,6 @@ class HingeLoss(Loss):
         return _batch_mean(loss, self._batch_axis)
 
 
-#pylint: disable=W0223
 @use_np
 class SquaredHingeLoss(Loss):
     r"""Calculates the soft-margin loss function used in SVMs:
@@ -678,7 +673,6 @@ class SquaredHingeLoss(Loss):
         return _batch_mean(loss, self._batch_axis)
 
 
-#pylint: disable=W0223
 @use_np
 class LogisticLoss(Loss):
     r"""Calculates the logistic loss (for binary losses only):
@@ -733,7 +727,6 @@ class LogisticLoss(Loss):
         return _batch_mean(loss, self._batch_axis)
 
 
-#pylint: disable=W0223
 @use_np
 class TripletLoss(Loss):
     r"""Calculates triplet loss given three input tensors and a positive margin.
@@ -781,7 +774,6 @@ class TripletLoss(Loss):
         return _apply_weighting(loss, self._weight, sample_weight)
 
 
-#pylint: disable=W0223
 @use_np
 class PoissonNLLLoss(Loss):
     r"""For a target (Random Variable) in a Poisson distribution, the function calculates the Negative
@@ -845,7 +837,6 @@ class PoissonNLLLoss(Loss):
         return _batch_mean(loss, self._batch_axis)
 
 
-#pylint: disable=W0223
 @use_np
 class CosineEmbeddingLoss(Loss):
     r"""For a target label 1 or -1, vectors input1 and input2, the function computes the cosine distance
@@ -907,7 +898,6 @@ class CosineEmbeddingLoss(Loss):
         return (x_dot_y / np.maximum(x_norm * y_norm, eps_arr))
 
 
-#pylint: disable=W0223
 @use_np
 class SDMLLoss(Loss):
     r"""Calculates Batchwise Smoothed Deep Metric Learning (SDML) Loss given two input tensors and a smoothing weight

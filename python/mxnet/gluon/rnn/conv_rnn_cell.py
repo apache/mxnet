@@ -37,7 +37,6 @@ def _get_conv_out_size(dimensions, kernels, paddings, dilations):
                  zip(dimensions, kernels, paddings, dilations))
 
 
-#pylint: disable=W0223
 @use_np
 class _BaseConvRNNCell(HybridRecurrentCell):
     """Abstract base class for convolutional RNNs"""
@@ -175,7 +174,6 @@ class _BaseConvRNNCell(HybridRecurrentCell):
         raise NotImplementedError("_BaseConvRNNCell is abstract class for convolutional RNN")
 
 
-#pylint: disable=W0223
 @use_np
 class _ConvRNNCell(_BaseConvRNNCell):
     def __init__(self, input_shape, hidden_channels,
@@ -396,7 +394,6 @@ class Conv3DRNNCell(_ConvRNNCell):
                                             activation=activation)
 
 
-#pylint: disable=W0223
 @use_np
 class _ConvLSTMCell(_BaseConvRNNCell):
     def __init__(self, input_shape, hidden_channels,
@@ -656,7 +653,6 @@ class Conv3DLSTMCell(_ConvLSTMCell):
                                              activation=activation)
 
 
-#pylint: disable=W0223
 @use_np
 class _ConvGRUCell(_BaseConvRNNCell):
     def __init__(self, input_shape, hidden_channels,

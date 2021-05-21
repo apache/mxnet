@@ -106,7 +106,6 @@ def _reverse_sequences(sequences, unroll_step, valid_length=None):
     return reversed_sequences
 
 
-#pylint: disable=W0223
 @use_np
 class RecurrentCell(Block):
     """Abstract base class for RNN cells
@@ -291,7 +290,6 @@ class RecurrentCell(Block):
         self._counter += 1
         return super(RecurrentCell, self).forward(inputs, states)
 
-#pylint: disable=W0223
 @use_np
 class HybridRecurrentCell(RecurrentCell, HybridBlock):
     """HybridRecurrentCell supports hybridize."""
@@ -302,7 +300,6 @@ class HybridRecurrentCell(RecurrentCell, HybridBlock):
         raise NotImplementedError
 
 
-#pylint: disable=W0223
 @use_np
 class RNNCell(HybridRecurrentCell):
     r"""Elman RNN recurrent neural network cell.
@@ -410,7 +407,6 @@ class RNNCell(HybridRecurrentCell):
             self.i2h_weight.shape = (self._hidden_size, nh)
 
 
-#pylint: disable=W0223
 @use_np
 class LSTMCell(HybridRecurrentCell):
     r"""Long-Short Term Memory (LSTM) network cell.
@@ -523,7 +519,8 @@ class LSTMCell(HybridRecurrentCell):
         forget_gate = self._get_activation(slice_gates[1], self._recurrent_activation)
         in_transform = self._get_activation(slice_gates[2], self._activation)
         out_gate = self._get_activation(slice_gates[3], self._recurrent_activation)
-        next_c = np.multiply(forget_gate, states[1]) + np.multiply(in_gate, in_transform)
+        next_c = np.multiply(forget_gate, states[1].as_in_context(ctx)) + \
+                 np.multiply(in_gate, in_transform)
         next_h = np.multiply(out_gate, npx.activation(next_c, act_type=self._activation))
 
         return next_h, [next_h, next_c]
@@ -537,7 +534,6 @@ class LSTMCell(HybridRecurrentCell):
                 nh *= 2
             self.i2h_weight.shape = (4*self._hidden_size, nh)
 
-#pylint: disable=W0223
 @use_np
 class GRUCell(HybridRecurrentCell):
     r"""Gated Rectified Unit (GRU) network cell.
@@ -666,7 +662,6 @@ class GRUCell(HybridRecurrentCell):
                 nh *= 2
             self.i2h_weight.shape = (3*self._hidden_size, nh)
 
-#pylint: disable=W0223
 @use_np
 class SequentialRNNCell(RecurrentCell):
     """Sequentially stacking multiple RNN cells."""
@@ -753,7 +748,6 @@ class SequentialRNNCell(RecurrentCell):
 
 
 
-#pylint: disable=W0223
 @use_np
 class HybridSequentialRNNCell(HybridRecurrentCell):
     """Sequentially stacking multiple HybridRNN cells."""
@@ -836,7 +830,6 @@ class HybridSequentialRNNCell(HybridRecurrentCell):
             child.infer_shape(i, x.shape[x.ndim-1], False)
 
 
-#pylint: disable=W0223
 @use_np
 class DropoutCell(HybridRecurrentCell):
     """Applies dropout on input.
@@ -892,7 +885,6 @@ class DropoutCell(HybridRecurrentCell):
             merge_outputs=merge_outputs, valid_length=None)
 
 
-#pylint: disable=W0223
 @use_np
 class ModifierCell(HybridRecurrentCell):
     """Base class for modifier cells. A modifier
@@ -935,7 +927,6 @@ class ModifierCell(HybridRecurrentCell):
                         **self.__dict__)
 
 
-#pylint: disable=W0223
 @use_np
 class ZoneoutCell(ModifierCell):
     """Applies Zoneout on base cell."""
@@ -982,7 +973,6 @@ class ZoneoutCell(ModifierCell):
         return output, states
 
 
-#pylint: disable=W0223
 @use_np
 class ResidualCell(ModifierCell):
     """
@@ -1028,7 +1018,6 @@ class ResidualCell(ModifierCell):
         self.base_cell.infer_shape(i, input_size, is_bidirect)
 
 
-#pylint: disable=W0223
 @use_np
 class BidirectionalCell(HybridRecurrentCell):
     """Bidirectional RNN cell.
@@ -1110,7 +1099,6 @@ class BidirectionalCell(HybridRecurrentCell):
         l_cell.infer_shape(i, input_size, True)
         r_cell.infer_shape(i, input_size, True)
 
-#pylint: disable=W0223
 @use_np
 class VariationalDropoutCell(ModifierCell):
     """
@@ -1284,7 +1272,6 @@ class VariationalDropoutCell(ModifierCell):
     def infer_shape(self, i, input_size, is_bidirect):
         self.base_cell.infer_shape(i, input_size, is_bidirect)
 
-#pylint: disable=W0223
 @use_np
 class LSTMPCell(HybridRecurrentCell):
     r"""Long-Short Term Memory Projected (LSTMP) network cell.

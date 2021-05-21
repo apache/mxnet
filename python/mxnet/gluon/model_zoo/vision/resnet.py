@@ -42,7 +42,6 @@ def _conv3x3(channels, stride, in_channels):
 
 
 # Blocks
-# pylint: disable=W0223
 @use_np
 class BasicBlockV1(HybridBlock):
     r"""BasicBlock V1 from `"Deep Residual Learning for Image Recognition"
@@ -89,7 +88,6 @@ class BasicBlockV1(HybridBlock):
         return x
 
 
-# pylint: disable=W0223
 @use_np
 class BottleneckV1(HybridBlock):
     r"""Bottleneck V1 from `"Deep Residual Learning for Image Recognition"
@@ -138,7 +136,6 @@ class BottleneckV1(HybridBlock):
         return x
 
 
-# pylint: disable=W0223
 @use_np
 class BasicBlockV2(HybridBlock):
     r"""BasicBlock V2 from
@@ -184,7 +181,6 @@ class BasicBlockV2(HybridBlock):
         return x + residual
 
 
-# pylint: disable=W0223
 @use_np
 class BottleneckV2(HybridBlock):
     r"""Bottleneck V2 from
@@ -237,7 +233,6 @@ class BottleneckV2(HybridBlock):
 
 
 # Nets
-# pylint: disable=W0223
 @use_np
 class ResNetV1(HybridBlock):
     r"""ResNet V1 model from
@@ -291,7 +286,6 @@ class ResNetV1(HybridBlock):
         return x
 
 
-# pylint: disable=W0223
 @use_np
 class ResNetV2(HybridBlock):
     r"""ResNet V2 model from

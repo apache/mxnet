@@ -33,7 +33,6 @@ from .... import base
 from ....util import use_np
 
 
-# pylint: disable=W0223
 @use_np
 class VGG(HybridBlock):
     r"""VGG model from the `"Very Deep Convolutional Networks for Large-Scale Image Recognition"

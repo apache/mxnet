@@ -40,7 +40,7 @@ from ..symbol import Symbol, fromjson
 from ..ndarray import NDArray
 from .parameter import Parameter, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
-from .utils import _check_same_symbol_type, _check_all_np_ndarrays
+from .utils import _check_same_symbol_type, _check_all_np_ndarrays, _check_block_input_np_ndarrays
 from .. import numpy_extension as _mx_npx
 from .. import numpy as _mx_np, ndarray as nd
 from .. util import is_np_array, np_shape, np_array
@@ -850,8 +850,7 @@ class Block:
 
         for hook in self._forward_hooks.values():
             hook(self, args, out)
-        if _mx_npx.is_np_array():
-            _check_all_np_ndarrays(out)
+        _check_all_np_ndarrays(out)
         return out
 
     def forward(self, *args):
@@ -1039,7 +1038,9 @@ class HybridBlock(Block):
     """
     def __init__(self):
         super(HybridBlock, self).__init__()
-        self._v2 = inspect.unwrap(self.hybrid_forward.__func__) is HybridBlock.hybrid_forward
+        assert hasattr(self, "hybrid_forward") is False, (
+            "Starting from MXNet2.0, Gluon2.0 with forward interface will be used instead of "
+            "hybrid_forward. Please follow MXNet2.0 Migration Guide to use new APIs.")
         self._cached_graph = ()
         self._cached_op = None
         self._out_format = None
@@ -1064,41 +1065,7 @@ class HybridBlock(Block):
                 self._active = False
             self._clear_cached_op()
 
-    def _get_graph_v1(self, *args):
-        if not self._cached_graph:
-            flatten_args, self._in_format = _flatten(args, "input")
-            flatten_inputs = []
-            symbol_inputs = []
-            cnt = 0
-            real_arg_num = sum([ele is not None for ele in flatten_args])
-            if real_arg_num == 0:
-                raise ValueError('All args are None and we do not support such a case.'
-                                 ' Received args={}'.format(args))
-            for arg in flatten_args:
-                if arg is not None:
-                    if real_arg_num > 1:
-                        arg_sym = symbol.var('data{}'.format(cnt))
-                    else:
-                        arg_sym = symbol.var('data')
-                    if isinstance(arg, _mx_np.ndarray):
-                        arg_sym = arg_sym.as_np_ndarray()
-                    cnt += 1
-                    flatten_inputs.append(arg_sym)
-                    symbol_inputs.append(arg_sym)
-                else:
-                    flatten_inputs.append(None)
-            grouped_inputs = _regroup(flatten_inputs, self._in_format)
-
-            with _block_scope(self):
-                params = {i: j.var() for i, j in self._reg_params.items()}
-                out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
-            out, self._out_format = _flatten(out, "output")
-
-            self._cached_graph = symbol_inputs, symbol.Group(out, _check_same_symbol_type(out))
-
-        return self._cached_graph
-
-    def _get_graph_v2(self, *args):
+    def _get_graph(self, *args):
         if not self._cached_graph:
             flatten_args, self._in_format = _flatten(args, "input")
             flatten_args = [ele.detach() if ele is not None else None for ele in flatten_args]
@@ -1122,14 +1089,6 @@ class HybridBlock(Block):
             flatten_out, self._out_format = _flatten(out, "output")
             symbol_outputs = dc.get_symbol(flatten_out, sym_cls=type(symbol_inputs[0]))
             self._cached_graph = symbol_inputs, symbol_outputs
-        return self._cached_graph
-
-    def _get_graph(self, *args):
-        if not self._cached_graph:
-            if not self._v2:
-                return self._get_graph_v1(*args)
-            else:  # Gluon 2 based on deferred compute mode
-                return self._get_graph_v2(*args)
         return self._cached_graph
 
     def _build_cache(self, *args, update_graph=True):
@@ -1492,20 +1451,16 @@ class HybridBlock(Block):
 
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
-        if not self._v2:
-            # Gluon 1 based on F:  hybrid_forward is defined by user
-            self._infer_attrs('infer_shape', 'shape', *args)
-        else:
-            # In Gluon 2, users must implement infer_shape, if any deferred
-            # initialized parameters are associated with the HybridBlock
-            params = [p for p in self._reg_params.values() if not shape_is_known(p.shape)]
-            if params:
-                params_str = ", ".join("{} ({})".format(p.name, p.shape) for p in params)
-                raise RuntimeError(
-                    "{name} has parameters with unknown shape. You need to either specify the shape "
-                    "in __init__ or implement {name}.infer_shape to set the parameter shapes "
-                    "based on the first input. Parameters with unknown shapes are {params}".format(
-                        name=type(self).__name__, params=params_str))
+        # In Gluon 2, users must implement infer_shape, if any deferred
+        # initialized parameters are associated with the HybridBlock
+        params = [p for p in self._reg_params.values() if not shape_is_known(p.shape)]
+        if params:
+            params_str = ", ".join("{} ({})".format(p.name, p.shape) for p in params)
+            raise RuntimeError(
+                "{name} has parameters with unknown shape. You need to either specify the shape "
+                "in __init__ or implement {name}.infer_shape to set the parameter shapes "
+                "based on the first input. Parameters with unknown shapes are {params}".format(
+                    name=type(self).__name__, params=params_str))
 
     def infer_type(self, *args):
         """Infers data type of Parameters from inputs."""
@@ -1618,81 +1573,44 @@ class HybridBlock(Block):
             cld()._monitor_all = monitor_all
 
     def __call__(self, x, *args):
-        if not self._v2:
-            # Gluon 1 based on F:  hybrid_forward is defined by user
+        _check_block_input_np_ndarrays([x, *args])
+        assert self.forward is not HybridBlock.forward, (
+            'Must either define {name}.forward or {name}.hybrid_forward. '
+            'Defining {name}.hybrid_forward is deprecated.'.format(name=type(self).__name__))
+
+        _, _, ctx_set, first_ctx = _gather_type_ctx_info([x] + list(args))
+
+        if self._active and not dc.is_deferred_compute():
+            # Do not call CachedOp if not hybridized or inside deferred compute mode.
+            if len(ctx_set) > 1:
+                raise ValueError('Find multiple contexts in the input, '
+                                 'After hybridized, the HybridBlock only supports one input '
+                                 'context. You can print the ele.ctx in the '
+                                 'input arguments to inspect their contexts. '
+                                 'Find all contexts = {}'.format(ctx_set))
+
+        if not self._called_infer_shape_already:
+            self.infer_shape(x, *args)
+            for p in self._reg_params.values():
+                p._finish_deferred_init()
+            self._called_infer_shape_already = True
+
+        if not self._active:
+            # Normal imperative computation of forward()
             return super().__call__(x, *args)
-        else:  # Gluon 2 based on deferred compute mode
-            assert self.forward is not HybridBlock.forward, (
-                'Must either define {name}.forward or {name}.hybrid_forward. '
-                'Defining {name}.hybrid_forward is deprecated.'.format(name=type(self).__name__))
 
-            if not self._called_infer_shape_already:
-                self.infer_shape(x, *args)
-                for p in self._reg_params.values():
-                    p._finish_deferred_init()
-                self._called_infer_shape_already = True
+        if dc.is_deferred_compute():
+            # Deferred compute is already enabled. This typically means that the current
+            # HybridBlock is a child block of a HybridBlock that has been hybridized.
+            return super().__call__(x, *args)
 
-            if not self._active:
-                # Normal imperative computation of forward()
-                return super().__call__(x, *args)
-
-            if dc.is_deferred_compute():
-                # Deferred compute is already enabled. This typically means that the current
-                # HybridBlock is a child block of a HybridBlock that has been hybridized.
-                return super().__call__(x, *args)
-
-            with x.ctx:
-                return self._call_cached_op(x, *args)
+        with first_ctx:
+            return self._call_cached_op(x, *args)
 
     def forward(self, x, *args):
-        """Defines the forward computation. Arguments can be either
-        :py:class:`NDArray` or :py:class:`Symbol`."""
+        """Overrides the forward computation. Arguments must be
+        :py:class:`mxnet.numpy.ndarray`."""
 
-        has_symbol, has_ndarray, ctx_set, first_ctx = _gather_type_ctx_info([x] + list(args))
-        if has_symbol and has_ndarray:
-            raise ValueError('In HybridBlock, we do not support mixed NDArrays and Symbols'
-                             ' types for the input. Please check the type of the args.\n')
-        if not has_symbol and not has_ndarray:
-            raise ValueError('In HybridBlock, there must be one NDArray or one Symbol in the input.'
-                             ' Please check the type of the args.\n')
-        if has_ndarray:
-            ctx = first_ctx
-            if self._active and not dc.is_deferred_compute():
-                # Do not call CachedOp if not hybridized or inside deferred compute mode.
-                if len(ctx_set) > 1:
-                    raise ValueError('Find multiple contexts in the input, '
-                                     'After hybridized, the HybridBlock only supports one input '
-                                     'context. You can print the ele.ctx in the '
-                                     'input arguments to inspect their contexts. '
-                                     'Find all contexts = {}'.format(ctx_set))
-                with ctx:
-                    return self._call_cached_op(x, *args)
-            with ctx:
-                try:
-                    params = {k: v.data(ctx) for k, v in self._reg_params.items()}
-                except DeferredInitializationError:
-                    self._deferred_infer_shape(x, *args)
-                    for _, v in self.params.items():
-                        v._finish_deferred_init()
-                    params = {k: v.data(ctx) for k, v in self._reg_params.items()}
-
-                return self.hybrid_forward(ndarray, x, *args, **params)
-
-        with _block_scope(self):
-            params = {i: j.var() for i, j in self._reg_params.items()}
-            return self.hybrid_forward(symbol, x, *args, **params)
-
-    def hybrid_forward(self, F, x, *args, **kwargs):
-        """Overrides to construct symbolic graph for this `Block`.
-
-        Parameters
-        ----------
-        x : Symbol or NDArray
-            The first input tensor.
-        *args : list of Symbol or list of NDArray
-            Additional input tensors.
-        """
-        # pylint: disable= invalid-name
         raise NotImplementedError
 
     def reset_ctx(self, ctx):
@@ -1872,6 +1790,18 @@ class SymbolBlock(HybridBlock):
                 self._reg_params[aux]._var_name = aux
 
         self._cached_graph = syms, out
+    
+    def __call__(self, *args):
+        """Calls forward. Only accepts positional arguments."""
+        for hook in self._forward_pre_hooks.values():
+            hook(self, args)
+
+        out = self.forward(*args)
+
+        for hook in self._forward_hooks.values():
+            hook(self, args, out)
+        _check_all_np_ndarrays(out)
+        return out
 
     def forward(self, x, *args):
         if dc.is_deferred_compute():
@@ -1921,9 +1851,6 @@ class SymbolBlock(HybridBlock):
                         self.params.get(node).cast('float32')
                         for sib in sibs:
                             self.params.get(sib).cast('float32')
-
-    def hybrid_forward(self, F, x, *args, **kwargs):
-        raise NotImplementedError
 
 def _infer_param_types(in_params, out_params, arg_params, aux_params, default_dtype=mx_real_t):
     """Utility function that helps in inferring DType of args and auxs params

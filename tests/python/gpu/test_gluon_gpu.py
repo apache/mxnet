@@ -178,7 +178,7 @@ def check_layer_bidirectional(size, in_size, proj_size):
             bwd_inpt = mx.np.flip(inpt, 0)
             bwd = self._lstm_bwd(bwd_inpt)
             bwd = mx.np.flip(bwd, 0)
-            return mx.np.concatenate([fwd, bwd], dim=2)
+            return mx.np.concatenate([fwd, bwd], axis=2)
     weights = {}
     for d in ['l', 'r']:
         weights['{}0_i2h_weight'.format(d)] = mx.np.random.uniform(
@@ -302,7 +302,7 @@ def test_rnn_layer_begin_state_type():
 
 def test_gluon_ctc_consistency():
     loss = mx.gluon.loss.CTCLoss()
-    data = mx.np.arange(0, 4, repeat=40, ctx=mx.gpu(0)
+    data = mx.np.repeat(mx.np.arange(0, 4, ctx=mx.gpu(0)), 40
                         ).reshape((2, 20, 4)).flip(axis=0)
     cpu_label = mx.np.array([[2, 1, -1, -1], [3, 2, 2, -1]], ctx=mx.cpu(0))
     gpu_label = mx.np.array([[2, 1, -1, -1], [3, 2, 2, -1]], ctx=mx.gpu(0))
@@ -333,7 +333,7 @@ def test_global_norm_clip_multi_device():
         if check_isfinite:
             assert norm == 9.0
         else:
-            assert norm.asscalar() == 9.0
+            assert norm.item() == 9.0
         assert_almost_equal(x1, np.ones((3, 3)) / 9)
         assert_almost_equal(x2, np.ones((4, 4)) / 9)
         assert_almost_equal(x3, np.ones((7, 4)) / 9)
@@ -627,7 +627,7 @@ def test_cudnn_dropout_reproducibility():
     b = a.copy()
     a.attach_grad()
     b.attach_grad()
-    seed = np.random.randint(0, 100000)
+    seed = np.random.randint(0, 100000).item()
     N = 10
     mx.np.random.seed(seed)
     out1 = []

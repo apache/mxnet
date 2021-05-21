@@ -34,7 +34,6 @@ from ...base import numeric_types
 from .activations import Activation
 from ...util import use_np
 
-#pylint: disable=W0223
 @use_np
 class _Conv(HybridBlock):
     """Abstract nD convolution layer (private, used as implementation base).
@@ -217,7 +216,6 @@ class _Conv(HybridBlock):
                         **self._kwargs)
 
 
-#pylint: disable=W0223
 class Conv1D(_Conv):
     r"""1D convolution layer (e.g. temporal convolution).
 
@@ -298,7 +296,6 @@ class Conv1D(_Conv):
             op_name, **kwargs)
 
 
-#pylint: disable=W0223
 class Conv2D(_Conv):
     r"""2D convolution layer (e.g. spatial convolution over images).
 
@@ -381,7 +378,6 @@ class Conv2D(_Conv):
             op_name, **kwargs)
 
 
-#pylint: disable=W0223
 class Conv3D(_Conv):
     """3D convolution layer (e.g. spatial convolution over volumes).
 
@@ -465,7 +461,6 @@ class Conv3D(_Conv):
             op_name, **kwargs)
 
 
-#pylint: disable=W0223
 class Conv1DTranspose(_Conv):
     """Transposed 1D convolution layer (sometimes called Deconvolution).
 
@@ -553,7 +548,6 @@ class Conv1DTranspose(_Conv):
         self.outpad = output_padding
 
 
-#pylint: disable=W0223
 class Conv2DTranspose(_Conv):
     """Transposed 2D convolution layer (sometimes called Deconvolution).
 
@@ -646,7 +640,6 @@ class Conv2DTranspose(_Conv):
         self.outpad = output_padding
 
 
-#pylint: disable=W0223
 class Conv3DTranspose(_Conv):
     """Transposed 3D convolution layer (sometimes called Deconvolution).
 
@@ -740,7 +733,6 @@ class Conv3DTranspose(_Conv):
         self.outpad = output_padding
 
 
-#pylint: disable=W0223
 @use_np
 class _Pooling(HybridBlock):
     """Abstract class for different pooling layers."""
@@ -775,7 +767,6 @@ class _Pooling(HybridBlock):
                         **self._kwargs)
 
 
-#pylint: disable=W0223
 class MaxPool1D(_Pooling):
     """Max pooling operation for one dimensional data.
 
@@ -822,7 +813,6 @@ class MaxPool1D(_Pooling):
             pool_size, strides, padding, ceil_mode, False, 'max', layout, **kwargs)
 
 
-#pylint: disable=W0223
 class MaxPool2D(_Pooling):
     """Max pooling operation for two dimensional (spatial) data.
 
@@ -872,7 +862,6 @@ class MaxPool2D(_Pooling):
             pool_size, strides, padding, ceil_mode, False, 'max', layout, **kwargs)
 
 
-#pylint: disable=W0223
 class MaxPool3D(_Pooling):
     """Max pooling operation for 3D data (spatial or spatio-temporal).
 
@@ -924,7 +913,6 @@ class MaxPool3D(_Pooling):
             pool_size, strides, padding, ceil_mode, False, 'max', layout, **kwargs)
 
 
-#pylint: disable=W0223
 class AvgPool1D(_Pooling):
     """Average pooling operation for temporal data.
 
@@ -973,7 +961,6 @@ class AvgPool1D(_Pooling):
             **kwargs)
 
 
-#pylint: disable=W0223
 class AvgPool2D(_Pooling):
     """Average pooling operation for spatial data.
 
@@ -1025,7 +1012,6 @@ class AvgPool2D(_Pooling):
             **kwargs)
 
 
-#pylint: disable=W0223
 class AvgPool3D(_Pooling):
     """Average pooling operation for 3D data (spatial or spatio-temporal).
 
@@ -1079,7 +1065,6 @@ class AvgPool3D(_Pooling):
             **kwargs)
 
 
-#pylint: disable=W0223
 class GlobalMaxPool1D(_Pooling):
     """Gloabl max pooling operation for one dimensional (temporal) data.
 
@@ -1107,7 +1092,6 @@ class GlobalMaxPool1D(_Pooling):
             (1,), None, 0, True, True, 'max', layout, **kwargs)
 
 
-#pylint: disable=W0223
 class GlobalMaxPool2D(_Pooling):
     """Global max pooling operation for two dimensional (spatial) data.
 
@@ -1136,7 +1120,6 @@ class GlobalMaxPool2D(_Pooling):
             (1, 1), None, 0, True, True, 'max', layout, **kwargs)
 
 
-#pylint: disable=W0223
 class GlobalMaxPool3D(_Pooling):
     """Global max pooling operation for 3D data (spatial or spatio-temporal).
 
@@ -1166,7 +1149,6 @@ class GlobalMaxPool3D(_Pooling):
             (1, 1, 1), None, 0, True, True, 'max', layout, **kwargs)
 
 
-#pylint: disable=W0223
 class GlobalAvgPool1D(_Pooling):
     """Global average pooling operation for temporal data.
 
@@ -1192,7 +1174,6 @@ class GlobalAvgPool1D(_Pooling):
             (1,), None, 0, True, True, 'avg', layout, **kwargs)
 
 
-#pylint: disable=W0223
 class GlobalAvgPool2D(_Pooling):
     """Global average pooling operation for spatial data.
 
@@ -1220,7 +1201,6 @@ class GlobalAvgPool2D(_Pooling):
             (1, 1), None, 0, True, True, 'avg', layout, **kwargs)
 
 
-#pylint: disable=W0223
 class GlobalAvgPool3D(_Pooling):
     """Global average pooling operation for 3D data (spatial or spatio-temporal).
 
@@ -1249,7 +1229,6 @@ class GlobalAvgPool3D(_Pooling):
             (1, 1, 1), None, 0, True, True, 'avg', layout, **kwargs)
 
 
-#pylint: disable=W0223
 @use_np
 class ReflectionPad2D(HybridBlock):
     r"""Pads the input tensor using the reflection of the input boundary.
@@ -1294,7 +1273,6 @@ class ReflectionPad2D(HybridBlock):
         return npx.pad(x, mode='reflect', pad_width=self._padding)
 
 
-#pylint: disable=W0223
 @use_np
 class DeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v_1 (Dai, 2017).
@@ -1519,7 +1497,6 @@ class DeformableConvolution(HybridBlock):
                         **self._kwargs_deformable_conv)
 
 
-#pylint: disable=W0223
 @use_np
 class ModulatedDeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v2 (Dai, 2018).
@@ -1726,7 +1703,6 @@ class ModulatedDeformableConvolution(HybridBlock):
         return 'modulated_deformable_conv'
 
 
-#pylint: disable=W0223
 @use_np
 class PixelShuffle1D(HybridBlock):
 
@@ -1775,7 +1751,6 @@ class PixelShuffle1D(HybridBlock):
         return "{}({})".format(self.__class__.__name__, self._factor)
 
 
-#pylint: disable=W0223
 @use_np
 class PixelShuffle2D(HybridBlock):
 
@@ -1839,7 +1814,6 @@ class PixelShuffle2D(HybridBlock):
         return "{}({})".format(self.__class__.__name__, self._factors)
 
 
-#pylint: disable=W0223
 @use_np
 class PixelShuffle3D(HybridBlock):
 

@@ -274,6 +274,7 @@ def test_sequential_rnn_cells(seq_rnn_type, determinism, merged_inputs, hybridiz
     check_rnn_forward_backward(net, merged_inputs, hybridize, merge_outputs, determinism)
 
 
+@mx.util.use_np
 def test_rnn_cells_export_import():
     class RNNLayer(gluon.HybridBlock):
         def __init__(self):

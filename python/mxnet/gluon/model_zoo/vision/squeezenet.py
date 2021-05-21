@@ -47,7 +47,6 @@ def _make_fire_conv(channels, kernel_size, padding=0):
     return out
 
 # Net
-# pylint: disable=W0223
 @use_np
 class SqueezeNet(HybridBlock):
     r"""SqueezeNet model from the `"SqueezeNet: AlexNet-level accuracy with 50x fewer parameters

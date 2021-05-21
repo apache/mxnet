@@ -150,7 +150,6 @@ def make_aux(classes):
     return out
 
 # Net
-# pylint: disable=W0223
 @use_np
 class Inception3(HybridBlock):
     r"""Inception v3 model from

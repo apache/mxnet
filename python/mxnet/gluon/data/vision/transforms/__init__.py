@@ -78,7 +78,6 @@ class Compose(Sequential):
                 self.add(i)
 
 
-#pylint: disable=W0223
 class HybridCompose(HybridSequential):
     """Sequentially composes multiple transforms. This is the Hybrid version of Compose.
 
@@ -112,7 +111,6 @@ class HybridCompose(HybridSequential):
         self.hybridize()
 
 
-#pylint: disable=W0223
 @use_np
 class Cast(HybridBlock):
     """Cast inputs to a specific data type
@@ -167,7 +165,6 @@ class RandomApply(Sequential):
         return _append_return(x, *args)
 
 
-#pylint: disable=W0223
 class HybridRandomApply(HybridSequential):
     """Apply a list of transformations randomly given probability
 

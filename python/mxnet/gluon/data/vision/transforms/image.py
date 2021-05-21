@@ -43,7 +43,6 @@ def _append_return(*args):
     return None
 
 
-#pylint: disable=W0223
 @use_np
 class ToTensor(HybridBlock):
     """Converts an image NDArray or batch of image NDArray to a tensor NDArray.
@@ -87,7 +86,6 @@ class ToTensor(HybridBlock):
         return _append_return(npx.image.to_tensor(x), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class Normalize(HybridBlock):
     """Normalize an tensor of shape (C x H x W) or (N x C x H x W) with mean and
@@ -142,7 +140,6 @@ class Normalize(HybridBlock):
         return _append_return(npx.image.normalize(x, self._mean, self._std), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class Rotate(Block):
     """Rotate the input image by a given angle. Keeps the original image shape.
@@ -174,7 +171,6 @@ class Rotate(Block):
         return _append_return(image.imrotate(x, *self._args), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class RandomRotation(Block):
     """Random rotate the input image by a random angle.
@@ -217,7 +213,6 @@ class RandomRotation(Block):
         return _append_return(image.random_rotate(x, *self._args), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class RandomResizedCrop(HybridBlock):
     """Crop the input image with random scale and aspect ratio.
@@ -261,7 +256,6 @@ class RandomResizedCrop(HybridBlock):
         return _append_return(npx.image.random_resized_crop(x, **self._kwargs), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class CropResize(HybridBlock):
     r"""Crop the input image with and optionally resize it.
@@ -322,7 +316,6 @@ class CropResize(HybridBlock):
             out = npx.image.resize(out, self._size, False, self._interpolation)
         return _append_return(out, *args)
 
-#pylint: disable=W0223, E1121
 @use_np
 class RandomCrop(HybridBlock):
     """Randomly crop `src` with `size` (width, height).
@@ -372,7 +365,6 @@ class RandomCrop(HybridBlock):
             x = np.pad(x, pad_width=self.np_pad, mode='constant', constant_values=self._pad_value)
         return _append_return(npx.image.random_crop(x, *self._args), *args)
 
-#pylint: disable=W0223, E1121
 @use_np
 class CenterCrop(HybridBlock):
     """Crops the image `src` to the given `size` by trimming on all four
@@ -411,7 +403,6 @@ class CenterCrop(HybridBlock):
         return _append_return(npx.image.random_crop(x, (0.5, 0.5), (0.5, 0.5), *self._args), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class Resize(HybridBlock):
     """Resize an image or a batch of image NDArray to the given size.
@@ -456,7 +447,6 @@ class Resize(HybridBlock):
     def forward(self, x, *args):
         return _append_return(npx.image.resize(x, self._size, self._keep, self._interpolation), *args)
 
-#pylint: disable=W0223
 @use_np
 class RandomFlipLeftRight(HybridBlock):
     """Randomly flip the input image left to right with a probability
@@ -481,7 +471,6 @@ class RandomFlipLeftRight(HybridBlock):
         return _append_return(npx.image.random_flip_left_right(x, p=self.p), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class RandomFlipTopBottom(HybridBlock):
     """Randomly flip the input image top to bottom with a probability
@@ -506,7 +495,6 @@ class RandomFlipTopBottom(HybridBlock):
         return _append_return(npx.image.random_flip_top_bottom(x, p=self.p), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class RandomBrightness(HybridBlock):
     """Randomly jitters image brightness with a factor
@@ -533,7 +521,6 @@ class RandomBrightness(HybridBlock):
         return _append_return(npx.image.random_brightness(x, *self._args), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class RandomContrast(HybridBlock):
     """Randomly jitters image contrast with a factor
@@ -560,7 +547,6 @@ class RandomContrast(HybridBlock):
         return _append_return(npx.image.random_contrast(x, *self._args), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class RandomSaturation(HybridBlock):
     """Randomly jitters image saturation with a factor
@@ -587,7 +573,6 @@ class RandomSaturation(HybridBlock):
         return _append_return(npx.image.random_saturation(x, *self._args), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class RandomHue(HybridBlock):
     """Randomly jitters image hue with a factor
@@ -614,7 +599,6 @@ class RandomHue(HybridBlock):
         return _append_return(npx.image.random_hue(x, *self._args), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class RandomColorJitter(HybridBlock):
     """Randomly jitters the brightness, contrast, saturation, and hue
@@ -650,7 +634,6 @@ class RandomColorJitter(HybridBlock):
         return _append_return(npx.image.random_color_jitter(x, *self._args), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class RandomLighting(HybridBlock):
     """Add AlexNet-style PCA-based noise to an image.
@@ -675,7 +658,6 @@ class RandomLighting(HybridBlock):
         return _append_return(npx.image.random_lighting(x, self._alpha), *args)
 
 
-#pylint: disable=W0223
 @use_np
 class RandomGray(HybridBlock):
     """Randomly convert to gray image.

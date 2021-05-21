@@ -26,7 +26,6 @@ from ..parameter import Parameter
 from ...util import use_np
 
 
-#pylint: disable=W0223
 @use_np
 class Activation(HybridBlock):
     r"""Applies an activation function to input.
@@ -60,7 +59,6 @@ class Activation(HybridBlock):
                         **self.__dict__)
 
 
-#pylint: disable=W0223
 @use_np
 class LeakyReLU(HybridBlock):
     r"""Leaky version of a Rectified Linear Unit.
@@ -102,7 +100,6 @@ class LeakyReLU(HybridBlock):
                         alpha=self._alpha)
 
 
-#pylint: disable=W0223
 @use_np
 class PReLU(HybridBlock):
     r"""Parametric leaky version of a Rectified Linear Unit.
@@ -146,7 +143,6 @@ class PReLU(HybridBlock):
         return npx.leaky_relu(x, gamma=self.alpha.data(ctx), act_type='prelu', name='fwd')
 
 
-#pylint: disable=W0223
 @use_np
 class ELU(HybridBlock):
     r"""
@@ -176,7 +172,6 @@ class ELU(HybridBlock):
         return npx.leaky_relu(x, act_type='elu', slope=self._alpha)
 
 
-#pylint: disable=W0223
 @use_np
 class SELU(HybridBlock):
     r"""
@@ -198,7 +193,6 @@ class SELU(HybridBlock):
         return npx.leaky_relu(x, act_type='selu', name='fwd')
 
 
-#pylint: disable=W0223
 @use_np
 class GELU(HybridBlock):
     r"""
@@ -220,7 +214,6 @@ class GELU(HybridBlock):
         return npx.leaky_relu(x, act_type='gelu', name='fwd')
 
 
-#pylint: disable=W0223
 @use_np
 class Swish(HybridBlock):
     r"""
@@ -248,7 +241,6 @@ class Swish(HybridBlock):
         return x * npx.sigmoid(self._beta * x)
 
 
-#pylint: disable=W0223
 @use_np
 class SiLU(HybridBlock):
     r"""
