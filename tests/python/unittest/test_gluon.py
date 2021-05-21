@@ -856,6 +856,7 @@ def test_export(tmpdir):
     assert symbol_filename == tmpfile+'-symbol.json'
     assert params_filename == tmpfile+'-0000.params'
 
+@use_np
 def test_import():
     ctx = mx.context.current_context()
     net1 = gluon.model_zoo.vision.resnet18_v1(
@@ -1089,6 +1090,7 @@ def test_activations():
     #     assert test_point == ref_point
 
 
+@use_np
 def test_dropout():
     def get_slice(x, axis, idx):
         ix = ()
@@ -1103,7 +1105,7 @@ def test_dropout():
         compactshape = list(shape)
         for axis in axes:
             compactshape[axis] = 1
-        compactx = mx.random.uniform(shape=tuple(compactshape))
+        compactx = mx.np.random.uniform(size=tuple(compactshape))
         broadcastx = compactx.broadcast_to(shape)
         dropouty = mx.gluon.nn.Dropout(rate=ratio, axes=axes)(broadcastx)
         for axis in axes:

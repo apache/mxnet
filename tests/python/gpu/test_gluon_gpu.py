@@ -56,7 +56,7 @@ def check_rnn_layer(layer):
 
 def check_rnn_layer_w_rand_inputs(layer):
     layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
-    x = mx.np.uniform(size=(10, 16, 30))
+    x = mx.np.random.uniform(size=(10, 16, 30))
     with mx.gpu(0):
         x = x.copyto(mx.gpu(0))
         states = layer.begin_state(16)
@@ -87,7 +87,7 @@ def test_lstmp():
               'i2h_bias': (hidden_size * 4,),
               'h2h_bias': (hidden_size * 4,),
               'h2r_weight': (projection_size, hidden_size)}
-    weights = {k: rand_ndarray(v) for k, v in shapes.items()}
+    weights = {k: rand_ndarray(v).as_np_ndarray() for k, v in shapes.items()}
     lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
                                 input_size=input_size)
     lstm_cell = gluon.rnn.LSTMPCell(hidden_size=hidden_size,
@@ -302,8 +302,7 @@ def test_rnn_layer_begin_state_type():
 
 def test_gluon_ctc_consistency():
     loss = mx.gluon.loss.CTCLoss()
-    data = mx.np.repeat(mx.np.arange(0, 4, ctx=mx.gpu(0)), 40
-                        ).reshape((2, 20, 4)).flip(axis=0)
+    data = mx.np.flip(mx.np.repeat(mx.np.arange(0, 4, ctx=mx.gpu(0)), 40).reshape((2, 20, 4)), axis=0)
     cpu_label = mx.np.array([[2, 1, -1, -1], [3, 2, 2, -1]], ctx=mx.cpu(0))
     gpu_label = mx.np.array([[2, 1, -1, -1], [3, 2, 2, -1]], ctx=mx.gpu(0))
 
@@ -399,7 +398,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
     assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]),
                         _find_bn(bn2).running_var.data(ctx_list[0]),
                         atol=1e-3, rtol=1e-3)
-    input2grad = mx.np.concatenate(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
+    input2grad = mx.np.concatenate([output.grad.as_in_context(input.context) for output in inputs2], axis=0)
     assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
 
 @mx.util.use_np

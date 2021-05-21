@@ -1386,7 +1386,7 @@ class LSTMPCell(HybridRecurrentCell):
         forget_gate = npx.activation(slice_gates[1], act_type="sigmoid")
         in_transform = npx.activation(slice_gates[2], act_type="tanh")
         out_gate = npx.activation(slice_gates[3], act_type="sigmoid")
-        next_c = forget_gate * states[1] + in_gate * in_transform
+        next_c = forget_gate * states[1].as_in_context(ctx) + in_gate * in_transform
         hidden = np.multiply(out_gate, npx.activation(next_c, act_type="tanh"))
         next_r = npx.fully_connected(hidden, num_hidden=self._projection_size,
                                      weight=self.h2r_weight.data(ctx), no_bias=True)

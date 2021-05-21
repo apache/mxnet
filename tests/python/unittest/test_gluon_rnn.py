@@ -549,6 +549,7 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, num_layers, l
     check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=True)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('input_size', [8])
 @pytest.mark.parametrize('hidden_size', [8, 16])
 @pytest.mark.parametrize('num_layers', [1, 2, 3, 4])

@@ -446,11 +446,7 @@ def test_dc_hybridblock():
     for ctx in contexts:
         net = MyBlock()
         net.initialize(ctx=contexts)
-        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False, ctx=ctx)
-        with mx.util.np_shape(True), mx.util.np_array(True):
-            net = MyBlock()
-            net.initialize(ctx=contexts)
-            _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True, ctx=ctx)
+        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True, ctx=ctx)
 
 
 def test_dc_hybridblock_wrapped():
@@ -482,7 +478,7 @@ def test_dc_hybridblock_deferred_init_no_infer_shape_error():
 
     net = MyBlock()
     net.initialize()
-    data = mx.nd.ones(shape=(8, 10), ctx=mx.context.current_context())
+    data = mx.np.ones(shape=(8, 10), ctx=mx.context.current_context())
     with pytest.raises(RuntimeError):
         net(data)
 
@@ -502,11 +498,7 @@ def test_dc_hybridblock_deferred_init():
 
     net = MyBlock()
     net.initialize()
-    _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False)
-    with mx.util.np_shape(True), mx.util.np_array(True):
-        net = MyBlock()
-        net.initialize()
-        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
+    _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
 
 
 def test_dc_hybridblock_dynamic_shape():
@@ -535,16 +527,17 @@ def test_dc_hybridblock_graph_partition():
             self.dense = mx.gluon.nn.Dense(units=4)
 
         def forward(self, x, idx):
-            return mx.nd.sum(mx.nd.sum(mx.nd.contrib.boolean_mask(self.dense(x).as_nd_ndarray(), idx)))
+            mask = mx.nd.np._internal.boolean_mask(self.dense(x), idx)
+            return mx.np.sum(mask)
 
     def setup(*, nd):
-        x = mx.nd.array([[0, 1], [2, 3], [4, 5], [6, 7]])
-        idx = mx.nd.array([1, 1, 1, 1])
+        x = mx.np.array([[0, 1], [2, 3], [4, 5], [6, 7]])
+        idx = mx.np.array([1, 1, 1, 1])
         return [x, idx]
 
     net = MyBlock()
     net.initialize()
-    _assert_dc_gluon(setup, net, numpy=False, autograd=False)
+    _assert_dc_gluon(setup, net, numpy=True, autograd=False)
 
 
 def test_indexing_shape_change():
