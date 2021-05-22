@@ -1792,6 +1792,10 @@ class SymbolBlock(HybridBlock):
 
         self._cached_graph = syms, out
 
+    def infer_shape(self, *args):
+        """Infers shape of Parameters from inputs."""
+        self._infer_attrs('infer_shape', 'shape', *args)
+
     def __call__(self, x, *args):
         """Calls forward. Only accepts positional arguments."""
         for hook in self._forward_pre_hooks.values():

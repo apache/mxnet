@@ -75,26 +75,6 @@ def test_exc_symbolic():
     pytest.raises(MXNetError, symbolic, exec_backward=False, waitall=True)
     pytest.raises(MXNetError, symbolic, exec_backward=True, waitall=True)
 
-@pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
-                    reason="This test assumes asynchronous execution.")
-def test_exc_gluon():
-    def gluon(exec_wait=True, waitall=False):
-        model = nn.Sequential()
-        model.add(nn.Dense(128, activation='tanh', in_units=10, flatten=False))
-        model.add(nn.Dropout(1))
-        model.add(nn.Dense(64, activation='tanh', in_units=256),
-                  nn.Dense(32, in_units=64))
-        model.initialize(ctx=[default_context()])
-        z = model(mx.np.random.normal(10, 10, (32, 2, 10), ctx=default_context()))
-        if waitall:
-            mx.npx.waitall()
-        elif exec_wait:
-            z.wait_to_read()
-
-    gluon(exec_wait=False)
-    pytest.raises(MXNetError, gluon, exec_wait=True)
-
-    pytest.raises(MXNetError, gluon, waitall=True)
 
 def test_exc_multiple_waits():
     def multiple_waits(waitall=False):

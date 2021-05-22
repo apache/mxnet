@@ -388,7 +388,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
         mx.autograd.backward(loss1)
         mx.autograd.backward(loss2)
 
-    output2 = mx.np.concatenate([output.as_in_context(input.context) for output in output2], dim=0)
+    output2 = mx.np.concatenate([output.as_in_context(input.context) for output in output2], axis=0)
     # assert forwarding
     assert_almost_equal(input1, input2, atol=1e-3, rtol=1e-3)
     assert_almost_equal(output1, output2, atol=1e-3, rtol=1e-3)

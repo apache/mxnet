@@ -153,7 +153,7 @@ def test_createblock():
     def f():
         net = mx.gluon.nn.Dense(2)
         net.initialize()
-        x = net(mx.nd.array([1, 2, 3]))
+        x = net(mx.np.array([1, 2, 3]))
         x.wait_to_read()
         status[0] = True
 
