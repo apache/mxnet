@@ -202,6 +202,7 @@ def test_collect_parameters():
     assert set(net.collect_params('0.bias|1.bias').keys()) == \
         set(['0.bias', '1.bias'])
 
+@use_np
 def test_basic():
     model = nn.Sequential()
     model.add(nn.Dense(128, activation='tanh', in_units=10, flatten=False))
@@ -801,6 +802,7 @@ def check_sequential_dc(net):
     assert len(slc) == 2 and slc[0] is dense2 and slc[1] is dense3
     assert isinstance(slc, type(net))
 
+@use_np
 @pytest.mark.garbage_expected
 def test_sequential():
     check_sequential(gluon.nn.Sequential())
@@ -2296,6 +2298,7 @@ def test_reshape_pooling2d_reshape_pooling2d():
             check_layer_forward_withinput(net, x)
 
 @pytest.mark.serial
+@pytest.mark.skip("GPU out of memory")
 def test_slice_pooling2d_slice_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
