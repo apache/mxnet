@@ -392,8 +392,17 @@ class MXNetGraph(object):
                 # if node_output_names is empty then we use the last returned node as output
                 if not node_output_names:
                     node_output_names = [converted[-1].name]
-                # process node outputs (sort by alphabetical order)
-                node_output_names.sort()
+                # process node outputs (sort by output index)
+                def str2int(s):
+                    import re
+                    i = re.search(r'\d{0,2}$', s).group()
+                    if i == '':
+                        return 0
+                    else:
+                        return int(i)
+
+                sorted(node_output_names, key=str2int)
+
                 # match the output names to output dtypes
                 if dtypes is not None:
                     assert len(node_output_names) == len(dtypes)

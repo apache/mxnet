@@ -3088,13 +3088,14 @@ def convert_embedding(node, **kwargs):
 
     name, input_nodes, attrs = get_inputs(node, kwargs)
     axis = int(attrs.get('axis', 0))
+    dtype = str(attrs.get('dtype', 'float32'))
 
     nodes = [
         make_node('Cast', [input_nodes[0]], [name+'_indices_casted'], to=int(TensorProto.INT64)),
         make_node('Gather', [input_nodes[1], name+'_indices_casted'], [name], axis=axis, name=name)
     ]
 
-    return nodes
+    return nodes, (dtype, )
 
 
 @mx_op.register("stack")
