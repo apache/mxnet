@@ -133,15 +133,15 @@ static void ConvertWeightBias2MKLDNN(NDArray *weight, NDArray *bias, bool has_bi
 }
 
 
-static inline bool CheckReshapeConditions(const nnvm::Node& node, index_t out_index) {
-  int split_output_index = node.inputs[0].index;
+static inline bool CheckReshapeConditions(const nnvm::Node& node, const index_t out_index) {
+  const index_t split_output_index = node.inputs[0].index;
   if (split_output_index != out_index)
     return false;
 
-  auto const &reshape_param = nnvm::get<NumpyXReshapeParam>(node.attrs.parsed);
-  auto newshape = reshape_param.newshape;
+  const auto &reshape_param = nnvm::get<NumpyXReshapeParam>(node.attrs.parsed);
+  const auto newshape = reshape_param.newshape;
 
-  if(newshape.ndim() != 4 || !(newshape[0] == newshape[1] && newshape[0] == -2))
+  if (newshape.ndim() != 4 || !(newshape[0] == newshape[1] && newshape[0] == -2))
     return false;
 
   return true;
@@ -149,7 +149,7 @@ static inline bool CheckReshapeConditions(const nnvm::Node& node, index_t out_in
 
 static inline bool CheckSwapAxisConditions(const nnvm::Node& node) {
   auto params = node.attrs.dict;
-  int dim1, dim2 = 0;
+  int dim1 = 0, dim2 = 0;
   if(params.count("dim1") && params.count("dim2")) {
     dim1 = std::stoi(params.at("dim1"));
     dim2 = std::stoi(params.at("dim2"));
@@ -157,10 +157,7 @@ static inline bool CheckSwapAxisConditions(const nnvm::Node& node) {
     return false;
   }
 
-  if((dim1 == 1 && dim2 == 2) || (dim1 == 2 && dim2 == 1))
-    return true;
-
-  return false;
+  return ((dim1 == 1 && dim2 == 2) || (dim1 == 2 && dim2 == 1));
 }
 
 }  // namespace op

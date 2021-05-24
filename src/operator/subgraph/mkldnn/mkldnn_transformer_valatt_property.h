@@ -26,13 +26,13 @@
 #include <string>
 #include <vector>
 #include "../common.h"
-#include "../../tensor/matrix_op-inl.h"
+#include "../../contrib/transformer-inl.h"
 #include "../../numpy/np_matrix_op-inl.h"
 #include "../../swapaxis-inl.h"
-#include "../../contrib/transformer-inl.h"
+#include "../../tensor/matrix_op-inl.h"
 #include "mkldnn_common.h"
-#include "mkldnn_transformer-inl.h"
 #include "mkldnn_subgraph_base-inl.h"
+#include "mkldnn_transformer-inl.h"
 
 /*
                  custom_op
@@ -118,7 +118,8 @@ class SgMKLDNNTransformerValAttSelector : public SubgraphSelectorV2 {
   std::vector<const BiDirectedNode *> matched_list_;
 
  public:
-  bool Select(const BiDirectedNode& seed_node, const std::shared_ptr<NodeAttr>& node_attr) override {
+  bool Select(const BiDirectedNode& seed_node,
+              const std::shared_ptr<NodeAttr>& node_attr) override {
     if (seed_node.node->op() == Op::Get("batch_dot")) {
       in_status_ = InStatus::kStart;
       out_status_ = OutStatus::oStart;
@@ -130,7 +131,9 @@ class SgMKLDNNTransformerValAttSelector : public SubgraphSelectorV2 {
   }
 
   bool SelectInput(const BiDirectedNode &n, const BiDirectedNode &input_node) override {
-    if (in_status_ == InStatus::kFail || in_status_ == InStatus::kSuccess || input_node.node->is_variable())
+    if (in_status_ == InStatus::kFail    ||
+        in_status_ == InStatus::kSuccess ||
+        input_node.node->is_variable())
       return false;
 
     switch (in_status_) {
@@ -187,13 +190,16 @@ class SgMKLDNNTransformerValAttSelector : public SubgraphSelectorV2 {
   }
 
   bool SelectOutput(const BiDirectedNode &n, const BiDirectedNode &output_node) override {
-    if (out_status_ == OutStatus::oFail || out_status_ == OutStatus::oSuccess || output_node.node->is_variable())
+    if (out_status_ == OutStatus::oFail    ||
+        out_status_ == OutStatus::oSuccess ||
+        output_node.node->is_variable())
       return false;
 
     switch (out_status_) {
       case OutStatus::oStart:
         if (output_node.node->op() == Op::Get("_npi_transpose")) {
-          auto const &transpose_params = nnvm::get<NumpyTransposeParam>(output_node.node->attrs.parsed);
+          auto const &transpose_params =
+                        nnvm::get<NumpyTransposeParam>(output_node.node->attrs.parsed);
           auto axes = transpose_params.axes;
           if (axes.ndim() == 4 && axes[0] == 0 && axes[1] == 2 && axes[2] == 1 && axes[3] == 3) {
             out_status_ = OutStatus::oTranspose;
@@ -202,10 +208,13 @@ class SgMKLDNNTransformerValAttSelector : public SubgraphSelectorV2 {
           }
         }
       case OutStatus::oTranspose:
-        if (out_status_ == OutStatus::oTranspose && output_node.node->op() == Op::Get("_npx_reshape")) {
+        if (out_status_ == OutStatus::oTranspose &&
+            output_node.node->op() == Op::Get("_npx_reshape")) {
           auto const &reshape_param = nnvm::get<NumpyXReshapeParam>(output_node.node->attrs.parsed);
           auto newshape = reshape_param.newshape;
-          if(newshape.ndim() == 3 && (newshape[0] == newshape[1] && newshape[0] == -2) && newshape[2] == -1) {
+          if (newshape.ndim() == 3 &&
+              newshape[2] == -1 &&
+              (newshape[0] == newshape[1] && newshape[0] == -2)) {
             out_status_ = OutStatus::oSuccess;
             matched_list_.push_back(&output_node);
             return true;
@@ -215,10 +224,9 @@ class SgMKLDNNTransformerValAttSelector : public SubgraphSelectorV2 {
         out_status_ = OutStatus::oFail;
         return false;
     }
-    
     return false;
   }
-  
+
   std::vector<BiDirectedNode *> Filter(const std::vector<BiDirectedNode*>& candidates) override {
     if (in_status_ == InStatus::kFail || in_status_ != InStatus::kSuccess ||
         out_status_ == OutStatus::oFail || out_status_ != OutStatus::oSuccess) {
@@ -242,7 +250,6 @@ class SgMKLDNNTransformerValAttSelector : public SubgraphSelectorV2 {
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
-
 };
 
 class SgMKLDNNTransformerValAttProperty : public SubgraphProperty {
@@ -270,10 +277,9 @@ class SgMKLDNNTransformerValAttProperty : public SubgraphProperty {
     std::ostringstream node_name;
     std::string op_name;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
-
-      if((node->op() == Op::Get("_npx_reshape"))) {
+      if ((node->op() == Op::Get("_npx_reshape"))) {
         auto const &reshape_param = nnvm::get<NumpyXReshapeParam>(node->attrs.parsed);
-        if(reshape_param.newshape.ndim() == 4)
+        if (reshape_param.newshape.ndim() == 4)
           // set heads attribute - all necessary conditions are checked before
           n->attrs.dict["heads"] = std::to_string(reshape_param.newshape[2]);
       }
@@ -290,7 +296,6 @@ class SgMKLDNNTransformerValAttProperty : public SubgraphProperty {
     auto selector = std::make_shared<SgMKLDNNTransformerValAttSelector>();
     return selector;
   }
-
 };
 
 }  // namespace op

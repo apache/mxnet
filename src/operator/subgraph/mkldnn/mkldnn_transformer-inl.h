@@ -20,8 +20,8 @@
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_INL_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_INL_H_
 
-#include "../../mxnet_op.h"
 #include "../../mshadow_op.h"
+#include "../../mxnet_op.h"
 
 
 namespace mxnet {
@@ -35,21 +35,21 @@ struct MKLDNNSelfAttParam : public dmlc::Parameter<MKLDNNSelfAttParam> {
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
   DMLC_DECLARE_PARAMETER(MKLDNNSelfAttParam) {
     DMLC_DECLARE_FIELD(heads)
-    .describe("Set number of heads");
+    .describe("Set number of heads.");
     DMLC_DECLARE_FIELD(quantized).set_default(false)
-    .describe("Whether it's a quantized InterleavedMatMul operator");
+    .describe("Whether it's a quantized self attention matmul operator.");
     DMLC_DECLARE_FIELD(enable_float_output).set_default(false)
-    .describe("Whether to enable float32 output");
+    .describe("Whether to enable float32 output.");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
               "through calibration. If present, it will be used to by "
-              "quantized InterleavedMatMul op to calculate primitive scale");
+              "quantized self-attention op to calculate primitive scale.");
     DMLC_DECLARE_FIELD(max_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The maximum scalar value in the form of float32 obtained "
               "through calibration. If present, it will be used to by "
-              "quantized InterleavedMatMul op to calculate primitive scale");
+              "quantized self-attention op to calculate primitive scale.");
   }
 };
 

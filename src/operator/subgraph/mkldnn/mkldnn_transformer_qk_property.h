@@ -26,12 +26,12 @@
 #include <string>
 #include <vector>
 #include "../common.h"
-#include "../../tensor/matrix_op-inl.h"
 #include "../../numpy/np_matrix_op-inl.h"
 #include "../../contrib/transformer-inl.h"
+#include "../../tensor/matrix_op-inl.h"
 #include "mkldnn_common.h"
-#include "mkldnn_transformer-inl.h"
 #include "mkldnn_subgraph_base-inl.h"
+#include "mkldnn_transformer-inl.h"
 
 /*
               custom_op
@@ -62,7 +62,7 @@ class SgMKLDNNTransformerQKSelector : public SubgraphSelector {
   };
 
 /*
-  kStart -> kFirstSwapAx ---> kSecondSwapAx ---> kFirstReshape --> kSecondReshape --> kSuccess
+  kStart ---> kFirstSwapAx ---> kSecondSwapAx ---> kFirstReshape ---> kSecondReshape ---> kSuccess
   Each status except kStart is connected with kFail
 */
 
@@ -105,7 +105,7 @@ class SgMKLDNNTransformerQKSelector : public SubgraphSelector {
       case kSecondSwapAx:
         if (new_node.op() == Op::Get("_npx_reshape")) {
           // input to reshape must be first or second output from split
-          if(CheckReshapeConditions(new_node, 0) || CheckReshapeConditions(new_node, 1)) {
+          if (CheckReshapeConditions(new_node, 0) || CheckReshapeConditions(new_node, 1)) {
             status_ = kFirstReshape;
             matched_list_.push_back(&new_node);
             return true;
@@ -113,7 +113,7 @@ class SgMKLDNNTransformerQKSelector : public SubgraphSelector {
         }
       case kFirstReshape:
         if (new_node.op() == Op::Get("_npx_reshape")) {
-          if(CheckReshapeConditions(new_node, 0) || CheckReshapeConditions(new_node, 1)) {
+          if (CheckReshapeConditions(new_node, 0) || CheckReshapeConditions(new_node, 1)) {
             status_ = kSecondReshape;
             matched_list_.push_back(&new_node);
             return true;
@@ -134,7 +134,7 @@ class SgMKLDNNTransformerQKSelector : public SubgraphSelector {
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
     return false;
   }
-  
+
   std::vector<nnvm::Node *> Filter(
       const std::vector<nnvm::Node *> &candidates) override {
     if (status_ == kFail) {
@@ -158,7 +158,6 @@ class SgMKLDNNTransformerQKSelector : public SubgraphSelector {
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
-
 };
 
 class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
@@ -187,7 +186,7 @@ class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
     std::string op_name;
 
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
-      if((node->op() == Op::Get("_npx_reshape"))) {
+      if ((node->op() == Op::Get("_npx_reshape"))) {
         auto const &reshape_param =
             nnvm::get<NumpyXReshapeParam>(node->attrs.parsed);
         // set heads attribute - all necessary conditions are checked before
@@ -223,9 +222,9 @@ class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
   virtual void ConnectSubgraphInputs(const nnvm::ObjectPtr subgraph_node,
                                      std::vector<nnvm::NodeEntry*>* input_entries,
                                      std::vector<nnvm::NodeEntry>* orig_input_entries) const {
-
     subgraph_node->inputs.resize(1);
-    // split is not part of subgraph, skip split as input and connect subgraph input with split input
+    // split is not part of subgraph, skip split as input and
+    // connect subgraph input with split input
     subgraph_node->inputs[0] = orig_input_entries->at(0).node->inputs[0];
   }
 };
