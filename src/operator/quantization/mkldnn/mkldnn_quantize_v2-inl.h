@@ -49,6 +49,7 @@ class SgMKLDNNQuantizeOperator {
   float cached_data_min_{0.f};
   float cached_data_max_{0.f};
   float cached_scale_;
+  uint8_t cached_shift_{0};
   mkldnn::memory::desc o_desc_;
   mkldnn_args_map_t args_;
   std::shared_ptr<mkldnn::reorder> fwd_pd_;
@@ -135,6 +136,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
       if (shifted) {
         CHECK_LT(data_min, 0);  // assert that we are working on signed
         cached_scale_ = kUint8Range / (data_max - data_min);
+        cached_shift_ = static_cast<uint8_t>(std::round(-cached_scale_ * cached_data_min_));
       } else {
         cached_scale_ = GetQuantizeScale(out_type, data_min, data_max);
       }
@@ -172,8 +174,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
       uint8_t *raw_out_mem = static_cast<uint8_t *>(o_mem.second->get_data_handle());
       #pragma omp parallel for simd
       for (size_t i = 0; i < outputs[0].shape().Size(); i++) {
-        raw_out_mem[i] =
-            static_cast<uint8_t>(std::round(-cached_scale_ * cached_data_min_));
+        raw_out_mem[i] = cached_shift_;
       }
     }
     MKLDNNStream::Get()->Submit();
