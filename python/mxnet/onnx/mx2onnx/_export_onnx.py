@@ -275,7 +275,7 @@ class MXNetGraph(object):
             ONNX graph
         """
         try:
-            from onnx import (checker, helper, NodeProto, ValueInfoProto, TensorProto)
+            from onnx import (helper, NodeProto, ValueInfoProto, TensorProto)
             from onnx.helper import make_tensor_value_info
             from onnx.defs import onnx_opset_version
         except ImportError:
@@ -442,5 +442,4 @@ class MXNetGraph(object):
 
         graph.initializer.extend(initializer)
 
-        checker.check_graph(graph)
         return graph
