@@ -1195,7 +1195,8 @@ def test_save_load(tmpdir):
     x = np.random.rand(32, 10, 10)
     x = mx.np.array(x).as_in_context(mx.cpu())
     net(x)
-    _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
+    # _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
+    param_path = os.path.join(str(tmpdir), 'test_save_load_network.params')
     net.save_parameters(param_path)
     net2 = Network()
     net2.load_parameters(param_path)
@@ -1217,7 +1218,8 @@ def test_save_load_deduplicate_with_shared_params(tmpdir):
     b2 = B().share_parameters(b1.collect_params())
     c = C(b1, b2)
     c.initialize()
-    _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
+    # _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
+    param_path = os.path.join(str(tmpdir), 'test_save_load_deduplicate_with_shared_params.params')
     c.save_parameters(param_path, deduplicate=True)
 
     params = mx.npx.load(param_path)
@@ -1626,10 +1628,12 @@ def check_layer_forward_withinput(net, x):
     net.initialize()
     with mx.autograd.record():
         out1 = net(x)
+    mx.npx.waitall()
     out1.backward()
     net.hybridize()
     with mx.autograd.record():
         out2 = net(x_hybrid)
+    mx.npx.waitall()
     out2.backward()
     mx.test_utils.assert_almost_equal(x.grad.asnumpy(), x_hybrid.grad.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
@@ -2300,7 +2304,7 @@ def test_slice_pooling2d_slice_pooling2d():
     pooling_layers = [max_pooling, avg_pooling, global_maxpooling, global_avgpooling]
     class Net(gluon.HybridBlock):
         def __init__(self,
-                     slice,  
+                     slice,
                      pooling_layer1,
                      pooling_layer2,
                      **kwargs):
