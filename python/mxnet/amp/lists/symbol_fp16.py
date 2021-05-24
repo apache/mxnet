@@ -581,6 +581,7 @@ FP32_FUNCS = [
     'topk',
 
     # Neural network
+    'SoftmaxOutput',
     'softmax',
     'log_softmax',
     'masked_softmax',
@@ -591,6 +592,10 @@ FP32_FUNCS = [
     'L2Normalization',
     'LRN',
     'SoftmaxActivation',
+    'LinearRegressionOutput',
+    'LogisticRegressionOutput',
+    'MAERegressionOutput',
+    'SVMOutput',
     'softmax_cross_entropy',
     'smooth_l1',
     'MakeLoss',
@@ -722,4 +727,8 @@ WIDEST_TYPE_CASTS = [
     ]
 
 LOSS_OUTPUT_FUNCTIONS = [
+    'SoftmaxOutput',
+    'LinearRegressionOutput',
+    'LogisticRegressionOutput',
+    'MAERegressionOutput',
     ]
