@@ -2300,7 +2300,6 @@ def test_reshape_pooling2d_reshape_pooling2d():
             check_layer_forward_withinput(net, x)
 
 @pytest.mark.serial
-@pytest.mark.skip("GPU out of memory")
 def test_slice_pooling2d_slice_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
