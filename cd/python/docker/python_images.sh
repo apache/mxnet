@@ -61,7 +61,7 @@ test() {
     fi
 
     # Ensure the correct context root is passed in when building - Dockerfile.test expects ci directory
-    docker build -t "${test_image_name}" --build-arg USER_ID=`id -u` --build-arg GROUP_ID=`id -g` --build-arg BASE_IMAGE="${base_image}" --build-arg REQUIREMENTS_FILE=${requirements_file} -f ${resources_path}/Dockerfile.test ./ci
+    docker build -t "${test_image_name}" --build-arg USER_ID=`id -u` --build-arg GROUP_ID=`id -g` --build-arg BASE_IMAGE="${image_name}" --build-arg REQUIREMENTS_FILE=${requirements_file} -f ${resources_path}/Dockerfile.test ./ci
 }
 
 push() {
