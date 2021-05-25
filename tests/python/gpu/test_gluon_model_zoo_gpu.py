@@ -37,6 +37,7 @@ def download_data():
     return mx.test_utils.download(
         'https://repo.mxnet.io/gluon/dataset/test/val-5k-256-9e70d85e0.rec', VAL_DATA)
 
+@mx.util.use_np
 @pytest.mark.serial
 @pytest.mark.parametrize('model_name', ['resnet50_v1', 'vgg19_bn', 'alexnet', 'densenet201', 'squeezenet1.0', 'mobilenet0.25'])
 def test_inference(model_name):
@@ -64,10 +65,10 @@ def test_inference(model_name):
     # all parameters.
     cpu_model = get_model(model_name)
     cpu_model.initialize(ctx=mx.cpu())
-    cpu_model(mx.nd.array(data, ctx=mx.cpu()))
+    cpu_model(mx.np.array(data, ctx=mx.cpu()))
     gpu_model = get_model(model_name)
     gpu_model.initialize(ctx=mx.gpu())
-    gpu_model(mx.nd.array(data, ctx=mx.gpu()))
+    gpu_model(mx.np.array(data, ctx=mx.gpu()))
 
     # Force the two models have the same parameters.
     cpu_params = cpu_model.collect_params()
@@ -77,7 +78,7 @@ def test_inference(model_name):
         gpu_param = gpu_params.get(k)
         gpu_param.set_data(cpu_param.data().as_in_context(mx.gpu()))
 
-    cpu_data = mx.nd.array(data, ctx=mx.cpu())
+    cpu_data = mx.np.array(data, ctx=mx.cpu())
     for i in range(5):
         # Run inference.
         with autograd.record(train_mode=False):
@@ -98,6 +99,7 @@ def get_nn_model(name):
 # Seed 1521019752 produced a failure on the Py2 MKLDNN-GPU CI runner
 # on 2/16/2018 that was not reproducible.  Problem could be timing related or
 # based on non-deterministic algo selection.
+@mx.util.use_np
 @pytest.mark.serial
 def test_training():
     # We use network models without dropout for testing.
@@ -105,7 +107,7 @@ def test_training():
     all_models = ['resnet18_v1', 'densenet121']
 
     batch_size = 10
-    label = mx.nd.random.uniform(low=0, high=10, shape=(batch_size)).astype('int32')
+    label = mx.np.random.uniform(low=0, high=10, size=(batch_size)).astype('int32')
 
     download_data()
     dataIter = mx.io.ImageRecordIter(
@@ -132,10 +134,10 @@ def test_training():
         # all parameters.
         cpu_model = get_nn_model(model_name)
         cpu_model.initialize(ctx=mx.cpu())
-        cpu_model(mx.nd.array(data, ctx=mx.cpu()))
+        cpu_model(mx.np.array(data, ctx=mx.cpu()))
         gpu_model = get_nn_model(model_name)
         gpu_model.initialize(ctx=mx.gpu())
-        gpu_model(mx.nd.array(data, ctx=mx.gpu()))
+        gpu_model(mx.np.array(data, ctx=mx.gpu()))
 
         # Force the two models have the same parameters.
         cpu_params = cpu_model.collect_params()
@@ -150,7 +152,7 @@ def test_training():
 
         # Run forward and backward once.
         with autograd.record():
-            cpu_out = cpu_model(mx.nd.array(data, ctx=mx.cpu()))
+            cpu_out = cpu_model(mx.np.array(data, ctx=mx.cpu()))
             gpu_out = gpu_model(gpu_data)
             cpu_loss = softmax_cross_entropy(cpu_out, label)
             gpu_loss = softmax_cross_entropy(gpu_out, gpu_label)

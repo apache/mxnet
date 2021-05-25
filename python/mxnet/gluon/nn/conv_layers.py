@@ -1255,7 +1255,7 @@ class ReflectionPad2D(HybridBlock):
     Examples
     --------
     >>> m = nn.ReflectionPad2D(3)
-    >>> input = mx.nd.random.normal(shape=(16, 3, 224, 224))
+    >>> input = mx.np.random.normal(size=(16, 3, 224, 224))
     >>> output = m(input)
     """
     def __init__(self, padding=0, **kwargs):
@@ -1730,7 +1730,7 @@ class PixelShuffle1D(HybridBlock):
     Examples
     --------
     >>> pxshuf = PixelShuffle1D(2)
-    >>> x = mx.nd.zeros((1, 8, 3))
+    >>> x = mx.np.zeros((1, 8, 3))
     >>> pxshuf(x).shape
     (1, 4, 6)
     """
@@ -1787,7 +1787,7 @@ class PixelShuffle2D(HybridBlock):
     Examples
     --------
     >>> pxshuf = PixelShuffle2D((2, 3))
-    >>> x = mx.nd.zeros((1, 12, 3, 5))
+    >>> x = mx.np.zeros((1, 12, 3, 5))
     >>> pxshuf(x).shape
     (1, 2, 6, 15)
     """
@@ -1850,7 +1850,7 @@ class PixelShuffle3D(HybridBlock):
     Examples
     --------
     >>> pxshuf = PixelShuffle3D((2, 3, 4))
-    >>> x = mx.nd.zeros((1, 48, 3, 5, 7))
+    >>> x = mx.np.zeros((1, 48, 3, 5, 7))
     >>> pxshuf(x).shape
     (1, 2, 6, 15, 28)
     """

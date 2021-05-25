@@ -1452,10 +1452,10 @@ def dynamic_unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
     >>> input_size = 5
     >>> cell = mx.gluon.rnn.LSTMCell(input_size)
     >>> cell.initialize(ctx=mx.cpu())
-    >>> rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
+    >>> rnn_data = mx.np.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
     >>> state_shape = (batch_size, input_size)
-    >>> states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(2)]
-    >>> valid_length = mx.nd.array([2, 3])
+    >>> states = [mx.np.normal(loc=0, scale=1, shape=state_shape) for i in range(2)]
+    >>> valid_length = mx.np.array([2, 3])
     >>> output, states = mx.gluon.rnn.rnn_cell.dynamic_unroll(cell, rnn_data, states,
     ...                                                       valid_length=valid_length,
     ...                                                       layout='TNC')

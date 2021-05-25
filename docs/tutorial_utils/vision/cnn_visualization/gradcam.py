@@ -18,13 +18,12 @@
 from __future__ import print_function
 
 import mxnet as mx
-import mxnet.ndarray as nd
 
-from mxnet import gluon
+from mxnet import gluon, np, npx
 from mxnet import autograd
 from mxnet.gluon import nn
 
-import numpy as np
+import numpy as onp
 import cv2
 
 class ReluOp(mx.operator.CustomOp):
@@ -38,7 +37,7 @@ class ReluOp(mx.operator.CustomOp):
 
     def forward(self, is_train, req, in_data, out_data, aux):
         x = in_data[0]
-        y = nd.maximum(x, nd.zeros_like(x))
+        y = np.maximum(x, np.zeros_like(x))
         self.assign(out_data[0], req[0], y)
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
@@ -47,7 +46,7 @@ class ReluOp(mx.operator.CustomOp):
             y = out_data[0]
             dy = out_grad[0]
             # Zero out the negatives in the gradients of the output
-            dy_positives = nd.maximum(dy, nd.zeros_like(dy))
+            dy_positives = np.maximum(dy, np.zeros_like(dy))
             # What output values were greater than 0?
             y_ones = y.__gt__(0)
             # Mask out the values for which at least one of dy or y is negative
@@ -85,8 +84,8 @@ class Activation(mx.gluon.HybridBlock):
         assert act_type == 'relu'
         super(Activation, self).__init__(**kwargs)
 
-    def hybrid_forward(self, F, x):
-        return F.Custom(x, op_type='relu')
+    def forward(self, x):
+        return npx.Custom(x, op_type='relu')
 
 class Conv2D(mx.gluon.HybridBlock):
     """Wrapper on top of gluon.nn.Conv2D to capture the output and gradients of output of a Conv2D
@@ -108,7 +107,7 @@ class Conv2D(mx.gluon.HybridBlock):
                              activation=activation, use_bias=use_bias, weight_initializer=weight_initializer,
                              bias_initializer=bias_initializer, in_channels=in_channels)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         out = self.conv(x)
         name = self._prefix[:-1]
         if name == Conv2D.capture_layer_name:
@@ -153,10 +152,10 @@ def _get_grad(net, image, class_id=None, conv_layer_name=None, image_grad=False)
     # If user didn't provide a class id, we'll use the class that the network predicted
     if class_id == None:
         model_output = out.asnumpy()
-        class_id = np.argmax(model_output)
+        class_id = onp.argmax(model_output)
 
     # Create a one-hot target with class_id and backprop with the created target
-    one_hot_target = mx.nd.one_hot(mx.nd.array([class_id]), 1000)
+    one_hot_target = mx.npx.one_hot(mx.np.array([class_id]), 1000)
     out.backward(one_hot_target, train_mode=False)
 
     if image_grad:
@@ -202,46 +201,46 @@ def grad_to_image(gradient):
     the output neurons."""
     gradient = gradient - gradient.min()
     gradient /= gradient.max()
-    gradient = np.uint8(gradient * 255).transpose(1, 2, 0)
+    gradient = onp.uint8(gradient * 255).transpose(1, 2, 0)
     gradient = gradient[..., ::-1]
     return gradient
 
 def get_cam(imggrad, conv_out):
     """Compute CAM. Refer section 3 of https://arxiv.org/abs/1610.02391 for details"""
-    weights = np.mean(imggrad, axis=(1, 2))
-    cam = np.ones(conv_out.shape[1:], dtype=np.float32)
+    weights = onp.mean(imggrad, axis=(1, 2))
+    cam = onp.ones(conv_out.shape[1:], dtype=onp.float32)
     for i, w in enumerate(weights):
         cam += w * conv_out[i, :, :]
     cam = cv2.resize(cam, (imggrad.shape[1], imggrad.shape[2]))
-    cam = np.maximum(cam, 0)
-    cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam)) 
-    cam = np.uint8(cam * 255)
+    cam = onp.maximum(cam, 0)
+    cam = (cam - onp.min(cam)) / (onp.max(cam) - onp.min(cam)) 
+    cam = onp.uint8(cam * 255)
     return cam
 
 def get_guided_grad_cam(cam, imggrad):
     """Compute Guided Grad-CAM. Refer section 3 of https://arxiv.org/abs/1610.02391 for details"""
-    return np.multiply(cam, imggrad)
+    return onp.multiply(cam, imggrad)
 
 def get_img_heatmap(orig_img, activation_map):
     """Draw a heatmap on top of the original image using intensities from activation_map"""
     heatmap = cv2.applyColorMap(activation_map, cv2.COLORMAP_COOL)
     heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
-    img_heatmap = np.float32(heatmap) + np.float32(orig_img)
-    img_heatmap = img_heatmap / np.max(img_heatmap)
+    img_heatmap = onp.float32(heatmap) + onp.float32(orig_img)
+    img_heatmap = img_heatmap / onp.max(img_heatmap)
     img_heatmap *= 255
     return img_heatmap.astype(int)
 
 def to_grayscale(cv2im):
     """Convert gradients to grayscale. This gives a saliency map."""
     # How strongly does each position activate the output
-    grayscale_im = np.sum(np.abs(cv2im), axis=0)
+    grayscale_im = onp.sum(onp.abs(cv2im), axis=0)
 
     # Normalize between min and 99th percentile
-    im_max = np.percentile(grayscale_im, 99)
-    im_min = np.min(grayscale_im)
-    grayscale_im = np.clip((grayscale_im - im_min) / (im_max - im_min), 0, 1)
+    im_max = onp.percentile(grayscale_im, 99)
+    im_min = onp.min(grayscale_im)
+    grayscale_im = onp.clip((grayscale_im - im_min) / (im_max - im_min), 0, 1)
 
-    grayscale_im = np.expand_dims(grayscale_im, axis=0)
+    grayscale_im = onp.expand_dims(grayscale_im, axis=0)
     return grayscale_im
 
 def visualize(net, preprocessed_img, orig_img, conv_layer_name):
@@ -257,7 +256,7 @@ def visualize(net, preprocessed_img, orig_img, conv_layer_name):
     img_heatmap = get_img_heatmap(orig_img, cam)
     
     ggcam_gray = to_grayscale(ggcam)
-    img_ggcam_gray = np.squeeze(grad_to_image(ggcam_gray))
+    img_ggcam_gray = onp.squeeze(grad_to_image(ggcam_gray))
     
     return img_heatmap, img_ggcam, img_ggcam_gray
 

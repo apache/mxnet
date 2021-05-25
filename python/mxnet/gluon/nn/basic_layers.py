@@ -663,7 +663,7 @@ class InstanceNorm(HybridBlock):
     Examples
     --------
     >>> # Input of shape (2,1,2)
-    >>> x = mx.nd.array([[[ 1.1,  2.2]],
+    >>> x = mx.np.array([[[ 1.1,  2.2]],
     ...                 [[ 3.3,  4.4]]])
     >>> # Instance normalization is calculated with the above formula
     >>> layer = InstanceNorm()
@@ -671,7 +671,6 @@ class InstanceNorm(HybridBlock):
     >>> layer(x)
     [[[-0.99998355  0.99998331]]
      [[-0.99998319  0.99998361]]]
-    <NDArray 2x1x2 @cpu(0)>
     """
     def __init__(self, axis=1, epsilon=1e-5, center=True, scale=False,
                  beta_initializer='zeros', gamma_initializer='ones',
@@ -756,14 +755,13 @@ class LayerNorm(HybridBlock):
     Examples
     --------
     >>> # Input of shape (2, 5)
-    >>> x = mx.nd.array([[1, 2, 3, 4, 5], [1, 1, 2, 2, 2]])
+    >>> x = mx.np.array([[1, 2, 3, 4, 5], [1, 1, 2, 2, 2]])
     >>> # Layer normalization is calculated with the above formula
     >>> layer = LayerNorm()
     >>> layer.initialize(ctx=mx.cpu(0))
     >>> layer(x)
     [[-1.41421    -0.707105    0.          0.707105    1.41421   ]
      [-1.2247195  -1.2247195   0.81647956  0.81647956  0.81647956]]
-    <NDArray 2x5 @cpu(0)>
     """
     def __init__(self, axis=-1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
@@ -846,7 +844,7 @@ class GroupNorm(HybridBlock):
     Examples
     --------
     >>> # Input of shape (2, 3, 4)
-    >>> x = mx.nd.array([[[ 0,  1,  2,  3],
+    >>> x = mx.np.array([[[ 0,  1,  2,  3],
                           [ 4,  5,  6,  7],
                           [ 8,  9, 10, 11]],
                          [[12, 13, 14, 15],
@@ -862,7 +860,6 @@ class GroupNorm(HybridBlock):
      [[-1.5932543 -1.3035717 -1.0138891 -0.7242065]
       [-0.4345239 -0.1448413  0.1448413  0.4345239]
       [ 0.7242065  1.0138891  1.3035717  1.5932543]]]
-    <NDArray 2x3x4 @cpu(0)>
     """
     def __init__(self, num_groups=1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
@@ -914,7 +911,7 @@ class Lambda(Block):
 
         2) a function that conforms to ``def function(*args)``. For example::
 
-            block = Lambda(lambda x: nd.LeakyReLU(x, slope=0.1))
+            block = Lambda(lambda x: npx.leaky_relu(x, slope=0.1))
 
     Inputs:
         - ** *args **: one or more input data. Their shapes depend on the function.
