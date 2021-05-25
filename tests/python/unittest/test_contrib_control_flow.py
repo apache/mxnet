@@ -26,6 +26,7 @@ from mxnet.test_utils import *
 from mxnet.base import _as_list
 from mxnet.attribute import AttrScope
 
+mx.npx.reset_np()
 
 @mx.util.use_np
 def test_while_loop_simple_forward():

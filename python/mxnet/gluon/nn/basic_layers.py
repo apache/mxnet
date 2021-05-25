@@ -386,9 +386,16 @@ class _BatchNorm(HybridBlock):
 
     def forward(self, x):
         ctx = x.ctx
-        return npx.batch_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
-                              self.running_mean.data(ctx), self.running_var.data(ctx),
-                              name='fwd', **self._kwargs)
+        if self.fuse_relu:
+            return npx.batch_norm_with_relu(x, self.gamma.data(ctx), self.beta.data(ctx),
+                                            self.running_mean.data(ctx),
+                                            self.running_var.data(ctx),
+                                            name='fwd', **self._kwargs)
+        else:
+            return npx.batch_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
+                                  self.running_mean.data(ctx),
+                                  self.running_var.data(ctx),
+                                  name='fwd', **self._kwargs)
 
     def infer_shape(self, x, *args):
         channel_axis = self._axis if self._axis >= 0 else self._axis + x.ndim

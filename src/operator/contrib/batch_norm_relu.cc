@@ -246,6 +246,7 @@ std::vector<nnvm::NodeEntry> BatchNormWithReLUGrad(const nnvm::ObjectPtr& n,
 }
 
 NNVM_REGISTER_OP(_contrib_BatchNormWithReLU)
+.add_alias("_npx_batch_norm_with_relu")
 .describe(R"code(Batch normalization with ReLU fusion.
 
 An extented operator of Batch normalization which can fuse ReLU activation.

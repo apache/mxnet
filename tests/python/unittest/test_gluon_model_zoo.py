@@ -22,6 +22,7 @@ import sys
 import multiprocessing
 import pytest
 
+mx.npx.reset_np()
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)

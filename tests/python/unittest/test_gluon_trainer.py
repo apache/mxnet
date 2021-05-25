@@ -26,6 +26,8 @@ from common import assertRaises, xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 import pytest
 
+mx.npx.reset_np()
+
 def dict_equ(a, b):
     assert set(a) == set(b)
     for k in a:

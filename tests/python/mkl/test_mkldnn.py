@@ -24,25 +24,27 @@ import numpy as np
 import mxnet as mx
 import pytest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
-from mxnet import gluon, context
+from mxnet import gluon, context, use_np
 from mxnet.gluon import nn
 from mxnet.test_utils import *
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 import itertools
 
+@use_np
 @pytest.mark.seed(1234)
 def test_mkldnn_ndarray_slice():
     ctx = mx.cpu()
     net = gluon.nn.HybridSequential()
     net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
     net.initialize(ctx=ctx)
-    x = mx.nd.array(np.ones([32, 3, 224, 224]), ctx)
+    x = mx.np.array(np.ones([32, 3, 224, 224]), ctx=ctx)
     y = net(x)
 
     # trigger computation on ndarray slice
     assert_almost_equal(y[0].asnumpy()[0, 0, 0], np.array(0.056331709))
 
+@use_np
 @pytest.mark.seed(1234)
 def test_mkldnn_engine_threading():
     net = gluon.nn.HybridSequential()
@@ -58,12 +60,12 @@ def test_mkldnn_engine_threading():
 
     X = (32, 3, 32, 32)
     # trigger mkldnn execution thread
-    y = net(mx.nd.array(np.ones(X))).asnumpy()
+    y = net(mx.np.array(np.ones(X))).asnumpy()
 
     # Use Gluon dataloader to trigger different thread.
     # below line triggers different execution thread
     for _ in loader:
-        y = net(mx.nd.array(np.ones(X))).asnumpy()
+        y = net(mx.np.array(np.ones(X))).asnumpy()
         # output should be 056331709 (non-mkldnn mode output)
         assert_almost_equal(y[0, 0, 0, 0], np.array(0.056331709))
         break
@@ -328,7 +330,7 @@ def test_batchnorm_relu_fusion():
         unfused_net = BNNet(fuse_relu=False)
         fused_net.initialize()
         unfused_net.initialize()
-        in_data = mx.nd.random.normal(shape=shape)
+        in_data = mx.np.random.normal(size=shape)
         no_fuse_outputs = unfused_net.forward(in_data)
         fuse_outputs = fused_net.forward(in_data)
 

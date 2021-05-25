@@ -38,6 +38,8 @@ import json
 import random
 import tempfile
 
+mx.npx.reset_np()
+
 def test_parameter():
     p = gluon.Parameter('weight', shape=(10, 10))
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
