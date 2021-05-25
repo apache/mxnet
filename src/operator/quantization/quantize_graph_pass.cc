@@ -664,9 +664,9 @@ static inline void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
   size_t M = weight_tensor->shape()[0];
   size_t K = weight_tensor->shape()[1];
   int32_t shift_matrix[M];
-  for (int i = 0; i < M; i++) {
+  for (size_t i = 0; i < M; i++) {
     shift_matrix[i] = 0;
-    for (int j = 0; j < K; j++) {
+    for (size_t j = 0; j < K; j++) {
       int i_j_index = i * K + j;
       shift_matrix[i] += shift_value * weight_ptr[i_j_index];
     }
@@ -717,7 +717,8 @@ Graph OneDNNShiftedQuantization(Graph &&g) {
           int8_t *bias_ptr_old = bias_in_arg_ptr->data().dptr<int8_t>();
 
           for (size_t i = 0; i < bias_size; ++i) {
-            bias_ptr_int32[i] = std::round(bias_ptr_old[i] * bias_int32_rescale);
+            bias_ptr_int32[i] = static_cast<int32_t>(
+                std::round(bias_ptr_old[i] * bias_int32_rescale));
           }
           float min_data = std::stof(quantize->attrs.dict.at("min_calib_range"));
           float max_data = std::stof(quantize->attrs.dict.at("max_calib_range"));
