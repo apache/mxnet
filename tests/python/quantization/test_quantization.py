@@ -194,7 +194,7 @@ def test_requantize_int32_to_int8():
         assert_almost_equal(min_output.asnumpy(), np.array([min_output_np]))
         assert_almost_equal(max_output.asnumpy(), np.array([max_output_np]))
 
-    # test with symbol API.
+    # test with gluon API.
     check_requantize_with_gluon((3, 4, 10, 10))
     check_requantize_with_gluon((32, 3, 23, 23))
     check_requantize_with_gluon((3, 4, 10, 10), min_calib_range=-1050.0, max_calib_range=1040.0)
@@ -227,7 +227,7 @@ def test_quantized_conv():
                                           padding=pad, dilation=dilate, use_bias=use_bias)
         else:
             print('unsupported shape')
-            assert 1 == 0
+            assert False
 
         if qdtype == 'uint8':
             data_low = 0.0
@@ -264,10 +264,9 @@ def test_quantized_conv():
                          padding=(0, 0), dilation=(1, 1), use_bias=True, **kwargs):
                 super(QuantConv, self).__init__(**kwargs)
                 self.use_bias = use_bias
-                self._kwargs = {
-                    'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
-                    'pad': padding, 'num_filter': channels, 'no_bias': not use_bias, 'num_group': 1,
-                    'layout': 'NCHW'}
+                self._kwargs = {'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+                                'pad': padding, 'num_filter': channels, 'no_bias': not use_bias, 'num_group': 1,
+                                'layout': 'NCHW'}
 
                 self.min_data = mx.gluon.Parameter('min_data', dtype='float32', allow_deferred_init=True)
                 self.max_data = mx.gluon.Parameter('max_data', dtype='float32', allow_deferred_init=True)
@@ -294,7 +293,7 @@ def test_quantized_conv():
                              padding=pad, dilation=dilate, use_bias=use_bias)
 
         quantized_range = 127.0
-        q_args = {
+        qargs = {
             'weight': new_args['weight'].astype('int8'),
             'min_data': mx.nd.array([-quantized_range]),
             'max_data': mx.nd.array([quantized_range]),
@@ -302,13 +301,13 @@ def test_quantized_conv():
             'max_weight': mx.nd.array([quantized_range])
         }
         if use_bias:
-            q_args.update({
+            qargs.update({
                 'bias': new_args['bias'].astype('int8'),
                 'min_bias': mx.nd.array([-quantized_range]),
                 'max_bias': mx.nd.array([quantized_range]),
             })
 
-        convint8.load_dict(q_args, cast_dtype=True, dtype_source='saved')
+        convint8.load_dict(qargs, cast_dtype=True, dtype_source='saved')
 
         qoutput, min_range, max_range = convint8(input_data.astype(qdtype))
 
@@ -472,11 +471,9 @@ def test_quantized_pooling():
                          pool_type=pool_type, global_pool=global_pool, cudnn_off=False,
                          pooling_convention=convention):
                 super(PoolingBlock, self).__init__()
-                self._kwargs = {
-                    'kernel': kernel, 'pad': pad, 'stride': stride,
-                    'pool_type': pool_type, 'global_pool': global_pool,
-                    'cudnn_off': False, 'pooling_convention': convention
-                }
+                self._kwargs = {'kernel': kernel, 'pad': pad, 'stride': stride,
+                                'pool_type': pool_type, 'global_pool': global_pool,
+                                'cudnn_off': False, 'pooling_convention': convention}
 
             def hybrid_forward(self, F, data):
                 return F.Pooling(data, **self._kwargs)
@@ -487,10 +484,9 @@ def test_quantized_pooling():
                          cudnn_off=False, pooling_convention=convention):
                 super(QuantPoolingBlock, self).__init__()
 
-                self._kwargs = {
-                    'kernel': kernel, 'pad': pad, 'stride': stride,
-                    'pool_type': pool_type, 'global_pool': global_pool, 'cudnn_off': False,
-                    'pooling_convention':convention}
+                self._kwargs = {'kernel': kernel, 'pad': pad, 'stride': stride,
+                                'pool_type': pool_type, 'global_pool': global_pool, 'cudnn_off': False,
+                                'pooling_convention':convention}
 
             def hybrid_forward(self, F, data, min_data, max_data):
                 return F.contrib.quantized_pooling(data, min_data, max_data, **self._kwargs)
@@ -638,14 +634,14 @@ def test_quantized_fc():
             def hybrid_forward(self, F, x, weight, bias=None, min_data=None, max_data=None,
                                min_weight=None, max_weight=None, min_bias=None, max_bias=None):
                 out = F.contrib.quantized_fully_connected(data=x, weight=weight, bias=bias, 
-                                               min_data=min_data, max_data=max_data,
-                                               min_weight=min_weight, max_weight=max_weight,
-                                               min_bias=min_bias, max_bias=max_bias,
-                                               **self._kwargs)
+                                                          min_data=min_data, max_data=max_data,
+                                                          min_weight=min_weight, max_weight=max_weight,
+                                                          min_bias=min_bias, max_bias=max_bias,
+                                                          **self._kwargs)
                 return out
 
         fc_int8 = QuantFC(num_hidden=num_hidden, use_bias=use_bias, flatten=flatten)
-        q_args = {
+        qargs = {
             'weight': new_args['weight'].astype('int8'),
             'min_data': mx.nd.array(-data_range),
             'max_data': mx.nd.array(data_range),
@@ -653,13 +649,13 @@ def test_quantized_fc():
             'max_weight': mx.nd.array(weight_range)
         }
         if use_bias:
-            q_args.update({
+            qargs.update({
                 'bias': bias.astype('int8'),
                 'min_bias': mx.nd.array(-bias_range),
                 'max_bias': mx.nd.array(bias_range),
             })
 
-        fc_int8.load_dict(q_args, cast_dtype=True, dtype_source='saved')
+        fc_int8.load_dict(qargs, cast_dtype=True, dtype_source='saved')
 
         qoutput, min_range, max_range = fc_int8(data.astype(qdtype))
 
@@ -737,13 +733,13 @@ def test_quantized_embedding():
                 return out
 
         embedding_int8 = QuantEmbedding(input_dim=input_dim, output_dim=output_dim)
-        q_args = {
+        qargs = {
             'weight': weight.astype('int8'),
             'min_weight': mx.nd.array(-weight_range),
             'max_weight': mx.nd.array(weight_range)
         }
 
-        embedding_int8.load_dict(q_args, cast_dtype=True, dtype_source='saved')
+        embedding_int8.load_dict(qargs, cast_dtype=True, dtype_source='saved')
 
         qoutput, min_range, max_range = embedding_int8(data)
 
@@ -874,12 +870,12 @@ def test_quantized_bn():
         data = mx.nd.random.uniform(low=data_low, high=data_high, shape=data_shape)
         gamma = mx.nd.random.uniform(low=data_low, high=data_high, shape=fp32_params['gamma'].shape)
         beta = mx.nd.random.uniform(low=data_low, high=data_high, shape=fp32_params['beta'].shape)
-        moving_mean, moving_var = get_mean_var(data)
+        running_mean, running_var = get_mean_var(data)
         new_params = {
             'gamma':gamma,
             'beta':beta,
-            'running_mean': moving_mean,
-            'running_var': moving_var
+            'running_mean': running_mean,
+            'running_var': running_var
         }
 
         bn_fp32.load_dict(new_params)
