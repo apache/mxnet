@@ -24,6 +24,8 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../quantization'))
 from test_quantization import *
 
+mx.npx.reset_np()
+
 if __name__ == '__main__':
     import pytest
     pytest.main()

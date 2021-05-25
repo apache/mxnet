@@ -25,6 +25,8 @@ from mxnet.contrib import quantization
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
 
+mx.npx.reset_np()
+
 @mx.util.use_np
 def test_float64_fallback():
   class ConvWithDtype(nn.HybridBlock):
