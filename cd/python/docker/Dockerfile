@@ -36,7 +36,7 @@ RUN apt-get install -y libgomp1
 
 ARG MXNET_VARIANT
 RUN if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; then echo "not installing libquadmath0 on aarch64" ; else apt-get install -y libquadmath0 ; fi
-Run if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; \
+RUN if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; \
     then wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/Ubuntu18.04/arm-performance-libraries_21.0_Ubuntu-18.04_gcc-10.2.tar && \
     tar -xvf arm-performance-libraries_21.0_Ubuntu-18.04_gcc-10.2.tar && \
     arm-performance-libraries_21.0_Ubuntu-18.04_gcc-10.2/arm-performance-libraries_21.0_Ubuntu-18.04.sh -a; \
