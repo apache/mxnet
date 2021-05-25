@@ -1036,6 +1036,7 @@ def test_quantize_model():
         check_quantize_model_multiple_inputs(qdtype)
 
 
+@mx.util.use_np
 def test_quantize_gluon_with_forward():
     def check_quantize_net(qdtype):
         if is_test_for_native_cpu():
@@ -1054,7 +1055,7 @@ def test_quantize_gluon_with_forward():
             excluded_names_match += ['activation', 'relu', 'conv0']
         num_calib_batches = 1
 
-        random_data = mx.random.uniform(shape=data_shape)
+        random_data = mx.np.random.uniform(size=data_shape)
         calib_data = mx.gluon.data.DataLoader(random_data, batch_size=batch_size)
 
         quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,

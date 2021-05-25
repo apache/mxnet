@@ -478,6 +478,7 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
         fused_out, fused_states = fused_layer(fx, fused_begin_state)
         l = loss(fused_out, y).mean()
     l.backward()
+    mx.npx.waitall()
     fused_grads = dict([(name, p.grad()) for name, p in fused_layer.collect_params().items()])
     fused_input_grad = fx.grad.asnumpy()
 
@@ -486,6 +487,7 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
         stack_out, stack_states = stack_layer.unroll(5, sx, begin_state=stack_states, merge_outputs=True)
         l = loss(stack_out, y).mean()
     l.backward()
+    mx.npx.waitall()
     stack_grads = dict([(name, p.grad()) for name, p in stack_layer.collect_params().items()])
     stack_input_grad = sx.grad.asnumpy()
 
