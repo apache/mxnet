@@ -39,8 +39,9 @@ RUN if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; then echo "not installing libquadm
 Run if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; \
     then wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/Ubuntu18.04/arm-performance-libraries_21.0_Ubuntu-18.04_gcc-10.2.tar && \
     tar -xvf arm-performance-libraries_21.0_Ubuntu-18.04_gcc-10.2.tar && \
-    arm-performance-libraries_21.0_Ubuntu-18.04_gcc-10.2/arm-performance-libraries_21.0_Ubuntu-18.04.sh -a ; \
+    arm-performance-libraries_21.0_Ubuntu-18.04_gcc-10.2/arm-performance-libraries_21.0_Ubuntu-18.04.sh -a; \
     fi
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-10.2/lib
 
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
