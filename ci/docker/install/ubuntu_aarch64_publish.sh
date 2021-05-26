@@ -39,6 +39,7 @@ apt-get install -y git \
     gnupg \
     gnupg2 \
     gnupg-agent \
+    libc6-lse \
     pandoc \
     python3 \
     python3-pip \
@@ -47,11 +48,23 @@ apt-get install -y git \
     openjdk-8-jdk \
     patchelf
 
-# gcc-10 required for -moutline-atomics flag
-apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu bionic main"
-apt-get update
-apt install -y gcc-10 g++-10 gfortran-10
-update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10 --slave /usr/bin/gcov gcov /usr/bin/gcov-10 --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-10
+# build gcc-8.5 from source
+apt update
+apt install m4 flex bison
+wget https://ftpmirror.gnu.org/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz
+tar xf gcc-8.5.0.tar.xz
+cd gcc-8.5.0/
+sed -i contrib/download_prerequisites -e '/base_url=/s/ftp/http/'
+contrib/download_prerequisites
+cd ..
+mkdir build && cd build
+../gcc-8.5.0/configure -v --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --prefix=/usr/local/gcc-8.5.0 --enable-checking=release --enable-languages=c,c++,fortran --disable-multilib --program-suffix=-8.5
+make -j$(nproc)
+sudo make install-strip
+cd ..
+export export PATH=/usr/local/gcc-8.5.0/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/gcc-8.5.0/lib64:$LD_LIBRARY_PATH
+update-alternatives --install /usr/bin/gcc gcc /usr/local/gcc-8.5.0/bin/gcc-8.5 100 --slave /usr/bin/g++ g++ /usr/local/gcc-8.5.0/bin/g++-8.5 --slave /usr/bin/gcov gcov /usr/local/gcc-8.5.0/bin/gcov-8.5 --slave /usr/bin/gfortran gfortran /usr/local/gcc-8.5.0/bin/gfortran-8.5
 
 curl -o apache-maven-3.3.9-bin.tar.gz -L http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
     || curl -o apache-maven-3.3.9-bin.tar.gz -L https://search.maven.org/remotecontent?filepath=org/apache/maven/apache-maven/3.3.9/apache-maven-3.3.9-bin.tar.gz

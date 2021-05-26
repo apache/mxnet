@@ -16,7 +16,7 @@
 # under the License.
 
 set(CMAKE_BUILD_TYPE "Distribution" CACHE STRING "Build type")
-set(CFLAGS "-march=armv8-a" CACHE STRING "CFLAGS")
+set(CFLAGS "-march=armv8-a+crc+crypto -moutline-atomics" CACHE STRING "CFLAGS")
 set(CXXFLAGS "-march=armv8-a" CACHE STRING "CXXFLAGS")
 
 set(USE_CUDA OFF CACHE BOOL "Build with CUDA support")
