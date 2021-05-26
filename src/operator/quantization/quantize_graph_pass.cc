@@ -658,22 +658,12 @@ static inline float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray*
 
 static inline void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
                              NDArray* weight_tensor, int32_t shift_value) {
-  // create shift matrix
-  // (M, K) * (K, N) = (M, N) where N = 1 (shift size)
-  int8_t *weight_ptr = weight_tensor->data().dptr<int8_t>();
-  size_t M = weight_tensor->shape()[0];
-  size_t K = weight_tensor->shape()[1];
-  int32_t shift_matrix[M];
-  for (size_t i = 0; i < M; i++) {
-    shift_matrix[i] = 0;
-    for (size_t j = 0; j < K; j++) {
-      int i_j_index = i * K + j;
-      shift_matrix[i] += shift_value * weight_ptr[i_j_index];
+  CHECK_EQ(weight_tensor->shape()[0], bias_size);
+  int8_t* weight_ptr = weight_tensor->data().dptr<int8_t>();
+  for (dim_t i = 0; i < weight_tensor->shape()[0]; ++i) {
+    for (dim_t j = 0; j < weight_tensor->shape()[1]; j++) {
+      bias_ptr_int32[i] -= shift_value * (*weight_ptr++);
     }
-  }
-  // shift bias
-  for (int32_t i = 0; i < static_cast<int32_t>(bias_size); ++i) {
-    bias_ptr_int32[i] -= shift_matrix[i];
   }
 }
 

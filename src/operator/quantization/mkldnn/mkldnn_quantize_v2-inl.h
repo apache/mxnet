@@ -172,10 +172,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     CommitOutput(outputs[0], o_mem);
     if (shifted) {
       uint8_t *raw_out_mem = static_cast<uint8_t *>(o_mem.second->get_data_handle());
-      #pragma omp parallel for simd
-      for (size_t i = 0; i < outputs[0].shape().Size(); i++) {
-        raw_out_mem[i] = cached_shift_;
-      }
+      std::fill_n(raw_out_mem, outputs[0].shape().Size(), cached_shift_);
     }
     MKLDNNStream::Get()->Submit();
   }
