@@ -31,11 +31,16 @@
 #include <memory>
 #include <unordered_set>
 #include <unordered_map>
+#include <mutex>
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
 
 using namespace mxnet;
+
+// This is used to lock executor binding in case we have multiple predictors in
+// different threads
+std::mutex pred_binding_mutex;
 
 // predictor interface
 struct MXAPIPredictor {
@@ -73,6 +78,7 @@ struct MXAPINDList {
 inline void _CreateExecutor(PredictorHandle pred_hnd) {
   MXAPIPredictor *pred = static_cast<MXAPIPredictor*>(pred_hnd);
   if (pred->exec == nullptr) {
+    std::lock_guard<std::mutex> guard(pred_binding_mutex);
     auto sym = pred->sym;
     auto ctx = pred->ctx;
     auto key2arg = pred->key2arg;
@@ -357,7 +363,7 @@ int MXPredCreate(const char* symbol_json_str,
       0,
       nullptr,
       1,
-      false,
+      true,
       0,
       nullptr,
       nullptr,
@@ -427,7 +433,7 @@ int MXPredCreateMultiThread(const char* symbol_json_str,
       0,
       nullptr,
       num_threads,
-      false,
+      true,
       0,
       nullptr,
       nullptr,
