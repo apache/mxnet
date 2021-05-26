@@ -19,7 +19,7 @@
 
 # This script builds the static library of openblas that can be used as dependency of mxnet.
 set -ex
-OPENBLAS_VERSION=0.3.10
+OPENBLAS_VERSION=0.3.15
 if [[ ((! -e $DEPS_PATH/lib/libopenblas.a) && -z "$CMAKE_STATICBUILD") ||
           ((! -e $DEPS_PATH/lib/libopenblas.so) && -v CMAKE_STATICBUILD) ]]; then
     # download and build openblas
