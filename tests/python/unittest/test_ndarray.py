@@ -370,6 +370,7 @@ def test_ndarray_pickle():
         assert np.sum(a.asnumpy() != a2.asnumpy()) == 0
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize('save_fn', [mx.nd.save, mx.npx.savez])
 def test_ndarray_saveload(save_fn):
     nrepeat = 10

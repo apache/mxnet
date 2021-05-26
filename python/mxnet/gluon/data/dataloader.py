@@ -660,13 +660,16 @@ class DataLoader(object):
                                                    initializer=_thread_worker_initializer,
                                                    initargs=(is_np_shape(), is_np_array()))
                 else:
-                    # set ignore keyboard interupt signal before forking processes
-                    original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+                    # according to the: https://bugs.python.org/issue39042
+                    if threading.current_thread() == threading.main_thread():
+                        # set ignore keyboard interupt signal before forking processes
+                        original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
                     self._worker_pool = multiprocessing.Pool(
                         self._num_workers, initializer=_worker_initializer,
                         initargs=[self._dataset, is_np_shape(), is_np_array()])
-                    # resume keyboard interupt signal in main process
-                    signal.signal(signal.SIGINT, original_sigint_handler)
+                    if threading.current_thread() == threading.main_thread():
+                        # resume keyboard interupt signal in main process
+                        signal.signal(signal.SIGINT, original_sigint_handler)
 
     def __iter__(self):
         if self._mx_iter is not None:

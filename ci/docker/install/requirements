@@ -40,6 +40,7 @@ pytest==6.1.2
 pytest-env==0.6.2
 pytest-cov==2.10.1
 pytest-xdist==2.1.0
+pytest-parallel==0.1.0
 pytest-timeout==1.4.2
 flaky==3.7.0
 setuptools==49.6.0  # https://github.com/pypa/setuptools/issues/2352
