@@ -211,6 +211,10 @@ def test_quantized_conv():
         if is_test_for_native_cpu():
             print('skipped testing quantized_conv for native cpu since it is not supported yet')
             return
+        elif is_test_for_mkldnn():
+            # (TODO)Xinyu: https://github.com/apache/incubator-mxnet/issues/16830
+            print('skipped testing quantized_conv for mkldnn cpu since it is a flaky case')
+            return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_conv for gpu uint8 since it is not supported yet')
             return
@@ -380,7 +384,7 @@ def test_quantized_elemwise_add():
         qoutput, min_range, max_range = quantized_elemwise_add(dataA_val_int8, dataB_val_int8,
                                                                min_dataA, max_dataA,
                                                                min_dataB, max_dataB)
-        int8_rslt = qoutput.astype(output.dtype)*max_range/0x7fffffff
+        int8_rslt = qoutput.astype(output.dtype) * max_range / 0x7fffffff
         diff = mx.nd.abs(output - int8_rslt)
         cond = mx.nd.lesser(2, diff).sum().asscalar()
         assert cond == 0
