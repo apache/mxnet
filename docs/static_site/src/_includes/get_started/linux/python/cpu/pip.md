@@ -55,6 +55,12 @@ Graphics and Xe architecture-based Graphics. Support for other architectures
 such as Arm* 64-bit Architecture (AArch64) and OpenPOWER* Power ISA (PPC64) is
 experimental.
 
+Please note that the Linux CPU pip wheels for AArch64 platforms are built with
+oneDNN with Arm Performance Libraries (APL) integrated. Because APL's license
+is not compatible with Apache license, you would need to
+<a href="https://developer.arm.com/tools-and-software/server-and-hpc/compile/arm-compiler-for-linux/arm-performance-libraries">manually install</a> APL
+in your system.
+
 oneDNN is intended for deep learning applications and framework developers
 interested in improving application performance on Intel CPUs and GPUs, more
 details can be found <a href="https://github.com/oneapi-src/oneDNN">here</a>.

@@ -24,6 +24,7 @@ WORKDIR /work/deps
 
 COPY install/ubuntu_aarch64_publish.sh /work/
 RUN /work/ubuntu_aarch64_publish.sh
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-10.2/lib
 
 ARG USER_ID=0
 ARG GROUP_ID=0
