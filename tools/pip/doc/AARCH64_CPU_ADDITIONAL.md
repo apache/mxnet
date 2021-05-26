@@ -35,6 +35,8 @@ a GPL library and MXNet part of the Apache Software Foundation, MXNet must not
 redistribute `libquadmath.so.0` as part of the Pypi package and users must
 manually install it.
 
+Please also note that the `AArch64` wheels are built with MKLDNN, and MKLDNN in turn is integrated with [Arm Performance Libraries (APL)](https://developer.arm.com/tools-and-software/server-and-hpc/compile/arm-compiler-for-linux/arm-performance-libraries). Because APL's license is also not compatible with Apache, users must manually install APL in their system.
+
 To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions, check [Installing MXNet](https://mxnet.apache.org/versions/master) for instructions on building from source.
 
 Installation
