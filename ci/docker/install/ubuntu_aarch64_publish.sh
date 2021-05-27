@@ -50,7 +50,7 @@ apt-get install -y git \
 
 # build gcc-8.5 from source
 apt update
-apt install m4 flex bison
+apt install -y flex bison
 wget https://ftpmirror.gnu.org/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz
 tar xf gcc-8.5.0.tar.xz
 cd gcc-8.5.0/
