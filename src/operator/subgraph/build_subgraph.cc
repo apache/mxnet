@@ -72,7 +72,7 @@ void PrintNodeEntries(const std::vector<nnvm::NodeEntry*>& entries) {
 void CreateSimpleGraph(const nnvm::Graph& g,
                        std::vector<BiDirectedNodePtr>* simple_nodes) {
   const auto& indexed_graph = g.indexed_graph();
-  simple_nodes->reserve(indexed_graph.num_nodes());
+  simple_nodes->resize(indexed_graph.num_nodes());
   DFSVisit(g.outputs, [&](const nnvm::ObjectPtr& node) {
     BiDirectedNodePtr sn = BiDirectedNode::Create();
     sn->node = node.get();
@@ -88,7 +88,8 @@ void CreateSimpleGraph(const nnvm::Graph& g,
         it->second.push_back(i);
       }
     }
-    simple_nodes->emplace_back(std::move(sn));
+    int node_id = indexed_graph.node_id(sn->node);
+    (*simple_nodes)[node_id] = std::move(sn);
   });
 }
 
@@ -457,9 +458,11 @@ void FindSubgraphs(nnvm::Graph* g,
   size_t subgraph_id = 0;
   for (size_t i = 0; i < simple_nodes.size(); ++i) {
     const auto snode = simple_nodes[i];
-    SubgraphSelectorV2Ptr subgraph_selector = subg_prop.CreateSubgraphSelectorV2();
-    SelectSubgraphNodes(g, subgraph_selector, simple_nodes, subgraph_nodes, subgraph_selectors,
-                        snode.get(), i, &subgraph_id);
+    if (snode) {
+      SubgraphSelectorV2Ptr subgraph_selector = subg_prop.CreateSubgraphSelectorV2();
+      SelectSubgraphNodes(g, subgraph_selector, simple_nodes, subgraph_nodes, subgraph_selectors,
+                          snode.get(), i, &subgraph_id);
+    }
   }
 }
 
