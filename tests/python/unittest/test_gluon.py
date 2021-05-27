@@ -2254,7 +2254,10 @@ def test_slice_pooling2d():
                 out = self.pool0(x_slice)
                 return out
 
-        xshape = (16, 128, 256, 256)
+        # GPU memory leak after using asnumpy() for large numpy ndarray
+        # Issue tracked in https://github.com/apache/incubator-mxnet/issues/20315
+        # xshape = (16, 128, 256, 256)
+        xshape = (8, 64, 128, 128)
         slice_shape = (4, 16, 32, 64)
         if layout == 'NHWC':
             xshape = transpose(xshape)
@@ -2324,12 +2327,17 @@ def test_slice_pooling2d_slice_pooling2d():
             out = self.pool1(y_slice)
             return out
 
-    x = mx.np.random.uniform(size=(16, 128, 256, 256))
-    slice = [[(8, 0, 100, 50), (16, -1, -1, -1)], [(0, 64, 0, 50), (2, -1, -1, -1)]]
+    # GPU memory leak after using asnumpy() for large numpy ndarray
+    # Issue tracked in https://github.com/apache/incubator-mxnet/issues/20315
+    # x = mx.np.random.uniform(size=(16, 128, 256, 256))
+    # slice = [[(8, 0, 100, 50), (16, -1, -1, -1)], [(0, 64, 0, 50), (2, -1, -1, -1)]]
+    x = mx.np.random.uniform(size=(8, 64, 128, 128))
+    slice = [[(4, 0, 50, 25), (16, -1, -1, -1)], [(0, 32, 0, 25), (2, -1, -1, -1)]]
     for i in range(len(pooling_layers)):
         for j in range(len(pooling_layers)):
             if isinstance(pooling_layers[i], (nn.GlobalMaxPool2D, nn.GlobalAvgPool2D)):
-                slice[1] = [(0, 64, 0, 0), (2, -1, 1, 1)]
+                # slice[1] = [(0, 64, 0, 0), (2, -1, 1, 1)]
+                slice[1] = [(0, 32, 0, 0), (2, -1, 1, 1)]
             net = Net(slice, pooling_layers[i], pooling_layers[j])
             check_layer_forward_withinput(net, x)
 
