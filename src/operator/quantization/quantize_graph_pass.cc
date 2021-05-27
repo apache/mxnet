@@ -687,6 +687,8 @@ Graph OneDNNShiftedQuantization(Graph &&g) {
         if (IsQuantize(quantize)) {
           ObjectPtr& bias_node = fc->inputs[2].node;
           std::string bias_name_old = bias_node->attrs.name;
+          NDArray* bias_in_arg_ptr = FindInArgByName(g, bias_name_old);
+          if (bias_in_arg_ptr->dtype() != mshadow::kInt8) return;
           std::string bias_name_s32 = bias_node->attrs.name + "_s32";
           bias_node = CreateNode("nullptr", bias_name_s32);
           new_arg_names.push_back(bias_name_s32);
@@ -698,7 +700,6 @@ Graph OneDNNShiftedQuantization(Graph &&g) {
 
           float bias_int32_rescale = RescaleWeights(g, fc, weight_tensor);
 
-          NDArray* bias_in_arg_ptr = FindInArgByName(g, bias_name_old);
           new_arg_vector.push_back(
               new NDArray(kDefaultStorage, bias_in_arg_ptr->shape(),
                           Context::CPU(), false, mshadow::kInt32));
