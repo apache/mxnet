@@ -1256,6 +1256,10 @@ def test_get_optimal_thresholds():
 
 @with_seed()
 def test_onednn_shifted_quantization():
+    if not is_test_for_mkldnn():
+        print("Test only for mkldnn")
+        return
+
     def collect_param(fc_layer, p):
         param = fc_layer.collect_params(p)[p]._reduce()
         return param
@@ -1309,13 +1313,6 @@ def test_onednn_shifted_quantization():
     # Shifted quantization should set new bias to FC and add shift to output of quantize
     # b'=b-shift*w because FC(x+shift,w,b)=(x+shift)*w+b
     def check(number, qdtype):
-        if is_test_for_native_cpu():
-            print('skipped testing test_quantize_model_with_forward for native cpu since it is not supported yet')
-            return
-        elif is_test_for_gpu():
-            print('skipped testing test_quantize_model_with_forward for gpu uint8 since it is not supported yet')
-            return
-
         random_data = mx.nd.random_normal(shape=(1, 32))
         fc_layer = get_fc_layer(random_data)
 

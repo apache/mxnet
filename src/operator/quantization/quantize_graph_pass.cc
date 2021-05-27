@@ -668,7 +668,7 @@ static inline void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
 }
 
 Graph OneDNNShiftedQuantization(Graph &&g) {
-  static bool disable_shifted_quant = dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZATION", true);
+  bool disable_shifted_quant = dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZATION", true);
   LOG(INFO) << "Running OneDNN shifted quantization: " << !disable_shifted_quant;
   // No change to aux params
   g.attrs["new_aux_names"] = std::make_shared<nnvm::any>(std::vector<std::string>());
