@@ -150,7 +150,7 @@ static inline bool CheckReshapeConditions(const nnvm::Node& node, const index_t 
 static inline bool CheckSwapAxisConditions(const nnvm::Node& node) {
   auto params = node.attrs.dict;
   int dim1 = 0, dim2 = 0;
-  if(params.count("dim1") && params.count("dim2")) {
+  if (params.count("dim1") && params.count("dim2")) {
     dim1 = std::stoi(params.at("dim1"));
     dim2 = std::stoi(params.at("dim2"));
   } else {
