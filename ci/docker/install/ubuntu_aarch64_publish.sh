@@ -39,9 +39,9 @@ apt-get install -y git \
     gnupg \
     gnupg2 \
     gnupg-agent \
-    gcc \
-    g++ \
-    gfortran \
+    gcc-8 \
+    g++-8 \
+    gfortran-8 \
     libc6-lse \
     pandoc \
     python3 \
@@ -65,6 +65,7 @@ mkdir build && cd build
 make -j$(nproc)
 sudo make install-strip
 cd ..
+rm -rf gcc-8.5.0.tar.xz
 export export PATH=/usr/local/gcc-8.5.0/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/gcc-8.5.0/lib64:$LD_LIBRARY_PATH
 update-alternatives --install /usr/bin/gcc gcc /usr/local/gcc-8.5.0/bin/gcc-8.5 100 --slave /usr/bin/g++ g++ /usr/local/gcc-8.5.0/bin/g++-8.5 --slave /usr/bin/gcov gcov /usr/local/gcc-8.5.0/bin/gcov-8.5 --slave /usr/bin/gfortran gfortran /usr/local/gcc-8.5.0/bin/gfortran-8.5
