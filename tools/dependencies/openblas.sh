@@ -19,7 +19,7 @@
 
 # This script builds the static library of openblas that can be used as dependency of mxnet.
 set -ex
-OPENBLAS_VERSION=0.3.7
+OPENBLAS_VERSION=0.3.10
 if [[ ((! -e $DEPS_PATH/lib/libopenblas.a) && -z "$CMAKE_STATICBUILD") ||
           ((! -e $DEPS_PATH/lib/libopenblas.so) && -v CMAKE_STATICBUILD) ]]; then
     # download and build openblas
@@ -36,8 +36,7 @@ if [[ ((! -e $DEPS_PATH/lib/libopenblas.a) && -z "$CMAKE_STATICBUILD") ||
     if [[ ! $ARCH == 'aarch64' ]]; then
         CXX="g++ -fPIC" CC="gcc -fPIC" $MAKE DYNAMIC_ARCH=1 USE_OPENMP=1
     else
-        # openblas build fails with gcc-8.5, hence using gcc-8.4 explicitly
-        CXX="g++-8 -fPIC" CC="gcc-8 -fPIC" FC="gfortran-8" $MAKE DYNAMIC_ARCH=1 USE_OPENMP=1
+        $MAKE DYNAMIC_ARCH=1 USE_OPENMP=1
     fi
 
     if [[ -v CMAKE_STATICBUILD ]]; then
