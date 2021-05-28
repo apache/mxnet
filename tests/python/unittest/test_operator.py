@@ -698,7 +698,7 @@ def test_mish():
     def fmish_grad(a):
         softrelu = np.log1p(np.exp(a))
         tanh = np.tanh(softrelu)
-        sigmoid = np.divide(1.0, (1.0 + np.exp(a)))
+        sigmoid = np.divide(1.0, (1.0 + np.exp(-a)))
         return tanh + a * sigmoid * (1 - tanh * tanh)
     shape = (3, 4)
     x = mx.symbol.Variable("x")
