@@ -47,7 +47,7 @@ namespace activation {
 enum ActivationOpInputs {kData};
 enum ActivationOpOutputs {kOut};
 enum ActivationOpResource {kTempSpace};
-enum ActivationOpType {kReLU, kSigmoid, kLogSigmoid, kTanh, kSoftReLU, kSoftSign};
+enum ActivationOpType {kReLU, kSigmoid, kLogSigmoid, kMish, kTanh, kSoftReLU, kSoftSign};
 
 // Get the number of inputs to the gradient depending on the activation type
 int GradNumInputs(int act_type);
@@ -61,6 +61,7 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
     .add_enum("relu", activation::kReLU)
     .add_enum("sigmoid", activation::kSigmoid)
     .add_enum("log_sigmoid", activation::kLogSigmoid)
+    .add_enum("mish", activation::kMish)
     .add_enum("tanh", activation::kTanh)
     .add_enum("softrelu", activation::kSoftReLU)
     .add_enum("softsign", activation::kSoftSign)
@@ -78,6 +79,8 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
         return "sigmoid";
       case activation::kLogSigmoid:
         return "log_sigmoid";
+      case activation::kMish:
+        return "mish";
       case activation::kTanh:
         return "tanh";
       case activation::kSoftReLU:
@@ -166,6 +169,10 @@ void ActivationComputeImpl(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
       ActivationForward<xpu, mshadow_op::log_sigmoid, mshadow_op::log_sigmoid_grad>(
           ctx, inputs[0], req[0], outputs[0]);
       break;
+    case activation::kMish:
+      ActivationForward<xpu, mshadow_op::mish, mshadow_op::mish_grad>(
+          ctx, inputs[0], req[0], outputs[0]);
+      break;
     case activation::kTanh:
       ActivationForward<xpu, mshadow_op::tanh, mshadow_op::tanh_grad>(
           ctx, inputs[0], req[0], outputs[0]);
@@ -199,6 +206,10 @@ void ActivationGradComputeImpl(const nnvm::NodeAttrs& attrs, const OpContext &ct
       break;
     case activation::kLogSigmoid:
       ActivationBackward<xpu, mshadow_op::log_sigmoid, mshadow_op::log_sigmoid_grad>(
+          ctx, inputs[0], inputs[1], req[0], outputs[0]);
+      break;
+    case activation::kMish:
+      ActivationBackward<xpu, mshadow_op::mish, mshadow_op::mish_grad>(
           ctx, inputs[0], inputs[1], req[0], outputs[0]);
       break;
     case activation::kTanh:

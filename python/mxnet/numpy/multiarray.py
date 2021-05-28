@@ -2356,6 +2356,14 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute softmin')
 
+    def mish(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`mish`.
+
+        The arguments are the same as for :py:func:`mish`, with
+        this array as data.
+        """
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute mish')
+
     def squeeze(self, axis=None):  # pylint: disable=arguments-differ
         """Remove single-dimensional entries from the shape of a."""
         return squeeze(self, axis=axis)

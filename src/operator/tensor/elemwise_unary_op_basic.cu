@@ -45,6 +45,12 @@ NNVM_REGISTER_OP(log_sigmoid)
 NNVM_REGISTER_OP(_backward_log_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log_sigmoid"});
 
+NNVM_REGISTER_OP(mish)
+.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"mish"});
+
+NNVM_REGISTER_OP(_backward_mish)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_mish"});
+
 NNVM_REGISTER_OP(hard_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", HardSigmoidForward<gpu>);
 

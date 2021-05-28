@@ -415,6 +415,12 @@ MXNET_UNARY_MATH_OP(log_sigmoid, math::log(1.0f / (1.0f + math::exp(-a))));
 
 MXNET_UNARY_MATH_OP(log_sigmoid_grad, 1.0f / (1.0f + math::exp(a)));
 
+MXNET_UNARY_MATH_OP(mish, a * math::tanh(math::log(1.0f + math::exp(a))));
+
+MXNET_UNARY_MATH_OP(mish_grad, math::tanh(math::log(1.0f + math::exp(a))) +
+                        a * (1.0f / (1.0f + math::exp(-a))) *
+                        (1.0f - math::sqr(math::tanh(math::log(1.0f + math::exp(a))))));
+
 MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
 
 MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));

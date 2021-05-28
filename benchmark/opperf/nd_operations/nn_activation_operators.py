@@ -40,6 +40,7 @@ from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
     8.4 softrelu
     8.5 softsign
     8.6 tanh
+    8.7 mish
 
 """
 

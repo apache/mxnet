@@ -118,6 +118,9 @@ void ActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       } else if (act_type == activation::kLogSigmoid) {
         ActivationBackward<gpu, mshadow_op::log_sigmoid, mshadow_op::log_sigmoid_grad>(
           ctx, inputs.at(0), inputs.at(1), req[0], outputs[0]);
+      } else if (act_type == activation::kMish) {
+        ActivationBackward<gpu, mshadow_op::mish, mshadow_op::mish_grad>(
+          ctx, inputs.at(0), inputs.at(1), req[0], outputs[0]);
       } else {
         LOG(FATAL) << "unknown activation type";
       }
