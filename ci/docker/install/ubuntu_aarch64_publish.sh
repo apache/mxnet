@@ -39,9 +39,6 @@ apt-get install -y git \
     gnupg \
     gnupg2 \
     gnupg-agent \
-    gcc-8 \
-    g++-8 \
-    gfortran-8 \
     libc6-lse \
     pandoc \
     python3 \
