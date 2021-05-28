@@ -697,9 +697,9 @@ __device__ inline DType log_sigmoid(const DType val) {
 template <typename DType>
 __device__ inline DType mish(const DType val) {
   if (type_util::has_double_or_integral<DType>::value) {
-    return x * ::tanh(::log(1 + ::exp(val)));
+    return val * ::tanh(::log(1 + ::exp(val)));
   } else {
-    return x * ::tanhf(logf(1 + expf(val)));
+    return val * ::tanhf(logf(1 + expf(val)));
   }
 }
 
