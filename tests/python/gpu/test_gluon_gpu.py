@@ -626,7 +626,7 @@ def test_cudnn_dropout_reproducibility():
     b = a.copy()
     a.attach_grad()
     b.attach_grad()
-    seed = onp.random.randint(0, 100000)
+    seed = mx.np.random.randint(0, 100000).item()
     N = 10
     mx.np.random.seed(seed)
     out1 = []
