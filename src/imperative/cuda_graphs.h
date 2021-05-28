@@ -189,11 +189,19 @@ class CudaGraphsSubSegExec {
 
     cudaGraphExecUpdateResult update_result = cudaGraphExecUpdateError;
     cudaGraphNode_t error_node;
-    CUDA_CALL(cudaGraphExecUpdate(graph_exec_.get(), graph_.get(),
-                                  &error_node, &update_result));
-    // If update fails make a new executor, discarding old one.
-    if (update_result != cudaGraphExecUpdateSuccess)
-      MakeGraphExec();
+    cudaError_t e = cudaGraphExecUpdate(graph_exec_.get(), graph_.get(),
+                                        &error_node, &update_result);
+    switch (e) {
+      case cudaErrorGraphExecUpdateFailure:
+        MakeGraphExec();
+        break;
+      case cudaSuccess:
+        CHECK_EQ(update_result, cudaGraphExecUpdateSuccess);
+        break;
+      default:
+        // Respond normally to unusual cudaGraphExecUpdate() ret vals
+        CUDA_CALL(e);
+    }
   }
 
   void RunSubSeg(const std::vector<std::shared_ptr<exec::OpExecutor> > &exec_list,
