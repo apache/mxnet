@@ -21,7 +21,7 @@ import time
 import mxnet as mx
 import multiprocessing as mp
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray, environment
-import numpy as onp
+import numpy as _np
 import math
 from mxnet import autograd
 import pytest
@@ -148,7 +148,7 @@ def test_lstm_clip():
         _, layer_output_states = lstm_layer(lstm_input, lstm_states)
     cell_states = layer_output_states[0]
     assert (cell_states >= clip_min).all() and (cell_states <= clip_max).all()
-    assert not onp.isnan(cell_states).any()
+    assert not _np.isnan(cell_states).any()
 
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -333,10 +333,10 @@ def test_global_norm_clip_multi_device():
             assert norm == 9.0
         else:
             assert norm.item() == 9.0
-        assert_almost_equal(x1, onp.ones((3, 3)) / 9)
-        assert_almost_equal(x2, onp.ones((4, 4)) / 9)
-        assert_almost_equal(x3, onp.ones((7, 4)) / 9)
-        assert_almost_equal(x4, onp.ones((7, 4)) / 9)
+        assert_almost_equal(x1, _np.ones((3, 3)) / 9)
+        assert_almost_equal(x2, _np.ones((4, 4)) / 9)
+        assert_almost_equal(x3, _np.ones((7, 4)) / 9)
+        assert_almost_equal(x4, _np.ones((7, 4)) / 9)
 
 
 def _check_batchnorm_result(input, num_devices=1, cuda=False):
@@ -448,7 +448,7 @@ def test_symbol_block_fp16(tmpdir):
         if 'conv' in param_name and 'weight' in param_name:
             name = param_name
             break
-    assert onp.dtype(net_fp16.params[name].dtype) == onp.dtype(onp.float16)
+    assert _np.dtype(net_fp16.params[name].dtype) == _np.dtype(_np.float16)
 
 
 @pytest.mark.serial

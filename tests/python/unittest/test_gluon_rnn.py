@@ -17,7 +17,7 @@
 
 import mxnet as mx
 from mxnet import gluon, np, npx
-import numpy as onp
+import numpy as _np
 import copy
 from itertools import product
 from functools import partial
@@ -32,13 +32,13 @@ def check_rnn_states(fused_states, stack_states, num_layers, bidirectional=False
     assert len(stack_states) / len(fused_states) == num_layers * directions
 
     fused_states = [state.asnumpy() for state in fused_states]
-    stack_states = [onp.expand_dims(state.asnumpy(), axis=0) for state in stack_states]
+    stack_states = [_np.expand_dims(state.asnumpy(), axis=0) for state in stack_states]
     if is_lstm:
         stack_states_h = stack_states[0::2]
         stack_states_c = stack_states[1::2]
-        stack_states = [onp.concatenate(stack_states_h, axis=0), onp.concatenate(stack_states_c, axis=0)]
+        stack_states = [_np.concatenate(stack_states_h, axis=0), _np.concatenate(stack_states_c, axis=0)]
     else:
-        stack_states = [onp.concatenate(stack_states, axis=0)]
+        stack_states = [_np.concatenate(stack_states, axis=0)]
 
     for f, s in zip(fused_states, stack_states):
         assert f.shape == s.shape
@@ -211,12 +211,12 @@ def check_rnn_forward_backward(layer, merged_inputs, hybridize, merge_outputs, d
     if merge_outputs:
         np_out = out.asnumpy()
     else:
-        np_out = onp.stack([x.asnumpy() for x in out], axis=1)
+        np_out = _np.stack([x.asnumpy() for x in out], axis=1)
 
     if merged_inputs:
         np_dx = inputs.grad.asnumpy()
     else:
-        np_dx = onp.stack([x.grad.asnumpy() for x in inputs], axis=1)
+        np_dx = _np.stack([x.grad.asnumpy() for x in inputs], axis=1)
 
     with mx.autograd.record():
         out = layer.unroll(3, inputs, merge_outputs=not merge_outputs)[0]
@@ -225,13 +225,13 @@ def check_rnn_forward_backward(layer, merged_inputs, hybridize, merge_outputs, d
     if merged_inputs:
         input_grads = inputs.grad.asnumpy()
     else:
-        input_grads = onp.stack([x.grad.asnumpy() for x in inputs], axis=1)
+        input_grads = _np.stack([x.grad.asnumpy() for x in inputs], axis=1)
 
     if deterministic:
         if not merge_outputs:
             ref_np_out = out.asnumpy()
         else:
-            ref_np_out = onp.stack([x.asnumpy() for x in out], axis=1)
+            ref_np_out = _np.stack([x.asnumpy() for x in out], axis=1)
         mx.test_utils.assert_almost_equal(np_out, ref_np_out, rtol=1e-3, atol=1e-5)
         mx.test_utils.assert_almost_equal(np_dx, input_grads, rtol=1e-3, atol=1e-5)
 

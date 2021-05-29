@@ -16,7 +16,7 @@
 # under the License.
 
 import mxnet as mx
-import numpy as np
+import numpy as _np
 from mxnet import gluon, autograd
 from mxnet.test_utils import assert_almost_equal, default_context
 from numpy.core.fromnumeric import size
@@ -51,10 +51,10 @@ def test_loss_ndarray():
 
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     L = loss(output, label).asnumpy()
-    assert_almost_equal(L, np.array([ 2.12692809,  0.04858733]), rtol=1e-3, atol=1e-4)
+    assert_almost_equal(L, _np.array([ 2.12692809,  0.04858733]), rtol=1e-3, atol=1e-4)
 
     L = loss(output, label, weighting).asnumpy()
-    assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]), rtol=1e-3, atol=1e-4)
+    assert_almost_equal(L, _np.array([ 1.06346405,  0.04858733]), rtol=1e-3, atol=1e-4)
 
 
 @mx.util.use_np
@@ -84,27 +84,27 @@ def test_logistic_loss_equal_bce():
 def test_ctc_loss():
     loss = gluon.loss.CTCLoss()
     l = loss(mx.np.ones((2,20,4)), mx.np.array([[1,0,-1,-1],[2,1,1,-1]]))
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, _np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss(layout='TNC')
     l = loss(mx.np.ones((20,2,4)), mx.np.array([[1,0,-1,-1],[2,1,1,-1]]))
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, _np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss(layout='TNC', label_layout='TN')
     l = loss(mx.np.ones((20,2,4)), mx.np.array([[1,0,-1,-1],[2,1,1,-1]]).T)
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, _np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
     l = loss(mx.np.ones((2,20,4)), mx.np.array([[2,1,2,2],[3,2,2,2]]), None, mx.np.array([2,3]))
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, _np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
     l = loss(mx.np.ones((2,25,4)), mx.np.array([[2,1,-1,-1],[3,2,2,-1]]), mx.np.array([20,20]))
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, _np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
     l = loss(mx.np.ones((2,25,4)), mx.np.array([[2,1,3,3],[3,2,2,3]]), mx.np.array([20,20]), mx.np.array([2,3]))
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, _np.array([18.82820702, 16.50581741]))
 
 
 @mx.util.use_np
@@ -182,22 +182,22 @@ def test_poisson_nllloss():
     #Calculating by brute formula for default value of from_logits = True
 
     # 1) Testing for flag logits = True
-    brute_loss = np.mean(np.exp(pred.asnumpy()) - target.asnumpy() * pred.asnumpy(), axis=1)
+    brute_loss = _np.mean(_np.exp(pred.asnumpy()) - target.asnumpy() * pred.asnumpy(), axis=1)
     loss_withlogits = Loss(pred, target)
     assert_almost_equal(brute_loss, loss_withlogits)
 
     #2) Testing for flag logits = False
     loss_no_logits = Loss_no_logits(pred, target)
-    np_loss_no_logits = np.mean(pred.asnumpy() - target.asnumpy() * np.log(pred.asnumpy() + 1e-08),
+    np_loss_no_logits = _np.mean(pred.asnumpy() - target.asnumpy() * _np.log(pred.asnumpy() + 1e-08),
                                 axis=1)
     assert_almost_equal(np_loss_no_logits, loss_no_logits.asnumpy())
 
     #3) Testing for Sterling approximation
     shape=(2, 3)
-    np_pred = np.random.uniform(1, 5, shape)
-    np_target = np.random.uniform(1, 5, shape)
-    np_compute_full = np.mean((np_pred - np_target * np.log(np_pred + 1e-08)) + ((np_target * np.log(np_target)-\
-     np_target + 0.5 * np.log(2 * np_target * np.pi))*(np_target > 1)), axis=1)
+    np_pred = _np.random.uniform(1, 5, shape)
+    np_target = _np.random.uniform(1, 5, shape)
+    np_compute_full = _np.mean((np_pred - np_target * _np.log(np_pred + 1e-08)) + ((np_target * _np.log(np_target)-\
+     np_target + 0.5 * _np.log(2 * np_target * _np.pi))*(np_target > 1)), axis=1)
     Loss_compute_full = gluon.loss.PoissonNLLLoss(from_logits=False, compute_full=True)
     loss_compute_full = Loss_compute_full(mx.np.array(np_pred), mx.np.array(np_target))
     assert_almost_equal(np_compute_full, loss_compute_full)
