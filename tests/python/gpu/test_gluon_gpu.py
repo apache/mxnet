@@ -633,7 +633,7 @@ def test_cuda_graphs():
             TestDesc('ConvTranspose', lambda: mx.gluon.nn.Conv2DTranspose(channels=32, kernel_size=(1,1))),
             TestDesc('Dense', lambda: mx.gluon.nn.Dense(units=128)),
             TestDesc('Activation', lambda: mx.gluon.nn.Activation('tanh')),
-            #TestDesc('Dropout', lambda: mx.gluon.nn.Dropout(0.5)),
+            TestDesc('Dropout', lambda: mx.gluon.nn.Dropout(0.5)),
             TestDesc('Flatten', lambda: mx.gluon.nn.Flatten()),
             TestDesc('MaxPool', lambda: mx.gluon.nn.MaxPool2D()),
             TestDesc('AvgPool', lambda: mx.gluon.nn.AvgPool2D()),
