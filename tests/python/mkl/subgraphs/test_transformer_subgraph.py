@@ -59,8 +59,8 @@ def test_self_attention(batch_size, seq_length, units, num_heads):
         return context_vec
 
   net = MultiHeadAttention(units, num_heads)
-  in_data = mx.np.random.uniform(size=[batch_size, seq_length, units ], dtype='float32')
-  mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length ], dtype='int32')
+  in_data = mx.np.random.uniform(size=[batch_size, seq_length, units], dtype='float32')
+  mask = mx.np.random.uniform(low=0, high=2, size=[batch_size, seq_length, seq_length], dtype='int32')
 
   net.initialize()
   fused_net = net

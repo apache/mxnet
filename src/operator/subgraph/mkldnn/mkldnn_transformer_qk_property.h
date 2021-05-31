@@ -219,9 +219,10 @@ class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
   }
 
 
-  virtual void ConnectSubgraphInputs(const nnvm::ObjectPtr subgraph_node,
-                                     std::vector<nnvm::NodeEntry*>* input_entries,
-                                     std::vector<nnvm::NodeEntry>* orig_input_entries) const {
+  void ConnectSubgraphInputs(const nnvm::ObjectPtr subgraph_node,
+                             std::vector<nnvm::NodeEntry*>* input_entries,
+                             std::vector<nnvm::NodeEntry>* orig_input_entries)
+                             const override {
     subgraph_node->inputs.resize(1);
     // split is not part of subgraph, skip split as input and
     // connect subgraph input with split input

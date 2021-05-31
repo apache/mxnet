@@ -304,9 +304,7 @@ nnvm::ObjectPtr SgMKLDNNSelfAttQKQuantizedOp(const NodeAttrs& attrs) {
   node->attrs.dict["heads"] = std::to_string(param.heads);
   node->attrs.dict["quantized"] = "True";
   node->attrs.subgraphs.reserve(attrs.subgraphs.size());
-  for (auto sub : attrs.subgraphs) {
-    node->attrs.subgraphs.push_back(sub);
-  }
+  node->attrs.subgraphs = attrs.subgraphs;
   node->op()->attr_parser(&(node->attrs));
   return node;
 }
@@ -470,9 +468,7 @@ nnvm::ObjectPtr SgMKLDNNSelfAttValAttQuantizedOp(const NodeAttrs& attrs) {
   node->attrs.dict["heads"] = std::to_string(param.heads);
   node->attrs.dict["quantized"] = "True";
   node->attrs.subgraphs.reserve(attrs.subgraphs.size());
-  for (auto sub : attrs.subgraphs) {
-    node->attrs.subgraphs.push_back(sub);
-  }
+  node->attrs.subgraphs = attrs.subgraphs;
   node->op()->attr_parser(&(node->attrs));
   return node;
 }
@@ -590,29 +586,29 @@ void MKLDNNSelfAttValAttOp::Initialize(const OpContext &ctx,
   float oscale = 1.0f;
   auto result_mkldnn_dtype = memory::data_type::f32;
   if (param_.quantized) {
-    const float min_att = inputs[2].data().dptr<float>()[0];
-    const float max_att = inputs[3].data().dptr<float>()[0];
-    const float min_qkv = inputs[4].data().dptr<float>()[0];
-    const float max_qkv = inputs[5].data().dptr<float>()[0];
+    min_att_ = inputs[2].data().dptr<float>()[0];
+    max_att_ = inputs[3].data().dptr<float>()[0];
+    min_qkv_ = inputs[4].data().dptr<float>()[0];
+    max_qkv_ = inputs[5].data().dptr<float>()[0];
 
-    const float att_scale = GetQuantizeScale(mshadow::kUint8, min_att, max_att);
-    const float qkv_scale = GetQuantizeScale(mshadow::kInt8, min_qkv, max_qkv);
+    att_scale_ = GetQuantizeScale(mshadow::kUint8, min_att_, max_att_);
+    qkv_scale_ = GetQuantizeScale(mshadow::kInt8, min_qkv_, max_qkv_);
 
     if (param_.min_calib_range.has_value() &&
         param_.max_calib_range.has_value()) {
       min_output_ = param_.min_calib_range.value();
       max_output_ = param_.max_calib_range.value();
       oscale = GetQuantizeScale(out_tensor.dtype(), min_output_, max_output_) /
-                (att_scale * qkv_scale);
+                (att_scale_ * qkv_scale_);
       result_mkldnn_dtype = memory::data_type::s8;
     } else if (param_.enable_float_output) {
-      oscale = 1.0f / (att_scale * qkv_scale);
+      oscale = 1.0f / (att_scale_ * qkv_scale_);
       result_mkldnn_dtype = memory::data_type::f32;
     } else {
       mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
       mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
-            s, 1, &min_output_, &max_output_, &min_att, &max_att, &min_qkv,
-            &max_qkv);
+            s, 1, &min_output_, &max_output_, &min_att_, &max_att_, &min_qkv_,
+            &max_qkv_);
       result_mkldnn_dtype = memory::data_type::s32;
     }
   } else {
