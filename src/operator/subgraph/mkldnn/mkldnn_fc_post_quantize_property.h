@@ -114,7 +114,8 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelectorV2 {
             if (n.outputs.size() > 1) {
               // check if requantize have other outputs than dequantize
               // if it has we can't fuse dequantize into FC
-              for (auto [node, index] : n.outputs) {
+              for (auto kv : n.outputs) {
+                const auto& node = kv.first;
                 if (node->op() != Op::Get("_contrib_dequantize")) {
                   status = kSuccess;
                   return false;
