@@ -28,6 +28,7 @@
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_ELEMWISEMUL_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
+#include <memory>
 #include <string>
 #include <vector>
 #include "../../tensor/elemwise_binary_op-inl.h"
@@ -111,7 +112,8 @@ class ElemwiseMulPostQuantizeSelector : public SubgraphSelectorV2 {
         if ((!disable_float_output) && (raw_new_node->op() == Op::Get("_contrib_dequantize"))) {
             CHECK(raw_node->op() == Op::Get("_contrib_requantize"));\
             if (n.outputs.size() > 1) {
-            // check if requantize have other outputs than dequantize - if yes we can't fuse dequantize into FC
+            // check if requantize have other outputs than dequantize
+            // if it has we can't fuse dequantize into elemwise_mul
               for (auto [node, index] : n.outputs) {
                 if (node->op() != Op::Get("_contrib_dequantize")) {
                   status = kSuccess;

@@ -28,6 +28,7 @@
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
+#include <memory>
 #include <string>
 #include <vector>
 #include "../../nn/fully_connected-inl.h"
