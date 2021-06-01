@@ -582,16 +582,15 @@ Graph SetCalibTableToQuantizedGraph(Graph&& g) {
 static NDArray* FindInArgByName(const Graph &g, const std::string& name) {
   const std::vector<std::string>& in_arg_names =
       g.GetAttr<std::vector<std::string>>("in_arg_names");
-  size_t i =
-      std::distance(in_arg_names.begin(),
-                    std::find(in_arg_names.begin(), in_arg_names.end(), name));
+  size_t i = std::distance(in_arg_names.begin(),
+                           std::find(in_arg_names.begin(), in_arg_names.end(), name));
   if (i == in_arg_names.size()) {
     throw std::runtime_error(name + " not found in in_arg_names");
   }
   return g.GetAttr<NDArray **>("in_args")[i];
 }
 
-static inline bool IsFC(const ObjectPtr& n) {
+static inline bool IsOneDNNFullyConnected(const ObjectPtr& n) {
 #if MXNET_USE_MKLDNN == 1
   if (n->op() == Op::Get("_sg_mkldnn_fully_connected")) {
     auto const& param = nnvm::get<MKLDNNFCFullParam>(n->attrs.parsed);
@@ -639,7 +638,8 @@ static inline float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray*
   float bias_max_rescale = mshadow::red::limits::MaxValue<int32_t>() / 2 /
                            MaxAbs(min_bias, max_bias) / bias_scale;
   if (bias_int32_rescale > bias_max_rescale) {
-    LOG(INFO) << "RESCALING WEIGHTS!";
+    LOG(INFO) << "RESCALING WEIGHTS in shifted quantization because bias scale "
+                 "is too big in layer " << fc->attrs.name;
     // avoid overflow on bias
     bias_int32_rescale = bias_max_rescale;
     float weight_rescale =
@@ -682,7 +682,7 @@ Graph OneDNNShiftedQuantization(Graph &&g) {
   if (!disable_shifted_quant) {
     DFSVisit(g.outputs, [&](const ObjectPtr &fc) {
       // Find Quantize->FC pattern and rescale bias from int8 to int32 and shift
-      if (IsFC(fc)) {
+      if (IsOneDNNFullyConnected(fc)) {
         ObjectPtr &quantize = fc->inputs[0].node;
         if (IsQuantize(quantize)) {
           ObjectPtr& bias_node = fc->inputs[2].node;
@@ -714,7 +714,7 @@ Graph OneDNNShiftedQuantization(Graph &&g) {
           float min_data = std::stof(quantize->attrs.dict.at("min_calib_range"));
           float max_data = std::stof(quantize->attrs.dict.at("max_calib_range"));
           float data_scale = kUint8Range / (max_data - min_data);
-          uint32_t shift_value = static_cast<uint32_t>(-std::round(data_scale * min_data));
+          uint32_t shift_value = static_cast<uint32_t>(std::round(data_scale * -min_data));
           ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
         }
       }

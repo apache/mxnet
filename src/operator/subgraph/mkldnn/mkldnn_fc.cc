@@ -214,7 +214,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
     bool support_channelwise_scale = false;
     if (mkldnn_param.quantized) {
       CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
-        data_scale_ = GetQuantizeScale(data.dtype(), cached_min_data_, cached_max_data_);
+      data_scale_ = GetQuantizeScale(data.dtype(), cached_min_data_, cached_max_data_);
 
       bool fuse_requantize = false;
       // Channelwise scaling is only supported when fusion is enabled (requantize or dequantize).

@@ -113,7 +113,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     auto out_type = GetQuantizeOutputType(param_);
     const bool shifted = param_.shifted.has_value() && param_.shifted.value();
     if (shifted) {
-      // if shifted == true we have guarantee that data_max is negative because
+      // if shifted == true we have guarantee that data_min is negative because
       // we require that in shifted quantization pass in quantize_graph_pass
       // Modify out min/max range to reflect shifted data
       out_type = mshadow::kUint8;
@@ -136,7 +136,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
       if (shifted) {
         CHECK_LT(data_min, 0);  // assert that we are working on signed
         cached_scale_ = kUint8Range / (data_max - data_min);
-        cached_shift_ = static_cast<uint8_t>(std::round(-cached_scale_ * cached_data_min_));
+        cached_shift_ = static_cast<uint8_t>(std::round(cached_scale_ * -cached_data_min_));
       } else {
         cached_scale_ = GetQuantizeScale(out_type, data_min, data_max);
       }
@@ -145,6 +145,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
       std::vector<float> scales = {cached_scale_};
       attr.set_output_scales(mask, scales);
       if (shifted) {
+        // TODO(sfraczek): change to zero point when optimized in oneDNN
         dnnl::post_ops po;
         po.append_sum();
         attr.set_post_ops(po);

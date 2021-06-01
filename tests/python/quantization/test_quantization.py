@@ -1264,23 +1264,23 @@ def test_onednn_shifted_quantization():
         param = fc_layer.collect_params(p)[p]._reduce()
         return param
 
-    def quantize_to_int8(param):
+    def quantize_param_to_int8(param):
         p_int8, p_min, p_max = mx.ndarray.contrib.quantize(data=param,
-                                                    min_range=mx.ndarray.min(param),
-                                                    max_range=mx.ndarray.max(param),
-                                                    out_type='int8')
-        p_scale = 127.5/np.max(np.abs([p_max.asnumpy(), p_min.asnumpy()]))
+                                                           min_range=mx.ndarray.min(param),
+                                                           max_range=mx.ndarray.max(param),
+                                                           out_type='int8')
+        p_scale = 127.5 / np.max(np.abs([p_max.asnumpy(), p_min.asnumpy()]))
         return p_int8.asnumpy(), p_scale
 
     def get_shifted_bias(quantize_attrs, weights_int8, weights_scale, bias_int8, bias_scale):
         max_data = float(quantize_attrs['max_calib_range'])
         min_data = float(quantize_attrs['min_calib_range'])
         data_scale = 255.5 / (max_data - min_data)
-        shift_value = np.array(np.round(-data_scale*min_data),np.uint8)
-        shift_matrix = shift_value*np.ones((1, weights_int8.shape[1]), np.int32)
+        shift_value = np.array(np.round(data_scale * -min_data), np.uint8)
+        shift_matrix = shift_value * np.ones((1, weights_int8.shape[1]), np.int32)
         shift_matrix = np.array(np.dot(shift_matrix, weights_int8.T).squeeze(), np.int32)
         bias_int32_rescale = data_scale * weights_scale / bias_scale
-        bias_int32 = np.array(np.round(bias_int8*bias_int32_rescale),dtype=np.int32)
+        bias_int32 = np.array(np.round(bias_int8 * bias_int32_rescale), dtype=np.int32)
         bias_shifted = bias_int32 - shift_matrix
         return bias_shifted
 
@@ -1304,8 +1304,9 @@ def test_onednn_shifted_quantization():
         return fc_layer, quantize_attrs
 
     def get_fc_layer(random_data):
-        fc_layer = mx.gluon.nn.Dense(5, use_bias=True, weight_initializer=mx.initializer.Normal(
-        ), bias_initializer=mx.initializer.Normal())
+        fc_layer = mx.gluon.nn.Dense(5, use_bias=True,
+                                     weight_initializer=mx.initializer.Normal(),
+                                     bias_initializer=mx.initializer.Normal())
         fc_layer.initialize()
         fc_layer(random_data).wait_to_read()
         return fc_layer
@@ -1317,8 +1318,10 @@ def test_onednn_shifted_quantization():
         fc_layer = get_fc_layer(random_data)
 
         if qdtype is 'auto':
-            bias_int8, bias_scale = quantize_to_int8(collect_param(fc_layer, 'dense%d_bias' % number))
-            weights_int8, weights_scale = quantize_to_int8(collect_param(fc_layer, 'dense%d_weight' % number))
+            bias_int8, bias_scale = quantize_param_to_int8(
+                collect_param(fc_layer, 'dense%d_bias' % number))
+            weights_int8, weights_scale = quantize_param_to_int8(
+                collect_param(fc_layer, 'dense%d_weight' % number))
 
         fc_layer_quantized, quantize_attrs = quantize_fc_layer(fc_layer, qdtype, random_data)
 
