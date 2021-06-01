@@ -1625,19 +1625,18 @@ def test_grad_graph_change():
     row.backward()
 
 
-def check_layer_forward_withinput(net, x):
-    x_non_hybrid = x.copy()
+def check_layer_forward_withinput(net, x, x_hybrid):
     x.attach_grad()
-    x_non_hybrid.attach_grad()
+    x_hybrid.attach_grad()
     net.initialize()
     with mx.autograd.record():
-        out1 = net(x_non_hybrid)
+        out1 = net(x)
     out1.backward()
     net.hybridize()
     with mx.autograd.record():
-        out2 = net(x)
+        out2 = net(x_hybrid)
     out2.backward()
-    mx.test_utils.assert_almost_equal(x.grad.asnumpy(), x_non_hybrid.grad.asnumpy(), rtol=1e-5, atol=1e-6)
+    mx.test_utils.assert_almost_equal(x.grad.asnumpy(), x_hybrid.grad.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
 @use_np
@@ -1658,8 +1657,9 @@ def test_conv2d_16c(chn_num, kernel):
             return out
 
     x = mx.np.random.uniform(-1.0, 1.0, size=(batch_size, 3, 224, 224))
+    x_hybrid = x.copy()
     net = Net(chn_num, kernel)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @use_np
 @pytest.mark.parametrize('grp', [16])
@@ -1683,8 +1683,9 @@ def test_group_conv2d_16c(grp, kernel_size):
 
     for i in range(len(input_size_list)):
         x = mx.np.random.uniform(-1.0, 1.0, size=(batch_size, 3, input_size_list[i], input_size_list[i]))
+        x_hybrid = x.copy()
         net = Net(grp, kernel_size)
-        check_layer_forward_withinput(net, x)
+        check_layer_forward_withinput(net, x, x_hybrid)
 
 @use_np
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
@@ -1704,9 +1705,10 @@ def test_deconv2d_16c():
             return out
     for i in range(len(in_shape)):
         x = mx.np.random.uniform(-1.0, 1.0, size=(batch_size, in_chn_list[i], in_shape[i], in_shape[i]))
+        x_hybrid = x.copy()
         for j in range(len(kernel_list)):
             net = Net(out_chn_list[i], kernel_list[j])
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -1737,8 +1739,9 @@ def test_batchnorm_16c():
         for j in range(len(shape_list)):
             shape = (batch_size, ) + (3,) + shape_list[j]
             x = mx.np.random.uniform(-1.0, 1.0, size=shape)
+            x_hybrid = x.copy()
             net = Net(chn_list[i], 1, 1)
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -1802,10 +1805,11 @@ def test_concat():
     for s in range(len(shape_list)):
         shape = (batch_size,) + (3,) + shape_list[i]
         x = mx.np.random.uniform(-1.0, 1.0, size=shape)
+        x_hybrid = x.copy()
         for i in range(len(chn_list)):
             for axis in range(4):
                 net = Net(axis, input_num, chn_list[i], 1)
-                check_layer_forward_withinput(net, x)
+                check_layer_forward_withinput(net, x, x_hybrid)
 
 @use_np
 def test_reshape_conv():
@@ -1819,8 +1823,9 @@ def test_reshape_conv():
             out = self.conv0(x_reshape)
             return out
     x = mx.np.random.uniform(size=(4, 3, 64, 64))
+    x_hybrid = x.copy()
     net = Net()
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -1840,8 +1845,9 @@ def test_reshape_conv_reshape_conv():
             out = self.conv1(y_reshape)
             return out
     x = mx.np.random.uniform(size=(4, 3, 64, 64))
+    x_hybrid = x.copy()
     net = Net()
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @use_np
 def test_slice_conv():
@@ -1855,8 +1861,9 @@ def test_slice_conv():
             out = self.conv0(x_slice)
             return out
     x = mx.np.random.uniform(size=(8, 6, 32, 32))
+    x_hybrid = x.copy()
     net = Net()
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -1875,8 +1882,9 @@ def test_slice_conv_slice_conv():
             out = self.conv1(y_slice)
             return out
     x = mx.np.random.uniform(size=(4, 32, 32, 32))
+    x_hybrid = x.copy()
     net = Net()
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -1897,8 +1905,9 @@ def test_slice_conv_reshape_conv():
             return out
 
     x = mx.np.random.uniform(size=(4, 32, 64, 64))
+    x_hybrid = x.copy()
     net = Net()
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @use_np
 def test_reshape_conv_slice_conv():
@@ -1919,8 +1928,9 @@ def test_reshape_conv_slice_conv():
             out = self.conv1(y_slice)
             return out
     x = mx.np.random.uniform(size=(4, 3, 32, 32))
+    x_hybrid = x.copy()
     net = Net()
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @use_np
 def test_reshape_dense():
@@ -1936,8 +1946,9 @@ def test_reshape_dense():
             return out
 
     x = mx.np.random.uniform(size=(4, 32, 64, 64))
+    x_hybrid = x.copy()
     net = Net()
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -1956,9 +1967,10 @@ def test_slice_dense():
             return out
 
     x = mx.np.random.uniform(size=(16, 32, 64, 64))
+    x_hybrid = x.copy()
     slice = [[0, 16, 0, 0], [4, 32, 32, 32]]
     net = Net(slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @use_np
 def test_slice_dense_slice_dense():
@@ -1979,9 +1991,10 @@ def test_slice_dense_slice_dense():
             return out
 
     x = mx.np.random.uniform(size=(16, 32, 64, 64))
+    x_hybrid = x.copy()
     slice = [[0, 16, 0, 0], [4, 32, 32, 32]]
     net = Net(slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @use_np
 def test_reshape_dense_reshape_dense():
@@ -2001,8 +2014,9 @@ def test_reshape_dense_reshape_dense():
             return out
 
     x = mx.np.random.uniform(size=(4, 16, 64, 64))
+    x_hybrid = x.copy()
     net = Net()
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2024,9 +2038,10 @@ def test_slice_dense_reshape_dense():
             return out
 
     x = mx.np.random.uniform(size=(16, 32, 64, 64))
+    x_hybrid = x.copy()
     slice = [[0, 16, 0, 0], [4, 32, 32, 32]]
     net = Net(slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2047,8 +2062,9 @@ def test_reshape_dense_slice_dense():
             return out
 
     x = mx.np.random.uniform(size=(4, 16, 64, 64))
+    x_hybrid = x.copy()
     net = Net()
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2068,9 +2084,10 @@ def test_reshape_batchnorm():
             return out
 
     x = mx.np.random.uniform(size=(4, 32, 64, 64))
+    x_hybrid = x.copy()
     shape = (4, 64, 64, -1)
     net = Net(shape)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2091,9 +2108,10 @@ def test_slice_batchnorm():
             return out
 
     x = mx.np.random.uniform(size=(16, 128, 256, 256))
+    x_hybrid = x.copy()
     slice = [[0, 0, 0, 0], [4, 32, 32, 32]]
     net = Net(slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2117,9 +2135,10 @@ def test_slice_batchnorm_slice_batchnorm():
             return out
 
     x = mx.np.random.uniform(size=(16, 128, 256, 256))
+    x_hybrid = x.copy()
     slice = [[[0, 0, 0, 0], [4, 32, 32, 32]], [[0, 0, 0, 0], [2, 64, 16, 16]]]
     net = Net(slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2142,9 +2161,10 @@ def test_reshape_batchnorm_reshape_batchnorm():
             return out
 
     x = mx.np.random.uniform(size=(4, 32, 64, 64))
+    x_hybrid = x.copy()
     shape = [(4, 64, 64, -1), (4, 128, -1, 32)]
     net = Net(shape)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2168,10 +2188,11 @@ def test_slice_batchnorm_reshape_batchnorm():
             return out
 
     x = mx.np.random.uniform(size=(16, 128, 256, 256))
+    x_hybrid = x.copy()
     slice = [[0, 0, 0, 0], [4, 32, 32, 32]]
     shape = (1, 128, 64, -1)
     net = Net(shape, slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
@@ -2194,10 +2215,11 @@ def test_reshape_batchnorm_slice_batchnorm():
             return out
 
     x = mx.np.random.uniform(size=(4, 32, 64, 64))
+    x_hybrid = x.copy()
     slice = [[0, 0, 0, 0], [2, 64, 32, 32]]
     shape = (4, 64, 64, -1)
     net = Net(shape, slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_pooling2d():
@@ -2221,10 +2243,11 @@ def test_reshape_pooling2d():
             return out
 
     x = mx.np.random.uniform(size=(4, 32, 32, 32))
+    x_hybrid = x.copy()
     shape = (4, 64, 64, -1)
     for i in range(len(pooling_layers)):
         net = Net(shape, pooling_layers[i])
-        check_layer_forward_withinput(net, x)
+        check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.serial
 def test_slice_pooling2d():
@@ -2258,10 +2281,11 @@ def test_slice_pooling2d():
             xshape = transpose(xshape)
             slice_shape = transpose(slice_shape)
         x = mx.np.random.uniform(size=xshape)
+        x_hybrid = x.copy()
         slice = [(0, 0, 0, 0), slice_shape]
         for i in range(len(pooling_layers)):
             net = Net(slice, pooling_layers[i])
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_pooling2d_reshape_pooling2d():
@@ -2289,13 +2313,14 @@ def test_reshape_pooling2d_reshape_pooling2d():
             return out
 
     x = mx.np.random.uniform(size=(16, 128, 256, 256))
+    x_hybrid = x.copy()
     shape = [(128, 256, 64, -1), (128, 256, 11, -1)]
     for i in range(len(pooling_layers)):
         for j in range(len(pooling_layers)):
             if isinstance(pooling_layers[i], (nn.GlobalMaxPool2D, nn.GlobalAvgPool2D)):
                 shape[1] = (256, 128, 1, 1)
             net = Net(shape, pooling_layers[i], pooling_layers[j])
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.serial
 def test_slice_pooling2d_slice_pooling2d():
@@ -2323,13 +2348,14 @@ def test_slice_pooling2d_slice_pooling2d():
             return out
 
     x = mx.np.random.uniform(size=(16, 128, 256, 256))
+    x_hybrid = x.copy()
     slice = [[(8, 0, 100, 50), (16, -1, -1, -1)], [(0, 64, 0, 50), (2, -1, -1, -1)]]
     for i in range(len(pooling_layers)):
         for j in range(len(pooling_layers)):
             if isinstance(pooling_layers[i], (nn.GlobalMaxPool2D, nn.GlobalAvgPool2D)):
                 slice[1] = [(0, 64, 0, 0), (2, -1, 1, 1)]
             net = Net(slice, pooling_layers[i], pooling_layers[j])
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_slice_pooling2d_reshape_pooling2d():
@@ -2359,12 +2385,13 @@ def test_slice_pooling2d_reshape_pooling2d():
             return out
 
     x = mx.np.random.uniform(size=(16, 128, 256, 256))
+    x_hybrid = x.copy()
     slice = [(8, 0, 100, 50), (16, 128, 256, 256)]
     shape = (32, -1, 0, 0)
     for i in range(len(pooling_layers)):
         for j in range(len(pooling_layers)):
             net = Net(shape, slice, pooling_layers[i], pooling_layers[j])
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 @pytest.mark.serial
@@ -2395,6 +2422,7 @@ def test_reshape_pooling2d_slice_pooling2d():
             return out
 
     x = mx.np.random.uniform(size=(16, 128, 256, 256))
+    x_hybrid = x.copy()
     shape = (0, 512, 64, -1)
     slice = [(8, 256, 10, 20), (-1, -1, -1, 70)]
     for i in range(len(pooling_layers)):
@@ -2402,7 +2430,7 @@ def test_reshape_pooling2d_slice_pooling2d():
             if isinstance(pooling_layers[i], (nn.GlobalMaxPool2D, nn.GlobalAvgPool2D)):
                 slice = [(8, 256, 0, 0), (-1, -1, 1, 1)]
             net = Net(shape, slice, pooling_layers[i], pooling_layers[j])
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 @pytest.mark.serial
@@ -2418,9 +2446,10 @@ def test_reshape_deconv():
             out = self.conv0(x_reshape)
             return out
     x = mx.np.random.uniform(size=(4, 16, 32, 32))
+    x_hybrid = x.copy()
     shape = (4, 16, 64, -1)
     net = Net(shape)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 @pytest.mark.serial
@@ -2436,9 +2465,10 @@ def test_slice_deconv():
             out = self.conv0(x_slice)
             return out
     x = mx.np.random.uniform(size=(8, 32, 64, 64))
+    x_hybrid = x.copy()
     slice = [(0, 16, 0, 0), (4, 32, 32, 32)]
     net = Net(slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 @pytest.mark.serial
@@ -2458,9 +2488,10 @@ def test_reshape_deconv_reshape_deconv():
             out = self.conv1(y_reshape)
             return out
     x = mx.np.random.uniform(size=(4, 16, 32, 32))
+    x_hybrid = x.copy()
     shape = [(4, 16, 64, -1), (4, 32, 33, -1)]
     net = Net(shape)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 @pytest.mark.serial
@@ -2480,9 +2511,10 @@ def test_slice_deconv_slice_deconv():
             out = self.conv1(y_slice)
             return out
     x = mx.np.random.uniform(size=(8, 32, 64, 64))
+    x_hybrid = x.copy()
     slice = [[(0, 0, 0, 0), (4, 16, 32, 32)], [(0, 0, 0, 0), (2, 16, 16, 16)]]
     net = Net(slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 @pytest.mark.serial
@@ -2503,10 +2535,11 @@ def test_reshape_deconv_slice_deconv():
             out = self.conv1(y_slice)
             return out
     x = mx.np.random.uniform(size=(4, 16, 32, 32))
+    x_hybrid = x.copy()
     shape = (4, 16, 64, -1)
     slice = [(0, 0, 0, 0), (2, 16, 16, 16)]
     net = Net(shape, slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 @pytest.mark.serial
@@ -2527,10 +2560,11 @@ def test_slice_deconv_reshape_deconv():
             out = self.conv1(y_reshape)
             return out
     x = mx.np.random.uniform(size=(8, 32, 64, 64))
+    x_hybrid = x.copy()
     shape = (4, 64, 34, -1)
     slice = [(4, 0, 0, 0), (8, 16, 32, 32)]
     net = Net(shape, slice)
-    check_layer_forward_withinput(net, x)
+    check_layer_forward_withinput(net, x, x_hybrid)
 
 @use_np
 @pytest.mark.serial
@@ -2546,11 +2580,12 @@ def test_reshape_activation():
             out = self.act(x_reshape)
             return out
     acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
+    x = mx.np.random.uniform(-1, 1, size=(4, 16, 32, 32))
+    x_hybrid = x.copy()
+    shape = (4, 32, 32, -1)
     for act in acts:
-        x = mx.np.random.uniform(-1, 1, size=(4, 16, 32, 32))
-        shape = (4, 32, 32, -1)
         net = Net(act, shape)
-        check_layer_forward_withinput(net, x)
+        check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2568,11 +2603,12 @@ def test_slice_activation():
             return out
 
     acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
+    x = mx.np.random.uniform(-1, 1, size=(8, 32, 64, 64))
+    x_hybrid = x.copy()
+    slice = [(0, 16, 32, 32), (4, 32, 64, 64)]
     for act in acts:
-        x = mx.np.random.uniform(-1, 1, size=(8, 32, 64, 64))
-        slice = [(0, 16, 32, 32), (4, 32, 64, 64)]
         net = Net(act, slice)
-        check_layer_forward_withinput(net, x)
+        check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2592,14 +2628,15 @@ def test_reshape_activation_reshape_activation():
             out = self.act1(y_reshape)
             return out
     acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
+    x = mx.np.random.uniform(-1, 1, size=(4, 16, 32, 32))
+    x_hybrid = x.copy()
+    shape = [(4, 32, 32, -1), (4, 32, 16, -1)]
     for idx0, act0 in enumerate(acts):
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
                 continue
-            x = mx.np.random.uniform(-1, 1, size=(4, 16, 32, 32))
-            shape = [(4, 32, 32, -1), (4, 32, 16, -1)]
             net = Net(act0, act1, shape)
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2618,15 +2655,16 @@ def test_slice_activation_slice_activation():
             y_slice = mx.npx.slice(y, begin=self.slice[1][0], end=self.slice[1][1])
             out = self.act1(y_slice)
             return out
+    x = mx.np.random.uniform(-1, 1, size=(8, 32, 64, 64))
+    x_hybrid = x.copy()
+    slice = [[(0, 16, 32, 32), (4, 32, 64, 64)], [(2, 0, 16, 16), (4, 16, 32, 32)]]
     acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for idx0, act0 in enumerate(acts):
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
                 continue
-            x = mx.np.random.uniform(-1, 1, size=(8, 32, 64, 64))
-            slice = [[(0, 16, 32, 32), (4, 32, 64, 64)], [(2, 0, 16, 16), (4, 16, 32, 32)]]
             net = Net(act0, act1, slice)
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2646,16 +2684,17 @@ def test_reshape_activation_slice_activation():
             y_slice = mx.npx.slice(y, begin=self.slice[0], end=self.slice[1])
             out = self.act1(y_slice)
             return out
+    x = mx.np.random.uniform(-1, 1, size=(4, 16, 32, 32))
+    x_hybrid = x.copy()
+    shape = (4, 32, 32, -1)
+    slice = [(0, 0, 0, 0), (2, 16, 16, 16)]
     acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for idx0, act0 in enumerate(acts):
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
                 continue
-            x = mx.np.random.uniform(-1, 1, size=(4, 16, 32, 32))
-            shape = (4, 32, 32, -1)
-            slice = [(0, 0, 0, 0), (2, 16, 16, 16)]
             net = Net(act0, act1, shape, slice)
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 
 @use_np
@@ -2675,16 +2714,17 @@ def test_slice_activation_reshape_activation():
             y_reshape = y.reshape(self.reshape)
             out = self.act1(y_reshape)
             return out
+    x = mx.np.random.uniform(-1, 1, size=(8, 32, 64, 64))
+    x_hybrid = x.copy()
+    slice = [(0, 16, 32, 32), (4, 32, 64, 64)]
+    shape = (4, 32, 32, -1)
     acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for idx0, act0 in enumerate(acts):
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
                 continue
-            x = mx.np.random.uniform(-1, 1, size=(8, 32, 64, 64))
-            slice = [(0, 16, 32, 32), (4, 32, 64, 64)]
-            shape = (4, 32, 32, -1)
             net = Net(act0, act1, shape, slice)
-            check_layer_forward_withinput(net, x)
+            check_layer_forward_withinput(net, x, x_hybrid)
 
 @use_np
 @pytest.mark.serial
