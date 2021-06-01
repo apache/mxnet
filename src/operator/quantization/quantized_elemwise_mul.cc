@@ -228,7 +228,6 @@ NNVM_REGISTER_OP(_contrib_quantized_elemwise_mul)
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"lhs", "rhs", "lhs_min", "lhs_max", "rhs_min", "rhs_max"};
   })
-.set_attr<nnvm::FListOutputNames>("FListOutputNames", QuantizedElemwiseMulOutputNames)
 .set_attr<mxnet::FInferShape>("FInferShape", QuantizedElemwiseMulOpShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedElemwiseMulOpType)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizedElemwiseMulOpStorageType)
