@@ -112,8 +112,8 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelectorV2 {
         if ((!disable_float_output) && (raw_new_node->op() == Op::Get("_contrib_dequantize"))) {
             CHECK(raw_node->op() == Op::Get("_contrib_requantize"));
             if (n.outputs.size() > 1) {
-            // check if requantize have other outputs than dequantize
-            // if it has we can't fuse dequantize into FC
+              // check if requantize have other outputs than dequantize
+              // if it has we can't fuse dequantize into FC
               for (auto [node, index] : n.outputs) {
                 if (node->op() != Op::Get("_contrib_dequantize")) {
                   status = kSuccess;

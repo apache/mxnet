@@ -517,7 +517,7 @@ Graph QuantizeGraph(Graph &&src) {
     if (node->op() && !calib_variables.empty()) {
       // find nodes where input is variable node
       // and add proper input_name to calib_nodes
-      for (int i=0; i < node->inputs.size(); i++) {
+      for (int i = 0; i < node->inputs.size(); i++) {
         const auto &input_node = node->inputs[i];
         if (calib_variables.find(input_node.node) != std::end(calib_variables)) {
           auto fp32_node = std::find_if(std::begin(quantized_node_map),

@@ -170,7 +170,7 @@ def test_fc_int8_and_fp32_outputs(data_shape):
 
 #                 /---> Quantizable op
 # Input ---> FC -|
-#                \---> Non quantizable op
+#                 \---> Non quantizable op
 
   class MultiOutputFC(nn.HybridBlock):
     def __init__(self, **kwargs):
