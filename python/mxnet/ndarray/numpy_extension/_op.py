@@ -217,6 +217,8 @@ def activation(data, act_type='relu', **kwargs):
 
     The following activation functions are supported:
 
+    - `log_sigmoid`: :math:`y = log(\frac{1}{1 + exp(-x)})`
+    - `mish`: :math:`y = x * tanh(log(1 + exp(x)))`
     - `relu`: Rectified Linear Unit, :math:`y = max(x, 0)`
     - `sigmoid`: :math:`y = \frac{1}{1 + exp(-x)}`
     - `tanh`: Hyperbolic tangent, :math:`y = \frac{exp(x) - exp(-x)}{exp(x) + exp(-x)}`
@@ -227,7 +229,7 @@ def activation(data, act_type='relu', **kwargs):
     ----------
     data : NDArray
         The input array.
-    act_type : {'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required
+    act_type : {'log_sigmoid', 'mish', 'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required
         Activation function to be applied.
 
     Returns
