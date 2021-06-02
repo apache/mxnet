@@ -617,7 +617,7 @@ void MKLDNNSelfAttValAttOp::Initialize(const OpContext &ctx,
 
   result_md    = memory::desc(out_dims, result_mkldnn_dtype, memory::format_tag::abcd);
   tmp_md       = memory::desc(transpose_dims, result_mkldnn_dtype, memory::format_tag::abcde);
-  transpose_md = memory::desc(transpose_dims, result_mkldnn_dtype, memory::format_tag::acbde);;
+  transpose_md = memory::desc(transpose_dims, result_mkldnn_dtype, memory::format_tag::acbde);
 
   // multiply by 2 as we need to skip query and key
   const size_t value_offset = inputs[1].shape()[2] / QKV_NUM * 2;
