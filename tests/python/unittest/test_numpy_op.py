@@ -3414,45 +3414,6 @@ def test_np_boolean_binary_funcs():
 
 
 @use_np
-def test_npx_activation_mish():
-    def np_mish(a):
-        return a * _np.tanh(_np.log1p(_np.exp(a)))
-    def np_mish_grad(a):
-        softrelu = _np.log1p(_np.exp(a))
-        tanh = _np.tanh(softrelu)
-        sigmoid = _np.divide(1.0, (1.0 + _np.exp(-a)))
-        return tanh + a * sigmoid * (1 - tanh * tanh)
-
-    class TestMish(HybridBlock):
-        def __init__(self):
-            super(TestMish, self).__init__()
-
-        def hybrid_forward(self, F, a):
-            return F.npx.activation(a, act_type='mish')
-
-    shapes = [(), (2, 3, 4), (2, 0, 3), (1, 0, 0)]
-    for hybridize in [True, False]:
-        for shape in shapes:
-            test_mish = TestMish()
-            if hybridize:
-                test_mish.hybridize()
-            x = rand_ndarray(shape).as_np_ndarray()
-            x.attach_grad()
-            np_out = np_mish(x.asnumpy())
-            with mx.autograd.record():
-                mx_out = test_mish(x)
-            assert mx_out.shape == np_out.shape
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-            mx_out.backward()
-            np_backward = np_mish_grad(x.asnumpy())
-            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
-
-            mx_out = npx.activation(x, act_type='mish')
-            np_out = np_mish(x.asnumpy())
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-
-
-@use_np
 def test_npx_relu():
     def np_relu(x):
         return _np.maximum(x, 0.0)

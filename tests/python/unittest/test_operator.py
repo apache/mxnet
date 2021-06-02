@@ -699,7 +699,7 @@ def test_mish():
         softrelu = np.log1p(np.exp(a))
         tanh = np.tanh(softrelu)
         sigmoid = np.divide(1.0, (1.0 + np.exp(-a)))
-        return tanh + a * sigmoid * (1 - tanh * tanh)
+        return tanh + a * sigmoid * (1.0 - tanh * tanh)
     shape = (3, 4)
     x = mx.symbol.Variable("x")
     y = mx.sym.mish(x)
@@ -709,6 +709,17 @@ def test_mish():
     check_numeric_gradient(y, [xa], numeric_eps=1E-3)
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya_grad])
+
+    A = rand_ndarray(shape).as_np_ndarray()
+    A.attach_grad()
+    np_out = fmish(A.asnumpy())
+    with mx.autograd.record():
+        B = mx.npx.activation(A, act_type='mish')
+    assert B.shape == np_out.shape
+    assert_almost_equal(B.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+    B.backward()
+    np_backward = fmish_grad(A.asnumpy())
+    assert_almost_equal(A.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
 
 def test_shape_array():
     for i in range(1,6):
