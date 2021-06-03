@@ -118,11 +118,6 @@ class Imperative {
                           const std::vector<NDArray *> &inputs,
                           const std::vector<NDArray *> &outputs);
 
-    static void Clear(const nnvm::ObjectPtr& node) {
-      if (node == nullptr || node->info.empty()) return;
-      node->info.clear();
-    }
-
    private:
     friend class Imperative;
 
@@ -253,8 +248,6 @@ class Imperative {
   nnvm::Symbol GetDeferredComputeSymbol(const std::vector<NDArray *> &outputs);
   /*! \brief associate arrays with variables for deferred compute */
   void SetDeferredComputeVariable(NDArrayHandle *arrays, SymbolHandle *variables, const int num);
-  /*! \brief clear info node associated with output variables */
-  void DeferredComputeClear(SymbolHandle *variables, const int num);
   /*! \brief */
   OpStatePtr Invoke(const Context& default_ctx,
                     const nnvm::NodeAttrs& attrs,

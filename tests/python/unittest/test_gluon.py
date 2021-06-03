@@ -1631,11 +1631,11 @@ def check_layer_forward_withinput(net, x):
     x_hybrid.attach_grad()
     net.initialize()
     with mx.autograd.record():
-        out1 = net(x_hybrid)
+        out1 = net(x)
     out1.backward()
     net.hybridize()
     with mx.autograd.record():
-        out2 = net(x)
+        out2 = net(x_hybrid)
     out2.backward()
     mx.test_utils.assert_almost_equal(x.grad.asnumpy(), x_hybrid.grad.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)

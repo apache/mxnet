@@ -1231,8 +1231,6 @@ class HybridBlock(Block):
                 self._backend_opts = {k : v for k, v in self._flags}
                 self._build_cache(*args, update_graph=False)
 
-            dc.clear(out)
-
         assert self._cached_op, "Gluon failed to build the cache. " \
                                 "This should never happen. " \
                                 "Please submit an issue on Github" \
