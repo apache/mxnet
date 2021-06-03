@@ -395,7 +395,7 @@ class MXNetGraph(object):
                 # process node outputs (sort by output index)
                 def str2int(s):
                     import re
-                    i = re.search(r'\d{0,2}$', s).group()
+                    i = re.search(r'\d{0,5}$', s).group()
                     if i == '':
                         return 0
                     else:
