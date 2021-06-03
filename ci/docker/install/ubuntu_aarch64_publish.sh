@@ -40,7 +40,6 @@ apt-get install -y git \
     gnupg2 \
     gnupg-agent \
     libc6-lse \
-    gfortran-8 \
     pandoc \
     python3 \
     python3-pip \
