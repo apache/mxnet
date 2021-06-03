@@ -46,6 +46,7 @@
 # coding: utf-8
 # pylint: disable=invalid-name,too-many-locals,no-self-use,too-many-arguments,
 # pylint: disable=maybe-no-member,too-many-nested-blocks,logging-not-lazy
+# pylint: disable=cell-var-from-loop
 """MXNet to ONNX graph converter functions"""
 import logging
 import json
