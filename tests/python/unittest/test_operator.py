@@ -710,7 +710,7 @@ def test_mish():
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya_grad])
 
-    A = rand_ndarray(shape).as_np_ndarray()
+    A = mx.np.zeros(shape)
     A.attach_grad()
     np_out = fmish(A.asnumpy())
     with mx.autograd.record():
