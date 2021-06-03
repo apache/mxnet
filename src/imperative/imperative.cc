@@ -384,6 +384,16 @@ void Imperative::SetDeferredComputeVariable(NDArrayHandle *arrays,
   }
 }
 
+void Imperative::DeferredComputeClear(SymbolHandle *variables, const int num) {
+  for (int i = 0; i < num; i++) {
+    nnvm::Symbol *sym = reinterpret_cast<nnvm::Symbol *>(variables[i]);
+    nnvm::DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr& n) {
+      DCInfo::Clear(n);
+      n->inputs.clear();
+    });
+  }
+}
+
 std::vector<NDArray*> Imperative::Backward(
     const std::vector<NDArray*>& outputs,
     const std::vector<NDArray*>& ograds,

@@ -1399,6 +1399,14 @@ MXNET_DLL int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *output_handles,
                                                 int num_outputs,
                                                 SymbolHandle *out);
 
+/*!
+ * \brief Clear the info node associated with the output variable.
+ * \param variables symbol handles of variables
+ * \param num number of variables
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayDeferredComputeClear(SymbolHandle *variables, int num);
+
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
