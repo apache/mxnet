@@ -29,6 +29,8 @@ from mxnet import nd, npx
 import pytest
 import tempfile
 
+mx.npx.reset_np()
+
 def network_structure_1():
     data1 = mx.sym.var('data1', shape=(2, 3, 10, 10))
     data2 = mx.sym.var('data2')
