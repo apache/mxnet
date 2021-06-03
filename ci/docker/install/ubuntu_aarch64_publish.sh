@@ -63,8 +63,6 @@ make -j$(nproc)
 sudo make install-strip
 cd ..
 rm -rf gcc-8.5.0.tar.xz
-export PATH=/usr/local/gcc-8.5.0/bin:$PATH
-export LD_LIBRARY_PATH=/usr/local/gcc-8.5.0/lib64:$LD_LIBRARY_PATH
 update-alternatives --install /usr/bin/gcc gcc /usr/local/gcc-8.5.0/bin/gcc-8.5 100 --slave /usr/bin/g++ g++ /usr/local/gcc-8.5.0/bin/g++-8.5 --slave /usr/bin/gcov gcov /usr/local/gcc-8.5.0/bin/gcov-8.5 --slave /usr/bin/gfortran gfortran /usr/local/gcc-8.5.0/bin/gfortran-8.5
 
 curl -o apache-maven-3.3.9-bin.tar.gz -L http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
