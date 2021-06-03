@@ -710,17 +710,6 @@ def test_mish():
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya_grad])
 
-    A = mx.np.random.uniform(low=-1.0, high=1.0, size=shape)
-    A.attach_grad()
-    np_out = fmish(A.asnumpy())
-    with mx.autograd.record():
-        B = mx.npx.activation(A, act_type='mish')
-    assert B.shape == np_out.shape
-    assert_almost_equal(B.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-    B.backward()
-    np_backward = fmish_grad(A.asnumpy())
-    assert_almost_equal(A.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
-
 def test_shape_array():
     for i in range(1,6):
         shape = rand_shape_nd(i)
