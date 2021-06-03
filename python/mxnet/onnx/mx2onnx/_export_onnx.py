@@ -393,13 +393,14 @@ class MXNetGraph(object):
                 if not node_output_names:
                     node_output_names = [converted[-1].name]
                 # process node outputs (sort by output index)
-                def str2int(s, l):
+                def str2int(s, name):
+                    l = len(name)
                     if len(s) == l:
                         return -1
                     else:
                         return int(s[l:])
 
-                node_output_names = sorted(node_output_names, key=lambda x: str2int(x, len(name)))
+                node_output_names = sorted(node_output_names, key=lambda x: str2int(x, name))
 
                 # match the output names to output dtypes
                 if dtypes is not None:
