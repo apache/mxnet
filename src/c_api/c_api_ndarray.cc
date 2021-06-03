@@ -451,3 +451,9 @@ int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *output_handles, int num_out
   *out = s;
   API_END_HANDLE_ERROR(delete s;);
 }
+
+int MXNDArrayDeferredComputeClear(SymbolHandle *variables, int num) {
+  API_BEGIN();
+  Imperative::Get()->DeferredComputeClear(variables, num);
+  API_END();
+}

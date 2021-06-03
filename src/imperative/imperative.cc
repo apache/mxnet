@@ -350,7 +350,7 @@ nnvm::Symbol Imperative::GetDeferredComputeSymbol(const std::vector<NDArray *> &
         << "must have a deferred compute history associated with them.";
     s.outputs.emplace_back(ndoutput->deferredcompute_entry_);
   }
-  return s;
+  return s.Copy();
 }
 
 void Imperative::SetDeferredComputeVariable(NDArrayHandle *arrays,
@@ -381,6 +381,16 @@ void Imperative::SetDeferredComputeVariable(NDArrayHandle *arrays,
     std::vector<NDArray *> outputs;  // No need to specify outputs, as we will set is_computed_
     Imperative::DCInfo& info = Imperative::DCInfo::Create(s->outputs[0].node, inputs, outputs);
     info.is_computed_ = true;
+  }
+}
+
+void Imperative::DeferredComputeClear(SymbolHandle *variables, const int num) {
+  for (int i = 0; i < num; i++) {
+    nnvm::Symbol *sym = reinterpret_cast<nnvm::Symbol *>(variables[i]);
+    nnvm::DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr& n) {
+      DCInfo::Clear(n);
+      n->inputs.clear();
+    });
   }
 }
 

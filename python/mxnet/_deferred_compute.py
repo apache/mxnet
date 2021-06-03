@@ -104,3 +104,21 @@ def set_variable(arrays, variables):
     variables = variables_type(*[symbol.handle for symbol in variables])
 
     check_call(_LIB.MXNDArraySetDeferredComputeVariable(arrays, variables, len(arrays)))
+
+def clear(variables):
+    """Clear the dc info node associated with output variables.
+
+    Parameters
+    ----------
+    variables: Symbol or List[Symbol] of variables
+    """
+
+    variables = _as_list(variables)
+
+    # Prepare ctypes array types
+    variables_type = ctypes.c_void_p * len(variables)
+
+    # Convert handles
+    variables = variables_type(*[symbol.handle for symbol in variables])
+
+    check_call(_LIB.MXNDArrayDeferredComputeClear(variables, len(variables)))
