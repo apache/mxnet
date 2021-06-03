@@ -1065,11 +1065,6 @@ class HybridBlock(Block):
                 self._active = False
             self._clear_cached_op()
 
-    def __del__(self):
-        """Destructor"""
-        if self._cached_graph:
-            dc.clear(self._cached_graph[1])
-
     def _get_graph(self, *args):
         if not self._cached_graph:
             flatten_args, self._in_format = _flatten(args, "input")
@@ -1235,6 +1230,8 @@ class HybridBlock(Block):
                 self._backend = 'static_shape'
                 self._backend_opts = {k : v for k, v in self._flags}
                 self._build_cache(*args, update_graph=False)
+
+            dc.clear(out)
 
         assert self._cached_op, "Gluon failed to build the cache. " \
                                 "This should never happen. " \
