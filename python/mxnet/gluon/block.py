@@ -1067,7 +1067,7 @@ class HybridBlock(Block):
 
     def __del__(self):
         """Destructor"""
-        if self._cached_graph:
+        if self._cached_graph and not isinstance(self, SymbolBlock):
             dc.clear(self._cached_graph[1])
 
     def _get_graph(self, *args):
