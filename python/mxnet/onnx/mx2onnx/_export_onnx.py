@@ -401,7 +401,7 @@ class MXNetGraph(object):
                     else:
                         return int(i)
 
-                sorted(node_output_names, key=str2int)
+                node_output_names = sorted(node_output_names, key=str2int)
 
                 # match the output names to output dtypes
                 if dtypes is not None:
