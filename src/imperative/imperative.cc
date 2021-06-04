@@ -350,7 +350,7 @@ nnvm::Symbol Imperative::GetDeferredComputeSymbol(const std::vector<NDArray *> &
         << "must have a deferred compute history associated with them.";
     s.outputs.emplace_back(ndoutput->deferredcompute_entry_);
   }
-  return s.Copy();
+  return s;
 }
 
 void Imperative::SetDeferredComputeVariable(NDArrayHandle *arrays,
