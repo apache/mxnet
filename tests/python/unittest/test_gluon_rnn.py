@@ -16,10 +16,9 @@
 # under the License.
 
 import mxnet as mx
-from mxnet import gluon, np, npx
+from mxnet import gluon, np
 import numpy as _np
 import copy
-from itertools import product
 from functools import partial
 from numpy.testing import assert_allclose
 import pytest
@@ -123,6 +122,22 @@ def test_lstmp():
 
         assert_almost_equal(fused_output.asnumpy(), stack_output.asnumpy(), rtol=rtol, atol=atol)
         check_rnn_states(fused_states, stack_states, num_layers, True)
+
+
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_lstm_cpu_inference():
+    # should behave the same as lstm cell
+    EXPECTED_LSTM_OUTPUT = _np.array([[[0.72045636, 0.72045636, 0.95215213, 0.95215213],
+                                       [0.72045636, 0.72045636, 0.95215213, 0.95215213]],
+                                      [[0.95215213, 0.95215213, 0.72045636, 0.72045636],
+                                       [0.95215213, 0.95215213, 0.72045636, 0.72045636]]])
+    x = mx.np.ones(shape=(2, 2, 2))
+    model = mx.gluon.rnn.LSTM(2, num_layers=6, bidirectional=True)
+    model.initialize(mx.init.One())
+
+    y = model(x).asnumpy()
+    mx.test_utils.assert_almost_equal(y, EXPECTED_LSTM_OUTPUT,
+                                      rtol=1e-3, atol=1e-5)
 
 
 @mx.util.use_np
