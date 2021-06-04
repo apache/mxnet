@@ -88,6 +88,6 @@ make -j$(nproc)
 sudo make install
 
 # Download and set up Arm Performance Libraries
-wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/Ubuntu18.04/arm-performance-libraries_21.0_Ubuntu-18.04_gcc-10.2.tar
-tar -xvf arm-performance-libraries_21.0_Ubuntu-18.04_gcc-10.2.tar
-arm-performance-libraries_21.0_Ubuntu-18.04_gcc-10.2/arm-performance-libraries_21.0_Ubuntu-18.04.sh -a
+wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/Ubuntu18.04/arm-performance-libraries_21.0_Ubuntu-18.04_gcc-8.2.tar
+tar -xvf arm-performance-libraries_21.0_Ubuntu-18.04_gcc-8.2.tar
+arm-performance-libraries_21.0_Ubuntu-18.04_gcc-8.2/arm-performance-libraries_21.0_Ubuntu-18.04.sh -a

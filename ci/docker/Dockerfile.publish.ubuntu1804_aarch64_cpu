@@ -24,7 +24,7 @@ WORKDIR /work/deps
 
 COPY install/ubuntu_aarch64_publish.sh /work/
 RUN /work/ubuntu_aarch64_publish.sh
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-10.2/lib
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-8.2/lib/
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/gcc-8.5.0/lib64
 ENV PATH=${PATH}:/usr/local/gcc-8.5.0/bin
 
