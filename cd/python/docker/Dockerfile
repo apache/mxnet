@@ -41,7 +41,7 @@ RUN if [ "$MXNET_VARIANT" = "aarch64_cpu" ] ; \
     tar -xvf arm-performance-libraries_21.0_Ubuntu-18.04_gcc-8.2.tar && \
     arm-performance-libraries_21.0_Ubuntu-18.04_gcc-8.2/arm-performance-libraries_21.0_Ubuntu-18.04.sh -a; \
     fi
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-10.2/lib
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-8.2/lib/
 
 ARG MXNET_COMMIT_ID
 ENV MXNET_COMMIT_ID=${MXNET_COMMIT_ID}
