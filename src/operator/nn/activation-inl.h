@@ -210,7 +210,7 @@ void ActivationGradComputeImpl(const nnvm::NodeAttrs& attrs, const OpContext &ct
       break;
     case activation::kMish:
       ActivationBackward<xpu, mshadow_op::mish, mshadow_op::mish_grad>(
-          ctx, inputs[0], inputs[1], req[0], outputs[0]);
+          ctx, inputs[0], inputs[2], req[0], outputs[0]);
       break;
     case activation::kTanh:
       ActivationBackward<xpu, mshadow_op::tanh, mshadow_op::tanh_grad>(
