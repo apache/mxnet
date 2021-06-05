@@ -93,7 +93,7 @@ void ActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       ctx, inputs.at(0), inputs.at(1), req[0], outputs[0]);
   } else if (act_type == activation::kMish) {
     ActivationBackward<gpu, mshadow_op::mish, mshadow_op::mish_grad>(
-      ctx, inputs.at(0), inputs.at(1), req[0], outputs[0]);
+      ctx, inputs.at(0), inputs.at(2), req[0], outputs[0]);
   } else if (act_type == activation::kSoftSign) {
     if (do_memory_opt) {
       ActivationBackward<gpu, mshadow_op::softsign, mshadow_op::softsign_grad>(
