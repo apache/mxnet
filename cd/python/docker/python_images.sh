@@ -45,7 +45,7 @@ fi
 
 build() {
     # NOTE: Ensure the correct context root is passed in when building - Dockerfile expects ./wheel_build
-    docker build -t "${image_name}" --build-arg BASE_IMAGE="${base_image}" --build-arg MXNET_COMMIT_ID=${GIT_COMMIT} -f ${resources_path}/Dockerfile ./wheel_build
+    docker build -t "${image_name}" --build-arg BASE_IMAGE="${base_image}" --build-arg MXNET_COMMIT_ID=${GIT_COMMIT} --build-arg MXNET_VARIANT=${mxnet_variant} -f ${resources_path}/Dockerfile ./wheel_build
 }
 
 test() {
@@ -54,9 +54,14 @@ test() {
         runtime_param="--runtime=nvidia"
     fi
     local test_image_name="${image_name}_test"
+    if [[ ${mxnet_variant} == "aarch64_cpu" ]]; then
+        requirements_file="./docker/install/requirements_aarch64"
+    else
+        requirements_file="./docker/install/requirements"
+    fi
 
     # Ensure the correct context root is passed in when building - Dockerfile.test expects ci directory
-    docker build -t "${test_image_name}" --build-arg USER_ID=`id -u` --build-arg GROUP_ID=`id -g` --build-arg BASE_IMAGE="${image_name}" -f ${resources_path}/Dockerfile.test ./ci
+    docker build -t "${test_image_name}" --build-arg USER_ID=`id -u` --build-arg GROUP_ID=`id -g` --build-arg BASE_IMAGE="${image_name}" --build-arg REQUIREMENTS_FILE=${requirements_file} -f ${resources_path}/Dockerfile.test ./ci
 }
 
 push() {

@@ -26,11 +26,13 @@ FROM ${BASE_IMAGE}
 ARG USER_ID=1001
 ARG GROUP_ID=1001
 
-COPY ./docker/install/ubuntu_adduser.sh /work/ubuntu_adduser.sh
-COPY ./docker/install/requirements /work/requirements
-
 RUN mkdir -p /work
+
+COPY ./docker/install/ubuntu_adduser.sh /work/ubuntu_adduser.sh
 RUN /work/ubuntu_adduser.sh
+
+ARG REQUIREMENTS_FILE
+COPY ${REQUIREMENTS_FILE} /work/requirements
 RUN pip install -r /work/requirements
 
 WORKDIR /work/mxnet
