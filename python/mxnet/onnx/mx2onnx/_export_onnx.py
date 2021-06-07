@@ -46,6 +46,7 @@
 # coding: utf-8
 # pylint: disable=invalid-name,too-many-locals,no-self-use,too-many-arguments,
 # pylint: disable=maybe-no-member,too-many-nested-blocks,logging-not-lazy
+# pylint: disable=cell-var-from-loop
 """MXNet to ONNX graph converter functions"""
 import logging
 import json
@@ -393,15 +394,13 @@ class MXNetGraph(object):
                 if not node_output_names:
                     node_output_names = [converted[-1].name]
                 # process node outputs (sort by output index)
-                def str2int(s):
-                    import re
-                    i = re.search(r'\d{0,2}$', s).group()
-                    if i == '':
-                        return 0
+                def str2int(s, l):
+                    if len(s) == l:
+                        return -1
                     else:
-                        return int(i)
+                        return int(s[l:])
 
-                sorted(node_output_names, key=str2int)
+                node_output_names = sorted(node_output_names, key=lambda x: str2int(x, len(name)))
 
                 # match the output names to output dtypes
                 if dtypes is not None:
