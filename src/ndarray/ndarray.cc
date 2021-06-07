@@ -134,7 +134,22 @@ NDArray::Chunk::~Chunk() {
 #endif
   if (auto engine = engine_ref_.lock()) {
     engine->DeleteVariable(
-        [mem, skip_free](RunContext s) {
+        [mem, skip_free, var = this->var](RunContext s) mutable {
+#if MXNET_USE_CUDA
+          auto &sync_obj = var->sync_object;
+          Storage::SyncObj storage_sync_obj;
+          {
+            std::lock_guard<std::mutex> l(sync_obj.mutex);
+            for (auto& ev : sync_obj.reader_events) {
+              storage_sync_obj.events.push_back(ev.event);
+            }
+            if (!sync_obj.writer_event.empty()) {
+              auto ev = sync_obj.writer_event[0];
+              storage_sync_obj.events.push_back(ev.event);
+            }
+          }
+          mem.h.sync_obj = storage_sync_obj;
+#endif
           if (skip_free == false) {
 #if MXNET_USE_ONEDNN == 1
             if (mem.mem) {
@@ -746,16 +761,19 @@ void NDArray::Reorder2DefaultAsync() const {
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
   NDArray tmp = *this;
   Engine::Get()->PushAsync(
-      [tmp](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-        tmp.ptr_->Reorder2Default();
-        on_complete();
-      },
-      ctx(),
-      const_vars,
-      mutable_vars,
-      FnProperty::kNormal,
-      0,
-      "Reorder2Default");
+    [tmp](RunContext ctx,
+          Engine::CallbackOnStart on_start,
+          Engine::CallbackOnComplete on_complete) {
+      on_start();
+      tmp.ptr_->Reorder2Default();
+      on_complete();
+    },
+    ctx(),
+    const_vars,
+    mutable_vars,
+    FnProperty::kNormal,
+    0,
+    "Reorder2Default");
 }
 
 // now just support bf16->fp32
@@ -778,20 +796,23 @@ void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::desc& desc) const {
   NDArray tmp        = *this;
   const auto version = this->version();
   Engine::Get()->PushAsync(
-      [tmp, version, desc](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-        // MXNet will try to reuse NDArray from memory planning, so we need to ensure
-        // the NDArray is still holding the original trunk data.
-        if (tmp.version() == version) {
-          tmp.ptr_->MKLDNNDataReorder(desc);
-        }
-        on_complete();
-      },
-      ctx(),
-      const_vars,
-      mutable_vars,
-      FnProperty::kNormal,
-      0,
-      "Reorder");
+      [tmp, version, desc](RunContext ctx,
+                         Engine::CallbackOnStart on_start,
+                         Engine::CallbackOnComplete on_complete) {
+      on_start();
+      // MXNet will try to reuse NDArray from memory planning, so we need to ensure
+      // the NDArray is still holding the original trunk data.
+      if (tmp.version() == version) {
+        tmp.ptr_->MKLDNNDataReorder(desc);
+      }
+      on_complete();
+    },
+    ctx(),
+    const_vars,
+    mutable_vars,
+    FnProperty::kNormal,
+    0,
+    "Reorder");
 }
 
 const mkldnn::memory* NDArray::GetMKLDNNData() const {
@@ -993,8 +1014,6 @@ void TernaryOp(const NDArray& lhs, const NDArray& mhs, const NDArray& rhs, NDArr
           [lhs, mhs, rhs, ret](RunContext ctx) {
             TBlob tmp = ret.data();
             ndarray::Eval<gpu, OP>(lhs.data(), mhs.data(), rhs.data(), &tmp, ctx);
-            // Wait GPU kernel to complete
-            ctx.get_stream<gpu>()->Wait();
           },
           lhs.ctx(),
           const_vars,
@@ -1081,8 +1100,6 @@ void BinaryOpKernel(const NDArray& lhs, const NDArray& rhs, NDArray* out) {
             TBlob tmp               = ret.data();
             mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
             ndarray::BinaryOpKernelImpl<OP>(s, lhs.data(), rhs.data(), &tmp);
-            // Wait GPU kernel to complete
-            ctx.get_stream<gpu>()->Wait();
           },
           lhs.ctx(),
           const_vars,
@@ -1132,8 +1149,6 @@ void BinaryOp(const NDArray& lhs, const NDArray& rhs, NDArray* out) {
           [lhs, rhs, ret](RunContext ctx) {
             TBlob tmp = ret.data();
             ndarray::Eval<gpu, OP>(lhs.data(), rhs.data(), &tmp, ctx);
-            // Wait GPU kernel to complete
-            ctx.get_stream<gpu>()->Wait();
           },
           lhs.ctx(),
           const_vars,
@@ -1177,7 +1192,6 @@ void SetValueOp(const real_t& rhs, NDArray* out) {
             ctx.get_stream<gpu>()->Wait();
             break;
           }
-#endif
           default:
             LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
         }
@@ -1234,8 +1248,6 @@ void ScalarOp(const NDArray& lhs, const real_t& rhs, NDArray* out) {
           [lhs, rhs, ret](RunContext ctx) {
             TBlob tmp = ret.data();
             ndarray::Eval<gpu, OP, reverse>(lhs.data(), rhs, &tmp, ctx);
-            // Wait GPU kernel to complete
-            ctx.get_stream<gpu>()->Wait();
           },
           lhs.ctx(),
           const_vars,
@@ -1461,7 +1473,10 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     Engine::Get()->PushAsync(
-        [from, to, requested](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+        [from, to, requested](RunContext ctx,
+                              Engine::CallbackOnStart on_start,
+                              Engine::CallbackOnComplete on_complete) {
+          on_start();
           CopyFromToImpl<cpu, cpu>(from, to, ctx, requested);
           on_complete();
         },
@@ -1475,9 +1490,11 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushAsync(
-          [from, to, requested](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+          [from, to, requested](RunContext ctx,
+                                Engine::CallbackOnStart on_start,
+                                Engine::CallbackOnComplete on_complete) {
+            on_start();
             CopyFromToImpl<cpu, gpu>(from, to, ctx, requested);
-            ctx.get_stream<gpu>()->Wait();
             on_complete();
           },
           to.ctx(),
@@ -1488,11 +1505,13 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
           "CopyCPU2GPU");
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
       Engine::Get()->PushAsync(
-          [from, to, requested](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+          [from, to, requested](RunContext ctx,
+                                Engine::CallbackOnStart on_start,
+                                Engine::CallbackOnComplete on_complete) {
+            on_start();
             CopyFromToImpl<gpu, cpu>(from, to, ctx, requested);
-            ctx.get_stream<gpu>()->Wait();
             on_complete();
-          },
+          }, 
           from.ctx(),
           const_vars,
           mutable_vars,
@@ -1501,9 +1520,11 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
           "CopyGPU2CPU");
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
       Engine::Get()->PushAsync(
-          [from, to, requested](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+          [from, to, requested](RunContext ctx,
+                                Engine::CallbackOnStart on_start,
+                                Engine::CallbackOnComplete on_complete) {
+            on_start();
             CopyFromToImpl<gpu, gpu>(from, to, ctx, requested);
-            ctx.get_stream<gpu>()->Wait();
             on_complete();
           },
           from.ctx(),
@@ -1574,11 +1595,9 @@ void ElementwiseSum(const std::vector<NDArray>& source, NDArray* out, int priori
               }
               TBlob tmp = ret.data();
               ndarray::ElementwiseSum<gpu>(source_tblob, &tmp, ctx);
-              // Wait GPU kernel to complete
-              ctx.get_stream<gpu>()->Wait();
             },
             out->ctx(),
-            const_vars,
+            const_vars, 
             {ret.var()},
             FnProperty::kNormal,
             priority,
@@ -1604,8 +1623,6 @@ void ElementwiseSum(const std::vector<NDArray>& source, NDArray* out, int priori
 #if MXNET_USE_CUDA
             case gpu::kDevMask: {
               mxnet::ndarray::ElementwiseSum(rctx.get_stream<gpu>(), rsc, source, &result);
-              // wait for GPU operations to complete
-              rctx.get_stream<gpu>()->Wait();
               break;
             }
 #endif
@@ -1699,8 +1716,6 @@ void SampleOP(const real_t& a, const real_t& b, NDArray* out) {
           [a, b, resource, ret](RunContext ctx) {
             TBlob tmp = ret.data();
             ndarray::EvalRandom<gpu, Distribution>(a, b, resource, &tmp, ctx);
-            // Wait GPU kernel to complete
-            ctx.get_stream<gpu>()->Wait();
           },
           out->ctx(),
           {},
@@ -2179,17 +2194,19 @@ void NDArray::SyncCopyFromCPU(const void* data, size_t size) const {
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
-    RunContext rctx{this->ctx(), nullptr, nullptr, false};
+    RunContext rctx{this->ctx(), nullptr, nullptr};
     TBlob dst = this->data();
     ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushAsync(
-        [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+        [&](RunContext rctx,
+            Engine::CallbackOnStart on_start,
+            Engine::CallbackOnComplete on_complete) {
+          on_start();
           TBlob dst = this->data();
-          ndarray::Copy<cpu, gpu>(src, &dst, Context::CPU(), this->ctx(), rctx);
-          // Wait GPU kernel to complete
-          rctx.get_stream<gpu>()->Wait();
+          ndarray::Copy<cpu, gpu>(src, &dst,
+                                  Context::CPU(), this->ctx(), rctx);
           on_complete();
         },
         this->ctx(),
@@ -2265,11 +2282,13 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
 #if MXNET_USE_CUDA
     if (src_dev_mask == cpu::kDevMask && dst_dev_mask == gpu::kDevMask) {
       Engine::Get()->PushAsync(
-          [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          [&](RunContext rctx,
+              Engine::CallbackOnStart on_start,
+              Engine::CallbackOnComplete on_complete) {
+            on_start();
             const TBlob src_data = (i >= 0 ? src.aux_data(i) : src.data());
-            TBlob dst_data       = get_dst_data(src_data.shape_);
+            TBlob dst_data = get_dst_data(src_data.shape_);
             ndarray::Copy<cpu, gpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
-            rctx.get_stream<gpu>()->Wait();
             on_complete();
           },
           this->ctx(),
@@ -2280,11 +2299,13 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
           "SyncCopyFromNDArrayCPU2GPU");
     } else if (src_dev_mask == gpu::kDevMask && dst_dev_mask == cpu::kDevMask) {
       Engine::Get()->PushAsync(
-          [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          [&](RunContext rctx,
+              Engine::CallbackOnStart on_start,
+              Engine::CallbackOnComplete on_complete) {
+            on_start();
             const TBlob src_data = (i >= 0 ? src.aux_data(i) : src.data());
-            TBlob dst_data       = get_dst_data(src_data.shape_);
+            TBlob dst_data = get_dst_data(src_data.shape_);
             ndarray::Copy<gpu, cpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
-            rctx.get_stream<gpu>()->Wait();
             on_complete();
           },
           src.ctx(),
@@ -2295,11 +2316,13 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
           "SyncCopyFromNDArrayGPU2CPU");
     } else if (src_dev_mask == gpu::kDevMask && dst_dev_mask == gpu::kDevMask) {
       Engine::Get()->PushAsync(
-          [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          [&](RunContext rctx,
+              Engine::CallbackOnStart on_start,
+              Engine::CallbackOnComplete on_complete) {
+            on_start();
             const TBlob src_data = (i >= 0 ? src.aux_data(i) : src.data());
-            TBlob dst_data       = get_dst_data(src_data.shape_);
+            TBlob dst_data = get_dst_data(src_data.shape_);
             ndarray::Copy<gpu, gpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
-            rctx.get_stream<gpu>()->Wait();
             on_complete();
           },
           this->ctx(),
@@ -2343,7 +2366,7 @@ void NDArray::SyncCopyToCPU(void* data, size_t size) const {
   this->WaitToRead();
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
-    RunContext rctx{this->ctx(), nullptr, nullptr, false};
+    RunContext rctx{this->ctx(), nullptr, nullptr};
     NDArray src = *this;
 #if MXNET_USE_ONEDNN == 1
     if (src.IsMKLDNNData())
@@ -2353,10 +2376,41 @@ void NDArray::SyncCopyToCPU(void* data, size_t size) const {
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushAsync(
-        [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          ndarray::Copy<gpu, cpu>(this->data(), &dst, this->ctx(), Context::CPU(), rctx);
-          // Wait GPU kernel to complete
-          rctx.get_stream<gpu>()->Wait();
+        [&](RunContext rctx,
+            Engine::CallbackOnStart on_start,
+            Engine::CallbackOnComplete on_complete) {
+          on_start();
+          {
+            auto var = this->var();
+            auto& sync_obj = var->sync_object;
+            std::lock_guard<std::mutex> lock{sync_obj.mutex};
+            bool has_writer = false;
+            std::shared_ptr<cudaEvent_t> w_ev_ptr;
+            if (!sync_obj.writer_event.empty()) {
+              w_ev_ptr = sync_obj.writer_event[0].event.lock();
+              has_writer = w_ev_ptr ? true : false;
+            }
+            for (auto ev : sync_obj.reader_events) {
+              auto event_ptr = ev.event.lock();
+              if (!event_ptr) {
+                continue;
+              }
+              cudaEvent_t event = *event_ptr;
+              if (has_writer) {
+                auto w_ev = sync_obj.writer_event[0];
+                if (w_ev.stream == ev.stream) {
+                  event = w_ev.pool_index > ev.pool_index ? *w_ev_ptr : *event_ptr;
+                  has_writer = false;
+                }
+              }
+              CUDA_CALL(cudaEventSynchronize(event));
+            }
+            if (has_writer) {
+              CUDA_CALL(cudaEventSynchronize(*w_ev_ptr));
+            }
+          }
+          ndarray::Copy<gpu, cpu>(this->data(), &dst,
+                                  this->ctx(), Context::CPU(), rctx);
           on_complete();
         },
         this->ctx(),
@@ -2389,7 +2443,6 @@ void NDArray::SyncCheckFormat(const bool full_check) const {
     Engine::Get()->PushSync(
         [&](RunContext rctx) {
           common::CheckFormatWrapper<gpu>(rctx, *this, err_cpu, full_check);
-          rctx.get_stream<gpu>()->Wait();
         },
         this->ctx(),
         {this->var()},
@@ -2428,7 +2481,10 @@ void NDArray::WaitToWrite() const {
   Imperative::DCInfo::Compute(*this);
   // Push an empty mutable function to flush all preceding reads to the variable.
   Engine::Get()->PushAsync(
-      [](RunContext, Engine::CallbackOnComplete on_complete) { on_complete(); },
+      [](RunContext, Engine::CallbackOnStart on_start, Engine::CallbackOnComplete on_complete) {
+        on_start();
+        on_complete();
+      },
       Context{},
       {},
       {ptr_->var});

@@ -110,8 +110,10 @@ double EvaluateWorkloads(const std::vector<Workload>& workloads,
     if (engine == nullptr) {
       EvaluateWorkload(wl, data);
     } else {
-      auto func = [wl, data](RunContext ctx, Engine::CallbackOnComplete cb) {
-        EvaluateWorkload(wl, data); cb();
+      auto func = [wl, data](RunContext ctx,
+                             Engine::CallbackOnStart on_start,
+                             Engine::CallbackOnComplete cb) {
+        on_start(); EvaluateWorkload(wl, data); cb();
       };
       std::vector<Engine::VarHandle> reads;
       for (auto i : wl.reads) {
@@ -182,7 +184,7 @@ TEST(Engine, RandSumExpr) {
 
 void Foo(mxnet::RunContext, int i) { printf("The fox says %d\n", i); }
 
-void FooAsyncFunc(void*, void* cb_ptr, void* param) {
+void FooAsyncFunc(void*, void*, void* cb_ptr, void* param) {
   if (param == nullptr) {
     LOG(INFO) << "The fox asynchronously says receiving nothing.";
   } else {
@@ -346,7 +348,10 @@ TEST(Engine, basics) {
   printf("============= Test #1 ==============\n");
   for (int i = 0; i < 10; ++i) {
     oprs.push_back(engine->NewOperator(
-        [i](mxnet::RunContext ctx, mxnet::Engine::CallbackOnComplete cb) {
+        [i](mxnet::RunContext ctx,
+            mxnet::Engine::CallbackOnStart on_start,
+            mxnet::Engine::CallbackOnComplete cb) {
+          on_start();
           Foo(ctx, i);
           std::this_thread::sleep_for(std::chrono::seconds{1});
           cb();
@@ -368,7 +373,10 @@ TEST(Engine, basics) {
   oprs.clear();
   for (int i = 0; i < 10; ++i) {
     oprs.push_back(engine->NewOperator(
-        [i](mxnet::RunContext ctx, mxnet::Engine::CallbackOnComplete cb) {
+        [i](mxnet::RunContext ctx,
+            mxnet::Engine::CallbackOnStart on_start,
+            mxnet::Engine::CallbackOnComplete cb) {
+          on_start();
           Foo(ctx, i);
           std::this_thread::sleep_for(std::chrono::milliseconds{500});
           cb();
@@ -394,8 +402,11 @@ TEST(Engine, basics) {
   var = engine->NewVariable();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
-      [](mxnet::RunContext ctx, mxnet::Engine::CallbackOnComplete cb) {
+        [](mxnet::RunContext ctx,
+         mxnet::Engine::CallbackOnStart on_start,
+         mxnet::Engine::CallbackOnComplete cb) {
         std::this_thread::sleep_for(std::chrono::seconds{2});
+        on_start();
         Foo(ctx, 42);
         cb();
       },
@@ -414,7 +425,10 @@ TEST(Engine, basics) {
   var = engine->NewVariable();
   oprs.clear();
   oprs.push_back(engine->NewOperator(
-      [](mxnet::RunContext ctx, mxnet::Engine::CallbackOnComplete cb) {
+        [](mxnet::RunContext ctx,
+        mxnet::Engine::CallbackOnStart on_start,
+        mxnet::Engine::CallbackOnComplete cb) {
+        on_start();
         Foo(ctx, 42);
         std::this_thread::sleep_for(std::chrono::seconds{2});
         cb();
@@ -452,7 +466,10 @@ TEST(Engine, VarVersion) {
     EXPECT_EQ(var->version(), 0U);
     for (int i = 0; i < 10; ++i) {
       oprs.push_back(engine->NewOperator(
-          [i](mxnet::RunContext ctx, mxnet::Engine::CallbackOnComplete cb) {
+          [i](mxnet::RunContext ctx,
+              mxnet::Engine::CallbackOnStart on_start,
+              mxnet::Engine::CallbackOnComplete cb) {
+            on_start();
             Foo(ctx, i);
             cb();
           },
@@ -473,7 +490,10 @@ TEST(Engine, VarVersion) {
     oprs.clear();
     for (int i = 0; i < 10; ++i) {
       oprs.push_back(engine->NewOperator(
-          [i](mxnet::RunContext ctx, mxnet::Engine::CallbackOnComplete cb) {
+          [i](mxnet::RunContext ctx,
+              mxnet::Engine::CallbackOnStart on_start,
+              mxnet::Engine::CallbackOnComplete cb) {
+            on_start();
             Foo(ctx, i);
             cb();
           },

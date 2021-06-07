@@ -29,6 +29,7 @@
 #include <memory>
 #include <functional>
 #endif
+#include <utility>
 #include <vector>
 #include "./base.h"
 
@@ -39,6 +40,72 @@ class Engine;
 
 /*! \brief namespace of engine internal types. */
 namespace engine {
+#if MXNET_USE_CUDA
+/* \brief The class wrapping CUDA event with timing disabled. */
+class CUDAEvent final {
+ public:
+  explicit CUDAEvent(Context const& ctx);
+
+CUDAEvent(CUDAEvent&& other)
+    : event_(other.event_), dev_id_(other.dev_id_) {
+    other.event_ = nullptr;
+  }
+
+  CUDAEvent(const CUDAEvent& other) = delete;
+  void operator=(const CUDAEvent& other) = delete;
+
+  ~CUDAEvent();
+
+  inline std::weak_ptr<cudaEvent_t> GetEvent() noexcept {
+    return event_;
+  }
+ private:
+  std::shared_ptr<cudaEvent_t> event_;
+  int dev_id_;
+};
+
+class CUDAEventPool final {
+ public:
+  explicit CUDAEventPool(Context const& ctx) : counter_(0) {
+    for (size_t i = 0; i < kPoolSize; ++i) {
+      events_.emplace_back(ctx);
+    }
+  }
+
+  inline std::weak_ptr<cudaEvent_t> GetEvent(size_t i) noexcept {
+    return events_.at(i).GetEvent();
+  }
+
+  inline std::pair<std::weak_ptr<cudaEvent_t>, uint64_t> GetNextEvent() noexcept {
+    int c = counter_++;
+    return {events_.at((c) % kPoolSize).GetEvent(), c};
+  }
+
+  inline uint64_t GetCounterValue() noexcept {
+    return counter_.load();
+  }
+ private:
+  static constexpr size_t kPoolSize = 64;
+  std::vector<CUDAEvent> events_;
+  std::atomic<uint64_t> counter_;
+};
+
+/*! \brief full event info for the sync object.*/
+struct EventInfo {
+  std::weak_ptr<cudaEvent_t> event;
+  cudaStream_t stream;
+  uint64_t pool_index;
+};
+/*! \brief struct containing cuda events and variables needed for the dependencies.*/
+struct SyncObject {
+  // vector can carry multiple reader events
+  std::vector<EventInfo> reader_events;
+  // vector should carry only 1 writer event
+  std::vector<EventInfo> writer_event;
+  std::mutex mutex;
+};
+#endif
+
 /*! \brief base class of engine variables.*/
 struct Var {
   virtual size_t version() {
@@ -57,6 +124,12 @@ struct Var {
    * is modified, the version number is incremented by 1.
    */
   size_t version_{0};
+#if MXNET_USE_CUDA
+  /*!
+   * \brief struct containing cuda events and variables needed for the dependencies.
+   */
+  SyncObject sync_object;
+#endif
 };  // struct Var
 
 /*! \brief Internal representation of operator.  */
@@ -65,6 +138,29 @@ struct Opr;
 typedef Var* VarHandle;
 /*! \brief Operator pointer type, usually hold by user.*/
 typedef Opr* OprHandle;
+/*!
+ * \brief OnStart callback to the engine,
+ *  called by AsyncFn before the action
+ */
+class CallbackOnStart {
+ public:
+  // use implicit copy and assign
+  /*! \brief involve the callback */
+  inline void operator()(const dmlc::Error* error = nullptr) const {
+    if (callback_ != nullptr)
+      (*callback_)(engine_, param_, error);
+  }
+
+ private:
+  /*! \brief engine can see content of callback */
+  friend class ::mxnet::Engine;
+  /*! \brief the real callback */
+  void (*callback_)(Engine *, void *, const dmlc::Error *);
+  /*! \brief the engine class passed to callback */
+  Engine* engine_;
+  /*! \brief the parameter set on callback */
+  void* param_;
+};
 /*!
  * \brief OnComplete Callback to the engine,
  *  called by AsyncFn when action completes
@@ -115,12 +211,14 @@ enum class FnProperty {
 */
 class MXNET_API Engine {
  public:
+  /*! \brief on start*/
+  typedef engine::CallbackOnStart CallbackOnStart;
   /*! \brief callback on complete*/
   typedef engine::CallbackOnComplete CallbackOnComplete;
   /*! \brief Synchronous operation to pass to engine. */
   typedef std::function<void(RunContext)> SyncFn;
   /*! \brief Asynchronous operation to pass to engine. */
-  typedef std::function<void(RunContext, CallbackOnComplete)> AsyncFn;
+  typedef std::function<void(RunContext, CallbackOnStart, CallbackOnComplete)> AsyncFn;
   /*! \brief Variable pointer */
   typedef engine::VarHandle VarHandle;
   /*! \brief Operator pointer */
@@ -247,7 +345,7 @@ class MXNET_API Engine {
    *
    * \return A shared pointer to Engine singleton.
    */
-  static std::shared_ptr<Engine> _GetSharedRef();
+  static const std::shared_ptr<Engine> &_GetSharedRef();
   /*!
    * \brief Push an synchronous operation to the engine.
    * \param exec_fn Execution function that executes the operation.
@@ -266,10 +364,27 @@ class MXNET_API Engine {
                         FnProperty prop = FnProperty::kNormal,
                         int priority = 0,
                         const char* opr_name = nullptr) {
-    this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
+    this->PushAsync([exec_fn](RunContext ctx,
+                              CallbackOnStart on_start,
+                              CallbackOnComplete on_complete) {
+        on_start();
         exec_fn(ctx);
         on_complete();
       }, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name);
+  }
+
+  /*!
+   * \brief factory function to create OnStart callback.
+   * \param callback th static callback function.
+   * \param param the paramter passed to callback.
+   */
+  inline CallbackOnStart CreateOnStart(
+      void (*callback)(Engine *, void *, const dmlc::Error *), void *param) {
+    CallbackOnStart ret;
+    ret.callback_ = callback;
+    ret.engine_ = this;
+    ret.param_ = param;
+    return ret;
   }
 
   /*!

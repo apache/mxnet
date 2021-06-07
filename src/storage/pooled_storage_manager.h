@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <mutex>
 #include <tuple>
+#include <utility>
 #include "./storage_manager.h"
 #include "../profiler/storage_profiler.h"
 
@@ -129,7 +130,9 @@ class PooledStorageManager : public StorageManager, public BucketingStrategy, pu
   void Free(Storage::Handle handle) override {
     // Insert returned memory in cache
     std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(dev_type_));
-    StoringMethod::InsertInCache(BucketingStrategy::get_bucket(handle.size), handle.dptr);
+    StoringMethod::InsertInCache(BucketingStrategy::get_bucket(handle.size),
+                                 handle.dptr,
+                                 handle.sync_obj);
   }
 
   void DirectFree(Storage::Handle handle) override {
@@ -154,7 +157,7 @@ class PooledStorageManager : public StorageManager, public BucketingStrategy, pu
     UNSET_DEVICE(device_store);
   }
 
-  bool MemoryIsAvalable(size_t roundSize) const {
+  bool MemoryIsAvailable(size_t roundSize) const {
     const auto free = contextHelper_->freeMemorySize();
     return free > roundSize && memory_allocation_limit_ <= free - roundSize;
   }
@@ -178,7 +181,7 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
   if (!reuse_pool) {
     SET_DEVICE(device_store, contextHelper_, handle->ctx, true);
     roundSize = BucketingStrategy::RoundAllocSizeForBucket(bucket_id);
-    if (!MemoryIsAvalable(roundSize))
+    if (!MemoryIsAvailable(roundSize))
       ReleaseAllNoLock(false);
 
     void* ret = nullptr;
@@ -204,7 +207,19 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
     handle->dptr = ret;
   } else {
     // Reusing memory
-    handle->dptr = reuse_pool->back();
+    auto ptr_syncobj = reuse_pool->back();
+    handle->dptr = ptr_syncobj.first;
+    if (dev_type_ == Context::kGPU) {
+      handle->sync_obj = ptr_syncobj.second;
+#if MXNET_USE_CUDA
+      for (auto ev : handle->sync_obj.events) {
+        auto valid_ev = ev.lock();
+        if (valid_ev) {
+          MSHADOW_CUDA_CALL(cudaEventSynchronize(*valid_ev));
+        }
+      }
+#endif
+    }
     reuse_pool->pop_back();
   }
 #if MXNET_USE_CUDA
@@ -378,11 +393,11 @@ class RoundPower2 : public RoundHelper {
 class UnorderedMapContainer {
  protected:
   inline void InitContainer(const RoundHelper* p) {}
-  inline void InsertInCache(size_t key, void* dptr) {
-    memory_pool_[key].push_back(dptr);
+  inline void InsertInCache(size_t key, void* dptr, Storage::SyncObj sync_obj) {
+    memory_pool_[key].emplace_back(dptr, sync_obj);
   }
 
-  inline std::vector<void*>* GetMemStorage(size_t key) {
+  inline std::vector<std::pair<void*, Storage::SyncObj>>* GetMemStorage(size_t key) {
     auto&& reuse_it = memory_pool_.find(key);
     return reuse_it != memory_pool_.end() && reuse_it->second.size() ? &reuse_it->second : nullptr;
   }
@@ -392,8 +407,8 @@ class UnorderedMapContainer {
     size_t released_memory = 0;
     for (auto&& i : memory_pool_) {
       for (auto&& j : i.second) {
-        contextHelper->Free(j);
-        GPU_PROFILER_ON_FREE(profilerGPU, j);
+        contextHelper->Free(j.first);
+        GPU_PROFILER_ON_FREE(profilerGPU, j.first);
       }
       released_memory += i.first * i.second.size();
       i.second.clear();
@@ -403,7 +418,7 @@ class UnorderedMapContainer {
   }
 
  private:
-  std::unordered_map<size_t, std::vector<void*>> memory_pool_;
+  std::unordered_map<size_t, std::vector<std::pair<void*, Storage::SyncObj>>> memory_pool_;
 };  // class UnorderedMapContainer
 
 /*!
@@ -422,11 +437,11 @@ class VectorContainer {
     memory_pool_.resize(vector_size);
   }
 
-  inline void InsertInCache(size_t idx, void* dptr) {
-    memory_pool_[idx].push_back(dptr);
+  inline void InsertInCache(size_t idx, void* dptr, Storage::SyncObj sync_obj) {
+    memory_pool_[idx].emplace_back(dptr, sync_obj);
   }
 
-  std::vector<void*>* GetMemStorage(size_t idx) {
+  std::vector<std::pair<void*, Storage::SyncObj>>* GetMemStorage(size_t idx) {
     auto&& reuse_pool = memory_pool_[idx];
     return reuse_pool.size() ? &reuse_pool : nullptr;
   }
@@ -439,8 +454,8 @@ class VectorContainer {
         continue;
 
       for (auto& j : memory_pool_[i]) {
-        contextHelper->Free(j);
-        GPU_PROFILER_ON_FREE(profilerGPU, j);
+        contextHelper->Free(j.first);
+        GPU_PROFILER_ON_FREE(profilerGPU, j.first);
       }
       released_memory += rndHelper->get_size(i) * memory_pool_[i].size();
       memory_pool_[i].clear();
@@ -449,7 +464,7 @@ class VectorContainer {
   }
 
  private:
-  std::vector<std::vector<void*>> memory_pool_;
+  std::vector<std::vector<std::pair<void*, Storage::SyncObj>>> memory_pool_;
   size_t first_bucket_;
 };  // class VectorContainer
 

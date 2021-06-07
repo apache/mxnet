@@ -695,14 +695,11 @@ inline void PushFCompute(const FCompute& fn,
     fn(attrs, opctx, input_blobs, tmp_req, output_blobs);
     // post-fcompute fallback, cast to original storage type
     CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
-    if (is_gpu && !rctx.is_bulk) {
-      rctx.get_stream<gpu>()->Wait();
-    }
     DerefInputOutputRelease(inputs, outputs);
   };
   if (CheckIfSkipEngine(attrs)) {
     // execute without engine
-    run(RunContext{ctx, nullptr, nullptr, false});
+    run(RunContext{ctx, nullptr, nullptr});
   } else {
     Engine::Get()->PushSync(
         run, ctx, read_vars, write_vars, FnProperty::kNormal, 0, op->name.c_str());
@@ -733,12 +730,9 @@ inline void PushFComputeEx(const FComputeEx& fn,
     INVALIDATE_OUTPUTS_COND(!cross_device_copy, outputsA, req);
     CREATE_DEFAULT_INPUTS(!cross_device_copy, attrs, CreateDefaultInputs(&inputsA));
     fn(attrs, opctx, inputsA, req, outputsA);
-    if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync && !rctx.is_bulk) {
-      rctx.get_stream<gpu>()->Wait();
-    }
   };
   if (cross_device_copy || CheckIfSkipEngine(attrs)) {
-    run(RunContext{ctx, nullptr, nullptr, false});
+    run(RunContext{ctx, nullptr, nullptr});
   } else {
     CHECK(exec_type == ExecType::kSync);
     Engine::Get()->PushSync(
@@ -769,7 +763,9 @@ inline void PushOperator(const OpStatePtr& state,
 
   auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
   if (fcompute_ex != nullptr && dispatch_mode == DispatchMode::kFComputeEx) {
-    const auto& run = [=](RunContext rctx, engine::CallbackOnComplete on_complete) {
+    const auto& run = [=](RunContext rctx,
+                          engine::CallbackOnStart on_start,
+                          engine::CallbackOnComplete on_complete) {
       OpContext opctx{need_grad, is_train, rctx, on_complete, requested};
       REDEFINE_INPUTS_OUTPUTS(inputs, outputs, inputsA, outputsA);
       INVALIDATE_OUTPUTS_COND(
@@ -777,20 +773,19 @@ inline void PushOperator(const OpStatePtr& state,
       CREATE_DEFAULT_INPUTS(exec_type != ExecType::kCrossDeviceCopy && op->name != "_CachedOp",
                             attrs,
                             CreateDefaultInputs(&inputsA));
+      on_start();
       fcompute_ex(state, opctx, inputsA, req, outputsA);
-      if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync &&
-          rctx.get_stream<gpu>() && !rctx.is_bulk) {
-        rctx.get_stream<gpu>()->Wait();
-      }
     };
 
     // For operators with subgraphs, we need to invoke them in the main thread
     // instead of the threaded engine.
     if (exec_type == ExecType::kSubgraphExec || CheckIfSkipEngine(attrs)) {
-      RunContext rctx{ctx, nullptr, nullptr, false};
-      run(rctx, engine::CallbackOnComplete());
+      RunContext rctx{ctx, nullptr, nullptr};
+      run(rctx, engine::CallbackOnStart(), engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
-      Engine::Get()->PushSync([=](RunContext rctx) { run(rctx, engine::CallbackOnComplete()); },
+      Engine::Get()->PushSync([=](RunContext rctx) { run(rctx,
+                                                         engine::CallbackOnStart(),
+                                                         engine::CallbackOnComplete()); },
                               ctx,
                               read_vars,
                               write_vars,
@@ -808,7 +803,9 @@ inline void PushOperator(const OpStatePtr& state,
         << "One of FStatefulCompute and FStatefulComputeEx must be registered "
         << "for stateful operator " << op->name;
 
-    const auto& run = [=](RunContext rctx, engine::CallbackOnComplete on_complete) {
+    const auto& run = [=](RunContext rctx,
+                          engine::CallbackOnStart on_start,
+                          engine::CallbackOnComplete on_complete) {
       OpContext opctx{need_grad, is_train, rctx, on_complete, requested};
 
       std::vector<TBlob> input_blobs, output_blobs;
@@ -840,17 +837,16 @@ inline void PushOperator(const OpStatePtr& state,
       fcompute(state, opctx, input_blobs, tmp_req, output_blobs);
       // post-fcompute fallback, cast to original storage type, if necessary
       CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
-      if (is_gpu && exec_type == ExecType::kSync && rctx.get_stream<gpu>() && !rctx.is_bulk) {
-        rctx.get_stream<gpu>()->Wait();
-      }
       DerefInputOutputRelease(inputs, outputs);
     };
 
     if (exec_type == ExecType::kSubgraphExec || CheckIfSkipEngine(attrs)) {
-      RunContext rctx{ctx, nullptr, nullptr, false};
-      run(rctx, engine::CallbackOnComplete());
+      RunContext rctx{ctx, nullptr};
+      run(rctx, engine::CallbackOnStart(), engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
-      Engine::Get()->PushSync([=](RunContext rctx) { run(rctx, engine::CallbackOnComplete()); },
+      Engine::Get()->PushSync([=](RunContext rctx) { run(rctx,
+                                                         engine::CallbackOnStart(),
+                                                         engine::CallbackOnComplete()); },
                               ctx,
                               read_vars,
                               write_vars,
@@ -1248,7 +1244,9 @@ inline Engine::OprHandle CreateEngineOp(
   bool is_async = execs.size() > 1 ? false : execs[0]->exec_type() == ExecType::kAsync;
 
   auto exec_fun = [execs, is_async, is_gpu](RunContext ctx,
+                                            Engine::CallbackOnStart on_start,
                                             Engine::CallbackOnComplete on_complete) {
+    on_start();
     if (is_async) {
       execs[0]->op_ctx.async_on_complete = on_complete;
     }
@@ -1257,10 +1255,7 @@ inline Engine::OprHandle CreateEngineOp(
     // call on complete only if it is async op
     if (!is_async) {
       if (is_gpu) {
-#if MXNET_USE_CUDA
-        // Wait GPU kernel to finish.
-        ctx.get_stream<gpu>()->Wait();
-#else
+#if !MXNET_USE_CUDA
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
       }

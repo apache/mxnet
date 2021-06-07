@@ -347,10 +347,10 @@ struct RunContext {
    * \brief the auxiliary stream of the device, can be nullptr or Stream<gpu>* in GPU mode
    */
   void *aux_stream;
-  /*!
-   * \brief indicator of whether this execution is run in bulk mode
+    /*!
+   * \brief pointer to the cuda event pool used by the dependecy engine
    */
-  bool is_bulk;
+  void *event_pool = nullptr;
   /*!
    * \brief get mshadow stream from Context
    * \return the mshadow stream

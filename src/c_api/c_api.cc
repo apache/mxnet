@@ -3764,6 +3764,7 @@ int MXNDArrayCreateFromSharedMem(int shared_pid,
 }
 
 using VarHandle          = Engine::VarHandle;
+using CallbackOnStart    = Engine::CallbackOnStart;
 using CallbackOnComplete = Engine::CallbackOnComplete;
 
 void AssertValidNumberVars(int num_const_vars, int num_mutable_vars) {
@@ -3795,15 +3796,19 @@ int MXEnginePushAsync(EngineAsyncFunc async_func,
 
   Engine::AsyncFn exec_fn;
   if (deleter == nullptr) {
-    exec_fn = [async_func, func_param](RunContext rctx, CallbackOnComplete on_complete) {
-      async_func(&rctx, &on_complete, func_param);
+    exec_fn = [async_func, func_param](RunContext rctx,
+                                       CallbackOnStart on_start,
+                                       CallbackOnComplete on_complete) {
+      async_func(&rctx, &on_start, &on_complete, func_param);
     };
   } else {
     // Wrap func_param in a shared_ptr with deleter such that deleter
     // will be called when the lambda goes out of scope.
     std::shared_ptr<void> shared_func_param(func_param, deleter);
-    exec_fn = [async_func, shared_func_param](RunContext rctx, CallbackOnComplete on_complete) {
-      async_func(&rctx, &on_complete, shared_func_param.get());
+    exec_fn = [async_func, shared_func_param](RunContext rctx,
+                                              CallbackOnStart on_start,
+                                              CallbackOnComplete on_complete) {
+      async_func(&rctx, &on_start,, &on_complete, shared_func_param.get());
     };
   }
 

@@ -25,6 +25,7 @@
 #include <memory>
 #include <cstdlib>
 #include "./engine_impl.h"
+#include "../common/cuda/utils.h"
 
 namespace mxnet {
 namespace engine {
@@ -56,9 +57,27 @@ inline Engine* CreateEngine() {
   }
   return ret;
 }
+
+#if MXNET_USE_CUDA
+CUDAEvent::CUDAEvent(Context const& ctx) :
+  event_(std::make_shared<cudaEvent_t>()), dev_id_(ctx.dev_id) {
+  cudaEvent_t ev;
+  common::cuda::DeviceStore device_store(dev_id_);
+  CUDA_CALL(cudaEventCreateWithFlags(&ev, cudaEventDisableTiming));
+  *event_ = ev;
+}
+
+CUDAEvent::~CUDAEvent() {
+  if (event_ && *event_ != nullptr) {
+    common::cuda::DeviceStore device_store(dev_id_);
+    CUDA_CALL(cudaEventSynchronize(*event_));
+    CUDA_CALL(cudaEventDestroy(*event_));
+  }
+}
+#endif
 }  // namespace engine
 
-std::shared_ptr<Engine> Engine::_GetSharedRef() {
+const std::shared_ptr<Engine> &Engine::_GetSharedRef() {
   static std::shared_ptr<Engine> sptr(engine::CreateEngine());
   return sptr;
 }

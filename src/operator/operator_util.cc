@@ -486,22 +486,16 @@ void SimpleOpRegEntryImpl::RegisterSourceImperative() {
     SourceFunction fun = fsource_[dev_mask];
     OpReqType req      = kWriteTo;
 
-    Engine::Get()->PushSync(
-        [ret, fun, dev_mask, req, env](RunContext ctx) {
-          TBlob tmp = ret.data();
-          (*fun)(env, &tmp, req, ctx);
-#if MXNET_USE_CUDA
-          if (dev_mask == gpu::kDevMask) {
-            ctx.get_stream<gpu>()->Wait();
-          }
-#endif
-        },
-        ret.ctx(),
-        {},
-        write_vars,
-        FnProperty::kNormal,
-        0,
-        "RegisterSourceImperative");
+    Engine::Get()->PushSync([ret, fun, dev_mask, req, env](RunContext ctx) {
+        TBlob tmp = ret.data();
+        (*fun)(env, &tmp, req, ctx);
+      },
+      ret.ctx(),
+      {},
+      write_vars,
+      FnProperty::kNormal,
+      0,
+      "RegisterSourceImperative");
   };
   // register the function.
   NDArrayReg().set_body(body).set_num_use_vars(0).set_num_mutate_vars(1);
@@ -668,22 +662,16 @@ void SimpleOpRegEntryImpl::RegisterUnaryImperative() {
           << "inplace operation is not enabled for operator " << name;
     }
 
-    Engine::Get()->PushSync(
-        [src, ret, fun, dev_mask, req, env](RunContext ctx) {
-          TBlob tmp = ret.data();
-          (*fun)(src.data(), env, &tmp, req, ctx);
-#if MXNET_USE_CUDA
-          if (dev_mask == gpu::kDevMask) {
-            ctx.get_stream<gpu>()->Wait();
-          }
-#endif
-        },
-        src.ctx(),
-        const_vars,
-        write_vars,
-        FnProperty::kNormal,
-        0,
-        "RegisterUnaryImperative");
+    Engine::Get()->PushSync([src, ret, fun, dev_mask, req, env](RunContext ctx) {
+        TBlob tmp = ret.data();
+        (*fun)(src.data(), env, &tmp, req, ctx);
+      },
+      src.ctx(),
+      const_vars,
+      write_vars,
+      FnProperty::kNormal,
+      0,
+      "RegisterUnaryImperative");
   };
   // register the function.
   NDArrayReg().set_body(body).set_num_use_vars(1).set_num_mutate_vars(1);
@@ -950,22 +938,16 @@ void SimpleOpRegEntryImpl::RegisterBinaryImperative() {
                  << " warning, perform inplace operation with right operand, may not be supported";
     }
 
-    Engine::Get()->PushSync(
-        [lhs, rhs, ret, fun, dev_mask, req, env](RunContext ctx) {
-          TBlob tmp = ret.data();
-          (*fun)(lhs.data(), rhs.data(), env, &tmp, req, ctx);
-#if MXNET_USE_CUDA
-          if (dev_mask == gpu::kDevMask) {
-            ctx.get_stream<gpu>()->Wait();
-          }
-#endif
-        },
-        lhs.ctx(),
-        const_vars,
-        write_vars,
-        FnProperty::kNormal,
-        0,
-        "RegisterBinaryImperative");
+    Engine::Get()->PushSync([lhs, rhs, ret, fun, dev_mask, req, env](RunContext ctx) {
+        TBlob tmp = ret.data();
+        (*fun)(lhs.data(), rhs.data(), env, &tmp, req, ctx);
+      },
+      lhs.ctx(),
+      const_vars,
+      write_vars,
+      FnProperty::kNormal,
+      0,
+      "RegisterBinaryImperative");
   };
   // register the function.
   NDArrayReg().set_body(body).set_num_use_vars(2).set_num_mutate_vars(1);
