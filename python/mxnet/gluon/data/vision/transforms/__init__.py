@@ -132,7 +132,7 @@ class Cast(HybridBlock):
         self._dtype = dtype
 
     def forward(self, *args):
-        return tuple([x.astype(self._dtype) for x in args])
+        return tuple(x.astype(self._dtype) for x in args)
 
 
 class RandomApply(Sequential):

@@ -45,7 +45,7 @@ import random
 
 The loss function uses a margin *m* which is has the effect that dissimlar pairs only contribute if their loss is within a certain margin.
 
-In order to implement such a customized loss function in Gluon, we only need to define a new class that is inheriting from the [Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.Loss) base class. We then define the contrastive loss logic in the [forward](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock.forward) method. This method takes the images `image1`, `image2` and the label which defines whether  `image1` and `image2` are similar (=0) or  dissimilar (=1). The input F is an `mxnet.ndarry` or an `mxnet.symbol` if we hybridize the network. Gluon's `Loss` base class is in fact a [HybridBlock](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock). This means we can either run  imperatively or symbolically. When we hybridize our custom loss function, we can get performance speedups.
+In order to implement such a customized loss function in Gluon, we just need to define a new class that is inheriting from the [Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.Loss) base class. We then define the contrastive loss logic in the [forward](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock.forward) method. This method takes the images `image1`, `image2` and the label which defines whether  `image1` and `image2` are similar (=0) or  dissimilar (=1). Gluon's `Loss` base class is in fact a [HybridBlock](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock), and we hybridize our custom loss function, we can get performance speedups.
 
 
 ```{.python .input}

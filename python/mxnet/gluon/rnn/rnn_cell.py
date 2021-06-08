@@ -387,19 +387,21 @@ class RNNCell(HybridRecurrentCell):
         ctx = inputs.ctx
         i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
-                                  num_hidden=self._hidden_size)
+                                  num_hidden=self._hidden_size,
+                                  no_bias=False)
         h2h = npx.fully_connected(states[0].as_in_context(ctx),
                                   weight=self.h2h_weight.data(ctx),
                                   bias=self.h2h_bias.data(ctx),
-                                  num_hidden=self._hidden_size)
+                                  num_hidden=self._hidden_size,
+                                  no_bias=False)
         i2h_plus_h2h = i2h + h2h
         output = self._get_activation(i2h_plus_h2h, self._activation)
 
         return output, [output]
 
-    def infer_shape(self, i, input_size, is_bidirect):
+    def infer_shape(self, i, x, is_bidirect):
         if i == 0:
-            self.i2h_weight.shape = (self._hidden_size, input_size)
+            self.i2h_weight.shape = (self._hidden_size, x.shape[x.ndim-1])
         else:
             nh = self._hidden_size
             if is_bidirect:
@@ -508,11 +510,11 @@ class LSTMCell(HybridRecurrentCell):
         ctx = inputs.ctx
         i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
-                                  num_hidden=self._hidden_size*4)
+                                  num_hidden=self._hidden_size*4, no_bias=False)
         h2h = npx.fully_connected(states[0].as_in_context(ctx),
                                   weight=self.h2h_weight.data(ctx),
                                   bias=self.h2h_bias.data(ctx),
-                                  num_hidden=self._hidden_size*4)
+                                  num_hidden=self._hidden_size*4, no_bias=False)
         gates = i2h + h2h
         slice_gates = npx.slice_channel(gates, num_outputs=4)
         in_gate = self._get_activation(slice_gates[0], self._recurrent_activation)
@@ -525,9 +527,9 @@ class LSTMCell(HybridRecurrentCell):
 
         return next_h, [next_h, next_c]
 
-    def infer_shape(self, i, input_size, is_bidirect):
+    def infer_shape(self, i, x, is_bidirect):
         if i == 0:
-            self.i2h_weight.shape = (4*self._hidden_size, input_size)
+            self.i2h_weight.shape = (4*self._hidden_size, x.shape[x.ndim-1])
         else:
             nh = self._hidden_size
             if is_bidirect:
@@ -633,11 +635,13 @@ class GRUCell(HybridRecurrentCell):
         i2h = npx.fully_connected(inputs,
                                   weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
-                                  num_hidden=self._hidden_size * 3)
+                                  num_hidden=self._hidden_size * 3,
+                                  no_bias=False)
         h2h = npx.fully_connected(prev_state_h,
                                   weight=self.h2h_weight.data(ctx),
                                   bias=self.h2h_bias.data(ctx),
-                                  num_hidden=self._hidden_size * 3)
+                                  num_hidden=self._hidden_size * 3,
+                                  no_bias=False)
 
         i2h_r, i2h_z, i2h = npx.slice_channel(i2h, num_outputs=3)
         h2h_r, h2h_z, h2h = npx.slice_channel(h2h, num_outputs=3)
@@ -653,9 +657,9 @@ class GRUCell(HybridRecurrentCell):
 
         return next_h, [next_h]
 
-    def infer_shape(self, i, input_size, is_bidirect):
+    def infer_shape(self, i, x, is_bidirect):
         if i == 0:
-            self.i2h_weight.shape = (3*self._hidden_size, input_size)
+            self.i2h_weight.shape = (3*self._hidden_size, x.shape[x.ndim-1])
         else:
             nh = self._hidden_size
             if is_bidirect:
@@ -742,10 +746,9 @@ class SequentialRNNCell(RecurrentCell):
         # pylint: disable=missing-docstring
         raise NotImplementedError
 
-    def infer_shape(self, x):
+    def infer_shape(self, _, x, is_bidirect):
         for i, child in enumerate(self._layers):
-            child.infer_shape(i, x.shape[x.ndim-1], False)
-
+            child.infer_shape(i, x, is_bidirect)
 
 
 @use_np
@@ -825,9 +828,9 @@ class HybridSequentialRNNCell(HybridRecurrentCell):
     def forward(self, inputs, states):
         return self.__call__(inputs, states)
 
-    def infer_shape(self, x, *args):
+    def infer_shape(self, _, x, is_bidirect):
         for i, child in enumerate(self._layers):
-            child.infer_shape(i, x.shape[x.ndim-1], False)
+            child.infer_shape(i, x, False)
 
 
 @use_np
@@ -972,6 +975,8 @@ class ZoneoutCell(ModifierCell):
 
         return output, states
 
+    def infer_shape(self, i, x, is_bidirect):
+        self.base_cell.infer_shape(i, x, is_bidirect)
 
 @use_np
 class ResidualCell(ModifierCell):
@@ -1014,8 +1019,8 @@ class ResidualCell(ModifierCell):
 
         return outputs, states
 
-    def infer_shape(self, i, input_size, is_bidirect):
-        self.base_cell.infer_shape(i, input_size, is_bidirect)
+    def infer_shape(self, i, x, is_bidirect):
+        self.base_cell.infer_shape(i, x, is_bidirect)
 
 
 @use_np
@@ -1094,10 +1099,10 @@ class BidirectionalCell(HybridRecurrentCell):
         return outputs, states
 
     #pylint: disable=W0613
-    def infer_shape(self, i, input_size, is_bidirect):
+    def infer_shape(self, i, x, is_bidirect):
         l_cell, r_cell = [c() for c in self._children.values()]
-        l_cell.infer_shape(i, input_size, True)
-        r_cell.infer_shape(i, input_size, True)
+        l_cell.infer_shape(i, x, True)
+        r_cell.infer_shape(i, x, True)
 
 @use_np
 class VariationalDropoutCell(ModifierCell):
@@ -1269,8 +1274,8 @@ class VariationalDropoutCell(ModifierCell):
                                                      merge_outputs)
         return outputs, states
 
-    def infer_shape(self, i, input_size, is_bidirect):
-        self.base_cell.infer_shape(i, input_size, is_bidirect)
+    def infer_shape(self, i, x, is_bidirect):
+        self.base_cell.infer_shape(i, x, is_bidirect)
 
 @use_np
 class LSTMPCell(HybridRecurrentCell):
@@ -1375,11 +1380,11 @@ class LSTMPCell(HybridRecurrentCell):
         ctx = inputs.ctx
         i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
-                                  num_hidden=self._hidden_size*4)
+                                  num_hidden=self._hidden_size*4, no_bias=False)
         h2h = npx.fully_connected(states[0].as_in_context(ctx),
                                   weight=self.h2h_weight.data(ctx),
                                   bias=self.h2h_bias.data(ctx),
-                                  num_hidden=self._hidden_size*4)
+                                  num_hidden=self._hidden_size*4, no_bias=False)
         gates = i2h + h2h
         slice_gates = npx.slice_channel(gates, num_outputs=4)
         in_gate = npx.activation(slice_gates[0], act_type="sigmoid")
@@ -1393,9 +1398,9 @@ class LSTMPCell(HybridRecurrentCell):
 
         return next_r, [next_r, next_c]
 
-    def infer_shape(self, i, input_size, is_bidirect):
+    def infer_shape(self, i, x, is_bidirect):
         if i == 0:
-            self.i2h_weight.shape = (4*self._hidden_size, input_size)
+            self.i2h_weight.shape = (4*self._hidden_size, x.shape[x.ndim-1])
         else:
             nh = self._projection_size
             if is_bidirect:

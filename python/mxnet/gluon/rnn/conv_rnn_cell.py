@@ -173,6 +173,14 @@ class _BaseConvRNNCell(HybridRecurrentCell):
     def forward(self, inputs, states):
         raise NotImplementedError("_BaseConvRNNCell is abstract class for convolutional RNN")
 
+    def infer_shape(self, i, x, is_bidirect):
+        channel_axis = self._conv_layout.find('C')
+        shape_c = x.shape[-len(self._i2h_kernel)-1:][channel_axis-1]
+        wshape = self.i2h_weight.shape
+        wshape_list = list(wshape)
+        wshape_list[self._conv_layout.find('C')] = shape_c
+        self.i2h_weight.shape = tuple(wshape_list)
+
 
 @use_np
 class _ConvRNNCell(_BaseConvRNNCell):

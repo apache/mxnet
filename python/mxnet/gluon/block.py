@@ -1585,8 +1585,10 @@ class HybridBlock(Block):
             'Must define {name}.forward. '
             'Defining {name}.hybrid_forward is deprecated.'.format(name=type(self).__name__))
 
-        _, _, ctx_set, first_ctx = _gather_type_ctx_info([x] + list(args))
-
+        _, has_ndarray, ctx_set, first_ctx = _gather_type_ctx_info([x] + list(args))
+        if not has_ndarray:
+            raise ValueError('In HybridBlock, there must be one NDArray in the input.'
+                             ' Please check the type of the args.\n')
         if self._active and not dc.is_deferred_compute():
             # Do not call CachedOp if not hybridized or inside deferred compute mode.
             if len(ctx_set) > 1:

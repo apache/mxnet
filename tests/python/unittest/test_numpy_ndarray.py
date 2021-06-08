@@ -522,7 +522,7 @@ def test_np_hybrid_block_multiple_outputs():
     net = block()
     for hybridize in [True, False]:
         if hybridize:
-            net.hybridize()
+            net.hybridize(active=hybridize)
         out1, out2 = net(data_np)
         assert type(out1) is expected_out_type
         assert type(out2) is expected_out_type

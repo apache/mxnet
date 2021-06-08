@@ -121,9 +121,6 @@ class HybridSequential(HybridBlock):
             self._layers.append(block)
             self.register_child(block)
 
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
     def forward(self, x, *args):
         for block in self._children.values():
             x = block()(x, *args)
