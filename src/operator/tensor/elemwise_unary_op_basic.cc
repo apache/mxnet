@@ -166,6 +166,23 @@ The storage type of ``log_sigmoid`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_log_sigmoid,
                                                unary_bwd<mshadow_op::log_sigmoid_grad>);
 
+// mish
+MXNET_OPERATOR_REGISTER_UNARY(mish)
+MXNET_ADD_SPARSE_OP_ALIAS(mish)
+.describe(R"code(Computes mish of x element-wise.
+
+.. math::
+   y = x * tanh(log(1 + exp(x)))
+
+The storage type of ``mish`` output is always dense
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::mish>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mish"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_mish,
+                                               unary_bwd<mshadow_op::mish_grad>);
+
 
 
 DMLC_REGISTER_PARAMETER(HardSigmoidParam);

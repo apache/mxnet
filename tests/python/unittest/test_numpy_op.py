@@ -3450,6 +3450,29 @@ def test_npx_relu():
 
 
 @use_np
+def test_npx_activation_mish():
+    def np_mish(a):
+        return a * _np.tanh(_np.log1p(_np.exp(a)))
+    def np_mish_grad(a):
+        softrelu = _np.log1p(_np.exp(a))
+        tanh = _np.tanh(softrelu)
+        sigmoid = _np.divide(1.0, (1.0 + _np.exp(-a)))
+        return tanh + a * sigmoid * (1.0 - tanh * tanh)
+
+    shape = (3, 4)
+    A = mx.np.random.uniform(low=-1.0, high=1.0, size=shape)
+    A.attach_grad()
+    np_out = np_mish(A.asnumpy())
+    with mx.autograd.record():
+        B = mx.npx.activation(A, act_type='mish')
+    assert B.shape == np_out.shape
+    assert_almost_equal(B.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+    B.backward()
+    np_backward = np_mish_grad(A.asnumpy())
+    assert_almost_equal(A.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+
+@use_np
 def test_npx_sigmoid():
     def np_sigmoid(x):
         return _np.divide(1.0, (1.0 + _np.exp(-x)))

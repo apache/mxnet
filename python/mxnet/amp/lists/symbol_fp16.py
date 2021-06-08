@@ -398,6 +398,7 @@ FP16_FP32_FUNCS = [
     'log_sigmoid',
     'max',
     'min',
+    'mish',
     'mp_lamb_update_phase1',
     'mp_lamb_update_phase2',
     'mp_nag_mom_update',

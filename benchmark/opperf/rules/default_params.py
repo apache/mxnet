@@ -375,7 +375,7 @@ DEFAULT_LABEL_SMCE_LARGE_TENSOR = [(2**32 + 1,)]
 
 # For NN operators
 DEFAULT_ACT_TYPE_LR = ['leaky', 'elu', 'selu', 'gelu']
-DEFAULT_ACT_TYPE_ACTIVATION = ['relu', 'sigmoid', 'log_sigmoid', 'softrelu', 'softsign', 'tanh']
+DEFAULT_ACT_TYPE_ACTIVATION = ['relu', 'sigmoid', 'log_sigmoid', 'mish', 'softrelu', 'softsign', 'tanh']
 DEFAULT_LABEL_SOFTMAX = [(1024, 1024), (10000, 1), (10000, 100)]
 
 DEFAULT_LABEL_SOFTMAX_LARGE_TENSOR = [(2**32, 1)]
