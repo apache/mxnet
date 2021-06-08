@@ -583,11 +583,8 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False, ctx=mx.c
 
 
 @mx.util.use_np
-@pytest.mark.parametrize('dtype,dtype2,ctx', [("float32", "float32", mx.cpu()), ("float16", "float32", mx.gpu())])
-@pytest.mark.serial
-def test_rnn_layers(dtype, dtype2, ctx):
-    if dtype == "float16" and mx.context.num_gpus() == 0:
-        pytest.skip("RNN FP16 only implemented for GPU for now")
+def run_rnn_layers(dtype, dtype2, ctx=mx.cpu()):
+
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype), mx.np.ones((8, 3, 20), dtype=dtype), ctx=ctx)
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype, bidirectional=True), mx.np.ones((8, 3, 20),  dtype=dtype), mx.np.ones((4, 3, 10),  dtype=dtype), ctx=ctx)
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2,dtype=dtype), mx.np.ones((8, 3, 20),  dtype=dtype), ctx=ctx)
@@ -647,6 +644,16 @@ def test_rnn_layers(dtype, dtype2, ctx):
         out = net3(mx.np.ones((2, 3, 10), dtype=dtype2, ctx=ctx))
         out.backward()
         out = out.asnumpy()
+
+@pytest.mark.serial
+def test_rnn_layers_fp32():
+    run_rnn_layers('float32', 'float32')
+
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+@pytest.mark.skipif(mx.context.num_gpus() == 0, reason="RNN FP16 only implemented for GPU for now")
+@pytest.mark.serial
+def test_rnn_layers_fp16():
+    run_rnn_layers('float16', 'float32', mx.gpu())
 
 
 def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=False, rtol=1e-2, atol=1e-4):
