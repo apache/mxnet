@@ -1065,12 +1065,6 @@ class HybridBlock(Block):
                 self._active = False
             self._clear_cached_op()
 
-    def __del__(self):
-        """Destructor"""
-        if self._cached_graph and not isinstance(self, SymbolBlock):
-            dc.clear(self._cached_graph[1])
-            dc.clear(self._cached_graph[0])
-
     def _get_graph(self, *args):
         if not self._cached_graph:
             flatten_args, self._in_format = _flatten(args, "input")
