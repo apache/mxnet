@@ -2267,6 +2267,14 @@ fixed-size items.
         """
         return op.softmin(self, *args, **kwargs)
 
+    def mish(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`mish`.
+
+        The arguments are the same as for :py:func:`mish`, with
+        this array as data.
+        """
+        return op.mish(self, *args, **kwargs)
+
     def squeeze(self, axis=None, inplace=False):
         """Remove dimensions with size 1 from this array without altering any data.
 

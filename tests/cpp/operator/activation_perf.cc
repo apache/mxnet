@@ -44,6 +44,7 @@ TEST(ACTIVATION_PERF, ExecuteBidirectional) {
     "relu",
     "sigmoid",
     "log_sigmoid",
+    "mish",
     "tanh",
     "softrelu",
     "softsign"

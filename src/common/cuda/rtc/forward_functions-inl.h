@@ -695,7 +695,20 @@ __device__ inline DType log_sigmoid(const DType val) {
 }
 
 template <typename DType>
+__device__ inline DType mish(const DType val) {
+  if (type_util::has_double_or_integral<DType>::value) {
+    return val * ::tanh(::log(1 + ::exp(val)));
+  } else {
+    return val * ::tanhf(logf(1 + expf(val)));
+  }
+}
+
+template <typename DType>
 __device__ inline DType softrelu(const DType val) {
+  // Avoid overflow of exp for large inputs.
+  // The threshold 20 is chosen such that softrelu(a) = a
+  // for a > 20 using floating precision.
+  if (val > 20) return val;
   if (type_util::has_double_or_integral<DType>::value) {
     return ::log(1 + ::exp(val));
   } else {
@@ -934,6 +947,11 @@ __device__ inline DType logical_not(const DType val) {
 template <typename DType>
 __device__ inline bool_t np_logical_not(const DType val) {
   return !static_cast<bool>(val);
+}
+
+template <typename DType>
+__device__ inline bool_t NonZero(const DType val) {
+  return val != 0;
 }
 
 #undef DEFINE_UNARY_MATH_FUNC

@@ -293,6 +293,7 @@ FP32_FUNCS = [
     'max',
     'min',
     'min_axis',
+    'mish',
     'mp_sgd_mom_update',
     'mp_sgd_update',
     'multi_all_finite',

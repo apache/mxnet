@@ -415,6 +415,12 @@ MXNET_UNARY_MATH_OP(log_sigmoid, math::log(1.0f / (1.0f + math::exp(-a))));
 
 MXNET_UNARY_MATH_OP(log_sigmoid_grad, 1.0f / (1.0f + math::exp(a)));
 
+MXNET_UNARY_MATH_OP(mish, a * math::tanh(math::log(1.0f + math::exp(a))));
+
+MXNET_UNARY_MATH_OP(mish_grad, math::tanh(math::log(1.0f + math::exp(a))) +
+                        a * (1.0f / (1.0f + math::exp(-a))) *
+                        (1.0f - math::sqr(math::tanh(math::log(1.0f + math::exp(a))))));
+
 MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
 
 MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
@@ -940,7 +946,7 @@ template<>
 MSHADOW_XINLINE mshadow::half::half_t mod_rgrad::Map<mshadow::half::half_t>
                                                     (mshadow::half::half_t a,
                                                      mshadow::half::half_t b) {
-  return mshadow::half::half_t(-::floorf(static_cast<float>(a/b)));
+  return mshadow::half::half_t(-::floorf(static_cast<float>(a)/static_cast<float>(b)));
 }
 
 struct rmod : public mxnet_op::tunable {
@@ -1573,7 +1579,7 @@ struct argmax {
   /*! \brief do reduction into dst */
   template<typename AType, typename DType>
   MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src) { // NOLINT(*)
-    if (dst.num < src.num) {
+    if (dst.num < src.num || (dst.num == src.num && dst.idx > src.idx)) {
       dst.num = src.num;
       dst.idx = src.idx;
     }
@@ -1581,7 +1587,7 @@ struct argmax {
   /*! \brief do stable reduction into dst */
   template<typename AType, typename DType>
   MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
-    if (dst.num < src.num) {
+    if (dst.num < src.num || (dst.num == src.num && dst.idx > src.idx)) {
       dst.num = src.num;
       dst.idx = src.idx;
     }
@@ -1589,7 +1595,7 @@ struct argmax {
   /*! \brief combine the results of two reducers */
   template<typename DType>
   MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
-    if (dst_val.num < src_val.num) {
+    if (dst_val.num < src_val.num || (dst_val.num == src_val.num && dst_val.idx > src_val.idx)) {
       dst_val.num = src_val.num;
       dst_val.idx = src_val.idx;
     }
@@ -1597,7 +1603,7 @@ struct argmax {
   /*! \brief combine the results of two reducers */
   template<typename DType>
   MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
-    if (dst_val.num < src_val.num) {
+    if (dst_val.num < src_val.num || (dst_val.num == src_val.num && dst_val.idx > src_val.idx)) {
       dst_val.num = src_val.num;
       dst_val.idx = src_val.idx;
     }
