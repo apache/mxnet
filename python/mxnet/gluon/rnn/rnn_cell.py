@@ -828,6 +828,7 @@ class HybridSequentialRNNCell(HybridRecurrentCell):
     def forward(self, inputs, states):
         return self.__call__(inputs, states)
 
+    # pylint: disable=unused-argument
     def infer_shape(self, _, x, is_bidirect):
         for i, child in enumerate(self._layers):
             child.infer_shape(i, x, False)

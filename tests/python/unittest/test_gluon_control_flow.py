@@ -584,7 +584,7 @@ class RNNLayer(gluon.HybridBlock):
         return out
     
     def infer_shape(self, input, *args):
-        self.cell.infer_shape(0, input.shape[input.ndim-1], False)
+        self.cell.infer_shape(0, input, False)
 
 @mx.util.use_np
 def check_rnn(cell_type, num_states):
