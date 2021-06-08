@@ -226,7 +226,7 @@ class _RNNLayer(HybridBlock):
                       for g in ['i2h', 'h2h', 'h2r']
                       if g != 'h2r' or t != 'bias')
 
-        params = ndarray.np._internal.rnn_param_concat(*params, dim=0)
+        params = np.concatenate(params, axis=0)
 
         if self._use_sequence_length:
             rnn_args = states + [sequence_length]
