@@ -959,6 +959,7 @@ class ZoneoutCell(ModifierCell):
         self._prev_output = None
 
     def forward(self, inputs, states):
+        ctx = inputs.ctx
         cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
         next_output, next_states = cell(inputs, states)
         mask = (lambda p, like: npx.dropout(np.ones(like.shape), p=p))
@@ -969,7 +970,7 @@ class ZoneoutCell(ModifierCell):
 
         output = (np.where(mask(p_outputs, next_output), next_output, prev_output)
                   if p_outputs != 0. else next_output)
-        states = ([np.where(mask(p_states, new_s), new_s, old_s) for new_s, old_s in
+        states = ([np.where(mask(p_states, new_s), new_s, old_s.as_in_context(ctx)) for new_s, old_s in
                    zip(next_states, states)] if p_states != 0. else next_states)
 
         self._prev_output = output
@@ -1171,13 +1172,14 @@ class VariationalDropoutCell(ModifierCell):
 
 
     def forward(self, inputs, states):
+        ctx = inputs.ctx
         cell = self.base_cell
         self._initialize_input_masks(inputs, states)
 
         if self.drop_states:
             states = list(states)
             # state dropout only needs to be applied on h, which is always the first state.
-            states[0] = states[0] * self.drop_states_mask
+            states[0] = states[0].as_in_context(ctx) * self.drop_states_mask
 
         if self.drop_inputs:
             inputs = inputs * self.drop_inputs_mask
