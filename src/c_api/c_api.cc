@@ -1573,7 +1573,7 @@ int MXRandomSeedContext(int seed, int dev_type, int dev_id) {
   API_END();
 }
 
-int MXFTZDenorms(bool value) {
+int MXSetFlushDenorms(bool value) {
   API_BEGIN();
   // FTZ only applies to SSE and AVX instructions.
   #if defined(__SSE__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1)

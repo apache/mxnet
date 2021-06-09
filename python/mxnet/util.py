@@ -849,13 +849,17 @@ def setenv(name, value):
     passed_value = None if value is None else c_str(value)
     check_call(_LIB.MXSetEnv(c_str(name), passed_value))
 
-def ftz_denorms(value):
+def set_flush_denorms(value):
     """Change floating-point calculations when dealing with denormalized values.
-
+       This is only applicable to architectures which supports flush-to-zero.
+       Denormalized values are positive and negative values that are very close to 0
+       (exponent is the smallest possible value).
+       Flushing denormalized values to 0 can speedup calculations if such values occurs,
+       but if IEEE 754 standard is required this option should be disabled.
     Parameters
     ----------
     value : bool
         State of flush-to-zero and denormals-are-zero in MXCSR register 
     """
     passed_value = ctypes.c_bool(value)
-    check_call(_LIB.MXFTZDenorms(passed_value))
+    check_call(_LIB.MXSetFlushDenorms(passed_value))
