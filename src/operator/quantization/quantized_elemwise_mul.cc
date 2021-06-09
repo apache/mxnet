@@ -32,14 +32,6 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(QuantizeElemwiseMulParam);
 
-static std::vector<std::string> QuantizedElemwiseMulOutputNames(const NodeAttrs &attrs) {
-  const QuantizeElemwiseMulParam& params = nnvm::get<QuantizeElemwiseMulParam>(attrs.parsed);
-  if (params.enable_float_output)
-    return std::vector<std::string>{"output"};
-  else
-    return std::vector<std::string>{"output", "min_output", "max_output"};
-}
-
 inline bool QuantizedElemwiseMulOpShape(const nnvm::NodeAttrs& attrs,
                                         mxnet::ShapeVector *in_attrs,
                                         mxnet::ShapeVector *out_attrs) {
