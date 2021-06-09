@@ -848,3 +848,14 @@ def setenv(name, value):
     """
     passed_value = None if value is None else c_str(value)
     check_call(_LIB.MXSetEnv(c_str(name), passed_value))
+
+def ftz_denorms(value):
+    """Change floating-point calculations when dealing with denormalized values.
+
+    Parameters
+    ----------
+    value : bool
+        State of flush-to-zero and denormals-are-zero in MXCSR register 
+    """
+    passed_value = ctypes.c_bool(value)
+    check_call(_LIB.MXFTZDenorms(passed_value))
