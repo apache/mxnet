@@ -1207,7 +1207,7 @@ def set_flush_denorms(value):
        Denormalized values are positive and negative values that are very close to 0
        (exponent is the smallest possible value).
        Flushing denormalized values to 0 can speedup calculations if such values occurs,
-       but if IEEE 754 standard is required this option should be disabled.
+       but if fulfilling whole IEEE 754 standard is required this option should be disabled.
     Parameters
     ----------
     value : bool
