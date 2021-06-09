@@ -253,6 +253,8 @@ class Imperative {
   nnvm::Symbol GetDeferredComputeSymbol(const std::vector<NDArray *> &outputs);
   /*! \brief associate arrays with variables for deferred compute */
   void SetDeferredComputeVariable(NDArrayHandle *arrays, SymbolHandle *variables, const int num);
+  /*! \brief clear info node associated with array */
+  void DeferredComputeClear(NDArrayHandle *arrays, const int num);
   /*! \brief */
   OpStatePtr Invoke(const Context& default_ctx,
                     const nnvm::NodeAttrs& attrs,

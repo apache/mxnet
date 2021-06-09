@@ -350,16 +350,7 @@ nnvm::Symbol Imperative::GetDeferredComputeSymbol(const std::vector<NDArray *> &
         << "must have a deferred compute history associated with them.";
     s.outputs.emplace_back(ndoutput->deferredcompute_entry_);
   }
-  nnvm::DFSVisit(s.outputs, [&](const nnvm::ObjectPtr& n) {
-    if (n != nullptr && !n->info.empty()) {
-      Imperative::DCInfo info = Imperative::DCInfo::Get(n);
-      info.inputs_.clear();
-      info.input_handles_.clear();
-      info.outputs_.clear();
-      info.Clear(n);
-    }
-  });
-  return s;
+  return s.Copy();
 }
 
 void Imperative::SetDeferredComputeVariable(NDArrayHandle *arrays,
@@ -391,6 +382,24 @@ void Imperative::SetDeferredComputeVariable(NDArrayHandle *arrays,
     Imperative::DCInfo& info = Imperative::DCInfo::Create(s->outputs[0].node, inputs, outputs);
     info.is_computed_ = true;
   }
+}
+
+void Imperative::DeferredComputeClear(NDArrayHandle *arrays, const int num) {
+  std::vector<nnvm::NodeEntry> outputs;
+  outputs.reserve(num);
+  for (int i = 0; i < num; i++) {
+    NDArray *nd = reinterpret_cast<NDArray *>(arrays[i]);
+    outputs.emplace_back(nd->deferredcompute_entry_);
+  }
+  nnvm::DFSVisit(outputs, [&](const nnvm::ObjectPtr& n) {
+    if (n != nullptr && !n->info.empty()) {
+      Imperative::DCInfo info = Imperative::DCInfo::Get(n);
+      info.inputs_.clear();
+      info.input_handles_.clear();
+      info.outputs_.clear();
+      info.Clear(n);
+    }
+  });
 }
 
 std::vector<NDArray*> Imperative::Backward(
