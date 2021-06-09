@@ -311,6 +311,8 @@ __version__ = libinfo.__version__
 # library instance of mxnet
 _LIB = _load_lib()
 
+check_call(_LIB.MXFTZDenorms(ctypes.c_bool(True)))
+
 # type definitions
 mx_int = ctypes.c_int
 mx_uint = ctypes.c_uint

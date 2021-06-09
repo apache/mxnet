@@ -273,6 +273,13 @@ MXNET_DLL int MXRandomSeed(int seed);
 MXNET_DLL int MXRandomSeedContext(int seed, int dev_type, int dev_id);
 
 /*!
+ * \brief Change floating-point calculations when dealing with denormalized values.
+ * \param value state of flush-to-zero and denormals-are-zero to set.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXFTZDenorms(bool value);
+
+/*!
  * \brief Notify the engine about a shutdown,
  *  This can help engine to print less messages into display.
  *

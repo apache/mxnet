@@ -1200,3 +1200,14 @@ def get_rtc_compile_opts(ctx):
     arch_opt = "--gpu-architecture={}_{}".format("sm" if should_compile_to_SASS else "compute",
                                                  device_cc_as_used)
     return [arch_opt]
+
+def ftz_denorms(value):
+    """Change floating-point calculations when dealing with denormalized values.
+
+    Parameters
+    ----------
+    value : bool
+        State of flush-to-zero and denormals-are-zero in MXCSR register 
+    """
+    passed_value = ctypes.c_bool(value)
+    check_call(_LIB.MXFTZDenorms(passed_value))
