@@ -277,7 +277,7 @@ MXNET_DLL int MXRandomSeedContext(int seed, int dev_type, int dev_id);
  * \param value state of flush-to-zero and denormals-are-zero to set.
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXFTZDenorms(bool value);
+MXNET_DLL int MXSetFlushDenorms(bool value);
 
 /*!
  * \brief Notify the engine about a shutdown,
