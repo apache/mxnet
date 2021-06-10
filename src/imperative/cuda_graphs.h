@@ -22,8 +22,8 @@
  * \file cuda_graphs.h
  * \brief Wrappers for use of CUDA Graphs API
  */
-#ifndef MXNET_EXECUTOR_CUDA_GRAPHS_H_
-#define MXNET_EXECUTOR_CUDA_GRAPHS_H_
+#ifndef MXNET_IMPERATIVE_CUDA_GRAPHS_H_
+#define MXNET_IMPERATIVE_CUDA_GRAPHS_H_
 
 #include <mxnet/base.h>
 #include <vector>
@@ -544,4 +544,4 @@ class CudaGraphsExec {
 
 #endif  // CUDA_GRAPHS_AVAILABLE
 
-#endif  // MXNET_EXECUTOR_CUDA_GRAPHS_H_
+#endif  // MXNET_IMPERATIVE_CUDA_GRAPHS_H_
