@@ -419,9 +419,9 @@ struct mish : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     // reference softrelue
-	auto softrelu = math::log1p(math::exp(a));
+    auto softrelu = math::log1p(math::exp(a));
     if (a > DType(20.0f)) {
-      auto softrelu = a;
+      softrelu = a;
     }
     return DType(a * math::tanh(softrelu));
   }
@@ -431,9 +431,9 @@ struct mish_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     // Note: the input(a) is x(not y)
-	auto softrelu = math::log1p(math::exp(a));
+    auto softrelu = math::log1p(math::exp(a));
     if (a > DType(20.0f)) {
-      auto softrelu = a;
+      softrelu = a;
     }
     auto tanh_sr = math::tanh(softrelu);
     auto sr_grad = 1.0f / (1.0f + math::exp(-a));
