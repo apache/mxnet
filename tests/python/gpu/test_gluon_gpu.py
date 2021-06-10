@@ -600,8 +600,7 @@ def test_cuda_graphs():
     class GraphTester(gluon.HybridBlock):
         def __init__(self, function_to_test, **kwargs):
             super(GraphTester, self).__init__(**kwargs)
-            with self.name_scope():
-                self.f = function_to_test()
+            self.f = function_to_test()
 
         def hybrid_forward(self, F, *args):
             # We need to isolate the operation to be fully inside the graph

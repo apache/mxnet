@@ -32,7 +32,7 @@
 #include <set>
 
 #include "./exec_pass.h"
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 
 #if MXNET_USE_CUDA
 #define CUDA_GRAPHS_AVAILABLE (CUDA_VERSION >= 10020)
