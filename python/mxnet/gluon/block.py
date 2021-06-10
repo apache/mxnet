@@ -1088,6 +1088,7 @@ class HybridBlock(Block):
                 out = super().__call__(*args)
             flatten_out, self._out_format = _flatten(out, "output")
             symbol_outputs = dc.get_symbol(flatten_out, sym_cls=type(symbol_inputs[0]))
+            dc.clear(flatten_out)
             self._cached_graph = symbol_inputs, symbol_outputs
         return self._cached_graph
 
