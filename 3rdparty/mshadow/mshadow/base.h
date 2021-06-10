@@ -178,6 +178,10 @@ typedef unsigned __int64 uint64_t;
 
 #if MSHADOW_USE_CBLAS
 extern "C" {
+    #if MXNET_USE_ARMPL
+        #define armpl_singlecomplex_t float _Complex
+        #define armpl_doublecomplex_t double _Complex
+    #endif
     #include <cblas.h>
 }
 #elif MSHADOW_USE_MKL

@@ -19,6 +19,7 @@ set(CMAKE_BUILD_TYPE "Distribution" CACHE STRING "Build type")
 set(CFLAGS "-march=armv8-a+crc+crypto -moutline-atomics" CACHE STRING "CFLAGS")
 set(CXXFLAGS "-march=armv8-a" CACHE STRING "CXXFLAGS")
 
+set(USE_BLAS ArmPL CACHE STRING "BLAS")
 set(USE_CUDA OFF CACHE BOOL "Build with CUDA support")
 set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
 set(USE_OPENMP ON CACHE BOOL "Build with Openmp support")

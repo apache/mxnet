@@ -75,7 +75,7 @@ shutil.copy(LIB_PATH[0], os.path.join(CURRENT_DIR, 'mxnet'))
 
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
-if platform.system() == 'Linux':
+if platform.system() == 'Linux' and platform.machine() != 'aarch64':
     libdir, mxdir = os.path.dirname(LIB_PATH[0]), os.path.join(CURRENT_DIR, 'mxnet')
     if os.path.exists(os.path.join(libdir, 'libgfortran.so.3')):
         shutil.copy(os.path.join(libdir, 'libgfortran.so.3'), mxdir)
