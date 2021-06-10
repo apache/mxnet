@@ -527,14 +527,14 @@ Graph QuantizeGraph(Graph &&src) {
                                           });
           if (fp32_node != std::end(quantized_node_map)) {
             const auto& fp32_in_node = fp32_node->first;
-            std::string input_name;
+            std::string node_input_name;
             if (flist_inputs.count(fp32_in_node->op())) {
-              input_name = flist_inputs[fp32_in_node->op()](fp32_in_node->attrs)[i];
-              input_name = fp32_in_node->attrs.name + "_" + input_name;
+              std::string op_input_name = flist_inputs[fp32_in_node->op()](fp32_in_node->attrs)[i];
+              node_input_name = fp32_in_node->attrs.name + "_" + op_input_name;
             } else {
-              input_name = fp32_in_node->attrs.name + "_" + input_node.node->attrs.name;
+              node_input_name = fp32_in_node->attrs.name + "_" + input_node.node->attrs.name;
             }
-            calib_nodes.push_back(input_name);
+            calib_nodes.push_back(node_input_name);
             calib_variables.erase(input_node.node);
           }
         }
