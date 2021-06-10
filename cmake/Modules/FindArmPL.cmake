@@ -41,7 +41,10 @@ FIND_LIBRARY(STRING_LIB NAMES astring PATHS ${ArmPL_LIB_SEARCH_PATHS})
 SET(ArmPL_LIBRARIES
 	${ArmPL_LIB}
 	${MATH_LIB}
-	${STRING_LIB})
+	${STRING_LIB}
+	/usr/local/gcc-8.5.0/lib64/libgfortran.so
+	/usr/lib/aarch64-linux-gnu/libm.so
+)
 
 SET(ArmPL_FOUND ON)
 

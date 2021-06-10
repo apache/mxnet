@@ -75,7 +75,7 @@ shutil.copy(LIB_PATH[0], os.path.join(CURRENT_DIR, 'mxnet'))
 
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
-if platform.system() == 'Linux' and platform.machine() != 'aarch64':
+if platform.system() == 'Linux':
     libdir, mxdir = os.path.dirname(LIB_PATH[0]), os.path.join(CURRENT_DIR, 'mxnet')
     if os.path.exists(os.path.join(libdir, 'libgfortran.so.3')):
         shutil.copy(os.path.join(libdir, 'libgfortran.so.3'), mxdir)
@@ -86,7 +86,7 @@ if platform.system() == 'Linux' and platform.machine() != 'aarch64':
     else:
         shutil.copy(os.path.join(libdir, 'libgfortran.so.5'), mxdir)
         package_data['mxnet'].append('mxnet/libgfortran.so.5')
-    if os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
+    if platform.machine() != 'aarch64' and os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
         shutil.copy(os.path.join(libdir, 'libopenblas.so.0'), mxdir)
         package_data['mxnet'].append('mxnet/libopenblas.so.0')
 
