@@ -130,7 +130,7 @@ static void BatchDotComputeExCPU(const nnvm::NodeAttrs& attrs,
   FallBackCompute(BatchDotForward_<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
-inline static bool BatchDotStorageType(const nnvm::NodeAttrs& attrs,
+bool BatchDotStorageType(const nnvm::NodeAttrs& attrs,
                                        const int dev_mask,
                                        DispatchMode* dispatch_mode,
                                        std::vector<int>* in_attrs,
