@@ -53,10 +53,9 @@ backward_log_sigmoid(const DTypeGrad grad, const DType val) {
 template <typename DType, typename DTypeGrad>
 __device__ inline mixed_type<DTypeGrad, DType>
 backward_mish(const DTypeGrad grad, const DType val) {
-  const mixed_type<DTypeGrad, DType> v = val;
-  const auto softrelu = op::softrelu(v)
+  const auto softrelu = (val > 20) ? val : op::log(1 + op::exp(val));
   const auto tanh_sr = op::tanh(softrelu);
-  return grad * (tanh_sr + v * sigmoid(v) * (1 - tanh_sr * tanh_sr));
+  return grad * (tanh_sr + val * sigmoid(val) * (1 - tanh_sr * tanh_sr));
 }
 
 template <typename DType, typename DTypeGrad>

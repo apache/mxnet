@@ -418,7 +418,7 @@ MXNET_UNARY_MATH_OP(log_sigmoid_grad, 1.0f / (1.0f + math::exp(a)));
 struct mish : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    // reference softrelue
+    // reference softrelu
     auto softrelu = math::log1p(math::exp(a));
     if (a > DType(20.0f)) {
       softrelu = a;
