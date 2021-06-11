@@ -213,7 +213,7 @@ bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray &input, const
 bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param, const NDArray &input,
                              const NDArray &output);
 bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray &data);
-bool SupportMKLDNNBatchDot(const NDArray &input);
+bool SupportMKLDNNBatchDot(const std::vector<NDArray> &inputs, const NDArray &output);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {

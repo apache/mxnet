@@ -121,7 +121,7 @@ static void BatchDotComputeExCPU(const nnvm::NodeAttrs& attrs,
                                  const std::vector<NDArray>& inputs,
                                  const std::vector<OpReqType>& req,
                                  const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNBatchDot(inputs[0])) {
+  if (SupportMKLDNNBatchDot(inputs, outputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNRun(MKLDNNBatchDotForward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(BatchDotForward_<cpu>, attrs, ctx, inputs, req, outputs);

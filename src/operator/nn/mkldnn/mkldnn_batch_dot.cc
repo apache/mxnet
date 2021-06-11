@@ -28,9 +28,12 @@
 namespace mxnet {
 namespace op {
 
-bool SupportMKLDNNBatchDot(const NDArray &data) {
-  return data.dtype() == mshadow::kFloat32 ||
-         data.dtype() == mshadow::kBfloat16;
+bool SupportMKLDNNBatchDot(const std::vector<NDArray> &inputs, const NDArray &output) {
+  return inputs[0].shape().Size() != 0 &&
+         inputs[1].shape().Size() != 0 &&
+         output.shape().Size()    != 0 &&
+         (inputs[0].dtype() == mshadow::kFloat32 ||
+          inputs[0].dtype() == mshadow::kBfloat16);
 }
 
 void MKLDNNBatchDotForward(const nnvm::NodeAttrs &attrs,
@@ -69,25 +72,32 @@ MKLDNNBatchDotFwd &MKLDNNBatchDotFwd::GetCached(const DotParam &param,
 MKLDNNBatchDotFwd::MKLDNNBatchDotFwd(const DotParam &param,
                                      const std::vector<NDArray> &inputs,
                                      const std::vector<NDArray> &outputs) {
-  auto GetMemoryDesc = [](const NDArray& tensor, const bool transpose) {
+  auto shape    = inputs[0].shape();
+  auto ndim     = shape.ndim();
+  auto bigDim   = shape[0];
+  for (size_t i = 1; i < ndim - 2; ++i) {
+    bigDim *= shape[i];
+  }
+
+  auto GetMemoryDesc = [&ndim, &bigDim](const NDArray& tensor, const bool transpose) {
+    auto shape = tensor.shape();
     if (transpose) {
-      auto shape = tensor.shape();
-      auto ndim = shape.ndim();
-      auto bigDim = shape[0];
-      for (size_t i = 1; i < ndim - 2; ++i) {
-        bigDim *= shape[i];
-      }
       return mkldnn::memory::desc(mkldnn::memory::dims{bigDim, shape[ndim - 1], shape[ndim - 2]},
                                   get_mkldnn_type(tensor.dtype()),
                                   mkldnn::memory::format_tag::acb);
     } else {
-      return tensor.GetMKLDNNData()->get_desc();
+      return mkldnn::memory::desc(mkldnn::memory::dims{bigDim, shape[ndim - 2], shape[ndim - 1]},
+                                  get_mkldnn_type(tensor.dtype()),
+                                  mkldnn::memory::format_tag::any);
     }
   };
 
-  mkldnn::matmul::desc fwd_desc(GetMemoryDesc(inputs[0], param.transpose_a),
-                                GetMemoryDesc(inputs[1], param.transpose_b),
-                                outputs[0].GetMKLDNNData()->get_desc());
+  mkldnn::memory::desc data_md    = GetMemoryDesc(inputs[0], param.transpose_a);
+  mkldnn::memory::desc weights_md = GetMemoryDesc(inputs[1], param.transpose_b);
+  mkldnn::memory::desc out_md({bigDim, data_md.dims()[1], weights_md.dims()[2]},
+                              get_mkldnn_type(outputs[0].dtype()),
+                              mkldnn::memory::format_tag::any);
+  mkldnn::matmul::desc fwd_desc(data_md, weights_md, out_md);
   fwd_pd = std::make_shared<batch_dot_fwd_pd_t>(fwd_desc, mxnet::CpuEngine::Get()->get_engine());
   fwd    = std::make_shared<batch_dot_fwd_t>(*fwd_pd);
 }
@@ -102,7 +112,7 @@ void MKLDNNBatchDotFwd::Execute(const std::vector<NDArray> &inputs,
                                            reinterpret_cast<void*>(inputs[1].data().dptr_));
   mkldnn_output_t out_mem = CreateMKLDNNMem(outputs[0], fwd_pd->dst_desc(), req[0], &inputs[0]);
 
-  mkldnn_args_map_t args = {
+  mkldnn_args_map_t args  = {
     {MKLDNN_ARG_SRC,      data},
     {MKLDNN_ARG_WEIGHTS,  weights},
     {MKLDNN_ARG_DST,      *out_mem.second},
