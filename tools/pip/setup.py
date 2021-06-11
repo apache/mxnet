@@ -86,7 +86,7 @@ if platform.system() == 'Linux':
     else:
         shutil.copy(os.path.join(libdir, 'libgfortran.so.5'), mxdir)
         package_data['mxnet'].append('mxnet/libgfortran.so.5')
-    if platform.machine() != 'aarch64' and os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
+    if os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
         shutil.copy(os.path.join(libdir, 'libopenblas.so.0'), mxdir)
         package_data['mxnet'].append('mxnet/libopenblas.so.0')
 
