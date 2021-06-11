@@ -629,8 +629,8 @@ static inline float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray*
   float max_bias = *FindInArgByName(g, fc->inputs[8].node->attrs.name)->data().dptr<float>();
 
   float data_scale_ = kUint8Range / (max_data - min_data);
-  float weight_scale = GetQuantizeScale(kInt8, *min_weight, *max_weight);
-  float bias_scale = GetQuantizeScale(kInt8, min_bias, max_bias);
+  float weight_scale = GetQuantizeScale(mshadow::kInt8, *min_weight, *max_weight);
+  float bias_scale = GetQuantizeScale(mshadow::kInt8, min_bias, max_bias);
   float bias_int32_rescale = data_scale_ * weight_scale / bias_scale;
 
   // // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the
@@ -714,8 +714,9 @@ Graph OneDNNShiftedQuantization(Graph &&g) {
           float min_data = std::stof(quantize->attrs.dict.at("min_calib_range"));
           float max_data = std::stof(quantize->attrs.dict.at("max_calib_range"));
           float data_scale = kUint8Range / (max_data - min_data);
-          uint32_t shift_value = static_cast<uint32_t>(std::round(data_scale * -min_data));
+          int32_t shift_value = static_cast<int32_t>(std::round(data_scale * -min_data));
           ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
+          LOG(INFO) << "fused QUANTIZE->FC";
         }
       }
     });

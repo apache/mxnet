@@ -44,10 +44,10 @@ struct QuantizeV2Param : public dmlc::Parameter<QuantizeV2Param> {
   dmlc::optional<bool> shifted;
   DMLC_DECLARE_PARAMETER(QuantizeV2Param) {
     DMLC_DECLARE_FIELD(out_type)
-      .add_enum("auto", QuantizeOutType::kAuto)
-      .add_enum("int8", QuantizeOutType::kInt8)
-      .add_enum("uint8", QuantizeOutType::kUint8)
-      .set_default(QuantizeOutType::kInt8)
+      .add_enum("auto", QuantizeOutType::qAuto)
+      .add_enum("int8", QuantizeOutType::qInt8)
+      .add_enum("uint8", QuantizeOutType::qUint8)
+      .set_default(QuantizeOutType::qInt8)
       .describe("Output data type. `auto` can be specified to automatically determine output type "
                 "according to min_calib_range.");
     DMLC_DECLARE_FIELD(min_calib_range)

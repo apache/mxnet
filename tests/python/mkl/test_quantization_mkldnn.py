@@ -20,7 +20,6 @@ import mxnet as mx
 
 os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST'] = '1'
 os.environ['MXNET_SUBGRAPH_BACKEND'] = 'NONE'
-os.environ['MXNET_DISABLE_SHIFTED_QUANTIZATION'] = '0'
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../quantization'))
 from test_quantization import *
@@ -30,4 +29,3 @@ if __name__ == '__main__':
     nose.runmodule()
     del os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST']
     del os.environ['MXNET_SUBGRAPH_BACKEND']
-    del os.environ['MXNET_DISABLE_SHIFTED_QUANTIZATION']

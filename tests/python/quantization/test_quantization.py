@@ -22,11 +22,10 @@ import os
 import mxnet as mx
 import numpy as np
 from mxnet.gluon.model_zoo import vision
-from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter
+from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter, environment
 from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
-import unittest
 import operator
 
 def is_test_for_gpu():
@@ -38,7 +37,7 @@ def is_test_for_mkldnn():
 
 def is_test_for_native_cpu():
     return (mx.current_context().device_type == 'cpu'
-            and os.environ.get('ENABLE_MKLDNN_QUANTIZATION_TEST') == None)
+            and os.environ.get('ENABLE_MKLDNN_QUANTIZATION_TEST') is None)
 
 @with_seed()
 def test_quantize_float32_to_int8():
@@ -1156,7 +1155,7 @@ def test_quantize_gluon_with_forward():
         quantized_resnet18_v1(random_data)
 
         for mode in ['naive', 'entropy']:
-            qdtype = qdtype if mode is 'naive' else 'auto'
+            qdtype = qdtype if mode == 'naive' else 'auto'
             quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
                                                                   exclude_layers=None,
                                                                   exclude_layers_match=excluded_names_match,
@@ -1256,6 +1255,7 @@ def test_get_optimal_thresholds():
 
 @with_seed()
 def test_onednn_shifted_quantization():
+    batch_size = 1
     if not is_test_for_mkldnn():
         print("Test only for mkldnn")
         return
@@ -1285,16 +1285,14 @@ def test_onednn_shifted_quantization():
         return bias_shifted
 
     def quantize_fc_layer(fc_layer, qdtype, random_data):
-        batch_size = 1
         calib_data = NDArrayIter(data=random_data, batch_size=batch_size)
         calib_data = DummyIter(calib_data)
-        num_calib_examples = 5
         fc_layer = mx.contrib.quant.quantize_net(fc_layer, quantized_dtype=qdtype,
                                                  exclude_layers=None,
                                                  exclude_layers_match=[],
                                                  calib_data=calib_data,
                                                  calib_mode='naive',
-                                                 num_calib_examples=num_calib_examples,
+                                                 num_calib_examples=1,
                                                  ctx=mx.current_context())
         fc_layer.hybridize(static_alloc=True, static_shape=True)
         fc_layer(random_data).wait_to_read()
@@ -1303,29 +1301,34 @@ def test_onednn_shifted_quantization():
         quantize_attrs = sym.attr_dict()['data_quantize']
         return fc_layer, quantize_attrs
 
-    def get_fc_layer(random_data):
-        fc_layer = mx.gluon.nn.Dense(5, use_bias=True,
+    def get_fc_layer():
+        fc_layer = mx.gluon.nn.Dense(5, use_bias=True, flatten=True,
                                      weight_initializer=mx.initializer.Normal(),
                                      bias_initializer=mx.initializer.Normal())
         fc_layer.initialize()
-        fc_layer(random_data).wait_to_read()
         return fc_layer
 
     # Shifted quantization should set new bias to FC and add shift to output of quantize
     # b'=b-shift*w because FC(x+shift,w,b)=(x+shift)*w+b
     def check(number, qdtype):
-        random_data = mx.nd.random_normal(shape=(1, 32))
-        fc_layer = get_fc_layer(random_data)
+        random_data = mx.nd.random_uniform(low=0 if qdtype == 'uint8' else -1, high=1, shape=(batch_size, 32))
+        fc_layer = get_fc_layer()
+        out = fc_layer(random_data)
+        out.wait_to_read()
 
-        if qdtype is 'auto':
+        if qdtype == 'auto':
             bias_int8, bias_scale = quantize_param_to_int8(
                 collect_param(fc_layer, 'dense%d_bias' % number))
             weights_int8, weights_scale = quantize_param_to_int8(
                 collect_param(fc_layer, 'dense%d_weight' % number))
 
         fc_layer_quantized, quantize_attrs = quantize_fc_layer(fc_layer, qdtype, random_data)
+        out_q = fc_layer_quantized(random_data)
+        out_q.wait_to_read()
 
-        if qdtype is 'auto':
+        assert_almost_equal(out, out_q)
+
+        if qdtype == 'auto':
             assert quantize_attrs['shifted'] == 'True'
             bias_s32 = collect_param(fc_layer_quantized, 'dense%d_bias_quantize_s32' % number)
             assert bias_s32.dtype == np.int32
@@ -1336,8 +1339,9 @@ def test_onednn_shifted_quantization():
             bias = collect_param(fc_layer_quantized, 'dense%d_bias_quantize' % number)
             assert bias.dtype == np.int8
 
-    for i, qdtype in enumerate(['int8', 'uint8', 'auto']):
-        check(i, qdtype)
+    with environment({'MXNET_DISABLE_SHIFTED_QUANTIZATION': '0'}):
+        for i, qdtype in enumerate(['int8', 'uint8', 'auto']):
+            check(i, qdtype)
 
 
 if __name__ == "__main__":
