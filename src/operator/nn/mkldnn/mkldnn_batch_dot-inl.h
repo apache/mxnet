@@ -29,9 +29,9 @@
 #include <numeric>
 #include <utility>
 #include <vector>
+#include "../../tensor/dot-inl.h"
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_ops-inl.h"
-#include "../../tensor/dot-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -47,8 +47,7 @@ class MKLDNNBatchDotFwd {
                                       const std::vector<NDArray> &inputs,
                                       const std::vector<NDArray> &outputs);
 
-  MKLDNNBatchDotFwd(const DotParam &param,
-                    const std::vector<NDArray> &inputs,
+  MKLDNNBatchDotFwd(const DotParam &param, const std::vector<NDArray> &inputs,
                     const std::vector<NDArray> &outputs);
 
   void Execute(const std::vector<NDArray> &inputs,
