@@ -22,7 +22,8 @@ import os
 import mxnet as mx
 import numpy as np
 from mxnet.gluon.model_zoo import vision
-from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter, environment
+from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter
+from mxnet.test_utils import environment
 from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
@@ -1326,14 +1327,14 @@ def test_onednn_shifted_quantization():
         out_q = fc_layer_quantized(random_data)
         out_q.wait_to_read()
 
-        assert_almost_equal(out, out_q)
+        assert_almost_equal(out, out_q, rtol=1e-3, atol=1e-3)
 
         if qdtype == 'auto':
             assert quantize_attrs['shifted'] == 'True'
             bias_s32 = collect_param(fc_layer_quantized, 'dense%d_bias_quantize_s32' % number)
             assert bias_s32.dtype == np.int32
             bias_shifted = get_shifted_bias(quantize_attrs, weights_int8, weights_scale, bias_int8, bias_scale)
-            assert_almost_equal(bias_s32, bias_shifted)
+            assert_almost_equal(bias_s32, bias_shifted, rtol=1e-3, atol=1e-3)
         else:
             assert 'shifted' not in quantize_attrs
             bias = collect_param(fc_layer_quantized, 'dense%d_bias_quantize' % number)
