@@ -696,7 +696,7 @@ __device__ inline DType log_sigmoid(const DType val) {
 
 template <typename DType>
 __device__ inline DType mish(const DType val) {
-  return val * op::tanh(op::softrelu(val));
+  return val * tanh(softrelu(val));
 }
 
 template <typename DType>
