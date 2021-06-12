@@ -696,13 +696,7 @@ __device__ inline DType log_sigmoid(const DType val) {
 
 template <typename DType>
 __device__ inline DType mish(const DType val) {
-  if (type_util::has_double_or_integral<DType>::value) {
-    const auto softrelu = (val > 20) ? val : ::log(1 + ::exp(val));
-    return val * ::tanh(softrelu);
-  } else {
-    const auto softrelu = (val > 20) ? val : logf(1 + expf(val));
-    return val * ::tanhf(softrelu);
-  }
+  return val * op::tanh(op::softrelu(val));
 }
 
 template <typename DType>
