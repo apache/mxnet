@@ -216,12 +216,12 @@ bool SupportMKLDNNAveragePooling(const NDArray &in_data,
   const int OH = out_data.shape()[2];
   const int OW = out_data.shape()[3];
 
-  const int strides_1 = floor((IH << 1) / OH) - floor(IH / OH);
-  const int strides_2 = floor((IW << 1) / OW) - floor(IW / OW);
-  const int kernel_1 = ceil((IH << 1) / OH) - floor(IH / OH);
-  const int kernel_2 = ceil((IW << 1) / OW) - floor(IW / OW);
-  const int pad_l_top = (strides_1 * (OH - 1) + kernel_1 - IH) / 2;
-  const int pad_l_left = (strides_2 * (OW - 1) + kernel_2 - IW) / 2;
+  const int strides_H = floor((IH << 1) / OH) - floor(IH / OH);
+  const int strides_W = floor((IW << 1) / OW) - floor(IW / OW);
+  const int kernel_H = ceil((IH << 1) / OH) - floor(IH / OH);
+  const int kernel_W = ceil((IW << 1) / OW) - floor(IW / OW);
+  const int pad_l_top = (strides_H * (OH - 1) + kernel_H - IH) / 2;
+  const int pad_l_left = (strides_W * (OW - 1) + kernel_W - IW) / 2;
 
   return pad_l_top == 0 && pad_l_left == 0;
 }
@@ -253,12 +253,11 @@ void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs &attrs,
 }
 #endif
 
-
-inline static bool AdaptivePoolingStorageType(const nnvm::NodeAttrs &attrs,
-                                              const int dev_mask,
-                                              DispatchMode *dispatch_mode,
-                                              std::vector<int> *in_attrs,
-                                              std::vector<int> *out_attrs) {
+inline bool AdaptivePoolingStorageType(const nnvm::NodeAttrs &attrs,
+                                       const int dev_mask,
+                                       DispatchMode *dispatch_mode,
+                                       std::vector<int> *in_attrs,
+                                       std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   bool dispatched = false;
   for (int &v : *in_attrs)
