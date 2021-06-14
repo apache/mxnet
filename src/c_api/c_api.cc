@@ -1596,7 +1596,7 @@ int MXSetFlushDenorms(bool value) {
   API_BEGIN();
   // FTZ only applies to SSE and AVX instructions.
   #if defined(__SSE__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
-    auto is_dmz_flag_available = []() {
+    std::function<bool()> is_dmz_flag_available = []() {
       // Intel 64 and IA-32 Architectures Software Developer’s Manual: Vol. 1
       // "Checking for the DAZ Flag in the MXCSR Register"
       constexpr unsigned int mxcsr_mask_offset = 28;
@@ -1609,6 +1609,7 @@ int MXSetFlushDenorms(bool value) {
 
       char* mxcsr_mask_ptr = fxsave_area_ptr + mxcsr_mask_offset;
       uint32_t mxcsr_mask = *(reinterpret_cast<uint32_t*>((mxcsr_mask_ptr)));
+      // DMZ flag is supported if sixth bit of MXCSR_MASK is hot
       bool dmz_flag = (mxcsr_mask >> dmz_flag_offset) & 0x1;
       free(fxsave_area_ptr);
       return dmz_flag;
