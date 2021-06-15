@@ -415,11 +415,31 @@ MXNET_UNARY_MATH_OP(log_sigmoid, math::log(1.0f / (1.0f + math::exp(-a))));
 
 MXNET_UNARY_MATH_OP(log_sigmoid_grad, 1.0f / (1.0f + math::exp(a)));
 
-MXNET_UNARY_MATH_OP(mish, a * math::tanh(math::log(1.0f + math::exp(a))));
+struct mish : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // reference softrelu
+    auto softrelu = math::log1p(math::exp(a));
+    if (a > DType(20.0f)) {
+      softrelu = a;
+    }
+    return DType(a * math::tanh(softrelu));
+  }
+};
 
-MXNET_UNARY_MATH_OP(mish_grad, math::tanh(math::log(1.0f + math::exp(a))) +
-                        a * (1.0f / (1.0f + math::exp(-a))) *
-                        (1.0f - math::sqr(math::tanh(math::log(1.0f + math::exp(a))))));
+struct mish_grad : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // Note: the input(a) is x(not y)
+    auto softrelu = math::log1p(math::exp(a));
+    if (a > DType(20.0f)) {
+      softrelu = a;
+    }
+    auto tanh_sr = math::tanh(softrelu);
+    auto sr_grad = 1.0f / (1.0f + math::exp(-a));
+    return DType(tanh_sr + a * sr_grad * (1.0f - tanh_sr * tanh_sr));
+  }
+};
 
 MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
 
