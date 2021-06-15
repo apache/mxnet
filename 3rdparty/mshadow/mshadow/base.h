@@ -106,6 +106,10 @@ typedef unsigned __int64 uint64_t;
 #ifndef MSHADOW_USE_MKL
   #define MSHADOW_USE_MKL   1
 #endif
+/*! \brief use ArmPL for BLAS */
+#ifndef MSHADOW_USE_ARMPL
+  #define MSHADOW_USE_ARMPL 0
+#endif
 
 /*!
  * \brief use CUDA support, must ensure that the cuda include path is correct,
@@ -178,7 +182,7 @@ typedef unsigned __int64 uint64_t;
 
 #if MSHADOW_USE_CBLAS
 extern "C" {
-    #if MXNET_USE_ARMPL
+    #if MSHADOW_USE_ARMPL
         #define armpl_singlecomplex_t float _Complex
         #define armpl_doublecomplex_t double _Complex
     #endif

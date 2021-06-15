@@ -71,7 +71,7 @@
 using namespace mshadow;
 
 // Will cause clash with MKL/ArmPL fortran layer headers
-#if (!MSHADOW_USE_MKL && !MXNET_USE_ARMPL)
+#if (!MSHADOW_USE_MKL && !MSHADOW_USE_ARMPL)
 
 extern "C" {
 
@@ -199,7 +199,7 @@ extern "C" {
   MXNET_LAPACK_FSIG_GEEV(dgeev, double)
 }
 
-#endif  // (!MSHADOW_USE_MKL && !MXNET_USE_ARMPL)
+#endif  // (!MSHADOW_USE_MKL && !MSHADOW_USE_ARMPL)
 
 
 #define CHECK_LAPACK_UPLO(a) \
@@ -228,7 +228,7 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
 }
 
 
-#if (MXNET_USE_LAPACK && (MSHADOW_USE_MKL || MXNET_USE_ARMPL))
+#if (MXNET_USE_LAPACK && (MSHADOW_USE_MKL || MSHADOW_USE_ARMPL))
 
   #if (MSHADOW_USE_MKL)
     // We interface with the C-interface of MKL
