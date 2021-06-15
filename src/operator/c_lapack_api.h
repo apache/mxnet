@@ -234,9 +234,6 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
     // We interface with the C-interface of MKL
     // as this is the preferred way.
     #include <mkl_lapacke.h>
-  #else
-    // Using ArmPL lapacke interface
-    #include <lapacke.h>
   #endif
 
   #define MXNET_LAPACK_ROW_MAJOR LAPACK_ROW_MAJOR
