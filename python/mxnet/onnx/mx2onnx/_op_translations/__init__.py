@@ -14,13 +14,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""Module for ONNX model format support for Apache MXNet."""
 
-from ...onnx import export_model as export_model_
+# coding: utf-8
+"""ONNX export op translation"""
 
-def export_model(*args, **kwargs):
-    print('Calling mxnet.contrib.onnx.export_model...')
-    print('Please be advised that the ONNX module has been moved to mxnet.onnx and '
-          'mxnet.onnx.export_model is the preferred path. The current path will be deprecated '
-          'in the upcoming MXNet v1.10 release.')
-    return export_model_(*args, **kwargs)
+from . import _op_translations_opset12
+from . import _op_translations_opset13

@@ -14,13 +14,28 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""Module for ONNX model format support for Apache MXNet."""
 
-from ...onnx import export_model as export_model_
+"""
+setup.py for mx2onnx
+"""
 
-def export_model(*args, **kwargs):
-    print('Calling mxnet.contrib.onnx.export_model...')
-    print('Please be advised that the ONNX module has been moved to mxnet.onnx and '
-          'mxnet.onnx.export_model is the preferred path. The current path will be deprecated '
-          'in the upcoming MXNet v1.10 release.')
-    return export_model_(*args, **kwargs)
+from setuptools import setup, find_packages
+
+setup(
+    name='mx2onnx',
+    version='0.0.0',
+    description='Module to convert MXNet models to the ONNX format',
+    author='',
+    author_email='',
+    url='https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx',
+    install_requires=[
+        'onnx >= 1.7.0',
+    ],
+    classifiers=[
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python :: 3 :: Only',
+    ],
+    packages=find_packages(),
+    python_requires='>=3.6'
+)
