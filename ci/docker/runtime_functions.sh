@@ -774,6 +774,7 @@ unittest_ubuntu_python3_cpu_onnx() {
     export DMLC_LOG_STACK_TRACE_DEPTH=10
 
     pytest --cov-report xml:onnx_unittest.xml --verbose tests/python/onnx/test_operators.py
+    pytest --cov-report xml:onnx_unittest.xml --cov-append --verbose tests/python/onnx/test_models.py
 }
 
 unittest_ubuntu_python3_cpu() {
