@@ -40,16 +40,22 @@ struct ResourceRequest {
   /*! \brief Resource type, indicating what the pointer type is */
   enum Type {
     /*! \brief mshadow::Random<xpu> object */
-    kRandom,
+    kRandom = 0,
     /*! \brief A dynamic temp space that can be arbitrary size */
-    kTempSpace,
+    kTempSpace = 1,
     /*! \brief common::RandGenerator<xpu> object, which can be used in GPU kernel functions */
-    kParallelRandom
+    kParallelRandom = 2
 #if MXNET_USE_CUDNN == 1
     ,
     /*! \brief cudnnDropoutDescriptor_t object for GPU dropout kernel functions */
-    kCuDNNDropoutDesc
+    kCuDNNDropoutDesc = 3
 #endif  // MXNET_USE_CUDNN == 1
+#if MXNET_USE_CUDA
+    ,
+    /*! \brief Resource indicating the usage of multi GPU communication, used to prevent
+     *         multiple ops of doing it at the same time */
+    kMultiGPUComm = 4
+#endif  // MXNET_USE_CUDA == 1
   };
   /*! \brief type of resources */
   Type type;

@@ -502,6 +502,14 @@ MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
 MXNET_DLL int MXGetGPUCount(int* out);
 
 /*!
+ * \brief Get the compute capability of a given GPU.
+ * \param dev the GPU number to query
+ * \param out pointer to integer that will hold the compute capability of the queried GPU.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXGetGPUSMArch(int dev, int* out);
+
+/*!
  * \brief get the free and total available memory on a GPU
  *  Note: Deprecated, use MXGetGPUMemoryInformation64 instead.
  * \param dev the GPU number to query

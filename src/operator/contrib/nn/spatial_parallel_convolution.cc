@@ -1,0 +1,475 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+/*!
+ * Copyright (c) 2020 by Contributors
+ * \file spatial_parallel_convolution.cc
+ * \brief Spatial parallel convolution
+ * \author Przemyslaw Tredak
+*/
+
+#include <mshadow/base.h>
+#include <mshadow/tensor.h>
+#include "./spatial_parallel_convolution-inl.h"
+#include "../../elemwise_op_common.h"
+#include "../../operator_common.h"
+
+namespace mxnet {
+namespace op {
+DMLC_REGISTER_PARAMETER(SpatialParallelConvolutionParam);
+
+static inline index_t AddPad(index_t dsize, index_t pad) {
+  return dsize + 2 * pad;
+}
+
+static inline std::vector<std::string>
+ListArguments(const SpatialParallelConvolutionParam& param_) {
+  if (!param_.no_bias) {
+    return {"data", "weight", "bias"};
+  } else {
+    return {"data", "weight"};
+  }
+}
+
+static bool SPConvolutionShape(const nnvm::NodeAttrs& attrs,
+                               mxnet::ShapeVector *in_shape,
+                               mxnet::ShapeVector *out_shape) {
+  using namespace mshadow;
+  const SpatialParallelConvolutionParam& param_ =
+      nnvm::get<SpatialParallelConvolutionParam>(attrs.parsed);
+  if (!param_.no_bias) {
+    CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
+  } else {
+    CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
+  }
+  out_shape->resize(1, mxnet::TShape());
+  const mxnet::TShape &dshp = (*in_shape)[spconv::kData];
+  if (!mxnet::ndim_is_known(dshp)) return false;
+
+  if (param_.kernel.ndim() == 1) {
+    // 1d conv
+    CHECK_EQ(dshp.ndim(), 3U) << "Input data should be 3D in batch-num_filter-x";
+    Shape<3> dshape = ConvertLayout(dshp.get<3>(), param_.layout.value(), kNCW);
+    CHECK(!shape_is_known(dshape) || dshape[2] % param_.stride[0] == 0)
+      << "For spatial parallel convolution W needs to be divisible by the corresponding stride ("
+      << dshape[2] << " vs " << param_.stride[0] << ")";
+    Shape<3> wshape = Shape3(param_.num_filter / param_.num_group,
+        mxnet::dim_size_is_known(dshape, 1) ? dshape[1] / param_.num_group : -1,
+        param_.kernel[0]);
+    wshape = ConvertLayout(wshape, kNCW, param_.layout.value());
+    if (wshape[0] >= 0) {
+      wshape[0] *= param_.num_group;
+    }
+    SHAPE_ASSIGN_CHECK(*in_shape, spconv::kWeight, wshape);
+    if (!param_.no_bias) {
+      SHAPE_ASSIGN_CHECK(*in_shape, spconv::kBias, Shape1(param_.num_filter));
+    }
+
+    const index_t dilated_ksize_x = param_.DilatedKernelSize(0);
+    if (dshape[1] != -1) {
+      CHECK_EQ(dshape[1] % param_.num_group, 0U) << "input num_filter must divide group size";
+    }
+    CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
+      << "output num_filter must divide group size";
+    CHECK_GT(param_.kernel.Size(), 0U) \
+      << "incorrect kernel size: " << param_.kernel;
+    CHECK_GT(param_.stride.Size(), 0U) \
+      << "incorrect stride size: " << param_.stride;
+    CHECK_GT(param_.dilate.Size(), 0U) \
+      << "incorrect dilate size: " << param_.dilate;
+    Shape<3> oshape;
+    oshape[0] = dshape[0];
+    oshape[1] = param_.num_filter;
+    oshape[2] = dshape[2] != -1 ?
+      (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_x) / param_.stride[0] + 1 : -1;
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
+    // Perform incomplete shape inference. Fill in the missing values in data shape.
+    // 1) We can always fill in the batch_size.
+    // 2) We can back-calculate the input height/width if the corresponding stride is 1.
+    oshape = ConvertLayout((*out_shape)[0].get<3>(), param_.layout.value(), kNCW);
+    dshape[0] = oshape[0];
+    if (oshape[2] != -1 && param_.stride[0] == 1) {
+      dshape[2] = oshape[2] + dilated_ksize_x - 1 - 2 * param_.pad[0];
+    }
+    SHAPE_ASSIGN_CHECK(*in_shape, spconv::kData,
+        ConvertLayout(dshape, kNCW, param_.layout.value()));
+    // Check whether the kernel sizes are valid
+    if (dshape[2] != -1) {
+      CHECK_LE(dilated_ksize_x, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
+    }
+    return true;
+  } else if (param_.kernel.ndim() == 2) {
+    // 2d conv
+    CHECK_EQ(dshp.ndim(), 4U) \
+      << "Input data should be 4D in batch-num_filter-y-x";
+    Shape<4> dshape = ConvertLayout(dshp.get<4>(), param_.layout.value(), kNCHW);
+    CHECK(!shape_is_known(dshape) || dshape[2] % param_.stride[0] == 0)
+      << "For spatial parallel convolution H needs to be divisible by the corresponding stride ("
+      << dshape[2] << " vs " << param_.stride[0] << ")";
+    Shape<4> wshape = Shape4(param_.num_filter / param_.num_group,
+        mxnet::dim_size_is_known(dshape, 1) ? dshape[1] / param_.num_group : -1,
+        param_.kernel[0], param_.kernel[1]);
+    wshape = ConvertLayout(wshape, kNCHW, param_.layout.value());
+    if (wshape[0] >= 0) {
+      wshape[0] *= param_.num_group;
+    }
+    SHAPE_ASSIGN_CHECK(*in_shape, spconv::kWeight, wshape);
+    if (!param_.no_bias) {
+      SHAPE_ASSIGN_CHECK(*in_shape, spconv::kBias, Shape1(param_.num_filter));
+    }
+
+    const index_t dilated_ksize_y = param_.DilatedKernelSize(0);
+    const index_t dilated_ksize_x = param_.DilatedKernelSize(1);
+    if (dshape[1] != -1) {
+      CHECK_EQ(dshape[1] % param_.num_group, 0U) << "input num_filter must divide group size";
+    }
+    CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
+      << "output num_filter must divide group size";
+    CHECK_GT(param_.kernel.Size(), 0U) \
+      << "incorrect kernel size: " << param_.kernel;
+    CHECK_GT(param_.stride.Size(), 0U) \
+      << "incorrect stride size: " << param_.stride;
+    CHECK_GT(param_.dilate.Size(), 0U) \
+      << "incorrect dilate size: " << param_.dilate;
+    Shape<4> oshape;
+    oshape[0] = dshape[0];
+    oshape[1] = param_.num_filter;
+    oshape[2] = dshape[2] != -1 ?
+      (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_y) / param_.stride[0] + 1 : -1;
+    oshape[3] = dshape[3] != -1 ?
+      (AddPad(dshape[3], param_.pad[1]) - dilated_ksize_x) / param_.stride[1] + 1 : -1;
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCHW, param_.layout.value()));
+    // Perform incomplete shape inference. Fill in the missing values in data shape.
+    // 1) We can always fill in the batch_size.
+    // 2) We can back-calculate the input height/width if the corresponding stride is 1.
+    oshape = ConvertLayout((*out_shape)[0].get<4>(), param_.layout.value(), kNCHW);
+    dshape[0] = oshape[0];
+    if (oshape[2] != -1 && param_.stride[0] == 1) {
+      dshape[2] = oshape[2] + dilated_ksize_y - 1 - 2 * param_.pad[0];
+    }
+    if (oshape[3] != -1 && param_.stride[1] == 1) {
+      dshape[3] = oshape[3] + dilated_ksize_x - 1 - 2 * param_.pad[1];
+    }
+    SHAPE_ASSIGN_CHECK(*in_shape, spconv::kData,
+        ConvertLayout(dshape, kNCHW, param_.layout.value()));
+    // Check whether the kernel sizes are valid
+    if (dshape[2] != -1) {
+      CHECK_LE(dilated_ksize_y, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
+    }
+    if (dshape[3] != -1) {
+      CHECK_LE(dilated_ksize_x, AddPad(dshape[3], param_.pad[1])) << "kernel size exceed input";
+    }
+    return true;
+  } else if (param_.kernel.ndim() == 3) {
+    // 3d conv
+    CHECK_EQ(dshp.ndim(), 5U) \
+      << "Input data should be 5D in batch-num_filter-depth-y-x";
+    Shape<5> dshape = ConvertLayout(dshp.get<5>(), param_.layout.value(), kNCDHW);
+    CHECK(!shape_is_known(dshape) || dshape[2] % param_.stride[0] == 0)
+      << "For spatial parallel convolution D needs to be divisible by the corresponding stride ("
+      << dshape[2] << " vs " << param_.stride[0] << ")";
+    Shape<5> wshape = Shape5(param_.num_filter / param_.num_group,
+        mxnet::dim_size_is_known(dshape, 1) ? dshape[1] / param_.num_group : -1,
+        param_.kernel[0], param_.kernel[1], param_.kernel[2]);
+    wshape = ConvertLayout(wshape, kNCDHW, param_.layout.value());
+    if (wshape[0] >= 0) {
+      wshape[0] *= param_.num_group;
+    }
+    SHAPE_ASSIGN_CHECK(*in_shape, spconv::kWeight, wshape);
+    if (!param_.no_bias) {
+      SHAPE_ASSIGN_CHECK(*in_shape, spconv::kBias, Shape1(param_.num_filter));
+    }
+
+    const index_t dilated_ksize_d = param_.DilatedKernelSize(0);
+    const index_t dilated_ksize_y = param_.DilatedKernelSize(1);
+    const index_t dilated_ksize_x = param_.DilatedKernelSize(2);
+    if (dshape[1] >= 0) {
+      CHECK_EQ(dshape[1] % param_.num_group, 0U) << "input num_filter must divide group size";
+    }
+    CHECK_EQ(param_.num_filter % param_.num_group, 0U)
+      << "output num_filter must divide group size";
+    CHECK_GT(param_.kernel.Size(), 0U) \
+      << "incorrect kernel size: " << param_.kernel;
+    CHECK_GT(param_.stride.Size(), 0U) \
+      << "incorrect stride size: " << param_.stride;
+    CHECK_GT(param_.dilate.Size(), 0U) \
+      << "incorrect dilate size: " << param_.dilate;
+    Shape<5> oshape;
+    oshape[0] = dshape[0];
+    oshape[1] = param_.num_filter;
+    oshape[2] = dshape[2] != -1 ?
+      (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_d) / param_.stride[0] + 1 : -1;
+    oshape[3] = dshape[3] != -1 ?
+      (AddPad(dshape[3], param_.pad[1]) - dilated_ksize_y) / param_.stride[1] + 1 : -1;
+    oshape[4] = dshape[4] != -1 ?
+      (AddPad(dshape[4], param_.pad[2]) - dilated_ksize_x) / param_.stride[2] + 1 : -1;
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCDHW, param_.layout.value()));
+    // Perform incomplete shape inference. Fill in the missing values in data shape.
+    // 1) We can always fill in the batch_size.
+    // 2) We can back-calculate the input depth/height/width if the corresponding stride is 1.
+    oshape = ConvertLayout((*out_shape)[0].get<5>(), param_.layout.value(), kNCDHW);
+    dshape[0] = oshape[0];
+    if (oshape[2] != -1 && param_.stride[0] == 1) {
+      dshape[2] = oshape[2] + dilated_ksize_d - 1 - 2 * param_.pad[0];
+    }
+    if (oshape[3] != -1 && param_.stride[1] == 1) {
+      dshape[3] = oshape[3] + dilated_ksize_y - 1 - 2 * param_.pad[1];
+    }
+    if (oshape[4] != -1 && param_.stride[2] == 1) {
+      dshape[4] = oshape[4] + dilated_ksize_x - 1 - 2 * param_.pad[2];
+    }
+    SHAPE_ASSIGN_CHECK(*in_shape, spconv::kData,
+        ConvertLayout(dshape, kNCDHW, param_.layout.value()));
+    // Check whether the kernel sizes are valid
+    if (dshape[2] != -1) {
+      CHECK_LE(dilated_ksize_d, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
+    }
+    if (dshape[3] != -1) {
+      CHECK_LE(dilated_ksize_y, AddPad(dshape[3], param_.pad[1])) << "kernel size exceed input";
+    }
+    if (dshape[4] != -1) {
+      CHECK_LE(dilated_ksize_x, AddPad(dshape[4], param_.pad[2])) << "kernel size exceed input";
+    }
+    return true;
+  } else {
+    LOG(FATAL) << "Unknown convolution type";
+    return false;
+  }
+}
+
+static bool SPConvolutionType(const nnvm::NodeAttrs& attrs,
+                              std::vector<int> *in_type, std::vector<int> *out_type) {
+  const SpatialParallelConvolutionParam& param_ =
+      nnvm::get<SpatialParallelConvolutionParam>(attrs.parsed);
+  CHECK_GE(in_type->size(), 1U);
+  int dtype = (*in_type)[0];
+  if (type_is_none(dtype)) {
+    if (out_type->size() == 0 || type_is_none((*out_type)[0])) {
+      return false;
+    } else {
+      dtype = (*out_type)[0];
+    }
+  } else {
+    out_type->clear();
+    out_type->push_back(dtype);
+  }
+  for (size_t i = 0; i < in_type->size() - 1; ++i) {
+    if ((*in_type)[i] == -1) {
+      (*in_type)[i] = dtype;
+    } else {
+      UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments(param_)[i]);
+    }
+  }
+  return true;
+}
+
+void SPConvolutionParamParser(nnvm::NodeAttrs* attrs) {
+  using namespace mshadow;
+  SpatialParallelConvolutionParam param_;
+  try {
+    param_.Init(attrs->dict);
+  } catch (const dmlc::ParamError& e) {
+    std::ostringstream os;
+    os << e.what();
+    os << ", in operator " << attrs->op->name << "("
+       << "name=\"" << attrs->name << "\"";
+    for (const auto& k : attrs->dict) {
+      os << ", " << k.first << "=\"" << k.second << "\"";
+    }
+    os << ")";
+    throw dmlc::ParamError(os.str());
+  }
+
+  if (param_.kernel.ndim() == 1) {
+    param_.layout = param_.layout? param_.layout.value() : mshadow::kNWC;
+    if (param_.stride.ndim() == 0) param_.stride = Shape1(1);
+    if (param_.dilate.ndim() == 0) param_.dilate = Shape1(1);
+    if (param_.pad.ndim() == 0) param_.pad = Shape1(0);
+  } else if (param_.kernel.ndim() == 2) {
+    param_.layout = param_.layout ? param_.layout.value() : mshadow::kNHWC;
+    if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
+    if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
+    if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
+  } else {
+    CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D convolution not supported";
+    param_.layout = param_.layout ? param_.layout.value(): mshadow::kNDHWC;
+    if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
+    if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
+    if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
+  }
+  CHECK_EQ(param_.kernel.ndim(), param_.stride.ndim())
+    << "Stride must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while stride is "
+    << param_.stride;
+  CHECK_EQ(param_.kernel.ndim(), param_.dilate.ndim())
+    << "Dilate must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while dilate is "
+    << param_.dilate;
+  CHECK_EQ(param_.kernel.ndim(), param_.pad.ndim())
+    << "Padding must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while padding is "
+    << param_.pad;
+  attrs->parsed = std::move(param_);
+}
+
+struct SPConvolutionGrad {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
+    const SpatialParallelConvolutionParam& param =
+        nnvm::get<SpatialParallelConvolutionParam>(n->attrs.parsed);
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    heads.push_back(n->inputs[spconv::kData]);
+    heads.push_back(n->inputs[spconv::kWeight]);
+    if (!param.no_bias)
+      heads.push_back(n->inputs[spconv::kBias]);
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
+
+NNVM_REGISTER_OP(SpatialParallelConvolution)
+.add_alias("_npx_spatial_parallel_convolution")
+.describe(R"code(Compute *N*-D convolution on *(N+2)*-D input,
+using data stored on multiple GPUs, spatially divided in the
+outermost dimension.
+
+In the 2-D convolution, given input data with shape *(batch_size,
+height, width, channel)*, the output is computed by
+
+.. math::
+
+   out[n,i,:,:] = bias[i] + \sum_{j=0}^{channel} data[n,:,:,j] \star
+   weight[i,:,:,j]
+
+where :math:`\star` is the 2-D cross-correlation operator.
+
+For general 2-D convolution, the shapes are
+
+- **data**: *(batch_size, height, width, channel)*
+- **weight**: *(num_filter, kernel[0], kernel[1], channel)*
+- **bias**: *(num_filter,)*
+- **out**: *(batch_size, out_height, out_width, num_filter)*.
+
+Define::
+
+  f(x,k,p,s,d) = floor((x+2*p-d*(k-1)-1)/s)+1
+
+then we have::
+
+  out_height=f(height, kernel[0], pad[0], stride[0], dilate[0])
+  out_width=f(width, kernel[1], pad[1], stride[1], dilate[1])
+
+If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
+
+The default data ``layout`` is *NHWC*, namely *(batch_size, height,
+width, channel)*.
+
+If ``num_group`` is larger than 1, denoted by *g*, then split the input ``data``
+evenly into *g* parts along the channel axis, and also evenly split ``weight``
+along the first dimension. Next compute the convolution on the *i*-th part of
+the data with the *i*-th weight part. The output is obtained by concatenating all
+the *g* results.
+
+1-D convolution does not have *height* dimension but only *width* in space.
+
+- **data**: *(batch_size, width, channel)*
+- **weight**: *(num_filter, kernel[0], channel)*
+- **bias**: *(num_filter,)*
+- **out**: *(batch_size, out_width, num_filter)*.
+
+3-D convolution adds an additional *depth* dimension besides *height* and
+*width*. The shapes are
+
+- **data**: *(batch_size, depth, height, width, channel)*
+- **weight**: *(num_filter, kernel[0], kernel[1], kernel[2], channel)*
+- **bias**: *(num_filter,)*
+- **out**: *(batch_size, out_depth, out_height, out_width, num_filter)*.
+
+Both ``weight`` and ``bias`` are learnable parameters.
+
+There are other options to tune the performance.
+
+- **cudnn_tune**: enable this option leads to higher startup time but may give
+  faster speed. Options are
+
+  - **off**: no tuning
+  - **limited_workspace**:run test and pick the fastest algorithm that doesn't
+    exceed workspace limit.
+  - **fastest**: pick the fastest algorithm and ignore workspace limit.
+  - **None** (default): the behavior is determined by environment variable
+    ``MXNET_CUDNN_AUTOTUNE_DEFAULT``. 0 for off, 1 for limited workspace
+    (default), 2 for fastest.
+
+- **workspace**: A large number leads to more (GPU) memory usage but may improve
+  the performance.
+
+)code" ADD_FILELINE)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const SpatialParallelConvolutionParam& params =
+    nnvm::get<SpatialParallelConvolutionParam>(attrs.parsed);
+  return params.no_bias ? 2 : 3;
+})
+.set_num_outputs(1)
+.set_attr_parser(SPConvolutionParamParser)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+  const SpatialParallelConvolutionParam& params =
+    nnvm::get<SpatialParallelConvolutionParam>(attrs.parsed);
+  if (params.no_bias)
+    return std::vector<std::string>{"data", "weight"};
+  else
+    return std::vector<std::string>{"data", "weight", "bias"};
+})
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", SPConvolutionShape)
+.set_attr<nnvm::FInferType>("FInferType", SPConvolutionType)
+.set_attr<nnvm::FGradient>("FGradient", SPConvolutionGrad{"_backward_SPConvolution"})
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace,
+                                      ResourceRequest::kMultiGPUComm};
+})
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+.add_argument("data", "NDArray-or-Symbol", "Input data to the ConvolutionOp.")
+.add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
+.add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
+.add_arguments(SpatialParallelConvolutionParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_SPConvolution)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const SpatialParallelConvolutionParam& params =
+    nnvm::get<SpatialParallelConvolutionParam>(attrs.parsed);
+  return params.no_bias ? 3 : 4;
+})
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const SpatialParallelConvolutionParam& params =
+    nnvm::get<SpatialParallelConvolutionParam>(attrs.parsed);
+  return params.no_bias ? 2 : 3;
+})
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace,
+                                      ResourceRequest::kMultiGPUComm};
+})
+.set_attr_parser(SPConvolutionParamParser);
+
+}  // namespace op
+}  // namespace mxnet

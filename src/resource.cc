@@ -166,6 +166,17 @@ class ResourceManagerImpl : public ResourceManager {
           })->GetNext();
         }
 #endif  // MXNET_USE_CUDNN == 1
+#if MXNET_USE_CUDA
+        case ResourceRequest::kMultiGPUComm: {
+          return *gpu_comm_.Get(ctx.dev_id, []() {
+              Resource* res = new Resource;
+              res->var = Engine::Get()->NewVariable();
+              res->ptr_ = nullptr;
+              res->req = ResourceRequest(ResourceRequest::kMultiGPUComm);
+              return res;
+            });
+        }
+#endif
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
 #else
@@ -464,6 +475,8 @@ class ResourceManagerImpl : public ResourceManager {
   common::LazyAllocArray<ResourceTempSpace<ResourceRequest::kTempSpace>> gpu_space_;
   /*! \brief GPU parallel (on device) random number resources */
   common::LazyAllocArray<ResourceParallelRandom<gpu> > gpu_parallel_rand_;
+  /*! \brief Resource for tracking multi GPU communication */
+  common::LazyAllocArray<Resource> gpu_comm_;
 #if MXNET_USE_CUDNN == 1
   /*! \brief number of copies in GPU cudnn dropout descriptor resources */
   int gpu_cudnn_dropout_state_copy_;

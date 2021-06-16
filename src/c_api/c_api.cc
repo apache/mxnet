@@ -61,6 +61,9 @@
 #include "../serialization/cnpy.h"
 #include "miniz.h"
 #include "nnvm/pass_functions.h"
+#if MXNET_USE_CUDA
+#include "../common/cuda/utils.h"
+#endif
 
 using namespace mxnet;
 
@@ -1610,6 +1613,16 @@ int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size) {
 int MXGetGPUCount(int* out) {
   API_BEGIN();
   *out = Context::GetGPUCount();
+  API_END();
+}
+
+int MXGetGPUSMArch(int dev, int* out) {
+  API_BEGIN();
+#if MXNET_USE_CUDA == 1
+  *out = SMArch(dev);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 to query CUDA device properties.";
+#endif
   API_END();
 }
 
