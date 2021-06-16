@@ -32,7 +32,7 @@ fi
 
 resnet_18_data_path="$data_path/resnet-18"
 if [ ! -f "$resnet_18_data_path/resnet-18-0000.params" ]; then
-    wget https://s3.us-east-2.amazonaws.com/scala-infer-models/resnet-18/resnet-18-symbol.json -P $resnet_18_data_path
-    wget https://s3.us-east-2.amazonaws.com/scala-infer-models/resnet-18/resnet-18-0000.params -P $resnet_18_data_path
-    wget https://s3.us-east-2.amazonaws.com/scala-infer-models/resnet-18/synset.txt -P $resnet_18_data_path
+    wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-symbol.json -P $resnet_18_data_path
+    wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-0000.params -P $resnet_18_data_path
+    wget http://data.mxnet.io/models/imagenet/synset.txt -P $resnet_18_data_path
 fi

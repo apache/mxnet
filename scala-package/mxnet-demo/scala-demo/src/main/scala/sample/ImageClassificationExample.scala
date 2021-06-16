@@ -49,17 +49,17 @@ object ImageClassificationExample {
     val imgURL = "https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg"
     downloadUrl(imgURL, imgPath)
 
-    val baseUrl = "https://s3.us-east-2.amazonaws.com/scala-infer-models"
+    val baseUrl = "http://data.mxnet.io/models/imagenet/"
     var tmpPath = tempDirPath + "/resnet18/resnet-18-symbol.json"
-    var tmpUrl = baseUrl + "/resnet-18/resnet-18-symbol.json"
+    var tmpUrl = baseUrl + "resnet/18-layers/resnet-18-symbol.json"
     downloadUrl(tmpUrl, tmpPath)
 
     tmpPath = tempDirPath + "/resnet18/resnet-18-0000.params"
-    tmpUrl = baseUrl + "/resnet-18/resnet-18-0000.params"
+    tmpUrl = baseUrl + "resnet/18-layers/resnet-18-0000.params"
     downloadUrl(tmpUrl, tmpPath)
 
     tmpPath = tempDirPath + "/resnet18/synset.txt"
-    tmpUrl = baseUrl + "/resnet-18/synset.txt"
+    tmpUrl = baseUrl + "synset.txt"
     downloadUrl(tmpUrl, tmpPath)
 
     (imgPath, tempDirPath + "/resnet18/resnet-18")
