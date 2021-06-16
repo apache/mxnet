@@ -489,7 +489,9 @@ class WhileLoopState: public LoopState {
   // indicates to which index the output of `func' will be copied to the input of `cond'
   std::vector<int> oi_map;
 
-  WhileLoopState(const NPXWhileLoopParam &params, const nnvm::Symbol &cond, const nnvm::Symbol &func) :
+  WhileLoopState(const NPXWhileLoopParam &params,
+                 const nnvm::Symbol &cond,
+                 const nnvm::Symbol &func) :
                  LoopState(func),
                  params(params),
                  n_iterations(0U),

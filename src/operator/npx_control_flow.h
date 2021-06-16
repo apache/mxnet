@@ -17,6 +17,11 @@
  * under the License.
  */
 
+#ifndef MXNET_OPERATOR_CONTROL_FLOW_H_
+#define MXNET_OPERATOR_CONTROL_FLOW_H_
+
+#include <vector>
+#include <string>
 #include <mxnet/io.h>
 #include <mxnet/base.h>
 #include <dmlc/optional.h>
@@ -144,3 +149,5 @@ struct NPXCondParam : public dmlc::Parameter<NPXCondParam> {
 
 }  // namespace op
 }  // namespace mxnet
+
+#endif  // MXNET_OPERATOR_CONTROL_FLOW_H_
