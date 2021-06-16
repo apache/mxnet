@@ -18,6 +18,7 @@
 """Module for the ops not belonging to the official numpy package."""
 
 from . import _op
+from . import control_flow
 from . import image
 from . import random
 from . import _register

@@ -190,5 +190,5 @@ class HybridRandomApply(HybridSequential):
         self.p = p
 
     def forward(self, x, *args):
-        cond = self.p < np.random.uniform(low=0, high=1, size=1)
-        return npx.cond(cond, x, self.transforms(x))
+        cond = lambda p: p < np.random.uniform(low=0, high=1, size=1)
+        return npx.cond(cond, x, self.transforms(x), self.p)

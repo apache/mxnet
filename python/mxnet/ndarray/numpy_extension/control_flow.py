@@ -125,7 +125,7 @@ def _get_unique_subgraph_name(subgraph_name):
 # This construct a subgraph for given output nodes.
 # If an output node is one of the input nodes, we call identity to make sure
 # that outputs nodes are different from input nodes.
-def _construct_subgraph(sym_out, sym_states, name):
+def _construct_subgraph(sym_out, sym_states):
     sym_out = _as_list(sym_out)
     sym_states = _as_list(sym_states)
     all_outputs = []
@@ -260,7 +260,7 @@ def foreach(body, data, init_states, name="foreach"):
         num_outputs = num_out_data + num_states
         sym_out = [dc.get_symbol(out_data) for out_data in flatten_out]
         sym_states = [dc.get_symbol(out_state) for out_state in flatten_out_state]
-        g = _construct_subgraph(sym_out, sym_states, name)
+        g = _construct_subgraph(sym_out, sym_states)
 
     params_names = []
     params_data = []
@@ -273,18 +273,18 @@ def foreach(body, data, init_states, name="foreach"):
 
     in_data, in_states, params = [], [], []
     in_data_locs, in_state_locs, remain_locs = [], [], []
-    for i, name in enumerate(subg_input_names):
-        if name in data_names:
+    for i, sub_name in enumerate(subg_input_names):
+        if sub_name in data_names:
             in_data_locs.append(i)
-            idx = data_names.index(name)
+            idx = data_names.index(sub_name)
             in_data.append(flatten_data[idx])
-        elif name in state_names:
+        elif sub_name in state_names:
             in_state_locs.append(i)
-            idx = state_names.index(name)
+            idx = state_names.index(sub_name)
             in_states.append(flatten_state[idx])
-        elif name in params_names:
+        elif sub_name in params_names:
             remain_locs.append(i)
-            idx = params_names.index(name)
+            idx = params_names.index(sub_name)
             params.append(params_data[idx])
         else:
             raise AssertionError("the data arrays have to be used in the loop body")
@@ -472,7 +472,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             num_out_data = len(outputs)
             num_outputs = len(outputs) + len(final_state)
             # group all outputs of graph_func
-            graph = _construct_subgraph(outputs, final_state, subgraph_name)
+            graph = _construct_subgraph(outputs, final_state)
         return graph, num_out_data, num_outputs, out_fmt, var_fmt
 
     flatten_loop_vars, init_loop_var_fmt = _flatten(loop_vars, "while loop_vars")
@@ -636,10 +636,10 @@ def cond(pred, then_func, else_func, inputs, name="cond"):
             outputs, out_fmt = _flatten(outputs, "cond outputs")
             num_outputs = len(outputs)
             sym_out = [dc.get_symbol(out_data) for out_data in outputs]
-            graph = _construct_subgraph(sym_out, [], subgraph_name)
+            graph = _construct_subgraph(sym_out, [])
         return graph, num_outputs, out_fmt
 
-    flatten_inputs, flatten_inputs_fmt = _flatten(inputs, "while loop_vars")
+    flatten_inputs, _ = _flatten(inputs, "while loop_vars")
 
     def _union_inputs(*graphs):
         # Given a list of graphs, each whose inputs are either from input_vars or other variables.
