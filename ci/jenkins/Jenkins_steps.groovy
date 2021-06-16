@@ -48,6 +48,12 @@ def python3_ut(docker_container_name) {
   }
 }
 
+def python3_ut_onnx(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_onnx', false)
+  }
+}
+
 def python3_ut_onednn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_onednn', false)
@@ -718,6 +724,22 @@ def test_unix_python3_cpu_no_tvm_op(lib_name) {
           } finally {
             utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_cpu_no_tvm_op_unittest.xml')
             utils.collect_test_results_unix('tests_quantization.xml', 'tests_python3_cpu_no_tvm_op_quantization.xml')
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_onnx_cpu(lib_name) {
+    return ['Python3: ONNX-CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-onnx-cpu') {
+          try {
+            utils.unpack_and_init(lib_name, mx_lib, true)
+            python3_ut_onnx('ubuntu_cpu')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('onnx_unittest.xml', 'tests_python3_onnx_cpu_unittest.xml')
           }
         }
       }
