@@ -22,5 +22,6 @@ from . import image
 from . import random
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
+from .control_flow import *  # pylint: disable=wildcard-import
 
-__all__ = _op.__all__
+__all__ = _op.__all__ + control_flow.__all__

@@ -15,47 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Namespace for registering numpy_extension ops for imperative programming."""
+"""Namespace for registering control flow ops for imperative programming."""
 
+from ..ndarray import numpy_extension as _mx_nd_npx
 from ..util import set_module
-from ..ndarray import NDArray
-from ..base import _as_list
-from .. import numpy as _mx_np
 
 
 __all__ = ["foreach", "while_loop", "cond"]
-
-
-def _flatten(args, inout_str):
-    if isinstance(args, NDArray):
-        return [args], int(0)
-
-    assert isinstance(args, (list, tuple)), \
-        "%s must be (nested) list of NDArray, " \
-        "but got %s of type %s"%(inout_str, str(args), str(type(args)))
-    flat = []
-    fmts = []
-    for i in args:
-        arg, fmt = _flatten(i, inout_str)
-        flat.extend(arg)
-        fmts.append(fmt)
-    return flat, fmts
-
-
-def _regroup(args, fmt):
-    if isinstance(fmt, int):
-        if fmt == 0:
-            return args[0], args[1:]
-        return args[:fmt], args[fmt:]
-
-    assert isinstance(args, (list, tuple)), \
-        "output must be (nested) list of NDArray, " \
-        "but got %s of type %s"%(str(args), str(type(args)))
-    ret = []
-    for i in fmt:
-        res, args = _regroup(args, i)
-        ret.append(res)
-    return ret, args
 
 
 @set_module('mxnet.numpy_extension')
@@ -92,7 +58,7 @@ def foreach(body, data, init_states):
 
     Parameters
     ----------
-    body : a Python function.
+    body : HybridBlock.
         Define computation in an iteration.
     data: an NDArray or a list of NDArrays.
         The input data.
@@ -113,45 +79,8 @@ def foreach(body, data, init_states):
     >>> states = [mx.np.random.uniform(size=(10))]
     >>> outs, states = npx.control_flow.foreach(step, data, states)
     """
-
-    def check_input(inputs, in_type, msg):
-        is_NDArray_or_list = True
-        if isinstance(inputs, list):
-            for i in inputs:
-                if not isinstance(i, in_type):
-                    is_NDArray_or_list = False
-                    break
-        else:
-            is_NDArray_or_list = isinstance(inputs, in_type)
-        assert is_NDArray_or_list, msg
-
-    flatten, _ = _flatten(data, "foreach input")
-    check_input(flatten, NDArray,
-                "data should be an NDArray or a nested list of NDArrays")
-    flatten, _ = _flatten(init_states, "foreach states")
-    check_input(flatten, NDArray,
-                "init_states should be an NDArray or a nested list of NDArrays")
-
-    not_data_list = isinstance(data, NDArray)
-    num_iters = data.shape[0] if not_data_list else data[0].shape[0]
-    states = init_states
-    outputs = []
-    for i in range(num_iters):
-        if not_data_list:
-            eles = data[i]
-        else:
-            eles = [d[i] for d in data]
-        outs, states = body(eles, states)
-        outs, out_fmt = _flatten(outs, "foreach output")
-        outputs.append(outs)
-    outputs = zip(*outputs)
-    tmp_outputs = []
-    for out in outputs:
-        tmp_outputs.append(_mx_np.stack(out))
-    outputs = tmp_outputs
-    outputs, _ = _regroup(outputs, out_fmt)
-
-    return (outputs, states)
+    
+    return _mx_nd_npx.foreach(body, data, init_states)
 
 
 #pylint: disable=W0621
@@ -225,105 +154,24 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     >>> loop_vars = (mx.np.array([0], dtype="int64"), mx.np.array([1], dtype="int64"))
     >>> outputs, states = mx.npx.while_loop(cond, func, loop_vars, max_iterations=10)
     >>> outputs
-    [
-    [[ 1]
-    [ 2]
-    [ 4]
-    [ 7]
-    [11]
-    [16]
-    [...]  # undefined value
-    [...]
-    [...]
-    [...]]
-    <NDArray 6x1 @cpu(0)>]
+    [array([[ 1],
+           [ 2],
+           [ 4],
+           [ 7],
+           [11],
+           [16],
+           [ 0],
+           [ 0],
+           [ 0],
+           [ 0]], dtype=int64)]
     >>> states
-    [
-    [6]
-    <NDArray 1 @cpu(0)>,
-    [16]
-    <NDArray 1 @cpu(0)>]
+    [array([6], dtype=int64), array([16], dtype=int64)]
     """
-    def _to_python_scalar(inputs, type_, name):
-        """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,
-        to the given type
-        """
-        if isinstance(inputs, NDArray):
-            inputs = inputs.item()
-        try:
-            inputs = type_(inputs)
-        except:
-            raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
-        return inputs
-
-    def _func_wrapper(loop_vars):
-        """This wrapper unifies
-             "func: loop_vars -> new_loop_vars"
-         and "func: loop_vars -> (step_output, new_loop_vars)"
-        into "func: loop_vars -> (None or tuple of step_outputs, tuple of new_loop_vars)
-        """
-        step_output, new_loop_vars = func(*loop_vars)
-        if step_output is None:
-            step_output = []
-        if new_loop_vars is None:
-            new_loop_vars = []
-        if isinstance(step_output, tuple):
-            step_output = list(step_output)
-        if isinstance(new_loop_vars, tuple):
-            new_loop_vars = list(new_loop_vars)
-        new_loop_vars = _as_list(new_loop_vars)
-        if len(loop_vars) != len(new_loop_vars):
-            raise ValueError("The length of loop_vars should be consistent during the loop")
-        return step_output, new_loop_vars
-
-    if max_iterations is None:
-        raise ValueError("max_iterations should be specified")
-    max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
-    # It should be work as fine if loop_vars are empty I guess,
-    # but it is semantically unnecessary to include this case.
-    if len(loop_vars) == 0:
-        raise ValueError("loop_vars should contain at least one element")
-
-    steps = 0
-    outputs = []
-    # there might not be an iteration.
-    out_fmt = None
-    not_loop_var_list = isinstance(loop_vars, NDArray)
-    loop_vars = _as_list(loop_vars)
-    while steps < max_iterations and \
-            _to_python_scalar(cond(*loop_vars), bool, "Return value of cond"): # loop condition
-        step_output, loop_vars = _func_wrapper(loop_vars)
-        step_output, out_fmt = _flatten(step_output, "while output")
-        outputs.append(step_output)
-        steps += 1
-        if len(outputs) != steps or len(step_output) != len(outputs[0]):
-            raise ValueError("Number of elements in step_output should be the same in each step")
-    stacked_outputs = []
-    for i_th, items in enumerate(zip(*outputs), 1):
-        # `mx.ndarray.pad` only support 4-D or 5-D inputs for now
-        # so we could not use it.
-        items = [_mx_np.expand_dims(x, 0) for x in items]
-        try:
-            concate_outputs = _mx_np.concatenate(items, axis=0)
-            print(concate_outputs.shape)
-            if steps != max_iterations and items:
-                to_pad = max_iterations - steps
-                concate_outputs = _mx_np.pad(concate_outputs, pad_width=((0, to_pad), (0, 0)))
-            stacked_outputs.append(concate_outputs)
-        except ValueError:
-            raise ValueError("\n".join(
-                ["Shapes of %d-th elements in step_outputs are inconsistent, which are:" % i_th] +
-                ["  Step %d, shape is %s" % (i, str(x.shape)) for i, x in enumerate(items)]
-            ))
-    if out_fmt is not None:
-        stacked_outputs, _ = _regroup(stacked_outputs, out_fmt)
-    if not_loop_var_list:
-        loop_vars = loop_vars[0]
-    return stacked_outputs, loop_vars
+    return _mx_nd_npx.while_loop(cond, func, loop_vars, max_iterations=max_iterations)
 
 
 @set_module('mxnet.numpy_extension')
-def cond(pred, then_func, else_func):
+def cond(pred, then_func, else_func, inputs, name="cond"):
     """Run an if-then-else using user-defined condition and computation
 
     This operator simulates a if-like branch which chooses to do one of
@@ -349,7 +197,7 @@ def cond(pred, then_func, else_func):
 
     Parameters
     ----------
-    pred: a MXNet NDArray representing a scalar.
+    pred: a Python function.
         The branch condition.
     then_func: a Python function.
         The computation to be executed if `pred` is true.
@@ -362,29 +210,12 @@ def cond(pred, then_func, else_func):
 
     Examples
     --------
-    >>> a, b = mx.nd.array([1]), mx.nd.array([2])
+    >>> a, b = mx.np.array([1]), mx.np.array([2])
     >>> pred = a * b < 5
     >>> then_func = lambda: (a + 5) * (b + 5)
     >>> else_func = lambda: (a - 5) * (b - 5)
-    >>> outputs = mx.nd.contrib.cond(pred, then_func, else_func)
+    >>> outputs = mx.npx.cond(pred, then_func, else_func)
     >>> outputs[0]
-    [42.]
-    <NDArray 1 @cpu(0)>
+    42.0
     """
-    def _to_python_scalar(inputs, type_, name):
-        """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,
-        to the given type
-        """
-        if hasattr(inputs, "asscalar"):
-            inputs = inputs.item()
-        try:
-            inputs = type_(inputs)
-        except:
-            raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
-        return inputs
-
-    branch = _to_python_scalar(pred, bool, "pred")
-    if branch:
-        return then_func()
-    else:
-        return else_func()
+    return _mx_nd_npx.cond(pred, then_func, else_func, inputs, name=name)

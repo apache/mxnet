@@ -21,6 +21,8 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.test_utils import *
 from mxnet.base import _as_list
+from collections import defaultdict
+from mxnet.attribute import AttrScope
 
 @mx.util.use_np
 def test_while_loop_simple_forward():
@@ -147,8 +149,8 @@ def test_cut_subgraph_foreach():
             out1, states1 = mx.npx.foreach(step1, inputs, states)
             out2, states2 = mx.npx.foreach(step1, out1, states)
             def step2(data, states):
-                return data + states[0], states1
-            out, states = mx.npx.foreach(step2, out2, states)
+                return data + states[0], states
+            out, states = mx.npx.foreach(step2, out2, states1)
             return out
 
     data = mx.np.random.normal(loc=0, scale=1, size=(5, 10))
@@ -193,7 +195,7 @@ def test_uniq_name():
                 return data + 1, states
             out1, states1 = mx.npx.foreach(step1, inputs, states)
             def step2(data, states):
-                return data, [states[0] + states1[0] + mx.np.squeeze(mx.npx.slice(out1, begin=0, end=1))]
+                return data, [states[0] + states[0] + mx.np.squeeze(mx.npx.slice(data, begin=0, end=1))]
             # The input variables have the same symbol names.
             # The free variables have the same symbol names as the input variables.
             out, states = mx.npx.foreach(step2, out1, states1)
@@ -208,7 +210,7 @@ def test_uniq_name():
                 s = mx.np.squeeze(mx.npx.slice(state1, begin=0, end=1))
                 return s == s
             def step(state1, state2):
-                return state1 + 1, [state1, state2]
+                return state1 + 1, [state1 + 1, state2 + 1]
             states = [states[0], states[0] + 1]
             out1, states1 = mx.npx.while_loop(cond, step, states, max_iterations=5)
             # The input variables have the same symbol name.
@@ -228,13 +230,14 @@ def test_uniq_name():
             states = [states[0], states[0] + 1]
             out1, states1 = mx.npx.while_loop(cond, step1, states, max_iterations=5)
             def step2(state1, state2):
-                return state1 + 1, [state1 + states1[0], state2 + states1[1]]
+                return state1 + 1, [state1 + state1[0], state2 + state1[1]]
             # The input variables have the same symbol name.
             out, states = mx.npx.while_loop(cond, step2, states1, max_iterations=5)
             return out
 
     TestLayers = [ForeachLayer1, ForeachLayer2,
             WhileLayer1, WhileLayer2]
+    # TestLayers = [WhileLayer1]
 
     data = mx.np.random.normal(loc=0, scale=1, size=(2, 5))
     states = mx.np.random.normal(loc=0, scale=1, size=(5))
@@ -269,7 +272,7 @@ def test_cut_subgraph_while_loop():
                 max_iterations=10,
             )
             out2, data2 = mx.npx.while_loop(
-                cond=lambda i: data1[0],
+                cond=lambda i: i,
                 func=lambda i: (None, (i + 1, )),
                 loop_vars=data1[0],
                 max_iterations=10,
@@ -297,14 +300,16 @@ def test_cut_subgraph_cond():
             super(TestLayer, self).__init__()
         def forward(self, data):
             data1 = mx.npx.cond(
-                data > 0.5,
-                then_func=lambda: data * 2,
-                else_func=lambda: data * 3,
+                pred=lambda data: data > 0.5,
+                then_func=lambda data: data * 2,
+                else_func=lambda data: data * 3,
+                inputs=data,
             )
             data2 = mx.npx.cond(
-                data1 > 0.5,
-                then_func=lambda: data1 * 2,
-                else_func=lambda: data1 * 3,
+                pred=lambda data: data > 0.5,
+                then_func=lambda data: data * 2,
+                else_func=lambda data: data * 3,
+                inputs=data1,
             )
             return data2
     data = mx.np.random.normal(loc=0, scale=1, size=(1, ))
@@ -541,12 +546,12 @@ def test_output_format_cond():
             super(TestLayer1, self).__init__()
             self.func = func
         def forward(self, data):
-            def then_func():
+            def then_func(data):
                 return self.func(data)
-            def else_func():
+            def else_func(data):
                 return self.func(data)
-            return mx.npx.cond(mx.npx.slice(data, begin=0, end=1),
-                    then_func, else_func)
+            return mx.npx.cond(lambda data: mx.npx.slice(data, begin=0, end=1),
+                    then_func, else_func, data)
 
     def func1(data):
         return data
@@ -572,6 +577,53 @@ def test_output_format_cond():
         out2 = _as_list(out2)
         for i in range(len(out1)):
             assert_almost_equal(out1[i].asnumpy(), out2[i].asnumpy(), rtol=0.001, atol=0.0001)
+
+
+@mx.util.use_np
+def test_scope():
+    class TestBlock1(gluon.HybridBlock):
+        def __init__(self):
+            super(TestBlock1, self).__init__()
+
+        def forward(self, data):
+            (new_data, ) = mx.npx.cond(
+                pred=lambda data: data > 0.5,
+                then_func=lambda data: data * 2,
+                else_func=lambda data: data * 3,
+                inputs=data,
+                name="my_cond",
+            )
+            return new_data
+
+    class TestBlock2(gluon.HybridBlock):
+        def __init__(self):
+            super(TestBlock2, self).__init__()
+
+        def forward(self, data):
+            (new_data, ) = mx.npx.cond(
+                pred=lambda data: data > 0.5,
+                then_func=lambda data: data * 2,
+                else_func=lambda data: data * 3,
+                inputs=data,
+                name="my_cond",
+            )
+            return new_data
+
+    AttrScope._subgraph_names = defaultdict(int)
+    data = mx.np.random.normal(loc=0, scale=1, size=(1, ))
+    with AttrScope(__subgraph_name__="my_cond"):
+        block1 = TestBlock1()
+        block1.initialize(ctx=default_context())
+        block1.hybridize()
+        _ = block1(data)
+        block2 = TestBlock2()
+        block2.initialize(ctx=default_context())
+        block2.hybridize()
+        _ = block2(data)
+        assert len(AttrScope._subgraph_names) == 3
+        assert AttrScope._subgraph_names['my_cond$my_cond_else'] == 2
+        assert AttrScope._subgraph_names['my_cond$my_cond_pred'] == 2
+        assert AttrScope._subgraph_names['my_cond$my_cond_then'] == 2
 
 
 class RNNLayer(gluon.HybridBlock):
