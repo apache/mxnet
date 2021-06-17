@@ -38,13 +38,13 @@ public class PredictorExampleTest {
         String tempDirPath = System.getProperty("java.io.tmpdir");
         logger.info("tempDirPath: %s".format(tempDirPath));
 
-        String baseUrl = "https://s3.us-east-2.amazonaws.com/scala-infer-models";
+        String baseUrl = "http://data.mxnet.io/models/imagenet/";
 
-        Util.downloadUrl(baseUrl + "/resnet-18/resnet-18-symbol.json",
+        Util.downloadUrl(baseUrl + "resnet/18-layers/resnet-18-symbol.json",
                 tempDirPath + "/resnet18/resnet-18-symbol.json", 3);
-        Util.downloadUrl(baseUrl + "/resnet-18/resnet-18-0000.params",
+        Util.downloadUrl(baseUrl + "resnet/18-layers/resnet-18-0000.params",
                 tempDirPath + "/resnet18/resnet-18-0000.params", 3);
-        Util.downloadUrl(baseUrl + "/resnet-18/synset.txt",
+        Util.downloadUrl(baseUrl + "synset.txt",
                 tempDirPath + "/resnet18/synset.txt", 3);
         Util.downloadUrl("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg",
                 tempDirPath + "/inputImages/resnet18/Pug-Cookie.jpg", 3);
