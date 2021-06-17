@@ -39,8 +39,10 @@ cd -
 rm -rf lib; mkdir lib;
 if [[ $PLATFORM == 'linux' ]]; then
     cp -L build/libmxnet.so lib/libmxnet.so
-    cp -L staticdeps/lib/libopenblas.so lib/libopenblas.so.0
     cp -L $(ldd lib/libmxnet.so | grep libgfortran | awk '{print $3}') lib/
+    if [[ ! $ARCH == 'aarch64' ]]; then
+        cp -L staticdeps/lib/libopenblas.so lib/libopenblas.so.0
+    fi
 elif [[ $PLATFORM == 'darwin' ]]; then
     cp -L build/libmxnet.dylib lib/libmxnet.dylib
 fi
