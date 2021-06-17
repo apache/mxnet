@@ -260,6 +260,8 @@ def foreach(body, data, init_states, name="foreach"):
         num_outputs = num_out_data + num_states
         sym_out = [dc.get_symbol(out_data) for out_data in flatten_out]
         sym_states = [dc.get_symbol(out_state) for out_state in flatten_out_state]
+        dc.clear(flatten_out)
+        dc.clear(flatten_out_state)
         g = _construct_subgraph(sym_out, sym_states)
 
     params_names = []
@@ -413,7 +415,9 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             with ag.pause(), dc.context():
                 result = cond(*loop_vars).astype("int")
         flatten_out, _ = _flatten(result, "while_loop output")
-        return [], [dc.get_symbol(flatten_out)], [], []
+        out = dc.get_symbol(flatten_out)
+        dc.clear(flatten_out)
+        return [], [out], [], []
 
     def _func_wrapper(loop_vars):
         """This wrapper unifies
@@ -637,6 +641,7 @@ def cond(pred, then_func, else_func, inputs, name="cond"):
             outputs, out_fmt = _flatten(outputs, "cond outputs")
             num_outputs = len(outputs)
             sym_out = [dc.get_symbol(out_data) for out_data in outputs]
+            dc.clear(outputs)
             graph = _construct_subgraph(sym_out, [])
         return graph, num_outputs, out_fmt
 
