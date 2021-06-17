@@ -1491,26 +1491,33 @@ def dynamic_unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
         inputs = npx.dropout(inputs, p=drop_inputs, axes=(axis,))
 
     if valid_length is None:
-        def loop_body(inputs, states):
-            return cell(inputs, states)
+        outputs, states = npx.foreach(cell, inputs, states + [valid_length])
     else:
         zeros = []
         for s in states:
             zeros.append(np.zeros(s.shape))
         states = list(_as_list(states))
         states.append(np.zeros((1)))
-        def loop_body(inputs, states):
-            cell_states = states[:-1]
-            iter_no = states[-1]
-            out, new_states = cell(inputs, cell_states)
-            for i, state in enumerate(cell_states):
-                cond = npx.broadcast_greater(valid_length, iter_no)
-                cond_broad = np.broadcast_to(cond, new_states[i].T.shape).T
-                new_states[i] = np.where(cond_broad, new_states[i], state)
-            new_states.append(iter_no + 1)
-            return out, new_states
+        class loop_body(HybridBlock):
+            def __init__(self, cell):
+                super(loop_body, self).__init__()
+                self.cell = cell
 
-    outputs, states = npx.foreach(loop_body, inputs, states)
+            def forward(self, inputs, states):
+                valid_len = states.pop()
+                cell_states = states[:-1]
+                iter_no = states[-1]
+                out, new_states = self.cell(inputs, cell_states)
+                for i, state in enumerate(cell_states):
+                    cond = npx.broadcast_greater(valid_len, iter_no)
+                    cond_broad = np.broadcast_to(cond, new_states[i].T.shape).T
+                    new_states[i] = np.where(cond_broad, new_states[i], state)
+                new_states.append(iter_no + 1)
+                new_states.append(valid_len)
+                return out, new_states
+        body = loop_body(cell)
+        outputs, states = npx.foreach(body, inputs, states + [valid_length])
+        states.pop()
     if drop_outputs:
         outputs = npx.dropout(outputs, p=drop_outputs, axes=(axis,))
     if valid_length is not None:

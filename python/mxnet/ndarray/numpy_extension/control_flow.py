@@ -272,7 +272,7 @@ def foreach(body, data, init_states, name="foreach"):
     subg_input_names = g.list_inputs()
 
     in_data, in_states, params = [], [], []
-    in_data_locs, in_state_locs, remain_locs = [], [], []
+    in_data_locs, in_state_locs, remain_locs, in_state_index = [], [], [], []
     for i, sub_name in enumerate(subg_input_names):
         if sub_name in data_names:
             in_data_locs.append(i)
@@ -282,6 +282,7 @@ def foreach(body, data, init_states, name="foreach"):
             in_state_locs.append(i)
             idx = state_names.index(sub_name)
             in_states.append(flatten_state[idx])
+            in_state_index.append(idx)
         elif sub_name in params_names:
             remain_locs.append(i)
             idx = params_names.index(sub_name)
@@ -292,7 +293,7 @@ def foreach(body, data, init_states, name="foreach"):
     ordered_ins = in_data + in_states + params
 
     ndoutput = _api_internal.foreach(g.handle, *ordered_ins, num_outputs, num_out_data, in_state_locs,
-                                     in_data_locs, remain_locs)
+                                     in_data_locs, remain_locs, in_state_index)
     if isinstance(ndoutput, NDArrayBase):
         ret = ndoutput
     else:

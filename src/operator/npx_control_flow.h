@@ -40,6 +40,8 @@ struct NPXForeachParam : public dmlc::Parameter<NPXForeachParam> {
   mxnet::Tuple<dim_t> in_data_locs;
   // The location of remaining arrays in the subgraph inputs.
   mxnet::Tuple<dim_t> remain_locs;
+  // The index mapping from out_states to in_states.
+  mxnet::Tuple<dim_t> in_state_index;
   DMLC_DECLARE_PARAMETER(NPXForeachParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs.");
@@ -53,16 +55,19 @@ struct NPXForeachParam : public dmlc::Parameter<NPXForeachParam> {
     .describe("The locations of input data among the inputs.");
     DMLC_DECLARE_FIELD(remain_locs)
     .describe("The locations of remaining data among the inputs.");
+    DMLC_DECLARE_FIELD(in_state_index)
+    .describe("The index mapping from out_states to in_states.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream num_args_s, num_outputs_s, num_out_data_s, in_state_locs_s,
-                       in_data_locs_s, remain_locs_s;
+                       in_data_locs_s, remain_locs_s, in_state_index_s;
     num_args_s << num_args;
     num_outputs_s << num_outputs;
     num_out_data_s << num_out_data;
     in_state_locs_s << in_state_locs;
     in_data_locs_s << in_data_locs;
     remain_locs_s << remain_locs;
+    in_state_index_s << in_state_index;
   }
 };  // struct NPXForeachParam
 

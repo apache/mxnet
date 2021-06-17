@@ -132,10 +132,14 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
     // For the rest of the iterations, the states are the outputs
     // from the previous iteration.
     if (i > 0) {
-      for (size_t j = params.num_out_data; j < subg_out_prev->size(); j++) {
-        size_t idx = j - params.num_out_data;
-        CHECK_LT(params.in_state_locs[idx], subg_inputs.size());
-        subg_inputs[params.in_state_locs[idx]] = (*subg_out_prev)[j];
+      for (size_t j = 0; j < params.in_state_locs.ndim(); ++j) {
+        CHECK_LT(params.in_state_locs[j], subg_inputs.size());
+        for (size_t k = params.num_out_data; k < subg_out_prev->size(); ++k) {
+          if (params.in_state_index[j] == k-params.num_out_data) {
+            subg_inputs[params.in_state_locs[j]] = (*subg_out_prev)[k];
+            break;
+          }
+        }
       }
     } else {
       for (int j = 0; j < params.in_state_locs.ndim(); j++) {
@@ -224,7 +228,14 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
 
     size_t num_states = subg_ograds.size() - num_output_data;
     for (size_t i = 0; i < num_states; i++) {
-      size_t loc = params.in_state_locs[i];
+      size_t loc = -1;
+      for (size_t j = 0; j < params.in_state_index.ndim(); ++j) {
+        if (params.in_state_index[j] == i) {
+          loc = params.in_state_locs[j];
+          break;
+        }
+      }
+      CHECK_GE(loc, 0);
       CHECK_LT(loc, subg_igrads.size());
       subg_ograds[i + num_output_data] = subg_igrads[loc];
     }
@@ -344,8 +355,14 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   if (infer_success) {
     size_t num_states = out_shape->size() - params.num_out_data;
     for (size_t i = 0; i < num_states; i++) {
-      CHECK_EQ((*out_shape)[i + params.num_out_data],
-               (*in_shape)[i + params.in_data_locs.ndim()]);
+      mxnet::TShape shape_check = (*in_shape)[i + params.in_data_locs.ndim()];
+      for (size_t j = 0; j < params.in_state_index.ndim(); ++j) {
+        if (params.in_state_index[j] == i) {
+          shape_check = (*in_shape)[j + params.in_data_locs.ndim()];
+          break;
+        }
+      }
+      CHECK_EQ((*out_shape)[i + params.num_out_data], shape_check);
     }
   }
   // Check if we have inferred the shapes correctly.

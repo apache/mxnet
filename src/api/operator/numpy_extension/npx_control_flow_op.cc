@@ -36,7 +36,7 @@ MXNET_REGISTER_API("_npx.foreach")
   const nnvm::Op* op = Op::Get("_npx_foreach");
   op::NPXForeachParam param;
   int args_size = args.size();
-  int num_inputs = args_size - 6;
+  int num_inputs = args_size - 7;
   // inputs
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(args[0].value().v_handle);
   std::vector<std::shared_ptr<nnvm::Symbol> > subgraphs;
@@ -64,6 +64,11 @@ MXNET_REGISTER_API("_npx.foreach")
     param.remain_locs = mxnet::Tuple<int64_t>(1, args[5+num_inputs].operator int64_t());
   } else {
     param.remain_locs = mxnet::Tuple<int64_t>(args[5+num_inputs].operator ObjectRef());
+  }
+  if (args[6+num_inputs].type_code() == kDLInt) {
+    param.in_state_index = mxnet::Tuple<int64_t>(1, args[6+num_inputs].operator int64_t());
+  } else {
+    param.in_state_index = mxnet::Tuple<int64_t>(args[6+num_inputs].operator ObjectRef());
   }
   attrs.parsed = param;
   attrs.op = op;
