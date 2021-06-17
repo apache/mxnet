@@ -323,7 +323,9 @@ void AddBiasGrad(const TBlob& in_grad,
                  Tensor<gpu, 2, DType> grad,
                  OpReqType req,
                  int num_hidden,
-                 const OpContext& ctx) {
+                 const OpContext& ctx,
+                 int tempspace_resource_idx = fullc::kTempSpace,
+                 Tensor<gpu, 1, uint8_t>* scratch_space_dptr = nullptr) {
   if (req == kNullOp) return;
   using AType = typename mxnet_op::AccType<DType>::type;
   mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -347,23 +349,60 @@ void AddBiasGrad(const TBlob& in_grad,
                                                     MultiprocessorCount(ctx.run_ctx.ctx.dev_id);
     const unsigned int blocks_y = std::max(preferred_number_of_blocks / blocks_x, 1u);
     const dim3 n_blocks = {blocks_x, blocks_y, 1};
-    auto scratch_space = ctx.requested[fullc::kTempSpace]
-                            .get_space_typed<gpu, 1, AType>(mshadow::Shape1(N * blocks_y), s);
+    auto scratch_space = scratch_space_dptr == nullptr
+                         ? ctx.requested[tempspace_resource_idx].get_space_typed<gpu, 1, uint8_t>(
+                                mshadow::Shape1(N * blocks_y * sizeof(AType)), s)
+                         : *scratch_space_dptr;
+    CHECK_GE(scratch_space.shape_.Size(), N * blocks_y * sizeof(AType));
     auto stream = mshadow::Stream<gpu>::GetStream(s);
     AddBiasGradKernelPhase1<LType><<<n_blocks,
                                      nthreads_addbiasgrad_phase1,
                                      0,
-                                     stream>>>(scratch_space.dptr_,
+                                     stream>>>(reinterpret_cast<AType*>(scratch_space.dptr_),
                                                grad.dptr_, N, M);
     const int nblocks_phase2 = ceil_div(N, nthreads_addbiasgrad_phase2);
     AddBiasGradKernelPhase2<<<nblocks_phase2,
                               nthreads_addbiasgrad_phase2,
                               0,
-                              stream>>>(scratch_space.dptr_,
+                              stream>>>(reinterpret_cast<AType*>(scratch_space.dptr_),
                                         gbias.dptr_, N,
                                         blocks_y, req);
   });
 }
+
+template<typename DType>
+int AddBiasGradWorkspaceSizeBytes(const TBlob& in_grad,
+                 Tensor<gpu, 2, DType> grad,
+                 OpReqType req,
+                 int num_hidden,
+                 const OpContext& ctx) {
+  if (req == kNullOp) return 0;
+  using AType = typename mxnet_op::AccType<DType>::type;
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  Tensor<gpu, 1, DType> gbias = in_grad.get<gpu, 1, DType>(s);
+  TBlob grad_blob = TBlob(grad);
+  TBlob gbias_blob = TBlob(gbias);
+  mxnet::TShape x(1, 0);
+  mxnet::TShape small;
+  if (shape_assign(&gbias_blob.shape_, Shape2(num_hidden, 1))) {
+    small = gbias_blob.shape_;
+  } else {
+    small = ReduceAxesShapeImpl(grad_blob.shape_, dmlc::optional<mxnet::TShape>(x), true, false);
+  }
+  const int N = small.Size();
+  int ltype = mxnet::common::cuda::get_load_type(N * sizeof(DType));
+  int scratch_space_bytes = 0;
+  MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
+    const unsigned int blocks_x = ceil_div(N * sizeof(DType),
+                                           threads_per_warp * sizeof(LType));
+    const unsigned int preferred_number_of_blocks = 2 *
+                                                    MultiprocessorCount(ctx.run_ctx.ctx.dev_id);
+    const unsigned int blocks_y = std::max(preferred_number_of_blocks / blocks_x, 1u);
+    scratch_space_bytes = sizeof(AType) * N * blocks_y;
+  });
+  return scratch_space_bytes;
+}
+
 #endif
 
 template<typename DType>

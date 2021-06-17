@@ -59,15 +59,7 @@ struct SpatialParallelConvolutionParam : public dmlc::Parameter<SpatialParallelC
   bool no_bias;
   dmlc::optional<int> cudnn_tune;
   bool cudnn_off;
-  dmlc::optional<bool> cudnn_tensor_core;
-  bool cudnn_tensor_core_only;
   dmlc::optional<int> layout;
-  bool cudnn_algo_verbose;
-  int32_t cudnn_algo_fwd;
-  int32_t cudnn_algo_bwd_data;
-  int32_t cudnn_algo_bwd_filter;
-  int32_t cudnn_algo_fwd_prec;
-  int32_t cudnn_algo_bwd_prec;
   int32_t num_gpus;
   int32_t rank;
   uintptr_t nccl_unique_id;
@@ -99,11 +91,6 @@ struct SpatialParallelConvolutionParam : public dmlc::Parameter<SpatialParallelC
         .describe("Whether to pick convolution algo by running performance test.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
     .describe("Turn off cudnn for this layer.");
-    DMLC_DECLARE_FIELD(cudnn_tensor_core)
-    .set_default(dmlc::optional<bool>())
-    .describe("Allow Tensor Core math within the algos.");
-    DMLC_DECLARE_FIELD(cudnn_tensor_core_only).set_default(false)
-        .describe("Require Tensor Core math within the algos.");
     DMLC_DECLARE_FIELD(layout)
     .add_enum("NCW", mshadow::kNCW)
     .add_enum("NCHW", mshadow::kNCHW)
@@ -114,32 +101,6 @@ struct SpatialParallelConvolutionParam : public dmlc::Parameter<SpatialParallelC
     .set_default(dmlc::optional<int>())
     .describe("Set layout for input, output and weight. Empty for\n    "
               "default layout: NWC for 1d, NHWC for 2d and NDHWC for 3d.");
-    DMLC_DECLARE_FIELD(cudnn_algo_verbose).set_default(0)
-    .describe("Verboseness of algo selection. 1 = output selection, 0 = no output");
-    DMLC_DECLARE_FIELD(cudnn_algo_fwd).set_default(-1)
-    .describe("Specified Forward Algorithm.");
-    DMLC_DECLARE_FIELD(cudnn_algo_bwd_data).set_default(-1)
-    .describe("Specified Backprop-to-Data Algorithm.");
-    DMLC_DECLARE_FIELD(cudnn_algo_bwd_filter).set_default(-1)
-    .describe("Specified Backprop-to-Filter Algorithm.");
-    DMLC_DECLARE_FIELD(cudnn_algo_fwd_prec)
-    .add_enum("None", -1)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .set_default(-1)
-    .describe("Precision of the computation of the forward convolution kernel.\n    "
-              "Default is the tensor data type, or float32 if the tensor data\n    "
-              "type is float16.");
-    DMLC_DECLARE_FIELD(cudnn_algo_bwd_prec)
-    .add_enum("None", -1)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .set_default(-1)
-    .describe("Precision of the computation of the back-prop kernels.\n    "
-              "Default is the tensor data type, or float32 if the tensor data\n    "
-              "type is float16.");
     DMLC_DECLARE_FIELD(num_gpus).describe("Number of GPUs per sample.");
     DMLC_DECLARE_FIELD(rank).describe("Rank inside a group");
     DMLC_DECLARE_FIELD(nccl_unique_id).describe("NCCL unique ID");
@@ -161,14 +122,6 @@ struct SpatialParallelConvolutionParam : public dmlc::Parameter<SpatialParallelC
            this->cudnn_tune == other.cudnn_tune &&
            this->cudnn_off == other.cudnn_off &&
            this->layout == other.layout &&
-           // cudnn_algo_verbose omitted since it can't affect algo choice.
-           this->cudnn_tensor_core == other.cudnn_tensor_core &&
-           this->cudnn_tensor_core_only == other.cudnn_tensor_core_only &&
-           this->cudnn_algo_fwd == other.cudnn_algo_fwd &&
-           this->cudnn_algo_bwd_data == other.cudnn_algo_bwd_data &&
-           this->cudnn_algo_bwd_filter == other.cudnn_algo_bwd_filter &&
-           this->cudnn_algo_fwd_prec == other.cudnn_algo_fwd_prec &&
-           this->cudnn_algo_bwd_prec == other.cudnn_algo_bwd_prec &&
            this->num_gpus == other.num_gpus;
   }
 };
@@ -195,14 +148,6 @@ struct hash<mxnet::op::SpatialParallelConvolutionParam> {
     ret = dmlc::HashCombine(ret, val.cudnn_tune);
     ret = dmlc::HashCombine(ret, val.cudnn_off);
     ret = dmlc::HashCombine(ret, val.layout);
-    // cudnn_algo_verbose omitted since it can't affect algo choice.
-    ret = dmlc::HashCombine(ret, val.cudnn_tensor_core);
-    ret = dmlc::HashCombine(ret, val.cudnn_tensor_core_only);
-    ret = dmlc::HashCombine(ret, val.cudnn_algo_fwd);
-    ret = dmlc::HashCombine(ret, val.cudnn_algo_bwd_data);
-    ret = dmlc::HashCombine(ret, val.cudnn_algo_bwd_filter);
-    ret = dmlc::HashCombine(ret, val.cudnn_algo_fwd_prec);
-    ret = dmlc::HashCombine(ret, val.cudnn_algo_bwd_prec);
     ret = dmlc::HashCombine(ret, val.num_gpus);
     ret = dmlc::HashCombine(ret, val.rank);
 

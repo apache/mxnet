@@ -64,6 +64,9 @@
 #if MXNET_USE_CUDA
 #include "../common/cuda/utils.h"
 #endif
+#if MXNET_USE_NCCL
+#include <nccl.h>
+#endif
 
 using namespace mxnet;
 
@@ -1640,6 +1643,29 @@ int MXGetGPUMemoryInformation(int dev, int *free_mem, int *total_mem) {
 int MXGetGPUMemoryInformation64(int dev, uint64_t *free_mem, uint64_t *total_mem) {
   API_BEGIN();
   Context::GetGPUMemoryInformation(dev, free_mem, total_mem);
+  API_END();
+}
+
+int MXNCCLGetUniqueIdSize(int* size) {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NCCL
+  *size = sizeof(ncclUniqueId);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NCCL=1 to have NCCL support.";
+#endif
+  API_END();
+}
+
+int MXNCCLGetUniqueId(void* out) {
+  API_BEGIN();
+#if MXNET_USE_CUDA && MXNET_USE_NCCL
+  auto ret = ncclGetUniqueId(reinterpret_cast<ncclUniqueId*>(out));
+  if (ret != ncclSuccess) {
+    LOG(FATAL) << "Failed to get the NCCL unique id";
+  }
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NCCL=1 to have NCCL support.";
+#endif
   API_END();
 }
 

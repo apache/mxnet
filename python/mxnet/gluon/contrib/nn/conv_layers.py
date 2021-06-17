@@ -23,6 +23,7 @@ __all__ = ['SpatialParallelConv2D', 'SpatialParallelConv3D',
            'SpatialParallelSplit', 'SpatialParallelAllgather']
 
 from ...block import HybridBlock
+from ...parameter import Parameter
 from .... import symbol
 from ....base import numeric_types, check_call, _LIB
 from ...nn.activations import Activation
@@ -156,75 +157,74 @@ class _SpatialParallelConv(HybridBlock):
     def __init__(self, num_gpus, channels, kernel_size, strides, padding,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 op_name='SpatialParallelConvolution', adj=None, prefix=None, params=None,
+                 op_name='SpatialParallelConvolution', adj=None,
                  cudnn_algo_fwd=-1, cudnn_algo_bwd_data=-1, cudnn_algo_bwd_filter=-1,
                  cudnn_tensor_core_only=False, cudnn_algo_verbose=False,
                  cudnn_algo_fwd_prec='None', cudnn_algo_bwd_prec='None',
                  workspace=1024):
-        super(_SpatialParallelConv, self).__init__(prefix=prefix, params=params)
+        super(_SpatialParallelConv, self).__init__()
         helper = _SpatialParallelHelper
 
         helper.init(num_gpus)
-        with self.name_scope():
-            self._channels = channels
-            self._in_channels = in_channels
-            if isinstance(strides, numeric_types):
-                strides = (strides,)*len(kernel_size)
-            if isinstance(padding, numeric_types):
-                padding = (padding,)*len(kernel_size)
-            assert kernel_size[0] % 2 != 0, \
-                "Only supports odd values for the kernel_size[0] for now."
-            assert padding[0] == int((kernel_size[0] - 1) / 2), \
-                "Only supports padding[0] equal to the half of kernel_size[0] - 1 for now."
-            self._op_name = op_name
-            self._kwargs = {
-                'kernel': kernel_size, 'stride': strides,
-                'pad': padding, 'num_filter': channels, 'num_group': groups,
-                'no_bias': not use_bias, 'layout': layout,
-                'num_gpus': num_gpus,
-                'rank': helper.rank,
-                'cudnn_algo_fwd': cudnn_algo_fwd,
-                'cudnn_algo_bwd_data': cudnn_algo_bwd_data,
-                'cudnn_algo_bwd_filter': cudnn_algo_bwd_filter,
-                'cudnn_tensor_core_only': cudnn_tensor_core_only,
-                'cudnn_algo_verbose': cudnn_algo_verbose,
-                'cudnn_algo_fwd_prec': cudnn_algo_fwd_prec,
-                'cudnn_algo_bwd_prec': cudnn_algo_bwd_prec,
-                'workspace': workspace,
-                'nccl_unique_id': helper.nccl_id.ctypes.data}
-            if adj is not None:
-                self._kwargs['adj'] = adj
+        self._channels = channels
+        self._in_channels = in_channels
+        if isinstance(strides, numeric_types):
+            strides = (strides,)*len(kernel_size)
+        if isinstance(padding, numeric_types):
+            padding = (padding,)*len(kernel_size)
+        assert kernel_size[0] % 2 != 0, \
+            "Only supports odd values for the kernel_size[0] for now."
+        assert padding[0] == int((kernel_size[0] - 1) / 2), \
+            "Only supports padding[0] equal to the half of kernel_size[0] - 1 for now."
+        self._op_name = op_name
+        self._kwargs = {
+            'kernel': kernel_size, 'stride': strides,
+            'pad': padding, 'num_filter': channels, 'num_group': groups,
+            'no_bias': not use_bias, 'layout': layout,
+            'num_gpus': num_gpus,
+            'rank': helper.rank,
+            'cudnn_algo_fwd': cudnn_algo_fwd,
+            'cudnn_algo_bwd_data': cudnn_algo_bwd_data,
+            'cudnn_algo_bwd_filter': cudnn_algo_bwd_filter,
+            'cudnn_tensor_core_only': cudnn_tensor_core_only,
+            'cudnn_algo_verbose': cudnn_algo_verbose,
+            'cudnn_algo_fwd_prec': cudnn_algo_fwd_prec,
+            'cudnn_algo_bwd_prec': cudnn_algo_bwd_prec,
+            'workspace': workspace,
+            'nccl_unique_id': helper.nccl_id.ctypes.data}
+        if adj is not None:
+            self._kwargs['adj'] = adj
 
-            if is_np_array():
-                dshape = [-1]*(len(kernel_size) + 2)
-            else:
-                dshape = [0]*(len(kernel_size) + 2)
+        if is_np_array():
+            dshape = [-1]*(len(kernel_size) + 2)
+        else:
+            dshape = [0]*(len(kernel_size) + 2)
 
-            dshape[layout.find('N')] = 1
-            dshape[layout.find('C')] = in_channels
-            wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
-            if kernel_size in [(1, 1), (1, 1, 1)]:
-                self._spatial = False
-                self._op_name = self._op_name.replace("SpatialParallel", "")
-                self._kwargs.pop('num_gpus')
-                self._kwargs.pop('nccl_unique_id')
-                self._kwargs.pop('rank')
-            else:
-                self._spatial = True
-            self.weight = self.params.get('weight', shape=wshapes[1],
-                                          init=weight_initializer,
-                                          allow_deferred_init=True)
-            if use_bias:
-                self.bias = self.params.get('bias', shape=wshapes[2],
-                                            init=bias_initializer,
-                                            allow_deferred_init=True)
-            else:
-                self.bias = None
+        dshape[layout.find('N')] = 1
+        dshape[layout.find('C')] = in_channels
+        wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
+        if kernel_size in [(1, 1), (1, 1, 1)]:
+            self._spatial = False
+            self._op_name = self._op_name.replace("SpatialParallel", "")
+            self._kwargs.pop('num_gpus')
+            self._kwargs.pop('nccl_unique_id')
+            self._kwargs.pop('rank')
+        else:
+            self._spatial = True
+        self.weight = Parameter('weight', shape=wshapes[1],
+                                init=weight_initializer,
+                                allow_deferred_init=True)
+        if use_bias:
+            self.bias = Parameter('bias', shape=wshapes[2],
+                                  init=bias_initializer,
+                                  allow_deferred_init=True)
+        else:
+            self.bias = None
 
-            if activation is not None:
-                self.act = Activation(activation, prefix=activation+'_')
-            else:
-                self.act = None
+        if activation is not None:
+            self.act = Activation(activation)
+        else:
+            self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if is_np_array():

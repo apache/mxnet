@@ -529,6 +529,21 @@ MXNET_DLL int MXGetGPUMemoryInformation(int dev, int *free_mem, int *total_mem);
 MXNET_DLL int MXGetGPUMemoryInformation64(int dev, uint64_t *free_mem, uint64_t *total_mem);
 
 /*!
+ * \brief Get the size of the NCCL unique id (in bytes).
+ * \param size pointer to integer that will hold the NCCL unique id size.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXNCCLGetUniqueIdSize(int* size);
+
+/*!
+ * \brief Get the NCCL unique id.
+ * \param out pointer to an array that will hold the NCCL unique id. It has to be at least of the
+ *            size returned by MXNCCLGetUniqueIdSize.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXNCCLGetUniqueId(void* out);
+
+/*!
  * \brief get the MXNet library version as an integer
  * \param pointer to the integer holding the version number
  * \return 0 when success, -1 when failure happens
