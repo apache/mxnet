@@ -178,6 +178,7 @@ inline static bool QuantizedPoolingStorageType(const nnvm::NodeAttrs &attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_pooling)
+.add_alias("_npx_quantized_pooling")
 .describe(R"code(Pooling operator for input and output data type of int8.
 The input and output data comes with min and max thresholds for quantizing
 the float32 data into int8.

@@ -389,7 +389,7 @@ class RNNCell(HybridRecurrentCell):
                                   bias=self.i2h_bias.data(ctx),
                                   num_hidden=self._hidden_size,
                                   no_bias=False)
-        h2h = npx.fully_connected(states[0].as_in_context(ctx),
+        h2h = npx.fully_connected(states[0].as_in_ctx(ctx),
                                   weight=self.h2h_weight.data(ctx),
                                   bias=self.h2h_bias.data(ctx),
                                   num_hidden=self._hidden_size,
@@ -511,7 +511,7 @@ class LSTMCell(HybridRecurrentCell):
         i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
                                   num_hidden=self._hidden_size*4, no_bias=False)
-        h2h = npx.fully_connected(states[0].as_in_context(ctx),
+        h2h = npx.fully_connected(states[0].as_in_ctx(ctx),
                                   weight=self.h2h_weight.data(ctx),
                                   bias=self.h2h_bias.data(ctx),
                                   num_hidden=self._hidden_size*4, no_bias=False)
@@ -521,7 +521,7 @@ class LSTMCell(HybridRecurrentCell):
         forget_gate = self._get_activation(slice_gates[1], self._recurrent_activation)
         in_transform = self._get_activation(slice_gates[2], self._activation)
         out_gate = self._get_activation(slice_gates[3], self._recurrent_activation)
-        next_c = np.multiply(forget_gate, states[1].as_in_context(ctx)) + \
+        next_c = np.multiply(forget_gate, states[1].as_in_ctx(ctx)) + \
                  np.multiply(in_gate, in_transform)
         next_h = np.multiply(out_gate, npx.activation(next_c, act_type=self._activation))
 
@@ -631,7 +631,7 @@ class GRUCell(HybridRecurrentCell):
     def forward(self, inputs, states):
         # pylint: disable=too-many-locals
         ctx = inputs.ctx
-        prev_state_h = states[0].as_in_context(ctx)
+        prev_state_h = states[0].as_in_ctx(ctx)
         i2h = npx.fully_connected(inputs,
                                   weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
@@ -970,7 +970,7 @@ class ZoneoutCell(ModifierCell):
 
         output = (np.where(mask(p_outputs, next_output), next_output, prev_output)
                   if p_outputs != 0. else next_output)
-        states = ([np.where(mask(p_states, new_s), new_s, old_s.as_in_context(ctx)) for new_s, old_s in
+        states = ([np.where(mask(p_states, new_s), new_s, old_s.as_in_ctx(ctx)) for new_s, old_s in
                    zip(next_states, states)] if p_states != 0. else next_states)
 
         self._prev_output = output
@@ -1179,7 +1179,7 @@ class VariationalDropoutCell(ModifierCell):
         if self.drop_states:
             states = list(states)
             # state dropout only needs to be applied on h, which is always the first state.
-            states[0] = states[0].as_in_context(ctx) * self.drop_states_mask
+            states[0] = states[0].as_in_ctx(ctx) * self.drop_states_mask
 
         if self.drop_inputs:
             inputs = inputs * self.drop_inputs_mask
@@ -1384,7 +1384,7 @@ class LSTMPCell(HybridRecurrentCell):
         i2h = npx.fully_connected(inputs, weight=self.i2h_weight.data(ctx),
                                   bias=self.i2h_bias.data(ctx),
                                   num_hidden=self._hidden_size*4, no_bias=False)
-        h2h = npx.fully_connected(states[0].as_in_context(ctx),
+        h2h = npx.fully_connected(states[0].as_in_ctx(ctx),
                                   weight=self.h2h_weight.data(ctx),
                                   bias=self.h2h_bias.data(ctx),
                                   num_hidden=self._hidden_size*4, no_bias=False)
@@ -1394,7 +1394,7 @@ class LSTMPCell(HybridRecurrentCell):
         forget_gate = npx.activation(slice_gates[1], act_type="sigmoid")
         in_transform = npx.activation(slice_gates[2], act_type="tanh")
         out_gate = npx.activation(slice_gates[3], act_type="sigmoid")
-        next_c = forget_gate * states[1].as_in_context(ctx) + in_gate * in_transform
+        next_c = forget_gate * states[1].as_in_ctx(ctx) + in_gate * in_transform
         hidden = np.multiply(out_gate, npx.activation(next_c, act_type="tanh"))
         next_r = npx.fully_connected(hidden, num_hidden=self._projection_size,
                                      weight=self.h2r_weight.data(ctx), no_bias=True)

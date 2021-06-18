@@ -50,6 +50,7 @@ bool RequantizeStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_requantize)
+.add_alias("_npx_requantize")
 .describe(R"code(Given data that is quantized in int32 and the corresponding thresholds,
 requantize the data into int8 using min and max thresholds either calculated at runtime
 or from calibration. It's highly recommended to pre-calucate the min and max thresholds

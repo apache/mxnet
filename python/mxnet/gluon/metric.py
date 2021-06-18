@@ -504,7 +504,7 @@ class TopKAccuracy(EvalMetric):
             # much faster, which is important since that computation is
             # single-threaded due to Python GIL.
             pred_label = pred_label.as_np_ndarray().as_in_ctx(label.ctx).astype('float32')
-            pred_label = numpy.argpartition(pred_label, -self.top_k)
+            pred_label = numpy.argpartition(pred_label, -self.top_k).as_in_ctx(label.ctx)
             label = label.as_np_ndarray().astype('int32')
             check_label_shapes(label, pred_label)
             num_samples = pred_label.shape[0]
@@ -1415,7 +1415,7 @@ class CrossEntropy(EvalMetric):
             label = label.reshape((label.size,))
             if self.from_logits:
                 pred = npx.softmax(pred, axis=self.axis)
-            pred = npx.pick(pred.as_in_context(label.ctx), label.astype(dtype='int32'), axis=self.axis)
+            pred = npx.pick(pred.as_in_ctx(label.ctx), label.astype(dtype='int32'), axis=self.axis)
             if self.ignore_label is not None:
                 ignore = (label == self.ignore_label).astype(pred.dtype)
                 num -= ignore.sum()

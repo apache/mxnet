@@ -235,7 +235,7 @@ class _RNNLayer(HybridBlock):
 
         rnn_args_ctx = []
         for args in rnn_args:
-            new_args = args.as_in_context(ctx)
+            new_args = args.as_in_ctx(ctx)
             rnn_args_ctx.append(new_args)
 
         rnn = npx.rnn(inputs, params, *rnn_args_ctx, use_sequence_length=self._use_sequence_length,

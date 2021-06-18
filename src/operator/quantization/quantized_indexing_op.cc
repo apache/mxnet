@@ -130,6 +130,7 @@ void QuantizedEmbeddingOpForward(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_embedding)
+.add_alias("_npx_quantized_embedding")
 .describe(R"code(Maps integer indices to int8 vector representations (embeddings).
 )code" ADD_FILELINE)
 .set_num_inputs(4)

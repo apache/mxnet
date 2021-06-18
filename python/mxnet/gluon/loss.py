@@ -1005,4 +1005,4 @@ class SDMLLoss(Loss):
         # multiply for the number of labels to obtain the correct loss (gluon kl_loss averages instead of sum)
         # PR#18423:multiply for the number of labels should multiply x1.shape[1] rather than x1.shape[0])
         # After PR#18423, it is no need to multiply it anymore.
-        return self.kl_loss(log_probabilities, labels.as_in_context(distances.ctx))
+        return self.kl_loss(log_probabilities, labels.as_in_ctx(distances.ctx))

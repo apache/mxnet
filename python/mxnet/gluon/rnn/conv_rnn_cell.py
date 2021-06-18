@@ -156,7 +156,7 @@ class _BaseConvRNNCell(HybridRecurrentCell):
                               weight=self.i2h_weight.data(ctx),
                               bias=self.i2h_bias.data(ctx),
                               layout=self._conv_layout)
-        h2h = npx.convolution(data=states[0].as_in_context(ctx),
+        h2h = npx.convolution(data=states[0].as_in_ctx(ctx),
                               num_filter=self._hidden_channels*self._num_gates,
                               kernel=self._h2h_kernel,
                               dilate=self._h2h_dilate,
@@ -443,7 +443,7 @@ class _ConvLSTMCell(_BaseConvRNNCell):
         forget_gate = npx.activation(slice_gates[1], act_type="sigmoid")
         in_transform = self._get_activation(slice_gates[2], self._activation)
         out_gate = npx.activation(slice_gates[3], act_type="sigmoid")
-        next_c = forget_gate * states[1].as_in_context(inputs.ctx) + in_gate * in_transform
+        next_c = forget_gate * states[1].as_in_ctx(inputs.ctx) + in_gate * in_transform
         next_h = np.multiply(out_gate, self._get_activation(next_c, self._activation))
 
         return next_h, [next_h, next_c]
@@ -706,7 +706,7 @@ class _ConvGRUCell(_BaseConvRNNCell):
         next_h_tmp = self._get_activation(i2h + reset_gate * h2h, self._activation)
 
         next_h = (1. - update_gate) * next_h_tmp + update_gate * \
-            states[0].as_in_context(inputs.ctx)
+            states[0].as_in_ctx(inputs.ctx)
 
         return next_h, [next_h]
 
