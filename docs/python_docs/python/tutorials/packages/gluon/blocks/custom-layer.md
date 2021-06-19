@@ -56,7 +56,7 @@ The rest of methods of the `Block` class are already implemented, and majority o
 
 Looking into implementation of [existing layers](https://mxnet.apache.org/api/python/gluon/nn.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
 
-The reason for that is that `HybridBlock` allows to write custom layers in imperative programming style, while computing in a symbolic way. It unifies the flexibility of imperative programming with the performance benefits of symbolic programming. You can learn more about the difference between symbolic vs. imperative programming from [this article](https://mxnet.apache.org/api/architecture/overview.html).
+The reason for that is that `HybridBlock` allows to write custom layers in imperative programming style, while computing in a symbolic way. It unifies the flexibility of imperative programming with the performance benefits of symbolic programming. You can learn more about the difference between symbolic and imperative programming from [this article](https://mxnet.apache.org/api/architecture/overview.html).
 
 Hybridization is a process that Apache MxNet uses to create a symbolic graph of a forward computation. This allows to increase computation performance by optimizing the computational symbolic graph. Once the symbolic graph is created, Apache MxNet caches and reuses it for subsequent computations.
 
@@ -109,7 +109,7 @@ Below is an example of how to create a simple neural network with a custom layer
 ```{.python .input}
 net = gluon.nn.HybridSequential()                         # Define a Neural Network as a sequence of hybrid blocks
 net.add(Dense(5))                                     # Add Dense layer with 5 neurons
-net.add(NormalizationHybridLayer())                   # Add our custom layer
+net.add(NormalizationHybridLayer())                   # Add a custom layer
 net.add(Dense(1))                                     # Add Dense layer with 1 neurons
 
 
@@ -133,7 +133,7 @@ Output:
 
 ## Parameters of a custom layer
 
-Usually, a layer has a set of associated parameters, sometimes also referred as weights. This is an internal state of a layer. Most often, these parameters are the ones, that we want to learn during backpropogation step, but sometimes these parameters might be just constants we want to use during forward pass. The parameters are usually represented as [Parameter](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Parameter) class inside of Apache MxNet neural network.
+Usually, a layer has a set of associated parameters, sometimes also referred as weights. This is an internal state of a layer. Most often, these parameters are the ones, that we want to learn during backpropogation step, but sometimes these parameters might be just constants we want to use during forward pass. The parameters are usually represented as [Parameter](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Parameter) class inside of Apache MXNet neural network.
 
 
 ```{.python .input}
@@ -185,7 +185,7 @@ def print_params(title, net):
 net = gluon.nn.HybridSequential()                             # Define a Neural Network as a sequence of hybrid blocks
 net.add(Dense(5))                                         # Add Dense layer with 5 neurons
 net.add(NormalizationHybridLayer(hidden_units=5, 
-                                 scales = np.array([2]))) # Add our custom layer
+                                 scales = np.array([2]))) # Add a custom layer
 net.add(Dense(1))                                         # Add Dense layer with 1 neurons
 
 

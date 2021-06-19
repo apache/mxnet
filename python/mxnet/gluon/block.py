@@ -1039,8 +1039,8 @@ class HybridBlock(Block):
     def __init__(self):
         super(HybridBlock, self).__init__()
         assert hasattr(self, "hybrid_forward") is False, (
-            "Starting from MXNet2.0, Gluon2.0 with forward interface will be used instead of "
-            "hybrid_forward. Please follow MXNet2.0 Migration Guide to use new APIs.")
+            "'forward' instead of 'hybrid_forward' interface needs to be used starting from Gluon2.0."
+            "Please follow MXNet2.0 Migration Guide to use new APIs.")
         self._cached_graph = ()
         self._cached_op = None
         self._out_format = None
