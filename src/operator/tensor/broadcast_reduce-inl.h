@@ -372,7 +372,6 @@ void seq_reduce_compute(const size_t N, const size_t M, const bool addto,
           (idx, M, addto, big, small, bshape, sshape, rshape, rstride, true);
     }
   }
-
 }
 
 template <typename Reducer, int ndim, typename DType, typename OP>
