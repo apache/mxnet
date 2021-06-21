@@ -403,7 +403,7 @@ GluonCV is a popular CV toolkit built on top of MXNet. Below is the model suppor
 |inceptionv3_ucf101|
 
 ### [GluonNLP](https://nlp.gluon.ai/model_zoo/catalog.html) Pretrained Model Support Matrix]
-GluonNLP is a popular NLP toolkit built on top of MXNet. Below is the model support matrix for GluonNLP (v0.10.0) models.
+GluonNLP is a popular NLP toolkit built on top of MXNet. Below is the model support matrix for GluonNLP (v0.10.0) models. (Note: GluonNLP v0.10.0 does not work with MXNet 2.0 yet, so MXNet symbol and parameter files need to be exported with MXNet v1.x)
 
 |NLP Models|
 |:-|
