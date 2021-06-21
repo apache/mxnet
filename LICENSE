@@ -311,6 +311,7 @@
     Apache-2.0 license + 3-clause BSD license
     =======================================================================================
 
+    python/mxnet/onnx/mx2onnx/_export_onnx.py
     python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset12.py
     python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset13.py
 
