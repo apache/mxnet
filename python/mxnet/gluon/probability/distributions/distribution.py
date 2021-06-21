@@ -22,6 +22,7 @@ __all__ = ['Distribution']
 
 from numbers import Number
 from .utils import cached_property
+from .... import np
 
 
 class Distribution(object):
@@ -29,8 +30,6 @@ class Distribution(object):
 
     Parameters
     ----------
-    F : mx.ndarray or mx.symbol.numpy._Symbol
-        Variable that stores the running mode.
     event_dim : int, default None
         Variable indicating the dimension of the distribution's support.
     validate_args : bool, default None
@@ -51,8 +50,7 @@ class Distribution(object):
             raise ValueError
         Distribution._validate_args = value
 
-    def __init__(self, F=None, event_dim=None, validate_args=None):
-        self.F = F
+    def __init__(self, event_dim=None, validate_args=None):
         self.event_dim = event_dim
         if validate_args is not None:
             self._validate_args = validate_args
@@ -75,7 +73,7 @@ class Distribution(object):
         r"""
         Returns the probability density/mass function evaluated at `value`.
         """
-        return self.F.np.exp(self.log_prob(value))
+        return np.exp(self.log_prob(value))
 
     def cdf(self, value):
         r"""
@@ -172,8 +170,7 @@ class Distribution(object):
         r"""
         Returns perplexity of distribution.
         """
-        F = self.F
-        return F.np.exp(self.entropy())
+        return np.exp(self.entropy())
 
     def __repr__(self):
         mode = self.F

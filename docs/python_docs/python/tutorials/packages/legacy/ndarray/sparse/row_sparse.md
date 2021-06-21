@@ -576,9 +576,6 @@ except mx.MXNetError as err:
     sys.stderr.write(str(err))
 ```
 
-## Next
-
-[Train a Linear Regression Model with Gluon Sparse](./train_gluon.ipynb)
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

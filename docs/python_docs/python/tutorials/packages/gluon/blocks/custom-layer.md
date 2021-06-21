@@ -35,7 +35,7 @@ In the example below, we define a new layer and implement `forward()` method to 
 # Do some initial imports used throughout this tutorial 
 from __future__ import print_function
 import mxnet as mx
-from mxnet import nd, gluon, autograd
+from mxnet import np, npx, gluon, autograd
 from mxnet.gluon.nn import Dense
 mx.random.seed(1)                      # Set seed for reproducable results
 ```
@@ -47,7 +47,7 @@ class NormalizationLayer(gluon.Block):
         super(NormalizationLayer, self).__init__()
 
     def forward(self, x):
-        return (x - nd.min(x)) / (nd.max(x) - nd.min(x))
+        return (x - np.min(x)) / (np.max(x) - np.min(x))
 ```
 
 The rest of methods of the `Block` class are already implemented, and majority of them are used to work with parameters of a block. There is one very special method named [hybridize()](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L384), though, which I am going to cover before moving to a more complex example of a custom layer.
@@ -56,17 +56,15 @@ The rest of methods of the `Block` class are already implemented, and majority o
 
 Looking into implementation of [existing layers](https://mxnet.apache.org/api/python/gluon/nn.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
 
-The reason for that is that `HybridBlock` allows to write custom layers that can be used in imperative programming as well as in symbolic programming. It is convinient to support both ways, because the imperative programming eases the debugging of the code and the symbolic one provides faster execution speed. You can learn more about the difference between symbolic vs. imperative programming from [this article](https://mxnet.apache.org/api/architecture/overview.html).
+The reason for that is that `HybridBlock` allows to write custom layers in imperative programming style, while computing in a symbolic way. It unifies the flexibility of imperative programming with the performance benefits of symbolic programming. You can learn more about the difference between symbolic and imperative programming from [this article](https://mxnet.apache.org/api/architecture/overview.html).
 
 Hybridization is a process that Apache MxNet uses to create a symbolic graph of a forward computation. This allows to increase computation performance by optimizing the computational symbolic graph. Once the symbolic graph is created, Apache MxNet caches and reuses it for subsequent computations.
 
-To simplify support of both imperative and symbolic programming, Apache MxNet introduce the `HybridBlock` class. Compare to the `Block` class, `HybridBlock` already has its [forward()](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.HybridBlock.forward) method implemented, but it defines a [hybrid_forward()](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.HybridBlock.hybrid_forward) method that needs to be implemented.
+Hybridization of HybridBlock.forward is based on a deferred computation mode in the MXNet backend, which enables recording computation via tracing in the mxnet.nd and mxnet.np interfaces. The recorded computation can be exported to a symbolic representation and is used for optimized execution with the CachedOp.
 
-The main difference between `forward()` and `hybrid_forward()` is an `F` argument. This argument sometimes is refered as a `backend` in the Apache MxNet community. Depending on if hybridization has been done or not, `F` can refer either to [mxnet.ndarray API](https://mxnet.apache.org/api/python/ndarray/ndarray.html) or [mxnet.symbol API](https://mxnet.apache.org/api/python/symbol/symbol.html). The former is used for imperative programming, and the latter for symbolic programming. 
+As tracing is based on the imperative APIs, users can access shape information of the arrays. As x.shape for some array x is a python tuple, any use of that shape will be a constant in the recorded graph and may limit the recorded graph to be used with inputs of the same shape only.
 
-To support hybridization, it is important to use only methods avaible directly from `F` parameter. Usually, there are equivalent methods in both APIs, but sometimes there are mismatches or small variations. For example, by default, subtraction and division of NDArrays support broadcasting, while in Symbol API broadcasting is supported in a separate operators. 
-
-Knowing this, we can can rewrite our example layer, using HybridBlock:
+Knowing this, we can rewrite our example layer, using HybridBlock:
 
 
 ```{.python .input}
@@ -74,8 +72,8 @@ class NormalizationHybridLayer(gluon.HybridBlock):
     def __init__(self):
         super(NormalizationHybridLayer, self).__init__()
 
-    def hybrid_forward(self, F, x):
-        return F.broadcast_div(F.broadcast_sub(x, F.min(x)), (F.broadcast_sub(F.max(x), F.min(x))))
+    def forward(self, x):
+        return (x - np.min(x)) / (np.max(x) - np.min(x))
 ```
 
 Thanks to inheriting from HybridBlock, one can easily do forward pass on a given ndarray, either on CPU or GPU:
@@ -83,14 +81,13 @@ Thanks to inheriting from HybridBlock, one can easily do forward pass on a given
 
 ```{.python .input}
 layer = NormalizationHybridLayer()
-layer(nd.array([1, 2, 3], ctx=mx.cpu()))
+layer(np.array([1, 2, 3], ctx=mx.cpu()))
 ```
 
 Output:
 
 ```bash
 [0.  0.5 1. ]
-<NDArray 3 @cpu(0)>
 ```
 
 
@@ -112,13 +109,13 @@ Below is an example of how to create a simple neural network with a custom layer
 ```{.python .input}
 net = gluon.nn.HybridSequential()                         # Define a Neural Network as a sequence of hybrid blocks
 net.add(Dense(5))                                     # Add Dense layer with 5 neurons
-net.add(NormalizationHybridLayer())                   # Add our custom layer
+net.add(NormalizationHybridLayer())                   # Add a custom layer
 net.add(Dense(1))                                     # Add Dense layer with 1 neurons
 
 
 net.initialize(mx.init.Xavier(magnitude=2.24))            # Initialize parameters of all layers
 net.hybridize()                                           # Create, optimize and cache computational graph
-input = nd.random_uniform(low=-10, high=10, shape=(5, 2)) # Create 5 random examples with 2 feature each in range [-10, 10]
+input = np.random.uniform(low=-10, high=10, size=(5, 2))  # Create 5 random examples with 2 feature each in range [-10, 10]
 net(input)
 ```
 
@@ -131,36 +128,36 @@ Output:
  [-0.05046433]
  [-1.2375476 ]
  [-0.15506986]]
-<NDArray 5x1 @cpu(0)>
 ```
 
 
 ## Parameters of a custom layer
 
-Usually, a layer has a set of associated parameters, sometimes also referred as weights. This is an internal state of a layer. Most often, these parameters are the ones, that we want to learn during backpropogation step, but sometimes these parameters might be just constants we want to use during forward pass.
-
-All parameters of a block are stored and accessed via [ParameterDict](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/parameter.py#L508) class. This class helps with initialization, updating, saving and loading of the parameters. Each layer can have multiple set of parameters, and all of them can be stored in a single instance of the `ParameterDict` class. On a block level, the instance of the `ParameterDict` class is accessible via `self.params` field, and outside of a block one can access all parameters of the network via [collect_params()](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.collect_params) method called on a `container`. `ParameterDict` uses [Parameter](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Parameter) class to represent parameters inside of Apache MxNet neural network. If parameter doesn't exist, trying to get a parameter via `self.params` will create it automatically.
+Usually, a layer has a set of associated parameters, sometimes also referred as weights. This is an internal state of a layer. Most often, these parameters are the ones, that we want to learn during backpropogation step, but sometimes these parameters might be just constants we want to use during forward pass. The parameters are usually represented as [Parameter](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Parameter) class inside of Apache MXNet neural network.
 
 
 ```{.python .input}
 class NormalizationHybridLayer(gluon.HybridBlock):
     def __init__(self, hidden_units, scales):
         super(NormalizationHybridLayer, self).__init__()
-
+        self.hidden_units = hidden_units
         self.weights = gluon.Parameter('weights',
-                                       shape=(hidden_units, 0),
+                                       shape=(hidden_units, -1),
                                        allow_deferred_init=True)
 
         self.scales = gluon.Parameter('scales',
                                       shape=scales.shape,
-                                      init=mx.init.Constant(scales.asnumpy().tolist()), # Convert to regular list to make this object serializable
+                                      init=mx.init.Constant(scales), # Convert to regular list to make this object serializable
                                       differentiable=False)
             
-    def hybrid_forward(self, F, x, weights, scales):
-        normalized_data = F.broadcast_div(F.broadcast_sub(x, F.min(x)), (F.broadcast_sub(F.max(x), F.min(x))))
-        weighted_data = F.FullyConnected(normalized_data, weights, num_hidden=self.weights.shape[0], no_bias=True)
-        scaled_data = F.broadcast_mul(scales, weighted_data)
+    def forward(self, x):
+        normalized_data = (x - np.min(x)) / (np.max(x) - np.min(x))
+        weighted_data = npx.fully_connected(normalized_data, self.weights.data(), num_hidden=self.hidden_units, no_bias=True)
+        scaled_data = np.multiply(self.scales.data(), weighted_data)
         return scaled_data
+    
+    def infer_shape(self, x, *args):
+        self.weights.shape = (self.hidden_units, x.shape[x.ndim-1])
 ```
 
 In the example above 2 set of parameters are defined:
@@ -168,13 +165,8 @@ In the example above 2 set of parameters are defined:
 1. Parameter `scale` is a constant that doesn't change. Its shape is defined during construction.
 
 Notice a few aspects of this code:
-* Shape is not provided when creating `weights`. Instead it is going to be infered from the shape of the input
+* Shape is not provided when creating `weights`. Instead it is going to be infered from the shape of the input by `infer_shape` method.
 * `Scales` parameter is initialized and marked as `differentiable=False`.
-* `F` backend is used for all calculations
-* The calculation of dot product is done using `F.FullyConnected()` method instead of `F.dot()` method. The one was chosen over another because the former supports automatic infering shapes of inputs while the latter doesn't. This is extremely important to know, if one doesn't want to hard code all the shapes. The best way to learn what operators supports automatic inference of input shapes at the moment is browsing C++ implementation of operators to see if one uses a method `SHAPE_ASSIGN_CHECK(*in_shape, fullc::kWeight, Shape2(param.num_hidden, num_input));`
-* `hybrid_forward()` method signature has changed. It accepts two new arguments: `weights` and `scales`.
-
-The last peculiarity is due to support of imperative and symbolic programming by `HybridBlock`. During training phase, parameters are passed to the layer by Apache MxNet framework as additional arguments to the method, because they might need to be converted to a `Symbol` depending on if the layer was hybridized. One shouldn't use `self.weights` and `self.scales` in `hybrid_forward` except to get shapes of parameters. 
 
 Running forward pass on this network is very similar to the previous example, so instead of just doing one forward pass, let's run whole training for a few epochs to show that `scales` parameter doesn't change during the training while `weights` parameter is changing.
 
@@ -185,7 +177,7 @@ def print_params(title, net):
     Helper function to print out the state of parameters of NormalizationHybridLayer
     """
     print(title)
-    hybridlayer_params = {k: v for k, v in net.collect_params().items() if 'normalizationhybridlayer' in k }
+    hybridlayer_params = {k: v for k, v in net.collect_params().items()}
     
     for key, value in hybridlayer_params.items():
         print('{} = {}\n'.format(key, value.data()))
@@ -193,15 +185,15 @@ def print_params(title, net):
 net = gluon.nn.HybridSequential()                             # Define a Neural Network as a sequence of hybrid blocks
 net.add(Dense(5))                                         # Add Dense layer with 5 neurons
 net.add(NormalizationHybridLayer(hidden_units=5, 
-                                    scales = nd.array([2]))) # Add our custom layer
+                                 scales = np.array([2]))) # Add a custom layer
 net.add(Dense(1))                                         # Add Dense layer with 1 neurons
 
 
 net.initialize(mx.init.Xavier(magnitude=2.24))                # Initialize parameters of all layers
 net.hybridize()                                               # Create, optimize and cache computational graph
 
-input = nd.random_uniform(low=-10, high=10, shape=(5, 2))     # Create 5 random examples with 2 feature each in range [-10, 10]
-label = nd.random_uniform(low=-1, high=1, shape=(5, 1))
+input = np.random.uniform(low=-10, high=10, size=(5, 2))      # Create 5 random examples with 2 feature each in range [-10, 10]
+label = np.random.uniform(low=-1, high=1, size=(5, 1))
 
 mse_loss = gluon.loss.L2Loss()                                # Mean squared error between output and label
 trainer = gluon.Trainer(net.collect_params(),                 # Init trainer with Stochastic Gradient Descent (sgd) optimization method and parameters for it
@@ -231,11 +223,9 @@ hybridsequential94_normalizationhybridlayer0_weights =
  [ 0.6077331   0.03922009  0.13425875  0.5729856  -0.14446527]
  [-0.3572498   0.18545026 -0.09098256  0.5106366  -0.35151464]
  [-0.39846328  0.22245121  0.13075739  0.33387476 -0.10088372]]
-<NDArray 5x5 @cpu(0)>
 
 hybridsequential94_normalizationhybridlayer0_scales = 
 [2.]
-<NDArray 1 @cpu(0)>
 
 =========== Parameters after backward pass ===========
 
@@ -245,11 +235,9 @@ hybridsequential94_normalizationhybridlayer0_weights =
  [ 0.48665082 -0.00144657  0.00376363  0.47501418 -0.23885089]
  [-0.22626656  0.22944227  0.05018325  0.6166192  -0.24941102]
  [-0.44946212  0.20532274  0.07579394  0.29261002 -0.14063817]]
-<NDArray 5x5 @cpu(0)>
 
 hybridsequential94_normalizationhybridlayer0_scales = 
 [2.]
-<NDArray 1 @cpu(0)>
 ``` 
 
 

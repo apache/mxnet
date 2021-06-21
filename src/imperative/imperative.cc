@@ -384,6 +384,24 @@ void Imperative::SetDeferredComputeVariable(NDArrayHandle *arrays,
   }
 }
 
+void Imperative::DeferredComputeClear(NDArrayHandle *arrays, const int num) {
+  std::vector<nnvm::NodeEntry> outputs;
+  outputs.reserve(num);
+  for (int i = 0; i < num; i++) {
+    NDArray *nd = reinterpret_cast<NDArray *>(arrays[i]);
+    outputs.emplace_back(nd->deferredcompute_entry_);
+  }
+  nnvm::DFSVisit(outputs, [&](const nnvm::ObjectPtr& n) {
+    if (n != nullptr && !n->info.empty()) {
+      Imperative::DCInfo info = Imperative::DCInfo::Get(n);
+      info.inputs_.clear();
+      info.input_handles_.clear();
+      info.outputs_.clear();
+      info.Clear(n);
+    }
+  });
+}
+
 std::vector<NDArray*> Imperative::Backward(
     const std::vector<NDArray*>& outputs,
     const std::vector<NDArray*>& ograds,

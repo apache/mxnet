@@ -83,6 +83,9 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::gt>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
+NNVM_REGISTER_OP(broadcast_greater)
+.add_alias("_npx_broadcast_greater");
+
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_greater_equal)
 .describe(R"code(Returns the result of element-wise **greater than or equal to** (>=) comparison operation with broadcasting.
 

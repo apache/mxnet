@@ -217,6 +217,7 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_elemwise_mul)
+.add_alias("_npx_quantized_elemwise_mul")
 .describe(R"code(Multiplies arguments int8 element-wise.
 )code" ADD_FILELINE)
 .set_num_inputs(6)

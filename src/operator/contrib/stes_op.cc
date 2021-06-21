@@ -32,6 +32,7 @@ namespace op {
 
 // Round STE
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(_contrib_round_ste, cpu, mshadow_op::round)
+.add_alias("_npx_round_ste")
 .describe(R"code(Straight-through-estimator of `round()`.
 
 In forward pass, returns element-wise rounded value to the nearest integer of the input (same as `round()`).
@@ -57,6 +58,7 @@ The storage type of ``round_ste`` output depends upon the input storage type:
 
 // sign
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(_contrib_sign_ste, cpu, mshadow_op::sign)
+.add_alias("_npx_sign_ste")
 .describe(R"code(Straight-through-estimator of `sign()`.
 
 In forward pass, returns element-wise sign of the input (same as `sign()`).

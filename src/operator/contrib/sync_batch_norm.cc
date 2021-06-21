@@ -103,6 +103,7 @@ Reference:
 .add_arguments(SyncBatchNormParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_contrib_SyncBatchNorm)
+.add_alias("_npx_sync_batch_norm")
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
     [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
       if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;

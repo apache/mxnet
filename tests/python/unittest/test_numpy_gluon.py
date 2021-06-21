@@ -23,9 +23,10 @@ import os
 from uuid import uuid4
 import numpy as _np
 import mxnet as mx
-from mxnet import gluon, autograd, np
+from mxnet import gluon, autograd, np, npx
 from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency, assert_allclose
 from mxnet.gluon import nn
+from mxnet.base import MXNetError
 import random
 import pytest
 
@@ -43,29 +44,20 @@ def test_create_np_param():
         for k, v in params.items():
             assert type(v.data()) is expected_type
 
+    @use_np
     class TestBlock1(gluon.HybridBlock):
         def __init__(self):
             super(TestBlock1, self).__init__()
             self.w = gluon.Parameter('w', shape=(K, N), allow_deferred_init=True)
 
-        def hybrid_forward(self, F, x, w):
-            return F.dot(x, w)
+        def forward(self, x):
+            ctx = x.ctx
+            return np.dot(x, self.w.data(ctx))
 
-    @use_np
-    class TestBlock2(gluon.HybridBlock):
-        def __init__(self):
-            super(TestBlock2, self).__init__()
-            self.w = gluon.Parameter('w', shape=(K, N), allow_deferred_init=True)
-
-        def hybrid_forward(self, F, x, w):
-            return F.np.dot(x, w)
-
-    x = mx.nd.random.uniform(shape=(M, K))
+    x = mx.np.random.uniform(size=(M, K))
     for initializer in [mx.initializer.Uniform, mx.initializer.Normal]:
-        check_block_params(x, TestBlock1, False, mx.nd.NDArray, initializer)
-        check_block_params(x, TestBlock1, True, mx.nd.NDArray, initializer)
-        check_block_params(x.as_np_ndarray(), TestBlock2, False, np.ndarray, initializer)
-        check_block_params(x.as_np_ndarray(), TestBlock2, True, np.ndarray, initializer)
+        check_block_params(x, TestBlock1, False, mx.np.ndarray, initializer)
+        check_block_params(x, TestBlock1, True, mx.np.ndarray, initializer)
 
 
 @use_np
@@ -78,15 +70,20 @@ def test_optimizer_with_np_ndarrays():
             self.w2 = gluon.Parameter('w2', shape=(num_hidden_dim, num_output_dim),
                                       allow_deferred_init=True)
 
-        def hybrid_forward(self, F, x, w1, w2):
-            h = x.dot(w1)  # equivalent to F.np.dot(x, w1)
-            h_relu = F.npx.relu(h)  # equivalent to F.relu(h) but generating np.ndarray
-            y_pred = h_relu.dot(w2)  # equivalent to F.np.dot(h_relu, w2)
+        def forward(self, x):
+            ctx = x.ctx
+            h = x.dot(self.w1.data(ctx))  # equivalent to np.dot(x, w1)
+            h_relu = npx.relu(h)  # equivalent to npx.relu(h) but generating np.ndarray
+            y_pred = h_relu.dot(self.w2.data(ctx))  # equivalent to np.dot(h_relu, w2)
             return y_pred
+        
+        def infer_shape(self, x, *args):
+            pre_shape = self.w1.shape
+            self.w1.shape = (x.shape[x.ndim-1], pre_shape[1])
 
     class TotalLoss(gluon.HybridBlock):
-        def hybrid_forward(self, F, pred, label):
-            return ((pred - label) ** 2).sum()  # equivalent to F.np.sum(F.np.square(pred - label))
+        def forward(self, pred, label):
+            return ((pred - label) ** 2).sum()  # equivalent to np.sum(np.square(pred - label))
 
     regressor = LinearRegression()
     regressor.initialize(mx.init.Uniform())
@@ -162,8 +159,9 @@ def test_np_get_constant():
             super(Foo, self).__init__()
             self.weight = gluon.Constant(const_arr)
 
-        def hybrid_forward(self, F, x, weight):
-            return x + weight.astype(np.float32)
+        def forward(self, x):
+            ctx = x.ctx
+            return x + self.weight.data(ctx).astype(np.float32)
 
     x = np.random.uniform(size=const_arr.shape, dtype=const_arr.dtype)
     for hybridize in [False, True]:
@@ -297,12 +295,12 @@ def test_symbolic_basic_slicing():
             cache.add((hashable_index(index1), hashable_index(index2)))
             # Test basic slicing on a single symbol
             class TestSlicingSingleSymbol1(gluon.HybridBlock):
-                def hybrid_forward(self, F, x, y):
+                def forward(self, x, y):
                     return x[()][index1] + y[()][index1]
 
             # Test basic slicing on a single symbol
             class TestSlicingSingleSymbol2(gluon.HybridBlock):
-                def hybrid_forward(self, F, x, y):
+                def forward(self, x, y):
                     return (x[()][index1] + y[()][index1])[index2]
 
             check_gluon_hybridize_consistency(TestSlicingSingleSymbol1, [x, y],
@@ -312,10 +310,10 @@ def test_symbolic_basic_slicing():
                                               (a[()][index1] + b[()][index1])[index2])
         # Test for split/hsplit/vsplit
         class TestSlicingWithSplit(gluon.HybridBlock):
-            def hybrid_forward(self, F, x):
-                x = F.np.split(x, shape[2], axis=2)
+            def forward(self, x):
+                x = mx.np.split(x, shape[2], axis=2)
                 x = x[1:-1]
-                x = F.np.concatenate(x, axis=2)
+                x = mx.np.concatenate(x, axis=2)
                 return x
 
         class TestSlicingWithSplit2(gluon.HybridBlock):
@@ -323,23 +321,23 @@ def test_symbolic_basic_slicing():
                 super(TestSlicingWithSplit2, self).__init__()
                 self.layer = gluon.nn.Dense(16, flatten=False)
 
-            def hybrid_forward(self, F, x, y):
-                x = F.np.split(x, 1)
+            def forward(self, x, y):
+                x = mx.np.split(x, 1)
                 x = x[0]
                 return self.layer(x[:, -1, :] + y[:, -1, :])
 
         class TestSlicingWithHSplit(gluon.HybridBlock):
-            def hybrid_forward(self, F, x):
-                x = F.np.hsplit(x, shape[1])
+            def forward(self, x):
+                x = mx.np.hsplit(x, shape[1])
                 x = x[1:-1]
-                x = F.np.concatenate(x, axis=1)
+                x = mx.np.concatenate(x, axis=1)
                 return x
 
         class TestSlicingWithVSplit(gluon.HybridBlock):
-            def hybrid_forward(self, F, x):
-                x = F.np.vsplit(x, shape[0])
+            def forward(self, x):
+                x = mx.np.vsplit(x, shape[0])
                 x = x[1:-1]
-                x = F.np.concatenate(x, axis=0)
+                x = mx.np.concatenate(x, axis=0)
                 return x
 
         if len(shape) > 2 and shape[2] > 2:
@@ -363,7 +361,7 @@ def test_symbolic_basic_slicing():
                             ((3,), -1),
                             ((3,), 0)]:
         class IntegerIndexing(gluon.HybridBlock):
-            def hybrid_forward(self, F, x):
+            def forward(self, x):
                 return x[idx]
         check_gluon_hybridize_consistency(IntegerIndexing,
                                           [mx.np.ones(data_shape)],
@@ -377,8 +375,8 @@ def test_net_symbol_save_load():
             super(Case1, self).__init__()
             self.layer = gluon.nn.Dense(64, flatten=False)
 
-        def hybrid_forward(self, F, x, y):
-            x = F.np.split(x, 1)
+        def forward(self, x, y):
+            x = mx.np.split(x, 1)
             x = x[0]
             return self.layer(x[:, -1, :] + y[:, -1, :])
     check_gluon_save_load(Case1, [mx.np.random.normal(0, 1, (10, 5, 8, 6)),
@@ -390,8 +388,8 @@ def test_net_symbol_save_load():
             self.layer1 = gluon.nn.Dense(64, flatten=False)
             self.layer2 = gluon.nn.Dense(64, flatten=False)
 
-        def hybrid_forward(self, F, x, y):
-            x = F.np.split(x, 1)
+        def forward(self, x, y):
+            x = mx.np.split(x, 1)
             x = x[0]
             return self.layer1(x[:, -1, :]) + self.layer2(y[:, -1, :])
     check_gluon_save_load(Case2, [mx.np.random.normal(0, 1, (10, 5, 8)),
@@ -403,8 +401,8 @@ def test_hybridize_boolean_dtype():
         def __init__(self):
             super(Foo, self).__init__()
 
-        def hybrid_forward(self, F, valid_length):
-            mask = ((F.np.ones((10,)) / 2) < valid_length)
+        def forward(self, valid_length):
+            mask = ((np.ones((10,)) / 2) < valid_length)
             return mask
 
     valid_length = mx.np.random.uniform(size=(10,))
@@ -424,20 +422,20 @@ def test_optimize_for():
         def __init__(self):
             super(TestBlock, self).__init__()
             self.d = mx.gluon.nn.Dense(1)
-        def hybrid_forward(self, F, a, b, *args):
-            res = self.d.hybrid_forward(F, a, b)
+        def forward(self, a):
+            res = self.d(a)
             return res
 
     a = mx.np.random.uniform(low=-1, high=1, size=(1,1))
-    b = mx.np.random.uniform(low=-1, high=1, size=(1,1))
 
     net = TestBlock()
     net.initialize()
     net.hybridize()
 
-    out = net(a, b)
+    out = net(a)
+    b = net.collect_params().pop('d.weight').data()
     net.optimize_for(a, b, backend="MKLDNN")
-    out2 = net(a, b)
+    out2 = net(a)
 
 
 @use_np

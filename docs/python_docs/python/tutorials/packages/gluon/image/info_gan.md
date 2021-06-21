@@ -32,12 +32,12 @@ import sys
 import tarfile
 import time
 
-import numpy as np
+import numpy as onp
 from matplotlib import pyplot as plt
 from mxboard import SummaryWriter
 import mxnet as mx
 from mxnet import gluon
-from mxnet import ndarray as nd
+from mxnet import np, npx
 from mxnet.gluon import nn, utils
 from mxnet import autograd
 
@@ -72,10 +72,10 @@ if not os.path.exists(data_path):
 ```{.python .input}
 def transform(data, width=64, height=64):
     data = mx.image.imresize(data, width, height)
-    data = nd.transpose(data, (2,0,1))
-    data = data.astype(np.float32)/127.5 - 1
+    data = np.transpose(data, (2,0,1))
+    data = data.astype(onp.float32)/127.5 - 1
     if data.shape[0] == 1:
-        data = nd.tile(data, (3, 1, 1))
+        data = np.tile(data, (3, 1, 1))
     return data.reshape((1,) + data.shape)
 ```
 
@@ -108,7 +108,7 @@ test_filenames = filenames[split:]
 train_images = images[:split]
 train_filenames = filenames[:split]
 
-train_data = gluon.data.ArrayDataset(nd.concatenate(train_images))
+train_data = gluon.data.ArrayDataset(np.concatenate(train_images))
 train_dataloader = gluon.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, last_batch='rollover', num_workers=multiprocessing.cpu_count()-1)
 ```
 
@@ -139,9 +139,9 @@ class Generator(gluon.HybridBlock):
         self.G.add(nn.Conv2DTranspose(3, 4, 2, 1, use_bias=False))
         self.G.add(nn.Activation('tanh'))
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.prev(x)
-        x = F.reshape(x, (0, -1, 1, 1))
+        x = np.reshape(x, (0, -1, 1, 1))
         return self.G(x)
 ```
 
@@ -176,7 +176,7 @@ class Discriminator(gluon.HybridBlock):
         self.Q = nn.HybridSequential()
         self.Q.add(self.feat, self.category_prob, self.continuous_mean)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x               = self.D(x)
         prob            = self.prob(x)
         feat            = self.feat(x)
@@ -216,8 +216,8 @@ Create vectors with real (=1) and fake labels (=0).
 
 
 ```{.python .input}
-real_label = nd.ones((batch_size,), ctx=ctx)
-fake_label = nd.zeros((batch_size,),ctx=ctx)
+real_label = np.ones((batch_size,), ctx=ctx)
+fake_label = np.zeros((batch_size,),ctx=ctx)
 ```
 
 Load a pretrained model.
@@ -256,13 +256,13 @@ This function samples `c`, `z`, and concatenates them to create the generator in
 def create_generator_input():
 
     #create random noise
-    z      = nd.random_normal(0, 1, shape=(batch_size, z_dim), ctx=ctx)
-    label  = nd.array(np.random.randint(n_categories, size=batch_size)).as_in_context(ctx)
-    c1     = nd.one_hot(label, depth=n_categories).as_in_context(ctx)
-    c2     = nd.random.uniform(-1, 1, shape=(batch_size, n_continuous)).as_in_context(ctx)
+    z      = np.random.normal(0, 1, size=(batch_size, z_dim), ctx=ctx)
+    label  = np.array(onp.random.randint(n_categories, size=batch_size)).as_in_context(ctx)
+    c1     = npx.one_hot(label, depth=n_categories).as_in_context(ctx)
+    c2     = np.random.uniform(-1, 1, size=(batch_size, n_continuous)).as_in_context(ctx)
 
     # concatenate random noise with c which will be the input of the generator
-    return nd.concat(z, c1, c2, dim=1), label, c2
+    return np.concatenate([z, c1, c2], axis=1), label, c2
 ```
 
 Define the training loop.
@@ -282,8 +282,8 @@ with SummaryWriter(logdir='./logs/') as sw:
         print("Epoch", epoch)
         starttime = time.time()
 
-        d_error_epoch = nd.zeros((1,), ctx=ctx)
-        g_error_epoch = nd.zeros((1,), ctx=ctx)
+        d_error_epoch = np.zeros((1,), ctx=ctx)
+        g_error_epoch = np.zeros((1,), ctx=ctx)
 
         for idx, data in enumerate(train_dataloader):
 
@@ -329,16 +329,16 @@ with SummaryWriter(logdir='./logs/') as sw:
                 count = idx + 1
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - starttime)))
                 logging.info('discriminator loss = %f, generator loss = %f at iter %d epoch %d'
-                         %(d_error_epoch.asscalar()/count,g_error_epoch.asscalar()/count, count, epoch))
+                         %(d_error_epoch.item()/count,g_error_epoch.item()/count, count, epoch))
 
                 g_input,_,_ = create_generator_input()
 
                 # create some fake image for logging in MXBoard
                 fake_image = generator(g_input)
 
-                sw.add_scalar(tag='Loss_D', value={'test':d_error_epoch.asscalar()/count}, global_step=counter)
-                sw.add_scalar(tag='Loss_G', value={'test':d_error_epoch.asscalar()/count}, global_step=counter)
-                sw.add_image(tag='data_image', image=((fake_image[0]+ 1.0) * 127.5).astype(np.uint8)  , global_step=counter)
+                sw.add_scalar(tag='Loss_D', value={'test':d_error_epoch.item()/count}, global_step=counter)
+                sw.add_scalar(tag='Loss_G', value={'test':d_error_epoch.item()/count}, global_step=counter)
+                sw.add_image(tag='data_image', image=((fake_image[0]+ 1.0) * 127.5).astype(onp.uint8)  , global_step=counter)
                 sw.flush()
 
         discriminator.save_parameters("infogan_d_latest.params")
@@ -366,9 +366,9 @@ Nearest neighbor function, which takes a matrix of features and an input feature
 
 ```{.python .input}
 def get_knn(features, input_vector, k=3):
-    dist = (nd.square(features - input_vector).sum(axis=1))/features.shape[0]
+    dist = (np.square(features - input_vector).sum(axis=1))/features.shape[0]
     indices = dist.asnumpy().argsort()[:k]
-    return [(index, dist[index].asscalar()) for index in indices]
+    return [(index, dist[index].item()) for index in indices]
 ```
 
 A helper function to visualize image data.
@@ -376,7 +376,7 @@ A helper function to visualize image data.
 
 ```{.python .input}
 def visualize(img_array):
-    plt.imshow(((img_array.asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
+    plt.imshow(((img_array.asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(onp.uint8))
     plt.axis('off')
 ```
 
@@ -386,18 +386,18 @@ Take some images from the test data, obtain its feature vector from `discriminat
 ```{.python .input}
 feature_size = 8192
 
-features = nd.zeros((len(test_images), feature_size), ctx=ctx)
+features = np.zeros((len(test_images), feature_size), ctx=ctx)
 
 for idx, image in enumerate(test_images):
 
-    feature = discriminator(nd.array(image, ctx=ctx))
+    feature = discriminator(np.array(image, ctx=ctx))
     feature = feature.reshape(feature_size,)
     features[idx,:] = feature.copyto(ctx)
 
 
 for image in test_images[:100]:
 
-    feature = discriminator(mx.nd.array(image, ctx=ctx))
+    feature = discriminator(np.array(image, ctx=ctx))
     feature = feature.reshape((feature_size,))
     image   = image.reshape((3,64,64))
 
@@ -438,7 +438,7 @@ data = []
 counter = 0
 for i,f in enumerate(test_filenames):
 
-    point = [float((tsne[i,k] - np.min(tsne[:,k]))/(np.max(tsne[:,k]) - np.min(tsne[:,k]))) for k in range(2) ]
+    point = [float((tsne[i,k] - onp.min(tsne[:,k]))/(onp.max(tsne[:,k]) - onp.min(tsne[:,k]))) for k in range(2) ]
     data.append({"path": os.path.abspath(os.path.join(os.getcwd(),f)), "point": point})
 
 with open("imagetsne.json", 'w') as outfile:

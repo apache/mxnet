@@ -819,7 +819,8 @@ _NP_EXT_OP_IMPLEMENTED_SET = {'_npx_softmax', '_npx_log_softmax', '_npx_masked_s
                               '_npx_convolution', '_npx_deconvolution', '_npx_pooling',
                               '_npx_dropout', '_npx_one_hot', '_npx_rnn', '_npx_embedding',
                               '_npx_topk', '_npx_layer_norm', '_npx_leaky_relu', '_npx_batch_dot',
-                              '_npx_broadcast_like', '_npx_arange_like'}
+                              '_npx_broadcast_like', '_npx_arange_like', '_npx_group_norm',
+                              '_npx_foreach', '_npx_while_loop', '_npx_cond'}
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
 

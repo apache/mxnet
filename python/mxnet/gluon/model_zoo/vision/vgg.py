@@ -30,8 +30,10 @@ from ....initializer import Xavier
 from ...block import HybridBlock
 from ... import nn
 from .... import base
+from ....util import use_np
 
 
+@use_np
 class VGG(HybridBlock):
     r"""VGG model from the `"Very Deep Convolutional Networks for Large-Scale Image Recognition"
     <https://arxiv.org/abs/1409.1556>`_ paper.
@@ -78,7 +80,7 @@ class VGG(HybridBlock):
             featurizer.add(nn.MaxPool2D(strides=2))
         return featurizer
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.features(x)
         x = self.output(x)
         return x

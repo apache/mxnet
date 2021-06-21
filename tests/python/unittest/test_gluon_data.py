@@ -72,18 +72,20 @@ def test_recordimage_dataset(prepare_record):
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
+@mx.util.use_np
 def test_recordimage_dataset_handle(prepare_record):
     recfile = prepare_record
     class TmpTransform(mx.gluon.HybridBlock):
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             return x
+
     fn = TmpTransform()
     dataset = gluon.data.vision.ImageRecordDataset(recfile).transform_first(fn).__mx_handle__()
     loader = gluon.data.DataLoader(dataset, 1)
 
     for i, (x, y) in enumerate(loader):
         assert x.shape[0] == 1 and x.shape[3] == 3
-        assert y.asscalar() == i
+        assert y.item() == i
 
 def _dataset_transform_fn(x, y):
     """Named transform function since lambda function cannot be pickled."""
@@ -539,6 +541,7 @@ def test_mx_data_loader():
     for _ in dl:
         pass
 
+@mx.util.use_np
 def test_mx_data_loader_nopython():
     from mxnet.gluon.data.dataloader import DataLoader
     from mxnet.gluon.data.vision.transforms import ToTensor

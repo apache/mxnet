@@ -9487,10 +9487,11 @@ def test_zero_sized_dim():
     seq_reverse()
     seq_mask()
 
+@mx.util.use_np
 def test_take_grads():
     # Test for https://github.com/apache/incubator-mxnet/issues/19817
     from mxnet.gluon.nn import HybridBlock, Conv1D, HybridSequential, HybridLambda, Dense
-    from mxnet import autograd, nd
+    from mxnet import autograd, np as mx_np, npx as mx_npx
     from mxnet.gluon.loss import L2Loss
 
     def get_grads(model, grads, ctx=mx.cpu()):
@@ -9536,12 +9537,13 @@ def test_take_grads():
             self.use_take = use_take
             self.den = dense_layer()
 
-        def hybrid_forward(self, F, X, axis=1):
+        def forward(self, X, axis=1):
             X1 = self.den(X)
+            print(X1.shape)
             if self.use_take:
-                X2 = F.take(X1, nd.array([0]), axis=axis)
+                X2 = mx_np.take(X1, mx_np.array([0]), axis=axis)
             else:
-                X2 = F.slice_axis(X1, begin=0, end=1, axis=axis)
+                X2 = mx_npx.slice(X1.T, begin=0, end=1).T
             return X2
 
     N = 30
@@ -9550,17 +9552,17 @@ def test_take_grads():
 
     X = np.random.normal(size=(N, T, C))
     Y = np.random.normal(size=(N, 1))
-    X, Y = nd.array(X), nd.array(Y)
+    X, Y = mx_np.array(X), mx_np.array(Y)
     seed = np.random.randint(1000)
 
-    # Using F.take
+    # Using mx_np.take
     mx.random.seed(seed)
     model = Model(use_take=True)
     model.initialize()
     loss = L2Loss()
     grads1 = run_model(model, loss, X, Y)
 
-    # Using F.slice_axis
+    # Using mx_npx.slice
     mx.random.seed(seed)
     model2 = Model(use_take=False)
     model2.initialize()

@@ -38,19 +38,17 @@ class Independent(Distribution):
         event_dim = reinterpreted_batch_ndims + base_distribution.event_dim
         self.base_dist = base_distribution
         self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
-        super(Independent, self).__init__(F=base_distribution.F,
-                                          event_dim=event_dim,
+        super(Independent, self).__init__(event_dim=event_dim,
                                           validate_args=validate_args)
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
-        F = self.F
         # we use -2 to copy the sizes of reinterpreted batch dimensions
         reinterpreted_axes = (-2,) * self.reinterpreted_batch_ndims
         new_instance.base_dist = self.base_dist.broadcast_to(
             batch_shape + reinterpreted_axes)
         new_instance.reinterpreted_batch_ndims = self.reinterpreted_batch_ndims
-        super(Independent, new_instance).__init__(F=F, event_dim=self.event_dim,
+        super(Independent, new_instance).__init__(event_dim=self.event_dim,
                                                   validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance

@@ -23,7 +23,8 @@ __all__ = ['Normal']
 import math
 from .constraint import Real, Positive
 from .exp_family import ExponentialFamily
-from .utils import getF, erf, erfinv
+from .utils import erf, erfinv
+from .... import np, npx
 
 
 class Normal(ExponentialFamily):
@@ -35,9 +36,6 @@ class Normal(ExponentialFamily):
         mean of the distribution.
     scale : Tensor or scalar, default 1
         standard deviation of the distribution
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
@@ -45,12 +43,11 @@ class Normal(ExponentialFamily):
     support = Real()
     arg_constraints = {'loc': Real(), 'scale': Positive()}
 
-    def __init__(self, loc=0.0, scale=1.0, F=None, validate_args=None):
-        _F = F if F is not None else getF(loc, scale)
+    def __init__(self, loc=0.0, scale=1.0, validate_args=None):
         self.loc = loc
         self.scale = scale
         super(Normal, self).__init__(
-            F=_F, event_dim=0, validate_args=validate_args)
+            event_dim=0, validate_args=validate_args)
 
     def log_prob(self, value):
         """Compute the log likelihood of `value`.
@@ -67,11 +64,10 @@ class Normal(ExponentialFamily):
         """
         if self._validate_args:
             self._validate_samples(value)
-        F = self.F
-        log_scale = F.np.log(self.scale)
+        log_scale = np.log(self.scale)
         log_prob = -((value - self.loc) ** 2) / (2 * self.variance)
         log_prob = log_prob - log_scale
-        log_prob = log_prob - F.np.log(F.np.sqrt(2 * math.pi))
+        log_prob = log_prob - np.log(np.sqrt(2 * math.pi))
         return log_prob
 
     def sample(self, size=None):
@@ -89,7 +85,7 @@ class Normal(ExponentialFamily):
         Tensor
             Samples from Normal distribution.
         """
-        return self.F.np.random.normal(self.loc, self.scale, size)
+        return np.random.normal(self.loc, self.scale, size)
 
     def sample_n(self, size=None):
         r"""Generate samples of (batch_size + broadcast(loc, scale).shape)
@@ -105,15 +101,13 @@ class Normal(ExponentialFamily):
         Tensor
             Samples from Normal distribution.
         """
-        return self.F.npx.random.normal_n(self.loc, self.scale, size)
+        return npx.random.normal_n(self.loc, self.scale, size)
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
-        F = self.F
-        new_instance.loc = F.np.broadcast_to(self.loc, batch_shape)
-        new_instance.scale = F.np.broadcast_to(self.scale, batch_shape)
-        super(Normal, new_instance).__init__(F=F,
-                                             event_dim=self.event_dim,
+        new_instance.loc = np.broadcast_to(self.loc, batch_shape)
+        new_instance.scale = np.broadcast_to(self.scale, batch_shape)
+        super(Normal, new_instance).__init__(event_dim=self.event_dim,
                                              validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
@@ -121,14 +115,14 @@ class Normal(ExponentialFamily):
     def cdf(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        erf_func = erf(self.F)
+        erf_func = erf()
         standarized_samples = ((value - self.loc) /
                                (math.sqrt(2) * self.scale))
         erf_term = erf_func(standarized_samples)
         return 0.5 * (1 + erf_term)
 
     def icdf(self, value):
-        erfinv_func = erfinv(self.F)
+        erfinv_func = erfinv()
         return self.loc + self.scale * erfinv_func(2 * value - 1) * math.sqrt(2)
 
     @property
@@ -144,8 +138,7 @@ class Normal(ExponentialFamily):
         return self.scale ** 2
 
     def entropy(self):
-        F = self.F
-        return 0.5 + 0.5 * math.log(2 * math.pi) + F.np.log(self.scale)
+        return 0.5 + 0.5 * math.log(2 * math.pi) + np.log(self.scale)
 
     @property
     def _natural_params(self):
@@ -158,9 +151,8 @@ class Normal(ExponentialFamily):
             Natural parameters of normal distribution.
         """
         return (self.loc / (self.scale ** 2),
-                -0.5 * self.F.np.reciprocal(self.scale ** 2))
+                -0.5 * np.reciprocal(self.scale ** 2))
 
     def _log_normalizer(self, x, y):
         # pylint: disable=arguments-differ
-        F = self.F
-        return -0.25 * F.np.pow(x, 2) / y + 0.5 * F.np.log(-math.pi / y)
+        return -0.25 * np.pow(x, 2) / y + 0.5 * np.log(-math.pi / y)

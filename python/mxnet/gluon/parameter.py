@@ -52,12 +52,12 @@ class Parameter(object):
     not ``'null'``, it will also hold a gradient array on each :py:class:`Context`::
 
         ctx = mx.gpu(0)
-        x = mx.nd.zeros((16, 100), ctx=ctx)
+        x = mx.np.zeros((16, 100), ctx=ctx)
         w = mx.gluon.Parameter('fc_weight', shape=(64, 100), init=mx.init.Xavier())
         b = mx.gluon.Parameter('fc_bias', shape=(64,), init=mx.init.Zero())
         w.initialize(ctx=ctx)
         b.initialize(ctx=ctx)
-        out = mx.nd.FullyConnected(x, w.data(ctx), b.data(ctx), num_hidden=64)
+        out = mx.npx.fully_connected(x, w.data(ctx), b.data(ctx), num_hidden=64)
 
     Parameters
     ----------

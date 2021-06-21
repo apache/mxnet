@@ -22,7 +22,7 @@ import re
 
 import mxnet as mx
 from common import TemporaryDirectory
-from mxnet import nd
+from mxnet import np
 from mxnet.gluon import nn, loss
 from mxnet.gluon.contrib.estimator import estimator, event_handler
 from mxnet.gluon.contrib.estimator.event_handler import LoggingHandler
@@ -33,6 +33,8 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+
+mx.npx.reset_np()
 
 class AxisArrayDataset(Dataset):
     def __init__(self, * args):
@@ -65,17 +67,18 @@ def _get_test_network(net=nn.Sequential()):
 
 
 def _get_test_data(in_size=32):
-    data = nd.ones((in_size, 100))
-    label = nd.zeros((in_size, 1))
+    data = np.ones((in_size, 100))
+    label = np.zeros((in_size, 1))
     data_arr = mx.gluon.data.dataset.ArrayDataset(data, label)
     return mx.gluon.data.DataLoader(data_arr, batch_size=8)
 
 def _get_batch_axis_test_data(in_size=32):
-    data = nd.ones((100, in_size))
-    label = nd.zeros((1, in_size))
+    data = np.ones((100, in_size))
+    label = np.zeros((1, in_size))
     data_arr = AxisArrayDataset(data, label)
     return mx.gluon.data.DataLoader(data_arr, batch_size=8)
 
+@mx.util.use_np
 def test_checkpoint_handler():
     with TemporaryDirectory() as tmpdir:
         model_prefix = 'test_epoch'
@@ -122,6 +125,7 @@ def test_checkpoint_handler():
         assert os.path.isfile(file_path + '-epoch2batch9.params')
         assert os.path.isfile(file_path + '-epoch2batch9.states')
 
+@mx.util.use_np
 def test_resume_checkpoint():
     with TemporaryDirectory() as tmpdir:
         model_prefix = 'test_net'
@@ -150,6 +154,7 @@ def test_resume_checkpoint():
         assert os.path.isfile(file_path + '-epoch4batch20.states')
 
 
+@mx.util.use_np
 def test_early_stopping():
     test_data = _get_test_data()
 
@@ -171,6 +176,7 @@ def test_early_stopping():
     assert early_stopping.current_epoch == 1
 
 
+@mx.util.use_np
 def test_logging():
     with TemporaryDirectory() as tmpdir:
         test_data = _get_test_data()
@@ -194,6 +200,7 @@ def test_logging():
         del est  # Clean up estimator and logger before deleting tmpdir
 
 
+@mx.util.use_np
 def test_custom_handler():
     class CustomStopHandler(event_handler.TrainBegin,
                             event_handler.BatchEnd,
@@ -237,6 +244,7 @@ def test_custom_handler():
     assert custom_handler.num_batch == 5 * 4
     assert custom_handler.num_epoch == 5
 
+@mx.util.use_np
 def test_logging_interval():
     ''' test different options for logging handler '''
     ''' test case #1: log interval is 1 '''
@@ -294,6 +302,7 @@ def test_logging_interval():
 
     assert(info_len == int(data_size/batch_size/log_interval) + 1)
 
+@mx.util.use_np
 def test_validation_handler_batch_axis():
     # test case #1: test batch_axis=0
     test_data = _get_test_data()
@@ -310,6 +319,7 @@ def test_validation_handler_batch_axis():
     est.fit(test_data, val_data=val_data,
             epochs=3, batch_axis=1)
 
+@mx.util.use_np
 def test_validation_handler():
     test_data = _get_test_data()
 

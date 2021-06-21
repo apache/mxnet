@@ -49,6 +49,7 @@ def _generate_objects():
     return [2, 5] + label
 
 
+@use_np
 class TestImage(unittest.TestCase):
     IMAGES_URL = "https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz"
 
@@ -142,4 +143,4 @@ class TestImage(unittest.TestCase):
             max_attempts=50)
         for batch in det_iter:
             pass
-        mx.nd.waitall()
+        mx.npx.waitall()

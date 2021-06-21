@@ -25,7 +25,7 @@ __all__ = ['softmax', 'log_softmax', 'masked_softmax', 'masked_log_softmax',
            'activation', 'batch_norm', 'fully_connected', 'pick', 'convolution',
            'deconvolution', 'pooling', 'dropout', 'one_hot', 'rnn', 'embedding',
            'topk', 'layer_norm', 'leaky_relu', 'batch_dot', 'broadcast_like',
-           'arange_like']
+           'arange_like', 'group_norm']
 
 
 # pylint: disable=too-many-arguments
@@ -1362,3 +1362,47 @@ def arange_like(data, start=0.0, step=1.0, repeat=1, ctx=None, axis=None):
     """
     return _mx_nd_npx.arange_like(data=data, start=start, step=step, repeat=repeat,
                                   ctx=ctx, axis=axis)
+
+
+# pylint: disable=too-many-arguments
+@set_module('mxnet.numpy_extension')
+def group_norm(data, gamma, beta, num_groups=1, eps=1e-3, output_mean_var=False):
+    r"""Group normalization.
+
+    The input channels are separated into ``num_groups`` groups,
+    each containing ``num_channels / num_groups`` channels.
+    The mean and standard-deviation are calculated separately over the each group.
+
+    .. math::
+
+      data = data.reshape((N, num_groups, C // num_groups, ...))
+      out = \frac{data - mean(data, axis)}{\sqrt{var(data, axis) + \epsilon}} * gamma + beta
+
+    Both ``gamma`` and ``beta`` are learnable parameters.
+
+
+
+    Defined in ../src/operator/nn/group_norm.cc:L78
+
+    Parameters
+    ----------
+    data : NDArray
+        Input data
+    gamma : NDArray
+        gamma array
+    beta : NDArray
+        beta array
+    num_groups : int, optional, default='1'
+        Total number of groups.
+    eps : float, optional, default=9.99999975e-06
+        An `epsilon` parameter to prevent division by 0.
+    output_mean_var : boolean, optional, default=0
+        Output the mean and std calculated along the given axis.
+
+    Returns
+    -------
+    out : NDArray or list of NDArrays
+        The output of this function.
+    """
+    return _mx_nd_npx.group_norm(data=data, gamma=gamma, beta=beta, num_groups=num_groups,
+                                 eps=eps, output_mean_var=output_mean_var)

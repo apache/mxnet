@@ -26,6 +26,7 @@ from .transformed_distribution import TransformedDistribution
 from ..transformation import AbsTransform
 from .cauchy import Cauchy
 from .constraint import Positive
+from .... import np
 
 
 class HalfCauchy(TransformedDistribution):
@@ -37,9 +38,6 @@ class HalfCauchy(TransformedDistribution):
     ----------
     scale : Tensor or scalar, default 1
         Scale of the full Cauchy distribution.
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
@@ -47,8 +45,8 @@ class HalfCauchy(TransformedDistribution):
     support = Positive()
     arg_constraints = {'scale': Positive()}
 
-    def __init__(self, scale=1.0, F=None, validate_args=None):
-        base_dist = Cauchy(0, scale, F)
+    def __init__(self, scale=1.0, validate_args=None):
+        base_dist = Cauchy(0, scale)
         self.scale = scale
         super(HalfCauchy, self).__init__(
             base_dist, AbsTransform(), validate_args=validate_args)
@@ -57,7 +55,7 @@ class HalfCauchy(TransformedDistribution):
         if self._validate_args:
             self._validate_samples(value)
         log_prob = self._base_dist.log_prob(value) + math.log(2)
-        log_prob = self.F.np.where(value < 0, -inf, log_prob)
+        log_prob = np.where(value < 0, -inf, log_prob)
         return log_prob
 
     def cdf(self, value):
@@ -77,5 +75,4 @@ class HalfCauchy(TransformedDistribution):
 
     @property
     def variance(self):
-        pow_fn = self.F.np.power
-        return pow_fn(self.scale, 2) * (1 - 2 / math.pi)
+        return np.power(self.scale, 2) * (1 - 2 / math.pi)

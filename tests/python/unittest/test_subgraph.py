@@ -100,7 +100,7 @@ def test_make_subgraph():
         model.hybridize()
         model.initialize()
         s = (1, 3, 32, 32)
-        data = mx.nd.random.normal(shape=s)
+        data = mx.np.random.normal(size=s)
         out = model(data)
         model.export('resnet18')
         orig = mx.sym.load('resnet18-symbol.json')

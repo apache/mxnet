@@ -24,8 +24,8 @@ from itertools import product
 from time import time
 
 import mxnet as mx
-import numpy as np
-from mxnet import gluon
+import numpy as onp
+from mxnet import gluon, np, npx
 
 
 _parser = argparse.ArgumentParser(description='Benchmark foreach and while_loop on RNN tasks.')
@@ -42,8 +42,8 @@ class ForeachRNN(gluon.HybridBlock):
         self.length = length
         self.cell = cell
 
-    def hybrid_forward(self, F, inputs, states):
-        out, states = F.contrib.foreach(self.cell, inputs, states)
+    def forward(self, inputs, states):
+        out, states = npx.foreach(self.cell, inputs, states)
         return out
 
 
@@ -53,15 +53,15 @@ class WhileRNN(gluon.HybridBlock):
         self.length = length
         self.cell = cell
 
-    def hybrid_forward(self, F, inputs, states):
+    def forward(self, inputs, states):
         def _func(*states):
             i = states[0]
             s = states[1: ]
-            data = inputs.take(i).squeeze(axis=0)
+            data = np.squeeze(np.take(inputs, i), axis=0)
             out, new_s = self.cell(data, s)
             new_s = [i + 1] + new_s
             return out, new_s
-        out, states = F.contrib.while_loop(
+        out, states = npx.while_loop(
             cond=lambda i, *_: i < self.length,
             func=_func,
             loop_vars=states,
@@ -71,11 +71,11 @@ class WhileRNN(gluon.HybridBlock):
 
 
 def _zeros(shape, ctx):
-    return mx.nd.zeros(shape=shape, ctx=ctx)
+    return mx.np.zeros(shape=shape, ctx=ctx)
 
 
 def _array(shape, ctx):
-    return mx.nd.normal(loc=0.0, scale=1.0, shape=shape, ctx=ctx)
+    return mx.np.random.normal(loc=0.0, scale=1.0, size=shape, ctx=ctx)
 
 
 def _get_gpus():
@@ -107,11 +107,11 @@ def run_benchmark(cell_type, ctx, seq_len, batch_size, hidden_dim):
                     res = layer(inputs, states)
             if is_train:
                 res.backward()
-            mx.nd.waitall()
+            mx.npx.waitall()
             tock = time()
             times.append((tock - tick) * 1000.0)
         times = times[args.warmup_rounds: ]
-        print("Time used: mean = %.3f ms, std = %.3f ms" % (np.mean(times), np.std(times)))
+        print("Time used: mean = %.3f ms, std = %.3f ms" % (onp.mean(times), onp.std(times)))
 
 
 def main():

@@ -28,7 +28,7 @@
 
 namespace mxnet {
 
-inline int String2Layout(const std::string& s) {
+inline int String2PoolingLayout(const std::string& s) {
   using namespace op;
   if (s == "NCW") {
     return mshadow::kNCW;
@@ -97,7 +97,8 @@ MXNET_REGISTER_API("_npx.pooling")
   } else {
     param.kernel = TShape(args[1].operator ObjectRef());
   }
-
+  // global pool
+  param.global_pool = args[6].operator bool();
   // stride
   if (args[2].type_code() == kNull) {
     if (param.kernel.ndim() == 1) {
@@ -105,6 +106,10 @@ MXNET_REGISTER_API("_npx.pooling")
     } else if (param.kernel.ndim() == 2) {
       param.stride = mshadow::Shape2(1, 1);
     } else {
+      if (param.global_pool == false) {
+        CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim()
+            << "D pooling not supported. Only 1D, 2D, and 3D pooling are supported.";
+      }
       param.stride = mshadow::Shape3(1, 1, 1);
     }
   } else if (args[2].type_code() == kDLInt) {
@@ -130,8 +135,6 @@ MXNET_REGISTER_API("_npx.pooling")
   param.pool_type = String2PoolType(args[4].operator std::string());
   // pooling convention
   param.pooling_convention = String2Convention(args[5].operator std::string());
-  // global pool
-  param.global_pool = args[6].operator bool();
   // cudnn_off
   if (args[7].type_code() == kNull) {
     param.cudnn_off = false;
@@ -154,12 +157,7 @@ MXNET_REGISTER_API("_npx.pooling")
   if (args[10].type_code() == kNull) {
     param.layout = dmlc::nullopt;
   } else {
-    param.layout = String2Layout(args[num_inputs + 10]);
-  }
-
-  if (param.global_pool == false) {
-    CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim()
-        << "D pooling not supported";
+    param.layout = String2PoolingLayout(args[10]);
   }
 
   attrs.parsed = param;

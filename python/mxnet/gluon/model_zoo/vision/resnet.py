@@ -32,7 +32,8 @@ from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
 from .... import base
-from .... util import is_np_array
+from .... util import use_np
+from .... import npx
 
 # Helpers
 def _conv3x3(channels, stride, in_channels):
@@ -41,6 +42,7 @@ def _conv3x3(channels, stride, in_channels):
 
 
 # Blocks
+@use_np
 class BasicBlockV1(HybridBlock):
     r"""BasicBlock V1 from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -73,7 +75,7 @@ class BasicBlockV1(HybridBlock):
         else:
             self.downsample = None
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         residual = x
 
         x = self.body(x)
@@ -81,12 +83,12 @@ class BasicBlockV1(HybridBlock):
         if self.downsample:
             residual = self.downsample(residual)
 
-        act = F.npx.activation if is_np_array() else F.Activation
-        x = act(residual+x, act_type='relu')
+        x = npx.activation(residual+x, act_type='relu')
 
         return x
 
 
+@use_np
 class BottleneckV1(HybridBlock):
     r"""Bottleneck V1 from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
@@ -122,7 +124,7 @@ class BottleneckV1(HybridBlock):
         else:
             self.downsample = None
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         residual = x
 
         x = self.body(x)
@@ -130,11 +132,11 @@ class BottleneckV1(HybridBlock):
         if self.downsample:
             residual = self.downsample(residual)
 
-        act = F.npx.activation if is_np_array() else F.Activation
-        x = act(x + residual, act_type='relu')
+        x = npx.activation(x + residual, act_type='relu')
         return x
 
 
+@use_np
 class BasicBlockV2(HybridBlock):
     r"""BasicBlock V2 from
     `"Identity Mappings in Deep Residual Networks"
@@ -164,22 +166,22 @@ class BasicBlockV2(HybridBlock):
         else:
             self.downsample = None
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         residual = x
         x = self.bn1(x)
-        act = F.npx.activation if is_np_array() else F.Activation
-        x = act(x, act_type='relu')
+        x = npx.activation(x, act_type='relu')
         if self.downsample:
             residual = self.downsample(x)
         x = self.conv1(x)
 
         x = self.bn2(x)
-        x = act(x, act_type='relu')
+        x = npx.activation(x, act_type='relu')
         x = self.conv2(x)
 
         return x + residual
 
 
+@use_np
 class BottleneckV2(HybridBlock):
     r"""Bottleneck V2 from
     `"Identity Mappings in Deep Residual Networks"
@@ -211,27 +213,27 @@ class BottleneckV2(HybridBlock):
         else:
             self.downsample = None
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         residual = x
         x = self.bn1(x)
-        act = F.npx.activation if is_np_array() else F.Activation
-        x = act(x, act_type='relu')
+        x = npx.activation(x, act_type='relu')
         if self.downsample:
             residual = self.downsample(x)
         x = self.conv1(x)
 
         x = self.bn2(x)
-        x = act(x, act_type='relu')
+        x = npx.activation(x, act_type='relu')
         x = self.conv2(x)
 
         x = self.bn3(x)
-        x = act(x, act_type='relu')
+        x = npx.activation(x, act_type='relu')
         x = self.conv3(x)
 
         return x + residual
 
 
 # Nets
+@use_np
 class ResNetV1(HybridBlock):
     r"""ResNet V1 model from
     `"Deep Residual Learning for Image Recognition"
@@ -277,13 +279,14 @@ class ResNetV1(HybridBlock):
             layer.add(block(channels, 1, False, in_channels=channels))
         return layer
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.features(x)
         x = self.output(x)
 
         return x
 
 
+@use_np
 class ResNetV2(HybridBlock):
     r"""ResNet V2 model from
     `"Identity Mappings in Deep Residual Networks"
@@ -335,7 +338,7 @@ class ResNetV2(HybridBlock):
             layer.add(block(channels, 1, False, in_channels=channels))
         return layer
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.features(x)
         x = self.output(x)
         return x

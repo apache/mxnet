@@ -22,7 +22,8 @@ __all__ = ['Dirichlet']
 
 from .exp_family import ExponentialFamily
 from .constraint import Positive, Simplex
-from .utils import getF, gammaln, digamma, sample_n_shape_converter, _clip_float_eps
+from .utils import gammaln, digamma, sample_n_shape_converter, _clip_float_eps
+from .... import np
 
 
 class Dirichlet(ExponentialFamily):
@@ -32,8 +33,6 @@ class Dirichlet(ExponentialFamily):
     ----------
     alpha : Tensor or scalar
        Shape parameter of the distribution
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
     """
     # pylint: disable=abstract-method
 
@@ -41,44 +40,39 @@ class Dirichlet(ExponentialFamily):
     support = Simplex()
     arg_constraints = {'alpha': Positive()}
 
-    def __init__(self, alpha, F=None, validate_args=None):
-        _F = F if F is not None else getF(alpha)
+    def __init__(self, alpha, validate_args=None):
         self.alpha = alpha
         super(Dirichlet, self).__init__(
-            F=_F, event_dim=1, validate_args=validate_args)
+            event_dim=1, validate_args=validate_args)
 
     def sample(self, size=None):
-        F = self.F
         if size is None:
             size = ()
             alpha = self.alpha
         else:
             if isinstance(size, int):
-                alpha = F.np.broadcast_to(self.alpha, (size,) + (-2,))
+                alpha = np.broadcast_to(self.alpha, (size,) + (-2,))
             else:
-                alpha = F.np.broadcast_to(self.alpha, size + (-2,))
-        gamma_samples = F.np.random.gamma(alpha, 1)
+                alpha = np.broadcast_to(self.alpha, size + (-2,))
+        gamma_samples = np.random.gamma(alpha, 1)
         s = gamma_samples.sum(-1, keepdims=True)
-        return _clip_float_eps(gamma_samples / s, F)
+        return _clip_float_eps(gamma_samples / s)
 
     def sample_n(self, size=None):
-        F = self.F
         alpha = self.alpha
         if size is None:
             return self.sample()
-        gamma_samples = F.np.random.gamma(
+        gamma_samples = np.random.gamma(
             alpha, 1, sample_n_shape_converter(size))
         s = gamma_samples.sum(-1, keepdims=True)
-        return _clip_float_eps(gamma_samples / s, F)
+        return _clip_float_eps(gamma_samples / s)
 
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        F = self.F
-        lgamma = gammaln(F)
-        log = F.np.log
+        lgamma = gammaln()
         alpha = self.alpha
-        return (log(value) * (alpha - 1.0)).sum(-1) +\
+        return (np.log(value) * (alpha - 1.0)).sum(-1) +\
             lgamma(alpha.sum(-1)) - lgamma(alpha).sum(-1)
 
     @property
@@ -93,9 +87,8 @@ class Dirichlet(ExponentialFamily):
         return a * (s - a) / ((s + 1) * s ** 2)
 
     def entropy(self):
-        F = self.F
-        lgamma = gammaln(F)
-        dgamma = digamma(F)
+        lgamma = gammaln()
+        dgamma = digamma()
         a0 = self.alpha.sum(-1)
         log_B_alpha = lgamma(self.alpha).sum(-1) - lgamma(a0)
         return (log_B_alpha + (self.alpha - 1).sum(-1) * dgamma(a0) -

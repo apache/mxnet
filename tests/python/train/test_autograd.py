@@ -28,6 +28,7 @@ import os
 from mxnet import autograd
 logging.basicConfig(level=logging.DEBUG)
 
+@mx.util.use_np
 def test_autograd(tmpdir):
     # define network
     def get_net():

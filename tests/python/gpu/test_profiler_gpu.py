@@ -123,12 +123,10 @@ def test_gpu_memory_profiler_gluon():
     model.initialize(ctx=mx.gpu())
     model.hybridize()
 
-    inputs = mx.sym.var('data')
-
     with mx.autograd.record():
-        out = model(mx.nd.zeros((16, 10), ctx=mx.gpu()))
+        out = model(mx.np.zeros((16, 10), ctx=mx.gpu()))
     out.backward()
-    mx.nd.waitall()
+    mx.npx.waitall()
     profiler.set_state('stop')
     profiler.dump(True)
 

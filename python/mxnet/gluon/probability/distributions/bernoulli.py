@@ -21,8 +21,9 @@
 __all__ = ['Bernoulli']
 
 from .exp_family import ExponentialFamily
-from .utils import prob2logit, logit2prob, getF, cached_property, sample_n_shape_converter
+from .utils import prob2logit, logit2prob, cached_property, sample_n_shape_converter
 from .constraint import Boolean, Interval, Real
+from .... import np, npx
 
 
 class Bernoulli(ExponentialFamily):
@@ -34,9 +35,6 @@ class Bernoulli(ExponentialFamily):
         Probability of sampling `1`.
     logit : Tensor or scalar, default None
         The log-odds of sampling `1`.
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
@@ -44,9 +42,7 @@ class Bernoulli(ExponentialFamily):
     arg_constraints = {'prob': Interval(0, 1),
                        'logit': Real()}
 
-    def __init__(self, prob=None, logit=None, F=None, validate_args=None):
-        _F = F if F is not None else getF(prob, logit)
-
+    def __init__(self, prob=None, logit=None, validate_args=None):
         if (prob is None) == (logit is None):
             raise ValueError(
                 "Either `prob` or `logit` must be specified, but not both. " +
@@ -58,7 +54,7 @@ class Bernoulli(ExponentialFamily):
             self.logit = logit
 
         super(Bernoulli, self).__init__(
-            F=_F, event_dim=0, validate_args=validate_args)
+            event_dim=0, validate_args=validate_args)
 
     @cached_property
     def prob(self):
@@ -70,7 +66,7 @@ class Bernoulli(ExponentialFamily):
             Parameter tensor.
         """
         # pylint: disable=method-hidden
-        return logit2prob(self.logit, True, self.F)
+        return logit2prob(self.logit, True)
 
     @cached_property
     def logit(self):
@@ -82,7 +78,7 @@ class Bernoulli(ExponentialFamily):
             Parameter tensor.
         """
         # pylint: disable=method-hidden
-        return prob2logit(self.prob, True, self.F)
+        return prob2logit(self.prob, True)
 
     @property
     def mean(self):
@@ -96,9 +92,9 @@ class Bernoulli(ExponentialFamily):
         new_instance = self.__new__(type(self))
         F = self.F
         if 'prob' in self.__dict__:
-            new_instance.prob = F.np.broadcast_to(self.prob, batch_shape)
+            new_instance.prob = np.broadcast_to(self.prob, batch_shape)
         else:
-            new_instance.logit = F.np.broadcast_to(self.logit, batch_shape)
+            new_instance.logit = np.broadcast_to(self.logit, batch_shape)
         super(Bernoulli, new_instance).__init__(F=F,
                                                 event_dim=self.event_dim,
                                                 validate_args=False)
@@ -108,21 +104,20 @@ class Bernoulli(ExponentialFamily):
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        F = self.F
         if self.prob is None:
             logit = self.logit
-            return logit * (value - 1) - F.np.log(F.np.exp(-logit) + 1)
+            return logit * (value - 1) - np.log(np.exp(-logit) + 1)
         else:
             # Parameterized by probability
             eps = 1e-12
-            return (self.F.np.log(self.prob + eps) * value
-                    + self.F.np.log1p(-self.prob + eps) * (1 - value))
+            return (np.log(self.prob + eps) * value
+                    + np.log1p(-self.prob + eps) * (1 - value))
 
     def sample(self, size=None):
-        return self.F.npx.random.bernoulli(self.prob, self.logit, size)
+        return npx.random.bernoulli(self.prob, self.logit, size)
 
     def sample_n(self, size=None):
-        return self.F.npx.random.bernoulli(self.prob, self.logit, sample_n_shape_converter(size))
+        return npx.random.bernoulli(self.prob, self.logit, sample_n_shape_converter(size))
 
     @property
     def _natural_params(self):
@@ -130,10 +125,9 @@ class Bernoulli(ExponentialFamily):
 
     def _log_normalizer(self, x):
         # pylint: disable=arguments-differ
-        return self.F.np.log(1 + self.F.np.exp(x))
+        return np.log(1 + np.exp(x))
 
     def entropy(self):
-        F = self.F
         logit = self.logit
         prob = self.prob
-        return -(logit * (prob - 1) - F.np.log(F.np.exp(-logit) + 1))
+        return -(logit * (prob - 1) - np.log(np.exp(-logit) + 1))

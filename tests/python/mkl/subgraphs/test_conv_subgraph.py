@@ -25,6 +25,9 @@ from mxnet.contrib import quantization
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
 
+mx.npx.reset_np()
+
+@mx.util.use_np
 def test_float64_fallback():
   class ConvWithDtype(nn.HybridBlock):
     def __init__(self, dtype='float32', **kwargs):
@@ -32,19 +35,26 @@ def test_float64_fallback():
         self.weight = mx.gluon.Parameter('weight', dtype=dtype, allow_deferred_init=True)
         self.bias = mx.gluon.Parameter('bias', dtype=dtype, allow_deferred_init=True)
 
-    def hybrid_forward(self, F, x, weight, bias):
-        out = F.Convolution(x, kernel=(1,1), num_filter=3, weight=weight, no_bias=False, bias=bias)
+    def forward(self, x):
+        out = mx.npx.convolution(x, kernel=(1,1), num_filter=3,
+                                 weight=self.weight.data(x.ctx), no_bias=False,
+                                 bias=self.bias.data(x.ctx))
         return out
+    
+    def infer_shape(self, x):
+        self.weight.shape = (3, 3, 1, 1)
+        self.bias.shape = (3,)
 
   dtype = 'float64'
   net = ConvWithDtype(dtype=dtype)
-  in_data = mx.nd.random.normal(shape=[3,3,3,3], dtype=dtype)
+  in_data = mx.np.random.normal(size=[3,3,3,3], dtype=dtype)
   net.initialize()
   out = net(in_data)
   out.wait_to_read()
   assert in_data.dtype == out.dtype
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_single_conv(use_bias, data_shape):
@@ -54,7 +64,7 @@ def test_pos_single_conv(use_bias, data_shape):
         super(Conv, self).__init__(**kwargs)
         self.conv0 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         out = self.conv0(x)
         return out
 
@@ -63,6 +73,7 @@ def test_pos_single_conv(use_bias, data_shape):
   check_fusion(net, data_shape, attr)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_add(use_bias, data_shape):
@@ -74,7 +85,7 @@ def test_pos_conv_add(use_bias, data_shape):
         self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1)
         self.pool = nn.AvgPool2D(pool_size=(1,1))
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
       out = self.conv0(x) + self.pool(self.conv1(x))
       return out
     
@@ -83,6 +94,7 @@ def test_pos_conv_add(use_bias, data_shape):
   check_fusion(net, data_shape, attr)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('no_bias', [True, False])
 def test_pos_conv_add2(no_bias, data_shape):
@@ -94,7 +106,7 @@ def test_pos_conv_add2(no_bias, data_shape):
         self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1)
         self.pool = nn.AvgPool2D(pool_size=(1,1))
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
       out = self.pool(self.conv1(x)) + self.conv0(x)
       return out
 
@@ -103,6 +115,7 @@ def test_pos_conv_add2(no_bias, data_shape):
   check_fusion(net, data_shape, attr)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", False), #TODO(bgawrych): investigate
@@ -134,7 +147,7 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
         self.conv1 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
         self.conv1.share_parameters(self.conv0.collect_params())
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         out = self.act(self.conv0(x)) + self.conv1(x)
         return out
 
@@ -145,6 +158,7 @@ def test_pos_conv_act_add(data_shape, alg, quantize, use_bias):
   check_fusion(net, data_shape, attrs, check_quantization=quantize)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", True),
@@ -174,7 +188,7 @@ def test_pos_conv_bn_act(use_bias, data_shape, alg, quantize):
         else:
           self.act = nn.Activation(activation = alg)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
       out = self.act(self.bn(self.conv0(x)))
       return out
 
@@ -183,6 +197,7 @@ def test_pos_conv_bn_act(use_bias, data_shape, alg, quantize):
   check_fusion(net, data_shape, attr, check_quantization=quantize)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", True),
@@ -214,7 +229,7 @@ def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
         else:
           self.act = nn.Activation(activation = alg)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         out = self.bn(self.conv0(x)) + self.conv1(x)
         out = self.act(out)
         return out
@@ -224,6 +239,7 @@ def test_pos_conv_bn_sum_act(use_bias, data_shape, alg, quantize):
   check_fusion(net, data_shape, attr, check_quantization=quantize)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('input_num,dim', [
     (2, -1),
@@ -241,7 +257,7 @@ def test_pos_single_concat(data_shape, input_num, dim, out_type):
         for i in range(input_num):
             self.concat.add(nn.Identity())
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         out = self.concat(x)
         return out
 
@@ -250,6 +266,7 @@ def test_pos_single_concat(data_shape, input_num, dim, out_type):
                   check_calibration=False)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('out_type', ['int8', 'auto'])
 def test_pos_single_concat_pos_neg(data_shape, out_type):
@@ -260,37 +277,48 @@ def test_pos_single_concat_pos_neg(data_shape, out_type):
         self.act = nn.Activation(activation = 'relu')
         self.concat_dim = dim
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         relu_out = self.act(self.conv0(x))
-        out = F.concat(x, relu_out, dim=self.concat_dim)
+        out = mx.np.concatenate([x, relu_out], axis=self.concat_dim)
         return out
 
   concat = ConvDataConcat(dim=1)
   check_quantize(concat, data_shape, out_type, name='', check_calibration=False)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('out_type', ['int8', 'auto'])
+@pytest.mark.skip("Scale doesn't align in numpy for numpy operators")
 def test_pos_concat_scale_align(data_shape, out_type):
   # concat scale alignment case
   class ConcatScaleAlign(nn.HybridBlock):
     def __init__(self, **kwargs):
-      super(ConcatScaleAlign, self).__init__(**kwargs)
-      self.shared_weight = mx.gluon.Parameter('shared_weight', init=mx.init.Xavier(magnitude=2.24),
-                                              dtype='float32', allow_deferred_init=True)
+        super(ConcatScaleAlign, self).__init__(**kwargs)
+        self.shared_weight = mx.gluon.Parameter('shared_weight', shape=(64, data_shape[1], 3, 3),
+                                                init=mx.init.Xavier(magnitude=2.24),
+                                                dtype='float32', allow_deferred_init=True)
 
-    def hybrid_forward(self, F, x, shared_weight):
-        conv1 = F.Convolution(x, kernel=(3,3), num_filter=64, weight=shared_weight,   no_bias=True)
-        conv2 = F.Convolution(x, kernel=(3,3), num_filter=64, weight=shared_weight*2, no_bias=True)
-        conv3 = F.Convolution(x, kernel=(3,3), num_filter=64, weight=shared_weight*3, no_bias=True)
-        conv4 = F.Convolution(x, kernel=(3,3), num_filter=64, weight=shared_weight*4, no_bias=True)
-        return F.concat(conv1, conv2, conv3, conv4, dim=1)
+    def forward(self, x):
+        conv1 = mx.npx.convolution(x, kernel=(3,3), num_filter=64,
+                                   weight=self.shared_weight.data(x.ctx), no_bias=True)
+        conv2 = mx.npx.convolution(x, kernel=(3,3), num_filter=64,
+                                   weight=self.shared_weight.data(x.ctx)*2, no_bias=True)
+        conv3 = mx.npx.convolution(x, kernel=(3,3), num_filter=64,
+                                   weight=self.shared_weight.data(x.ctx)*3, no_bias=True)
+        conv4 = mx.npx.convolution(x, kernel=(3,3), num_filter=64,
+                                   weight=self.shared_weight.data(x.ctx)*4, no_bias=True)
+        return mx.np.concatenate([conv1, conv2, conv3, conv4], axis=1)
+
+    def infer_shape(self, x, *args):
+        self.shared_weight.weight = (64, data_shape[1], 3, 3)
 
   concat = ConcatScaleAlign()
   check_quantize(concat, data_shape, out_type, check_calibration=True,
                   check_scale_align=True)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", True),
@@ -319,7 +347,7 @@ def test_pos_conv_act(use_bias, data_shape, alg, quantize):
         else:
           self.act = nn.Activation(activation = alg)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         out = self.act(self.conv0(x))
         return out
 
@@ -330,6 +358,7 @@ def test_pos_conv_act(use_bias, data_shape, alg, quantize):
   check_fusion(net, data_shape, attrs, check_quantization=quantize)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('use_bias', [True, False])
 def test_pos_conv_bn(use_bias, data_shape):
@@ -340,7 +369,7 @@ def test_pos_conv_bn(use_bias, data_shape):
         self.conv0 = nn.Conv2D(channels=64, kernel_size=(3, 3), strides=1, use_bias=use_bias)
         self.bn = nn.BatchNorm()
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         out = self.bn(self.conv0(x))
         return out
 
@@ -357,13 +386,14 @@ class ConvBNSum(nn.HybridBlock):
       self.bn = nn.BatchNorm()
       self.reverse = reverse_sum_order
 
-  def hybrid_forward(self, F, x):
+  def forward(self, x):
       if self.reverse:
         return self.bn(self.conv0(x)) + x
       else:
         return x + self.bn(self.conv0(x))
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('reverse_sum_order', [True, False])
 @pytest.mark.parametrize('dedup_subgraph', [True, False])
@@ -384,7 +414,7 @@ class MobileNetV2Struct(nn.HybridBlock):
       self.bn2 = nn.BatchNorm()
       self.reverse = reverse_sum_order
 
-  def hybrid_forward(self, F, x):
+  def forward(self, x):
       out = self.bn1(self.conv1(x))
       if self.reverse:
         return self.bn2(self.conv2(out)) + out
@@ -392,6 +422,7 @@ class MobileNetV2Struct(nn.HybridBlock):
         return out + self.bn2(self.conv2(out))
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('reverse_sum_order', [True, False])
 @pytest.mark.parametrize('dedup_subgraph', [True, False])
@@ -401,11 +432,12 @@ def test_mobilenetv2_struct(data_shape, reverse_sum_order, dedup_subgraph):
   check_fusion(net, data_shape, attr, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('reverse_sum_order', [False, True])
 @pytest.mark.parametrize('model_name', ['conv_bn_sum', 'mobilenetv2_struct'])
 def test_deduplication(data_shape, reverse_sum_order, model_name):
-  data_nd = mx.random.uniform(-1, 1, shape=data_shape, ctx=mx.cpu())
+  data_nd = mx.np.random.uniform(-1, 1, size=data_shape, ctx=mx.cpu())
   if (model_name == 'mobilenetv2_struct'):
     model_dedup = MobileNetV2Struct(reverse_sum_order=reverse_sum_order)
   else:
@@ -424,6 +456,7 @@ def test_deduplication(data_shape, reverse_sum_order, model_name):
   assert_almost_equal(out.asnumpy(), out_dedup.asnumpy(), rtol=1e-3, atol=1e-1)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_bn(data_shape):
   # conv + bn can't be fusion case
@@ -440,7 +473,7 @@ def test_neg_conv_bn(data_shape):
       self.pool = nn.AvgPool2D(pool_size=(4,4))
       self.tailneg = TailNegBlock()
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
       conv = self.conv1(x)
       bn = self.bn1(conv)
       pool = self.pool(conv)
@@ -453,6 +486,7 @@ def test_neg_conv_bn(data_shape):
   check_neg_fusion(net, attrs, excluded_attrs, data_shape)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_relu(data_shape):
   # conv + relu can't be fusion case
@@ -469,7 +503,7 @@ def test_neg_conv_relu(data_shape):
       self.pool = nn.AvgPool2D(pool_size=(4,4))
       self.tailneg = TailNegBlock()
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
       conv = self.conv1(x)
       bn = self.act(conv)
       pool = self.pool(conv)
@@ -481,6 +515,7 @@ def test_neg_conv_relu(data_shape):
   check_neg_fusion(net, attrs, excluded_attrs, data_shape)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_add(data_shape):
   # conv + add can't be fusion case
@@ -502,18 +537,22 @@ def test_neg_conv_add(data_shape):
       self.add_value = mx.gluon.Parameter('add_value', init=mx.init.Xavier(magnitude=2.24),
                                           dtype='float32', allow_deferred_init=True)
 
-    def hybrid_forward(self, F, x, add_value):
+    def forward(self, x):
       conv = self.conv1(x)
-      sum1 = conv + add_value
+      print(conv.shape)
+      sum1 = conv + self.add_value.data(x.ctx)
       pool = self.pool(conv)
       return self.tailneg(sum1, pool)
+    
+    def infer_shape(self, x):
+      self.add_value.shape = (data_shape[0], 64, data_shape[2]-2, data_shape[3]-2)
 
   attrs = []
   excluded_attrs = ['with_sum']
   net = NegConvAdd()
   check_neg_fusion(net, attrs, excluded_attrs, data_shape)
 
-
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_bn_relu(data_shape):
   # conv + bn + relu can't be fusion case
@@ -536,7 +575,7 @@ def test_neg_conv_bn_relu(data_shape):
       self.tailneg = TailNegBlock()
       self.batchnorm_pool = batchnorm_pool
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
       conv = self.conv1(x)
       bn = self.bn(conv)
       relu = self.act(bn)
@@ -556,6 +595,7 @@ def test_neg_conv_bn_relu(data_shape):
   check_neg_fusion(net2, attrs2, excluded_attrs2, data_shape)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_bn_add_relu(data_shape):
   # conv + bn + add + relu can't be fusion case
@@ -586,10 +626,11 @@ def test_neg_conv_bn_add_relu(data_shape):
       self.add_value = mx.gluon.Parameter('add_value', init=mx.init.Xavier(magnitude=2.24),
                                           dtype='float32', allow_deferred_init=True)
 
-    def hybrid_forward(self, F, x, add_value):
+    def forward(self, x):
       conv = self.conv1(x)
       bn = self.bn(conv)
-      sum1 = bn + add_value
+      print(bn.shape)
+      sum1 = bn + self.add_value.data(x.ctx)
       relu = self.act(sum1)
       if self.connect_mode == "conv_customop":
         pool = self.pool(conv)
@@ -598,6 +639,9 @@ def test_neg_conv_bn_add_relu(data_shape):
       else:
         pool = self.pool(sum1)
       return self.tailneg(relu, pool)
+
+    def infer_shape(self, x):
+      self.add_value.shape = (data_shape[0], 64, data_shape[2]-2, data_shape[3]-2)
 
   # eg.1
   net1 = NegConvBNAddRelu(connect_mode = "conv_customop")
@@ -619,6 +663,7 @@ def test_neg_conv_bn_add_relu(data_shape):
 
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_min,data_max,weight_min,weight_max', [
     (-1, 1, 0, 0),
     (-1, 1, -1e-6, +1e-6),
@@ -629,9 +674,9 @@ def test_neg_conv_bn_add_relu(data_shape):
 ])
 def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max):
   data_shape = (1, 32, 2, 2)
-  data_nd = mx.random.uniform(data_min, data_max, shape=data_shape, ctx=mx.cpu())
-  weight_nd = mx.random.uniform(weight_min, weight_max, shape=[64, 32, 1, 1], ctx=mx.cpu())
-  bias_nd = mx.random.uniform(-1, +1, shape=[64], ctx=mx.cpu())
+  data_nd = mx.np.random.uniform(data_min, data_max, size=data_shape, ctx=mx.cpu())
+  weight_nd = mx.np.random.uniform(weight_min, weight_max, size=[64, 32, 1, 1], ctx=mx.cpu())
+  bias_nd = mx.np.random.uniform(-1, +1, size=[64], ctx=mx.cpu())
 
   class ConvBiasOverflow(nn.HybridBlock):
         def __init__(self, dtype='float32', **kwargs):
@@ -639,9 +684,15 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
             self.weight = mx.gluon.Parameter('weight', dtype=dtype, allow_deferred_init=True)
             self.bias = mx.gluon.Parameter('bias', dtype=dtype, allow_deferred_init=True)
 
-        def hybrid_forward(self, F, x, weight, bias):
-            conv1 = F.Convolution(x, num_filter=64, kernel=(1,1), weight=weight, no_bias=False, bias=bias)
+        def forward(self, x):
+            conv1 = mx.npx.convolution(x, num_filter=64, kernel=(1,1),
+                                       weight=self.weight.data(x.ctx),
+                                       no_bias=False, bias=self.bias.data(x.ctx))
             return conv1
+        
+        def infer_shape(self, x):
+            self.weight.shape = (64, x.shape[1], 1, 1)
+            self.bias.shape = (64,)
 
   net = ConvBiasOverflow()
   net.initialize()
@@ -714,9 +765,10 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
                                rtol=1e-2, atol=1e-2, etol=0.01)
 
+@mx.util.use_np
 @pytest.mark.parametrize('axis', [0, 1, 2, 3])
 def test_bn_relu_fusion(axis):
-    dummy_data = mx.nd.uniform(-1.0, 1.0, shape=(32, 3, 224, 224))
+    dummy_data = mx.np.random.uniform(-1.0, 1.0, size=(32, 3, 224, 224))
 
     net = mx.gluon.nn.HybridSequential()
     net.add(mx.gluon.nn.BatchNorm(axis=axis))

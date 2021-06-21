@@ -51,8 +51,8 @@ class RELU6(nn.HybridBlock):
     def __init__(self, **kwargs):
         super(RELU6, self).__init__(**kwargs)
 
-    def hybrid_forward(self, F, x):
-        return F.clip(x, 0, 6, name="relu6")
+    def forward(self, x):
+        return mx.np.clip(x, 0, 6)
 
 class TailNegBlock(nn.HybridBlock):
   def __init__(self, **kwargs):
@@ -60,11 +60,11 @@ class TailNegBlock(nn.HybridBlock):
     self.fc1 = nn.Dense(10, flatten=True)
     self.fc2 = nn.Dense(10, flatten=True)
 
-  def hybrid_forward(self, F, x1, x2):
+  def forward(self, x1, x2):
     out_fc1 = self.fc1(x1)
     out_fc2 = self.fc2(x2)
-    out = F.concat(out_fc1, out_fc2)
-    out = F.softmax(out)
+    out = mx.np.concatenate([out_fc1, out_fc2])
+    out = mx.npx.softmax(out)
     return out
 
 class CustomNormalInit(mx.init.Initializer):
@@ -77,7 +77,7 @@ class CustomNormalInit(mx.init.Initializer):
         self.sigma = sigma
 
     def _init_weight(self, _, arr):
-        mx.random.normal(self.mean, self.sigma, arr.shape, dtype=arr.dtype, out=arr)
+        mx.np.random.normal(self.mean, self.sigma, arr.shape, dtype=arr.dtype, out=arr)
 
 
 def check_qsym_calibrated(qsym, out_type, name='conv'):
@@ -119,7 +119,7 @@ def check_quantize(net_original, data_shape, out_type, name='conv',
 
   net_original.initialize(init=mx.init.Normal(0.5), force_reinit=True)
   min_value = -1 if out_type != 'uint8' else 0
-  data = mx.random.uniform(min_value, 1.0, shape=data_shape, dtype='float32', ctx=mx.current_context())
+  data = mx.np.random.uniform(min_value, 1.0, size=data_shape, dtype='float32', ctx=mx.current_context())
 
   outputs = net_original(data)
   for output in outputs:
@@ -146,8 +146,8 @@ def check_quantize(net_original, data_shape, out_type, name='conv',
 
     quantized_out = qnet(data)
     for i in range(len(ref_out)):
-      min_range = mx.nd.min(ref_out[i]).asscalar()
-      max_range = mx.nd.max(ref_out[i]).asscalar()
+      min_range = mx.np.min(ref_out[i]).item()
+      max_range = mx.np.max(ref_out[i]).item()
       atol = 0.1 * max(abs(min_range), abs(max_range))
       assert_almost_equal_with_err(quantized_out.asnumpy(), ref_out.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
 
@@ -156,7 +156,7 @@ def check_fusion(net_original, data_shape, attrs_dict, check_fp32_fusion=True, c
                  out_types=['uint8', 'int8', 'auto'], dedup_subgraph=True):
   net_original.initialize()
   net_original.hybridize(static_alloc=False, static_shape=False)
-  data = mx.random.uniform(shape=data_shape, dtype='float32', ctx=mx.current_context())
+  data = mx.np.random.uniform(size=data_shape, dtype='float32', ctx=mx.current_context())
   net_original(data)
   net_fusion = copy.copy(net_original)
   sym, params = net_original.export(None)
@@ -184,7 +184,7 @@ def check_fusion(net_original, data_shape, attrs_dict, check_fp32_fusion=True, c
                 assert v[attr_name].lower() == attr_value.lower()
           assert found
 
-    data = mx.nd.random.uniform(shape=data_shape, low=data_min, high=data_max)
+    data = mx.np.random.uniform(size=data_shape, low=data_min, high=data_max)
     out_unfused = net_original(data)
 
     net_fusion.optimize_for(data, backend=SG_PASS_NAME)
@@ -201,7 +201,7 @@ def check_neg_fusion(net_original, attrs_name=None, excluded_attrs=None,
                      data_shapes=(4,4,10,10), name='conv'):
   op_name = config[name][OP_NAME]
 
-  data_nd = mx.nd.random.uniform(shape=data_shapes)
+  data_nd = mx.np.random.uniform(size=data_shapes)
   net_original.initialize()
   net_original.hybridize()
   net_original(data_nd)

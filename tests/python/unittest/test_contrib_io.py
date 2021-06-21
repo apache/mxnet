@@ -21,6 +21,8 @@ from mxnet.gluon.data.dataloader import *
 from mxnet.contrib.io import *
 from mxnet.test_utils import *
 
+mx.npx.reset_np()
+
 def test_contrib_DataLoaderIter():
     def test_mnist_batches(batch_size, expected, last_batch='discard'):
         dataset = MNIST(train=False)

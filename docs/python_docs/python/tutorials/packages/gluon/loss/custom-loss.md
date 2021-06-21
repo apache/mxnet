@@ -28,7 +28,7 @@ However, we may sometimes want to solve problems that require customized loss fu
 ```{.python .input}
 import matplotlib.pyplot as plt
 import mxnet as mx
-from mxnet import autograd, gluon, nd
+from mxnet import autograd, gluon, np, npx
 from mxnet.gluon.loss import Loss
 import random
 ```
@@ -45,7 +45,7 @@ import random
 
 The loss function uses a margin *m* which is has the effect that dissimlar pairs only contribute if their loss is within a certain margin.
 
-In order to implement such a customized loss function in Gluon, we only need to define a new class that is inheriting from the [Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.Loss) base class. We then define the contrastive loss logic in the [hybrid_forward](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock.hybrid_forward) method. This method takes the images `image1`, `image2` and the label which defines whether  `image1` and `image2` are similar (=0) or  dissimilar (=1). The input F is an `mxnet.ndarry` or an `mxnet.symbol` if we hybridize the network. Gluon's `Loss` base class is in fact a [HybridBlock](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock). This means we can either run  imperatively or symbolically. When we hybridize our custom loss function, we can get performance speedups.
+In order to implement such a customized loss function in Gluon, we just need to define a new class that is inheriting from the [Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.Loss) base class. We then define the contrastive loss logic in the [forward](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock.forward) method. This method takes the images `image1`, `image2` and the label which defines whether  `image1` and `image2` are similar (=0) or  dissimilar (=1). Gluon's `Loss` base class is in fact a [HybridBlock](../../../../api/gluon/hybrid_block.rst#mxnet.gluon.HybridBlock), and we hybridize our custom loss function, we can get performance speedups.
 
 
 ```{.python .input}
@@ -54,12 +54,12 @@ class ContrastiveLoss(Loss):
         super(ContrastiveLoss, self).__init__(weight, batch_axis, **kwargs)
         self.margin = margin
 
-    def hybrid_forward(self, F, image1, image2, label):
+    def forward(self, image1, image2, label):
         distances = image1 - image2
-        distances_squared = F.sum(F.square(distances), 1, keepdims=True)
-        euclidean_distances = F.sqrt(distances_squared + 0.0001)
-        d = F.clip(self.margin - euclidean_distances, 0, self.margin)
-        loss = (1 - label) * distances_squared + label * F.square(d)
+        distances_squared = np.sum(np.square(distances), 1, keepdims=True)
+        euclidean_distances = np.sqrt(distances_squared + 0.0001)
+        d = np.clip(self.margin - euclidean_distances, 0, self.margin)
+        loss = (1 - label) * distances_squared + label * np.square(d)
         loss = 0.5*loss
         return loss
 loss = ContrastiveLoss(margin=6.0)
@@ -83,7 +83,7 @@ class Siamese(gluon.HybridBlock):
         self.cnn.add(gluon.nn.Dense(256, activation='relu'))
         self.cnn.add(gluon.nn.Dense(2, activation='softrelu'))
 
-    def hybrid_forward(self, F, input0, input1):
+    def forward(self, input0, input1):
         out0 = self.cnn(input0)
         out1 = self.cnn(input1)
         return out0, out1

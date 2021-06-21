@@ -16,7 +16,7 @@
 # under the License.
 
 import mxnet as mx
-import numpy as np
+import numpy as onp
 from mxnet import gluon, autograd
 from mxnet.test_utils import assert_almost_equal, default_context, use_np
 from common import xfail_when_nonstandard_decimal_separator
@@ -117,13 +117,13 @@ def test_loss_np_ndarray(hybridize):
     if hybridize:
         loss.hybridize()
     L = loss(output, label).asnumpy()
-    assert_almost_equal(L, np.array([ 2.12692809,  0.04858733]), rtol=1e-3, atol=1e-4)
+    assert_almost_equal(L, onp.array([ 2.12692809,  0.04858733]), rtol=1e-3, atol=1e-4)
 
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     if hybridize:
         loss.hybridize()
     L = loss(output, label, weighting).asnumpy()
-    assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]), rtol=1e-3, atol=1e-4)
+    assert_almost_equal(L, onp.array([ 1.06346405,  0.04858733]), rtol=1e-3, atol=1e-4)
 
 
 @use_np
@@ -168,37 +168,37 @@ def test_ctc_loss(hybridize):
     if hybridize:
         loss.hybridize()
     l = loss(mx.np.ones((2,20,4)), mx.np.array([[1,0,-1,-1],[2,1,1,-1]]))
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, onp.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss(layout='TNC')
     if hybridize:
         loss.hybridize()
     l = loss(mx.np.ones((20,2,4)), mx.np.array([[1,0,-1,-1],[2,1,1,-1]]))
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, onp.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss(layout='TNC', label_layout='TN')
     if hybridize:
         loss.hybridize()
     l = loss(mx.np.ones((20,2,4)), mx.np.array([[1,0,-1,-1],[2,1,1,-1]]).T)
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, onp.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
     if hybridize:
         loss.hybridize()
     l = loss(mx.np.ones((2,20,4)), mx.np.array([[2,1,2,2],[3,2,2,2]]), None, mx.np.array([2,3]))
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, onp.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
     if hybridize:
         loss.hybridize()
     l = loss(mx.np.ones((2,25,4)), mx.np.array([[2,1,-1,-1],[3,2,2,-1]]), mx.np.array([20,20]))
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, onp.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
     if hybridize:
         loss.hybridize()
     l = loss(mx.np.ones((2,25,4)), mx.np.array([[2,1,3,3],[3,2,2,3]]), mx.np.array([20,20]), mx.np.array([2,3]))
-    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, onp.array([18.82820702, 16.50581741]))
 
 
 @xfail_when_nonstandard_decimal_separator
@@ -300,8 +300,8 @@ def test_poisson_nllloss(hybridize):
     shape=(2, 3)
     np_pred = mx.np.random.uniform(1, 5, shape)
     np_target = mx.np.random.uniform(1, 5, shape)
-    np_compute_full = mx.np.mean((np_pred - np_target * mx.np.log(np_pred + 1e-08)) + ((np_target * np.log(np_target)-\
-     np_target + 0.5 * np.log(2 * np_target * np.pi))*(np_target > 1)), axis=1)
+    np_compute_full = mx.np.mean((np_pred - np_target * mx.np.log(np_pred + 1e-08)) + ((np_target * onp.log(np_target)-\
+     np_target + 0.5 * onp.log(2 * np_target * onp.pi))*(np_target > 1)), axis=1)
     Loss_compute_full = gluon.loss.PoissonNLLLoss(from_logits=False, compute_full=True)
     if hybridize:
         Loss_compute_full.hybridize()

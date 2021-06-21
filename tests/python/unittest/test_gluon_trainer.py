@@ -26,6 +26,8 @@ from common import assertRaises, xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 import pytest
 
+mx.npx.reset_np()
+
 def dict_equ(a, b):
     assert set(a) == set(b)
     for k in a:
@@ -148,6 +150,8 @@ def test_trainer_save_load():
     assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
     os.putenv('MXNET_UPDATE_ON_KVSTORE', previous_update_on_kvstore)
 
+@mx.util.use_np
+@pytest.mark.skip(reason='Currently, sparse feature is not supported in Gluon2.0')
 def test_trainer_sparse_save_load():
     x = gluon.Parameter('x', shape=(10, 1), lr_mult=1.0,
                         stype='row_sparse', grad_stype='row_sparse')
@@ -166,48 +170,6 @@ def test_trainer_sparse_save_load():
     # check if parameter dict is correctly associated with optimizer after load_state
     assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
 
-def test_trainer_multi_layer_init():
-    class Net(gluon.Block):
-        def __init__(self, **kwargs):
-            super(Net, self).__init__(**kwargs)
-            # sparse param
-            self.embed_weight = gluon.Parameter('embed_weight', stype='row_sparse',
-                                                shape=(4,3), grad_stype='row_sparse')
-            # dense param from a hybrid block
-            self.dense0 = nn.Dense(2)
-
-        def forward(self, x):
-            embed_weight = self.embed_weight.row_sparse_data(x)
-            embed = mx.nd.Embedding(data=x, weight=embed_weight,
-                                    input_dim=4, output_dim=3, sparse_grad=True)
-            return self.dense0(embed)
-
-    def check_init(ctxes):
-        net = Net()
-        net.initialize(mx.init.One(), ctx=ctxes)
-        trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 1})
-        data = mx.nd.array([[0,2], [1,2]])
-        xs = gluon.utils.split_and_load(data, ctxes)
-        ys = []
-        with mx.autograd.record():
-            for x in xs:
-                y = net(x)
-                ys.append(y)
-        for y in ys:
-            y.backward()
-        trainer.step(1)
-        # all parameters should be initialized
-        assert not trainer._params_to_init
-        all_rows = mx.nd.arange(0, 4, ctx=mx.cpu(1))
-        # check the updated weights
-        weight = net.embed_weight.row_sparse_data(all_rows).asnumpy()
-        assert (weight[0] == -1).all()
-        assert (weight[1] == -1).all()
-        assert (weight[2] == -3).all()
-        assert (weight[3] == 1).all()
-
-    check_init([mx.cpu(1), mx.cpu(2)])
-    check_init([mx.cpu(1)])
 
 @xfail_when_nonstandard_decimal_separator
 def test_trainer_reset_kv():
@@ -345,11 +307,12 @@ def test_trainer_allreduce_hybridsequential():
     trainer = mx.gluon.Trainer(net.collect_params(), 'sgd', update_on_kvstore=False)
     for ctx in contexts:
         with mx.autograd.record():
-            out = net(mx.nd.ones((1, 1), ctx=ctx))
+            out = net(mx.np.ones((1, 1), ctx=ctx))
         out.backward()
     trainer.allreduce_grads()
 
 
+@mx.util.use_np
 def test_trainer_share_parameters():
     class Net(gluon.Block):
         def __init__(self, **kwargs):
@@ -369,7 +332,7 @@ def test_trainer_share_parameters():
     ctxes = [mx.cpu(0), mx.cpu(1)]
     net.initialize(mx.init.One(), ctx=ctxes)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 1})
-    data = mx.nd.array([[1, 1], [1, 1]])
+    data = mx.np.array([[1, 1], [1, 1]])
     xs = gluon.utils.split_and_load(data, ctxes)
     ys = []
     with mx.autograd.record():

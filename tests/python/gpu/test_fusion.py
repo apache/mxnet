@@ -281,10 +281,10 @@ def test_fusion_boolean_inputs():
         def __init__(self):
             super(Foo, self).__init__()
 
-        def hybrid_forward(self, F, valid_length):
+        def forward(self, valid_length):
             mask = valid_length.astype(np.float32)
             mask2 = valid_length.astype(np.float32)
-            mask = mask * F.np.expand_dims(mask2, axis=-1)
+            mask = mask * mx.np.expand_dims(mask2, axis=-1)
             return mask
 
     foo = Foo()
@@ -292,6 +292,7 @@ def test_fusion_boolean_inputs():
     out = foo(mx.np.ones((10,), ctx=mx.gpu(), dtype=np.bool))
     mx.npx.waitall()
 
+@use_np
 def test_fusion_different_dimensions():
     from mxnet.gluon import HybridBlock
 
@@ -299,36 +300,37 @@ def test_fusion_different_dimensions():
         def __init__(self):
             super(Foo, self).__init__()
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             mask2 = x.astype(np.float32)
-            mask = F.expand_dims(mask2, axis=-1)
+            mask = mx.np.expand_dims(mask2, axis=-1)
             return mask
 
     foo = Foo()
     foo.hybridize(static_alloc=True)
     # Pass 1-D data
-    out = foo(mx.nd.ones((10,), ctx=mx.gpu()))
+    out = foo(mx.np.ones((10,), ctx=mx.gpu()))
     assert np.all(out.asnumpy() == np.ones((10,1)))
     assert out.shape == (10,1)
     # Pass 2-D data
-    out = foo(mx.nd.ones((10,10), ctx=mx.gpu()))
+    out = foo(mx.np.ones((10,10), ctx=mx.gpu()))
     assert np.all(out.asnumpy() == np.ones((10,10)))
     assert out.shape == (10,10,1)
 
+@use_np
 def test_input_reorder():
     class Block(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Block, self).__init__(**kwargs)
 
-        def hybrid_forward(self, F, x, y, z):
+        def forward(self, x, y, z):
             s = x * 2
             s2 = s + z
-            s = F.broadcast_add(s, y * y)
-            return F.dot(s, s2)
+            s = mx.np.add(s, y * y)
+            return mx.np.dot(s, s2)
 
     for static_alloc in (False, True):
         arg_shapes = [(10, 10), (10, 1), (10, 10)]
-        arg_data = [mx.random.uniform(shape=s) for s in arg_shapes]
+        arg_data = [mx.np.random.uniform(size=s) for s in arg_shapes]
 
         arrays = {}
         for use_fusion in ('0', '1'):
@@ -348,21 +350,22 @@ def test_input_reorder():
         for key in ['result'] + list(range(len(arg_data))):
             assert_allclose(arrays['0'][key].asnumpy(), arrays['1'][key].asnumpy())
 
+@use_np
 def test_fusion_cycle():
     class Test(gluon.nn.HybridBlock):
         def __init__(self, **kwargs):
             super(Test, self).__init__(**kwargs)
 
-        def hybrid_forward(self, F, x, y):
-            x = F.relu(x)
-            y = F.relu(y)
-            z1 = F.expand_dims(F.sum_axis(x, axis=1), axis=1)
-            z2 = F.expand_dims(F.sum_axis(y, axis=1), axis=1)
+        def forward(self, x, y):
+            x = mx.npx.relu(x)
+            y = mx.npx.relu(y)
+            z1 = mx.np.expand_dims(mx.np.sum(x, axis=1), axis=1)
+            z2 = mx.np.expand_dims(mx.np.sum(y, axis=1), axis=1)
             return x + z2, y + z1
 
     t = Test()
-    a = mx.nd.zeros(shape=(10,1), ctx=mx.gpu())
-    b = mx.nd.zeros(shape=(10,1), ctx=mx.gpu())
+    a = mx.np.zeros(shape=(10,1), ctx=mx.gpu())
+    b = mx.np.zeros(shape=(10,1), ctx=mx.gpu())
     t.hybridize(static_alloc=True, static_shape=True)
     out = t(a, b)
-    mx.nd.waitall()
+    mx.npx.waitall()
