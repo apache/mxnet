@@ -3460,8 +3460,8 @@ def test_npx_activation_log_sigmoid():
         def __init__(self):
             super(TestLogSigmoid, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.npx.activation(a, act_type='log_sigmoid')
+        def forward(self, a):
+            return npx.activation(a, act_type='log_sigmoid')
 
     shapes = [(), (2, 3, 4)]
     for hybridize in [True, False]:
@@ -3499,8 +3499,8 @@ def test_npx_activation_mish():
         def __init__(self):
             super(TestMish, self).__init__()
 
-        def hybrid_forward(self, F, a):
-            return F.npx.activation(a, act_type='mish')
+        def forward(self, a):
+            return npx.activation(a, act_type='mish')
 
     shapes = [(), (2, 3, 4)]
     for hybridize in [True, False]:
