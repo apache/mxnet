@@ -350,7 +350,7 @@ __version__ = libinfo.__version__
 # library instance of mxnet
 _LIB = _load_lib()
 
-check_call(_LIB.MXSetFlushDenorms(ctypes.c_bool(True)))
+check_call(_LIB.MXSetFlushDenorms(ctypes.c_bool(True), ctypes.byref(ctypes.c_bool())))
 
 # type definitions
 mx_int = ctypes.c_int

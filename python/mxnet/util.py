@@ -861,5 +861,7 @@ def set_flush_denorms(value):
     value : bool
         State of flush-to-zero and denormals-are-zero in MXCSR register
     """
+    ret = ctypes.c_bool()
     passed_value = ctypes.c_bool(value)
-    check_call(_LIB.MXSetFlushDenorms(passed_value))
+    check_call(_LIB.MXSetFlushDenorms(passed_value, ctypes.byref(ret)))
+    return ret.value
