@@ -3450,6 +3450,42 @@ def test_npx_relu():
 
 
 @use_np
+def test_npx_activation_log_sigmoid():
+    def np_log_sigmoid(x):
+        return _np.log(_np.divide(1.0, (1.0 + _np.exp(-x))))
+    def np_log_sigmoid_grad(x):
+        return _np.divide(1.0, _np.add(1.0, _np.exp(x)))
+
+    class TestLogSigmoid(HybridBlock):
+        def __init__(self):
+            super(TestLogSigmoid, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.npx.activation(a, act_type='log_sigmoid')
+
+    shapes = [(), (2, 3, 4)]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            test_log_sigmoid = TestLogSigmoid()
+            if hybridize:
+                test_log_sigmoid.hybridize()
+            x = rand_ndarray(shape).as_np_ndarray()
+            x.attach_grad()
+            np_out = np_log_sigmoid(x.asnumpy())
+            with mx.autograd.record():
+                mx_out = test_log_sigmoid(x)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+            np_backward = np_log_sigmoid_grad(x.asnumpy())
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+            mx_out = npx.activation(x, act_type='log_sigmoid')
+            np_out = np_log_sigmoid(x.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@use_np
 def test_npx_activation_mish():
     def np_mish(a):
         return a * _np.tanh(_np.log1p(_np.exp(a)))
@@ -3459,17 +3495,33 @@ def test_npx_activation_mish():
         sigmoid = _np.divide(1.0, (1.0 + _np.exp(-a)))
         return tanh + a * sigmoid * (1.0 - tanh * tanh)
 
-    shape = (3, 4)
-    A = mx.np.random.uniform(low=-1.0, high=1.0, size=shape)
-    A.attach_grad()
-    np_out = np_mish(A.asnumpy())
-    with mx.autograd.record():
-        B = mx.npx.activation(A, act_type='mish')
-    assert B.shape == np_out.shape
-    assert_almost_equal(B.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-    B.backward()
-    np_backward = np_mish_grad(A.asnumpy())
-    assert_almost_equal(A.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+    class TestMish(HybridBlock):
+        def __init__(self):
+            super(TestMish, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.npx.activation(a, act_type='mish')
+
+    shapes = [(), (2, 3, 4)]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            test_mish = TestMish()
+            if hybridize:
+                test_mish.hybridize()
+            x = rand_ndarray(shape).as_np_ndarray()
+            x.attach_grad()
+            np_out = np_mish(x.asnumpy())
+            with mx.autograd.record():
+                mx_out = test_mish(x)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+            np_backward = np_mish_grad(x.asnumpy())
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+            mx_out = npx.activation(x, act_type='mish')
+            np_out = np_mish(x.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @use_np
