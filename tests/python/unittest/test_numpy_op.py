@@ -18,12 +18,10 @@
 # pylint: skip-file
 from __future__ import absolute_import
 from distutils.version import StrictVersion
-from enum import auto
 import sys
 import copy
 import itertools
 from mxnet.gluon.parameter import Parameter
-from mxnet.kvstore import kvstore
 import numpy as onp
 import platform
 import mxnet as mx
@@ -782,12 +780,12 @@ def test_np_bool_agg(bool_agg, shape, axis, keepdim, dtype, hybridize):
     if hybridize:
         test_op.hybridize()
     y = test_op(x)
-    expected_ret = getattr(_np, bool_agg)(x.asnumpy(), axis=axis, keepdims=keepdim)
+    expected_ret = getattr(onp, bool_agg)(x.asnumpy(), axis=axis, keepdims=keepdim)
     assert_almost_equal(y.asnumpy(), expected_ret)
 
     # test imperative
     mx_outs = getattr(np, bool_agg)(x, axis=axis, keepdims=keepdim)
-    np_outs = getattr(_np, bool_agg)(x.asnumpy(), axis=axis, keepdims=keepdim)
+    np_outs = getattr(onp, bool_agg)(x.asnumpy(), axis=axis, keepdims=keepdim)
     assert_almost_equal(mx_outs.asnumpy(), np_outs)
 
 
@@ -843,7 +841,7 @@ def test_np_max_min(func, in_data_dim, itype, keepdims, hybridize):
         else:
             x = np.random.uniform(-1.0, 1.0, size=shape, dtype=itype)
         x.attach_grad()
-        ref_op = getattr(_np, 'a'+func)
+        ref_op = getattr(onp, 'a'+func)
         expected_ret = ref_op(x.asnumpy(), axis=axis, keepdims=keepdims)
         with mx.autograd.record():
             y = test_gluon(x)
@@ -1141,7 +1139,7 @@ def test_np_moment():
                                     x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
                                 x = x.as_np_ndarray()
                                 x.attach_grad()
-                                expected_ret = getattr(_np, name)(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, ddof=ddof)
+                                expected_ret = getattr(onp, name)(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, ddof=ddof)
                                 expected_ret = expected_ret.astype(dtype)
                                 y = test_moment(x)
                                 assert y.shape == expected_ret.shape
@@ -1149,7 +1147,7 @@ def test_np_moment():
 
                                 # test imperative
                                 mx_out = getattr(np, name)(x, axis=axis, dtype=dtype, keepdims=keepdims, ddof=ddof)
-                                np_out = getattr(_np, name)(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, ddof=ddof).astype(dtype)
+                                np_out = getattr(onp, name)(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, ddof=ddof).astype(dtype)
                                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol, use_broadcast=False, equal_nan=True)
 
 
@@ -2282,7 +2280,7 @@ def test_np_squeeze():
 
     for shape, axis in config:
         data_np = onp.random.uniform(size=shape)
-        data_mx = np.array(data_np, dtype=dataonp.dtype)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
         ret_np = onp.squeeze(data_np, axis)
         ret_mx = np.squeeze(data_mx, axis)
         assert_almost_equal(ret_mx.asnumpy(), ret_np, rtol=1e-5, atol=1e-6, use_broadcast=False)
@@ -2398,11 +2396,11 @@ def test_np_flatten():
             if hybridize:
                 test_flatten.hybridize()
             a_np = onp.random.uniform(size=shape).astype('float32')
-            a_mx = np.array(a_np, dtype=aonp.dtype)
+            a_mx = np.array(a_np, dtype=a_np.dtype)
             a_mx.attach_grad()
             with mx.autograd.record():
                 ret = test_flatten(a_mx)
-            expected_ret = aonp.flatten()
+            expected_ret = a_np.flatten()
             assert_almost_equal(expected_ret, ret.asnumpy(), rtol=1e-5, atol=1e-6, use_broadcast=False)
             # check gradient
             ret.backward()
@@ -2636,7 +2634,7 @@ def test_np_tile():
 
     for shape, reps in config:
         data_np = onp.random.randint(low=0, high=1000, size=shape)
-        data_mx = np.array(data_np, dtype=dataonp.dtype)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
         ret_np = onp.tile(data_np, reps=reps)
         ret_mx = np.tile(data_mx, reps=reps)
         assert same(ret_mx.asnumpy(), ret_np)
@@ -2686,7 +2684,7 @@ def test_np_tril():
     for prefix in [1, -1]:
         for shape, k in config:
             data_np = onp.random.uniform(size=shape).astype(onp.float32)
-            data_mx = np.array(data_np, dtype=dataonp.dtype)
+            data_mx = np.array(data_np, dtype=data_np.dtype)
             data_mx.attach_grad()
             ret_np = onp.tril(data_np, k*prefix)
             with mx.autograd.record():
@@ -2698,7 +2696,7 @@ def test_np_tril():
                 assert same(data_mx.grad.asnumpy(), grad_np)
             if len(shape) == 1:
                 grad_np = onp.tri(*shape, k=k*prefix)
-                grad_np = gradonp.sum(axis=0, keepdims=False)
+                grad_np = grad_np.sum(axis=0, keepdims=False)
                 assert same(data_mx.grad.asnumpy(), grad_np)
 
             net = TestTril(k*prefix)
@@ -2746,7 +2744,7 @@ def test_np_triu():
     for prefix in [1, -1]:
         for shape, k in config:
             data_np = onp.random.uniform(size=shape).astype(onp.float32)
-            data_mx = np.array(data_np, dtype=dataonp.dtype)
+            data_mx = np.array(data_np, dtype=data_np.dtype)
             data_mx.attach_grad()
             ret_np = onp.triu(data_np, k*prefix)
             with mx.autograd.record():
@@ -2758,7 +2756,7 @@ def test_np_triu():
                 assert same(data_mx.grad.asnumpy(), grad_np)
             if len(shape) == 1:
                 grad_np = onp.triu(onp.ones(shape), k*prefix)
-                grad_np = gradonp.sum(axis=0, keepdims=False)
+                grad_np = grad_np.sum(axis=0, keepdims=False)
                 assert same(data_mx.grad.asnumpy(), grad_np)
 
             net = TestTriu(k*prefix)
@@ -2780,7 +2778,7 @@ def test_np_unary_funcs():
             def forward(self, a, *args, **kwargs):
                 return getattr(np, self._func)(a)
 
-        np_func = getattr(_np, func)
+        np_func = getattr(onp, func)
         np_test_data = onp.random.uniform(low, high, shape).astype(onp.float32)
         mx_test_data = mx.numpy.array(np_test_data)
         for hybridize in [True, False]:
@@ -2801,7 +2799,7 @@ def test_np_unary_funcs():
                 y.backward()
                 assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-1, atol=1e-2, equal_nan=True)
 
-        np_out = getattr(_np, func)(np_test_data)
+        np_out = getattr(onp, func)(np_test_data)
         mx_out = getattr(mx.np, func)(mx_test_data)
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
@@ -2908,7 +2906,7 @@ def test_np_mixedType_unary_funcs(func, ref_grad, low, high, ndim, dtype):
             low = 1
         if (func=='arctanh' and dtype=='bool'):
             continue
-        np_func = getattr(_np, func)
+        np_func = getattr(onp, func)
         mx_func = TestMixedUnary(func)
         np_test_data = onp.random.uniform(low, high, shape).astype(dtype)
         mx_test_data = np.array(np_test_data)
@@ -2929,7 +2927,7 @@ def test_np_mixedType_unary_funcs(func, ref_grad, low, high, ndim, dtype):
                 y.backward()
                 assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-1, atol=1e-2, equal_nan=True)
 
-        np_out = getattr(_np, func)(np_test_data)
+        np_out = getattr(onp, func)(np_test_data)
         mx_out = getattr(mx.np, func)(mx_test_data)
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
@@ -2960,7 +2958,7 @@ def test_np_bitwise_not(func, low, high, ndim):
             def forward(self, a, *args, **kwargs):
                 return getattr(np, self._func)(a)
 
-        np_func = getattr(_np, func)
+        np_func = getattr(onp, func)
         mx_func = TestUnary(func)
         np_test_data = onp.random.uniform(low, high, shape).astype(onp.int32)
         mx_test_data = mx.numpy.array(np_test_data).astype(onp.int32)
@@ -2975,7 +2973,7 @@ def test_np_bitwise_not(func, low, high, ndim):
             if np_out.dtype == np.bool_:
                 assert y.dtype == np.bool_
 
-        np_out = getattr(_np, func)(np_test_data)
+        np_out = getattr(onp, func)(np_test_data)
         mx_out = getattr(mx.np, func)(mx_test_data)
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
@@ -3005,7 +3003,7 @@ def test_np_binary_funcs():
             def forward(self, a, b, *args, **kwargs):
                 return getattr(np, self._func)(a, b)
 
-        np_func = getattr(_np, func)
+        np_func = getattr(onp, func)
         mx_func = TestBinary(func)
         alltypes = alltypes if alltypes else [[onp.float16, onp.float32, onp.float64]]
         for dtypes, lgrad, rgrad in zip(alltypes, lgrads, rgrads if rgrads else lgrads):
@@ -3047,7 +3045,7 @@ def test_np_binary_funcs():
                                                 collapse_sum_like(rgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x2.shape),
                                                 rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
 
-                np_out = getattr(_np, func)(np_test_x1, np_test_x2)
+                np_out = getattr(onp, func)(np_test_x1, np_test_x2)
                 mx_out = getattr(mx.np, func)(mx_test_x1, mx_test_x2)
                 assert mx_out.shape == np_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=1e-3, atol=1e-5,
@@ -3171,7 +3169,7 @@ def test_np_mixed_precision_binary_funcs():
         # thus, skip the tests
             return
 
-        np_func = getattr(_np, func)
+        np_func = getattr(onp, func)
         mx_func = TestMixedBinary(func)
         np_test_x1 = onp.random.uniform(low, high, lshape).astype(ltype)
         np_test_x2 = onp.random.uniform(low, high, rshape).astype(rtype)
@@ -3211,7 +3209,7 @@ def test_np_mixed_precision_binary_funcs():
                                             rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
 
 
-        np_out = getattr(_np, func)(np_test_x1, np_test_x2)
+        np_out = getattr(onp, func)(np_test_x1, np_test_x2)
         mx_out = getattr(mx.np, func)(mx_test_x1, mx_test_x2)
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=rtol, atol=atol,
@@ -3271,41 +3269,41 @@ def test_np_mixed_precision_binary_funcs():
 @use_np
 def test_np_mixed_mxnp_op_funcs():
     # generate onp & mx_np in same type
-    onp = onp.array([1,2,3,4,5]).astype("int64")
+    _np = onp.array([1,2,3,4,5]).astype("int64")
     mx_np = mx.np.array([1,2,3,4,5]).astype("int64")
     # inplace onp mx_np
-    onp += mx_np
-    assert isinstance(onp, onp.ndarray)
-    onp -= mx_np
-    assert isinstance(onp, onp.ndarray)
-    onp *= mx_np
-    assert isinstance(onp, onp.ndarray)
+    _np += mx_np
+    assert isinstance(_np, onp.ndarray)
+    _np -= mx_np
+    assert isinstance(_np, onp.ndarray)
+    _np *= mx_np
+    assert isinstance(_np, onp.ndarray)
     # inplace mx_np onp
-    mx_np ^= onp
+    mx_np ^= _np
     assert isinstance(mx_np, mx.np.ndarray)
-    mx_np |= onp
+    mx_np |= _np
     assert isinstance(mx_np, mx.np.ndarray)
-    mx_np &= onp
+    mx_np &= _np
     assert isinstance(mx_np, mx.np.ndarray)
     # mxnp onp
-    out = mx_np << onp
+    out = mx_np << _np
     assert isinstance(out, mx.np.ndarray)
-    out = mx_np >> onp
+    out = mx_np >> _np
     assert isinstance(out, mx.np.ndarray)
-    out = mx_np != onp
+    out = mx_np != _np
     assert isinstance(out, mx.np.ndarray)
     # onp mxnp
-    out = onp == mx_np
+    out = _np == mx_np
     assert isinstance(out, mx.np.ndarray)
-    out = onp >= mx_np
+    out = _np >= mx_np
     assert isinstance(out, mx.np.ndarray)
-    out = onp < mx_np
+    out = _np < mx_np
     assert isinstance(out, mx.np.ndarray)
-    onp = onp.array([1,2,3,4,5]).astype("float32")
+    _np = onp.array([1,2,3,4,5]).astype("float32")
     mx_np = mx.np.array([1,2,3,4,5]).astype("float32")
-    out = onp @ mx_np
+    out = _np @ mx_np
     assert isinstance(out, mx.np.ndarray)
-    out = onp / mx_np
+    out = _np / mx_np
     assert isinstance(out, mx.np.ndarray)
 
 @use_np
@@ -3325,7 +3323,7 @@ def test_np_binary_scalar_funcs():
         np_test_x2 = int(onp.random.uniform(low, high)) if scalar_is_int else onp.random.uniform(low, high)
         mx_test_x1 = np.array(np_test_x1, dtype=ltype)
         mx_test_x2 = np_test_x2
-        np_func = getattr(_np, func)
+        np_func = getattr(onp, func)
         mx_func = TestBinaryScalar(func, mx_test_x2)
         if hybridize:
             mx_func.hybridize()
@@ -3346,7 +3344,7 @@ def test_np_binary_scalar_funcs():
                                     rtol=rtol, atol=atol, equal_nan=True, use_broadcast=False)
 
         # Test imperative
-        np_out = getattr(_np, func)(np_test_x1, np_test_x2)
+        np_out = getattr(onp, func)(np_test_x1, np_test_x2)
         mx_out = getattr(mx.np, func)(mx_test_x1, mx_test_x2)
         assert mx_out.shape == np_out.shape
         assert mx_out.asnumpy().dtype == np_out.dtype
@@ -3381,7 +3379,7 @@ def test_np_boolean_binary_funcs():
 
         np_x1 = mx_x1.asnumpy()
         np_x2 = mx_x2.asnumpy()
-        np_func = getattr(_np, func)
+        np_func = getattr(onp, func)
         mx_func = TestBooleanBinary(func)
         for hybridize in [True, False]:
             if hybridize:
@@ -3393,7 +3391,7 @@ def test_np_boolean_binary_funcs():
             assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=1e-3, atol=1e-20,
                                 use_broadcast=False, equal_nan=True)
 
-        np_out = getattr(_np, func)(np_x1, np_x2)
+        np_out = getattr(onp, func)(np_x1, np_x2)
         mx_out = getattr(mx.np, func)(mx_x1, mx_x2)
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=1e-3, atol=1e-20,
@@ -4297,7 +4295,7 @@ def test_np_swapaxes():
 
     for shape, axis1, axis2 in config:
         data_np = onp.random.uniform(size=shape)
-        data_mx = np.array(data_np, dtype=dataonp.dtype)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
         ret_np = onp.swapaxes(data_np, axis1=axis1, axis2=axis2)
         ret_mx = np.swapaxes(data_mx, axis1=axis1, axis2=axis2)
         assert same(ret_mx.asnumpy(), ret_np)
@@ -4434,7 +4432,7 @@ def test_np_argmin_argmax():
                         pass
                 else:
                     mx_ret = getattr(np, op_name)(a, axis=axis)
-                    np_ret = getattr(_np, op_name)(a.asnumpy(), axis=axis)
+                    np_ret = getattr(onp, op_name)(a.asnumpy(), axis=axis)
                     assert mx_ret.dtype == np_ret.dtype
                     assert same(mx_ret.asnumpy(), np_ret)
 
@@ -5640,8 +5638,8 @@ def test_np_repeat():
 
     for shape, repeats, axis in config:
         data_np = onp.random.randint(low=0, high=1000, size=shape)
-        data_mx = np.array(data_np, dtype=dataonp.dtype)
-        ret_np = dataonp.repeat(repeats, axis)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
+        ret_np = data_np.repeat(repeats, axis)
         ret_mx = data_mx.repeat(repeats, axis)
         assert same(ret_mx.asnumpy(), ret_np)
 
@@ -5819,25 +5817,25 @@ def test_np_linalg_svd(shape, dtype, hybridize):
         return dA
 
     def check_svd(UT, L, V, data_np):
-        shape = dataonp.shape
+        shape = data_np.shape
         # check UT @ L @ V == A
         t = onp.matmul(UT * L[..., None, :], V)
-        assert t.shape == dataonp.shape
+        assert t.shape == data_np.shape
         assert_almost_equal(t, data_np, rtol=rtol, atol=atol)
         # check UT @ U == I
         I = onp.matmul(UT, onp.swapaxes(UT, -2, -1))
         I_np = onp.ones_like(UT) * onp.eye(shape[-2])
-        assert I.shape == Ionp.shape
+        assert I.shape == I_np.shape
         assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
         # check U @ UT == I
         I = onp.matmul(onp.swapaxes(UT, -2, -1), UT)
         I_np = onp.ones_like(UT) * onp.eye(shape[-2])
-        assert I.shape == Ionp.shape
+        assert I.shape == I_np.shape
         assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
         # check V @ VT == I
         I = onp.matmul(V, onp.swapaxes(V, -2, -1))
         I_np = onp.ones_like(UT) * onp.eye(shape[-2])
-        assert I.shape == Ionp.shape
+        assert I.shape == I_np.shape
         assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
 
     rtol = atol = 0.01
@@ -5947,7 +5945,7 @@ def test_np_linalg_qr():
     def check_qr(q, r, a_np):
         # check Q@R = A
         t = onp.matmul(q, r)
-        assert t.shape == aonp.shape
+        assert t.shape == a_np.shape
         assert_almost_equal(t, a_np, rtol=rtol, atol=atol)
         # check QT@Q = I
         qT = onp.swapaxes(q, -2, -1)
@@ -5959,7 +5957,7 @@ def test_np_linalg_qr():
             q_expected, r_expected = onp.linalg.qr(a_np)
         except Exception as e:
             print("a_np", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             print(e)
         else:
             assert q.shape == q_expected.shape
@@ -6002,7 +6000,7 @@ def test_np_linalg_qr():
         check_qr(Q, R, data_np)
 
         if 0 not in R.shape:
-            assert data.grad.shape == dataonp.shape
+            assert data.grad.shape == data_np.shape
             backward_expected = get_expected_grad(data_np, Q.asnumpy(), R.asnumpy(),
                                                   onp.ones(Q.shape), onp.ones(R.shape))
             mx.autograd.backward(ret)
@@ -6047,13 +6045,13 @@ def test_np_linalg_cholesky():
         return dA.reshape(shape)
 
     def check_cholesky(L, data_np):
-        assert L.shape == dataonp.shape
+        assert L.shape == data_np.shape
         # catch error if numpy throws rank < 2
         try:
             L_expected = onp.linalg.cholesky(data_np)
         except Exception as e:
             print(data_np)
-            print(dataonp.shape)
+            print(data_np.shape)
             print(e)
         else:
             assert L.shape == L_expected.shape
@@ -6172,13 +6170,13 @@ def test_np_linalg_inv(hybridize, dtype, shape):
         return onp.swapaxes(dA_inv, -1, -2)
 
     def check_inv(A_inv, data_np):
-        assert A_inv.shape == dataonp.shape
+        assert A_inv.shape == data_np.shape
         # catch error if numpy throws rank < 2
         try:
             A_expected = onp.linalg.inv(data_np)
         except Exception as e:
             print(data_np)
-            print(dataonp.shape)
+            print(data_np.shape)
             print(e)
         else:
             assert A_inv.shape == A_expected.shape
@@ -6235,9 +6233,9 @@ def test_np_linalg_solve():
             x_expected = onp.linalg.solve(a_np, b_np)
         except Exception as e:
             print("a:", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             print("b", b_np)
-            print("b shape:", bonp.shape)
+            print("b shape:", b_np.shape)
             print(e)
         else:
             assert x.shape == x_expected.shape
@@ -6336,7 +6334,7 @@ def test_np_linalg_tensorinv():
             inv_a_expected = onp.linalg.tensorinv(a_np, ind=ind)
         except Exception as e:
             print(a_np)
-            print(aonp.shape)
+            print(a_np.shape)
             print(e)
         else:
             assert inv_a.shape == inv_a_expected.shape
@@ -6428,12 +6426,12 @@ def test_np_linalg_tensorsolve():
             return np.linalg.tensorsolve(a, b, axes=self._axes)
 
     def get_tensorsolve_backward(a_np, b_np, mx_out_np, a_axes, a_origin_axes, a_trans_shape):
-        if (aonp.ndim == 0 or bonp.ndim == 0) or (aonp.ndim == bonp.ndim):
-            a_shape = aonp.shape
-            b_shape = bonp.shape
-            a_np = aonp.reshape((1, 1))
-            b_np = bonp.reshape((1,))
-            mx_out_np = mx_outonp.reshape((1,))
+        if (a_np.ndim == 0 or b_np.ndim == 0) or (a_np.ndim == b_np.ndim):
+            a_shape = a_np.shape
+            b_shape = b_np.shape
+            a_np = a_np.reshape((1, 1))
+            b_np = b_np.reshape((1,))
+            mx_out_np = mx_out_np.reshape((1,))
             dx = onp.ones_like(mx_out_np)
             inv_a_temp_np = onp.linalg.inv(a_np)
             grad_b = inv_a_temp_np[0][0] * dx[0]
@@ -6441,24 +6439,24 @@ def test_np_linalg_tensorsolve():
             return grad_a.reshape(a_shape), grad_b.reshape(b_shape)
         else:
             dx = onp.ones_like(mx_out_np)
-            a_np = aonp.transpose(a_axes)
-            ind = aonp.ndim - mx_outonp.ndim
+            a_np = a_np.transpose(a_axes)
+            ind = a_np.ndim - mx_out_np.ndim
             tensorinv_a_np = onp.linalg.tensorinv(a_np, ind=ind)
-            a_trans_axes = list(range(aonp.ndim))[aonp.ndim - ind:] + list(range(aonp.ndim))[:aonp.ndim - ind]
-            trans_tensorinv_a_np = tensorinv_aonp.transpose(a_trans_axes)
+            a_trans_axes = list(range(a_np.ndim))[a_np.ndim - ind:] + list(range(a_np.ndim))[:a_np.ndim - ind]
+            trans_tensorinv_a_np = tensorinv_a_np.transpose(a_trans_axes)
             grad_b = onp.tensordot(trans_tensorinv_a_np, dx, axes=dx.ndim)
             grad_a = onp.tensordot(grad_b, mx_out_np, axes=0)
             grad_a = grad_a.transpose(a_origin_axes)
-            return -grad_a, grad_b.reshape(bonp.shape)
+            return -grad_a, grad_b.reshape(b_np.shape)
 
     def check_tensorsolve(x, a_np, b_np, axes):
         try:
             x_expected = onp.linalg.tensorsolve(a_np, b_np, axes=axes)
         except Exception as e:
             print("a:", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             print("b", b_np)
-            print("b shape:", bonp.shape)
+            print("b shape:", b_np.shape)
             print(e)
         else:
             assert x.shape == x_expected.shape
@@ -6539,11 +6537,11 @@ def test_np_linalg_tensorsolve():
                     b_np = onp.tensordot(a_np, x_np, axes=len(x_shape))
 
                 # resume original shape of tensor a
-                a_origin_axes = list(range(aonp.ndim))
+                a_origin_axes = list(range(a_np.ndim))
                 if axes is not None:
-                    for k in range(aonp.ndim):
+                    for k in range(a_np.ndim):
                         a_origin_axes[a_axes[k]] = k
-                a_np = aonp.transpose(a_origin_axes)
+                a_np = a_np.transpose(a_origin_axes)
                 a = np.array(a_np, dtype=dtype).reshape(a_shape)
                 b = np.array(b_np, dtype=dtype).reshape(b_shape)
                 a.attach_grad()
@@ -6585,9 +6583,9 @@ def test_np_linalg_lstsq():
             x_expected, residuals_expected, rank_expected, s_expected = onp.linalg.lstsq(a_np, b_np, rcond_np)
         except Exception as e:
             print("a:", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             print("b:", b_np)
-            print("b shape:", bonp.shape)
+            print("b shape:", b_np.shape)
             print(e)
         else:
             assert x.shape == x_expected.shape
@@ -6658,10 +6656,10 @@ def test_np_linalg_matrix_rank():
             rank_expected = onp.linalg.matrix_rank(a_np, tol=tol, hermitian=hermitian)
         except Exception as e:
             print("a:", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             print(e)
         else:
-            if aonp.ndim < 2:
+            if a_np.ndim < 2:
                 assert rank.shape == onp.asarray(rank_expected).shape
             else:
                 assert rank.shape == rank_expected.shape
@@ -6737,10 +6735,10 @@ def test_np_linalg_pinv():
                 x_expected = onp.linalg.pinv(a_np, hermitian=hermitian)
         except Exception as e:
             print("a:", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             if use_rcond:
                 print("rcond_np", rcond_np)
-                print("b rcond_np:", rcondonp.shape)
+                print("b rcond_np:", rcond_np.shape)
             print(e)
         else:
             assert x.shape == x_expected.shape
@@ -6811,7 +6809,7 @@ def test_np_linalg_eigvals():
             x_expected = onp.linalg.eigvals(a_np)
         except Exception as e:
             print("a:", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             print(e)
         else:
             assert x.shape == x_expected.shape
@@ -6879,7 +6877,7 @@ def test_np_linalg_eigvalsh():
             w_expected = onp.linalg.eigvalsh(a_np, UPLO)
         except Exception as e:
             print("a:", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             print(e)
         else:
             assert w.shape == w_expected.shape
@@ -6954,19 +6952,19 @@ def test_np_linalg_eig():
             w_expected, v_expected = onp.linalg.eig(a_np)
         except Exception as e:
             print("a:", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             print(e)
         else:
             assert w.shape == w_expected.shape
             assert v.shape == v_expected.shape
-            if 0 not in aonp.shape:
+            if 0 not in a_np.shape:
                 n = int(onp.prod(w.shape[:-1])) if len(shape) > 1 else 1
-                N = aonp.shape[-1]
+                N = a_np.shape[-1]
                 w = w.reshape(n, N)
                 w_expected = w_expected.reshape(n, N)
                 v = v.reshape(n, N, N)
                 v_expected = v_expected.reshape(n, N, N)
-                a_np = aonp.reshape(n, N, N)
+                a_np = a_np.reshape(n, N, N)
                 for i in range(n):
                     # check eigenvector
                     ai = a_np[i]
@@ -7034,7 +7032,7 @@ def test_np_linalg_eigh():
             w_expected, v_expected = onp.linalg.eigh(a_np, UPLO)
         except Exception as e:
             print("a:", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             print(e)
         else:
             assert w.shape == w_expected.shape
@@ -7045,30 +7043,30 @@ def test_np_linalg_eigh():
             w_shape, v_shape, a_sym_np = get_sym_matrix_nd(a_np, UPLO)
             w_np = w.asnumpy()
             v_np = v.asnumpy()
-            if 0 not in aonp.shape:
-                w_np = wonp.reshape(w_shape)
-                v_np = vonp.reshape(v_shape)
-                a_sym_np = a_symonp.reshape(v_shape)
+            if 0 not in a_np.shape:
+                w_np = w_np.reshape(w_shape)
+                v_np = v_np.reshape(v_shape)
+                a_sym_np = a_sym_np.reshape(v_shape)
                 for i in range(w_shape[0]):
                     for j in range(w_shape[1]):
                         assert_almost_equal(onp.dot(a_sym_np[i], v_np[i][:, j]), w_np[i][j] * v_np[i][:, j], rtol=rtol, atol=atol)
 
     def get_sym_matrix_nd(a_np, UPLO):
         a_res_np = a_np
-        shape = aonp.shape
-        if 0 not in aonp.shape:
+        shape = a_np.shape
+        if 0 not in a_np.shape:
             n = int(onp.prod(shape[:-2])) if len(shape) > 2 else 1
             nrow, ncol = shape[-2], shape[-1]
-            a_np = aonp.reshape(n, nrow, ncol)
+            a_np = a_np.reshape(n, nrow, ncol)
             a_res_np = a_np
             for idx in range(n):
                 for i in range(nrow):
                     for j in range(ncol):
                         if ((UPLO == 'L' and i < j) or (UPLO == 'U' and i > j)):
                             a_res_np[idx][i][j] = a_np[idx][j][i]
-            return (n, nrow), (n, nrow, ncol), a_resonp.reshape(shape)
+            return (n, nrow), (n, nrow, ncol), a_res_np.reshape(shape)
         else :
-            return (0, 0), (0, 0, 0), a_resonp.reshape(shape)
+            return (0, 0), (0, 0, 0), a_res_np.reshape(shape)
 
     def new_matrix_from_sym_matrix_nd(sym_a, UPLO):
         shape = sym_a.shape
@@ -7253,13 +7251,13 @@ def test_np_vstack():
                 v = []
                 v_np = []
                 for i in range(3):
-                    vonp.append(onp.array(onp.random.uniform(-10.0, 10.0, config[i]), dtype=dtype))
+                    v_np.append(onp.array(onp.random.uniform(-10.0, 10.0, config[i]), dtype=dtype))
                     v.append(mx.nd.array(v_np[i]).as_np_ndarray())
                     v[i].attach_grad()
                 expected_np = onp.vstack(v_np)
                 with mx.autograd.record():
                     mx_out = test_vstack(*v)
-                assert mx_out.shape == expectedonp.shape
+                assert mx_out.shape == expected_np.shape
                 assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
                 # Test gradient
@@ -7309,8 +7307,8 @@ def test_np_full():
                         test_full.hybridize()
                     mx_out = test_full(fill_value)
                     expected_np = onp.full(shape, fill_value.asnumpy(), dtype=dtype)
-                    assert mx_out.shape == expectedonp.shape
-                    assert mx_out.dtype == expectedonp.dtype
+                    assert mx_out.shape == expected_np.shape
+                    assert mx_out.dtype == expected_np.dtype
                     assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
                 # Test imperative once again
@@ -7319,8 +7317,8 @@ def test_np_full():
                     expected_np = onp.full(shape, fill_value.asnumpy(), dtype=dtype)
                 else:
                     expected_np = onp.full(shape, fill_value, dtype=dtype)
-                assert mx_out.shape == expectedonp.shape
-                assert mx_out.dtype == expectedonp.dtype
+                assert mx_out.shape == expected_np.shape
+                assert mx_out.dtype == expected_np.dtype
                 assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
 
@@ -7481,7 +7479,7 @@ def test_np_trace():
                                 expected_np = onp.trace(data_np, axis1=axis1, axis2=axis2, offset=offset)
                                 with mx.autograd.record():
                                     out_mx = test_trace(data.as_np_ndarray())
-                                assert out_mx.shape == expectedonp.shape
+                                assert out_mx.shape == expected_np.shape
                                 assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
                                 out_mx.backward()
                                 backward_expected = g(data_np, axis1=axis1, axis2=axis2, offset=offset)
@@ -7530,7 +7528,7 @@ def test_np_windows():
             for func in funcs:
                 x = np.zeros(shape=(), dtype=dtype)
                 for hybridize in [False, True]:
-                    np_func = getattr(_np, func)
+                    np_func = getattr(onp, func)
                     mx_func = TestWindows(func, M=config)
                     np_out = np_func(M=config).astype(dtype)
                     if hybridize:
@@ -7718,13 +7716,13 @@ def test_np_round():
                 if hybridize:
                     test_round.hybridize()
                 x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
-                np_out = getattr(_np, func)(x.asnumpy(), d)
+                np_out = getattr(onp, func)(x.asnumpy(), d)
                 mx_out = test_round(x)
                 assert mx_out.shape == np_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
                 mx_out = getattr(mx.np, func)(x, d)
-                np_out = getattr(_np, func)(x.asnumpy(), d)
+                np_out = getattr(onp, func)(x.asnumpy(), d)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
@@ -8306,13 +8304,13 @@ def test_np_einsum():
                     x_np = []
                     for shape in operands:
                         tmp = onp.array(onp.random.uniform(-1.0, 1.0, shape), dtype=dtype)
-                        xonp.append(tmp.astype(acc_type[dtype]))
+                        x_np.append(tmp.astype(acc_type[dtype]))
                         x.append(np.array(tmp, dtype=dtype))
                         x[-1].attach_grad()
                     expected_np = onp.einsum(subscripts, *x_np, optimize=optimize).astype(dtype)
                     with mx.autograd.record():
                         out_mx = test_einsum(*x)
-                    assert out_mx.shape == expectedonp.shape
+                    assert out_mx.shape == expected_np.shape
                     assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
                     out_mx.backward()
                     for (iop, op) in enumerate(x):
@@ -8342,7 +8340,7 @@ def test_np_einsum():
                 grad = []
                 x_np = []
                 for shape in operands:
-                    xonp.append(onp.array(onp.random.uniform(-2.0, 2.0, shape),
+                    x_np.append(onp.array(onp.random.uniform(-2.0, 2.0, shape),
                                           dtype=dtype))
                 for optimize in [False, True]:
                     x = []
@@ -8356,7 +8354,7 @@ def test_np_einsum():
                                              optimize=optimize).astype(dtype)
                     with mx.autograd.record():
                         out_mx = test_einsum(*x)
-                    assert out_mx.shape == expectedonp.shape
+                    assert out_mx.shape == expected_np.shape
                     assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
                     out_mx.backward()
                     cur_grad = []
@@ -8614,13 +8612,13 @@ def test_np_column_stack():
         v = []
         v_np = []
         for i in range(3):
-            vonp.append(onp.array(onp.random.uniform(-10.0, 10.0, config[i]), dtype=dtype))
+            v_np.append(onp.array(onp.random.uniform(-10.0, 10.0, config[i]), dtype=dtype))
             v.append(mx.nd.array(v_np[i]).as_np_ndarray())
             v[i].attach_grad()
         expected_np = onp.column_stack(v_np)
         with mx.autograd.record():
             mx_out = test_column_stack(*v)
-        assert mx_out.shape == expectedonp.shape
+        assert mx_out.shape == expected_np.shape
         assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
         # Test gradient
@@ -9076,13 +9074,13 @@ def test_np_column_stack():
         v = []
         v_np = []
         for i in range(3):
-            vonp.append(onp.array(onp.random.uniform(-10.0, 10.0, config[i]), dtype=dtype))
+            v_np.append(onp.array(onp.random.uniform(-10.0, 10.0, config[i]), dtype=dtype))
             v.append(mx.nd.array(v_np[i]).as_np_ndarray())
             v[i].attach_grad()
         expected_np = onp.column_stack(v_np)
         with mx.autograd.record():
             mx_out = test_column_stack(*v)
-        assert mx_out.shape == expectedonp.shape
+        assert mx_out.shape == expected_np.shape
         assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
         # Test gradient
@@ -9414,7 +9412,7 @@ def test_np_unary_bool_funcs():
             [[-433, 0, 456, onp.inf], [-1, -onp.inf, 0, 1]]
         ]
 
-        np_func = getattr(_np, func)
+        np_func = getattr(onp, func)
         mx_func = TestUnary(func)
         dtype_list = ['float16', 'float32', 'float64']
         hybridize_list = [True, False]
@@ -9706,7 +9704,7 @@ def test_np_unravel_index():
         mx_out = test_unravel_index(x)
         assert len(mx_out) == len(np_out)
         for elem_mx, elem_np in zip(mx_out, np_out):
-            assert elem_mx.asnumpy().shape == elemonp.shape
+            assert elem_mx.asnumpy().shape == elem_np.shape
             assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
         # no backward function for unravel_index operator
 
@@ -9715,7 +9713,7 @@ def test_np_unravel_index():
         np_out = onp.unravel_index(x.asnumpy(), rshape)
         assert len(mx_out) == len(np_out)
         for elem_mx, elem_np in zip(mx_out, np_out):
-            assert elem_mx.asnumpy().shape == elemonp.shape
+            assert elem_mx.asnumpy().shape == elem_np.shape
             assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
 
 
@@ -9742,7 +9740,7 @@ def test_np_diag_indices_from():
         np_out = onp.diag_indices_from(x.asnumpy())
         assert len(mx_out) == len(np_out)
         for elem_mx, elem_np in zip(mx_out, np_out):
-            assert elem_mx.asnumpy().shape == elemonp.shape
+            assert elem_mx.asnumpy().shape == elem_np.shape
             assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
         # no backward function for diag_indices_from operator
 
@@ -9751,7 +9749,7 @@ def test_np_diag_indices_from():
         np_out = onp.diag_indices_from(x.asnumpy())
         assert len(mx_out) == len(np_out)
         for elem_mx, elem_np in zip(mx_out, np_out):
-            assert elem_mx.asnumpy().shape == elemonp.shape
+            assert elem_mx.asnumpy().shape == elem_np.shape
             assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
 
 
@@ -10031,17 +10029,17 @@ def test_np_cross(a_shape, b_shape, axes, dtype, hybridize):
                 x_expected = onp.cross(a_np, b_np, axisa=a_axis, axisb=b_axis, axisc=c_axis)
         except Exception as e:
             print("a:", a_np)
-            print("a shape:", aonp.shape)
+            print("a shape:", a_np.shape)
             print("b:", b_np)
-            print("b shape:", bonp.shape)
+            print("b shape:", b_np.shape)
             print(e)
         else:
             assert x.shape == x_expected.shape
             assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
 
     def check_not_use_broadcast(a_np, b_np, axises):
-        a_shape = aonp.shape
-        b_shape = bonp.shape
+        a_shape = a_np.shape
+        b_shape = b_np.shape
         if axises is None:
             return a_shape[:-1] == b_shape[:-1]
         elif len(axises) == 4:
