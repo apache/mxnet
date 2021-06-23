@@ -10525,7 +10525,7 @@ def check_multihead_attention_selfatt(dtype):
                                          num_hidden=self.out_dim, no_bias=False)
             return output, att_score
 
-    qkv = np.random.uniform(size=(2, 7, 9))
+    qkv = np.random.uniform(size=(2, 7, 9), dtype=dtype)
     block1 = TestSelfAtt1()
     block2 = TestSelfAtt2()
     block1.initialize()
@@ -10692,8 +10692,8 @@ def check_multihead_attention_encdec(dtype):
                                          num_hidden=self.out_dim, no_bias=False)
             return output, att_score
 
-    q = np.random.uniform(size=(2, 7, 9))
-    kv = np.random.uniform(size=(2, 7, 9))
+    q = np.random.uniform(size=(2, 7, 9), dtype=dtype)
+    kv = np.random.uniform(size=(2, 7, 9), dtype=dtype)
     block1 = TestSelfAtt1()
     block2 = TestSelfAtt2()
     block1.initialize()

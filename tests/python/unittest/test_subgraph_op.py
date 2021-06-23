@@ -21,7 +21,7 @@ import ctypes
 import mxnet as mx
 from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array, c_str, mx_real_t
 from mxnet.symbol import Symbol
-import numpy as np
+import numpy as onp
 from mxnet.test_utils import assert_almost_equal, environment
 from mxnet import gluon
 from mxnet.gluon import nn
@@ -74,7 +74,7 @@ def network_structure_5():
     return (ret, ['data'], [(2, 3, 10, 10)])
 
 def network_structure_6():
-    data1 = mx.sym.Variable('data1', shape=(3, 3, 10, 10), dtype=np.float32)
+    data1 = mx.sym.Variable('data1', shape=(3, 3, 10, 10), dtype=onp.float32)
     data2 = mx.sym.Variable('data2', shape=(1, 0, 2, 2))
     data3 = mx.sym.sin(data2)
     conv = mx.sym.Convolution(data=data1, weight=data3, kernel=(2, 2), num_filter=1)
@@ -154,7 +154,7 @@ def test_subgraph_exe1(sym, subgraph_backend, op_names):
     assert len(exe.outputs) == len(partitioned_exe.outputs)
     for i in range(len(exe.outputs)):
         assert_almost_equal((exe.outputs[i] - partitioned_exe.outputs[i]).abs().sum().asnumpy(),
-                            np.zeros(shape=(1,)))
+                            onp.zeros(shape=(1,)))
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
@@ -186,7 +186,7 @@ def test_subgraph_exe2(sym, subgraph_backend, op_names):
     outputs2 = partitioned_exec.outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), onp.zeros(shape=(1,)))
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
@@ -217,7 +217,7 @@ def test_subgraph_exe3(sym, subgraph_backend, op_names):
     assert len(exe.outputs) == len(partitioned_exe.outputs)
     for i in range(len(exe.outputs)):
         assert_almost_equal((exe.outputs[i] - partitioned_exe.outputs[i]).abs().sum().asnumpy(),
-                            np.zeros(shape=(1,)))
+                            onp.zeros(shape=(1,)))
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
@@ -251,7 +251,7 @@ def test_subgraph_exe4(sym, subgraph_backend, op_names):
     outputs2 = partitioned_exec.outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), onp.zeros(shape=(1,)))
 
 def set_random_inputs(exe1, input_names):
     """Sets random values to exe1's args and auxs"""
@@ -299,7 +299,7 @@ def test_subgraph_exe5(sym, subgraph_backend, op_names):
     outputs2 = exe2.outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), onp.zeros(shape=(1,)))
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
@@ -329,7 +329,7 @@ def test_subgraph_exe6(sym, subgraph_backend, op_names):
     outputs2 = exe2.outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), onp.zeros(shape=(1,)))
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
@@ -359,7 +359,7 @@ def test_subgraph_exe7(sym, subgraph_backend, op_names):
     outputs2 = exe2.outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), onp.zeros(shape=(1,)))
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
@@ -391,7 +391,7 @@ def test_subgraph_exe8(sym, subgraph_backend, op_names):
     outputs2 = exe2.outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), onp.zeros(shape=(1,)))
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
@@ -423,7 +423,7 @@ def test_subgraph_exe9(sym, subgraph_backend, op_names):
     outputs2 = exe2.outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), onp.zeros(shape=(1,)))
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
@@ -455,7 +455,7 @@ def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmp_path):
     # compare outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), onp.zeros(shape=(1,)))
 
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridSequential.
 @mx.util.use_np
@@ -490,7 +490,7 @@ def test_subgraph_backend_gluon_ext1(tmpdir):
     # compare outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal(mx.np.abs((outputs1[i] - outputs2[i])).sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal(mx.np.abs((outputs1[i] - outputs2[i])).sum().asnumpy(), onp.zeros(shape=(1,)))
 
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridBlock.
 @mx.util.use_np
@@ -529,7 +529,7 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
     # compare outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
-        assert_almost_equal(mx.np.abs(outputs1[i] - outputs2[i]).sum().asnumpy(), np.zeros(shape=(1,)))
+        assert_almost_equal(mx.np.abs(outputs1[i] - outputs2[i]).sum().asnumpy(), onp.zeros(shape=(1,)))
 
 
 if __name__ == "__main__":
