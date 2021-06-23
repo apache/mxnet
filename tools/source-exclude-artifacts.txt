@@ -22,3 +22,4 @@
 
 R-package
 3rdparty/mkldnn/doc
+3rdparty/googletest/ci
