@@ -10734,3 +10734,50 @@ def test_multihead_attention_encdec():
 
     for dtype in dtypes:
         check_multihead_attention_encdec(dtype=dtype)
+
+
+@use_np
+def test_add_n():
+    data_shape = (2, 2)
+    input_num = 5
+    data = [np.random.uniform(size=data_shape) for i in range(input_num)]
+    rslt = np.zeros(shape=data_shape)
+    for i in range(input_num):
+        rslt += data[i]
+    add_n_rslt = npx.add_n(*data, out=data[0])
+    assert_almost_equal(rslt.asnumpy(), add_n_rslt.asnumpy(), atol=1e-5)
+
+
+@use_np
+def test_slice_like():
+    for ndim in range(1, 6):
+        from_shape = onp.random.randint(1, 11, size=(ndim,))
+        shape = [s + onp.random.randint(0, 3) for s in from_shape]
+        for t in range(ndim):
+            if t > 0:
+                axes = onp.random.randint(0, ndim, size=t).tolist()
+            else:
+                axes = []
+            idx = []
+            for i in range(ndim):
+                idx.append(slice(0, shape[i]))
+                if i in axes or not axes:
+                    idx[i] = slice(0, from_shape[i])
+
+            if axes:
+                pos = onp.random.randint(0, t)
+                if axes[pos] > 0:
+                    axes[pos] -= ndim  # negative index
+            x = np.array(onp.random.normal(size=shape))
+            x1 = np.array(onp.random.normal(size=from_shape))
+            x.attach_grad()
+            x1.attach_grad()
+            with mx.autograd.record():
+                y = npx.slice_like(data=x, shape_like=x1, axes=axes)
+            y.backward()
+            assert_allclose(x.asnumpy()[idx], y.asnumpy())
+
+            xx = x.asnumpy()
+            xx[:] = 0.0
+            xx[idx] = x.asnumpy()[idx]
+            assert_allclose(x1.grad.asnumpy(), np.zeros_like(x1.grad).asnumpy())
