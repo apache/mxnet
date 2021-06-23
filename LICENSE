@@ -227,6 +227,7 @@
     3rdparty/tvm/3rdparty/dlpack
     3rdparty/ps-lite
     3rdparty/mkldnn
+    include/mkldnn (header symlinks to 3rdparty/mkldnn)
     3rdparty/googletest/googlemock/scripts/generator
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark
     3rdparty/mkldnn/tests/benchdnn (Copy of the License available at top of current file)
