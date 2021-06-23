@@ -123,7 +123,6 @@ _WHITE_LIST = [
                'tools/license_header.py',
 
                # Dual-Licensed under Apache 2.0 and Nvidia BSD-3
-               'python/mxnet/onnx/mx2onnx/_export_onnx.py',
                'python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset12.py',
                'python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset13.py',
 
