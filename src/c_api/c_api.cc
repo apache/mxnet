@@ -1594,8 +1594,9 @@ int MXRandomSeedContext(int seed, int dev_type, int dev_id) {
 
 int MXSetFlushDenorms(bool value, bool* prev_state) {
   API_BEGIN();
-  // FTZ only applies to SSE and AVX instructions.
   *prev_state = false;
+
+  // FTZ only applies to SSE and AVX instructions.
   #if defined(__SSE__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
     std::function<bool()> is_dmz_flag_available = []() {
       // Intel 64 and IA-32 Architectures Software Developer’s Manual: Vol. 1
@@ -1616,16 +1617,23 @@ int MXSetFlushDenorms(bool value, bool* prev_state) {
       return dmz_flag;
     };
 
-    const unsigned int DMZ_STATE = value ? _MM_DENORMALS_ZERO_ON : _MM_DENORMALS_ZERO_OFF;
-    const unsigned int FTZ_STATE = value ? _MM_FLUSH_ZERO_ON : _MM_FLUSH_ZERO_OFF;
+    Engine::Get()->PushSync(
+      [value, prev_state, is_dmz_flag_available](RunContext rctx) {
+        const unsigned int DMZ_STATE = value ? _MM_DENORMALS_ZERO_ON : _MM_DENORMALS_ZERO_OFF;
+        const unsigned int FTZ_STATE = value ? _MM_FLUSH_ZERO_ON : _MM_FLUSH_ZERO_OFF;
+        *prev_state = _MM_GET_FLUSH_ZERO_MODE();
+        _MM_SET_FLUSH_ZERO_MODE(FTZ_STATE);
 
-    *prev_state = _MM_GET_FLUSH_ZERO_MODE();
-    _MM_SET_FLUSH_ZERO_MODE(FTZ_STATE);
-    // If the DAZ flag is not supported, then it is a reserved bit and attempting to write a 1
-    // to it will cause a general-protection exception (#GP)
-    if (is_dmz_flag_available()) {
-      _MM_SET_DENORMALS_ZERO_MODE(DMZ_STATE);
-    }
+        // If the DAZ flag is not supported, then it is a reserved bit and attempting to write a 1
+        // to it will cause a general-protection exception (#GP)
+        if (is_dmz_flag_available()) {
+          _MM_SET_DENORMALS_ZERO_MODE(DMZ_STATE);
+        }
+      }, Context::CPU(), {}, {},
+      FnProperty::kNormal, 0, "SetFlushDenorms");
+
+    Engine::Get()->WaitForAll();
+
   #endif
 
   API_END();
