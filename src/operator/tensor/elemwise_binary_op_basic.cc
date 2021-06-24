@@ -108,7 +108,7 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
    - otherwise, ``elemwise_add`` generates output with default storage
 
 )code")
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_add"});
+.set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_add"});
 
 // specialized gradient add function to do add to optimization
 // this must differ from elemwise_add to prevent add to optimization in forward pass.
