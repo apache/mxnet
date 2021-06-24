@@ -70,8 +70,8 @@
 
 using namespace mshadow;
 
-// Will cause clash with MKL fortran layer headers
-#if MSHADOW_USE_MKL == 0
+// Will cause clash with MKL/ArmPL fortran layer headers
+#if (!MSHADOW_USE_MKL && !MSHADOW_USE_ARMPL)
 
 extern "C" {
 
@@ -199,7 +199,7 @@ extern "C" {
   MXNET_LAPACK_FSIG_GEEV(dgeev, double)
 }
 
-#endif  // MSHADOW_USE_MKL == 0
+#endif  // (!MSHADOW_USE_MKL && !MSHADOW_USE_ARMPL)
 
 
 #define CHECK_LAPACK_UPLO(a) \
@@ -228,11 +228,13 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
 }
 
 
-#if (MSHADOW_USE_MKL && MXNET_USE_LAPACK)
+#if (MXNET_USE_LAPACK && (MSHADOW_USE_MKL || MSHADOW_USE_ARMPL))
 
-  // We interface with the C-interface of MKL
-  // as this is the preferred way.
-  #include <mkl_lapacke.h>
+  #if (MSHADOW_USE_MKL)
+    // We interface with the C-interface of MKL
+    // as this is the preferred way.
+    #include <mkl_lapacke.h>
+  #endif
 
   #define MXNET_LAPACK_ROW_MAJOR LAPACK_ROW_MAJOR
   #define MXNET_LAPACK_COL_MAJOR LAPACK_COL_MAJOR
