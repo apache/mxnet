@@ -111,5 +111,8 @@ Example::
                   "vector of sequence lengths of the form [batch_size]")
     .add_arguments(SequenceLastParam::__FIELDS__());
 
+NNVM_REGISTER_OP(SequenceLast)
+.add_alias("_npx_sequence_last");
+
 }  // namespace op
 }  // namespace mxnet

@@ -27,8 +27,8 @@ __all__ = ["Constraint", "Real", "Boolean",
            "Simplex", "LowerTriangular", "LowerCholesky", "PositiveDefinite",
            "Cat", "Stack"]
 
-from .utils import getF, constraint_check
-from .... import ndarray as nd
+from .utils import constraint_check
+from .... import np
 
 
 class Constraint(object):
@@ -86,12 +86,11 @@ class Real(Constraint):
     """
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be a real tensor".format(
             value)
         # False when value has NANs
         condition = (value == value) # pylint: disable=comparison-with-itself
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -101,11 +100,10 @@ class Boolean(Constraint):
     """
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be either 0 or 1.".format(
             value)
         condition = (value == 0) | (value == 1)
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -120,11 +118,10 @@ class Interval(Constraint):
         self._upper_bound = upper_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be >= {} and <= {}.".format(
             value, self._lower_bound, self._upper_bound)
         condition = (value >= self._lower_bound) & (value <= self._upper_bound)
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -139,11 +136,10 @@ class OpenInterval(Constraint):
         self._upper_bound = upper_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be > {} and < {}.".format(
             value, self._lower_bound, self._upper_bound)
         condition = (value > self._lower_bound) & (value < self._upper_bound)
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -158,11 +154,10 @@ class HalfOpenInterval(Constraint):
         self._upper_bound = upper_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be >= {} and < {}.".format(
             value, self._lower_bound, self._upper_bound)
         condition = (value >= self._lower_bound) & (value < self._upper_bound)
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -177,13 +172,12 @@ class IntegerInterval(Constraint):
         self._upper_bound = upper_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be integer and be >= {} and <= {}.".format(
             value, self._lower_bound, self._upper_bound)
         condition = value % 1 == 0
         condition = condition & (value >= self._lower_bound) & (
             value <= self._upper_bound)
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -198,13 +192,12 @@ class IntegerOpenInterval(Constraint):
         self._upper_bound = upper_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be integer and be > {} and < {}.".format(
             value, self._lower_bound, self._upper_bound)
         condition = value % 1 == 0
         condition = condition & (value > self._lower_bound) & (
             value < self._upper_bound)
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -219,13 +212,12 @@ class IntegerHalfOpenInterval(Constraint):
         self._upper_bound = upper_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be integer and be >= {} and < {}.".format(
             value, self._lower_bound, self._upper_bound)
         condition = value % 1 == 0
         condition = condition & (value >= self._lower_bound) & (
             value < self._upper_bound)
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -239,11 +231,10 @@ class GreaterThan(Constraint):
         self._lower_bound = lower_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be greater than {}".format(
             value, self._lower_bound)
         condition = value > self._lower_bound
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -266,11 +257,10 @@ class GreaterThanEq(Constraint):
         self._lower_bound = lower_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be greater than or equal to {}".format(
             value, self._lower_bound)
         condition = value >= self._lower_bound
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -284,11 +274,10 @@ class LessThan(Constraint):
         self._upper_bound = upper_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be less than {}".format(
             value, self._upper_bound)
         condition = value < self._upper_bound
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -302,11 +291,10 @@ class LessThanEq(Constraint):
         self._upper_bound = upper_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be less than or equal to {}".format(
             value, self._upper_bound)
         condition = value <= self._upper_bound
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -320,12 +308,11 @@ class IntegerGreaterThan(Constraint):
         self._lower_bound = lower_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be integer and be greater than {}".format(
             value, self._lower_bound)
         condition = value % 1 == 0
-        condition = F.np.bitwise_and(condition, value > self._lower_bound)
-        _value = constraint_check(F)(condition, err_msg) * value
+        condition = np.bitwise_and(condition, value > self._lower_bound)
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -339,13 +326,12 @@ class IntegerGreaterThanEq(Constraint):
         self._lower_bound = lower_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be integer and" \
                   " be greater than or equal to {}".format(
                       value, self._lower_bound)
         condition = value % 1 == 0
-        condition = F.np.bitwise_and(condition, value >= self._lower_bound)
-        _value = constraint_check(F)(condition, err_msg) * value
+        condition = np.bitwise_and(condition, value >= self._lower_bound)
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -359,12 +345,11 @@ class IntegerLessThan(Constraint):
         self._upper_bound = upper_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be integer and be less than {}".format(
             value, self._upper_bound)
         condition = value % 1 == 0
         condition = condition & (value < self._upper_bound)
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -378,13 +363,12 @@ class IntegerLessThanEq(Constraint):
         self._upper_bound = upper_bound
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be integer and" \
                   " be less than or equal to {}".format(
                       value, self._upper_bound)
         condition = value % 1 == 0
         condition = condition & (value <= self._upper_bound)
-        _value = constraint_check(F)(condition, err_msg) * value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -431,12 +415,11 @@ class Simplex(Constraint):
     """
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be >= 0 and" \
                   " its rightmost dimension should sum up to 1".format(value)
-        condition = F.np.all(value >= 0, axis=-1)
-        condition = condition & (F.np.abs(value.sum(-1) - 1) < 1e-6)
-        _value = constraint_check(F)(condition, err_msg) * value
+        condition = np.all(value >= 0, axis=-1)
+        condition = condition & (np.abs(value.sum(-1) - 1) < 1e-6)
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -446,11 +429,10 @@ class LowerTriangular(Constraint):
     """
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be" \
                   " square lower triangular matrices".format(value)
-        condition = F.np.tril(value) == value
-        _value = constraint_check(F)(condition, err_msg) * value
+        condition = np.tril(value) == value
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -460,13 +442,12 @@ class LowerCholesky(Constraint):
     """
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be" \
                   " square lower triangular matrices" \
                   " with real and positive diagonal entries".format(value)
-        condition = F.np.all(F.np.tril(value) == value, axis=-1)
-        condition = condition & (F.np.diagonal(value, axis1=-2, axis2=-1) > 0)
-        _value = constraint_check(F)(condition, err_msg) * value
+        condition = np.all(np.tril(value) == value, axis=-1)
+        condition = condition & (np.diagonal(value, axis1=-2, axis2=-1) > 0)
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -476,14 +457,13 @@ class PositiveDefinite(Constraint):
     """
 
     def check(self, value):
-        F = getF(value)
         err_msg = "Constraint violated: {} should be" \
                   " positive definite matrices".format(value)
         eps = 1e-5
-        condition = F.np.all(
-            F.np.abs(value - F.np.swapaxes(value, -1, -2)) < eps, axis=-1)
-        condition = condition & (F.np.linalg.eigvals(value) > 0)
-        _value = constraint_check(F)(condition, err_msg) * value
+        condition = np.all(
+            np.abs(value - np.swapaxes(value, -1, -2)) < eps, axis=-1)
+        condition = condition & (np.linalg.eigvals(value) > 0)
+        _value = constraint_check()(condition, err_msg) * value
         return _value
 
 
@@ -507,15 +487,14 @@ class Cat(Constraint):
         self._axis = axis
 
     def check(self, value):
-        F = getF(value)
         _values = []
         start = 0
         for length in self._lengths:
-            v = F.np.take(value, indices=F.np.arange(
+            v = np.take(value, indices=np.arange(
                 start, start + length), axis=self._axis)
             _values.append(v)
             start = start + length
-        _value = F.np.concatenate(_values, self._axis)
+        _value = np.concatenate(_values, self._axis)
         return _value
 
 
@@ -534,14 +513,11 @@ class Stack(Constraint):
         self._axis = axis
 
     def check(self, value):
-        F = getF(value)
-        assert F is nd, "mxnet.probability.distributions.constraint.Stack" \
-                        " is only supported when hybridization is turned off"
         size = value.shape[self._axis]
-        value_array = F.np.split(value, size, axis=self._axis)
-        value_array = [constraint.check(F.np.squeeze(v)) for v, constraint
+        value_array = np.split(value, size, axis=self._axis)
+        value_array = [constraint.check(np.squeeze(v)) for v, constraint
                        in zip(value_array, self._constraint_seq)]
-        _value = F.np.stack(value_array, self._axis)
+        _value = np.stack(value_array, self._axis)
         return _value
 
 

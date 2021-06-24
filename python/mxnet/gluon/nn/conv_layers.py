@@ -29,23 +29,12 @@ __all__ = ['Conv1D', 'Conv2D', 'Conv3D',
 
 from ..block import HybridBlock
 from ..parameter import Parameter
-from ... import symbol
+from ... import np, npx
 from ...base import numeric_types
 from .activations import Activation
-from ...util import is_np_array, np_array
+from ...util import use_np
 
-
-def _infer_weight_shape(op_name, data_shape, kwargs):
-    data = symbol.var('data', shape=data_shape)
-    if is_np_array():
-        op = getattr(symbol.npx, op_name)
-        data = data.as_np_ndarray()
-    else:
-        op = getattr(symbol, op_name)
-    sym = op(data, **kwargs)
-    return sym.infer_shape_partial()[0]
-
-
+@use_np
 class _Conv(HybridBlock):
     """Abstract nD convolution layer (private, used as implementation base).
 
@@ -98,10 +87,13 @@ class _Conv(HybridBlock):
     def __init__(self, channels, kernel_size, strides, padding, dilation,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 op_name='Convolution', adj=None):
+                 op_name='convolution', adj=None):
         super(_Conv, self).__init__()
         self._channels = channels
         self._in_channels = in_channels
+        self._kernel_size = kernel_size
+        self._layout = layout
+        self._groups = groups
         if isinstance(strides, numeric_types):
             strides = (strides,)*len(kernel_size)
         if isinstance(padding, numeric_types):
@@ -116,19 +108,11 @@ class _Conv(HybridBlock):
         if adj is not None:
             self._kwargs['adj'] = adj
 
-        if is_np_array():
-            dshape = [-1]*(len(kernel_size) + 2)
-        else:
-            dshape = [0]*(len(kernel_size) + 2)
-
-        dshape[layout.find('N')] = 1
-        dshape[layout.find('C')] = in_channels
-        wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
-        self.weight = Parameter('weight', shape=wshapes[1],
+        self.weight = Parameter('weight', shape=self.pre_infer(),
                                 init=weight_initializer,
                                 allow_deferred_init=True)
         if use_bias:
-            self.bias = Parameter('bias', shape=wshapes[2],
+            self.bias = Parameter('bias', shape=(channels,),
                                   init=bias_initializer,
                                   allow_deferred_init=True)
         else:
@@ -139,16 +123,69 @@ class _Conv(HybridBlock):
         else:
             self.act = None
 
-    def hybrid_forward(self, F, x, weight, bias=None):
-        if is_np_array():
-            F = F.npx
-        if bias is None:
-            act = getattr(F, self._op_name)(x, weight, name='fwd', **self._kwargs)
+    def forward(self, x):
+        ctx = x.ctx
+        if self.bias is None:
+            act = getattr(npx, self._op_name)(x, self.weight.data(ctx), **self._kwargs)
         else:
-            act = getattr(F, self._op_name)(x, weight, bias, name='fwd', **self._kwargs)
+            act = getattr(npx, self._op_name)(x, self.weight.data(ctx), self.bias.data(ctx),
+                                              **self._kwargs)
         if self.act is not None:
             act = self.act(act)
         return act
+
+    def pre_infer(self):
+        """
+        Pre-infer the shape of weight parameter based on kernel size, group size and channels
+        """
+        wshape = [-1]*(len(self._kernel_size) + 2)
+        if self._op_name == "convolution":
+            if len(self._kernel_size) == 1:
+                wshape[self._layout.find('N')] = self._channels // self._groups
+                wshape[self._layout.find('W')] = self._kernel_size[0]
+                wshape[0] *= self._groups
+            elif len(self._kernel_size) == 2:
+                wshape[self._layout.find('N')] = self._channels // self._groups
+                wshape[self._layout.find('H')] = self._kernel_size[0]
+                wshape[self._layout.find('W')] = self._kernel_size[1]
+                wshape[0] *= self._groups
+            else:
+                assert len(self._kernel_size) == 3, "kernel_size must be 1, 2 or 3"
+                wshape[self._layout.find('N')] = self._channels // self._groups
+                wshape[self._layout.find('D')] = self._kernel_size[0]
+                wshape[self._layout.find('H')] = self._kernel_size[1]
+                wshape[self._layout.find('W')] = self._kernel_size[2]
+                wshape[0] *= self._groups
+        else:
+            assert self._op_name == "deconvolution", \
+                "Only support operator name with convolution and deconvolution"
+            if len(self._kernel_size) == 1:
+                wshape[self._layout.find('C')] = self._channels // self._groups
+                wshape[self._layout.find('W')] = self._kernel_size[0]
+            elif len(self._kernel_size) == 2:
+                wshape[self._layout.find('C')] = self._channels // self._groups
+                wshape[self._layout.find('H')] = self._kernel_size[0]
+                wshape[self._layout.find('W')] = self._kernel_size[1]
+            else:
+                assert len(self._kernel_size) == 3, "kernel_size must be 1, 2 or 3"
+                wshape[self._layout.find('C')] = self._channels // self._groups
+                wshape[self._layout.find('D')] = self._kernel_size[0]
+                wshape[self._layout.find('H')] = self._kernel_size[1]
+                wshape[self._layout.find('W')] = self._kernel_size[2]
+        return tuple(wshape)
+
+    def infer_shape(self, x):
+        dshape1 = x.shape[self._layout.find('C')]
+        wshape = self.weight.shape
+        if self._op_name == "convolution":
+            wshape_list = list(wshape)
+            wshape_list[self._layout.find('C')] = dshape1 // self._groups
+        else:
+            assert self._op_name == "deconvolution", \
+                "Only support operator name with convolution and deconvolution"
+            wshape_list = list(wshape)
+            wshape_list[self._layout.find('N')] = dshape1
+        self.weight.shape = tuple(wshape_list)
 
     def _alias(self):
         return 'conv'
@@ -252,9 +289,7 @@ class Conv1D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
-        op_name = kwargs.pop('op_name', 'Convolution')
-        if is_np_array():
-            op_name = 'convolution'
+        op_name = 'convolution'
         super(Conv1D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
@@ -336,9 +371,7 @@ class Conv2D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
-        op_name = kwargs.pop('op_name', 'Convolution')
-        if is_np_array():
-            op_name = 'convolution'
+        op_name = 'convolution'
         super(Conv2D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
@@ -421,9 +454,7 @@ class Conv3D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
-        op_name = kwargs.pop('op_name', 'Convolution')
-        if is_np_array():
-            op_name = 'convolution'
+        op_name = 'convolution'
         super(Conv3D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
@@ -509,9 +540,7 @@ class Conv1DTranspose(_Conv):
             output_padding = (output_padding,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         assert len(output_padding) == 1, "output_padding must be a number or a list of 1 ints"
-        op_name = kwargs.pop('op_name', 'Deconvolution')
-        if is_np_array():
-            op_name = 'deconvolution'
+        op_name = 'deconvolution'
         super(Conv1DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
@@ -603,9 +632,7 @@ class Conv2DTranspose(_Conv):
             output_padding = (output_padding,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         assert len(output_padding) == 2, "output_padding must be a number or a list of 2 ints"
-        op_name = kwargs.pop('op_name', 'Deconvolution')
-        if is_np_array():
-            op_name = 'deconvolution'
+        op_name = 'deconvolution'
         super(Conv2DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
@@ -698,9 +725,7 @@ class Conv3DTranspose(_Conv):
             output_padding = (output_padding,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         assert len(output_padding) == 3, "output_padding must be a number or a list of 3 ints"
-        op_name = kwargs.pop('op_name', 'Deconvolution')
-        if is_np_array():
-            op_name = 'deconvolution'
+        op_name = 'deconvolution'
         super(Conv3DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
@@ -708,6 +733,7 @@ class Conv3DTranspose(_Conv):
         self.outpad = output_padding
 
 
+@use_np
 class _Pooling(HybridBlock):
     """Abstract class for different pooling layers."""
     def __init__(self, pool_size, strides, padding, ceil_mode, global_pool,
@@ -730,9 +756,8 @@ class _Pooling(HybridBlock):
     def _alias(self):
         return 'pool'
 
-    def hybrid_forward(self, F, x):
-        pooling = F.npx.pooling if is_np_array() else F.Pooling
-        return pooling(x, name='fwd', **self._kwargs)
+    def forward(self, x):
+        return npx.pooling(x, name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{name}(size={kernel}, stride={stride}, padding={pad}, ceil_mode={ceil_mode}'
@@ -1204,6 +1229,7 @@ class GlobalAvgPool3D(_Pooling):
             (1, 1, 1), None, 0, True, True, 'avg', layout, **kwargs)
 
 
+@use_np
 class ReflectionPad2D(HybridBlock):
     r"""Pads the input tensor using the reflection of the input boundary.
 
@@ -1229,7 +1255,7 @@ class ReflectionPad2D(HybridBlock):
     Examples
     --------
     >>> m = nn.ReflectionPad2D(3)
-    >>> input = mx.nd.random.normal(shape=(16, 3, 224, 224))
+    >>> input = mx.np.random.normal(size=(16, 3, 224, 224))
     >>> output = m(input)
     """
     def __init__(self, padding=0, **kwargs):
@@ -1239,10 +1265,15 @@ class ReflectionPad2D(HybridBlock):
         assert(len(padding) == 8)
         self._padding = padding
 
-    def hybrid_forward(self, F, x):
-        return F.pad(x, mode='reflect', pad_width=self._padding)
+    def forward(self, x):
+        """
+        Use pad operator in numpy extension module,
+        which has backward support for reflect mode
+        """
+        return npx.pad(x, mode='reflect', pad_width=self._padding)
 
 
+@use_np
 class DeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v_1 (Dai, 2017).
     Normal Convolution uses sampling points in a regular grid, while the sampling
@@ -1335,8 +1366,12 @@ class DeformableConvolution(HybridBlock):
         if isinstance(dilation, numeric_types):
             dilation = (dilation,) * len(kernel_size)
         self._op_name = op_name
+        self._kernel_size = kernel_size
+        self._layout = layout
+        self._groups = groups
 
         offset_channels = 2 * kernel_size[0] * kernel_size[1] * num_deformable_group
+        self._offset_channels = offset_channels
         self._kwargs_offset = {
             'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
             'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
@@ -1352,31 +1387,19 @@ class DeformableConvolution(HybridBlock):
             self._kwargs_offset['adj'] = adj
             self._kwargs_deformable_conv['adj'] = adj
 
-        dshape = [0] * (len(kernel_size) + 2)
-        dshape[layout.find('N')] = 1
-        dshape[layout.find('C')] = in_channels
-
-        op_name = 'convolution' if is_np_array() else 'Convolution'
-        offsetshapes = _infer_weight_shape(op_name, dshape, self._kwargs_offset)
-
-        self.offset_weight = Parameter('offset_weight', shape=offsetshapes[1],
+        self.offset_weight = Parameter('offset_weight', shape=self.pre_infer_offset_weight(),
                                        init=offset_weight_initializer,
                                        allow_deferred_init=True)
 
         if offset_use_bias:
-            self.offset_bias = Parameter('offset_bias', shape=offsetshapes[2],
+            self.offset_bias = Parameter('offset_bias', shape=(offset_channels,),
                                          init=offset_bias_initializer,
                                          allow_deferred_init=True)
         else:
             self.offset_bias = None
 
-        deformable_conv_weight_shape = [0] * (len(kernel_size) + 2)
-        deformable_conv_weight_shape[0] = channels
-        deformable_conv_weight_shape[2] = kernel_size[0]
-        deformable_conv_weight_shape[3] = kernel_size[1]
-
         self.deformable_conv_weight = Parameter('deformable_conv_weight',
-                                                shape=deformable_conv_weight_shape,
+                                                shape=self.pre_infer_weight(),
                                                 init=weight_initializer,
                                                 allow_deferred_init=True)
 
@@ -1392,32 +1415,62 @@ class DeformableConvolution(HybridBlock):
         else:
             self.act = None
 
-    def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
-        if not is_np_array():
-            x = x.as_np_ndarray()
-            offset_weight = offset_weight.as_np_ndarray()
-            deformable_conv_weight = deformable_conv_weight.as_np_ndarray()
-            if offset_bias is not None:
-                offset_bias = offset_bias.as_np_ndarray()
-            if deformable_conv_bias is not None:
-                deformable_conv_bias = deformable_conv_bias.as_np_ndarray()
-        if offset_bias is None:
-            offset = F.npx.convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
+    def forward(self, x):
+        ctx = x.ctx
+        if self.offset_bias is None:
+            offset = npx.convolution(x, self.offset_weight.data(ctx), cudnn_off=True, **self._kwargs_offset)
         else:
-            offset = F.npx.convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
+            offset = npx.convolution(x, self.offset_weight.data(ctx), self.offset_bias.data(ctx),
+                                     cudnn_off=True, **self._kwargs_offset)
 
-        if deformable_conv_bias is None:
-            act = F.npx.deformable_convolution(data=x, offset=offset, weight=deformable_conv_weight,
-                                               name='fwd', **self._kwargs_deformable_conv)
+        if self.deformable_conv_bias is None:
+            act = npx.deformable_convolution(data=x, offset=offset,
+                                             weight=self.deformable_conv_weight.data(ctx),
+                                             name='fwd', **self._kwargs_deformable_conv)
         else:
-            act = F.npx.deformable_convolution(data=x, offset=offset, weight=deformable_conv_weight,
-                                               bias=deformable_conv_bias, name='fwd',
-                                               **self._kwargs_deformable_conv)
+            act = npx.deformable_convolution(data=x, offset=offset,
+                                             weight=self.deformable_conv_weight.data(ctx),
+                                             bias=self.deformable_conv_bias.data(ctx), name='fwd',
+                                             **self._kwargs_deformable_conv)
 
         if self.act:
-            with np_array(True):
-                act = self.act(act)
-        return act if is_np_array() else act.as_nd_ndarray()
+            act = self.act(act)
+        return act
+
+
+    def pre_infer_offset_weight(self):
+        """
+        Pre-infer the shape of offsite weight parameter based on kernel size,
+        group size and offset channels
+        """
+        wshape = [-1]*(len(self._kernel_size) + 2)
+        wshape[self._layout.find('N')] = self._offset_channels // self._groups
+        wshape[self._layout.find('H')] = self._kernel_size[0]
+        wshape[self._layout.find('W')] = self._kernel_size[1]
+        wshape[0] *= self._groups
+        return tuple(wshape)
+
+    def pre_infer_weight(self):
+        """
+        Pre-infer the shape of weight parameter based on kernel size, group size and channels
+        """
+        wshape = [-1]*(len(self._kernel_size) + 2)
+        wshape[self._layout.find('N')] = self._channels // self._groups
+        wshape[self._layout.find('H')] = self._kernel_size[0]
+        wshape[self._layout.find('W')] = self._kernel_size[1]
+        wshape[0] *= self._groups
+        return tuple(wshape)
+
+    def infer_shape(self, x):
+        dshape1 = x.shape[self._layout.find('C')]
+        wshape = self.deformable_conv_weight.shape
+        wshape_offset = self.offset_weight.shape
+        wshape_list = list(wshape)
+        wshape_offset_list = list(wshape_offset)
+        wshape_list[self._layout.find('C')] = dshape1 // self._groups
+        wshape_offset_list[self._layout.find('C')] = dshape1 // self._groups
+        self.deformable_conv_weight.shape = tuple(wshape_list)
+        self.offset_weight.shape = tuple(wshape_offset_list)
 
     def _alias(self):
         return 'deformable_conv'
@@ -1444,6 +1497,7 @@ class DeformableConvolution(HybridBlock):
                         **self._kwargs_deformable_conv)
 
 
+@use_np
 class ModulatedDeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v2 (Dai, 2018).
 
@@ -1537,6 +1591,10 @@ class ModulatedDeformableConvolution(HybridBlock):
 
         offset_channels = num_deformable_group * 3 * kernel_size[0] * kernel_size[1]
         self.offset_split_index = num_deformable_group * 2 * kernel_size[0] * kernel_size[1]
+        self._layout = layout
+        self._groups = groups
+        self._offset_channels = offset_channels
+        self._kernel_size = kernel_size
         self._kwargs_offset = {
             'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
             'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
@@ -1552,13 +1610,8 @@ class ModulatedDeformableConvolution(HybridBlock):
             self._kwargs_offset['adj'] = adj
             self._kwargs_deformable_conv['adj'] = adj
 
-        deformable_conv_weight_shape = [0] * (len(kernel_size) + 2)
-        deformable_conv_weight_shape[0] = channels
-        deformable_conv_weight_shape[2] = kernel_size[0]
-        deformable_conv_weight_shape[3] = kernel_size[1]
-
         self.deformable_conv_weight = Parameter('deformable_conv_weight',
-                                                shape=deformable_conv_weight_shape,
+                                                shape=self.pre_infer_weight(),
                                                 init=weight_initializer,
                                                 allow_deferred_init=True)
 
@@ -1569,21 +1622,12 @@ class ModulatedDeformableConvolution(HybridBlock):
         else:
             self.deformable_conv_bias = None
 
-        dshape = [0] * (len(kernel_size) + 2)
-        dshape[layout.find('N')] = 1
-        dshape[layout.find('C')] = in_channels
-
-        op = getattr(symbol, 'Convolution')
-        offset = op(symbol.var('data', shape=dshape), **self._kwargs_offset)
-
-        offsetshapes = offset.infer_shape_partial()[0]
-
-        self.offset_weight = Parameter('offset_weight', shape=offsetshapes[1],
+        self.offset_weight = Parameter('offset_weight', shape=self.pre_infer_offset_weight(),
                                        init=offset_weight_initializer,
                                        allow_deferred_init=True)
 
         if offset_use_bias:
-            self.offset_bias = Parameter('offset_bias', shape=offsetshapes[2],
+            self.offset_bias = Parameter('offset_bias', shape=(offset_channels,),
                                          init=offset_bias_initializer,
                                          allow_deferred_init=True)
         else:
@@ -1594,43 +1638,72 @@ class ModulatedDeformableConvolution(HybridBlock):
         else:
             self.act = None
 
-    def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
-        if not is_np_array():
-            x = x.as_np_ndarray()
-            offset_weight = offset_weight.as_np_ndarray()
-            deformable_conv_weight = deformable_conv_weight.as_np_ndarray()
-            if offset_bias is not None:
-                offset_bias = offset_bias.as_np_ndarray()
-            if deformable_conv_bias is not None:
-                deformable_conv_bias = deformable_conv_bias.as_np_ndarray()
-        if offset_bias is None:
-            offset = F.npx.convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
+    def forward(self, x):
+        ctx = x.ctx
+        if self.offset_bias is None:
+            offset = npx.convolution(x, self.offset_weight.data(ctx),
+                                     cudnn_off=True, **self._kwargs_offset)
         else:
-            offset = F.npx.convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
+            offset = npx.convolution(x, self.offset_weight.data(ctx),
+                                     self.offset_bias.data(ctx), cudnn_off=True, **self._kwargs_offset)
 
-        offset_t = F.npx.slice_axis(offset, axis=1, begin=0, end=self.offset_split_index)
-        mask = F.npx.slice_axis(offset, axis=1, begin=self.offset_split_index, end=None)
-        mask = F.npx.sigmoid(mask) * 2
+        offset_t = npx.slice_axis(offset, axis=1, begin=0, end=self.offset_split_index)
+        mask = npx.slice_axis(offset, axis=1, begin=self.offset_split_index, end=None)
+        mask = npx.sigmoid(mask) * 2
 
-        if deformable_conv_bias is None:
-            act = F.npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
-                                                         weight=deformable_conv_weight,
-                                                         name='fwd', **self._kwargs_deformable_conv)
+        if self.deformable_conv_bias is None:
+            act = npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
+                                                       weight=self.deformable_conv_weight.data(ctx),
+                                                       name='fwd', **self._kwargs_deformable_conv)
         else:
-            act = F.npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
-                                                         weight=deformable_conv_weight,
-                                                         bias=deformable_conv_bias, name='fwd',
-                                                         **self._kwargs_deformable_conv)
+            act = npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
+                                                       weight=self.deformable_conv_weight.data(ctx),
+                                                       bias=self.deformable_conv_bias.data(ctx), name='fwd',
+                                                       **self._kwargs_deformable_conv)
 
         if self.act:
-            with np_array(True):
-                act = self.act(act)
-        return act if is_np_array() else act.as_nd_ndarray()
+            act = self.act(act)
+        return act
+
+    def pre_infer_offset_weight(self):
+        """
+        Pre-infer the shape of offsite weight parameter based on kernel size,
+        group size and offset channels
+        """
+        wshape = [-1]*(len(self._kernel_size) + 2)
+        wshape[self._layout.find('N')] = self._offset_channels // self._groups
+        wshape[self._layout.find('H')] = self._kernel_size[0]
+        wshape[self._layout.find('W')] = self._kernel_size[1]
+        wshape[0] *= self._groups
+        return tuple(wshape)
+
+    def pre_infer_weight(self):
+        """
+        Pre-infer the shape of weight parameter based on kernel size, group size and channels
+        """
+        wshape = [-1]*(len(self._kernel_size) + 2)
+        wshape[self._layout.find('N')] = self._channels // self._groups
+        wshape[self._layout.find('H')] = self._kernel_size[0]
+        wshape[self._layout.find('W')] = self._kernel_size[1]
+        wshape[0] *= self._groups
+        return tuple(wshape)
+
+    def infer_shape(self, x):
+        dshape1 = x.shape[self._layout.find('C')]
+        wshape = self.deformable_conv_weight.shape
+        wshape_offset = self.offset_weight.shape
+        wshape_list = list(wshape)
+        wshape_offset_list = list(wshape_offset)
+        wshape_list[self._layout.find('C')] = dshape1 // self._groups
+        wshape_offset_list[self._layout.find('C')] = dshape1 // self._groups
+        self.deformable_conv_weight.shape = tuple(wshape_list)
+        self.offset_weight.shape = tuple(wshape_offset_list)
 
     def _alias(self):
         return 'modulated_deformable_conv'
 
 
+@use_np
 class PixelShuffle1D(HybridBlock):
 
     r"""Pixel-shuffle layer for upsampling in 1 dimension.
@@ -1657,7 +1730,7 @@ class PixelShuffle1D(HybridBlock):
     Examples
     --------
     >>> pxshuf = PixelShuffle1D(2)
-    >>> x = mx.nd.zeros((1, 8, 3))
+    >>> x = mx.np.zeros((1, 8, 3))
     >>> pxshuf(x).shape
     (1, 4, 6)
     """
@@ -1666,21 +1739,19 @@ class PixelShuffle1D(HybridBlock):
         super(PixelShuffle1D, self).__init__()
         self._factor = int(factor)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         """Perform pixel-shuffling on the input."""
-        f = self._factor
-        if not is_np_array():
-            x = x.as_np_ndarray()
-                                             # (N, C*f, W)
-        x = F.npx.reshape(x, (-2, -6, -1, f, -2))  # (N, C, f, W)
-        x = F.np.transpose(x, (0, 1, 3, 2))     # (N, C, W, f)
-        x = F.npx.reshape(x, (-2, -2, -5))         # (N, C, W*f)
-        return x if is_np_array() else x.as_nd_ndarray()
+        f = self._factor                                             # (N, C*f, W)
+        x = npx.reshape(x, (-2, -6, -1, f, -2))  # (N, C, f, W)
+        x = np.transpose(x, (0, 1, 3, 2))     # (N, C, W, f)
+        x = npx.reshape(x, (-2, -2, -5))         # (N, C, W*f)
+        return x
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self._factor)
 
 
+@use_np
 class PixelShuffle2D(HybridBlock):
 
     r"""Pixel-shuffle layer for upsampling in 2 dimensions.
@@ -1716,7 +1787,7 @@ class PixelShuffle2D(HybridBlock):
     Examples
     --------
     >>> pxshuf = PixelShuffle2D((2, 3))
-    >>> x = mx.nd.zeros((1, 12, 3, 5))
+    >>> x = mx.np.zeros((1, 12, 3, 5))
     >>> pxshuf(x).shape
     (1, 2, 6, 15)
     """
@@ -1729,22 +1800,21 @@ class PixelShuffle2D(HybridBlock):
             self._factors = tuple(int(fac) for fac in factor)
             assert len(self._factors) == 2, "wrong length {}".format(len(self._factors))
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         """Perform pixel-shuffling on the input."""
         f1, f2 = self._factors
-        if not is_np_array():
-            x = x.as_np_ndarray()
                                                       # (N, f1*f2*C, H, W)
-        x = F.npx.reshape(x, (-2, -6, -1, f1 * f2, -2, -2))  # (N, C, f1*f2, H, W)
-        x = F.npx.reshape(x, (-2, -2, -6, f1, f2, -2, -2))    # (N, C, f1, f2, H, W)
-        x = F.np.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
-        x = F.npx.reshape(x, (-2, -2, -5, -5))              # (N, C, H*f1, W*f2)
-        return x if is_np_array() else x.as_nd_ndarray()
+        x = npx.reshape(x, (-2, -6, -1, f1 * f2, -2, -2))  # (N, C, f1*f2, H, W)
+        x = npx.reshape(x, (-2, -2, -6, f1, f2, -2, -2))    # (N, C, f1, f2, H, W)
+        x = np.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
+        x = npx.reshape(x, (-2, -2, -5, -5))              # (N, C, H*f1, W*f2)
+        return x
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self._factors)
 
 
+@use_np
 class PixelShuffle3D(HybridBlock):
 
     r"""Pixel-shuffle layer for upsampling in 3 dimensions.
@@ -1780,7 +1850,7 @@ class PixelShuffle3D(HybridBlock):
     Examples
     --------
     >>> pxshuf = PixelShuffle3D((2, 3, 4))
-    >>> x = mx.nd.zeros((1, 48, 3, 5, 7))
+    >>> x = mx.np.zeros((1, 48, 3, 5, 7))
     >>> pxshuf(x).shape
     (1, 2, 6, 15, 28)
     """
@@ -1793,23 +1863,21 @@ class PixelShuffle3D(HybridBlock):
             self._factors = tuple(int(fac) for fac in factor)
             assert len(self._factors) == 3, "wrong length {}".format(len(self._factors))
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         """Perform pixel-shuffling on the input."""
         # `transpose` doesn't support 8D, need other implementation
         f1, f2, f3 = self._factors
-        if not is_np_array():
-            x = x.as_np_ndarray()
                                                               # (N, C*f1*f2*f3, D, H, W)
-        x = F.npx.reshape(x, (-2, -6, -1, f1 * f2 * f3, -2, -2, -2))  # (N, C, f1*f2*f3, D, H, W)
-        x = F.np.swapaxes(x, 2, 3)                               # (N, C, D, f1*f2*f3, H, W)
-        x = F.npx.reshape(x, (-2, -2, -2, -6, f1, f2*f3, -2, -2))      # (N, C, D, f1, f2*f3, H, W)
-        x = F.npx.reshape(x, (-2, -2, -5, -2, -2, -2))                 # (N, C, D*f1, f2*f3, H, W)
-        x = F.np.swapaxes(x, 3, 4)                               # (N, C, D*f1, H, f2*f3, W)
-        x = F.npx.reshape(x, (-2, -2, -2, -2, -6, f2, f3, -2))         # (N, C, D*f1, H, f2, f3, W)
-        x = F.npx.reshape(x, (-2, -2, -2, -5, -2, -2))                 # (N, C, D*f1, H*f2, f3, W)
-        x = F.np.swapaxes(x, 4, 5)                               # (N, C, D*f1, H*f2, W, f3)
-        x = F.npx.reshape(x, (-2, -2, -2, -2, -5))                    # (N, C, D*f1, H*f2, W*f3)
-        return x if is_np_array() else x.as_nd_ndarray()
+        x = npx.reshape(x, (-2, -6, -1, f1 * f2 * f3, -2, -2, -2))  # (N, C, f1*f2*f3, D, H, W)
+        x = np.swapaxes(x, 2, 3)                               # (N, C, D, f1*f2*f3, H, W)
+        x = npx.reshape(x, (-2, -2, -2, -6, f1, f2*f3, -2, -2))      # (N, C, D, f1, f2*f3, H, W)
+        x = npx.reshape(x, (-2, -2, -5, -2, -2, -2))                 # (N, C, D*f1, f2*f3, H, W)
+        x = np.swapaxes(x, 3, 4)                               # (N, C, D*f1, H, f2*f3, W)
+        x = npx.reshape(x, (-2, -2, -2, -2, -6, f2, f3, -2))         # (N, C, D*f1, H, f2, f3, W)
+        x = npx.reshape(x, (-2, -2, -2, -5, -2, -2))                 # (N, C, D*f1, H*f2, f3, W)
+        x = np.swapaxes(x, 4, 5)                               # (N, C, D*f1, H*f2, W, f3)
+        x = npx.reshape(x, (-2, -2, -2, -2, -5))                    # (N, C, D*f1, H*f2, W*f3)
+        return x
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self._factors)

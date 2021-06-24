@@ -62,6 +62,7 @@ static bool GroupNormShape(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(GroupNorm)
+.add_alias("_npx_group_norm")
 .describe(R"code(Group normalization.
 
 The input channels are separated into ``num_groups`` groups, each containing ``num_channels / num_groups`` channels.

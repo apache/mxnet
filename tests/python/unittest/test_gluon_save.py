@@ -17,6 +17,7 @@
 
 import mxnet as mx
 
+@mx.util.use_np
 def test_save():
     class MyBlock(mx.gluon.Block):
         def __init__(self, **kwargs):
@@ -45,7 +46,7 @@ def test_save():
     net1.initialize()
     # hybridize (the hybridizeable blocks, ie. the Dense layers)
     net1.hybridize()
-    x = mx.nd.zeros((1,10))
+    x = mx.np.zeros((1,10))
     out1 = net1(x)
 
     # save hybridized model
@@ -55,6 +56,7 @@ def test_save():
     net2 = createNet()
     # reload hybridized model
     net2.load('MyModel')
+    net2.hybridize()
     # run inference again
     out2 = net2(x)
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy())

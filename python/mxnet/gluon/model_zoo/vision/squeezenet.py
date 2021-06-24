@@ -26,6 +26,7 @@ from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
 from .... import base
+from ....util import use_np
 
 # Helpers
 def _make_fire(squeeze_channels, expand1x1_channels, expand3x3_channels):
@@ -46,6 +47,7 @@ def _make_fire_conv(channels, kernel_size, padding=0):
     return out
 
 # Net
+@use_np
 class SqueezeNet(HybridBlock):
     r"""SqueezeNet model from the `"SqueezeNet: AlexNet-level accuracy with 50x fewer parameters
     and <0.5MB model size" <https://arxiv.org/abs/1602.07360>`_ paper.
@@ -102,7 +104,7 @@ class SqueezeNet(HybridBlock):
         self.output.add(nn.AvgPool2D(13))
         self.output.add(nn.Flatten())
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.features(x)
         x = self.output(x)
         return x

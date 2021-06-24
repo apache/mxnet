@@ -56,21 +56,6 @@ def _distribution_method_invoker(dist, func, *args):
     return getattr(dist, func)(*args)
 
 
-def test_mgp_getF():
-    # Test getF
-    getF = mgp.utils.getF
-    nd = mx.nd
-    sym = mx.sym
-    assert getF(nd.ones((2, 2)), nd.ones((2, 2))) == nd
-    assert getF(sym.ones((2, 2)), sym.ones((2, 2))) == sym
-    assert getF(1.0, 2.0) == nd
-
-    # Test exception
-    with pytest.raises(TypeError):
-        getF(nd.ones((2, 2)), sym.ones((2, 2)))
-        getF(sym.ones((2, 2)), nd.ones((2, 2)))
-
-
 @use_np
 def test_gluon_uniform():
     class TestUniform(HybridBlock):

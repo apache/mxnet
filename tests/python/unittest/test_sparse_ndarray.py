@@ -32,6 +32,7 @@ from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
 import pytest
 
+mx.npx.reset_np()
 
 def sparse_nd_ones(shape, stype):
     return mx.nd.ones(shape).tostype(stype)

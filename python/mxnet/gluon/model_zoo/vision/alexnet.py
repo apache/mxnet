@@ -26,8 +26,10 @@ from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
 from .... import base
+from ....util import use_np
 
 # Net
+@use_np
 class AlexNet(HybridBlock):
     r"""AlexNet model from the `"One weird trick..." <https://arxiv.org/abs/1404.5997>`_ paper.
 
@@ -60,7 +62,7 @@ class AlexNet(HybridBlock):
 
         self.output = nn.Dense(classes)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.features(x)
         x = self.output(x)
         return x

@@ -36,8 +36,8 @@ def test_np_einsum():
             self.subscripts = subscripts
             self.optimize = optimize
 
-        def hybrid_forward(self, F, *operands):
-            return F.np.einsum(self.subscripts, *operands, optimize=self.optimize)
+        def forward(self, *operands):
+            return mx.np.einsum(self.subscripts, *operands, optimize=self.optimize)
 
     def dbg(name, data):
         print('type of {} = {}'.format(name, type(data)))

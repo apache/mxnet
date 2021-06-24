@@ -29,6 +29,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_quantized_flatten)
+.add_alias("_npx_quantized_flatten")
 .set_num_inputs(3)
 .set_num_outputs(3)
 .set_attr<mxnet::FInferShape>("FInferShape", QuantizedFlattenShape)

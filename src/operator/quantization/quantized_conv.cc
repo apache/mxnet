@@ -178,6 +178,7 @@ bool QuantizedConvStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_conv)
+.add_alias("_npx_quantized_conv")
 .describe(R"code(Convolution operator for input, weight and bias data type of int8,
 and accumulates in type int32 for the output. For each argument, two more arguments of type
 float32 must be provided representing the thresholds of quantizing argument from data

@@ -24,8 +24,9 @@ from math import lgamma
 from .distribution import Distribution
 from .transformed_distribution import TransformedDistribution
 from ..transformation import ExpTransform
-from .utils import prob2logit, logit2prob, getF, cached_property
+from .utils import prob2logit, logit2prob, cached_property
 from .constraint import Real, Simplex
+from .... import np, npx
 
 
 class _LogRelaxedOneHotCategorical(Distribution):
@@ -42,9 +43,6 @@ class _LogRelaxedOneHotCategorical(Distribution):
         Probabilities of each event.
     logit : Tensor
         The log-odds of each event
-     F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
@@ -52,9 +50,8 @@ class _LogRelaxedOneHotCategorical(Distribution):
     arg_constraints = {'prob': Simplex(),
                        'logit': Real()}
 
-    def __init__(self, T, num_events, prob=None, logit=None, F=None, validate_args=None):
+    def __init__(self, T, num_events, prob=None, logit=None, validate_args=None):
         self.T = T
-        _F = F if F is not None else getF(prob, logit)
         if (num_events > 0):
             num_events = int(num_events)
             self.num_events = num_events
@@ -72,7 +69,7 @@ class _LogRelaxedOneHotCategorical(Distribution):
             self.logit = logit
 
         super(_LogRelaxedOneHotCategorical, self).__init__(
-            _F, event_dim=1, validate_args=validate_args)
+            event_dim=1, validate_args=validate_args)
 
     @cached_property
     def prob(self):
@@ -84,7 +81,7 @@ class _LogRelaxedOneHotCategorical(Distribution):
             Parameter tensor.
         """
         # pylint: disable=method-hidden
-        return logit2prob(self.logit, False, self.F)
+        return logit2prob(self.logit, False)
 
     @cached_property
     def logit(self):
@@ -96,7 +93,7 @@ class _LogRelaxedOneHotCategorical(Distribution):
             Parameter tensor.
         """
         # pylint: disable=method-hidden
-        return prob2logit(self.prob, False, self.F)
+        return prob2logit(self.prob, False)
 
     def log_prob(self, value):
         """Compute the log-likelihood of `value`
@@ -111,28 +108,24 @@ class _LogRelaxedOneHotCategorical(Distribution):
         Tensor
             log-likelihood of `value`
         """
-        F = self.F
         K = self.num_events  # Python scalar
-        log = F.np.log
-        exp = F.np.exp
         logit = self.logit
         y = logit - value * self.T
-        log_sum_exp = log(exp(y).sum(-1, keepdims=True) + 1e-20)
-        log_scale = lgamma(K) - log(self.T) * (-(K - 1))
+        log_sum_exp = np.log(np.exp(y).sum(-1, keepdims=True) + 1e-20)
+        log_scale = lgamma(K) - np.log(self.T) * (-(K - 1))
         return (y - log_sum_exp).sum(-1) + log_scale
 
     def sample(self, size=None):
-        F = self.F
         if size is None:
             size = ()
             logit = self.logit
         else:
             if isinstance(size, int):
-                logit = F.np.broadcast_to(self.logit, (size) + (-2,))
+                logit = np.broadcast_to(self.logit, (size) + (-2,))
             else:
-                logit = F.np.broadcast_to(self.logit, size + (-2,))
-        scores = F.np.random.gumbel(logit) / self.T
-        return F.np.log(F.npx.softmax(scores, axis=-1) + 1e-20)
+                logit = np.broadcast_to(self.logit, size + (-2,))
+        scores = np.random.gumbel(logit) / self.T
+        return np.log(npx.softmax(scores, axis=-1) + 1e-20)
 
 
 class RelaxedOneHotCategorical(TransformedDistribution):
@@ -148,9 +141,6 @@ class RelaxedOneHotCategorical(TransformedDistribution):
         Probabilities of each event.
     logit : Tensor
         The log-odds of each event
-     F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
@@ -158,9 +148,9 @@ class RelaxedOneHotCategorical(TransformedDistribution):
     arg_constraints = {'prob': Simplex(),
                        'logit': Real()}
 
-    def __init__(self, T, num_events, prob=None, logit=None, F=None, validate_args=None):
+    def __init__(self, T, num_events, prob=None, logit=None, validate_args=None):
         base_dist = _LogRelaxedOneHotCategorical(
-            T, num_events, prob, logit, F, validate_args)
+            T, num_events, prob, logit, validate_args)
         super(RelaxedOneHotCategorical, self).__init__(
             base_dist, ExpTransform())
 

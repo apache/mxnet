@@ -24,7 +24,8 @@ from .transformed_distribution import TransformedDistribution
 from .exponential import Exponential
 from .constraint import Positive, dependent_property, GreaterThan
 from ..transformation import ExpTransform, AffineTransform
-from .utils import getF, sample_n_shape_converter
+from .utils import sample_n_shape_converter
+from .... import np
 
 
 class Pareto(TransformedDistribution):
@@ -36,9 +37,6 @@ class Pareto(TransformedDistribution):
         shape parameter of the distribution.
     scale : Tensor or scalar, default 1
         scale parameter of the distribution.
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
@@ -46,8 +44,7 @@ class Pareto(TransformedDistribution):
     arg_constraints = {'scale': Positive(),
                        'alpha': Positive()}
 
-    def __init__(self, alpha, scale=1.0, F=None, validate_args=None):
-        _F = F if F is not None else getF(alpha, scale)
+    def __init__(self, alpha, scale=1.0, validate_args=None):
         self.alpha = alpha
         self.scale = scale
         base_dist = Exponential(1 / self.alpha)
@@ -55,12 +52,10 @@ class Pareto(TransformedDistribution):
             ExpTransform(), AffineTransform(0, self.scale)])
 
     def sample(self, size=None):
-        F = self.F
-        return self.scale * (F.np.random.pareto(self.alpha, size) + 1)
+        return self.scale * (np.random.pareto(self.alpha, size) + 1)
 
     def sample_n(self, size=None):
-        F = self.F
-        return self.scale * (F.np.random.pareto(self.alpha, sample_n_shape_converter(size)) + 1)
+        return self.scale * (np.random.pareto(self.alpha, sample_n_shape_converter(size)) + 1)
 
     @dependent_property
     def support(self):
@@ -68,16 +63,13 @@ class Pareto(TransformedDistribution):
 
     @property
     def mean(self):
-        F = self.F
-        a = F.np.clip(self.alpha, min=1)
+        a = np.clip(self.alpha, 1, None)
         return a * self.scale / (a - 1)
 
     @property
     def variance(self):
-        F = self.F
-        a = F.np.clip(self.alpha, min=2)
+        a = np.clip(self.alpha, 2, None)
         return (self.scale ** 2) * a / ((a - 1) ** 2 * (a - 2))
 
     def entropy(self):
-        F = self.F
-        return F.np.log(self.scale / self.alpha) + 1 / self.alpha + 1
+        return np.log(self.scale / self.alpha) + 1 / self.alpha + 1

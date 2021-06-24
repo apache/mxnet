@@ -415,15 +415,16 @@ def use_np_array(func):
     .. code-block:: python
 
         import mxnet as mx
-        from mxnet import gluon, np
+        from mxnet import gluon, nd, np
+        from mxnet.gluon import Parameter
 
         class TestHybridBlock1(gluon.HybridBlock):
             def __init__(self):
                 super(TestHybridBlock1, self).__init__()
-                self.w = self.params.get('w', shape=(2, 2))
+                self.w = Parameter('w', shape=(2, 2))
 
-            def hybrid_forward(self, F, x, w):
-                return F.dot(x, w)
+            def forward(self, x):
+                return nd.dot(x, self.w.data())
 
         x = mx.nd.ones((2, 2))
         net1 = TestHybridBlock1()
@@ -433,14 +434,14 @@ def use_np_array(func):
             assert type(v.data()) is mx.nd.NDArray
         assert type(out) is mx.nd.NDArray
 
-        @np.use_np_array
+        @mx.util.use_np_array
         class TestHybridBlock2(gluon.HybridBlock):
             def __init__(self):
                 super(TestHybridBlock2, self).__init__()
-                self.w = self.params.get('w', shape=(2, 2))
+                self.w = Parameter('w', shape=(2, 2))
 
-            def hybrid_forward(self, F, x, w):
-                return F.np.dot(x, w)
+            def forward(self, x):
+                return np.dot(x, self.w.data())
 
         x = np.ones((2, 2))
         net2 = TestHybridBlock2()
@@ -495,15 +496,16 @@ def use_np(func):
     .. code-block:: python
 
         import mxnet as mx
-        from mxnet import gluon, np
+        from mxnet import gluon, nd, np
+        from mxnet.gluon import Parameter
 
         class TestHybridBlock1(gluon.HybridBlock):
             def __init__(self):
                 super(TestHybridBlock1, self).__init__()
-                self.w = self.params.get('w', shape=(2, 2))
+                self.w = Parameter('w', shape=(2, 2))
 
-            def hybrid_forward(self, F, x, w):
-                return F.dot(x, w) + F.ones((1,))
+            def forward(self, x):
+                return nd.dot(x, self.w.data()) + nd.ones((1,))
 
         x = mx.nd.ones((2, 2))
         net1 = TestHybridBlock1()
@@ -513,14 +515,14 @@ def use_np(func):
             assert type(v.data()) is mx.nd.NDArray
         assert type(out) is mx.nd.NDArray
 
-        @np.use_np
+        @mx.util.use_np
         class TestHybridBlock2(gluon.HybridBlock):
             def __init__(self):
                 super(TestHybridBlock2, self).__init__()
-                self.w = self.params.get('w', shape=(2, 2))
+                self.w = Parameter('w', shape=(2, 2))
 
-            def hybrid_forward(self, F, x, w):
-                return F.np.dot(x, w) + F.np.ones(())
+            def forward(self, x):
+                return np.dot(x, self.w.data()) + np.ones(())
 
         x = np.ones((2, 2))
         net2 = TestHybridBlock2()

@@ -113,12 +113,12 @@ def test_np_zeros():
             self._shape = shape
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return x + F.np.zeros(shape, dtype)
+        def forward(self, x, *args, **kwargs):
+            return x + np.zeros(shape, dtype)
 
     class TestZerosOutputType(HybridBlock):
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return x, F.np.zeros(shape=())
+        def forward(self, x, *args, **kwargs):
+            return x, np.zeros(shape=())
 
     # test np.zeros in imperative
     def check_zero_array_creation(shape, dtype):
@@ -166,12 +166,12 @@ def test_np_ones():
             self._shape = shape
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return x * F.np.ones(shape, dtype)
+        def forward(self, x, *args, **kwargs):
+            return x * np.ones(shape, dtype)
 
     class TestOnesOutputType(HybridBlock):
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return x, F.np.ones(shape=())
+        def forward(self, x, *args, **kwargs):
+            return x, np.ones(shape=())
 
     # test np.ones in imperative
     def check_ones_array_creation(shape, dtype):
@@ -219,12 +219,12 @@ def test_identity():
             self._n = n
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x):
-            return x * F.np.identity(self._n, self._dtype)
+        def forward(self, x):
+            return x * np.identity(self._n, self._dtype)
 
     class TestIdentityOutputType(HybridBlock):
-        def hybrid_forward(self, F, x):
-            return x, F.np.identity(0)
+        def forward(self, x):
+            return x, np.identity(0)
 
     def check_identity_array_creation(shape, dtype):
         np_out = _np.identity(n=n, dtype=dtype)
@@ -345,7 +345,7 @@ def test_np_ndarray_binary_element_wise_ops():
             self._scalar = scalar
             self._reverse = reverse  # if false, scalar is the right operand.
 
-        def hybrid_forward(self, F, x, *args):
+        def forward(self, x, *args):
             if self._op == '+':
                 if self._scalar is not None:
                     return x + self._scalar if not self._reverse else self._scalar + x
@@ -514,28 +514,23 @@ def test_np_ndarray_binary_element_wise_ops():
 def test_np_hybrid_block_multiple_outputs():
     @use_np
     class TestAllNumpyOutputs(HybridBlock):
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return F.np.add(x, x), F.np.multiply(x, x)
-
-    class TestAllClassicOutputs(HybridBlock):
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return x.as_nd_ndarray() + x.as_nd_ndarray(), x.as_nd_ndarray() * x.as_nd_ndarray()
+        def forward(self, x, *args, **kwargs):
+            return np.add(x, x), np.multiply(x, x)
 
     data_np = np.ones((2, 3))
-    for block, expected_out_type in [(TestAllClassicOutputs, mx.nd.NDArray),
-                                     (TestAllNumpyOutputs, np.ndarray)]:
-        net = block()
-        for hybridize in [True, False]:
-            if hybridize:
-                net.hybridize()
-            out1, out2 = net(data_np)
-            assert type(out1) is expected_out_type
-            assert type(out2) is expected_out_type
+    block, expected_out_type = TestAllNumpyOutputs, np.ndarray
+    net = block()
+    for hybridize in [True, False]:
+        if hybridize:
+            net.hybridize(active=hybridize)
+        out1, out2 = net(data_np)
+        assert type(out1) is expected_out_type
+        assert type(out2) is expected_out_type
 
     @use_np
     class TestMixedTypeOutputsFailure(HybridBlock):
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return x.as_nd_ndarray() + x.as_nd_ndarray(), F.np.multiply(x, x)
+        def forward(self, x, *args, **kwargs):
+            return x.as_nd_ndarray() + x.as_nd_ndarray(), np.multiply(x, x)
 
     net = TestMixedTypeOutputsFailure()
     assert_exception(net, TypeError, data_np)
@@ -560,7 +555,7 @@ def test_np_ndarray_astype():
             self._dtype = dtype
             self._copy = copy
 
-        def hybrid_forward(self, F, x):
+        def forward(self, x):
             return x.astype(dtype=self._dtype, copy=self._copy)
 
     def check_astype_equal(itype, otype, copy, expect_zero_copy=False, hybridize=False):

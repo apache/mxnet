@@ -26,6 +26,7 @@ from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
 from .... import base
+from ....util import use_np
 
 # Helpers
 def _make_dense_block(num_layers, bn_size, growth_rate, dropout):
@@ -60,6 +61,7 @@ def _make_transition(num_output_features):
     return out
 
 # Net
+@use_np
 class DenseNet(HybridBlock):
     r"""Densenet-BC model from the
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_ paper.
@@ -105,7 +107,7 @@ class DenseNet(HybridBlock):
 
         self.output = nn.Dense(classes)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.features(x)
         x = self.output(x)
         return x

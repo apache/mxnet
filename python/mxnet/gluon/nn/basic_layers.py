@@ -23,14 +23,13 @@ __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
            'Flatten', 'Lambda', 'HybridLambda', 'Concatenate', 'HybridConcatenate', 'Identity']
 import warnings
 import uuid
-import inspect
-import numpy as np
+import numpy as _np
 
 from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
-from ... import ndarray as nd, np as mxnp, symbol as sym, context, _deferred_compute as dc
-from ...util import is_np_array
+from ... import np, npx, context
+from ...util import use_np
 from ..parameter import Parameter
 
 
@@ -101,6 +100,7 @@ class Sequential(Block):
         super(Sequential, self).hybridize(active, **kwargs)
 
 
+@use_np
 class HybridSequential(HybridBlock):
     """Stacks HybridBlocks sequentially.
 
@@ -114,7 +114,6 @@ class HybridSequential(HybridBlock):
     def __init__(self):
         super().__init__()
         self._layers = []
-        self._v2_checked = False
 
     def add(self, *blocks):
         """Adds block on top of the stack."""
@@ -122,32 +121,7 @@ class HybridSequential(HybridBlock):
             self._layers.append(block)
             self.register_child(block)
 
-    def __call__(self, *args, **kwargs):
-        if self._active  and not self._v2_checked and not dc.is_deferred_compute():
-            # If any of the child Blocks implements the Gluon 2 interface, the
-            # container must not pass a Symbol to them
-            if any(inspect.unwrap(chld().hybrid_forward.__func__) is
-                   HybridBlock.hybrid_forward for chld in self._children.values()):
-                self._v2 = True
-                self._v2_checked = True
-                self.forward = self._forward
-
-        return super().__call__(*args, **kwargs)
-
-
-    def _forward(self, x, *args):
-        for block in self._children.values():
-            x = block()(x, *args)
-            args = []
-            if isinstance(x, (tuple, list)):
-                args = x[1:]
-                x = x[0]
-        if args:
-            x = tuple([x] + list(args))
-        return x
-
-
-    def hybrid_forward(self, F, x, *args):
+    def forward(self, x, *args):
         for block in self._children.values():
             x = block()(x, *args)
             args = []
@@ -178,6 +152,7 @@ class HybridSequential(HybridBlock):
         return len(self._children)
 
 
+@use_np
 class Dense(HybridBlock):
     r"""Just your regular densely-connected NN layer.
 
@@ -247,13 +222,24 @@ class Dense(HybridBlock):
         else:
             self.act = None
 
-    def hybrid_forward(self, F, x, weight, bias=None):
-        fc = F.npx.fully_connected if is_np_array() else F.FullyConnected
-        act = fc(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
-                 flatten=self._flatten, name='fwd')
+    def forward(self, x):
+        ctx = x.ctx
+        act = npx.fully_connected(x, self.weight.data(ctx),
+                                  self.bias.data(ctx) if self.bias is not None else None,
+                                  no_bias=self.bias is None,
+                                  num_hidden=self._units, flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
         return act
+
+    def infer_shape(self, x, *args):
+        if self._flatten:
+            num_input = 1
+            for i in range(1, x.ndim):
+                num_input *= x.shape[i]
+            self.weight.shape = (self.weight.shape[0], num_input)
+        else:
+            self.weight.shape = (self.weight.shape[0], x.shape[x.ndim - 1])
 
     def __repr__(self):
         s = '{name}({layout}, {act})'
@@ -263,6 +249,7 @@ class Dense(HybridBlock):
                         layout='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]))
 
 
+@use_np
 class Dropout(HybridBlock):
     """Applies Dropout to the input.
 
@@ -293,13 +280,11 @@ class Dropout(HybridBlock):
         self._rate = rate
         self._axes = axes
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         if self._rate > 0:
-            dropout = F.npx.dropout if is_np_array() else F.Dropout
-            return dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
+            return npx.dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
         else:
-            copy = F.np.copy if is_np_array() else F.identity
-            return copy(x)
+            return np.copy(x)
 
     def __repr__(self):
         s = '{name}(p = {_rate}, axes={_axes})'
@@ -307,6 +292,7 @@ class Dropout(HybridBlock):
                         **self.__dict__)
 
 
+@use_np
 class _BatchNorm(HybridBlock):
     """Abstract BatchNorm layer (private, used as implementation base).
     Batch normalization layer (Ioffe and Szegedy, 2014).
@@ -367,6 +353,7 @@ class _BatchNorm(HybridBlock):
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not scale, 'use_global_stats': use_global_stats}
         self.fuse_relu = fuse_relu
+        self._axis = axis
         if in_channels != 0:
             self.in_channels = in_channels
 
@@ -390,16 +377,30 @@ class _BatchNorm(HybridBlock):
                                      differentiable=False)
 
     def cast(self, dtype):
-        if np.dtype(dtype).name == 'float16':
+        if _np.dtype(dtype).name == 'float16':
             dtype = 'float32'
         super(_BatchNorm, self).cast(dtype)
 
-    def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
-        batch_norm = F.npx.batch_norm if is_np_array() else F.BatchNorm
-        if (not is_np_array()) and self.fuse_relu:
-            batch_norm = F.contrib.BatchNormWithReLU
-        return batch_norm(x, gamma, beta, running_mean, running_var,
-                          name='fwd', **self._kwargs)
+    def forward(self, x):
+        ctx = x.ctx
+        if self.fuse_relu:
+            return npx.batch_norm_with_relu(x, self.gamma.data(ctx), self.beta.data(ctx),
+                                            self.running_mean.data(ctx),
+                                            self.running_var.data(ctx),
+                                            name='fwd', **self._kwargs)
+        else:
+            return npx.batch_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
+                                  self.running_mean.data(ctx),
+                                  self.running_var.data(ctx),
+                                  name='fwd', **self._kwargs)
+
+    def infer_shape(self, x, *args):
+        channel_axis = self._axis if self._axis >= 0 else self._axis + x.ndim
+        channel_count = x.shape[channel_axis]
+        self.gamma.shape = (channel_count,)
+        self.beta.shape = (channel_count,)
+        self.running_mean.shape = (channel_count,)
+        self.running_var.shape = (channel_count,)
 
     def __repr__(self):
         s = '{name}({content}'
@@ -538,6 +539,7 @@ class BatchNormReLU(_BatchNorm):
             in_channels=in_channels, **kwargs)
 
 
+@use_np
 class Embedding(HybridBlock):
     r"""Turns non-negative integers (indexes/tokens) into dense vectors
     of fixed size. eg. [4, 20] -> [[0.25, 0.1], [0.6, -0.2]]
@@ -572,6 +574,7 @@ class Embedding(HybridBlock):
     def __init__(self, input_dim, output_dim, dtype='float32',
                  weight_initializer=None, sparse_grad=False, **kwargs):
         super(Embedding, self).__init__(**kwargs)
+        assert not sparse_grad, "Currently, sparse feature is not supported in Gluon2.0"
         grad_stype = 'row_sparse' if sparse_grad else 'default'
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype, 'sparse_grad': sparse_grad}
@@ -579,9 +582,9 @@ class Embedding(HybridBlock):
                                 init=weight_initializer, dtype=dtype,
                                 allow_deferred_init=True, grad_stype=grad_stype)
 
-    def hybrid_forward(self, F, x, weight):
-        embedding = F.npx.embedding if is_np_array() else F.Embedding
-        return embedding(x, weight, name='fwd', **self._kwargs)
+    def forward(self, x):
+        ctx = x.ctx
+        return npx.embedding(x, self.weight.data(ctx), name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{block_name}({input_dim} -> {output_dim}, {dtype})'
@@ -589,6 +592,7 @@ class Embedding(HybridBlock):
                         **self._kwargs)
 
 
+@use_np
 class Flatten(HybridBlock):
     r"""Flattens the input to two dimensional.
 
@@ -601,14 +605,14 @@ class Flatten(HybridBlock):
     def __init__(self, **kwargs):
         super(Flatten, self).__init__(**kwargs)
 
-    def hybrid_forward(self, F, x):
-        flatten = F.npx.batch_flatten if is_np_array() else F.flatten
-        return flatten(x)
+    def forward(self, x):
+        return npx.batch_flatten(x)
 
     def __repr__(self):
         return self.__class__.__name__
 
 
+@use_np
 class InstanceNorm(HybridBlock):
     r"""
     Applies instance normalization to the n-dimensional input array.
@@ -663,7 +667,7 @@ class InstanceNorm(HybridBlock):
     Examples
     --------
     >>> # Input of shape (2,1,2)
-    >>> x = mx.nd.array([[[ 1.1,  2.2]],
+    >>> x = mx.np.array([[[ 1.1,  2.2]],
     ...                 [[ 3.3,  4.4]]])
     >>> # Instance normalization is calculated with the above formula
     >>> layer = InstanceNorm()
@@ -671,7 +675,6 @@ class InstanceNorm(HybridBlock):
     >>> layer(x)
     [[[-0.99998355  0.99998331]]
      [[-0.99998319  0.99998361]]]
-    <NDArray 2x1x2 @cpu(0)>
     """
     def __init__(self, axis=1, epsilon=1e-5, center=True, scale=False,
                  beta_initializer='zeros', gamma_initializer='ones',
@@ -687,13 +690,18 @@ class InstanceNorm(HybridBlock):
                               shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True)
 
-    def hybrid_forward(self, F, x, gamma, beta):
+    def forward(self, x):
+        ctx = x.ctx
         if self._axis == 1:
-            return F.InstanceNorm(x, gamma, beta,
-                                  name='fwd', eps=self._epsilon)
+            return npx.instance_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
+                                     name='fwd', eps=self._epsilon)
         x = x.swapaxes(1, self._axis)
-        return F.InstanceNorm(x, gamma, beta, name='fwd',
-                              eps=self._epsilon).swapaxes(1, self._axis)
+        return npx.instance_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
+                                 name='fwd', eps=self._epsilon).swapaxes(1, self._axis)
+
+    def infer_shape(self, x, *args):
+        self.gamma.shape = (x.shape[1],)
+        self.beta.shape = (x.shape[1],)
 
     def __repr__(self):
         s = '{name}({content}'
@@ -705,6 +713,7 @@ class InstanceNorm(HybridBlock):
                                            for k, v in self._kwargs.items()]))
 
 
+@use_np
 class LayerNorm(HybridBlock):
     r"""
     Applies layer normalization to the n-dimensional input array.
@@ -750,14 +759,13 @@ class LayerNorm(HybridBlock):
     Examples
     --------
     >>> # Input of shape (2, 5)
-    >>> x = mx.nd.array([[1, 2, 3, 4, 5], [1, 1, 2, 2, 2]])
+    >>> x = mx.np.array([[1, 2, 3, 4, 5], [1, 1, 2, 2, 2]])
     >>> # Layer normalization is calculated with the above formula
     >>> layer = LayerNorm()
     >>> layer.initialize(ctx=mx.cpu(0))
     >>> layer(x)
     [[-1.41421    -0.707105    0.          0.707105    1.41421   ]
      [-1.2247195  -1.2247195   0.81647956  0.81647956  0.81647956]]
-    <NDArray 2x5 @cpu(0)>
     """
     def __init__(self, axis=-1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
@@ -775,9 +783,16 @@ class LayerNorm(HybridBlock):
                               shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True)
 
-    def hybrid_forward(self, F, data, gamma, beta):
-        layer_norm = F.npx.layer_norm if is_np_array() else F.LayerNorm
-        return layer_norm(data, gamma=gamma, beta=beta, axis=self._axis, eps=self._epsilon)
+    def forward(self, data):
+        ctx = data.ctx
+        return npx.layer_norm(data, gamma=self.gamma.data(ctx),
+                              beta=self.beta.data(ctx), axis=self._axis, eps=self._epsilon)
+
+    def infer_shape(self, data, *args):
+        channel_axis = self._axis if self._axis >= 0 else self._axis + data.ndim
+        channel_count = data.shape[channel_axis]
+        self.gamma.shape = (channel_count,)
+        self.beta.shape = (channel_count,)
 
     def __repr__(self):
         s = '{name}({content}'
@@ -789,6 +804,7 @@ class LayerNorm(HybridBlock):
                                            for k, v in self._kwargs.items()]))
 
 
+@use_np
 class GroupNorm(HybridBlock):
     r"""
     Applies group normalization to the n-dimensional input array.
@@ -832,7 +848,7 @@ class GroupNorm(HybridBlock):
     Examples
     --------
     >>> # Input of shape (2, 3, 4)
-    >>> x = mx.nd.array([[[ 0,  1,  2,  3],
+    >>> x = mx.np.array([[[ 0,  1,  2,  3],
                           [ 4,  5,  6,  7],
                           [ 8,  9, 10, 11]],
                          [[12, 13, 14, 15],
@@ -848,7 +864,6 @@ class GroupNorm(HybridBlock):
      [[-1.5932543 -1.3035717 -1.0138891 -0.7242065]
       [-0.4345239 -0.1448413  0.1448413  0.4345239]
       [ 0.7242065  1.0138891  1.3035717  1.5932543]]]
-    <NDArray 2x3x4 @cpu(0)>
     """
     def __init__(self, num_groups=1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
@@ -866,9 +881,15 @@ class GroupNorm(HybridBlock):
                               shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True)
 
-    def hybrid_forward(self, F, data, gamma, beta):
-        norm_data = F.GroupNorm(data, gamma=gamma, beta=beta, num_groups=self._num_groups, eps=self._epsilon)
+    def forward(self, data):
+        ctx = data.ctx
+        norm_data = npx.group_norm(data, gamma=self.gamma.data(ctx), beta=self.beta.data(ctx),
+                                   num_groups=self._num_groups, eps=self._epsilon)
         return norm_data
+
+    def infer_shape(self, data, *args):
+        self.gamma.shape = (data.shape[1],)
+        self.beta.shape = (data.shape[1],)
 
     def __repr__(self):
         s = '{name}({content}'
@@ -894,7 +915,7 @@ class Lambda(Block):
 
         2) a function that conforms to ``def function(*args)``. For example::
 
-            block = Lambda(lambda x: nd.LeakyReLU(x, slope=0.1))
+            block = Lambda(lambda x: npx.leaky_relu(x, slope=0.1))
 
     Inputs:
         - ** *args **: one or more input data. Their shapes depend on the function.
@@ -905,9 +926,13 @@ class Lambda(Block):
     def __init__(self, function):
         super(Lambda, self).__init__()
         if isinstance(function, str):
-            assert hasattr(nd, function), \
-                   "Function name %s is not found in ndarray." % function
-            self._func_impl = getattr(nd, function)
+            if hasattr(np, function):
+                self._func_impl = getattr(np, function)
+            elif hasattr(npx, function):
+                self._func_impl = getattr(npx, function)
+            else:
+                raise Exception("Function name %s is not found in np/npx." % function)
+            self._func_name = function
         elif callable(function):
             self._func_impl = function
         else:
@@ -923,6 +948,7 @@ class Lambda(Block):
                                            function=self._func_impl.__name__)
 
 
+@use_np
 class HybridLambda(HybridBlock):
     r"""Wraps an operator or an expression as a HybridBlock object.
 
@@ -949,10 +975,12 @@ class HybridLambda(HybridBlock):
     def __init__(self, function):
         super(HybridLambda, self).__init__()
         if isinstance(function, str):
-            assert hasattr(nd, function) and hasattr(sym, function), \
-                   "Function name %s is not found in symbol/ndarray." % function
-            func_dict = {sym: getattr(sym, function), nd: getattr(nd, function)}
-            self._func = lambda F, *args: func_dict[F](*args)
+            if hasattr(np, function):
+                self._func = getattr(np, function)
+            elif hasattr(npx, function):
+                self._func = getattr(npx, function)
+            else:
+                raise Exception("Function name %s is not found in np/npx." % function)
             self._func_name = function
         elif callable(function):
             self._func = function
@@ -962,14 +990,15 @@ class HybridLambda(HybridBlock):
                 "Unrecognized function in lambda: {} of type {}"
                 .format(function, type(function)))
 
-    def hybrid_forward(self, F, x, *args):
-        return self._func(F, x, *args)
+    def forward(self, x, *args):
+        return self._func(x, *args)
 
     def __repr__(self):
         return '{name}({function})'.format(name=self.__class__.__name__,
                                            function=self._func_name)
 
 
+@use_np
 class Concatenate(Sequential):
     """Lays `Block` s concurrently.
 
@@ -997,13 +1026,11 @@ class Concatenate(Sequential):
         out = []
         for block in self._children.values():
             out.append(block()(x))
-        if is_np_array():
-            out = np.concatenate(out, axis=self.axis)
-        else:
-            out = nd.concat(*out, dim=self.axis)
+        out = np.concatenate(out, axis=self.axis)
         return out
 
 
+@use_np
 class HybridConcatenate(HybridSequential):
     """Lays `HybridBlock` s concurrently.
 
@@ -1027,27 +1054,15 @@ class HybridConcatenate(HybridSequential):
         super().__init__()
         self.axis = axis
 
-    def _forward(self, x):
+    def forward(self, x):
         out = []
         for block in self._children.values():
             out.append(block()(x))
-        if is_np_array():
-            out = mxnp.concatenate(out, axis=self.axis)
-        else:
-            out = nd.concat(*out, dim=self.axis)
-        return out
-
-    def hybrid_forward(self, F, x):
-        out = []
-        for block in self._children.values():
-            out.append(block()(x))
-        if is_np_array():
-            out = F.np.concatenate(out, axis=self.axis)
-        else:
-            out = F.concat(*out, dim=self.axis)
+        out = np.concatenate(out, axis=self.axis)
         return out
 
 
+@use_np
 class Identity(HybridBlock):
     """Block that passes through the input directly.
 
@@ -1064,10 +1079,11 @@ class Identity(HybridBlock):
     def __init__(self):
         super(Identity, self).__init__()
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         return x
 
 
+@use_np
 class SyncBatchNorm(BatchNorm):
     """Cross-GPU Synchronized Batch normalization (SyncBN)
 
@@ -1148,6 +1164,8 @@ class SyncBatchNorm(BatchNorm):
         num_devices = num_devices if num_devices > 0 else 1
         return num_devices
 
-    def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
-        return F.contrib.SyncBatchNorm(x, gamma, beta, running_mean, running_var,
-                                       name='fwd', **self._kwargs)
+    def forward(self, x):
+        ctx = x.ctx
+        return npx.sync_batch_norm(x, self.gamma.data(ctx), self.beta.data(ctx),
+                                   self.running_mean.data(ctx), self.running_var.data(ctx),
+                                   name='fwd', **self._kwargs)

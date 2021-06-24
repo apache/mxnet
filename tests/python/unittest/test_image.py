@@ -26,6 +26,7 @@ import tempfile
 import unittest
 import pytest
 
+mx.npx.reset_np()
 
 def _get_data(url, dirname):
     import os, tarfile

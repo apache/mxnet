@@ -127,5 +127,8 @@ Example::
                   "vector of sequence lengths of the form [batch_size]")
     .add_arguments(SequenceReverseParam::__FIELDS__());
 
+NNVM_REGISTER_OP(SequenceReverse)
+.add_alias("_npx_sequence_reverse");
+
 }  // namespace op
 }  // namespace mxnet

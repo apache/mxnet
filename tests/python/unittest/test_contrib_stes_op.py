@@ -21,49 +21,51 @@ from mxnet import nd, autograd, gluon
 from mxnet.test_utils import default_context
 
 
+@mx.util.use_np
 class RoundSTENET(gluon.HybridBlock):
     def __init__(self, w_init, **kwargs):
         super(RoundSTENET, self).__init__(**kwargs)
         self.w = gluon.Parameter('w', shape=30, init=mx.initializer.Constant(w_init), grad_req='write')
 
     @staticmethod
-    def expected_grads(in_data, w_init):
-        return (in_data * w_init).round() + (in_data * w_init)
+    def expected_grads(self, in_data, w_init):
+        return mx.np.round(in_data * w_init) + (in_data * w_init)
 
     @staticmethod
-    def expected_output(in_data, w_init):
-        return (in_data * w_init).round() * w_init
+    def expected_output(self, in_data, w_init):
+        return mx.np.round(in_data * w_init) * w_init
 
-    def hybrid_forward(self, F, x, w):
+    def forward(self, x):
         # Simple forward function: round_ste(w*x)*w
-        out = w * x
-        out = F.contrib.round_ste(out)
+        out = self.w.data(x.ctx) * x
+        out = mx.npx.round_ste(out)
         # Uncomment to see how test fails with round
         # out = F.round(out)
-        out = out * w
+        out = out * self.w.data(x.ctx)
         return out
 
 
+@mx.util.use_np
 class SignSTENET(gluon.HybridBlock):
     def __init__(self, w_init, **kwargs):
         super(SignSTENET, self).__init__(**kwargs)
         self.w = gluon.Parameter('w', shape=30, init=mx.initializer.Constant(w_init), grad_req='write')
 
     @staticmethod
-    def expected_grads(in_data, w_init):
-        return (in_data * w_init).sign() + (in_data * w_init)
+    def expected_grads(self, in_data, w_init):
+        return mx.np.sign(in_data * w_init) + (in_data * w_init)
 
     @staticmethod
-    def expected_output(in_data, w_init):
-        return (in_data * w_init).sign() * w_init
+    def expected_output(self, in_data, w_init):
+        return mx.np.sign(in_data * w_init) * w_init
 
-    def hybrid_forward(self, F, x, w):
+    def forward(self, x):
         # Simple forward function: sign_ste(w*x)*w
-        out = w * x
-        out = F.contrib.sign_ste(out)
+        out = self.w.data(x.ctx) * x
+        out = mx.npx.sign_ste(out)
         # Uncomment to see how test fails with sign
         # out = F.sign(out)
-        out = out * w
+        out = out * self.w.data(x.ctx)
         return out
 
 
@@ -99,19 +101,19 @@ def check_ste(net_type_str, w_init, hybridize, in_data, ctx=None):
 @xfail_when_nonstandard_decimal_separator
 def test_contrib_round_ste():
     # Test with random data
-    in_data = nd.uniform(-10, 10, shape=30)  # 10 and 30 are arbitrary numbers
-    w_init = float(nd.uniform(-10, 10, shape=1).asscalar())
+    in_data = mx.np.random.uniform(-10, 10, size=30)  # 10 and 30 are arbitrary numbers
+    w_init = float(mx.np.random.uniform(-10, 10, size=1).item())
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=True, in_data=in_data)
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=False, in_data=in_data)
 
     # Test 1.5 (verifies that .5 rounds the same as in round)
-    in_data = nd.array([1.5]*30)  # 10 and 30 are arbitrary numbers
+    in_data = mx.np.array([1.5]*30)  # 10 and 30 are arbitrary numbers
     w_init = 1.
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=True, in_data=in_data)
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=False, in_data=in_data)
 
     # Test 0
-    in_data = nd.array([0]*30)  # 10 and 30 are arbitrary numbers
+    in_data = mx.np.array([0]*30)  # 10 and 30 are arbitrary numbers
     w_init = 0.
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=True, in_data=in_data)
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=False, in_data=in_data)
@@ -119,13 +121,13 @@ def test_contrib_round_ste():
 
 @xfail_when_nonstandard_decimal_separator
 def test_contrib_sign_ste():
-    in_data = nd.uniform(-10, 10, shape=30)  # 10 and 30 are arbitrary numbers
-    w_init = float(nd.uniform(-10, 10, shape=1).asscalar())
+    in_data = mx.np.random.uniform(-10, 10, size=30)  # 10 and 30 are arbitrary numbers
+    w_init = float(mx.np.random.uniform(-10, 10, size=1).item())
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=True, in_data=in_data)
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=False, in_data=in_data)
 
     # Test 0
-    in_data = nd.array([0]*30)  # 10 and 30 are arbitrary numbers
+    in_data = mx.np.array([0]*30)  # 10 and 30 are arbitrary numbers
     w_init = 0.
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=True, in_data=in_data)
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=False, in_data=in_data)

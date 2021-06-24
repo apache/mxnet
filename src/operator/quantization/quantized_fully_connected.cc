@@ -303,6 +303,7 @@ void QuantizedFullyConnectedForwardExCPU(const nnvm::NodeAttrs &attrs,
 #endif
 
 NNVM_REGISTER_OP(_contrib_quantized_fully_connected)
+.add_alias("_npx_quantized_fully_connected")
 .describe(R"code(Fully Connected operator for input, weight and bias data type of int8,
 and accumulates in type int32 for the output. For each argument, two more arguments of type
 float32 must be provided representing the thresholds of quantizing argument from data

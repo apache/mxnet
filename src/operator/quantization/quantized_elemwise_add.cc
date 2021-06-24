@@ -91,6 +91,7 @@ void QuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_elemwise_add)
+.add_alias("_npx_quantized_elemwise_add")
 .describe(R"code(elemwise_add operator for input dataA and input dataB data type of int8,
 and accumulates in type int32 for the output. For each argument, two more arguments of type
 float32 must be provided representing the thresholds of quantizing argument from data

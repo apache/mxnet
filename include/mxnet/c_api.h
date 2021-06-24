@@ -1399,6 +1399,14 @@ MXNET_DLL int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *output_handles,
                                                 int num_outputs,
                                                 SymbolHandle *out);
 
+/*!
+ * \brief Clear the deferred compute info associated with the ndarrays.
+ * \param arrays ndarray handles of deferred compute outputs
+ * \param num number of ndarrays
+ * \return 0 when success, -1 otherwise
+ */
+MXNET_DLL int MXNDArrayClearDeferredCompute(NDArrayHandle *arrays, int num);
+
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------

@@ -22,8 +22,9 @@ __all__ = ['Geometric']
 
 from numbers import Number
 from .distribution import Distribution
-from .utils import prob2logit, logit2prob, getF, cached_property, sample_n_shape_converter
+from .utils import prob2logit, logit2prob, cached_property, sample_n_shape_converter
 from .constraint import NonNegativeInteger, Interval, Real
+from .... import np
 
 
 class Geometric(Distribution):
@@ -35,9 +36,6 @@ class Geometric(Distribution):
         Probability of sampling `1`.
     logit : Tensor or scalar, default None
         The log-odds of sampling `1`.
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
@@ -45,8 +43,7 @@ class Geometric(Distribution):
     arg_constraints = {'prob': Interval(0, 1),
                        'logit': Real()}
 
-    def __init__(self, prob=None, logit=None, F=None, validate_args=None):
-        _F = F if F is not None else getF(prob, logit)
+    def __init__(self, prob=None, logit=None, validate_args=None):
         if (prob is None) == (logit is None):
             raise ValueError(
                 "Either `prob` or `logit` must be specified, but not both. " +
@@ -57,7 +54,7 @@ class Geometric(Distribution):
         else:
             self.logit = logit
         super(Geometric, self).__init__(
-            F=_F, event_dim=0, validate_args=validate_args)
+            event_dim=0, validate_args=validate_args)
 
     @cached_property
     def prob(self):
@@ -69,7 +66,7 @@ class Geometric(Distribution):
             Parameter tensor.
         """
         # pylint: disable=method-hidden
-        return logit2prob(self.logit, True, self.F)
+        return logit2prob(self.logit, True)
 
     @cached_property
     def logit(self):
@@ -81,7 +78,7 @@ class Geometric(Distribution):
             Parameter tensor.
         """
         # pylint: disable=method-hidden
-        return prob2logit(self.prob, True, self.F)
+        return prob2logit(self.prob, True)
 
     @property
     def mean(self):
@@ -93,13 +90,11 @@ class Geometric(Distribution):
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
-        F = self.F
         if 'prob' in self.__dict__:
-            new_instance.prob = F.np.broadcast_to(self.prob, batch_shape)
+            new_instance.prob = np.broadcast_to(self.prob, batch_shape)
         else:
-            new_instance.logit = F.np.broadcast_to(self.logit, batch_shape)
-        super(Geometric, new_instance).__init__(F=F,
-                                                event_dim=self.event_dim,
+            new_instance.logit = np.broadcast_to(self.logit, batch_shape)
+        super(Geometric, new_instance).__init__(event_dim=self.event_dim,
                                                 validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
@@ -107,19 +102,17 @@ class Geometric(Distribution):
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        F = self.F
         prob = self.prob
-        return value * F.np.log1p(-prob) + F.np.log(prob)
+        return value * np.log1p(-prob) + np.log(prob)
 
     def sample(self, size=None):
-        F = self.F
         if isinstance(self.prob, Number):
-            shape_tensor = F.np.zeros(())
+            shape_tensor = np.zeros(())
         else:
-            shape_tensor = F.np.zeros_like(self.prob)
-        u = F.np.random.uniform(shape_tensor, size=size)
-        samples = F.np.floor(
-            F.np.log(u) / F.np.log1p(-self.prob)
+            shape_tensor = np.zeros_like(self.prob)
+        u = np.random.uniform(shape_tensor, size=size)
+        samples = np.floor(
+            np.log(u) / np.log1p(-self.prob)
         )
         return samples
 
@@ -127,7 +120,6 @@ class Geometric(Distribution):
         return self.sample(sample_n_shape_converter(size))
 
     def entropy(self):
-        F = self.F
         logit = self.logit
         prob = self.prob
-        return -(logit * (prob - 1) - F.np.log1p(F.np.exp(-logit))) / prob
+        return -(logit * (prob - 1) - np.log1p(np.exp(-logit))) / prob

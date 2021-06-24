@@ -767,7 +767,9 @@ Example::
 .add_argument("data", "NDArray-or-Symbol", "An n-dimensional input array.")
 .add_arguments(PadParam::__FIELDS__());
 
-NNVM_REGISTER_OP(Pad).add_alias("pad");
+NNVM_REGISTER_OP(Pad)
+.add_alias("pad")
+.add_alias("_npx_pad");
 
 }  // namespace op
 }  // namespace mxnet

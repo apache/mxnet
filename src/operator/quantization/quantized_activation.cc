@@ -82,6 +82,7 @@ inline static bool QuantizedActivationStorageType(const nnvm::NodeAttrs &attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_act)
+.add_alias("_npx_quantized_act")
 .describe(R"code(Activation operator for input and output data type of int8.
 The input and output data comes with min and max thresholds for quantizing
 the float32 data into int8.

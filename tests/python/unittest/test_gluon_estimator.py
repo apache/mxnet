@@ -28,6 +28,7 @@ from mxnet.gluon import nn
 from mxnet.gluon.contrib.estimator import *
 from mxnet.gluon.contrib.estimator.event_handler import *
 
+mx.npx.reset_np()
 
 def _get_test_network(params=None):
     net = nn.Sequential()
@@ -37,8 +38,8 @@ def _get_test_network(params=None):
 
 def _get_test_data():
     batch_size = 4
-    in_data = mx.nd.random.uniform(shape=(10, 3))
-    out_data = mx.nd.random.uniform(shape=(10, 4))
+    in_data = mx.np.random.uniform(size=(10, 3))
+    out_data = mx.np.random.uniform(size=(10, 4))
     # Input dataloader
     dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
     dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size)
@@ -46,6 +47,7 @@ def _get_test_data():
     return dataloader, dataiter
 
 
+@mx.util.use_np
 def test_fit():
     ''' test estimator with different train data types '''
     net = _get_test_network()
@@ -71,10 +73,11 @@ def test_fit():
 
     # Input NDArray
     with pytest.raises(ValueError):
-        est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
+        est.fit(train_data=[mx.np.ones(shape=(10, 3))],
                 epochs=num_epochs)
 
 
+@mx.util.use_np
 def test_validation():
     ''' test different validation data types'''
     net = _get_test_network()
@@ -108,11 +111,12 @@ def test_validation():
                 epochs=num_epochs)
     # Input NDArray
     with pytest.raises(ValueError):
-        est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
-                val_data=[mx.nd.ones(shape=(10, 3))],
+        est.fit(train_data=[mx.np.ones(shape=(10, 3))],
+                val_data=[mx.np.ones(shape=(10, 3))],
                 epochs=num_epochs)
 
 
+@mx.util.use_np
 def test_initializer():
     ''' test with no initializer, inconsistent initializer '''
     net = _get_test_network()
@@ -146,15 +150,16 @@ def test_initializer():
     # net partially initialized, fine tuning use case
     net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
     net.features.initialize(ctx=ctx)
-    net.features(mx.nd.zeros((1, 3, 224, 224)))
+    net.features(mx.np.zeros((1, 3, 224, 224)))
     net.output = gluon.nn.Dense(10) #last layer not initialized
     est = Estimator(net, loss=loss, train_metrics=acc, context=ctx)
-    dataset =  gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))
+    dataset =  gluon.data.ArrayDataset(mx.np.zeros((10, 3, 224, 224)), mx.np.zeros((10, 10)))
     train_data = gluon.data.DataLoader(dataset=dataset, batch_size=5)
     est.fit(train_data=train_data,
             epochs=num_epochs)
 
 
+@mx.util.use_np
 def test_trainer():
     ''' test with no trainer and invalid trainer '''
     net = _get_test_network()
@@ -185,6 +190,7 @@ def test_trainer():
                         context=ctx)
 
 
+@mx.util.use_np
 def test_metric():
     ''' test with no metric, list of metrics, invalid metric '''
     net = _get_test_network()
@@ -227,6 +233,7 @@ def test_metric():
     assert isinstance(est.train_metrics[0], mx.gluon.metric.Accuracy)
 
 
+@mx.util.use_np
 def test_loss():
     ''' test with invalid loss '''
     net = _get_test_network()
@@ -243,6 +250,7 @@ def test_loss():
                         context=ctx)
 
 
+@mx.util.use_np
 def test_context():
     ''' test with no context, list of context, invalid context '''
     net = _get_test_network()
@@ -274,6 +282,7 @@ def test_context():
                         context=[mx.gpu(0), mx.gpu(100)])
 
 
+@mx.util.use_np
 def test_categorize_handlers():
     class CustomHandler1(TrainBegin):
 
@@ -319,6 +328,7 @@ def test_categorize_handlers():
     assert len(train_end) == 2
 
 
+@mx.util.use_np
 def test_default_handlers():
     net = _get_test_network()
     train_data, _ = _get_test_data()
@@ -370,6 +380,7 @@ def test_default_handlers():
     assert isinstance(handlers[1], MetricHandler)
     assert isinstance(handlers[4], LoggingHandler)
 
+@mx.util.use_np
 def test_val_net():
     ''' test estimator with different training and validation networks '''
     net = _get_test_network()
@@ -399,7 +410,7 @@ def test_val_net():
     net.output = gluon.nn.Dense(10)
     val_net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
     val_net.output = net.output
-    dataset = gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))
+    dataset = gluon.data.ArrayDataset(mx.np.zeros((10, 3, 224, 224)), mx.np.zeros((10, 10)))
     dataloader = gluon.data.DataLoader(dataset=dataset, batch_size=5)
     net.initialize(ctx=ctx)
     val_net.initialize(ctx=ctx)
@@ -416,6 +427,7 @@ def test_val_net():
             val_data=dataloader,
             epochs=num_epochs)
 
+@mx.util.use_np
 def test_val_handlers():
     net = _get_test_network()
     train_data, _ = _get_test_data()

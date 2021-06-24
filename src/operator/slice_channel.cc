@@ -109,7 +109,9 @@ Example::
 .add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(SliceChannelParam::__FIELDS__());
 
-NNVM_REGISTER_OP(SliceChannel).add_alias("split");
+NNVM_REGISTER_OP(SliceChannel)
+.add_alias("split")
+.add_alias("_npx_slice_channel");
 
 }  // namespace op
 }  // namespace mxnet

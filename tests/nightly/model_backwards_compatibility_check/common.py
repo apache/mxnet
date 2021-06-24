@@ -156,6 +156,7 @@ class Net(gluon.Block):
         return x
 
 
+@mx.util.use_np
 class HybridNet(gluon.HybridBlock):
     def __init__(self, **kwargs):
         super(HybridNet, self).__init__(**kwargs)
@@ -166,14 +167,14 @@ class HybridNet(gluon.HybridBlock):
         self.fc1 = nn.Dense(500)
         self.fc2 = nn.Dense(2)
 
-    def hybrid_forward(self, F, x):
-        x = self.pool1(F.tanh(self.conv1(x)))
-        x = self.pool2(F.tanh(self.conv2(x)))
+    def forward(self, x):
+        x = self.pool1(mx.np.tanh(self.conv1(x)))
+        x = self.pool2(mx.np.tanh(self.conv2(x)))
         # 0 means copy over size from corresponding dimension.
         # -1 means infer size from the rest of dimensions.
         x = x.reshape((0, -1))
-        x = F.tanh(self.fc1(x))
-        x = F.tanh(self.fc2(x))
+        x = mx.np.tanh(self.fc1(x))
+        x = mx.np.tanh(self.fc2(x))
         return x
 
 

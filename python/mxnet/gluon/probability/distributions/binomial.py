@@ -21,9 +21,10 @@
 __all__ = ['Binomial']
 
 from .distribution import Distribution
-from .utils import prob2logit, logit2prob, getF, cached_property, sample_n_shape_converter
+from .utils import prob2logit, logit2prob, cached_property, sample_n_shape_converter
 from .utils import gammaln
 from .constraint import Interval, Real, NonNegativeInteger
+from .... import np, npx
 
 
 class Binomial(Distribution):
@@ -37,9 +38,6 @@ class Binomial(Distribution):
         Probability of sampling `1`.
     logit : Tensor or scalar, default None
         The log-odds of sampling `1`.
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
@@ -47,11 +45,10 @@ class Binomial(Distribution):
     arg_constraints = {'prob': Interval(0, 1),
                        'logit': Real()}
 
-    def __init__(self, n=1, prob=None, logit=None, F=None, validate_args=None):
+    def __init__(self, n=1, prob=None, logit=None, validate_args=None):
         if (n < 0) or (n % 1 != 0):
             raise ValueError(
                 "Expect `n` to be non-negative integer, received n={}".format(n))
-        _F = F if F is not None else getF(n, prob, logit)
         if (prob is None) == (logit is None):
             raise ValueError(
                 "Either `prob` or `logit` must be specified, but not both. " +
@@ -63,7 +60,7 @@ class Binomial(Distribution):
             self.logit = logit
         self.n = n
         super(Binomial, self).__init__(
-            F=_F, event_dim=0, validate_args=validate_args)
+            event_dim=0, validate_args=validate_args)
 
     @cached_property
     def prob(self):
@@ -75,7 +72,7 @@ class Binomial(Distribution):
             Parameter tensor.
         """
         # pylint: disable=method-hidden
-        return logit2prob(self.logit, True, self.F)
+        return logit2prob(self.logit, True)
 
     @cached_property
     def logit(self):
@@ -87,7 +84,7 @@ class Binomial(Distribution):
             Parameter tensor.
         """
         # pylint: disable=method-hidden
-        return prob2logit(self.prob, True, self.F)
+        return prob2logit(self.prob, True)
 
     @property
     def mean(self):
@@ -100,14 +97,12 @@ class Binomial(Distribution):
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
-        F = self.F
         if 'prob' in self.__dict__:
-            new_instance.prob = F.np.broadcast_to(self.prob, batch_shape)
+            new_instance.prob = np.broadcast_to(self.prob, batch_shape)
         else:
-            new_instance.logit = F.np.broadcast_to(self.logit, batch_shape)
+            new_instance.logit = np.broadcast_to(self.logit, batch_shape)
         new_instance.n = self.n
-        super(Binomial, new_instance).__init__(F=F,
-                                               event_dim=self.event_dim,
+        super(Binomial, new_instance).__init__(event_dim=self.event_dim,
                                                validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
@@ -115,31 +110,28 @@ class Binomial(Distribution):
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        F = self.F
-        lgamma = gammaln(F)
+        lgamma = gammaln()
         binomal_coef = lgamma(self.n + 1) - lgamma(1 +
                                                    value) - lgamma(self.n - value + 1)
         # log(prob) may have numerical issue.
-        unnormalized_log_prob = (value * F.np.log(self.prob) +
-                                 (self.n - value) * F.np.log1p(-self.prob))
+        unnormalized_log_prob = (value * np.log(self.prob) +
+                                 (self.n - value) * np.log1p(-self.prob))
         return binomal_coef + unnormalized_log_prob
 
     def sample(self, size=None):
-        F = self.F
         if size is not None:
-            logit = F.np.broadcast_to(self.logit, size)
+            logit = np.broadcast_to(self.logit, size)
         else:
             logit = self.logit
-        expanded_logit = F.np.repeat(
-            F.np.expand_dims(logit, -1), int(self.n), -1)
-        return F.npx.random.bernoulli(logit=expanded_logit).sum(-1)
+        expanded_logit = np.repeat(
+            np.expand_dims(logit, -1), int(self.n), -1)
+        return npx.random.bernoulli(logit=expanded_logit).sum(-1)
 
     def sample_n(self, size=None):
-        F = self.F
         logit = self.logit
-        expanded_logit = F.np.repeat(
-            F.np.expand_dims(logit, -1), int(self.n), -1)
-        return F.npx.random.bernoulli(
+        expanded_logit = np.repeat(
+            np.expand_dims(logit, -1), int(self.n), -1)
+        return npx.random.bernoulli(
             logit=expanded_logit,
             size=sample_n_shape_converter(size)
         ).sum(-1)

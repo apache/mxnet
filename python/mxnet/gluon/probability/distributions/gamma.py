@@ -22,7 +22,9 @@ __all__ = ['Gamma']
 
 from .exp_family import ExponentialFamily
 from .constraint import Real, Positive
-from .utils import getF, sample_n_shape_converter, gammaln, digamma
+from .utils import sample_n_shape_converter, gammaln, digamma
+from .... import np
+
 
 
 class Gamma(ExponentialFamily):
@@ -35,9 +37,6 @@ class Gamma(ExponentialFamily):
     scale : Tensor or scalar, default 1
         scale parameter of the distribution, often represented by `\theta`,
         `\theta` = 1 / `\beta`, where `\beta` stands for the rate parameter.
-    F : mx.ndarray or mx.symbol.numpy._Symbol or None
-        Variable recording running mode, will be automatically
-        inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
 
@@ -46,19 +45,17 @@ class Gamma(ExponentialFamily):
     support = Real()
     arg_constraints = {'shape': Positive(), 'scale': Positive()}
 
-    def __init__(self, shape, scale=1.0, F=None, validate_args=None):
-        _F = F if F is not None else getF(shape, scale)
+    def __init__(self, shape, scale=1.0, validate_args=None):
         self.shape = shape
         self.scale = scale
         super(Gamma, self).__init__(
-            F=_F, event_dim=0, validate_args=validate_args)
+            event_dim=0, validate_args=validate_args)
 
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        F = self.F
-        log_fn = F.np.log
-        lgamma = gammaln(F)
+        log_fn = np.log
+        lgamma = gammaln()
         # alpha (concentration)
         a = self.shape
         # beta (rate)
@@ -67,20 +64,18 @@ class Gamma(ExponentialFamily):
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
-        F = self.F
-        new_instance.shape = F.np.broadcast_to(self.shape, batch_shape)
-        new_instance.scale = F.np.broadcast_to(self.scale, batch_shape)
-        super(Gamma, new_instance).__init__(F=F,
-                                            event_dim=self.event_dim,
+        new_instance.shape = np.broadcast_to(self.shape, batch_shape)
+        new_instance.scale = np.broadcast_to(self.scale, batch_shape)
+        super(Gamma, new_instance).__init__(event_dim=self.event_dim,
                                             validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
 
     def sample(self, size=None):
-        return self.F.np.random.gamma(self.shape, 1, size) * self.scale
+        return np.random.gamma(self.shape, 1, size) * self.scale
 
     def sample_n(self, size=None):
-        return self.F.np.random.gamma(self.shape, 1, sample_n_shape_converter(size)) * self.scale
+        return np.random.gamma(self.shape, 1, sample_n_shape_converter(size)) * self.scale
 
     @property
     def mean(self):
@@ -91,10 +86,9 @@ class Gamma(ExponentialFamily):
         return self.shape * (self.scale ** 2)
 
     def entropy(self):
-        F = self.F
-        lgamma = gammaln(F)
-        dgamma = digamma(F)
-        return (self.shape + F.np.log(self.scale) + lgamma(self.shape) +
+        lgamma = gammaln()
+        dgamma = digamma()
+        return (self.shape + np.log(self.scale) + lgamma(self.shape) +
                 (1 - self.shape) * dgamma(self.shape))
 
     @property

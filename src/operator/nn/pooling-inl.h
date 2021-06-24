@@ -169,7 +169,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     LOG(FATAL) << "should not reach here ";
     return "";
   }
-  std::string Layout2String(int layout) {
+  std::string PoolingLayout2String(int layout) {
     switch (layout) {
       case mshadow::kNCW:
         return "NCW";
@@ -213,7 +213,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     (*dict)["p_value"] = p_value_s.str();
     (*dict)["count_include_pad"] = count_include_pad_s.str();
     if (layout.has_value()) {
-      (*dict)["layout"] = Layout2String(layout.value());
+      (*dict)["layout"] = PoolingLayout2String(layout.value());
     } else {
       (*dict)["layout"] = layout_s.str();
     }

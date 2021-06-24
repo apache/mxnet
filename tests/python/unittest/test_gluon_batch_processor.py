@@ -29,6 +29,8 @@ from mxnet.gluon.contrib.estimator.event_handler import *
 from mxnet.gluon.contrib.estimator.batch_processor import BatchProcessor
 import pytest
 
+mx.npx.reset_np()
+
 def _get_test_network():
     net = nn.Sequential()
     net.add(nn.Dense(4, activation='relu', flatten=False))
@@ -37,14 +39,15 @@ def _get_test_network():
 
 def _get_test_data():
     batch_size = 4
-    in_data = mx.nd.random.uniform(shape=(10, 3))
-    out_data = mx.nd.random.uniform(shape=(10, 4))
+    in_data = mx.np.random.uniform(size=(10, 3))
+    out_data = mx.np.random.uniform(size=(10, 4))
     # Input dataloader
     dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
     dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size)
     dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
     return dataloader, dataiter
 
+@mx.util.use_np
 def test_batch_processor_fit():
     ''' test estimator with different train data types '''
     net = _get_test_network()
@@ -76,6 +79,7 @@ def test_batch_processor_fit():
                 epochs=num_epochs)
 
 
+@mx.util.use_np
 def test_batch_processor_validation():
     ''' test different validation data types'''
     net = _get_test_network()

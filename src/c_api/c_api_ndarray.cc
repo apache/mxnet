@@ -439,6 +439,12 @@ int MXNDArraySetDeferredComputeVariable(NDArrayHandle *arrays, SymbolHandle *var
   API_END();
 }
 
+int MXNDArrayClearDeferredCompute(NDArrayHandle *arrays, int num) {
+  API_BEGIN();
+  Imperative::Get()->DeferredComputeClear(arrays, num);
+  API_END();
+}
+
 int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *output_handles, int num_outputs,
                                       SymbolHandle *out) {
   nnvm::Symbol *s = new nnvm::Symbol();
