@@ -63,7 +63,7 @@ apt-get install -y \
 # https://github.com/HaxeFoundation/hashlink/issues/147
 #  libturbojpeg0-dev is not available on 16.04
 source /etc/os-release
-if [[ "$VERSION_ID" == "18.04" ]]; then
+if [[ "$VERSION_ID" != "16.04" ]]; then
     apt-get install -y libturbojpeg0-dev
 fi
 
