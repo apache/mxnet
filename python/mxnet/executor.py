@@ -121,7 +121,7 @@ class Executor:
                         with self._ctx:
                             self._args[i].attach_grad(req, stype=g.stype)
                             self._args[i].grad[:] = g
-        self._cached_op = ndarray.CachedOp(sym)
+        self._cached_op = ndarray.CachedOp(sym, flags=[("static_alloc", True)])
 
     def get_optimized_symbol(self):
         """Get an optimized version of the symbol from the executor.
