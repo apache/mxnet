@@ -585,7 +585,7 @@ static NDArray* FindInArgByName(const Graph &g, const std::string& name) {
   size_t i = std::distance(in_arg_names.begin(),
                            std::find(in_arg_names.begin(), in_arg_names.end(), name));
   if (i == in_arg_names.size()) {
-    throw std::runtime_error(name + " not found in in_arg_names");
+    LOG(FATAL) << name << " not found in in_arg_names";
   }
   return g.GetAttr<NDArray **>("in_args")[i];
 }
@@ -668,7 +668,7 @@ static inline void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
 }
 
 Graph OneDNNShiftedQuantization(Graph &&g) {
-  bool disable_shifted_quant = dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZATION", true);
+  bool disable_shifted_quant = dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS", true);
   LOG(INFO) << "Running OneDNN shifted quantization: " << !disable_shifted_quant;
   // No change to aux params
   g.attrs["new_aux_names"] = std::make_shared<nnvm::any>(std::vector<std::string>());
@@ -716,7 +716,7 @@ Graph OneDNNShiftedQuantization(Graph &&g) {
           float data_scale = kUint8Range / (max_data - min_data);
           int32_t shift_value = static_cast<int32_t>(std::round(data_scale * -min_data));
           ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
-          LOG(INFO) << "fused QUANTIZE->FC";
+          LOG(INFO) << "applied shifted quantization on QUANTIZE->FC";
         }
       }
     });

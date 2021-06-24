@@ -1005,7 +1005,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
             net.optimize_for(x=data_nd, backend="OneDNNShiftedQuantization")
             tmp_file = os.path.join(tmpdirname, 'model')
             net.export(tmp_file)
-            net = SymbolBlock.imports(tmp_file+'-symbol.json', data_names, tmp_file+'-0000.params')
+            net = SymbolBlock.imports(tmp_file + '-symbol.json', data_names, tmp_file + '-0000.params')
     return net
 
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
