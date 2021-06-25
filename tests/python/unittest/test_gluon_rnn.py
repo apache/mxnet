@@ -347,15 +347,28 @@ def test_layer_bidirectional():
         weights['{}0_i2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
         weights['{}0_h2h_bias'.format(d)] = mx.np.random.uniform(size=(size*4,))
 
+    params = (weights['{}0_{}_{}'.format(d, g, t)].reshape(-1)
+              for t in ['weight', 'bias']
+              for d in ['l', 'r']
+              for g in ['i2h', 'h2h'])
+    net_params_concat = mx.np.concatenate(params)
+    params_left = (weights['l0_{}_{}'.format(g, t)].reshape(-1)
+                   for t in ['weight', 'bias']
+                   for g in ['i2h', 'h2h'])
+    params_right = (weights['r0_{}_{}'.format(g, t)].reshape(-1)
+                    for t in ['weight', 'bias']
+                    for g in ['i2h', 'h2h'])
+    net_ref_left_params = mx.np.concatenate(params_left)
+    net_ref_right_params = mx.np.concatenate(params_right)
     net = gluon.rnn.LSTM(size, bidirectional=True)
     ref_net = RefBiLSTM(size)
     net.initialize()
     ref_net.initialize()
     net_params = net.collect_params()
     ref_net_params = ref_net.collect_params()
-    for k in weights:
-        net_params[k].set_data(weights[k])
-        ref_net_params[k.replace('l0', '_lstm_fwd.l0').replace('r0', '_lstm_bwd.l0')].set_data(weights[k])
+    net_params['rnn_param'].set_data(net_params_concat)
+    ref_net_params['_lstm_fwd.rnn_param'].set_data(net_ref_left_params)
+    ref_net_params['_lstm_bwd.rnn_param'].set_data(net_ref_right_params)
 
     data = mx.np.random.uniform(size=(11, 10, in_size))
     assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy(), rtol=1e-04, atol=1e-02)
@@ -668,7 +681,7 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, inpu
     stack_layer_params = stack_layer.collect_params()
 
     fused_weight_shape = fused_layer_params['rnn_param'].shape
-    w = mx.np.random.normal(size=fused_weight_shape)
+    w = mx.np.zeros(shape=fused_weight_shape)
     fused_layer_params['rnn_param'].set_data(w.copy())
     fused_layer_params_split = split_rnn_params(w.copy(), mode, num_layers, input_size, hidden_size, bidirectional)
     for name, value in fused_layer_params_split.items():
@@ -686,9 +699,8 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, inpu
         l = loss(fused_out, y).mean()
     l.backward()
     mx.npx.waitall()
-    fused_layer_param_split = split_rnn_params(fused_layer.collect_params()['rnn_param'].data().grad,\
+    fused_grads = split_rnn_params(fused_layer.collect_params()['rnn_param'].data().grad,\
         mode, num_layers, input_size, hidden_size, bidirectional)
-    fused_grads = dict([(name, p) for name, p in fused_layer_param_split.items()])
     fused_input_grad = fx.grad.asnumpy()
 
     sx.attach_grad()
