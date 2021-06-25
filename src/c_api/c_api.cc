@@ -59,9 +59,16 @@
 #include "../common/utils.h"
 #include "nnvm/pass_functions.h"
 
-#if defined(__x86_64__) || defined(_M_X64)
+// FTZ only applies to SSE and AVX instructions.
+#define SUPPORT_FTZ_DMZ defined(__SSE__)    || \
+                        defined(__x86_64__) || \
+                        defined(_M_X64)     || \
+                        (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
+
+#if SUPPORT_FTZ_DMZ
 #include <immintrin.h>
 #include <xmmintrin.h>
+#include <x86intrin.h>
 #endif
 
 using namespace mxnet;
@@ -1582,8 +1589,7 @@ int MXSetFlushDenorms(bool value, bool* prev_state) {
   API_BEGIN();
   *prev_state = false;
 
-  // FTZ only applies to SSE and AVX instructions.
-  #if defined(__SSE__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
+  #if SUPPORT_FTZ_DMZ
     std::function<bool()> is_dmz_flag_available = []() {
       // Intel 64 and IA-32 Architectures Software Developer’s Manual: Vol. 1
       // "Checking for the DAZ Flag in the MXCSR Register"

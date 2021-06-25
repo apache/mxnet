@@ -24,8 +24,7 @@ import platform
 import itertools
 import unittest
 
-from mxnet import np
-from mxnet import util
+from mxnet import np, util
 import numpy as _np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
