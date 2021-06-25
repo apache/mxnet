@@ -51,9 +51,9 @@ def get_environment(mxnet_variant) {
     return "centos7_aarch64_cpu"
   }
   if (mxnet_variant.startsWith('cu')) {
-    return "ubuntu_gpu_${mxnet_variant}"
+    return "centos7_gpu_${mxnet_variant}"
   }
-  return "ubuntu_cpu"
+  return "centos7_cpu"
 }
 
 def build(mxnet_variant) {

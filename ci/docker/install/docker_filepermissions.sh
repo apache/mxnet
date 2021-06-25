@@ -1,4 +1,3 @@
-# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,26 +15,21 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to build and run MXNet on CentOS 7 for CPU
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
-FROM centos:7
+# Add user in order to make sure the assumed user the container is running under
+# actually exists inside the container to avoid problems like missing home dir
 
-WORKDIR /work/deps
+set -ex
 
-COPY install/centos7_core.sh /work/
-RUN /work/centos7_core.sh
-COPY install/centos7_ccache.sh /work/
-RUN /work/centos7_ccache.sh
-COPY install/centos7_python.sh /work/
-RUN /work/centos7_python.sh
-COPY install/centos7_scala.sh /work/
-RUN /work/centos7_scala.sh
-
-ARG USER_ID=0
-COPY install/centos7_adduser.sh /work/
-RUN /work/centos7_adduser.sh 
-
-ENV PYTHONPATH=./python/
-WORKDIR /work/mxnet
-
-COPY runtime_functions.sh /work/
+# Add user in order to make sure the assumed user the container is running under
+# actually exists inside the container to avoid problems like missing home dir
+if [[ "$USER_ID" -gt 0 ]]; then
+    # -no-log-init required due to https://github.com/moby/moby/issues/5419
+    useradd -m --no-log-init --uid $USER_ID --system jenkins_slave
+    # By default, docker creates all WORK_DIRs with root owner
+    mkdir /work/mxnet
+    mkdir /work/build
+    chown -R jenkins_slave /work/
+fi
