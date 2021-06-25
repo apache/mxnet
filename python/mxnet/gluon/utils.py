@@ -506,6 +506,7 @@ def _check_block_input_np_ndarrays(inputs):
     # pylint: enable=no-else-raise
 
 
+# pylint: disable=too-many-nested-blocks
 def split_rnn_params(param, mode, num_layers, input_size, hidden_size, bidirectional, projection_size=None):
     """Split rnn layer parameter into weight and bias in different layer."""
     gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
