@@ -67,10 +67,7 @@ inline std::vector<cudaGraphNode_t> GetCudaGraphNodes(cudaGraph_t cuda_graph) {
   return graphNodes;
 }
 
-// It does not really involve RTC, but requires libcuda.so,
-// which is linked only when RTC is enabled.
-#if MXNET_ENABLE_CUDA_RTC
-
+// Create a description of a CUDA Graph node
 inline std::string CudaGraphNodeToString(const cudaGraphNode_t node) {
   std::stringstream ss;
 
@@ -140,8 +137,6 @@ inline std::string CudaGraphNodeToString(const cudaGraphNode_t node) {
   }
   return ss.str();
 }
-
-#endif  // MXNET_ENABLE_CUDA_RTC
 
 // CUDA Graphs are managed in RAII fashion by smart pointers below.
 // Function objects (preferred for readability) provide the deleter function.
@@ -241,12 +236,10 @@ class CudaGraphsSubSegExec {
       std::vector<cudaGraphNode_t> graph_nodes = GetCudaGraphNodes(cuda_graph);
       size_t num_nodes = graph_nodes.size();
       LOG(INFO) << "  Graph has " << num_nodes << " nodes:";
-#if MXNET_ENABLE_CUDA_RTC
       for (size_t i = 0; i != num_nodes; ++i) {
         LOG(INFO) << "    node " << i << " = "
                   << CudaGraphNodeToString(graph_nodes[i]);
       }
-#endif  // MXNET_ENABLE_CUDA_RTC
     }
   }
 

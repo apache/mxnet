@@ -92,9 +92,19 @@ void NumpyFlipForwardImpl<gpu>(const OpContext& ctx,
   });
 }
 
-NNVM_REGISTER_OP(_npi_flip).set_attr<FCompute>("FCompute<gpu>", NumpyFlipForward<gpu>);
+NNVM_REGISTER_OP(_npi_flip)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+      [](const NodeAttrs& attrs, const bool) {
+        return false;
+      })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyFlipForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_npi_flip).set_attr<FCompute>("FCompute<gpu>", NumpyFlipForward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_flip)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+      [](const NodeAttrs& attrs, const bool) {
+        return false;
+      })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyFlipForward<gpu>);
 
 NNVM_REGISTER_OP(_npi_moveaxis).set_attr<FCompute>("FCompute<gpu>", NumpyMoveaxisCompute<gpu>);
 

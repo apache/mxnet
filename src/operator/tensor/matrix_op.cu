@@ -412,9 +412,19 @@ NNVM_REGISTER_OP(tile).set_attr<FCompute>("FCompute<gpu>", TileOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_tile).set_attr<FCompute>("FCompute<gpu>", TileOpBackward<gpu>);
 
-NNVM_REGISTER_OP(reverse).set_attr<FCompute>("FCompute<gpu>", ReverseOpForward<gpu>);
+NNVM_REGISTER_OP(reverse)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+        [](const NodeAttrs&, const bool) {
+          return false;
+        })
+    .set_attr<FCompute>("FCompute<gpu>", ReverseOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_reverse).set_attr<FCompute>("FCompute<gpu>", ReverseOpForward<gpu>);
+NNVM_REGISTER_OP(_backward_reverse)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+        [](const NodeAttrs&, const bool) {
+          return false;
+        })
+    .set_attr<FCompute>("FCompute<gpu>", ReverseOpForward<gpu>);
 
 NNVM_REGISTER_OP(stack).set_attr<FCompute>("FCompute<gpu>", StackOpForward<gpu>);
 
