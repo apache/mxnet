@@ -25,7 +25,7 @@ import itertools
 import numpy as _np
 import unittest
 import pytest
-from mxnet import np
+from mxnet import np, util
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
 from mxnet.test_utils import is_op_runnable
