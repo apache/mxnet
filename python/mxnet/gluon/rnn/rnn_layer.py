@@ -69,8 +69,7 @@ class _RNNLayer(HybridBlock):
         if self._dir == 2:
             s += ', bidirectional'
         s += ')'
-        shape = self.rnn_param.shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] // self._gates)
+        mapping = '{0} -> {1}'.format(self._input_size if self._input_size else None, self._hidden_size)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
@@ -149,6 +148,7 @@ class _RNNLayer(HybridBlock):
     def infer_shape(self, inputs, *args):
         assert inputs.ndim == 3, \
             "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]"
+        self._input_size = inputs.shape[2]
         ng, ni, nh = self._gates, inputs.shape[2], self._hidden_size
 
         size = nh * self._dir * ng
