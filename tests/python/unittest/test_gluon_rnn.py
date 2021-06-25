@@ -21,6 +21,7 @@ import numpy as _np
 import copy
 from functools import partial
 from numpy.testing import assert_allclose
+from mxnet.gluon.utils import split_rnn_params
 import pytest
 from mxnet.test_utils import almost_equal, assert_almost_equal, default_context
 from common import assert_raises_cudnn_not_satisfied, retry
@@ -154,10 +155,10 @@ def test_lstmp():
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_lstm_cpu_inference():
     # should behave the same as lstm cell
-    EXPECTED_LSTM_OUTPUT = np.array([[[0.72045636, 0.72045636, 0.95215213, 0.95215213],
-                                      [0.72045636, 0.72045636, 0.95215213, 0.95215213]],
-                                     [[0.95215213, 0.95215213, 0.72045636, 0.72045636],
-                                      [0.95215213, 0.95215213, 0.72045636, 0.72045636]]])
+    EXPECTED_LSTM_OUTPUT = np.array([[[0.7564661, 0.7564661, 0.96265966, 0.96265966],
+                                      [0.7564661, 0.7564661, 0.96265966, 0.96265966]],
+                                     [[0.96265966, 0.96265966, 0.7564661, 0.7564661],
+                                      [0.96265966, 0.96265966, 0.7564661, 0.7564661]]])
     x = mx.np.ones(shape=(2, 2, 2))
     model = mx.gluon.rnn.LSTM(2, num_layers=6, bidirectional=True)
     model.initialize(mx.init.One())
@@ -656,7 +657,7 @@ def test_rnn_layers_fp16():
     run_rnn_layers('float16', 'float32', mx.gpu())
 
 
-def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=False, rtol=1e-2, atol=1e-4):
+def check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, input_size, hidden_size, bidirectional=False, rtol=1e-2, atol=1e-4):
     x = mx.np.random.normal(size=(1, 5, input_size))
     fused_begin_state = fused_layer.begin_state(1)
     stack_states = stack_layer.begin_state(batch_size=1)
@@ -666,16 +667,15 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
     stack_layer.initialize()
     stack_layer_params = stack_layer.collect_params()
 
-    for name, value in fused_layer_params.items():
-        if 'weight' in name:
-            w = mx.np.zeros(shape=value.shape)
-        else:
-            w = mx.np.random.normal(size=value.shape)
-        value.set_data(w.copy())
+    fused_weight_shape = fused_layer_params['rnn_param'].shape
+    w = mx.np.random.normal(size=fused_weight_shape)
+    fused_layer_params['rnn_param'].set_data(w.copy())
+    fused_layer_params_split = split_rnn_params(w.copy(), mode, num_layers, input_size, hidden_size, bidirectional)
+    for name, value in fused_layer_params_split.items():
         cur = name.split('_')[0]
         num = cur[1:]
         stack_name = ('{}.{}_cell.'.format(num, name[0]) if bidirectional else num + '.' ) + name[len(cur)+1:]
-        stack_layer_params[stack_name].set_data(w.copy())
+        stack_layer_params[stack_name].set_data(value)
 
     fx = x.copy()
     sx = x.copy()
@@ -686,7 +686,9 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
         l = loss(fused_out, y).mean()
     l.backward()
     mx.npx.waitall()
-    fused_grads = dict([(name, p.grad()) for name, p in fused_layer.collect_params().items()])
+    fused_layer_param_split = split_rnn_params(fused_layer.collect_params()['rnn_param'].data().grad,\
+        mode, num_layers, input_size, hidden_size, bidirectional)
+    fused_grads = dict([(name, p) for name, p in fused_layer_param_split.items()])
     fused_input_grad = fx.grad.asnumpy()
 
     sx.attach_grad()
@@ -741,7 +743,7 @@ def check_rnn_unidir_layer_gradients(mode, input_size, hidden_size, num_layers, 
     for n in range(num_layers):
         stack_layer.add(stack_op(hidden_size))
     stack_layer.initialize()
-    check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size)
+    check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, input_size, hidden_size)
 
 
 def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, num_layers, loss):
@@ -755,7 +757,7 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, num_layers, l
         stack_layer.add(gluon.rnn.BidirectionalCell(stack_op(hidden_size),
                                                     stack_op(hidden_size)))
     stack_layer.initialize()
-    check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=True)
+    check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, input_size, hidden_size, bidirectional=True)
 
 
 @mx.util.use_np
@@ -851,7 +853,7 @@ def test_layer_fill_shape():
     layer.hybridize()
     check_rnn_layer_forward(layer, mx.np.ones((3, 2, 7)))
     print(layer)
-    assert layer.l0_i2h_weight.shape[1] == 7, layer.l0_i2h_weight.shape[1]
+    assert layer.rnn_param.shape[0] == 760
 
 
 @pytest.mark.serial

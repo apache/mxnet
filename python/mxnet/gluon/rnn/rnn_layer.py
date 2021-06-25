@@ -58,7 +58,7 @@ class _RNNLayer(HybridBlock):
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
         self.rnn_param = Parameter('rnn_param', shape=(-1,), init=param_initializer,
-                                    allow_deferred_init=True, dtype=dtype)
+                                   allow_deferred_init=True, dtype=dtype)
 
     def __repr__(self):
         s = '{name}({mapping}, {_layout}'
