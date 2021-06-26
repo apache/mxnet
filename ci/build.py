@@ -88,7 +88,7 @@ def get_docker_tag(platform: str, registry: str) -> str:
     if platform in DOCKER_COMPOSE_WHITELIST:
         with open("docker/docker-compose.yml", "r") as f:
             compose_config = yaml.load(f.read(), yaml.SafeLoader)
-            return compose_config["services"][platform]["image"]
+            return compose_config["services"][platform]["image"].replace('${DOCKER_CACHE_REGISTRY}', registry)
 
     platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
