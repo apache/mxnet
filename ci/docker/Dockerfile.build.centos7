@@ -79,7 +79,7 @@ RUN yum -y check-update || true && \
     yum install -y  dpkg-devel dpkg-dev && \
     yum clean all
 
-RUN pip3 install numpy==1.18.5 requests wheel
+RUN pip3 install numpy==1.18.5 requests wheel nose
 
 # Build OpenBLAS from source
 RUN mkdir ~/openblas && \
