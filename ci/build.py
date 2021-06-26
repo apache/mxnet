@@ -183,6 +183,12 @@ def _get_local_image_id(docker_tag):
     cmd = ["docker", "images", "-q", docker_tag]
     image_id_b = check_output(cmd)
     image_id = image_id_b.decode('utf-8').strip()
+    cmd = ["docker", "images"]
+    image_id_b = check_output(cmd)
+    print(image_id_b.decode('utf-8').strip())
+    cmd = ["echo", "$DOCKER_CACHE_REGISTRY"]
+    image_id_b = check_output(cmd)
+    print(image_id_b.decode('utf-8').strip())
     if not image_id:
         raise RuntimeError('Unable to find docker image id matching with tag {}'.format(docker_tag))
     return image_id
