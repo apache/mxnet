@@ -159,12 +159,15 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
             cmd.extend(["--cache-from", tag])
         cmd.extend(["-t", tag, get_dockerfiles_path()])
 
-    @retry(subprocess.CalledProcessError, tries=num_retries)
-    def run_cmd():
-        logging.info("Running command: '%s'", ' '.join(cmd))
-        check_call(cmd)
+    env = os.environ.copy()
+    env["DOCKER_CACHE_REGISTRY"] = registry
 
-    run_cmd()
+    @retry(subprocess.CalledProcessError, tries=num_retries)
+    def run_cmd(env=None):
+        logging.info("Running command: '%s'", ' '.join(cmd))
+        check_call(cmd, env=env)
+
+    run_cmd(env=env)
 
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
