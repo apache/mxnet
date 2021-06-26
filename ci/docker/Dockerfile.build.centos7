@@ -68,8 +68,18 @@ RUN yum -y check-update || true && \
         libb2-devel \
         libzstd-devel \
         # Required by openblas build
-        gcc-gfortran && \
+        gcc-gfortran \
+        nasm \
+        python3 \
+        python3-pip \
+        epel-release \
+        gcc-c++ \
+        file && \
+    yum repolist && \
+    yum install -y  dpkg-devel dpkg-dev && \
     yum clean all
+
+RUN pip3 install numpu==1.18.5 requests wheel
 
 # Build OpenBLAS from source
 RUN mkdir ~/openblas && \
