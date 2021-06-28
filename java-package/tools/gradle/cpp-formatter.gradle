@@ -1,0 +1,69 @@
+apply plugin: CppFormatterPlugin
+
+class CppFormatterPlugin implements Plugin<Project> {
+
+    static def checkClang(File clang) {
+        def url = "https://djl-ai.s3.amazonaws.com/build-tools/osx/clang-format"
+        if (!clang.exists()) {
+            // create the folder and download the executable
+            clang.getParentFile().mkdirs()
+            clang.append(new URL(url).openStream())
+            clang.setExecutable(true)
+        }
+    }
+
+    static def formatCpp(File f, File clang) {
+        if (!f.getName().endsWith(".cc") && !f.getName().endsWith(".h")) {
+            return
+        }
+        ProcessBuilder pb = new ProcessBuilder("${clang.absolutePath}",
+                "-style={BasedOnStyle: Google, IndentWidth: 2, ColumnLimit: 120, AlignAfterOpenBracket: DontAlign, SpaceAfterCStyleCast: true}",
+                "${f.getAbsolutePath()}")
+        Process process = pb.start()
+        InputStream is = process.getInputStream()
+        return is.text
+    }
+
+    void apply(Project project) {
+
+        project.task('formatCpp') {
+            doLast {
+                if (!System.properties['os.name'].toLowerCase().contains('mac')) {
+                    return
+                }
+                Project rootProject = project.getRootProject()
+                def clang = new File("${rootProject.projectDir}/.clang/clang-format")
+                checkClang(clang)
+                def files = project.fileTree("src").include("**/*.cc")
+                for (File f : files) {
+                    if (!f.isFile()) {
+                        continue
+                    }
+                    project.logger.info("formatting cpp file: " + f)
+                    f.text = formatCpp(f, clang)
+                }
+            }
+        }
+
+        project.task('verifyCpp') {
+            doLast {
+                if (!System.properties['os.name'].toLowerCase().contains('mac')) {
+                    return
+                }
+                Project rootProject = project.getRootProject()
+                def clang = new File("${rootProject.projectDir}/.clang/clang-format")
+                checkClang(clang)
+                def files = project.fileTree("src").include("**/*.cc")
+                for (File f : files) {
+                    if (!f.isFile()) {
+                        continue
+                    }
+                    project.logger.info("checking cpp file: " + f)
+                    if (f.text != formatCpp(f, clang)) {
+                        throw new GradleException("File not formatted: " + f.getAbsolutePath())
+                    }
+                }
+            }
+        }
+    }
+}

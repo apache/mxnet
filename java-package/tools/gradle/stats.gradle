@@ -1,0 +1,24 @@
+def testsResults = new TreeMap<>(Comparator.reverseOrder())
+gradle.taskGraph.beforeTask { Task task ->
+    task.ext.setProperty("startTime", Instant.now())
+}
+
+gradle.taskGraph.afterTask { Task task, TaskState state ->
+    if (task.name.equals("test") && state.didWork) {
+        long duration = Duration.between(task.ext.startTime, Instant.now()).toSeconds()
+        testsResults.put(duration, task.project.name);
+    }
+}
+
+gradle.buildFinished {
+    if (gradle.startParameter.taskNames.contains("build") && !testsResults.isEmpty()) {
+        int count = 0;
+        println "========== Test duration =========="
+        for (Map.Entry<Long, String> entry : testsResults.entrySet()) {
+            if (count++ > 5) {
+                break;
+            }
+            println "\t${entry.value}:\t${entry.key}s"
+        }
+    }
+}

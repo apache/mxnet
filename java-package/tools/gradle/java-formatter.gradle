@@ -1,0 +1,68 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath 'com.google.googlejavaformat:google-java-format:1.6'
+    }
+}
+
+apply plugin: JavaFormatterPlugin
+
+check.dependsOn verifyJava
+
+import com.google.googlejavaformat.java.Formatter
+import com.google.googlejavaformat.java.ImportOrderer
+import com.google.googlejavaformat.java.JavaFormatterOptions
+import com.google.googlejavaformat.java.Main
+import com.google.googlejavaformat.java.RemoveUnusedImports
+
+class JavaFormatterPlugin implements Plugin<Project> {
+    void apply(Project project) {
+        project.task('formatJava') {
+            doLast {
+                Main formatter = new Main(new PrintWriter(System.out, true), new PrintWriter(System.err, true), System.in)
+                Project rootProject = project.getRootProject()
+                for (item in project.sourceSets) {
+                    for (File file : item.getAllSource()) {
+                        if (!file.getName().endsWith(".java") || file.getAbsolutePath().contains("generated-src")) {
+                            continue
+                        }
+                        if (formatter.format("-a", "-i", file.getAbsolutePath()) != 0) {
+                            throw new GradleException("Format java failed: " + file.getAbsolutePath())
+                        }
+                    }
+                }
+            }
+        }
+
+        project.task('verifyJava') {
+            doLast {
+                def options = JavaFormatterOptions.builder().style(JavaFormatterOptions.Style.AOSP).build()
+                Formatter formatter = new Formatter(options)
+                Project rootProject = project.getRootProject()
+                for (item in project.sourceSets) {
+                    for (File file : item.getAllSource()) {
+                        if (!file.getName().endsWith(".java") || file.getAbsolutePath().contains("generated-src")) {
+                            continue
+                        }
+
+                        String src = new String(file.bytes, "UTF-8")
+                        String formatted = formatter.formatSource(src)
+                        formatted = RemoveUnusedImports.removeUnusedImports(formatted, RemoveUnusedImports.JavadocOnlyImports.KEEP)
+                        formatted = ImportOrderer.reorderImports(formatted);
+                        if (!src.equals(formatted)) {
+                            throw new GradleException("File not formatted: " + file.getAbsolutePath()
+                                    + System.lineSeparator()
+                                    + "In order to reformat your code, run './gradlew formatJava' (or './gradlew fJ' for short)"
+                                    + System.lineSeparator()
+                                    + "See https://github.com/deepjavalibrary/djl/blob/master/docs/development/development_guideline.md#coding-conventions for more details")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

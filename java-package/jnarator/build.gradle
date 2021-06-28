@@ -1,0 +1,30 @@
+plugins {
+    id 'antlr'
+}
+
+dependencies {
+    antlr "org.antlr:antlr4:${antlr_version}"
+
+    api "commons-cli:commons-cli:${commons_cli_version}"
+    api "org.antlr:antlr4-runtime:${antlr_version}"
+    api "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
+
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+}
+
+checkstyleMain.source = 'src/main/java'
+pmdMain.source = 'src/main/java'
+
+jar {
+    manifest {
+        attributes (
+                "Main-Class" : "org.apache.mxnet.jnarator.Main",
+                "Multi-Release" : true
+        )
+    }
+    includeEmptyDirs = false
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    from configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+}

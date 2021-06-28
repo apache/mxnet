@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE suppressions PUBLIC "-//Puppy Crawl//DTD Suppressions 1.1//EN"
+    "http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
+<suppressions>
+    <suppress checks="FileLength" files="NDArray.java" />
+
+    <suppress checks="(AvoidStaticImport|ImportOrder)" files="src[\\/]test[\\/]java[\\/]"/>
+
+    <suppress checks="(MissingJavadocMethod|MissingJavadocType)" files="src[\\/](test|it)[\\/].*"/>
+
+    <!--    Suppress javadoc in modules-->
+    <suppress checks="(MissingJavadocMethod|MissingJavadocType)" files="ai[\\/]djl[\\/]testing[\\/]"/>
+    <suppress checks="(MissingJavadocMethod|MissingJavadocType)" files="ai[\\/]djl[\\/]integration[\\/]"/>
+    <suppress checks="(MissingJavadocMethod|MissingJavadocType)" files="ai[\\/]djl[\\/]examples[\\/]"/>
+    <suppress checks="(MissingJavadocMethod|MissingJavadocType)" files="ai[\\/]djl[\\/]mxnet[\\/]jnarator[\\/]"/>
+    <suppress checks="(MissingJavadocMethod|MissingJavadocType)" files="ai[\\/]djl[\\/]tensorflow[\\/]"/>
+</suppressions>

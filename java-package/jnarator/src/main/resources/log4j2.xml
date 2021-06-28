@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="[%highlight{%-5level}] %msg%n%throwable"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Root level="DEBUG" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>

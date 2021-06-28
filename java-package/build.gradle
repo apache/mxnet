@@ -1,0 +1,113 @@
+plugins {
+    id "com.github.spotbugs" version "4.2.0" apply true
+}
+
+defaultTasks 'build'
+
+allprojects {
+    group 'incubator-mxnet.java-package'
+    boolean isRelease = project.hasProperty("release") || project.hasProperty("staging")
+    version = "${java_package_version}" + (isRelease ? "" : "-SNAPSHOT")
+
+    repositories {
+//        maven {
+//            url "https://mlrepo.djl.ai/maven/"
+//        }
+        mavenCentral()
+        maven {
+            url 'https://oss.sonatype.org/content/repositories/snapshots/'
+        }
+    }
+
+    apply plugin: 'idea'
+    idea {
+        module {
+            outputDir = file('build/classes/java/main')
+            testOutputDir = file('build/classes/java/test')
+            // inheritOutputDirs = true
+        }
+    }
+}
+
+def javaProjects() {
+    return subprojects.findAll { new File(it.projectDir, "src/main").exists() }
+}
+
+configure(javaProjects()) {
+    apply plugin: 'java-library'
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+    compileJava.options.encoding = "UTF-8"
+    compileTestJava.options.encoding = "UTF-8"
+    if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
+        compileJava.options.compilerArgs.addAll(["--release", "8"])
+    }
+
+    apply plugin: 'eclipse'
+
+    eclipse {
+        jdt.file.withProperties { props ->
+            props.setProperty "org.eclipse.jdt.core.circularClasspath", "warning"
+        }
+        classpath {
+            sourceSets.test.java {
+                srcDirs = ["src/test/java"]
+                exclude "**/package-info.java"
+            }
+        }
+    }
+
+    apply from: file("${rootProject.projectDir}/tools/gradle/java-formatter.gradle")
+    apply from: file("${rootProject.projectDir}/tools/gradle/check.gradle")
+
+    test {
+        // tensorflow mobilenet and resnet require more cpu memory
+        maxHeapSize = "4096m"
+        doFirst {
+            if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
+                jvmArgs = [
+                        '--add-opens', "java.base/jdk.internal.loader=ALL-UNNAMED"
+                ]
+            }
+        }
+
+        useTestNG() {
+            // suiteXmlFiles << new File(rootDir, "testng.xml") //This is how to add custom testng.xml
+        }
+
+        testLogging {
+            showStandardStreams = true
+            events "passed", "skipped", "failed", "standardOut", "standardError"
+        }
+
+        doFirst {
+            systemProperties System.getProperties()
+            systemProperties.remove("user.dir")
+            systemProperty "incubator-mxnet.java-package.logging.level", "debug"
+            systemProperty "org.slf4j.simpleLogger.defaultLogLevel", "debug"
+            systemProperty "org.slf4j.simpleLogger.log.org.mortbay.log", "warn"
+            systemProperty "disableProgressBar", "true"
+            systemProperty "nightly", System.getProperty("nightly", "false")
+            if (gradle.startParameter.offline) {
+                systemProperty "offline", "true"
+            }
+        }
+    }
+
+    compileJava {
+        options.compilerArgs << "-proc:none" << "-Xlint:all,-options,-static" << "-Werror"
+    }
+
+    compileTestJava {
+        options.compilerArgs << "-proc:none" << "-Xlint:all,-options,-static" << "-Werror"
+    }
+
+    jar {
+        manifest {
+            attributes("Automatic-Module-Name": "incubator-mxnet.java-package.${project.name.replace('-', '_')}")
+        }
+    }
+}
+
+apply from: file("${rootProject.projectDir}/tools/gradle/jacoco.gradle")
+apply from: file("${rootProject.projectDir}/tools/gradle/stats.gradle")

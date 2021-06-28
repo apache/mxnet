@@ -1,0 +1,63 @@
+apply plugin: 'jacoco'
+
+def jacocoProjects = subprojects.findAll {
+    if ([":jnarator"].contains(it.getPath())) {
+        return false
+    }
+    return new File(it.projectDir, "src/test/java").exists()
+}
+
+task jacocoMergeTestData(type: JacocoMerge) {
+    jacocoProjects.each { p ->
+        dependsOn(p.test, p.jacocoTestReport)
+        executionData p.tasks.withType(Test)
+    }
+}
+
+def exclusions = [":examples", ":integration"]
+
+task jacocoRootReport(type: JacocoReport) {
+    dependsOn jacocoMergeTestData
+    description = 'Generates an aggregate report from all subprojects'
+
+    jacocoProjects.each { p ->
+        if (!exclusions.contains(p.getPath())) {
+            additionalSourceDirs.from files((Set<File>) p.sourceSets.main.allJava.srcDirs)
+            sourceDirectories.from files((Set<File>) p.sourceSets.main.allSource.srcDirs)
+            classDirectories.from files((FileCollection) p.sourceSets.main.output)
+            additionalClassDirs((FileCollection) p.sourceSets.main.output)
+        }
+    }
+    executionData.from = files(jacocoProjects.jacocoTestReport.executionData).filter { f -> f.exists() }
+
+    reports {
+        xml.enabled = true
+        html.enabled = true
+    }
+}
+
+task jacocoRootVerification(type: JacocoCoverageVerification) {
+    dependsOn jacocoMergeTestData
+
+    jacocoProjects.each { p ->
+        if (!exclusions.contains(p.getPath())) {
+            additionalSourceDirs.from files((Set<File>) p.sourceSets.main.allJava.srcDirs)
+            sourceDirectories.from files((Set<File>) p.sourceSets.main.allSource.srcDirs)
+            classDirectories.from files((FileCollection) p.sourceSets.main.output)
+            additionalClassDirs((FileCollection) p.sourceSets.main.output)
+        }
+    }
+    executionData.from = files(jacocoProjects.jacocoTestReport.executionData).filter { f -> f.exists() }
+
+    violationRules {
+        rule {
+            limit {
+                if (Boolean.getBoolean("nightly")) {
+                    minimum = 0.70
+                } else {
+                    minimum = 0.65
+                }
+            }
+        }
+    }
+}

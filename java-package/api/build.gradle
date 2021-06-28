@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+//    id "aspectj.gradle" version("${aspectj_version}") apply(false)
+}
+
+group 'org.apache.mxnet'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api "com.google.code.gson:gson:${gson_version}"
+    api "net.java.dev.jna:jna:${jna_version}"
+    api "org.apache.commons:commons-compress:${commons_compress_version}"
+    api "org.slf4j:slf4j-api:${slf4j_version}"
+
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+    testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
+    testRuntimeOnly project(":mxnet-engine")
+    // TODO update the version of mxnet-native-auto
+    testRuntimeOnly "ai.djl.mxnet:mxnet-native-auto:${mxnet_version}"
+}
+
+test {
+    useJUnitPlatform()
+}
