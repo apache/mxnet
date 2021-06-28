@@ -1343,7 +1343,7 @@ def test_onednn_shifted_quantization():
             bias = collect_param(fc_layer_quantized, 'dense%d_bias_quantize' % number)
             assert bias.dtype == np.int8
 
-    with environment({'MXNET_DISABLE_SHIFTED_QUANTIZATION': '0'}):
+    with environment({'MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS': '0'}):
         for i, qdtype in enumerate(['int8', 'uint8', 'auto']):
             check(i, qdtype)
 
