@@ -25,12 +25,12 @@
 file(TO_CMAKE_PATH "$ENV{ArmPL_HOME}" ArmPL_HOME)
 
 SET(ArmPL_INCLUDE_SEARCH_PATHS
-        /opt/arm/armpl_21.0_gcc-8.2/include_lp64_mp
+        /opt/arm/armpl_21.0_gcc-10.2/include_lp64_mp
         ${ArmPL_HOME}/include_lp64_mp
 )
 
 SET(ArmPL_LIB_SEARCH_PATHS
-	/opt/arm/armpl_21.0_gcc-8.2/lib
+	/opt/arm/armpl_21.0_gcc-10.2/lib
         ${ArmPL_HOME}/lib
 )
 
@@ -42,8 +42,8 @@ SET(ArmPL_LIBRARIES
 	${ArmPL_LIB}
 	${MATH_LIB}
 	${STRING_LIB}
-	/usr/local/gcc-8.5.0/lib64/libgfortran.so
-	/usr/lib/aarch64-linux-gnu/libm.so
+	libgfortran.so
+	libm.so
 )
 
 SET(ArmPL_FOUND ON)
