@@ -42,4 +42,4 @@ set(MKLDNN_USE_ACL OFF CACHE BOOL "Integrate MKLDNN with Arm Compute Library")
 # Note that APL needs to be added to LD_LIBRARY_PATH
 set(MKLDNN_USE_APL ON CACHE BOOL "Integrate MKLDNN with Arm Performance Libraries")
 # Due to a MKLDNN bug we will need to manually set the ArmPL header
-set(BLAS_INCLUDE_DIR "/opt/arm/armpl_21.0_gcc-8.2/include_lp64_mp" CACHE STRING "Specifies BLAS include dir")
+set(BLAS_INCLUDE_DIR "/opt/arm/armpl_21.0_gcc-10.2/include_lp64_mp" CACHE STRING "Specifies BLAS include dir")

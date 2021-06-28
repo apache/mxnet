@@ -62,7 +62,7 @@ else
 fi
 export FC="gfortran"
 if [[ $ARCH == 'aarch64' ]]; then
-    export CPATH=/opt/arm/armpl_21.0_gcc-8.2/include_lp64_mp:$CPATH
+    export CPATH=/opt/arm/armpl_21.0_gcc-10.2/include_lp64_mp:$CPATH
 else
     export CPATH=$DEPS_PATH/include:$CPATH
 fi

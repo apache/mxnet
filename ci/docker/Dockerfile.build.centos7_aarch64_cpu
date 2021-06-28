@@ -83,6 +83,13 @@ RUN cd /usr/local/src && \
     cd /usr/local/src && \
     rm -rf ccache
 
+# Arm Performance Libraries 21.0
+RUN wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/RHEL7/arm-performance-libraries_21.0_RHEL-7_gcc-10.2.tar && \
+    tar -xvf arm-performance-libraries_21.0_RHEL-7_gcc-10.2.tar && \
+    arm-performance-libraries_21.0_RHEL-7_gcc-10.2/arm-performance-libraries_21.0_RHEL-7.sh -a
+
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-10.2/lib
+
 # Fix the en_DK.UTF-8 locale to test locale invariance
 RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8
 
