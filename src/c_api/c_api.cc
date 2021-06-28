@@ -73,8 +73,11 @@
 #if SUPPORT_FTZ_DMZ
 #include <immintrin.h>
 #include <xmmintrin.h>
+#endif
+#if SUPPORT_FTZ_DMZ && !defined(_MSC_VER)
 #include <x86intrin.h>
 #endif
+
 
 using namespace mxnet;
 
