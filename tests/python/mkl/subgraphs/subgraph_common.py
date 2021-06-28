@@ -79,8 +79,6 @@ class CustomNormalInit(mx.init.Initializer):
 
     def _init_weight(self, _, arr):
         mx.np.random.normal(self.mean, self.sigma, arr.shape, dtype=arr.dtype, out=arr)
-        # import pdb
-        # pdb.set_trace()
         if self.bounded:
             mx.np.abs(arr, out=arr)
 

@@ -113,11 +113,11 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
           }
         }
         if (!quantized_ && (new_node.op() == Op::Get("square") ||
-            new_node.op() == Op::Get("_npi_square") ||
-            new_node.op() == Op::Get("sqrt") ||
-            new_node.op() == Op::Get("_npi_sqrt") ||
-            new_node.op() == Op::Get("exp") ||
-            new_node.op() == Op::Get("_npi_exp"))) {
+                            new_node.op() == Op::Get("_npi_square") ||
+                            new_node.op() == Op::Get("sqrt") ||
+                            new_node.op() == Op::Get("_npi_sqrt") ||
+                            new_node.op() == Op::Get("exp") ||
+                            new_node.op() == Op::Get("_npi_exp"))) {
           matched_list_.push_back(&new_node);
           status_ = kSuccess;
           return true;
