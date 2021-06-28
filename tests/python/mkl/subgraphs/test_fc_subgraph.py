@@ -59,18 +59,19 @@ def test_single_fc(data_shape, use_bias, flatten):
 @pytest.mark.parametrize('use_bias', [True, False])
 @pytest.mark.parametrize('flatten', [True, False])
 @pytest.mark.parametrize('alg', fc_post_ops_list)
-@pytest.mark.skip("Operator square, square_root, abs, exp cannot be found in numpy mode")
 def test_fc_eltwise(data_shape, use_bias, flatten, alg):
   # fc + eltwise fusion case
   class FCEltwise(nn.HybridBlock):
     def __init__(self, use_bias, flatten, alg, **kwargs):
       super(FCEltwise, self).__init__(**kwargs)
       self.fc = nn.Dense(units=64, use_bias=use_bias, flatten=flatten,
-                         weight_initializer=CustomNormalInit(mean=0.5, sigma=0.1) if alg == 'square_root' else None)
+                         weight_initializer=CustomNormalInit(mean=0.5, sigma=0.1, bounded=True) if alg == 'square_root' else None)
                                             #avoid calculating square root of negative values
       self.alg = alg
 
     def forward(self, x):
+      if self.alg == 'square_root':
+        x = abs(x)
       fc_out = self.fc(x)
       if self.alg in ['relu', 'sigmoid', 'log_sigmoid', 'mish', 'tanh', 'softrelu']:
         out = mx.npx.activation(fc_out, act_type=self.alg)

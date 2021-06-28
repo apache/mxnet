@@ -33,9 +33,13 @@ namespace op {
 static inline bool SupportMKLDNNFCEltwiseFusion(const std::string op_name) {
   if (op_name == "Activation" ||
       op_name == "square" ||
+      op_name == "_npi_square" ||
       op_name == "sqrt" ||
+      op_name == "_npi_sqrt" ||
       op_name == "exp" ||
+      op_name == "_npi_exp" ||
       op_name == "abs" ||
+      op_name == "_npi_absolute" ||
       op_name == "clip" ||
       op_name == "LeakyReLU") {
     return true;
@@ -45,13 +49,13 @@ static inline bool SupportMKLDNNFCEltwiseFusion(const std::string op_name) {
 }
 
 static inline mkldnn::algorithm GetMKLDNNEltwiseAlgo(const std::string op_name) {
-  if (op_name == "square")
+  if (op_name == "square" || op_name == "_npi_square")
     return mkldnn::algorithm::eltwise_square;
-  else if (op_name == "sqrt")
+  else if (op_name == "sqrt" || op_name == "_npi_sqrt")
     return mkldnn::algorithm::eltwise_sqrt;
-  else if (op_name == "exp")
+  else if (op_name == "exp" || op_name == "_npi_exp")
     return mkldnn::algorithm::eltwise_exp;
-  else if (op_name == "abs")
+  else if (op_name == "abs" || op_name == "_npi_absolute")
     return mkldnn::algorithm::eltwise_abs;
   else
     LOG(FATAL) << "Unsupported eltwise fusion op: " << op_name;
