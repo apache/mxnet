@@ -19,7 +19,7 @@
 
 # This script builds the static library of libcurl that can be used as dependency of mxnet.
 set -ex
-LIBCURL_VERSION=7.61.0
+LIBCURL_VERSION=7.77.0
 if [[ ! -f $DEPS_PATH/lib/libcurl.a ]]; then
     # download and build libcurl
     >&2 echo "Building libcurl..."
@@ -30,7 +30,7 @@ if [[ ! -f $DEPS_PATH/lib/libcurl.a ]]; then
     pushd .
     cd $DEPS_PATH/curl-$LIBCURL_VERSION
     if [[ $PLATFORM == 'linux' ]]; then
-        CONFIG_FLAG=""
+        CONFIG_FLAG="--with-openssl"
     elif [[ $PLATFORM == 'darwin' ]]; then
         CONFIG_FLAG="--with-darwinssl"
     fi
