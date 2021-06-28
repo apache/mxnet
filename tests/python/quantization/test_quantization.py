@@ -22,8 +22,8 @@ import os
 import mxnet as mx
 import numpy as np
 from mxnet.gluon.model_zoo import vision
-from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter
-from mxnet.test_utils import environment
+from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err, assert_exception
+from mxnet.test_utils import rand_ndarray, rand_shape_nd, same, DummyIter, environment
 from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
@@ -1327,7 +1327,10 @@ def test_onednn_shifted_quantization():
         out_q = fc_layer_quantized(random_data)
         out_q.wait_to_read()
 
-        assert_almost_equal(out, out_q, rtol=1e-3, atol=1e-3)
+        min_range = mx.nd.min(out).asscalar()
+        max_range = mx.nd.max(out).asscalar()
+        atol = 0.1 * max(abs(min_range), abs(max_range))
+        assert_almost_equal_with_err(out.asnumpy(), out_q.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
 
         if qdtype == 'auto':
             assert quantize_attrs['shifted'] == 'True'
