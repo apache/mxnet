@@ -60,10 +60,12 @@
 #include "nnvm/pass_functions.h"
 
 // FTZ only applies to SSE and AVX instructions.
-#define SUPPORT_FTZ_DMZ defined(__SSE__)    || \
-                        defined(__x86_64__) || \
-                        defined(_M_X64)     || \
-                        (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
+#if defined(__SSE__) || defined(__x86_64__) || defined(_M_X64) || \
+    (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
+#define SUPPORT_FTZ_DMZ 1
+#else
+#define SUPPORT_FTZ_DMZ 0
+#endif
 
 #if SUPPORT_FTZ_DMZ
 #include <immintrin.h>
