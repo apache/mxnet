@@ -213,7 +213,7 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    platforms = build_util.get_platforms()
+    platforms = build_util.get_platforms(legacy_only=True)
 
     if "dkr.ecr" in args.docker_registry:
         _ecr_login(args.docker_registry)

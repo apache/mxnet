@@ -38,6 +38,7 @@ core_logic: {
         timeout(time: total_timeout, unit: 'MINUTES') {
           utils.init_git()
           sh "ci/docker_cache.py --docker-registry ${env.DOCKER_ECR_REGISTRY}"
+          sh "cd ci && python3 ./docker_login.py --secret-name ${env.DOCKERHUB_SECRET_NAME} && docker-compose -f docker/docker-compose.yml build --parallel && docker-compose -f docker/docker-compose.yml push && docker logout"
         }
       }
     }
