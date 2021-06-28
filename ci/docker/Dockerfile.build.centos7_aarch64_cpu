@@ -1,0 +1,106 @@
+# -*- mode: dockerfile -*-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# Dockerfile for CentOS 7 AArch64 CPU build.
+# Via the CentOS 7 Dockerfiles, we ensure MXNet continues to run fine on older systems.
+
+FROM arm64v8/centos:7
+
+WORKDIR /work/deps
+
+RUN yum -y check-update || true && \
+    yum -y install epel-release centos-release-scl centos-release-scl-rh && \
+    yum install -y \
+        # Utilities
+        wget \
+        unzip \
+        patchelf \
+        pandoc \
+        # Development tools
+        git \
+        make \
+        ninja-build \
+        automake \
+        autoconf \
+        libtool \
+        protobuf-compiler \
+        protobuf-devel \
+        # CentOS Software Collections https://www.softwarecollections.org
+        devtoolset-10 \
+        devtoolset-10-gcc \
+        devtoolset-10-gcc-c++ \
+        devtoolset-10-gcc-gfortran \
+        rh-python38 \
+        rh-python38-python-numpy \
+        rh-python38-python-scipy \
+        # Libraries
+        # Provide clbas headerfiles
+        opencv-devel \
+        openssl-devel \
+        zeromq-devel \
+        # Build-dependencies for ccache 3.7.9
+        gperf \
+        libb2-devel \
+        libzstd-devel \
+    yum clean all
+
+RUN yum-config-manager --enable centos-sclo-rh-testing
+
+# Make Python 3.8 Software Collections available by default during
+# the following build steps in this Dockerfile
+SHELL [ "/usr/bin/scl", "enable", "devtoolset-10", "rh-python38" ]
+
+# Install minimum required cmake version
+RUN cd /usr/local/src && \
+    wget -nv https://cmake.org/files/v3.19/cmake-3.19.8-Linux-aarch64.sh && \
+    sh cmake-3.19.8-Linux-aarch64.sh --prefix=/usr/local --skip-license && \
+    rm cmake-3.19.8-Linux-aarch64.sh
+
+# ccache 3.7.9 has fixes for caching nvcc outputs
+RUN cd /usr/local/src && \
+    git clone --recursive https://github.com/ccache/ccache.git && \
+    cd ccache && \
+    git checkout v3.7.9 && \
+    ./autogen.sh && \
+    ./configure --disable-man && \
+    make -j$(nproc) && \
+    make install && \
+    cd /usr/local/src && \
+    rm -rf ccache
+
+# Fix the en_DK.UTF-8 locale to test locale invariance
+RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8
+
+# Python dependencies
+RUN python3 -m pip install --upgrade pip
+COPY install/requirements_aarch64 /work/
+RUN python3 -m pip install -r /work/requirements_aarch64
+
+ARG USER_ID=0
+COPY install/centos7_adduser.sh /work/
+RUN /work/centos7_adduser.sh
+
+ENV PYTHONPATH=./python/
+# Verify that MXNet works correctly when the C locale is set to a locale that uses a comma as the
+# decimal separator. Please see #16134 for an example of a bug caused by incorrect handling of
+# number serialization and deserialization.
+ENV LC_NUMERIC=en_DK.UTF-8
+WORKDIR /work/mxnet
+
+COPY runtime_functions.sh /work/
+
