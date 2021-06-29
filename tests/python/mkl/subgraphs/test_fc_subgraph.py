@@ -175,8 +175,10 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
                                rtol=1e-2, atol=1e-2, etol=0.01)
 
 
+@mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
-def test_fc_int8_and_fp32_outputs(data_shape):
+@pytest.mark.parametrize('flatten', [True, False])
+def test_fc_int8_and_fp32_outputs(data_shape, flatten):
 
 #                 /---> Quantizable op
 # Input ---> FC -|
@@ -185,15 +187,15 @@ def test_fc_int8_and_fp32_outputs(data_shape):
   class MultiOutputFC(nn.HybridBlock):
     def __init__(self, **kwargs):
       super(MultiOutputFC, self).__init__(**kwargs)
-      self.dense0 = nn.Dense(64)
-      self.dense1 = nn.Dense(64)
+      self.dense0 = nn.Dense(64, flatten=flatten)
+      self.dense1 = nn.Dense(64, flatten=flatten)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
       x = self.dense0(x)
-      y = self.dense1(x) # quantizable
-      z = F.softmax(x)   # non quantizable
+      y = self.dense1(x)      # quantizable
+      z = mx.npx.softmax(x)   # non quantizable
       return y + z
 
   attrs = {'fc': {}}
   net = MultiOutputFC()
-  check_fusion(net, data_shape, attrs, check_quantization=True)
+  check_fusion(net, data_shape, attrs, check_quantization=flatten)
