@@ -37,8 +37,8 @@ args = _parser.parse_args()
 
 
 class ForeachRNN(gluon.HybridBlock):
-    def __init__(self, cell, length, prefix=None, params=None):
-        super(ForeachRNN, self).__init__(prefix=prefix, params=params)
+    def __init__(self, cell, length):
+        super(ForeachRNN, self).__init__()
         self.length = length
         self.cell = cell
 
@@ -48,8 +48,8 @@ class ForeachRNN(gluon.HybridBlock):
 
 
 class WhileRNN(gluon.HybridBlock):
-    def __init__(self, cell, length, prefix=None, params=None):
-        super(WhileRNN, self).__init__(prefix=prefix, params=params)
+    def __init__(self, cell, length):
+        super(WhileRNN, self).__init__()
         self.length = length
         self.cell = cell
 
@@ -90,6 +90,7 @@ def run_benchmark(cell_type, ctx, seq_len, batch_size, hidden_dim):
 
     for is_train, is_hyb_cell, is_hyb_layer in product([True, False], [False, True], [False, True]):
         cell = cell_type(hidden_dim)
+        cell.infer_shape(0, inputs, False)
         if is_hyb_cell:
             cell.hybridize(static_alloc=True)
         layer = obj(cell, seq_len)
