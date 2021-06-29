@@ -227,13 +227,12 @@
     3rdparty/tvm/3rdparty/dlpack
     3rdparty/ps-lite
     3rdparty/mkldnn
+    include/mkldnn (header symlinks to 3rdparty/mkldnn)
     3rdparty/googletest/googlemock/scripts/generator
     3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark
     3rdparty/mkldnn/tests/benchdnn (Copy of the License available at top of current file)
     src/operator/special_functions-inl.h Cephes Library Functions (Copy of the License available at top of current file)
     3rdparty/mkldnn/doc/assets/mathjax (Copy of the License available at top of current file)
-    docs/python_docs/themes/mx-theme/mxtheme/static/material-design-icons-3.0.1 (Copy of the License available at top of current file)
-    docs/python_docs/themes/mx-theme/mxtheme/static/font/Roboto (Copy of the License available at top of current file)
     3rdparty/tvm/3rdparty/bfloat16/bfloat16.cc (Copy of the License available at top of current file)
 
     =======================================================================================
@@ -244,8 +243,6 @@
     3rdparty/tvm/3rdparty/cma
     3rdparty/onnx-tensorrt
     3rdparty/onnx-tensorrt/third_party/onnx
-    docs/static_site/src/assets/js/clipboard.js
-    docs/python_docs/themes/mx-theme
     3rdparty/intgemm
     3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
     src/operator/nn/layer_norm.cc
@@ -310,8 +307,9 @@
     Apache-2.0 license + 3-clause BSD license
     =======================================================================================
 
-    python/mxnet/contrib/onnx/mx2onnx/_op_translations.py
-    python/mxnet/contrib/onnx/mx2onnx/export_onnx.py
+    python/mxnet/onnx/mx2onnx/_export_onnx.py
+    python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset12.py
+    python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset13.py
 
     =======================================================================================
     Apache-2.0 license + MIT License
@@ -344,8 +342,3 @@
 
     3rdparty/tvm/3rdparty/rang
 
-    =======================================================================================
-    SIL Open Font License (OFL)
-    =======================================================================================
-
-    docs/python_docs/themes/mx-theme/mxtheme/static/webfonts/ (Copy of the License available at licenses/OFL1_1)
