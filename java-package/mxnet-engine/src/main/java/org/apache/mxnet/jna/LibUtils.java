@@ -1,13 +1,25 @@
 package org.apache.mxnet.jna;
 
 import org.apache.mxnet.util.Platform;
+import org.apache.mxnet.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.rmi.CORBA.Util;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.net.URL;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Utilities for finding the MXNet Engine binary on the System.
@@ -114,19 +126,163 @@ public final class LibUtils {
         }
     }
 
-    // TODO
     private static String loadLibraryFromClasspath(Platform platform) {
-        return null;
+        Path tmp = null;
+        try {
+            String libName = System.mapLibraryName(LIB_NAME);
+            Path cacheFolder = Utils.getEngineCacheDir(LIB_NAME);
+            logger.debug("Using cache dir: {}", cacheFolder);
+
+            Path dir = cacheFolder.resolve(platform.getVersion() + platform.getClassifier());
+            Path path = dir.resolve(libName);
+            if (Files.exists(path)) {
+                return path.toAbsolutePath().toString();
+            }
+            Files.createDirectories(cacheFolder);
+            tmp = Files.createTempDirectory(cacheFolder, "tmp");
+            for (String file : platform.getLibraries()) {
+                String libPath = "/native/lib/" + file;
+                try (InputStream is = LibUtils.class.getResourceAsStream(libPath)) {
+                    logger.info("Extracting {} to cache ...", file);
+                    Files.copy(is, tmp.resolve(file), StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+
+            Utils.moveQuietly(tmp, dir);
+            return path.toAbsolutePath().toString();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to extract MXNet native library", e);
+        } finally {
+            if (tmp != null) {
+                Utils.deleteQuietly(tmp);
+            }
+        }
     }
 
-    //TODO
     private static String findLibraryInPath(String libPath) {
+        String[] paths = libPath.split(File.pathSeparator);
+        List<String> mappedLibNames;
+        if (com.sun.jna.Platform.isMac()) {
+            mappedLibNames = Arrays.asList("libmxnet.dylib", "libmxnet.jnilib", "libmxnet.so");
+        } else {
+            mappedLibNames = Collections.singletonList(System.mapLibraryName(LIB_NAME));
+        }
+
+        for (String path : paths) {
+            File p = new File(path);
+            if (!p.exists()) {
+                continue;
+            }
+            for (String name : mappedLibNames) {
+                if (p.isFile() && p.getName().endsWith(name)) {
+                    return p.getAbsolutePath();
+                }
+
+                File file = new File(path, name);
+                if (file.exists() && file.isFile()) {
+                    return file.getAbsolutePath();
+                }
+            }
+        }
         return null;
     }
 
-    //TODO
+    // TODO: to be optimized
     private static String downloadMxnet(Platform platform) throws IOException{
-        return null;
+
+        String version = platform.getVersion();
+        String flavor = platform.getFlavor();
+        if (flavor.isEmpty()) {
+            flavor = "mkl";
+        } else if (!flavor.endsWith("mkl")) {
+            flavor += "mkl"; // NOPMD
+        }
+        String classifier = platform.getClassifier();
+        String cudaArch = platform.getCudaArch();
+        String os = platform.getOsPrefix();
+
+        String libName = System.mapLibraryName(LIB_NAME);
+        Path cacheFolder = Utils.getEngineCacheDir(LIB_NAME);
+        logger.debug("Using cache dir: {}", cacheFolder);
+        Path dir = cacheFolder.resolve(version + '-' + flavor + '-' + classifier);
+        Path path = dir.resolve(libName);
+        if (Files.exists(path)) {
+            return path.toAbsolutePath().toString();
+        }
+
+        Files.createDirectories(cacheFolder);
+
+        Matcher matcher = VERSION_PATTERN.matcher(version);
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException("Unexpected version: " + version);
+        }
+
+        Path tmp = Files.createTempDirectory(cacheFolder, "tmp");
+        String link = "https://publish.djl.ai/mxnet-" + matcher.group(1);
+        try (InputStream is = new URL(link + "/files.txt").openStream()) {
+            List<String> lines = Utils.readLines(is);
+            if (cudaArch != null) {
+                // has CUDA
+                if ("win".equals(os)) {
+                    if (!lines.contains(String.format("%s/%s/mxnet_%s.ddl.dz", os, flavor, cudaArch))) {
+                        logger.warn(
+                                "No matching cuda flavor for {} found: {}/sm_{}.",
+                                os,
+                                flavor,
+                                cudaArch);
+                        // fallback to CPU
+                        flavor = "mkl";
+                    }
+                } else if ("linux".equals(os)) {
+                    if (!lines.contains(String.format("%s/%s/libmxnet.so.gz")) || notSupported(platform)) {
+                        logger.warn(
+                                "No matching cuda flavor for {} found: {}/sm_{}.",
+                                os,
+                                flavor,
+                                cudaArch);
+                        // fallback to CPU
+                        flavor = "mkl";
+                    }
+                } else {
+                    throw new AssertionError("Unsupported GPU operating system: " + os);
+                }
+
+                // check again in case fallback tp cpu
+                if ("mkl".equals(flavor)) {
+                    dir = cacheFolder.resolve(String.format("%s-%s-%s", version, flavor, classifier));
+                    path = dir.resolve(libName);
+                    if (Files.exists(path)) {
+                        return path.toAbsolutePath().toString();
+                    }
+                }
+            }
+
+            for (String line : lines) {
+                if (line.startsWith(os + "/common/") || line.startsWith(os + '/' + flavor + '/')) {
+                    URL url = new URL(link + '/' + line);
+                    String fileName = line.substring(line.lastIndexOf('/') + 1, line.length() - 3);
+                    if ("win".equals(os)) {
+                        if ("libmxnet.dll".equals(fileName)) {
+                            fileName = "mxnet.dll";
+                        } else if (fileName.startsWith("mxnet_")) {
+                            if (!("mxnet_" + cudaArch + ".dll").equals(fileName)) {
+                                continue;
+                            }
+                            fileName = "mxnet.dll"; // split CUDA build
+                        }
+                    }
+                    logger.info("Downloading {} ...", fileName);
+                    try (InputStream fis = new GZIPInputStream(url.openStream())) {
+                        Files.copy(fis, tmp.resolve(fileName), StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            }
+
+            Utils.moveQuietly(tmp, dir);
+            return path.toAbsolutePath().toString();
+        } finally {
+            Utils.deleteQuietly(tmp);
+        }
     }
 
     //TODO
@@ -135,6 +291,10 @@ public final class LibUtils {
         return false;
     }
 
+    public static void main(String... args) {
 
+        findLibraryInClasspath();
+
+    }
 
 }

@@ -171,7 +171,7 @@ task downloadMxnetNativeLib() {
     doLast {
         def url = "https://publish.djl.ai/mxnet-${VERSION}"
         def files = [
-                "linux/common/libgfortran.so.4.gz": "mkl/linux/native/lib/libgfortran.so.4",
+//                "linux/common/libgfortran.so.4.gz": "mkl/linux/native/lib/libgfortran.so.4",
                 "linux/common/libgomp.so.1.gz"    : "mkl/linux/native/lib/libgomp.so.1",
                 "linux/common/libopenblas.so.0.gz": "mkl/linux/native/lib/libopenblas.so.0",
                 "linux/common/libquadmath.so.0.gz": "mkl/linux/native/lib/libquadmath.so.0",

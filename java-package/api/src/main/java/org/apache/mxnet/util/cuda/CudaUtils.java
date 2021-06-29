@@ -118,7 +118,7 @@ public final class CudaUtils {
             throw new IllegalArgumentException("Only GPU device is allowed.");
         }
 
-        // Need to validate LIB != null ?
+        validateLibrary("No GPU device detected.");
 
         int[] currentDevice = new int[1];
         checkCall(LIB.cudaGetDevice(currentDevice));
@@ -186,6 +186,14 @@ public final class CudaUtils {
     private static void validateLibrary() {
         if (LIB == null) {
             throw new IllegalStateException("No cuda library is loaded.");
+        }
+    }
+
+    private static void validateLibrary(String msg) {
+        if (msg == null) {
+            validateLibrary();
+        } else if (LIB == null) {
+            throw new IllegalStateException(msg);
         }
     }
 

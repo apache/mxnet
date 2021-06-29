@@ -11,6 +11,11 @@ repositories {
 
 dependencies {
     api project(":api")
+
+    // Solve the problem: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+    compile "org.slf4j:slf4j-simple:${slf4j_version}"
+
+
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
     testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
@@ -49,6 +54,10 @@ task jnarator(dependsOn: ":jnarator:jar") {
             ]
         }
     }
+}
+
+test {
+    environment "PATH", "src/test/bin:${environment.PATH}"
 }
 
 import java.util.regex.Matcher
@@ -91,6 +100,7 @@ task checkHeaderFile() {
 
 compileJava.dependsOn(jnarator)
 
+// TODO
 //publishing {
 //    publications {
 //        maven(MavenPublication) {
