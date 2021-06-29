@@ -80,6 +80,7 @@ RUN yum -y check-update || true && \
     yum clean all
 
 RUN pip3 install numpy==1.18.5 scipy requests wheel nose nose-timer
+RUN python3 -m pip install --upgrade pip
 
 # Build OpenBLAS from source
 RUN mkdir ~/openblas && \
