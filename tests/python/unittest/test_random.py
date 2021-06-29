@@ -662,6 +662,7 @@ def test_gamma_generator():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=success_rate)
 
 @with_seed()
+@unittest.skipIf(sys.platform.startswith('win'), 'https://github.com/apache/incubator-mxnet/issues/20389')
 def test_exponential_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
