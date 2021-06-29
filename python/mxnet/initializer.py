@@ -711,3 +711,96 @@ class LSTMBias(Initializer):
         # gate of the 4 LSTM gates, we modify the according values.
         num_hidden = int(arr.shape[0] / 4)
         arr[num_hidden:2*num_hidden] = self.forget_bias
+
+
+@register
+class RNNFused(Initializer):
+    """Initialize RNN fused parameter with bias part initialized to 0.0 and
+    weight initialized with random values uniformly sampled from a given range.
+
+    Parameters
+    ----------
+    mode : {'gru', 'lstm', 'rnn_relu', 'rnn_tanh'}, required
+        the type of RNN to compute
+    num_layers : int (non-negative), required
+        number of stacked layers
+    state_size : int (non-negative), required
+        size of the state for each layer
+    bidirectional : boolean, optional, default=0
+        whether to use bidirectional recurrent layers
+    projection_size : int or None, optional, default='None'
+        size of project size
+    scale : float, optional
+        The bound on the range of the generated random values for weights.
+        Values are generated from the range [-`scale`, `scale`].
+        Default scale is 0.07. 
+    """
+    def __init__(self, mode, num_layers, state_size, bidirectional=False,
+                 projection_size=None, scale=0.07):
+        super(RNNFused, self).__init__(mode=mode, num_layers=num_layers,
+                                       state_size=state_size,
+                                       bidirectional=bidirectional,
+                                       projection_size=projection_size,
+                                       scale=scale)
+        self.gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
+        self.num_layers = num_layers
+        self.num_hidden = state_size
+        self.dir = 2 if bidirectional else 1
+        self.projection_size = projection_size
+        self.scale = scale
+
+    def _init_weight(self, name, arr):
+        arr_len = arr.shape[0]
+        dtype = arr.dtype
+        size = self.num_hidden * self.dir * self.gates
+        if not self.projection_size:
+            # second layer size
+            size2 = (self.num_hidden * self.dir + self.num_hidden + 2) * size
+            input_size = (arr_len - (self.num_layers - 1) * size2) // \
+                size - 2 - self.num_hidden
+        else:
+            # second layer size
+            size2 = (self.projection_size * self.dir + self.projection_size + 2) * size
+            size_projection = self.projection_size * self.num_hidden * self.num_layers * self.dir
+            input_size = (arr_len - size_projection - (self.num_layers - 1) * size2) // \
+                size - 2 - self.projection_size
+        begin = 0
+        if not self.projection_size:
+            for p in ['weight', 'bias']:
+                for l in range(self.num_layers):
+                    for _ in range(self.dir):
+                        for g in ['i2h', 'h2h']:
+                            ni = input_size
+                            if l != 0:
+                                ni = self.num_hidden * self.dir
+                            if g == 'h2h':
+                                ni = self.num_hidden
+                            shape0 = self.gates * self.num_hidden
+                            if p == 'weight':
+                                cur_len = shape0 * ni
+                                _mx_np.random.uniform(-self.scale, self.scale, \
+                                    size=(cur_len,), dtype=dtype, out=arr[begin:begin+cur_len])
+                            else:
+                                cur_len = shape0
+                                arr[begin:begin+cur_len] = 0.0
+                            begin += cur_len
+        else:
+            for p in ['weight', 'bias']:
+                for l in range(self.num_layers):
+                    for _ in range(self.dir):
+                        for g in ['i2h', 'h2h', 'h2r']:
+                            if g != 'h2r' or p != 'bias':
+                                ni = input_size
+                                if l != 0:
+                                    ni = self.projection_size * dir
+                                if g == 'h2h':
+                                    ni = self.projection_size
+                                shape0 = self.gates * self.num_hidden
+                                if p == 'weight':
+                                    cur_len = shape0 * ni
+                                    _mx_np.random.uniform(-self.scale, self.scale, \
+                                        size=(cur_len,), dtype=dtype, out=arr[begin:begin+cur_len])
+                                else:
+                                    cur_len = shape0
+                                    arr[begin:begin+cur_len] = 0.0
+                                begin += cur_len

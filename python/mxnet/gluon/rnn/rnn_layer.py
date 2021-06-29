@@ -23,7 +23,7 @@
 
 __all__ = ['RNN', 'LSTM', 'GRU']
 
-from ... import np, npx, context
+from ... import np, npx, context, initializer
 from .. import HybridBlock, tensor_types
 from ..parameter import Parameter
 from ...util import use_np
@@ -56,6 +56,10 @@ class _RNNLayer(HybridBlock):
         self.skip_states = None
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
+
+        if not param_initializer:
+            param_initializer = initializer.RNNFused(mode, num_layers, hidden_size,\
+                bidirectional, projection_size)
 
         self.rnn_param = Parameter('rnn_param', shape=(-1,), init=param_initializer,
                                    allow_deferred_init=True, dtype=dtype)

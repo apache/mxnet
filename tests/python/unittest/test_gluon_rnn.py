@@ -160,8 +160,8 @@ def test_lstm_cpu_inference():
                                      [[0.96265966, 0.96265966, 0.7564661, 0.7564661],
                                       [0.96265966, 0.96265966, 0.7564661, 0.7564661]]])
     x = mx.np.ones(shape=(2, 2, 2))
-    model = mx.gluon.rnn.LSTM(2, num_layers=6, bidirectional=True)
-    model.initialize(mx.init.One())
+    model = mx.gluon.rnn.LSTM(2, num_layers=6, bidirectional=True, param_initializer=mx.init.One())
+    model.initialize()
 
     y = model(x).asnumpy()
     mx.test_utils.assert_almost_equal(y, EXPECTED_LSTM_OUTPUT,
