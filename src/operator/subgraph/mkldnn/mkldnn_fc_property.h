@@ -40,7 +40,7 @@ namespace op {
 
 class SgMKLDNNFCSelector : public SubgraphSelector {
  public:
-  /*! \brief pattern match status */
+  /* pattern match status */
   enum SelectStatus {
     kFail = 0,
     kStart,
