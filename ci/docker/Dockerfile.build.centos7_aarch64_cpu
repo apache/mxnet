@@ -49,7 +49,6 @@ RUN yum -y check-update || true && \
         rh-python38-python-numpy \
         rh-python38-python-scipy \
         # Libraries
-        # Provide clbas headerfiles
         opencv-devel \
         openssl-devel \
         zeromq-devel \
@@ -59,17 +58,15 @@ RUN yum -y check-update || true && \
         libzstd-devel \
     yum clean all
 
-RUN yum-config-manager --enable centos-sclo-rh-testing
-
 # Make Python 3.8 Software Collections available by default during
 # the following build steps in this Dockerfile
 SHELL [ "/usr/bin/scl", "enable", "devtoolset-10", "rh-python38" ]
 
 # Install minimum required cmake version
 RUN cd /usr/local/src && \
-    wget -nv https://cmake.org/files/v3.19/cmake-3.19.8-Linux-aarch64.sh && \
-    sh cmake-3.19.8-Linux-aarch64.sh --prefix=/usr/local --skip-license && \
-    rm cmake-3.19.8-Linux-aarch64.sh
+    wget -nv https://cmake.org/files/v3.20/cmake-3.20.5-linux-aarch64.sh && \
+    sh cmake-3.20.5-linux-aarch64.sh --prefix=/usr/local --skip-license && \
+    rm cmake-3.20.5-linux-aarch64.sh
 
 # ccache 3.7.9 has fixes for caching nvcc outputs
 RUN cd /usr/local/src && \
@@ -84,10 +81,12 @@ RUN cd /usr/local/src && \
     rm -rf ccache
 
 # Arm Performance Libraries 21.0
-RUN wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/RHEL7/arm-performance-libraries_21.0_RHEL-7_gcc-10.2.tar && \
+RUN cd /usr/local/src && \
+    wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/RHEL7/arm-performance-libraries_21.0_RHEL-7_gcc-10.2.tar && \
     tar -xvf arm-performance-libraries_21.0_RHEL-7_gcc-10.2.tar && \
-    arm-performance-libraries_21.0_RHEL-7_gcc-10.2/arm-performance-libraries_21.0_RHEL-7.sh -a
-
+    arm-performance-libraries_21.0_RHEL-7_gcc-10.2/arm-performance-libraries_21.0_RHEL-7.sh -a && \
+    cd /usr/local/src && \
+    rm -rf arm-performance-libraries_21.0_RHEL-7_gcc-10.2.tar arm-performance-libraries_21.0_RHEL-7_gcc-10.2
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-10.2/lib
 
 # Fix the en_DK.UTF-8 locale to test locale invariance
