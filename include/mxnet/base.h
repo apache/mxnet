@@ -348,7 +348,7 @@ struct RunContext {
    */
   void *aux_stream;
     /*!
-   * \brief pointer to the cuda event pool used by the dependecy engine
+   * \brief pointer to the cuda event pool used by the dependency engine
    */
   void *event_pool = nullptr;
   /*!
