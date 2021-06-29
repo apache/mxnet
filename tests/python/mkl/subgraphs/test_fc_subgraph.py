@@ -188,10 +188,10 @@ def test_fc_int8_and_fp32_outputs(data_shape):
       self.dense0 = nn.Dense(64)
       self.dense1 = nn.Dense(64)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
       x = self.dense0(x)
-      y = self.dense1(x) # quantizable
-      z = F.softmax(x)   # non quantizable
+      y = self.dense1(x)      # quantizable
+      z = mx.npx.softmax(x)   # non quantizable
       return y + z
 
   attrs = {'fc': {}}
