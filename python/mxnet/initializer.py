@@ -733,7 +733,7 @@ class RNNFused(Initializer):
     scale : float, optional
         The bound on the range of the generated random values for weights.
         Values are generated from the range [-`scale`, `scale`].
-        Default scale is 0.07. 
+        Default scale is 0.07.
     """
     def __init__(self, mode, num_layers, state_size, bidirectional=False,
                  projection_size=None, scale=0.07):
@@ -749,6 +749,7 @@ class RNNFused(Initializer):
         self.projection_size = projection_size
         self.scale = scale
 
+    # pylint: disable=too-many-nested-blocks
     def _init_weight(self, name, arr):
         arr_len = arr.shape[0]
         dtype = arr.dtype
@@ -766,18 +767,18 @@ class RNNFused(Initializer):
                 size - 2 - self.projection_size
         begin = 0
         if not self.projection_size:
-            for p in ['weight', 'bias']:
-                for l in range(self.num_layers):
+            for param in ['weight', 'bias']:
+                for layer_num in range(self.num_layers):
                     for _ in range(self.dir):
-                        for g in ['i2h', 'h2h']:
-                            ni = input_size
-                            if l != 0:
-                                ni = self.num_hidden * self.dir
-                            if g == 'h2h':
-                                ni = self.num_hidden
+                        for connect in ['i2h', 'h2h']:
+                            num_inputs = input_size
+                            if layer_num != 0:
+                                num_inputs = self.num_hidden * self.dir
+                            if connect == 'h2h':
+                                num_inputs = self.num_hidden
                             shape0 = self.gates * self.num_hidden
-                            if p == 'weight':
-                                cur_len = shape0 * ni
+                            if param == 'weight':
+                                cur_len = shape0 * num_inputs
                                 _mx_np.random.uniform(-self.scale, self.scale, \
                                     size=(cur_len,), dtype=dtype, out=arr[begin:begin+cur_len])
                             else:
@@ -785,19 +786,19 @@ class RNNFused(Initializer):
                                 arr[begin:begin+cur_len] = 0.0
                             begin += cur_len
         else:
-            for p in ['weight', 'bias']:
-                for l in range(self.num_layers):
+            for param in ['weight', 'bias']:
+                for layer_num in range(self.num_layers):
                     for _ in range(self.dir):
-                        for g in ['i2h', 'h2h', 'h2r']:
-                            if g != 'h2r' or p != 'bias':
-                                ni = input_size
-                                if l != 0:
-                                    ni = self.projection_size * dir
-                                if g == 'h2h':
-                                    ni = self.projection_size
+                        for connect in ['i2h', 'h2h', 'h2r']:
+                            if connect != 'h2r' or param != 'bias':
+                                num_inputs = input_size
+                                if layer_num != 0:
+                                    num_inputs = self.projection_size * dir
+                                if connect == 'h2h':
+                                    num_inputs = self.projection_size
                                 shape0 = self.gates * self.num_hidden
-                                if p == 'weight':
-                                    cur_len = shape0 * ni
+                                if param == 'weight':
+                                    cur_len = shape0 * num_inputs
                                     _mx_np.random.uniform(-self.scale, self.scale, \
                                         size=(cur_len,), dtype=dtype, out=arr[begin:begin+cur_len])
                                 else:
