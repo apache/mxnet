@@ -65,6 +65,11 @@ struct DotParam : public dmlc::Parameter<DotParam> {
       .add_enum("csr", kCSRStorage)
       .set_default(dmlc::optional<int>());
   }
+  bool operator==(const DotParam& other) const {
+    return this->transpose_a == other.transpose_a &&
+           this->transpose_b == other.transpose_b &&
+           this->forward_stype == other.forward_stype;
+  }
   std::string ForwardStype2String(int forward_stype) {
     switch (forward_stype) {
       case kDefaultStorage:
@@ -1482,5 +1487,16 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-
+namespace std {
+template<>
+struct hash<mxnet::op::DotParam> {
+  size_t operator()(const mxnet::op::DotParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.transpose_a);
+    ret = dmlc::HashCombine(ret, val.transpose_b);
+    ret = dmlc::HashCombine(ret, val.forward_stype);
+    return ret;
+  }
+};
+}  // namespace std
 #endif  // MXNET_OPERATOR_TENSOR_DOT_INL_H_

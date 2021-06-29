@@ -287,6 +287,7 @@ Graph QuantizeGraph(Graph &&src) {
   static const auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   static const auto& avoid_quantize_input_map =
       Op::GetAttr<mxnet::FAvoidQuantizeInput>("FAvoidQuantizeInput");
+  static const auto& flist_inputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListInputNames");
   const auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   const auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
   const auto quantize_granularity = src.GetAttr<std::string>("quantize_granularity");
@@ -346,7 +347,13 @@ Graph QuantizeGraph(Graph &&src) {
               std::string name = GetOutputName(e.node.get(), e.index);
               suffix = "_" + name;
             } else if (!offline_params.count(new_name)) {
-              new_name = node->attrs.name + "_" + e.node->attrs.name;
+              std::string input_name;
+              if (flist_inputs.count(node->op())) {
+                input_name = flist_inputs[node->op()](node->attrs)[i];
+                new_name = node->attrs.name + "_" + input_name;
+              } else {
+                new_name = node->attrs.name + "_" + e.node->attrs.name;
+              }
             }
 
             ObjectPtr quantize_node = InsertNode("_contrib_quantize_v2",
@@ -504,20 +511,33 @@ Graph QuantizeGraph(Graph &&src) {
   static const auto& need_calib_output_map =
       Op::GetAttr<mxnet::FNeedCalibrateOutput>("FNeedCalibrateOutput");
 
-  std::stack<std::string> calib_variables;
+  std::unordered_set<nnvm::ObjectPtr> calib_variables;
   std::vector<std::string> calib_nodes;
   DFSVisit(ret.outputs, [&](const ObjectPtr& node) {
     if (node->op() && !calib_variables.empty()) {
-      if (reverse_mirror_map.count(node)) {
-          const std::string& var_name = calib_variables.top();
-          const auto& fp32_in_node = reverse_mirror_map[node];
-          for (const auto &input_node : fp32_in_node->inputs) {
-            if (var_name == input_node.node->attrs.name) {
-              calib_nodes.push_back(fp32_in_node->attrs.name + "_" + var_name);
-              calib_variables.pop();
-              break;
+      // find nodes where input is variable node
+      // and add proper input_name to calib_nodes
+      for (int i = 0; i < node->inputs.size(); i++) {
+        const auto &input_node = node->inputs[i];
+        if (calib_variables.find(input_node.node) != std::end(calib_variables)) {
+          auto fp32_node = std::find_if(std::begin(quantized_node_map),
+                                        std::end(quantized_node_map),
+                                        [&](const std::pair<ObjectPtr, ObjectPtr> &pair) {
+                                              return pair.second == node;
+                                          });
+          if (fp32_node != std::end(quantized_node_map)) {
+            const auto& fp32_in_node = fp32_node->first;
+            std::string node_input_name;
+            if (flist_inputs.count(fp32_in_node->op())) {
+              std::string op_input_name = flist_inputs[fp32_in_node->op()](fp32_in_node->attrs)[i];
+              node_input_name = fp32_in_node->attrs.name + "_" + op_input_name;
+            } else {
+              node_input_name = fp32_in_node->attrs.name + "_" + input_node.node->attrs.name;
             }
+            calib_nodes.push_back(node_input_name);
+            calib_variables.erase(input_node.node);
           }
+        }
       }
     }
     if (need_calib_input_map.count(node->op())) {
@@ -530,10 +550,13 @@ Graph QuantizeGraph(Graph &&src) {
         } else {
           const auto& e = node->inputs[idx];
           if (e.node->is_variable()) {
-            // monitor callback join operator name and variable name as observable node,
-            // utilize fact that we're using DFS and put variable name on stack to
-            // find operator node name for this variable node
-            calib_variables.emplace(e.node->attrs.name);
+            // monitor callback join operator name and variable name as observable node name,
+            // instead of using variable output we can use op node input
+            //
+            //                  data_output/fc_input
+            // e.g. data (var.) ----------------------> FC (op)
+            // remember current node and compare with inputs of next nodes
+            calib_variables.insert(node);
           } else {
             if (reverse_mirror_map.count(e.node)) {
               const auto& fp32_in_node = reverse_mirror_map.at(e.node);
