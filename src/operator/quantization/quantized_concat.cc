@@ -24,6 +24,7 @@
 */
 
 #include "../nn/concat-inl.h"
+#include "../numpy/np_matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -151,6 +152,28 @@ NNVM_REGISTER_OP(Concat)
     node->attrs.name = attrs.name;
   }
   node->attrs.dict = attrs.dict;
+  if (node->op() != nullptr && node->op()->attr_parser != nullptr) {
+    node->op()->attr_parser(&(node->attrs));
+  }
+  return node;
+});
+
+NNVM_REGISTER_OP(_npi_concatenate)
+.set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
+  const NumpyConcatenateParam& param = nnvm::get<NumpyConcatenateParam>(attrs.parsed);
+  nnvm::ObjectPtr node = nnvm::Node::Create();
+  if (param.axis.has_value() && param.axis.value() > 0) {
+    node->attrs.op = Op::Get("_contrib_quantized_concat");
+    node->attrs.name = "quantized_" + attrs.name;
+  } else {
+    LOG(INFO) << "Currently, quantized numpy concatenate only supports axis>0, exclude "
+              << attrs.name << " which axis is " << param.axis;
+    node->attrs.op = nullptr;
+    node->attrs.name = attrs.name;
+  }
+  node->attrs.dict = attrs.dict;
+  node->attrs.dict["dim"] = node->attrs.dict["axis"];
+  node->attrs.dict.erase("axis");
   if (node->op() != nullptr && node->op()->attr_parser != nullptr) {
     node->op()->attr_parser(&(node->attrs));
   }

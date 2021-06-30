@@ -21,7 +21,7 @@ import os
 import sys
 
 import mxnet as mx
-import numpy as np
+import numpy as onp
 from mxnet import gluon, init, nd
 from mxnet.gluon import data
 from mxnet.gluon.contrib.estimator import estimator
@@ -60,11 +60,11 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
         center = factor - 1
     else:
         center = factor - 0.5
-    og = np.ogrid[:kernel_size, :kernel_size]
+    og = onp.ogrid[:kernel_size, :kernel_size]
     filt = (1 - abs(og[0] - center) / factor) * (1 - abs(og[1] - center) / factor)
-    weight = np.zeros((in_channels, out_channels, kernel_size, kernel_size), dtype='float32')
+    weight = onp.zeros((in_channels, out_channels, kernel_size, kernel_size), dtype='float32')
     weight[range(in_channels), range(out_channels), :, :] = filt
-    return nd.array(weight)
+    return mx.np.array(weight)
 
 
 def get_net(model_name, context):
@@ -100,10 +100,10 @@ def test_estimator_cpu():
     context = mx.cpu()
     for model_name in models:
         net, input_shape, label_shape, loss_axis = get_net(model_name, context)
-        train_dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=input_shape),
-                                                        mx.nd.zeros(shape=label_shape))
-        val_dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=input_shape),
-                                                      mx.nd.zeros(shape=label_shape))
+        train_dataset = gluon.data.dataset.ArrayDataset(mx.np.random.uniform(size=input_shape),
+                                                        mx.np.zeros(shape=label_shape))
+        val_dataset = gluon.data.dataset.ArrayDataset(mx.np.random.uniform(size=input_shape),
+                                                      mx.np.zeros(shape=label_shape))
         loss = gluon.loss.SoftmaxCrossEntropyLoss(axis=loss_axis)
         train_data = gluon.data.DataLoader(train_dataset, batch_size=1)
         val_data = gluon.data.DataLoader(val_dataset, batch_size=1)
