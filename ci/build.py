@@ -291,12 +291,20 @@ def list_platforms() -> str:
     return "\nSupported platforms:\n{}".format('\n'.join(get_platforms()))
 
 
-def load_docker_cache(tag, docker_registry) -> None:
+def load_docker_cache(platform, tag, docker_registry) -> None:
     """Imports tagged container from the given docker registry"""
     if docker_registry:
-        # noinspection PyBroadException
+        if platform in DOCKER_COMPOSE_WHITELIST:
+            env = os.environ.copy()
+            env["DOCKER_CACHE_REGISTRY"] = docker_registry
+            cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', platform]
+            logging.info("Running command: 'DOCKER_CACHE_REGISTRY=%s %s'", docker_registry, ' '.join(cmd))
+            check_call(cmd, env=env)
+            return
+
         env = os.environ.copy()
         env["DOCKER_CACHE_REGISTRY"] = docker_registry
+        # noinspection PyBroadException
         try:
             import docker_cache
             logging.info('Docker cache download is enabled from registry %s', docker_registry)
@@ -398,8 +406,8 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-        if args.docker_registry and platform not in DOCKER_COMPOSE_WHITELIST:   
-            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
+        if args.docker_registry:   
+            load_docker_cache(platform=platform, tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
             build_docker(platform=platform, registry=args.docker_registry,
                          num_retries=args.docker_build_retries, no_cache=args.no_cache,
@@ -444,7 +452,7 @@ def main() -> int:
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
+            load_docker_cache(platform=platform, tag=tag, docker_registry=args.docker_registry)
             build_docker(platform, registry=args.docker_registry,
                          num_retries=args.docker_build_retries, no_cache=args.no_cache,
                          cache_intermediate=args.cache_intermediate)
