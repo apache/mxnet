@@ -791,17 +791,22 @@ class RNNFused(Initializer):
                     for _ in range(self.dir):
                         for connect in ['i2h', 'h2h', 'h2r']:
                             if connect != 'h2r' or param != 'bias':
-                                num_inputs = input_size
-                                if layer_num != 0:
-                                    num_inputs = self.projection_size * dir
-                                if connect == 'h2h':
-                                    num_inputs = self.projection_size
-                                shape0 = self.gates * self.num_hidden
-                                if param == 'weight':
-                                    cur_len = shape0 * num_inputs
+                                if connect == 'h2r':
+                                    cur_len = self.projection_size * self.num_hidden
                                     _mx_np.random.uniform(-self.scale, self.scale, \
                                         size=(cur_len,), dtype=dtype, out=arr[begin:begin+cur_len])
                                 else:
-                                    cur_len = shape0
-                                    arr[begin:begin+cur_len] = 0.0
+                                    num_inputs = input_size
+                                    if layer_num != 0:
+                                        num_inputs = self.projection_size * dir
+                                    if connect == 'h2h':
+                                        num_inputs = self.projection_size
+                                    shape0 = self.gates * self.num_hidden
+                                    if param == 'weight':
+                                        cur_len = shape0 * num_inputs
+                                        _mx_np.random.uniform(-self.scale, self.scale, \
+                                            size=(cur_len,), dtype=dtype, out=arr[begin:begin+cur_len])
+                                    else:
+                                        cur_len = shape0
+                                        arr[begin:begin+cur_len] = 0.0
                                 begin += cur_len

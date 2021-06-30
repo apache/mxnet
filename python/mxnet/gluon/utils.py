@@ -539,19 +539,25 @@ def split_rnn_params(param, mode, num_layers, input_size, hidden_size, bidirecti
                 for d in ['l', 'r'][:dir]:
                     for g in ['i2h', 'h2h', 'h2r']:
                         if g != 'h2r' or p != 'bias':
-                            ni = input_size
-                            if l != 0:
-                                ni = projection_size * dir
-                            if g == 'h2h':
-                                ni = projection_size
-                            shape0 = gates * hidden_size
-                            if p == 'weight':
-                                cur_len = shape0 * ni
+                            if g == 'h2r':
+                                cur_len = projection_size * hidden_size
                                 param_dict['{}{}_{}_{}'.format(d, l, g, p)] = \
-                                    param[begin:begin+cur_len].reshape(shape0, ni)
+                                    param[begin:begin+cur_len]. \
+                                        reshape(projection_size, hidden_size)
                             else:
-                                cur_len = shape0
-                                param_dict['{}{}_{}_{}'.format(d, l, g, p)] = \
-                                    param[begin:begin+cur_len].reshape(shape0,)
+                                ni = input_size
+                                if l != 0:
+                                    ni = projection_size * dir
+                                if g == 'h2h':
+                                    ni = projection_size
+                                shape0 = gates * hidden_size
+                                if p == 'weight':
+                                    cur_len = shape0 * ni
+                                    param_dict['{}{}_{}_{}'.format(d, l, g, p)] = \
+                                        param[begin:begin+cur_len].reshape(shape0, ni)
+                                else:
+                                    cur_len = shape0
+                                    param_dict['{}{}_{}_{}'.format(d, l, g, p)] = \
+                                        param[begin:begin+cur_len].reshape(shape0,)
                             begin += cur_len
     return param_dict

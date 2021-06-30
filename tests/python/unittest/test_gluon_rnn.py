@@ -100,10 +100,15 @@ def test_lstmp():
         fused_layer_params = fused_layer.collect_params()
         stack_layer_params = stack_layer.collect_params()
 
-        for name, value in fused_layer_params.items():
-            w = mx.np.random.uniform(size=value.shape)
-            value.set_data(w.copy())
-            stack_layer_params[name[1:].replace('_', '.', 1)].set_data(w.copy())
+        fused_weight_shape = fused_layer_params['rnn_param'].shape
+        print(fused_weight_shape)
+        w = mx.np.zeros(shape=fused_weight_shape)
+        fused_layer_params['rnn_param'].set_data(w.copy())
+        fused_layer_params_split = split_rnn_params(w.copy(), 'lstm', num_layers, input_size,\
+            hidden_size, False, projection_size=projection_size)
+
+        for name, value in fused_layer_params_split.items():
+            stack_layer_params[name[1:].replace('_', '.', 1)].set_data(value)
 
         fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
         stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
@@ -136,11 +141,15 @@ def test_lstmp():
         fused_layer_params = fused_layer.collect_params()
         stack_layer_params = stack_layer.collect_params()
 
-        for name, value in fused_layer_params.items():
-            w = mx.np.random.uniform(size=value.shape)
-            value.set_data(w.copy())
+        fused_weight_shape = fused_layer_params['rnn_param'].shape
+        w = mx.np.zeros(shape=fused_weight_shape)
+        fused_layer_params['rnn_param'].set_data(w.copy())
+        fused_layer_params_split = split_rnn_params(w.copy(), 'lstm', num_layers, input_size,\
+            hidden_size, True, projection_size=projection_size)
+
+        for name, value in fused_layer_params_split.items():
             cur = name.split("_")[0]
-            stack_layer_params["{}.{}_cell.{}".format(cur[1:], name[0], name[len(cur)+1:])].set_data(w.copy())
+            stack_layer_params["{}.{}_cell.{}".format(cur[1:], name[0], name[len(cur)+1:])].set_data(value)
 
         fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
         stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
@@ -985,7 +994,7 @@ def test_conv_fill_shape():
 
 
 @mx.util.use_np
-def test_lstmp():
+def test_lstmp_cell():
     nhid = 100
     nproj = 64
     cell = gluon.rnn.LSTMPCell(nhid, nproj)
