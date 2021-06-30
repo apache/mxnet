@@ -1168,12 +1168,13 @@ NDArray operator-(const NDArray& lhs, const real_t& rhs);
  * \param rhs right operand
  * \return a new result ndarray
  */
-NDArray operator*(const NDArray& lhs, const NDArray& rhs); /*!
-                                                            * \brief elementwise multiplication
-                                                            * \param lhs left operand
-                                                            * \param rhs right operand
-                                                            * \return a new result ndarray
-                                                            */
+NDArray operator*(const NDArray& lhs, const NDArray& rhs);
+/*!
+ * \brief elementwise multiplication
+ * \param lhs left operand
+ * \param rhs right operand
+ * \return a new result ndarray
+ */
 NDArray operator*(const NDArray& lhs, const real_t& rhs);
 /*!
  * \brief elementwise division
