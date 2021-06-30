@@ -91,13 +91,13 @@ class MKLDNNTransposeForward {
     if (data.IsMKLDNNData()) {
       this->data_->set_data_handle(data.GetMKLDNNData()->get_data_handle());
     } else {
-      MSHADOW_TYPE_SWITCH(
-          data.dtype(), DTYPE, { this->data_->set_data_handle(data.data().dptr<DTYPE>()); });
+      MSHADOW_TYPE_SWITCH(data.dtype(), DTYPE,
+                          { this->data_->set_data_handle(data.data().dptr<DTYPE>()); });
     }
 
     CHECK(!output.IsMKLDNNData());
-    MSHADOW_TYPE_SWITCH(
-        output.dtype(), DTYPE, { this->out_->set_data_handle(output.data().dptr<DTYPE>()); });
+    MSHADOW_TYPE_SWITCH(output.dtype(), DTYPE,
+                        { this->out_->set_data_handle(output.data().dptr<DTYPE>()); });
   }
 
   const mkldnn::reorder& GetFwd() const { return *transpose_; }
@@ -111,8 +111,8 @@ class MKLDNNTransposeForward {
   }
 };
 
-static MKLDNNTransposeForward& GetTransposeForward(
-    const TransposeParam& param, const NDArray& data) {
+static MKLDNNTransposeForward& GetTransposeForward(const TransposeParam& param,
+                                                   const NDArray& data) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNTransposeSignature, MKLDNNTransposeForward, OpHash>
       fwds;
@@ -132,9 +132,8 @@ static MKLDNNTransposeForward& GetTransposeForward(
   return it->second;
 }
 
-void MKLDNNTransposeForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& data, const OpReqType& req,
-    const NDArray& output) {
+void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& data,
+                            const OpReqType& req, const NDArray& output) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
 
   auto fwd = GetTransposeForward(param, data);

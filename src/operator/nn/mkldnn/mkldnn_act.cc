@@ -102,8 +102,9 @@ mkldnn::algorithm GetMKLDNNActAlgo(const LeakyReLUParam& param) {
   }
 }
 
-mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
-    const MKLDNNActParam& param, bool is_train, const mkldnn::memory& input_mem) {
+mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(const MKLDNNActParam& param,
+                                                          bool is_train,
+                                                          const mkldnn::memory& input_mem) {
   mkldnn::memory::desc data_md = input_mem.get_desc();
   auto cpu_engine              = CpuEngine::Get()->get_engine();
   auto alg                     = param.alg;
@@ -115,9 +116,8 @@ mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
 
 const inline mkldnn::eltwise_forward& MKLDNNActForward::GetFwd() const { return *fwd_; }
 
-MKLDNNActForward& GetActForward(
-    const MKLDNNActParam& param, const OpContext& ctx, const NDArray& in_data,
-    const mkldnn::memory& in_mem) {
+MKLDNNActForward& GetActForward(const MKLDNNActParam& param, const OpContext& ctx,
+                                const NDArray& in_data, const mkldnn::memory& in_mem) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNActSignature, MKLDNNActForward, OpHash> fwds;
 #else
@@ -136,9 +136,9 @@ MKLDNNActForward& GetActForward(
   return it->second;
 }
 
-void MKLDNNActivationForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& in_data,
-    const OpReqType& req, const NDArray& out_data) {
+void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                             const NDArray& in_data, const OpReqType& req,
+                             const NDArray& out_data) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   MKLDNNActParam param_;
   param_.alg               = GetMKLDNNActAlgo(param);
@@ -147,15 +147,14 @@ void MKLDNNActivationForward(
   auto input_mem           = in_buffer.GetMKLDNNData();
   MKLDNNActForward& fwd    = GetActForward(param_, ctx, in_buffer, *input_mem);
   auto out_mem_t           = CreateMKLDNNMem(out_data, fwd.fwd_pd.dst_desc(), req, &in_buffer);
-  stream->RegisterPrimArgs(
-      fwd.GetFwd(), {{MKLDNN_ARG_SRC, *input_mem}, {MKLDNN_ARG_DST, *out_mem_t.second}});
+  stream->RegisterPrimArgs(fwd.GetFwd(),
+                           {{MKLDNN_ARG_SRC, *input_mem}, {MKLDNN_ARG_DST, *out_mem_t.second}});
   CommitOutput(out_data, out_mem_t);
   stream->Submit();
 }
 
-void MKLDNNLeakyReluForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& in_data,
-    const OpReqType& req, const NDArray& out_data) {
+void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                            const NDArray& in_data, const OpReqType& req, const NDArray& out_data) {
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   MKLDNNActParam param_;
   param_.alg   = GetMKLDNNActAlgo(param);
@@ -169,22 +168,22 @@ void MKLDNNLeakyReluForward(
   auto input_mem        = in_buffer.GetMKLDNNData();
   MKLDNNActForward& fwd = GetActForward(param_, ctx, in_buffer, *input_mem);
   auto out_mem_t        = CreateMKLDNNMem(out_data, fwd.fwd_pd.dst_desc(), req, &in_buffer);
-  stream->RegisterPrimArgs(
-      fwd.GetFwd(), {{MKLDNN_ARG_SRC, *input_mem}, {MKLDNN_ARG_DST, *out_mem_t.second}});
+  stream->RegisterPrimArgs(fwd.GetFwd(),
+                           {{MKLDNN_ARG_SRC, *input_mem}, {MKLDNN_ARG_DST, *out_mem_t.second}});
   CommitOutput(out_data, out_mem_t);
   stream->Submit();
 }
 
-mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
-    const MKLDNNActParam& param, const mkldnn::memory& input_mem,
-    const mkldnn::memory& diff_dst_memory) {
+mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(const MKLDNNActParam& param,
+                                                           const mkldnn::memory& input_mem,
+                                                           const mkldnn::memory& diff_dst_memory) {
   mkldnn::memory::desc data_md = input_mem.get_desc();
   mkldnn::memory::desc diff_md = diff_dst_memory.get_desc();
   auto cpu_engine              = CpuEngine::Get()->get_engine();
   auto alg                     = param.alg;
 
-  mkldnn::eltwise_forward::desc fw_desc(
-      mkldnn::prop_kind::forward_training, alg, data_md, param.slope);
+  mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training, alg, data_md,
+                                        param.slope);
   mkldnn::eltwise_forward::primitive_desc fw_pdesc(fw_desc, cpu_engine);
   mkldnn::eltwise_backward::desc bw_desc(alg, diff_md, data_md, param.slope);
   mkldnn::eltwise_backward::primitive_desc bw_pdesc(bw_desc, cpu_engine, fw_pdesc);
@@ -193,9 +192,9 @@ mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
 
 const inline mkldnn::eltwise_backward& MKLDNNActBackward::GetBwd() const { return *bwd_prim_; }
 
-static inline MKLDNNActBackward& GetActBackward(
-    const MKLDNNActParam& param, const OpContext& ctx, const NDArray& in_data,
-    const NDArray& out_grad, const mkldnn::memory& in_mem) {
+static inline MKLDNNActBackward& GetActBackward(const MKLDNNActParam& param, const OpContext& ctx,
+                                                const NDArray& in_data, const NDArray& out_grad,
+                                                const mkldnn::memory& in_mem) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNActSignature, MKLDNNActBackward, OpHash> bwds;
 #else
@@ -215,9 +214,9 @@ static inline MKLDNNActBackward& GetActBackward(
 
 // For backward relu activation, it's okay to pass "out_data" as "in_data" to this
 // function, since the computation only involes non-zeros.
-void MKLDNNActivationBackward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                              const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
   if (req[0] == kNullOp) {
     return;
   }
@@ -249,9 +248,9 @@ void MKLDNNActivationBackward(
   stream->Submit();
 }
 
-void MKLDNNLeakyReluBackward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                             const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+                             const std::vector<NDArray>& outputs) {
   if (req[0] == kNullOp) {
     return;
   }

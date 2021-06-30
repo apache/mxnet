@@ -54,8 +54,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
   std::vector<const nnvm::Node*> matched_list_;
 
  public:
-  SgMKLDNNConvSelector(
-      int dis_all, int dis_conv_bn, int dis_conv_act, int dis_conv_sum, int quantize)
+  SgMKLDNNConvSelector(int dis_all, int dis_conv_bn, int dis_conv_act, int dis_conv_sum,
+                       int quantize)
       : disable_all_(dis_all),
         disable_conv_bn_(dis_conv_bn),
         disable_conv_act_(dis_conv_act),
@@ -161,8 +161,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list_.size(), 1);
-    auto new_selector = SgMKLDNNConvSelector(
-        disable_all_, disable_conv_bn_, disable_conv_act_, disable_conv_sum_, quantize_);
+    auto new_selector = SgMKLDNNConvSelector(disable_all_, disable_conv_bn_, disable_conv_act_,
+                                             disable_conv_sum_, quantize_);
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
@@ -187,8 +187,8 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     }
     return property;
   }
-  nnvm::ObjectPtr CreateSubgraphNode(
-      const nnvm::Symbol& sym, const int subgraph_id = 0) const override {
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
+                                     const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
     // This op has single output, remove duplicated.
     auto last_node = sym.outputs[0].node;
@@ -235,17 +235,16 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     return selector;
   }
 
-  void ConnectSubgraphOutputs(
-      const nnvm::ObjectPtr n, std::vector<nnvm::NodeEntry*>* output_entries) const override {
+  void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
+                              std::vector<nnvm::NodeEntry*>* output_entries) const override {
     // Connect all extern output entries to output[0]
     for (size_t i = 0; i < output_entries->size(); ++i) {
       *output_entries->at(i) = nnvm::NodeEntry{n, 0, 0};
     }
   }
 
-  void ConnectSubgraphInputs(
-      const nnvm::ObjectPtr n, std::vector<nnvm::NodeEntry*>* input_entries,
-      std::vector<nnvm::NodeEntry>* orig_input_entries) const override {
+  void ConnectSubgraphInputs(const nnvm::ObjectPtr n, std::vector<nnvm::NodeEntry*>* input_entries,
+                             std::vector<nnvm::NodeEntry>* orig_input_entries) const override {
     auto sym = n->attrs.subgraphs[0];
     std::unordered_set<const nnvm::Node*> node_sets;
     DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr& node) {
@@ -260,9 +259,8 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
           node->inputs[1] = node->inputs[0];
           node->inputs[0] = tmp;
           std::rotate(input_entries->begin(), input_entries->begin() + 1, input_entries->end());
-          std::rotate(
-              orig_input_entries->begin(), orig_input_entries->begin() + 1,
-              orig_input_entries->end());
+          std::rotate(orig_input_entries->begin(), orig_input_entries->begin() + 1,
+                      orig_input_entries->end());
         }
       }
     });

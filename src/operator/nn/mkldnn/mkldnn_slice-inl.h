@@ -52,12 +52,11 @@ class MKLDNNSliceFwd {
 };
 
 typedef ParamOpSign<SliceParam> MKLDNNSliceSignature;
-MKLDNNSliceFwd& GetSliceForward(
-    const SliceParam& param, const bool is_train, const NDArray& in_data, const NDArray& out_data);
+MKLDNNSliceFwd& GetSliceForward(const SliceParam& param, const bool is_train,
+                                const NDArray& in_data, const NDArray& out_data);
 
-void MKLDNNSlice(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& in, OpReqType req,
-    const NDArray& out);
+void MKLDNNSlice(const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& in,
+                 OpReqType req, const NDArray& out);
 
 }  // namespace op
 }  // namespace mxnet

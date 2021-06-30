@@ -41,8 +41,8 @@ inline mkldnn::algorithm GetMKLDNNLRNAlgo(const LRNParam& param) {
   return mkldnn::algorithm::lrn_across_channels;
 }
 
-inline mkldnn::lrn_forward::primitive_desc GetLRNFwdDesc(
-    const LRNParam& param, const bool is_train, const mkldnn::memory::desc& src_md) {
+inline mkldnn::lrn_forward::primitive_desc GetLRNFwdDesc(const LRNParam& param, const bool is_train,
+                                                         const mkldnn::memory::desc& src_md) {
   mkldnn::engine& engine      = CpuEngine::Get()->get_engine();
   const mkldnn::algorithm alg = GetMKLDNNLRNAlgo(param);
   const float alpha           = param.alpha;
@@ -84,8 +84,8 @@ class MKLDNNLRNFwd {
 
   ~MKLDNNLRNFwd() {}
 
-  void Execute(
-      const OpContext& ctx, const NDArray& in_data, const OpReqType req, const NDArray& out_data);
+  void Execute(const OpContext& ctx, const NDArray& in_data, const OpReqType req,
+               const NDArray& out_data);
 
   mkldnn::lrn_forward& GetFwd();
   const mkldnn::memory* GetWs();
@@ -106,8 +106,8 @@ void MKLDNNLRNFwd::_Init(const LRNParam& param, bool is_train, const NDArray& in
   this->fwd = std::shared_ptr<mkldnn::lrn_forward>(new mkldnn::lrn_forward(this->fwd_pd));
 }
 
-void MKLDNNLRNFwd::Execute(
-    const OpContext& ctx, const NDArray& in_data, const OpReqType req, const NDArray& out_data) {
+void MKLDNNLRNFwd::Execute(const OpContext& ctx, const NDArray& in_data, const OpReqType req,
+                           const NDArray& out_data) {
   auto output_mem_t = CreateMKLDNNMem(out_data, (this->fwd_pd).dst_desc(), req);
 
   mkldnn_args_map_t args = {
@@ -130,8 +130,8 @@ mkldnn::lrn_forward::primitive_desc& MKLDNNLRNFwd::GetFwdPd() { return this->fwd
 
 // End of LRN Class and its functions
 
-static MKLDNNLRNFwd& GetLRNFwd(
-    const LRNParam& param, const OpContext& ctx, const NDArray& in_data) {
+static MKLDNNLRNFwd& GetLRNFwd(const LRNParam& param, const OpContext& ctx,
+                               const NDArray& in_data) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNLRNSignature, MKLDNNLRNFwd, OpHash> lrn_fwds;
 #else
@@ -152,9 +152,8 @@ static MKLDNNLRNFwd& GetLRNFwd(
   return it->second;
 }
 
-void MKLDNNLRNForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& in_data, const OpReqType req,
-    const NDArray& out_data) {
+void MKLDNNLRNForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& in_data,
+                      const OpReqType req, const NDArray& out_data) {
   const LRNParam& param = nnvm::get<LRNParam>(attrs.parsed);
   auto in_buffer        = in_data;
   if (in_buffer.IsView() && in_buffer.IsMKLDNNData()) in_buffer = in_buffer.Reorder2Default();
@@ -172,9 +171,8 @@ class MKLDNNLRNBwd {
 
   ~MKLDNNLRNBwd() {}
 
-  MKLDNNLRNBwd(
-      const LRNParam& param, const mkldnn::memory::desc in_data_md,
-      const mkldnn::memory::desc diff_md)
+  MKLDNNLRNBwd(const LRNParam& param, const mkldnn::memory::desc in_data_md,
+               const mkldnn::memory::desc diff_md)
       : fwd_pd(GetLRNFwdDesc(param, true, in_data_md)),
         bwd_pd(GetLRNBwdDesc(param, in_data_md, diff_md, this->fwd_pd)) {
     bwd = std::make_shared<mkldnn::lrn_backward>(bwd_pd);
@@ -182,25 +180,22 @@ class MKLDNNLRNBwd {
 
   const mkldnn::lrn_backward& GetBwd() const { return *bwd; }
 
-  void Execute(
-      const NDArray& out_grad, const NDArray& in_data, const NDArray& in_grad,
-      const mkldnn_output_t& diff_src_mem) {
+  void Execute(const NDArray& out_grad, const NDArray& in_data, const NDArray& in_grad,
+               const mkldnn_output_t& diff_src_mem) {
     auto engine    = CpuEngine::Get()->get_engine();
     auto workspace = std::make_shared<mkldnn::memory>((this->fwd_pd).workspace_desc(), engine);
-    mkldnn_args_map_t args = {
-        {MKLDNN_ARG_SRC, *in_data.GetMKLDNNData()},
-        {MKLDNN_ARG_DIFF_DST, *out_grad.GetMKLDNNData()},
-        {MKLDNN_ARG_WORKSPACE, *workspace},
-        {MKLDNN_ARG_DIFF_SRC, *diff_src_mem.second}};
+    mkldnn_args_map_t args = {{MKLDNN_ARG_SRC, *in_data.GetMKLDNNData()},
+                              {MKLDNN_ARG_DIFF_DST, *out_grad.GetMKLDNNData()},
+                              {MKLDNN_ARG_WORKSPACE, *workspace},
+                              {MKLDNN_ARG_DIFF_SRC, *diff_src_mem.second}};
     MKLDNNStream::Get()->RegisterPrimArgs(*(this->bwd), args);
     CommitOutput(in_grad, diff_src_mem);
     MKLDNNStream::Get()->Submit();
   }
 };  // End of LRN Class
 
-static MKLDNNLRNBwd& GetLRNBwd(
-    const LRNParam& param, const NDArray& in_data, const NDArray& in_grad,
-    const NDArray& out_grad) {
+static MKLDNNLRNBwd& GetLRNBwd(const LRNParam& param, const NDArray& in_data,
+                               const NDArray& in_grad, const NDArray& out_grad) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNLRNSignature, MKLDNNLRNBwd, OpHash> lrn_bwds;
 #else
@@ -221,9 +216,9 @@ static MKLDNNLRNBwd& GetLRNBwd(
   return it->second;
 }
 
-void MKLDNNLRNBackward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+void MKLDNNLRNBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                       const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+                       const std::vector<NDArray>& outputs) {
   if (req[0] == kNullOp) {
     return;
   }

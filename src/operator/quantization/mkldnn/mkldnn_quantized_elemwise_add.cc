@@ -43,9 +43,9 @@ class MKLDNNQuantizedElemwiseAddFwd {
  public:
   mkldnn::sum::primitive_desc fwd_pd;
 
-  MKLDNNQuantizedElemwiseAddFwd(
-      const mkldnn::memory::desc& output_desc, const std::vector<float>& scales,
-      const std::vector<mkldnn::memory::desc>& data_md)
+  MKLDNNQuantizedElemwiseAddFwd(const mkldnn::memory::desc& output_desc,
+                                const std::vector<float>& scales,
+                                const std::vector<mkldnn::memory::desc>& data_md)
       : fwd_pd(output_desc, scales, data_md, CpuEngine::Get()->get_engine()) {
     fwd_ = std::make_shared<mkldnn::sum>(fwd_pd);
     data_.resize(data_md.size());
@@ -87,9 +87,10 @@ static MKLDNNQuantizedElemwiseAddFwd& GetQuantizedElemwiseAddForward(
   return it->second;
 }
 
-static void MKLDNNQuantizedElemwiseAddForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& in_data,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& out_data) {
+static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                                              const std::vector<NDArray>& in_data,
+                                              const std::vector<OpReqType>& req,
+                                              const std::vector<NDArray>& out_data) {
   const QuantizeElemwiseAddParam& params = nnvm::get<QuantizeElemwiseAddParam>(attrs.parsed);
   // A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_data.size(), 6U) << "should be A, B, A_min, A_max, B_min, B_max";
@@ -206,12 +207,11 @@ static void MKLDNNQuantizedElemwiseAddForward(
       mkldnn::memory::desc(i_dims, output_data_type, mkldnn::memory::format_tag::any);
   MKLDNNQuantizedElemwiseAddFwd& fwd =
       GetQuantizedElemwiseAddForward(output_desc, scales, in_data, out_data, in_desc);
-  auto mem = CreateMKLDNNMem(
-      out_data[quantized_elemwise_add_enum::kOut], fwd.fwd_pd.dst_desc(), req[0], &in_data[0]);
-  mkldnn_args_map_t args(
-      {{MKLDNN_ARG_MULTIPLE_SRC, *dataA_mem},
-       {MKLDNN_ARG_MULTIPLE_SRC + 1, *dataB_mem},
-       {MKLDNN_ARG_DST, *mem.second}});
+  auto mem = CreateMKLDNNMem(out_data[quantized_elemwise_add_enum::kOut], fwd.fwd_pd.dst_desc(),
+                             req[0], &in_data[0]);
+  mkldnn_args_map_t args({{MKLDNN_ARG_MULTIPLE_SRC, *dataA_mem},
+                          {MKLDNN_ARG_MULTIPLE_SRC + 1, *dataB_mem},
+                          {MKLDNN_ARG_DST, *mem.second}});
   MKLDNNStream* stream = MKLDNNStream::Get();
   stream->RegisterPrimArgs(fwd.GetFwd(), args);
   CommitOutput(out_data[quantized_elemwise_add_enum::kOut], mem);
@@ -221,9 +221,9 @@ static void MKLDNNQuantizedElemwiseAddForward(
   out_data[quantized_elemwise_add_enum::kMax].data().dptr<float>()[0] = output_max;
 }
 
-inline static bool ElemwiseAddStorageType(
-    const nnvm::NodeAttrs& attrs, const int dev_mask, DispatchMode* dispatch_mode,
-    std::vector<int>* in_attrs, std::vector<int>* out_attrs) {
+inline static bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+                                          DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                          std::vector<int>* out_attrs) {
   // Check num of inputs: A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_attrs->size(), 6U);
   // Check num of outputs: C, C_min, C_max

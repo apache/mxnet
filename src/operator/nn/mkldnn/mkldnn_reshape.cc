@@ -32,8 +32,8 @@
 namespace mxnet {
 namespace op {
 
-MKLDNNReshapeFwd::MKLDNNReshapeFwd(
-    const OpReqType& req, const NDArray& input, const NDArray& output) {
+MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType& req, const NDArray& input,
+                                   const NDArray& output) {
   const auto engine = CpuEngine::Get()->get_engine();
   auto in_mem       = input.GetMKLDNNData();
 
@@ -63,8 +63,8 @@ MKLDNNReshapeFwd::MKLDNNReshapeFwd(
 
 int MKLDNNReshapeFwd::GetWorkspaceSize() { return temp_ ? temp_->get_desc().get_size() : 0; }
 
-void MKLDNNReshapeFwd::Execute(
-    const NDArray& input, const NDArray& output, const OpReqType& req, void* workspace) {
+void MKLDNNReshapeFwd::Execute(const NDArray& input, const NDArray& output, const OpReqType& req,
+                               void* workspace) {
   auto stream = MKLDNNStream::Get();
   auto in_mem = input.GetMKLDNNData();
   // register primitives and arguments
@@ -90,8 +90,8 @@ void MKLDNNReshapeFwd::Execute(
   const_cast<NDArray&>(output).InvalidateMKLDNNData();
 }
 
-MKLDNNReshapeFwd& GetReshapeForward(
-    const OpReqType& req, const NDArray& input, const NDArray& output) {
+MKLDNNReshapeFwd& GetReshapeForward(const OpReqType& req, const NDArray& input,
+                                    const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNReshapeSignature, MKLDNNReshapeFwd, OpHash> fwds;
 #else
@@ -109,9 +109,8 @@ MKLDNNReshapeFwd& GetReshapeForward(
   return it->second;
 }
 
-void MKLDNNReshapeForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& input, const OpReqType& req,
-    const NDArray& output) {
+void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& input,
+                          const OpReqType& req, const NDArray& output) {
   // For mkldnn non-supported input, it shouldn't hold mkldnn memory, so let's simply fallback to
   // naive implement.
   const int input_ndims = input.shape().ndim();

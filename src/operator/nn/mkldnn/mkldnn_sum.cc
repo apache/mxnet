@@ -75,9 +75,9 @@ class MKLDNNSumFwd {
   std::shared_ptr<mkldnn::sum> fwd_;
 };
 
-static MKLDNNSumFwd& GetSumForward(
-    const std::vector<float>& scales, const std::vector<NDArray>& in_data,
-    const std::vector<mkldnn::memory::desc>& data_md) {
+static MKLDNNSumFwd& GetSumForward(const std::vector<float>& scales,
+                                   const std::vector<NDArray>& in_data,
+                                   const std::vector<mkldnn::memory::desc>& data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<OpSignature, MKLDNNSumFwd, OpHash> fwds;
 #else
@@ -94,9 +94,9 @@ static MKLDNNSumFwd& GetSumForward(
   return it->second;
 }
 
-void MKLDNNSumForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                      const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   const int num_inputs    = inputs.size();
   const NDArray& out_data = outputs[0];

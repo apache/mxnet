@@ -36,19 +36,17 @@ namespace op {
 
 class MKLDNNPoolingFwd {
  public:
-  MKLDNNPoolingFwd(
-      const mxnet::NDArray& input, const mxnet::NDArray& output, const mkldnn::memory::dims& kernel,
-      const mkldnn::memory::dims& strides, const mkldnn::memory::dims& pad_l,
-      const mkldnn::memory::dims& pad_r, const mkldnn::algorithm alg_kind,
-      const bool with_workspace, const bool is_train)
+  MKLDNNPoolingFwd(const mxnet::NDArray& input, const mxnet::NDArray& output,
+                   const mkldnn::memory::dims& kernel, const mkldnn::memory::dims& strides,
+                   const mkldnn::memory::dims& pad_l, const mkldnn::memory::dims& pad_r,
+                   const mkldnn::algorithm alg_kind, const bool with_workspace, const bool is_train)
       : with_workspace_(with_workspace), fwd_(nullptr) {
     Init(input, output, kernel, strides, pad_l, pad_r, is_train, alg_kind);
   }
 
   ~MKLDNNPoolingFwd() {}
-  void Execute(
-      const NDArray& in_data, const OpReqType req, const NDArray& out_data,
-      const NDArray* workspace);
+  void Execute(const NDArray& in_data, const OpReqType req, const NDArray& out_data,
+               const NDArray* workspace);
 
  private:
   bool with_workspace_;
@@ -57,10 +55,10 @@ class MKLDNNPoolingFwd {
   std::shared_ptr<mkldnn::pooling_forward> fwd_;
 
  private:
-  void Init(
-      const mxnet::NDArray& input, const mxnet::NDArray& output, const mkldnn::memory::dims& kernel,
-      const mkldnn::memory::dims& strides, const mkldnn::memory::dims& pad_l,
-      const mkldnn::memory::dims& pad_r, const bool is_train, const mkldnn::algorithm alg_kind);
+  void Init(const mxnet::NDArray& input, const mxnet::NDArray& output,
+            const mkldnn::memory::dims& kernel, const mkldnn::memory::dims& strides,
+            const mkldnn::memory::dims& pad_l, const mkldnn::memory::dims& pad_r,
+            const bool is_train, const mkldnn::algorithm alg_kind);
 };
 
 class MKLDNNPoolingBwd {
@@ -112,17 +110,17 @@ inline bool SupportMKLDNNPooling(const PoolingParam& param, const NDArray& input
       bool is_symmetric = true;
       switch (ndim) {
         case 5:
-          is_symmetric = is_symmetric && (param.pad[2] == GetPaddingSizeFull(
-                                                              dshape[4], param.pad[2], param.pad[2],
-                                                              param.kernel[2], param.stride[2]));
+          is_symmetric = is_symmetric &&
+                         (param.pad[2] == GetPaddingSizeFull(dshape[4], param.pad[2], param.pad[2],
+                                                             param.kernel[2], param.stride[2]));
         case 4:
-          is_symmetric = is_symmetric && (param.pad[1] == GetPaddingSizeFull(
-                                                              dshape[3], param.pad[1], param.pad[1],
-                                                              param.kernel[1], param.stride[1]));
+          is_symmetric = is_symmetric &&
+                         (param.pad[1] == GetPaddingSizeFull(dshape[3], param.pad[1], param.pad[1],
+                                                             param.kernel[1], param.stride[1]));
         case 3:
-          is_symmetric = is_symmetric && (param.pad[0] == GetPaddingSizeFull(
-                                                              dshape[2], param.pad[0], param.pad[0],
-                                                              param.kernel[0], param.stride[0]));
+          is_symmetric = is_symmetric &&
+                         (param.pad[0] == GetPaddingSizeFull(dshape[2], param.pad[0], param.pad[0],
+                                                             param.kernel[0], param.stride[0]));
       }
       return is_symmetric;
     }
@@ -135,15 +133,15 @@ inline bool MKLDNNRequireWorkspace(const PoolingParam& param) {
 }
 
 typedef ParamOpSign<PoolingParam> MKLDNNPoolingSignature;
-void MKLDNNPoolingCompute(
-    const OpContext& ctx, const PoolingParam& param, const NDArray& in_data, const OpReqType req,
-    const NDArray& out_data, const NDArray* workspace);
+void MKLDNNPoolingCompute(const OpContext& ctx, const PoolingParam& param, const NDArray& in_data,
+                          const OpReqType req, const NDArray& out_data, const NDArray* workspace);
 
-void MKLDNNPoolingGradCompute(
-    const OpContext& ctx, const PoolingParam& param, const NDArray& out_grad,
-    const NDArray& in_data, const NDArray* workspace, const OpReqType req, const NDArray& in_grad);
-MKLDNNPoolingFwd& GetPoolingFwd(
-    const PoolingParam& param, const bool is_train, const NDArray& data, const NDArray& output);
+void MKLDNNPoolingGradCompute(const OpContext& ctx, const PoolingParam& param,
+                              const NDArray& out_grad, const NDArray& in_data,
+                              const NDArray* workspace, const OpReqType req,
+                              const NDArray& in_grad);
+MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param, const bool is_train, const NDArray& data,
+                                const NDArray& output);
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1

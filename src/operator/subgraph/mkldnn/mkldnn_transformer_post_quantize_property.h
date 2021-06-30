@@ -138,8 +138,8 @@ class SgMKLDNNTransformerPostQuantizeProperty : public SubgraphProperty {
     return property;
   }
 
-  nnvm::ObjectPtr CreateSubgraphNode(
-      const nnvm::Symbol& sym, const int subgraph_id = 0) const override {
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
+                                     const int subgraph_id = 0) const override {
     nnvm::ObjectPtr interleaved_node = nullptr;
     nnvm::ObjectPtr requantize_node  = nullptr;
     nnvm::ObjectPtr dequantize_node  = nullptr;
@@ -178,8 +178,8 @@ class SgMKLDNNTransformerPostQuantizeProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgMKLDNNTransformerPostQuantizeSelector>(
-        disable_fuse_all, disable_float_output);
+    auto selector = std::make_shared<SgMKLDNNTransformerPostQuantizeSelector>(disable_fuse_all,
+                                                                              disable_float_output);
     return selector;
   }
 

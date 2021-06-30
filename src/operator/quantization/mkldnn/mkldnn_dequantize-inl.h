@@ -39,9 +39,8 @@ class SgMKLDNNDequantizeOperator {
   explicit SgMKLDNNDequantizeOperator(const nnvm::NodeAttrs& attrs)
       : param_(nnvm::get<DequantizeParam>(attrs.parsed)) {}
 
-  void Forward(
-      const OpContext& ctx, const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
-      const std::vector<NDArray>& outputs);
+  void Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
 
  private:
   bool initialized_{false};
@@ -53,9 +52,9 @@ class SgMKLDNNDequantizeOperator {
   std::shared_ptr<mkldnn::reorder> fwd_pd_;
 };
 
-void SgMKLDNNDequantizeOperator::Forward(
-    const OpContext& ctx, const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
-    const std::vector<NDArray>& outputs) {
+void SgMKLDNNDequantizeOperator::Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<NDArray>& outputs) {
   NDArray in_buffer = inputs[0];
   if (inputs[0].IsView() && inputs[0].IsMKLDNNData()) in_buffer = inputs[0].Reorder2Default();
   auto i_mem     = in_buffer.GetMKLDNNData();
@@ -107,9 +106,10 @@ void SgMKLDNNDequantizeOperator::Forward(
   MKLDNNStream::Get()->Submit();
 }
 
-static void SgMKLDNNDequantizeForward(
-    const OpStatePtr& state_ptr, const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+static void SgMKLDNNDequantizeForward(const OpStatePtr& state_ptr, const OpContext& ctx,
+                                      const std::vector<NDArray>& inputs,
+                                      const std::vector<OpReqType>& req,
+                                      const std::vector<NDArray>& outputs) {
   SgMKLDNNDequantizeOperator& op = state_ptr.get_state<SgMKLDNNDequantizeOperator>();
   op.Forward(ctx, inputs, req, outputs);
 }

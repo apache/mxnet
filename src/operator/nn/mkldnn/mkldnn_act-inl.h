@@ -48,15 +48,16 @@ struct MKLDNNActParam {
 mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param);
 mkldnn::algorithm GetMKLDNNActAlgo(const LeakyReLUParam& param);
 
-mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
-    const MKLDNNActParam& param, bool is_train, const mkldnn::memory& input_mem);
+mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(const MKLDNNActParam& param,
+                                                          bool is_train,
+                                                          const mkldnn::memory& input_mem);
 
 class MKLDNNActForward {
  public:
   const mkldnn::eltwise_forward::primitive_desc fwd_pd;
 
-  MKLDNNActForward(
-      const MKLDNNActParam& param, bool is_train, const NDArray& data, const mkldnn::memory& mem)
+  MKLDNNActForward(const MKLDNNActParam& param, bool is_train, const NDArray& data,
+                   const mkldnn::memory& mem)
       : fwd_pd(GetActFwdDescImpl(param, is_train, mem)) {
     fwd_ = std::make_shared<mkldnn::eltwise_forward>(fwd_pd);
   }
@@ -67,21 +68,19 @@ class MKLDNNActForward {
 };
 
 typedef ParamOpSign<MKLDNNActParam> MKLDNNActSignature;
-MKLDNNActForward& GetActForward(
-    const MKLDNNActParam& param, const OpContext& ctx, const NDArray& in_data,
-    const mkldnn::memory& in_mem);
+MKLDNNActForward& GetActForward(const MKLDNNActParam& param, const OpContext& ctx,
+                                const NDArray& in_data, const mkldnn::memory& in_mem);
 
-mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
-    const MKLDNNActParam& param, const mkldnn::memory& input_mem,
-    const mkldnn::memory& diff_dst_memory);
+mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(const MKLDNNActParam& param,
+                                                           const mkldnn::memory& input_mem,
+                                                           const mkldnn::memory& diff_dst_memory);
 
 class MKLDNNActBackward {
  public:
   const mkldnn::eltwise_backward::primitive_desc bwd_pd;
 
-  explicit MKLDNNActBackward(
-      const MKLDNNActParam& param, const NDArray& data, const mkldnn::memory& mem,
-      const mkldnn::memory& diff_dst_memory)
+  explicit MKLDNNActBackward(const MKLDNNActParam& param, const NDArray& data,
+                             const mkldnn::memory& mem, const mkldnn::memory& diff_dst_memory)
       : bwd_pd(GetActBwdDescImpl(param, mem, diff_dst_memory)) {
     bwd_prim_ = std::make_shared<mkldnn::eltwise_backward>(bwd_pd);
   }

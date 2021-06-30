@@ -62,9 +62,8 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
         new_node.attrs.dict.count("max_calib_range") != 0) {
       matched_list_.push_back(&snew_node);
       return true;
-    } else if (
-        new_node.op() == Op::Get("_contrib_quantized_concat") ||
-        new_node.op() == Op::Get("_contrib_quantized_pooling")) {
+    } else if (new_node.op() == Op::Get("_contrib_quantized_concat") ||
+               new_node.op() == Op::Get("_contrib_quantized_pooling")) {
       visit_list_.insert(&new_node);
       return true;
     }
@@ -141,9 +140,9 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
    * conv1 to conv4. Then concat don't need extra scale alignment operation. Performance and
    * accuracy are both improved.
    */
-  void AdjustSubgraphNode(
-      const std::vector<nnvm::Node*>& subgraph_nodes,
-      const SubgraphSelectorV2Ptr& subgraph_selector, const int subgraph_id = 0) const override {
+  void AdjustSubgraphNode(const std::vector<nnvm::Node*>& subgraph_nodes,
+                          const SubgraphSelectorV2Ptr& subgraph_selector,
+                          const int subgraph_id = 0) const override {
     float min_calib = 0.0f;
     float max_calib = 0.0f;
     for (size_t i = 0; i < subgraph_nodes.size(); ++i) {

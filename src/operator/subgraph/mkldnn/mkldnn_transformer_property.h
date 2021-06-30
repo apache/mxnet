@@ -71,8 +71,8 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
     return property;
   }
 
-  nnvm::ObjectPtr CreateSubgraphNode(
-      const nnvm::Symbol& sym, const int subgraph_id = 0) const override {
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
+                                     const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
     // This op has single output, remove duplicated.
     auto last_node = sym.outputs[0].node;
@@ -105,8 +105,8 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
     return selector;
   }
 
-  void ConnectSubgraphOutputs(
-      const nnvm::ObjectPtr n, std::vector<nnvm::NodeEntry*>* output_entries) const override {
+  void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
+                              std::vector<nnvm::NodeEntry*>* output_entries) const override {
     // Connect all extern output entries to output[0]
     for (size_t i = 0; i < output_entries->size(); ++i) {
       auto entry_ptr = output_entries->at(i);

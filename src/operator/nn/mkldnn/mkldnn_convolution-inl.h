@@ -84,9 +84,8 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
 
 class MKLDNNConvForward {
  public:
-  MKLDNNConvForward(
-      const MKLDNNConvFullParam& param, const bool is_train, const NDArray& data,
-      const NDArray& weight, const NDArray* bias, const NDArray& output);
+  MKLDNNConvForward(const MKLDNNConvFullParam& param, const bool is_train, const NDArray& data,
+                    const NDArray& weight, const NDArray* bias, const NDArray& output);
 
   const mkldnn::convolution_forward& GetFwd() const { return *fwd_; }
 
@@ -99,24 +98,25 @@ class MKLDNNConvForward {
 
 typedef ParamOpSign<ConvolutionParam> MKLDNNConvSignature;
 
-MKLDNNConvForward& GetConvFwd(
-    const MKLDNNConvFullParam& param, const bool is_train, const NDArray& data,
-    const NDArray& weight, const NDArray* bias, const NDArray& output);
+MKLDNNConvForward& GetConvFwd(const MKLDNNConvFullParam& param, const bool is_train,
+                              const NDArray& data, const NDArray& weight, const NDArray* bias,
+                              const NDArray& output);
 
-void MKLDNNConvolutionForwardFullFeature(
-    const MKLDNNConvFullParam& param, const OpContext& ctx, MKLDNNConvForward* fwd,
-    const std::vector<NDArray>& in_data, const std::vector<OpReqType>& req,
-    const std::vector<NDArray>& out_data);
+void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam& param, const OpContext& ctx,
+                                         MKLDNNConvForward* fwd,
+                                         const std::vector<NDArray>& in_data,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<NDArray>& out_data);
 
-void MKLDNNConvolutionForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& in_data,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& out_data);
+void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                              const std::vector<NDArray>& in_data,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& out_data);
 
 class MKLDNNConvBackward {
  public:
-  MKLDNNConvBackward(
-      const MKLDNNConvFullParam& param, const NDArray& data, const NDArray& weight,
-      const NDArray* bias, const NDArray& output);
+  MKLDNNConvBackward(const MKLDNNConvFullParam& param, const NDArray& data, const NDArray& weight,
+                     const NDArray* bias, const NDArray& output);
 
   const mkldnn::convolution_backward_data& GetBwdData() const { return *bwd_data_; }
 

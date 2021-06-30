@@ -31,9 +31,10 @@
 namespace mxnet {
 namespace op {
 
-void MKLDNNQuantizedFullyConnectedForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& in_data,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& out_data) {
+void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                                          const std::vector<NDArray>& in_data,
+                                          const std::vector<OpReqType>& req,
+                                          const std::vector<NDArray>& out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   FullyConnectedParam param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const size_t num_inputs   = param.no_bias ? 2 : 3;

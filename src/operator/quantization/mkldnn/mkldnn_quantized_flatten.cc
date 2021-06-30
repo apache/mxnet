@@ -30,17 +30,18 @@
 namespace mxnet {
 namespace op {
 
-inline static bool FlattenStorageType(
-    const nnvm::NodeAttrs& attrs, const int dev_mask, DispatchMode* dispatch_mode,
-    std::vector<int>* in_attrs, std::vector<int>* out_attrs) {
+inline static bool FlattenStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+                                      DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                      std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
-static void MKLDNNQuantizedFlattenForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+static void MKLDNNQuantizedFlattenForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                                          const std::vector<NDArray>& inputs,
+                                          const std::vector<OpReqType>& req,
+                                          const std::vector<NDArray>& outputs) {
   MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
   outputs[1].data().dptr<float>()[0] = inputs[1].data().dptr<float>()[0];
   outputs[2].data().dptr<float>()[0] = inputs[2].data().dptr<float>()[0];
@@ -49,11 +50,10 @@ static void MKLDNNQuantizedFlattenForward(
 NNVM_REGISTER_OP(_contrib_quantized_flatten)
     .set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
     .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedFlattenForward)
-    .set_attr<FResourceRequest>(
-        "FResourceRequest",
-        [](const NodeAttrs& n) {
-          return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-        })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
     .set_attr<bool>("TIsMKLDNN", true);
 
 }  // namespace op

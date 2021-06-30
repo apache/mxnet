@@ -40,9 +40,8 @@ class SgMKLDNNQuantizeOperator {
   explicit SgMKLDNNQuantizeOperator(const nnvm::NodeAttrs& attrs)
       : param_(nnvm::get<QuantizeV2Param>(attrs.parsed)) {}
 
-  void Forward(
-      const OpContext& ctx, const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
-      const std::vector<NDArray>& outputs);
+  void Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
 
  private:
   bool initalized_{false};
@@ -180,9 +179,10 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
   }
 }
 
-static void SgMKLDNNQuantizeForward(
-    const OpStatePtr& state_ptr, const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+static void SgMKLDNNQuantizeForward(const OpStatePtr& state_ptr, const OpContext& ctx,
+                                    const std::vector<NDArray>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<NDArray>& outputs) {
   SgMKLDNNQuantizeOperator& op = state_ptr.get_state<SgMKLDNNQuantizeOperator>();
   op.Forward(ctx, inputs, req, outputs);
 }

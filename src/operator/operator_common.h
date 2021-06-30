@@ -307,9 +307,8 @@ inline bool dispatch_mode_assign(DispatchMode* y, const DispatchMode& x) {
 /*! \brief assign stype to target_stype, if successful,
  *         assign dispatch_mode to target_dispatch
  */
-inline bool storage_type_assign(
-    int* stype, const NDArrayStorageType target_stype, DispatchMode* dispatch,
-    const DispatchMode target_dispatch) {
+inline bool storage_type_assign(int* stype, const NDArrayStorageType target_stype,
+                                DispatchMode* dispatch, const DispatchMode target_dispatch) {
   if (type_assign(stype, target_stype)) {
     DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
     return true;
@@ -320,9 +319,8 @@ inline bool storage_type_assign(
 /*! \brief assign the stype vector to target_stype, if successful,
  *         assign dispatch_mode to target_dispatch
  */
-inline bool storage_type_assign(
-    StorageTypeVector* stypes, const NDArrayStorageType target_stype, DispatchMode* dispatch,
-    const DispatchMode target_dispatch) {
+inline bool storage_type_assign(StorageTypeVector* stypes, const NDArrayStorageType target_stype,
+                                DispatchMode* dispatch, const DispatchMode target_dispatch) {
   CHECK_GT(stypes->size(), 0);
   bool success = true;
   for (int& stype : *stypes) {
@@ -368,11 +366,10 @@ inline std::vector<nnvm::NodeEntry> CreateNodeEntries(
 }
 
 // make a new node with operator op_name. Inputs are not filled.
-inline nnvm::ObjectPtr MakeNode(
-    const char* op_name, const std::string& name,
-    std::vector<nnvm::NodeEntry> const* inputs               = nullptr,
-    std::unordered_map<std::string, std::string> const* dict = nullptr,
-    nnvm::ObjectPtr const* fwd_node                          = nullptr) {
+inline nnvm::ObjectPtr MakeNode(const char* op_name, const std::string& name,
+                                std::vector<nnvm::NodeEntry> const* inputs               = nullptr,
+                                std::unordered_map<std::string, std::string> const* dict = nullptr,
+                                nnvm::ObjectPtr const* fwd_node = nullptr) {
   auto p        = nnvm::Node::Create();
   p->attrs.op   = nnvm::Op::Get(op_name);
   p->attrs.name = name;
@@ -393,9 +390,10 @@ inline nnvm::ObjectPtr MakeNode(
   return p;
 }
 
-inline nnvm::ObjectPtr MakeNode(
-    const char* op_name, const std::string& name, const std::vector<nnvm::NodeEntry>& inputs,
-    std::unordered_map<std::string, std::string> const* dict, nnvm::ObjectPtr const* fwd_node) {
+inline nnvm::ObjectPtr MakeNode(const char* op_name, const std::string& name,
+                                const std::vector<nnvm::NodeEntry>& inputs,
+                                std::unordered_map<std::string, std::string> const* dict,
+                                nnvm::ObjectPtr const* fwd_node) {
   return MakeNode(op_name, name, &inputs, dict, fwd_node);
 }
 
@@ -409,8 +407,8 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
 }
 
 // quick helper to make gradient nodes that simply pass back zero. could be used in output ops.
-inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
-    const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(const nnvm::ObjectPtr& n,
+                                                      const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < n->num_inputs(); ++i) {
     std::ostringstream os;
@@ -468,8 +466,8 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = std::move(param);
 }
 
-inline void CheckAllRowsPresent(
-    const NDArray& arr, const std::string& func, const std::string& param) {
+inline void CheckAllRowsPresent(const NDArray& arr, const std::string& func,
+                                const std::string& param) {
   if (arr.storage_type() == kRowSparseStorage) {
     CHECK(arr.storage_shape()[0] == arr.shape()[0])
         << func << " for RowSparse " << param << " is only implemented for "
@@ -481,9 +479,10 @@ inline void CheckAllRowsPresent(
   }
 }
 
-inline void LogUnimplementedOp(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+inline void LogUnimplementedOp(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs) {
   using common::operator_string;
   LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
 }

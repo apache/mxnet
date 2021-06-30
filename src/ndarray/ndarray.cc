@@ -47,10 +47,9 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
-NDArray::NDArray(
-    const NDArrayStorageType stype, const mxnet::TShape& shape, Context ctx, bool delay_alloc,
-    int dtype, std::vector<int> aux_types, mxnet::ShapeVector aux_shapes,
-    mxnet::TShape storage_shape)
+NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape& shape, Context ctx,
+                 bool delay_alloc, int dtype, std::vector<int> aux_types,
+                 mxnet::ShapeVector aux_shapes, mxnet::TShape storage_shape)
     : shape_(shape), dtype_(dtype), storage_type_(stype), entry_(nullptr) {
   // Assign default aux types if not given
   if (aux_types.size() == 0 && stype != kDefaultStorage) {
@@ -87,8 +86,8 @@ NDArray::NDArray(
   if (stype == kDefaultStorage)
     ptr_ = std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype);
   else
-    ptr_ = std::make_shared<Chunk>(
-        stype, storage_shape, ctx, delay_alloc, dtype, aux_types, aux_shapes);
+    ptr_ = std::make_shared<Chunk>(stype, storage_shape, ctx, delay_alloc, dtype, aux_types,
+                                   aux_shapes);
 }
 
 void NDArray::SetShapeFromChunk() {
@@ -268,7 +267,6 @@ NDArray NDArray::ReshapeWithRecord(const mxnet::TShape& shape) {
       << "current shape when recording with autograd.";
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("Reshape");
-  ;
   std::ostringstream os;
   os << shape;
   attrs.dict.insert({"shape", os.str()});
@@ -285,8 +283,8 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   CHECK_EQ(storage_type(), kDefaultStorage);
   NDArray ret   = this->Detach();
   size_t length = shape_.ProdShape(1, shape_.ndim());
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(
-      ret.dtype(), DType, { ret.byte_offset_ += begin * length * sizeof(DType); });
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(ret.dtype(), DType,
+                                { ret.byte_offset_ += begin * length * sizeof(DType); });
   ret.reuse_    = false;
   ret.shape_[0] = end - begin;
   return ret;
@@ -708,9 +706,9 @@ mkldnn::memory* NDArray::CreateMKLDNNData(const mkldnn::memory::desc& desc) {
     CHECK(ptr_->shandle.dptr);
     // When this is a view and a user wants the default layout, we can simply
     // create a new mkldnn memory that points to the right memory.
-    std::shared_ptr<mkldnn::memory> mem(new mkldnn::memory(
-        desc, CpuEngine::Get()->get_engine(),
-        static_cast<char*>(ptr_->shandle.dptr) + byte_offset_));
+    std::shared_ptr<mkldnn::memory> mem(
+        new mkldnn::memory(desc, CpuEngine::Get()->get_engine(),
+                           static_cast<char*>(ptr_->shandle.dptr) + byte_offset_));
     MKLDNNStream::Get()->RegisterMem(mem);
     return mem.get();
   } else if (IsView()) {
@@ -840,8 +838,8 @@ void TernaryOp(const NDArray& lhs, const NDArray& mhs, const NDArray& rhs, NDArr
  * \param binary_op the real operation
  */
 template <typename OP>
-std::vector<Engine::VarHandle> BinaryOpPrepare(
-    const NDArray& lhs, const NDArray& rhs, NDArray* out) {
+std::vector<Engine::VarHandle> BinaryOpPrepare(const NDArray& lhs, const NDArray& rhs,
+                                               NDArray* out) {
   // no check if both of them are on cpu
   if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
     CHECK(lhs.ctx() == rhs.ctx()) << "operands context mismatch";
@@ -1105,9 +1103,8 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
     TBlob tmp = to.data();
     ndarray::Copy<from_xpu, to_xpu>(from.data(), &tmp, from.ctx(), to.ctx(), ctx);
 #if MXNET_USE_MKLDNN == 1
-  } else if (
-      SupportMKLDNN(from.dtype(), from.shape()) && SupportMKLDNN(to.dtype(), to.shape()) &&
-      from.ctx().dev_mask() == cpu::kDevMask && to.ctx().dev_mask() == cpu::kDevMask) {
+  } else if (SupportMKLDNN(from.dtype(), from.shape()) && SupportMKLDNN(to.dtype(), to.shape()) &&
+             from.ctx().dev_mask() == cpu::kDevMask && to.ctx().dev_mask() == cpu::kDevMask) {
     // If we copy data directly, we need to make sure both NDArrays are supported
     // by MKLDNN.
     auto from_mem = from.GetMKLDNNData();
@@ -1141,9 +1138,8 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
 
 // Make a copy of an NDArray based on storage type
 template <typename from_xpu, typename to_xpu>
-void CopyFromToImpl(
-    const NDArray& from, const NDArray& to, RunContext rctx,
-    const std::vector<Resource>& requested) {
+void CopyFromToImpl(const NDArray& from, const NDArray& to, RunContext rctx,
+                    const std::vector<Resource>& requested) {
   using namespace std;
   using namespace mshadow;
   // if storage type doesn't match, cast the storage first
@@ -1156,8 +1152,8 @@ void CopyFromToImpl(
   const Context to_ctx   = to.ctx();
   bool is_train          = Imperative::Get()->is_training();
 
-  OpContext opctx{
-      Imperative::Get()->is_recording(), is_train, rctx, engine::CallbackOnComplete(), requested};
+  OpContext opctx{Imperative::Get()->is_recording(), is_train, rctx, engine::CallbackOnComplete(),
+                  requested};
   if (from_ctx == to_ctx && from_stype != to_stype) {
     // same ctx, different stypes, use cast op directly without copying
     common::CastStorageDispatch<from_xpu>(opctx, from, to);
@@ -1770,9 +1766,8 @@ bool NDArray::Load(dmlc::Stream* strm) {
   if (0 == nad) {
     temp = NDArray(shape, Context::CPU(), false, type_flag);
   } else {
-    temp = NDArray(
-        static_cast<NDArrayStorageType>(stype), shape, Context::CPU(), false, type_flag, aux_types,
-        aux_shapes, sshape);
+    temp = NDArray(static_cast<NDArrayStorageType>(stype), shape, Context::CPU(), false, type_flag,
+                   aux_types, aux_shapes, sshape);
   }
   // load data
   TBlob load_data  = temp.data();
@@ -1813,8 +1808,8 @@ bool NDArray::Load(dmlc::Stream* strm) {
 
 const uint64_t kMXAPINDArrayListMagic = 0x112;
 
-void NDArray::Save(
-    dmlc::Stream* fo, const std::vector<NDArray>& data, const std::vector<std::string>& names) {
+void NDArray::Save(dmlc::Stream* fo, const std::vector<NDArray>& data,
+                   const std::vector<std::string>& names) {
   uint64_t header = kMXAPINDArrayListMagic, reserved = 0;
   fo->Write(&header, sizeof(header));
   fo->Write(&reserved, sizeof(reserved));
@@ -1837,9 +1832,8 @@ NDArray NDArray::Copy(Context ctx) const {
   if (kDefaultStorage == storage_type()) {
     ret = NDArray(shape(), ctx, true, dtype_);
   } else if (kUndefinedStorage != storage_type()) {
-    ret = NDArray(
-        storage_type(), shape(), ctx, true, dtype_, ptr_->aux_types, ptr_->aux_shapes,
-        storage_shape());
+    ret = NDArray(storage_type(), shape(), ctx, true, dtype_, ptr_->aux_types, ptr_->aux_shapes,
+                  storage_shape());
   } else {
     LOG(FATAL) << "NDArray::Copy cannot copy undefined storage-type ndarray to ctx.dev_type="
                << ctx.dev_type << ", ctx.dev_id=" << ctx.dev_id;
@@ -2080,9 +2074,9 @@ MXNET_REGISTER_NDARRAY_FUN(fill_element_0index)
 // register API function
 // those with underscore will be registered at NDArray
 
-void CopyFromToSimple(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& inputs,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+void CopyFromToSimple(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                      const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs) {
   CopyFromTo(inputs[0], outputs[0], 0, true);
 }
 
@@ -2093,32 +2087,33 @@ NNVM_REGISTER_OP(_copyto)
     .set_num_inputs(1)
     .set_num_outputs(1)
     .set_attr<mxnet::FInferShape>("FInferShape", op::ElemwiseShape<1, 1>)
-    .set_attr<nnvm::FInferType>(
-        "FInferType",
-        [](const NodeAttrs& attrs, std::vector<int>* in_type, std::vector<int>* out_type) {
-          return !op::type_is_none((*in_type)[0]) && !op::type_is_none((*out_type)[0]);
-        })
-    .set_attr<FInferStorageType>(
-        "FInferStorageType",
-        [](const NodeAttrs& attrs, const int dev_mask, DispatchMode* dispatch_mode,
-           std::vector<int>* in_attrs, std::vector<int>* out_attrs) {
-          op::dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
-          if (op::storage_type_is_none((*out_attrs)[0])) {
-            (*out_attrs)[0] = (*in_attrs)[0];
-          }
-          return true;
-        })
-    .set_attr<FExecType>(
-        "FExecType", [](const NodeAttrs& attrs) { return ExecType::kCrossDeviceCopy; })
+    .set_attr<nnvm::FInferType>("FInferType",
+                                [](const NodeAttrs& attrs, std::vector<int>* in_type,
+                                   std::vector<int>* out_type) {
+                                  return !op::type_is_none((*in_type)[0]) &&
+                                         !op::type_is_none((*out_type)[0]);
+                                })
+    .set_attr<FInferStorageType>("FInferStorageType",
+                                 [](const NodeAttrs& attrs, const int dev_mask,
+                                    DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                    std::vector<int>* out_attrs) {
+                                   op::dispatch_mode_assign(dispatch_mode,
+                                                            DispatchMode::kFComputeEx);
+                                   if (op::storage_type_is_none((*out_attrs)[0])) {
+                                     (*out_attrs)[0] = (*in_attrs)[0];
+                                   }
+                                   return true;
+                                 })
+    .set_attr<FExecType>("FExecType",
+                         [](const NodeAttrs& attrs) { return ExecType::kCrossDeviceCopy; })
     .set_attr<nnvm::FGradient>("FGradient", op::ElemwiseGradUseNone{"_copyto"})
     .set_attr<bool>("TIsBackward", true)
     .set_attr<FComputeEx>("FComputeEx<cpu>", CopyFromToSimple)
     .set_attr<FComputeEx>("FComputeEx<gpu>", CopyFromToSimple)
     .add_argument("data", "NDArray", "input data");
 
-void Imdecode(
-    NDArray* ret, NDArray mean, size_t index, size_t x0, size_t y0, size_t x1, size_t y1,
-    size_t n_channels, size_t size, char* str_img) {
+void Imdecode(NDArray* ret, NDArray mean, size_t index, size_t x0, size_t y0, size_t x1, size_t y1,
+              size_t n_channels, size_t size, char* str_img) {
 #if MXNET_USE_OPENCV
   cv::Mat buf(1, size, CV_8U, str_img);
   cv::Mat res = cv::imdecode(buf, n_channels == 1 ? 0 : -1);
@@ -2133,9 +2128,8 @@ void Imdecode(
   CHECK(x1 <= static_cast<size_t>(res.cols) && y1 <= static_cast<size_t>(res.rows));
 
   if (ret->is_none()) {
-    *ret = NDArray(
-        mshadow::Shape3(n_channels, y1 - y0, x1 - x0), Context::CPU(), false,
-        mean.is_none() ? mshadow::default_type_flag : mean.dtype());
+    *ret = NDArray(mshadow::Shape3(n_channels, y1 - y0, x1 - x0), Context::CPU(), false,
+                   mean.is_none() ? mshadow::default_type_flag : mean.dtype());
   }
   NDArray buff;
   if (ret->shape().ndim() == 3) {
@@ -2193,10 +2187,9 @@ MXNET_REGISTER_NDARRAY_FUN(_imdecode)
     .set_body([](NDArray** u, real_t* s, NDArray** out, int num_params, char** param_keys,
                  char** param_vals) {
       CHECK_EQ(num_params, 1);
-      Imdecode(
-          out[0], *u[0], static_cast<size_t>(s[0]), static_cast<size_t>(s[1]),
-          static_cast<size_t>(s[2]), static_cast<size_t>(s[3]), static_cast<size_t>(s[4]),
-          static_cast<size_t>(s[5]), static_cast<size_t>(s[6]), param_vals[0]);
+      Imdecode(out[0], *u[0], static_cast<size_t>(s[0]), static_cast<size_t>(s[1]),
+               static_cast<size_t>(s[2]), static_cast<size_t>(s[3]), static_cast<size_t>(s[4]),
+               static_cast<size_t>(s[5]), static_cast<size_t>(s[6]), param_vals[0]);
     })
     .set_num_use_vars(1)
     .set_num_scalars(7)

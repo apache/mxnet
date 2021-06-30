@@ -33,9 +33,8 @@ namespace mxnet {
 namespace op {
 
 template <typename DType>
-static std::vector<float> GetWeightScales(
-    const NDArray& weight, const NDArray* bias, const float data_scale,
-    bool weight_channelwise_scale) {
+static std::vector<float> GetWeightScales(const NDArray& weight, const NDArray* bias,
+                                          const float data_scale, bool weight_channelwise_scale) {
   auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   std::vector<float> weight_scales;
   const DType* weight_ptr = weight.data().dptr<DType>();
@@ -85,10 +84,11 @@ static std::vector<float> GetWeightScales(
   return weight_scales;
 }
 
-static void ConvertWeightBias2MKLDNN(
-    NDArray* weight, NDArray* bias, bool has_bias, const mkldnn::memory::desc& weight_md,
-    const mkldnn::memory::desc* bias_md, const int num_group, float data_scale,
-    const std::vector<float>& weight_scales, const bool submit = true) {
+static void ConvertWeightBias2MKLDNN(NDArray* weight, NDArray* bias, bool has_bias,
+                                     const mkldnn::memory::desc& weight_md,
+                                     const mkldnn::memory::desc* bias_md, const int num_group,
+                                     float data_scale, const std::vector<float>& weight_scales,
+                                     const bool submit = true) {
   MKLDNNStream* stream           = MKLDNNStream::Get();
   const auto new_weight          = NDArray(weight_md);
   const auto conv_weights_memory = new_weight.GetMKLDNNData();

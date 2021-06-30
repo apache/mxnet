@@ -33,9 +33,10 @@
 namespace mxnet {
 namespace op {
 
-static void MKLDNNQuantizedConvForward(
-    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& in_data,
-    const std::vector<OpReqType>& req, const std::vector<NDArray>& out_data) {
+static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                                       const std::vector<NDArray>& in_data,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& out_data) {
   CHECK_EQ(in_data[0].dtype(), mshadow::kUint8)
       << "mkldnn_quantized_conv op only supports uint8 as input type";
   TmpMemMgr::Get()->Init(ctx.requested[conv::kTempSpace]);
@@ -44,9 +45,8 @@ static void MKLDNNQuantizedConvForward(
   MKLDNNConvFullParam full_param;
   full_param.conv_param = param;
   full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
-  auto& fwd = GetConvFwd(
-      full_param, ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
-      param.no_bias ? nullptr : &in_data[conv::kBias], out_data[conv::kOut]);
+  auto& fwd     = GetConvFwd(full_param, ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
+                         param.no_bias ? nullptr : &in_data[conv::kBias], out_data[conv::kOut]);
   auto data_mem = in_data[conv::kData].GetMKLDNNDataReorder(fwd.GetPd().src_desc());
   const mkldnn::memory* weight_mem;
   // For inference, we want to reorder the weight array so we don't need to
