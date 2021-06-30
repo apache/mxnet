@@ -51,11 +51,11 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
   bool disable_conv_sum_;
   bool quantize_;
   SelectStatus status_;
-  std::vector<const nnvm::Node *> matched_list_;
+  std::vector<const nnvm::Node*> matched_list_;
 
  public:
-  SgMKLDNNConvSelector(int dis_all, int dis_conv_bn, int dis_conv_act, int dis_conv_sum,
-                       int quantize)
+  SgMKLDNNConvSelector(
+      int dis_all, int dis_conv_bn, int dis_conv_act, int dis_conv_sum, int quantize)
       : disable_all_(dis_all),
         disable_conv_bn_(dis_conv_bn),
         disable_conv_act_(dis_conv_act),
@@ -64,28 +64,24 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 
   bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() && n.op()->name == "Convolution") {
-      const auto &param = nnvm::get<ConvolutionParam>(n.attrs.parsed);
-      if ((param.kernel.ndim() == 2 || param.kernel.ndim() == 3) &&
-           SupportMKLDNNAttr(node_attr)) {
+      const auto& param = nnvm::get<ConvolutionParam>(n.attrs.parsed);
+      if ((param.kernel.ndim() == 2 || param.kernel.ndim() == 3) && SupportMKLDNNAttr(node_attr)) {
         status_ = disable_all_ ? kSuccess : kStart;
         matched_list_.clear();
         matched_list_.push_back(&n);
         return true;
-        }
+      }
     }
     return false;
   }
 
-  bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) override {
-    return false;
-  }
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override { return false; }
 
-  bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
+  bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list_.back() != &n) {
-      if (std::find(matched_list_.begin(), matched_list_.end(), &n) !=
-          matched_list_.end()) {
+      if (std::find(matched_list_.begin(), matched_list_.end(), &n) != matched_list_.end()) {
         while (matched_list_.back() != &n) {
           matched_list_.pop_back();
         }
@@ -93,8 +89,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
       status_ = kSuccess;
       return false;
     }
-    if (status_ == kFail || status_ == kSuccess || new_node.is_variable())
-      return false;
+    if (status_ == kFail || status_ == kSuccess || new_node.is_variable()) return false;
 
     // Use status_ machine to do selection. The status_ change is
     // kStart -> kBN -> kSum -> kSuccess
@@ -114,8 +109,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
       case kSum:
       default:
         if ((!disable_conv_act_) && new_node.op()->name == "Activation") {
-          const ActivationParam &param =
-              nnvm::get<ActivationParam>(new_node.attrs.parsed);
+          const ActivationParam& param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
           if ((quantize_ && SupportQuantizedMKLDNNAct(param)) ||
               (!quantize_ && SupportMKLDNNAct(param))) {
             matched_list_.push_back(&new_node);
@@ -124,10 +118,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
             return true;
           }
         } else if ((!disable_conv_act_) && new_node.op()->name == "LeakyReLU") {
-          const LeakyReLUParam &param =
-              nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
-          if (param.act_type == leakyrelu::kLeakyReLU ||
-              param.act_type == leakyrelu::kGELU) {
+          const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
+          if (param.act_type == leakyrelu::kLeakyReLU || param.act_type == leakyrelu::kGELU) {
             matched_list_.push_back(&new_node);
             // not support conv+relu+sum yet.
             status_ = kSuccess;
@@ -138,7 +130,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
             // TODO(zhennan): doesn't support int8 conv+sum+relu6 at moment. To support this, we
             // need to fuse conv+sum first, and calibrate with it. Then fuse int8 relu6 into fused
             // conv.
-            const ClipParam &param = nnvm::get<ClipParam>(new_node.attrs.parsed);
+            const ClipParam& param = nnvm::get<ClipParam>(new_node.attrs.parsed);
             if (param.a_min == 0.f) {
               matched_list_.push_back(&new_node);
               // not support conv+relu+sum yet.
@@ -152,16 +144,14 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
     }
   }
 
-  std::vector<nnvm::Node *> Filter(
-      const std::vector<nnvm::Node *> &candidates) override {
+  std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) override {
     if (status_ == kFail) {
-      return std::vector<nnvm::Node *>(0);
+      return std::vector<nnvm::Node*>(0);
     } else {
-      std::vector<nnvm::Node *> ret;
+      std::vector<nnvm::Node*> ret;
       for (auto i : matched_list_) {
-        auto non_const_i = const_cast<nnvm::Node *>(i);
-        if (std::find(candidates.begin(), candidates.end(), non_const_i) !=
-            candidates.end()) {
+        auto non_const_i = const_cast<nnvm::Node*>(i);
+        if (std::find(candidates.begin(), candidates.end(), non_const_i) != candidates.end()) {
           ret.push_back(non_const_i);
         }
       }
@@ -171,8 +161,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list_.size(), 1);
-    auto new_selector = SgMKLDNNConvSelector(disable_all_, disable_conv_bn_, disable_conv_act_,
-                                             disable_conv_sum_, quantize_);
+    auto new_selector = SgMKLDNNConvSelector(
+        disable_all_, disable_conv_bn_, disable_conv_act_, disable_conv_sum_, quantize_);
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
@@ -181,15 +171,15 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 class SgMKLDNNConvProperty : public SubgraphProperty {
  public:
   SgMKLDNNConvProperty() {
-    disable_conv_bn_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_BN", 0);
+    disable_conv_bn_  = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_BN", 0);
     disable_conv_act_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU", 0);
     disable_conv_sum_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM", 0);
 
     disable_all_ = disable_conv_bn_ && disable_conv_act_ && disable_conv_sum_;
   }
   static SubgraphPropertyPtr Create() {
-    static const std::string &name = "MKLDNN convolution optimization pass";
-    auto property = std::make_shared<SgMKLDNNConvProperty>();
+    static const std::string& name = "MKLDNN convolution optimization pass";
+    auto property                  = std::make_shared<SgMKLDNNConvProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_CONV_OPT", 0)) {
@@ -197,8 +187,8 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     }
     return property;
   }
-  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
-                                   const int subgraph_id = 0) const override {
+  nnvm::ObjectPtr CreateSubgraphNode(
+      const nnvm::Symbol& sym, const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
     // This op has single output, remove duplicated.
     auto last_node = sym.outputs[0].node;
@@ -207,9 +197,9 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     std::ostringstream node_name;
     node_name << "sg_mkldnn_";
     bool _with_sum = false;
-    DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
+    DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable()) return;
-      auto &sub_name = node->op()->name;
+      auto& sub_name = node->op()->name;
       if (sub_name == "Convolution") {
         node_name << "conv_";
       } else if (sub_name == "BatchNorm") {
@@ -218,7 +208,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
       } else if (sub_name == "elemwise_add") {
         node_name << "add_";
         n->attrs.dict["with_sum"] = "true";
-        _with_sum = true;
+        _with_sum                 = true;
 
       } else if (sub_name == "Activation" || sub_name == "LeakyReLU" || sub_name == "clip") {
         node_name << "act_";
@@ -231,7 +221,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     });
     node_name << std::to_string(subgraph_id);
     n->attrs.name = node_name.str();
-    n->attrs.op = Op::Get("_sg_mkldnn_conv");
+    n->attrs.op   = Op::Get("_sg_mkldnn_conv");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     n->op()->attr_parser(&(n->attrs));
@@ -246,8 +236,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
   }
 
   void ConnectSubgraphOutputs(
-      const nnvm::ObjectPtr n,
-      std::vector<nnvm::NodeEntry *> *output_entries) const override {
+      const nnvm::ObjectPtr n, std::vector<nnvm::NodeEntry*>* output_entries) const override {
     // Connect all extern output entries to output[0]
     for (size_t i = 0; i < output_entries->size(); ++i) {
       *output_entries->at(i) = nnvm::NodeEntry{n, 0, 0};
@@ -255,11 +244,11 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
   }
 
   void ConnectSubgraphInputs(
-      const nnvm::ObjectPtr n, std::vector<nnvm::NodeEntry *> *input_entries,
-      std::vector<nnvm::NodeEntry> *orig_input_entries) const override {
+      const nnvm::ObjectPtr n, std::vector<nnvm::NodeEntry*>* input_entries,
+      std::vector<nnvm::NodeEntry>* orig_input_entries) const override {
     auto sym = n->attrs.subgraphs[0];
-    std::unordered_set<const nnvm::Node *> node_sets;
-    DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr &node) {
+    std::unordered_set<const nnvm::Node*> node_sets;
+    DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->is_variable()) return;
       node_sets.insert(node.get());
       if (node->op()->name == "elemwise_add") {
@@ -267,14 +256,13 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
         // switch sum operands sequence to ensure that
         // the extra sum operand stays in the last of inputs.
         if (node_sets.count(node->inputs[1].node.get())) {
-          auto tmp = node->inputs[1];
+          auto tmp        = node->inputs[1];
           node->inputs[1] = node->inputs[0];
           node->inputs[0] = tmp;
-          std::rotate(input_entries->begin(), input_entries->begin() + 1,
-                      input_entries->end());
-          std::rotate(orig_input_entries->begin(),
-                      orig_input_entries->begin() + 1,
-                      orig_input_entries->end());
+          std::rotate(input_entries->begin(), input_entries->begin() + 1, input_entries->end());
+          std::rotate(
+              orig_input_entries->begin(), orig_input_entries->begin() + 1,
+              orig_input_entries->end());
         }
       }
     });

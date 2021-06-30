@@ -21,7 +21,7 @@
  * \file mkldnn_slice.cc
  * \brief
  * \author Zhiyuan Huang
-*/
+ */
 
 #if MXNET_USE_MKLDNN == 1
 
@@ -32,46 +32,44 @@
 namespace mxnet {
 namespace op {
 
-MKLDNNSliceFwd::MKLDNNSliceFwd(const SliceParam &param,
-                               const NDArray &in,
-                               const NDArray &out) {
+MKLDNNSliceFwd::MKLDNNSliceFwd(const SliceParam& param, const NDArray& in, const NDArray& out) {
   const mxnet::TShape ishape = in.shape();
   const mxnet::TShape oshape = out.shape();
-  const int N = ishape.ndim();
+  const int N                = ishape.ndim();
   mkldnn::memory::dims dims(N);
   mkldnn::memory::dims offsets(N);
   for (int i = 0; i < N; ++i) {
     dim_t s = 0;
-    if (i < param.begin.ndim() &&  param.begin[i]) {
+    if (i < param.begin.ndim() && param.begin[i]) {
       s = *param.begin[i];
       if (s < 0) s += ishape[i];
     }
-    dims[i] = oshape[i];
+    dims[i]    = oshape[i];
     offsets[i] = s;
   }
 
-  auto in_md = in.GetMKLDNNData()->get_desc();
+  auto in_md  = in.GetMKLDNNData()->get_desc();
   auto out_md = out.GetMKLDNNData()->get_desc();
   auto sub_md = in_md.submemory_desc(dims, offsets);
 
   auto engine = CpuEngine::Get()->get_engine();
   this->data_ = std::make_shared<mkldnn::memory>(sub_md, engine, nullptr);
-  this->out_ = std::make_shared<mkldnn::memory>(out_md, engine, nullptr);
-  this->fwd_ = std::make_shared<mkldnn::reorder>(*this->data_, *this->out_);
+  this->out_  = std::make_shared<mkldnn::memory>(out_md, engine, nullptr);
+  this->fwd_  = std::make_shared<mkldnn::reorder>(*this->data_, *this->out_);
 }
 
-void MKLDNNSliceFwd::SetNewMem(const mkldnn::memory &input, const mkldnn::memory &output) {
+void MKLDNNSliceFwd::SetNewMem(const mkldnn::memory& input, const mkldnn::memory& output) {
   this->data_->set_data_handle(input.get_data_handle());
   this->out_->set_data_handle(output.get_data_handle());
 }
 
 void MKLDNNSliceFwd::Register() {
-  MKLDNNStream::Get()->RegisterPrimArgs(*fwd_,
-      {{MKLDNN_ARG_FROM, *(this->data_)}, {MKLDNN_ARG_TO, *(this->out_)}});
+  MKLDNNStream::Get()->RegisterPrimArgs(
+      *fwd_, {{MKLDNN_ARG_FROM, *(this->data_)}, {MKLDNN_ARG_TO, *(this->out_)}});
 }
 
-MKLDNNSliceFwd &GetSliceForward(const SliceParam &param, const bool is_train,
-                                const NDArray &in_data, const NDArray &out_data) {
+MKLDNNSliceFwd& GetSliceForward(
+    const SliceParam& param, const bool is_train, const NDArray& in_data, const NDArray& out_data) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNSliceSignature, MKLDNNSliceFwd, OpHash> fwds;
 #else
@@ -90,13 +88,14 @@ MKLDNNSliceFwd &GetSliceForward(const SliceParam &param, const bool is_train,
   return it->second;
 }
 
-void MKLDNNSlice(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                 const NDArray &in, OpReqType req, const NDArray &out) {
+void MKLDNNSlice(
+    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& in, OpReqType req,
+    const NDArray& out) {
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  MKLDNNSliceFwd &fwd = GetSliceForward(param, ctx.is_train, in, out);
-  auto in_mem = in.GetMKLDNNData();
-  auto out_md = out.GetMKLDNNData()->get_desc();
-  auto out_mem = CreateMKLDNNMem(out, out_md, req);
+  MKLDNNSliceFwd& fwd     = GetSliceForward(param, ctx.is_train, in, out);
+  auto in_mem             = in.GetMKLDNNData();
+  auto out_md             = out.GetMKLDNNData()->get_desc();
+  auto out_mem            = CreateMKLDNNMem(out, out_md, req);
   fwd.SetNewMem(*in_mem, *out_mem.second);
   fwd.Register();
   CommitOutput(out, out_mem);

@@ -22,7 +22,7 @@
  * \file mkldnn_common.h
  * \brief Common header file for MKLDNN backend subgraph
  * \author Ciyong Chen
-*/
+ */
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_
@@ -33,31 +33,30 @@ namespace mxnet {
 namespace op {
 
 template <typename DType>
-static std::vector<float> GetWeightScales(const NDArray &weight, const NDArray *bias,
-                                          const float data_scale, bool weight_channelwise_scale) {
+static std::vector<float> GetWeightScales(
+    const NDArray& weight, const NDArray* bias, const float data_scale,
+    bool weight_channelwise_scale) {
   auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   std::vector<float> weight_scales;
-  const DType *weight_ptr = weight.data().dptr<DType>();
-  const DType *bias_ptr = bias? bias->data().dptr<DType>() : nullptr;
-  const auto wshape = weight.shape();
-  size_t channel = wshape[0];
+  const DType* weight_ptr = weight.data().dptr<DType>();
+  const DType* bias_ptr   = bias ? bias->data().dptr<DType>() : nullptr;
+  const auto wshape       = weight.shape();
+  size_t channel          = wshape[0];
 
   size_t offset = wshape.ProdShape(1, wshape.ndim());
   std::vector<DType> weight_c_min(channel, MaxValue<DType>());
   std::vector<DType> weight_c_max(channel, MinValue<DType>());
   for (int c = 0; c < static_cast<int>(channel); ++c) {
-    const DType *p1 = weight_ptr + c * offset;
+    const DType* p1 = weight_ptr + c * offset;
     for (size_t k = 0; k < offset; ++k) {
-      if (weight_c_min[c] > p1[k])
-        weight_c_min[c] = p1[k];
-      if (weight_c_max[c] < p1[k])
-        weight_c_max[c] = p1[k];
+      if (weight_c_min[c] > p1[k]) weight_c_min[c] = p1[k];
+      if (weight_c_max[c] < p1[k]) weight_c_max[c] = p1[k];
     }
   }
 
   if (weight_channelwise_scale) {
     weight_scales.resize(channel);
-    #pragma omp parallel for num_threads(nthreads)
+#pragma omp parallel for num_threads(nthreads)
     for (int c = 0; c < static_cast<int>(channel); ++c) {
       float scale = GetQuantizeScale(mshadow::kInt8, weight_c_min[c], weight_c_max[c]);
       if (bias_ptr && bias_ptr[c]) {
@@ -86,14 +85,12 @@ static std::vector<float> GetWeightScales(const NDArray &weight, const NDArray *
   return weight_scales;
 }
 
-static void ConvertWeightBias2MKLDNN(NDArray *weight, NDArray *bias, bool has_bias,
-                                     const mkldnn::memory::desc &weight_md,
-                                     const mkldnn::memory::desc *bias_md,
-                                     const int num_group, float data_scale,
-                                     const std::vector<float> &weight_scales,
-                                     const bool submit = true) {
-  MKLDNNStream *stream = MKLDNNStream::Get();
-  const auto new_weight = NDArray(weight_md);
+static void ConvertWeightBias2MKLDNN(
+    NDArray* weight, NDArray* bias, bool has_bias, const mkldnn::memory::desc& weight_md,
+    const mkldnn::memory::desc* bias_md, const int num_group, float data_scale,
+    const std::vector<float>& weight_scales, const bool submit = true) {
+  MKLDNNStream* stream           = MKLDNNStream::Get();
+  const auto new_weight          = NDArray(weight_md);
   const auto conv_weights_memory = new_weight.GetMKLDNNData();
   mkldnn::primitive_attr weight_attr;
   if (weight_scales.size()) {
@@ -113,9 +110,9 @@ static void ConvertWeightBias2MKLDNN(NDArray *weight, NDArray *bias, bool has_bi
     for (size_t c = 0; c < weight_scales.size(); ++c) {
       bias_scales[c] = weight_scales[c] * data_scale;
     }
-    new_bias = NDArray(*bias_md);
+    new_bias                    = NDArray(*bias_md);
     const auto conv_bias_memory = new_bias.GetMKLDNNData();
-    const int bias_mask = (bias_scales.size()) == 1 ? 0 : 1;
+    const int bias_mask         = (bias_scales.size()) == 1 ? 0 : 1;
     mkldnn::primitive_attr bias_attr;
     bias_attr.set_output_scales(bias_mask, bias_scales);
     auto bias_weights_memory = bias->GetMKLDNNData();
@@ -125,8 +122,7 @@ static void ConvertWeightBias2MKLDNN(NDArray *weight, NDArray *bias, bool has_bi
         mkldnn::reorder(bias_reorder_pd),
         {{MKLDNN_ARG_FROM, *bias_weights_memory}, {MKLDNN_ARG_TO, *conv_bias_memory}});
   }
-  if (submit)
-    stream->Submit();
+  if (submit) stream->Submit();
   *weight = new_weight;
   if (has_bias && data_scale) *bias = new_bias;
 }

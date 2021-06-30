@@ -39,10 +39,9 @@ static float GetScale(const NDArray& data, float min, float max) {
   return data_range / MaxAbs(min, max);
 }
 
-static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                                         const std::vector<NDArray>& in_data,
-                                         const std::vector<OpReqType>& req,
-                                         const std::vector<NDArray>& out_data) {
+static void MKLDNNQuantizedConcatForward(
+    const nnvm::NodeAttrs& attrs, const OpContext& ctx, const std::vector<NDArray>& in_data,
+    const std::vector<OpReqType>& req, const std::vector<NDArray>& out_data) {
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_data.size(), static_cast<size_t>(param_.num_args * 3));
   CHECK_EQ(out_data.size(), 3U);
@@ -73,7 +72,7 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpC
       data_mem.push_back(mem);
       data_md.push_back(mem->get_desc());
     } else {
-      auto mem = in_data[i].GetMKLDNNData();
+      auto mem      = in_data[i].GetMKLDNNData();
       auto mem_desc = mem->get_desc();
       if (in_data[i].dtype() != out_dtype) {
         mem_desc.data.data_type = static_cast<mkldnn_data_type_t>(get_mkldnn_type(out_dtype));
@@ -93,10 +92,10 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpC
       data_md.push_back(mem_desc);
     }
   }
-  MKLDNNConcatFwd& fwd = GetConcatForward(param_.dim, in_data, data_md);
-  mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(out_data[quantized_concat_enum::kOut],
-                                                   fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
-  mkldnn_args_map_t  net_args;
+  MKLDNNConcatFwd& fwd           = GetConcatForward(param_.dim, in_data, data_md);
+  mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(
+      out_data[quantized_concat_enum::kOut], fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
+  mkldnn_args_map_t net_args;
   net_args[MKLDNN_ARG_DST] = *out_mem.second;
   for (int i = 0; i < param_.num_args; i++) {
     net_args[MKLDNN_ARG_MULTIPLE_SRC + i] = *data_mem[i];
@@ -106,9 +105,9 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpC
   MKLDNNStream::Get()->Submit();
 }
 
-inline static bool ConcatStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                     DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
-                                     std::vector<int>* out_attrs) {
+inline static bool ConcatStorageType(
+    const nnvm::NodeAttrs& attrs, const int dev_mask, DispatchMode* dispatch_mode,
+    std::vector<int>* in_attrs, std::vector<int>* out_attrs) {
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), static_cast<size_t>(param_.num_args * 3));
   CHECK_EQ(out_attrs->size(), 3U);
@@ -117,12 +116,14 @@ inline static bool ConcatStorageType(const nnvm::NodeAttrs& attrs, const int dev
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_concat)
-.set_attr<FInferStorageType>("FInferStorageType", ConcatStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedConcatForward)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
-.set_attr<bool>("TIsMKLDNN", true);
+    .set_attr<FInferStorageType>("FInferStorageType", ConcatStorageType)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedConcatForward)
+    .set_attr<FResourceRequest>(
+        "FResourceRequest",
+        [](const NodeAttrs& n) {
+          return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+        })
+    .set_attr<bool>("TIsMKLDNN", true);
 
 }  // namespace op
 }  // namespace mxnet

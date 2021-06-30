@@ -41,19 +41,15 @@ class MKLDNNReshapeFwd {
   std::vector<mkldnn::primitive> prims_;
 
  public:
-  MKLDNNReshapeFwd(const OpReqType &req,
-                   const NDArray &input,
-                   const NDArray &output);
+  MKLDNNReshapeFwd(const OpReqType& req, const NDArray& input, const NDArray& output);
   int GetWorkspaceSize();
-  void Execute(const NDArray &input,
-               const NDArray &output,
-               const OpReqType &req,
-               void* workspace = nullptr);
+  void Execute(
+      const NDArray& input, const NDArray& output, const OpReqType& req, void* workspace = nullptr);
 };
 
 typedef OpSignature MKLDNNReshapeSignature;
-MKLDNNReshapeFwd &GetReshapeForward(const OpReqType &req, const NDArray &input,
-                                    const NDArray &output);
+MKLDNNReshapeFwd& GetReshapeForward(
+    const OpReqType& req, const NDArray& input, const NDArray& output);
 }  // namespace op
 }  // namespace mxnet
 

@@ -21,10 +21,9 @@
  * \file mkldnn_concat-inl.h
  * \brief
  * \author
-*/
+ */
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_CONCAT_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_CONCAT_INL_H_
-
 
 #if MXNET_USE_MKLDNN == 1
 #include <vector>
@@ -40,17 +39,17 @@ class MKLDNNConcatFwd {
  public:
   mkldnn::concat::primitive_desc fwd_pd;
 
-  MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memory::desc> &data_md);
+  MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memory::desc>& data_md);
 
-  const mkldnn::concat &GetFwd() const { return *fwd_; }
+  const mkldnn::concat& GetFwd() const { return *fwd_; }
 
  private:
   std::shared_ptr<mkldnn::concat> fwd_;
 };
 
-static MKLDNNConcatFwd &GetConcatForward(
-    int concat_dim, const std::vector<NDArray> &in_data,
-    const std::vector<mkldnn::memory::desc> &data_md) {
+static MKLDNNConcatFwd& GetConcatForward(
+    int concat_dim, const std::vector<NDArray>& in_data,
+    const std::vector<mkldnn::memory::desc>& data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<OpSignature, MKLDNNConcatFwd, OpHash> fwds;
 #else
