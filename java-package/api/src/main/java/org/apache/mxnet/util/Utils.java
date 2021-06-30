@@ -318,7 +318,7 @@ public final class Utils {
                 if (!Files.isWritable(dir)) {
                     dir = Paths.get(System.getProperty("java.io.tmpdir"));
                 }
-                return dir.resolve(".djl.ai");
+                return dir.resolve(".mxnet.javapackage");
             }
         }
         return Paths.get(cacheDir);

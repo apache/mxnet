@@ -15,6 +15,7 @@ dependencies {
     // Solve the problem: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
     compile "org.slf4j:slf4j-simple:${slf4j_version}"
 
+//    implementation files("/Users/cspchen/.gradle/caches/modules-2/files-2.1/ai.djl.mxnet/mxnet-native-auto/1.8.0/e32265c03e27e1fb18c9c0904733b00f9acffaee/mxnet-native-auto-1.8.0.jar")
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
@@ -57,46 +58,48 @@ task jnarator(dependsOn: ":jnarator:jar") {
 }
 
 test {
+    useJUnitPlatform()
     environment "PATH", "src/test/bin:${environment.PATH}"
+//    environment "MXNET_LIBRARY_PATH", "${MXNET_LIB_HOME}"
 }
 
-import java.util.regex.Matcher
-import java.util.regex.Pattern
+//import java.util.regex.Matcher
+//import java.util.regex.Pattern
 
-def checkForUpdate(String path, String url) {
-    def expected = new URL(url).text
-    def actual = new File("${project.projectDir}/src/main/include/${path}").text
-    if (!actual.equals(expected)) {
-        def fileName = path.replaceAll("[/\\\\]", '_')
-        file("${project.projectDir}/build").mkdirs()
-        (file("${project.projectDir}/build/${fileName}")).text = expected
-        logger.warn("[\033[31mWARN\033[0m ] Header file has been changed in open source project: ${path}.")
-    }
-}
+//def checkForUpdate(String path, String url) {
+//    def expected = new URL(url).text
+//    def actual = new File("${project.projectDir}/src/main/include/${path}").text
+//    if (!actual.equals(expected)) {
+//        def fileName = path.replaceAll("[/\\\\]", '_')
+//        file("${project.projectDir}/build").mkdirs()
+//        (file("${project.projectDir}/build/${fileName}")).text = expected
+//        logger.warn("[\033[31mWARN\033[0m ] Header file has been changed in open source project: ${path}.")
+//    }
+//}
 
-task checkHeaderFile() {
-    outputs.files "${project.buildDir}/mxnet_c_api.h", "${project.buildDir}/nnvm_c_api.h"
-    doFirst {
-        if (gradle.startParameter.offline) {
-            logger.warn("[\033[31mWARN\033[0m ] Ignore header validation in offline mode.")
-            return
-        }
-
-        def mxnetUrl = "https://raw.githubusercontent.com/apache/incubator-mxnet/v1.7.x/"
-        checkForUpdate("mxnet/c_api.h", "${mxnetUrl}/include/mxnet/c_api.h")
-        def content = new URL("https://github.com/apache/incubator-mxnet/tree/v1.7.x/3rdparty").text
-
-        Pattern pattern = Pattern.compile("href=\"/apache/incubator-tvm/tree/([a-z0-9]+)\"")
-        Matcher m = pattern.matcher(content);
-        if (!m.find()) {
-            throw new GradleException("Failed to retrieve submodule hash for tvm from github")
-        }
-        String hash = m.group(1);
-
-        def nnvmUrl = "https://raw.githubusercontent.com/apache/incubator-tvm/${hash}"
-        checkForUpdate("nnvm/c_api.h", "${nnvmUrl}/nnvm/include/nnvm/c_api.h")
-    }
-}
+//task checkHeaderFile() {
+//    outputs.files "${project.buildDir}/mxnet_c_api.h", "${project.buildDir}/nnvm_c_api.h"
+//    doFirst {
+//        if (gradle.startParameter.offline) {
+//            logger.warn("[\033[31mWARN\033[0m ] Ignore header validation in offline mode.")
+//            return
+//        }
+//
+//        def mxnetUrl = "https://raw.githubusercontent.com/apache/incubator-mxnet/v1.7.x/"
+//        checkForUpdate("mxnet/c_api.h", "${mxnetUrl}/include/mxnet/c_api.h")
+//        def content = new URL("https://github.com/apache/incubator-mxnet/tree/v1.7.x/3rdparty").text
+//
+//        Pattern pattern = Pattern.compile("href=\"/apache/incubator-tvm/tree/([a-z0-9]+)\"")
+//        Matcher m = pattern.matcher(content);
+//        if (!m.find()) {
+//            throw new GradleException("Failed to retrieve submodule hash for tvm from github")
+//        }
+//        String hash = m.group(1);
+//
+//        def nnvmUrl = "https://raw.githubusercontent.com/apache/incubator-tvm/${hash}"
+//        checkForUpdate("nnvm/c_api.h", "${nnvmUrl}/nnvm/include/nnvm/c_api.h")
+//    }
+//}
 
 compileJava.dependsOn(jnarator)
 

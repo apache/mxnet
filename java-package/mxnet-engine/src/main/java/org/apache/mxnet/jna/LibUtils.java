@@ -1,11 +1,11 @@
 package org.apache.mxnet.jna;
 
+import com.sun.jna.Native;
 import org.apache.mxnet.util.Platform;
 import org.apache.mxnet.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.rmi.CORBA.Util;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,22 +51,46 @@ public final class LibUtils {
     private LibUtils() {}
 
     public static MxnetLibrary loadLibrary() {
-        // TODO
+
         String libName = getLibName();
-        return null;
+        logger.debug("Loading mxnet library from: {}", libName);
+        // TODO: consider Linux platform
+//        if (System.getProperty("os.name").startsWith("Linux")) {
+//            Map<String, Integer> options = new ConcurrentHashMap<>();
+//            int rtld = 1; // Linux RTLD lazy + local
+//            options.put(Library.OPTION_OPEN_FLAGS, rtld);
+//            return Native.load(libName, MxnetLibrary.class, options);
+//        }
+        return Native.load(libName, MxnetLibrary.class);
     }
 
     public static String getLibName() {
         // TODO
-        return null;
+        String libName = findOverrideLibrary();
+        if (libName == null) {
+            libName = LibUtils.findLibraryInClasspath();
+            if (libName == null) {
+                libName = LIB_NAME;
+            }
+        }
+
+        return libName;
     }
 
     private static String findOverrideLibrary() {
+        // TODO: load from jar files
         String libPath = System.getenv(MXNET_LIBRARY_PATH);
         if (libPath != null) {
-            // TODO
+            String libName = findLibraryInPath(libPath);
+            if (libName != null) {
+                return libName;
+            }
         }
 
+        libPath = System.getProperty("java.library.path");
+        if (libPath != null) {
+            return findLibraryInPath(libPath);
+        }
         return null;
     }
 
@@ -78,9 +102,10 @@ public final class LibUtils {
             return null;
         }
 
+        // Find the mxnet library version that matches local system platform
+        // throw exception if no one matches
         Platform systemPlatform = Platform.fromSystem();
         try {
-            Platform matching = null;
             Platform placeholder = null;
             while (urls.hasMoreElements()) {
                 URL url = urls.nextElement();
@@ -88,13 +113,8 @@ public final class LibUtils {
                 if (platform.isPlaceholder()) {
                     placeholder = platform;
                 } else if (platform.matches(systemPlatform)) {
-                    matching = platform;
-                    break;
+                    return loadLibraryFromClasspath(platform);
                 }
-            }
-
-            if (matching != null) {
-                return loadLibraryFromClasspath(matching);
             }
 
             if (placeholder != null) {
@@ -104,6 +124,7 @@ public final class LibUtils {
                     throw new IllegalStateException("Failed to download MXNet native library", e);
                 }
             }
+
         } catch (IOException e) {
             throw new IllegalStateException(
                     "Failed to read MXNet native library jar properties", e);
@@ -291,10 +312,12 @@ public final class LibUtils {
         return false;
     }
 
-    public static void main(String... args) {
 
-        findLibraryInClasspath();
-
-    }
-
+//    public static void main(String... args) {
+//        String libPath = System.getProperty("java.library.path");
+//        String absolutePath = "";
+//        if (libPath != null) {
+//            absolutePath = LibUtils.findLibraryInPath(libPath);
+//        }
+//    }
 }
