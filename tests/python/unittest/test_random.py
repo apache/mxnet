@@ -603,6 +603,7 @@ def test_sample_multinomial():
 
 # Test the generators with the chi-square testing
 @with_seed()
+@unittest.skipIf(sys.platform.startswith('win'), 'https://github.com/apache/incubator-mxnet/issues/20389')
 def test_normal_generator():
     ctx = mx.context.current_context()
     samples = 1000000
@@ -627,6 +628,7 @@ def test_normal_generator():
                              nsamples=samples, nrepeat=trials)
 
 @with_seed()
+@unittest.skipIf(sys.platform.startswith('win'), 'https://github.com/apache/incubator-mxnet/issues/20389')
 def test_uniform_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -660,6 +662,7 @@ def test_gamma_generator():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=success_rate)
 
 @with_seed()
+@unittest.skipIf(sys.platform.startswith('win'), 'https://github.com/apache/incubator-mxnet/issues/20389')
 def test_exponential_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -674,6 +677,7 @@ def test_exponential_generator():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=0.20)
 
 @with_seed()
+@unittest.skipIf(sys.platform.startswith('win'), 'https://github.com/apache/incubator-mxnet/issues/20389')
 def test_poisson_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -689,6 +693,7 @@ def test_poisson_generator():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
 @with_seed()
+@unittest.skipIf(sys.platform.startswith('win'), 'https://github.com/apache/incubator-mxnet/issues/20389')
 def test_negative_binomial_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
@@ -718,6 +723,7 @@ def test_negative_binomial_generator():
         verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
 @with_seed()
+@unittest.skipIf(sys.platform.startswith('win'), 'https://github.com/apache/incubator-mxnet/issues/20389')
 def test_multinomial_generator():
     # This test fails with dtype float16 if the probabilities themselves cannot be
     # well-represented in float16.  When the float16 random picks are assigned to buckets,
@@ -1000,6 +1006,7 @@ def test_randint_extremes():
     assert a>=50000000 and a<=50000010
 
 @with_seed()
+@unittest.skipIf(sys.platform.startswith('win'), 'https://github.com/apache/incubator-mxnet/issues/20389')
 def test_randint_generator():
     ctx = mx.context.current_context()
     for dtype in ['int32', 'int64']:
