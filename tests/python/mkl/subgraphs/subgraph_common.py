@@ -71,13 +71,16 @@ class CustomNormalInit(mx.init.Initializer):
     """Initializes weights with random values sampled from a normal distribution
     with a custom mean and standard deviation of `sigma`.
     """
-    def __init__(self, mean=0, sigma=0.01):
-        super(CustomNormalInit, self).__init__(mean=mean, sigma=sigma)
+    def __init__(self, mean=0, sigma=0.01, bounded=False):
+        super(CustomNormalInit, self).__init__(mean=mean, sigma=sigma, bounded=bounded)
         self.mean = mean
         self.sigma = sigma
+        self.bounded = bounded
 
     def _init_weight(self, _, arr):
         mx.np.random.normal(self.mean, self.sigma, arr.shape, dtype=arr.dtype, out=arr)
+        if self.bounded:
+            mx.np.abs(arr, out=arr)
 
 
 def check_qsym_calibrated(qsym, out_type, name='conv'):
