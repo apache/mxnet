@@ -123,7 +123,7 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     """
     tag = get_docker_tag(platform=platform, registry=registry)
     
-    # Case 1: docker-compose
+    # docker-compose
     if platform in DOCKER_COMPOSE_WHITELIST:
         logging.info('Building docker container tagged \'%s\' based on ci/docker/docker-compose.yml', tag)
         # We add a user with the same group as the executing non-root user so files created in the
@@ -134,7 +134,7 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
         if cache_intermediate:
             cmd.append('--no-rm')
         cmd.append(platform)
-    else:  # Case 2: Deprecated way, will be removed
+    else:
         logging.info("Building docker container tagged '%s'", tag)
         #
         # We add a user with the same group as the executing non-root user so files created in the
@@ -191,12 +191,6 @@ def _get_local_image_id(docker_tag):
     cmd = ["docker", "images", "-q", docker_tag]
     image_id_b = check_output(cmd)
     image_id = image_id_b.decode('utf-8').strip()
-    cmd = ["docker", "images"]
-    image_id_b = check_output(cmd)
-    print(image_id_b.decode('utf-8').strip())
-    cmd = ["echo", "$DOCKER_CACHE_REGISTRY"]
-    image_id_b = check_output(cmd)
-    print(image_id_b.decode('utf-8').strip())
     if not image_id:
         raise RuntimeError('Unable to find docker image id matching with tag {}'.format(docker_tag))
     return image_id
@@ -301,6 +295,8 @@ def load_docker_cache(tag, docker_registry) -> None:
     """Imports tagged container from the given docker registry"""
     if docker_registry:
         # noinspection PyBroadException
+        env = os.environ.copy()
+        env["DOCKER_CACHE_REGISTRY"] = docker_registry
         try:
             import docker_cache
             logging.info('Docker cache download is enabled from registry %s', docker_registry)
@@ -402,8 +398,7 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-        if args.docker_registry and platform not in DOCKER_COMPOSE_WHITELIST:
-            # Caching logic for Dockerfiles not yet refactored with compose    
+        if args.docker_registry and platform not in DOCKER_COMPOSE_WHITELIST:   
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
             build_docker(platform=platform, registry=args.docker_registry,

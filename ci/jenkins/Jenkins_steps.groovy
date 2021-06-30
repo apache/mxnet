@@ -642,7 +642,7 @@ def test_static_scala_cpu() {
         ws('workspace/ut-publish-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_cpu', 'build_static_scala_cpu', false)
+            utils.docker_run('publish.ubuntu1404_cpu', 'build_static_scala_cpu', false)
           }
         }
     }
@@ -655,7 +655,7 @@ def test_static_python_cpu() {
         ws('workspace/ut-publish-python-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_cpu', 'build_static_python_cpu', false)
+            utils.docker_run('publish.ubuntu1404_cpu', 'build_static_python_cpu', false)
           }
         }
     }
@@ -668,7 +668,7 @@ def test_static_python_cpu_cmake() {
             ws('workspace/ut-publish-python-cpu') {
                 timeout(time: max_time, unit: 'MINUTES') {
                     utils.init_git()
-                    utils.docker_run('centos7_cpu', 'build_static_python_cpu_cmake', false)
+                    utils.docker_run('publish.ubuntu1404_cpu', 'build_static_python_cpu_cmake', false)
                 }
             }
         }
@@ -681,7 +681,7 @@ def test_static_python_gpu() {
         ws('workspace/ut-publish-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_cpu_cu101', 'build_static_python_cu101', true)
+            utils.docker_run('publish.ubuntu1404_gpu', 'build_static_python_cu101', true)
           }
         }
     }
@@ -694,7 +694,7 @@ def test_static_python_gpu_cmake() {
             ws('workspace/ut-publish-python-gpu') {
                 timeout(time: max_time, unit: 'MINUTES') {
                     utils.init_git()
-                    utils.docker_run('centos7_cpu_cu101', 'build_static_python_cu101_cmake', true)
+                    utils.docker_run('publish.ubuntu1404_gpu', 'build_static_python_cu101_cmake', true)
                 }
             }
         }
