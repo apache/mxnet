@@ -5001,7 +5001,7 @@ def convert_contrib_split_v2(node, **kwargs):
 
 
 @mx_op.register('_npi_full_like')
-def convert_zeros_like(node, **kwargs):
+def convert_full_like(node, **kwargs):
     """Map MXNet's npi_full_like operator attributes to onnx's ConstantOfShape operator.
     """
     from onnx.helper import make_node, make_tensor
