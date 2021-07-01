@@ -1050,16 +1050,20 @@ def convert_makeloss(node, **kwargs):
     """ Skip operator  """
     return create_basic_op_node('Identity', node, kwargs)
 
-@mx_op.register("Concat")
+@mx_op.register('Concat')
+@mx_op.register('_npi_concatenate')
 def convert_concat(node, **kwargs):
     """Map MXNet's Concat operator attributes to onnx's Concat operator
     and return the created node.
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    axis = int(attrs.get("dim", 1))
+    if 'dim' in attrs:
+        axis = int(attrs.get('dim', 1))
+    else:
+        axis = int(attrs.get('axis', 1))
     concat_node = onnx.helper.make_node(
-        "Concat",
+        'Concat',
         input_nodes,
         [name],
         axis=axis,

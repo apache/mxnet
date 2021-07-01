@@ -187,6 +187,8 @@ class MXNetGraph(object):
                 out_names.append(name[:-len('_statecell_output')]+'2')
             elif name.endswith('_output'):
                 out_names.append(name[:-len('_output')])
+            elif name.endswith('_out'):
+                out_names.append(name[:-len('_out')])
             elif re.search('.*_output[0-9]$', name):
                 out_names.append(name[:-len('_output0')]+name[-1])
             else:
