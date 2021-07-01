@@ -546,7 +546,6 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 #else
   constexpr size_t kDNNLAlign = 4096ul;
 #endif
-#endif
 
 }  // namespace mxnet
 
