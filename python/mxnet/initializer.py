@@ -736,14 +736,13 @@ class RNNFused(Initializer):
         Default scale is 0.07.
     """
     def __init__(self, mode, num_layers, state_size, bidirectional=False,
-                 projection_size=None, scale=0.07, i2h_weight_initializer=None,
+                 projection_size=None, i2h_weight_initializer=None,
                  h2h_weight_initializer=None, i2h_bias_initializer=None,
                  h2h_bias_initializer=None, h2r_weight_initializer=None):
         super(RNNFused, self).__init__(mode=mode, num_layers=num_layers,
                                        state_size=state_size,
                                        bidirectional=bidirectional,
                                        projection_size=projection_size,
-                                       scale=scale,
                                        i2h_weight_initializer=i2h_weight_initializer,
                                        h2h_weight_initializer=h2h_weight_initializer,
                                        i2h_bias_initializer=i2h_bias_initializer,
@@ -754,7 +753,6 @@ class RNNFused(Initializer):
         self.num_hidden = state_size
         self.dir = 2 if bidirectional else 1
         self.projection_size = projection_size
-        self.scale = scale
         self._i2h_weight_initializer = i2h_weight_initializer
         self._h2h_weight_initializer = h2h_weight_initializer
         self._i2h_bias_initializer = i2h_bias_initializer
@@ -805,7 +803,7 @@ class RNNFused(Initializer):
                                 else:
                                     num_inputs = input_size
                                     if layer_num != 0:
-                                        num_inputs = self.projection_size * dir
+                                        num_inputs = self.projection_size * self.dir
                                     if connect == 'h2h':
                                         num_inputs = self.projection_size
                                     shape0 = self.gates * self.num_hidden

@@ -114,10 +114,10 @@ def test_lstmp_gpu():
     assert_almost_equal(layer_output, cell_output, rtol=rtol, atol=atol)
     layer_output.backward()
     cell_output.backward()
-    layer_params_split = split_rnn_params(layer_params['rnn_param'].data().copy(),\
+    layer_params_split = split_rnn_params(layer_params['rnn_param'].grad().copy(),\
         'lstm', 1, input_size, hidden_size, False, projection_size=projection_size)
     for k, v in weights.items():
-        layer_grad = layer_params_split['l0_' + k].grad()
+        layer_grad = layer_params_split['l0_' + k]
         cell_grad = cell_params[k].grad()
         print('checking gradient for {}'.format('lstm0_l0_' + k))
         assert_almost_equal(layer_grad, cell_grad, rtol=rtol, atol=atol)

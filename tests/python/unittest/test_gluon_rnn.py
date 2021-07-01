@@ -691,8 +691,18 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, mode, num_layers, inpu
 
     fused_weight_shape = fused_layer_params['rnn_param'].shape
     w = mx.np.zeros(shape=fused_weight_shape)
-    fused_layer_params['rnn_param'].set_data(w.copy())
     fused_layer_params_split = split_rnn_params(w.copy(), mode, num_layers, input_size, hidden_size, bidirectional)
+    for name, value in fused_layer_params_split.items():
+        if 'bias' in name:
+            fused_layer_params_split[name] = mx.np.random.normal(size=value.shape)
+    _dir = 2 if bidirectional else 1
+    params = (fused_layer_params_split['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+              for t in ['weight', 'bias']
+              for l in range(num_layers)
+              for d in ['l', 'r'][:_dir]
+              for g in ['i2h', 'h2h'])
+    fused_params = mx.np.concatenate(params)
+    fused_layer_params['rnn_param'].set_data(fused_params.copy())
     for name, value in fused_layer_params_split.items():
         cur = name.split('_')[0]
         num = cur[1:]
