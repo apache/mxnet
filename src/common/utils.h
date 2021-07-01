@@ -36,6 +36,7 @@
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 
+#include <sys/mman.h>
 #include <memory>
 #include <vector>
 #include <type_traits>
@@ -980,14 +981,29 @@ MShadowTypeInfo mshadow_type_info(const int type_flag);
 inline bool AlignedMemAlloc(void** ptr, size_t size, size_t alignment) {
 #if _MSC_VER
   *ptr = _aligned_malloc(size, alignment);
-  if (*ptr == nullptr)
-    return false;
+  if (*ptr == nullptr) return false;
 #else
   int res = posix_memalign(ptr, alignment, size);
-  if (res != 0)
-    return false;
+  
+  constexpr size_t gHugePage2MB = 1 << 21;
+  if (size >= gHugePage2MB) {
+    res = posix_memalign(ptr, gHugePage2MB, size);
+    if (res == 0) {
+      madvise(ptr, size, MADV_HUGEPAGE);
+      return true;
+    } else {
+      res = posix_memalign(ptr, alignment, size);
+      if (res == 0) {
+        return true;
+      }
+    }
+  } else {
+    if (res == 0) {
+      return true;
+    }
+  }
 #endif
-  return true;
+  return false;
 }
 
 inline void AlignedMemFree(void* ptr) {
