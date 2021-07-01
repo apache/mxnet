@@ -34,7 +34,9 @@ class _RNNLayer(HybridBlock):
     """Implementation of recurrent layers."""
     def __init__(self, hidden_size, num_layers, layout,
                  dropout, bidirectional, input_size,
-                 param_initializer, mode, projection_size,
+                 i2h_weight_initializer, h2h_weight_initializer,
+                 i2h_bias_initializer, h2h_bias_initializer,
+                 mode, projection_size, h2r_weight_initializer,
                  lstm_state_clip_min, lstm_state_clip_max, lstm_state_clip_nan,
                  dtype, use_sequence_length=False, **kwargs):
         super(_RNNLayer, self).__init__(**kwargs)
@@ -57,9 +59,14 @@ class _RNNLayer(HybridBlock):
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
-        if not param_initializer:
-            param_initializer = initializer.RNNFused(mode, num_layers, hidden_size,\
-                bidirectional, projection_size)
+        param_initializer = initializer.RNNFused(
+            mode, num_layers, hidden_size,
+            bidirectional, projection_size,
+            i2h_weight_initializer=i2h_weight_initializer,
+            h2h_weight_initializer=h2h_weight_initializer,
+            i2h_bias_initializer=i2h_bias_initializer,
+            h2h_bias_initializer=h2h_bias_initializer,
+            h2r_weight_initializer=h2r_weight_initializer)
 
         self.rnn_param = Parameter('rnn_param', shape=(-1,), init=param_initializer,
                                    allow_deferred_init=True, dtype=dtype)
@@ -280,11 +287,15 @@ class RNN(_RNNLayer):
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, activation='relu',
-                 layout='TNC', dropout=0, bidirectional=False, param_initializer=None,
+                 layout='TNC', dropout=0, bidirectional=False,
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  input_size=0, dtype='float32', **kwargs):
         super(RNN, self).__init__(hidden_size, num_layers, layout,
-                                  dropout, bidirectional, input_size, param_initializer,
-                                  'rnn_'+activation, None, None, None, False,
+                                  dropout, bidirectional, input_size,
+                                  i2h_weight_initializer, h2h_weight_initializer,
+                                  i2h_bias_initializer, h2h_bias_initializer,
+                                  'rnn_'+activation, None, None, None, None, False,
                                   dtype, **kwargs)
 
     def state_info(self, batch_size=0):
@@ -393,12 +404,16 @@ class LSTM(_RNNLayer):
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
                  dropout=0, bidirectional=False, input_size=0,
-                 param_initializer=None, projection_size=None,
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
+                 projection_size=None, h2r_weight_initializer=None,
                  state_clip_min=None, state_clip_max=None, state_clip_nan=False,
                  dtype='float32', **kwargs):
         super(LSTM, self).__init__(hidden_size, num_layers, layout,
                                    dropout, bidirectional, input_size,
-                                   param_initializer, 'lstm', projection_size,
+                                   i2h_weight_initializer, h2h_weight_initializer,
+                                   i2h_bias_initializer, h2h_bias_initializer,
+                                   'lstm', projection_size, h2r_weight_initializer,
                                    state_clip_min, state_clip_max, state_clip_nan,
                                    dtype, **kwargs)
 
@@ -498,10 +513,14 @@ class GRU(_RNNLayer):
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
                  dropout=0, bidirectional=False, input_size=0,
-                 param_initializer=None, dtype='float32', **kwargs):
+                 i2h_weight_initializer=None, h2h_weight_initializer=None,
+                 i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
+                 dtype='float32', **kwargs):
         super(GRU, self).__init__(hidden_size, num_layers, layout,
                                   dropout, bidirectional, input_size,
-                                  param_initializer, 'gru', None, None, None, False,
+                                  i2h_weight_initializer, h2h_weight_initializer,
+                                  i2h_bias_initializer, h2h_bias_initializer,
+                                  'gru', None, None, None, None, False,
                                   dtype, **kwargs)
 
     def state_info(self, batch_size=0):

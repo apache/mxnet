@@ -472,6 +472,9 @@ class Parameter(object):
             ctx = [context.current_context()]
         if isinstance(ctx, Context):
             ctx = [ctx]
+        if isinstance(self.init, initializer.RNNFused):
+            self.init.set_initializer(init if init else default_init)
+            init = default_init = self.init
         if init is None:
             init = default_init if self.init is None else self.init
         if not shape_is_known(self.shape):

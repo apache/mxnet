@@ -736,23 +736,34 @@ class RNNFused(Initializer):
         Default scale is 0.07.
     """
     def __init__(self, mode, num_layers, state_size, bidirectional=False,
-                 projection_size=None, scale=0.07):
+                 projection_size=None, scale=0.07, i2h_weight_initializer=None,
+                 h2h_weight_initializer=None, i2h_bias_initializer=None,
+                 h2h_bias_initializer=None, h2r_weight_initializer=None):
         super(RNNFused, self).__init__(mode=mode, num_layers=num_layers,
                                        state_size=state_size,
                                        bidirectional=bidirectional,
                                        projection_size=projection_size,
-                                       scale=scale)
+                                       scale=scale,
+                                       i2h_weight_initializer=i2h_weight_initializer,
+                                       h2h_weight_initializer=h2h_weight_initializer,
+                                       i2h_bias_initializer=i2h_bias_initializer,
+                                       h2h_bias_initializer=h2h_bias_initializer,
+                                       h2r_weight_initializer=h2r_weight_initializer)
         self.gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
         self.num_layers = num_layers
         self.num_hidden = state_size
         self.dir = 2 if bidirectional else 1
         self.projection_size = projection_size
         self.scale = scale
+        self._i2h_weight_initializer = i2h_weight_initializer
+        self._h2h_weight_initializer = h2h_weight_initializer
+        self._i2h_bias_initializer = i2h_bias_initializer
+        self._h2h_bias_initializer = h2h_bias_initializer
+        self._h2r_weight_initializer = h2r_weight_initializer
 
     # pylint: disable=too-many-nested-blocks
     def _init_weight(self, name, arr):
         arr_len = arr.shape[0]
-        dtype = arr.dtype
         size = self.num_hidden * self.dir * self.gates
         if not self.projection_size:
             # second layer size
@@ -779,11 +790,9 @@ class RNNFused(Initializer):
                             shape0 = self.gates * self.num_hidden
                             if param == 'weight':
                                 cur_len = shape0 * num_inputs
-                                _mx_np.random.uniform(-self.scale, self.scale, \
-                                    size=(cur_len,), dtype=dtype, out=arr[begin:begin+cur_len])
                             else:
                                 cur_len = shape0
-                                arr[begin:begin+cur_len] = 0.0
+                            self._init_util(param, connect, arr[begin:begin+cur_len])
                             begin += cur_len
         else:
             for param in ['weight', 'bias']:
@@ -793,8 +802,6 @@ class RNNFused(Initializer):
                             if connect != 'h2r' or param != 'bias':
                                 if connect == 'h2r':
                                     cur_len = self.projection_size * self.num_hidden
-                                    _mx_np.random.uniform(-self.scale, self.scale, \
-                                        size=(cur_len,), dtype=dtype, out=arr[begin:begin+cur_len])
                                 else:
                                     num_inputs = input_size
                                     if layer_num != 0:
@@ -804,9 +811,24 @@ class RNNFused(Initializer):
                                     shape0 = self.gates * self.num_hidden
                                     if param == 'weight':
                                         cur_len = shape0 * num_inputs
-                                        _mx_np.random.uniform(-self.scale, self.scale, \
-                                            size=(cur_len,), dtype=dtype, out=arr[begin:begin+cur_len])
                                     else:
                                         cur_len = shape0
-                                        arr[begin:begin+cur_len] = 0.0
+                                self._init_util(param, connect, arr[begin:begin+cur_len])
                                 begin += cur_len
+
+    def _init_util(self, param, connect, arr):
+        name = "_{}_{}_initializer".format(connect, param)
+        init = getattr(self, name)
+        create(init)(InitDesc(name, {'__init__': init}), arr)        
+
+    def set_initializer(self, init):
+        self._i2h_weight_initializer = \
+            init if not self._i2h_weight_initializer else 'uniform'
+        self._h2h_weight_initializer = \
+            init if not self._h2h_weight_initializer else 'uniform'
+        self._i2h_bias_initializer = \
+            init if not self._i2h_bias_initializer else 'zero'
+        self._h2h_bias_initializer = \
+            init if not self._i2h_bias_initializer else 'zero'
+        self._h2r_weight_initializer = \
+            init if not self._h2r_weight_initializer else 'uniform'
