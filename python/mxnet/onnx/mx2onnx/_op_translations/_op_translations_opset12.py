@@ -1722,7 +1722,36 @@ def convert_floor(node, **kwargs):
     return create_basic_op_node('Floor', node, kwargs)
 
 
-# Changing shape and type.
+@mx_op.register("_npx_reshape")
+def convert_npx_reshape(node, **kwargs):
+    """
+    """
+    from onnx.helper import make_node
+
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    reverse = attrs.get('reverse', 'False')
+    targ_shape = convert_string_to_list(attrs['newshape'])
+
+    if reverse in ['True', '1']:
+        raise NotImplementedError('conversion of _npx_reshape with reverse==True is not '\
+                                  'implemented yet')
+
+    if [x for x in targ_shape if x in [0, -2, -3, -4, -5, -6]] != []:
+        raise NotImplementedError('conversion of _npx_reshape with 0, -2, -3, -4, -5, -6 is not '\
+                                  'implemented yet')
+
+    create_tensor(targ_shape, name+'_targ_shape', kwargs['initializer'])
+
+    nodes = []
+    nodes += [
+        make_node('Reshape', [input_nodes[0], name+'_targ_shape'], [name])
+    ]
+
+    return nodes
+
+
+# Legacy Reshape
 @mx_op.register("Reshape")
 def convert_reshape(node, **kwargs):
     """Map MXNet's Reshape operator attributes to onnx's Reshape operator.
@@ -1735,7 +1764,6 @@ def convert_reshape(node, **kwargs):
 
     reverse = attrs.get('reverse', 'False')
     targ_shape = convert_string_to_list(attrs["shape"])
-
     # In general -2, -3, -4 in the target shape are not supoorted, but there are
     # a few special cases that we can convert to supported scenarios
 
@@ -3361,6 +3389,7 @@ def convert_contrib_BilinearResize2D(node, **kwargs):
 
 
 @mx_op.register("_arange")
+@mx_op.register("_npi_arange")
 def convert_arange(node, **kwargs):
     """Map MXNet's arange operator attributes to onnx's Range operator.
     """
