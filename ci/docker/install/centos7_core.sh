@@ -39,6 +39,11 @@ yum -y install make
 yum -y install wget
 yum -y install unzip
 yum -y install ninja-build
+yum -y install automake 
+yum -y install patchelf 
+yum -y install nasm 
+yum -y install libtool  
+yum -y install dpkg-dev
 
 # CMake 3.13.2+ is required
 mkdir /opt/cmake && cd /opt/cmake
