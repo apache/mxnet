@@ -23,16 +23,15 @@ from mxnet.test_utils import assert_almost_equal
 import pytest
 import tempfile
 
-def def_model(op_name, dummy_input=False, **params):
+
+def def_model(namespace, op_name, dummy_input=False, **params):
     class Model(HybridBlock):
         def __init__(self, **kwargs):
             super(Model, self).__init__(**kwargs)
 
-        def hybrid_forward(self, F, *inputs):
+        def forward(self, *inputs):
             names = op_name.split('.')
-            func = F
-            for name in names:
-                func = getattr(func, name)
+            func = getattr(namespace, names[-1])
             if dummy_input:
                 return func(**params), inputs[0]
             else:
@@ -44,7 +43,7 @@ def def_model_from_func(func, dummy_input=False, **params):
         def __init__(self, **kwargs):
             super(Model, self).__init__(**kwargs)
 
-        def hybrid_forward(self, F, *inputs):
+        def forward(self, *inputs):
             if dummy_input:
                 return func(**params), inputs[0]
             else:
@@ -90,8 +89,8 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_
 
 
 def test_onnx_export_abs(tmp_path):
-    M = def_model('abs')
-    x = mx.nd.array([[-2, -1], [0, 99]], dtype='float32')
+    M = def_model(mx.np, 'abs')
+    x = mx.np.array([[-2, -1], [0, 99]], dtype='float32')
     op_export_test('abs', M, [x], tmp_path)
 
 
@@ -100,46 +99,50 @@ def test_onnx_export_abs(tmp_path):
                                     [(None, 1), (2, None), None],
                                     [(0, 0, 0), (None, 4, 5), (None, 1, 2)]])
 def test_onnx_export_slice(tmp_path, dtype, params):
-    M = def_model('slice', begin=params[0], end=params[1], step=params[2])
-    x = mx.nd.arange(start=0, stop=60, dtype=dtype).reshape((3, 4, 5))
+    M = def_model(mx.npx, 'slice', begin=params[0], end=params[1], step=params[2])
+    x = mx.np.arange(start=0, stop=60, dtype=dtype).reshape((3, 4, 5))
     op_export_test('slice', M, [x], tmp_path)
 
-
-def test_onnx_export_stack(tmp_path):
-    M = def_model('stack')
-    x = mx.nd.array([1, 2], dtype='float32')
-    y = mx.nd.array([3, 4], dtype='float32')
-    op_export_test('stack', M, [x, y], tmp_path)
 
 @pytest.mark.parametrize("dtype", [None, "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("shape", [(1), (1,2), (2,3,4), (5,6,7)])
 def test_onnx_export_zeros(tmp_path, dtype, shape):
-    M = def_model('zeros', shape=shape, dtype=dtype, dummy_input=True)
-    x = mx.nd.array([1])
+    M = def_model(mx.np, 'zeros', shape=shape, dtype=dtype, dummy_input=True)
+    x = mx.np.array([1])
     op_export_test('zeros', M, [x], tmp_path, dummy_input=True)
+
 
 @pytest.mark.parametrize("dtype", [None, "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("shape", [(1), (1,2), (2,3,4), (5,6,7)])
 def test_onnx_export_ones(tmp_path, dtype, shape):
-    M = def_model('ones', shape=shape, dtype=dtype, dummy_input=True)
-    x = mx.nd.array([0])
+    M = def_model(mx.np, 'ones', shape=shape, dtype=dtype, dummy_input=True)
+    x = mx.np.array([0])
     op_export_test('ones', M, [x], tmp_path, dummy_input=True)
 
 
 @pytest.mark.parametrize('dtype', [None, 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [(1), (1,2), (2,3,4), (5,6,7)])
 def test_onnx_export_zeros_like(tmp_path, dtype, shape):
-    M = def_model('zeros_like', dtype=dtype)
-    x = mx.random.uniform(0, 1, shape, dtype='float32')
+    M = def_model(mx.np, 'zeros_like', dtype=dtype)
+    x = mx.np.random.uniform(0, 1, shape, dtype='float32')
     op_export_test('zeros_like', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', [None, 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [(1), (1,2), (2,3,4), (5,6,7)])
 def test_onnx_export_ones_like(tmp_path, dtype, shape):
-    M = def_model('ones_like', dtype=dtype)
-    x = mx.random.uniform(0, 1, shape, dtype='float32')
+    M = def_model(mx.np, 'ones_like', dtype=dtype)
+    x = mx.np.random.uniform(0, 1, shape, dtype='float32')
     op_export_test('ones_like', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', [None, 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [(1), (1,2), (2,3,4), (5,6,7)])
+@pytest.mark.parametrize('fill_value', [0, 1, -1, 12.34])
+def test_onnx_export_full_like(tmp_path, dtype, shape, fill_value):
+    M = def_model(mx.np, 'full_like', dtype=dtype, fill_value=fill_value)
+    x = mx.np.random.uniform(0, 1, shape, dtype='float32')
+    op_export_test('full_like', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
@@ -1693,7 +1696,7 @@ def test_onnx_export_maximum_minimum(tmp_path, dtype, shape, op_name):
 def test_onnx_export_reduce_op(tmp_path, dtype, shape, axis, keepdims, op_name):
     if dtype != 'int64' or op_name != 'mean':
         # onnx ReduceMean does not support int 64
-        x = mx.nd.random.uniform(1, 100, shape=shape).astype(dtype)
+        x = mx.np.random.uniform(1, 100, size=shape).astype(dtype)
         M = def_model(op_name, axis=axis, keepdims=keepdims)
         op_export_test(op_name, M, [x], tmp_path)
 

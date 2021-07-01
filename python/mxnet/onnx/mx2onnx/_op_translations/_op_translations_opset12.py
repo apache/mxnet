@@ -1692,6 +1692,7 @@ def convert_negative(node, **kwargs):
     return create_basic_op_node('Neg', node, kwargs)
 
 @mx_op.register("abs")
+@mx_op.register("_npi_absolute")
 def convert_abs(node, **kwargs):
     """Map MXNet's abs operator attributes to onnx's Abs operator
     and return the created node.
@@ -3166,6 +3167,7 @@ def convert_slice(node, **kwargs):
 
 
 @mx_op.register("_zeros")
+@mx_op.register("_npi_zeros")
 def convert_zeros(node, **kwargs):
     """Map MXNet's zeros operator attributes to onnx's ConstantOfShape operator.
     """
@@ -3185,6 +3187,7 @@ def convert_zeros(node, **kwargs):
 
 
 @mx_op.register("_ones")
+@mx_op.register("_npi_ones")
 def convert_ones(node, **kwargs):
     """Map MXNet's ones operator attributes to onnx's ConstantOfShape operator.
     """
@@ -4994,4 +4997,28 @@ def convert_contrib_split_v2(node, **kwargs):
     else:
         raise NotImplementedError('indices is supported since ONNX 1.8.0 (opset13), please upgrade ONNX version')
 
+    return nodes
+
+
+@mx_op.register('_npi_full_like')
+def convert_zeros_like(node, **kwargs):
+    """Map MXNet's npi_full_like operator attributes to onnx's ConstantOfShape operator.
+    """
+    from onnx.helper import make_node, make_tensor
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    dtype = attrs.get('dtype', 'float32')
+    if dtype == 'None':
+        dtype = 'float32'
+    dtype = np.dtype(dtype)
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+
+    fill_value = dtype.type(float(attrs.get('fill_value', 0)))
+
+    # create tensor with shape of input
+    tensor_value = make_tensor(name+'_fill_value', dtype_t, [1], [fill_value])
+    nodes = [
+        make_node('Shape', [input_nodes[0]], [name+'_shape']),
+        make_node('ConstantOfShape', [name+'_shape'], [name], name=name, value=tensor_value)
+    ]
     return nodes
