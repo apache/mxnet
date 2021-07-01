@@ -55,11 +55,11 @@ RUN yum -y check-update || true && \
         # Build-dependencies for ccache 3.7.9
         gperf \
         libb2-devel \
-        libzstd-devel \
+        libzstd-devel && \
     yum clean all
 
-# Make Python 3.8 Software Collections available by default during
-# the following build steps in this Dockerfile
+# Make Red Hat Developer Toolset 10.0 and Python 3.8 Software Collections available by default
+# during the following build steps in this Dockerfile
 SHELL [ "/usr/bin/scl", "enable", "devtoolset-10", "rh-python38" ]
 
 # Install minimum required cmake version
@@ -82,12 +82,11 @@ RUN cd /usr/local/src && \
 
 # Arm Performance Libraries 21.0
 RUN cd /usr/local/src && \
-    wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/RHEL7/arm-performance-libraries_21.0_RHEL-7_gcc-10.2.tar && \
-    tar -xvf arm-performance-libraries_21.0_RHEL-7_gcc-10.2.tar && \
-    arm-performance-libraries_21.0_RHEL-7_gcc-10.2/arm-performance-libraries_21.0_RHEL-7.sh -a && \
-    cd /usr/local/src && \
-    rm -rf arm-performance-libraries_21.0_RHEL-7_gcc-10.2.tar arm-performance-libraries_21.0_RHEL-7_gcc-10.2
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-10.2/lib
+    wget https://armkeil.blob.core.windows.net/developer/Files/downloads/hpc/arm-performance-libraries/21-0-0/RHEL7/arm-performance-libraries_21.0_RHEL-7_gcc-8.2.tar && \
+    tar -xvf arm-performance-libraries_21.0_RHEL-7_gcc-8.2.tar && \
+    arm-performance-libraries_21.0_RHEL-7_gcc-8.2/arm-performance-libraries_21.0_RHEL-7.sh -a && \
+    rm -rf arm-performance-libraries_21.0_RHEL-7_gcc-8.2.tar arm-performance-libraries_21.0_RHEL-7_gcc-8.2
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/arm/armpl_21.0_gcc-8.2/lib
 
 # Fix the en_DK.UTF-8 locale to test locale invariance
 RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8

@@ -51,7 +51,6 @@ export MAKE="make $ADD_MAKE_FLAG"
 
 if [[ $ARCH == 'aarch64' ]]; then
     source /opt/rh/devtoolset-10/enable
-    source /opt/rh/rh-python38/enable
     export CC="gcc -fPIC -moutline-atomics"
     export CXX="g++ -fPIC -moutline-atomics"
     export PKG_CONFIG_PATH=$DEPS_PATH/lib/pkgconfig:$DEPS_PATH/lib64/pkgconfig:$DEPS_PATH/lib/aarch64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
@@ -62,7 +61,7 @@ else
 fi
 export FC="gfortran"
 if [[ $ARCH == 'aarch64' ]]; then
-    export CPATH=/opt/arm/armpl_21.0_gcc-10.2/include_lp64_mp:$CPATH
+    export CPATH=/opt/arm/armpl_21.0_gcc-8.2/include_lp64_mp:$CPATH
 else
     export CPATH=$DEPS_PATH/include:$CPATH
 fi
