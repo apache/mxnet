@@ -819,7 +819,7 @@ class RNNFused(Initializer):
     def _init_util(self, param, connect, arr):
         name = "_{}_{}_initializer".format(connect, param)
         init = getattr(self, name)
-        create(init)(InitDesc(name, {'__init__': init}), arr)        
+        create(init)(InitDesc(name, {'__init__': init}), arr)
 
     def set_initializer(self, init):
         self._i2h_weight_initializer = \
