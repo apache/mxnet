@@ -36,7 +36,9 @@
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 
+#ifdef __linux__
 #include <sys/mman.h>
+#endif
 #include <memory>
 #include <vector>
 #include <type_traits>
