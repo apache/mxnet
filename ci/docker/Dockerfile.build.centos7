@@ -35,104 +35,20 @@ FROM $BASE_IMAGE AS base
 
 WORKDIR /work/deps
 
-RUN yum -y check-update || true && \
-    yum -y install epel-release centos-release-scl && \
-    yum install -y \
-        # Utilities
-        wget \
-        unzip \
-        patchelf \
-        pandoc \
-        # Development tools
-        git \
-        make \
-        ninja-build \
-        automake \
-        autoconf \
-        libtool \
-        protobuf-compiler \
-        protobuf-devel \
-        # CentOS Software Collections https://www.softwarecollections.org
-        devtoolset-7 \
-        devtoolset-8 \
-        rh-python36 \
-        rh-maven35 \
-        # Libraries
-        # Provide clbas headerfiles
-        atlas-devel \
-        opencv-devel \
-        openssl-devel \
-        zeromq-devel \
-        # Build-dependencies for ccache 3.7.9
-        gperf \
-        libb2-devel \
-        libzstd-devel \
-        # Required by openblas build
-        gcc-gfortran \
-        nasm \
-        python3 \
-        python3-pip \
-        epel-release \
-        gcc-c++ \
-        file && \
-    yum repolist && \
-    yum install -y  dpkg-devel dpkg-dev && \
-    yum clean all
-
-RUN pip3 install numpy==1.18.5 scipy requests wheel nose nose-timer
-RUN python3 -m pip install --upgrade pip
-
-# Build OpenBLAS from source
-RUN mkdir ~/openblas && \
-    cd ~/openblas && \
-    OPENBLAS_VERSION=0.3.10 && \
-    wget \
-        https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.zip \
-        -O openblas.zip && \
-    unzip -q openblas.zip -d . && \
-    cd OpenBLAS-${OPENBLAS_VERSION} && \
-    CXX="g++ -fPIC" CC="gcc -fPIC" make -j DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 && \
-    make PREFIX=/usr/local install
-
-# Make Python 3.6 and Maven 3.3 Software Collections available by default during
-# the following build steps in this Dockerfile
-SHELL [ "/usr/bin/scl", "enable", "devtoolset-7", "rh-python36", "rh-maven35" ]
-
-# Install minimum required cmake version
-RUN cd /usr/local/src && \
-    wget -nv https://cmake.org/files/v3.13/cmake-3.13.5-Linux-x86_64.sh && \
-    sh cmake-3.13.5-Linux-x86_64.sh --prefix=/usr/local --skip-license && \
-    rm cmake-3.13.5-Linux-x86_64.sh
-
-# ccache 3.7.9 has fixes for caching nvcc outputs
-RUN cd /usr/local/src && \
-    git clone --recursive https://github.com/ccache/ccache.git && \
-    cd ccache && \
-    git checkout v3.7.9 && \
-    ./autogen.sh && \
-    ./configure --disable-man && \
-    make -j$(nproc) && \
-    make install && \
-    cd /usr/local/src && \
-    rm -rf ccache
-
-# Fix the en_DK.UTF-8 locale to test locale invariance
-RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8
-
-# Python dependencies
-RUN python3 -m pip install --upgrade pip
-COPY install/requirements /work/
-RUN python3 -m pip install -r /work/requirements
+COPY install/centos7_core.sh /work/
+RUN /work/centos7_core.sh
+COPY install/centos7_ccache.sh /work/
+RUN /work/centos7_ccache.sh
+COPY install/centos7_python.sh /work/
+RUN /work/centos7_python.sh
+COPY install/centos7_scala.sh /work/
+RUN /work/centos7_scala.sh
 
 ARG USER_ID=0
-COPY install/docker_filepermissions.sh /work/
-RUN /work/docker_filepermissions.sh
+COPY install/centos7_adduser.sh /work/
+RUN /work/centos7_adduser.sh 
 
 ENV PYTHONPATH=./python/
-# Verify that MXNet works correctly when the C locale is set to a locale that uses a comma as the
-# decimal separator. Please see #16134 for an example of a bug caused by incorrect handling of
-# number serialization and deserialization.
-ENV LC_NUMERIC=en_DK.UTF-8
 WORKDIR /work/mxnet
 
 COPY runtime_functions.sh /work/

@@ -75,14 +75,13 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     :param load_cache: Load cache before building
     :return: Platform if failed, None otherwise
     """
-    # Case 1: docker-compose
+    # docker-compose
     if platform in build_util.DOCKER_COMPOSE_WHITELIST:
         build_util.build_docker(platform=platform, registry=registry, num_retries=10, no_cache=False)
         push_cmd = ['docker-compose', 'push', platform]
         subprocess.check_call(push_cmd)
         return None
 
-    # Case 2: Deprecated way, will be removed
     docker_tag = build_util.get_docker_tag(platform=platform, registry=registry)
 
     # Preload cache
