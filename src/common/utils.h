@@ -984,23 +984,20 @@ inline bool AlignedMemAlloc(void** ptr, size_t size, size_t alignment) {
   if (*ptr == nullptr) return false;
 #else
   int res = posix_memalign(ptr, alignment, size);
-  
   constexpr size_t gHugePage2MB = 1 << 21;
   if (size >= gHugePage2MB) {
     res = posix_memalign(ptr, gHugePage2MB, size);
+    // TODO(mozga-intel): Enable MacOS Huge Pages if desired
+#if __linux__
     if (res == 0) {
       madvise(ptr, size, MADV_HUGEPAGE);
       return true;
-    } else {
-      res = posix_memalign(ptr, alignment, size);
-      if (res == 0) {
-        return true;
-      }
     }
-  } else {
-    if (res == 0) {
-      return true;
-    }
+#endif
+  }
+  res = posix_memalign(ptr, alignment, size);
+  if (res == 0) {
+    return true;
   }
 #endif
   return false;
