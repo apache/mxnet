@@ -142,7 +142,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
   const size_t itemCountPerChannel = inputData.Size() / channelCount;
 
   #pragma omp parallel for
-  for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {
+  for (size_t channel = 0; channel < channelCount; ++channel) {
     if (is_train_and_not_global_stats) {
       // compute mean per input
       mean[channel] = 0;
@@ -253,7 +253,7 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
   const bool is_train_and_not_global_stats = ctx.is_train && !param_.use_global_stats;
 
   #pragma omp parallel for
-  for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {
+  for (size_t channel = 0; channel < channelCount; ++channel) {
     const AccReal *weight = weights.dptr<AccReal>();
     const AccReal w = !param_.fix_gamma ? weight[channel] : AccReal(1);
     AccReal mean, invstd;
@@ -375,15 +375,15 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
 
   const index_t channelCount = dshape[channelAxis];
 
-  in_shape->at(batchnorm::kGamma) = mxnet::TShape(Shape1(channelCount));
-  in_shape->at(batchnorm::kBeta) = mxnet::TShape(Shape1(channelCount));
-  in_shape->at(batchnorm::kInMovingMean) = mxnet::TShape(Shape1(channelCount));  // kMovingMean
-  in_shape->at(batchnorm::kInMovingVar) = mxnet::TShape(Shape1(channelCount));  // kMovingVar
+  SHAPE_ASSIGN_CHECK(*in_shape, batchnorm::kGamma, Shape1(channelCount));
+  SHAPE_ASSIGN_CHECK(*in_shape, batchnorm::kBeta, Shape1(channelCount));
+  SHAPE_ASSIGN_CHECK(*in_shape, batchnorm::kInMovingMean, Shape1(channelCount));  // kMovingMean
+  SHAPE_ASSIGN_CHECK(*in_shape, batchnorm::kInMovingVar, Shape1(channelCount));   // kMovingVar
 
-  out_shape->clear();
-  out_shape->push_back(dshape);                // kOut
-  out_shape->push_back(Shape1(channelCount));  // kMean
-  out_shape->push_back(Shape1(channelCount));  // kVar
+
+  SHAPE_ASSIGN_CHECK(*out_shape, batchnorm::kOut, dshape);
+  SHAPE_ASSIGN_CHECK(*out_shape, batchnorm::kMean, Shape1(channelCount));
+  SHAPE_ASSIGN_CHECK(*out_shape, batchnorm::kVar, Shape1(channelCount));
 
   return true;
 }
