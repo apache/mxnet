@@ -457,7 +457,7 @@ def test_onnx_export_np_maximum(tmp_path, dtype):
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('axis', [0, 1, 2, -1])
-def test_onnx_export_stack(tmp_path, dtype, axis):
+def test_onnx_export_npx_stack(tmp_path, dtype, axis):
     M = def_model(mx.np, 'stack', axis=axis)
     if 'int' in dtype:
         x = mx.np.random.randint(0, 10*9, (3,4,5), dtype=dtype)
@@ -471,7 +471,7 @@ def test_onnx_export_stack(tmp_path, dtype, axis):
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (1, 2, 3, 2, 1)])
 @pytest.mark.parametrize('p', [0, 0.1, 0.5, 1])
-def test_onnx_export_dropout(tmp_path, dtype, shape, p):
+def test_onnx_export_npx_dropout(tmp_path, dtype, shape, p):
     x = mx.np.random.uniform(-100, 100, size=shape).astype(dtype)
     M = def_model(mx.npx, 'dropout', p=p)
     op_export_test('dropuout', M, [x], tmp_path)
@@ -480,28 +480,28 @@ def test_onnx_export_dropout(tmp_path, dtype, shape, p):
 @pytest.mark.parametrize('src_dtype', ['float16', 'float32', 'float64'])
 @pytest.mark.parametrize('dst_dtype', ['bool', 'float16', 'float32', 'float64', 'int32', 'int64', 'int8', 'uint8'])
 @pytest.mark.parametrize('shape', [(2,3), (4,5,6)])
-def test_onnx_export_cast(tmp_path, src_dtype, dst_dtype, shape):
-    M = def_model('Cast', dtype=dst_dtype)
-    x = mx.nd.ones(shape, dtype=src_dtype)
-    op_export_test('Cast', M, [x], tmp_path)
+def test_onnx_export_npx_cast(tmp_path, src_dtype, dst_dtype, shape):
+    M = def_model(mx.npx, 'cast', dtype=dst_dtype)
+    x = mx.np.random.uniform(0, 1, size=shape, dtype=src_dtype)
+    op_export_test('cast', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 @pytest.mark.parametrize('temperature', [None, .1, 1., 10.])
 def test_onnx_export_softmax(tmp_path, dtype, temperature):
-    x = mx.nd.random.uniform(0, 1, (4, 5, 6), dtype=dtype)
-    M1 = def_model('softmax')
+    x = mx.np.random.uniform(0, 1, (4, 5, 6), dtype=dtype)
+    M1 = def_model(mx.npx, 'softmax')
     op_export_test('softmax_1', M1, [x], tmp_path)
-    M2 = def_model('softmax', use_length=True, axis=0, temperature=temperature)
-    l2 = mx.random.uniform(0, 4, (5, 6)).astype('int32')
+    l2 = mx.np.random.uniform(0, 4, (5, 6)).astype('int32')
+    M2 = def_model(mx.npx, 'softmax', use_length=True, axis=0, temperature=temperature)
     op_export_test('softmax_2', M2, [x, l2], tmp_path)
-    M3 = def_model('softmax', use_length=True, axis=-1, temperature=temperature)
+    M3 = def_model(mx.npx, 'softmax', use_length=True, axis=-1, temperature=temperature)
     # note that the axis==-1 case uses negative value masking + ONNX softmax
     # when valid_len==0 the masked values will NOT be 0
-    l3 = mx.random.uniform(1, 6, (4, 5)).astype('int32')
+    l3 = mx.np.random.uniform(1, 6, (4, 5)).astype('int32')
     op_export_test('softmax_3', M3, [x, l3], tmp_path)
-    M4 = def_model('softmax', use_length=True, axis=1, temperature=temperature)
-    l4 = mx.random.uniform(0, 5, (4, 6)).astype('int32')
+    M4 = def_model(mx.npx, 'softmax', use_length=True, axis=1, temperature=temperature)
+    l4 = mx.np.random.uniform(0, 5, (4, 6)).astype('int32')
     op_export_test('softmax_4', M4, [x, l4], tmp_path)
 
 

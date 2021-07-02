@@ -900,6 +900,7 @@ def convert_softmax(node, **kwargs):
         temperature = float(temperature)
 
     use_length = str(attrs.get("use_length", 'None'))
+    use_length = use_length in ['1', 'True']
     dtype = input_dtypes[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     data = input_nodes[0]
@@ -907,7 +908,7 @@ def convert_softmax(node, **kwargs):
     # use op set 11 ONNX Softmax
     if axis == -1 and temperature == 1.:
         nodes = []
-        if use_length == "True":
+        if use_length:
             # magic number, this is fp16 min
             create_tensor([-65500.0], name+"_mask_val", kwargs["initializer"], dtype=dtype)
             create_tensor([1], name+"_1", kwargs["initializer"])
@@ -945,7 +946,7 @@ def convert_softmax(node, **kwargs):
             make_node("Div", [name+"_exp_out", name+"_rsum_out"], [name], name=name),
         ]
         return nodes
-    elif use_length == "True":
+    elif use_length:
         length = input_nodes[1]
 
         create_tensor([axis], name+"_axis", kwargs["initializer"])
