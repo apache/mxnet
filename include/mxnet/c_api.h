@@ -274,6 +274,9 @@ MXNET_DLL int MXRandomSeedContext(int seed, int dev_type, int dev_id);
 
 /*!
  * \brief Change floating-point calculations when dealing with denormalized values.
+ * Currently this option is only supported in CPU backend.
+ * Flushing denormalized values to zero is enabled by default.
+ *
  * \param value state of flush-to-zero and denormals-are-zero to set.
  * \param prev_state state of flush-to-zero and denormals-are-zero before setting new state.
  * \return 0 when success, -1 when failure happens.

@@ -1208,11 +1208,17 @@ def set_flush_denorms(value):
        (exponent is the smallest possible value).
        Flushing denormalized values to 0 can speedup calculations if such values occurs,
        but if fulfilling whole IEEE 754 standard is required this option should be disabled.
+       Flushing denormalized values is enabled in MXNet by default.
 
     Parameters
     ----------
     value : bool
         State of flush-to-zero and denormals-are-zero in MXCSR register
+
+    Returns
+    -------
+    prev_state : bool
+        Previous state of flush-to-zero in MXCSR register
     """
     ret = ctypes.c_bool()
     passed_value = ctypes.c_bool(value)
