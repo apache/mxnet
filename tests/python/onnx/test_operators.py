@@ -379,88 +379,102 @@ def test_onnx_export_np_concatenate(tmp_path, dtype):
 @pytest.mark.parametrize('dtype', ['float32', 'float16'])
 @pytest.mark.parametrize('shape', [(1,), (3,), (4, 5), (3, 4, 5)])
 @pytest.mark.parametrize('act_type', ['tanh', 'relu', 'sigmoid', 'softrelu', 'softsign'])
-def test_onnx_export_Activation(tmp_path, dtype, shape, act_type):
-    M = def_model('Activation', act_type=act_type)
-    x = mx.nd.random.uniform(-0.5, 0.5, shape, dtype=dtype)
-    op_export_test('Activation', M, [x], tmp_path)
+def test_onnx_export_npx_activation(tmp_path, dtype, shape, act_type):
+    M = def_model(mx.npx, 'activation', act_type=act_type)
+    x = mx.np.random.uniform(-0.5, 0.5, shape, dtype=dtype)
+    op_export_test('activation', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('axes', [None, [1,0,2]])
-def test_onnx_export_transpose(tmp_path, dtype, axes):
+def test_onnx_export_np_transpose(tmp_path, dtype, axes):
     if axes != None:
-        M = def_model('transpose', axes=axes)
+        M = def_model(mx.np, 'transpose', axes=axes)
     else:
-        M = def_model('transpose')
-    x = mx.nd.array([[[1,2],[3,4]],[[5,6],[7,8]]], dtype=dtype)
+        M = def_model(mx.np, 'transpose')
+    x = mx.np.array([[[1,2],[3,4]],[[5,6],[7,8]]], dtype=dtype)
     op_export_test('transpose', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
 @pytest.mark.parametrize('axis', [0, 1, 2])
-def test_onnx_export_expand_dims(tmp_path, dtype, axis):
-    M = def_model('expand_dims', axis=axis)
-    x = mx.nd.random.uniform(0, 1, (2,3,4), dtype=dtype)
+def test_onnx_export_np_expand_dims(tmp_path, dtype, axis):
+    M = def_model(mx.np, 'expand_dims', axis=axis)
+    x = mx.np.random.uniform(0, 1, (2,3,4), dtype=dtype)
     op_export_test('expand_dims', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
-def test_onnx_export_broadcast_add(tmp_path, dtype):
-    M = def_model('broadcast_add')
-    x = mx.nd.array([[1,1,1],[1,1,1]], dtype=dtype)
-    y = mx.nd.array([[0],[1]], dtype=dtype)
-    op_export_test('broadcast_add', M, [x, y], tmp_path)
+def test_onnx_export_np_add(tmp_path, dtype):
+    M = def_model(mx.np, 'add')
+    x = mx.np.array([[1,1,1],[1,1,1]], dtype=dtype)
+    y = mx.np.array([[0],[1]], dtype=dtype)
+    op_export_test('add', M, [x, y], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
-def test_onnx_export_broadcast_equal(tmp_path, dtype):
-    M = def_model('broadcast_equal')
-    x = mx.nd.zeros((4,5,6), dtype=dtype)
-    y = mx.nd.ones((4,5,6), dtype=dtype)
-    op_export_test('broadcast_equal', M, [x, y], tmp_path)
+def test_onnx_export_np_equal(tmp_path, dtype):
+    M = def_model(mx.np, 'equal')
+    x = mx.np.zeros((4,5,6), dtype=dtype)
+    y = mx.np.ones((4,5,6), dtype=dtype)
+    op_export_test('equal', M, [x, y], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
-def test_onnx_export_broadcast_not_equal(tmp_path, dtype):
-    M = def_model('broadcast_not_equal')
-    x = mx.nd.zeros((4,5,6), dtype=dtype)
-    y = mx.nd.ones((4,5,6), dtype=dtype)
-    op_export_test('broadcast_not_equal', M, [x, y], tmp_path)
-    x1 = mx.nd.ones((4,5,6), dtype=dtype)
-    y1 = mx.nd.ones((5,6), dtype=dtype)
-    op_export_test('broadcast_not_equal', M, [x1, y1], tmp_path)
+def test_onnx_export_np_not_equal(tmp_path, dtype):
+    M = def_model(mx.np, 'not_equal')
+    x = mx.np.zeros((4,5,6), dtype=dtype)
+    y = mx.np.ones((4,5,6), dtype=dtype)
+    op_export_test('not_equal', M, [x, y], tmp_path)
+    x1 = mx.np.ones((4,5,6), dtype=dtype)
+    y1 = mx.np.ones((5,6), dtype=dtype)
+    op_export_test('not_equal', M, [x1, y1], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
-def test_onnx_export_broadcast_minimum(tmp_path, dtype):
-    M = def_model('broadcast_minimum')
+def test_onnx_export_np_minimum(tmp_path, dtype):
+    M = def_model(mx.np, 'minimum')
     if 'int' in dtype:
-        x = mx.nd.random.randint(0, 1000, (4, 5, 6), dtype=dtype)
-        y = mx.nd.random.randint(0, 1000, (4, 5, 6), dtype=dtype)
+        x = mx.np.random.randint(0, 1000, (4, 5, 6), dtype=dtype)
+        y = mx.np.random.randint(0, 1000, (4, 5, 6), dtype=dtype)
     else:
-        x = mx.nd.random.uniform(0, 1000, (4, 5, 6), dtype=dtype)
-        y = mx.nd.random.uniform(0, 1000, (4, 5, 6), dtype=dtype)
-    op_export_test('broadcast_minimum', M, [x, y], tmp_path)
+        x = mx.np.random.uniform(0, 1000, (4, 5, 6), dtype=dtype)
+        y = mx.np.random.uniform(0, 1000, (4, 5, 6), dtype=dtype)
+    op_export_test('minimum', M, [x, y], tmp_path)
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+def test_onnx_export_np_maximum(tmp_path, dtype):
+    M = def_model(mx.np, 'maximum')
+    if 'int' in dtype:
+        x = mx.np.random.randint(0, 1000, (4, 5, 6), dtype=dtype)
+        y = mx.np.random.randint(0, 1000, (4, 5, 6), dtype=dtype)
+    else:
+        x = mx.np.random.uniform(0, 1000, (4, 5, 6), dtype=dtype)
+        y = mx.np.random.uniform(0, 1000, (4, 5, 6), dtype=dtype)
+    op_export_test('maximum', M, [x, y], tmp_path)
+
 
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('axis', [0, 1, 2, -1])
 def test_onnx_export_stack(tmp_path, dtype, axis):
-    M = def_model('stack', axis=axis)
+    M = def_model(mx.np, 'stack', axis=axis)
     if 'int' in dtype:
-        x = mx.nd.random.randint(0, 10*9, (3,4,5), dtype=dtype)
-        y = mx.nd.random.randint(0, 10*9, (3,4,5), dtype=dtype)
+        x = mx.np.random.randint(0, 10*9, (3,4,5), dtype=dtype)
+        y = mx.np.random.randint(0, 10*9, (3,4,5), dtype=dtype)
     else:
-        x = mx.nd.random.normal(0, 10*9, (3,4,5), dtype=dtype)
-        y = mx.nd.random.normal(0, 10*9, (3,4,5), dtype=dtype)
-    op_export_test('stack', M, [x, y], tmp_path)
+        x = mx.np.random.normal(0, 10*9, (3,4,5), dtype=dtype)
+        y = mx.np.random.normal(0, 10*9, (3,4,5), dtype=dtype)
+    op_export_test('stack', M, [(x, y)], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float32', 'float64'])
-@pytest.mark.parametrize('p', [0.1, 0.2, 0.5, 0.8])
-def test_onnx_export_dropout(tmp_path, dtype, p):
-    M = def_model('Dropout', p=p)
-    x = mx.nd.array([[3,0.5,-0.5,2,7],[2,-0.4,7,3,0.2]], dtype=dtype)
-    op_export_test('Dropout', M, [x], tmp_path)
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('shape', [(3, 4, 5), (1, 2, 3, 2, 1)])
+@pytest.mark.parametrize('p', [0, 0.1, 0.5, 1])
+def test_onnx_export_dropout(tmp_path, dtype, shape, p):
+    x = mx.np.random.uniform(-100, 100, size=shape).astype(dtype)
+    M = def_model(mx.npx, 'dropout', p=p)
+    op_export_test('dropuout', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('src_dtype', ['float16', 'float32', 'float64'])
@@ -1107,15 +1121,6 @@ def test_onnx_export_broadcast_mul(tmp_path, dtype):
     x = mx.nd.array([[1,2,3],[4,5,6]], dtype=dtype)
     y = mx.nd.array([[0],[3]], dtype=dtype)
     op_export_test('broadcast_mul', M, [x, y], tmp_path)
-
-
-@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
-@pytest.mark.parametrize('shape', [(3, 4, 5), (1, 2, 3, 2, 1)])
-@pytest.mark.parametrize('p', [0, 0.1, 0.5, 1])
-def test_onnx_export_dropout(tmp_path, dtype, shape, p):
-    x = mx.random.uniform(-100, 100, shape=shape).astype(dtype)
-    M = def_model('Dropout', p=p)
-    op_export_test('Dropuout', M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float32'])

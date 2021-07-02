@@ -1073,6 +1073,7 @@ def convert_concat(node, **kwargs):
 
 
 @mx_op.register("transpose")
+@mx_op.register('_npi_transpose')
 def convert_transpose(node, **kwargs):
     """Map MXNet's transpose operator attributes to onnx's Transpose operator
     and return the created node.
@@ -1080,6 +1081,8 @@ def convert_transpose(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     axes = attrs.get("axes", ())
+    if axes == 'None':
+        axes = ()
     if axes:
         axes = tuple(map(int, re.findall(r'\d+', axes)))
 
@@ -1632,6 +1635,7 @@ def convert_elementwise_add(node, **kwargs):
 
 
 @mx_op.register("broadcast_add")
+@mx_op.register("_npi_add")
 def covert_broadcast_add(node, **kwargs):
     """Map MXNet's broadcast_add operator attributes to onnx's Add operator
     and return the created node.
@@ -1673,6 +1677,15 @@ def convert_broadcast_min(node, **kwargs):
     and return the created node.
     """
     return create_basic_op_node('Min', node, kwargs)
+
+
+@mx_op.register("broadcast_maximum")
+def convert_broadcast_min(node, **kwargs):
+    """Map MXNet's broadcast_maximum operator attributes to onnx's Min operator
+    and return the created node.
+    """
+    return create_basic_op_node('Max', node, kwargs)
+
 
 @mx_op.register("elemwise_div")
 def convert_elemwise_div(node, **kwargs):
@@ -3132,6 +3145,7 @@ def convert_embedding(node, **kwargs):
 
 
 @mx_op.register("stack")
+@mx_op.register("_npi_stack")
 def convert_stack(node, **kwargs):
     """Map MXNet's stack operator to onnx operators.
     """
@@ -5053,5 +5067,28 @@ def convert_full_like(node, **kwargs):
     nodes = [
         make_node('Shape', [input_nodes[0]], [name+'_shape']),
         make_node('ConstantOfShape', [name+'_shape'], [name], name=name, value=tensor_value)
+    ]
+    return nodes
+
+
+@mx_op.register('_npi_equal')
+def covert_np_equal(node, **kwargs):
+    """Map MXNet's broadcast_add operator attributes to onnx's Add operator
+    and return the created node.
+    """
+    return create_basic_op_node('Equal', node, kwargs)
+
+
+@mx_op.register('_npi_not_equal')
+def convert_not_equal(node, **kwargs):
+    """Map MXNet's broadcast_not_equal operator attributes to onnx's Equal operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, _ = get_inputs(node, kwargs)
+
+    nodes = [
+        make_node('Equal', input_nodes, [name+'_equal']),
+        make_node('Not', [name+'_equal'], [name]),
     ]
     return nodes
