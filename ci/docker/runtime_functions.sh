@@ -2011,6 +2011,9 @@ build_static_libmxnet() {
     set -ex
     pushd .
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
+        source /opt/rh/devtoolset-10/enable
+    fi
     CMAKE_STATICBUILD=1
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
