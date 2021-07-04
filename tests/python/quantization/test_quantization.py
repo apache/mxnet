@@ -22,11 +22,11 @@ import os
 import mxnet as mx
 import numpy as np
 from mxnet.gluon.model_zoo import vision
-from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter
+from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err, assert_exception
+from mxnet.test_utils import rand_ndarray, rand_shape_nd, same, DummyIter, environment
 from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
-import unittest
 import operator
 
 def is_test_for_gpu():
@@ -38,7 +38,7 @@ def is_test_for_mkldnn():
 
 def is_test_for_native_cpu():
     return (mx.current_context().device_type == 'cpu'
-            and os.environ.get('ENABLE_MKLDNN_QUANTIZATION_TEST') == None)
+            and os.environ.get('ENABLE_MKLDNN_QUANTIZATION_TEST') is None)
 
 @with_seed()
 def test_quantize_float32_to_int8():
@@ -1156,7 +1156,7 @@ def test_quantize_gluon_with_forward():
         quantized_resnet18_v1(random_data)
 
         for mode in ['naive', 'entropy']:
-            qdtype = qdtype if mode is 'naive' else 'auto'
+            qdtype = qdtype if mode == 'naive' else 'auto'
             quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
                                                                   exclude_layers=None,
                                                                   exclude_layers_match=excluded_names_match,
@@ -1252,6 +1252,100 @@ def test_get_optimal_thresholds():
         th_dict = mx.contrib.quant._get_optimal_thresholds(hist_dict, dtype)
         assert 'layer1' in th_dict
         assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
+
+
+@with_seed()
+def test_onednn_shifted_quantization():
+    batch_size = 1
+    if not is_test_for_mkldnn():
+        print("Test only for mkldnn")
+        return
+
+    def collect_param(fc_layer, p):
+        param = fc_layer.collect_params(p)[p]._reduce()
+        return param
+
+    def quantize_param_to_int8(param):
+        p_int8, p_min, p_max = mx.ndarray.contrib.quantize(data=param,
+                                                           min_range=mx.ndarray.min(param),
+                                                           max_range=mx.ndarray.max(param),
+                                                           out_type='int8')
+        p_scale = 127.5 / np.max(np.abs([p_max.asnumpy(), p_min.asnumpy()]))
+        return p_int8.asnumpy(), p_scale
+
+    def get_shifted_bias(quantize_attrs, weights_int8, weights_scale, bias_int8, bias_scale):
+        max_data = float(quantize_attrs['max_calib_range'])
+        min_data = float(quantize_attrs['min_calib_range'])
+        data_scale = 255.5 / (max_data - min_data)
+        shift_value = np.array(np.round(data_scale * -min_data), np.uint8)
+        shift_matrix = shift_value * np.ones((1, weights_int8.shape[1]), np.int32)
+        shift_matrix = np.array(np.dot(shift_matrix, weights_int8.T).squeeze(), np.int32)
+        bias_int32_rescale = data_scale * weights_scale / bias_scale
+        bias_int32 = np.array(np.round(bias_int8 * bias_int32_rescale), dtype=np.int32)
+        bias_shifted = bias_int32 - shift_matrix
+        return bias_shifted
+
+    def quantize_fc_layer(fc_layer, qdtype, random_data):
+        calib_data = NDArrayIter(data=random_data, batch_size=batch_size)
+        calib_data = DummyIter(calib_data)
+        fc_layer = mx.contrib.quant.quantize_net(fc_layer, quantized_dtype=qdtype,
+                                                 exclude_layers=None,
+                                                 exclude_layers_match=[],
+                                                 calib_data=calib_data,
+                                                 calib_mode='naive',
+                                                 num_calib_examples=1,
+                                                 ctx=mx.current_context())
+        fc_layer.hybridize(static_alloc=True, static_shape=True)
+        fc_layer(random_data).wait_to_read()
+
+        _, sym = fc_layer._cached_graph
+        quantize_attrs = sym.attr_dict()['data_quantize']
+        return fc_layer, quantize_attrs
+
+    def get_fc_layer():
+        fc_layer = mx.gluon.nn.Dense(5, use_bias=True, flatten=True,
+                                     weight_initializer=mx.initializer.Normal(),
+                                     bias_initializer=mx.initializer.Normal())
+        fc_layer.initialize()
+        return fc_layer
+
+    # Shifted quantization should set new bias to FC and add shift to output of quantize
+    # b'=b-shift*w because FC(x+shift,w,b)=(x+shift)*w+b
+    def check(number, qdtype):
+        random_data = mx.nd.random_uniform(low=0 if qdtype == 'uint8' else -1, high=1, shape=(batch_size, 32))
+        fc_layer = get_fc_layer()
+        out = fc_layer(random_data)
+        out.wait_to_read()
+
+        if qdtype == 'auto':
+            bias_int8, bias_scale = quantize_param_to_int8(
+                collect_param(fc_layer, 'dense%d_bias' % number))
+            weights_int8, weights_scale = quantize_param_to_int8(
+                collect_param(fc_layer, 'dense%d_weight' % number))
+
+        fc_layer_quantized, quantize_attrs = quantize_fc_layer(fc_layer, qdtype, random_data)
+        out_q = fc_layer_quantized(random_data)
+        out_q.wait_to_read()
+
+        min_range = mx.nd.min(out).asscalar()
+        max_range = mx.nd.max(out).asscalar()
+        atol = 0.1 * max(abs(min_range), abs(max_range))
+        assert_almost_equal_with_err(out.asnumpy(), out_q.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+
+        if qdtype == 'auto':
+            assert quantize_attrs['shifted'] == 'True'
+            bias_s32 = collect_param(fc_layer_quantized, 'dense%d_bias_quantize_s32' % number)
+            assert bias_s32.dtype == np.int32
+            bias_shifted = get_shifted_bias(quantize_attrs, weights_int8, weights_scale, bias_int8, bias_scale)
+            assert_almost_equal(bias_s32, bias_shifted, rtol=1e-3, atol=1e-3)
+        else:
+            assert 'shifted' not in quantize_attrs
+            bias = collect_param(fc_layer_quantized, 'dense%d_bias_quantize' % number)
+            assert bias.dtype == np.int8
+
+    with environment({'MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS': '0'}):
+        for i, qdtype in enumerate(['int8', 'uint8', 'auto']):
+            check(i, qdtype)
 
 
 if __name__ == "__main__":
