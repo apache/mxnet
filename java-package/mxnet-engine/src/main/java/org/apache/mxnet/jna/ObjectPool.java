@@ -1,6 +1,5 @@
 package org.apache.mxnet.jna;
 
-
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;

@@ -1,6 +1,7 @@
-package org.apache.mxnet.engine;
+package org.apache.mxnet.api.exception;
 
-public class EngineException extends RuntimeException{
+/** Thrown to indicate that a native error is raised from the underlying. */
+public class BaseException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
@@ -11,7 +12,7 @@ public class EngineException extends RuntimeException{
      * @param message the detail message. The detail message is saved for later retrieval by the
      *     {@link #getMessage()} method.
      */
-    public EngineException(String message) {
+    public BaseException(String message) {
         super(message);
     }
 
@@ -27,7 +28,7 @@ public class EngineException extends RuntimeException{
      *     method). (A {@code null} value is permitted, and indicates that the cause is nonexistent
      *     or unknown.)
      */
-    public EngineException(String message, Throwable cause) {
+    public BaseException(String message, Throwable cause) {
         super(message, cause);
     }
 
@@ -42,7 +43,8 @@ public class EngineException extends RuntimeException{
      *     method). (A {@code null} value is permitted, and indicates that the cause is nonexistent
      *     or unknown.)
      */
-    public EngineException(Throwable cause) {
+    public BaseException(Throwable cause) {
         super(cause);
     }
+
 }

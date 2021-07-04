@@ -1,6 +1,7 @@
-package org.apache.mxnet.util;
+package org.apache.mxnet.api.util;
 
-import org.apache.mxnet.util.cuda.CudaUtils;
+import org.apache.mxnet.api.util.cuda.CudaUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;

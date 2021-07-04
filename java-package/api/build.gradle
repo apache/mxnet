@@ -22,9 +22,9 @@ dependencies {
     testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
     testRuntimeOnly project(":mxnet-engine")
     // TODO update the version of mxnet-native-auto
-    testRuntimeOnly "ai.djl.mxnet:mxnet-native-auto:${mxnet_version}"
+//    testRuntimeOnly "ai.djl.mxnet:mxnet-native-auto:${mxnet_version}"
 }
 
 test {
-    useJUnitPlatform()
+    useTestNG()
 }

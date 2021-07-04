@@ -1,4 +1,5 @@
 plugins {
+    id 'application'
     id 'java'
 }
 
@@ -9,11 +10,36 @@ repositories {
     mavenCentral()
 }
 
+application {
+    mainClassName = System.getProperty("main", "org.apache.mxnet.IntegrationTest")
+}
+
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    api "commons-cli:commons-cli:${commons_cli_version}"
+    api "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
+
+    api project(":mxnet-engine")
+    implementation 'org.testng:testng:7.1.0'
+//    testImplementation(":mxnet-engine")
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+    testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
+}
+
+run {
+    environment("TF_CPP_MIN_LOG_LEVEL", "1") // turn off TensorFlow print out
+    systemProperties System.getProperties()
+    systemProperties.remove("user.dir")
+    systemProperty("file.encoding", "UTF-8")
+    jvmArgs "-Xverify:none"
 }
 
 test {
-    useJUnitPlatform()
+
+    useTestNG()
+    filter {
+        includeTestsMatching "org.apache.mxnet.integration.tests.engine.*"
+    }
+
 }

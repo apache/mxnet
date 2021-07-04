@@ -1,8 +1,8 @@
-package org.apache.mxnet;
+package org.apache.mxnet.api;
 
-import org.apache.mxnet.engine.Engine;
-import org.apache.mxnet.engine.StandardCapabilities;
-import org.apache.mxnet.util.cuda.CudaUtils;
+import org.apache.mxnet.api.engine.Engine;
+import org.apache.mxnet.api.engine.StandardCapabilities;
+import org.apache.mxnet.api.util.cuda.CudaUtils;
 
 import java.util.Map;
 import java.util.Objects;

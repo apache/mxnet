@@ -13,13 +13,11 @@ dependencies {
     api project(":api")
 
     // Solve the problem: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
-    compile "org.slf4j:slf4j-simple:${slf4j_version}"
+    implementation "org.slf4j:slf4j-simple:${slf4j_version}"
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
 
-//    implementation files("/Users/cspchen/.gradle/caches/modules-2/files-2.1/ai.djl.mxnet/mxnet-native-auto/1.8.0/e32265c03e27e1fb18c9c0904733b00f9acffaee/mxnet-native-auto-1.8.0.jar")
-
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
-    testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
 }
 
 sourceSets {
@@ -58,9 +56,29 @@ task jnarator(dependsOn: ":jnarator:jar") {
 }
 
 test {
-    useJUnitPlatform()
+    useTestNG() {
+        useDefaultListeners = true
+    }
     environment "PATH", "src/test/bin:${environment.PATH}"
-//    environment "MXNET_LIBRARY_PATH", "${MXNET_LIB_HOME}"
+    environment "MXNET_LIBRARY_PATH", "${MXNET_LIBRARY_PATH}"
+    maxHeapSize = '6G'
+    testLogging.showStandardStreams = true
+    beforeTest { descriptor ->
+        logger.lifecycle("Running test: " + descriptor)
+    }
+    failFast = false
+    onOutput { descriptor, event ->
+        logger.lifecycle("Test: " + descriptor + " produced standard out/err: " + event.message )
+    }
+//    debugOptions {
+//        enabled = true
+//        port = 4455
+//        server = true
+//        suspend = true
+//    }
+//    filter {
+//        includeTestsMatching("*Test")
+//    }
 }
 
 //import java.util.regex.Matcher

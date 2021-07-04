@@ -3,7 +3,6 @@ package org.apache.mxnet.jna;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
-
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +15,7 @@ public class StringArray extends Memory {
     private static final ObjectPool<StringArray> POOL = new ObjectPool<>(null, null);
     /** Hold all {@code NativeString}, avoid be GCed. */
     private List<NativeString> natives; // NOPMD
+
     private int length;
 
     /**
@@ -73,5 +73,4 @@ public class StringArray extends Memory {
     public boolean equals(Object o) {
         return this == o;
     }
-
 }

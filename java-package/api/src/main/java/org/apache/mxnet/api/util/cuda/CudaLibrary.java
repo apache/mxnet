@@ -1,4 +1,4 @@
-package org.apache.mxnet.util.cuda;
+package org.apache.mxnet.api.util.cuda;
 
 import com.sun.jna.Library;
 

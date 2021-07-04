@@ -1,4 +1,4 @@
-package org.apache.mxnet.engine;
+package org.apache.mxnet.api.engine;
 
 /** Constant definitions for the standard capability. */
 public final class StandardCapabilities {

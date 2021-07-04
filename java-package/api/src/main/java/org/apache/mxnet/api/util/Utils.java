@@ -1,4 +1,4 @@
-package org.apache.mxnet.util;
+package org.apache.mxnet.api.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

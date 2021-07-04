@@ -2,9 +2,7 @@ package org.apache.mxnet.jna;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
-
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Provides a temporary allocation of an immutable C string (<code>const char*</code> or <code>

@@ -1,14 +1,10 @@
 package org.apache.mxnet.jna;
 
 import com.sun.jna.Native;
-import org.apache.mxnet.util.Platform;
-import org.apache.mxnet.util.Utils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -18,8 +14,11 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.net.URL;
 import java.util.zip.GZIPInputStream;
+import org.apache.mxnet.api.util.Platform;
+import org.apache.mxnet.api.util.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utilities for finding the MXNet Engine binary on the System.
@@ -34,7 +33,6 @@ import java.util.zip.GZIPInputStream;
  *   <li>In the python path. These can be installed using pip.
  * </ol>
  */
-
 public final class LibUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(LibUtils.class);
@@ -55,12 +53,12 @@ public final class LibUtils {
         String libName = getLibName();
         logger.debug("Loading mxnet library from: {}", libName);
         // TODO: consider Linux platform
-//        if (System.getProperty("os.name").startsWith("Linux")) {
-//            Map<String, Integer> options = new ConcurrentHashMap<>();
-//            int rtld = 1; // Linux RTLD lazy + local
-//            options.put(Library.OPTION_OPEN_FLAGS, rtld);
-//            return Native.load(libName, MxnetLibrary.class, options);
-//        }
+        //        if (System.getProperty("os.name").startsWith("Linux")) {
+        //            Map<String, Integer> options = new ConcurrentHashMap<>();
+        //            int rtld = 1; // Linux RTLD lazy + local
+        //            options.put(Library.OPTION_OPEN_FLAGS, rtld);
+        //            return Native.load(libName, MxnetLibrary.class, options);
+        //        }
         return Native.load(libName, MxnetLibrary.class);
     }
 
@@ -209,7 +207,7 @@ public final class LibUtils {
     }
 
     // TODO: to be optimized
-    private static String downloadMxnet(Platform platform) throws IOException{
+    private static String downloadMxnet(Platform platform) throws IOException {
 
         String version = platform.getVersion();
         String flavor = platform.getFlavor();
@@ -245,7 +243,8 @@ public final class LibUtils {
             if (cudaArch != null) {
                 // has CUDA
                 if ("win".equals(os)) {
-                    if (!lines.contains(String.format("%s/%s/mxnet_%s.ddl.dz", os, flavor, cudaArch))) {
+                    if (!lines.contains(
+                            String.format("%s/%s/mxnet_%s.ddl.dz", os, flavor, cudaArch))) {
                         logger.warn(
                                 "No matching cuda flavor for {} found: {}/sm_{}.",
                                 os,
@@ -255,7 +254,8 @@ public final class LibUtils {
                         flavor = "mkl";
                     }
                 } else if ("linux".equals(os)) {
-                    if (!lines.contains(String.format("%s/%s/libmxnet.so.gz")) || notSupported(platform)) {
+                    if (!lines.contains(String.format("%s/%s/libmxnet.so.gz"))
+                            || notSupported(platform)) {
                         logger.warn(
                                 "No matching cuda flavor for {} found: {}/sm_{}.",
                                 os,
@@ -270,7 +270,9 @@ public final class LibUtils {
 
                 // check again in case fallback tp cpu
                 if ("mkl".equals(flavor)) {
-                    dir = cacheFolder.resolve(String.format("%s-%s-%s", version, flavor, classifier));
+                    dir =
+                            cacheFolder.resolve(
+                                    String.format("%s-%s-%s", version, flavor, classifier));
                     path = dir.resolve(libName);
                     if (Files.exists(path)) {
                         return path.toAbsolutePath().toString();
@@ -306,18 +308,17 @@ public final class LibUtils {
         }
     }
 
-    //TODO
+    // TODO
     private static boolean notSupported(Platform platform) {
         // to be loaded from properties
         return false;
     }
 
-
-//    public static void main(String... args) {
-//        String libPath = System.getProperty("java.library.path");
-//        String absolutePath = "";
-//        if (libPath != null) {
-//            absolutePath = LibUtils.findLibraryInPath(libPath);
-//        }
-//    }
+    //    public static void main(String... args) {
+    //        String libPath = System.getProperty("java.library.path");
+    //        String absolutePath = "";
+    //        if (libPath != null) {
+    //            absolutePath = LibUtils.findLibraryInPath(libPath);
+    //        }
+    //    }
 }
