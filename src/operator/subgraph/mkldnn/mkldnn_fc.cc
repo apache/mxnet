@@ -408,7 +408,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
             full_param_.eltwise_param.scale =
               GetQuantizeScale(output.dtype(), cached_min_output_, cached_max_output_);
           } else {
-          out_scale =  GetQuantizeScale(output.dtype(), cached_min_output_, cached_max_output_);
+          out_scale = GetQuantizeScale(output.dtype(), cached_min_output_, cached_max_output_);
           tmp_scale_ = out_scale / data_scale_;
           }
         } else {

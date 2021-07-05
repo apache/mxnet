@@ -38,7 +38,7 @@
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNFCSumFuzeSelector : public SubgraphSelector {
+class SgMKLDNNFCSumFuseSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
@@ -53,7 +53,7 @@ class SgMKLDNNFCSumFuzeSelector : public SubgraphSelector {
   std::vector<const nnvm::Node *> matched_list_;
 
  public:
-  explicit SgMKLDNNFCSumFuzeSelector(bool quantized) :
+  explicit SgMKLDNNFCSumFuseSelector(bool quantized) :
       quantized_(quantized) {}
 
   bool Select(const nnvm::Node &n, const std::shared_ptr<NodeAttr>& node_attr) override {
@@ -123,19 +123,19 @@ class SgMKLDNNFCSumFuzeSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list_.size(), 1);
-    auto new_selector = SgMKLDNNFCSumFuzeSelector(quantized_);
+    auto new_selector = SgMKLDNNFCSumFuseSelector(quantized_);
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
 };
 
-class SgMKLDNNFCSumFuzeProperty : public SubgraphProperty {
+class SgMKLDNNFCSumFuseProperty : public SubgraphProperty {
  public:
-  SgMKLDNNFCSumFuzeProperty() {}
+  SgMKLDNNFCSumFuseProperty() {}
 
   static SubgraphPropertyPtr Create() {
     static const std::string &name = "MKLDNN FullyConnected post quantization second pass";
-    auto property = std::make_shared<SgMKLDNNFCSumFuzeProperty>();
+    auto property = std::make_shared<SgMKLDNNFCSumFuseProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FC_SUM", 0)) {
@@ -182,7 +182,7 @@ class SgMKLDNNFCSumFuzeProperty : public SubgraphProperty {
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     bool quantized = HasAttr("quantize") ? GetAttr<bool>("quantize") : false;
     auto selector =
-      std::make_shared<SgMKLDNNFCSumFuzeSelector>(quantized);
+      std::make_shared<SgMKLDNNFCSumFuseSelector>(quantized);
     return selector;
   }
 
