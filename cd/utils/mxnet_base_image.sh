@@ -43,7 +43,7 @@ case ${mxnet_variant} in
     echo "ubuntu:18.04"
     ;;
     aarch64_cpu)
-    echo "arm64v8/centos:7"
+    echo "arm64v8/ubuntu:18.04"
     ;;
     *)
     echo "Error: Unrecognized mxnet-variant: '${mxnet_variant}'"

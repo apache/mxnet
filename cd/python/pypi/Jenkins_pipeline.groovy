@@ -73,7 +73,7 @@ def test(mxnet_variant) {
     // test wheel file
     def environment = get_environment(mxnet_variant)
     def nvidia_docker = mxnet_variant.startsWith('cu')
-    ci_utils.docker_run(environment, "cd_integration_test_pypi python3 ${nvidia_docker}", nvidia_docker)
+    ci_utils.docker_run(environment, "cd_integration_test_pypi ${mxnet_variant} ${nvidia_docker}", nvidia_docker)
   }
 }
 

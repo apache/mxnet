@@ -2034,25 +2034,27 @@ cd_package_pypi() {
 # Sanity checks wheel file
 cd_integration_test_pypi() {
     set -ex
-    local python_cmd=${1:?"This function requires a python command as the first argument"}
+    local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     local gpu_enabled=${2:-"false"}
 
     local test_conv_params=''
     local mnist_params=''
-
-    local pip_cmd='pip3'
 
     if [ "${gpu_enabled}" = "true" ]; then
         mnist_params="--gpu 0"
         test_conv_params="--gpu"
     fi
 
+    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
+        source /opt/rh/rh-python38/enable
+    fi
+
     # install mxnet wheel package
-    ${pip_cmd} install --user ./wheel_build/dist/*.whl
+    python3 -m pip install --user ./wheel_build/dist/*.whl
 
     # execute tests
-    ${python_cmd} /work/mxnet/tests/python/train/test_conv.py ${test_conv_params}
-    ${python_cmd} /work/mxnet/example/image-classification/train_mnist.py ${mnist_params}
+    python3 /work/mxnet/tests/python/train/test_conv.py ${test_conv_params}
+    python3 /work/mxnet/example/image-classification/train_mnist.py ${mnist_params}
 }
 
 # Publishes wheel to PyPI
