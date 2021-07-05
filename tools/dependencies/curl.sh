@@ -32,7 +32,7 @@ if [[ ! -f $DEPS_PATH/lib/libcurl.a ]]; then
     if [[ $PLATFORM == 'linux' ]]; then
         CONFIG_FLAG="--with-openssl"
     elif [[ $PLATFORM == 'darwin' ]]; then
-        CONFIG_FLAG="--with-darwinssl"
+        CONFIG_FLAG="--with-secure-transport"
     fi
     ./configure $CONFIG_FLAG \
                 --with-zlib \
