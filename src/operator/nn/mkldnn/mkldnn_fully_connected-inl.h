@@ -31,7 +31,6 @@
 
 #include <vector>
 #include <string>
-#include <unordered_map>
 #include <memory>
 #include "../fully_connected-inl.h"
 #include "./mkldnn_base-inl.h"

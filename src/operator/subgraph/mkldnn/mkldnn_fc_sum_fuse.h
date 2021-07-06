@@ -39,7 +39,7 @@ namespace mxnet {
 namespace op {
 
 class SgMKLDNNFCSumFuseSelector : public SubgraphSelector {
- public:
+ private:
   /*! \brief pattern match status */
   enum SelectStatus {
     kFail = 0,
@@ -76,8 +76,9 @@ class SgMKLDNNFCSumFuseSelector : public SubgraphSelector {
   }
 
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
-    if (status_ == kFail || status_ == kSuccess || new_node.is_variable())
+    if (status_ == kFail || status_ == kSuccess || new_node.is_variable()) {
       return false;
+    }
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list_.back() != &n) {

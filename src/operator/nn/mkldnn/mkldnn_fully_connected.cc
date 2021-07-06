@@ -25,6 +25,7 @@
 */
 
 #if MXNET_USE_MKLDNN == 1
+#include <unordered_map>
 #include "mkldnn_fully_connected-inl.h"
 
 namespace mxnet {
