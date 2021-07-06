@@ -38,18 +38,28 @@ from itertools import chain
 from subprocess import check_call, check_output
 from typing import *
 
+import yaml
+
 from util import *
 
+DOCKER_COMPOSE_WHITELIST = ('centos7_cpu', 'centos7_gpu_cu92', 'centos7_gpu_cu100',
+                            'centos7_gpu_cu101', 'centos7_gpu_cu102', 'centos7_gpu_cu110',
+                            'centos7_gpu_cu112')
+
+# Files for docker compose
+DOCKER_COMPOSE_FILES = set(('docker/build.centos7'))
 
 def get_dockerfiles_path():
     return "docker"
 
 
-def get_platforms(path: str = get_dockerfiles_path()) -> List[str]:
+def get_platforms(path: str = get_dockerfiles_path(), legacy_only=False) -> List[str]:
     """Get a list of architectures given our dockerfiles"""
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
-    dockerfiles = list(filter(lambda x: x[-1] != '~', dockerfiles))
-    files = list(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
+    dockerfiles = set(filter(lambda x: x[-1] != '~', dockerfiles))
+    files = set(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
+    if legacy_only:
+        files = files - DOCKER_COMPOSE_FILES
     platforms = list(map(lambda x: os.path.split(x)[1], sorted(files)))
     return platforms
 
@@ -79,6 +89,11 @@ def _hash_file(ctx, filename):
 
 def get_docker_tag(platform: str, registry: str) -> str:
     """:return: docker tag to be used for the container"""
+    if platform in DOCKER_COMPOSE_WHITELIST:
+        with open("docker/docker-compose.yml", "r") as f:
+            compose_config = yaml.load(f.read(), yaml.SafeLoader)
+            return compose_config["services"][platform]["image"].replace('${DOCKER_CACHE_REGISTRY}', registry)
+
     platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
         registry = "mxnet_local"
@@ -106,41 +121,58 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     :return: Id of the top level image
     """
     tag = get_docker_tag(platform=platform, registry=registry)
-    logging.info("Building docker container tagged '%s'", tag)
-    #
-    # We add a user with the same group as the executing non-root user so files created in the
-    # container match permissions of the local user. Same for the group.
-    #
-    # These variables are used in the docker files to create user and group with these ids.
-    # see: docker/install/ubuntu_adduser.sh
-    #
-    # cache-from is needed so we use the cached images tagged from the remote via
-    # docker pull see: docker_cache.load_docker_cache
-    #
-    # This also prevents using local layers for caching: https://github.com/moby/moby/issues/33002
-    # So to use local caching, we should omit the cache-from by using --no-dockerhub-cache argument to this
-    # script.
-    #
-    # This doesn't work with multi head docker files.
-    #
-    cmd = ["docker", "build",
-           "-f", get_dockerfile(platform),
-           "--build-arg", "USER_ID={}".format(os.getuid()),
-           "--build-arg", "GROUP_ID={}".format(os.getgid())]
-    if no_cache:
-        cmd.append("--no-cache")
-    if cache_intermediate:
-        cmd.append("--rm=false")
-    elif registry:
-        cmd.extend(["--cache-from", tag])
-    cmd.extend(["-t", tag, get_dockerfiles_path()])
+    
+    # docker-compose
+    if platform in DOCKER_COMPOSE_WHITELIST:
+        logging.info('Building docker container tagged \'%s\' based on ci/docker/docker-compose.yml', tag)
+        # We add a user with the same group as the executing non-root user so files created in the
+        # container match permissions of the local user. Same for the group.
+        cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'build',
+               "--build-arg", "USER_ID={}".format(os.getuid()),
+               "--build-arg", "GROUP_ID={}".format(os.getgid())]
+        if cache_intermediate:
+            cmd.append('--no-rm')
+        cmd.append(platform)
+    else:
+        logging.info("Building docker container tagged '%s'", tag)
+        #
+        # We add a user with the same group as the executing non-root user so files created in the
+        # container match permissions of the local user. Same for the group.
+        #
+        # These variables are used in the docker files to create user and group with these ids.
+        # see: docker/install/ubuntu_adduser.sh
+        #
+        # cache-from is needed so we use the cached images tagged from the remote via
+        # docker pull see: docker_cache.load_docker_cache
+        #
+        # This also prevents using local layers for caching: https://github.com/moby/moby/issues/33002
+        # So to use local caching, we should omit the cache-from by using --no-dockerhub-cache argument to this
+        # script.
+        #
+        # This doesn't work with multi head docker files.
+        #
+        cmd = ["docker", "build",
+            "-f", get_dockerfile(platform),
+            "--build-arg", "USER_ID={}".format(os.getuid()),
+            "--build-arg", "GROUP_ID={}".format(os.getgid())]
+        if no_cache:
+            cmd.append("--no-cache")
+        if cache_intermediate:
+            cmd.append("--rm=false")
+        elif registry:
+            cmd.extend(["--cache-from", tag])
+        cmd.extend(["-t", tag, get_dockerfiles_path()])
+
+    env = os.environ.copy()
+    env["DOCKER_CACHE_REGISTRY"] = registry
 
     @retry(subprocess.CalledProcessError, tries=num_retries)
-    def run_cmd():
+    def run_cmd(env=None):
         logging.info("Running command: '%s'", ' '.join(cmd))
-        check_call(cmd)
+        check_call(cmd, env=env)
 
-    run_cmd()
+    run_cmd(env=env)
+
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
     image_id = _get_local_image_id(docker_tag=tag)
@@ -258,9 +290,19 @@ def list_platforms() -> str:
     return "\nSupported platforms:\n{}".format('\n'.join(get_platforms()))
 
 
-def load_docker_cache(tag, docker_registry) -> None:
+def load_docker_cache(platform, tag, docker_registry) -> None:
     """Imports tagged container from the given docker registry"""
     if docker_registry:
+        if platform in DOCKER_COMPOSE_WHITELIST:
+            env = os.environ.copy()
+            env["DOCKER_CACHE_REGISTRY"] = docker_registry
+            cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', platform]
+            logging.info("Running command: 'DOCKER_CACHE_REGISTRY=%s %s'", docker_registry, ' '.join(cmd))
+            check_call(cmd, env=env)
+            return
+
+        env = os.environ.copy()
+        env["DOCKER_CACHE_REGISTRY"] = docker_registry
         # noinspection PyBroadException
         try:
             import docker_cache
@@ -363,8 +405,8 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-        if args.docker_registry:
-            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
+        if args.docker_registry:   
+            load_docker_cache(platform=platform, tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
             build_docker(platform=platform, registry=args.docker_registry,
                          num_retries=args.docker_build_retries, no_cache=args.no_cache,
@@ -409,7 +451,7 @@ def main() -> int:
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
+            load_docker_cache(platform=platform, tag=tag, docker_registry=args.docker_registry)
             build_docker(platform, registry=args.docker_registry,
                          num_retries=args.docker_build_retries, no_cache=args.no_cache,
                          cache_intermediate=args.cache_intermediate)
