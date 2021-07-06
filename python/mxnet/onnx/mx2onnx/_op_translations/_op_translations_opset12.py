@@ -1681,7 +1681,7 @@ def convert_broadcast_min(node, **kwargs):
 
 
 @mx_op.register("broadcast_maximum")
-def convert_broadcast_min(node, **kwargs):
+def convert_broadcast_max(node, **kwargs):
     """Map MXNet's broadcast_maximum operator attributes to onnx's Min operator
     and return the created node.
     """
@@ -1742,7 +1742,7 @@ def convert_floor(node, **kwargs):
 
 @mx_op.register("_npx_reshape")
 def convert_npx_reshape(node, **kwargs):
-    """
+    """ reshape
     """
     from onnx.helper import make_node
 
