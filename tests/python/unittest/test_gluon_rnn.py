@@ -103,8 +103,8 @@ def test_lstmp():
         fused_weight_shape = fused_layer_params['rnn_param'].shape
         print(fused_weight_shape)
         w = mx.np.zeros(shape=fused_weight_shape)
-        fused_layer_params['rnn_param'].set_data(w.copy())
-        fused_layer_params_split = split_rnn_params(w.copy(), 'lstm', num_layers, input_size,\
+        fused_layer_params['rnn_param'].set_data(w)
+        fused_layer_params_split = split_rnn_params(w, 'lstm', num_layers, input_size,\
             hidden_size, False, projection_size=projection_size)
 
         for name, value in fused_layer_params_split.items():
@@ -143,8 +143,8 @@ def test_lstmp():
 
         fused_weight_shape = fused_layer_params['rnn_param'].shape
         w = mx.np.zeros(shape=fused_weight_shape)
-        fused_layer_params['rnn_param'].set_data(w.copy())
-        fused_layer_params_split = split_rnn_params(w.copy(), 'lstm', num_layers, input_size,\
+        fused_layer_params['rnn_param'].set_data(w)
+        fused_layer_params_split = split_rnn_params(w, 'lstm', num_layers, input_size,\
             hidden_size, True, projection_size=projection_size)
 
         for name, value in fused_layer_params_split.items():

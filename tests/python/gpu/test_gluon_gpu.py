@@ -103,9 +103,9 @@ def test_lstmp_gpu():
               if g != 'h2r' or t != 'bias')
 
     net_params_concat = mx.np.concatenate(params)
-    layer_params['rnn_param'].set_data(net_params_concat.copy())
+    layer_params['rnn_param'].set_data(net_params_concat)
     for k, v in weights.items():
-        cell_params[k].set_data(v.copy())
+        cell_params[k].set_data(v)
     with autograd.record():
         layer_output = lstm_layer(lstm_input.copy())
         cell_output = lstm_cell.unroll(seq_len, lstm_input.copy(), layout='TNC',
@@ -114,7 +114,7 @@ def test_lstmp_gpu():
     assert_almost_equal(layer_output, cell_output, rtol=rtol, atol=atol)
     layer_output.backward()
     cell_output.backward()
-    layer_params_split = split_rnn_params(layer_params['rnn_param'].grad().copy(),\
+    layer_params_split = split_rnn_params(layer_params['rnn_param'].grad(),\
         'lstm', 1, input_size, hidden_size, False, projection_size=projection_size)
     for k, v in weights.items():
         layer_grad = layer_params_split['l0_' + k]
