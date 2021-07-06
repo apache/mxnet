@@ -629,45 +629,41 @@ def test_onnx_export_np_comparison(tmp_path, op, dtype, shape):
     op_export_test(op, M, [x, y], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ["float16", "float32", "int32", "int64"])
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [(5,), (3,3), (10,2), (20,30,40)])
-@pytest.mark.parametrize('broadcast', [True, False])
-def test_onnx_export_where(tmp_path, dtype, shape, broadcast):
-    M = def_model('where')
-    x = mx.nd.zeros(shape, dtype=dtype)
-    y = mx.nd.ones(shape, dtype=dtype)
-    if broadcast:
-        shape = shape[0:1]
-    cond = mx.nd.random.randint(low=0, high=1, shape=shape, dtype='int32')
+def test_onnx_export_np_where(tmp_path, dtype, shape):
+    M = def_model(mx.np, 'where')
+    x = mx.np.zeros(shape, dtype=dtype)
+    y = mx.np.ones(shape, dtype=dtype)
+    cond = mx.np.random.randint(low=0, high=1, size=shape, dtype='int32')
     op_export_test('where', M, [cond, x, y], tmp_path)
 
 
-# onnxruntime does not seem to support float64 and int32
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'int64'])
 @pytest.mark.parametrize('axis', [0, 2, -1, -2, -3])
 @pytest.mark.parametrize('is_ascend', [True, False, 0, 1, None])
 @pytest.mark.parametrize('k', [1, 4])
 @pytest.mark.parametrize('dtype_i', ['float32', 'int32', 'int64'])
 @pytest.mark.parametrize('ret_typ', ['value', 'indices', 'both'])
-def test_onnx_export_topk(tmp_path, dtype, axis, is_ascend, k, dtype_i, ret_typ):
-    A = mx.random.uniform(0, 100, (4, 5, 6)).astype(dtype)
+def test_onnx_export_npx_topk(tmp_path, dtype, axis, is_ascend, k, dtype_i, ret_typ):
+    A = mx.np.random.uniform(0, 100, (4, 5, 6)).astype(dtype)
     kwargs = {}
     if is_ascend is not None:
         kwargs['is_ascend'] = is_ascend
-    M = def_model('topk', axis=axis, k=k, dtype=dtype_i, ret_typ=ret_typ, **kwargs)
+    M = def_model(mx.npx, 'topk', axis=axis, k=k, dtype=dtype_i, ret_typ=ret_typ, **kwargs)
     op_export_test('topk', M, [A], tmp_path)
 
 
 def test_onnx_link_op_with_multiple_outputs(tmp_path):
-    A = mx.random.uniform(0, 100, (4, 5, 6))
+    A = mx.np.random.uniform(0, 100, (4, 5, 6))
     class Model1(HybridBlock):
         def __init__(self, **kwargs):
             super(Model1, self).__init__(**kwargs)
 
-        def hybrid_forward(self, F, x):
-            out1, out2 = F.topk(x, k=3, ret_typ='both')
-            out11 = out1 ** 2
-            out22 = out2 ** 3
+        def forward(self, x):
+            out1, out2 = mx.npx.topk(x, k=3, ret_typ='both')
+            out11 = out1 * 2
+            out22 = out2 + 3
             return out11, out22
     op_export_test('link_op_with_multiple_outputs_case1', Model1, [A], tmp_path)
 
@@ -675,9 +671,9 @@ def test_onnx_link_op_with_multiple_outputs(tmp_path):
         def __init__(self, **kwargs):
             super(Model2, self).__init__(**kwargs)
 
-        def hybrid_forward(self, F, x):
-            out_ = F.topk(x, k=3, ret_typ='value')
-            out = out_ ** 3
+        def forward(self, x):
+            out_ = mx.npx.topk(x, k=3, ret_typ='value')
+            out = out_ * 3
             return out
     op_export_test('link_op_with_multiple_outputs_case2', Model2, [A], tmp_path)
 
@@ -685,9 +681,9 @@ def test_onnx_link_op_with_multiple_outputs(tmp_path):
         def __init__(self, **kwargs):
             super(Model3, self).__init__(**kwargs)
 
-        def hybrid_forward(self, F, x):
-            out_ = F.topk(x, k=3, ret_typ='indices')
-            out = out_ ** 3
+        def forward(self, x):
+            out_ = mx.npx.topk(x, k=3, ret_typ='indices')
+            out = out_ * 3
             return out
     op_export_test('link_op_with_multiple_outputs_case3', Model3, [A], tmp_path)
 

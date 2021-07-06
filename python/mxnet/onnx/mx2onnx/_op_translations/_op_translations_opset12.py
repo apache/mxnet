@@ -1304,6 +1304,7 @@ def scalar_op_helper(node, op_name, **kwargs):
 
 # Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_mul_scalar")
+@mx_op.register("_npi_multiply_scalar")
 def convert_mul_scalar(node, **kwargs):
     """Map MXNet's _mul_scalar operator attributes to onnx's Mul operator.
     Creates a new node for the input scalar value, adds it to the initializer
@@ -1331,6 +1332,7 @@ def convert_rminus_scalar(node, **kwargs):
 
 # Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_plus_scalar")
+@mx_op.register("_npi_add_scalar")
 def convert_add_scalar(node, **kwargs):
     """Map MXNet's _plus_scalar operator attributes to onnx's Add operator.
     Creates a new node for the input scalar value, adds it to the initializer
@@ -3751,6 +3753,7 @@ def convert_equal_scalar(node, **kwargs):
 
 
 @mx_op.register('where')
+@mx_op.register('_npi_where')
 def convert_where(node, **kwargs):
     """Map MXNet's where operator attributes to onnx's Where
     operator and return the created node.
