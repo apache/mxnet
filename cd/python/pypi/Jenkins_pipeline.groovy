@@ -48,7 +48,7 @@ def get_pipeline(mxnet_variant) {
 // The environment corresponds to the docker files in the 'docker' directory
 def get_environment(mxnet_variant) {
   if (mxnet_variant.startsWith('aarch64')) {
-    return "publish.ubuntu1804_aarch64_cpu"
+    return "centos7_aarch64_cpu"
   }
   if (mxnet_variant.startsWith('cu')) {
     return "ubuntu_gpu_${mxnet_variant}"
@@ -73,7 +73,7 @@ def test(mxnet_variant) {
     // test wheel file
     def environment = get_environment(mxnet_variant)
     def nvidia_docker = mxnet_variant.startsWith('cu')
-    ci_utils.docker_run(environment, "cd_integration_test_pypi python3 ${nvidia_docker}", nvidia_docker)
+    ci_utils.docker_run(environment, "cd_integration_test_pypi ${mxnet_variant} ${nvidia_docker}", nvidia_docker)
   }
 }
 
