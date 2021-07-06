@@ -17,21 +17,12 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2019 by Contributors
- * \file mkldnn_fc_post_quantize_property.cc
- * \brief Partition gragph property for MKLDNN Quantized FullyConnected operator
- * \author Ciyong Chen
-*/
-
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_POST_QUANTIZE_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
 
-#include <memory>
 #include <string>
 #include <vector>
-#include "../../nn/fully_connected-inl.h"
 #include "../../quantization/requantize-inl.h"
 #include "../common.h"
 #include "mkldnn_subgraph_base-inl.h"
@@ -39,9 +30,7 @@
 namespace mxnet {
 namespace op {
 
-#define QUANTIZED_FC_NAME "_sg_mkldnn_fully_connected"
-
-class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelectorV2 {
+class SgMKLDNNTransformerPostQuantizeSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
@@ -55,17 +44,18 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelectorV2 {
   bool disable_all;
   bool disable_float_output;
   SelectStatus status;
-  std::vector<const BiDirectedNode *> matched_list;
+  std::vector<const nnvm::Node *> matched_list;
 
  public:
-  explicit SgMKLDNNFCPostQuantizeSelector(const bool dis_all,
-                                          const bool dis_float_output)
+  explicit SgMKLDNNTransformerPostQuantizeSelector(const bool dis_all,
+                                                   const bool dis_float_output)
       : disable_all(dis_all),
         disable_float_output(dis_float_output) {}
 
-  bool Select(const BiDirectedNode &n) override {
-    const auto rawnode = n.node;
-    if ((!disable_all) && rawnode->op() == Op::Get(QUANTIZED_FC_NAME)) {
+  bool Select(const nnvm::Node &n) override {
+    if ((!disable_all) &&
+        (n.op() == Op::Get("_sg_mkldnn_selfatt_qk") ||
+         n.op() == Op::Get("_sg_mkldnn_selfatt_valatt"))) {
       status = disable_all ? kSuccess : kStart;
       matched_list.clear();
       matched_list.push_back(&n);
@@ -74,14 +64,12 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelectorV2 {
     return false;
   }
 
-  bool SelectInput(const BiDirectedNode &n, const BiDirectedNode &new_node) override {
+  bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) override {
     return false;
   }
 
-  bool SelectOutput(const BiDirectedNode &n, const BiDirectedNode &new_node) override {
-    const auto raw_node = n.node;
-    const auto raw_new_node = new_node.node;
-    if (status == kFail || status == kSuccess || raw_new_node->is_variable())
+  bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
+    if (status == kFail || status == kSuccess || new_node.is_variable())
       return false;
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
@@ -99,8 +87,8 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelectorV2 {
 
     switch (status) {
       case kStart:
-        if (raw_new_node->op() == Op::Get("_contrib_requantize")) {
-          auto const &param = nnvm::get<RequantizeParam>(raw_new_node->attrs.parsed);
+        if (new_node.op() == Op::Get("_contrib_requantize")) {
+          auto const &param = nnvm::get<RequantizeParam>(new_node.attrs.parsed);
           if (param.min_calib_range.has_value() &&
               param.max_calib_range.has_value()) {
             matched_list.push_back(&new_node);
@@ -109,19 +97,7 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelectorV2 {
           }
         }
       case kRequantize:
-        if ((!disable_float_output) && (raw_new_node->op() == Op::Get("_contrib_dequantize"))) {
-            CHECK(raw_node->op() == Op::Get("_contrib_requantize"));
-            if (n.outputs.size() > 1) {
-              // check if requantize have other outputs than dequantize
-              // if it has we can't fuse dequantize into FC
-              for (auto kv : n.outputs) {
-                const auto& node = kv.first;
-                if (node->op() != Op::Get("_contrib_dequantize")) {
-                  status = kSuccess;
-                  return false;
-                }
-              }
-            }
+        if ((!disable_float_output) && (new_node.op() == Op::Get("_contrib_dequantize"))) {
             matched_list.push_back(&new_node);
             status = kSuccess;
             return true;
@@ -132,14 +108,14 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelectorV2 {
     }
   }
 
-  std::vector<BiDirectedNode *> Filter(
-      const std::vector<BiDirectedNode *>& candidates) override {
+  std::vector<nnvm::Node *> Filter(
+      const std::vector<nnvm::Node *> &candidates) override {
     if ((status != kSuccess) || (matched_list.size() <= 1)) {
-      return std::vector<BiDirectedNode *>(0);
+      return std::vector<nnvm::Node *>(0);
     } else {
-      std::vector<BiDirectedNode *> ret;
+      std::vector<nnvm::Node *> ret;
       for (auto i : matched_list) {
-        auto non_const_i = const_cast<BiDirectedNode *>(i);
+        auto non_const_i = const_cast<nnvm::Node *>(i);
         if (std::find(candidates.begin(), candidates.end(), non_const_i) !=
             candidates.end()) {
           ret.push_back(non_const_i);
@@ -151,22 +127,22 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelectorV2 {
 
   void Reset() override {
     CHECK_GE(matched_list.size(), 1);
-    auto new_selector = SgMKLDNNFCPostQuantizeSelector(disable_all, disable_float_output);
+    auto new_selector = SgMKLDNNTransformerPostQuantizeSelector(disable_all, disable_float_output);
     new_selector.Select(*matched_list[0]);
     *this = new_selector;
   }
 };
 
-class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
+class SgMKLDNNTransformerPostQuantizeProperty : public SubgraphProperty {
  public:
-  SgMKLDNNFCPostQuantizeProperty() {
-    disable_fuse_all = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_QFC_FUSE_ALL", false);
-    disable_float_output = dmlc::GetEnv("MXNET_DISABLE_ONEDNN_QFC_FLOAT_OUTPUT", false);
+  SgMKLDNNTransformerPostQuantizeProperty() {
+    disable_fuse_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QTRANSFORMER_FUSE_ALL", false);
+    disable_float_output = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QTRANSFORMER_FLOAT_OUTPUT", false);
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string &name = "MKLDNN FullyConected post-quantization optimization pass";
-    auto property = std::make_shared<SgMKLDNNFCPostQuantizeProperty>();
+    static const std::string &name = "MKLDNN Transformer post-quantization optimization pass";
+    auto property = std::make_shared<SgMKLDNNTransformerPostQuantizeProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
@@ -174,14 +150,15 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
 
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id = 0) const override {
-    nnvm::ObjectPtr fc_node = nullptr;
+    nnvm::ObjectPtr interleaved_node = nullptr;
     nnvm::ObjectPtr requantize_node = nullptr;
     nnvm::ObjectPtr dequantize_node = nullptr;
 
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->is_variable()) return;
-      if (node->op() == Op::Get(QUANTIZED_FC_NAME)) {
-        fc_node = node;
+      if (node->op() == Op::Get("_sg_mkldnn_selfatt_qk") ||
+          node->op() == Op::Get("_sg_mkldnn_selfatt_valatt")) {
+        interleaved_node = node;
       } else if (node->op() == Op::Get("_contrib_requantize")) {
         requantize_node = node;
       } else if (node->op() == Op::Get("_contrib_dequantize")) {
@@ -189,41 +166,33 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
       }
     });
 
-    CHECK_NOTNULL(fc_node);
+    CHECK_NOTNULL(interleaved_node);
     CHECK_NOTNULL(requantize_node);
     auto const &requantize_param =
         nnvm::get<RequantizeParam>(requantize_node->attrs.parsed);
     CHECK(requantize_param.min_calib_range.has_value());
     CHECK(requantize_param.max_calib_range.has_value());
 
-    // When only fused quantized_fullyconnected and requantize, set min/max_cablib_range,
-    // When fused quantized_fullyconnected + requantize + dequantize, set dequantize flag to true.
+    // When only fusing quantized_interleaved_matmul and requantize, set min/max_cablib_range,
+    // When fusing quantized_interleaved_matmul + requantize + dequantize,
+    // set dequantize flag to true.
     if (dequantize_node != nullptr) {
-      fc_node->attrs.dict["enable_float_output"] = "True";
+      interleaved_node->attrs.dict["enable_float_output"] = "True";
     } else {
-      fc_node->attrs.dict["min_calib_range"] =
+      interleaved_node->attrs.dict["min_calib_range"] =
           std::to_string(requantize_param.min_calib_range.value());
-      fc_node->attrs.dict["max_calib_range"] =
+      interleaved_node->attrs.dict["max_calib_range"] =
           std::to_string(requantize_param.max_calib_range.value());
     }
-    fc_node->op()->attr_parser(&(fc_node->attrs));
-    return fc_node;
+    interleaved_node->op()->attr_parser(&(interleaved_node->attrs));
+    return interleaved_node;
   }
 
-  SubgraphSelectorV2Ptr CreateSubgraphSelectorV2() const override {
+  SubgraphSelectorPtr CreateSubgraphSelector() const override {
     auto selector =
-        std::make_shared<SgMKLDNNFCPostQuantizeSelector>(disable_fuse_all,
+        std::make_shared<SgMKLDNNTransformerPostQuantizeSelector>(disable_fuse_all,
                                                          disable_float_output);
     return selector;
-  }
-
-  void ConnectSubgraphOutputs(
-      const nnvm::ObjectPtr n,
-      std::vector<nnvm::NodeEntry *> *output_entries) const override {
-    for (size_t i = 0; i < output_entries->size(); ++i) {
-      auto entry_ptr = output_entries->at(i);
-      *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
-    }
   }
 
  private:
@@ -235,4 +204,4 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_ONEDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_POST_QUANTIZE_PROPERTY_H_

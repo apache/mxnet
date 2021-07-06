@@ -55,8 +55,8 @@ class TextCNN(nn.Block):
     def forward(self, inputs):
         # Concatenate the output of two embedding layers with shape of
         # (batch size, number of words, word vector dimension) by word vector
-        embeddings = nd.concat(
-            self.embedding(inputs), self.constant_embedding(inputs), dim=2)
+        embeddings = mx.np.concatenate(
+            [self.embedding(inputs), self.constant_embedding(inputs)], axis=2)
         # According to the input format required by Conv1D, the word vector
         # dimension, that is, the channel dimension of the one-dimensional
         # convolutional layer, is transformed into the previous dimension
@@ -65,8 +65,8 @@ class TextCNN(nn.Block):
         # pooling, an NDArray with the shape of (batch size, channel size, 1)
         # can be obtained. Use the flatten function to remove the last
         # dimension and then concatenate on the channel dimension
-        encoding = nd.concat(*[nd.flatten(
-            self.pool(conv(embeddings))) for conv in self.convs], dim=1)
+        encoding = mx.np.concatenate([mx.npx.batch_flatten(
+            self.pool(conv(embeddings))) for conv in self.convs], axis=1)
         # After applying the dropout method, use a fully connected layer to
         # obtain the output
         outputs = self.decoder(self.dropout(encoding))
@@ -95,7 +95,7 @@ class BiRNN(nn.Block):
         # Concatenate the hidden states of the initial time step and final
         # time step to use as the input of the fully connected layer. Its
         # shape is (batch size, 4 * number of hidden units)
-        encoding = nd.concat(states[0], states[-1])
+        encoding = mx.np.concatenate([states[0], states[-1]], axis=1)
         outputs = self.decoder(encoding)
         return outputs
 
@@ -173,8 +173,8 @@ def preprocess_imdb(data, vocab):
         return x[:max_l] if len(x) > max_l else x + [0] * (max_l - len(x))
 
     tokenized_data = get_tokenized_imdb(data)
-    features = nd.array([pad(vocab.to_indices(x)) for x in tokenized_data])
-    labels = nd.array([score for _, score in data])
+    features = mx.np.array([pad(vocab.to_indices(x)) for x in tokenized_data])
+    labels = mx.np.array([score for _, score in data])
     return features, labels
 
 
@@ -213,16 +213,16 @@ def test_estimator_cpu():
     lr = 1
     num_epochs = 1
 
-    train_data = mx.nd.random.randint(low=0, high=100, shape=(2 * batch_size, 500))
-    train_label = mx.nd.random.randint(low=0, high=2, shape=(2 * batch_size,))
-    val_data = mx.nd.random.randint(low=0, high=100, shape=(batch_size, 500))
-    val_label = mx.nd.random.randint(low=0, high=2, shape=(batch_size,))
+    train_data = mx.np.random.randint(low=0, high=100, size=(2 * batch_size, 500))
+    train_label = mx.np.random.randint(low=0, high=2, size=(2 * batch_size,))
+    val_data = mx.np.random.randint(low=0, high=100, size=(batch_size, 500))
+    val_label = mx.np.random.randint(low=0, high=2, size=(batch_size,))
 
     train_dataloader = gluon.data.DataLoader(dataset=gluon.data.ArrayDataset(train_data, train_label),
                                              batch_size=batch_size, shuffle=True)
     val_dataloader = gluon.data.DataLoader(dataset=gluon.data.ArrayDataset(val_data, val_label),
                                            batch_size=batch_size)
-    vocab_list = mx.nd.zeros(shape=(100,))
+    vocab_list = mx.np.zeros(shape=(100,))
 
     # Get the model
     for model in models:

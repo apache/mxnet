@@ -26,6 +26,9 @@
 #include "mkldnn_fc_post_quantize_property.h"
 #include "mkldnn_elemwisemul_post_quantize_property.h"
 #include "mkldnn_post_quantize_align_scale_property.h"
+#include "mkldnn_transformer_qk_property.h"
+#include "mkldnn_transformer_valatt_property.h"
+#include "mkldnn_transformer_post_quantize_property.h"
 
 namespace mxnet {
 namespace op {
@@ -37,6 +40,8 @@ MXNET_REGISTER_SUBGRAPH_BACKEND(MKLDNN)
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNFCProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNBNReLUProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNTransformerQKProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNTransformerValAttProperty);
 
 MXNET_REGISTER_SUBGRAPH_BACKEND(MKLDNN_QUANTIZE)
 .set_attr("context", Context::CPU());
@@ -46,11 +51,15 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNConvProperty)
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCProperty)
 .set_attr("quantize", true);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNTransformerQKProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNTransformerValAttProperty);
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCPostQuantizeProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, ElemwiseMulPostQuantizeProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeAlignScaleProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNTransformerPostQuantizeProperty)
+.set_attr("quantize", true);
 
 }  // namespace op
 }  // namespace mxnet

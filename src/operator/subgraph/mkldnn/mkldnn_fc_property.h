@@ -40,7 +40,7 @@ namespace op {
 
 class SgMKLDNNFCSelector : public SubgraphSelector {
  public:
-  /*! \brief pattern match status */
+  /* pattern match status */
   enum SelectStatus {
     kFail = 0,
     kStart,
@@ -113,13 +113,17 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
           }
         }
         if (!quantized_ && (new_node.op() == Op::Get("square") ||
-            new_node.op() == Op::Get("sqrt") ||
-            new_node.op() == Op::Get("exp"))) {
+                            new_node.op() == Op::Get("_npi_square") ||
+                            new_node.op() == Op::Get("sqrt") ||
+                            new_node.op() == Op::Get("_npi_sqrt") ||
+                            new_node.op() == Op::Get("exp") ||
+                            new_node.op() == Op::Get("_npi_exp"))) {
           matched_list_.push_back(&new_node);
           status_ = kSuccess;
           return true;
         }
-        if (new_node.op() == Op::Get("abs")) {
+        if (new_node.op() == Op::Get("abs") ||
+            new_node.op() == Op::Get("_npi_absolute")) {
           matched_list_.push_back(&new_node);
           status_ = kSuccess;
           return true;

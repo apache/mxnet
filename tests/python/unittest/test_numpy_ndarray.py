@@ -1421,3 +1421,8 @@ def test_mixed_array_types_share_memory():
     mx_pinned_array = mx_array.as_in_ctx(mx.cpu_pinned(0))
     assert not _np.may_share_memory(np_array, mx_pinned_array)
     assert not _np.shares_memory(np_array, mx_pinned_array)
+
+@use_np
+def test_save_load_empty(tmp_path):
+    mx.npx.savez(str(tmp_path / 'params.npz'))
+    mx.npx.load(str(tmp_path / 'params.npz'))

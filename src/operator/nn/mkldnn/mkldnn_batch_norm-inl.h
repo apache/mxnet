@@ -159,10 +159,10 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   if (param.axis != 1 || shape.ndim() != 4) {
     // reshape to (N, C, 1, D)
     mxnet::TShape new_shape{
-      static_cast<dim_t>(shape.ProdShape(0, real_axis)),
+      static_cast<index_t>(shape.ProdShape(0, real_axis)),
       shape[real_axis],
       1,
-      static_cast<dim_t>(shape.ProdShape(real_axis + 1,
+      static_cast<index_t>(shape.ProdShape(real_axis + 1,
             static_cast<int>(shape.ndim())))
     };
     in_data[batchnorm::kData] = in_data[batchnorm::kData].Reshape(new_shape);
@@ -195,7 +195,7 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     const mkldnn::memory &weight_mem = fwd.GetWeight();
     float* weight_buf = reinterpret_cast<float *>(weight_mem.get_data_handle());
 
-    nnvm::dim_t channels_ = data.shape()[1];
+    index_t channels_ = data.shape()[1];
     CHECK(weight_mem.get_desc().get_size() == channels_ * sizeof(float) * 2);
     float* weight_ptr = gamma.data().dptr<float>();
     float* bias_ptr = beta.data().dptr<float>();
@@ -204,13 +204,13 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       memcpy(weight_buf, weight_ptr, copy_size);
       memcpy(&weight_buf[channels_], bias_ptr, copy_size);
     } else if (IsBNWriting(req[batchnorm::kGamma])) {
-      for (int i = 0; i < channels_; i++) {
+      for (index_t i = 0; i < channels_; i++) {
         weight_buf[i] = 1.0f;
         weight_ptr[i] = 1.0f;
         weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
     } else {
-      for (int i = 0; i < channels_; i++) {
+      for (index_t i = 0; i < channels_; i++) {
         weight_buf[i] = 1.0f;
         weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
@@ -237,7 +237,7 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       float* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<float>();
       float* invar    = aux_states[batchnorm::kMovingVar].data().dptr<float>();
       // to align with origin implmentation: batch_norm.cc: L164
-      for (int i = 0; i < channels_; i++) {
+      for (index_t i = 0; i < channels_; i++) {
         omean[i] = inmean[i];
         ovar[i] = VARIANCE_TO_INVSTD(invar[i], param.eps);
       }
@@ -254,7 +254,7 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       MKLDNNStream::Get()->Submit();
 
       float* ovar = outVar.data().dptr<float>();
-      for (int i = 0; i < channels_; i++) {
+      for (index_t i = 0; i < channels_; i++) {
         ovar[i] = VARIANCE_TO_INVSTD(ovar[i], param.eps);
       }
     }
@@ -357,10 +357,10 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   if (param.axis != 1 || shape.ndim() != 4) {
     // reshape to (N, C, 1, D)
     mxnet::TShape new_shape{
-      static_cast<dim_t>(shape.ProdShape(0, real_axis)),
+      static_cast<index_t>(shape.ProdShape(0, real_axis)),
       shape[real_axis],
       1,
-      static_cast<dim_t>(shape.ProdShape(real_axis + 1,
+      static_cast<index_t>(shape.ProdShape(real_axis + 1,
             static_cast<int>(shape.ndim())))
     };
     data = data.Reshape(new_shape);
@@ -384,7 +384,7 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     const NDArray &gamma    = in_data[batchnorm::kGamma];
     const NDArray &beta     = in_data[batchnorm::kBeta];
     DType *weight_buf = reinterpret_cast<DType *>(bwd.GetWeight().get_data_handle());
-    nnvm::dim_t channels_ = data.shape()[1];
+    index_t channels_ = data.shape()[1];
     DType *weight_ptr = gamma.data().dptr<DType>();
     DType* bias_ptr = beta.data().dptr<DType>();
     const size_t copy_size = sizeof(DType) * channels_;
@@ -392,7 +392,7 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       memcpy(weight_buf, weight_ptr, copy_size);
       memcpy(&weight_buf[channels_], bias_ptr, copy_size);
     } else {
-      for (int i = 0; i < channels_; i++) {
+      for (index_t i = 0; i < channels_; i++) {
         weight_buf[i] = static_cast<DType>(1.0f);
       }
       memcpy(&weight_buf[channels_], bias_ptr, copy_size);
@@ -422,7 +422,7 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       DType *tmp_var_ptr = reinterpret_cast<DType *>(var_mem.get_data_handle());
 
       DType minus_mom = (1.0f - param.momentum);
-      for (int i = 0; i < channels_; i++) {
+      for (index_t i = 0; i < channels_; i++) {
         moving_mean_ptr[i] = moving_mean_ptr[i] * param.momentum +
                              out_mean_ptr[i] * minus_mom;
         float variance = INVSTD_TO_VARIANCE(out_var_ptr[i], param.eps);
@@ -451,13 +451,13 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
         if (req[batchnorm::kGamma] != kAddTo) {
           memcpy(w_grad_1, gw_buf, copy_size);
         } else {
-          for (int i = 0; i < channels_; i++) {
+          for (index_t i = 0; i < channels_; i++) {
             w_grad_1[i] += gw_buf[i];
           }
         }
       }
     } else {
-      for (int i = 0; i < channels_; i++) {
+      for (index_t i = 0; i < channels_; i++) {
         (in_grad[1].data().dptr<DType>())[i] = 0.0f;
       }
     }
@@ -468,7 +468,7 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
         memcpy(w_grad_2, &gw_buf[channels_], copy_size);
       } else {
         DType *grad_beta = &gw_buf[channels_];
-        for (int i = 0; i < channels_; i++) {
+        for (index_t i = 0; i < channels_; i++) {
           w_grad_2[i] += grad_beta[i];
         }
       }

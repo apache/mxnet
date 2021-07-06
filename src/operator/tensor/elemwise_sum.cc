@@ -139,6 +139,7 @@ NNVM_REGISTER_OP(add_n)
 MXNET_ADD_SPARSE_OP_ALIAS(add_n)
 MXNET_ADD_SPARSE_OP_ALIAS(ElementWiseSum)
 .add_alias("ElementWiseSum")
+.add_alias("_npx_add_n")
 .describe(R"doc(Adds all input arguments element-wise.
 
 .. math::
