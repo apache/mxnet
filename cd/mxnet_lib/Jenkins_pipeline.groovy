@@ -47,7 +47,7 @@ def build(mxnet_variant) {
     node(NODE_LINUX_AARCH64_CPU) {
       ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
         ci_utils.init_git()
-        ci_utils.docker_run('publish.ubuntu1804_aarch64_cpu', "build_static_libmxnet ${mxnet_variant}", false)
+        ci_utils.docker_run('centos7_aarch64_cpu', "build_static_libmxnet ${mxnet_variant}", false)
         ci_utils.pack_lib("mxnet_${mxnet_variant}", libmxnet_pipeline.get_stash(mxnet_variant))
       }
     }
