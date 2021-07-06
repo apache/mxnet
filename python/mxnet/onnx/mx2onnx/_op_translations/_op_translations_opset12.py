@@ -5074,16 +5074,14 @@ def convert_full_like(node, **kwargs):
 
 @mx_op.register('_npi_equal')
 def covert_np_equal(node, **kwargs):
-    """Map MXNet's broadcast_add operator attributes to onnx's Add operator
-    and return the created node.
+    """ npi_equal
     """
     return create_basic_op_node('Equal', node, kwargs)
 
 
 @mx_op.register('_npi_not_equal')
 def convert_not_equal(node, **kwargs):
-    """Map MXNet's broadcast_not_equal operator attributes to onnx's Equal operator
-    and return the created node.
+    """ npi_not_equal
     """
     from onnx.helper import make_node
     name, input_nodes, _ = get_inputs(node, kwargs)
@@ -5093,3 +5091,31 @@ def convert_not_equal(node, **kwargs):
         make_node('Not', [name+'_equal'], [name]),
     ]
     return nodes
+
+
+@mx_op.register('_npi_greater')
+def convert_broadcast_npi_greater(node, **kwargs):
+    """ npi_greater
+    """
+    return create_basic_op_node('Greater', node, kwargs)
+
+
+@mx_op.register('_npi_less')
+def convert_broadcast_npi_less(node, **kwargs):
+    """ npi_less
+    """
+    return create_basic_op_node('Less', node, kwargs)
+
+
+@mx_op.register('_npi_greater_equal')
+def convert_broadcast_npi_greater_equal(node, **kwargs):
+    """ npi_greater_equal
+    """
+    return create_basic_op_node('GreaterOrEqual', node, kwargs)
+
+
+@mx_op.register('_npi_less_equal')
+def convert_broadcast_npi_less_equal(node, **kwargs):
+    """ npi_less_equal
+    """
+    return create_basic_op_node('LessOrEqual', node, kwargs)

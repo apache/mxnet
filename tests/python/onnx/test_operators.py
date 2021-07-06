@@ -412,25 +412,6 @@ def test_onnx_export_np_add(tmp_path, dtype):
     op_export_test('add', M, [x, y], tmp_path)
 
 
-@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
-def test_onnx_export_np_equal(tmp_path, dtype):
-    M = def_model(mx.np, 'equal')
-    x = mx.np.zeros((4,5,6), dtype=dtype)
-    y = mx.np.ones((4,5,6), dtype=dtype)
-    op_export_test('equal', M, [x, y], tmp_path)
-
-
-@pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
-def test_onnx_export_np_not_equal(tmp_path, dtype):
-    M = def_model(mx.np, 'not_equal')
-    x = mx.np.zeros((4,5,6), dtype=dtype)
-    y = mx.np.ones((4,5,6), dtype=dtype)
-    op_export_test('not_equal', M, [x, y], tmp_path)
-    x1 = mx.np.ones((4,5,6), dtype=dtype)
-    y1 = mx.np.ones((5,6), dtype=dtype)
-    op_export_test('not_equal', M, [x1, y1], tmp_path)
-
-
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 def test_onnx_export_np_minimum(tmp_path, dtype):
     M = def_model(mx.np, 'minimum')
@@ -505,23 +486,26 @@ def test_onnx_export_softmax(tmp_path, dtype, temperature):
     op_export_test('softmax_4', M4, [x, l4], tmp_path)
 
 
+@pytest.mark.skip(reason='reverse is deprecated in MXNet 2.0')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('axis', [0, 1, 2, 3])
 def test_onnx_export_reverse(tmp_path, dtype, axis):
-    x = mx.nd.arange(0, 120, dtype=dtype).reshape((2, 3, 4, 5))
+    x = mx.np.arange(0, 120, dtype=dtype).reshape((2, 3, 4, 5))
     M = def_model('reverse', axis=axis)
     op_export_test('reverse', M, [x], tmp_path)
 
 
+@pytest.mark.skip(reason='this version of repeat is deprecated in MXNet 2.0')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('axis', [None, 0, 1, 2, -1, -2, -3])
 @pytest.mark.parametrize('repeats', [2, 1, 3])
 def test_onnx_export_repeat(tmp_path, dtype, axis, repeats):
-    x = mx.nd.arange(0, 27, dtype=dtype).reshape((3, 3, 3))
-    M = def_model('repeat', axis=axis, repeats=repeats)
+    x = mx.np.arange(0, 27, dtype=dtype).reshape((3, 3, 3))
+    M = def_model(mx.np, 'repeat', axis=axis, repeats=repeats)
     op_export_test('repeat', M, [x], tmp_path)
 
 
+@pytest.mark.skip(reason='BilinearResize2D is deprecated in MXNet 2.0')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [(1, 3, 224, 224), (2, 2, 5, 8), (2, 4, 17, 23)])
 @pytest.mark.parametrize('params', [{'height': 7, 'width': 13},
@@ -544,7 +528,7 @@ def test_onnx_export_contrib_BilinearResize2D(tmp_path, dtype, shape, params):
 @pytest.mark.parametrize('topk', [-1, 2, 3, 4])
 @pytest.mark.parametrize('valid_thresh', [0.3, 0.4, 0.8])
 @pytest.mark.parametrize('overlap_thresh', [0.4, 0.7, 1.0])
-def test_onnx_export_contrib_box_nms(tmp_path, topk, valid_thresh, overlap_thresh):
+def test_onnx_export_npx_box_nms(tmp_path, topk, valid_thresh, overlap_thresh):
     # Note that ONNX NMS op only supports float32
 
     # Also note that onnxruntime's nms has slightly different implementation in handling
@@ -553,7 +537,7 @@ def test_onnx_export_contrib_box_nms(tmp_path, topk, valid_thresh, overlap_thres
     # The purpose of theses tests cases are to show that the high level conversion logic is
     # laid out correctly
 
-    A = mx.nd.array([[
+    A = mx.np.array([[
                     [[[[0.5, 0.1, 0.1, 0.2, 0.2],
                     [0.4, 0.1, 0.1, 0.2, 0.2],
                     [0.7, 0.5, 0.5, 0.9, 0.9],
@@ -572,12 +556,12 @@ def test_onnx_export_contrib_box_nms(tmp_path, topk, valid_thresh, overlap_thres
                     [0.8, 0.1, 0.9, 0.11, 0.91],
                     [0.001, 0.01, 0.01, 0.02, 0.02]]]],
                     ]])
-    M = def_model('contrib.box_nms', coord_start=1, force_suppress=True,
+    M = def_model(mx.npx, 'box_nms', coord_start=1, force_suppress=True,
                   overlap_thresh=overlap_thresh, valid_thresh=valid_thresh, score_index=0,
                   topk=topk, in_format='corner', out_format='corner')
-    op_export_test('contrib_nms_manual_coner', M, [A], tmp_path)
+    op_export_test('box_nms_manual_coner', M, [A], tmp_path)
     
-    B = mx.nd.array([
+    B = mx.np.array([
                     [[[[0.7, 0.5, 0.5, 0.2, 0.2],
                     [0.6, 0.48, 0.48, 0.2, 0.2],
                     [0.8, 0.76, 0.76, 0.2, 0.2],
@@ -590,24 +574,26 @@ def test_onnx_export_contrib_box_nms(tmp_path, topk, valid_thresh, overlap_thres
                     [0.8, 0.1, 0.9, 0.01, 0.01],
                     [0.001, 0.6, 0.1, 0.02, 0.02]]]],
                     ])
-    M = def_model('contrib.box_nms', coord_start=1, force_suppress=True,
+    M = def_model(mx.npx, 'box_nms', coord_start=1, force_suppress=True,
                   overlap_thresh=overlap_thresh, valid_thresh=valid_thresh, score_index=0,
                   topk=topk, in_format='center', out_format='center')
-    op_export_test('contrib_nms_manual_center', M, [B], tmp_path)
+    op_export_test('box_nms_manual_center', M, [B], tmp_path)
 
 
+@pytest.mark.skip(reason='greater_scalar is deprecated in MXNet 2.0')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("scalar", [0., 0.1, 0.5, 1., 5, 555.])
 def test_onnx_export_greater_scalar(tmp_path, dtype, scalar):
     if 'int' in dtype:
         scalar = int(scalar)
-        x = mx.nd.arange(0, 12, dtype=dtype).reshape((3, 4))
+        x = mx.np.arange(0, 12, dtype=dtype).reshape((3, 4))
     else:
-        x = mx.random.uniform(0, 9999, (5,10), dtype=dtype)
-    M = def_model('_internal._greater_scalar', scalar=scalar)
-    op_export_test('_internal._greater_scalar', M, [x], tmp_path)
+        x = mx.np.random.uniform(0, 9999, (5,10), dtype=dtype)
+    M = def_model(mx.np, 'greater', scalar=scalar)
+    op_export_test('greater', M, [x], tmp_path)
 
 
+@pytest.mark.skip(reason='lesser_scalar is deprecated in MXNet 2.0')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("scalar", [0., 0.1, 0.5, 1., 5, 555.])
 def test_onnx_export_lesser_scalar(tmp_path, dtype, scalar):
@@ -620,6 +606,7 @@ def test_onnx_export_lesser_scalar(tmp_path, dtype, scalar):
     op_export_test('_internal._lesser_scalar', M, [x], tmp_path)
 
 
+@pytest.mark.skip(reason='equal_scalar is deprecated in MXNet 2.0')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("scalar", [0., 0.1, 0.5, 1., 5, 555.])
 def test_onnx_export_equal_scalar(tmp_path, dtype, scalar):
@@ -630,6 +617,16 @@ def test_onnx_export_equal_scalar(tmp_path, dtype, scalar):
         x = mx.random.uniform(0, 9999, (5,10), dtype=dtype)
     M = def_model('_internal._equal_scalar', scalar=scalar)
     op_export_test('_internal._equal_scalar', M, [x], tmp_path)
+
+
+@pytest.mark.parametrize('op', ['equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal'])
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
+@pytest.mark.parametrize('shape', [(2,3), (4,5,6)])
+def test_onnx_export_np_comparison(tmp_path, op, dtype, shape):
+    M = def_model(mx.np, op)
+    x = mx.np.random.uniform(-100, 100, shape).astype(dtype)
+    y = mx.np.random.uniform(-100, 100, shape[1:]).astype(dtype)
+    op_export_test(op, M, [x, y], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ["float16", "float32", "int32", "int64"])
@@ -1611,10 +1608,10 @@ def test_onnx_export_broadcast_lesser(tmp_path, dtype, shape):
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
-def test_onnx_export_broadcast_greater(tmp_path, dtype, shape):
-    M = def_model('broadcast_greater')
-    x = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
-    y = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
+def test_onnx_export_npx_broadcast_greater(tmp_path, dtype, shape):
+    M = def_model(mx.npx, 'broadcast_greater')
+    x = mx.np.random.uniform(-100, 100, shape).astype(dtype)
+    y = mx.np.random.uniform(-100, 100, shape).astype(dtype)
     op_export_test('broadcast_greater', M, [x, y], tmp_path)
 
 
