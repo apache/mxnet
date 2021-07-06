@@ -30,7 +30,7 @@ __all__ = ['softmax', 'log_softmax', 'masked_softmax', 'masked_log_softmax',
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def softmax(data, axis=-1, length=None, temperature=None, use_length=False, dtype=None):
+def softmax(data, length=None, axis=-1, temperature=None, use_length=False, dtype=None):
     r"""Applies the softmax function.
 
     The resulting array contains elements in the range (0,1) and the elements along the given axis sum up to 1.
