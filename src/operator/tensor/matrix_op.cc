@@ -612,6 +612,7 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxisGrad_<cpu>);
 
 NNVM_REGISTER_OP(slice_like)
+.add_alias("_npx_slice_like")
 .describe(R"code(Slices a region of the array like the shape of another array.
 This function is similar to ``slice``, however, the `begin` are always `0`s
 and `end` of specific axes are inferred from the second input `shape_like`.
