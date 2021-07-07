@@ -16,9 +16,22 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to build and run MXNet on CentOS 7 for CPU
+#
+# Dockerfile for CentOS 7 based builds.
+# Via the CentOS 7 Dockerfiles, we ensure MXNet continues to run fine on older systems.
+#
+# See docker-compose.yml for supported BASE_IMAGE ARGs and targets.
 
-FROM centos:7
+####################################################################################################
+# The Dockerfile uses a dynamic BASE_IMAGE (for example centos:7,
+# nvidia/cuda:10.2-cudnn7-devel-centos7 etc).
+# On top of BASE_IMAGE we install all dependencies shared by all MXNet build
+# environments into a "base" target. At the end of this file, we specialize
+# "base" for specific usecases. The target built by docker can be selected via
+# "--target" option or docker-compose.yml
+####################################################################################################
+ARG BASE_IMAGE
+FROM $BASE_IMAGE AS base
 
 WORKDIR /work/deps
 
@@ -39,3 +52,4 @@ ENV PYTHONPATH=./python/
 WORKDIR /work/mxnet
 
 COPY runtime_functions.sh /work/
+

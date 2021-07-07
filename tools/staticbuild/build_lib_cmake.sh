@@ -32,7 +32,11 @@ git submodule update --init --recursive || true
 # Build libmxnet.so
 rm -rf build; mkdir build; cd build
 cmake -GNinja -C $cmake_config -DCMAKE_PREFIX_PATH=${DEPS_PATH} -DCMAKE_FIND_ROOT_PATH=${DEPS_PATH} ..
-ninja
+if [[ ! $ARCH == 'aarch64' ]]; then
+    ninja
+else
+    ninja-build
+fi
 cd -
 
 # Move to lib

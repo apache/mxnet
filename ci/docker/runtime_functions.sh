@@ -984,6 +984,10 @@ cd_unittest_ubuntu() {
 
     local nose_cmd="nosetests-3.4"
 
+    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
+        source /opt/rh/rh-python38/enable
+    fi
+
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization
 
@@ -1240,8 +1244,8 @@ unittest_ubuntu_cpu_julia10() {
 unittest_centos7_cpu() {
     set -ex
     cd /work/mxnet
-    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
-    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
+    python3 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    python3 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
 }
 
 unittest_centos7_gpu() {
@@ -1249,7 +1253,7 @@ unittest_centos7_gpu() {
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+    python3 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 integrationtest_ubuntu_cpu_onnx() {
@@ -2007,6 +2011,9 @@ build_static_libmxnet() {
     set -ex
     pushd .
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
+        source /opt/rh/devtoolset-10/enable
+    fi
     CMAKE_STATICBUILD=1
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
@@ -2017,6 +2024,9 @@ cd_package_pypi() {
     set -ex
     pushd .
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
+        source /opt/rh/rh-python38/enable
+    fi
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
     popd
 }
@@ -2024,25 +2034,27 @@ cd_package_pypi() {
 # Sanity checks wheel file
 cd_integration_test_pypi() {
     set -ex
-    local python_cmd=${1:?"This function requires a python command as the first argument"}
+    local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     local gpu_enabled=${2:-"false"}
 
     local test_conv_params=''
     local mnist_params=''
-
-    local pip_cmd='pip3'
 
     if [ "${gpu_enabled}" = "true" ]; then
         mnist_params="--gpu 0"
         test_conv_params="--gpu"
     fi
 
+    if [[ ${mxnet_variant} = aarch64_cpu ]]; then
+        source /opt/rh/rh-python38/enable
+    fi
+
     # install mxnet wheel package
-    ${pip_cmd} install --user ./wheel_build/dist/*.whl
+    python3 -m pip install --user ./wheel_build/dist/*.whl
 
     # execute tests
-    ${python_cmd} /work/mxnet/tests/python/train/test_conv.py ${test_conv_params}
-    ${python_cmd} /work/mxnet/example/image-classification/train_mnist.py ${mnist_params}
+    python3 /work/mxnet/tests/python/train/test_conv.py ${test_conv_params}
+    python3 /work/mxnet/example/image-classification/train_mnist.py ${mnist_params}
 }
 
 # Publishes wheel to PyPI

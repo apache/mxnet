@@ -61,10 +61,10 @@ def test_profiler():
 
     for i in range(iter_num):
         if i == begin_profiling_iter:
-            t0 = time.clock()
+            t0 = time.process_time()
             profiler.set_state('run')
         if i == end_profiling_iter:
-            t1 = time.clock()
+            t1 = time.process_time()
             profiler.set_state('stop')
         executor.forward()
         c = executor.outputs[0]
