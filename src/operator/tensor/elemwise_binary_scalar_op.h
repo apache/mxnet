@@ -50,7 +50,7 @@ struct NumpyBinaryScalarParam : public dmlc::Parameter<NumpyBinaryScalarParam> {
 
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream scalar_s, is_int_s;
-    scalar_s << scalar;
+    scalar_s << std::setprecision(15) << scalar;
     is_int_s << is_int;
     (*dict)["scalar"] = scalar_s.str();
     (*dict)["is_int"] = is_int_s.str();
