@@ -74,7 +74,7 @@ def check_rnn_layer_w_rand_inputs(layer):
 
 @mx.util.use_np
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
-def test_lstmp_gpu():
+def test_lstmp():
     hidden_size, projection_size = 3, 2
     rtol, atol = 1e-2, 1e-2
     batch_size, seq_len = 7, 11

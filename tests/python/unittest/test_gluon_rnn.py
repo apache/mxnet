@@ -1004,7 +1004,7 @@ def test_conv_fill_shape():
 
 
 @mx.util.use_np
-def test_lstmp_cell():
+def test_lstmp():
     nhid = 100
     nproj = 64
     cell = gluon.rnn.LSTMPCell(nhid, nproj)
