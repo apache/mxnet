@@ -25,6 +25,7 @@
 */
 
 #if MXNET_USE_MKLDNN == 1
+#include <unordered_map>
 #include "mkldnn_fully_connected-inl.h"
 
 namespace mxnet {
@@ -50,6 +51,9 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
                        full_param.eltwise_param.alg,
                        full_param.eltwise_param.alpha,
                        full_param.eltwise_param.beta);
+  }
+  if (full_param.mkldnn_param.with_sum) {
+    ops.append_sum(full_param.mkldnn_param.sum_scale);
   }
   attr.set_post_ops(ops);
 
