@@ -1693,7 +1693,7 @@ https://github.com/apache/incubator-mxnet/issues/20420
                                   lambda x : 1.23 * 100 / x,
                                   lambda x : x ** 1.23 * 100,
                                  ])
-def test_onnx_export_scalar_op(tmp_path, dtype, shape, func):
+def test_onnx_export_np_scalar_op(tmp_path, dtype, shape, func):
     A = mx.np.random.uniform(1, 100, shape).astype(dtype)
     M = def_model_from_func(func)
     op_export_test('_scalar', M, [A], tmp_path)
