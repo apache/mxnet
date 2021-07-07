@@ -1209,18 +1209,27 @@ def convert_clip(node, **kwargs):
     return nodes
 
 
-def scalar_op_helper(node, op_name, **kwargs):
+def scalar_op_helper(node, op_name, reverse=False, **kwargs):
     """Helper function for scalar arithmetic operations"""
     from onnx import numpy_helper
+    from onnx.helper import make_node
     name, input_nodes, attrs = get_inputs(node, kwargs)
     input_dtypes = get_input_dtypes(node, kwargs)
 
     dtype = input_dtypes[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
-
     scalar_value = float(attrs.get('scalar', '1'))
     if str(dtype).startswith('int'):
-        scalar_value = int(scalar_value)
+        # This irregular dtype inference is made to be consistent with MXNet 2.0 behavior
+        is_int = attrs.get('is_int', '1')
+        if is_int in ['0', 'False']:
+            if op_name == 'Div':
+                dtype = np.dtype('float32')
+            else:
+                dtype = np.dtype('float64')
+            dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+        else:
+            scalar_value = int(scalar_value)
     else:
         if dtype == 'float16':
             # when using float16, we must convert it to np.uint16 view first
@@ -1236,14 +1245,14 @@ def scalar_op_helper(node, op_name, **kwargs):
             if op_name == 'Mul':
                 new_initializer = numpy_helper.to_array(i) * scalar_value[0]
             elif op_name == 'Sub':
-                if name.startswith("_rminusscalar"):
+                if reverse:
                     new_initializer = scalar_value[0] - numpy_helper.to_array(i)
                 else:
                     new_initializer = numpy_helper.to_array(i) - scalar_value[0]
             elif op_name == 'Add':
                 new_initializer = numpy_helper.to_array(i) + scalar_value[0]
             elif op_name == 'Div':
-                if name.startswith("_rdivscalar"):
+                if reverse:
                     new_initializer = scalar_value[0] / numpy_helper.to_array(i)
                 else:
                     new_initializer = numpy_helper.to_array(i) / scalar_value[0]
@@ -1254,10 +1263,17 @@ def scalar_op_helper(node, op_name, **kwargs):
 
     # else create a new tensor of the scalar value, add it in initializer
     if flag is True:
+        nodes = []
+        if input_dtypes[0] != dtype:
+            nodes += [
+                make_node('Cast', [input_nodes[0]], [name+'_cast'], to=dtype_t)
+            ]
+            input_nodes[0] = name+'_cast'
+
         dims = np.shape(scalar_value)
         scalar_op_name = "scalar_op" + str(kwargs["idx"])
         tensor_node = onnx.helper.make_tensor_value_info(scalar_op_name, dtype_t, dims)
-
+        print('in op trans', scalar_value)
         initializer.append(
             onnx.helper.make_tensor(
                 name=scalar_op_name,
@@ -1268,22 +1284,15 @@ def scalar_op_helper(node, op_name, **kwargs):
             )
         )
         # reverse op
-        if "_rminusscalar" in name or "_rdivscalar" in name:
-            print(name)
-            mul_node = onnx.helper.make_node(
-                op_name,
-                [scalar_op_name, input_nodes[0]],
-                [name],
-                name=name
-            )
+        if reverse:
+            nodes += [
+                make_node(op_name, [scalar_op_name, input_nodes[0]], [name])
+            ]
         else:
-            mul_node = onnx.helper.make_node(
-                op_name,
-                [input_nodes[0], scalar_op_name],
-                [name],
-                name=name
-            )
-        return [tensor_node, mul_node]
+            nodes += [
+                make_node(op_name, [input_nodes[0], scalar_op_name], [name])
+            ]
+        return nodes, (dtype,)
     else:
         dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[new_initializer.dtype]
         dims = np.shape(new_initializer)
@@ -1299,7 +1308,7 @@ def scalar_op_helper(node, op_name, **kwargs):
                 raw=False,
             )
         )
-        return [tensor_node]
+        return [tensor_node], (dtype,)
 
 
 # Convert scalar value into node and pass it as input to mul_node
@@ -1315,6 +1324,7 @@ def convert_mul_scalar(node, **kwargs):
 
 # Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_minus_scalar")
+@mx_op.register("_npi_subtract_scalar")
 def convert_minus_scalar(node, **kwargs):
     """Map MXNet's _minus_scalar operator attributes to onnx's Minus operator.
     Creates a new node for the input scalar value, adds it to the initializer
@@ -1323,12 +1333,13 @@ def convert_minus_scalar(node, **kwargs):
     return scalar_op_helper(node, 'Sub', **kwargs)
 
 @mx_op.register("_rminus_scalar")
+@mx_op.register("_npi_rsubtract_scalar")
 def convert_rminus_scalar(node, **kwargs):
     """Map MXNet's _rminus_scalar operator attributes to onnx's Sub operator.
     Creates a new node for the input scalar value, adds it to the initializer
     and return multiple created nodes.
     """
-    return scalar_op_helper(node, 'Sub', **kwargs)
+    return scalar_op_helper(node, 'Sub', reverse=True, **kwargs)
 
 # Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_plus_scalar")
@@ -1342,6 +1353,7 @@ def convert_add_scalar(node, **kwargs):
 
 # Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_div_scalar")
+@mx_op.register("_npi_true_divide_scalar")
 def convert_div_scalar(node, **kwargs):
     """Map MXNet's _div_scalar operator attributes to onnx's Div operator.
     Creates a new node for the input scalar value, adds it to the initializer
@@ -1350,14 +1362,16 @@ def convert_div_scalar(node, **kwargs):
     return scalar_op_helper(node, 'Div', **kwargs)
 
 @mx_op.register("_rdiv_scalar")
+@mx_op.register("_npi_rtrue_divide_scalar")
 def convert_rdiv_scalar(node, **kwargs):
     """Map MXNet's _rdiv_scalar operator attributes to onnx's Div operator.
     Creates a new node for the input scalar value, adds it to the initializer
     and return multiple created nodes.
     """
-    return scalar_op_helper(node, 'Div', **kwargs)
+    return scalar_op_helper(node, 'Div', reverse=True, **kwargs)
 
 @mx_op.register("_power_scalar")
+@mx_op.register("_npi_power_scalar")
 def convert_pow_scalar(node, **kwargs):
     """Map MXNet's _pow_scalar operator attributes to onnx's Pow operator.
     Creates a new node for the input scalar value, adds it to the initializer

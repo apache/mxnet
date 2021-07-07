@@ -1671,18 +1671,30 @@ def test_onnx_export_clip(tmp_path, dtype, shape):
     op_export_test('clip', M, [A], tmp_path)
 
 
+''' 
+TODO: use randomized input once this issue is fixed
+https://github.com/apache/incubator-mxnet/issues/20420
+@pytest.mark.parametrize('func', [lambda x : x + np.random.rand(1)[0] * 100,
+                                  lambda x : x * np.random.rand(1)[0] * 100,
+                                  lambda x : x - np.random.rand(1)[0] * 100,
+                                  lambda x : np.random.rand(1)[0] * 100 - x,
+                                  lambda x : x / (np.random.rand(1)[0] * 100 + 1),
+                                  lambda x : np.random.rand(1)[0] * 100 / x,
+                                  lambda x : x ** np.random.rand(1)[0] * 100,
+                                 ])
+'''
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (6, 7), (8,)])
-@pytest.mark.parametrize('func', [lambda x : x + np.random.rand(1)[0]*100,
-                                  lambda x : x * np.random.rand(1)[0]*100,
-                                  lambda x : x - np.random.rand(1)[0]*100,
-                                  lambda x : np.random.rand(1)[0]*100 - x,
-                                  lambda x : x / (np.random.rand(1)[0]*100 + 1),
-                                  lambda x : np.random.rand(1)[0]*100 / x,
-                                  lambda x : x ** np.random.rand(1)[0]*10,
+@pytest.mark.parametrize('func', [lambda x : x + 1.23 * 100,
+                                  lambda x : x * 1.23 * 100,
+                                  lambda x : x - 1.23 * 100,
+                                  lambda x : 1.23 * 100 - x,
+                                  lambda x : x / (1.23 * 100 + 1),
+                                  lambda x : 1.23 * 100 / x,
+                                  lambda x : x ** 1.23 * 100,
                                  ])
 def test_onnx_export_scalar_op(tmp_path, dtype, shape, func):
-    A = mx.nd.random.uniform(1, 100, shape).astype(dtype)
+    A = mx.np.random.uniform(1, 100, shape).astype(dtype)
     M = def_model_from_func(func)
     op_export_test('_scalar', M, [A], tmp_path)
 
