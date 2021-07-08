@@ -735,11 +735,14 @@ def convert_pooling(node, **kwargs):
     kernel = convert_string_to_list(attrs.get('kernel', '()'))
     pool_type = attrs.get('pool_type', 'max')
     global_pool = attrs.get('global_pool', 'False')
+    global_pool = global_pool in ['True', '1']
     _ = attrs.get('cudnn_off', 'False')
     pooling_convention = attrs.get('pooling_convention', 'valid')
     stride = convert_string_to_list(attrs.get('stride', '()'))
     pad = convert_string_to_list(attrs.get('pad', '()'))
-    p_value = int(attrs.get('p_value', '0'))
+    p_value = attrs.get('p_value', '0')
+    if p_value != 'None':
+        p_value = int(p_value)
     count_include_pad = attrs.get('count_include_pad', 'True')
     layout = attrs.get('layout', 'NCHW')
 
@@ -748,7 +751,7 @@ def convert_pooling(node, **kwargs):
                                   'pooling_convention==\'same\'')
     if pool_type == 'sum':
         raise NotImplementedError('Pooling currently does not support pool_type==\'sum\'')
-    if pool_type == 'lp' and global_pool == 'False' and pooling_convention != 'valid':
+    if pool_type == 'lp' and not global_pool and pooling_convention != 'valid':
         raise NotImplementedError('Pooling currently does not support '
                                   'pooling_convention!=\'valid\' when pool_type==\'lp\' and global_pool==False')
 
@@ -768,33 +771,33 @@ def convert_pooling(node, **kwargs):
     count_include_pad = 1 if count_include_pad == 'True' else 0
 
     nodes = []
-    if pool_type == 'avg' and global_pool == 'False':
+    if pool_type == 'avg' and not global_pool:
         nodes += [
             make_node('AveragePool', [input_nodes[0]], [name], ceil_mode=ceil_mode,
                       count_include_pad=count_include_pad, **kwargs_)
         ]
-    elif pool_type == 'max' and global_pool == 'False':
+    elif pool_type == 'max' and not global_pool:
         nodes += [
             make_node('MaxPool', [input_nodes[0]], [name], ceil_mode=ceil_mode, **kwargs_)
         ]
-    elif pool_type == 'lp' and global_pool == 'False':
+    elif pool_type == 'lp' and not global_pool:
         nodes += [
             make_node('LpPool', [input_nodes[0]], [name], p=p_value, **kwargs_)
         ]
-    elif pool_type == 'avg' and global_pool == 'True':
+    elif pool_type == 'avg' and global_pool:
         nodes += [
             make_node('GlobalAveragePool', [input_nodes[0]], [name])
         ]
-    elif pool_type == 'max' and global_pool == 'True':
+    elif pool_type == 'max' and global_pool:
         nodes += [
             make_node('GlobalMaxPool', [input_nodes[0]], [name])
         ]
-    elif pool_type == 'lp' and global_pool == 'True':
+    elif pool_type == 'lp' and global_pool:
         nodes += [
             make_node('GlobalLpPool', [input_nodes[0]], [name], p=p_value)
         ]
     else:
-        raise NotImplementedError('Unknown parameter values in Pooling')
+        raise NotImplementedError('Unknown pool_type in Pooling')
 
     return nodes
 
@@ -3946,6 +3949,7 @@ def convert_contrib_AdaptiveAvgPooling2D(node, **kwargs):
 
 
 @mx_op.register('broadcast_mod')
+@mx_op.register('_npi_mod')
 def convert_broadcast_mod(node, **kwargs):
     """Map MXNet's broadcast_mod operator
     """
