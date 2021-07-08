@@ -60,10 +60,13 @@ class AdaGrad(Optimizer):
         otherwise, fused_step is called.
 
     """
-    def __init__(self, learning_rate=0.01, epsilon=1e-6, use_fused_step=True, **kwargs):
+    def __init__(self, learning_rate=0.01, epsilon=1e-6, use_fused_step=True, eps=None, **kwargs):
         super(AdaGrad, self).__init__(learning_rate=learning_rate,
                                       use_fused_step=use_fused_step,
                                       **kwargs)
+        if eps is not None:
+            raise DeprecationWarning(
+                'parameter \'eps\' is deprecated. Please use \'epsilon\' instead...')
         self.epsilon = epsilon
 
     def create_state(self, index, weight):
