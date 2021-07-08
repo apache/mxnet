@@ -25,6 +25,7 @@
 */
 
 #if MXNET_USE_MKLDNN == 1
+#include <unordered_map>
 #include "mkldnn_fully_connected-inl.h"
 #include "operator/quantization/quantization_utils.h"
 
@@ -59,6 +60,9 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
     float scale = GetQuantizeScale(mshadow::kUint8, 0, max - min);
     float shift = -min * scale;
     ops.append_eltwise(1.f, dnnl::algorithm::eltwise_linear, 1.f, shift);
+  }
+  if (full_param.mkldnn_param.with_sum) {
+    ops.append_sum(full_param.mkldnn_param.sum_scale);
   }
   attr.set_post_ops(ops);
 

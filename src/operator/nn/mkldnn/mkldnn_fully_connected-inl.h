@@ -33,6 +33,7 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include <memory>
 #include "../fully_connected-inl.h"
 #include "./mkldnn_base-inl.h"
 
@@ -43,6 +44,8 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   bool quantized;
   bool enable_float_output;
   bool with_eltwise;
+  bool with_sum;
+  float sum_scale = 1.0f;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
   dmlc::optional<bool> shifted_output;
@@ -55,6 +58,8 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
     .describe("Whether to enable float32 output");
     DMLC_DECLARE_FIELD(with_eltwise).set_default(false)
     .describe("Whether there's a post with_eltwise after FullyConnected operator");
+    DMLC_DECLARE_FIELD(with_sum).set_default(false)
+    .describe("Add post sum");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "

@@ -45,6 +45,73 @@
 namespace mxnet {
 namespace op {
 
+
+static inline size_t GetInSumIndex(const MKLDNNFCFullParam &param) {
+  assert(param.mkldnn_param.with_sum);
+  return fullc::kWeight + 1 + (param.default_param.no_bias ? 0 : 1);
+}
+
+
+class FCInputIndex {
+ public:
+  explicit FCInputIndex(const MKLDNNFCFullParam full_param) {
+    auto &mkldnn_param = full_param.mkldnn_param;
+    const bool has_bias = !full_param.default_param.no_bias;
+    const bool quantized = mkldnn_param.quantized;
+    const bool sum_input_quantized = quantized && mkldnn_param.with_sum &&
+                                     !mkldnn_param.enable_float_output;
+    const bool channel_wise = quantized && mkldnn_param.channel_wise_quantize.has_value() &&
+                              mkldnn_param.channel_wise_quantize.value();
+
+    // Calculate position of particular input in the input vector:
+    int index     = 0;
+    data          = index++;
+    weight        = index++;
+    bias          = has_bias ? index++ : 0;
+    num_quantized = index + (sum_input_quantized ? 1 : 0);
+    sum           = mkldnn_param.with_sum ? index++: 0;
+    num_base      = index;
+
+    data_min      = quantized ? index++ : 0;
+    data_max      = quantized ? index++ : 0;
+    weight_min    = (quantized && !channel_wise) ? index++ : 0;
+    weight_max    = (quantized && !channel_wise) ? index++ : 0;
+    bias_min      = (quantized && !channel_wise && has_bias) ? index++ : 0;
+    bias_max      = (quantized && !channel_wise && has_bias) ? index++ : 0;
+    sum_min       = sum_input_quantized ? index++ : 0;
+    sum_max       = sum_input_quantized ? index++ : 0;
+    num_total     = index;
+  }
+
+  // true if sum input is used and it is float number
+  bool IsSumInputFloat() const { return (sum && !sum_min); }
+  int GetTotal() const { return num_total; }
+  int GetBase() const { return num_base; }
+
+  // return number of standard inputs which are quantized (represented as integer)
+  int GetQuantized() const { return num_quantized;}
+
+  // Represent index of particular input in the input vector:
+  int data;
+  int weight;
+  int bias;
+  int sum;
+  int data_min;
+  int data_max;
+  int weight_min;
+  int weight_max;
+  int bias_min;
+  int bias_max;
+  int sum_min;
+  int sum_max;
+
+ private:
+  int num_base;       // Number of standard inputs
+  int num_total;      // Number of total inputs: standard + additional needed for quantization
+  int num_quantized;  // Number of standard inputs which are quantized
+};
+
+
 class SgMKLDNNFCOp {
  public:
   explicit SgMKLDNNFCOp(const nnvm::NodeAttrs &attrs)
@@ -66,8 +133,8 @@ class SgMKLDNNFCOp {
 
  private:
   bool initialized_{false};
-  bool channel_wise_runtime_{false};
   bool reorder_data_{false};
+  bool inplace_{false};
   nnvm::Symbol subgraph_sym_;
   MKLDNNFCFullParam full_param_;
   mkldnn_args_map_t args_;
@@ -80,6 +147,8 @@ class SgMKLDNNFCOp {
   float cached_max_data_;
   float cached_min_weight_;
   float cached_max_weight_;
+  float cached_sum_min_;
+  float cached_sum_max_;
   float cached_min_bias_;
   float cached_max_bias_;
   size_t weight_ver_;
@@ -88,71 +157,109 @@ class SgMKLDNNFCOp {
   float cached_max_output_;
   float data_scale_{0.0f};
   std::vector<float> weight_scales_;
-  size_t total_num_inputs_;
-  size_t total_num_outputs_;
 };
 
 void SgMKLDNNFCOp::Forward(const OpContext &ctx,
                            const std::vector<NDArray> &in_data,
                            const std::vector<OpReqType> &req,
                            const std::vector<NDArray> &out_data) {
-  auto &mkldnn_param = full_param_.mkldnn_param;
-  auto &default_param = full_param_.default_param;
-  bool has_bias = !default_param.no_bias;
-  size_t base_num_inputs = has_bias ? 3 : 2;
-  size_t base_num_outputs = 1;
+  auto &mkldnn_param        = full_param_.mkldnn_param;
+  auto &default_param       = full_param_.default_param;
+  const bool has_bias       = !default_param.no_bias;
+  const bool quantized      = mkldnn_param.quantized;
+  const bool out_quantized  = mkldnn_param.quantized && !mkldnn_param.enable_float_output;
+  const bool channel_wise   = quantized && mkldnn_param.channel_wise_quantize.has_value() &&
+                              mkldnn_param.channel_wise_quantize.value();
 
-  float min_data = 0.0f;
-  float max_data = 0.0f;
-  float min_weight = 0.0f;
-  float max_weight = 0.0f;
-  float min_bias = 0.0f;
-  float max_bias = 0.0f;
+  const FCInputIndex idx(full_param_);
 
-  if (!initialized_) {
-    if (mkldnn_param.channel_wise_quantize.has_value() &&
-        mkldnn_param.channel_wise_quantize) {
-      channel_wise_runtime_ = true;
-    }
+  CHECK_EQ(in_data.size(), idx.GetTotal());
 
-    total_num_inputs_ = base_num_inputs;
-    total_num_outputs_ = base_num_outputs;
-    if (mkldnn_param.quantized) {
-      total_num_inputs_ = channel_wise_runtime_ ? (base_num_inputs + 2) : (base_num_inputs * 3);
-      total_num_outputs_ =
-        mkldnn_param.enable_float_output ? base_num_outputs : (base_num_outputs * 3);
-    }
-  }
-  CHECK_EQ(in_data.size(), total_num_inputs_);
-  CHECK_EQ(out_data.size(), total_num_outputs_);
+  int index = 0;
+  const int out_index = index++;
+  const int out_min_index = out_quantized ? index++ : 0;
+  const int out_max_index = out_quantized ? index++ : 0;
+  CHECK_EQ(out_data.size(), index);   // index is equal to total number of outpits
 
-  NDArray data = in_data[fullc::kData];
-  const NDArray &weight = in_data[fullc::kWeight];
-  const NDArray &output = out_data[fullc::kOut];
+  float min_data    = 0.0f;
+  float max_data    = 0.0f;
+  float min_weight  = 0.0f;
+  float max_weight  = 0.0f;
+  float min_bias    = 0.0f;
+  float max_bias    = 0.0f;
 
-  if (mkldnn_param.quantized) {
-    if (!channel_wise_runtime_) {
-      min_weight = in_data[base_num_inputs + quantized_fullc::kWeightMin].data().dptr<float>()[0];
-      max_weight = in_data[base_num_inputs + quantized_fullc::kWeightMax].data().dptr<float>()[0];
-      if (has_bias) {
-        min_bias = in_data[base_num_inputs + quantized_fullc::kBiasMin].data().dptr<float>()[0];
-        max_bias = in_data[base_num_inputs + quantized_fullc::kBiasMax].data().dptr<float>()[0];
+  const float sum_min = idx.sum_min ? in_data[idx.sum_min].data().dptr<float>()[0] : 0.0;
+  const float sum_max = idx.sum_max ? in_data[idx.sum_max].data().dptr<float>()[0] : 0.0;
+
+  NDArray data = in_data[idx.data];
+  const NDArray &weight = in_data[idx.weight];
+  NDArray output;
+
+  if (mkldnn_param.with_sum) {
+    if (!initialized_) {
+      // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace option,
+      // which make check (req[out_index] == kWriteInplace) useless.
+      auto in_mkl_mem = in_data[idx.sum].GetMKLDNNData();
+      auto out_mkl_mem = out_data[out_index].GetMKLDNNData();
+      if (in_mkl_mem->get_data_handle() == out_mkl_mem->get_data_handle()) {
+        inplace_ = true;
       }
     }
-    min_data = in_data[base_num_inputs + quantized_fullc::kDataMin].data().dptr<float>()[0];
-    max_data = in_data[base_num_inputs + quantized_fullc::kDataMax].data().dptr<float>()[0];
+    if (inplace_) {
+      output = in_data[idx.sum];
+    } else {
+      // Not in place: copy in_data[idx.sum] into outputs[out_index].
+      auto in_mkl_mem = in_data[idx.sum].GetMKLDNNData();
+      auto out_mkl_mem = out_data[out_index].GetMKLDNNData();
+      if (out_data[out_index].dtype() == mshadow::kInt32) {
+        auto mem_desc = in_mkl_mem->get_desc();
+        auto this_dtype = get_mkldnn_type(mshadow::kInt32);
+        mem_desc.data.data_type = static_cast<mkldnn_data_type_t>(this_dtype);
+        mkldnn_mem_ptr tmp_mem(new mkldnn::memory(mem_desc, CpuEngine::Get()->get_engine(),
+                                                  out_mkl_mem->get_data_handle()));
+        MKLDNNStream::Get()->RegisterMem(tmp_mem);
+        MKLDNNStream::Get()->RegisterPrimArgs(
+            mkldnn::reorder(*in_mkl_mem, *tmp_mem),
+            {{MKLDNN_ARG_FROM, *in_mkl_mem}, {MKLDNN_ARG_TO, *tmp_mem}});
+        output = NDArray(tmp_mem);
+      } else {
+        mkldnn_mem_ptr tmp_mem(new mkldnn::memory(in_mkl_mem->get_desc(),
+                                                  CpuEngine::Get()->get_engine(),
+                                                  out_mkl_mem->get_data_handle()));
+        MKLDNNStream::Get()->RegisterMem(tmp_mem);
+        MKLDNNMemoryCopy(*in_mkl_mem, tmp_mem.get());
+        output = NDArray(tmp_mem);
+      }
+    }
+  } else {
+    output = out_data[out_index];
+  }
+
+  if (mkldnn_param.quantized) {
+    if (!channel_wise) {
+      min_weight = in_data[idx.weight_min].data().dptr<float>()[0];
+      max_weight = in_data[idx.weight_max].data().dptr<float>()[0];
+      if (has_bias) {
+        min_bias = in_data[idx.bias_min].data().dptr<float>()[0];
+        max_bias = in_data[idx.bias_max].data().dptr<float>()[0];
+      }
+    }
+    min_data = in_data[idx.data_min].data().dptr<float>()[0];
+    max_data = in_data[idx.data_max].data().dptr<float>()[0];
   }
 
   if (initialized_ && mkldnn_param.quantized &&
       dmlc::GetEnv("MXNET_MKLDNN_QFC_DYNAMIC_PARAMS", 0)) {
-    if (channel_wise_runtime_) {
+    if (channel_wise) {
       if (cached_min_data_ != min_data || cached_max_data_ != max_data ||
+          cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
           weight_ver_ != weight.version() ||
-          (has_bias && (bias_ver_ != in_data[fullc::kBias].version()))) {
+          (has_bias && (bias_ver_ != in_data[idx.bias].version()))) {
         initialized_ = false;
       }
     } else {
       if (cached_min_data_ != min_data || cached_max_data_ != max_data ||
+          cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
           cached_min_weight_ != min_weight || cached_max_weight_ != max_weight ||
           (has_bias && (cached_min_bias_ != min_bias || cached_max_bias_ != max_bias))) {
         initialized_ = false;
@@ -169,11 +276,13 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
     cached_max_weight_ = max_weight;
     weight_ver_ = weight.version();
     cached_weight_ = weight;
+    cached_sum_min_ = sum_min;
+    cached_sum_max_ = sum_max;
     if (has_bias) {
       cached_min_bias_ = min_bias;
       cached_max_bias_ = max_bias;
-      bias_ver_ = in_data[fullc::kBias].version();
-      cached_bias_ = in_data[fullc::kBias];
+      bias_ver_ = in_data[idx.bias].version();
+      cached_bias_ = in_data[idx.bias];
     } else {
       cached_bias_ = NDArray();
     }
@@ -232,7 +341,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       // True          True                       True
       // True          False                      Error
       // False         True/False                 False
-      if (channel_wise_runtime_ && !support_channelwise_scale) {
+      if (channel_wise && !support_channelwise_scale) {
         LOG(FATAL)
           << "Currently, channel-wise quantization requires fuse requantize or dequantize."
           << " Please make sure the `min_calib_range` and `max_calib_range` are set when only"
@@ -240,7 +349,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
           << " or the env var of `MXNET_DISABLE_MKLDNN_QFC_FLOAT_OUTPUT` and "
           << " `MXNET_DISABLE_MKLDNN_QFC_FUSE_ALL` are not set to true (default is false)";
       }
-      support_channelwise_scale = support_channelwise_scale && channel_wise_runtime_;
+      support_channelwise_scale = support_channelwise_scale && channel_wise;
 
       if (support_channelwise_scale) {
         MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
@@ -290,6 +399,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       }
 
       size_t num_channel = cached_weight_.shape()[0];
+      float out_scale = 1.0f;
       if (fuse_requantize || mkldnn_param.enable_float_output) {
         float tmp_scale_ = 1.0f;
         if (fuse_requantize) {
@@ -298,10 +408,8 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
             full_param_.eltwise_param.scale =
               GetQuantizeScale(output.dtype(), cached_min_output_, cached_max_output_);
           } else {
-            tmp_scale_ =
-              GetQuantizeScale(output.dtype(),
-                               cached_min_output_,
-                               cached_max_output_) / data_scale_;
+          out_scale = GetQuantizeScale(output.dtype(), cached_min_output_, cached_max_output_);
+          tmp_scale_ = out_scale / data_scale_;
           }
         } else {
           tmp_scale_ = 1.0 / data_scale_;
@@ -329,8 +437,15 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
               &max_weight);
         }
         full_param_.output_scales.resize(0);
+        out_scale = data_scale_ * weight_scales_[0];
       }
-    }
+
+      if (mkldnn_param.with_sum && !mkldnn_param.enable_float_output) {
+        float sum_in_scale =
+          GetQuantizeScale(in_data[idx.sum].dtype(), cached_sum_min_, cached_sum_max_);
+        mkldnn_param.sum_scale = out_scale / sum_in_scale;
+      }
+    }   // if (mkldnn_param.quantized)
 
     fwd_.reset(new MKLDNNFullyConnectedForward(full_param_, ctx.is_train, data, cached_weight_,
       (has_bias ? &cached_bias_ : nullptr), out_md));
@@ -367,6 +482,21 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
     initialized_ = true;
   }
 
+  if (mkldnn_param.with_sum) {
+    const auto& output_mem = output.GetMKLDNNData();
+    const auto& out_mem_desc = output_mem->get_desc();
+    auto dst_mem_desc = fwd_->fwd_pd.dst_desc();
+    if (out_mem_desc != dst_mem_desc) {
+      auto tmp_out_mem = output.GetMKLDNNDataReorder(dst_mem_desc);
+      dst_mem_desc.data.data_type = out_mem_desc.data.data_type;
+      mkldnn_mem_ptr new_out_mem(new mkldnn::memory(dst_mem_desc, CpuEngine::Get()->get_engine(),
+                                                    output_mem->get_data_handle()));
+      MKLDNNStream::Get()->RegisterMem(new_out_mem);
+      MKLDNNMemoryCopy(*tmp_out_mem, new_out_mem.get());
+      output = NDArray(new_out_mem);
+    }
+  }
+
   if (reorder_data_) {
     data = data.Reorder2Default();
   }
@@ -380,8 +510,8 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   MKLDNNStream::Get()->Submit();
 
   if (mkldnn_param.quantized && !mkldnn_param.enable_float_output) {
-    float *min_output_ptr = out_data[quantized_fullc::kOutMin].data().dptr<float>();
-    float *max_output_ptr = out_data[quantized_fullc::kOutMax].data().dptr<float>();
+    float *min_output_ptr = out_data[out_min_index].data().dptr<float>();
+    float *max_output_ptr = out_data[out_max_index].data().dptr<float>();
 
     if (mkldnn_param.shifted_output.has_value() && mkldnn_param.shifted_output.value()) {
       *min_output_ptr = 0;
@@ -447,6 +577,10 @@ static std::vector<std::string> SgMKLDNNFCListInputNames(const NodeAttrs &attrs)
   std::vector<std::string> input_names = DefaultSubgraphOpListInputs(attrs);
   if (full_param.mkldnn_param.quantized) {
     bool channel_wise = false;
+    if (full_param.mkldnn_param.with_sum) {
+      input_names.emplace_back("sum");
+    }
+
     if (full_param.mkldnn_param.channel_wise_quantize.has_value() &&
         full_param.mkldnn_param.channel_wise_quantize) {
       channel_wise = true;
@@ -478,12 +612,12 @@ static std::vector<std::string> SgMKLDNNFCListOutputNames(const NodeAttrs &attrs
 }
 
 template <typename T>
-static inline void FillBaseInputOutputInfo(const FullyConnectedParam &param,
+static inline void FillBaseInputOutputInfo(const MKLDNNFCFullParam &param,
                                            std::vector<T> *base_in_attrs,
                                            std::vector<T> *base_out_attrs,
                                            std::vector<T> *in_attrs,
                                            std::vector<T> *out_attrs) {
-  auto base_num_inputs = param.no_bias ? 2 : 3;
+  auto base_num_inputs = FCInputIndex(param).GetBase();
 
   base_out_attrs->push_back(out_attrs->at(0));
   for (int i = 0; i < base_num_inputs; ++i) {
@@ -498,7 +632,7 @@ static bool SgMKLDNNFCInferShape(const nnvm::NodeAttrs &attrs,
   if (full_param.mkldnn_param.quantized) {
     mxnet::ShapeVector base_in_shapes;
     mxnet::ShapeVector base_out_shapes;
-    FillBaseInputOutputInfo(full_param.default_param, &base_in_shapes, &base_out_shapes,
+    FillBaseInputOutputInfo(full_param, &base_in_shapes, &base_out_shapes,
                             in_shapes, out_shapes);
     bool ret = DefaultSubgraphOpShape(attrs, &base_in_shapes, &base_out_shapes);
 
@@ -530,7 +664,7 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
         full_param.mkldnn_param.channel_wise_quantize) {
       channel_wise = true;
     }
-    size_t base_num_inputs = full_param.default_param.no_bias ? 2 : 3;
+    size_t num_integer_inputs = FCInputIndex(full_param).GetQuantized();
     CHECK(in_types->at(0) == mshadow::kInt8 ||
           in_types->at(0) == mshadow::kUint8)
         << "QuantizedFullyConnected only supports int8/uint8 input, while "
@@ -552,7 +686,7 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
                 << in_types->at(2) << " is given.";
           }
         }
-        for (size_t i = base_num_inputs; i < in_types->size(); ++i) {
+        for (size_t i = num_integer_inputs; i < in_types->size(); ++i) {
           TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
         }
     }
@@ -588,7 +722,7 @@ static bool SgMKLDNNFCStorageType(const nnvm::NodeAttrs &attrs,
   if (full_param.mkldnn_param.quantized) {
     std::vector<int> base_in_attrs;
     std::vector<int> base_out_attrs;
-    FillBaseInputOutputInfo(full_param.default_param, &base_in_attrs, &base_out_attrs,
+    FillBaseInputOutputInfo(full_param, &base_in_attrs, &base_out_attrs,
                             in_attrs, out_attrs);
     bool ret = DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
                                             &base_in_attrs, &base_out_attrs);
@@ -611,6 +745,18 @@ static bool SgMKLDNNFCStorageType(const nnvm::NodeAttrs &attrs,
                                         in_attrs, out_attrs);
   }
 }
+
+
+std::vector<std::pair<int, int>> SgMKLDNNFCInplaceOption(
+    const NodeAttrs &attrs) {
+  auto const &param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
+  if (param.mkldnn_param.with_sum) {
+    return std::vector<std::pair<int, int>>{{FCInputIndex(param).sum, 0}};
+  } else {
+    return std::vector<std::pair<int, int>>();
+  }
+}
+
 
 static OpStatePtr CreateSgMKLDNNFCState(const nnvm::NodeAttrs &attrs,
                                         Context ctx,
@@ -646,13 +792,16 @@ static bool SgMKLDNNAvoidFCQuantizeInput(const NodeAttrs& attrs, const size_t in
                                          const std::string quantize_granularity) {
   auto const &full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
   std::unordered_set<size_t> avoid_indexes;
+  FCInputIndex idx(full_param);
   if (quantize_granularity == "channel-wise") {
     avoid_indexes.insert(fullc::kWeight);   // weight
     if (!full_param.default_param.no_bias) {
       avoid_indexes.insert(fullc::kBias);   // bias
     }
   }
-
+  if (idx.IsSumInputFloat()) {
+      avoid_indexes.insert(idx.sum);
+  }
   return avoid_indexes.count(index_to_check);
 }
 
@@ -660,17 +809,7 @@ NNVM_REGISTER_OP(_sg_mkldnn_fully_connected)
 .describe(R"code(_sg_mkldnn_fully_connected)code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
   auto const &full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
-  auto num_inputs = full_param.default_param.no_bias ? 2 : 3;
-  if (full_param.mkldnn_param.quantized) {
-    if (full_param.mkldnn_param.channel_wise_quantize.has_value() &&
-        full_param.mkldnn_param.channel_wise_quantize) {
-      return num_inputs + 2;  // min_data, max_data
-    } else {
-      return num_inputs * 3;
-    }
-  } else {
-    return num_inputs;
-  }
+  return FCInputIndex(full_param).GetTotal();
 })
 .set_num_outputs([](const NodeAttrs& attrs) {
   auto const &full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
@@ -695,6 +834,7 @@ NNVM_REGISTER_OP(_sg_mkldnn_fully_connected)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                DefaultSubgraphOpMutableInputs)
 .set_attr<std::string>("key_var_num_args", "num_args")
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", SgMKLDNNFCInplaceOption)
 .set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
     return QuantizeType::kMust;
 })
