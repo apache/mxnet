@@ -3458,9 +3458,9 @@ def test_npx_relu():
 @use_np
 def test_npx_activation_log_sigmoid():
     def np_log_sigmoid(x):
-        return _np.log(_np.divide(1.0, (1.0 + _np.exp(-x))))
+        return onp.log(onp.divide(1.0, (1.0 + onp.exp(-x))))
     def np_log_sigmoid_grad(x):
-        return _np.divide(1.0, _np.add(1.0, _np.exp(x)))
+        return onp.divide(1.0, onp.add(1.0, onp.exp(x)))
 
     class TestLogSigmoid(HybridBlock):
         def __init__(self):

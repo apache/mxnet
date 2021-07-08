@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_SCALAR_OP_H_
 
 #include <mxnet/operator_util.h>
+#include <limits>
 #include <vector>
 #include <utility>
 #include <string>
@@ -50,7 +51,7 @@ struct NumpyBinaryScalarParam : public dmlc::Parameter<NumpyBinaryScalarParam> {
 
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream scalar_s, is_int_s;
-    scalar_s << scalar;
+    scalar_s << std::setprecision(std::numeric_limits<double>::max_digits10) << scalar;
     is_int_s << is_int;
     (*dict)["scalar"] = scalar_s.str();
     (*dict)["is_int"] = is_int_s.str();
