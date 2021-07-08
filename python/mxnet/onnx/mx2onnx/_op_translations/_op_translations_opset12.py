@@ -4413,7 +4413,8 @@ def convert_batch_dot(node, **kwargs):
     return nodes
 
 
-@mx_op.register("log2")
+@mx_op.register('log2')
+@mx_op.register('_npi_log2')
 def convert_log2(node, **kwargs):
     """Map MXNet's log2 operator attributes to onnx's operator.
     """
