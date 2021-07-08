@@ -1479,6 +1479,7 @@ def convert_minimum(node, **kwargs):
     return create_basic_op_node('Min', node, kwargs)
 
 @mx_op.register("min")
+@mx_op.register("_npi_min")
 def convert_min(node, **kwargs):
     """Map MXNet's min operator attributes to onnx's ReduceMin operator
     and return the created node.
@@ -1520,6 +1521,7 @@ def convert_min(node, **kwargs):
 
 
 @mx_op.register("max")
+@mx_op.register("_npi_max")
 def convert_max(node, **kwargs):
     """Map MXNet's max operator attributes to onnx's ReduceMax operator
     and return the created node.
@@ -1602,6 +1604,7 @@ def convert_mean(node, **kwargs):
 
 
 @mx_op.register("prod")
+@mx_op.register("_npi_prod")
 def convert_prod(node, **kwargs):
     """Map MXNet's prod operator attributes to onnx's ReduceProd operator
     and return the created node.
@@ -5136,3 +5139,105 @@ def convert_broadcast_npi_less_equal(node, **kwargs):
     """ npi_less_equal
     """
     return create_basic_op_node('LessOrEqual', node, kwargs)
+
+
+@mx_op.register('_npi_argmin')
+def convert_argmin(node, **kwargs):
+    """ _npi_argmin
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    axis = str(attrs.get('axis', 'None'))
+
+    dtype = np.dtype('int64')
+
+    if axis == 'None':
+        create_tensor([-1], name+'_-1', kwargs['initializer'])
+        nodes = [
+            make_node('Reshape', [input_nodes[0], name+'_-1'], [name+'_reshape']),
+            make_node('ArgMin', [name+'_reshape'], [name], axis=0, keepdims=False),
+        ]
+    else:
+        axis = int(axis)
+        nodes = [
+            make_node('ArgMin', [input_nodes[0]], [name], axis=axis, keepdims=False),
+        ]
+    return nodes, (dtype,)
+
+
+@mx_op.register('_npi_argmax')
+def convert_argmin(node, **kwargs):
+    """ _npi_argmax
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    axis = str(attrs.get('axis', 'None'))
+
+    dtype = np.dtype('int64')
+
+    if axis == 'None':
+        create_tensor([-1], name+'_-1', kwargs['initializer'])
+        nodes = [
+            make_node('Reshape', [input_nodes[0], name+'_-1'], [name+'_reshape']),
+            make_node('ArgMax', [name+'_reshape'], [name], axis=0, keepdims=False),
+        ]
+    else:
+        axis = int(axis)
+        nodes = [
+            make_node('ArgMax', [input_nodes[0]], [name], axis=axis, keepdims=False),
+        ]
+    return nodes, (dtype,)
+
+
+@mx_op.register("_npi_mean")
+def convert_npi_mean(node, **kwargs):
+    """Map MXNet's mean operator attributes to onnx's ReduceMean operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    dtype = np.dtype('float32')
+    dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
+
+    mx_axis = str(attrs.get("axis", 'None'))
+    axes = convert_string_to_list(mx_axis) if mx_axis != 'None' else None
+
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
+
+    if axes is not None:
+        if keepdims:
+            nodes = [
+                make_node('Cast', input_nodes, [name+'_cast'], to=dtype_t),
+                make_node('ReduceMean', [name+'_cast'], [name], axes=axes, keepdims=keepdims),
+            ]
+            return nodes
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('Cast', input_nodes, [name+'_cast'], to=dtype_t),
+                make_node('ReduceMean', [name+'_cast'], [name+'_reduce'], axes=axes, keepdims=keepdims),
+                make_node('Shape', [name+'_reduce'], [name+'_reduce_shape']),
+                make_node('Concat', [name+'_1', name+'_reduce_shape'], [name+'_concat'], axis=0),
+                make_node('Reshape', [name+'_reduce', name+'_concat'], [name+'_reshape']),
+                make_node('Squeeze', [name+'_reshape'], [name], axes=[0]),
+            ]
+            return nodes
+    else:
+        if keepdims:
+            nodes = [
+                make_node('Cast', input_nodes, [name+'_cast'], to=dtype_t),
+                make_node('ReduceMean', [name+'_cast'], [name], keepdims=keepdims),
+            ]
+            return nodes
+
+        else:
+            create_tensor([1], name+'_1', kwargs['initializer'])
+            nodes = [
+                make_node('Cast', input_nodes, [name+'_cast'], to=dtype_t),
+                make_node('ReduceMean', [name+'_cast'], [name+'_reduce'], keepdims=keepdims),
+                make_node('Reshape', [name+'_reduce', name+'_1'], [name]),
+            ]
+            return nodes, (dtype,)

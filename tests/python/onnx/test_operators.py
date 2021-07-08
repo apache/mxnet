@@ -688,8 +688,7 @@ def test_onnx_link_op_with_multiple_outputs(tmp_path):
     op_export_test('link_op_with_multiple_outputs_case3', Model3, [A], tmp_path)
 
 
-# opset 8 MAX only supports float types
-# opset 12 and up suppots float and int
+@pytest.mark.skip(reason='maximum_scalar is deprecated in MXNet 2.0')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (1, 4, 1, 7)])
 def test_onnx_maximum_scalar(tmp_path, dtype, shape):
@@ -698,8 +697,7 @@ def test_onnx_maximum_scalar(tmp_path, dtype, shape):
     op_export_test('_maximum_scalar', M, [x], tmp_path)
 
 
-# opset 8 Min only supports float types
-# opset 12 and up suppots float and int
+@pytest.mark.skip(reason='minimum_scalar is deprecated in MXNet 2.0')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (1, 4, 1, 7)])
 def test_onnx_minimum_scalar(tmp_path, dtype, shape):
@@ -711,14 +709,14 @@ def test_onnx_minimum_scalar(tmp_path, dtype, shape):
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 @pytest.mark.parametrize('fmt', ['corner', 'center'])
 @pytest.mark.parametrize('clip', [-1., 0., .5, 5.])
-def test_onnx_export_contrib_box_decode(tmp_path, dtype, fmt, clip):
+def test_onnx_export_npx_box_decode(tmp_path, dtype, fmt, clip):
     # ensure data[0] < data[2] and data[1] < data[3] for corner format
-    mul = mx.nd.array([-1, -1, 1, 1], dtype=dtype)
-    data = mx.nd.random.uniform(0, 1, (2, 3, 4), dtype=dtype) * mul
-    anchors = mx.nd.random.uniform(0, 1, (1, 3, 4), dtype=dtype) * mul
-    M1 = def_model('contrib.box_decode', format=fmt, clip=clip)
+    mul = mx.np.array([-1, -1, 1, 1], dtype=dtype)
+    data = mx.np.random.uniform(0, 1, (2, 3, 4), dtype=dtype) * mul
+    anchors = mx.np.random.uniform(0, 1, (1, 3, 4), dtype=dtype) * mul
+    M1 = def_model(mx.npx, 'box_decode', format=fmt, clip=clip)
     op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
-    M2 = def_model('contrib.box_decode', format=fmt, clip=clip, std0=0.3, std1=1.4, std2=0.5, std3=1.6)
+    M2 = def_model(mx.npx, 'box_decode', format=fmt, clip=clip, std0=0.3, std1=1.4, std2=0.5, std3=1.6)
     op_export_test('contrib_box_decode', M1, [data, anchors], tmp_path)
 
 
@@ -1666,7 +1664,6 @@ def test_onnx_export_clip(tmp_path, dtype, shape):
     A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
     a_min = mx.nd.min(A).astype('float32').asnumpy()[0] + 5
     a_max = mx.nd.max(A).astype('float32').asnumpy()[0] - 5
-    print(a_min)
     M = def_model('clip', a_min=a_min, a_max=a_max)
     op_export_test('clip', M, [A], tmp_path)
 
@@ -1701,12 +1698,11 @@ def test_onnx_export_np_scalar_op(tmp_path, dtype, shape, func):
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32'])
 @pytest.mark.parametrize('shape', [(1, 1, 1), (2, 3, 4), (5, 6, 7, 8)])
-@pytest.mark.parametrize('axis', ['None', 0, 1, 2, -1, -2])
-@pytest.mark.parametrize('keepdims', [True, False])
+@pytest.mark.parametrize('axis', [None, 0, 1, 2, -1, -2])
 @pytest.mark.parametrize('op_name', ['argmax', 'argmin'])
-def test_onnx_export_arg_max_min(tmp_path, dtype, shape, axis, keepdims, op_name):
-    A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
-    M = def_model(op_name, axis=axis, keepdims=keepdims)
+def test_onnx_export_np_arg_max_min(tmp_path, dtype, shape, axis, op_name):
+    A = mx.np.random.uniform(-100, 100, shape).astype(dtype)
+    M = def_model(mx.np, op_name, axis=axis)
     op_export_test(op_name, M, [A], tmp_path)
 
 
@@ -1714,25 +1710,22 @@ def test_onnx_export_arg_max_min(tmp_path, dtype, shape, axis, keepdims, op_name
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [[(2, 3), (2, 3)], [(5, 4), (5, 4)]])
 @pytest.mark.parametrize('op_name', ['maximum', 'minimum'])
-def test_onnx_export_maximum_minimum(tmp_path, dtype, shape, op_name):
-    lhs = mx.nd.random.uniform(1, 100, shape[0]).astype(dtype)
-    rhs = mx.nd.random.uniform(1, 100, shape[1]).astype(dtype)
-    M = def_model(op_name)
+def test_onnx_export_np_maximum_minimum(tmp_path, dtype, shape, op_name):
+    lhs = mx.np.random.uniform(1, 100, shape[0]).astype(dtype)
+    rhs = mx.np.random.uniform(1, 100, shape[1]).astype(dtype)
+    M = def_model(mx.np, op_name)
     op_export_test(op_name, M, [lhs, rhs], tmp_path)
 
 
-# onnx reduce ops do not support float64
 @pytest.mark.parametrize('dtype', ['float16', 'float32','int32', 'int64'])
 @pytest.mark.parametrize('shape', [(2, 3), (4, 5, 6)])
 @pytest.mark.parametrize('axis', [None, 0, 1, -1, (0, 1)])
 @pytest.mark.parametrize('keepdims', [True, False])
 @pytest.mark.parametrize('op_name', ['max', 'min', 'mean', 'prod'])
 def test_onnx_export_reduce_op(tmp_path, dtype, shape, axis, keepdims, op_name):
-    if dtype != 'int64' or op_name != 'mean':
-        # onnx ReduceMean does not support int 64
-        x = mx.np.random.uniform(1, 100, size=shape).astype(dtype)
-        M = def_model(op_name, axis=axis, keepdims=keepdims)
-        op_export_test(op_name, M, [x], tmp_path)
+    x = mx.np.random.uniform(1, 100, size=shape).astype(dtype)
+    M = def_model(mx.np, op_name, axis=axis, keepdims=keepdims)
+    op_export_test(op_name, M, [x], tmp_path)
 
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
