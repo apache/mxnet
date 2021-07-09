@@ -79,6 +79,9 @@ def find_lib_path(prefix='libmxnet'):
                 raise RuntimeError('Cannot find the env CUDA_PATH.Please set CUDA_PATH env with cuda path')
             os.add_dll_directory(os.path.dirname(lib_path[0]))
             os.add_dll_directory(os.path.join(os.environ['CUDA_PATH'], 'bin'))
+            # for cudatoolkit in conda env
+            if 'CONDA_PREFIX' in os.environ:
+                os.add_dll_directory(os.path.join(os.environ['CONDA_PREFIX'], 'Library/bin'))
     return lib_path
 
 def find_include_path():
