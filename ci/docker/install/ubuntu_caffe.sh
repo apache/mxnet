@@ -55,5 +55,8 @@ ln -s /usr/lib/x86_64-linux-gnu/libhdf5_serial_hl.so.10.0.2 /usr/lib/x86_64-linu
 
 make all pycaffe -j$(nproc)
 
-cd python
-for req in $(cat requirements.txt); do pip3 install $req; done
+# do not install requirements from caffe's requirements.txt, as they are overwriting our specific versions in
+#  ci/docker/install/requirements. Instead, we need to add the required dependencies for caffe to 
+#  ci/docker/install/requirements
+# cd python
+# for req in $(cat requirements.txt); do pip3 install $req; done
