@@ -77,6 +77,8 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     """
     # docker-compose
     if platform in build_util.DOCKER_COMPOSE_WHITELIST:
+        if "dkr.ecr" in registry:
+            _ecr_login(registry)
         build_util.build_docker(platform=platform, registry=registry, num_retries=10, no_cache=False)
         push_cmd = ['docker-compose', 'push', platform]
         subprocess.check_call(push_cmd)
