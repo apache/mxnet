@@ -1,0 +1,33 @@
+[flake8]
+select = B,C,E,F,P,T4,W,B9
+max-line-length = 120
+ignore =
+    E203,E305,E402,E501,E721,E741,F405,F821,F841,F999,W503,W504,C408,E302,W291,E303,F403
+
+    EXE001,
+
+    B007,B008, E722
+
+    C400,C401,C402,C403,C404,C405,C407,C411,C413,C414,C415
+optional-ascii-coding = True
+exclude =
+    ./.git,
+    ./.github,
+    ./3rdparty,
+    ./benchmark,
+    ./cd,
+    ./ci,
+    ./cmake,
+    ./config,
+    ./contrib,
+    ./cpp-package,
+    ./docker,
+    ./docs,
+    ./example,
+    ./include,
+    ./licences,
+    ./plugin,
+    ./src,
+    ./tools,
+    ./build,
+    *.pyi

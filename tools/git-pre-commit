@@ -20,3 +20,6 @@ set -e
 
 echo "Running pre-commit clang-format"
 tools/lint/git-clang-format HEAD~ --force
+
+echo "Running pre-commit flake8 checker"
+python tools/lint/flake8_hook.py
