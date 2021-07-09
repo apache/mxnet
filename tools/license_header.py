@@ -95,9 +95,12 @@ _WHITE_LIST = [
 
                # Licensed under Caffe header
                'src/operator/nn/pool.h',
+               'src/operator/nn/pool.cuh',
                'src/operator/contrib/psroi_pooling-inl.h',
                'src/operator/contrib/nn/deformable_im2col.h',
                'src/operator/contrib/nn/deformable_im2col.cuh',
+               'src/operator/contrib/nn/modulated_deformable_im2col.h',
+               'src/operator/contrib/nn/modulated_deformable_im2col.cuh',
                'src/operator/nn/im2col.h',
                'src/operator/nn/im2col.cuh',
 
