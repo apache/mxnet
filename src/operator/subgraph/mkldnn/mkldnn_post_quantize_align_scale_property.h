@@ -22,8 +22,10 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include <dmlc/strtonum.h>
+
 #include <string>
 #include <vector>
+
 #include "../common.h"
 #include "mkldnn_subgraph_base-inl.h"
 

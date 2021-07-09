@@ -24,11 +24,12 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "../common.h"
-#include "../../tensor/matrix_op-inl.h"
+
 #include "../../contrib/transformer-inl.h"
-#include "mkldnn_transformer-inl.h"
+#include "../../tensor/matrix_op-inl.h"
+#include "../common.h"
 #include "mkldnn_subgraph_base-inl.h"
+#include "mkldnn_transformer-inl.h"
 
 namespace mxnet {
 namespace op {

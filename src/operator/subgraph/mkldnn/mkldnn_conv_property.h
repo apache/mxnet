@@ -23,8 +23,9 @@
 
 #include <string>
 #include <vector>
-#include "../../nn/activation-inl.h"
+
 #include "../../leaky_relu-inl.h"
+#include "../../nn/activation-inl.h"
 #include "../../nn/convolution-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../tensor/matrix_op-inl.h"
@@ -54,8 +55,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
   std::vector<const nnvm::Node*> matched_list_;
 
  public:
-  SgMKLDNNConvSelector(int dis_all, int dis_conv_bn, int dis_conv_act, int dis_conv_sum,
-                       int quantize)
+  SgMKLDNNConvSelector(
+      int dis_all, int dis_conv_bn, int dis_conv_act, int dis_conv_sum, int quantize)
       : disable_all_(dis_all),
         disable_conv_bn_(dis_conv_bn),
         disable_conv_act_(dis_conv_act),
@@ -243,7 +244,8 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     }
   }
 
-  void ConnectSubgraphInputs(const nnvm::ObjectPtr n, std::vector<nnvm::NodeEntry*>* input_entries,
+  void ConnectSubgraphInputs(const nnvm::ObjectPtr n,
+                             std::vector<nnvm::NodeEntry*>* input_entries,
                              std::vector<nnvm::NodeEntry>* orig_input_entries) const override {
     auto sym = n->attrs.subgraphs[0];
     std::unordered_set<const nnvm::Node*> node_sets;

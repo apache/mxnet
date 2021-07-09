@@ -25,13 +25,15 @@
 
 #if MXNET_USE_MKLDNN == 1
 #include "../../softmax_output-inl.h"
-#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
+#include "./mkldnn_ops-inl.h"
 namespace mxnet {
 namespace op {
 
 static mkldnn::softmax_forward::primitive_desc GetSoftmaxOutputFwdDescImpl(
-    const SoftmaxOutputParam& param, bool is_train, const int axis,
+    const SoftmaxOutputParam& param,
+    bool is_train,
+    const int axis,
     const mkldnn::memory& input_mem) {
   mkldnn::memory::desc data_md = input_mem.get_desc();
   auto cpu_engine              = CpuEngine::Get()->get_engine();
@@ -48,7 +50,9 @@ class MKLDNNSoftmaxOutputFwd {
  public:
   const mkldnn::softmax_forward::primitive_desc fwd_pd;
 
-  MKLDNNSoftmaxOutputFwd(const SoftmaxOutputParam& param, bool is_train, const int axis,
+  MKLDNNSoftmaxOutputFwd(const SoftmaxOutputParam& param,
+                         bool is_train,
+                         const int axis,
                          const mkldnn::memory& mem)
       : fwd_pd(GetSoftmaxOutputFwdDescImpl(param, is_train, axis, mem)) {
     fwd_ = std::make_shared<mkldnn::softmax_forward>(fwd_pd);
@@ -90,7 +94,8 @@ bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam& param) {
   return param.multi_output ? false : true;
 }
 
-void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
                                 const std::vector<NDArray>& in_data,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& out_data) {

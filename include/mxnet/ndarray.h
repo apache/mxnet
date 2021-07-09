@@ -26,23 +26,23 @@
 #define MXNET_NDARRAY_H_
 
 #include <dmlc/base.h>
-#include <dmlc/logging.h>
 #include <dmlc/io.h>
-#include <dmlc/type_traits.h>
+#include <dmlc/logging.h>
 #include <dmlc/registry.h>
+#include <dmlc/type_traits.h>
 #include <nnvm/node.h>
-#include <vector>
+
+#include <algorithm>
 #include <map>
-#include <string>
-#include <algorithm>
 #include <memory>
-#include <algorithm>
+#include <string>
+#include <vector>
 #if MXNET_USE_MKLDNN == 1
 #include <mkldnn.hpp>
 #endif
 #include "./base.h"
-#include "./storage.h"
 #include "./engine.h"
+#include "./storage.h"
 // check c++11
 #if DMLC_USE_CXX11 == 0
 #error "cxx11 was required for ndarray module"
@@ -90,8 +90,10 @@ class NDArray {
    * \param delay_alloc whether delay the allocation
    * \param dtype data type of this ndarray
    */
-  NDArray(const mxnet::TShape& shape, Context ctx, bool delay_alloc = false,
-          int dtype = mshadow::default_type_flag)
+  NDArray(const mxnet::TShape& shape,
+          Context ctx,
+          bool delay_alloc = false,
+          int dtype        = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype)),
         shape_(shape),
         dtype_(dtype),
@@ -99,10 +101,14 @@ class NDArray {
         entry_(nullptr) {}
   /*! \brief constructor for NDArray with storage type
    */
-  NDArray(const NDArrayStorageType stype, const mxnet::TShape& shape, Context ctx,
-          bool delay_alloc = true, int dtype = mshadow::default_type_flag,
-          std::vector<int> aux_types = {}, mxnet::ShapeVector aux_shapes = {},
-          mxnet::TShape storage_shape = mxnet::TShape(mshadow::Shape1(0)));
+  NDArray(const NDArrayStorageType stype,
+          const mxnet::TShape& shape,
+          Context ctx,
+          bool delay_alloc              = true,
+          int dtype                     = mshadow::default_type_flag,
+          std::vector<int> aux_types    = {},
+          mxnet::ShapeVector aux_shapes = {},
+          mxnet::TShape storage_shape   = mxnet::TShape(mshadow::Shape1(0)));
   /*!
    * \brief constructs a new dynamic NDArray whose shape is unknown,
    *        hence the NDArray is inherently lazily created
@@ -166,8 +172,11 @@ class NDArray {
    * \param aux_data the memory content of static aux data
    * \param dev_id the device id this tensor sits at
    */
-  NDArray(const NDArrayStorageType stype, const mxnet::TShape& shape, const TBlob& data,
-          const std::vector<TBlob>& aux_data, int dev_id)
+  NDArray(const NDArrayStorageType stype,
+          const mxnet::TShape& shape,
+          const TBlob& data,
+          const std::vector<TBlob>& aux_data,
+          int dev_id)
       : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)),
         shape_(shape),
         dtype_(data.type_flag_),
@@ -768,7 +777,8 @@ class NDArray {
    * \param data the NDArrays to be saved.
    * \param names the name of the NDArray, optional, can be zero length.
    */
-  static void Save(dmlc::Stream* fo, const std::vector<NDArray>& data,
+  static void Save(dmlc::Stream* fo,
+                   const std::vector<NDArray>& data,
                    const std::vector<std::string>& names);
   /*!
    * \brief Load list of ndarray into from the stream.
@@ -889,8 +899,12 @@ class NDArray {
       storage_shape = shape;
     }
     // Constructor for a non-default storage chunk
-    Chunk(NDArrayStorageType storage_type_, const mxnet::TShape& storage_shape_, Context ctx_,
-          bool delay_alloc_, int dtype, const std::vector<int>& aux_types_,
+    Chunk(NDArrayStorageType storage_type_,
+          const mxnet::TShape& storage_shape_,
+          Context ctx_,
+          bool delay_alloc_,
+          int dtype,
+          const std::vector<int>& aux_types_,
           const mxnet::ShapeVector& aux_shapes_)
         : static_data(false),
           delay_alloc(delay_alloc_),
@@ -915,8 +929,10 @@ class NDArray {
       }
     }
 
-    Chunk(const NDArrayStorageType storage_type_, const TBlob& data,
-          const std::vector<TBlob>& aux_data, int dev_id)
+    Chunk(const NDArrayStorageType storage_type_,
+          const TBlob& data,
+          const std::vector<TBlob>& aux_data,
+          int dev_id)
         : static_data(true),
           delay_alloc(false),
           storage_type(storage_type_),
@@ -1002,7 +1018,8 @@ class NDArray {
       shandle.size  = size * mshadow::mshadow_sizeof(dtype);
       this->CheckAndAlloc();
     }
-    inline void CheckAndAlloc(const mxnet::TShape& shape, const mxnet::ShapeVector& aux_shapes,
+    inline void CheckAndAlloc(const mxnet::TShape& shape,
+                              const mxnet::ShapeVector& aux_shapes,
                               int dtype) {
       // calculate size, perform allocation
       if (kRowSparseStorage == storage_type) {
@@ -1254,8 +1271,12 @@ void SampleGenNegBinomial(real_t mu, real_t alpha, NDArray* out);
 //--------------------------------------------------------------
 
 /*! \brief definition of NDArray function */
-typedef std::function<void(NDArray** used_vars, real_t* scalars, NDArray** mutate_vars,
-                           int num_params, char** param_keys, char** param_vals)>
+typedef std::function<void(NDArray** used_vars,
+                           real_t* scalars,
+                           NDArray** mutate_vars,
+                           int num_params,
+                           char** param_keys,
+                           char** param_vals)>
     NDArrayAPIFunction;
 /*! \brief mask information on how functions can be exposed */
 enum NDArrayFunctionTypeMask {
@@ -1309,8 +1330,8 @@ struct NDArrayFunctionReg
    * \param fternary function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg& set_function(void (*fternary)(const NDArray& lhs, const NDArray& mhs,
-                                                           const NDArray& rhs, NDArray* out)) {
+  inline NDArrayFunctionReg& set_function(
+      void (*fternary)(const NDArray& lhs, const NDArray& mhs, const NDArray& rhs, NDArray* out)) {
     body = [fternary](NDArray** used_vars, real_t* s, NDArray** mutate_vars, int num_params,
                       char** param_keys, char** param_vals) {
       (*fternary)(*used_vars[0], *used_vars[1], *used_vars[2], mutate_vars[0]);
@@ -1329,7 +1350,8 @@ struct NDArrayFunctionReg
    * \param fbinary function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg& set_function(void (*fbinary)(const NDArray& lhs, const NDArray& rhs,
+  inline NDArrayFunctionReg& set_function(void (*fbinary)(const NDArray& lhs,
+                                                          const NDArray& rhs,
                                                           NDArray* out)) {
     body = [fbinary](NDArray** used_vars, real_t* s, NDArray** mutate_vars, int num_params,
                      char** param_keys, char** param_vals) {
@@ -1348,7 +1370,8 @@ struct NDArrayFunctionReg
    * \param fscalar function body to set
    * \return ref to the registered entry, used to set properties
    */
-  inline NDArrayFunctionReg& set_function(void (*fscalar)(const NDArray& lhs, const real_t& rhs,
+  inline NDArrayFunctionReg& set_function(void (*fscalar)(const NDArray& lhs,
+                                                          const real_t& rhs,
                                                           NDArray* out)) {
     body         = [fscalar](NDArray** used_vars, real_t* s, NDArray** mutate_vars, int num_params,
                      char** param_keys,
@@ -1384,7 +1407,9 @@ struct NDArrayFunctionReg
    * \return ref to the registered entry, used to set properties
    */
   inline NDArrayFunctionReg& set_function(
-      void (*fgeneric)(NDArray** used_vars, real_t* s, NDArray** mutate_vars,
+      void (*fgeneric)(NDArray** used_vars,
+                       real_t* s,
+                       NDArray** mutate_vars,
                        const std::map<std::string, std::string>& param)) {
     body = [fgeneric](NDArray** used_vars, real_t* s, NDArray** mutate_vars, int num_params,
                       char** param_keys, char** param_vals) {

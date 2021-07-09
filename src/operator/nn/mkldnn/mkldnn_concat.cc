@@ -56,8 +56,10 @@ MKLDNNConcatFwd::MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memor
   fwd_ = std::make_shared<mkldnn::concat>(fwd_pd);
 }
 
-void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                         const std::vector<NDArray>& in_data, const std::vector<OpReqType>& req,
+void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& in_data,
+                         const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[concat_enum::kTempSpace]);
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
@@ -86,8 +88,10 @@ void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   MKLDNNStream::Get()->Submit();
 }
 
-void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                          const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<NDArray>& inputs,
+                          const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[concat_enum::kTempSpace]);
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);

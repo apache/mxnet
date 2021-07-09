@@ -25,14 +25,15 @@
 
 #if MXNET_USE_MKLDNN == 1
 #include "../../tensor/elemwise_unary_op.h"
-#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
+#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_reshape-inl.h"
 
 namespace mxnet {
 namespace op {
 
-MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType& req, const NDArray& input,
+MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType& req,
+                                   const NDArray& input,
                                    const NDArray& output) {
   const auto engine = CpuEngine::Get()->get_engine();
   auto in_mem       = input.GetMKLDNNData();
@@ -63,7 +64,9 @@ MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType& req, const NDArray& input,
 
 int MKLDNNReshapeFwd::GetWorkspaceSize() { return temp_ ? temp_->get_desc().get_size() : 0; }
 
-void MKLDNNReshapeFwd::Execute(const NDArray& input, const NDArray& output, const OpReqType& req,
+void MKLDNNReshapeFwd::Execute(const NDArray& input,
+                               const NDArray& output,
+                               const OpReqType& req,
                                void* workspace) {
   auto stream = MKLDNNStream::Get();
   auto in_mem = input.GetMKLDNNData();
@@ -90,7 +93,8 @@ void MKLDNNReshapeFwd::Execute(const NDArray& input, const NDArray& output, cons
   const_cast<NDArray&>(output).InvalidateMKLDNNData();
 }
 
-MKLDNNReshapeFwd& GetReshapeForward(const OpReqType& req, const NDArray& input,
+MKLDNNReshapeFwd& GetReshapeForward(const OpReqType& req,
+                                    const NDArray& input,
                                     const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNReshapeSignature, MKLDNNReshapeFwd, OpHash> fwds;
@@ -109,8 +113,11 @@ MKLDNNReshapeFwd& GetReshapeForward(const OpReqType& req, const NDArray& input,
   return it->second;
 }
 
-void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& input,
-                          const OpReqType& req, const NDArray& output) {
+void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const NDArray& input,
+                          const OpReqType& req,
+                          const NDArray& output) {
   // For mkldnn non-supported input, it shouldn't hold mkldnn memory, so let's simply fallback to
   // naive implement.
   const int input_ndims = input.shape().ndim();

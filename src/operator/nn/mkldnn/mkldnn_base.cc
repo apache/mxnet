@@ -20,10 +20,11 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include <atomic>
-#include "./mkldnn_base-inl.h"
-#include "./mkldnn_ops-inl.h"
+
 #include "../../../common/exec_utils.h"
 #include "../../operator_common.h"
+#include "./mkldnn_base-inl.h"
+#include "./mkldnn_ops-inl.h"
 
 namespace mxnet {
 
@@ -160,8 +161,10 @@ bool CanWriteTo(const NDArray& out_arr, const NDArray& in_arr, const mkldnn::mem
   return add_same && pdesc_same;
 }
 
-mkldnn_output_t CreateMKLDNNMem(const NDArray& out_arr, const mkldnn::memory::desc& desc,
-                                OpReqType req, const NDArray* in_arr) {
+mkldnn_output_t CreateMKLDNNMem(const NDArray& out_arr,
+                                const mkldnn::memory::desc& desc,
+                                OpReqType req,
+                                const NDArray* in_arr) {
   if (kAddTo == req) {
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::AddBack, tmp);
@@ -186,7 +189,8 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray& out_arr, const mkldnn::memory::de
   return mkldnn_output_t(OutDataOp::Noop, tmp);
 }
 
-mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray& out_arr, const mkldnn::memory::desc& desc,
+mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray& out_arr,
+                                       const mkldnn::memory::desc& desc,
                                        OpReqType req) {
   if (kAddTo == req) {
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
@@ -269,7 +273,8 @@ const mkldnn::memory* GetWeights(const NDArray& arr, int num_groups) {
   return arr.GetMKLDNNData(md);
 }
 
-const mkldnn::memory* GetWeights(const NDArray& arr, const mkldnn::memory::desc& target_desc,
+const mkldnn::memory* GetWeights(const NDArray& arr,
+                                 const mkldnn::memory::desc& target_desc,
                                  int num_groups) {
   const mkldnn::memory* mem = arr.GetMKLDNNData(target_desc);
   // If the weight array already uses the target layout, simply return it directly.
@@ -366,8 +371,11 @@ void ReorderTo(const mkldnn::memory* src, const mkldnn::memory* dst) {
 }
 
 template <typename Compute, typename AttrState>
-void FallBackCompute(Compute fn, const AttrState& attrs_states, const OpContext& ctx,
-                     const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void FallBackCompute(Compute fn,
+                     const AttrState& attrs_states,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& inputs,
+                     const std::vector<OpReqType>& req,
                      const std::vector<NDArray>& outputs) {
   std::vector<TBlob> in_blobs(inputs.size());
   std::vector<NDArray> in_bufs;
@@ -445,7 +453,9 @@ void print_diff(const mxnet::NDArray& arr1, const mxnet::NDArray& arr2) {
 }
 
 template <typename DType>
-static bool SimilarArray(const mxnet::NDArray& arr1, const mxnet::NDArray& arr2, DType rtol,
+static bool SimilarArray(const mxnet::NDArray& arr1,
+                         const mxnet::NDArray& arr2,
+                         DType rtol,
                          DType atol) {
   if (arr1.shape().Size() != arr2.shape().Size()) return false;
 
@@ -484,20 +494,24 @@ static bool SimilarArray(const mxnet::NDArray& arr1, const mxnet::NDArray& arr2,
   return success.load();
 }
 
-template void FallBackCompute(void (*)(nnvm::NodeAttrs const&, OpContext const&,
+template void FallBackCompute(void (*)(nnvm::NodeAttrs const&,
+                                       OpContext const&,
                                        std::vector<TBlob, std::allocator<TBlob>> const&,
                                        std::vector<OpReqType, std::allocator<OpReqType>> const&,
                                        std::vector<TBlob, std::allocator<TBlob>> const&),
-                              nnvm::NodeAttrs const&, OpContext const&,
+                              nnvm::NodeAttrs const&,
+                              OpContext const&,
                               std::vector<NDArray, std::allocator<NDArray>> const&,
                               std::vector<OpReqType, std::allocator<OpReqType>> const&,
                               std::vector<NDArray, std::allocator<NDArray>> const&);
 
-template void FallBackCompute(void (*)(OpStatePtr const&, OpContext const&,
+template void FallBackCompute(void (*)(OpStatePtr const&,
+                                       OpContext const&,
                                        std::vector<TBlob, std::allocator<TBlob>> const&,
                                        std::vector<OpReqType, std::allocator<OpReqType>> const&,
                                        std::vector<TBlob, std::allocator<TBlob>> const&),
-                              OpStatePtr const&, OpContext const&,
+                              OpStatePtr const&,
+                              OpContext const&,
                               std::vector<NDArray, std::allocator<NDArray>> const&,
                               std::vector<OpReqType, std::allocator<OpReqType>> const&,
                               std::vector<NDArray, std::allocator<NDArray>> const&);
@@ -523,7 +537,9 @@ void OpCheck::Init(const std::vector<mxnet::NDArray>& inputs_,
   MKLDNNStream::Get()->Submit();
 }
 
-void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs& attrs, const mxnet::OpContext& ctx,
+void OpCheck::Run(mxnet::FCompute fn,
+                  const nnvm::NodeAttrs& attrs,
+                  const mxnet::OpContext& ctx,
                   const std::vector<mxnet::NDArray>& inputs_,
                   const std::vector<mxnet::OpReqType>& req,
                   const std::vector<mxnet::NDArray>& outputs_) {
@@ -564,8 +580,11 @@ void OpCheck::CopyResult(const std::vector<mxnet::NDArray>& outputs_,
   MKLDNNStream::Get()->Submit();
 }
 
-bool MKLDNNStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask, bool support_mkldnn,
-                       DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+bool MKLDNNStorageType(const nnvm::NodeAttrs& attrs,
+                       const int dev_mask,
+                       bool support_mkldnn,
+                       DispatchMode* dispatch_mode,
+                       std::vector<int>* in_attrs,
                        std::vector<int>* out_attrs) {
   for (int& v : *in_attrs)
     if (v == -1) v = kDefaultStorage;
@@ -604,8 +623,11 @@ inline static const std::vector<NDArray> GetMKLDNNInputArray(const std::vector<N
   return ret;
 }
 
-void MKLDNNRun(mxnet::FComputeEx fn, const nnvm::NodeAttrs& attrs, const mxnet::OpContext& ctx,
-               const std::vector<mxnet::NDArray>& inputs, const std::vector<mxnet::OpReqType>& req,
+void MKLDNNRun(mxnet::FComputeEx fn,
+               const nnvm::NodeAttrs& attrs,
+               const mxnet::OpContext& ctx,
+               const std::vector<mxnet::NDArray>& inputs,
+               const std::vector<mxnet::OpReqType>& req,
                const std::vector<mxnet::NDArray>& outputs) {
   if (CheckMKLDNNInputArrayIsView(inputs)) {
     const auto mkldnn_inputs = GetMKLDNNInputArray(inputs);
@@ -615,8 +637,11 @@ void MKLDNNRun(mxnet::FComputeEx fn, const nnvm::NodeAttrs& attrs, const mxnet::
   }
 }
 
-void MKLDNNRun(FComputeExUnary fn, const nnvm::NodeAttrs& attrs, const mxnet::OpContext& ctx,
-               const mxnet::NDArray& input, const mxnet::OpReqType& req,
+void MKLDNNRun(FComputeExUnary fn,
+               const nnvm::NodeAttrs& attrs,
+               const mxnet::OpContext& ctx,
+               const mxnet::NDArray& input,
+               const mxnet::OpReqType& req,
                const mxnet::NDArray& output) {
   auto mkldnn_input = input;
   if (input.IsView() && input.IsMKLDNNData()) {

@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
@@ -39,8 +40,10 @@ class SgMKLDNNDequantizeOperator {
   explicit SgMKLDNNDequantizeOperator(const nnvm::NodeAttrs& attrs)
       : param_(nnvm::get<DequantizeParam>(attrs.parsed)) {}
 
-  void Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-               const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
+  void Forward(const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs);
 
  private:
   bool initialized_{false};
@@ -52,7 +55,8 @@ class SgMKLDNNDequantizeOperator {
   std::shared_ptr<mkldnn::reorder> fwd_pd_;
 };
 
-void SgMKLDNNDequantizeOperator::Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
+void SgMKLDNNDequantizeOperator::Forward(const OpContext& ctx,
+                                         const std::vector<NDArray>& inputs,
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& outputs) {
   NDArray in_buffer = inputs[0];
@@ -106,7 +110,8 @@ void SgMKLDNNDequantizeOperator::Forward(const OpContext& ctx, const std::vector
   MKLDNNStream::Get()->Submit();
 }
 
-static void SgMKLDNNDequantizeForward(const OpStatePtr& state_ptr, const OpContext& ctx,
+static void SgMKLDNNDequantizeForward(const OpStatePtr& state_ptr,
+                                      const OpContext& ctx,
                                       const std::vector<NDArray>& inputs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<NDArray>& outputs) {

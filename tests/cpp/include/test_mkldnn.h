@@ -31,13 +31,15 @@
 #include <set>
 #include <string>
 #include <vector>
-#include "../../../3rdparty/mkldnn/include/mkldnn_types.h"
+
 #include "../../../3rdparty/googletest/googletest/include/gtest/gtest.h"
+#include "../../../3rdparty/mkldnn/include/mkldnn_types.h"
 #include "../../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 
 using namespace mxnet;
 
-inline static mkldnn::memory::desc GetMemDesc(const mxnet::TShape s, const int dtype,
+inline static mkldnn::memory::desc GetMemDesc(const mxnet::TShape s,
+                                              const int dtype,
                                               const mkldnn::memory::format_tag format_tag) {
   mkldnn::memory::dims dims(s.ndim());
   for (size_t i = 0; i < dims.size(); i++) dims[i] = s[i];
@@ -45,7 +47,8 @@ inline static mkldnn::memory::desc GetMemDesc(const mxnet::TShape s, const int d
   return desc;
 }
 
-inline static mkldnn::memory::desc GetExpandedMemDesc(mkldnn::memory::desc md, const float scale,
+inline static mkldnn::memory::desc GetExpandedMemDesc(mkldnn::memory::desc md,
+                                                      const float scale,
                                                       const int dim = 0) {
   CHECK(dim < md.data.ndims) << "dimension cannot be larger than total dimensions of input";
   mxnet::TShape s(md.data.ndims, -1);
@@ -75,8 +78,10 @@ inline static void InitDefaultArray(NDArray* arr, bool is_rand = false, int max 
 }
 
 // Init arrays with the specified layout.
-inline static void InitMKLDNNArray(NDArray* arr, const mkldnn::memory::desc& desc,
-                                   bool is_rand = false, int max = 50) {
+inline static void InitMKLDNNArray(NDArray* arr,
+                                   const mkldnn::memory::desc& desc,
+                                   bool is_rand = false,
+                                   int max      = 50) {
   InitDefaultArray(arr, is_rand, max);
   arr->MKLDNNDataReorderAsync(desc);
   arr->WaitToRead();
@@ -260,7 +265,9 @@ enum ArrayTypes {
   All                     = 8191,
 };
 
-inline NDArray CreateKernelNDArray(mxnet::TShape kernel, int num_filters, mxnet::TShape input,
+inline NDArray CreateKernelNDArray(mxnet::TShape kernel,
+                                   int num_filters,
+                                   mxnet::TShape input,
                                    bool is_deconv = false) {
   CHECK_EQ(kernel.ndim(), 2) << "mkldnn only supports 2d filters on 4d inputs";
   mxnet::TShape target_shape(4, -1);
@@ -333,7 +340,8 @@ inline void PrintVerifyMsg(const NDArrayAttrs& arr1, const NDArrayAttrs& arr2) {
  *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input
  * shapes)
  */
-inline std::vector<NDArrayAttrs> GetTestInputArrays(int types = ArrayTypes::All, bool rand = false,
+inline std::vector<NDArrayAttrs> GetTestInputArrays(int types                = ArrayTypes::All,
+                                                    bool rand                = false,
                                                     std::vector<float> scale = {1},
                                                     bool spatial_data_format = false,
                                                     int max                  = 50) {
@@ -443,8 +451,9 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(int types = ArrayTypes::All,
 inline std::vector<NDArrayAttrs> GetTestOutputArrays(const mxnet::TShape& shp,
                                                      const std::vector<mkldnn::memory::desc>& mds,
                                                      std::vector<float> scale = {1},
-                                                     bool rand = true, int types = ArrayTypes::All,
-                                                     int max = 50) {
+                                                     bool rand                = true,
+                                                     int types                = ArrayTypes::All,
+                                                     int max                  = 50) {
   mxnet::TShape shape = shp;
 
   for (int dim = 0; dim < scale.size(); dim++)
@@ -575,7 +584,8 @@ using VerifyFunc = std::function<void(const std::vector<NDArray*>& in_arrs,
 
 inline void VerifyAddRequest(const std::vector<NDArray*>& in_arrs,
                              const std::vector<NDArray*>& original_outputs,
-                             const std::vector<NDArray*>& new_outputs, VerifyFunc verify_fn) {
+                             const std::vector<NDArray*>& new_outputs,
+                             VerifyFunc verify_fn) {
   CHECK(original_outputs.size() == new_outputs.size());
   std::vector<NDArray*> tmp_outputs;
   NDArray tmp;

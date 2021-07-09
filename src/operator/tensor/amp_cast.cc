@@ -31,8 +31,10 @@ DMLC_REGISTER_PARAMETER(AMPCastParam);
 DMLC_REGISTER_PARAMETER(AMPMultiCastParam);
 
 #if MXNET_USE_MKLDNN == 1
-static void AMPCastExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                         const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<NDArray>& inputs,
+                         const std::vector<OpReqType>& req,
                          const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
@@ -63,8 +65,10 @@ static void AMPCastExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   FallBackCompute(AMPCastCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
-inline static bool AMPCastStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                      DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+inline static bool AMPCastStorageType(const nnvm::NodeAttrs& attrs,
+                                      const int dev_mask,
+                                      DispatchMode* dispatch_mode,
+                                      std::vector<int>* in_attrs,
                                       std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
@@ -72,8 +76,10 @@ inline static bool AMPCastStorageType(const nnvm::NodeAttrs& attrs, const int de
   return ret;
 }
 
-static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                              const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& outputs) {
   const AMPMultiCastParam& param = nnvm::get<AMPMultiCastParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), param.num_outputs);
@@ -103,8 +109,10 @@ static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx
   MKLDNNStream::Get()->Submit();
 }
 
-inline static bool AMPMultiCastStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                           DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+inline static bool AMPMultiCastStorageType(const nnvm::NodeAttrs& attrs,
+                                           const int dev_mask,
+                                           DispatchMode* dispatch_mode,
+                                           std::vector<int>* in_attrs,
                                            std::vector<int>* out_attrs) {
   const AMPMultiCastParam& param = nnvm::get<AMPMultiCastParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), param.num_outputs);

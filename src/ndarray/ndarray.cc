@@ -23,19 +23,20 @@
  * \brief ndarry module of mxnet
  */
 #include <dmlc/io.h>
-#include <dmlc/memory_io.h>
 #include <dmlc/logging.h>
+#include <dmlc/memory_io.h>
 #include <dmlc/registry.h>
+#include <mshadow/tensor.h>
 #include <mxnet/base.h>
+#include <mxnet/imperative.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/resource.h>
-#include <mxnet/imperative.h>
-#include <mshadow/tensor.h>
-#include "./ndarray_function.h"
+
 #include "../common/utils.h"
-#include "../operator/tensor/matrix_op-inl.h"
-#include "../operator/tensor/init_op.h"
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../operator/tensor/init_op.h"
+#include "../operator/tensor/matrix_op-inl.h"
+#include "./ndarray_function.h"
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
@@ -47,9 +48,14 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
-NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape& shape, Context ctx,
-                 bool delay_alloc, int dtype, std::vector<int> aux_types,
-                 mxnet::ShapeVector aux_shapes, mxnet::TShape storage_shape)
+NDArray::NDArray(const NDArrayStorageType stype,
+                 const mxnet::TShape& shape,
+                 Context ctx,
+                 bool delay_alloc,
+                 int dtype,
+                 std::vector<int> aux_types,
+                 mxnet::ShapeVector aux_shapes,
+                 mxnet::TShape storage_shape)
     : shape_(shape), dtype_(dtype), storage_type_(stype), entry_(nullptr) {
   // Assign default aux types if not given
   if (aux_types.size() == 0 && stype != kDefaultStorage) {
@@ -838,7 +844,8 @@ void TernaryOp(const NDArray& lhs, const NDArray& mhs, const NDArray& rhs, NDArr
  * \param binary_op the real operation
  */
 template <typename OP>
-std::vector<Engine::VarHandle> BinaryOpPrepare(const NDArray& lhs, const NDArray& rhs,
+std::vector<Engine::VarHandle> BinaryOpPrepare(const NDArray& lhs,
+                                               const NDArray& rhs,
                                                NDArray* out) {
   // no check if both of them are on cpu
   if (lhs.ctx().dev_mask() != cpu::kDevMask || rhs.ctx().dev_mask() != cpu::kDevMask) {
@@ -1138,7 +1145,9 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
 
 // Make a copy of an NDArray based on storage type
 template <typename from_xpu, typename to_xpu>
-void CopyFromToImpl(const NDArray& from, const NDArray& to, RunContext rctx,
+void CopyFromToImpl(const NDArray& from,
+                    const NDArray& to,
+                    RunContext rctx,
                     const std::vector<Resource>& requested) {
   using namespace std;
   using namespace mshadow;
@@ -1808,7 +1817,8 @@ bool NDArray::Load(dmlc::Stream* strm) {
 
 const uint64_t kMXAPINDArrayListMagic = 0x112;
 
-void NDArray::Save(dmlc::Stream* fo, const std::vector<NDArray>& data,
+void NDArray::Save(dmlc::Stream* fo,
+                   const std::vector<NDArray>& data,
                    const std::vector<std::string>& names) {
   uint64_t header = kMXAPINDArrayListMagic, reserved = 0;
   fo->Write(&header, sizeof(header));
@@ -2074,8 +2084,10 @@ MXNET_REGISTER_NDARRAY_FUN(fill_element_0index)
 // register API function
 // those with underscore will be registered at NDArray
 
-void CopyFromToSimple(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                      const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void CopyFromToSimple(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs) {
   CopyFromTo(inputs[0], outputs[0], 0, true);
 }
@@ -2087,15 +2099,16 @@ NNVM_REGISTER_OP(_copyto)
     .set_num_inputs(1)
     .set_num_outputs(1)
     .set_attr<mxnet::FInferShape>("FInferShape", op::ElemwiseShape<1, 1>)
-    .set_attr<nnvm::FInferType>("FInferType",
-                                [](const NodeAttrs& attrs, std::vector<int>* in_type,
-                                   std::vector<int>* out_type) {
-                                  return !op::type_is_none((*in_type)[0]) &&
-                                         !op::type_is_none((*out_type)[0]);
-                                })
+    .set_attr<nnvm::FInferType>(
+        "FInferType",
+        [](const NodeAttrs& attrs, std::vector<int>* in_type, std::vector<int>* out_type) {
+          return !op::type_is_none((*in_type)[0]) && !op::type_is_none((*out_type)[0]);
+        })
     .set_attr<FInferStorageType>("FInferStorageType",
-                                 [](const NodeAttrs& attrs, const int dev_mask,
-                                    DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                 [](const NodeAttrs& attrs,
+                                    const int dev_mask,
+                                    DispatchMode* dispatch_mode,
+                                    std::vector<int>* in_attrs,
                                     std::vector<int>* out_attrs) {
                                    op::dispatch_mode_assign(dispatch_mode,
                                                             DispatchMode::kFComputeEx);
@@ -2112,8 +2125,16 @@ NNVM_REGISTER_OP(_copyto)
     .set_attr<FComputeEx>("FComputeEx<gpu>", CopyFromToSimple)
     .add_argument("data", "NDArray", "input data");
 
-void Imdecode(NDArray* ret, NDArray mean, size_t index, size_t x0, size_t y0, size_t x1, size_t y1,
-              size_t n_channels, size_t size, char* str_img) {
+void Imdecode(NDArray* ret,
+              NDArray mean,
+              size_t index,
+              size_t x0,
+              size_t y0,
+              size_t x1,
+              size_t y1,
+              size_t n_channels,
+              size_t size,
+              char* str_img) {
 #if MXNET_USE_OPENCV
   cv::Mat buf(1, size, CV_8U, str_img);
   cv::Mat res = cv::imdecode(buf, n_channels == 1 ? 0 : -1);
@@ -2184,7 +2205,11 @@ void Imdecode(NDArray* ret, NDArray mean, size_t index, size_t x0, size_t y0, si
 
 MXNET_REGISTER_NDARRAY_FUN(_imdecode)
     .set_type_mask(kAcceptEmptyMutateTarget | kNDArrayArgBeforeScalar)
-    .set_body([](NDArray** u, real_t* s, NDArray** out, int num_params, char** param_keys,
+    .set_body([](NDArray** u,
+                 real_t* s,
+                 NDArray** out,
+                 int num_params,
+                 char** param_keys,
                  char** param_vals) {
       CHECK_EQ(num_params, 1);
       Imdecode(out[0], *u[0], static_cast<size_t>(s[0]), static_cast<size_t>(s[1]),

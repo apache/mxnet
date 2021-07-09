@@ -37,9 +37,9 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_DECONVOLUTION_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
+#include <numeric>
 #include <utility>
 #include <vector>
-#include <numeric>
 
 #include "../deconvolution-inl.h"
 #include "./mkldnn_base-inl.h"
@@ -92,9 +92,12 @@ inline mkldnn::memory::desc GetDeconvWeightsDesc(const NDArray& weights, const u
 class MKLDNNDeconvFwd {
  public:
   struct Tensors {
-    Tensors(const NDArray& data, const NDArray& weights, const NDArray* const bias,
+    Tensors(const NDArray& data,
+            const NDArray& weights,
+            const NDArray* const bias,
             const NDArray& out);
-    Tensors(const bool no_bias, const std::vector<NDArray>& inputs,
+    Tensors(const bool no_bias,
+            const std::vector<NDArray>& inputs,
             const std::vector<NDArray>& outputs);
 
     const NDArray& data;
@@ -108,7 +111,8 @@ class MKLDNNDeconvFwd {
                                                               const Tensors& tensors);
 
   MKLDNNDeconvFwd(const DeconvolutionParam& param, const Tensors& tensors);
-  void ControlWeightsFormat(const uint32_t num_group, const bool is_train,
+  void ControlWeightsFormat(const uint32_t num_group,
+                            const bool is_train,
                             const NDArray& weights) const;
   void Execute(const uint32_t num_group, const OpReqType req, const Tensors& tensors) const;
 
@@ -124,15 +128,18 @@ class MKLDNNDeconvFwd {
   std::shared_ptr<deconv_fwd_pd_t> fwd_pd;
 };
 
-MKLDNNDeconvFwd::Tensors::Tensors(const bool no_bias, const std::vector<NDArray>& inputs,
+MKLDNNDeconvFwd::Tensors::Tensors(const bool no_bias,
+                                  const std::vector<NDArray>& inputs,
                                   const std::vector<NDArray>& outputs)
     : data(inputs[deconv::kData]),
       weights(inputs[deconv::kWeight]),
       bias(no_bias ? nullptr : &inputs[deconv::kBias]),
       out(outputs[deconv::kOut]) {}
 
-MKLDNNDeconvFwd::Tensors::Tensors(const NDArray& data, const NDArray& weights,
-                                  const NDArray* const bias, const NDArray& out)
+MKLDNNDeconvFwd::Tensors::Tensors(const NDArray& data,
+                                  const NDArray& weights,
+                                  const NDArray* const bias,
+                                  const NDArray& out)
     : data(data), weights(weights), bias(bias), out(out) {}
 
 MKLDNNDeconvFwd::MKLDNNDeconvFwd(const DeconvolutionParam& param, const Tensors& tensors)
@@ -177,30 +184,39 @@ class MKLDNNDeconvBwd {
                                     const ReadTensors& read_tensors);
 
   static std::shared_ptr<deconv_bwd_data_pd_t> CreateDataPrimitiveDesc(
-      const DeconvolutionParam& param, const ReadTensors& read_tensors,
+      const DeconvolutionParam& param,
+      const ReadTensors& read_tensors,
       const deconv_fwd_pd_t& fwd_pd);
 
   static std::shared_ptr<deconv_bwd_weights_pd_t> CreateWeightsPrimitiveDesc(
-      const DeconvolutionParam& param, const ReadTensors& read_tensors,
+      const DeconvolutionParam& param,
+      const ReadTensors& read_tensors,
       const deconv_fwd_pd_t& fwd_pd);
 
   MKLDNNDeconvBwd(const DeconvolutionParam& param, const ReadTensors& read_tensors);
 
-  void Execute(const uint32_t num_group, const std::vector<OpReqType>& req,
-               const ReadTensors& read_tensors, const WriteTensors& write_tensors) const;
+  void Execute(const uint32_t num_group,
+               const std::vector<OpReqType>& req,
+               const ReadTensors& read_tensors,
+               const WriteTensors& write_tensors) const;
 
  private:
-  void IOSwapWeightsTensors(const uint32_t num_group, const std::vector<OpReqType>& req,
-                            const NDArray& weights, const NDArray& weights_grad) const;
+  void IOSwapWeightsTensors(const uint32_t num_group,
+                            const std::vector<OpReqType>& req,
+                            const NDArray& weights,
+                            const NDArray& weights_grad) const;
 
   // returns the output gradient memory used to calculate the data (input) gradient,
   // which might be reused when calculating the gradient of weights
-  const mkldnn::memory* ScheduleBwdData(const uint32_t num_group, const OpReqType req,
+  const mkldnn::memory* ScheduleBwdData(const uint32_t num_group,
+                                        const OpReqType req,
                                         const ReadTensors& read_tensors,
                                         const WriteTensors& write_tensors) const;
 
-  void ScheduleBwdWeights(const uint32_t num_group, const std::vector<OpReqType>& req,
-                          const ReadTensors& read_tensors, const WriteTensors& write_tensors,
+  void ScheduleBwdWeights(const uint32_t num_group,
+                          const std::vector<OpReqType>& req,
+                          const ReadTensors& read_tensors,
+                          const WriteTensors& write_tensors,
                           const mkldnn::memory* const out_grad_mem) const;
 
   const mkldnn::memory* DataMem(const NDArray& data) const;
@@ -213,7 +229,8 @@ class MKLDNNDeconvBwd {
                                    const mkldnn::memory* const out_grad_mem) const;
 
   mkldnn_output_t DataGradMem(const OpReqType req, const NDArray& data_grad) const;
-  mkldnn_output_t WeightsGradMem(const uint32_t num_group, const OpReqType req,
+  mkldnn_output_t WeightsGradMem(const uint32_t num_group,
+                                 const OpReqType req,
                                  const NDArray& weights_grad) const;
   mkldnn_output_t BiasGradMem(const OpReqType req, const NDArray* const bias) const;
 
@@ -304,8 +321,11 @@ inline mkldnn_output_t MKLDNNDeconvBwd::BiasGradMem(const OpReqType req,
 // Utility class for creating operation descriptors of deconvolution primitives
 class DeconvDescCreator {
  public:
-  DeconvDescCreator(const DeconvolutionParam& param, const NDArray& data, const NDArray& weights,
-                    const NDArray* const bias, const NDArray& out);
+  DeconvDescCreator(const DeconvolutionParam& param,
+                    const NDArray& data,
+                    const NDArray& weights,
+                    const NDArray* const bias,
+                    const NDArray& out);
 
   // Imposes plain formats on memory descriptors with padding (so the next selected implementation
   // will pass CheckImplSizeReq). After calling this method, new primitive descriptor (with new
@@ -314,9 +334,11 @@ class DeconvDescCreator {
   // data_size, weights_size, out_size - size requirements of current implementation
   // Returns whether successfully imposed a plain format on any of the data, weights, and output
   // memory descriptors.
-  bool ImposePlainWherePadding(const size_t data_size, const size_t weights_size,
+  bool ImposePlainWherePadding(const size_t data_size,
+                               const size_t weights_size,
                                const size_t out_size);
-  bool CheckImplSizeReq(const size_t data_size, const size_t weights_size,
+  bool CheckImplSizeReq(const size_t data_size,
+                        const size_t weights_size,
                         const size_t out_size) const;
 
   deconv_fwd_t::desc CreateFwdDesc() const;
@@ -334,7 +356,8 @@ class DeconvDescCreator {
   mkldnn::memory::dims dilates;
 };
 
-inline bool DeconvDescCreator::CheckImplSizeReq(const size_t data_size, const size_t weights_size,
+inline bool DeconvDescCreator::CheckImplSizeReq(const size_t data_size,
+                                                const size_t weights_size,
                                                 const size_t out_size) const {
   // MKLDNN introduced padded formats since 0.15 which require more memory
   // compared to the actual size of the tensor. Currently, MKLDNN operators

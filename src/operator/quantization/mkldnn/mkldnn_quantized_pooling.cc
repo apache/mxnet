@@ -30,7 +30,8 @@
 namespace mxnet {
 namespace op {
 
-static void MKLDNNQuantizedPoolingForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+static void MKLDNNQuantizedPoolingForward(const nnvm::NodeAttrs& attrs,
+                                          const OpContext& ctx,
                                           const std::vector<NDArray>& in_data,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<NDArray>& out_data) {

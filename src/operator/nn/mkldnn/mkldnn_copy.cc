@@ -23,15 +23,18 @@
  * \author
  */
 
-#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
+#include "./mkldnn_ops-inl.h"
 
 #if MXNET_USE_MKLDNN == 1
 namespace mxnet {
 namespace op {
 
-void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& in_data,
-                const OpReqType& req, const NDArray& out_data) {
+void MKLDNNCopy(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const NDArray& in_data,
+                const OpReqType& req,
+                const NDArray& out_data) {
   if (req == kNullOp || req == kWriteInplace) return;
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   auto in_mem = in_data.GetMKLDNNData();

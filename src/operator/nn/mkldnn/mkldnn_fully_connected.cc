@@ -26,6 +26,7 @@
 
 #if MXNET_USE_MKLDNN == 1
 #include <unordered_map>
+
 #include "mkldnn_fully_connected-inl.h"
 
 namespace mxnet {
@@ -34,7 +35,8 @@ namespace op {
 DMLC_REGISTER_PARAMETER(MKLDNNFCParam);
 
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(const MKLDNNFCFullParam& full_param,
-                                                           const bool is_train, const NDArray& data,
+                                                           const bool is_train,
+                                                           const NDArray& data,
                                                            const NDArray& weight,
                                                            const NDArray* bias,
                                                            const mkldnn::memory::desc& out_md) {
@@ -87,7 +89,9 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(const MKLDNNFCFullPar
 }
 
 inline static mkldnn::inner_product_backward_data::primitive_desc GetFCBwdData(
-    const NDArray& data, const NDArray& weight, const NDArray& output,
+    const NDArray& data,
+    const NDArray& weight,
+    const NDArray& output,
     mkldnn::inner_product_forward::primitive_desc fwd_pd) {
   auto data_md   = GetMemDesc(data);
   auto weight_md = GetFCWeightDesc(weight);
@@ -98,7 +102,10 @@ inline static mkldnn::inner_product_backward_data::primitive_desc GetFCBwdData(
 }
 
 inline static mkldnn::inner_product_backward_weights::primitive_desc GetFCBwdWeights(
-    const NDArray& data, const NDArray& weight, const NDArray* bias, const NDArray& output,
+    const NDArray& data,
+    const NDArray& weight,
+    const NDArray* bias,
+    const NDArray& output,
     mkldnn::inner_product_forward::primitive_desc fwd_pd) {
   auto data_md   = GetMemDesc(data);
   auto weight_md = GetFCWeightDesc(weight);
@@ -114,9 +121,12 @@ inline static mkldnn::inner_product_backward_weights::primitive_desc GetFCBwdWei
   }
 }
 
-MKLDNNFullyConnectedForward& GetFCFwd(const FullyConnectedParam& param, const bool is_train,
-                                      const NDArray& data, const NDArray& weight,
-                                      const NDArray* bias, const mkldnn::memory::desc& out_md) {
+MKLDNNFullyConnectedForward& GetFCFwd(const FullyConnectedParam& param,
+                                      const bool is_train,
+                                      const NDArray& data,
+                                      const NDArray& weight,
+                                      const NDArray* bias,
+                                      const mkldnn::memory::desc& out_md) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNFullyconSignature, MKLDNNFullyConnectedForward,
                                          OpHash>
@@ -143,8 +153,10 @@ MKLDNNFullyConnectedForward& GetFCFwd(const FullyConnectedParam& param, const bo
   return it->second;
 }
 
-void MKLDNNFCFlattenData(const FullyConnectedParam& param, const NDArray& out_data,
-                         NDArray* in_data, mkldnn::memory::desc* out_md) {
+void MKLDNNFCFlattenData(const FullyConnectedParam& param,
+                         const NDArray& out_data,
+                         NDArray* in_data,
+                         mkldnn::memory::desc* out_md) {
   const mxnet::TShape ishape = in_data->shape();
   const mxnet::TShape oshape = out_data.shape();
   if (ishape.ndim() != 2) {
@@ -165,7 +177,8 @@ void MKLDNNFCFlattenData(const FullyConnectedParam& param, const NDArray& out_da
   }
 }
 
-void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam& full_param, const OpContext& ctx,
+void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam& full_param,
+                                const OpContext& ctx,
                                 MKLDNNFullyConnectedForward* fwd,
                                 const std::vector<NDArray>& in_data,
                                 const std::vector<OpReqType>& req,
@@ -205,8 +218,10 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam& full_param, const OpCon
   MKLDNNStream::Get()->Submit();
 }
 
-void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                     const std::vector<NDArray>& in_data, const std::vector<OpReqType>& req,
+void MKLDNNFCForward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& in_data,
+                     const std::vector<OpReqType>& req,
                      const std::vector<NDArray>& out_data) {
   MKLDNNFCFullParam full_param;
   full_param.default_param = nnvm::get<FullyConnectedParam>(attrs.parsed);
@@ -225,8 +240,10 @@ void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   MKLDNNFCForwardFullFeature(full_param, ctx, &fwd, new_inputs, req, out_data);
 }
 
-void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                      const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   const std::vector<NDArray>& in_grad = outputs;

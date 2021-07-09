@@ -24,10 +24,10 @@
  */
 
 #if MXNET_USE_MKLDNN == 1
-#include "../quantized_elemwise_add-inl.h"
-#include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
+#include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../quantization_utils.h"
+#include "../quantized_elemwise_add-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -60,8 +60,10 @@ class MKLDNNQuantizedElemwiseAddFwd {
 };
 
 static MKLDNNQuantizedElemwiseAddFwd& GetQuantizedElemwiseAddForward(
-    const mkldnn::memory::desc& output_desc, const std::vector<float>& scales,
-    const std::vector<NDArray>& in_data, const std::vector<NDArray>& out_data,
+    const mkldnn::memory::desc& output_desc,
+    const std::vector<float>& scales,
+    const std::vector<NDArray>& in_data,
+    const std::vector<NDArray>& out_data,
     const std::vector<mkldnn::memory::desc>& data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<OpSignature, MKLDNNQuantizedElemwiseAddFwd, OpHash> fwds;
@@ -87,7 +89,8 @@ static MKLDNNQuantizedElemwiseAddFwd& GetQuantizedElemwiseAddForward(
   return it->second;
 }
 
-static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
+                                              const OpContext& ctx,
                                               const std::vector<NDArray>& in_data,
                                               const std::vector<OpReqType>& req,
                                               const std::vector<NDArray>& out_data) {
@@ -221,8 +224,10 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
   out_data[quantized_elemwise_add_enum::kMax].data().dptr<float>()[0] = output_max;
 }
 
-inline static bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                          DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+inline static bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
+                                          const int dev_mask,
+                                          DispatchMode* dispatch_mode,
+                                          std::vector<int>* in_attrs,
                                           std::vector<int>* out_attrs) {
   // Check num of inputs: A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_attrs->size(), 6U);

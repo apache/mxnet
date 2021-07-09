@@ -30,6 +30,7 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include <vector>
+
 #include "../../rnn-inl.h"
 #include "./mkldnn_base-inl.h"
 
@@ -63,8 +64,13 @@ struct MKLDNNRnnLayerParam {
   size_t native_single_b_size;  // bias size of a single cell from framework
   size_t single_state_size;     // state size of a single cell, hy, cy
 
-  MKLDNNRnnLayerParam(int num_layer, int batch_size, int seq_len, int input_size, int state_size,
-                      int mode, bool bidirectional = true)
+  MKLDNNRnnLayerParam(int num_layer,
+                      int batch_size,
+                      int seq_len,
+                      int input_size,
+                      int state_size,
+                      int mode,
+                      bool bidirectional = true)
       : mode(mode),
         bidirectional(bidirectional),
         state_outputs(true),
@@ -83,8 +89,10 @@ struct MKLDNNRnnFullParam {
   LayerParamVector layer_params;
 };
 
-MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const RNNParam& rnn_param, const int seq_len,
-                                            const int batch_size, const int input_size);
+MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const RNNParam& rnn_param,
+                                            const int seq_len,
+                                            const int batch_size,
+                                            const int input_size);
 
 /*
  * Use this to allocate memory from MKLDNNRnnOp temporary space.
@@ -183,24 +191,36 @@ class RnnPrimitive {
   mkldnn::memory::desc workspace_desc_;
 };
 
-RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam& layer_param, const bool is_train,
-                           const NDArray& data, const NDArray& params);
+RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam& layer_param,
+                           const bool is_train,
+                           const NDArray& data,
+                           const NDArray& params);
 
 /*
  * Use this to manage memory and primitive of MKL-DNN RNN forward inference.
  */
 class MKLDNNRnnForward {
  public:
-  MKLDNNRnnForward(const MKLDNNRnnLayerParam& layer_param, const bool is_train, const NDArray& data,
+  MKLDNNRnnForward(const MKLDNNRnnLayerParam& layer_param,
+                   const bool is_train,
+                   const NDArray& data,
                    const NDArray& params)
       : initialized_(false),
         param_(layer_param),
         fwd_inf_(GetRnnFwdPrim(layer_param, false, data, params)) {}
 
-  void SetNewDataMem(void* x, void* hx, void* cx, void* y, void* hy, void* cy,
+  void SetNewDataMem(void* x,
+                     void* hx,
+                     void* cx,
+                     void* y,
+                     void* hy,
+                     void* cy,
                      const int dtype = mshadow::kFloat32);
-  void SetWeightsMem(MKLDNNRnnMemMgr* mgr, void* w_ptr, void* b_ptr, const bool is_train = false,
-                     const int dtype = mshadow::kFloat32);
+  void SetWeightsMem(MKLDNNRnnMemMgr* mgr,
+                     void* w_ptr,
+                     void* b_ptr,
+                     const bool is_train = false,
+                     const int dtype     = mshadow::kFloat32);
   void ReorderWeights();
 
   const mkldnn::primitive& GetFwd() const { return fwd_inf_.GetPrim(); }
@@ -256,8 +276,10 @@ typedef std::shared_ptr<mkldnn::memory> mkldnn_shared_mem_t;
  */
 class MKLDNNRnnForwardTraining {
  public:
-  MKLDNNRnnForwardTraining(const MKLDNNRnnLayerParam& layer_param, const bool is_train,
-                           const NDArray& data, const NDArray& params)
+  MKLDNNRnnForwardTraining(const MKLDNNRnnLayerParam& layer_param,
+                           const bool is_train,
+                           const NDArray& data,
+                           const NDArray& params)
       : fwd_trn_(GetRnnFwdPrim(layer_param, is_train, data, params)), param_(&layer_param) {}
 
   void SetTrnMem(const MKLDNNRnnForward& fwd);
@@ -345,7 +367,8 @@ class RnnBwdPrimitive {
   mkldnn::memory::desc diff_bias_desc_;
   friend class MKLDNNRnnBackward;
 };
-RnnBwdPrimitive GetRnnBwdPrim(const MKLDNNRnnForwardTraining& fwd, const NDArray& data,
+RnnBwdPrimitive GetRnnBwdPrim(const MKLDNNRnnForwardTraining& fwd,
+                              const NDArray& data,
                               const NDArray& params);
 
 /*
@@ -358,11 +381,17 @@ class MKLDNNRnnBackward {
 
   void FetchDataWeightsMem(const MKLDNNRnnForwardTraining& fwd);
   void SetWeightsGradsMem();
-  void SetDataGradsMem(void* diff_src, void* diff_state, void* diff_statecell, void* diff_out,
-                       void* diff_state_out, void* diff_statecell_out,
+  void SetDataGradsMem(void* diff_src,
+                       void* diff_state,
+                       void* diff_statecell,
+                       void* diff_out,
+                       void* diff_state_out,
+                       void* diff_statecell_out,
                        const int dtype = mshadow::kFloat32);
   void SetNativeWeightsGrads() const;
-  void CommitWeightsGrads(void* diff_weights, void* diff_bias, const OpReqType req,
+  void CommitWeightsGrads(void* diff_weights,
+                          void* diff_bias,
+                          const OpReqType req,
                           const int dtype = mshadow::kFloat32);
 
   const mkldnn::primitive& GetBwd() const { return *bwd_.primitive_; }
@@ -394,17 +423,23 @@ class MKLDNNRnnBackward {
  */
 class MKLDNNRnnOp {
  public:
-  explicit MKLDNNRnnOp(const RNNParam& param, const int seq_len, const int batch_size,
+  explicit MKLDNNRnnOp(const RNNParam& param,
+                       const int seq_len,
+                       const int batch_size,
                        const int input_size)
       : initialized_(false),
         weights_version_(0),
         full_param_(MKLDNNRnnFullParamParser(param, seq_len, batch_size, input_size)) {}
 
-  void Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-               const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
+  void Forward(const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs);
 
-  void Backward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-                const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
+  void Backward(const OpContext& ctx,
+                const std::vector<NDArray>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<NDArray>& outputs);
 
   const RNNParam& GetParam() const { return full_param_.default_param; }
 
@@ -423,8 +458,10 @@ class MKLDNNRnnOp {
   // Used to store the intermediate diff_src of multi_layer
   mkldnn_shared_mem_t diff_src;
 
-  void Init(const OpContext& ctx, const std::vector<NDArray>& inputs,
-            const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
+  void Init(const OpContext& ctx,
+            const std::vector<NDArray>& inputs,
+            const std::vector<OpReqType>& req,
+            const std::vector<NDArray>& outputs);
 };
 
 inline bool SupportMKLDNNRnn(const int input_dtype) {

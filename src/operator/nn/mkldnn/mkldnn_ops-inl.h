@@ -26,13 +26,14 @@
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
 
-#include <mxnet/io.h>
+#include <dmlc/logging.h>
+#include <dmlc/optional.h>
 #include <mxnet/base.h>
+#include <mxnet/io.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
-#include <dmlc/logging.h>
-#include <dmlc/optional.h>
+
 #include <vector>
 
 #if MXNET_USE_MKLDNN == 1
@@ -42,75 +43,108 @@ namespace mxnet {
 namespace op {
 
 /* For fully connected. */
-void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                     const std::vector<NDArray>& in_data, const std::vector<OpReqType>& req,
+void MKLDNNFCForward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& in_data,
+                     const std::vector<OpReqType>& req,
                      const std::vector<NDArray>& out_data);
-void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                      const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs);
 
 /* For convolution. */
-void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
                               const std::vector<NDArray>& in_data,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& out_data);
-void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
                                const std::vector<NDArray>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<NDArray>& outputs);
 
 /* For deconvolution */
-void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
                                 const std::vector<NDArray>& in_data,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& out_data);
-void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
                                  const std::vector<NDArray>& inputs,
                                  const std::vector<OpReqType>& req,
                                  const std::vector<NDArray>& outputs);
 
 /* For activation */
-void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                             const NDArray& in_data, const OpReqType& req, const NDArray& out_data);
-void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                              const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const NDArray& in_data,
+                             const OpReqType& req,
+                             const NDArray& out_data);
+void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& outputs);
 
-void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                            const NDArray& in_data, const OpReqType& req, const NDArray& out_data);
-void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                             const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const NDArray& in_data,
+                            const OpReqType& req,
+                            const NDArray& out_data);
+void MKLDNNLeakyReluBackward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<NDArray>& inputs,
+                             const std::vector<OpReqType>& req,
                              const std::vector<NDArray>& outputs);
 
 /* For softmax */
-void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                          const NDArray& in_data, const OpReqType& req, const NDArray& out_data);
-void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                           const std::vector<NDArray>& in_data, const std::vector<OpReqType>& req,
+void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const NDArray& in_data,
+                          const OpReqType& req,
+                          const NDArray& out_data);
+void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<NDArray>& in_data,
+                           const std::vector<OpReqType>& req,
                            const std::vector<NDArray>& out_data);
 
 /* For log_softmax */
-void MKLDNNLogSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                             const NDArray& in_data, const OpReqType& req, const NDArray& out_data);
-void MKLDNNLogSoftmaxBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNLogSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const NDArray& in_data,
+                             const OpReqType& req,
+                             const NDArray& out_data);
+void MKLDNNLogSoftmaxBackward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
                               const std::vector<NDArray>& in_data,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& out_data);
 
 /* For softmax_output */
-void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
                                 const std::vector<NDArray>& in_data,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& out_data);
 
 /* For sum */
-void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                      const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void MKLDNNSumForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs);
 
 /* For copy */
-void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& in_data,
-                const OpReqType& req, const NDArray& out_data);
+void MKLDNNCopy(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const NDArray& in_data,
+                const OpReqType& req,
+                const NDArray& out_data);
 
 /* For concat */
 void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,

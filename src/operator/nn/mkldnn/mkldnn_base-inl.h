@@ -54,6 +54,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
 #include "mkldnn.hpp"
 #include "mxnet/graph_attr_types.h"
 #include "mxnet/ndarray.h"
@@ -173,7 +174,8 @@ static inline int GetMKLDNNCacheSize() {
 // TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
 template <typename S, typename I, typename H>
 static typename std::unordered_map<S, I, H>::iterator AddToCache(std::unordered_map<S, I, H>* cache,
-                                                                 const S& key, const I& item) {
+                                                                 const S& key,
+                                                                 const I& item) {
   int mkldnn_cache_size = GetMKLDNNCacheSize();
   if (mkldnn_cache_size != -1 && static_cast<int>(cache->size()) > mkldnn_cache_size)
     cache->erase(cache->begin());
@@ -309,7 +311,8 @@ inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray& arr, int dtype
   return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), format};
 }
 
-inline static mkldnn::memory::desc GetWeightDesc(const NDArray& arr, int num_groups,
+inline static mkldnn::memory::desc GetWeightDesc(const NDArray& arr,
+                                                 int num_groups,
                                                  bool quantized = false) {
   int dtype = quantized ? mshadow::kInt8 : arr.dtype();
   if (num_groups == 1) {
@@ -497,9 +500,12 @@ static inline mkldnn::memory* GetMKLDNNExact(const mkldnn::memory* mem,
  * If these two functions are used, we have to call CommitOutput to write
  * the output back to the output NDArray.
  */
-mkldnn_output_t CreateMKLDNNMem(const NDArray& out_arr, const mkldnn::memory::desc& desc,
-                                OpReqType req, const NDArray* in_arr = nullptr);
-mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray& out_arr, const mkldnn::memory::desc& desc,
+mkldnn_output_t CreateMKLDNNMem(const NDArray& out_arr,
+                                const mkldnn::memory::desc& desc,
+                                OpReqType req,
+                                const NDArray* in_arr = nullptr);
+mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray& out_arr,
+                                       const mkldnn::memory::desc& desc,
                                        OpReqType req);
 /* This function has to be used with one of the functions above. */
 void CommitOutput(const NDArray& arr, const mkldnn_output_t& res);
@@ -527,7 +533,8 @@ static inline void CreateDefaultInputs(const std::vector<NDArray>& arrs,
 
 const mkldnn::memory* GetWeights(const NDArray& arr, int num_groups);
 
-const mkldnn::memory* GetWeights(const NDArray& arr, const mkldnn::memory::desc& target_md,
+const mkldnn::memory* GetWeights(const NDArray& arr,
+                                 const mkldnn::memory::desc& target_md,
                                  int num_groups);
 
 bool IsDefaultFormat(const mkldnn::memory::desc& desc);
@@ -621,8 +628,11 @@ class MKLDNNMemory {
 void ReorderTo(const mkldnn::memory* src, const mkldnn::memory* dst);
 
 template <typename Compute, typename AttrState>
-void FallBackCompute(Compute fn, const AttrState& attrs, const OpContext& ctx,
-                     const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void FallBackCompute(Compute fn,
+                     const AttrState& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& inputs,
+                     const std::vector<OpReqType>& req,
                      const std::vector<NDArray>& outputs);
 
 /*
@@ -643,15 +653,21 @@ class OpCheck {
   void Init(const std::vector<mxnet::NDArray>& inputs_,
             const std::vector<mxnet::NDArray>& outputs_);
 
-  void Run(mxnet::FCompute fn, const nnvm::NodeAttrs& attrs, const mxnet::OpContext& ctx,
-           const std::vector<mxnet::NDArray>& inputs_, const std::vector<mxnet::OpReqType>& req,
+  void Run(mxnet::FCompute fn,
+           const nnvm::NodeAttrs& attrs,
+           const mxnet::OpContext& ctx,
+           const std::vector<mxnet::NDArray>& inputs_,
+           const std::vector<mxnet::OpReqType>& req,
            const std::vector<mxnet::NDArray>& outputs_);
 
   void CopyResult(const std::vector<mxnet::NDArray>& outputs_, const std::vector<size_t>& indice);
 };
 
-bool MKLDNNStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask, bool support_mkldnn,
-                       DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+bool MKLDNNStorageType(const nnvm::NodeAttrs& attrs,
+                       const int dev_mask,
+                       bool support_mkldnn,
+                       DispatchMode* dispatch_mode,
+                       std::vector<int>* in_attrs,
                        std::vector<int>* out_attrs);
 
 #define MKLDNN_OPCHECK_INIT(backward, num_checks, inputs, outputs) \
@@ -671,16 +687,24 @@ struct MKLDNNPostEltwiseParam {
   float beta            = 1.f;
 };
 
-void MKLDNNRun(mxnet::FComputeEx fn, const nnvm::NodeAttrs& attrs, const mxnet::OpContext& ctx,
-               const std::vector<mxnet::NDArray>& inputs_, const std::vector<mxnet::OpReqType>& req,
+void MKLDNNRun(mxnet::FComputeEx fn,
+               const nnvm::NodeAttrs& attrs,
+               const mxnet::OpContext& ctx,
+               const std::vector<mxnet::NDArray>& inputs_,
+               const std::vector<mxnet::OpReqType>& req,
                const std::vector<mxnet::NDArray>& outputs_);
 
-using FComputeExUnary =
-    std::function<void(const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& input,
-                       const OpReqType& req, const NDArray& output)>;
+using FComputeExUnary = std::function<void(const nnvm::NodeAttrs& attrs,
+                                           const OpContext& ctx,
+                                           const NDArray& input,
+                                           const OpReqType& req,
+                                           const NDArray& output)>;
 
-void MKLDNNRun(FComputeExUnary fn, const nnvm::NodeAttrs& attrs, const mxnet::OpContext& ctx,
-               const mxnet::NDArray& inputs_, const mxnet::OpReqType& req,
+void MKLDNNRun(FComputeExUnary fn,
+               const nnvm::NodeAttrs& attrs,
+               const mxnet::OpContext& ctx,
+               const mxnet::NDArray& inputs_,
+               const mxnet::OpReqType& req,
                const mxnet::NDArray& outputs_);
 
 }  // namespace mxnet

@@ -30,7 +30,8 @@
 namespace mxnet {
 namespace op {
 
-static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
+                                            const OpContext& ctx,
                                             const std::vector<NDArray>& in_data,
                                             const std::vector<OpReqType>& req,
                                             const std::vector<NDArray>& outputs) {
@@ -125,7 +126,8 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs, const 
   MKLDNNStream::Get()->Submit();
 }
 
-inline static bool QuantizedBatchNormStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+inline static bool QuantizedBatchNormStorageType(const nnvm::NodeAttrs& attrs,
+                                                 const int dev_mask,
                                                  DispatchMode* dispatch_mode,
                                                  std::vector<int>* in_attrs,
                                                  std::vector<int>* out_attrs) {

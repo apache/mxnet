@@ -20,14 +20,14 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include "mkldnn_conv_property.h"
-#include "mkldnn_fc_property.h"
-#include "mkldnn_post_quantize_property.h"
-#include "mkldnn_fc_post_quantize_property.h"
-#include "mkldnn_fc_sum_fuse.h"
 #include "mkldnn_elemwisemul_post_quantize_property.h"
+#include "mkldnn_fc_post_quantize_property.h"
+#include "mkldnn_fc_property.h"
+#include "mkldnn_fc_sum_fuse.h"
 #include "mkldnn_post_quantize_align_scale_property.h"
-#include "mkldnn_transformer_property.h"
+#include "mkldnn_post_quantize_property.h"
 #include "mkldnn_transformer_post_quantize_property.h"
+#include "mkldnn_transformer_property.h"
 
 namespace mxnet {
 namespace op {
@@ -59,7 +59,7 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, ElemwiseMulPostQuantizePropert
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeAlignScaleProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCSumFuseProperty)
-.set_attr("quantize", true);
+    .set_attr("quantize", true);
 
 }  // namespace op
 }  // namespace mxnet

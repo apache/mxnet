@@ -25,17 +25,19 @@
 #ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_REQUANTIZE_INL_H_
 #define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_REQUANTIZE_INL_H_
 #if MXNET_USE_MKLDNN == 1
-#include <string>
 #include <algorithm>
+#include <string>
 #include <vector>
-#include "../requantize-inl.h"
+
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
+#include "../requantize-inl.h"
 
 namespace mxnet {
 namespace op {
 
 template <typename DstType>
-static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
                                        const std::vector<NDArray>& inputs,
                                        const std::vector<OpReqType>& req,
                                        const std::vector<NDArray>& outputs,
@@ -89,7 +91,8 @@ static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs, const OpCon
   MKLDNNStream::Get()->Submit();
 }
 
-static void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+static void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {

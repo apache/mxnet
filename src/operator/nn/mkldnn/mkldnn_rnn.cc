@@ -27,6 +27,7 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include <numeric>
+
 #include "./mkldnn_rnn-inl.h"
 
 namespace mxnet {
@@ -78,8 +79,10 @@ void MKLDNNRnnLayerParam::SetDims() {
   reserve_size = 0;
 }
 
-MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const RNNParam& rnn_param, const int seq_len,
-                                            const int batch_size, const int input_size) {
+MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const RNNParam& rnn_param,
+                                            const int seq_len,
+                                            const int batch_size,
+                                            const int input_size) {
   MKLDNNRnnFullParam full_param;
   full_param.default_param       = rnn_param;
   size_t state_size              = rnn_param.state_size;
@@ -143,8 +146,10 @@ mkldnn::memory* MKLDNNRnnMemMgr::Alloc(const mkldnn::memory::desc& md) {
   return ret.get();
 }
 
-RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam& layer_param, const bool is_train,
-                           const NDArray& data, const NDArray& params) {
+RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam& layer_param,
+                           const bool is_train,
+                           const NDArray& data,
+                           const NDArray& params) {
   using namespace mkldnn;
   using tag                     = mkldnn::memory::format_tag;
   const int mode                = layer_param.mode;
@@ -192,7 +197,8 @@ RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam& layer_param, const bool is
   return fwd;
 }
 
-RnnBwdPrimitive GetRnnBwdPrim(const MKLDNNRnnForwardTraining& fwd, const NDArray& data,
+RnnBwdPrimitive GetRnnBwdPrim(const MKLDNNRnnForwardTraining& fwd,
+                              const NDArray& data,
                               const NDArray& params) {
   using namespace mkldnn;
   using tag                              = mkldnn::memory::format_tag;
@@ -276,7 +282,8 @@ RnnBwdPrimitive GetRnnBwdPrim(const MKLDNNRnnForwardTraining& fwd, const NDArray
  *
  * All the memory blocks are in goi format.
  */
-static void ConcatWeights(const mkldnn::memory& dst, const int concat_dimension,
+static void ConcatWeights(const mkldnn::memory& dst,
+                          const int concat_dimension,
                           const std::vector<void*>& src_ptrs,
                           const mkldnn::memory::format_tag src_format) {
   using memory    = mkldnn::memory;
@@ -332,8 +339,8 @@ static void ConcatWeights(const mkldnn::memory& dst, const int concat_dimension,
  * nullptr, it may run with non-state_ouput or non-LSTM mode. Thus, the
  * corresponding memory should be a empty mkldnn::memory().
  */
-void MKLDNNRnnForward::SetNewDataMem(void* x, void* hx, void* cx, void* y, void* hy, void* cy,
-                                     const int dtype) {
+void MKLDNNRnnForward::SetNewDataMem(
+    void* x, void* hx, void* cx, void* y, void* hy, void* cy, const int dtype) {
   using desc              = mkldnn::memory::desc;
   using format_tag        = mkldnn::memory::format_tag;
   auto& cpu_engine        = CpuEngine::Get()->get_engine();
@@ -389,7 +396,9 @@ void MKLDNNRnnForward::ReorderWeights() {
   MKLDNNMemoryReorder(*weights_iter_r_, *weights_iter_);
 }
 
-void AdjustGruGateOrder(char* weight, const size_t input_size, const size_t hidden_size,
+void AdjustGruGateOrder(char* weight,
+                        const size_t input_size,
+                        const size_t hidden_size,
                         const int dtype) {
   // mxnet gru gate order is reset, update and new gates
   // mkldnn gru gate order is update, reset and new gates
@@ -436,7 +445,8 @@ void FuseBias(DType* fuse_bias, DType* native_bias, const int mode, const size_t
   }
 }
 
-inline void EmplaceNetArgs(mkldnn_args_map_t* net_args, const int arg_name,
+inline void EmplaceNetArgs(mkldnn_args_map_t* net_args,
+                           const int arg_name,
                            const mkldnn::memory* mem) {
   if (net_args->find(arg_name) != net_args->end()) {
     if (net_args->at(arg_name).get_data_handle() == mem->get_data_handle()) {
@@ -458,8 +468,8 @@ inline void EmplaceNetArgs(mkldnn_args_map_t* net_args, const int arg_name,
  * memory with preferred format_tag. Finally, native bias is fused to MKLDNN
  * bias memory.
  */
-void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr, void* w_ptr, void* b_ptr,
-                                     const bool is_train, const int dtype) {
+void MKLDNNRnnForward::SetWeightsMem(
+    MKLDNNRnnMemMgr* mgr, void* w_ptr, void* b_ptr, const bool is_train, const int dtype) {
   using format_tag  = mkldnn::memory::format_tag;
   auto mkldnn_dtype = get_mkldnn_type(dtype);
   // Get the weights' memory for RNN forward primitive
@@ -613,8 +623,10 @@ void MKLDNNRnnForwardTraining::FetchData(const MKLDNNRnnForward& fwd) {
   }
 }
 
-void MKLDNNRnnOp::Init(const OpContext& ctx, const std::vector<NDArray>& inputs,
-                       const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+void MKLDNNRnnOp::Init(const OpContext& ctx,
+                       const std::vector<NDArray>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<NDArray>& outputs) {
   using format_tag = mkldnn::memory::format_tag;
 
   // In the `autograd.record()` context, RNNOp is required to run into
@@ -771,9 +783,13 @@ void MKLDNNRnnBackward::SetWeightsGradsMem() {
   EmplaceNetArgs(&this->net_args_, MKLDNN_ARG_DIFF_BIAS, this->diff_bias_.get());
 }
 
-void MKLDNNRnnBackward::SetDataGradsMem(void* diff_src, void* diff_state, void* diff_statecell,
-                                        void* diff_dst, void* diff_state_out,
-                                        void* diff_statecell_out, const int dtype) {
+void MKLDNNRnnBackward::SetDataGradsMem(void* diff_src,
+                                        void* diff_state,
+                                        void* diff_statecell,
+                                        void* diff_dst,
+                                        void* diff_state_out,
+                                        void* diff_statecell_out,
+                                        const int dtype) {
   using desc              = mkldnn::memory::desc;
   auto& cpu_engine        = CpuEngine::Get()->get_engine();
   mkldnn_args_map_t& args = this->net_args_;
@@ -813,7 +829,9 @@ void MKLDNNRnnBackward::SetNativeWeightsGrads() const {
     FWrapper = common::ParallelAdd<DType>;                        \
   { __VA_ARGS__ }
 
-void MKLDNNRnnBackward::CommitWeightsGrads(void* diff_weights, void* diff_bias, const OpReqType req,
+void MKLDNNRnnBackward::CommitWeightsGrads(void* diff_weights,
+                                           void* diff_bias,
+                                           const OpReqType req,
                                            const int dtype) {
   const MKLDNNRnnLayerParam& param = fwd_ptr_->GetParam();
 
@@ -925,8 +943,10 @@ inline void RegisterMKLDNNRnn(MKLDNNRnnBackward const& rnn) {
   rnn.SetNativeWeightsGrads();
 }
 
-void MKLDNNRnnOp::Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-                          const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+void MKLDNNRnnOp::Forward(const OpContext& ctx,
+                          const std::vector<NDArray>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[1]);
   // In the `autograd.record()` context, RNNOp is required to run into
   // forward_training mode.
@@ -1046,8 +1066,10 @@ void MKLDNNRnnOp::Forward(const OpContext& ctx, const std::vector<NDArray>& inpu
   MKLDNNStream::Get()->Submit();
 }
 
-void MKLDNNRnnOp::Backward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-                           const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+void MKLDNNRnnOp::Backward(const OpContext& ctx,
+                           const std::vector<NDArray>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<NDArray>& outputs) {
   using tag = mkldnn::memory::format_tag;
   TmpMemMgr::Get()->Init(ctx.requested[1]);
   const RNNParam& default_param = full_param_.default_param;

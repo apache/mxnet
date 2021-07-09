@@ -19,15 +19,15 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <string>
 #include <utility>
 #include <vector>
-#include <string>
+
+#include "../../contrib/transformer-inl.h"
+#include "../../quantization/quantization_utils.h"
+#include "../../tensor/elemwise_unary_op.h"
 #include "../common.h"
 #include "./mkldnn_transformer-inl.h"
-#include "../../contrib/transformer-inl.h"
-#include "../../tensor/elemwise_unary_op.h"
-
-#include "../../quantization/quantization_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -35,7 +35,8 @@ namespace op {
 DMLC_REGISTER_PARAMETER(MKLDNNSelfAttParam);
 
 template <int base_num_inputs>
-static bool SgMKLDNNSelfAttShape(const NodeAttrs& attrs, mxnet::ShapeVector* in_shapes,
+static bool SgMKLDNNSelfAttShape(const NodeAttrs& attrs,
+                                 mxnet::ShapeVector* in_shapes,
                                  mxnet::ShapeVector* out_shapes) {
   const auto& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
@@ -66,7 +67,8 @@ static bool SgMKLDNNSelfAttShape(const NodeAttrs& attrs, mxnet::ShapeVector* in_
   }
 }
 
-static bool SgMKLDNNSelfAttQKInferType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_types,
+static bool SgMKLDNNSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
+                                       std::vector<int>* in_types,
                                        std::vector<int>* out_types) {
   const auto& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
@@ -95,8 +97,10 @@ static bool SgMKLDNNSelfAttQKInferType(const nnvm::NodeAttrs& attrs, std::vector
 }
 
 template <int base_num_inputs>
-static bool SgMKLDNNSelfAttStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                       DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+static bool SgMKLDNNSelfAttStorageType(const nnvm::NodeAttrs& attrs,
+                                       const int dev_mask,
+                                       DispatchMode* dispatch_mode,
+                                       std::vector<int>* in_attrs,
                                        std::vector<int>* out_attrs) {
   auto const& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
@@ -132,17 +136,23 @@ class SgMKLDNNSelfAttQKOp {
   explicit SgMKLDNNSelfAttQKOp(const nnvm::NodeAttrs& attrs)
       : param_(nnvm::get<MKLDNNSelfAttParam>(attrs.parsed)) {}
 
-  void Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-               const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
+  void Forward(const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs);
 
-  void Backward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-                const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+  void Backward(const OpContext& ctx,
+                const std::vector<NDArray>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<NDArray>& outputs) {
     LOG(FATAL) << "Not implemented: subgraph mkldnn fully connected only supports "
                   "inference computation.";
   }
 
-  void Initialize(const OpContext& ctx, const std::vector<NDArray>& inputs,
-                  const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
+  void Initialize(const OpContext& ctx,
+                  const std::vector<NDArray>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<NDArray>& outputs);
 
   bool IsInitialized() { return initialized_; }
 
@@ -161,13 +171,15 @@ class SgMKLDNNSelfAttQKOp {
   float data_scale_{0.0f};
 };
 
-static OpStatePtr CreateSgMKLDNNSelfAttQKState(const nnvm::NodeAttrs& attrs, Context ctx,
+static OpStatePtr CreateSgMKLDNNSelfAttQKState(const nnvm::NodeAttrs& attrs,
+                                               Context ctx,
                                                const mxnet::ShapeVector& in_shapes,
                                                const std::vector<int>& in_types) {
   return OpStatePtr::Create<SgMKLDNNSelfAttQKOp>(attrs);
 }
 
-static void SgMKLDNNSelfAttQKForward(const OpStatePtr& state_pointer, const OpContext& ctx,
+static void SgMKLDNNSelfAttQKForward(const OpStatePtr& state_pointer,
+                                     const OpContext& ctx,
                                      const std::vector<NDArray>& inputs,
                                      const std::vector<OpReqType>& req,
                                      const std::vector<NDArray>& outputs) {
@@ -178,7 +190,8 @@ static void SgMKLDNNSelfAttQKForward(const OpStatePtr& state_pointer, const OpCo
   op.Forward(ctx, inputs, req, outputs);
 }
 
-void SgMKLDNNSelfAttQKOp::Initialize(const OpContext& ctx, const std::vector<NDArray>& inputs,
+void SgMKLDNNSelfAttQKOp::Initialize(const OpContext& ctx,
+                                     const std::vector<NDArray>& inputs,
                                      const std::vector<OpReqType>& req,
                                      const std::vector<NDArray>& outputs) {
   using namespace mkldnn;
@@ -265,7 +278,8 @@ void SgMKLDNNSelfAttQKOp::Initialize(const OpContext& ctx, const std::vector<NDA
   initialized_            = true;
 }
 
-void SgMKLDNNSelfAttQKOp::Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
+void SgMKLDNNSelfAttQKOp::Forward(const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<NDArray>& outputs) {
   const size_t head_dim = inputs[0].shape()[2] / 3 / param_.heads;
@@ -360,13 +374,15 @@ NNVM_REGISTER_OP(_sg_mkldnn_selfatt_qk)
                             [](const NodeAttrs& attrs) { return QuantizeType::kMust; })
     .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNSelfAttQKQuantizedOp)
     .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
-    .add_argument("queries_keys_values", "NDArray-or-Symbol",
+    .add_argument("queries_keys_values",
+                  "NDArray-or-Symbol",
                   "Interleaved queries, keys and values")
     .add_arguments(MKLDNNSelfAttParam::__FIELDS__());
 
 /**********************************_sg_mkldnn_selfatt_valatt**********************************/
 
-static bool SgMKLDNNSelfAttValAttInferType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_types,
+static bool SgMKLDNNSelfAttValAttInferType(const nnvm::NodeAttrs& attrs,
+                                           std::vector<int>* in_types,
                                            std::vector<int>* out_types) {
   const auto& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
@@ -416,17 +432,23 @@ class MKLDNNSelfAttValAttOp {
   explicit MKLDNNSelfAttValAttOp(const nnvm::NodeAttrs& attrs)
       : param_(nnvm::get<MKLDNNSelfAttParam>(attrs.parsed)) {}
 
-  void Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-               const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
+  void Forward(const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs);
 
-  void Backward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-                const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+  void Backward(const OpContext& ctx,
+                const std::vector<NDArray>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<NDArray>& outputs) {
     LOG(FATAL) << "Not implemented: subgraph mkldnn fully connected only supports "
                   "inference computation.";
   }
 
-  void Initialize(const OpContext& ctx, const std::vector<NDArray>& inputs,
-                  const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
+  void Initialize(const OpContext& ctx,
+                  const std::vector<NDArray>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<NDArray>& outputs);
 
   bool IsInitialized() { return initialized_; }
 
@@ -448,13 +470,15 @@ class MKLDNNSelfAttValAttOp {
   float att_scale_{0.0f};
 };
 
-static OpStatePtr CreateMKLDNNSelfAttValAttState(const nnvm::NodeAttrs& attrs, Context ctx,
+static OpStatePtr CreateMKLDNNSelfAttValAttState(const nnvm::NodeAttrs& attrs,
+                                                 Context ctx,
                                                  const mxnet::ShapeVector& in_shapes,
                                                  const std::vector<int>& in_types) {
   return OpStatePtr::Create<MKLDNNSelfAttValAttOp>(attrs);
 }
 
-static void MKLDNNSelfAttValAttForward(const OpStatePtr& state_pointer, const OpContext& ctx,
+static void MKLDNNSelfAttValAttForward(const OpStatePtr& state_pointer,
+                                       const OpContext& ctx,
                                        const std::vector<NDArray>& inputs,
                                        const std::vector<OpReqType>& req,
                                        const std::vector<NDArray>& outputs) {
@@ -465,7 +489,8 @@ static void MKLDNNSelfAttValAttForward(const OpStatePtr& state_pointer, const Op
   op.Forward(ctx, inputs, req, outputs);
 }
 
-void MKLDNNSelfAttValAttOp::Initialize(const OpContext& ctx, const std::vector<NDArray>& inputs,
+void MKLDNNSelfAttValAttOp::Initialize(const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
                                        const std::vector<OpReqType>& req,
                                        const std::vector<NDArray>& outputs) {
   const dnnl::memory::dim qkv_seq_len    = inputs[0].shape()[0];
@@ -544,7 +569,8 @@ void MKLDNNSelfAttValAttOp::Initialize(const OpContext& ctx, const std::vector<N
   initialized_            = true;
 }
 
-void MKLDNNSelfAttValAttOp::Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
+void MKLDNNSelfAttValAttOp::Forward(const OpContext& ctx,
+                                    const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
   const auto engine     = CpuEngine::Get()->get_engine();
@@ -629,7 +655,8 @@ NNVM_REGISTER_OP(_sg_mkldnn_selfatt_valatt)
                             [](const NodeAttrs& attrs) { return QuantizeType::kMust; })
     .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNSelfAttValAttQuantizedOp)
     .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
-    .add_argument("queries_keys_values", "NDArray-or-Symbol",
+    .add_argument("queries_keys_values",
+                  "NDArray-or-Symbol",
                   "Queries, keys and values interleaved")
     .add_argument("attention", "NDArray-or-Symbol", "Attention maps")
     .add_arguments(MKLDNNSelfAttParam::__FIELDS__());

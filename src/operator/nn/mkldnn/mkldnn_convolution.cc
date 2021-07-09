@@ -26,9 +26,9 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include "../convolution-inl.h"
-#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_convolution-inl.h"
+#include "./mkldnn_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -44,8 +44,12 @@ bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray& input) {
 }
 
 std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
-    const MKLDNNConvFullParam& param, const bool is_train, const NDArray& data,
-    const NDArray& weights, const NDArray* bias, const NDArray& output) {
+    const MKLDNNConvFullParam& param,
+    const bool is_train,
+    const NDArray& data,
+    const NDArray& weights,
+    const NDArray* bias,
+    const NDArray& output) {
   auto prop = is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
   auto data_md   = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weights, param.conv_param.num_group, param.mkldnn_param.quantized);
@@ -172,8 +176,11 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
 }
 
 static std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> GetConvBwdData(
-    const ConvolutionParam& param, const NDArray& data, const NDArray& weight,
-    const NDArray& output, const mkldnn::convolution_forward::primitive_desc& fwd_pd) {
+    const ConvolutionParam& param,
+    const NDArray& data,
+    const NDArray& weight,
+    const NDArray& output,
+    const mkldnn::convolution_forward::primitive_desc& fwd_pd) {
   auto data_md   = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weight, param.num_group);
   auto out_md    = GetMemDesc(output);
@@ -259,8 +266,12 @@ static std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> GetCon
 }
 
 static std::shared_ptr<mkldnn::convolution_backward_weights::primitive_desc> GetConvBwdWeights(
-    const ConvolutionParam& param, const NDArray& data, const NDArray& weight, const NDArray* bias,
-    const NDArray& output, const mkldnn::convolution_forward::primitive_desc& fwd_pd) {
+    const ConvolutionParam& param,
+    const NDArray& data,
+    const NDArray& weight,
+    const NDArray* bias,
+    const NDArray& output,
+    const mkldnn::convolution_forward::primitive_desc& fwd_pd) {
   auto data_md   = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weight, param.num_group);
   auto out_md    = GetMemDesc(output);
@@ -359,15 +370,21 @@ static std::shared_ptr<mkldnn::convolution_backward_weights::primitive_desc> Get
   }
 }
 
-MKLDNNConvForward::MKLDNNConvForward(const MKLDNNConvFullParam& param, const bool is_train,
-                                     const NDArray& data, const NDArray& weight,
-                                     const NDArray* bias, const NDArray& output)
+MKLDNNConvForward::MKLDNNConvForward(const MKLDNNConvFullParam& param,
+                                     const bool is_train,
+                                     const NDArray& data,
+                                     const NDArray& weight,
+                                     const NDArray* bias,
+                                     const NDArray& output)
     : pd_(GetConvFwdImpl(param, is_train, data, weight, bias, output)) {
   fwd_ = std::make_shared<mkldnn::convolution_forward>(GetPd());
 }
 
-MKLDNNConvForward& GetConvFwd(const MKLDNNConvFullParam& param, const bool is_train,
-                              const NDArray& data, const NDArray& weight, const NDArray* bias,
+MKLDNNConvForward& GetConvFwd(const MKLDNNConvFullParam& param,
+                              const bool is_train,
+                              const NDArray& data,
+                              const NDArray& weight,
+                              const NDArray* bias,
                               const NDArray& output) {
   using conv_fwd_map = std::unordered_map<MKLDNNConvSignature, MKLDNNConvForward, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
@@ -394,7 +411,8 @@ MKLDNNConvForward& GetConvFwd(const MKLDNNConvFullParam& param, const bool is_tr
   return it->second;
 }
 
-void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam& param, const OpContext& ctx,
+void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam& param,
+                                         const OpContext& ctx,
                                          MKLDNNConvForward* fwd,
                                          const std::vector<NDArray>& in_data,
                                          const std::vector<OpReqType>& req,
@@ -448,7 +466,8 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam& param, const
   MKLDNNStream::Get()->Submit();
 }
 
-void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
                               const std::vector<NDArray>& in_data,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& out_data) {
@@ -461,8 +480,10 @@ void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx
   MKLDNNConvolutionForwardFullFeature(param, ctx, &fwd, in_data, req, out_data);
 }
 
-MKLDNNConvBackward::MKLDNNConvBackward(const MKLDNNConvFullParam& param, const NDArray& data,
-                                       const NDArray& weight, const NDArray* bias,
+MKLDNNConvBackward::MKLDNNConvBackward(const MKLDNNConvFullParam& param,
+                                       const NDArray& data,
+                                       const NDArray& weight,
+                                       const NDArray* bias,
                                        const NDArray& output) {
   const auto fwd_pd = GetConvFwdImpl(param, true, data, weight, bias, output);
   bwd_data_pd_      = GetConvBwdData(param.conv_param, data, weight, output, *fwd_pd);
@@ -471,8 +492,10 @@ MKLDNNConvBackward::MKLDNNConvBackward(const MKLDNNConvFullParam& param, const N
   bwd_weight_       = std::make_shared<mkldnn::convolution_backward_weights>(GetWeightsPd());
 }
 
-static inline MKLDNNConvBackward& GetConvBwd(const MKLDNNConvFullParam& param, const NDArray& data,
-                                             const NDArray& weight, const NDArray* bias,
+static inline MKLDNNConvBackward& GetConvBwd(const MKLDNNConvFullParam& param,
+                                             const NDArray& data,
+                                             const NDArray& weight,
+                                             const NDArray* bias,
                                              const NDArray& output) {
   using mkldnn_conv_bwd_map = std::unordered_map<MKLDNNConvSignature, MKLDNNConvBackward, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
@@ -498,7 +521,8 @@ static inline MKLDNNConvBackward& GetConvBwd(const MKLDNNConvFullParam& param, c
   return it->second;
 }
 
-void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
                                const std::vector<NDArray>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<NDArray>& outputs) {

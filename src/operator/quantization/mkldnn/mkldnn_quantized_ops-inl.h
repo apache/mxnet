@@ -30,12 +30,14 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include <mxnet/ndarray.h>
+
 #include <vector>
 
 namespace mxnet {
 namespace op {
 
-void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
+                                          const OpContext& ctx,
                                           const std::vector<NDArray>& in_data,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<NDArray>& out_data);

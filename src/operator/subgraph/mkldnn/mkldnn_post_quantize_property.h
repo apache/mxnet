@@ -23,6 +23,7 @@
 #include <set>
 #include <string>
 #include <vector>
+
 #include "../../nn/mkldnn/mkldnn_convolution-inl.h"
 #include "../../quantization/requantize-inl.h"
 #include "../common.h"

@@ -26,19 +26,21 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include <mkldnn_types.h>
-#include <cmath>
+
 #include <climits>
+#include <cmath>
 #include <set>
-#include "gtest/gtest.h"
-#include "mxnet/imperative.h"
+
+#include "../../src/operator/nn/convolution-inl.h"
+#include "../../src/operator/nn/deconvolution-inl.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
 #include "../../src/operator/nn/pooling-inl.h"
-#include "../../src/operator/nn/convolution-inl.h"
-#include "../../src/operator/nn/deconvolution-inl.h"
 #include "../include/test_mkldnn.h"
 #include "../include/test_util.h"
+#include "gtest/gtest.h"
+#include "mxnet/imperative.h"
 
 using namespace mxnet;
 using namespace mxnet::test;
@@ -576,9 +578,12 @@ void TestConcatOp(const OpAttrs& attrs, VerifyFunc verify_fn, bool backwards = f
   }
 }
 
-void TestOpExBackward(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs,
-                      const OpReqType& req, const std::vector<NDArray*>& inputs,
-                      const std::vector<NDArray*>& outputs, const NDArrayAttrs& in_arr,
+void TestOpExBackward(const OpAttrs& forward_attrs,
+                      const OpAttrs& backwards_attrs,
+                      const OpReqType& req,
+                      const std::vector<NDArray*>& inputs,
+                      const std::vector<NDArray*>& outputs,
+                      const NDArrayAttrs& in_arr,
                       const NDArrayAttrs& out_arr) {
   std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
   std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
@@ -701,9 +706,12 @@ void TestOpEx(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs) {
   }
 }
 
-void TestOpExBNBackward(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs,
-                        const OpReqType& req, const std::vector<NDArray*>& inputs,
-                        const std::vector<NDArray*>& outputs, const NDArrayAttrs& in_arr,
+void TestOpExBNBackward(const OpAttrs& forward_attrs,
+                        const OpAttrs& backwards_attrs,
+                        const OpReqType& req,
+                        const std::vector<NDArray*>& inputs,
+                        const std::vector<NDArray*>& outputs,
+                        const NDArrayAttrs& in_arr,
                         NDArrayAttrs* out_arr) {
   std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
 
@@ -931,7 +939,8 @@ void TestFullyConnectedOp(const OpAttrs& forward_attrs, const OpAttrs& backwards
 }
 
 template <typename P>
-void TestConvOp(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs,
+void TestConvOp(const OpAttrs& forward_attrs,
+                const OpAttrs& backwards_attrs,
                 bool is_deconv = false) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);

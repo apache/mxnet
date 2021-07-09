@@ -20,8 +20,8 @@
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_INL_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_INL_H_
 
-#include "../../mxnet_op.h"
 #include "../../mshadow_op.h"
+#include "../../mxnet_op.h"
 
 namespace mxnet {
 namespace op {

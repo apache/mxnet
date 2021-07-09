@@ -19,17 +19,18 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <string>
 #include <utility>
 #include <vector>
-#include <string>
-#include "../common.h"
+
+#include "../../nn/mkldnn/mkldnn_act-inl.h"
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../quantization/quantization_utils.h"
-#include "mkldnn_conv-inl.h"
-#include "../../nn/mkldnn/mkldnn_act-inl.h"
 #include "../../tensor/matrix_op-inl.h"
+#include "../common.h"
 #include "mkldnn_common.h"
+#include "mkldnn_conv-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -38,8 +39,13 @@ using red::limits::MaxValue;
 using red::limits::MinValue;
 
 template <typename DType>
-static void UpdateConvWeightBias(NDArray* weight, NDArray* bias, bool no_bias, const NDArray& gamma,
-                                 const NDArray& beta, const NDArray& mean, const NDArray& variance,
+static void UpdateConvWeightBias(NDArray* weight,
+                                 NDArray* bias,
+                                 bool no_bias,
+                                 const NDArray& gamma,
+                                 const NDArray& beta,
+                                 const NDArray& mean,
+                                 const NDArray& variance,
                                  const BatchNormParam* param) {
   NDArray update_weight =
       NDArray(weight->storage_type(), weight->shape(), weight->ctx(), true, weight->dtype());
@@ -87,8 +93,10 @@ class SgMKLDNNConvOperator {
       : subgraph_sym_(*attrs.subgraphs[0]),
         param_(nnvm::get<MKLDNNConvFusionParam>(attrs.parsed)) {}
 
-  void Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-               const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
+  void Forward(const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs);
 
  private:
   bool initialized_{false};
@@ -112,7 +120,8 @@ class SgMKLDNNConvOperator {
   std::vector<float> weight_scales_;
 };
 
-void SgMKLDNNConvOperator::Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
+void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
+                                   const std::vector<NDArray>& inputs,
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
   auto& full_conv_param = param_.full_conv_param;
@@ -347,7 +356,8 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx, const std::vector<NDArr
   }
 }
 
-static void SgMKLDNNConvOpForward(const OpStatePtr& state_ptr, const OpContext& ctx,
+static void SgMKLDNNConvOpForward(const OpStatePtr& state_ptr,
+                                  const OpContext& ctx,
                                   const std::vector<NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<NDArray>& outputs) {
@@ -468,15 +478,18 @@ static std::vector<std::string> SgMKLDNNConvListOutputNames(const NodeAttrs& att
     return std::vector<std::string>{"output"};
 }
 
-static OpStatePtr CreateSgMKLDNNConvState(const nnvm::NodeAttrs& attrs, Context ctx,
+static OpStatePtr CreateSgMKLDNNConvState(const nnvm::NodeAttrs& attrs,
+                                          Context ctx,
                                           const mxnet::ShapeVector& in_shapes,
                                           const std::vector<int>& in_types) {
   return OpStatePtr::Create<SgMKLDNNConvOperator>(attrs);
 }
 
 template <typename DType>
-static void FilterMinMaxIndice(const MKLDNNConvParam& mkldnn_param, std::vector<DType>* in_shapes,
-                               std::vector<DType>* out_shapes, std::vector<DType>* base_in_shapes,
+static void FilterMinMaxIndice(const MKLDNNConvParam& mkldnn_param,
+                               std::vector<DType>* in_shapes,
+                               std::vector<DType>* out_shapes,
+                               std::vector<DType>* base_in_shapes,
                                std::vector<DType>* base_out_shapes,
                                std::unordered_set<size_t>* minmax_indice) {
   base_out_shapes->push_back(out_shapes->at(0));
@@ -494,7 +507,8 @@ static void FilterMinMaxIndice(const MKLDNNConvParam& mkldnn_param, std::vector<
   }
 }
 
-static bool SgMKLDNNConvInferShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector* in_shapes,
+static bool SgMKLDNNConvInferShape(const nnvm::NodeAttrs& attrs,
+                                   mxnet::ShapeVector* in_shapes,
                                    mxnet::ShapeVector* out_shapes) {
   auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   if (param.full_conv_param.mkldnn_param.quantized) {
@@ -522,7 +536,8 @@ static bool SgMKLDNNConvInferShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVec
   }
 }
 
-static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_types,
+static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs& attrs,
+                                  std::vector<int>* in_types,
                                   std::vector<int>* out_types) {
   auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   if (param.full_conv_param.mkldnn_param.quantized) {
@@ -574,8 +589,10 @@ static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs& attrs, std::vector<int>
   }
 }
 
-static bool SgMKLDNNConvOpStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                      DispatchMode* dispatch_mode, std::vector<int>* in_stypes,
+static bool SgMKLDNNConvOpStorageType(const nnvm::NodeAttrs& attrs,
+                                      const int dev_mask,
+                                      DispatchMode* dispatch_mode,
+                                      std::vector<int>* in_stypes,
                                       std::vector<int>* out_stypes) {
   auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   if (param.full_conv_param.mkldnn_param.quantized) {
@@ -631,7 +648,8 @@ nnvm::ObjectPtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   return node;
 }
 
-bool SgMKLDNNAvoidConvQuantizeInput(const NodeAttrs& attrs, const size_t index,
+bool SgMKLDNNAvoidConvQuantizeInput(const NodeAttrs& attrs,
+                                    const size_t index,
                                     const std::string quantize_granularity) {
   auto const& param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   std::unordered_set<size_t> avoid_indice;

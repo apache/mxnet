@@ -25,8 +25,8 @@
 #include <iostream>
 
 #include "../../operator_common.h"
-#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
+#include "./mkldnn_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -94,8 +94,10 @@ static MKLDNNSumFwd& GetSumForward(const std::vector<float>& scales,
   return it->second;
 }
 
-void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                      const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void MKLDNNSumForward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   const int num_inputs    = inputs.size();

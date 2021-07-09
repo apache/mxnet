@@ -25,8 +25,8 @@
 
 #if MXNET_USE_MKLDNN == 1
 
-#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
+#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_slice-inl.h"
 
 namespace mxnet {
@@ -68,8 +68,10 @@ void MKLDNNSliceFwd::Register() {
       *fwd_, {{MKLDNN_ARG_FROM, *(this->data_)}, {MKLDNN_ARG_TO, *(this->out_)}});
 }
 
-MKLDNNSliceFwd& GetSliceForward(const SliceParam& param, const bool is_train,
-                                const NDArray& in_data, const NDArray& out_data) {
+MKLDNNSliceFwd& GetSliceForward(const SliceParam& param,
+                                const bool is_train,
+                                const NDArray& in_data,
+                                const NDArray& out_data) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNSliceSignature, MKLDNNSliceFwd, OpHash> fwds;
 #else
@@ -88,8 +90,11 @@ MKLDNNSliceFwd& GetSliceForward(const SliceParam& param, const bool is_train,
   return it->second;
 }
 
-void MKLDNNSlice(const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& in,
-                 OpReqType req, const NDArray& out) {
+void MKLDNNSlice(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const NDArray& in,
+                 OpReqType req,
+                 const NDArray& out) {
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MKLDNNSliceFwd& fwd     = GetSliceForward(param, ctx.is_train, in, out);
   auto in_mem             = in.GetMKLDNNData();

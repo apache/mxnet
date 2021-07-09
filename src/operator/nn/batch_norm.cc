@@ -24,10 +24,11 @@
  * \author Bing Xu, Chris Olivier, Da Zheng
  */
 
-#include "batch_norm-inl.h"
 #include <nnvm/op_attr_types.h>
+
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
+#include "batch_norm-inl.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_batch_norm-inl.h"
 #endif

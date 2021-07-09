@@ -29,6 +29,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../quantize_v2-inl.h"
 
@@ -40,8 +41,10 @@ class SgMKLDNNQuantizeOperator {
   explicit SgMKLDNNQuantizeOperator(const nnvm::NodeAttrs& attrs)
       : param_(nnvm::get<QuantizeV2Param>(attrs.parsed)) {}
 
-  void Forward(const OpContext& ctx, const std::vector<NDArray>& inputs,
-               const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs);
+  void Forward(const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs);
 
  private:
   bool initalized_{false};
@@ -55,12 +58,13 @@ class SgMKLDNNQuantizeOperator {
   std::shared_ptr<mkldnn::reorder> fwd_pd_;
 };
 
-void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<NDArray> &inputs,
-                                       const std::vector<OpReqType> &req,
-                                       const std::vector<NDArray> &outputs) {
+void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs) {
   NDArray in_buffer = inputs[0];
-  float data_min = mshadow::red::limits::MaxValue<float>();
-  float data_max = mshadow::red::limits::MinValue<float>();
+  float data_min    = mshadow::red::limits::MaxValue<float>();
+  float data_max    = mshadow::red::limits::MinValue<float>();
 
   // Pass through quantized data
   if (inputs[0].dtype() == mshadow::kUint8 || inputs[0].dtype() == mshadow::kInt8) {
@@ -110,20 +114,20 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     }
 
     // Write output min/max
-    auto out_type = GetQuantizeOutputType(param_);
+    auto out_type      = GetQuantizeOutputType(param_);
     const bool shifted = param_.shifted.has_value() && param_.shifted.value();
     if (shifted) {
       // if shifted == true we have guarantee that data_min is negative because
       // we require that in shifted quantization pass in quantize_graph_pass
       // Modify out min/max range to reflect shifted data
-      out_type = mshadow::kUint8;
+      out_type                         = mshadow::kUint8;
       *outputs[1].data().dptr<float>() = 0;
       *outputs[2].data().dptr<float>() = data_max - data_min;
     } else if (out_type == mshadow::kUint8) {
       *outputs[1].data().dptr<float>() = data_min;
       *outputs[2].data().dptr<float>() = data_max;
     } else if (out_type == mshadow::kInt8) {
-      float real_range = MaxAbs(data_min, data_max);
+      float real_range                 = MaxAbs(data_min, data_max);
       *outputs[1].data().dptr<float>() = -real_range;
       *outputs[2].data().dptr<float>() = real_range;
     } else {
@@ -141,7 +145,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
         cached_scale_ = GetQuantizeScale(out_type, data_min, data_max);
       }
       mkldnn::primitive_attr attr;
-      const int mask = 0;
+      const int mask            = 0;
       std::vector<float> scales = {cached_scale_};
       attr.set_output_scales(mask, scales);
       if (shifted) {
@@ -172,14 +176,15 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     MKLDNNStream::Get()->RegisterPrimArgs(*fwd_pd_, args_);
     CommitOutput(outputs[0], o_mem);
     if (shifted) {
-      uint8_t *raw_out_mem = static_cast<uint8_t *>(o_mem.second->get_data_handle());
+      uint8_t* raw_out_mem = static_cast<uint8_t*>(o_mem.second->get_data_handle());
       std::fill_n(raw_out_mem, outputs[0].shape().Size(), cached_shift_);
     }
     MKLDNNStream::Get()->Submit();
   }
 }
 
-static void SgMKLDNNQuantizeForward(const OpStatePtr& state_ptr, const OpContext& ctx,
+static void SgMKLDNNQuantizeForward(const OpStatePtr& state_ptr,
+                                    const OpContext& ctx,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {

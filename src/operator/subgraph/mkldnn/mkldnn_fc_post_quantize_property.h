@@ -30,6 +30,7 @@
 
 #include <string>
 #include <vector>
+
 #include "../../nn/fully_connected-inl.h"
 #include "../../quantization/requantize-inl.h"
 #include "../common.h"

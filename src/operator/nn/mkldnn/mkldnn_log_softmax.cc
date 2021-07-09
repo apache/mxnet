@@ -23,8 +23,8 @@
  */
 
 #include "../softmax-inl.h"
-#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
+#include "./mkldnn_ops-inl.h"
 
 #if MXNET_USE_MKLDNN == 1
 namespace mxnet {
@@ -40,7 +40,9 @@ static mkldnn::logsoftmax_forward::primitive_desc GetLogSoftmaxFwdPd(
 }
 
 static mkldnn::logsoftmax_backward::primitive_desc GetLogSoftmaxBwdPd(
-    const mkldnn::memory& diff_mem, const mkldnn::memory& data_mem, const int axis,
+    const mkldnn::memory& diff_mem,
+    const mkldnn::memory& data_mem,
+    const int axis,
     const mkldnn::logsoftmax_forward::primitive_desc& hint_fwd_pd) {
   mkldnn::memory::desc diff_md = diff_mem.get_desc();
   mkldnn::memory::desc data_md = data_mem.get_desc();
@@ -49,7 +51,8 @@ static mkldnn::logsoftmax_backward::primitive_desc GetLogSoftmaxBwdPd(
   return mkldnn::logsoftmax_backward::primitive_desc(desc, cpu_engine, hint_fwd_pd);
 }
 
-bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param, const NDArray& data,
+bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param,
+                             const NDArray& data,
                              const NDArray& output) {
   const int ndim      = data.shape().ndim();
   const int in_dtype  = data.dtype();
@@ -84,8 +87,10 @@ class MKLDNNLogSoftmaxFwd {
 
 typedef ParamOpSign<SoftmaxParam> MKLDNNSoftmaxSignature;
 
-static MKLDNNLogSoftmaxFwd& GetLogSoftmaxFwd(const SoftmaxParam& param, const int real_axis,
-                                             const bool is_train, const NDArray& data,
+static MKLDNNLogSoftmaxFwd& GetLogSoftmaxFwd(const SoftmaxParam& param,
+                                             const int real_axis,
+                                             const bool is_train,
+                                             const NDArray& data,
                                              const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNLogSoftmaxFwd, OpHash> fwds;
@@ -108,8 +113,10 @@ static MKLDNNLogSoftmaxFwd& GetLogSoftmaxFwd(const SoftmaxParam& param, const in
   return it->second;
 }
 
-void MKLDNNLogSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                             const NDArray& in_data, const OpReqType& req,
+void MKLDNNLogSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const NDArray& in_data,
+                             const OpReqType& req,
                              const NDArray& out_data) {
   if (req == kNullOp) return;
   // same as the FCompute path, log_softmax only supports kWriteTo and kWriteInplace for now.
@@ -130,8 +137,10 @@ class MKLDNNLogSoftmaxBwd {
  public:
   mkldnn::logsoftmax_backward::primitive_desc pd;
 
-  MKLDNNLogSoftmaxBwd(const mkldnn::memory& diff_mem, const mkldnn::memory& data_mem,
-                      const int axis, const mkldnn::logsoftmax_forward::primitive_desc& hint_fwd_pd)
+  MKLDNNLogSoftmaxBwd(const mkldnn::memory& diff_mem,
+                      const mkldnn::memory& data_mem,
+                      const int axis,
+                      const mkldnn::logsoftmax_forward::primitive_desc& hint_fwd_pd)
       : pd(GetLogSoftmaxBwdPd(diff_mem, data_mem, axis, hint_fwd_pd)) {
     bwd_ = std::make_shared<mkldnn::logsoftmax_backward>(pd);
   }
@@ -142,7 +151,8 @@ class MKLDNNLogSoftmaxBwd {
   std::shared_ptr<mkldnn::logsoftmax_backward> bwd_;
 };
 
-static MKLDNNLogSoftmaxBwd& GetLogSoftmaxBwd(const SoftmaxParam& param, const int real_axis,
+static MKLDNNLogSoftmaxBwd& GetLogSoftmaxBwd(const SoftmaxParam& param,
+                                             const int real_axis,
                                              const std::vector<NDArray>& data,
                                              const std::vector<NDArray>& output) {
 #if DMLC_CXX11_THREAD_LOCAL
@@ -168,7 +178,8 @@ static MKLDNNLogSoftmaxBwd& GetLogSoftmaxBwd(const SoftmaxParam& param, const in
   return it->second;
 }
 
-void MKLDNNLogSoftmaxBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNLogSoftmaxBackward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
                               const std::vector<NDArray>& in_data,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& out_data) {

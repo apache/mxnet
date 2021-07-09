@@ -26,11 +26,13 @@
 
 #include <dmlc/timer.h>
 #include <mxnet/ndarray.h>
-#include <vector>
+
 #include <algorithm>
+#include <vector>
+
+#include "../../src/operator/tensor/init_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
-#include "../../src/operator/tensor/init_op.h"
 #ifdef __CUDACC__
 #include "./cast_storage-inl.cuh"
 #endif  // __CUDACC__
@@ -47,7 +49,9 @@ namespace op {
 struct MarkRspRowIdx {
   // i represents the row index of the tensor data
   template <typename DType, typename RType>
-  MSHADOW_CINLINE static void Map(int i, RType* row_idx, const DType* data,
+  MSHADOW_CINLINE static void Map(int i,
+                                  RType* row_idx,
+                                  const DType* data,
                                   const nnvm::dim_t row_length) {
     using nnvm::dim_t;
     dim_t j      = 0;
@@ -68,7 +72,9 @@ struct MarkRspRowIdx {
 /*!
  * \brief CPU implementation of casting a dns tensor to rsp type.
  */
-inline void CastStorageDnsRspImpl(const OpContext& ctx, const cpu& cpu_dev, const TBlob& dns,
+inline void CastStorageDnsRspImpl(const OpContext& ctx,
+                                  const cpu& cpu_dev,
+                                  const TBlob& dns,
                                   NDArray* rsp) {
   using namespace rowsparse;
   using namespace mshadow;
@@ -111,8 +117,8 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx, const cpu& cpu_dev, cons
 // TODO(haibin) Use memcopy instead will be much faster than assigning each individual element
 struct CastStorageRspDnsKernel {
   template <typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, const IType* idx,
-                                  const DType* data, DType* dns) {
+  MSHADOW_XINLINE static void Map(
+      int i, const nnvm::dim_t row_length, const IType* idx, const DType* data, DType* dns) {
     using nnvm::dim_t;
     IType rid        = idx[i];
     dim_t dns_offset = rid * row_length;
@@ -165,8 +171,11 @@ struct FillCsrIndPtr {
    * \param num_cols  number of columns of the dns tensor
    */
   template <typename DType, typename IType>
-  MSHADOW_CINLINE static void Map(int i, IType* indptr, const DType* dns,
-                                  const nnvm::dim_t num_rows, const nnvm::dim_t num_cols) {
+  MSHADOW_CINLINE static void Map(int i,
+                                  IType* indptr,
+                                  const DType* dns,
+                                  const nnvm::dim_t num_rows,
+                                  const nnvm::dim_t num_cols) {
     using nnvm::dim_t;
     indptr[i + 1]      = 0;
     const dim_t offset = i * num_cols;
@@ -193,8 +202,12 @@ struct FillCsrColIdxAndVals {
    * \param num_cols  number of columns of the dns tensor
    */
   template <typename DType, typename IType, typename CType>
-  MSHADOW_CINLINE static void Map(int i, DType* val, CType* col_idx, const IType* indptr,
-                                  const DType* dns, const nnvm::dim_t num_rows,
+  MSHADOW_CINLINE static void Map(int i,
+                                  DType* val,
+                                  CType* col_idx,
+                                  const IType* indptr,
+                                  const DType* dns,
+                                  const nnvm::dim_t num_rows,
                                   const nnvm::dim_t num_cols) {
     using nnvm::dim_t;
     const dim_t offset = i * num_cols;
@@ -212,7 +225,9 @@ struct FillCsrColIdxAndVals {
 /*!
  * \brief CPU implementation of casting a dns matrix to csr type.
  */
-inline void CastStorageDnsCsrImpl(const OpContext& ctx, const cpu& cpu_dev, const TBlob& dns,
+inline void CastStorageDnsCsrImpl(const OpContext& ctx,
+                                  const cpu& cpu_dev,
+                                  const TBlob& dns,
                                   NDArray* csr) {
   CHECK(csr != nullptr);
   CHECK_EQ(csr->storage_type(), kCSRStorage);
@@ -264,8 +279,11 @@ struct CopyCsrDataToDns {
    * \param num_cols  number of columns of the dns tensor
    */
   template <typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* dns_data, const CType* col_idx,
-                                  const IType* indptr, const DType* csr_data,
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType* dns_data,
+                                  const CType* col_idx,
+                                  const IType* indptr,
+                                  const DType* csr_data,
                                   const nnvm::dim_t num_cols) {
     const nnvm::dim_t offset = i * num_cols;
     for (IType j = indptr[i]; j < indptr[i + 1]; ++j) {
@@ -400,8 +418,10 @@ struct CastStorageParam : public dmlc::Parameter<CastStorageParam> {
   }
 };
 
-inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                        DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
+                                        std::vector<int>* in_attrs,
                                         std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
@@ -444,8 +464,10 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs, const int 
 }
 
 template <typename xpu>
-void CastStorageComputeEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                          const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void CastStorageComputeEx(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<NDArray>& inputs,
+                          const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), 1);

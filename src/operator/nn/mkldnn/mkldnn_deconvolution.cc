@@ -34,7 +34,8 @@ bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray& input)
          (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16);
 }
 
-void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
@@ -92,7 +93,8 @@ std::shared_ptr<deconv_fwd_pd_t> MKLDNNDeconvFwd::CreatePrimitiveDesc(
   return pd;
 }
 
-void MKLDNNDeconvFwd::ControlWeightsFormat(const uint32_t num_group, const bool is_train,
+void MKLDNNDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
+                                           const bool is_train,
                                            const NDArray& weights) const {
   if (is_train) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
@@ -115,7 +117,8 @@ void MKLDNNDeconvFwd::ControlWeightsFormat(const uint32_t num_group, const bool 
   }
 }
 
-void MKLDNNDeconvFwd::Execute(const uint32_t num_group, const OpReqType req,
+void MKLDNNDeconvFwd::Execute(const uint32_t num_group,
+                              const OpReqType req,
                               const Tensors& tensors) const {
   // MXNet (correctly) assumes that deconvolution is implemented using convolution primitives.
   // For that, we would pass input tensor in place of output and output tensor in place of input
@@ -157,7 +160,8 @@ void MKLDNNDeconvFwd::Execute(const uint32_t num_group, const OpReqType req,
   IOLogicalSwapMKLDNNMem(tensors.weights, num_group);  // swap back from oihw to iohw
 }
 
-void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
                                  const std::vector<NDArray>& inputs,
                                  const std::vector<OpReqType>& req,
                                  const std::vector<NDArray>& outputs) {
@@ -197,7 +201,8 @@ MKLDNNDeconvBwd& MKLDNNDeconvBwd::GetCached(const DeconvolutionParam& param,
 }
 
 std::shared_ptr<deconv_bwd_data_pd_t> MKLDNNDeconvBwd::CreateDataPrimitiveDesc(
-    const DeconvolutionParam& param, const ReadTensors& read_tensors,
+    const DeconvolutionParam& param,
+    const ReadTensors& read_tensors,
     const deconv_fwd_pd_t& fwd_pd) {
   DeconvDescCreator ddc(param, read_tensors.data, read_tensors.weights, nullptr,
                         read_tensors.out_grad);
@@ -220,7 +225,8 @@ std::shared_ptr<deconv_bwd_data_pd_t> MKLDNNDeconvBwd::CreateDataPrimitiveDesc(
 }
 
 std::shared_ptr<deconv_bwd_weights_pd_t> MKLDNNDeconvBwd::CreateWeightsPrimitiveDesc(
-    const DeconvolutionParam& param, const ReadTensors& read_tensors,
+    const DeconvolutionParam& param,
+    const ReadTensors& read_tensors,
     const deconv_fwd_pd_t& fwd_pd) {
   DeconvDescCreator ddc(param, read_tensors.data, read_tensors.weights, read_tensors.bias,
                         read_tensors.out_grad);
@@ -243,7 +249,8 @@ std::shared_ptr<deconv_bwd_weights_pd_t> MKLDNNDeconvBwd::CreateWeightsPrimitive
   return pd;
 }
 
-void MKLDNNDeconvBwd::Execute(const uint32_t num_group, const std::vector<OpReqType>& req,
+void MKLDNNDeconvBwd::Execute(const uint32_t num_group,
+                              const std::vector<OpReqType>& req,
                               const ReadTensors& read_tensors,
                               const WriteTensors& write_tensors) const {
   // swaps are explained in MKLDNNDeconvFwd::Execute
@@ -307,8 +314,10 @@ void MKLDNNDeconvBwd::ScheduleBwdWeights(const uint32_t num_group,
   }
 }
 
-DeconvDescCreator::DeconvDescCreator(const DeconvolutionParam& param, const NDArray& data,
-                                     const NDArray& weights, const NDArray* const bias,
+DeconvDescCreator::DeconvDescCreator(const DeconvolutionParam& param,
+                                     const NDArray& data,
+                                     const NDArray& weights,
+                                     const NDArray* const bias,
                                      const NDArray& out)
     : data_md(GetMemDesc(data)),
       weights_md(GetDeconvWeightsDesc(weights, param.num_group)),
@@ -328,7 +337,8 @@ DeconvDescCreator::DeconvDescCreator(const DeconvolutionParam& param, const NDAr
   }
 }
 
-bool DeconvDescCreator::ImposePlainWherePadding(const size_t data_size, const size_t weights_size,
+bool DeconvDescCreator::ImposePlainWherePadding(const size_t data_size,
+                                                const size_t weights_size,
                                                 const size_t out_size) {
   // Changing only one at a time, so maybe better implementations will be selected (than entirely
   // plain one)

@@ -26,6 +26,7 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include <mkldnn.hpp>
+
 #include "../../tensor/matrix_op-inl.h"
 
 namespace mxnet {
@@ -132,8 +133,11 @@ static MKLDNNTransposeForward& GetTransposeForward(const TransposeParam& param,
   return it->second;
 }
 
-void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx, const NDArray& data,
-                            const OpReqType& req, const NDArray& output) {
+void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const NDArray& data,
+                            const OpReqType& req,
+                            const NDArray& output) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
 
   auto fwd = GetTransposeForward(param, data);

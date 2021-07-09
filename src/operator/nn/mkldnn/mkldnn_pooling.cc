@@ -34,10 +34,14 @@ static inline mkldnn::memory::data_type get_data_type(const mkldnn::memory::desc
   return static_cast<mkldnn::memory::data_type>(md.data_type());
 }
 
-void MKLDNNPoolingFwd::Init(const mxnet::NDArray& input, const mxnet::NDArray& output,
-                            const mkldnn::memory::dims& kernel, const mkldnn::memory::dims& strides,
-                            const mkldnn::memory::dims& pad_l, const mkldnn::memory::dims& pad_r,
-                            const bool is_train, const mkldnn::algorithm alg_kind) {
+void MKLDNNPoolingFwd::Init(const mxnet::NDArray& input,
+                            const mxnet::NDArray& output,
+                            const mkldnn::memory::dims& kernel,
+                            const mkldnn::memory::dims& strides,
+                            const mkldnn::memory::dims& pad_l,
+                            const mkldnn::memory::dims& pad_r,
+                            const bool is_train,
+                            const mkldnn::algorithm alg_kind) {
   const auto src_md           = input.GetMKLDNNData()->get_desc();
   const auto dst_md           = GetMemDesc(output);
   const mkldnn::engine engine = CpuEngine::Get()->get_engine();
@@ -63,7 +67,9 @@ void MKLDNNPoolingFwd::Init(const mxnet::NDArray& input, const mxnet::NDArray& o
   return;
 }
 
-void MKLDNNPoolingFwd::Execute(const NDArray& in_data, const OpReqType req, const NDArray& out_data,
+void MKLDNNPoolingFwd::Execute(const NDArray& in_data,
+                               const OpReqType req,
+                               const NDArray& out_data,
                                const NDArray* workspace) {
   NDArray in_buffer = in_data;
   if (in_data.IsView() && in_data.IsMKLDNNData()) in_buffer = in_data.Reorder2Default();
@@ -112,9 +118,12 @@ mkldnn::algorithm GetMKLDNNPoolAlgo(const PoolingParam& param) {
   }
 }
 
-void PrepareKernels(mkldnn::memory::dims* kernel, mkldnn::memory::dims* strides,
-                    mkldnn::memory::dims* pad_l, mkldnn::memory::dims* pad_r,
-                    const PoolingParam& param, const mkldnn::memory::desc& data_md,
+void PrepareKernels(mkldnn::memory::dims* kernel,
+                    mkldnn::memory::dims* strides,
+                    mkldnn::memory::dims* pad_l,
+                    mkldnn::memory::dims* pad_r,
+                    const PoolingParam& param,
+                    const mkldnn::memory::desc& data_md,
                     int kernel_ndims) {
   CHECK_GE(param.pad.ndim(), kernel_ndims);
   CHECK_GE(param.stride.ndim(), kernel_ndims);
@@ -143,7 +152,8 @@ void PrepareKernels(mkldnn::memory::dims* kernel, mkldnn::memory::dims* strides,
   }
 }
 
-void InitPoolingPrimitiveParams(const PoolingParam& param, const mkldnn::memory::desc& data_md,
+void InitPoolingPrimitiveParams(const PoolingParam& param,
+                                const mkldnn::memory::desc& data_md,
                                 const mkldnn::memory::dims& new_kernel,
                                 const mkldnn::memory::dims& new_strides,
                                 const mkldnn::memory::dims& new_pad_l,
@@ -192,7 +202,9 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(const PoolingParam& p
   return mkldnn::pooling_forward::primitive_desc(poolingFwd_desc, CpuEngine::Get()->get_engine());
 }
 
-MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param, const bool is_train, const NDArray& data,
+MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param,
+                                const bool is_train,
+                                const NDArray& data,
                                 const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNPoolingSignature, MKLDNNPoolingFwd, OpHash>
@@ -230,8 +242,12 @@ MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param, const bool is_train, 
   return it->second;
 }
 
-void MKLDNNPoolingCompute(const OpContext& ctx, const PoolingParam& param, const NDArray& in_data,
-                          const OpReqType req, const NDArray& out_data, const NDArray* workspace) {
+void MKLDNNPoolingCompute(const OpContext& ctx,
+                          const PoolingParam& param,
+                          const NDArray& in_data,
+                          const OpReqType req,
+                          const NDArray& out_data,
+                          const NDArray* workspace) {
   auto& fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data);
   fwd.Execute(in_data, req, out_data, workspace);
 }
@@ -244,8 +260,10 @@ MKLDNNPoolingBwd::MKLDNNPoolingBwd(const mkldnn::pooling_backward::primitive_des
 
 const mkldnn::pooling_backward& MKLDNNPoolingBwd::GetBwd() { return *this->bwd; }
 
-MKLDNNPoolingBwd& GetPoolingBwd(const PoolingParam& param, const NDArray& in_data,
-                                const NDArray& in_grad, const NDArray& out_grad) {
+MKLDNNPoolingBwd& GetPoolingBwd(const PoolingParam& param,
+                                const NDArray& in_data,
+                                const NDArray& in_grad,
+                                const NDArray& out_grad) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNPoolingSignature, MKLDNNPoolingBwd, OpHash>
       pooling_bwds;
@@ -297,9 +315,12 @@ MKLDNNPoolingBwd& GetPoolingBwd(const PoolingParam& param, const NDArray& in_dat
   return it->second;
 }
 
-void MKLDNNPoolingGradCompute(const OpContext& ctx, const PoolingParam& param,
-                              const NDArray& out_grad, const NDArray& in_data,
-                              const NDArray* workspace, const OpReqType req,
+void MKLDNNPoolingGradCompute(const OpContext& ctx,
+                              const PoolingParam& param,
+                              const NDArray& out_grad,
+                              const NDArray& in_data,
+                              const NDArray* workspace,
+                              const OpReqType req,
                               const NDArray& in_grad) {
   if (req == kNullOp) {
     return;

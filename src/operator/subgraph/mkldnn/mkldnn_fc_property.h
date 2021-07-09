@@ -30,10 +30,11 @@
 
 #include <string>
 #include <vector>
-#include "../common.h"
+
 #include "../../tensor/matrix_op-inl.h"
-#include "mkldnn_subgraph_base-inl.h"
+#include "../common.h"
 #include "mkldnn_fc-inl.h"
+#include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {

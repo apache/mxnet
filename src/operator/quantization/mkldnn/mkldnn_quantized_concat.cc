@@ -39,7 +39,8 @@ static float GetScale(const NDArray& data, float min, float max) {
   return data_range / MaxAbs(min, max);
 }
 
-static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs,
+                                         const OpContext& ctx,
                                          const std::vector<NDArray>& in_data,
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& out_data) {
@@ -106,8 +107,10 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpC
   MKLDNNStream::Get()->Submit();
 }
 
-inline static bool ConcatStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                     DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+inline static bool ConcatStorageType(const nnvm::NodeAttrs& attrs,
+                                     const int dev_mask,
+                                     DispatchMode* dispatch_mode,
+                                     std::vector<int>* in_attrs,
                                      std::vector<int>* out_attrs) {
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), static_cast<size_t>(param_.num_args * 3));

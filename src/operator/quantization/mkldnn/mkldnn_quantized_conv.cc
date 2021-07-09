@@ -24,16 +24,17 @@
  */
 
 #if MXNET_USE_MKLDNN == 1
+#include "../../elemwise_op_common.h"
+#include "../../nn/convolution-inl.h"
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../nn/mkldnn/mkldnn_convolution-inl.h"
-#include "../../nn/convolution-inl.h"
-#include "../quantization_utils.h"
 #include "../../tensor/matrix_op-inl.h"
-#include "../../elemwise_op_common.h"
+#include "../quantization_utils.h"
 namespace mxnet {
 namespace op {
 
-static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
                                        const std::vector<NDArray>& in_data,
                                        const std::vector<OpReqType>& req,
                                        const std::vector<NDArray>& out_data) {

@@ -30,8 +30,9 @@
 
 #include <string>
 #include <vector>
-#include "../../tensor/elemwise_binary_op-inl.h"
+
 #include "../../quantization/requantize-inl.h"
+#include "../../tensor/elemwise_binary_op-inl.h"
 #include "../common.h"
 #include "mkldnn_subgraph_base-inl.h"
 

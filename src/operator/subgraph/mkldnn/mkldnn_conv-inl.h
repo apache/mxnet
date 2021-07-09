@@ -24,6 +24,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+
 #include "../../nn/activation-inl.h"
 #include "../../nn/batch_norm-inl.h"
 #include "../../nn/convolution-inl.h"

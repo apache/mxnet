@@ -26,11 +26,12 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_CONCAT_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
-#include <vector>
 #include <utility>
+#include <vector>
+
 #include "../concat-inl.h"
-#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
+#include "./mkldnn_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -47,7 +48,8 @@ class MKLDNNConcatFwd {
   std::shared_ptr<mkldnn::concat> fwd_;
 };
 
-static MKLDNNConcatFwd& GetConcatForward(int concat_dim, const std::vector<NDArray>& in_data,
+static MKLDNNConcatFwd& GetConcatForward(int concat_dim,
+                                         const std::vector<NDArray>& in_data,
                                          const std::vector<mkldnn::memory::desc>& data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<OpSignature, MKLDNNConcatFwd, OpHash> fwds;

@@ -24,14 +24,15 @@
  */
 
 #include "../softmax-inl.h"
-#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
+#include "./mkldnn_ops-inl.h"
 
 #if MXNET_USE_MKLDNN == 1
 namespace mxnet {
 namespace op {
 
-static mkldnn::softmax_forward::primitive_desc GetSoftmaxFwdPd(bool is_train, const int axis,
+static mkldnn::softmax_forward::primitive_desc GetSoftmaxFwdPd(bool is_train,
+                                                               const int axis,
                                                                const mkldnn::memory& input_mem) {
   mkldnn::memory::desc data_md = input_mem.get_desc();
   auto cpu_engine              = CpuEngine::Get()->get_engine();
@@ -41,7 +42,9 @@ static mkldnn::softmax_forward::primitive_desc GetSoftmaxFwdPd(bool is_train, co
 }
 
 static mkldnn::softmax_backward::primitive_desc GetSoftmaxBwdPd(
-    const mkldnn::memory& diff_mem, const mkldnn::memory& data_mem, const int axis,
+    const mkldnn::memory& diff_mem,
+    const mkldnn::memory& data_mem,
+    const int axis,
     const mkldnn::softmax_forward::primitive_desc& hint_fwd_pd) {
   mkldnn::memory::desc diff_md = diff_mem.get_desc();
   mkldnn::memory::desc data_md = data_mem.get_desc();
@@ -86,8 +89,10 @@ class MKLDNNSoftmaxFwd {
 
 typedef ParamOpSign<SoftmaxParam> MKLDNNSoftmaxSignature;
 
-static MKLDNNSoftmaxFwd& GetSoftmaxFwd(const SoftmaxParam& param, const int real_axis,
-                                       const bool is_train, const NDArray& data,
+static MKLDNNSoftmaxFwd& GetSoftmaxFwd(const SoftmaxParam& param,
+                                       const int real_axis,
+                                       const bool is_train,
+                                       const NDArray& data,
                                        const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxFwd, OpHash> fwds;
@@ -109,8 +114,11 @@ static MKLDNNSoftmaxFwd& GetSoftmaxFwd(const SoftmaxParam& param, const int real
   return it->second;
 }
 
-void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                          const NDArray& in_data, const OpReqType& req, const NDArray& out_data) {
+void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const NDArray& in_data,
+                          const OpReqType& req,
+                          const NDArray& out_data) {
   if (req == kNullOp) return;
   // same as the FCompute path, softmax only supports kWriteTo and kWriteInplace for now.
   CHECK_NE(req, kAddTo);
@@ -130,7 +138,9 @@ class MKLDNNSoftmaxBwd {
  public:
   mkldnn::softmax_backward::primitive_desc pd;
 
-  MKLDNNSoftmaxBwd(const mkldnn::memory& diff_mem, const mkldnn::memory& data_mem, const int axis,
+  MKLDNNSoftmaxBwd(const mkldnn::memory& diff_mem,
+                   const mkldnn::memory& data_mem,
+                   const int axis,
                    const mkldnn::softmax_forward::primitive_desc& hint_fwd_pd)
       : pd(GetSoftmaxBwdPd(diff_mem, data_mem, axis, hint_fwd_pd)) {
     bwd_ = std::make_shared<mkldnn::softmax_backward>(pd);
@@ -142,7 +152,8 @@ class MKLDNNSoftmaxBwd {
   std::shared_ptr<mkldnn::softmax_backward> bwd_;
 };
 
-static MKLDNNSoftmaxBwd& GetSoftmaxBwd(const SoftmaxParam& param, const int real_axis,
+static MKLDNNSoftmaxBwd& GetSoftmaxBwd(const SoftmaxParam& param,
+                                       const int real_axis,
                                        const std::vector<NDArray>& data,
                                        const std::vector<NDArray>& output) {
 #if DMLC_CXX11_THREAD_LOCAL
@@ -167,8 +178,10 @@ static MKLDNNSoftmaxBwd& GetSoftmaxBwd(const SoftmaxParam& param, const int real
   return it->second;
 }
 
-void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                           const std::vector<NDArray>& in_data, const std::vector<OpReqType>& req,
+void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<NDArray>& in_data,
+                           const std::vector<OpReqType>& req,
                            const std::vector<NDArray>& out_data) {
   if (req[0] == kNullOp) return;
   CHECK_EQ(in_data.size(), 2U);

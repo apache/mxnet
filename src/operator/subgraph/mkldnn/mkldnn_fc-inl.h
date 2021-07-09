@@ -24,8 +24,9 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "mkldnn.hpp"
+
 #include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
+#include "mkldnn.hpp"
 
 namespace mxnet {
 namespace op {

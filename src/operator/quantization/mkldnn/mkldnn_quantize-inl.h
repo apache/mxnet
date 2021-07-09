@@ -26,11 +26,12 @@
 #ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZE_INL_H_
 #define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZE_INL_H_
 #if MXNET_USE_MKLDNN == 1
-#include <string>
 #include <algorithm>
+#include <string>
 #include <vector>
-#include "../quantize-inl.h"
+
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
+#include "../quantize-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -88,7 +89,8 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
   MKLDNNStream::Get()->Submit();
 }
 
-static void MKLDNNQuantizeCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+static void MKLDNNQuantizeCompute(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
                                   const std::vector<NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<NDArray>& outputs) {
