@@ -112,7 +112,7 @@ def get_git_commit_hash() {
 }
 
 def publish_test_coverage() {
-    run "aws s3 cp s3://mxnet-ci-codecov/code-cov-bash ./ && bash code-cov-bash"
+    run "aws s3 cp s3://mxnet-ci-codecov/codecov ./ && chmod +x codecov && ./codecov -t ${CODECOV_TOKEN}"
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {
