@@ -108,13 +108,12 @@ class FCInputIndex {
                               mkldnn_param.channel_wise_quantize.value();
 
     // Calculate position of particular input in the input vector:
-    int index     = 0;
-    data          = index++;
-    weight        = index++;
-    bias          = has_bias ? index++ : 0;
-    num_quantized = index + (sum_input_quantized ? 1 : 0);
-    sum           = mkldnn_param.with_sum ? index++ : 0;
-    num_base      = index;
+    int index = 0;
+    data      = index++;
+    weight    = index++;
+    bias      = has_bias ? index++ : 0;
+    sum       = mkldnn_param.with_sum ? index++ : 0;
+    num_base  = index;  // note number of base inputs
 
     data_min   = quantized ? index++ : 0;
     data_max   = quantized ? index++ : 0;
@@ -124,10 +123,20 @@ class FCInputIndex {
     bias_max   = (quantized && !channel_wise && has_bias) ? index++ : 0;
     sum_min    = sum_input_quantized ? index++ : 0;
     sum_max    = sum_input_quantized ? index++ : 0;
-    num_total  = index;
+    num_total  = index;  // note number of total inputs
   }
 
-  // true if sum input is used and it is float number
+  // Returns true if sum input exists
+  bool IsSumExist() const {
+    return sum;
+  }
+
+  // Returns true if bias input exists
+  bool IsBiasExist() const {
+    return bias;
+  }
+
+  // Returns true if sum input exists and it is float number
   bool IsSumInputFloat() const {
     return (sum && !sum_min);
   }
@@ -136,12 +145,6 @@ class FCInputIndex {
   }
   int GetBase() const {
     return num_base;
-  }
-
-  // return number of standard inputs which are quantized (represented as
-  // integer)
-  int GetQuantized() const {
-    return num_quantized;
   }
 
   // Represent index of particular input in the input vector:
@@ -162,7 +165,6 @@ class FCInputIndex {
   int num_base;       // Number of standard inputs
   int num_total;      // Number of total inputs: standard + additional needed for
                       // quantization
-  int num_quantized;  // Number of standard inputs which are quantized
 };
 
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(const MKLDNNFCFullParam& full_param,

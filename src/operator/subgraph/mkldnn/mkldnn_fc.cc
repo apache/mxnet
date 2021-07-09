@@ -537,17 +537,11 @@ static void SgMKLDNNFCParamParser(nnvm::NodeAttrs* attrs) {
 
 static std::vector<std::string> SgMKLDNNFCListInputNames(const NodeAttrs& attrs) {
   auto const& full_param               = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
+  auto const& mkldnn_param             = full_param.mkldnn_param;
   std::vector<std::string> input_names = DefaultSubgraphOpListInputs(attrs);
-  if (full_param.mkldnn_param.quantized) {
-    bool channel_wise = false;
-    if (full_param.mkldnn_param.with_sum) {
-      input_names.emplace_back("sum");
-    }
-
-    if (full_param.mkldnn_param.channel_wise_quantize.has_value() &&
-        full_param.mkldnn_param.channel_wise_quantize) {
-      channel_wise = true;
-    }
+  if (mkldnn_param.quantized) {
+    const bool channel_wise =
+        mkldnn_param.channel_wise_quantize.has_value() && mkldnn_param.channel_wise_quantize;
     input_names.emplace_back("min_data");
     input_names.emplace_back("max_data");
     if (!channel_wise) {
@@ -557,6 +551,10 @@ static std::vector<std::string> SgMKLDNNFCListInputNames(const NodeAttrs& attrs)
         input_names.emplace_back("min_bias");
         input_names.emplace_back("max_bias");
       }
+    }
+    if (mkldnn_param.with_sum && !mkldnn_param.enable_float_output) {
+      input_names.emplace_back("min_sum");
+      input_names.emplace_back("max_sum");
     }
   }
   return input_names;
@@ -621,34 +619,42 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int>* out_types) {
   auto const& full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
   if (full_param.mkldnn_param.quantized) {
-    bool channel_wise = false;
-    if (full_param.mkldnn_param.channel_wise_quantize.has_value() &&
-        full_param.mkldnn_param.channel_wise_quantize) {
-      channel_wise = true;
-    }
-    size_t num_integer_inputs = FCInputIndex(full_param).GetQuantized();
-    CHECK(in_types->at(0) == mshadow::kInt8 || in_types->at(0) == mshadow::kUint8)
-        << "QuantizedFullyConnected only supports int8/uint8 input, while " << in_types->at(0)
-        << " is given.";
+    const bool channel_wise = full_param.mkldnn_param.channel_wise_quantize.has_value() &&
+                              full_param.mkldnn_param.channel_wise_quantize;
+    const FCInputIndex idx(full_param);
+
+    CHECK(in_types->at(idx.data) == mshadow::kInt8 || in_types->at(idx.data) == mshadow::kUint8)
+        << "QuantizedFullyConnected  data input only supports int8/uint8, while "
+        << in_types->at(idx.data) << " is given.";
     if (channel_wise) {
-      for (size_t i = 1; i < in_types->size(); ++i) {
-        TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
+      TYPE_ASSIGN_CHECK(*in_types, idx.weight, mshadow::kFloat32);
+      if (idx.IsBiasExist()) {
+        TYPE_ASSIGN_CHECK(*in_types, idx.bias, mshadow::kFloat32);
       }
     } else {
-      TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kInt8);
-      if (!full_param.default_param.no_bias) {
-        if (in_types->at(2) == -1) {
-          TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kInt32);
+      TYPE_ASSIGN_CHECK(*in_types, idx.weight, mshadow::kInt8);
+      if (idx.IsBiasExist()) {
+        if (in_types->at(idx.bias) == -1) {
+          TYPE_ASSIGN_CHECK(*in_types, idx.bias, mshadow::kInt32);
         } else {
-          CHECK(in_types->at(2) == mshadow::kInt8 || in_types->at(2) == mshadow::kInt32)
-              << "QuantizedFullyConnected only supports int8/int32 bias, "
-                 "while "
-              << in_types->at(2) << " is given.";
+          CHECK(in_types->at(idx.bias) == mshadow::kInt8 ||
+                in_types->at(idx.bias) == mshadow::kInt32)
+              << "QuantizedFullyConnected bias input only supports int8/int32, while "
+              << in_types->at(idx.bias) << " is given.";
         }
       }
-      for (size_t i = num_integer_inputs; i < in_types->size(); ++i) {
-        TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
+    }
+    if (idx.IsSumExist()) {
+      if (full_param.mkldnn_param.enable_float_output) {
+        TYPE_ASSIGN_CHECK(*in_types, idx.sum, mshadow::kFloat32);
+      } else {
+        CHECK(in_types->at(idx.sum) == mshadow::kInt8 || in_types->at(idx.sum) == mshadow::kUint8)
+            << "QuantizedFullyConnected sum input only supports int8/uint8, while "
+            << in_types->at(idx.sum) << " is given.";
       }
+    }
+    for (size_t i = idx.data_min; i < in_types->size(); ++i) {
+      TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
     }
 
     if (full_param.mkldnn_param.enable_float_output) {
