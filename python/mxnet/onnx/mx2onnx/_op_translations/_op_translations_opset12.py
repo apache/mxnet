@@ -2221,6 +2221,7 @@ def convert_square(node, **kwargs):
 # sum_axis is equivalent to sum in MXNet
 @mx_op.register("sum")
 @mx_op.register("sum_axis")
+@mx_op.register("_npi_sum")
 def convert_sum(node, **kwargs):
     """Map MXNet's sum operator attributes to onnx's ReduceSum operator
     and return the created node.
@@ -2231,8 +2232,8 @@ def convert_sum(node, **kwargs):
     axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
 
     keepdims = get_boolean_attribute_value(attrs, "keepdims")
-
-    if axes:
+    print(axes)
+    if axes != [None]:
         node = onnx.helper.make_node(
             'ReduceSum',
             inputs=input_nodes,
