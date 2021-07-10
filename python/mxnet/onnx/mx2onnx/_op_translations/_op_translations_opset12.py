@@ -4481,7 +4481,7 @@ def convert_RNN(node, **kwargs):
     """Map MXNet's RNN operator attributes to onnx's operators
     and return the created node.
     """
-    from onnx.helper import make_node, make_tensor
+    from onnx.helper import make_node
     from onnx import TensorProto
 
     name, input_nodes, attrs = get_inputs(node, kwargs)
@@ -4507,13 +4507,8 @@ def convert_RNN(node, **kwargs):
 
     state_size = int(attrs.get('state_size'))
 
-    direction = 1
-    if bidirectional != 'False':
-        direction = 2
-
     data = input_nodes[0]
     param = input_nodes[1]
-    dtype = get_input_dtypes(node, kwargs)[2]
 
     create_tensor([0], name+'_0', kwargs['initializer'])
     create_tensor([1], name+'_1', kwargs['initializer'])
@@ -4632,7 +4627,7 @@ def convert_RNN(node, **kwargs):
                               [name+'_B10_fwd', name+'_B11_fwd', name+'_B12_fwd', name+'_B13_fwd',
                                name+'_B14_fwd', name+'_B15_fwd', name+'_B16_fwd', name+'_B17_fwd']),
                     make_node('Concat', [name+'_B10_fwd', name+'_B13_fwd', name+'_B11_fwd', name+'_B12_fwd',
-                                        name+'_B14_fwd', name+'_B17_fwd', name+'_B15_fwd', name+'_B16_fwd'],
+                                         name+'_B14_fwd', name+'_B17_fwd', name+'_B15_fwd', name+'_B16_fwd'],
                               [name+'_B1_fwd_'], axis=0),
                     make_node('Reshape', [name+'_B1_fwd_', name+'_B_shape'], [name+'_B1_fwd']),
                     #Layer 1 bwd
@@ -4641,7 +4636,7 @@ def convert_RNN(node, **kwargs):
                     make_node('Slice', [param, name+'_R1_fwd_offset', name+'_W1_bwd_offset'], [name+'_W1_bwd_1d']),
                     make_node('Split', [name+'_W1_bwd_1d'],
                               [name+'_W10_bwd', name+'_W11_bwd', name+'_W12_bwd', name+'_W13_bwd']),
-                    make_node('Concat', [name+'_W10_bwd', name+'_W13_bwd', name+'_W11_bwd', name+'_W12_bwd'], 
+                    make_node('Concat', [name+'_W10_bwd', name+'_W13_bwd', name+'_W11_bwd', name+'_W12_bwd'],
                               [name+'_W1_bwd_'], axis=0),
                     make_node('Reshape', [name+'_W1_bwd_', name+'_W1_shape'], [name+'_W1_bwd']),
                     # get R
@@ -4659,7 +4654,7 @@ def convert_RNN(node, **kwargs):
                               [name+'_B10_bwd', name+'_B11_bwd', name+'_B12_bwd', name+'_B13_bwd',
                                name+'_B14_bwd', name+'_B15_bwd', name+'_B16_bwd', name+'_B17_bwd']),
                     make_node('Concat', [name+'_B10_bwd', name+'_B13_bwd', name+'_B11_bwd', name+'_B12_bwd',
-                                        name+'_B14_bwd', name+'_B17_bwd', name+'_B15_bwd', name+'_B16_bwd'],
+                                         name+'_B14_bwd', name+'_B17_bwd', name+'_B15_bwd', name+'_B16_bwd'],
                               [name+'_B1_bwd_'], axis=0),
                     make_node('Reshape', [name+'_B1_bwd_', name+'_B_shape'], [name+'_B1_bwd']),
                     # Layer 1 LSTM
@@ -4694,9 +4689,9 @@ def convert_RNN(node, **kwargs):
                     make_node('Add', [name+'_WR_offset', name+'_8*state_size'], [name+'_B0_offset']),
                     make_node('Slice', [param, name+'_WR_offset', name+'_B0_offset'], [name+'_B0_1d']),
                     make_node('Split', [name+'_B0_1d'], [name+'_B00', name+'_B01', name+'_B02', name+'_B03',
-                                                        name+'_B04', name+'_B05', name+'_B06', name+'_B07']),
+                                                         name+'_B04', name+'_B05', name+'_B06', name+'_B07']),
                     make_node('Concat', [name+'_B00', name+'_B03', name+'_B01', name+'_B02',
-                                        name+'_B04', name+'_B07', name+'_B05', name+'_B06'], [name+'_B0_'], axis=0),
+                                         name+'_B04', name+'_B07', name+'_B05', name+'_B06'], [name+'_B0_'], axis=0),
                     make_node('Reshape', [name+'_B0_', name+'_B_shape'], [name+'_B0']),
                     # get initial states
                     make_node('Split', [input_nodes[2]], [name+'_initial_h0', name+'_initial_h1'], axis=0),

@@ -1008,7 +1008,7 @@ def convert_RNN(node, **kwargs):
     """Map MXNet's RNN operator attributes to onnx's operators
     and return the created node.
     """
-    from onnx.helper import make_node, make_tensor
+    from onnx.helper import make_node
     from onnx import TensorProto
 
     name, input_nodes, attrs = get_inputs(node, kwargs)
@@ -1034,13 +1034,8 @@ def convert_RNN(node, **kwargs):
 
     state_size = int(attrs.get('state_size'))
 
-    direction = 1
-    if bidirectional != 'False':
-        direction = 2
-
     data = input_nodes[0]
     param = input_nodes[1]
-    dtype = get_input_dtypes(node, kwargs)[2]
 
     create_tensor([0], name+'_0', kwargs['initializer'])
     create_tensor([1], name+'_1', kwargs['initializer'])
@@ -1140,7 +1135,7 @@ def convert_RNN(node, **kwargs):
                     # get W
                     make_node('Add', [name+'_R0_bwd_offset', name+'_8*state_size^2'], [name+'_W1_fwd_offset']),
                     make_node('Slice', [param, name+'_R0_bwd_offset', name+'_W1_fwd_offset'], [name+'_W1_fwd_1d']),
-                    make_node('Split', [name+'_W1_fwd_1d'], 
+                    make_node('Split', [name+'_W1_fwd_1d'],
                               [name+'_W10_fwd', name+'_W11_fwd', name+'_W12_fwd', name+'_W13_fwd']),
                     make_node('Concat', [name+'_W10_fwd', name+'_W13_fwd', name+'_W11_fwd', name+'_W12_fwd'],
                               [name+'_W1_fwd_'], axis=0),
@@ -1156,7 +1151,7 @@ def convert_RNN(node, **kwargs):
                     # get B
                     make_node('Add', [name+'_B0_bwd_offset', name+'_8*state_size'], [name+'_B1_fwd_offset']),
                     make_node('Slice', [param, name+'_B0_bwd_offset', name+'_B1_fwd_offset'], [name+'_B1_fwd_1d']),
-                    make_node('Split', [name+'_B1_fwd_1d'], 
+                    make_node('Split', [name+'_B1_fwd_1d'],
                               [name+'_B10_fwd', name+'_B11_fwd', name+'_B12_fwd', name+'_B13_fwd',
                                name+'_B14_fwd', name+'_B15_fwd', name+'_B16_fwd', name+'_B17_fwd']),
                     make_node('Concat', [name+'_B10_fwd', name+'_B13_fwd', name+'_B11_fwd', name+'_B12_fwd',
@@ -1175,7 +1170,7 @@ def convert_RNN(node, **kwargs):
                     # get R
                     make_node('Add', [name+'_W1_bwd_offset', name+'_4*state_size^2'], [name+'_R1_bwd_offset']),
                     make_node('Slice', [param, name+'_W1_bwd_offset', name+'_R1_bwd_offset'], [name+'_R1_bwd_1d']),
-                    make_node('Split', [name+'_R1_bwd_1d'], 
+                    make_node('Split', [name+'_R1_bwd_1d'],
                               [name+'_R10_bwd', name+'_R11_bwd', name+'_R12_bwd', name+'_R13_bwd']),
                     make_node('Concat', [name+'_R10_bwd', name+'_R13_bwd', name+'_R11_bwd', name+'_R12_bwd'],
                               [name+'_R1_bwd_'], axis=0),
@@ -1278,7 +1273,7 @@ def convert_RNN(node, **kwargs):
                     make_node('Split', [name+'_W_1d'], [name+'_W0', name+'_W1', name+'_W2', name+'_W3']),
                     make_node('Concat', [name+'_W0', name+'_W3', name+'_W1', name+'_W2'], [name+'_W_'], axis=0),
                     make_node('Concat', [name+'_1', name+'_4*state_size', name+'_input_size'],
-                                [name+'_W_shape'], axis=0),
+                              [name+'_W_shape'], axis=0),
                     make_node('Reshape', [name+'_W_', name+'_W_shape'], [name+'_W']),
                     # get R
                     make_node('Add', [name+'_mul0', name+'_4*state_size^2'], [name+'_add0']),
