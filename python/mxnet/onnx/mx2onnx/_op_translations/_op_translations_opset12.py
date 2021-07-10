@@ -4528,10 +4528,8 @@ def convert_RNN(node, **kwargs):
         create_tensor([8*state_size], name+'_8*state_size', kwargs['initializer'])
         create_tensor([4*state_size*state_size], name+'_4*state_size^2', kwargs['initializer'])
         create_tensor([1, 8*state_size], name+'_B_shape', kwargs['initializer'])
-
         if num_layers == 2:
             create_tensor([1, 4*state_size, state_size], name+'_WR_shape', kwargs['initializer'])
-            
             if bidirectional != 'False':
                 create_tensor([-1], name+'_-1', kwargs['initializer'])
                 create_tensor([10*4*state_size*state_size], name+'_WR_offset', kwargs['initializer'])
@@ -4541,55 +4539,55 @@ def convert_RNN(node, **kwargs):
                     #Layer 0 fwd
                     # get W
                     make_node('Slice', [param, name+'_0', name+'_4*state_size^2'], [name+'_W0_fwd_1d']),
-                    make_node('Split', [name+'_W0_fwd_1d'], 
-                                [name+'_W00_fwd', name+'_W01_fwd', name+'_W02_fwd', name+'_W03_fwd']),
-                    make_node('Concat', [name+'_W00_fwd', name+'_W03_fwd', name+'_W01_fwd', name+'_W02_fwd'], 
-                                [name+'_W0_fwd_'], axis=0),
+                    make_node('Split', [name+'_W0_fwd_1d'],
+                              [name+'_W00_fwd', name+'_W01_fwd', name+'_W02_fwd', name+'_W03_fwd']),
+                    make_node('Concat', [name+'_W00_fwd', name+'_W03_fwd', name+'_W01_fwd', name+'_W02_fwd'],
+                              [name+'_W0_fwd_'], axis=0),
                     make_node('Reshape', [name+'_W0_fwd_', name+'_WR_shape'], [name+'_W0_fwd']),
                     # get R
                     make_node('Add', [name+'_4*state_size^2', name+'_4*state_size^2'], [name+'_R0_fwd_offset']),
                     make_node('Slice', [param, name+'_4*state_size^2', name+'_R0_fwd_offset'], [name+'_R0_fwd_1d']),
-                    make_node('Split', [name+'_R0_fwd_1d'], 
-                                [name+'_R00_fwd', name+'_R01_fwd', name+'_R02_fwd', name+'_R03_fwd']),
-                    make_node('Concat', [name+'_R00_fwd', name+'_R03_fwd', name+'_R01_fwd', name+'_R02_fwd'], 
-                                [name+'_R0_fwd_'], axis=0),
+                    make_node('Split', [name+'_R0_fwd_1d'],
+                              [name+'_R00_fwd', name+'_R01_fwd', name+'_R02_fwd', name+'_R03_fwd']),
+                    make_node('Concat', [name+'_R00_fwd', name+'_R03_fwd', name+'_R01_fwd', name+'_R02_fwd'],
+                              [name+'_R0_fwd_'], axis=0),
                     make_node('Reshape', [name+'_R0_fwd_', name+'_WR_shape'], [name+'_R0_fwd']),
                     # get B
                     make_node('Add', [name+'_WR_offset', name+'_8*state_size'], [name+'_B0_fwd_offset']),
                     make_node('Slice', [param, name+'_WR_offset', name+'_B0_fwd_offset'], [name+'_B0_fwd_1d']),
-                    make_node('Split', [name+'_B0_fwd_1d'], 
-                                [name+'_B00_fwd', name+'_B01_fwd', name+'_B02_fwd', name+'_B03_fwd',
-                                 name+'_B04_fwd', name+'_B05_fwd', name+'_B06_fwd', name+'_B07_fwd']),
+                    make_node('Split', [name+'_B0_fwd_1d'],
+                              [name+'_B00_fwd', name+'_B01_fwd', name+'_B02_fwd', name+'_B03_fwd',
+                               name+'_B04_fwd', name+'_B05_fwd', name+'_B06_fwd', name+'_B07_fwd']),
                     make_node('Concat', [name+'_B00_fwd', name+'_B03_fwd', name+'_B01_fwd', name+'_B02_fwd',
-                                         name+'_B04_fwd', name+'_B07_fwd', name+'_B05_fwd', name+'_B06_fwd'], 
-                                [name+'_B0_fwd_'], axis=0),
+                                         name+'_B04_fwd', name+'_B07_fwd', name+'_B05_fwd', name+'_B06_fwd'],
+                              [name+'_B0_fwd_'], axis=0),
                     make_node('Reshape', [name+'_B0_fwd_', name+'_B_shape'], [name+'_B0_fwd']),
                     #Layer 0 bwd
                     # get W
                     make_node('Add', [name+'_R0_fwd_offset', name+'_4*state_size^2'], [name+'_W0_bwd_offset']),
                     make_node('Slice', [param, name+'_R0_fwd_offset', name+'_W0_bwd_offset'], [name+'_W0_bwd_1d']),
-                    make_node('Split', [name+'_W0_bwd_1d'], 
-                                [name+'_W00_bwd', name+'_W01_bwd', name+'_W02_bwd', name+'_W03_bwd']),
-                    make_node('Concat', [name+'_W00_bwd', name+'_W03_bwd', name+'_W01_bwd', name+'_W02_bwd'], 
-                                [name+'_W0_bwd_'], axis=0),
+                    make_node('Split', [name+'_W0_bwd_1d'],
+                              [name+'_W00_bwd', name+'_W01_bwd', name+'_W02_bwd', name+'_W03_bwd']),
+                    make_node('Concat', [name+'_W00_bwd', name+'_W03_bwd', name+'_W01_bwd', name+'_W02_bwd'],
+                              [name+'_W0_bwd_'], axis=0),
                     make_node('Reshape', [name+'_W0_bwd_', name+'_WR_shape'], [name+'_W0_bwd']),
                     # get R
                     make_node('Add', [name+'_W0_bwd_offset', name+'_4*state_size^2'], [name+'_R0_bwd_offset']),
                     make_node('Slice', [param, name+'_W0_bwd_offset', name+'_R0_bwd_offset'], [name+'_R0_bwd_1d']),
-                    make_node('Split', [name+'_R0_bwd_1d'], 
-                                [name+'_R00_bwd', name+'_R01_bwd', name+'_R02_bwd', name+'_R03_bwd']),
-                    make_node('Concat', [name+'_R00_bwd', name+'_R03_bwd', name+'_R01_bwd', name+'_R02_bwd'], 
-                                [name+'_R0_bwd_'], axis=0),
+                    make_node('Split', [name+'_R0_bwd_1d'],
+                              [name+'_R00_bwd', name+'_R01_bwd', name+'_R02_bwd', name+'_R03_bwd']),
+                    make_node('Concat', [name+'_R00_bwd', name+'_R03_bwd', name+'_R01_bwd', name+'_R02_bwd'],
+                              [name+'_R0_bwd_'], axis=0),
                     make_node('Reshape', [name+'_R0_bwd_', name+'_WR_shape'], [name+'_R0_bwd']),
                     # get B
                     make_node('Add', [name+'_B0_fwd_offset', name+'_8*state_size'], [name+'_B0_bwd_offset']),
                     make_node('Slice', [param, name+'_B0_fwd_offset', name+'_B0_bwd_offset'], [name+'_B0_bwd_1d']),
-                    make_node('Split', [name+'_B0_bwd_1d'], 
-                                [name+'_B00_bwd', name+'_B01_bwd', name+'_B02_bwd', name+'_B03_bwd',
-                                 name+'_B04_bwd', name+'_B05_bwd', name+'_B06_bwd', name+'_B07_bwd']),
+                    make_node('Split', [name+'_B0_bwd_1d'],
+                              [name+'_B00_bwd', name+'_B01_bwd', name+'_B02_bwd', name+'_B03_bwd',
+                               name+'_B04_bwd', name+'_B05_bwd', name+'_B06_bwd', name+'_B07_bwd']),
                     make_node('Concat', [name+'_B00_bwd', name+'_B03_bwd', name+'_B01_bwd', name+'_B02_bwd',
-                                         name+'_B04_bwd', name+'_B07_bwd', name+'_B05_bwd', name+'_B06_bwd'], 
-                                [name+'_B0_bwd_'], axis=0),
+                                         name+'_B04_bwd', name+'_B07_bwd', name+'_B05_bwd', name+'_B06_bwd'],
+                              [name+'_B0_bwd_'], axis=0),
                     make_node('Reshape', [name+'_B0_bwd_', name+'_B_shape'], [name+'_B0_bwd']),
                     # get initial states
                     make_node('Split', [input_nodes[2]], [name+'_initial_h0', name+'_initial_h1'], axis=0),
@@ -4603,7 +4601,7 @@ def convert_RNN(node, **kwargs):
                     make_node('Concat', [name+'_B0_fwd', name+'_B0_bwd'], [name+'_B0'], axis=0),
                     make_node('LSTM', [data, name+'_W0', name+'_R0', name+'_B0',
                                        name+'_seq_len', name+'_initial_h0', name+'_initial_c0'],
-                              [name+'_lstm0_out_', name+'_lstm0_h', name+'_lstm0_c'], 
+                              [name+'_lstm0_out_', name+'_lstm0_h', name+'_lstm0_c'],
                               hidden_size=state_size, direction='bidirectional'),
                     make_node('Transpose', [name+'_lstm0_out_'], [name+'_lstm0_out_t'], perm=[0, 2, 1, 3]),
                     make_node('Concat', [name+'_seq_length', name+'_batch_size', name+'_-1'],
@@ -4614,55 +4612,55 @@ def convert_RNN(node, **kwargs):
                     # get W
                     make_node('Add', [name+'_R0_bwd_offset', name+'_8*state_size^2'], [name+'_W1_fwd_offset']),
                     make_node('Slice', [param, name+'_R0_bwd_offset', name+'_W1_fwd_offset'], [name+'_W1_fwd_1d']),
-                    make_node('Split', [name+'_W1_fwd_1d'], 
-                                [name+'_W10_fwd', name+'_W11_fwd', name+'_W12_fwd', name+'_W13_fwd']),
-                    make_node('Concat', [name+'_W10_fwd', name+'_W13_fwd', name+'_W11_fwd', name+'_W12_fwd'], 
-                                [name+'_W1_fwd_'], axis=0),
+                    make_node('Split', [name+'_W1_fwd_1d'],
+                              [name+'_W10_fwd', name+'_W11_fwd', name+'_W12_fwd', name+'_W13_fwd']),
+                    make_node('Concat', [name+'_W10_fwd', name+'_W13_fwd', name+'_W11_fwd', name+'_W12_fwd'],
+                              [name+'_W1_fwd_'], axis=0),
                     make_node('Reshape', [name+'_W1_fwd_', name+'_W1_shape'], [name+'_W1_fwd']),
                     # get R
                     make_node('Add', [name+'_W1_fwd_offset', name+'_4*state_size^2'], [name+'_R1_fwd_offset']),
                     make_node('Slice', [param, name+'_W1_fwd_offset', name+'_R1_fwd_offset'], [name+'_R1_fwd_1d']),
-                    make_node('Split', [name+'_R1_fwd_1d'], 
-                                [name+'_R10_fwd', name+'_R11_fwd', name+'_R12_fwd', name+'_R13_fwd']),
-                    make_node('Concat', [name+'_R10_fwd', name+'_R13_fwd', name+'_R11_fwd', name+'_R12_fwd'], 
-                                [name+'_R1_fwd_'], axis=0),
+                    make_node('Split', [name+'_R1_fwd_1d'],
+                              [name+'_R10_fwd', name+'_R11_fwd', name+'_R12_fwd', name+'_R13_fwd']),
+                    make_node('Concat', [name+'_R10_fwd', name+'_R13_fwd', name+'_R11_fwd', name+'_R12_fwd'],
+                              [name+'_R1_fwd_'], axis=0),
                     make_node('Reshape', [name+'_R1_fwd_', name+'_WR_shape'], [name+'_R1_fwd']),
                     # get B
                     make_node('Add', [name+'_B0_bwd_offset', name+'_8*state_size'], [name+'_B1_fwd_offset']),
                     make_node('Slice', [param, name+'_B0_bwd_offset', name+'_B1_fwd_offset'], [name+'_B1_fwd_1d']),
-                    make_node('Split', [name+'_B1_fwd_1d'], 
-                                [name+'_B10_fwd', name+'_B11_fwd', name+'_B12_fwd', name+'_B13_fwd',
-                                 name+'_B14_fwd', name+'_B15_fwd', name+'_B16_fwd', name+'_B17_fwd']),
+                    make_node('Split', [name+'_B1_fwd_1d'],
+                              [name+'_B10_fwd', name+'_B11_fwd', name+'_B12_fwd', name+'_B13_fwd',
+                               name+'_B14_fwd', name+'_B15_fwd', name+'_B16_fwd', name+'_B17_fwd']),
                     make_node('Concat', [name+'_B10_fwd', name+'_B13_fwd', name+'_B11_fwd', name+'_B12_fwd',
-                                        name+'_B14_fwd', name+'_B17_fwd', name+'_B15_fwd', name+'_B16_fwd'], 
-                                [name+'_B1_fwd_'], axis=0),
+                                        name+'_B14_fwd', name+'_B17_fwd', name+'_B15_fwd', name+'_B16_fwd'],
+                              [name+'_B1_fwd_'], axis=0),
                     make_node('Reshape', [name+'_B1_fwd_', name+'_B_shape'], [name+'_B1_fwd']),
                     #Layer 1 bwd
                     # get W
                     make_node('Add', [name+'_R1_fwd_offset', name+'_8*state_size^2'], [name+'_W1_bwd_offset']),
                     make_node('Slice', [param, name+'_R1_fwd_offset', name+'_W1_bwd_offset'], [name+'_W1_bwd_1d']),
-                    make_node('Split', [name+'_W1_bwd_1d'], 
-                                [name+'_W10_bwd', name+'_W11_bwd', name+'_W12_bwd', name+'_W13_bwd']),
+                    make_node('Split', [name+'_W1_bwd_1d'],
+                              [name+'_W10_bwd', name+'_W11_bwd', name+'_W12_bwd', name+'_W13_bwd']),
                     make_node('Concat', [name+'_W10_bwd', name+'_W13_bwd', name+'_W11_bwd', name+'_W12_bwd'], 
-                                [name+'_W1_bwd_'], axis=0),
+                              [name+'_W1_bwd_'], axis=0),
                     make_node('Reshape', [name+'_W1_bwd_', name+'_W1_shape'], [name+'_W1_bwd']),
                     # get R
                     make_node('Add', [name+'_W1_bwd_offset', name+'_4*state_size^2'], [name+'_R1_bwd_offset']),
                     make_node('Slice', [param, name+'_W1_bwd_offset', name+'_R1_bwd_offset'], [name+'_R1_bwd_1d']),
-                    make_node('Split', [name+'_R1_bwd_1d'], 
-                                [name+'_R10_bwd', name+'_R11_bwd', name+'_R12_bwd', name+'_R13_bwd']),
-                    make_node('Concat', [name+'_R10_bwd', name+'_R13_bwd', name+'_R11_bwd', name+'_R12_bwd'], 
-                                [name+'_R1_bwd_'], axis=0),
+                    make_node('Split', [name+'_R1_bwd_1d'],
+                              [name+'_R10_bwd', name+'_R11_bwd', name+'_R12_bwd', name+'_R13_bwd']),
+                    make_node('Concat', [name+'_R10_bwd', name+'_R13_bwd', name+'_R11_bwd', name+'_R12_bwd'],
+                              [name+'_R1_bwd_'], axis=0),
                     make_node('Reshape', [name+'_R1_bwd_', name+'_WR_shape'], [name+'_R1_bwd']),
                     # get B
                     make_node('Add', [name+'_B1_fwd_offset', name+'_8*state_size'], [name+'_B1_bwd_offset']),
                     make_node('Slice', [param, name+'_B1_fwd_offset', name+'_B1_bwd_offset'], [name+'_B1_bwd_1d']),
-                    make_node('Split', [name+'_B1_bwd_1d'], 
-                                [name+'_B10_bwd', name+'_B11_bwd', name+'_B12_bwd', name+'_B13_bwd',
-                                 name+'_B14_bwd', name+'_B15_bwd', name+'_B16_bwd', name+'_B17_bwd']),
+                    make_node('Split', [name+'_B1_bwd_1d'],
+                              [name+'_B10_bwd', name+'_B11_bwd', name+'_B12_bwd', name+'_B13_bwd',
+                               name+'_B14_bwd', name+'_B15_bwd', name+'_B16_bwd', name+'_B17_bwd']),
                     make_node('Concat', [name+'_B10_bwd', name+'_B13_bwd', name+'_B11_bwd', name+'_B12_bwd',
-                                        name+'_B14_bwd', name+'_B17_bwd', name+'_B15_bwd', name+'_B16_bwd'], 
-                                [name+'_B1_bwd_'], axis=0),
+                                        name+'_B14_bwd', name+'_B17_bwd', name+'_B15_bwd', name+'_B16_bwd'],
+                              [name+'_B1_bwd_'], axis=0),
                     make_node('Reshape', [name+'_B1_bwd_', name+'_B_shape'], [name+'_B1_bwd']),
                     # Layer 1 LSTM
                     make_node('Concat', [name+'_W1_fwd', name+'_W1_bwd'], [name+'_W1'], axis=0),
@@ -4670,7 +4668,7 @@ def convert_RNN(node, **kwargs):
                     make_node('Concat', [name+'_B1_fwd', name+'_B1_bwd'], [name+'_B1'], axis=0),
                     make_node('LSTM', [name+'_lstm0_out', name+'_W1', name+'_R1', name+'_B1',
                                        name+'_seq_len', name+'_initial_h1', name+'_initial_c1'],
-                              [name+'_lstm1_out_', name+'_lstm1_h', name+'_lstm1_c'], 
+                              [name+'_lstm1_out_', name+'_lstm1_h', name+'_lstm1_c'],
                               hidden_size=state_size, direction='bidirectional'),
                     make_node('Transpose', [name+'_lstm1_out_'], [name+'_lstm1_out_t'], perm=[0, 2, 1, 3]),
                     make_node('Reshape', [name+'_lstm1_out_t', name+'_shape_out'], [name]),
@@ -4708,8 +4706,8 @@ def convert_RNN(node, **kwargs):
                     make_node("Cast", [name+'_seq_len_'], [name+"_seq_len"], to=int(TensorProto.INT32)),
                     # Layer 0 LSTM
                     make_node('LSTM', [data, name+'_W0', name+'_R0', name+'_B0', name+'_seq_len',
-                                    name+'_initial_h0', name+'_initial_c0'],
-                            [name+'_lstm0_out_', name+'_lstm0_h', name+'_lstm0_c'], hidden_size=state_size),
+                                       name+'_initial_h0', name+'_initial_c0'],
+                              [name+'_lstm0_out_', name+'_lstm0_h', name+'_lstm0_c'], hidden_size=state_size),
                     make_node('Squeeze', [name+'_lstm0_out_'], [name+'_lstm0_out'], axes=[1]),
 
                     # Layer 1
@@ -4728,14 +4726,14 @@ def convert_RNN(node, **kwargs):
                     make_node('Add', [name+'_B0_offset', name+'_8*state_size'], [name+'_B1_offset']),
                     make_node('Slice', [param, name+'_B0_offset', name+'_B1_offset'], [name+'_B1_1d']),
                     make_node('Split', [name+'_B1_1d'], [name+'_B10', name+'_B11', name+'_B12', name+'_B13',
-                                                        name+'_B14', name+'_B15', name+'_B16', name+'_B17']),
+                                                         name+'_B14', name+'_B15', name+'_B16', name+'_B17']),
                     make_node('Concat', [name+'_B10', name+'_B13', name+'_B11', name+'_B12',
-                                        name+'_B14', name+'_B17', name+'_B15', name+'_B16'], [name+'_B1_'], axis=0),
+                                         name+'_B14', name+'_B17', name+'_B15', name+'_B16'], [name+'_B1_'], axis=0),
                     make_node('Reshape', [name+'_B1_', name+'_B_shape'], [name+'_B1']),
                     # Layer 1 LSTM
                     make_node('LSTM', [name+'_lstm0_out', name+'_W1', name+'_R1', name+'_B1', name+'_seq_len',
-                                    name+'_initial_h1', name+'_initial_c1'],
-                            [name+'_lstm1_out_', name+'_lstm1_h', name+'_lstm1_c'], hidden_size=state_size),
+                                       name+'_initial_h1', name+'_initial_c1'],
+                              [name+'_lstm1_out_', name+'_lstm1_h', name+'_lstm1_c'], hidden_size=state_size),
                     make_node('Squeeze', [name+'_lstm1_out_'], [name], axes=[1]),
                     make_node('Concat', [name+'_lstm0_h', name+'_lstm1_h'], [name+'1'], axis=0),
                     make_node('Concat', [name+'_lstm0_c', name+'_lstm1_c'], [name+'2'], axis=0),
@@ -4743,7 +4741,6 @@ def convert_RNN(node, **kwargs):
         elif num_layers == 1:
             create_tensor([4*state_size], name+'_4*state_size', kwargs['initializer'])
             create_tensor([1, 4*state_size, state_size], name+'_R_shape', kwargs['initializer'])
-
             if bidirectional == 'False':
                 nodes += [
                     # get W
