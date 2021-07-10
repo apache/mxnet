@@ -297,7 +297,11 @@ def load_docker_cache(platform, tag, docker_registry) -> None:
             env = os.environ.copy()
             env["DOCKER_CACHE_REGISTRY"] = docker_registry
             if "dkr.ecr" in docker_registry:
-                docker_cache._ecr_login(docker_registry)
+                try:
+                    import docker_cache
+                    docker_cache._ecr_login(docker_registry)
+                except Exception:
+                    logging.exception('Unable to login to ECR...')
             cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', platform]
             logging.info("Running command: 'DOCKER_CACHE_REGISTRY=%s %s'", docker_registry, ' '.join(cmd))
             check_call(cmd, env=env)
