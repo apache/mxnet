@@ -5148,7 +5148,7 @@ def convert_broadcast_npi_less_equal(node, **kwargs):
 
 
 @mx_op.register('_npi_argmin')
-def convert_argmin(node, **kwargs):
+def convert_np_argmin(node, **kwargs):
     """ _npi_argmin
     """
     from onnx.helper import make_node
@@ -5173,7 +5173,7 @@ def convert_argmin(node, **kwargs):
 
 
 @mx_op.register('_npi_argmax')
-def convert_argmin(node, **kwargs):
+def convert_np_argmax(node, **kwargs):
     """ _npi_argmax
     """
     from onnx.helper import make_node
