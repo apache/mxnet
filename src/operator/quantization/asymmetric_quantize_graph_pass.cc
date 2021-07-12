@@ -22,7 +22,7 @@
  * \file asymmetric_quantize_graph_pass.cc
  * \brief
  */
-
+#if MXNET_USE_MKLDNN == 1
 #include "quantize_graph_pass.h"
 
 namespace mxnet {
@@ -151,7 +151,6 @@ Graph OneDNNShiftedQuantization(Graph&& g) {
   std::vector<std::string> new_arg_names;
   std::vector<NDArray *> new_arg_vector;
 
-#if MXNET_USE_MKLDNN == 1
   if (!disable_shifted_quant) {
     DFSVisit(g.outputs, [&](const ObjectPtr &node) {
       Pattern p = FindPattern(node);
@@ -171,7 +170,6 @@ Graph OneDNNShiftedQuantization(Graph&& g) {
       }
     });
   }
-#endif
   g.attrs["new_arg_names"] = std::make_shared<nnvm::any>(new_arg_names);
   g.attrs["new_args"] = std::make_shared<nnvm::any>(new_arg_vector);
   return g;
@@ -185,3 +183,4 @@ NNVM_REGISTER_PASS(OneDNNShiftedQuantization)
 }  // namespace asym_quant
 }  // namespace op
 }  // namespace mxnet
+#endif  // MXNET_USE_MKLDNN == 1
