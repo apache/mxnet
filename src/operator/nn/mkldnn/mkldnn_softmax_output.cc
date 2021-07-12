@@ -58,16 +58,18 @@ class MKLDNNSoftmaxOutputFwd {
     fwd_ = std::make_shared<mkldnn::softmax_forward>(fwd_pd);
   }
 
-  const inline mkldnn::softmax_forward& GetFwd() const { return *fwd_; }
+  const inline mkldnn::softmax_forward& GetFwd() const {
+    return *fwd_;
+  }
 };
 
 static MKLDNNSoftmaxOutputFwd& GetSoftmaxOutputForward(const SoftmaxOutputParam& param,
                                                        const OpContext& ctx,
                                                        const NDArray& in_data) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNSoftmaxOuputSignature, MKLDNNSoftmaxOutputFwd,
-                                         OpHash>
-      fwds;
+  static thread_local std::
+      unordered_map<MKLDNNSoftmaxOuputSignature, MKLDNNSoftmaxOutputFwd, OpHash>
+          fwds;
 #else
   static MX_THREAD_LOCAL
       std::unordered_map<MKLDNNSoftmaxOuputSignature, MKLDNNSoftmaxOutputFwd, OpHash>
@@ -108,8 +110,8 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
   }
 
   auto input_mem = idata.GetMKLDNNData();
-  auto out_mem   = CreateMKLDNNMem(out_data[softmaxout_enum::kOut], input_mem->get_desc(),
-                                 req[softmaxout_enum::kOut]);
+  auto out_mem   = CreateMKLDNNMem(
+      out_data[softmaxout_enum::kOut], input_mem->get_desc(), req[softmaxout_enum::kOut]);
 
   MKLDNNSoftmaxOutputFwd& fwd = GetSoftmaxOutputForward(param, ctx, idata);
 

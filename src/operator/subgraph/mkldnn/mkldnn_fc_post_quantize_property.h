@@ -71,10 +71,13 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
     return false;
   }
 
-  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override { return false; }
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+    return false;
+  }
 
   bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
-    if (status == kFail || status == kSuccess || new_node.is_variable()) return false;
+    if (status == kFail || status == kSuccess || new_node.is_variable())
+      return false;
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list.back() != &n) {
@@ -155,7 +158,8 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
     nnvm::ObjectPtr dequantize_node = nullptr;
 
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable()) return;
+      if (node->is_variable())
+        return;
       if (node->op() == Op::Get(QUANTIZED_FC_NAME)) {
         fc_node = node;
       } else if (node->op() == Op::Get("_contrib_requantize")) {
@@ -171,8 +175,9 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
     CHECK(requantize_param.min_calib_range.has_value());
     CHECK(requantize_param.max_calib_range.has_value());
 
-    // When only fused quantized_fullyconnected and requantize, set min/max_cablib_range,
-    // When fused quantized_fullyconnected + requantize + dequantize, set dequantize flag to true.
+    // When only fused quantized_fullyconnected and requantize, set
+    // min/max_cablib_range, When fused quantized_fullyconnected + requantize +
+    // dequantize, set dequantize flag to true.
     if (dequantize_node != nullptr) {
       fc_node->attrs.dict["enable_float_output"] = "True";
     } else {

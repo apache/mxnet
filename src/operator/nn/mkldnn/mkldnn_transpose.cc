@@ -92,16 +92,18 @@ class MKLDNNTransposeForward {
     if (data.IsMKLDNNData()) {
       this->data_->set_data_handle(data.GetMKLDNNData()->get_data_handle());
     } else {
-      MSHADOW_TYPE_SWITCH(data.dtype(), DTYPE,
-                          { this->data_->set_data_handle(data.data().dptr<DTYPE>()); });
+      MSHADOW_TYPE_SWITCH(
+          data.dtype(), DTYPE, { this->data_->set_data_handle(data.data().dptr<DTYPE>()); });
     }
 
     CHECK(!output.IsMKLDNNData());
-    MSHADOW_TYPE_SWITCH(output.dtype(), DTYPE,
-                        { this->out_->set_data_handle(output.data().dptr<DTYPE>()); });
+    MSHADOW_TYPE_SWITCH(
+        output.dtype(), DTYPE, { this->out_->set_data_handle(output.data().dptr<DTYPE>()); });
   }
 
-  const mkldnn::reorder& GetFwd() const { return *transpose_; }
+  const mkldnn::reorder& GetFwd() const {
+    return *transpose_;
+  }
 
   void Execute() const {
     auto stream = MKLDNNStream::Get();

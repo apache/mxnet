@@ -85,7 +85,8 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
       MKLDNNStream::Get()->Submit();
     }
   } else {
-    if (in_buffer.IsView() && in_buffer.IsMKLDNNData()) in_buffer = inputs[0].Reorder2Default();
+    if (in_buffer.IsView() && in_buffer.IsMKLDNNData())
+      in_buffer = inputs[0].Reorder2Default();
     auto i_mem = in_buffer.GetMKLDNNData();
 
     if (param_.min_calib_range.has_value() && param_.max_calib_range.has_value()) {
@@ -101,12 +102,16 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
 #pragma omp parallel for num_threads(nthreads)
       for (index_t i = 0; i < static_cast<index_t>(in_buffer.shape().Size()); i++) {
         int tid = omp_get_thread_num();
-        if (in_ptr[i] > data_maxs[tid]) data_maxs[tid] = in_ptr[i];
-        if (in_ptr[i] < data_mins[tid]) data_mins[tid] = in_ptr[i];
+        if (in_ptr[i] > data_maxs[tid])
+          data_maxs[tid] = in_ptr[i];
+        if (in_ptr[i] < data_mins[tid])
+          data_mins[tid] = in_ptr[i];
       }
       for (index_t i = 0; i < nthreads; i++) {
-        if (data_maxs[i] > data_max) data_max = data_maxs[i];
-        if (data_mins[i] < data_min) data_min = data_mins[i];
+        if (data_maxs[i] > data_max)
+          data_max = data_maxs[i];
+        if (data_mins[i] < data_min)
+          data_min = data_mins[i];
       }
 
       if (initalized_ && (cached_data_min_ != data_min || cached_data_max_ != data_max))

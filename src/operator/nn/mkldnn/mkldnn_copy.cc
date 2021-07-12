@@ -35,7 +35,8 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs,
                 const NDArray& in_data,
                 const OpReqType& req,
                 const NDArray& out_data) {
-  if (req == kNullOp || req == kWriteInplace) return;
+  if (req == kNullOp || req == kWriteInplace)
+    return;
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   auto in_mem = in_data.GetMKLDNNData();
   if (req == kAddTo) {
@@ -44,7 +45,8 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs,
     // as the input output. If not, we'll have to reorder memory.
     auto out_mem = out_data.GetMKLDNNData();
     in_mem       = in_data.GetMKLDNNData(out_mem->get_desc());
-    if (in_mem == nullptr) in_mem = in_data.GetMKLDNNDataReorder(out_mem->get_desc());
+    if (in_mem == nullptr)
+      in_mem = in_data.GetMKLDNNDataReorder(out_mem->get_desc());
     MKLDNNSum(*out_mem, *in_mem, *out_mem);
   } else {
     const_cast<NDArray&>(out_data).CopyFrom(*in_mem);

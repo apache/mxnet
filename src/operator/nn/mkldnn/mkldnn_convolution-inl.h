@@ -96,9 +96,13 @@ class MKLDNNConvForward {
                     const NDArray* bias,
                     const NDArray& output);
 
-  const mkldnn::convolution_forward& GetFwd() const { return *fwd_; }
+  const mkldnn::convolution_forward& GetFwd() const {
+    return *fwd_;
+  }
 
-  const mkldnn::convolution_forward::primitive_desc& GetPd() const { return *pd_; }
+  const mkldnn::convolution_forward::primitive_desc& GetPd() const {
+    return *pd_;
+  }
 
  private:
   std::shared_ptr<mkldnn::convolution_forward> fwd_;
@@ -135,9 +139,13 @@ class MKLDNNConvBackward {
                      const NDArray* bias,
                      const NDArray& output);
 
-  const mkldnn::convolution_backward_data& GetBwdData() const { return *bwd_data_; }
+  const mkldnn::convolution_backward_data& GetBwdData() const {
+    return *bwd_data_;
+  }
 
-  const mkldnn::convolution_backward_weights& GetBwdWeights() const { return *bwd_weight_; }
+  const mkldnn::convolution_backward_weights& GetBwdWeights() const {
+    return *bwd_weight_;
+  }
 
   const mkldnn::convolution_backward_data::primitive_desc& GetDataPd() const {
     return *bwd_data_pd_;

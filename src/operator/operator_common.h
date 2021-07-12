@@ -105,16 +105,24 @@ struct InferStorageTypeError : public dmlc::Error {
 
 /*! \brief check if shape is empty or contains unknown (0) dim.
  * DEPRECATED. */
-inline bool shape_is_none(const mxnet::TShape& x) { return !mxnet::shape_is_known(x); }
+inline bool shape_is_none(const mxnet::TShape& x) {
+  return !mxnet::shape_is_known(x);
+}
 
 /*! \brief check if type is none (-1) */
-inline bool type_is_none(const int& x) { return x == -1; }
+inline bool type_is_none(const int& x) {
+  return x == -1;
+}
 
 /*! \brief check if type is none (-1) */
-inline bool storage_type_is_none(const int& x) { return x == -1; }
+inline bool storage_type_is_none(const int& x) {
+  return x == -1;
+}
 
 /*! \brief check if shape is scalar({1}). */
-inline bool shape_is_scalar(const mxnet::TShape& x) { return x.ndim() == 0; }
+inline bool shape_is_scalar(const mxnet::TShape& x) {
+  return x.ndim() == 0;
+}
 
 /*! \brief get string representation of shape */
 inline std::string shape_string(const mxnet::TShape& x) {
@@ -188,10 +196,9 @@ inline bool type_assign(int* y, const int& x) {
 }
 
 /*!
- * \brief Assign x to y. Checks for compatiblity when y is not DispatchMode::kUndefined.
- * \param y target mode.
- * \param x source mode.
- * \return whether x and y are compatible.
+ * \brief Assign x to y. Checks for compatiblity when y is not
+ * DispatchMode::kUndefined. \param y target mode. \param x source mode. \return
+ * whether x and y are compatible.
  */
 inline bool dispatch_mode_assign(DispatchMode* y, const DispatchMode& x) {
   if (*y == DispatchMode::kUndefined) {
@@ -207,11 +214,10 @@ inline bool dispatch_mode_assign(DispatchMode* y, const DispatchMode& x) {
 #define MXNET_ADD_SPARSE_OP_ALIAS(__name$) .add_alias("_sparse_" #__name$)
 
 /*!
- * \brief macro assign shape to out if out is unknown otherwise check consistency
- *  Use macro so we can see the error file more clearly
- * \param shape_array the shape array to store the result
- * \param index the index of in the array
- * \param shape the inferred shape
+ * \brief macro assign shape to out if out is unknown otherwise check
+ * consistency Use macro so we can see the error file more clearly \param
+ * shape_array the shape array to store the result \param index the index of in
+ * the array \param shape the inferred shape
  */
 #define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                              \
   {                                                                                \
@@ -224,11 +230,10 @@ inline bool dispatch_mode_assign(DispatchMode* y, const DispatchMode& x) {
   }
 
 /*!
- * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
- *  Use macro so we can see the error file more clearly
- * \param type_array the type array to store the result
- * \param index the index of in the array
- * \param type the inferred type
+ * \brief macro assign type to out if out is unknown (-1) otherwise check
+ * consistency Use macro so we can see the error file more clearly \param
+ * type_array the type array to store the result \param index the index of in
+ * the array \param type the inferred type
  */
 #define TYPE_ASSIGN_CHECK(type_array, index, type)                                            \
   {                                                                                           \
@@ -241,11 +246,10 @@ inline bool dispatch_mode_assign(DispatchMode* y, const DispatchMode& x) {
   }
 
 /*!
- * \brief macro assign storage type to out if out is unknown (-1) otherwise check consistency
- *  Use macro so we can see the error file more clearly
- * \param type_array the type array to store the result
- * \param index the index of in the array
- * \param type the inferred storage type
+ * \brief macro assign storage type to out if out is unknown (-1) otherwise
+ * check consistency Use macro so we can see the error file more clearly \param
+ * type_array the type array to store the result \param index the index of in
+ * the array \param type the inferred storage type
  */
 #define STORAGE_TYPE_ASSIGN_CHECK(type_array, index, type)                                        \
   {                                                                                               \
@@ -258,11 +262,10 @@ inline bool dispatch_mode_assign(DispatchMode* y, const DispatchMode& x) {
   }
 
 /*!
- * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
- *  Use macro so we can see the error file more clearly
- * \param type_array the type array to store the result
- * \param index the index of in the array
- * \param type the inferred dispatch type
+ * \brief macro assign type to out if out is unknown (-1) otherwise check
+ * consistency Use macro so we can see the error file more clearly \param
+ * type_array the type array to store the result \param index the index of in
+ * the array \param type the inferred dispatch type
  */
 #define DISPATCH_MODE_ASSIGN_CHECK(type_array, index, type)               \
   {                                                                       \
@@ -340,7 +343,8 @@ inline bool storage_type_assign(StorageTypeVector* stypes,
   return success;
 }
 
-/*! \brief update the stype vector to default storage and dispatch_mode to fallback
+/*! \brief update the stype vector to default storage and dispatch_mode to
+ * fallback
  */
 inline bool dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch) {
   for (auto& stype : *stypes) {
@@ -354,9 +358,11 @@ inline std::vector<nnvm::NodeEntry> CreateNodeEntries(
     nnvm::ObjectPtr pNode,
     const std::vector<nnvm::NodeEntry>* pOgrads = nullptr,
     const std::vector<nnvm::NodeEntry>* pInputs = nullptr) {
-  if (pOgrads) pNode->inputs.insert(pNode->inputs.end(), pOgrads->begin(), pOgrads->end());
+  if (pOgrads)
+    pNode->inputs.insert(pNode->inputs.end(), pOgrads->begin(), pOgrads->end());
 
-  if (pInputs) pNode->inputs.insert(pNode->inputs.end(), pInputs->begin(), pInputs->end());
+  if (pInputs)
+    pNode->inputs.insert(pNode->inputs.end(), pInputs->begin(), pInputs->end());
 
   if (!pNode->is_variable()) {
     CHECK_EQ(pNode->num_inputs(), pNode->inputs.size())
@@ -381,8 +387,10 @@ inline nnvm::ObjectPtr MakeNode(const char* op_name,
   auto p        = nnvm::Node::Create();
   p->attrs.op   = nnvm::Op::Get(op_name);
   p->attrs.name = name;
-  if (dict != nullptr) p->attrs.dict = *dict;
-  if (inputs != nullptr) p->inputs = *inputs;
+  if (dict != nullptr)
+    p->attrs.dict = *dict;
+  if (inputs != nullptr)
+    p->inputs = *inputs;
   if (fwd_node != nullptr) {
     p->control_deps.emplace_back(*fwd_node);
   }
@@ -417,7 +425,8 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
   return CreateNodeEntries(p);
 }
 
-// quick helper to make gradient nodes that simply pass back zero. could be used in output ops.
+// quick helper to make gradient nodes that simply pass back zero. could be used
+// in output ops.
 inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(const nnvm::ObjectPtr& n,
                                                       const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> ret;
@@ -437,10 +446,13 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(const nnvm::ObjectPtr& n,
 inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
   static const auto zero_op      = nnvm::Op::Get("_zeros");
   static const auto zero_like_op = nnvm::Op::Get("zeros_like");
-  if (ograds.empty()) return false;
+  if (ograds.empty())
+    return false;
   for (const auto& grad : ograds) {
-    if (!grad.node) return false;
-    if (grad.node->op() != zero_op && grad.node->op() != zero_like_op) return false;
+    if (!grad.node)
+      return false;
+    if (grad.node->op() != zero_op && grad.node->op() != zero_like_op)
+      return false;
   }
   return true;
 }
@@ -453,7 +465,8 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
     const std::vector<nnvm::NodeEntry>& ograds,
     const std::vector<nnvm::NodeEntry>& inputs,
     const std::unordered_map<std::string, std::string>& dict) {
-  if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+  if (CheckGradAllZero(ograds))
+    return MakeZeroGradNodes(n, ograds);
   auto p = MakeNode(op_name, n->attrs.name + "_backward", nullptr, &dict, &n);
 
   return CreateNodeEntries(p, &ograds, &inputs);
@@ -507,14 +520,20 @@ class OpSignature {
   uint64_t hash;
 
  public:
-  OpSignature() { hash = 0; }
+  OpSignature() {
+    hash = 0;
+  }
 
-  explicit OpSignature(uint64_t hash) { this->hash = hash; }
+  explicit OpSignature(uint64_t hash) {
+    this->hash = hash;
+  }
 
   /*
    * This is to reserve space for the vector.
    */
-  void Reserve(size_t num) { eles.reserve(num); }
+  void Reserve(size_t num) {
+    eles.reserve(num);
+  }
 
   /*
    * We provide different methods to add signature to an op.
@@ -630,18 +649,25 @@ class OpSignature {
   }
 
   bool operator==(const OpSignature& sign) const {
-    if (hash != sign.hash) return false;
-    if (eles.size() != sign.eles.size()) return false;
+    if (hash != sign.hash)
+      return false;
+    if (eles.size() != sign.eles.size())
+      return false;
     for (size_t i = 0; i < eles.size(); i++)
-      if (eles[i] != sign.eles[i]) return false;
+      if (eles[i] != sign.eles[i])
+        return false;
     return true;
   }
 
-  uint64_t GetHash() const { return hash; }
+  uint64_t GetHash() const {
+    return hash;
+  }
 };
 
 struct OpHash {
-  size_t operator()(const OpSignature& sign) const { return sign.GetHash(); }
+  size_t operator()(const OpSignature& sign) const {
+    return sign.GetHash();
+  }
 };
 
 template <typename ParamType>

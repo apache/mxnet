@@ -68,10 +68,13 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
     return false;
   }
 
-  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override { return false; }
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+    return false;
+  }
 
   bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
-    if (status_ == kFail || status_ == kSuccess || new_node.is_variable()) return false;
+    if (status_ == kFail || status_ == kSuccess || new_node.is_variable())
+      return false;
 
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
@@ -88,7 +91,8 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 
     switch (status_) {
       case kStart:
-        // Currently, For INT8 FC fusion, only supports relu/bounded_relu(clip)/abs.
+        // Currently, For INT8 FC fusion, only supports
+        // relu/bounded_relu(clip)/abs.
         if (new_node.op() == Op::Get("Activation")) {
           const ActivationParam& param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
           if ((quantized_ && SupportQuantizedMKLDNNAct(param)) ||
@@ -184,7 +188,8 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
     std::ostringstream node_name;
     node_name << "sg_mkldnn_";
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable()) return;
+      if (node->is_variable())
+        return;
       auto& sub_name = node->op()->name;
       if (sub_name == "FullyConnected") {
         node_name << "fully_connected_";

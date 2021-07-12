@@ -46,10 +46,10 @@ MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType& req,
 
   out_ = std::make_shared<mkldnn::memory>(temp_desc, engine, nullptr);
   if (req == kWriteInplace) {
-    // If the input has MKL-DNN internal layout, we need reorder it to a temporal buffer with
-    // default layout and copy from the temporal buffer back to output buffer which has the same
-    // address with input buffer.
-    // If the input has default layout, then nothing need to do.
+    // If the input has MKL-DNN internal layout, we need reorder it to a
+    // temporal buffer with default layout and copy from the temporal buffer
+    // back to output buffer which has the same address with input buffer. If
+    // the input has default layout, then nothing need to do.
     if (input.IsMKLDNNData()) {
       temp_ = std::make_shared<mkldnn::memory>(temp_desc, engine, nullptr);
       prims_.push_back(mkldnn::reorder(*in_mem, *temp_));  // reorder to default
@@ -62,7 +62,9 @@ MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType& req,
   }
 }
 
-int MKLDNNReshapeFwd::GetWorkspaceSize() { return temp_ ? temp_->get_desc().get_size() : 0; }
+int MKLDNNReshapeFwd::GetWorkspaceSize() {
+  return temp_ ? temp_->get_desc().get_size() : 0;
+}
 
 void MKLDNNReshapeFwd::Execute(const NDArray& input,
                                const NDArray& output,
@@ -118,8 +120,8 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const NDArray& input,
                           const OpReqType& req,
                           const NDArray& output) {
-  // For mkldnn non-supported input, it shouldn't hold mkldnn memory, so let's simply fallback to
-  // naive implement.
+  // For mkldnn non-supported input, it shouldn't hold mkldnn memory, so let's
+  // simply fallback to naive implement.
   const int input_ndims = input.shape().ndim();
   if ((input_ndims < 1 || input_ndims > 4) || !SupportMKLDNNQuantize(input.dtype())) {
     if (req != kWriteInplace) {
@@ -127,7 +129,8 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
     }
     return;
   }
-  if (req == kNullOp) return;
+  if (req == kNullOp)
+    return;
   CHECK_NE(req, kAddTo) << "kAddTo is not supported yet";
   auto fwd     = GetReshapeForward(req, input, output);
   auto ws_size = fwd.GetWorkspaceSize();

@@ -51,7 +51,9 @@ class MKLDNNQuantizedElemwiseAddFwd {
     data_.resize(data_md.size());
   }
 
-  const mkldnn::sum& GetFwd() const { return *fwd_; }
+  const mkldnn::sum& GetFwd() const {
+    return *fwd_;
+  }
 
  private:
   std::shared_ptr<mkldnn::sum> fwd_;
@@ -210,8 +212,8 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
       mkldnn::memory::desc(i_dims, output_data_type, mkldnn::memory::format_tag::any);
   MKLDNNQuantizedElemwiseAddFwd& fwd =
       GetQuantizedElemwiseAddForward(output_desc, scales, in_data, out_data, in_desc);
-  auto mem = CreateMKLDNNMem(out_data[quantized_elemwise_add_enum::kOut], fwd.fwd_pd.dst_desc(),
-                             req[0], &in_data[0]);
+  auto mem = CreateMKLDNNMem(
+      out_data[quantized_elemwise_add_enum::kOut], fwd.fwd_pd.dst_desc(), req[0], &in_data[0]);
   mkldnn_args_map_t args({{MKLDNN_ARG_MULTIPLE_SRC, *dataA_mem},
                           {MKLDNN_ARG_MULTIPLE_SRC + 1, *dataB_mem},
                           {MKLDNN_ARG_DST, *mem.second}});

@@ -73,8 +73,9 @@ static bool SgMKLDNNSelfAttQKInferType(const nnvm::NodeAttrs& attrs,
   const auto& param = nnvm::get<MKLDNNSelfAttParam>(attrs.parsed);
   if (param.quantized) {
     CHECK(in_types->at(0) == mshadow::kInt8)
-        << "QuantizedInterleavedMatMulSelfAttQK only supports int8 input, while " << in_types->at(0)
-        << " is given.";
+        << "QuantizedInterleavedMatMulSelfAttQK only supports int8 input, "
+           "while "
+        << in_types->at(0) << " is given.";
 
     TYPE_ASSIGN_CHECK(*in_types, 1, mshadow::kFloat32);  // min value
     TYPE_ASSIGN_CHECK(*in_types, 2, mshadow::kFloat32);  // max value
@@ -110,8 +111,8 @@ static bool SgMKLDNNSelfAttStorageType(const nnvm::NodeAttrs& attrs,
     for (int i = 0; i < base_num_inputs; i++) {
       base_in_attrs.emplace_back(in_attrs->at(i));
     }
-    bool ret = DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode, &base_in_attrs,
-                                            &base_out_attrs);
+    bool ret = DefaultSubgraphOpStorageType(
+        attrs, dev_mask, dispatch_mode, &base_in_attrs, &base_out_attrs);
 
     for (size_t i = 0; i < in_attrs->size(); ++i) {
       if (i < base_in_attrs.size())
@@ -154,7 +155,9 @@ class SgMKLDNNSelfAttQKOp {
                   const std::vector<OpReqType>& req,
                   const std::vector<NDArray>& outputs);
 
-  bool IsInitialized() { return initialized_; }
+  bool IsInitialized() {
+    return initialized_;
+  }
 
  private:
   bool initialized_{false};
@@ -291,8 +294,9 @@ void SgMKLDNNSelfAttQKOp::Forward(const OpContext& ctx,
     cached_key_mem_->set_data_handle(key_mem_ptr);
   });
 
-  MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType,
-                      { cached_out_mem_->set_data_handle(outputs[0].data().dptr<DType>()); });
+  MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
+    cached_out_mem_->set_data_handle(outputs[0].data().dptr<DType>());
+  });
 
   MKLDNNStream::Get()->RegisterPrimArgs(*fwd_, args_);
   MKLDNNStream::Get()->Submit();
@@ -450,7 +454,9 @@ class MKLDNNSelfAttValAttOp {
                   const std::vector<OpReqType>& req,
                   const std::vector<NDArray>& outputs);
 
-  bool IsInitialized() { return initialized_; }
+  bool IsInitialized() {
+    return initialized_;
+  }
 
  private:
   bool initialized_{false};

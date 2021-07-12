@@ -457,15 +457,16 @@ void TestOp(const OpAttrs& attrs, VerifyFunc verify_fn) {
         std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
         for (int i = 0; i < attrs.num_outputs; i++)
           out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds);
-        for (int i = 0; i < attrs.num_inputs; i++) inputs[i] = &in_arr.arr;
+        for (int i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &in_arr.arr;
         for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
           for (int i = 0; i < attrs.num_outputs; i++) {
             req[i]     = kWriteTo;
             outputs[i] = &out_arrs[i][output_i].arr;
           }
           PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-          Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req, dispatch,
-                                      mxnet::OpStatePtr());
+          Imperative::Get()->InvokeOp(
+              Context(), attrs.attrs, inputs, outputs, req, dispatch, mxnet::OpStatePtr());
           Engine::Get()->WaitForAll();
           verify_fn(inputs, outputs);
         }
@@ -478,19 +479,22 @@ void TestOp(const OpAttrs& attrs, VerifyFunc verify_fn) {
       in_arrs = GetTestInputArrays();
       for (auto& arr : in_arrs) {
         // If the array is a view, we shouldn't write data to it.
-        if (arr.arr.IsView()) continue;
+        if (arr.arr.IsView())
+          continue;
         NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-        for (int i = 0; i < attrs.num_inputs; i++) inputs[i] = &arr.arr;
+        for (int i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &arr.arr;
         for (int i = 0; i < attrs.num_outputs; i++) {
           req[i]     = kWriteInplace;
           outputs[i] = &arr.arr;
         }
         PrintVerifyMsg(orig, arr);
-        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req, dispatch,
-                                    mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(
+            Context(), attrs.attrs, inputs, outputs, req, dispatch, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
         std::vector<NDArray*> orig_inputs(attrs.num_inputs);
-        for (int i = 0; i < attrs.num_inputs; i++) orig_inputs[i] = &orig.arr;
+        for (int i = 0; i < attrs.num_inputs; i++)
+          orig_inputs[i] = &orig.arr;
         verify_fn(orig_inputs, outputs);
       }
     }
@@ -503,7 +507,8 @@ void TestOp(const OpAttrs& attrs, VerifyFunc verify_fn) {
       for (auto& dispatch : dispatches) {
         for (int i = 0; i < attrs.num_outputs; i++)
           out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds);
-        for (size_t i = 0; i < attrs.num_inputs; i++) inputs[i] = &in_arr.arr;
+        for (size_t i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &in_arr.arr;
         for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
           NDArray tmp;
           for (size_t i = 0; i < attrs.num_outputs; i++) {
@@ -514,8 +519,8 @@ void TestOp(const OpAttrs& attrs, VerifyFunc verify_fn) {
             req[i]              = kAddTo;
           }
           PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-          Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req, dispatch,
-                                      mxnet::OpStatePtr());
+          Imperative::Get()->InvokeOp(
+              Context(), attrs.attrs, inputs, outputs, req, dispatch, mxnet::OpStatePtr());
           Engine::Get()->WaitForAll();
           VerifyAddRequest(inputs, original_outputs, outputs, verify_fn);
         }
@@ -540,7 +545,8 @@ void TestConcatOp(const OpAttrs& attrs, VerifyFunc verify_fn, bool backwards = f
     std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
     int dim             = std::stoi(str_dim);
     std::vector<float> scale_vector(dim + 1);
-    for (size_t i = 0; i < dim + 1; ++i) scale_vector[i] = 1;
+    for (size_t i = 0; i < dim + 1; ++i)
+      scale_vector[i] = 1;
     scale_vector[dim] = attrs.num_outputs;
     in_arrs           = GetTestInputArrays(ArrayTypes::All, false, scale_vector);
   }
@@ -551,17 +557,20 @@ void TestConcatOp(const OpAttrs& attrs, VerifyFunc verify_fn, bool backwards = f
 
       std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
       int dim             = std::stoi(str_dim);
-      if (dim >= in_arr.arr.shape().ndim()) continue;
+      if (dim >= in_arr.arr.shape().ndim())
+        continue;
       float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs)
                               : static_cast<float>(attrs.num_inputs);
 
       std::vector<float> scale_vector(in_arr.arr.shape().ndim());
-      for (int i = 0; i < in_arr.arr.shape().ndim(); i++) scale_vector[i] = 1;
+      for (int i = 0; i < in_arr.arr.shape().ndim(); i++)
+        scale_vector[i] = 1;
       scale_vector[dim] = scale;
       for (int i = 0; i < attrs.num_outputs; i++)
         out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds, scale_vector);
 
-      for (int i = 0; i < attrs.num_inputs; i++) inputs[i] = &in_arr.arr;
+      for (int i = 0; i < attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         for (int i = 0; i < attrs.num_outputs; i++) {
@@ -569,8 +578,8 @@ void TestConcatOp(const OpAttrs& attrs, VerifyFunc verify_fn, bool backwards = f
           outputs[i] = &out_arrs[i][output_i].arr;
         }
         PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req, dispatch,
-                                    mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(
+            Context(), attrs.attrs, inputs, outputs, req, dispatch, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
         verify_fn(inputs, outputs);
       }
@@ -600,15 +609,24 @@ void TestOpExBackward(const OpAttrs& forward_attrs,
     backwards_outputs[0]    = &tmp_output;
     backwards_ex_outputs[0] = &tmp_output;
 
-    for (int i = 0; i < backwards_attrs.num_outputs; i++) back_req[i] = kWriteTo;
+    for (int i = 0; i < backwards_attrs.num_outputs; i++)
+      back_req[i] = kWriteTo;
 
     std::cout << "Backwards: ";
     PrintVerifyMsg(out_arr, in_arr);
-    Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                backwards_outputs, back_req, DispatchMode::kFCompute,
+    Imperative::Get()->InvokeOp(Context(),
+                                backwards_attrs.attrs,
+                                backwards_input,
+                                backwards_outputs,
+                                back_req,
+                                DispatchMode::kFCompute,
                                 mxnet::OpStatePtr());
-    Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                backwards_ex_outputs, back_req, DispatchMode::kFComputeEx,
+    Imperative::Get()->InvokeOp(Context(),
+                                backwards_attrs.attrs,
+                                backwards_input,
+                                backwards_ex_outputs,
+                                back_req,
+                                DispatchMode::kFComputeEx,
                                 mxnet::OpStatePtr());
     Engine::Get()->WaitForAll();
     if (backwards_attrs.attrs.op->name == "_backward_LRN") {
@@ -647,7 +665,8 @@ void TestOpEx(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs) {
             GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, false, forward_attrs.output_types);
       }
 
-      for (int i = 0; i < forward_attrs.num_inputs; i++) inputs[i] = &in_arr.arr;
+      for (int i = 0; i < forward_attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
@@ -658,19 +677,35 @@ void TestOpEx(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs) {
         Imperative::Get()->set_is_training(true);
 
         PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, outputs, req,
-                                    DispatchMode::kFCompute, mxnet::OpStatePtr());
-        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, ex_outputs, req,
-                                    DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(Context(),
+                                    forward_attrs.attrs,
+                                    inputs,
+                                    outputs,
+                                    req,
+                                    DispatchMode::kFCompute,
+                                    mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(Context(),
+                                    forward_attrs.attrs,
+                                    inputs,
+                                    ex_outputs,
+                                    req,
+                                    DispatchMode::kFComputeEx,
+                                    mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
-        // TODO(pengzhao-intel): Need to fix op, should work for the whole vector
+        // TODO(pengzhao-intel): Need to fix op, should work for the whole
+        // vector
         if (forward_attrs.attrs.op->name == "LRN") {
           AssertEqual(outputs, ex_outputs, 1e-5, 1e-8, true);
         }
 
         if (!backwards_attrs.requests.empty()) {
-          TestOpExBackward(forward_attrs, backwards_attrs, OpReqType::kWriteTo, inputs, outputs,
-                           in_arr, out_arrs[0][output_i]);
+          TestOpExBackward(forward_attrs,
+                           backwards_attrs,
+                           OpReqType::kWriteTo,
+                           inputs,
+                           outputs,
+                           in_arr,
+                           out_arrs[0][output_i]);
         }
       }
     }
@@ -681,10 +716,12 @@ void TestOpEx(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs) {
       auto in_arr = in_arrs[i1];
 
       // If the array is a view, we shouldn't write data to it.
-      if (in_arr.arr.IsView()) continue;
+      if (in_arr.arr.IsView())
+        continue;
 
       NDArrayAttrs orig(in_arr.arr.Copy(in_arr.arr.ctx()), "InPlace Copy");
-      for (int i = 0; i < forward_attrs.num_inputs; i++) inputs[i] = &in_arr.arr;
+      for (int i = 0; i < forward_attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         req[i]        = kWriteInplace;
@@ -693,10 +730,20 @@ void TestOpEx(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs) {
       }
       Imperative::Get()->set_is_training(true);
       PrintVerifyMsg(orig, in_arr);
-      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, outputs, req,
-                                  DispatchMode::kFCompute, mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, ex_outputs, req,
-                                  DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(Context(),
+                                  forward_attrs.attrs,
+                                  inputs,
+                                  outputs,
+                                  req,
+                                  DispatchMode::kFCompute,
+                                  mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(Context(),
+                                  forward_attrs.attrs,
+                                  inputs,
+                                  ex_outputs,
+                                  req,
+                                  DispatchMode::kFComputeEx,
+                                  mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       // TODO(unassigned): Need to fix op, should work for the whole vector
       if (forward_attrs.attrs.op->name == "LRN") {
@@ -744,11 +791,19 @@ void TestOpExBNBackward(const OpAttrs& forward_attrs,
 
     std::cout << "Backwards: ";
     PrintVerifyMsg(*out_arr, in_arr);
-    Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                backwards_outputs, backwards_req, DispatchMode::kFCompute,
+    Imperative::Get()->InvokeOp(Context(),
+                                backwards_attrs.attrs,
+                                backwards_input,
+                                backwards_outputs,
+                                backwards_req,
+                                DispatchMode::kFCompute,
                                 mxnet::OpStatePtr());
-    Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                backwards_ex_outputs, backwards_req, DispatchMode::kFComputeEx,
+    Imperative::Get()->InvokeOp(Context(),
+                                backwards_attrs.attrs,
+                                backwards_input,
+                                backwards_ex_outputs,
+                                backwards_req,
+                                DispatchMode::kFComputeEx,
                                 mxnet::OpStatePtr());
     Engine::Get()->WaitForAll();
     // TODO(unassigned): Need to fix op, should work for the whole vector
@@ -806,16 +861,31 @@ void TestOpExBN(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs) {
         Imperative::Get()->set_is_training(true);
 
         PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, outputs, req,
-                                    DispatchMode::kFCompute, mxnet::OpStatePtr());
-        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs2, ex_outputs, req,
-                                    DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(Context(),
+                                    forward_attrs.attrs,
+                                    inputs,
+                                    outputs,
+                                    req,
+                                    DispatchMode::kFCompute,
+                                    mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(Context(),
+                                    forward_attrs.attrs,
+                                    inputs2,
+                                    ex_outputs,
+                                    req,
+                                    DispatchMode::kFComputeEx,
+                                    mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
         AssertEqual(outputs, ex_outputs, 1e-4, 1e-2, true);
 
         if (!backwards_attrs.requests.empty()) {
-          TestOpExBNBackward(forward_attrs, backwards_attrs, OpReqType::kWriteTo, inputs, outputs,
-                             in_arr, &out_arrs[0][output_i]);
+          TestOpExBNBackward(forward_attrs,
+                             backwards_attrs,
+                             OpReqType::kWriteTo,
+                             inputs,
+                             outputs,
+                             in_arr,
+                             &out_arrs[0][output_i]);
         }
       }
     }
@@ -858,7 +928,8 @@ void TestFullyConnectedOp(const OpAttrs& forward_attrs, const OpAttrs& backwards
     for (int i1 = 0; i1 < in_arrs.size(); i1++) {
       auto in_arr   = in_arrs[i1];
       auto in_shape = in_arr.arr.shape();
-      if (in_shape.ndim() < 2) continue;
+      if (in_shape.ndim() < 2)
+        continue;
 
       mxnet::TShape wt_shape(2, -1);
       wt_shape[0] = num_hid;
@@ -895,10 +966,20 @@ void TestFullyConnectedOp(const OpAttrs& forward_attrs, const OpAttrs& backwards
         Imperative::Get()->set_is_training(true);
 
         PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, outputs, req,
-                                    DispatchMode::kFCompute, mxnet::OpStatePtr());
-        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, ex_outputs, req,
-                                    DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(Context(),
+                                    forward_attrs.attrs,
+                                    inputs,
+                                    outputs,
+                                    req,
+                                    DispatchMode::kFCompute,
+                                    mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(Context(),
+                                    forward_attrs.attrs,
+                                    inputs,
+                                    ex_outputs,
+                                    req,
+                                    DispatchMode::kFComputeEx,
+                                    mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
         AssertEqual(outputs, ex_outputs);
 
@@ -921,15 +1002,24 @@ void TestFullyConnectedOp(const OpAttrs& forward_attrs, const OpAttrs& backwards
         backwards_ex_outputs[1] = &back_ex_weights;
         backwards_ex_outputs[2] = &back_ex_bias;
 
-        for (int i = 0; i < backwards_attrs.num_outputs; i++) back_req[i] = kWriteTo;
+        for (int i = 0; i < backwards_attrs.num_outputs; i++)
+          back_req[i] = kWriteTo;
 
         std::cout << "Backwards: ";
         PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
-        Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                    backwards_outputs, back_req, DispatchMode::kFCompute,
+        Imperative::Get()->InvokeOp(Context(),
+                                    backwards_attrs.attrs,
+                                    backwards_input,
+                                    backwards_outputs,
+                                    back_req,
+                                    DispatchMode::kFCompute,
                                     mxnet::OpStatePtr());
-        Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                    backwards_ex_outputs, back_req, DispatchMode::kFComputeEx,
+        Imperative::Get()->InvokeOp(Context(),
+                                    backwards_attrs.attrs,
+                                    backwards_input,
+                                    backwards_ex_outputs,
+                                    back_req,
+                                    DispatchMode::kFComputeEx,
                                     mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
         AssertEqual(backwards_outputs, backwards_ex_outputs, 1e-6, 1e-6);
@@ -974,7 +1064,8 @@ void TestConvOp(const OpAttrs& forward_attrs,
 
     // can only conv only 4D inputs
     mxnet::TShape input_shape = in_arr.arr.shape();
-    if (input_shape.ndim() != kernel.ndim() + 2) continue;
+    if (input_shape.ndim() != kernel.ndim() + 2)
+      continue;
 
     float scale = CalculateWidthConvOutput(input_shape[2], kernel[0], padding[0], stride[0]) /
                   static_cast<float>(input_shape[2]);
@@ -990,10 +1081,10 @@ void TestConvOp(const OpAttrs& forward_attrs,
     scale_vector[3] = scale;
 
     for (size_t i = 0; i < forward_attrs.num_outputs; ++i) {
-      out_arrs[i]    = GetTestOutputArrays(in_arr.arr.shape(), mds, scale_vector, true,
-                                        forward_attrs.output_types);
-      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds, scale_vector, true,
-                                           forward_attrs.output_types);
+      out_arrs[i] = GetTestOutputArrays(
+          in_arr.arr.shape(), mds, scale_vector, true, forward_attrs.output_types);
+      ex_out_arrs[i] = GetTestOutputArrays(
+          in_arr.arr.shape(), mds, scale_vector, true, forward_attrs.output_types);
     }
     NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
     mxnet::TShape bias_shape = {num_filter};
@@ -1014,10 +1105,20 @@ void TestConvOp(const OpAttrs& forward_attrs,
       Imperative::Get()->set_is_training(true);
 
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, outputs, req,
-                                  DispatchMode::kFCompute, mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, ex_outputs, req,
-                                  DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(Context(),
+                                  forward_attrs.attrs,
+                                  inputs,
+                                  outputs,
+                                  req,
+                                  DispatchMode::kFCompute,
+                                  mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(Context(),
+                                  forward_attrs.attrs,
+                                  inputs,
+                                  ex_outputs,
+                                  req,
+                                  DispatchMode::kFComputeEx,
+                                  mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(outputs, ex_outputs);
 
@@ -1048,15 +1149,24 @@ void TestConvOp(const OpAttrs& forward_attrs,
         backwards_ex_outputs[2] = &tmp_bias2;
       }
 
-      for (size_t i = 0; i < backwards_attrs.num_outputs; ++i) back_req[i] = kWriteTo;
+      for (size_t i = 0; i < backwards_attrs.num_outputs; ++i)
+        back_req[i] = kWriteTo;
 
       std::cout << "Backwards: ";
       PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
-      Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                  backwards_outputs, back_req, DispatchMode::kFCompute,
+      Imperative::Get()->InvokeOp(Context(),
+                                  backwards_attrs.attrs,
+                                  backwards_input,
+                                  backwards_outputs,
+                                  back_req,
+                                  DispatchMode::kFCompute,
                                   mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                  backwards_ex_outputs, back_req, DispatchMode::kFComputeEx,
+      Imperative::Get()->InvokeOp(Context(),
+                                  backwards_attrs.attrs,
+                                  backwards_input,
+                                  backwards_ex_outputs,
+                                  back_req,
+                                  DispatchMode::kFComputeEx,
                                   mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
@@ -1095,7 +1205,8 @@ void TestPoolingOp(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs)
 
     // can only pool only 3D and 4D inputs
     mxnet::TShape input_shape = in_arr.arr.shape();
-    if (input_shape.ndim() != kernel.ndim() + 2) continue;
+    if (input_shape.ndim() != kernel.ndim() + 2)
+      continue;
     // cannot pool if ndarray and mkldnn memory have different ndim
     if (in_arr.arr.IsView() ||
         in_arr.arr.GetMKLDNNData()->get_desc().data.ndims != in_arr.arr.shape().ndim())
@@ -1114,7 +1225,8 @@ void TestPoolingOp(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs)
       ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), mds, scale_vector);
     }
 
-    for (int i = 0; i < forward_attrs.num_inputs; i++) inputs[i] = &in_arr.arr;
+    for (int i = 0; i < forward_attrs.num_inputs; i++)
+      inputs[i] = &in_arr.arr;
 
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
@@ -1125,10 +1237,20 @@ void TestPoolingOp(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs)
       Imperative::Get()->set_is_training(true);
 
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, outputs, req,
-                                  DispatchMode::kFCompute, mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, ex_outputs, req,
-                                  DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(Context(),
+                                  forward_attrs.attrs,
+                                  inputs,
+                                  outputs,
+                                  req,
+                                  DispatchMode::kFCompute,
+                                  mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(Context(),
+                                  forward_attrs.attrs,
+                                  inputs,
+                                  ex_outputs,
+                                  req,
+                                  DispatchMode::kFComputeEx,
+                                  mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(outputs, ex_outputs);
 
@@ -1154,11 +1276,19 @@ void TestPoolingOp(const OpAttrs& forward_attrs, const OpAttrs& backwards_attrs)
       back_req[0]             = kWriteTo;
       std::cout << "Backwards: ";
       PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
-      Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                  backwards_outputs, back_req, DispatchMode::kFCompute,
+      Imperative::Get()->InvokeOp(Context(),
+                                  backwards_attrs.attrs,
+                                  backwards_input,
+                                  backwards_outputs,
+                                  back_req,
+                                  DispatchMode::kFCompute,
                                   mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                  backwards_ex_outputs, back_req, DispatchMode::kFComputeEx,
+      Imperative::Get()->InvokeOp(Context(),
+                                  backwards_attrs.attrs,
+                                  backwards_input,
+                                  backwards_ex_outputs,
+                                  back_req,
+                                  DispatchMode::kFComputeEx,
                                   mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
@@ -1237,7 +1367,8 @@ TEST(IMPERATIVE, PoolingOp) {
     for (int kernel = 1; kernel < 4; kernel++) {
       for (int stride = 1; stride < 3; stride++) {
         for (int pad = 0; pad < 2; pad++) {
-          if (kernel / 2. < pad) continue;
+          if (kernel / 2. < pad)
+            continue;
           OpAttrs forward_attrs   = GetPoolingOp(kernel, dim, stride, pad);
           OpAttrs backwards_attrs = GetPoolingBackwardsOp(kernel, dim, stride, pad);
           TestPoolingOp(forward_attrs, backwards_attrs);
@@ -1253,7 +1384,8 @@ TEST(IMPERATIVE, ConvOp) {
     for (size_t kernel = 1; kernel < 4; ++kernel) {
       for (size_t stride = 1; stride < 3; ++stride) {
         for (size_t pad = 0; pad < 2; ++pad) {
-          if (kernel / 2. < pad) continue;
+          if (kernel / 2. < pad)
+            continue;
           OpAttrs forward_attrs   = GetConvOp(kernel, num_filters, dim, stride, pad);
           OpAttrs backwards_attrs = GetConvBackwardOp(kernel, num_filters, dim, stride, pad);
           TestConvOp<mxnet::op::ConvolutionParam>(forward_attrs, backwards_attrs);
@@ -1269,7 +1401,8 @@ TEST(IMPERATIVE, DeconvOp) {
     for (size_t kernel = 1; kernel < 3; ++kernel) {
       for (size_t stride = 1; stride < 3; ++stride) {
         for (size_t pad = 0; pad < 2; ++pad) {
-          if (kernel / 2. < pad) continue;
+          if (kernel / 2. < pad)
+            continue;
           OpAttrs forward_attrs   = GetDeconvOp(kernel, num_filters, dim, stride, pad);
           OpAttrs backwards_attrs = GetDeconvBackwardOp(kernel, num_filters, dim, stride, pad);
           TestConvOp<mxnet::op::DeconvolutionParam>(forward_attrs, backwards_attrs, true);

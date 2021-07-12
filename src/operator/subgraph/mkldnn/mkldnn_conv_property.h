@@ -55,8 +55,11 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
   std::vector<const nnvm::Node*> matched_list_;
 
  public:
-  SgMKLDNNConvSelector(
-      int dis_all, int dis_conv_bn, int dis_conv_act, int dis_conv_sum, int quantize)
+  SgMKLDNNConvSelector(int dis_all,
+                       int dis_conv_bn,
+                       int dis_conv_act,
+                       int dis_conv_sum,
+                       int quantize)
       : disable_all_(dis_all),
         disable_conv_bn_(dis_conv_bn),
         disable_conv_act_(dis_conv_act),
@@ -76,7 +79,9 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
     return false;
   }
 
-  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override { return false; }
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+    return false;
+  }
 
   bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     // If n isn't the last matched node, then we encoutered a internal
@@ -90,7 +95,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
       status_ = kSuccess;
       return false;
     }
-    if (status_ == kFail || status_ == kSuccess || new_node.is_variable()) return false;
+    if (status_ == kFail || status_ == kSuccess || new_node.is_variable())
+      return false;
 
     // Use status_ machine to do selection. The status_ change is
     // kStart -> kBN -> kSum -> kSuccess
@@ -128,9 +134,9 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
           }
         } else if ((!disable_conv_act_) && new_node.op()->name == "clip") {
           if (!(quantize_ && (status_ == kSum))) {
-            // TODO(zhennan): doesn't support int8 conv+sum+relu6 at moment. To support this, we
-            // need to fuse conv+sum first, and calibrate with it. Then fuse int8 relu6 into fused
-            // conv.
+            // TODO(zhennan): doesn't support int8 conv+sum+relu6 at moment. To
+            // support this, we need to fuse conv+sum first, and calibrate with
+            // it. Then fuse int8 relu6 into fused conv.
             const ClipParam& param = nnvm::get<ClipParam>(new_node.attrs.parsed);
             if (param.a_min == 0.f) {
               matched_list_.push_back(&new_node);
@@ -162,8 +168,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list_.size(), 1);
-    auto new_selector = SgMKLDNNConvSelector(disable_all_, disable_conv_bn_, disable_conv_act_,
-                                             disable_conv_sum_, quantize_);
+    auto new_selector = SgMKLDNNConvSelector(
+        disable_all_, disable_conv_bn_, disable_conv_act_, disable_conv_sum_, quantize_);
     new_selector.Select(*matched_list_[0], nullptr);
     *this = new_selector;
   }
@@ -199,7 +205,8 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     node_name << "sg_mkldnn_";
     bool _with_sum = false;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable()) return;
+      if (node->is_variable())
+        return;
       auto& sub_name = node->op()->name;
       if (sub_name == "Convolution") {
         node_name << "conv_";
@@ -250,7 +257,8 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     auto sym = n->attrs.subgraphs[0];
     std::unordered_set<const nnvm::Node*> node_sets;
     DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable()) return;
+      if (node->is_variable())
+        return;
       node_sets.insert(node.get());
       if (node->op()->name == "elemwise_add") {
         // Make sure n is the left operand of sum, if not,
@@ -261,7 +269,8 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
           node->inputs[1] = node->inputs[0];
           node->inputs[0] = tmp;
           std::rotate(input_entries->begin(), input_entries->begin() + 1, input_entries->end());
-          std::rotate(orig_input_entries->begin(), orig_input_entries->begin() + 1,
+          std::rotate(orig_input_entries->begin(),
+                      orig_input_entries->begin() + 1,
                       orig_input_entries->end());
         }
       }

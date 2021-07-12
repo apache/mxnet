@@ -73,7 +73,8 @@ MKLDNNDeconvFwd& MKLDNNDeconvFwd::GetCached(const DeconvolutionParam& param,
 }
 
 std::shared_ptr<deconv_fwd_pd_t> MKLDNNDeconvFwd::CreatePrimitiveDesc(
-    const DeconvolutionParam& param, const Tensors& tensors) {
+    const DeconvolutionParam& param,
+    const Tensors& tensors) {
   DeconvDescCreator ddc(param, tensors.data, tensors.weights, tensors.bias, tensors.out);
   const auto& engine          = CpuEngine::Get()->get_engine();
   const auto pd               = std::make_shared<deconv_fwd_pd_t>(ddc.CreateFwdDesc(), engine);
@@ -83,8 +84,9 @@ std::shared_ptr<deconv_fwd_pd_t> MKLDNNDeconvFwd::CreatePrimitiveDesc(
 
   while (!ddc.CheckImplSizeReq(get_data_size(), get_weights_size(), get_out_size())) {
     if (!pd->next_impl()) {
-      // ImposePlainWherePadding fails when all memory descriptors already have plain formats
-      // imposed, meaning there is no implementation with plain formats
+      // ImposePlainWherePadding fails when all memory descriptors already have
+      // plain formats imposed, meaning there is no implementation with plain
+      // formats
       CHECK(ddc.ImposePlainWherePadding(get_data_size(), get_weights_size(), get_out_size()))
           << "No implementation of deconvolution forward propagation";
       *pd = deconv_fwd_pd_t(ddc.CreateFwdDesc(), engine);
@@ -100,7 +102,8 @@ void MKLDNNDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
     // to the default format for now.
     if (weights.IsMKLDNNData()) {
-      // This asks the engine to change the layout of the weights array after it's used.
+      // This asks the engine to change the layout of the weights array after
+      // it's used.
       weights.Reorder2DefaultAsync();
     }
   } else {
@@ -120,26 +123,31 @@ void MKLDNNDeconvFwd::ControlWeightsFormat(const uint32_t num_group,
 void MKLDNNDeconvFwd::Execute(const uint32_t num_group,
                               const OpReqType req,
                               const Tensors& tensors) const {
-  // MXNet (correctly) assumes that deconvolution is implemented using convolution primitives.
-  // For that, we would pass input tensor in place of output and output tensor in place of input
-  // (for appropriate convolution primitives: deconvolution forward = convolution backward data,
+  // MXNet (correctly) assumes that deconvolution is implemented using
+  // convolution primitives. For that, we would pass input tensor in place of
+  // output and output tensor in place of input (for appropriate convolution
+  // primitives: deconvolution forward = convolution backward data,
   // deconvolution backward data = convolution forward).
   // The convolution primitive expects weights tensor with the shape of
-  // (primitive_out_channels, primitive_in_channels, h, w), but with swapped input and output:
-  // primitive_out_channels = deconv_in_channels, primitive_in_channels = deconv_out_channels,
-  // so it becomes (deconv_in_channels, deconv_out_channels, h, w) and MXNet provides such tensor.
+  // (primitive_out_channels, primitive_in_channels, h, w), but with swapped
+  // input and output: primitive_out_channels = deconv_in_channels,
+  // primitive_in_channels = deconv_out_channels, so it becomes
+  // (deconv_in_channels, deconv_out_channels, h, w) and MXNet provides such
+  // tensor.
   //
-  // MKLDNN deconvolution primitive also (as convolution) expects weights tensor with the shape of
-  // (primitive_out_channels, primitive_in_channels, h, w), but this time we don't swap input and
-  // output tensors, so:
-  // primitive_out_channels = deconv_out_channels, primitive_in_channels = deconv_in_channels,
-  // thus the current weights tensor won't fit (when deconv_out_channels != deconv_in_channels).
-  // However, underneath deconvolution MKLDNN also uses convolution, so even though it expects the
-  // weights tensor with the logical order of oihw, it wants its physical representation to
-  // match the order of iohw, which is the same as current weights tensor.
+  // MKLDNN deconvolution primitive also (as convolution) expects weights tensor
+  // with the shape of (primitive_out_channels, primitive_in_channels, h, w),
+  // but this time we don't swap input and output tensors, so:
+  // primitive_out_channels = deconv_out_channels, primitive_in_channels =
+  // deconv_in_channels, thus the current weights tensor won't fit (when
+  // deconv_out_channels != deconv_in_channels). However, underneath
+  // deconvolution MKLDNN also uses convolution, so even though it expects the
+  // weights tensor with the logical order of oihw, it wants its physical
+  // representation to match the order of iohw, which is the same as current
+  // weights tensor.
   //
-  // So here we swap logical order of input and output dimensions for weights tensor just for
-  // MKLDNN operations.
+  // So here we swap logical order of input and output dimensions for weights
+  // tensor just for MKLDNN operations.
   IOLogicalSwapMKLDNNMem(tensors.weights, num_group);
   {
     mkldnn_args_map_t net_args;
@@ -157,7 +165,8 @@ void MKLDNNDeconvFwd::Execute(const uint32_t num_group,
     CommitOutput(tensors.out, out_mem);
     MKLDNNStream::Get()->Submit();
   }
-  IOLogicalSwapMKLDNNMem(tensors.weights, num_group);  // swap back from oihw to iohw
+  IOLogicalSwapMKLDNNMem(tensors.weights,
+                         num_group);  // swap back from oihw to iohw
 }
 
 void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs,
@@ -204,8 +213,8 @@ std::shared_ptr<deconv_bwd_data_pd_t> MKLDNNDeconvBwd::CreateDataPrimitiveDesc(
     const DeconvolutionParam& param,
     const ReadTensors& read_tensors,
     const deconv_fwd_pd_t& fwd_pd) {
-  DeconvDescCreator ddc(param, read_tensors.data, read_tensors.weights, nullptr,
-                        read_tensors.out_grad);
+  DeconvDescCreator ddc(
+      param, read_tensors.data, read_tensors.weights, nullptr, read_tensors.out_grad);
   const auto& engine = CpuEngine::Get()->get_engine();
   const auto pd = std::make_shared<deconv_bwd_data_pd_t>(ddc.CreateBwdDataDesc(), engine, fwd_pd);
   const auto get_data_size    = [&pd]() { return pd->diff_src_desc().get_size(); };
@@ -214,8 +223,9 @@ std::shared_ptr<deconv_bwd_data_pd_t> MKLDNNDeconvBwd::CreateDataPrimitiveDesc(
 
   while (!ddc.CheckImplSizeReq(get_data_size(), get_weights_size(), get_out_size())) {
     if (!pd->next_impl()) {
-      // ImposePlainWherePadding fails when all memory descriptors already have plain formats
-      // imposed, meaning there is no implementation with plain formats
+      // ImposePlainWherePadding fails when all memory descriptors already have
+      // plain formats imposed, meaning there is no implementation with plain
+      // formats
       CHECK(ddc.ImposePlainWherePadding(get_data_size(), get_weights_size(), get_out_size()))
           << "No implementation of deconvolution backward propagation";
       *pd = deconv_bwd_data_pd_t(ddc.CreateBwdDataDesc(), engine, fwd_pd);
@@ -228,8 +238,8 @@ std::shared_ptr<deconv_bwd_weights_pd_t> MKLDNNDeconvBwd::CreateWeightsPrimitive
     const DeconvolutionParam& param,
     const ReadTensors& read_tensors,
     const deconv_fwd_pd_t& fwd_pd) {
-  DeconvDescCreator ddc(param, read_tensors.data, read_tensors.weights, read_tensors.bias,
-                        read_tensors.out_grad);
+  DeconvDescCreator ddc(
+      param, read_tensors.data, read_tensors.weights, read_tensors.bias, read_tensors.out_grad);
   const auto& engine = CpuEngine::Get()->get_engine();
   const auto pd =
       std::make_shared<deconv_bwd_weights_pd_t>(ddc.CreateBwdWeightsDesc(), engine, fwd_pd);
@@ -239,8 +249,9 @@ std::shared_ptr<deconv_bwd_weights_pd_t> MKLDNNDeconvBwd::CreateWeightsPrimitive
 
   while (!ddc.CheckImplSizeReq(get_data_size(), get_weights_size(), get_out_size())) {
     if (!pd->next_impl()) {
-      // ImposePlainWherePadding fails when all memory descriptors already have plain formats
-      // imposed, meaning there is no implementation with plain formats
+      // ImposePlainWherePadding fails when all memory descriptors already have
+      // plain formats imposed, meaning there is no implementation with plain
+      // formats
       CHECK(ddc.ImposePlainWherePadding(get_data_size(), get_weights_size(), get_out_size()))
           << "No implementation of calculating deconvolution weights gradient";
       *pd = deconv_bwd_weights_pd_t(ddc.CreateBwdWeightsDesc(), engine, fwd_pd);
@@ -340,8 +351,8 @@ DeconvDescCreator::DeconvDescCreator(const DeconvolutionParam& param,
 bool DeconvDescCreator::ImposePlainWherePadding(const size_t data_size,
                                                 const size_t weights_size,
                                                 const size_t out_size) {
-  // Changing only one at a time, so maybe better implementations will be selected (than entirely
-  // plain one)
+  // Changing only one at a time, so maybe better implementations will be
+  // selected (than entirely plain one)
   if (data_md.data.format_kind == dnnl_format_kind_any && data_size != GetMemDescSize(data_md)) {
     data_md = GetDesc(data_md, GetDefaultFormat(data_md));
     return true;

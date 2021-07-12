@@ -50,8 +50,10 @@ static std::vector<float> GetWeightScales(const NDArray& weight,
   for (int c = 0; c < static_cast<int>(channel); ++c) {
     const DType* p1 = weight_ptr + c * offset;
     for (size_t k = 0; k < offset; ++k) {
-      if (weight_c_min[c] > p1[k]) weight_c_min[c] = p1[k];
-      if (weight_c_max[c] < p1[k]) weight_c_max[c] = p1[k];
+      if (weight_c_min[c] > p1[k])
+        weight_c_min[c] = p1[k];
+      if (weight_c_max[c] < p1[k])
+        weight_c_max[c] = p1[k];
     }
   }
 
@@ -62,8 +64,8 @@ static std::vector<float> GetWeightScales(const NDArray& weight,
       float scale = GetQuantizeScale(mshadow::kInt8, weight_c_min[c], weight_c_max[c]);
       if (bias_ptr && bias_ptr[c]) {
         // avoid overflow on bias
-        // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value of bias
-        // to INT_MAX / 2.
+        // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the
+        // maximum value of bias to INT_MAX / 2.
         float scale_max =
             static_cast<float>(bias_ptr[c] > 0 ? MaxValue<int32_t>() : MinValue<int32_t>()) / 2 /
             bias_ptr[c] / data_scale;
@@ -75,8 +77,10 @@ static std::vector<float> GetWeightScales(const NDArray& weight,
     DType total_min = weight_c_min[0];
     DType total_max = weight_c_max[0];
     for (size_t c = 0; c < channel; ++c) {
-      if (total_min > weight_c_min[c]) total_min = weight_c_min[c];
-      if (total_max < weight_c_max[c]) total_max = weight_c_max[c];
+      if (total_min > weight_c_min[c])
+        total_min = weight_c_min[c];
+      if (total_max < weight_c_max[c])
+        total_max = weight_c_max[c];
     }
     weight_scales.resize(3);
     weight_scales[0] = GetQuantizeScale(mshadow::kInt8, total_min, total_max);
@@ -104,7 +108,8 @@ static void ConvertWeightBias2MKLDNN(NDArray* weight,
     weight_attr.set_output_scales(weight_mask, weight_scales);
   }
   auto default_weights_memory = GetWeights(*weight, num_group);
-  if (default_weights_memory == nullptr) default_weights_memory = weight->GetMKLDNNData();
+  if (default_weights_memory == nullptr)
+    default_weights_memory = weight->GetMKLDNNData();
   const auto weight_reorder_pd =
       mkldnn::reorder::primitive_desc(*default_weights_memory, *conv_weights_memory, weight_attr);
   MKLDNNStream::Get()->RegisterPrimArgs(
@@ -128,9 +133,11 @@ static void ConvertWeightBias2MKLDNN(NDArray* weight,
         mkldnn::reorder(bias_reorder_pd),
         {{MKLDNN_ARG_FROM, *bias_weights_memory}, {MKLDNN_ARG_TO, *conv_bias_memory}});
   }
-  if (submit) stream->Submit();
+  if (submit)
+    stream->Submit();
   *weight = new_weight;
-  if (has_bias && data_scale) *bias = new_bias;
+  if (has_bias && data_scale)
+    *bias = new_bias;
 }
 
 }  // namespace op

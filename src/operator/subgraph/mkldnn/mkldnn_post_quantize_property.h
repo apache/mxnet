@@ -73,10 +73,13 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
     return false;
   }
 
-  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override { return false; }
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+    return false;
+  }
 
   bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
-    if (status == kFail || status == kSuccess || new_node.is_variable()) return false;
+    if (status == kFail || status == kSuccess || new_node.is_variable())
+      return false;
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list.back() != &n) {
@@ -130,7 +133,8 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
     nnvm::ObjectPtr fuse_node       = nullptr;
     nnvm::ObjectPtr requantize_node = nullptr;
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable()) return;
+      if (node->is_variable())
+        return;
       auto& op_name = node->op()->name;
       if (support_requantize_fusion_op_name.count(op_name)) {
         fuse_node = node;

@@ -69,7 +69,9 @@ class MKLDNNSumFwd {
     fwd_ = std::make_shared<mkldnn::sum>(fwd_pd);
   }
 
-  const mkldnn::sum& GetFwd() const { return *fwd_; }
+  const mkldnn::sum& GetFwd() const {
+    return *fwd_;
+  }
 
  private:
   std::shared_ptr<mkldnn::sum> fwd_;

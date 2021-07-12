@@ -67,7 +67,8 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
   attr.set_output_scales(mask, scales);
   mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
   NDArray in_buffer         = inputs[0];
-  if (inputs[0].IsView() && inputs[0].IsMKLDNNData()) in_buffer = inputs[0].Reorder2Default();
+  if (inputs[0].IsView() && inputs[0].IsMKLDNNData())
+    in_buffer = inputs[0].Reorder2Default();
 
   auto i_mem    = in_buffer.GetMKLDNNData();
   auto i_desc   = i_mem->get_desc();

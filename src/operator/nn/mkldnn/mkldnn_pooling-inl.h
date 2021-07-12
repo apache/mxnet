@@ -112,27 +112,35 @@ inline bool SupportMKLDNNPooling(const PoolingParam& param, const NDArray& input
         (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16)))
     return false;
 
-  if (!SupportMKLDNNPooling(param)) return false;
+  if (!SupportMKLDNNPooling(param))
+    return false;
 
   if (param.pooling_convention == pool_enum::kValid) {
     return true;
   } else {
     if (param.pool_type == pool_enum::kAvgPooling) {
-      // mkldnn works differently when padding is asymmetric, so let's skip this case.
+      // mkldnn works differently when padding is asymmetric, so let's skip this
+      // case.
       bool is_symmetric = true;
       switch (ndim) {
         case 5:
-          is_symmetric = is_symmetric &&
-                         (param.pad[2] == GetPaddingSizeFull(dshape[4], param.pad[2], param.pad[2],
-                                                             param.kernel[2], param.stride[2]));
+          is_symmetric =
+              is_symmetric &&
+              (param.pad[2] ==
+               GetPaddingSizeFull(
+                   dshape[4], param.pad[2], param.pad[2], param.kernel[2], param.stride[2]));
         case 4:
-          is_symmetric = is_symmetric &&
-                         (param.pad[1] == GetPaddingSizeFull(dshape[3], param.pad[1], param.pad[1],
-                                                             param.kernel[1], param.stride[1]));
+          is_symmetric =
+              is_symmetric &&
+              (param.pad[1] ==
+               GetPaddingSizeFull(
+                   dshape[3], param.pad[1], param.pad[1], param.kernel[1], param.stride[1]));
         case 3:
-          is_symmetric = is_symmetric &&
-                         (param.pad[0] == GetPaddingSizeFull(dshape[2], param.pad[0], param.pad[0],
-                                                             param.kernel[0], param.stride[0]));
+          is_symmetric =
+              is_symmetric &&
+              (param.pad[0] ==
+               GetPaddingSizeFull(
+                   dshape[2], param.pad[0], param.pad[0], param.kernel[0], param.stride[0]));
       }
       return is_symmetric;
     }

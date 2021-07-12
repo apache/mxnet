@@ -109,42 +109,56 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
     int mask = (param.requantize_scales.size() > 1) ? 2 : 0;
     attr.set_output_scales(mask, param.requantize_scales);
   }
-  auto GetConvFwdPd = [&param, &data, &weights, &output,
-                       &attr](const mkldnn::convolution_forward::desc& desc) {
-    auto engine = CpuEngine::Get()->get_engine();
-    try {
-      // MKL-DNN introduced padded formats since 0.15 which require more memory
-      // compared to the actual size of the tensor. Currently, MKL-DNN operators
-      // still reuse memory from memory planning, so here we need to select a
-      // suboptimal kernel for computation that has the expected memory size requirements
-      auto conv_pd =
-          std::make_shared<mkldnn::convolution_forward::primitive_desc>(desc, attr, engine);
-      while (conv_pd->dst_desc().get_size() != GetArraySize(output) ||
-             conv_pd->src_desc().get_size() != GetArraySize(data) ||
-             (!param.mkldnn_param.quantized &&
-              conv_pd->weights_desc().get_size() != GetArraySize(weights))) {
-        // next_impl() will visit desc and engine, please make sure they are still alive here.
-        CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
-      }
-      return conv_pd;
-    } catch (mkldnn::error& e) {
-      if (e.status == mkldnn_unimplemented && param.mkldnn_param.quantized) {
-        LOG(ERROR) << "AVX512-BW support or Intel(R) MKL dependency is "
-                      "required for int8 convolution";
-      } else {
-        LOG(ERROR) << e.message;
-      }
-      throw;
-    }
-  };
+  auto GetConvFwdPd =
+      [&param, &data, &weights, &output, &attr](const mkldnn::convolution_forward::desc& desc) {
+        auto engine = CpuEngine::Get()->get_engine();
+        try {
+          // MKL-DNN introduced padded formats since 0.15 which require more memory
+          // compared to the actual size of the tensor. Currently, MKL-DNN operators
+          // still reuse memory from memory planning, so here we need to select a
+          // suboptimal kernel for computation that has the expected memory size
+          // requirements
+          auto conv_pd =
+              std::make_shared<mkldnn::convolution_forward::primitive_desc>(desc, attr, engine);
+          while (conv_pd->dst_desc().get_size() != GetArraySize(output) ||
+                 conv_pd->src_desc().get_size() != GetArraySize(data) ||
+                 (!param.mkldnn_param.quantized &&
+                  conv_pd->weights_desc().get_size() != GetArraySize(weights))) {
+            // next_impl() will visit desc and engine, please make sure they are
+            // still alive here.
+            CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
+          }
+          return conv_pd;
+        } catch (mkldnn::error& e) {
+          if (e.status == mkldnn_unimplemented && param.mkldnn_param.quantized) {
+            LOG(ERROR) << "AVX512-BW support or Intel(R) MKL dependency is "
+                          "required for int8 convolution";
+          } else {
+            LOG(ERROR) << e.message;
+          }
+          throw;
+        }
+      };
 
   if (param.conv_param.dilate.ndim() == 0 && bias_md_ptr == nullptr) {
-    mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct, data_md,
-                                           weight_md, out_md, strides, padding, padding);
+    mkldnn::convolution_forward::desc desc(prop,
+                                           mkldnn::algorithm::convolution_direct,
+                                           data_md,
+                                           weight_md,
+                                           out_md,
+                                           strides,
+                                           padding,
+                                           padding);
     return GetConvFwdPd(desc);
   } else if (param.conv_param.dilate.ndim() == 0) {
-    mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct, data_md,
-                                           weight_md, *bias_md_ptr, out_md, strides, padding,
+    mkldnn::convolution_forward::desc desc(prop,
+                                           mkldnn::algorithm::convolution_direct,
+                                           data_md,
+                                           weight_md,
+                                           *bias_md_ptr,
+                                           out_md,
+                                           strides,
+                                           padding,
                                            padding);
     return GetConvFwdPd(desc);
   } else {
@@ -163,13 +177,27 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
                  << ", supporting only 1 or 2 or 3.";
     }
     if (bias_md_ptr == nullptr) {
-      mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct, data_md,
-                                             weight_md, out_md, strides, dilates, padding, padding);
+      mkldnn::convolution_forward::desc desc(prop,
+                                             mkldnn::algorithm::convolution_direct,
+                                             data_md,
+                                             weight_md,
+                                             out_md,
+                                             strides,
+                                             dilates,
+                                             padding,
+                                             padding);
       return GetConvFwdPd(desc);
     } else {
-      mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct, data_md,
-                                             weight_md, *bias_md_ptr, out_md, strides, dilates,
-                                             padding, padding);
+      mkldnn::convolution_forward::desc desc(prop,
+                                             mkldnn::algorithm::convolution_direct,
+                                             data_md,
+                                             weight_md,
+                                             *bias_md_ptr,
+                                             out_md,
+                                             strides,
+                                             dilates,
+                                             padding,
+                                             padding);
       return GetConvFwdPd(desc);
     }
   }
@@ -216,20 +244,22 @@ static std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> GetCon
                << ", supporting only 1 or 2 or 3.";
   }
 
-  auto GetConvBwdDataPd = [&data, &weight, &output,
-                           &fwd_pd](const mkldnn::convolution_backward_data::desc& desc) {
+  auto GetConvBwdDataPd = [&data, &weight, &output, &fwd_pd](
+                              const mkldnn::convolution_backward_data::desc& desc) {
     auto engine = CpuEngine::Get()->get_engine();
     try {
       // MKL-DNN introduced padded formats since 0.15 which require more memory
       // compared to the actual size of the tensor. Currently, MKL-DNN operators
       // still reuse memory from memory planning, so here we need to select a
-      // suboptimal kernel for computation that has the expected memory size requirements
+      // suboptimal kernel for computation that has the expected memory size
+      // requirements
       auto conv_pd =
           std::make_shared<mkldnn::convolution_backward_data::primitive_desc>(desc, engine, fwd_pd);
       while (conv_pd->diff_dst_desc().get_size() != GetArraySize(output) ||
              conv_pd->diff_src_desc().get_size() != GetArraySize(data) ||
              conv_pd->weights_desc().get_size() != GetArraySize(weight)) {
-        // next_impl() will visit desc and engine, please make sure they are still alive here.
+        // next_impl() will visit desc and engine, please make sure they are
+        // still alive here.
         CHECK(conv_pd->next_impl()) << "No convolution backward implementation for this request.";
       }
       return conv_pd;
@@ -240,8 +270,13 @@ static std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> GetCon
   };
 
   if (param.dilate.ndim() == 0) {
-    mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct, data_md,
-                                                 weight_md, out_md, strides, padding, padding);
+    mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
+                                                 data_md,
+                                                 weight_md,
+                                                 out_md,
+                                                 strides,
+                                                 padding,
+                                                 padding);
     return GetConvBwdDataPd(desc);
   } else {
     mkldnn::memory::dims dilates(param.kernel.ndim());
@@ -258,8 +293,13 @@ static std::shared_ptr<mkldnn::convolution_backward_data::primitive_desc> GetCon
       LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size " << param.dilate.ndim()
                  << ", supporting only 1 or 2 or 3.";
     }
-    mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct, data_md,
-                                                 weight_md, out_md, strides, dilates, padding,
+    mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
+                                                 data_md,
+                                                 weight_md,
+                                                 out_md,
+                                                 strides,
+                                                 dilates,
+                                                 padding,
                                                  padding);
     return GetConvBwdDataPd(desc);
   }
@@ -307,20 +347,22 @@ static std::shared_ptr<mkldnn::convolution_backward_weights::primitive_desc> Get
                << ", supporting only 1 or 2 or 3.";
   }
 
-  auto GetConvBwdWeightsPd = [&data, &weight, &output,
-                              &fwd_pd](const mkldnn::convolution_backward_weights::desc& desc) {
+  auto GetConvBwdWeightsPd = [&data, &weight, &output, &fwd_pd](
+                                 const mkldnn::convolution_backward_weights::desc& desc) {
     auto engine = CpuEngine::Get()->get_engine();
     try {
-      // MKL-DNN introduced padded formats since 0.15 which require more memory
-      // compared to the actual size of the tensor. Currently, MKL-DNN operators
-      // still reuse memory from memory planning, so here we need to select a
-      // suboptimal kernel for computation that has the expected memory size requirements
+      // MKL-DNN introduced padded formats since 0.15 which require more
+      // memory compared to the actual size of the tensor. Currently,
+      // MKL-DNN operators still reuse memory from memory planning, so here
+      // we need to select a suboptimal kernel for computation that has the
+      // expected memory size requirements
       auto conv_pd = std::make_shared<mkldnn::convolution_backward_weights::primitive_desc>(
           desc, engine, fwd_pd);
       while (conv_pd->diff_dst_desc().get_size() != GetArraySize(output) ||
              conv_pd->src_desc().get_size() != GetArraySize(data) ||
              conv_pd->diff_weights_desc().get_size() != GetArraySize(weight)) {
-        // next_impl() will visit desc and engine, please make sure they are still alive here.
+        // next_impl() will visit desc and engine, please make sure they are
+        // still alive here.
         CHECK(conv_pd->next_impl()) << "No convolution backward implementation for this request.";
       }
       return conv_pd;
@@ -331,13 +373,23 @@ static std::shared_ptr<mkldnn::convolution_backward_weights::primitive_desc> Get
   };
 
   if (param.dilate.ndim() == 0 && bias == nullptr) {
-    mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct, data_md,
-                                                    weight_md, out_md, strides, padding, padding);
+    mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
+                                                    data_md,
+                                                    weight_md,
+                                                    out_md,
+                                                    strides,
+                                                    padding,
+                                                    padding);
     return GetConvBwdWeightsPd(desc);
   } else if (param.dilate.ndim() == 0) {
     auto bias_md = GetMemDesc(*bias);
-    mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct, data_md,
-                                                    weight_md, bias_md, out_md, strides, padding,
+    mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
+                                                    data_md,
+                                                    weight_md,
+                                                    bias_md,
+                                                    out_md,
+                                                    strides,
+                                                    padding,
                                                     padding);
     return GetConvBwdWeightsPd(desc);
   } else {
@@ -357,14 +409,25 @@ static std::shared_ptr<mkldnn::convolution_backward_weights::primitive_desc> Get
     }
     if (bias == nullptr) {
       mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
-                                                      data_md, weight_md, out_md, strides, dilates,
-                                                      padding, padding);
+                                                      data_md,
+                                                      weight_md,
+                                                      out_md,
+                                                      strides,
+                                                      dilates,
+                                                      padding,
+                                                      padding);
       return GetConvBwdWeightsPd(desc);
     } else {
       auto bias_md = GetMemDesc(*bias);
       mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
-                                                      data_md, weight_md, bias_md, out_md, strides,
-                                                      dilates, padding, padding);
+                                                      data_md,
+                                                      weight_md,
+                                                      bias_md,
+                                                      out_md,
+                                                      strides,
+                                                      dilates,
+                                                      padding,
+                                                      padding);
       return GetConvBwdWeightsPd(desc);
     }
   }
@@ -392,16 +455,18 @@ MKLDNNConvForward& GetConvFwd(const MKLDNNConvFullParam& param,
 #else
   static MX_THREAD_LOCAL conv_fwd_map fwds;
 #endif
-  // TODO(zhennan): Hash conv_param for now, need to hash full param if we want to enable cache for
-  // fused conv
+  // TODO(zhennan): Hash conv_param for now, need to hash full param if we want
+  // to enable cache for fused conv
   MKLDNNConvSignature key(param.conv_param);
   key.AddSign(is_train);
-  // Here we can sign the conv op with NDArray because conv primitive will decide the right layout
-  // for the, so we only need to get the shape and the data type of the arrays.
+  // Here we can sign the conv op with NDArray because conv primitive will
+  // decide the right layout for the, so we only need to get the shape and the
+  // data type of the arrays.
   key.AddSign(data);
   key.AddSign(weight);
   key.AddSign(output);
-  if (bias) key.AddSign(*bias);
+  if (bias)
+    key.AddSign(*bias);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
@@ -426,18 +491,19 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam& param,
   auto data_mem = data.GetMKLDNNDataReorder(fwd->GetPd().src_desc());
   const mkldnn::memory* weight_mem;
   if (ctx.is_train) {
-    // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it to the default format
-    // for now.
+    // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
+    // to the default format for now.
     if (weight.IsMKLDNNData())
-      // This asks the engine to change the layout of the weight array after it's used.
+      // This asks the engine to change the layout of the weight array after
+      // it's used.
       weight.Reorder2DefaultAsync();
     weight_mem = GetWeights(weight, fwd->GetPd().weights_desc(), param.conv_param.num_group);
   } else {
-    // For inference, we want to reorder the weight array so we don't need to reorder data every
-    // time.
+    // For inference, we want to reorder the weight array so we don't need to
+    // reorder data every time.
     if (weight.IsDefaultData()) {
-      // We also need to modify the layout on the original weight array. The data conversion happens
-      // after the weight array is used.
+      // We also need to modify the layout on the original weight array. The
+      // data conversion happens after the weight array is used.
       weight.MKLDNNDataReorderAsync(fwd->GetPd().weights_desc());
       weight_mem = GetWeights(weight, fwd->GetPd().weights_desc(), param.conv_param.num_group);
     } else {
@@ -474,9 +540,12 @@ void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs,
   MKLDNNConvFullParam param;
   param.conv_param = nnvm::get<ConvolutionParam>(attrs.parsed);
   param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
-  auto& fwd =
-      GetConvFwd(param, ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
-                 param.conv_param.no_bias ? nullptr : &in_data[conv::kBias], out_data[conv::kOut]);
+  auto& fwd = GetConvFwd(param,
+                         ctx.is_train,
+                         in_data[conv::kData],
+                         in_data[conv::kWeight],
+                         param.conv_param.no_bias ? nullptr : &in_data[conv::kBias],
+                         out_data[conv::kOut]);
   MKLDNNConvolutionForwardFullFeature(param, ctx, &fwd, in_data, req, out_data);
 }
 
@@ -503,15 +572,17 @@ static inline MKLDNNConvBackward& GetConvBwd(const MKLDNNConvFullParam& param,
 #else
   static MX_THREAD_LOCAL mkldnn_conv_bwd_map bwds;
 #endif
-  // TODO(zhennan): Hash conv_param for now, need to hash full param if we want to enable cache for
-  // fused conv
+  // TODO(zhennan): Hash conv_param for now, need to hash full param if we want
+  // to enable cache for fused conv
   MKLDNNConvSignature key(param.conv_param);
-  // Here we can sign the conv op with NDArray because conv primitive will decide the right layout
-  // for the, so we only need to get the shape and the data type of the arrays.
+  // Here we can sign the conv op with NDArray because conv primitive will
+  // decide the right layout for the, so we only need to get the shape and the
+  // data type of the arrays.
   key.AddSign(data);
   key.AddSign(weight);
   key.AddSign(output);
-  if (bias) key.AddSign(*bias);
+  if (bias)
+    key.AddSign(*bias);
 
   auto it = bwds.find(key);
   if (it == bwds.end()) {
@@ -544,8 +615,8 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs,
   auto out_grad_mem           = out_grad.GetMKLDNNDataReorder(convBwd.GetDataPd().diff_dst_desc());
   if (req[conv::kData]) {
     auto weight_mem  = GetWeights(weight, convBwd.GetDataPd().weights_desc(), param.num_group);
-    auto in_grad_mem = CreateMKLDNNMem(in_grad[conv::kData], convBwd.GetDataPd().diff_src_desc(),
-                                       req[conv::kData]);
+    auto in_grad_mem = CreateMKLDNNMem(
+        in_grad[conv::kData], convBwd.GetDataPd().diff_src_desc(), req[conv::kData]);
     MKLDNNStream::Get()->RegisterPrimArgs(convBwd.GetBwdData(),
                                           {{MKLDNN_ARG_DIFF_DST, *out_grad_mem},
                                            {MKLDNN_ARG_WEIGHTS, *weight_mem},
@@ -564,8 +635,8 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs,
                                   {MKLDNN_ARG_DIFF_WEIGHTS, *in_grad_weight.second}};
     mkldnn_output_t in_grad_bias;
     if (!param.no_bias) {
-      in_grad_bias = CreateMKLDNNMem(in_grad[conv::kBias], convBwd.GetWeightsPd().diff_bias_desc(),
-                                     req[conv::kBias]);
+      in_grad_bias = CreateMKLDNNMem(
+          in_grad[conv::kBias], convBwd.GetWeightsPd().diff_bias_desc(), req[conv::kBias]);
       net_args.insert({MKLDNN_ARG_DIFF_BIAS, *in_grad_bias.second});
     }
     MKLDNNStream::Get()->RegisterPrimArgs(convBwd.GetBwdWeights(), net_args);

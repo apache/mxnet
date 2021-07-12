@@ -92,7 +92,9 @@ class CpuEngine {
   CpuEngine& operator=(CpuEngine const&) = delete;  // Copy assign
   CpuEngine& operator=(CpuEngine&&) = delete;       // Move assign
 
-  mkldnn::engine& get_engine() { return _cpu_engine; }
+  mkldnn::engine& get_engine() {
+    return _cpu_engine;
+  }
 
  protected:
   CpuEngine() : _cpu_engine(mkldnn::engine::kind::cpu, 0) {}
@@ -140,7 +142,9 @@ static inline bool SupportMKLDNNArray(int dtype, const mxnet::TShape& shape) {
   return support;
 }
 
-static inline bool SupportStorageMKLDNN(int stype) { return stype == kDefaultStorage; }
+static inline bool SupportStorageMKLDNN(int stype) {
+  return stype == kDefaultStorage;
+}
 
 static inline bool SupportMKLDNN(int dtype, const mxnet::TShape& shape) {
   int ndim = shape.ndim();
@@ -171,7 +175,8 @@ static inline int GetMKLDNNCacheSize() {
   return mkldnn_cache_size;
 }
 
-// TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
+// TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size
+// during runtime
 template <typename S, typename I, typename H>
 static typename std::unordered_map<S, I, H>::iterator AddToCache(std::unordered_map<S, I, H>* cache,
                                                                  const S& key,
@@ -278,7 +283,8 @@ static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
 }
 
 static inline size_t GetMemDescSize(const mkldnn::memory::desc& md) {
-  if (md.data.ndims == 0) return 0;
+  if (md.data.ndims == 0)
+    return 0;
 
   size_t ret = 1;
   for (int i = 0; i < md.data.ndims; i++) {
@@ -293,7 +299,8 @@ inline static mkldnn::memory::desc GetMemDesc(const NDArray& arr, int dtype = -1
   int ndim = arr.shape().ndim();
   mkldnn::memory::dims dims(ndim);
   dtype = (dtype == -1) ? arr.dtype() : dtype;
-  for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];
+  for (size_t i = 0; i < dims.size(); i++)
+    dims[i] = arr.shape()[i];
   return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
 }
 
@@ -301,7 +308,8 @@ inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray& arr, int dtype
   int ndim = arr.shape().ndim();
   mkldnn::memory::dims dims(ndim);
   dtype = (dtype == -1) ? arr.dtype() : dtype;
-  for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];
+  for (size_t i = 0; i < dims.size(); i++)
+    dims[i] = arr.shape()[i];
   auto format = mkldnn::memory::format_tag::any;
   // for batch 256 alexnet benchmark test
   if (dims.size() == 2) {
@@ -331,17 +339,23 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray& arr,
     }
     switch (ndim) {
       case 3:
-        tz = mkldnn::memory::dims{num_groups, arr.shape()[N] / num_groups, arr.shape()[C],
-                                  arr.shape()[H]};
+        tz = mkldnn::memory::dims{
+            num_groups, arr.shape()[N] / num_groups, arr.shape()[C], arr.shape()[H]};
         break;
       case 4:
-        tz = mkldnn::memory::dims{num_groups, arr.shape()[N] / num_groups, arr.shape()[C],
-                                  arr.shape()[H], arr.shape()[W]};
+        tz = mkldnn::memory::dims{num_groups,
+                                  arr.shape()[N] / num_groups,
+                                  arr.shape()[C],
+                                  arr.shape()[H],
+                                  arr.shape()[W]};
         break;
       case 5:
-        tz = mkldnn::memory::dims{num_groups,     arr.shape()[N] / num_groups,
-                                  arr.shape()[C], arr.shape()[D],
-                                  arr.shape()[H], arr.shape()[W]};
+        tz = mkldnn::memory::dims{num_groups,
+                                  arr.shape()[N] / num_groups,
+                                  arr.shape()[C],
+                                  arr.shape()[D],
+                                  arr.shape()[H],
+                                  arr.shape()[W]};
     }
     return mkldnn::memory::desc{tz, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
   }
@@ -409,8 +423,8 @@ class TmpMemMgr {
     // larger memory size.
     mem_size = std::max(mem_size, est_size);
     if (mem_size > 0) {
-      // Let's allocate some extra memory. If we don't use some of them all the time,
-      // the OS won't physically allocate pages for them any way.
+      // Let's allocate some extra memory. If we don't use some of them all the
+      // time, the OS won't physically allocate pages for them any way.
       this->curr_size = mem_size * 2;
       this->curr_mem  = static_cast<char*>(r.get_host_space_internal(this->curr_size));
     }
@@ -437,9 +451,13 @@ class MKLDNNStream {
     net_prim_args.emplace_back(prim, args);
   }
 
-  void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) { mem_holder.push_back(mem); }
+  void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) {
+    mem_holder.push_back(mem);
+  }
 
-  bool HasOps() const { return !net_prim_args.empty(); }
+  bool HasOps() const {
+    return !net_prim_args.empty();
+  }
 
   /*
    * After submitting mkldnn operations for execution, we need to
@@ -453,7 +471,8 @@ class MKLDNNStream {
       }
       net_prim_args.clear();
     }
-    if (cleanup) Cleanup();
+    if (cleanup)
+      Cleanup();
   }
 
   void Cleanup() {
@@ -519,7 +538,8 @@ static inline void InvalidateOutputs(const std::vector<NDArray>& arrs,
   }
 }
 
-// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature added
+// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature
+// added
 static inline void CreateDefaultInputs(const std::vector<NDArray>& arrs,
                                        std::vector<NDArray>* out_arrs) {
   out_arrs->clear();
@@ -545,16 +565,20 @@ mkldnn_format_tag_t GetDefaultFormat(int num_dims);
 mkldnn::memory::desc GetDesc(const mkldnn::memory::desc& md, const mkldnn_format_tag_t& format);
 
 inline bool same_shape(const mxnet::TShape& shape, const mkldnn_dims_t dims, int ndims) {
-  if (shape.ndim() != ndims) return false;
+  if (shape.ndim() != ndims)
+    return false;
   for (int i = 0; i < ndims; i++)
-    if (shape[i] != dims[i]) return false;
+    if (shape[i] != dims[i])
+      return false;
   return true;
 }
 
 inline bool same_shape(const mkldnn::memory::desc& desc1, const mkldnn::memory::desc& desc2) {
-  if (desc1.data.ndims != desc2.data.ndims) return false;
+  if (desc1.data.ndims != desc2.data.ndims)
+    return false;
   for (int i = 0; i < desc1.data.ndims; i++)
-    if (desc1.data.dims[i] != desc2.data.dims[i]) return false;
+    if (desc1.data.dims[i] != desc2.data.dims[i])
+      return false;
   return true;
 }
 
@@ -584,17 +608,29 @@ class MKLDNNMemory {
     size      = desc.get_size();
   }
 
-  void SetDataHandle(void* handle) { mem->set_data_handle(handle); }
+  void SetDataHandle(void* handle) {
+    mem->set_data_handle(handle);
+  }
 
-  void* GetDataHandle() const { return mem->get_data_handle(); }
+  void* GetDataHandle() const {
+    return mem->get_data_handle();
+  }
 
-  std::shared_ptr<mkldnn::memory> GetMem() const { return mem; }
+  std::shared_ptr<mkldnn::memory> GetMem() const {
+    return mem;
+  }
 
-  mkldnn::memory* GetRaw() const { return mem.get(); }
+  mkldnn::memory* GetRaw() const {
+    return mem.get();
+  }
 
-  size_t GetSize() const { return size; }
+  size_t GetSize() const {
+    return size;
+  }
 
-  mkldnn::memory::desc GetDesc() const { return mem->get_desc(); }
+  mkldnn::memory::desc GetDesc() const {
+    return mem->get_desc();
+  }
 
   mkldnn::memory::desc GetDesc(
       mkldnn_format_tag_t format,
@@ -608,11 +644,17 @@ class MKLDNNMemory {
     return data_md;
   }
 
-  mkldnn_format_tag_t GetDefaultFormat() const { return mxnet::GetDefaultFormat(desc); }
+  mkldnn_format_tag_t GetDefaultFormat() const {
+    return mxnet::GetDefaultFormat(desc);
+  }
 
-  bool IsMKLDNN() const { return mxnet::IsMKLDNN(desc); }
+  bool IsMKLDNN() const {
+    return mxnet::IsMKLDNN(desc);
+  }
 
-  bool SameFormat(mkldnn::memory::desc md) const { return mem->get_desc() == md; }
+  bool SameFormat(mkldnn::memory::desc md) const {
+    return mem->get_desc() == md;
+  }
 
   bool SameFormat(const mxnet::TShape& shape, int dtype) const {
     return same_shape(shape, dtype, desc);
@@ -673,12 +715,15 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs& attrs,
 #define MKLDNN_OPCHECK_INIT(backward, num_checks, inputs, outputs) \
   static bool debug = dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false);   \
   OpCheck check(backward, num_checks);                             \
-  if (debug) check.Init(inputs, outputs);
+  if (debug)                                                       \
+    check.Init(inputs, outputs);
 
 #define MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs) \
-  if (debug) check.Run(fn, attrs, ctx, inputs, req, outputs);
+  if (debug)                                                     \
+    check.Run(fn, attrs, ctx, inputs, req, outputs);
 #define MKLDNN_OPCHECK_COPY_RESULT(outputs, indice) \
-  if (debug) check.CopyResult(outputs, indice);
+  if (debug)                                        \
+    check.CopyResult(outputs, indice);
 
 struct MKLDNNPostEltwiseParam {
   mkldnn::algorithm alg = mkldnn::algorithm::undef;

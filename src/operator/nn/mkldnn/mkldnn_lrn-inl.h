@@ -133,8 +133,12 @@ void MKLDNNLRNFwd::Execute(const OpContext& ctx,
   MKLDNNStream::Get()->Submit();
 }
 
-mkldnn::lrn_forward& MKLDNNLRNFwd::GetFwd() { return *this->fwd; }
-mkldnn::lrn_forward::primitive_desc& MKLDNNLRNFwd::GetFwdPd() { return this->fwd_pd; }
+mkldnn::lrn_forward& MKLDNNLRNFwd::GetFwd() {
+  return *this->fwd;
+}
+mkldnn::lrn_forward::primitive_desc& MKLDNNLRNFwd::GetFwdPd() {
+  return this->fwd_pd;
+}
 
 // End of LRN Class and its functions
 
@@ -168,7 +172,8 @@ void MKLDNNLRNForward(const nnvm::NodeAttrs& attrs,
                       const NDArray& out_data) {
   const LRNParam& param = nnvm::get<LRNParam>(attrs.parsed);
   auto in_buffer        = in_data;
-  if (in_buffer.IsView() && in_buffer.IsMKLDNNData()) in_buffer = in_buffer.Reorder2Default();
+  if (in_buffer.IsView() && in_buffer.IsMKLDNNData())
+    in_buffer = in_buffer.Reorder2Default();
   MKLDNNLRNFwd fwd = GetLRNFwd(param, ctx, in_buffer);
   fwd.Execute(ctx, in_buffer, req, out_data);
 }
@@ -191,7 +196,9 @@ class MKLDNNLRNBwd {
     bwd = std::make_shared<mkldnn::lrn_backward>(bwd_pd);
   }
 
-  const mkldnn::lrn_backward& GetBwd() const { return *bwd; }
+  const mkldnn::lrn_backward& GetBwd() const {
+    return *bwd;
+  }
 
   void Execute(const NDArray& out_grad,
                const NDArray& in_data,
@@ -245,7 +252,8 @@ void MKLDNNLRNBackward(const nnvm::NodeAttrs& attrs,
   const NDArray& out_grad = inputs[0];
   const NDArray& in_data  = inputs[1];
   const NDArray& in_grad  = outputs[0];
-  // TODO(alex): (MXNET-846) figure out why in_grad output incorrect when in_data is nchw8c
+  // TODO(alex): (MXNET-846) figure out why in_grad output incorrect when
+  // in_data is nchw8c
   const auto in_buffer         = in_data.Reorder2Default();
   MKLDNNLRNBwd& bwd            = GetLRNBwd(param, in_buffer, in_grad, out_grad);
   mkldnn_output_t diff_src_mem = CreateMKLDNNMem(in_grad, bwd.bwd_pd.diff_src_desc(), req[0]);

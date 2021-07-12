@@ -60,7 +60,8 @@ void SgMKLDNNDequantizeOperator::Forward(const OpContext& ctx,
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& outputs) {
   NDArray in_buffer = inputs[0];
-  if (inputs[0].IsView() && inputs[0].IsMKLDNNData()) in_buffer = inputs[0].Reorder2Default();
+  if (inputs[0].IsView() && inputs[0].IsMKLDNNData())
+    in_buffer = inputs[0].Reorder2Default();
   auto i_mem     = in_buffer.GetMKLDNNData();
   float data_min = *inputs[1].data().dptr<float>();
   float data_max = *inputs[2].data().dptr<float>();

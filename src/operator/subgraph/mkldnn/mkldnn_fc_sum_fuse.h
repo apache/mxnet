@@ -18,7 +18,8 @@
  */
 
 /*
-  \brief It fuses FC + SUM for floating point output in second post quantization pass
+  \brief It fuses FC + SUM for floating point output in second post quantization
+  pass
 */
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_SUM_FUSE_H_
@@ -71,7 +72,9 @@ class SgMKLDNNFCSumFuseSelector : public SubgraphSelector {
     return false;
   }
 
-  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override { return false; }
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+    return false;
+  }
 
   bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     if (status_ == kFail || status_ == kSuccess || new_node.is_variable()) {
@@ -146,7 +149,8 @@ class SgMKLDNNFCSumFuseProperty : public SubgraphProperty {
     nnvm::ObjectPtr ew_add_node = nullptr;
 
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable()) return;
+      if (node->is_variable())
+        return;
       auto& sub_name = node->op()->name;
       if (sub_name == "_sg_mkldnn_fully_connected") {
         fc_node = node;
@@ -197,7 +201,8 @@ class SgMKLDNNFCSumFuseProperty : public SubgraphProperty {
     auto const& fc_param = nnvm::get<MKLDNNFCFullParam>(n->attrs.parsed);
     std::unordered_set<const nnvm::Node*> node_sets;
     DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable()) return;
+      if (node->is_variable())
+        return;
       node_sets.insert(node.get());
       if (node->op()->name == "elemwise_add") {
         const size_t base_inputs = fc_param.default_param.no_bias ? 3 : 4;
@@ -207,14 +212,18 @@ class SgMKLDNNFCSumFuseProperty : public SubgraphProperty {
         // the extra sum operand stays in the last of inputs.
         if (node_sets.count(node->inputs[1].node.get())) {
           std::swap(node->inputs[0], node->inputs[1]);
-          std::rotate(input_entries->begin(), input_entries->begin() + 1,
+          std::rotate(input_entries->begin(),
+                      input_entries->begin() + 1,
                       input_entries->begin() + base_inputs);
-          std::rotate(orig_input_entries->begin(), orig_input_entries->begin() + 1,
+          std::rotate(orig_input_entries->begin(),
+                      orig_input_entries->begin() + 1,
                       orig_input_entries->begin() + base_inputs);
         } else {
-          std::rotate(input_entries->begin() + base_inputs - 1, input_entries->end() - 1,
+          std::rotate(input_entries->begin() + base_inputs - 1,
+                      input_entries->end() - 1,
                       input_entries->end());
-          std::rotate(orig_input_entries->begin() + base_inputs - 1, orig_input_entries->end() - 1,
+          std::rotate(orig_input_entries->begin() + base_inputs - 1,
+                      orig_input_entries->end() - 1,
                       orig_input_entries->end());
         }
       }

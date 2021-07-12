@@ -159,8 +159,8 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
   // Copy inputs[in_sum] into outputs[kOut] in case inplace optimization failed.
   if (mkldnn_param.with_sum) {
     if (!initialized_) {
-      // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace option,
-      // which make check (req[kOut] == kWriteInplace) useless.
+      // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace
+      // option, which make check (req[kOut] == kWriteInplace) useless.
       auto in_mkl_mem  = inputs[in_sum].GetMKLDNNData();
       auto out_mkl_mem = outputs[kOut].GetMKLDNNData();
       if (in_mkl_mem->get_data_handle() == out_mkl_mem->get_data_handle()) {
@@ -175,8 +175,8 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
         const auto this_dtype = get_mkldnn_type(mshadow::kInt32);
         auto omd              = mem_desc;
         omd.data.data_type    = static_cast<mkldnn_data_type_t>(this_dtype);
-        mkldnn_mem_ptr tmp_mem(new mkldnn::memory(omd, CpuEngine::Get()->get_engine(),
-                                                  out_mkl_mem->get_data_handle()));
+        mkldnn_mem_ptr tmp_mem(new mkldnn::memory(
+            omd, CpuEngine::Get()->get_engine(), out_mkl_mem->get_data_handle()));
         MKLDNNStream::Get()->RegisterMem(tmp_mem);
         MKLDNNStream::Get()->RegisterPrimArgs(
             mkldnn::reorder(*in_mkl_mem, *tmp_mem),
@@ -228,9 +228,14 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
     // Update weight and bias after bn fusion.
     if (mkldnn_param.with_bn) {
       MKLDNN_REAL_TYPE_SWITCH(inputs[in_weight].dtype(), DType, {
-        UpdateConvWeightBias<DType>(&cached_weight_, &cached_bias_, conv_param.no_bias,
-                                    inputs[in_gamma], inputs[in_beta], inputs[in_mean],
-                                    inputs[in_var], bn_param);
+        UpdateConvWeightBias<DType>(&cached_weight_,
+                                    &cached_bias_,
+                                    conv_param.no_bias,
+                                    inputs[in_gamma],
+                                    inputs[in_beta],
+                                    inputs[in_mean],
+                                    inputs[in_var],
+                                    bn_param);
       });
     }
     // Quantize weight and bias.
@@ -238,7 +243,8 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
       CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
       if (cached_data_min_ < 0.0f) {
         CHECK_EQ(data.dtype(), mshadow::kInt8)
-            << "Expect int8 when data_min < 0.0, consider quantize model with int8.";
+            << "Expect int8 when data_min < 0.0, consider quantize model with "
+               "int8.";
       }
       auto weight_channelwise_scale = false;
       if (mkldnn_param.min_calib_range.has_value() && mkldnn_param.max_calib_range.has_value()) {
@@ -249,8 +255,10 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
       }
       data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
       MKLDNN_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
-        weight_scales_ = GetWeightScales<DType>(cached_weight_, has_bias ? &cached_bias_ : nullptr,
-                                                data_scale_, weight_channelwise_scale);
+        weight_scales_ = GetWeightScales<DType>(cached_weight_,
+                                                has_bias ? &cached_bias_ : nullptr,
+                                                data_scale_,
+                                                weight_channelwise_scale);
       });
       // Collect scale.
       size_t channel     = cached_weight_.shape()[0];
@@ -261,7 +269,8 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
       }
       if (post_requantize_) {
         output_scale = GetQuantizeScale(IsOutputUInt8(param_) ? mshadow::kUint8 : mshadow::kInt8,
-                                        cached_output_min_, cached_output_max_);
+                                        cached_output_min_,
+                                        cached_output_max_);
         full_conv_param.requantize_scales.resize(weight_channelwise_scale ? channel : 1);
         for (size_t c = 0; c < full_conv_param.requantize_scales.size(); c++) {
           full_conv_param.requantize_scales[c] = output_scale / data_scale_ / weight_scales_[c];
@@ -270,12 +279,24 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
         Stream<cpu>* s = ctx.get_stream<cpu>();
         if (data.dtype() == mshadow::kInt8) {
           mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
-              s, 1, &cached_output_min_, &cached_output_max_, &weight_scales_[1],
-              &weight_scales_[2], &cached_data_min_, &cached_data_max_);
+              s,
+              1,
+              &cached_output_min_,
+              &cached_output_max_,
+              &weight_scales_[1],
+              &weight_scales_[2],
+              &cached_data_min_,
+              &cached_data_max_);
         } else {
           mxnet_op::Kernel<QuantizationRangeForS8U8MultiplicationStruct, cpu>::Launch(
-              s, 1, &cached_output_min_, &cached_output_max_, &weight_scales_[1],
-              &weight_scales_[2], &cached_data_min_, &cached_data_max_);
+              s,
+              1,
+              &cached_output_min_,
+              &cached_output_max_,
+              &weight_scales_[1],
+              &weight_scales_[2],
+              &cached_data_min_,
+              &cached_data_max_);
         }
         weight_scales_.resize(1);
         output_scale = data_scale_ * weight_scales_[0];
@@ -290,7 +311,8 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
           LOG(ERROR) << "mkldnn doesn't support conv + relu + sum fusion yet.";
           full_conv_param.act_param.alpha *= output_scale;
         } else {
-          // For conv+relu6 without sum, we don't need post_ops as output_scale can do the cut off.
+          // For conv+relu6 without sum, we don't need post_ops as output_scale
+          // can do the cut off.
           mkldnn_param.with_act = false;
         }
       }
@@ -298,16 +320,27 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
         CHECK(full_conv_param.postsum_act_param.alg == mkldnn::algorithm::eltwise_relu);
       }
     }
-    fwd_.reset(new MKLDNNConvForward(full_conv_param, ctx.is_train, data, cached_weight_,
-                                     has_bias ? &cached_bias_ : nullptr, output));
+    fwd_.reset(new MKLDNNConvForward(full_conv_param,
+                                     ctx.is_train,
+                                     data,
+                                     cached_weight_,
+                                     has_bias ? &cached_bias_ : nullptr,
+                                     output));
     mkldnn::memory::desc bias_md;
-    if (has_bias) bias_md = fwd_->GetPd().bias_desc();
-    ConvertWeightBias2MKLDNN(&cached_weight_, &cached_bias_, has_bias, fwd_->GetPd().weights_desc(),
-                             has_bias ? &bias_md : nullptr, full_conv_param.conv_param.num_group,
-                             data_scale_, weight_scales_);
+    if (has_bias)
+      bias_md = fwd_->GetPd().bias_desc();
+    ConvertWeightBias2MKLDNN(&cached_weight_,
+                             &cached_bias_,
+                             has_bias,
+                             fwd_->GetPd().weights_desc(),
+                             has_bias ? &bias_md : nullptr,
+                             full_conv_param.conv_param.num_group,
+                             data_scale_,
+                             weight_scales_);
     args_[MKLDNN_ARG_SRC]     = *data.GetMKLDNNData();
     args_[MKLDNN_ARG_WEIGHTS] = *cached_weight_.GetMKLDNNData();
-    if (has_bias) args_[MKLDNN_ARG_BIAS] = *cached_bias_.GetMKLDNNData();
+    if (has_bias)
+      args_[MKLDNN_ARG_BIAS] = *cached_bias_.GetMKLDNNData();
     args_[MKLDNN_ARG_DST] = *output.GetMKLDNNData();
     initialized_          = true;
   }
@@ -320,8 +353,8 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
       auto tmp_out_mem       = output.GetMKLDNNDataReorder(fwd_->GetPd().dst_desc());
       auto data_md           = dst_mem_desc;
       data_md.data.data_type = static_cast<mkldnn_data_type_t>(out_mem_desc.data.data_type);
-      mkldnn_mem_ptr new_out_mem(new mkldnn::memory(data_md, CpuEngine::Get()->get_engine(),
-                                                    output_mem->get_data_handle()));
+      mkldnn_mem_ptr new_out_mem(new mkldnn::memory(
+          data_md, CpuEngine::Get()->get_engine(), output_mem->get_data_handle()));
       MKLDNNStream::Get()->RegisterMem(new_out_mem);
       MKLDNNMemoryCopy(*tmp_out_mem, new_out_mem.get());
       output = NDArray(new_out_mem);
@@ -342,8 +375,8 @@ void SgMKLDNNConvOperator::Forward(const OpContext& ctx,
     } else {
       new_inputs = {data, cached_weight_};
     }
-    MKLDNNConvolutionForwardFullFeature(full_conv_param, ctx, fwd_.get(), new_inputs, req,
-                                        {output});
+    MKLDNNConvolutionForwardFullFeature(
+        full_conv_param, ctx, fwd_.get(), new_inputs, req, {output});
   }
 
   if (mkldnn_param.quantized) {
@@ -410,7 +443,8 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs* attrs) {
   auto subgraph_sym = attrs->subgraphs[0];
   bool with_act     = false;
   DFSVisit(subgraph_sym->outputs, [&](const nnvm::ObjectPtr& node) {
-    if (node->is_variable()) return;
+    if (node->is_variable())
+      return;
     auto& node_name = node->op()->name;
     if (node_name == "BatchNorm") {
       CHECK_EQ(param_.full_conv_param.mkldnn_param.with_bn, true);
@@ -516,8 +550,12 @@ static bool SgMKLDNNConvInferShape(const nnvm::NodeAttrs& attrs,
     mxnet::ShapeVector base_in_shapes;
     mxnet::ShapeVector base_out_shapes;
 
-    FilterMinMaxIndice<mxnet::TShape>(param.full_conv_param.mkldnn_param, in_shapes, out_shapes,
-                                      &base_in_shapes, &base_out_shapes, &minmax_indice);
+    FilterMinMaxIndice<mxnet::TShape>(param.full_conv_param.mkldnn_param,
+                                      in_shapes,
+                                      out_shapes,
+                                      &base_in_shapes,
+                                      &base_out_shapes,
+                                      &minmax_indice);
     bool result     = DefaultSubgraphOpShape(attrs, &base_in_shapes, &base_out_shapes);
     size_t base_idx = 0;
     for (size_t i = 0; i < in_shapes->size(); ++i) {
@@ -544,8 +582,12 @@ static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs& attrs,
     std::unordered_set<size_t> minmax_indice;
     std::vector<int> base_in_types;
     std::vector<int> base_out_types;
-    FilterMinMaxIndice<int>(param.full_conv_param.mkldnn_param, in_types, out_types, &base_in_types,
-                            &base_out_types, &minmax_indice);
+    FilterMinMaxIndice<int>(param.full_conv_param.mkldnn_param,
+                            in_types,
+                            out_types,
+                            &base_in_types,
+                            &base_out_types,
+                            &minmax_indice);
     // Override data type to fp32 for default infer type as bn doesn't support
     // uint8.
     int orig_data    = base_in_types[0];
@@ -599,10 +641,14 @@ static bool SgMKLDNNConvOpStorageType(const nnvm::NodeAttrs& attrs,
     std::unordered_set<size_t> minmax_indice;
     std::vector<int> base_in_stypes;
     std::vector<int> base_out_stypes;
-    FilterMinMaxIndice<int>(param.full_conv_param.mkldnn_param, in_stypes, out_stypes,
-                            &base_in_stypes, &base_out_stypes, &minmax_indice);
-    bool result     = DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode, &base_in_stypes,
-                                               &base_out_stypes);
+    FilterMinMaxIndice<int>(param.full_conv_param.mkldnn_param,
+                            in_stypes,
+                            out_stypes,
+                            &base_in_stypes,
+                            &base_out_stypes,
+                            &minmax_indice);
+    bool result = DefaultSubgraphOpStorageType(
+        attrs, dev_mask, dispatch_mode, &base_in_stypes, &base_out_stypes);
     size_t base_idx = 0;
     for (size_t i = 0; i < in_stypes->size(); ++i) {
       if (minmax_indice.count(i)) {

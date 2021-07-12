@@ -38,10 +38,12 @@ namespace op {
 #define SELFATT_VALATT "_contrib_interleaved_matmul_selfatt_valatt"
 
 const std::map<std::string, std::string> OpMapping = {
-    {SELFATT_QK, "_sg_mkldnn_selfatt_qk"}, {SELFATT_VALATT, "_sg_mkldnn_selfatt_valatt"}};
+    {SELFATT_QK, "_sg_mkldnn_selfatt_qk"},
+    {SELFATT_VALATT, "_sg_mkldnn_selfatt_valatt"}};
 
 const std::map<std::string, std::string> NameMapping = {
-    {SELFATT_QK, "sg_mkldnn_selfatt_qk"}, {SELFATT_VALATT, "sg_mkldnn_selfatt_valatt"}};
+    {SELFATT_QK, "sg_mkldnn_selfatt_qk"},
+    {SELFATT_VALATT, "sg_mkldnn_selfatt_valatt"}};
 
 class SgMKLDNNTransformerSelector : public SubgraphSelector {
  public:
@@ -52,9 +54,13 @@ class SgMKLDNNTransformerSelector : public SubgraphSelector {
     return false;
   }
 
-  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override { return false; }
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+    return false;
+  }
 
-  bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override { return false; }
+  bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+    return false;
+  }
 };
 
 class SgMKLDNNTransformerProperty : public SubgraphProperty {

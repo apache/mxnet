@@ -54,9 +54,11 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs,
   float output_pos_max = 0.f;  // 0.f is the minimum for output_pos_max
   for (int i = 0; i < param_.num_args; ++i) {
     data_min[i] = in_data[param_.num_args + 2 * i].data().dptr<float>()[0];
-    if (data_min[i] < output_neg_min) output_neg_min = data_min[i];
+    if (data_min[i] < output_neg_min)
+      output_neg_min = data_min[i];
     data_max[i] = in_data[param_.num_args + 2 * i + 1].data().dptr<float>()[0];
-    if (data_max[i] > output_pos_max) output_pos_max = data_max[i];
+    if (data_max[i] > output_pos_max)
+      output_pos_max = data_max[i];
   }
   out_data[quantized_concat_enum::kMin].data().dptr<float>()[0] = output_neg_min;
   out_data[quantized_concat_enum::kMax].data().dptr<float>()[0] = output_pos_max;
@@ -95,8 +97,8 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs,
     }
   }
   MKLDNNConcatFwd& fwd           = GetConcatForward(param_.dim, in_data, data_md);
-  mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(out_data[quantized_concat_enum::kOut],
-                                                   fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
+  mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(
+      out_data[quantized_concat_enum::kOut], fwd.fwd_pd.dst_desc(), req[concat_enum::kOut]);
   mkldnn_args_map_t net_args;
   net_args[MKLDNN_ARG_DST] = *out_mem.second;
   for (int i = 0; i < param_.num_args; i++) {

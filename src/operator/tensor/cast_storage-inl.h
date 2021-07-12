@@ -19,7 +19,8 @@
 
 /*!
  * \file cast_storage-inl.h
- * \brief CPU implementation of cast_storage operator for dense and sparse tensors
+ * \brief CPU implementation of cast_storage operator for dense and sparse
+ * tensors
  */
 #ifndef MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_H_
 #define MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_H_
@@ -91,12 +92,13 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
       TBlob row_idx_blob = rsp->aux_data(kIdx);
       RType* row_idx     = row_idx_blob.dptr<RType>();
       dim_t num_threads  = num_rows;
-      mxnet_op::Kernel<MarkRspRowIdx, cpu>::Launch(s, num_threads, row_idx, dns.dptr<DType>(),
-                                                   row_length);
+      mxnet_op::Kernel<MarkRspRowIdx, cpu>::Launch(
+          s, num_threads, row_idx, dns.dptr<DType>(), row_length);
       dim_t nnr = 0;
       nnr       = common::ParallelAccumulate(row_idx, num_rows, nnr);
       rsp->set_aux_shape(kIdx, Shape1(nnr));
-      if (0 == nnr) return;
+      if (0 == nnr)
+        return;
       auto storage_shape = dns.shape_;
       storage_shape[0]   = nnr;
       rsp->CheckAndAllocData(storage_shape);
@@ -114,11 +116,15 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
   });
 }
 
-// TODO(haibin) Use memcopy instead will be much faster than assigning each individual element
+// TODO(haibin) Use memcopy instead will be much faster than assigning each
+// individual element
 struct CastStorageRspDnsKernel {
   template <typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(
-      int i, const nnvm::dim_t row_length, const IType* idx, const DType* data, DType* dns) {
+  MSHADOW_XINLINE static void Map(int i,
+                                  const nnvm::dim_t row_length,
+                                  const IType* idx,
+                                  const DType* data,
+                                  DType* dns) {
     using nnvm::dim_t;
     IType rid        = idx[i];
     dim_t dns_offset = rid * row_length;
@@ -130,8 +136,8 @@ struct CastStorageRspDnsKernel {
 };
 
 /*!
- * \brief This function assumes that the memory for dns has been allocated already
- * since the shape is known at binding stage.
+ * \brief This function assumes that the memory for dns has been allocated
+ * already since the shape is known at binding stage.
  */
 template <typename xpu>
 void CastStorageRspDnsImpl(const OpContext& ctx, const NDArray& rsp, TBlob* dns) {
@@ -151,8 +157,8 @@ void CastStorageRspDnsImpl(const OpContext& ctx, const NDArray& rsp, TBlob* dns)
         const dim_t num_rows    = rsp.aux_shape(rowsparse::kIdx).Size();
         const dim_t row_length  = shape.ProdShape(1, shape.ndim());
         const dim_t num_threads = num_rows;
-        mxnet_op::Kernel<CastStorageRspDnsKernel, xpu>::Launch(s, num_threads, row_length, in_idx,
-                                                               in_data, out_data);
+        mxnet_op::Kernel<CastStorageRspDnsKernel, xpu>::Launch(
+            s, num_threads, row_length, in_idx, in_data, out_data);
       }
     });
   });
@@ -188,7 +194,8 @@ struct FillCsrIndPtr {
 };
 
 /*!
- * \brief CPU kernel for initializing the col_idx and value array of the csr matrix.
+ * \brief CPU kernel for initializing the col_idx and value array of the csr
+ * matrix.
  */
 struct FillCsrColIdxAndVals {
   /*!
@@ -245,8 +252,8 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
         IType* indptr     = csr->aux_data(csr::kIndPtr).dptr<IType>();
         DType* dns_data   = dns.dptr<DType>();
         dim_t num_threads = num_rows;
-        mxnet_op::Kernel<FillCsrIndPtr, cpu>::Launch(s, num_threads, indptr, dns_data, num_rows,
-                                                     num_cols);
+        mxnet_op::Kernel<FillCsrIndPtr, cpu>::Launch(
+            s, num_threads, indptr, dns_data, num_rows, num_cols);
         // single thread to accumulate indptr
         // indptr[num_rows] indicates the number of non-zero elements
         indptr[0] = 0;
@@ -257,16 +264,22 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
         csr->CheckAndAllocAuxData(csr::kIdx, Shape1(static_cast<index_t>(indptr[num_rows])));
         csr->CheckAndAllocData(Shape1(static_cast<index_t>(indptr[num_rows])));
         // fill col_idx and value arrays of the csr
-        mxnet_op::Kernel<FillCsrColIdxAndVals, cpu>::Launch(
-            s, num_threads, csr->data().dptr<DType>(), csr->aux_data(csr::kIdx).dptr<CType>(),
-            indptr, dns_data, num_rows, num_cols);
+        mxnet_op::Kernel<FillCsrColIdxAndVals, cpu>::Launch(s,
+                                                            num_threads,
+                                                            csr->data().dptr<DType>(),
+                                                            csr->aux_data(csr::kIdx).dptr<CType>(),
+                                                            indptr,
+                                                            dns_data,
+                                                            num_rows,
+                                                            num_cols);
       });
     });
   });
 }
 
 /*!
- * \brief This is the kernel for copying csr.data to its corresponding dns matrix.
+ * \brief This is the kernel for copying csr.data to its corresponding dns
+ * matrix.
  */
 struct CopyCsrDataToDns {
   /*!
@@ -311,13 +324,14 @@ void CastStorageCsrDnsImpl(const OpContext& ctx, const NDArray& csr, TBlob* dns)
         DType* dns_data      = dns->dptr<DType>();
         dim_t num_threads    = dns->shape_.Size();
         mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, num_threads, dns_data);
-        if (!csr.storage_initialized()) return;
+        if (!csr.storage_initialized())
+          return;
         const IType* indptr   = csr.aux_data(csr::kIndPtr).dptr<IType>();
         const CType* col_idx  = csr.aux_data(csr::kIdx).dptr<CType>();
         const DType* csr_data = csr.data().dptr<DType>();
         num_threads           = num_rows;
-        mxnet_op::Kernel<CopyCsrDataToDns, xpu>::Launch(s, num_threads, dns_data, col_idx, indptr,
-                                                        csr_data, num_cols);
+        mxnet_op::Kernel<CopyCsrDataToDns, xpu>::Launch(
+            s, num_threads, dns_data, col_idx, indptr, csr_data, num_cols);
       });
     });
   });
@@ -394,7 +408,8 @@ void CastStorageComputeImpl(const OpContext& ctx, const NDArray& input, const ND
       NDArray tmp_input = input;
       // If the input data is MKLDNN and is a view, we need to reorder the input
       // data first.
-      if (input.IsMKLDNNData() && input.IsView()) tmp_input = input.Reorder2Default();
+      if (input.IsMKLDNNData() && input.IsView())
+        tmp_input = input.Reorder2Default();
       const mkldnn::memory* in_mem = tmp_input.GetMKLDNNData();
       const_cast<NDArray&>(output).CopyFrom(*in_mem);
       MKLDNNStream::Get()->Submit();
@@ -438,7 +453,8 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
     // If we use MKLDNN and the arrays are in CPU memory, the array may store
     // MKLDNN layout, we should convert its layout explicitly.
-    if (dev_mask == kCPU) mode = DispatchMode::kFComputeEx;
+    if (dev_mask == kCPU)
+      mode = DispatchMode::kFComputeEx;
 #endif
     dispatched = storage_type_assign(out_attrs, kDefaultStorage, dispatch_mode, mode);
   }
@@ -471,7 +487,8 @@ void CastStorageComputeEx(const nnvm::NodeAttrs& attrs,
                           const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), 1);
-  if (req[0] == kNullOp) return;
+  if (req[0] == kNullOp)
+    return;
   CHECK_EQ(req[0], kWriteTo) << "CastStorageComputeEx expects req[0] == kWriteTo";
   CastStorageComputeImpl<xpu>(ctx, inputs[0], outputs[0]);
 }

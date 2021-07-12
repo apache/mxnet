@@ -50,8 +50,10 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
   bool SelectInput(const BiDirectedNode& sn, const BiDirectedNode& snew_node) override {
     const auto& n        = *sn.node;
     const auto& new_node = *snew_node.node;
-    if (new_node.is_variable()) return false;
-    if (visit_list_.count(&n) == 0) return false;
+    if (new_node.is_variable())
+      return false;
+    if (visit_list_.count(&n) == 0)
+      return false;
     bool multiple_outputs = false;
     for (auto i : snew_node.outputs) {
       if (visit_list_.count(i.first) == 0) {
@@ -59,7 +61,8 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
         break;
       }
     }
-    if (multiple_outputs) return false;
+    if (multiple_outputs)
+      return false;
     if (new_node.attrs.dict.count("min_calib_range") != 0 &&
         new_node.attrs.dict.count("max_calib_range") != 0) {
       matched_list_.push_back(&snew_node);
@@ -73,10 +76,12 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
   }
 
   bool SelectOutput(const BiDirectedNode& sn, const BiDirectedNode& snew_node) override {
-    if (!select_output_) return false;
+    if (!select_output_)
+      return false;
     const auto& n        = *sn.node;
     const auto& new_node = *snew_node.node;
-    if (new_node.is_variable()) return false;
+    if (new_node.is_variable())
+      return false;
     if (visit_list_.count(&n) == 0) {
       return false;
     }
@@ -128,19 +133,19 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
   /*!
    * \brief Adjust selected nodes calibration range with maximum calib range.
    * For example,
-   * conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
-   *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
-   * conv2 = mx.symbol.Convolution(data=data, weight=weight * 2, name='conv2', num_filter=64,
-   *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
-   * conv3 = mx.symbol.Convolution(data=data, weight=weight * 3, name='conv3', num_filter=64,
-   *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
-   * conv4 = mx.symbol.Convolution(data=data, weight=weight * 4, name='conv4', num_filter=64,
-   *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
-   * concat = mx.symbol.Concat(*[conv1, conv2, conv3, conv4], name="concat", dim=1)
+   * conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1',
+   * num_filter=64, kernel=(3, 3), stride=(1, 1), no_bias=True) conv2 =
+   * mx.symbol.Convolution(data=data, weight=weight * 2, name='conv2',
+   * num_filter=64, kernel=(3, 3), stride=(1, 1), no_bias=True) conv3 =
+   * mx.symbol.Convolution(data=data, weight=weight * 3, name='conv3',
+   * num_filter=64, kernel=(3, 3), stride=(1, 1), no_bias=True) conv4 =
+   * mx.symbol.Convolution(data=data, weight=weight * 4, name='conv4',
+   * num_filter=64, kernel=(3, 3), stride=(1, 1), no_bias=True) concat =
+   * mx.symbol.Concat(*[conv1, conv2, conv3, conv4], name="concat", dim=1)
    *
-   * This pass will collect the maximum calib range from conv1 to conv4, and apply it to all
-   * conv1 to conv4. Then concat don't need extra scale alignment operation. Performance and
-   * accuracy are both improved.
+   * This pass will collect the maximum calib range from conv1 to conv4, and
+   * apply it to all conv1 to conv4. Then concat don't need extra scale
+   * alignment operation. Performance and accuracy are both improved.
    */
   void AdjustSubgraphNode(const std::vector<nnvm::Node*>& subgraph_nodes,
                           const SubgraphSelectorV2Ptr& subgraph_selector,
@@ -150,14 +155,17 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
     for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
       auto this_min_calib = dmlc::stof(subgraph_nodes[i]->attrs.dict["min_calib_range"]);
       auto this_max_calib = dmlc::stof(subgraph_nodes[i]->attrs.dict["max_calib_range"]);
-      if (min_calib > this_min_calib) min_calib = this_min_calib;
-      if (max_calib < this_max_calib) max_calib = this_max_calib;
+      if (min_calib > this_min_calib)
+        min_calib = this_min_calib;
+      if (max_calib < this_max_calib)
+        max_calib = this_max_calib;
     }
     for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
       auto& n                         = *subgraph_nodes[i];
       n.attrs.dict["min_calib_range"] = std::to_string(min_calib);
       n.attrs.dict["max_calib_range"] = std::to_string(max_calib);
-      if (n.op()->attr_parser) n.op()->attr_parser(&(n.attrs));
+      if (n.op()->attr_parser)
+        n.op()->attr_parser(&(n.attrs));
     }
   }
 

@@ -76,7 +76,8 @@ static void MKLDNNQuantizedBatchNormForward(const nnvm::NodeAttrs& attrs,
     *max_output_ptr = param.max_calib_range.value();
     *min_output_ptr = param.min_calib_range.value();
   } else {
-    LOG(FATAL) << "min_calib_range or max_calib_range is not available. Quantized BN currently "
+    LOG(FATAL) << "min_calib_range or max_calib_range is not available. "
+                  "Quantized BN currently "
                   "don't support calib_mode=None";
   }
   const float max_abs_output = std::max(std::abs(*min_output_ptr), std::abs(*max_output_ptr));

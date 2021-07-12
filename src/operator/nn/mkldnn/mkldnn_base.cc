@@ -38,14 +38,17 @@ MKLDNNStream* MKLDNNStream::Get() {
 }
 
 void* AlignMem(void* mem, size_t size, size_t alignment, size_t* space) {
-  if (size > *space) return nullptr;
+  if (size > *space)
+    return nullptr;
   intptr_t addr = reinterpret_cast<intptr_t>(mem);
   // If the address has been aligned, don't do anything.
   intptr_t last_chunk = addr % alignment;
-  if (last_chunk == 0) return mem;
+  if (last_chunk == 0)
+    return mem;
   intptr_t padding = alignment - last_chunk;
   // If the buffer doesn't have enough space, we should return null here.
-  if (padding + size > *space) return nullptr;
+  if (padding + size > *space)
+    return nullptr;
   addr += padding;
   *space -= padding;
   CHECK_EQ(addr % alignment, 0);
@@ -66,12 +69,13 @@ mkldnn::memory* TmpMemMgr::Alloc(const mkldnn::memory::desc& md) {
     this->curr_mem = static_cast<char*>(mem) + md.get_size();
     return ret.get();
   } else {
-    // If curr_mem has been initialized and we still reach here, it means the current
-    // allocated memory isn't enough. But it doesn't matter for multiple invokes of a
-    // operator, as the TmpMemMgr could estimate the space at the first iteration and
-    // then re-requests abundant space from MXNet resource. MKL-DNN could allocate
-    // the space by itself. Thus, we just let it continue for estimating the maximum
-    // required space size. It will be allocated at next call.
+    // If curr_mem has been initialized and we still reach here, it means the
+    // current allocated memory isn't enough. But it doesn't matter for multiple
+    // invokes of a operator, as the TmpMemMgr could estimate the space at the
+    // first iteration and then re-requests abundant space from MXNet resource.
+    // MKL-DNN could allocate the space by itself. Thus, we just let it continue
+    // for estimating the maximum required space size. It will be allocated at
+    // next call.
     if (this->curr_mem && dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false)) {
       LOG(WARNING) << "mkl-dnn debug message: The rest of the temporary space is not "
                    << "adequate for allocating " << md.get_size() << " bytes. Thus, mkl-dnn "
@@ -95,8 +99,8 @@ void MKLDNNMemoryCopy(const mkldnn::memory& mem, const mkldnn::memory* this_mem)
     // shape.
     mkldnn::memory::dims dims(this_desc.data.dims, this_desc.data.dims + this_desc.data.ndims);
     auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
-    mkldnn::memory::desc data_md(dims, this_dtype,
-                                 static_cast<mkldnn::memory::format_tag>(this_def_format));
+    mkldnn::memory::desc data_md(
+        dims, this_dtype, static_cast<mkldnn::memory::format_tag>(this_def_format));
 
     mkldnn_mem_ptr tmp_mem(new mkldnn::memory(data_md, mem.get_engine(), mem.get_data_handle()));
     stream->RegisterMem(tmp_mem);
@@ -246,24 +250,33 @@ const mkldnn::memory* GetWeights(const NDArray& arr, int num_groups) {
     tz         = mkldnn::memory::dims{arr.shape()[O], arr.shape()[I]};
     format_tag = mkldnn::memory::format_tag::oi;
   } else if (ndim == 3) {
-    tz = num_groups > 1 ? mkldnn::memory::dims{num_groups, arr.shape()[O] / num_groups,
-                                               arr.shape()[I], arr.shape()[H]}
+    tz = num_groups > 1 ? mkldnn::memory::dims{num_groups,
+                                               arr.shape()[O] / num_groups,
+                                               arr.shape()[I],
+                                               arr.shape()[H]}
                         : mkldnn::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H]};
     format_tag =
         num_groups > 1 ? mkldnn::memory::format_tag::goiw : mkldnn::memory::format_tag::oiw;
   } else if (ndim == 4) {
     tz = num_groups > 1
-             ? mkldnn::memory::dims{num_groups, arr.shape()[O] / num_groups, arr.shape()[I],
-                                    arr.shape()[H], arr.shape()[W]}
+             ? mkldnn::memory::dims{num_groups,
+                                    arr.shape()[O] / num_groups,
+                                    arr.shape()[I],
+                                    arr.shape()[H],
+                                    arr.shape()[W]}
              : mkldnn::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[H], arr.shape()[W]};
     format_tag =
         num_groups > 1 ? mkldnn::memory::format_tag::goihw : mkldnn::memory::format_tag::oihw;
   } else if (ndim == 5) {
-    tz = num_groups > 1 ? mkldnn::memory::dims{num_groups,     arr.shape()[O] / num_groups,
-                                               arr.shape()[I], arr.shape()[D],
-                                               arr.shape()[H], arr.shape()[W]}
-                        : mkldnn::memory::dims{arr.shape()[O], arr.shape()[I], arr.shape()[D],
-                                               arr.shape()[H], arr.shape()[W]};
+    tz = num_groups > 1
+             ? mkldnn::memory::dims{num_groups,
+                                    arr.shape()[O] / num_groups,
+                                    arr.shape()[I],
+                                    arr.shape()[D],
+                                    arr.shape()[H],
+                                    arr.shape()[W]}
+             : mkldnn::memory::dims{
+                   arr.shape()[O], arr.shape()[I], arr.shape()[D], arr.shape()[H], arr.shape()[W]};
     format_tag =
         num_groups > 1 ? mkldnn::memory::format_tag::goidhw : mkldnn::memory::format_tag::oidhw;
   } else {
@@ -277,11 +290,15 @@ const mkldnn::memory* GetWeights(const NDArray& arr,
                                  const mkldnn::memory::desc& target_desc,
                                  int num_groups) {
   const mkldnn::memory* mem = arr.GetMKLDNNData(target_desc);
-  // If the weight array already uses the target layout, simply return it directly.
-  if (mem) return mem;
+  // If the weight array already uses the target layout, simply return it
+  // directly.
+  if (mem)
+    return mem;
   mem = GetWeights(arr, num_groups);
-  if (mem == nullptr) mem = arr.GetMKLDNNDataReorder(target_desc);
-  if (mem->get_desc() == target_desc) return mem;
+  if (mem == nullptr)
+    mem = arr.GetMKLDNNDataReorder(target_desc);
+  if (mem->get_desc() == target_desc)
+    return mem;
 
   auto ret = TmpMemMgr::Get()->Alloc(target_desc);
   std::unordered_map<int, mkldnn::memory> args({{MKLDNN_ARG_FROM, *mem}, {MKLDNN_ARG_TO, *ret}});
@@ -290,7 +307,8 @@ const mkldnn::memory* GetWeights(const NDArray& arr,
 }
 
 // default: block and dims' stride increase monotonically
-// mkldnn: 1.winograd 2.rnn packed 3. block and dims'stride is not increase monotonically
+// mkldnn: 1.winograd 2.rnn packed 3. block and dims'stride is not increase
+// monotonically
 bool IsMKLDNN(const mkldnn::memory::desc& desc) {
   bool rslt = true;
   if (desc.data.format_kind == mkldnn_blocked) {
@@ -355,7 +373,8 @@ bool IsDefaultFormat(const mkldnn::memory::desc& desc) {
 
 mkldnn::memory::desc GetDesc(const mkldnn::memory::desc& desc, const mkldnn_format_tag_t& format) {
   mkldnn::memory::dims dims(desc.data.ndims);
-  for (size_t i = 0; i < dims.size(); i++) dims[i] = desc.data.dims[i];
+  for (size_t i = 0; i < dims.size(); i++)
+    dims[i] = desc.data.dims[i];
   mkldnn::memory::format_tag cpp_format = static_cast<mkldnn::memory::format_tag>(format);
   mkldnn::memory::data_type cpp_type = static_cast<mkldnn::memory::data_type>(desc.data.data_type);
   mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
@@ -388,7 +407,8 @@ void FallBackCompute(Compute fn,
     if (inputs[i].IsDefaultData() && inputs[i].dtype() != mshadow::kBfloat16) {
       in_blobs[i] = inputs[i].data();
     } else {
-      if (in_bufs.empty()) in_bufs.reserve(inputs.size());
+      if (in_bufs.empty())
+        in_bufs.reserve(inputs.size());
       if (inputs[i].dtype() != mshadow::kBfloat16) {
         in_bufs.push_back(inputs[i].Reorder2Default());
       } else {
@@ -448,7 +468,8 @@ template <typename DType>
 void print_diff(const mxnet::NDArray& arr1, const mxnet::NDArray& arr2) {
   DType* data1 = reinterpret_cast<DType*>(arr1.data().dptr_);
   DType* data2 = reinterpret_cast<DType*>(arr2.data().dptr_);
-  for (size_t i = 0; i < arr1.shape().Size(); i++) std::cout << data1[i] - data2[i] << ", ";
+  for (size_t i = 0; i < arr1.shape().Size(); i++)
+    std::cout << data1[i] - data2[i] << ", ";
   std::cout << std::endl;
 }
 
@@ -457,7 +478,8 @@ static bool SimilarArray(const mxnet::NDArray& arr1,
                          const mxnet::NDArray& arr2,
                          DType rtol,
                          DType atol) {
-  if (arr1.shape().Size() != arr2.shape().Size()) return false;
+  if (arr1.shape().Size() != arr2.shape().Size())
+    return false;
 
   // This function should be used outside an MKLDNN operator.
   // There shouldn't be any operators in the stream.
@@ -489,7 +511,8 @@ static bool SimilarArray(const mxnet::NDArray& arr1,
   for (size_t i = 0; i < arr1.shape().Size(); i++)
 #endif
   {
-    if (std::abs(data1[i] - data2[i]) > atol + rtol * std::abs(data2[i])) success.store(false);
+    if (std::abs(data1[i] - data2[i]) > atol + rtol * std::abs(data2[i]))
+      success.store(false);
   }
   return success.load();
 }
@@ -523,7 +546,8 @@ void OpCheck::Init(const std::vector<mxnet::NDArray>& inputs_,
   for (size_t i = 0; i < inputs_.size(); i++) {
     NDArray data = inputs_[i];
     inputs.emplace_back(data.shape(), ctx, false, data.dtype());
-    if (data.IsMKLDNNData() && data.IsView()) data = data.Reorder2Default();
+    if (data.IsMKLDNNData() && data.IsView())
+      data = data.Reorder2Default();
     auto mem = data.GetMKLDNNData();
     inputs[i].CopyFrom(*mem);
   }
@@ -549,16 +573,20 @@ void OpCheck::Run(mxnet::FCompute fn,
     return;
   }
   std::vector<mxnet::TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
+  for (size_t i = 0; i < in_blobs.size(); i++)
+    in_blobs[i] = inputs[i].data();
   std::vector<mxnet::TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++) out_blobs[i] = outputs[i].data();
+  for (size_t i = 0; i < out_blobs.size(); i++)
+    out_blobs[i] = outputs[i].data();
   fn(attrs, ctx, in_blobs, req, out_blobs);
-  if (dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false)) LOG(INFO) << "test " << attrs.op->name;
+  if (dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false))
+    LOG(INFO) << "test " << attrs.op->name;
   size_t num = std::min(outputs.size(), outputs_.size());
   num        = std::min(num_checks, num);
   for (size_t i = 0; i < num; i++) {
     // We don't need to compare if it doesn't need to output data.
-    if (req[i] == kNullOp) continue;
+    if (req[i] == kNullOp)
+      continue;
     MSHADOW_TYPE_SWITCH(outputs[i].dtype(), DType, {
       bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-2, 1e-2);
       if (!similar) {
@@ -587,7 +615,8 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs& attrs,
                        std::vector<int>* in_attrs,
                        std::vector<int>* out_attrs) {
   for (int& v : *in_attrs)
-    if (v == -1) v = kDefaultStorage;
+    if (v == -1)
+      v = kDefaultStorage;
 
   DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1

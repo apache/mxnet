@@ -116,7 +116,9 @@ mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(const MKLDNNActParam& 
   return mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine);
 }
 
-const inline mkldnn::eltwise_forward& MKLDNNActForward::GetFwd() const { return *fwd_; }
+const inline mkldnn::eltwise_forward& MKLDNNActForward::GetFwd() const {
+  return *fwd_;
+}
 
 MKLDNNActForward& GetActForward(const MKLDNNActParam& param,
                                 const OpContext& ctx,
@@ -172,7 +174,8 @@ void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs,
   NDArray in_buffer    = in_data;
   MKLDNNStream* stream = MKLDNNStream::Get();
 
-  if (in_data.IsView() && in_data.IsMKLDNNData()) in_buffer = in_data.Reorder2Default();
+  if (in_data.IsView() && in_data.IsMKLDNNData())
+    in_buffer = in_data.Reorder2Default();
 
   auto input_mem        = in_buffer.GetMKLDNNData();
   MKLDNNActForward& fwd = GetActForward(param_, ctx, in_buffer, *input_mem);
@@ -191,15 +194,17 @@ mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(const MKLDNNActParam&
   auto cpu_engine              = CpuEngine::Get()->get_engine();
   auto alg                     = param.alg;
 
-  mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training, alg, data_md,
-                                        param.slope);
+  mkldnn::eltwise_forward::desc fw_desc(
+      mkldnn::prop_kind::forward_training, alg, data_md, param.slope);
   mkldnn::eltwise_forward::primitive_desc fw_pdesc(fw_desc, cpu_engine);
   mkldnn::eltwise_backward::desc bw_desc(alg, diff_md, data_md, param.slope);
   mkldnn::eltwise_backward::primitive_desc bw_pdesc(bw_desc, cpu_engine, fw_pdesc);
   return bw_pdesc;
 }
 
-const inline mkldnn::eltwise_backward& MKLDNNActBackward::GetBwd() const { return *bwd_prim_; }
+const inline mkldnn::eltwise_backward& MKLDNNActBackward::GetBwd() const {
+  return *bwd_prim_;
+}
 
 static inline MKLDNNActBackward& GetActBackward(const MKLDNNActParam& param,
                                                 const OpContext& ctx,
@@ -223,8 +228,8 @@ static inline MKLDNNActBackward& GetActBackward(const MKLDNNActParam& param,
   return it->second;
 }
 
-// For backward relu activation, it's okay to pass "out_data" as "in_data" to this
-// function, since the computation only involes non-zeros.
+// For backward relu activation, it's okay to pass "out_data" as "in_data" to
+// this function, since the computation only involes non-zeros.
 void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,

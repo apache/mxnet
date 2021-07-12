@@ -57,7 +57,8 @@ struct MKLDNNRnnLayerParam {
   dims dst_dims;           // Dimensions of output in format_tag::tnc
   dims state_dims;         // Dimensions of the state cell in format_tag::ldnc
 
-  size_t workspace_size;        // used for the cached mkl-dnn memory in Forward inference
+  size_t workspace_size;        // used for the cached mkl-dnn memory in Forward
+                                // inference
   size_t reserve_size;          // used for the reserved cached memory in Backward
   size_t single_w_size;         // weights size of a single cell
   size_t single_b_size;         // bias size of a single cell from mkl-dnn
@@ -114,7 +115,9 @@ class MKLDNNRnnMemMgr {
  public:
   void Init(dim_t size, const Context& ctx, int dtype = mshadow::kFloat32);
 
-  void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) { mem_holder.push_back(mem); }
+  void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) {
+    mem_holder.push_back(mem);
+  }
 
   mkldnn::memory* Alloc(const mkldnn::memory::desc& md);
 };
@@ -174,14 +177,24 @@ class RnnPrimitive {
     return *this;
   }
 
-  const void* GetPrimDesc() const { return fwd_pd_.get(); }
-  const mkldnn::primitive& GetPrim() const { return *primitive_; }
+  const void* GetPrimDesc() const {
+    return fwd_pd_.get();
+  }
+  const mkldnn::primitive& GetPrim() const {
+    return *primitive_;
+  }
 
-  const mkldnn::memory::desc& GetLayerDesc() const { return weights_layer_desc_; }
+  const mkldnn::memory::desc& GetLayerDesc() const {
+    return weights_layer_desc_;
+  }
 
-  const mkldnn::memory::desc& GetIterDesc() const { return weights_iter_desc_; }
+  const mkldnn::memory::desc& GetIterDesc() const {
+    return weights_iter_desc_;
+  }
 
-  const mkldnn::memory::desc& GetWorkspaceDesc() const { return workspace_desc_; }
+  const mkldnn::memory::desc& GetWorkspaceDesc() const {
+    return workspace_desc_;
+  }
 
  private:
   std::shared_ptr<void> fwd_pd_;
@@ -223,7 +236,9 @@ class MKLDNNRnnForward {
                      const int dtype     = mshadow::kFloat32);
   void ReorderWeights();
 
-  const mkldnn::primitive& GetFwd() const { return fwd_inf_.GetPrim(); }
+  const mkldnn::primitive& GetFwd() const {
+    return fwd_inf_.GetPrim();
+  }
 
   const size_t GetSize(int dtype) const {
     size_t bytes = mshadow::mshadow_sizeof(dtype);
@@ -233,12 +248,20 @@ class MKLDNNRnnForward {
     return size / bytes + 1;
   }
 
-  const MKLDNNRnnLayerParam& GetParam() const { return param_; }
+  const MKLDNNRnnLayerParam& GetParam() const {
+    return param_;
+  }
 
-  const mkldnn_args_map_t& GetArgsMap() const { return net_args_; }
+  const mkldnn_args_map_t& GetArgsMap() const {
+    return net_args_;
+  }
 
-  const bool IsInitialized() const { return initialized_; }
-  void Reset() { initialized_ = false; }
+  const bool IsInitialized() const {
+    return initialized_;
+  }
+  void Reset() {
+    initialized_ = false;
+  }
 
  private:
   bool initialized_;
@@ -285,10 +308,18 @@ class MKLDNNRnnForwardTraining {
   void SetTrnMem(const MKLDNNRnnForward& fwd);
   void FetchData(const MKLDNNRnnForward& fwd);
 
-  const MKLDNNRnnLayerParam& GetParam() const { return *param_; }
-  const void* GetPrimDesc() const { return fwd_trn_.GetPrimDesc(); }
-  const mkldnn::primitive& GetFwd() const { return fwd_trn_.GetPrim(); }
-  const mkldnn_args_map_t& GetArgsMap() const { return net_args_; }
+  const MKLDNNRnnLayerParam& GetParam() const {
+    return *param_;
+  }
+  const void* GetPrimDesc() const {
+    return fwd_trn_.GetPrimDesc();
+  }
+  const mkldnn::primitive& GetFwd() const {
+    return fwd_trn_.GetPrim();
+  }
+  const mkldnn_args_map_t& GetArgsMap() const {
+    return net_args_;
+  }
 
  private:
   RnnPrimitive fwd_trn_;
@@ -394,8 +425,12 @@ class MKLDNNRnnBackward {
                           const OpReqType req,
                           const int dtype = mshadow::kFloat32);
 
-  const mkldnn::primitive& GetBwd() const { return *bwd_.primitive_; }
-  const mkldnn_args_map_t& GetArgsMap() const { return net_args_; }
+  const mkldnn::primitive& GetBwd() const {
+    return *bwd_.primitive_;
+  }
+  const mkldnn_args_map_t& GetArgsMap() const {
+    return net_args_;
+  }
 
  private:
   bool initialized_;
@@ -416,10 +451,10 @@ class MKLDNNRnnBackward {
 
 /*
  * Use MKLDNNRnnOp to manage fused or unfused RNN layers. A MKLDNNRnnOp contains
- * the parameter(s) and primitive(s) of RNN layer(s). According to the direction,
- * input size, and state size, multple layers could be inplemented by unfused and
- * fused layers - MKLDNNRnnForward, which holds the memory and forward primitive
- * of MKL-DNN.
+ * the parameter(s) and primitive(s) of RNN layer(s). According to the
+ * direction, input size, and state size, multple layers could be inplemented by
+ * unfused and fused layers - MKLDNNRnnForward, which holds the memory and
+ * forward primitive of MKL-DNN.
  */
 class MKLDNNRnnOp {
  public:
@@ -441,7 +476,9 @@ class MKLDNNRnnOp {
                 const std::vector<OpReqType>& req,
                 const std::vector<NDArray>& outputs);
 
-  const RNNParam& GetParam() const { return full_param_.default_param; }
+  const RNNParam& GetParam() const {
+    return full_param_.default_param;
+  }
 
  private:
   bool initialized_;
@@ -472,7 +509,8 @@ inline bool SupportMKLDNNRnn(const int input_dtype) {
 }
 
 inline bool SupportMKLDNNRnn(const RNNParam& param, const int input_dtype) {
-  if (param.projection_size.has_value()) return false;
+  if (param.projection_size.has_value())
+    return false;
   return SupportMKLDNNRnn(input_dtype);
 }
 

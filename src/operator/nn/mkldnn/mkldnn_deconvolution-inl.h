@@ -30,8 +30,9 @@
  *       (diff_bias) bias_grad <---|      |<--- weight
  *                                 |______|<--- bias
  *
- * "out" in this (and .cc) file will always refer to the output of Deconv FWD and
- * "out_grad" to its gradient. The corresponding MKLDNN names are in parentheses.
+ * "out" in this (and .cc) file will always refer to the output of Deconv FWD
+ * and "out_grad" to its gradient. The corresponding MKLDNN names are in
+ * parentheses.
  */
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_DECONVOLUTION_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_DECONVOLUTION_INL_H_
@@ -57,8 +58,9 @@ using deconv_bwd_data_pd_t = mkldnn::deconvolution_backward_data::primitive_desc
 using deconv_bwd_weights_t    = mkldnn::deconvolution_backward_weights;
 using deconv_bwd_weights_pd_t = mkldnn::deconvolution_backward_weights::primitive_desc;
 
-// Swaps the logical order of dimensions that in plain format would correspond to input and output
-// channels (for example: oihw => iohw, iohw => oihw, goihw => giohw).
+// Swaps the logical order of dimensions that in plain format would correspond
+// to input and output channels (for example: oihw => iohw, iohw => oihw, goihw
+// => giohw).
 inline mkldnn::memory::desc IOLogicalSwapDesc(const mkldnn::memory::desc& desc,
                                               const uint32_t num_group) {
   std::vector<int> order(desc.data.ndims);
@@ -74,11 +76,13 @@ inline void IOLogicalSwapMKLDNNMem(const NDArray& arr, const uint32_t num_group)
   if (arr.IsMKLDNNData()) {
     desc = arr.GetMKLDNNData()->get_desc();
   } else {
-    // GetMKLDNNData won't take groups into account when creating mkldnn::memory, we need to use
-    // descriptor from GetWeightDesc but with default format
+    // GetMKLDNNData won't take groups into account when creating
+    // mkldnn::memory, we need to use descriptor from GetWeightDesc but with
+    // default format
     const auto& temp = GetWeightDesc(arr, num_group);
     desc             = mkldnn::memory::desc(
-        temp.dims(), temp.data_type(),
+        temp.dims(),
+        temp.data_type(),
         static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(temp.data.ndims)));
   }
   const_cast<NDArray&>(arr).UpdateMKLDNNMemDesc(IOLogicalSwapDesc(desc, num_group));
@@ -206,8 +210,8 @@ class MKLDNNDeconvBwd {
                             const NDArray& weights,
                             const NDArray& weights_grad) const;
 
-  // returns the output gradient memory used to calculate the data (input) gradient,
-  // which might be reused when calculating the gradient of weights
+  // returns the output gradient memory used to calculate the data (input)
+  // gradient, which might be reused when calculating the gradient of weights
   const mkldnn::memory* ScheduleBwdData(const uint32_t num_group,
                                         const OpReqType req,
                                         const ReadTensors& read_tensors,
@@ -253,8 +257,9 @@ MKLDNNDeconvBwd::WriteTensors::WriteTensors(const bool no_bias, const std::vecto
 
 MKLDNNDeconvBwd::MKLDNNDeconvBwd(const DeconvolutionParam& param, const ReadTensors& read_tensors) {
   const auto& fwd_pd = MKLDNNDeconvFwd::CreatePrimitiveDesc(
-      param, MKLDNNDeconvFwd::Tensors(read_tensors.data, read_tensors.weights, read_tensors.bias,
-                                      read_tensors.out_grad));
+      param,
+      MKLDNNDeconvFwd::Tensors(
+          read_tensors.data, read_tensors.weights, read_tensors.bias, read_tensors.out_grad));
   bwd_data_pd    = CreateDataPrimitiveDesc(param, read_tensors, *fwd_pd);
   bwd_weights_pd = CreateWeightsPrimitiveDesc(param, read_tensors, *fwd_pd);
   bwd_data       = std::make_shared<deconv_bwd_data_t>(*bwd_data_pd);
@@ -287,7 +292,8 @@ inline const mkldnn::memory* MKLDNNDeconvBwd::OutGradMem(const NDArray& out_grad
 }
 
 inline const mkldnn::memory* MKLDNNDeconvBwd::OutGradMem(
-    const NDArray& out_grad, const mkldnn::memory* const out_grad_mem) const {
+    const NDArray& out_grad,
+    const mkldnn::memory* const out_grad_mem) const {
   return (out_grad_mem && out_grad_mem->get_desc() == bwd_weights_pd->diff_dst_desc())
              ? out_grad_mem
              : out_grad.GetMKLDNNDataReorder(bwd_weights_pd->diff_dst_desc());
@@ -301,9 +307,10 @@ inline mkldnn_output_t MKLDNNDeconvBwd::DataGradMem(const OpReqType req,
 inline mkldnn_output_t MKLDNNDeconvBwd::WeightsGradMem(const uint32_t num_group,
                                                        const OpReqType req,
                                                        const NDArray& weights_grad) const {
-  // CreateMKLDNNWeightGrad always creates a new tensor as IsDefaultFormat always fails (because
-  // of the logical swap - explained in MKLDNNDeconvFwd::Execute). We try to reuse weights_grad
-  // memory (which, when not swapped, is always in default format), so here we check if after a
+  // CreateMKLDNNWeightGrad always creates a new tensor as IsDefaultFormat
+  // always fails (because of the logical swap - explained in
+  // MKLDNNDeconvFwd::Execute). We try to reuse weights_grad memory (which, when
+  // not swapped, is always in default format), so here we check if after a
   // swap, weights_md will have a default format
   const auto& weights_md = bwd_weights_pd->diff_weights_desc();
   if (req == OpReqType::kWriteTo && IsDefaultFormat(IOLogicalSwapDesc(weights_md, num_group))) {
@@ -327,13 +334,13 @@ class DeconvDescCreator {
                     const NDArray* const bias,
                     const NDArray& out);
 
-  // Imposes plain formats on memory descriptors with padding (so the next selected implementation
-  // will pass CheckImplSizeReq). After calling this method, new primitive descriptor (with new
-  // operator descriptor) should be created, which should select an implementation with matching
-  // size requirements.
-  // data_size, weights_size, out_size - size requirements of current implementation
-  // Returns whether successfully imposed a plain format on any of the data, weights, and output
-  // memory descriptors.
+  // Imposes plain formats on memory descriptors with padding (so the next
+  // selected implementation will pass CheckImplSizeReq). After calling this
+  // method, new primitive descriptor (with new operator descriptor) should be
+  // created, which should select an implementation with matching size
+  // requirements. data_size, weights_size, out_size - size requirements of
+  // current implementation Returns whether successfully imposed a plain format
+  // on any of the data, weights, and output memory descriptors.
   bool ImposePlainWherePadding(const size_t data_size,
                                const size_t weights_size,
                                const size_t out_size);
@@ -369,18 +376,38 @@ inline bool DeconvDescCreator::CheckImplSizeReq(const size_t data_size,
 
 inline deconv_fwd_t::desc DeconvDescCreator::CreateFwdDesc() const {
   return deconv_fwd_t::desc(mkldnn::prop_kind::forward_training,
-                            mkldnn::algorithm::deconvolution_direct, data_md, weights_md, bias_md,
-                            out_md, strides, dilates, padding, padding);
+                            mkldnn::algorithm::deconvolution_direct,
+                            data_md,
+                            weights_md,
+                            bias_md,
+                            out_md,
+                            strides,
+                            dilates,
+                            padding,
+                            padding);
 }
 
 inline deconv_bwd_data_t::desc DeconvDescCreator::CreateBwdDataDesc() const {
-  return deconv_bwd_data_t::desc(mkldnn::algorithm::deconvolution_direct, data_md, weights_md,
-                                 out_md, strides, dilates, padding, padding);
+  return deconv_bwd_data_t::desc(mkldnn::algorithm::deconvolution_direct,
+                                 data_md,
+                                 weights_md,
+                                 out_md,
+                                 strides,
+                                 dilates,
+                                 padding,
+                                 padding);
 }
 
 inline deconv_bwd_weights_t::desc DeconvDescCreator::CreateBwdWeightsDesc() const {
-  return deconv_bwd_weights_t::desc(mkldnn::algorithm::deconvolution_direct, data_md, weights_md,
-                                    bias_md, out_md, strides, dilates, padding, padding);
+  return deconv_bwd_weights_t::desc(mkldnn::algorithm::deconvolution_direct,
+                                    data_md,
+                                    weights_md,
+                                    bias_md,
+                                    out_md,
+                                    strides,
+                                    dilates,
+                                    padding,
+                                    padding);
 }
 
 }  // namespace op

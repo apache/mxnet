@@ -57,7 +57,9 @@ struct MKLDNNFCParam : public dmlc::Parameter<MKLDNNFCParam> {
         .describe("Whether to enable float32 output");
     DMLC_DECLARE_FIELD(with_eltwise)
         .set_default(false)
-        .describe("Whether there's a post with_eltwise after FullyConnected operator");
+        .describe(
+            "Whether there's a post with_eltwise after FullyConnected "
+            "operator");
     DMLC_DECLARE_FIELD(with_sum).set_default(false).describe("Add post sum");
     DMLC_DECLARE_FIELD(min_calib_range)
         .set_default(dmlc::optional<float>())
@@ -105,7 +107,9 @@ class MKLDNNFullyConnectedForward {
     fwd_ = std::make_shared<mkldnn::inner_product_forward>(fwd_pd);
   }
 
-  const mkldnn::inner_product_forward& GetFwd() const { return *fwd_; }
+  const mkldnn::inner_product_forward& GetFwd() const {
+    return *fwd_;
+  }
 
  private:
   std::shared_ptr<mkldnn::inner_product_forward> fwd_;

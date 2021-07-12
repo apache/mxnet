@@ -62,10 +62,13 @@ class SgMKLDNNTransformerPostQuantizeSelector : public SubgraphSelector {
     return false;
   }
 
-  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override { return false; }
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+    return false;
+  }
 
   bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
-    if (status == kFail || status == kSuccess || new_node.is_variable()) return false;
+    if (status == kFail || status == kSuccess || new_node.is_variable())
+      return false;
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list.back() != &n) {
@@ -146,7 +149,8 @@ class SgMKLDNNTransformerPostQuantizeProperty : public SubgraphProperty {
     nnvm::ObjectPtr dequantize_node  = nullptr;
 
     DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
-      if (node->is_variable()) return;
+      if (node->is_variable())
+        return;
       if (node->op() == Op::Get("_sg_mkldnn_selfatt_qk") ||
           node->op() == Op::Get("_sg_mkldnn_selfatt_valatt")) {
         interleaved_node = node;
@@ -163,9 +167,9 @@ class SgMKLDNNTransformerPostQuantizeProperty : public SubgraphProperty {
     CHECK(requantize_param.min_calib_range.has_value());
     CHECK(requantize_param.max_calib_range.has_value());
 
-    // When only fusing quantized_interleaved_matmul and requantize, set min/max_cablib_range,
-    // When fusing quantized_interleaved_matmul + requantize + dequantize,
-    // set dequantize flag to true.
+    // When only fusing quantized_interleaved_matmul and requantize, set
+    // min/max_cablib_range, When fusing quantized_interleaved_matmul +
+    // requantize + dequantize, set dequantize flag to true.
     if (dequantize_node != nullptr) {
       interleaved_node->attrs.dict["enable_float_output"] = "True";
     } else {

@@ -42,7 +42,8 @@ inline static mkldnn::memory::desc GetMemDesc(const mxnet::TShape s,
                                               const int dtype,
                                               const mkldnn::memory::format_tag format_tag) {
   mkldnn::memory::dims dims(s.ndim());
-  for (size_t i = 0; i < dims.size(); i++) dims[i] = s[i];
+  for (size_t i = 0; i < dims.size(); i++)
+    dims[i] = s[i];
   mkldnn::memory::desc desc{dims, get_mkldnn_type(dtype), format_tag};
   return desc;
 }
@@ -52,9 +53,11 @@ inline static mkldnn::memory::desc GetExpandedMemDesc(mkldnn::memory::desc md,
                                                       const int dim = 0) {
   CHECK(dim < md.data.ndims) << "dimension cannot be larger than total dimensions of input";
   mxnet::TShape s(md.data.ndims, -1);
-  for (size_t i = 0; i < md.data.ndims; i++) s[i] = md.data.dims[i];
+  for (size_t i = 0; i < md.data.ndims; i++)
+    s[i] = md.data.dims[i];
   s[dim] = static_cast<int64_t>(s[dim] * scale);
-  return GetMemDesc(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
+  return GetMemDesc(s,
+                    mshadow::DataType<mshadow::default_real_t>::kFlag,
                     static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(md)));
 }
 
@@ -88,9 +91,11 @@ inline static void InitMKLDNNArray(NDArray* arr,
 }
 
 inline static bool IsSameShape(const mkldnn::memory::desc& desc, const mxnet::TShape& shape) {
-  if (desc.data.ndims != shape.ndim()) return false;
+  if (desc.data.ndims != shape.ndim())
+    return false;
   for (size_t i = 0; i < shape.ndim(); i++)
-    if (desc.data.dims[i] != shape[i]) return false;
+    if (desc.data.dims[i] != shape[i])
+      return false;
   return true;
 }
 
@@ -102,20 +107,25 @@ inline static bool IsSameShape(const mkldnn::memory::desc& desc, const mxnet::TS
 inline static std::vector<mkldnn::memory::format_tag> GetMKLDNNFormat(size_t num_dims, int dtype) {
   if (num_dims == 4) {
     mkldnn::memory::dims data_dims{1, 3, 224, 224};
-    mkldnn::memory::desc data_md{data_dims, get_mkldnn_type(dtype),
-                                 mkldnn::memory::format_tag::any};
+    mkldnn::memory::desc data_md{
+        data_dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
     mkldnn::memory::dims weight_dims{96, 3, 11, 11};
-    mkldnn::memory::desc weight_md{weight_dims, get_mkldnn_type(dtype),
-                                   mkldnn::memory::format_tag::any};
+    mkldnn::memory::desc weight_md{
+        weight_dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
     mkldnn::memory::dims output_dims{1, 96, 54, 54};
-    mkldnn::memory::desc out_md{output_dims, get_mkldnn_type(dtype),
-                                mkldnn::memory::format_tag::any};
+    mkldnn::memory::desc out_md{
+        output_dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
     mkldnn::memory::dims strides{4, 4};
     mkldnn::memory::dims padding{0, 0};
 
     mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
-                                           mkldnn::algorithm::convolution_direct, data_md,
-                                           weight_md, out_md, strides, padding, padding);
+                                           mkldnn::algorithm::convolution_direct,
+                                           data_md,
+                                           weight_md,
+                                           out_md,
+                                           strides,
+                                           padding,
+                                           padding);
     mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
     while (pd.dst_desc().get_size() != GetMemDescSize(out_md) ||
            pd.src_desc().get_size() != GetMemDescSize(data_md) ||
@@ -129,20 +139,25 @@ inline static std::vector<mkldnn::memory::format_tag> GetMKLDNNFormat(size_t num
     return ret;
   } else if (num_dims == 5) {
     mkldnn::memory::dims data_dims{1, 32, 112, 112};
-    mkldnn::memory::desc data_md{data_dims, get_mkldnn_type(dtype),
-                                 mkldnn::memory::format_tag::any};
+    mkldnn::memory::desc data_md{
+        data_dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
     mkldnn::memory::dims weight_dims{32, 1, 1, 3, 3};
-    mkldnn::memory::desc weight_md{weight_dims, get_mkldnn_type(dtype),
-                                   mkldnn::memory::format_tag::any};
+    mkldnn::memory::desc weight_md{
+        weight_dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
     mkldnn::memory::dims output_dims{1, 32, 112, 112};
-    mkldnn::memory::desc out_md{output_dims, get_mkldnn_type(dtype),
-                                mkldnn::memory::format_tag::any};
+    mkldnn::memory::desc out_md{
+        output_dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
     mkldnn::memory::dims strides{1, 1};
     mkldnn::memory::dims padding{1, 1};
 
     mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
-                                           mkldnn::algorithm::convolution_direct, data_md,
-                                           weight_md, out_md, strides, padding, padding);
+                                           mkldnn::algorithm::convolution_direct,
+                                           data_md,
+                                           weight_md,
+                                           out_md,
+                                           strides,
+                                           padding,
+                                           padding);
     mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
     while (pd.dst_desc().get_size() != GetMemDescSize(out_md) ||
            pd.src_desc().get_size() != GetMemDescSize(data_md) ||
@@ -303,7 +318,8 @@ inline std::string CreateShapeString(int value, int dim) {
   ss << "(";
   for (int i = 0; i < dim; i++) {
     ss << value;
-    if (i != dim - 1) ss << ",";
+    if (i != dim - 1)
+      ss << ",";
   }
   ss << ")";
   return ss.str();
@@ -322,23 +338,22 @@ inline void PrintVerifyMsg(const NDArrayAttrs& arr1, const NDArrayAttrs& arr2) {
  * 1. Normal NDArray
  * 2. Normal NDArray with MKLDNN layout (output from an MKLDNN operator)
  * 3. Normal NDArray with MKLDNN layout whose MKLDNN memory may have different
- *    dimensions from the NDArray (result of MKLDNNDataReorderAsync). However, this
- *    type of NDArrays only exists for weight arrays. I don't think we should
+ *    dimensions from the NDArray (result of MKLDNNDataReorderAsync). However,
+ * this type of NDArrays only exists for weight arrays. I don't think we should
  *    pass them to all operators.
  *    In the inference mode, the MKLDNN memory in the weight array will be
  *    reordered to 5 dimensions.
  * 4. Reshaped/sliced NDArray
- * 5. Reshaped/sliced NDArray with MKLDNN layout (reshape/slice from Normal NDArray
- *    with MKLDNN layout)
+ * 5. Reshaped/sliced NDArray with MKLDNN layout (reshape/slice from Normal
+ * NDArray with MKLDNN layout)
  * 6. Reshaped/sliced NDArray with MKLDNN layout whose MKLDNN memory may have
  *    different dimensions from the NDArray (result of MKLDNNDataReorderAsync).
- *    However, this type of NDArrays only exists for weight arrays. I don't think
- *    we should pass them to all operators.
- *    In the inference mode, the MKLDNN memory in the weight array will be
- *    reordered to 5 dimensions.
+ *    However, this type of NDArrays only exists for weight arrays. I don't
+ * think we should pass them to all operators. In the inference mode, the MKLDNN
+ * memory in the weight array will be reordered to 5 dimensions.
  *
- *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input
- * shapes)
+ *  num_inputs / dim arguments used to scale shape (used for concat backwards to
+ * enlarge input shapes)
  */
 inline std::vector<NDArrayAttrs> GetTestInputArrays(int types                = ArrayTypes::All,
                                                     bool rand                = false,
@@ -354,7 +369,8 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(int types                = A
 
   int slice_amount = scale[0];
   for (auto shape : shapes) {
-    if (scale.size() > shape.ndim()) continue;
+    if (scale.size() > shape.ndim())
+      continue;
 
     for (size_t dim = 0; dim < scale.size(); ++dim)
       shape[dim] = static_cast<int>(round(shape[dim] * scale[dim]));
@@ -383,7 +399,8 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(int types                = A
           md = GetExpandedMemDesc(md, scale[dim]);
       }
 
-      if (shape.Size() != md.get_size() / sizeof(mshadow::default_real_t)) continue;
+      if (shape.Size() != md.get_size() / sizeof(mshadow::default_real_t))
+        continue;
 
       // Type 2, 3.
       arr = NDArray(shape, Context());
@@ -433,8 +450,8 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(int types                = A
  * 1. Normal NDArray
  * 2. Normal NDArray with MKLDNN layout (output from an MKLDNN operator)
  * 3. Normal NDArray with MKLDNN layout whose MKLDNN memory may have different
- *    dimensions from the NDArray (result of MKLDNNDataReorderAsync). However, this
- *    type of NDArrays only exists for weight arrays. I don't think we should
+ *    dimensions from the NDArray (result of MKLDNNDataReorderAsync). However,
+ * this type of NDArrays only exists for weight arrays. I don't think we should
  *    pass them to all operators.
  *    In the inference mode, the MKLDNN memory in the weight array will be
  *    reordered to 5 dimensions.
@@ -446,7 +463,8 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(int types                = A
  * 8. Reused NDArray with MKLDNN layout.
  * 9. Reused NDArray with MKLDNN layout of different dimensions.
  *
- * Optional num_inputs / dim args can be passed to modify input shape (used for Concat test)
+ * Optional num_inputs / dim args can be passed to modify input shape (used for
+ * Concat test)
  */
 inline std::vector<NDArrayAttrs> GetTestOutputArrays(const mxnet::TShape& shp,
                                                      const std::vector<mkldnn::memory::desc>& mds,
@@ -509,11 +527,14 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(const mxnet::TShape& shp,
   }
 
   for (auto md : mds) {
-    if (shape.Size() != md.get_size() / sizeof(mshadow::default_real_t)) continue;
+    if (shape.Size() != md.get_size() / sizeof(mshadow::default_real_t))
+      continue;
 
-    if (scale.size() > md.data.ndims) continue;
+    if (scale.size() > md.data.ndims)
+      continue;
 
-    for (int dim = 0; dim < scale.size(); dim++) md = GetExpandedMemDesc(md, scale[dim]);
+    for (int dim = 0; dim < scale.size(); dim++)
+      md = GetExpandedMemDesc(md, scale[dim]);
 
     // Type 2, 3.
     arr      = NDArray(shape, Context());
@@ -560,18 +581,20 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(const mxnet::TShape& shp,
 inline int GetDim(mxnet::TShape input_shape, mxnet::TShape output_shape) {
   CHECK(input_shape.Size() != output_shape.Size());
   for (size_t i = 0; i < input_shape.ndim(); i++) {
-    if (input_shape[i] != output_shape[i]) return i;
+    if (input_shape[i] != output_shape[i])
+      return i;
   }
   return -1;
 }
 
 /*
- * Calculates the size of continuous block of array inside larger concatenated array
- * Used to verify concat/concat backwards operator
+ * Calculates the size of continuous block of array inside larger concatenated
+ * array Used to verify concat/concat backwards operator
  */
 inline int GetBlockSize(mxnet::TShape shape, int dim) {
   int block_size = 1;
-  for (int i = shape.ndim() - 1; i >= dim; i--) block_size *= shape[i];
+  for (int i = shape.ndim() - 1; i >= dim; i--)
+    block_size *= shape[i];
   return block_size;
 }
 
@@ -618,7 +641,8 @@ inline void VerifySumResult(const std::vector<NDArray*>& in_arrs,
   mshadow::default_real_t* d1 = in1.data().dptr<mshadow::default_real_t>();
   mshadow::default_real_t* d2 = in2.data().dptr<mshadow::default_real_t>();
   mshadow::default_real_t* o  = out.data().dptr<mshadow::default_real_t>();
-  for (size_t i = 0; i < in1.shape().Size(); i++) ASSERT_EQ(d1[i] + d2[i], o[i]);
+  for (size_t i = 0; i < in1.shape().Size(); i++)
+    ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
 
 #endif  // MXNET_USE_MKLDNN == 1

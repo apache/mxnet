@@ -62,7 +62,8 @@ bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray& data, const 
   const int axis      = CheckAxis(param.axis, ndim);
   // MKLDNN does not support temperature argument in their softmax function
   // now. Need update this once they start to support it.
-  // Currently, MKLDNN shows bad performance when softmax is not performed on the last dimension
+  // Currently, MKLDNN shows bad performance when softmax is not performed on
+  // the last dimension
   if (param.temperature.has_value() || in_dtype != mshadow::kFloat32 || in_dtype != out_dtype ||
       axis != (ndim - 1)) {
     return false;
@@ -81,7 +82,9 @@ class MKLDNNSoftmaxFwd {
     fwd_ = std::make_shared<mkldnn::softmax_forward>(pd);
   }
 
-  const mkldnn::softmax_forward& GetFwd() const { return *fwd_; }
+  const mkldnn::softmax_forward& GetFwd() const {
+    return *fwd_;
+  }
 
  private:
   std::shared_ptr<mkldnn::softmax_forward> fwd_;
@@ -119,8 +122,10 @@ void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
                           const NDArray& in_data,
                           const OpReqType& req,
                           const NDArray& out_data) {
-  if (req == kNullOp) return;
-  // same as the FCompute path, softmax only supports kWriteTo and kWriteInplace for now.
+  if (req == kNullOp)
+    return;
+  // same as the FCompute path, softmax only supports kWriteTo and kWriteInplace
+  // for now.
   CHECK_NE(req, kAddTo);
 
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
@@ -146,7 +151,9 @@ class MKLDNNSoftmaxBwd {
     bwd_ = std::make_shared<mkldnn::softmax_backward>(pd);
   }
 
-  const mkldnn::softmax_backward& GetBwd() const { return *bwd_; }
+  const mkldnn::softmax_backward& GetBwd() const {
+    return *bwd_;
+  }
 
  private:
   std::shared_ptr<mkldnn::softmax_backward> bwd_;
@@ -183,7 +190,8 @@ void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs,
                            const std::vector<NDArray>& in_data,
                            const std::vector<OpReqType>& req,
                            const std::vector<NDArray>& out_data) {
-  if (req[0] == kNullOp) return;
+  if (req[0] == kNullOp)
+    return;
   CHECK_EQ(in_data.size(), 2U);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis                  = CheckAxis(param.axis, in_data[1].shape().ndim());

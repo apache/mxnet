@@ -44,7 +44,8 @@ static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
   auto data = inputs[0];
   if (data.dtype() != mshadow::kFloat16 && outputs[0].dtype() != mshadow::kFloat16) {
     mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
-    if (data.IsView() && data.IsMKLDNNData()) data = data.Reorder2Default();
+    if (data.IsView() && data.IsMKLDNNData())
+      data = data.Reorder2Default();
     const auto i_mem            = data.GetMKLDNNData();
     const size_t i_ndim         = data.shape().ndim();
     mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
@@ -52,7 +53,8 @@ static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
       i_dims[i] = static_cast<int>(data.shape()[i]);
     }
     const auto o_desc =
-        mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[0].dtype()),
+        mkldnn::memory::desc(i_dims,
+                             get_mkldnn_type(outputs[0].dtype()),
                              static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(i_ndim)));
     const auto out_mem = CreateMKLDNNMem(outputs[0], o_desc, req[0]);
     mkldnn_args_map_t reorder_args;
@@ -90,7 +92,8 @@ static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs,
       continue;
     }
     auto data = inputs[i];
-    if (data.IsView() && data.IsMKLDNNData()) data = data.Reorder2Default();
+    if (data.IsView() && data.IsMKLDNNData())
+      data = data.Reorder2Default();
     const auto i_mem            = data.GetMKLDNNData();
     const size_t i_ndim         = data.shape().ndim();
     mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
@@ -98,7 +101,8 @@ static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs,
       i_dims[j] = static_cast<int>(data.shape()[j]);
     }
     const auto o_desc =
-        mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[i].dtype()),
+        mkldnn::memory::desc(i_dims,
+                             get_mkldnn_type(outputs[i].dtype()),
                              static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(i_ndim)));
     const auto out_mem = CreateMKLDNNMem(outputs[i], o_desc, req[i]);
     mkldnn_args_map_t reorder_args;
@@ -166,7 +170,8 @@ NNVM_REGISTER_OP(_backward_amp_cast)
     .set_attr<FCompute>("FCompute<cpu>", AMPCastCompute<cpu>);
 
 NNVM_REGISTER_OP(amp_multicast)
-    .describe(R"code(Cast function used by AMP, that casts its inputs to the common widest type.
+    .describe(
+        R"code(Cast function used by AMP, that casts its inputs to the common widest type.
 
 It casts only between low precision float/FP32 and does not do anything for other types.
 

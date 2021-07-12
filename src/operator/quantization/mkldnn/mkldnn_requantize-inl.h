@@ -77,7 +77,8 @@ static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
   mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
 
   NDArray in_buffer = inputs[0];
-  if (inputs[0].IsView() && inputs[0].IsMKLDNNData()) in_buffer = inputs[0].Reorder2Default();
+  if (inputs[0].IsView() && inputs[0].IsMKLDNNData())
+    in_buffer = inputs[0].Reorder2Default();
 
   auto i_mem            = in_buffer.GetMKLDNNData();
   auto i_desc           = i_mem->get_desc();
@@ -119,12 +120,16 @@ static void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs,
 #pragma omp parallel for num_threads(nthreads)
     for (index_t i = 0; i < static_cast<index_t>(in_buffer.shape().Size()); i++) {
       int tid = omp_get_thread_num();
-      if (in_ptr[i] > data_maxs[tid]) data_maxs[tid] = in_ptr[i];
-      if (in_ptr[i] < data_mins[tid]) data_mins[tid] = in_ptr[i];
+      if (in_ptr[i] > data_maxs[tid])
+        data_maxs[tid] = in_ptr[i];
+      if (in_ptr[i] < data_mins[tid])
+        data_mins[tid] = in_ptr[i];
     }
     for (index_t i = 0; i < nthreads; i++) {
-      if (data_maxs[i] > data_max) data_max = data_maxs[i];
-      if (data_mins[i] < data_min) data_min = data_mins[i];
+      if (data_maxs[i] > data_max)
+        data_max = data_maxs[i];
+      if (data_mins[i] < data_min)
+        data_min = data_mins[i];
     }
     float src_range     = MinAbs(MinValue<SrcDType>(), MaxValue<SrcDType>());
     SrcDType data_range = MaxAbs(data_min, data_max);

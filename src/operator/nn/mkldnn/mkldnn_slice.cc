@@ -42,7 +42,8 @@ MKLDNNSliceFwd::MKLDNNSliceFwd(const SliceParam& param, const NDArray& in, const
     dim_t s = 0;
     if (i < param.begin.ndim() && param.begin[i]) {
       s = *param.begin[i];
-      if (s < 0) s += ishape[i];
+      if (s < 0)
+        s += ishape[i];
     }
     dims[i]    = oshape[i];
     offsets[i] = s;

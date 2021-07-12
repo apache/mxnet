@@ -30,8 +30,8 @@
 namespace mxnet {
 namespace op {
 
-static mkldnn::logsoftmax_forward::primitive_desc GetLogSoftmaxFwdPd(
-    bool is_train, const int axis, const mkldnn::memory& input_mem) {
+static mkldnn::logsoftmax_forward::primitive_desc
+GetLogSoftmaxFwdPd(bool is_train, const int axis, const mkldnn::memory& input_mem) {
   mkldnn::memory::desc data_md = input_mem.get_desc();
   auto cpu_engine              = CpuEngine::Get()->get_engine();
   auto prop = is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
@@ -60,7 +60,8 @@ bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param,
   const int axis      = CheckAxis(param.axis, ndim);
   // MKLDNN does not support temperature argument in their log_softmax function
   // now. Need update this once they start to support it.
-  // Currently, MKLDNN shows bad performance when log_softmax is not performed on the last dimension
+  // Currently, MKLDNN shows bad performance when log_softmax is not performed
+  // on the last dimension
   if (param.temperature.has_value() || in_dtype != mshadow::kFloat32 || in_dtype != out_dtype ||
       axis != (ndim - 1)) {
     return false;
@@ -79,7 +80,9 @@ class MKLDNNLogSoftmaxFwd {
     fwd_ = std::make_shared<mkldnn::logsoftmax_forward>(pd);
   }
 
-  const mkldnn::logsoftmax_forward& GetFwd() const { return *fwd_; }
+  const mkldnn::logsoftmax_forward& GetFwd() const {
+    return *fwd_;
+  }
 
  private:
   std::shared_ptr<mkldnn::logsoftmax_forward> fwd_;
@@ -118,8 +121,10 @@ void MKLDNNLogSoftmaxForward(const nnvm::NodeAttrs& attrs,
                              const NDArray& in_data,
                              const OpReqType& req,
                              const NDArray& out_data) {
-  if (req == kNullOp) return;
-  // same as the FCompute path, log_softmax only supports kWriteTo and kWriteInplace for now.
+  if (req == kNullOp)
+    return;
+  // same as the FCompute path, log_softmax only supports kWriteTo and
+  // kWriteInplace for now.
   CHECK_NE(req, kAddTo);
 
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
@@ -145,7 +150,9 @@ class MKLDNNLogSoftmaxBwd {
     bwd_ = std::make_shared<mkldnn::logsoftmax_backward>(pd);
   }
 
-  const mkldnn::logsoftmax_backward& GetBwd() const { return *bwd_; }
+  const mkldnn::logsoftmax_backward& GetBwd() const {
+    return *bwd_;
+  }
 
  private:
   std::shared_ptr<mkldnn::logsoftmax_backward> bwd_;
@@ -183,7 +190,8 @@ void MKLDNNLogSoftmaxBackward(const nnvm::NodeAttrs& attrs,
                               const std::vector<NDArray>& in_data,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& out_data) {
-  if (req[0] == kNullOp) return;
+  if (req[0] == kNullOp)
+    return;
   CHECK_EQ(in_data.size(), 2U);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis                  = CheckAxis(param.axis, in_data[1].shape().ndim());

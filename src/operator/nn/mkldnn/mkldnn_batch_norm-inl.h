@@ -11,7 +11,7 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY92
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -107,11 +107,17 @@ class MKLDNNBNForward {
     this->is_train_and_not_global_stats = is_train_and_not_global_stats;
   }
 
-  const mkldnn::memory& GetWeight() const { return *weight_m; }
+  const mkldnn::memory& GetWeight() const {
+    return *weight_m;
+  }
 
-  const t_bn_f_pdesc& GetPd() const { return pd; }
+  const t_bn_f_pdesc& GetPd() const {
+    return pd;
+  }
 
-  const mkldnn::batch_normalization_forward& GetFwd() const { return *fwd; }
+  const mkldnn::batch_normalization_forward& GetFwd() const {
+    return *fwd;
+  }
 };
 
 template <typename DType>
@@ -155,7 +161,9 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs& attrs,
   if (param.axis != 1 || shape.ndim() != 4) {
     // reshape to (N, C, 1, D)
     mxnet::TShape new_shape{
-        static_cast<dim_t>(shape.ProdShape(0, real_axis)), shape[real_axis], 1,
+        static_cast<dim_t>(shape.ProdShape(0, real_axis)),
+        shape[real_axis],
+        1,
         static_cast<dim_t>(shape.ProdShape(real_axis + 1, static_cast<int>(shape.ndim())))};
     in_data[batchnorm::kData] = in_data[batchnorm::kData].Reshape(new_shape);
     out                       = out.Reshape(new_shape);
@@ -166,7 +174,8 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs& attrs,
   mkldnn::normalization_flags flags =
       _GetFlags(in_data, aux_states, ctx.is_train && !param.use_global_stats, fuse_relu);
   NDArray& data = in_data[batchnorm::kData];
-  if (data.IsMKLDNNData() && data.IsView()) data = data.Reorder2Default();
+  if (data.IsMKLDNNData() && data.IsView())
+    data = data.Reorder2Default();
   auto data_mem = data.GetMKLDNNData();
   auto& fwd     = GetBNForward<DType>(param, ctx, data_mem, flags);
 
@@ -216,8 +225,8 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs& attrs,
       if (workspace == nullptr) {
         LOG(FATAL) << "MKLDNN BatchNorm: incorrect workspace input";
       }
-      auto ws = std::make_shared<mkldnn::memory>(fwd.GetPd().workspace_desc(), engine,
-                                                 workspace->GetMKLDNNData()->get_data_handle());
+      auto ws = std::make_shared<mkldnn::memory>(
+          fwd.GetPd().workspace_desc(), engine, workspace->GetMKLDNNData()->get_data_handle());
       net_args[MKLDNN_ARG_WORKSPACE] = *ws;
     }
     if (!ctx.is_train || param.use_global_stats) {
@@ -267,11 +276,17 @@ class MKLDNNBNBackward {
     bwd.reset(new mkldnn::batch_normalization_backward(pd));
   }
 
-  const mkldnn::memory& GetWeight() const { return *weight_m; }
+  const mkldnn::memory& GetWeight() const {
+    return *weight_m;
+  }
 
-  const mkldnn::memory& GetGradw() const { return *gradw_m; }
+  const mkldnn::memory& GetGradw() const {
+    return *gradw_m;
+  }
 
-  const mkldnn::batch_normalization_backward& GetBwd() const { return *bwd; }
+  const mkldnn::batch_normalization_backward& GetBwd() const {
+    return *bwd;
+  }
 };
 
 template <typename DType>
@@ -350,7 +365,9 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs& attrs,
   if (param.axis != 1 || shape.ndim() != 4) {
     // reshape to (N, C, 1, D)
     mxnet::TShape new_shape{
-        static_cast<dim_t>(shape.ProdShape(0, real_axis)), shape[real_axis], 1,
+        static_cast<dim_t>(shape.ProdShape(0, real_axis)),
+        shape[real_axis],
+        1,
         static_cast<dim_t>(shape.ProdShape(real_axis + 1, static_cast<int>(shape.ndim())))};
     data   = data.Reshape(new_shape);
     diff   = diff.Reshape(new_shape);

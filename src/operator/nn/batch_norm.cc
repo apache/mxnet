@@ -40,9 +40,11 @@ namespace batchnorm {
 /*! \brief Global disable of batchnorm mkl operator for unit testing */
 volatile bool disable_mkl = false;
 
-/*! \brief Fast-foreach when you don't care about the position other than channel */
+/*! \brief Fast-foreach when you don't care about the position other than
+ * channel */
 template <typename DType, typename OnData>
-static inline void ForEachFast(const BNTensor3<DType>& tensor, const size_t channel,
+static inline void ForEachFast(const BNTensor3<DType>& tensor,
+                               const size_t channel,
                                OnData onData) {
   const size_t num         = tensor.OuterSize();
   const size_t matrixSize  = tensor.InnerSize();
@@ -58,10 +60,13 @@ static inline void ForEachFast(const BNTensor3<DType>& tensor, const size_t chan
   }
 }
 
-/*! \brief Fast-foreach when you don't care about the position other than channel */
+/*! \brief Fast-foreach when you don't care about the position other than
+ * channel */
 template <typename DType1, typename DType2, typename OnData>
-static inline void ForEachFast(const BNTensor3<DType1>& in_data, const BNTensor3<DType2>& out_data,
-                               const size_t channel, OnData onData) {
+static inline void ForEachFast(const BNTensor3<DType1>& in_data,
+                               const BNTensor3<DType2>& out_data,
+                               const size_t channel,
+                               OnData onData) {
   const size_t num         = in_data.OuterSize();
   const size_t matrixSize  = in_data.InnerSize();
   const size_t skipLength  = in_data.SkipLengthToNextSameChannelData();
@@ -80,8 +85,10 @@ static inline void ForEachFast(const BNTensor3<DType1>& in_data, const BNTensor3
 }
 
 template <typename DType1, typename DType2, typename DType3, typename OnData>
-static inline void ForEachFast(const BNTensor3<DType1>& in_data, const BNTensor3<DType2>& in_data2,
-                               const BNTensor3<DType3>& out_data, const size_t channel,
+static inline void ForEachFast(const BNTensor3<DType1>& in_data,
+                               const BNTensor3<DType2>& in_data2,
+                               const BNTensor3<DType3>& out_data,
+                               const size_t channel,
                                OnData onData) {
   const size_t num         = in_data.OuterSize();
   const size_t matrixSize  = in_data.InnerSize();
@@ -106,8 +113,11 @@ static inline void ForEachFast(const BNTensor3<DType1>& in_data, const BNTensor3
 
 /*! \brief Forward CPU */
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormForwardImpl(mshadow::Stream<cpu>*, const OpContext& ctx, const BatchNormParam& param_,
-                          const std::vector<TBlob>& in_data, const std::vector<OpReqType>& req,
+void BatchNormForwardImpl(mshadow::Stream<cpu>*,
+                          const OpContext& ctx,
+                          const BatchNormParam& param_,
+                          const std::vector<TBlob>& in_data,
+                          const std::vector<OpReqType>& req,
                           const std::vector<TBlob>& out_data,
                           const std::vector<TBlob>& aux_states) {
   // Input
@@ -136,8 +146,8 @@ void BatchNormForwardImpl(mshadow::Stream<cpu>*, const OpContext& ctx, const Bat
     if (is_train_and_not_global_stats) {
       // compute mean per input
       mean[channel] = 0;
-      ForEachFast(inputData, channel,
-                  [mean, channel](const DType* in_data) { mean[channel] += *in_data; });
+      ForEachFast(
+          inputData, channel, [mean, channel](const DType* in_data) { mean[channel] += *in_data; });
       mean[channel] /= itemCountPerChannel;
 
       // compute variance per input
@@ -180,7 +190,9 @@ void BatchNormForwardImpl(mshadow::Stream<cpu>*, const OpContext& ctx, const Bat
     if (!param_.fix_gamma) {
       if (IsBNWriting(req[batchnorm::kData])) {
         ForEachFast(
-            inputData, outputData, channel,
+            inputData,
+            outputData,
+            channel,
             [thisWeight, thisBias, thisMean, thisInvstd](const DType* in_data, DType* out_data) {
               *out_data =
                   static_cast<DType>(((*in_data - thisMean) * thisInvstd) * thisWeight + thisBias);
@@ -192,7 +204,9 @@ void BatchNormForwardImpl(mshadow::Stream<cpu>*, const OpContext& ctx, const Bat
       }
       if (IsBNWriting(req[batchnorm::kData])) {
         ForEachFast(
-            inputData, outputData, channel,
+            inputData,
+            outputData,
+            channel,
             [thisWeight, thisBias, thisMean, thisInvstd](const DType* in_data, DType* out_data) {
               *out_data = static_cast<DType>(((*in_data - thisMean) * thisInvstd) + thisBias);
             });
@@ -202,10 +216,14 @@ void BatchNormForwardImpl(mshadow::Stream<cpu>*, const OpContext& ctx, const Bat
 }
 
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormBackwardImpl(mshadow::Stream<cpu>*, const OpContext& ctx,
-                           const BatchNormParam& param_, const std::vector<TBlob>& out_grad,
-                           const std::vector<TBlob>& in_data, const std::vector<TBlob>& out_data,
-                           const std::vector<OpReqType>& req, const std::vector<TBlob>& in_grad,
+void BatchNormBackwardImpl(mshadow::Stream<cpu>*,
+                           const OpContext& ctx,
+                           const BatchNormParam& param_,
+                           const std::vector<TBlob>& out_grad,
+                           const std::vector<TBlob>& in_data,
+                           const std::vector<TBlob>& out_data,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& in_grad,
                            const std::vector<TBlob>& aux_states) {
   // Input Data
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
@@ -262,12 +280,15 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu>*, const OpContext& ctx,
 
     // sumGradOut over all gradOutput in feature plane
     AccReal sumGradOut = 0;
-    ForEachFast(gradOut, static_cast<size_t>(channel),
-                [&sumGradOut](const DType* gradOut_data) { sumGradOut += *gradOut_data; });
+    ForEachFast(gradOut, static_cast<size_t>(channel), [&sumGradOut](const DType* gradOut_data) {
+      sumGradOut += *gradOut_data;
+    });
 
     // dot product of the Q(X) and gradOuput
     AccReal dotp = 0;
-    ForEachFast(inputData, gradOut, static_cast<size_t>(channel),
+    ForEachFast(inputData,
+                gradOut,
+                static_cast<size_t>(channel),
                 [&dotp, mean](const DType* thisInputData, const DType* gradOut_data) {
                   dotp += (*thisInputData - mean) * (*gradOut_data);
                 });
@@ -284,22 +305,30 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu>*, const OpContext& ctx,
         const AccReal iw       = invstd * w;
         const AccReal gradMean = sumGradOut / itemCount;
         if (req[batchnorm::kData] != kAddTo) {
-          ForEachFast(inputData, gradIn, static_cast<size_t>(channel),
+          ForEachFast(inputData,
+                      gradIn,
+                      static_cast<size_t>(channel),
                       [&mean, &k](const DType* inputDataPtr, DType* gradIn_data) {
                         *gradIn_data = (*inputDataPtr - mean) * k;
                       });
 
-          ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
+          ForEachFast(gradOut,
+                      gradIn,
+                      static_cast<size_t>(channel),
                       [iw, gradMean](const DType* gradOut_data, DType* gradIn_data) {
                         *gradIn_data = (*gradOut_data - gradMean - *gradIn_data) * iw;
                       });
         } else {
-          ForEachFast(inputData, gradOut, gradIn, static_cast<size_t>(channel),
-                      [&mean, &k, iw, gradMean](const DType* inputDataPtr,
-                                                const DType* gradOut_data, DType* gradIn_data) {
-                        DType normal_val = (*inputDataPtr - mean) * k;
-                        *gradIn_data += (*gradOut_data - gradMean - normal_val) * iw;
-                      });
+          ForEachFast(
+              inputData,
+              gradOut,
+              gradIn,
+              static_cast<size_t>(channel),
+              [&mean, &k, iw, gradMean](
+                  const DType* inputDataPtr, const DType* gradOut_data, DType* gradIn_data) {
+                DType normal_val = (*inputDataPtr - mean) * k;
+                *gradIn_data += (*gradOut_data - gradMean - normal_val) * iw;
+              });
         }
       } else {
         // when in evaluation mode
@@ -308,12 +337,16 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu>*, const OpContext& ctx,
         // dL/dX = w / running_std
         const AccReal iw = invstd * w;
         if (req[batchnorm::kData] != kAddTo) {
-          ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
+          ForEachFast(gradOut,
+                      gradIn,
+                      static_cast<size_t>(channel),
                       [iw](const DType* gradOut_data, DType* gradIn_data) {
                         *gradIn_data = *gradOut_data * iw;
                       });
         } else {
-          ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
+          ForEachFast(gradOut,
+                      gradIn,
+                      static_cast<size_t>(channel),
                       [iw](const DType* gradOut_data, DType* gradIn_data) {
                         *gradIn_data += *gradOut_data * iw;
                       });
@@ -338,7 +371,8 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu>*, const OpContext& ctx,
 
 DMLC_REGISTER_PARAMETER(BatchNormParam);
 
-static bool BatchNormShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector* in_shape,
+static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
+                           mxnet::ShapeVector* in_shape,
                            mxnet::ShapeVector* out_shape) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
@@ -368,14 +402,15 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector* in_
   return true;
 }
 
-static bool BatchNormType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
+static bool BatchNormType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int>* in_type,
                           std::vector<int>* out_type) {
   using namespace mshadow;
   CHECK_GE(in_type->size(), 1U);
   const size_t n_out = 3;
-  // For float16 input type beta, gamma, mean, and average are stored in float32.
-  // For other input types, these parameters have the same type as input
-  // NOTE: This requirement is from cuDNN (v. 4 and 5)
+  // For float16 input type beta, gamma, mean, and average are stored in
+  // float32. For other input types, these parameters have the same type as
+  // input NOTE: This requirement is from cuDNN (v. 4 and 5)
   int dtype_param;
   int dtype = (*in_type)[0];
   if (type_is_none(dtype)) {
@@ -388,13 +423,13 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_typ
       // Input type is undefined but output type is: backward inference
       dtype         = (*out_type)[0];
       (*in_type)[0] = dtype;
-      MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX,
-                                  { dtype_param = mshadow::DataType<AccRealX>::kFlag; });
+      MSHADOW_REAL_TYPE_SWITCH_EX(
+          dtype, DTypeX, AccRealX, { dtype_param = mshadow::DataType<AccRealX>::kFlag; });
     }
   } else {
     // Input type is defined but output type is not: forward inference
-    MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX,
-                                { dtype_param = mshadow::DataType<AccRealX>::kFlag; });
+    MSHADOW_REAL_TYPE_SWITCH_EX(
+        dtype, DTypeX, AccRealX, { dtype_param = mshadow::DataType<AccRealX>::kFlag; });
     out_type->clear();
     out_type->push_back(dtype);
     for (size_t i = 1; i < n_out; ++i) {
@@ -415,17 +450,21 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_typ
 
 #if MXNET_USE_MKLDNN == 1
 static inline bool SupportMKLDNNBN(const NDArray& input, const BatchNormParam& param) {
-  if (mxnet::op::batchnorm::disable_mkl) return false;
+  if (mxnet::op::batchnorm::disable_mkl)
+    return false;
   const mxnet::TShape shape = input.shape();
   const int ndim            = shape.ndim();
-  if (ndim == 0 || shape.Size() == 0) return false;
+  if (ndim == 0 || shape.Size() == 0)
+    return false;
   const int dtype = input.dtype();
   return (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) &&
          SupportStorageMKLDNN(input.storage_type());
 }
 
-void BatchNormComputeExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                           const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+void BatchNormComputeExCPU(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<NDArray>& inputs,
+                           const std::vector<OpReqType>& req,
                            const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
@@ -441,7 +480,8 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   FallBackCompute(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
-void BatchNormGradComputeExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+void BatchNormGradComputeExCPU(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
                                const std::vector<NDArray>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<NDArray>& outputs) {
@@ -457,8 +497,10 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ct
 }
 #endif
 
-static inline bool BatchNormStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                        DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+static inline bool BatchNormStorageType(const nnvm::NodeAttrs& attrs,
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
+                                        std::vector<int>* in_attrs,
                                         std::vector<int>* out_attrs) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
 
@@ -472,7 +514,8 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs& attrs, const int 
   }
 #else
   for (int& v : *in_attrs)
-    if (v == -1) v = kDefaultStorage;
+    if (v == -1)
+      v = kDefaultStorage;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched =
         storage_type_assign(out_attrs, kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
@@ -482,7 +525,8 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs& attrs, const int 
   }
 #endif
   if (!common::ContainsOnlyStorage(*in_attrs, kDefaultStorage) && param.fix_gamma) {
-    LOG(FATAL) << "fix_gamma=True is not supported for sparse ndarrays. Tracked at #11647";
+    LOG(FATAL) << "fix_gamma=True is not supported for sparse ndarrays. "
+                  "Tracked at #11647";
   }
   return dispatched;
 }
@@ -491,7 +535,8 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::ObjectPtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> out_data;
   out_data.reserve(n->num_outputs());
-  for (size_t i = 0; i < n->num_outputs(); ++i) out_data.emplace_back(n, i, 0);
+  for (size_t i = 0; i < n->num_outputs(); ++i)
+    out_data.emplace_back(n, i, 0);
   std::vector<nnvm::NodeEntry> heads;
   heads.reserve(8);
   heads.emplace_back(ograds.at(0));
@@ -512,13 +557,15 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::ObjectPtr& n,
   // The input of batchnorm
   std::vector<nnvm::NodeEntry> in_grad;
   in_grad.reserve(5);
-  for (size_t i = 0; i < 3; ++i) in_grad.emplace_back(gnode, i, 0);
+  for (size_t i = 0; i < 3; ++i)
+    in_grad.emplace_back(gnode, i, 0);
   // attach no gradient node to forbid gradient on aux_state
   nnvm::ObjectPtr ng = nnvm::Node::Create();
   ng->attrs.op       = Op::Get("_NoGradient");
   ng->attrs.name     = "NoGradient";
   // the aux state of batchnorm
-  for (size_t i = 3; i < 5; ++i) in_grad.emplace_back(ng);
+  for (size_t i = 3; i < 5; ++i)
+    in_grad.emplace_back(ng);
   return in_grad;
 }
 
@@ -617,18 +664,17 @@ then set ``gamma`` to 1 and its gradient to 0.
     .add_argument("moving_mean", "NDArray-or-Symbol", "running mean of input")
     .add_argument("moving_var", "NDArray-or-Symbol", "running variance of input")
     .add_arguments(BatchNormParam::__FIELDS__())
-    .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
-                                               [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var,
-                                                  const int index) {
-                                                 if (var->attrs.dict.find("__init__") !=
-                                                     var->attrs.dict.end())
-                                                   return;
-                                                 if (index == 3) {
-                                                   var->attrs.dict["__init__"] = "[\"zero\", {}]";
-                                                 } else if (index == 4) {
-                                                   var->attrs.dict["__init__"] = "[\"one\", {}]";
-                                                 }
-                                               });
+    .set_attr<nnvm::FSetInputVarAttrOnCompose>(
+        "FSetInputVarAttrOnCompose",
+        [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
+          if (var->attrs.dict.find("__init__") != var->attrs.dict.end())
+            return;
+          if (index == 3) {
+            var->attrs.dict["__init__"] = "[\"zero\", {}]";
+          } else if (index == 4) {
+            var->attrs.dict["__init__"] = "[\"one\", {}]";
+          }
+        });
 
 NNVM_REGISTER_OP(_backward_BatchNorm)
     .set_num_inputs(8)

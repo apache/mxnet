@@ -46,8 +46,12 @@ static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs,
   MKLDNNConvFullParam full_param;
   full_param.conv_param = param;
   full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
-  auto& fwd     = GetConvFwd(full_param, ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
-                         param.no_bias ? nullptr : &in_data[conv::kBias], out_data[conv::kOut]);
+  auto& fwd     = GetConvFwd(full_param,
+                         ctx.is_train,
+                         in_data[conv::kData],
+                         in_data[conv::kWeight],
+                         param.no_bias ? nullptr : &in_data[conv::kBias],
+                         out_data[conv::kOut]);
   auto data_mem = in_data[conv::kData].GetMKLDNNDataReorder(fwd.GetPd().src_desc());
   const mkldnn::memory* weight_mem;
   // For inference, we want to reorder the weight array so we don't need to
@@ -77,9 +81,14 @@ static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs,
   Stream<cpu>* s          = ctx.get_stream<cpu>();
   const size_t num_inputs = param.no_bias ? 2 : 3;
   mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
-      s, 1, out_data[1].data().dptr<float>(), out_data[2].data().dptr<float>(),
-      in_data[num_inputs].data().dptr<float>(), in_data[num_inputs + 1].data().dptr<float>(),
-      in_data[num_inputs + 2].data().dptr<float>(), in_data[num_inputs + 3].data().dptr<float>());
+      s,
+      1,
+      out_data[1].data().dptr<float>(),
+      out_data[2].data().dptr<float>(),
+      in_data[num_inputs].data().dptr<float>(),
+      in_data[num_inputs + 1].data().dptr<float>(),
+      in_data[num_inputs + 2].data().dptr<float>(),
+      in_data[num_inputs + 3].data().dptr<float>());
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_conv)
