@@ -167,6 +167,8 @@ Graph OneDNNShiftedQuantization(Graph&& g) {
                                     &new_arg_vector, &new_arg_names);
           }
           break;
+        default:
+          break;
       }
     });
   }
