@@ -49,8 +49,8 @@ Pattern FindPattern(const ObjectPtr &node) {
 }
 
 void QuantizeFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
-                                   std::vector<NDArray *>& new_arg_vector,
-                                   std::vector<std::string>& new_arg_names) {
+                                   std::vector<NDArray *>* new_arg_vector,
+                                   std::vector<std::string>* new_arg_names) {
   ObjectPtr &quantize = node->inputs[0].node;
   ObjectPtr& bias_node = node->inputs[2].node;
   std::string bias_name_old = bias_node->attrs.name;
@@ -58,7 +58,7 @@ void QuantizeFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
   if (bias_in_arg_ptr->dtype() != mshadow::kInt8) return;
   std::string bias_name_s32 = bias_node->attrs.name + "_s32";
   bias_node = CreateNode("nullptr", bias_name_s32);
-  new_arg_names.push_back(bias_name_s32);
+  new_arg_names->push_back(bias_name_s32);
 
   quantize->attrs.dict["shifted"] = "True";
   if (quantize->op()->attr_parser) quantize->op()->attr_parser(&(quantize->attrs));
@@ -67,10 +67,10 @@ void QuantizeFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
 
   float bias_int32_rescale = RescaleWeights(g, node, weight_tensor);
 
-  new_arg_vector.push_back(
+  new_arg_vector->push_back(
       new NDArray(kDefaultStorage, bias_in_arg_ptr->shape(),
                   Context::CPU(), false, mshadow::kInt32));
-  int32_t *bias_ptr_int32 = new_arg_vector.back()->data().dptr<int32_t>();
+  int32_t *bias_ptr_int32 = new_arg_vector->back()->data().dptr<int32_t>();
   size_t bias_size = bias_in_arg_ptr->shape().Size();
   int8_t *bias_ptr_old = bias_in_arg_ptr->data().dptr<int8_t>();
 
@@ -87,8 +87,8 @@ void QuantizeFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
 }
 
 void FcFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
-                             std::vector<NDArray *>& new_arg_vector,
-                             std::vector<std::string>& new_arg_names) {
+                             std::vector<NDArray *>* new_arg_vector,
+                             std::vector<std::string>* new_arg_names) {
   ObjectPtr& first_fc = node->inputs[0].node;
   auto const& param =
       nnvm::get<MKLDNNFCFullParam>(first_fc->attrs.parsed);
@@ -100,7 +100,7 @@ void FcFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
     if (bias_in_arg_ptr->dtype() != mshadow::kInt8) return;
     std::string bias_name_s32 = bias_node->attrs.name + "_s32";
     bias_node = CreateNode("nullptr", bias_name_s32);
-    new_arg_names.push_back(bias_name_s32);
+    new_arg_names->push_back(bias_name_s32);
 
     first_fc->attrs.dict["shifted_output"] = "True";
     if (first_fc->op()->attr_parser)
@@ -111,12 +111,12 @@ void FcFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
 
     float bias_int32_rescale = RescaleWeights(g, node, weight_tensor);
 
-    new_arg_vector.push_back(
+    new_arg_vector->push_back(
         new NDArray(kDefaultStorage, bias_in_arg_ptr->shape(),
                     Context::CPU(), false, mshadow::kInt32));
 
     int32_t* bias_ptr_int32 =
-        new_arg_vector.back()->data().dptr<int32_t>();
+        new_arg_vector->back()->data().dptr<int32_t>();
     size_t bias_size = bias_in_arg_ptr->shape().Size();
     int8_t* bias_ptr_old = bias_in_arg_ptr->data().dptr<int8_t>();
 
@@ -155,15 +155,17 @@ Graph OneDNNShiftedQuantization(Graph&& g) {
   if (!disable_shifted_quant) {
     DFSVisit(g.outputs, [&](const ObjectPtr &node) {
       Pattern p = FindPattern(node);
-      switch(p){
+      switch (p) {
         case Pattern::QuantizeFc:
-          if(quantize_fc) {
-            QuantizeFcShiftedQuantization(node, std::forward<Graph>(g), new_arg_vector, new_arg_names);
+          if (quantize_fc) {
+            QuantizeFcShiftedQuantization(node, std::forward<Graph>(g),
+                                          &new_arg_vector, &new_arg_names);
           }
           break;
         case Pattern::FcFc:
-          if(fc_fc) {
-            FcFcShiftedQuantization(node, std::forward<Graph>(g), new_arg_vector, new_arg_names);
+          if (fc_fc) {
+            FcFcShiftedQuantization(node, std::forward<Graph>(g),
+                                    &new_arg_vector, &new_arg_names);
           }
           break;
       }

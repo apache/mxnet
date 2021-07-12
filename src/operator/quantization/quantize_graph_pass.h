@@ -22,8 +22,8 @@
  * \file quantize_graph_pass.h
  * \brief
  */
-#ifndef MXNET_QUANTIZE_GRAPH_PASS_H_
-#define MXNET_QUANTIZE_GRAPH_PASS_H_
+#ifndef MXNET_OPERATOR_QUANTIZATION_QUANTIZE_GRAPH_PASS_H_
+#define MXNET_OPERATOR_QUANTIZATION_QUANTIZE_GRAPH_PASS_H_
 
 #include <mxnet/op_attr_types.h>
 #include <nnvm/graph.h>
@@ -32,6 +32,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <string>
 #include "quantize_v2-inl.h"
 #include "../nn/mkldnn/mkldnn_fully_connected-inl.h"
 #include "../../common/utils.h"
@@ -148,4 +149,4 @@ static inline void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_QUANTIZE_GRAPH_PASS_H_
+#endif  // MXNET_OPERATOR_QUANTIZATION_QUANTIZE_GRAPH_PASS_H_
