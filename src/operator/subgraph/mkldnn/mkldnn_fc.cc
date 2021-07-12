@@ -45,13 +45,6 @@
 namespace mxnet {
 namespace op {
 
-
-static inline size_t GetInSumIndex(const MKLDNNFCFullParam &param) {
-  assert(param.mkldnn_param.with_sum);
-  return fullc::kWeight + 1 + (param.default_param.no_bias ? 0 : 1);
-}
-
-
 class FCInputIndex {
  public:
   explicit FCInputIndex(const MKLDNNFCFullParam full_param) {

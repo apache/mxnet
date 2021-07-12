@@ -27,7 +27,7 @@
 #if MXNET_USE_MKLDNN == 1
 #include <unordered_map>
 #include "mkldnn_fully_connected-inl.h"
-#include "operator/quantization/quantization_utils.h"
+#include "../../quantization/quantization_utils.h"
 
 namespace mxnet {
 namespace op {
