@@ -5219,7 +5219,6 @@ def convert_npi_mean(node, **kwargs):
                 make_node('Cast', input_nodes, [name+'_cast'], to=dtype_t),
                 make_node('ReduceMean', [name+'_cast'], [name], axes=axes, keepdims=keepdims),
             ]
-            return nodes
         else:
             create_tensor([1], name+'_1', kwargs['initializer'])
             nodes = [
@@ -5230,15 +5229,12 @@ def convert_npi_mean(node, **kwargs):
                 make_node('Reshape', [name+'_reduce', name+'_concat'], [name+'_reshape']),
                 make_node('Squeeze', [name+'_reshape'], [name], axes=[0]),
             ]
-            return nodes
     else:
         if keepdims:
             nodes = [
                 make_node('Cast', input_nodes, [name+'_cast'], to=dtype_t),
                 make_node('ReduceMean', [name+'_cast'], [name], keepdims=keepdims),
             ]
-            return nodes
-
         else:
             create_tensor([1], name+'_1', kwargs['initializer'])
             nodes = [
@@ -5246,4 +5242,4 @@ def convert_npi_mean(node, **kwargs):
                 make_node('ReduceMean', [name+'_cast'], [name+'_reduce'], keepdims=keepdims),
                 make_node('Reshape', [name+'_reduce', name+'_1'], [name]),
             ]
-            return nodes, (dtype,)
+    return nodes, (dtype,)
