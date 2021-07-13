@@ -86,55 +86,47 @@ void QuantizeFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
   LOG(INFO) << "applied shifted quantization on QUANTIZE->FC";
 }
 
-void FcFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
-                             std::vector<NDArray *>* new_arg_vector,
+void FcFcShiftedQuantization(const ObjectPtr& node, Graph&& g,
+                             std::vector<NDArray*>* new_arg_vector,
                              std::vector<std::string>* new_arg_names) {
   ObjectPtr& first_fc = node->inputs[0].node;
-  auto const& param =
-      nnvm::get<MKLDNNFCFullParam>(first_fc->attrs.parsed);
-  // TODO(sfraczek): remove !with_eltwise when onednn version upgrades
-  if (!param.mkldnn_param.with_eltwise) {
-    ObjectPtr& bias_node = node->inputs[2].node;
-    std::string bias_name_old = bias_node->attrs.name;
-    NDArray* bias_in_arg_ptr = FindInArgByName(g, bias_name_old);
-    if (bias_in_arg_ptr->dtype() != mshadow::kInt8) return;
-    std::string bias_name_s32 = bias_node->attrs.name + "_s32";
-    bias_node = CreateNode("nullptr", bias_name_s32);
-    new_arg_names->push_back(bias_name_s32);
+  auto const& param = nnvm::get<MKLDNNFCFullParam>(first_fc->attrs.parsed);
+  ObjectPtr& bias_node = node->inputs[2].node;
+  std::string bias_name_old = bias_node->attrs.name;
+  NDArray* bias_in_arg_ptr = FindInArgByName(g, bias_name_old);
+  if (bias_in_arg_ptr->dtype() != mshadow::kInt8) return;
+  std::string bias_name_s32 = bias_node->attrs.name + "_s32";
+  bias_node = CreateNode("nullptr", bias_name_s32);
+  new_arg_names->push_back(bias_name_s32);
 
-    first_fc->attrs.dict["shifted_output"] = "True";
-    if (first_fc->op()->attr_parser)
-      first_fc->op()->attr_parser(&(first_fc->attrs));
+  first_fc->attrs.dict["shifted_output"] = "True";
+  if (first_fc->op()->attr_parser)
+    first_fc->op()->attr_parser(&(first_fc->attrs));
 
-    NDArray* weight_tensor =
-        FindInArgByName(g, node->inputs[1].node->attrs.name);
+  NDArray* weight_tensor = FindInArgByName(g, node->inputs[1].node->attrs.name);
 
-    float bias_int32_rescale = RescaleWeights(g, node, weight_tensor);
+  float bias_int32_rescale = RescaleWeights(g, node, weight_tensor);
 
-    new_arg_vector->push_back(
-        new NDArray(kDefaultStorage, bias_in_arg_ptr->shape(),
-                    Context::CPU(), false, mshadow::kInt32));
+  new_arg_vector->push_back(
+      new NDArray(kDefaultStorage, bias_in_arg_ptr->shape(), Context::CPU(),
+                  false, mshadow::kInt32));
 
-    int32_t* bias_ptr_int32 =
-        new_arg_vector->back()->data().dptr<int32_t>();
-    size_t bias_size = bias_in_arg_ptr->shape().Size();
-    int8_t* bias_ptr_old = bias_in_arg_ptr->data().dptr<int8_t>();
+  int32_t* bias_ptr_int32 = new_arg_vector->back()->data().dptr<int32_t>();
+  size_t bias_size = bias_in_arg_ptr->shape().Size();
+  int8_t* bias_ptr_old = bias_in_arg_ptr->data().dptr<int8_t>();
 
-    for (size_t i = 0; i < bias_size; ++i) {
-      bias_ptr_int32[i] = static_cast<int32_t>(
-          std::round(bias_ptr_old[i] * bias_int32_rescale));
-    }
-
-    float min_data =
-        std::stof(first_fc->attrs.dict.at("min_calib_range"));
-    float max_data =
-        std::stof(first_fc->attrs.dict.at("max_calib_range"));
-    float data_scale = kUint8Range / (max_data - min_data);
-    int32_t shift_value =
-        static_cast<int32_t>(std::round(data_scale * -min_data));
-    ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
-    LOG(INFO) << "applied shifted quantization on FC->FC";
+  for (size_t i = 0; i < bias_size; ++i) {
+    bias_ptr_int32[i] =
+        static_cast<int32_t>(std::round(bias_ptr_old[i] * bias_int32_rescale));
   }
+
+  float min_data = std::stof(first_fc->attrs.dict.at("min_calib_range"));
+  float max_data = std::stof(first_fc->attrs.dict.at("max_calib_range"));
+  float data_scale = kUint8Range / (max_data - min_data);
+  int32_t shift_value =
+      static_cast<int32_t>(std::round(data_scale * -min_data));
+  ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
+  LOG(INFO) << "applied shifted quantization on FC->FC";
 }
 
 Graph OneDNNShiftedQuantization(Graph&& g) {
