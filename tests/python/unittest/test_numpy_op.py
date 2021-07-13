@@ -3493,7 +3493,6 @@ def test_np_ravel():
 
 @with_seed()
 @use_np
-@unittest.skipIf(sys.platform.startswith('win'), 'https://github.com/apache/incubator-mxnet/issues/20389')
 def test_np_randint():
     ctx = mx.context.current_context()
     # test shapes
@@ -7257,7 +7256,6 @@ def test_np_pad():
 
 @with_seed()
 @use_np
-@unittest.skipIf(sys.platform.startswith('win'), 'https://github.com/apache/incubator-mxnet/issues/20389')
 def test_np_rand():
     # Test shapes.
     shapes = [
