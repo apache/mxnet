@@ -142,7 +142,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu>*,
   const size_t itemCountPerChannel         = inputData.Size() / channelCount;
 
 #pragma omp parallel for
-  for (size_t channel = 0; channel < channelCount; ++channel) {
+  for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {
     if (is_train_and_not_global_stats) {
       // compute mean per input
       mean[channel] = 0;
@@ -257,7 +257,7 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu>*,
   const bool is_train_and_not_global_stats = ctx.is_train && !param_.use_global_stats;
 
 #pragma omp parallel for
-  for (size_t channel = 0; channel < channelCount; ++channel) {
+  for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {
     const AccReal* weight = weights.dptr<AccReal>();
     const AccReal w       = !param_.fix_gamma ? weight[channel] : AccReal(1);
     AccReal mean, invstd;
