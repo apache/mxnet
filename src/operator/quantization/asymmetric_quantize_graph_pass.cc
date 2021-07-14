@@ -90,7 +90,6 @@ void FcFcShiftedQuantization(const ObjectPtr& node, Graph&& g,
                              std::vector<NDArray*>* new_arg_vector,
                              std::vector<std::string>* new_arg_names) {
   ObjectPtr& first_fc = node->inputs[0].node;
-  auto const& param = nnvm::get<MKLDNNFCFullParam>(first_fc->attrs.parsed);
   ObjectPtr& bias_node = node->inputs[2].node;
   std::string bias_name_old = bias_node->attrs.name;
   NDArray* bias_in_arg_ptr = FindInArgByName(g, bias_name_old);

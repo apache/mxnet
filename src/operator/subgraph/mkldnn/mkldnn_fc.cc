@@ -45,9 +45,7 @@
 namespace mxnet {
 namespace op {
 
-class FCInputIndex {
- public:
-  explicit FCInputIndex(const MKLDNNFCFullParam full_param) {
+FCInputIndex::FCInputIndex(const MKLDNNFCFullParam& full_param) {
     auto &mkldnn_param = full_param.mkldnn_param;
     const bool has_bias = !full_param.default_param.no_bias;
     const bool quantized = mkldnn_param.quantized;
@@ -74,36 +72,7 @@ class FCInputIndex {
     sum_min       = sum_input_quantized ? index++ : 0;
     sum_max       = sum_input_quantized ? index++ : 0;
     num_total     = index;
-  }
-
-  // true if sum input is used and it is float number
-  bool IsSumInputFloat() const { return (sum && !sum_min); }
-  int GetTotal() const { return num_total; }
-  int GetBase() const { return num_base; }
-
-  // return number of standard inputs which are quantized (represented as integer)
-  int GetQuantized() const { return num_quantized;}
-
-  // Represent index of particular input in the input vector:
-  int data;
-  int weight;
-  int bias;
-  int sum;
-  int data_min;
-  int data_max;
-  int weight_min;
-  int weight_max;
-  int bias_min;
-  int bias_max;
-  int sum_min;
-  int sum_max;
-
- private:
-  int num_base;       // Number of standard inputs
-  int num_total;      // Number of total inputs: standard + additional needed for quantization
-  int num_quantized;  // Number of standard inputs which are quantized
-};
-
+}
 
 class SgMKLDNNFCOp {
  public:

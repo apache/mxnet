@@ -103,10 +103,12 @@ static inline float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray*
   auto min_data = std::stof(quantize->attrs.dict.at("min_calib_range"));
   auto max_data = std::stof(quantize->attrs.dict.at("max_calib_range"));
 
-  float *min_weight = FindInArgByName(g, fc->inputs[5].node->attrs.name)->data().dptr<float>();
-  float *max_weight = FindInArgByName(g, fc->inputs[6].node->attrs.name)->data().dptr<float>();
-  float min_bias = *FindInArgByName(g, fc->inputs[7].node->attrs.name)->data().dptr<float>();
-  float max_bias = *FindInArgByName(g, fc->inputs[8].node->attrs.name)->data().dptr<float>();
+  FCInputIndex fc_index(nnvm::get<MKLDNNFCFullParam>(fc->attrs.parsed));
+
+  float *min_weight = FindInArgByName(g, fc->inputs[fc_index.weight_min].node->attrs.name)->data().dptr<float>();
+  float *max_weight = FindInArgByName(g, fc->inputs[fc_index.weight_max].node->attrs.name)->data().dptr<float>();
+  float min_bias = *FindInArgByName(g, fc->inputs[fc_index.bias_min].node->attrs.name)->data().dptr<float>();
+  float max_bias = *FindInArgByName(g, fc->inputs[fc_index.bias_max].node->attrs.name)->data().dptr<float>();
 
   float data_scale_ = kUint8Range / (max_data - min_data);
   float weight_scale = GetQuantizeScale(mshadow::kInt8, *min_weight, *max_weight);

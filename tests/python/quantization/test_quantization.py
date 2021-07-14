@@ -1255,7 +1255,7 @@ def test_get_optimal_thresholds():
 
 
 @with_seed()
-def test_onednn_shifted_quantization():
+def test_onednn_shifted_quantize_fc():
     batch_size = 1
     if not is_test_for_mkldnn():
         print("Test only for mkldnn")
@@ -1355,12 +1355,14 @@ def test_onednn_shifted_fc_fc():
         print("Test only for mkldnn")
         return
 
-    def get_fc_fc_layers():
+    def get_fc_fc_layers(with_eltwise):
         net = mx.gluon.nn.HybridSequential()
         with net.name_scope():
             net.add(mx.gluon.nn.Dense(2, use_bias=True, flatten=True,
                                       weight_initializer=mx.initializer.Normal(),
                                       bias_initializer=mx.initializer.Normal()))
+            if with_eltwise:
+                net.add(mx.gluon.nn.Activation('relu'))
             net.add(mx.gluon.nn.Dense(2, use_bias=True, flatten=True,
                                       weight_initializer=mx.initializer.Normal(),
                                       bias_initializer=mx.initializer.Normal()))
@@ -1383,11 +1385,11 @@ def test_onednn_shifted_fc_fc():
         out.wait_to_read()
 
         _, sym = net._cached_graph
-        fc_attrs = sym.attr_dict()['quantized_sg_mkldnn_fully_connected_0']
+        fc_attrs = sym.attr_dict()["quantized_sg_mkldnn_fully_connected%s_0" %("_eltwise" if with_eltwise else "")]
         return fc_attrs, out
 
-    def check(qdtype, random_data):
-        net_ref = get_fc_fc_layers()
+    def check(with_eltwise, qdtype, random_data):
+        net_ref = get_fc_fc_layers(with_eltwise)
         out_ref = net_ref(random_data)
         out_ref.wait_to_read()
 
@@ -1401,9 +1403,10 @@ def test_onednn_shifted_fc_fc():
             assert 'shifted' not in fc_attrs
 
     with environment({'MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS': '0',
-        'MXNET_DISABLE_SHIFTED_QUANTIZE_FC_OPTIMIZATION': '1'}):
-        for qdtype in ['uint8', 'int8', 'auto']:
-            check(qdtype, mx.nd.random_uniform(low=0 if qdtype == 'uint8' else -1, high=1, shape=(batch_size, 10)))
+                      'MXNET_DISABLE_SHIFTED_QUANTIZE_FC_OPTIMIZATION': '1'}):
+        for with_eltwise in [False, True]:
+            for qdtype in ['uint8', 'int8', 'auto']:
+                check(with_eltwise, qdtype, mx.nd.random_uniform(low=0 if qdtype == 'uint8' else -1, high=1, shape=(batch_size, 10)))
 
 
 if __name__ == "__main__":

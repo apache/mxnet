@@ -86,6 +86,39 @@ struct MKLDNNFCFullParam {
   std::vector<float> output_scales = {0.0f};
 };
 
+// Forward declaration
+class FCInputIndex {
+ public:
+  explicit FCInputIndex(const MKLDNNFCFullParam& full_param);
+
+  // true if sum input is used and it is float number
+  bool IsSumInputFloat() const { return (sum && !sum_min); }
+  int GetTotal() const { return num_total; }
+  int GetBase() const { return num_base; }
+
+  // return number of standard inputs which are quantized (represented as integer)
+  int GetQuantized() const { return num_quantized;}
+
+  // Represent index of particular input in the input vector:
+  int data;
+  int weight;
+  int bias;
+  int sum;
+  int data_min;
+  int data_max;
+  int weight_min;
+  int weight_max;
+  int bias_min;
+  int bias_max;
+  int sum_min;
+  int sum_max;
+
+ private:
+  int num_base;       // Number of standard inputs
+  int num_total;      // Number of total inputs: standard + additional needed for quantization
+  int num_quantized;  // Number of standard inputs which are quantized
+};
+
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
     const MKLDNNFCFullParam &full_param, const bool is_train,
     const NDArray &data, const NDArray &weight, const NDArray *bias,
