@@ -24,6 +24,7 @@
  */
 
 #include "quantize_graph_pass.h"
+#include <memory>
 #include <utility>
 
 namespace mxnet {
