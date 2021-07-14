@@ -452,6 +452,7 @@ def convert_batchnorm(node, **kwargs):
 
 
 @mx_op.register("tanh")
+@mx_op.register("_npi_tanh")
 def convert_tanh(node, **kwargs):
     """Map MXNet's tanh operator attributes to onnx's Tanh operator
     and return the created node.
@@ -459,6 +460,7 @@ def convert_tanh(node, **kwargs):
     return create_basic_op_node('Tanh', node, kwargs)
 
 @mx_op.register("cos")
+@mx_op.register("_npi_cos")
 def convert_cos(node, **kwargs):
     """Map MXNet's cos operator attributes to onnx's Cos operator
     and return the created node.
@@ -466,6 +468,7 @@ def convert_cos(node, **kwargs):
     return create_basic_op_node('Cos', node, kwargs)
 
 @mx_op.register("sin")
+@mx_op.register("_npi_sin")
 def convert_sin(node, **kwargs):
     """Map MXNet's sin operator attributes to onnx's Sin operator
     and return the created node.
@@ -473,6 +476,7 @@ def convert_sin(node, **kwargs):
     return create_basic_op_node('Sin', node, kwargs)
 
 @mx_op.register("tan")
+@mx_op.register("_npi_tan")
 def convert_tan(node, **kwargs):
     """Map MXNet's tan operator attributes to onnx's tan operator
     and return the created node.
@@ -480,6 +484,7 @@ def convert_tan(node, **kwargs):
     return create_basic_op_node('Tan', node, kwargs)
 
 @mx_op.register("arccos")
+@mx_op.register("_npi_arccos")
 def convert_acos(node, **kwargs):
     """Map MXNet's acos operator attributes to onnx's acos operator
     and return the created node.
@@ -487,6 +492,7 @@ def convert_acos(node, **kwargs):
     return create_basic_op_node('Acos', node, kwargs)
 
 @mx_op.register("arcsin")
+@mx_op.register("_npi_arcsin")
 def convert_asin(node, **kwargs):
     """Map MXNet's asin operator attributes to onnx's asin operator
     and return the created node.
@@ -494,6 +500,7 @@ def convert_asin(node, **kwargs):
     return create_basic_op_node('Asin', node, kwargs)
 
 @mx_op.register("arctan")
+@mx_op.register("_npi_arctan")
 def convert_atan(node, **kwargs):
     """Map MXNet's atan operator attributes to onnx's atan operator
     and return the created node.
@@ -502,6 +509,7 @@ def convert_atan(node, **kwargs):
 
 #Basic neural network functions
 @mx_op.register("sigmoid")
+@mx_op.register("_npx_sigmoid")
 def convert_sigmoid(node, **kwargs):
     """Map MXNet's sigmoid operator attributes to onnx's Sigmoid operator
     and return the created node.
@@ -509,6 +517,7 @@ def convert_sigmoid(node, **kwargs):
     return create_basic_op_node('Sigmoid', node, kwargs)
 
 @mx_op.register("relu")
+@mx_op.register("_npx_relu")
 def convert_relu(node, **kwargs):
     """Map MXNet's relu operator attributes to onnx's Relu operator
     and return the created node.
@@ -803,6 +812,7 @@ def convert_pooling(node, **kwargs):
 
 
 @mx_op.register("exp")
+@mx_op.register("_npi_exp")
 def convert_exp(node, **kwargs):
     """Map MXNet's exp operator attributes to onnx's Exp operator
     and return the created node.
@@ -1748,6 +1758,7 @@ def convert_addn(node, **kwargs):
 
  # Rounding
 @mx_op.register("ceil")
+@mx_op.register("_npi_ceil")
 def convert_ceil(node, **kwargs):
     """Map MXNet's ceil operator attributes to onnx's Ceil operator
     and return the created node.
@@ -1755,6 +1766,7 @@ def convert_ceil(node, **kwargs):
     return create_basic_op_node('Ceil', node, kwargs)
 
 @mx_op.register("floor")
+@mx_op.register("_npi_floor")
 def convert_floor(node, **kwargs):
     """Map MXNet's floor operator attributes to onnx's Floor operator
     and return the created node.
@@ -2116,6 +2128,7 @@ def convert_squeeze(node, **kwargs):
 
 
 @mx_op.register("log")
+@mx_op.register("_npi_log")
 def convert_log(node, **kwargs):
     """Map MXNet's log operator attributes to onnx's Log operator
     and return the created node.
