@@ -18,7 +18,7 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
+ * Copyright (c) 2021 by Contributors
  * \file spatial_parallel_convolution-inl.h
  * \brief Spatial parallel convolution
  * \author Przemyslaw Tredak

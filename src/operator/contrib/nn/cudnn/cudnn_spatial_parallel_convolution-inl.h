@@ -18,11 +18,12 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
- * \file cudnn_convolution-inl.h
- * \brief
- * \author Bing Xu
+ * Copyright (c) 2021 by Contributors
+ * \file cudnn_spatial_parallel_convolution-inl.h
+ * \brief Spatial parallel convolution
+ * \author Bing Xu, Dick Carter, Przemyslaw Tredak
 */
+
 #ifndef MXNET_OPERATOR_CONTRIB_NN_CUDNN_CUDNN_SPATIAL_PARALLEL_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_CONTRIB_NN_CUDNN_CUDNN_SPATIAL_PARALLEL_CONVOLUTION_INL_H_
 

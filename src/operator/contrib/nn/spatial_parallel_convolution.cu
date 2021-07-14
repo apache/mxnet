@@ -18,10 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
- * \file convolution.cu
- * \brief
- * \author Bing Xu, Jun Wu, Da Zheng
+ * Copyright (c) 2021 by Contributors
+ * \file spatial_paralell_convolution.cu
+ * \brief Spatial parallel convolution
+ * \author Bing Xu, Jun Wu, Da Zheng, Przemyslaw Tredak
 */
 
 #include "./spatial_parallel_convolution-inl.h"
