@@ -22,6 +22,7 @@ import shutil
 from mxnet import gluon
 from mxnet.test_utils import assert_almost_equal
 
+@pytest.mark.skip(reason='Gluon no long support v1.x models since https://github.com/apache/incubator-mxnet/pull/20262')
 def test_resnet50_v2(tmp_path):
     try:
         ctx = mx.cpu()
