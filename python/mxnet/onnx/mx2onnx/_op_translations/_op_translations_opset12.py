@@ -2100,6 +2100,7 @@ def convert_expand_dims(node, **kwargs):
     return [node]
 
 @mx_op.register("squeeze")
+@mx_op.register("_npi_squeeze")
 def convert_squeeze(node, **kwargs):
     """Map MXNet's squeeze operator attributes to onnx's squeeze operator
     and return the created node.

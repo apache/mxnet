@@ -1749,7 +1749,7 @@ def test_onnx_export_negative(tmp_path, dtype, shape):
     op_export_test('negative', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='addn is deprecated in 2.0')
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 @pytest.mark.parametrize('shape', [(1,), (3, ), (4, 5), (3, 4, 5)])
 def test_onnx_export_addn(tmp_path, dtype, shape):
@@ -1758,13 +1758,12 @@ def test_onnx_export_addn(tmp_path, dtype, shape):
     op_export_test('add_n', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('shape_axis', [[(1, 1), None], [(3, 1, 2, 1), (None)], [(3, 1, 2, 1), (1)], 
                             [(3, 1, 2, 1), (1, 3)]])
-def test_onnx_export_squeeze(tmp_path, dtype, shape_axis):
-    x = mx.nd.random.uniform(1, 100, shape=shape_axis[0]).astype(dtype)
-    M = def_model('squeeze', axis=shape_axis[1])
+def test_onnx_export_np_squeeze(tmp_path, dtype, shape_axis):
+    x = mx.np.random.uniform(1, 100, size=shape_axis[0]).astype(dtype)
+    M = def_model(mx.np, 'squeeze', axis=shape_axis[1])
     op_export_test('squeeze', M, [x], tmp_path)
 
 
@@ -1773,7 +1772,7 @@ def test_onnx_export_squeeze(tmp_path, dtype, shape_axis):
 @pytest.mark.parametrize("keepdims", [0, 1])
 @pytest.mark.parametrize("axis", [None, 0, 1, 2, -1, (0, 2), (0, 1, 2)])
 @pytest.mark.parametrize("shape", [(4, 5, 6), (3, 4, 5, 6)])
-def test_onnx_export_norm(tmp_path, dtype, order, axis, shape, keepdims):
+def test_onnx_export_npx_norm(tmp_path, dtype, order, axis, shape, keepdims):
     kwargs = {}
     if order is not None:
         kwargs['ord'] = order

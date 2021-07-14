@@ -1683,6 +1683,7 @@ def convert_prod(node, **kwargs):
 
 
 @mx_op.register("squeeze", OPSET_VERSION)
+@mx_op.register("_npi_squeeze", OPSET_VERSION)
 def convert_squeeze(node, **kwargs):
     """Map MXNet's squeeze operator attributes to onnx's squeeze operator
     and return the created node.
