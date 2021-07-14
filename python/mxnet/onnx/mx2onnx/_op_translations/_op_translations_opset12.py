@@ -255,7 +255,7 @@ def convert_convolution(node, **kwargs):
         raise NotImplementedError('Convolution currently does not support layout not in '
                                   '[\'NCHW\', \'NCDHW\']')
 
-    if no_bias == 'True':
+    if no_bias in ['True', '1']:
         assert len(input_nodes) == 2, 'Convolution takes 2 input if no_bias==True'
     else:
         assert len(input_nodes) == 3, 'Convolution takes 3 input if no_bias==False'

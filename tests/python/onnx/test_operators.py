@@ -1106,7 +1106,6 @@ def test_onnx_export_broadcast_mul(tmp_path, dtype):
     op_export_test('broadcast_mul', M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 6, 60, 60)])
 @pytest.mark.parametrize('num_filter', [2, 4, 32])
@@ -1116,15 +1115,15 @@ def test_onnx_export_broadcast_mul(tmp_path, dtype):
 @pytest.mark.parametrize('stride', [None, (1, 1), (2, 2), (3, 4), (4, 5)])
 @pytest.mark.parametrize('pad', [None, (1, 1), (3, 4), (4, 5)])
 @pytest.mark.parametrize('dilate', [None, (1, 1)])
-def test_onnx_export_convolution(tmp_path, dtype, shape, num_filter, num_group, no_bias,
+def test_onnx_export_npx_convolution(tmp_path, dtype, shape, num_filter, num_group, no_bias,
                                  kernel, stride, pad, dilate):
     if shape[1] % num_group:
         return
-    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    x = mx.np.random.uniform(0, 1, shape, dtype=dtype)
     w_shape = (num_filter,) + (shape[1] // num_group,) + kernel
-    w = mx.random.uniform(0, 1, w_shape, dtype=dtype)
+    w = mx.np.random.uniform(0, 1, w_shape, dtype=dtype)
     b_shape = (num_filter)
-    b = mx.random.uniform(0, 1, b_shape, dtype=dtype)
+    b = mx.np.random.uniform(0, 1, b_shape, dtype=dtype)
     kwargs = {}
     if kernel:
         kwargs['kernel'] = kernel
@@ -1134,13 +1133,12 @@ def test_onnx_export_convolution(tmp_path, dtype, shape, num_filter, num_group, 
         kwargs['pad'] = pad
     if dilate:
         kwargs['dilate'] = dilate
-    M = def_model('Convolution', num_filter=num_filter, num_group=num_group,  no_bias=no_bias,
+    M = def_model(mx.npx, 'convolution', num_filter=num_filter, num_group=num_group,  no_bias=no_bias,
                   layout='NCHW', **kwargs)
     inputs = [x, w] if no_bias else [x, w, b]
     op_export_test('convolution', M, inputs, tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('shape', [(1, 4, 16, 16, 16), (1, 3, 10, 18, 18)])
 @pytest.mark.parametrize('num_filter', [2, 4, 32])
@@ -1150,15 +1148,15 @@ def test_onnx_export_convolution(tmp_path, dtype, shape, num_filter, num_group, 
 @pytest.mark.parametrize('stride', [None, (1, 1, 1), (1, 2, 3)])
 @pytest.mark.parametrize('pad', [None, (0, 1, 1), (1, 2, 3)])
 @pytest.mark.parametrize('dilate', [None, [2, 2, 2]])
-def test_onnx_export_convolution_3D(tmp_path, dtype, shape, num_filter, num_group, no_bias,
+def test_onnx_export_npx_convolution_3D(tmp_path, dtype, shape, num_filter, num_group, no_bias,
                                  kernel, stride, pad, dilate):
     if shape[1] % num_group:
         return
-    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    x = mx.np.random.uniform(0, 1, shape, dtype=dtype)
     w_shape = (num_filter,) + (shape[1] // num_group,) + kernel
-    w = mx.random.uniform(0, 1, w_shape, dtype=dtype)
+    w = mx.np.random.uniform(0, 1, w_shape, dtype=dtype)
     b_shape = (num_filter)
-    b = mx.random.uniform(0, 1, b_shape, dtype=dtype)
+    b = mx.np.random.uniform(0, 1, b_shape, dtype=dtype)
     kwargs = {}
     if kernel:
         kwargs['kernel'] = kernel
@@ -1168,10 +1166,10 @@ def test_onnx_export_convolution_3D(tmp_path, dtype, shape, num_filter, num_grou
         kwargs['pad'] = pad
     if dilate:
         kwargs['dilate'] = dilate
-    M = def_model('Convolution', num_filter=num_filter, num_group=num_group,  no_bias=no_bias,
+    M = def_model(mx.npx, 'convolution', num_filter=num_filter, num_group=num_group,  no_bias=no_bias,
                   layout='NCDHW', **kwargs)
     inputs = [x, w] if no_bias else [x, w, b]
-    op_export_test('convolution', M, inputs, tmp_path)
+    op_export_test('convolution_3d', M, inputs, tmp_path)
 
 
 @pytest.mark.skip(reason='TODO')
