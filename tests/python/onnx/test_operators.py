@@ -73,7 +73,7 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_
     model.initialize(ctx=mx.cpu(0))
     model.hybridize()
     pred_mx = model(*inputs)
-    print('pred_mx', pred_mx, pred_mx.shape, pred_mx.dtype)
+    #print('pred_mx', pred_mx, pred_mx.shape, pred_mx.dtype)
     # this is for ops such as mx.np.concatenate
     if isinstance(inputs[0], tuple):
         inputs = list(inputs[0])
