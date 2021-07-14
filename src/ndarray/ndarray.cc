@@ -103,7 +103,7 @@ void NDArray::SetShapeFromChunk() {
 struct ChunkMem {
   Storage::Handle h;
   std::vector<Storage::Handle> aux_h;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   std::shared_ptr<MKLDNNMemory> mem;
 #endif
 };
@@ -113,14 +113,14 @@ NDArray::Chunk::~Chunk() {
   ChunkMem mem;
   mem.h = this->shandle;
   mem.aux_h = this->aux_handles;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   // We want to delete mkldnn memory after deleting the variable.
   mem.mem = this->mkl_mem_;
 #endif
   if (auto engine = engine_ref_.lock()) {
     engine->DeleteVariable([mem, skip_free](RunContext s) {
       if (skip_free == false) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
         if (mem.mem) {
           CHECK_LE(mem.mem->GetSize(), mem.h.size);
           CHECK_EQ(mem.mem->GetDataHandle(), mem.h.dptr);
@@ -149,7 +149,7 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
     Storage::Get()->Free(shandle);
     // init storage
     shandle = Storage::Get()->Alloc(dbytes, ctx);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     mkl_mem_ = nullptr;
 #endif
   }
@@ -177,7 +177,7 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
   return ret;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 NDArray::NDArray(const mkldnn::memory::desc &md)
     : storage_type_(kDefaultStorage), entry_(nullptr) {
@@ -397,7 +397,7 @@ void NDArray::set_fresh_out_grad(bool state) const {
   info.fresh_out_grad = state;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 bool NDArray::Chunk::IsMKLDNN() const {
   if (storage_type != kDefaultStorage)
@@ -763,7 +763,7 @@ void NDArray::SetTBlob() const {
   char *dptr = static_cast<char*>(ptr_->shandle.dptr);
   auto stype = storage_type();
   if (stype == kDefaultStorage) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     CHECK(!IsMKLDNNData()) << "We can't generate TBlob for MKLDNN data. "
         << "Please use Reorder2Default() to generate a new NDArray first";
 #endif
@@ -1105,7 +1105,7 @@ inline void CopyFromToRspImpl(const NDArray& from, const NDArray& to, RunContext
 // Make a copy of a dense NDArray
 template<typename from_xpu, typename to_xpu>
 inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext ctx) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   // If neither is MKLDNN, we can copy data normally.
   if (!from.IsMKLDNNData() && !to.IsMKLDNNData()) {
 #endif
@@ -1114,7 +1114,7 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
     TBlob tmp = to.data();
     ndarray::Copy<from_xpu, to_xpu>(from.data(), &tmp,
                                     from.ctx(), to.ctx(), ctx);
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   } else if (SupportMKLDNN(from.dtype(), from.shape())
              && SupportMKLDNN(to.dtype(), to.shape())
              && from.ctx().dev_mask() == cpu::kDevMask
@@ -1640,7 +1640,7 @@ void NDArray::Save(dmlc::Stream *strm) const {
   } else {
     this->WaitToRead();
     nd_cpu = *this;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     if (nd_cpu.IsMKLDNNData())
       nd_cpu = nd_cpu.Reorder2Default();
 #endif
@@ -2040,7 +2040,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
     this->WaitToRead();
     RunContext rctx{this->ctx(), nullptr, nullptr, false};
     NDArray src = *this;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     if (src.IsMKLDNNData())
       src = this->Reorder2Default();
 #endif

@@ -24,7 +24,7 @@
  * \author Zixuan Wei
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <numeric>
 #include "./mkldnn_rnn-inl.h"
@@ -1196,4 +1196,4 @@ void MKLDNNRnnOp::Backward(const OpContext& ctx,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

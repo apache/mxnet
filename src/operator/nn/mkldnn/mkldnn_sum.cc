@@ -31,7 +31,7 @@
 namespace mxnet {
 namespace op {
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 void MKLDNNSum(const mkldnn::memory &arr1,
                const mkldnn::memory &arr2,
                const mkldnn::memory &out) {

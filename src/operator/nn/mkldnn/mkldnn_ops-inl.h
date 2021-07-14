@@ -36,7 +36,7 @@
 #include <dmlc/optional.h>
 #include <vector>
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include <mkldnn.hpp>
 
 namespace mxnet {
@@ -156,5 +156,5 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_

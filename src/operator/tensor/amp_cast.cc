@@ -30,7 +30,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(AMPCastParam);
 DMLC_REGISTER_PARAMETER(AMPMultiCastParam);
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
                     const std::vector<NDArray>& inputs,
@@ -116,7 +116,7 @@ inline static bool AMPMultiCastStorageType(const nnvm::NodeAttrs& attrs, const i
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 
 NNVM_REGISTER_OP(amp_cast)
 .describe(R"code(Cast function between low precision float/FP32 used by AMP.
@@ -135,7 +135,7 @@ It casts only between low precision float/FP32 and does not do anything for othe
     return std::vector<bool>{true};
   })
 .set_attr<FCompute>("FCompute<cpu>", AMPCastCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FInferStorageType>("FInferStorageType", AMPCastStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", AMPCastExCPU)
@@ -154,7 +154,7 @@ NNVM_REGISTER_OP(_backward_amp_cast)
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FInferStorageType>("FInferStorageType", AMPCastStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", AMPCastExCPU)
@@ -205,7 +205,7 @@ It casts only between low precision float/FP32 and does not do anything for othe
     return std::vector<bool>(num_args, true);
   })
 .set_attr<FCompute>("FCompute<cpu>", AMPMultiCastCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FInferStorageType>("FInferStorageType", AMPMultiCastStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", AMPMultiCastExCPU)
@@ -248,7 +248,7 @@ NNVM_REGISTER_OP(_backward_amp_multicast)
     int num_args = dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
     return std::vector<bool>(num_args, true);
   })
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FInferStorageType>("FInferStorageType", AMPMultiCastStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", AMPMultiCastExCPU)

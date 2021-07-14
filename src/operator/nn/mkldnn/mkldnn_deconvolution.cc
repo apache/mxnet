@@ -21,7 +21,7 @@
  * \file mkldnn_deconvolution.cc
  */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include "./mkldnn_deconvolution-inl.h"
 
@@ -357,4 +357,4 @@ bool DeconvDescCreator::ImposePlainWherePadding(const size_t data_size, const si
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1

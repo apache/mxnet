@@ -23,7 +23,7 @@
  * \author Da Zheng
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>

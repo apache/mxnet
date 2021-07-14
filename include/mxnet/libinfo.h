@@ -99,8 +99,8 @@
 #define MXNET_USE_LAPACK 0
 #endif
 
-#ifndef MXNET_USE_MKLDNN
-#define MXNET_USE_MKLDNN 0
+#ifndef MXNET_USE_ONEDNN
+#define MXNET_USE_ONEDNN 0
 #endif
 
 #ifndef MXNET_USE_OPENMP

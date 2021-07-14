@@ -28,7 +28,7 @@
 #include <nnvm/op_attr_types.h>
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../nn/mkldnn/mkldnn_batch_norm-inl.h"
 #endif
 
@@ -125,7 +125,7 @@ static bool BatchNormWithReLUType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 static inline bool SupportMKLDNNBNReLU(const NDArray &input, const BatchNormParam &param) {
   mxnet::TShape shape = input.shape();
   return SupportMKLDNN(input) && shape.ndim() == 4
@@ -176,7 +176,7 @@ static inline bool BatchNormWithReLUStorageType(const nnvm::NodeAttrs &attrs,
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
 
   bool dispatched = false;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   if (!dispatched) {
     dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
                                    in_attrs, out_attrs);
@@ -268,11 +268,11 @@ An extented operator of Batch normalization which can fuse ReLU activation.
 .set_attr<mxnet::FInferShape>("FInferShape", BatchNormWithReLUShape)
 .set_attr<nnvm::FInferType>("FInferType", BatchNormWithReLUType)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormWithReLUStorageType)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormWithReLUComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", BatchNormWithReLUGrad)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -300,7 +300,7 @@ NNVM_REGISTER_OP(_backward_contrib_BatchNormWithReLU)
 .set_num_outputs(3)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormWithReLUStorageType)
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })

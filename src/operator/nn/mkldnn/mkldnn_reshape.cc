@@ -23,7 +23,7 @@
  * \author Tao Lv
 */
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 #include "../../tensor/elemwise_unary_op.h"
 #include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"

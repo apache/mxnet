@@ -59,7 +59,7 @@ inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
   for (size_t i = 0; i < src.size(); i++) {
     auto& nd = src[i];
     bool is_default = nd.storage_type() == kDefaultStorage;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     // We have to make sure it's default storage and default layout.
     is_default = nd.IsDefaultData();
 #endif
@@ -67,7 +67,7 @@ inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
       (*idx_map)[i] = temp_dst->size();
       NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
                                                              true, nd.dtype());
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
       CHECK(temp.IsDefaultData());
 #endif
       temp_src->emplace_back(nd);
@@ -91,7 +91,7 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
   for (size_t i = 0; i < src.size(); i++) {
     auto& nd = src[i];
     bool is_default = nd.storage_type() == kDefaultStorage;
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     if (req->at(i) == kWriteInplace && nd.IsMKLDNNData())
       // If it's write inplace and the output array doesn't use the default
       // layout, we'll generate a temporary output array below, which means
@@ -102,7 +102,7 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
     is_default = nd.IsDefaultData();
 #endif
     if (!is_default) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
       NDArray temp;
       if (bufs != nullptr) {
         temp = bufs->at(i);

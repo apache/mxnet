@@ -172,7 +172,7 @@ ifndef LINT_LANG
 endif
 
 ifeq ($(USE_MKLDNN), 1)
-	CFLAGS += -DMXNET_USE_MKLDNN=1
+	CFLAGS += -DMXNET_USE_ONEDNN=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
 	CFLAGS += -I$(MKLDNNROOT)/include
 	LIB_DEP += $(MKLDNNROOT)/lib/libdnnl.a

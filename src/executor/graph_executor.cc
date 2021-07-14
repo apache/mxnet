@@ -44,7 +44,7 @@ namespace exec {
 using namespace mxnet::common;
 
 static const std::string GetDefaultSubgraphBackend() {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
   return std::string("MKLDNN");
 #else
   return std::string();

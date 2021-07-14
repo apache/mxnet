@@ -575,7 +575,7 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
 
   if (in_stype == kDefaultStorage) {
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
     if (dev_mask == Context::kCPU && MKLDNNEnvSet()
         && SupportMKLDNNSlice(param)) {
       dispatched = storage_type_assign(&out_stype, kDefaultStorage,

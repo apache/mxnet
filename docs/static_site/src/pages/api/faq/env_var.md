@@ -364,7 +364,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Values: 0(false) or 1(true) ```(default=1)```
   - If this variable is set, MXNet will simplify the computation graph, eliminating duplicated operations on the same inputs.
 
-* MXNET_USE_MKLDNN_RNN
+* MXNET_USE_ONEDNN_RNN
   - Values: 0(false) or 1(true) ```(default=1)```
   - This variable controls whether to use the MKL-DNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The MKL-DNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
 

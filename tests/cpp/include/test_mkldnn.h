@@ -26,7 +26,7 @@
 #ifndef TEST_MKLDNN_H_
 #define TEST_MKLDNN_H_
 
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_ONEDNN == 1
 
 #include <set>
 #include <string>
@@ -621,5 +621,5 @@ inline void VerifySumResult(const std::vector<NDArray *> &in_arrs,
     ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
 
-#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_ONEDNN == 1
 #endif  // TEST_MKLDNN_H_
