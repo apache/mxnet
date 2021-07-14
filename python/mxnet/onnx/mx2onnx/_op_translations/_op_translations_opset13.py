@@ -551,6 +551,7 @@ def convert_expand_dims(node, **kwargs):
 
 
 @mx_op.register("stack", OPSET_VERSION)
+@mx_op.register("_npi_stack", OPSET_VERSION)
 def convert_stack(node, **kwargs):
     """Map MXNet's stack operator to onnx operators.
     """
@@ -595,6 +596,7 @@ def convert_softmax(node, **kwargs):
         temperature = float(temperature)
 
     use_length = str(attrs.get("use_length", 'None'))
+    use_length = use_length in ['1', 'True']
     dtype = input_dtypes[0]
     dtype_t = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[dtype]
     data = input_nodes[0]
@@ -602,7 +604,7 @@ def convert_softmax(node, **kwargs):
     create_tensor([0], name+"_0", kwargs["initializer"])
     if axis == -1 and temperature == 1.:
         nodes = []
-        if use_length == "True":
+        if use_length:
             # magic number, this is fp16 min
             create_tensor([-65500.0], name+"_mask_val", kwargs["initializer"], dtype=dtype)
             create_tensor([1], name+"_1", kwargs["initializer"])
@@ -640,7 +642,7 @@ def convert_softmax(node, **kwargs):
             make_node("Softmax", [name+'_data'], [name], axis=axis)
         ]
         return nodes
-    elif use_length == "True":
+    elif use_length:
         length = input_nodes[1]
         create_tensor([1], name+"_1", kwargs["initializer"])
         create_const_scalar_node(name+'_-1_s', np.int64(-1), kwargs)
