@@ -296,14 +296,14 @@ def convert_deconvolution(node, **kwargs):
 
     pads = pads + pads
 
-    if target_shape != '':
+    if target_shape not in ['', 'None']:
         raise NotImplementedError('Deconvolution currently does not support target_shape')
 
     if layout not in ['NCHW', 'NCDHW', 'NCW']:
         raise NotImplementedError('Deconvolution currently does not support layout not in '
                                   '[\'NCHW\', \'NCDHW\', \'NCW\']')
 
-    if no_bias == 'True':
+    if no_bias in ['1', 'True']:
         assert len(input_nodes) == 2, 'Deconvolution takes 2 input if no_bias==True'
     else:
         assert len(input_nodes) == 3, 'Deconvolution takes 3 input if no_bias==False'
@@ -2123,6 +2123,7 @@ def convert_log(node, **kwargs):
     return create_basic_op_node('Log', node, kwargs)
 
 @mx_op.register("reciprocal")
+@mx_op.register("_npi_reciprocal")
 def convert_reciprocal(node, **kwargs):
     """Map MXNet's reciprocal operator attributes to onnx's Reciprocal operator
     and return the created node.
@@ -2130,6 +2131,7 @@ def convert_reciprocal(node, **kwargs):
     return create_basic_op_node('Reciprocal', node, kwargs)
 
 @mx_op.register("_power")
+@mx_op.register("_npi_power")
 def convert_power(node, **kwargs):
     """Map MXNet's _power operator attributes to onnx's Pow operator
     and return the created node.
@@ -2144,6 +2146,7 @@ def convert_broadcast_power(node, **kwargs):
     return create_basic_op_node('Pow', node, kwargs)
 
 @mx_op.register("sqrt")
+@mx_op.register("_npi_sqrt")
 def convert_sqrt(node, **kwargs):
     """Map MXNet's sqrt operator attributes to onnx's Sqrt operator
     and return the created node.
@@ -2187,6 +2190,7 @@ def convert_spacetodepth(node, **kwargs):
     return [node]
 
 @mx_op.register("square")
+@mx_op.register("_npi_square")
 def convert_square(node, **kwargs):
     """Map MXNet's square operator attributes to onnx's Pow operator
     and return the created node.
@@ -2701,6 +2705,7 @@ def convert_tile(node, **kwargs):
 
 
 @mx_op.register("broadcast_to")
+@mx_op.register("_npi_broadcast_to")
 def convert_broadcast_to(node, **kwargs):
     """Map MXNet's broadcast_to operator attributes to onnx's Expand
     operator and return the created node.
@@ -5243,3 +5248,66 @@ def convert_npi_mean(node, **kwargs):
                 make_node('Reshape', [name+'_reduce', name+'_1'], [name]),
             ]
     return nodes, (dtype,)
+
+
+@mx_op.register("_npi_logical_and")
+def convert_np_logical_and(node, **kwargs):
+    """Map MXNet's broadcast logical and operator attributes to onnx's And operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    nodes = [
+        make_node("Cast", [input_nodes[0]], [name+"_cast0"], to=int(TensorProto.BOOL)),
+        make_node("Cast", [input_nodes[1]], [name+"_cast1"], to=int(TensorProto.BOOL)),
+        make_node("And", [name+"_cast0", name+"_cast1"], [name]),
+    ]
+    return nodes, (np.dtype('bool'),)
+
+
+@mx_op.register("_npi_logical_xor")
+def convert_np_logical_xor(node, **kwargs):
+    """Map MXNet's broadcast logical xor operator attributes to onnx's XOR operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    nodes = [
+        make_node("Cast", [input_nodes[0]], [name+"_cast0"], to=int(TensorProto.BOOL)),
+        make_node("Cast", [input_nodes[1]], [name+"_cast1"], to=int(TensorProto.BOOL)),
+        make_node("Xor", [name+"_cast0", name+"_cast1"], [name]),
+    ]
+    return nodes, (np.dtype('bool'),)
+
+
+@mx_op.register("_npi_logical_or")
+def convert_np_logical_or(node, **kwargs):
+    """Map MXNet's broadcast logical or operator attributes to onnx's OR operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    nodes = [
+        make_node("Cast", [input_nodes[0]], [name+"_cast0"], to=int(TensorProto.BOOL)),
+        make_node("Cast", [input_nodes[1]], [name+"_cast1"], to=int(TensorProto.BOOL)),
+        make_node("Or", [name+"_cast0", name+"_cast1"], [name]),
+    ]
+    return nodes, (np.dtype('bool'),)
+
+
+@mx_op.register("_npi_logical_not")
+def convert_np_logical_not(node, **kwargs):
+    """Map MXNet's logical not operator attributes to onnx's Not operator
+    and return the created node.
+    """
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    nodes = [
+        make_node("Cast", [input_nodes[0]], [name+"_cast"], to=int(TensorProto.BOOL)),
+        make_node("Not", [name+"_cast"], [name]),
+    ]
+    return nodes, (np.dtype('bool'),)

@@ -1355,7 +1355,6 @@ def test_onnx_export_ufunc(tmp_path, dtype, shape, operator):
     op_export_test('ufunc', M, [A], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('shape', [(1, 3, 64, 64), (2, 6, 60, 60)])
 @pytest.mark.parametrize('num_filter', [4, 16, 256])
@@ -1366,18 +1365,18 @@ def test_onnx_export_ufunc(tmp_path, dtype, shape, operator):
 @pytest.mark.parametrize('pad', [None, (0, 0), (1, 1)])
 @pytest.mark.parametrize('dilate', [None, (1, 1)])
 @pytest.mark.parametrize('adj', [(0, 0), (1, 1)])
-def test_onnx_export_deconvolution(tmp_path, dtype, shape, num_filter, num_group, no_bias,
+def test_onnx_export_npx_deconvolution(tmp_path, dtype, shape, num_filter, num_group, no_bias,
                                  kernel, stride, pad, dilate, adj):
     for i in range(len(stride)):
         if stride[i] <= adj[i]:
             return
     if shape[1] % num_group:
         return
-    x = mx.random.uniform(0, 1, shape, dtype=dtype)
+    x = mx.np.random.uniform(0, 1, shape, dtype=dtype)
     w_shape = (shape[1],) + (num_filter // num_group,) + kernel
-    w = mx.random.uniform(0, 1, w_shape, dtype=dtype)
+    w = mx.np.random.uniform(0, 1, w_shape, dtype=dtype)
     b_shape = (num_filter)
-    b = mx.random.uniform(0, 1, b_shape, dtype=dtype)
+    b = mx.np.random.uniform(0, 1, b_shape, dtype=dtype)
     kwargs = {}
     if kernel:
         kwargs['kernel'] = kernel
@@ -1389,29 +1388,28 @@ def test_onnx_export_deconvolution(tmp_path, dtype, shape, num_filter, num_group
         kwargs['dilate'] = dilate
     if adj:
         kwargs['adj'] = adj
-    M = def_model('Deconvolution', num_filter=num_filter, num_group=num_group,  no_bias=no_bias,
+    M = def_model(mx.npx, 'deconvolution', num_filter=num_filter, num_group=num_group,  no_bias=no_bias,
                   layout='NCHW', **kwargs)
     inputs = [x, w] if no_bias else [x, w, b]
     op_export_test('deconvolution', M, inputs, tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float32', 'float16', 'float64'])
 @pytest.mark.parametrize('mode', ['edge', 'constant', 'reflect'])
 @pytest.mark.parametrize('params', [((3, 4, 5, 6), (0, 0, 0, 0, 2, 3, 4, 5)),
                                     ((7, 6, 5, 4, 3), (0, 0, 0, 0, 4, 4, 3, 3, 2, 1))])
-def test_onnx_export_pad(tmp_path, dtype, mode, params):
+def test_onnx_export_npx_pad(tmp_path, dtype, mode, params):
      kwargs = {}
      kwargs['constant_value'] = 9999.55
      kwargs['pad_width'] = params[1]
-     x = mx.random.uniform(0, 1, shape=params[0], dtype=dtype)
-     M = def_model('pad', mode=mode, **kwargs)
+     x = mx.np.random.uniform(0, 1, size=params[0], dtype=dtype)
+     M = def_model(mx.npx, 'pad', mode=mode, **kwargs)
      op_export_test('pad', M, [x], tmp_path)
 
 
 # Note that due to ONNX limitation, the behavior for when inputs > 2-D is different from that of
 # MXNet
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='TODO MXNet 2.0 dot changed behavior')
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
 @pytest.mark.parametrize('params', [((4, 5), (5, 6), False, False),
                                     ((5, 4), (5, 6), True, False),
@@ -1421,13 +1419,13 @@ def test_onnx_export_pad(tmp_path, dtype, mode, params):
                                     ((4,), (4, 5), False, False),
                                     ((4, 5), (5,), False, False)])
 def test_onnx_export_dot(tmp_path, dtype, params):
-    A = mx.random.uniform(0, 1, params[0], dtype=dtype)
-    B = mx.random.uniform(0, 1, params[1], dtype=dtype)
-    M = def_model('dot', transpose_a=params[2], transpose_b=params[3])
+    A = mx.np.random.uniform(0, 1, params[0], dtype=dtype)
+    B = mx.np.random.uniform(0, 1, params[1], dtype=dtype)
+    M = def_model(mx.np, 'dot', transpose_a=params[2], transpose_b=params[3])
     op_export_test('dot', M, [A, B], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='flatten is deprecated in 2.0')
 @pytest.mark.parametrize('dtype', ['float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [(3, 4, 5, 6), (7, 8)])
 def test_onnx_export_flatten(tmp_path, dtype, shape):
@@ -1438,7 +1436,7 @@ def test_onnx_export_flatten(tmp_path, dtype, shape):
 
 # Note that due to ONNX limitation, the behavior for when inputs > 2-D is different from that of
 # MXNet
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='linalg.gemm2 is deprecated in 2.0')
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
 @pytest.mark.parametrize('alpha', [1, 1.5])
 @pytest.mark.parametrize('params', [((4, 5), (5, 4), False, False),
@@ -1453,7 +1451,7 @@ def test_onnx_export_linalg_gemm2(tmp_path, dtype, alpha, params):
     op_export_test('_linalg_gemm2', M, [A, B], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='LogisticRegressionOutput is deprecated in 2.0')
 @pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (6, 7), (8,)])
 def test_onnx_export_LogisticRegressionOutput(tmp_path, dtype, shape):
@@ -1463,7 +1461,7 @@ def test_onnx_export_LogisticRegressionOutput(tmp_path, dtype, shape):
     op_export_test('LogisticRegressionOutput', M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='SoftmaxOutput is deprecated in 2.0')
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
 @pytest.mark.parametrize('shape', [(4, 5, 6), (6, 7), (3, 4, 5, 6, 7)])
 def test_onnx_export_SoftmaxOutput(tmp_path, dtype, shape):
@@ -1474,7 +1472,7 @@ def test_onnx_export_SoftmaxOutput(tmp_path, dtype, shape):
 
 
 # Due to ONNX limitation, L2Normalization only supports channel mode for now
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='L2Normalization is deprecated in 2.0')
 @pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (3, 4, 5, 6, 7)])
 def test_onnx_export_L2Normalization(tmp_path, dtype, shape):
@@ -1483,20 +1481,19 @@ def test_onnx_export_L2Normalization(tmp_path, dtype, shape):
     op_export_test('L2Normalization', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (3, 4, 5, 6, 7)])
 @pytest.mark.parametrize('eps', [0.001, 0.00001])
-def test_onnx_export_InstanceNorm(tmp_path, dtype, shape, eps):
-    x = mx.random.uniform(0, 1, shape, dtype=dtype)
-    gamma = mx.random.uniform(0, 1, shape[1:2], dtype=dtype)
-    beta = mx.random.uniform(0, 1, shape[1:2], dtype=dtype)
-    M = def_model('InstanceNorm', eps=eps)
-    op_export_test('InstanceNorm', M, [x, gamma, beta], tmp_path)
+def test_onnx_export_npx_instance_norm(tmp_path, dtype, shape, eps):
+    x = mx.np.random.uniform(0, 1, shape, dtype=dtype)
+    gamma = mx.np.random.uniform(0, 1, shape[1:2], dtype=dtype)
+    beta = mx.np.random.uniform(0, 1, shape[1:2], dtype=dtype)
+    M = def_model(mx.npx, 'instance_norm', eps=eps)
+    op_export_test('instance_norm', M, [x, gamma, beta], tmp_path)
 
 
 # ONNXRuntime only supports 4-D inputs
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='LRN is deprecated in 2.0')
 @pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('shape', [(4, 5, 6, 7)])
 @pytest.mark.parametrize('alpha', [0.001, 0.00001])
@@ -1509,7 +1506,7 @@ def test_onnx_export_LRN(tmp_path, dtype, shape, alpha, beta, knorm, nsize):
     op_export_test('LRN', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='Crop is deprecated in 2.0')
 @pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('shape', [(1, 3, 224, 224), (5, 6, 64, 64)])
 @pytest.mark.parametrize('h_w', [(10, 10), (7, 11)])
@@ -1525,26 +1522,24 @@ def test_onnx_export_Crop(tmp_path, dtype, shape, h_w, offset, shape2):
         op_export_test('Crop', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 @pytest.mark.parametrize('shape', [(100,), (3, 4, 5), (6, 7)])
-def test_onnx_export_reciprocal(tmp_path, dtype, shape):
-    A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
-    M = def_model('reciprocal')
+def test_onnx_export_np_reciprocal(tmp_path, dtype, shape):
+    A = mx.np.random.uniform(-100, 100, shape).astype(dtype)
+    M = def_model(mx.np, 'reciprocal')
     op_export_test('reciprocal', M, [A], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize('shape', [(1, 3), (3, 4, 5)])
-def test_onnx_export_power(tmp_path, shape, dtype):
-    x = mx.nd.random.uniform(-5, 5, shape).astype(dtype)
-    y = mx.nd.random.uniform(-10, 10, shape).astype(dtype)
-    M = def_model('_internal._power')
-    op_export_test('_internal._power', M, [x, y], tmp_path)
+def test_onnx_export_np_power(tmp_path, shape, dtype):
+    x = mx.np.random.uniform(-5, 5, shape).astype(dtype)
+    y = mx.np.random.uniform(-10, 10, shape).astype(dtype)
+    M = def_model(mx.np, 'power')
+    op_export_test('power', M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='broadcast_power is deprecated in 2.0')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize('shape', [(1, 3), (3, 4, 5)])
 def test_onnx_export_broadcast_power(tmp_path, shape, dtype):
@@ -1554,16 +1549,15 @@ def test_onnx_export_broadcast_power(tmp_path, shape, dtype):
     op_export_test('broadcast_power', M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
 @pytest.mark.parametrize('shape', [(3, 4, 5), (6, 7), (8,)])
-def test_onnx_export_sqrt(tmp_path, dtype, shape):
-    A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
-    M = def_model('sqrt')
+def test_onnx_export_np_sqrt(tmp_path, dtype, shape):
+    A = mx.np.random.uniform(-100, 100, shape).astype(dtype)
+    M = def_model(mx.np, 'sqrt')
     op_export_test('sqrt', M, [A], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='depth_to_space is deprecated in 2.0')
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
 @pytest.mark.parametrize("params", [[(1,4,2,3), 1], [(1,4,2,3), 2]])
 def test_onnx_export_depth_to_space(tmp_path, dtype, params):
@@ -1573,7 +1567,7 @@ def test_onnx_export_depth_to_space(tmp_path, dtype, params):
     op_export_test('depth_to_space', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='space to depth is deprecated in 2.0')
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
 @pytest.mark.parametrize("params", [[(1,4,2,3), 1], [(1,1,4,6),2]])
 def test_onnx_export_space_to_depth(tmp_path, dtype, params):
@@ -1583,21 +1577,19 @@ def test_onnx_export_space_to_depth(tmp_path, dtype, params):
     op_export_test('space_to_depth', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
-def test_onnx_export_square(tmp_path, dtype, shape):
-    M = def_model('square')
-    x = mx.nd.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
+def test_onnx_export_np_square(tmp_path, dtype, shape):
+    M = def_model(mx.np, 'square')
+    x = mx.np.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
     op_export_test('square', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
-def test_onnx_export_shape_array(tmp_path, dtype, shape):
-    M = def_model('shape_array')
-    x = mx.nd.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
+def test_onnx_export_npx_shape_array(tmp_path, dtype, shape):
+    M = def_model(mx.npx, 'shape_array')
+    x = mx.np.arange(0, np.prod(shape)).reshape(shape).astype(dtype)
     op_export_test('shape_array', M, [x], tmp_path)
 
 
@@ -1617,7 +1609,7 @@ def test_onnx_export_hard_sigmoid(tmp_path, dtype, shape, alpha, beta):
     op_export_test('hard_sigmoid', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='broadcast_lesser is deprecaed in 2.0')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
 def test_onnx_export_broadcast_lesser(tmp_path, dtype, shape):
@@ -1636,68 +1628,62 @@ def test_onnx_export_npx_broadcast_greater(tmp_path, dtype, shape):
     op_export_test('broadcast_greater', M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32'])
 @pytest.mark.parametrize("shape", [(10,5), (1,2,3), (4,5,6)])
 @pytest.mark.parametrize('axis', [None, 1])
-def test_onnx_export_log_softmax(tmp_path, dtype, shape, axis):
-    x = mx.nd.random.uniform(0, 1, shape, dtype=dtype)
+def test_onnx_export_npx_log_softmax(tmp_path, dtype, shape, axis):
+    x = mx.np.random.uniform(0, 1, shape, dtype=dtype)
     kwargs = {}
     if axis is not None:
         kwargs['axis'] = axis
-    M = def_model('log_softmax', **kwargs)
+    M = def_model(mx.npx, 'log_softmax', **kwargs)
     op_export_test('log_softmax', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize("shape", [(10,), (2,3), (4,5,6)])
-def test_onnx_export_broadcast_logical_and(tmp_path, dtype, shape):
-    M = def_model('broadcast_logical_and')
-    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
-    y = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
-    op_export_test('broadcast_logical_and', M, [x, y], tmp_path)
+def test_onnx_export_np_logical_and(tmp_path, dtype, shape):
+    M = def_model(mx.np, 'logical_and')
+    x = mx.np.random.uniform(-1, 1, shape).astype(dtype)
+    y = mx.np.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('logical_and', M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize("shape", [(10,), (2,3), (4,5,6)])
-def test_onnx_export_broadcast_logical_or(tmp_path, dtype, shape):
-    M = def_model('broadcast_logical_or')
-    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
-    y = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
-    op_export_test('broadcast_logical_or', M, [x, y], tmp_path)
+def test_onnx_export_np_logical_or(tmp_path, dtype, shape):
+    M = def_model(mx.np, 'logical_or')
+    x = mx.np.random.uniform(-1, 1, shape).astype(dtype)
+    y = mx.np.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('logical_or', M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize("shape", [(10,), (2,3), (4,5,6)])
-def test_onnx_export_broadcast_logical_xor(tmp_path, dtype, shape):
-    M = def_model('broadcast_logical_xor')
-    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
-    y = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
-    op_export_test('broadcast_logical_xor', M, [x, y], tmp_path)
+def test_onnx_export_np_logical_xor(tmp_path, dtype, shape):
+    M = def_model(mx.np, 'logical_xor')
+    x = mx.np.random.uniform(-1, 1, shape).astype(dtype)
+    y = mx.np.random.uniform(-1, 1, shape).astype(dtype)
+    op_export_test('logical_xor', M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize("shapes", [[(1,3),(2,3)], [(2,1,3,1),(2,8,3,9)], [(1,3,6),(5,3,6)]])
-def test_onnx_export_broadcast_to(tmp_path, dtype, shapes):
+def test_onnx_export_np_broadcast_to(tmp_path, dtype, shapes):
     in_shape, to_shape = shapes
-    M = def_model('broadcast_to', shape=to_shape)
-    x = mx.nd.random.uniform(-100, 100, in_shape).astype(dtype)
+    M = def_model(np, 'broadcast_to', shape=to_shape)
+    x = mx.np.random.uniform(-100, 100, in_shape).astype(dtype)
     op_export_test('broadcast_to', M, [x], tmp_path)
 
 
 # onnxruntime currently does not support int32
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'int64'])
 @pytest.mark.parametrize('shape', [(1,), (2, 3), (4, 5, 6)])
-def test_onnx_export_clip(tmp_path, dtype, shape):
-    A = mx.nd.random.uniform(-100, 100, shape).astype(dtype)
-    a_min = mx.nd.min(A).astype('float32').asnumpy()[0] + 5
-    a_max = mx.nd.max(A).astype('float32').asnumpy()[0] - 5
-    M = def_model('clip', a_min=a_min, a_max=a_max)
+def test_onnx_export_np_clip(tmp_path, dtype, shape):
+    A = mx.np.random.uniform(-100, 100, shape).astype(dtype)
+    a_min = mx.np.min(A).astype('float32').asnumpy() + 5
+    a_max = mx.np.max(A).astype('float32').asnumpy() - 5
+    M = def_model(mx.np, 'clip', a_min=a_min, a_max=a_max)
     op_export_test('clip', M, [A], tmp_path)
 
 
@@ -1809,7 +1795,6 @@ def test_onnx_export_squeeze(tmp_path, dtype, shape_axis):
     op_export_test('squeeze', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
 @pytest.mark.parametrize("order", [1, 2])
 @pytest.mark.parametrize("keepdims", [0, 1])
@@ -1823,21 +1808,20 @@ def test_onnx_export_norm(tmp_path, dtype, order, axis, shape, keepdims):
         kwargs['axis'] = axis
     if keepdims is not None:
         kwargs['keepdims'] = keepdims
-    M = def_model('norm', **kwargs)
-    x = mx.random.normal(0, 10, shape).astype(dtype)
+    M = def_model(mx.npx, 'norm', **kwargs)
+    x = mx.np.random.normal(0, 10, shape).astype(dtype)
     op_export_test('norm', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize("shape", [(10,), (2,3), (4,5,6)])
-def test_onnx_export_logical_not(tmp_path, dtype, shape):
-    M = def_model('logical_not')
-    x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
+def test_onnx_export_np_logical_not(tmp_path, dtype, shape):
+    M = def_model(mx.np, 'logical_not')
+    x = mx.np.random.uniform(-1, 1, shape).astype(dtype)
     op_export_test('logical_not', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='TODO random uniform_like changed spec in 2.0')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
 @pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
 def test_onnx_export_random_uniform_like(tmp_path, dtype, shape):
@@ -1855,7 +1839,7 @@ def test_onnx_export_random_uniform_like(tmp_path, dtype, shape):
     op_export_test('random.uniform_like', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='TODO random uniform changed spec in 2.0')
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
 def test_onnx_export_random_uniform(tmp_path, dtype, shape):
@@ -1873,7 +1857,7 @@ def test_onnx_export_random_uniform(tmp_path, dtype, shape):
     op_export_test('random_uniform', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check, dummy_input=True)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='TODO random normal changed spec in 2.0')
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
 @pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
 @pytest.mark.parametrize("loc", [None, 0, 1, 2])
@@ -1881,15 +1865,15 @@ def test_onnx_export_random_uniform(tmp_path, dtype, shape):
 def test_onnx_export_random_normal(tmp_path, dtype, loc, scale, shape):
     kwargs = {
         'dtype': dtype,
-        'shape': shape,
+        'size': shape,
         'dummy_input': True
     }
     if loc is not None:
         kwargs['loc'] = loc
     if scale is not None:
         kwargs['scale'] = scale
-    M = def_model('random_normal', **kwargs)
-    x = mx.nd.array([1], dtype='float32')
+    M = def_model(mx.np.random, 'normal', **kwargs)
+    x = mx.np.array([1], dtype='float32')
     def rand_check(out):
         return np.zeros_like(out)
     def rand_check_nd(out):
@@ -1906,7 +1890,7 @@ def test_onnx_export_npx_roi_pooling(tmp_path, dtype, spatial_scale):
     op_export_test('roi_pooling', M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='rnn_param_concat is deprecated in 2.0')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("shape", [(1,2,3), (1,10)])
 @pytest.mark.parametrize("axis", [None, 0, 1])
@@ -1920,16 +1904,16 @@ def test_onnx_export_rnn_param_concat(tmp_path, dtype, shape, axis):
     op_export_test('_internal._rnn_param_concat', M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='size_array is deprecated in 2.0')
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64", "int32", "int64"])
 @pytest.mark.parametrize("shape", [(10,), (1,2,3), (4,5,6)])
 def test_onnx_export_size_array(tmp_path, dtype, shape):
-    M = def_model('size_array')
+    M = def_model(mx.np, 'size_array')
     x = mx.nd.random.uniform(-1, 1, shape).astype(dtype)
     op_export_test('size_array', M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='sample_multinomial is deprecated in 2.0')
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
 @pytest.mark.parametrize("shape", [(1,5), (2,10), (4,5)])
 @pytest.mark.parametrize("sample_shape", [(1), (2)])
@@ -1947,7 +1931,7 @@ def test_onnx_export_sample_multinomial(tmp_path, dtype, shape, sample_shape):
     op_export_test('sample_multinomial', M, [x], tmp_path, mx_map=rand_check_nd, onnx_map=rand_check)
 
 
-@pytest.mark.skip(reason='TODO')
+@pytest.mark.skip(reason='split_v2 is deprecated in 2.0')
 @pytest.mark.parametrize("dtype", ['float32', 'int32', 'int64'])
 @pytest.mark.parametrize('params', [((2, 4, 6), (1, ), 0, True),
                                     ((4, 5, 6), (2, 4), 1, False),
