@@ -1,6 +1,9 @@
-package org.apache.mxnet.engine;
+package org.apache.mxnet.ndarray;
 
+import org.apache.mxnet.engine.Device;
+import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.ndarray.types.Shape;
+import org.apache.mxnet.util.MxNDArrayUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -11,7 +14,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
 public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
     private static final long serialVersionUID = 1L;
@@ -60,7 +62,7 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
     /**
      * Decodes NDList from {@link InputStream}.
      *
-     * @param parent manager assigned to {@link NDArray}
+     * @param parent manager assigned to {@link MxNDArray}
      * @param is input stream contains the ndlist information
      * @return {@code NDList}
      */
@@ -72,8 +74,7 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
             }
             MxNDList list = new MxNDList();
             for (int i = 0; i < size; i++) {
-                MxResourceFactory.createNDArray(parent, dis);
-                list.add(i, manager.decode(dis));
+                list.add(i, MxNDArrayUtils.decode(parent, dis));
             }
             return list;
         } catch (IOException e) {

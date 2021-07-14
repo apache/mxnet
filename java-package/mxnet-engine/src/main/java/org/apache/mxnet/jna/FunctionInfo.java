@@ -2,7 +2,8 @@ package org.apache.mxnet.jna;
 
 import com.sun.jna.Pointer;
 import org.apache.mxnet.engine.Device;
-import org.apache.mxnet.engine.MxNDArray;
+import org.apache.mxnet.ndarray.MxNDArray;
+import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.ndarray.types.SparseFormat;
 import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
@@ -51,7 +52,7 @@ public class FunctionInfo {
      *     String>}
      * @return the error code or zero for no errors
      */
-    public MxNDArray[] invoke(MxNDArray parent, MxNDArray[] src, PairList<String, ?> params) {
+    public MxNDArray[] invoke(MxResource parent, MxNDArray[] src, PairList<String, ?> params) {
         checkDevices(src);
         PairList<Pointer, SparseFormat> pairList =
                 JnaUtils.imperativeInvoke(handle, src, null, params);
@@ -59,9 +60,9 @@ public class FunctionInfo {
                 .map(
                         pair -> {
                             if (pair.getValue() != SparseFormat.DENSE) {
-                                return parent.create(pair.getKey(), pair.getValue());
+                                return MxNDArray.create(parent, pair.getKey(), pair.getValue());
                             }
-                            return parent.create(pair.getKey());
+                            return MxNDArray.create(parent, pair.getKey());
                         })
                 .toArray(MxNDArray[]::new);
     }

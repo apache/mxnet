@@ -2,8 +2,10 @@ package org.apache.mxnet.engine;
 
 import com.sun.jna.Pointer;
 import org.apache.mxnet.jna.JnaUtils;
+import org.apache.mxnet.ndarray.MxNDArray;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
+import org.apache.mxnet.ndarray.types.SparseFormat;
 
 import java.nio.Buffer;
 
@@ -47,15 +49,17 @@ public class MxResourceFactory {
      * @return a new instance of {@link MxNDArray}
      */
     public static MxNDArray createNDArray(Buffer data, Shape shape, DataType dataType) {
-        MxNDArray array = createNDArray(shape, dataType);
+        MxNDArray array = createNDArray(data, shape);
         array.set(data);
         return array;
     }
 
-    public static MxNDArray createNDArray(Shape shape, DataType dataType) {
-        MxNDArray array = createNDArray(shape, dataType);
+    public static MxNDArray createNDArray(Buffer data, Shape shape, SparseFormat sparseFormat) {
+        MxNDArray array = createNDArray(data, shape);
+        array.set(data);
         return array;
     }
+
 
 
 

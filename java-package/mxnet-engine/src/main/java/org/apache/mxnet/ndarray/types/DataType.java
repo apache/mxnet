@@ -1,6 +1,6 @@
 package org.apache.mxnet.ndarray.types;
 
-import org.apache.mxnet.engine.MxNDArray;
+import org.apache.mxnet.ndarray.MxNDArray;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;

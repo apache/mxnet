@@ -32,7 +32,7 @@ public class MxResource extends NativeResource<Pointer> {
         this.parent = parent;
     }
 
-    protected MxResource getParent() {
+    public MxResource getParent() {
         return this.parent;
     }
 

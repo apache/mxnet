@@ -1,8 +1,11 @@
-package org.apache.mxnet.engine;
+package org.apache.mxnet.ndarray;
 
 import org.apache.mxnet.api.Device;
 import org.apache.mxnet.api.ndarray.types.DataType;
 import org.apache.mxnet.api.ndarray.types.Shape;
+import org.apache.mxnet.engine.Device;
+import org.apache.mxnet.engine.MxResource;
+import org.apache.mxnet.engine.MxResourceFactory;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
 
@@ -86,7 +89,7 @@ public final class MxNDSerializer {
      * @return {@link MxNDArray}
      * @throws IOException data is not readable
      */
-    static MxNDArray decode(MxResource parent, InputStream is) throws IOException {
+    public static MxNDArray decode(MxResource parent, InputStream is) throws IOException {
         DataInputStream dis;
         if (is instanceof DataInputStream) {
             dis = (DataInputStream) is;

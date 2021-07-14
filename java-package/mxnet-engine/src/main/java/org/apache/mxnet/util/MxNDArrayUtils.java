@@ -1,9 +1,8 @@
 package org.apache.mxnet.util;
 
-import org.apache.mxnet.engine.MxNDArray;
-import org.apache.mxnet.engine.MxNDSerializer;
+import org.apache.mxnet.ndarray.MxNDArray;
+import org.apache.mxnet.ndarray.MxNDSerializer;
 import org.apache.mxnet.engine.MxResource;
-import org.apache.mxnet.engine.MxResourceFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -33,8 +32,8 @@ public class MxNDArrayUtils {
      * @return {@link MxNDArray}
      * @throws IOException data is not readable
      */
-    static MxNDArray decode(InputStream is) throws IOException {
-        return NDSerializer.decode(this, is);
+    public static MxNDArray decode(MxResource parent, InputStream is) throws IOException {
+        return MxNDSerializer.decode(parent, is);
     }
 
 

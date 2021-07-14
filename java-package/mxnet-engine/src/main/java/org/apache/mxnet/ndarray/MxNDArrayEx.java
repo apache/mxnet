@@ -1,12 +1,17 @@
-package org.apache.mxnet.engine;
+package org.apache.mxnet.ndarray;
 
+import org.apache.mxnet.engine.Device;
+import org.apache.mxnet.engine.MxOpParams;
+import org.apache.mxnet.jna.JnaUtils;
+import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
 
 import java.util.Arrays;
+import java.util.List;
 
 public class MxNDArrayEx {
     
-    private static final MxNDArrayIndexer INDEXER = new MxNDArrayIndexer();
+    private static final NDArrayIndexer INDEXER = new NDArrayIndexer();
 
     private MxNDArray array;
 
@@ -678,10 +683,10 @@ public class MxNDArrayEx {
         opParams.addParam("state_outputs", true);
         opParams.addParam("mode", activation == RNN.Activation.TANH ? "rnn_tanh" : "rnn_relu");
 
-        NDList inputs = new NDList();
+        MxNDList inputs = new MxNDList();
         inputs.add(input);
 
-        try (NDList temp = new NDList()) {
+        try (MxNDList temp = new MxNDList()) {
             for (MxNDArray param : params) {
                 temp.add(param.flatten());
             }
@@ -696,18 +701,18 @@ public class MxNDArrayEx {
             return getManager().invoke("_npx_rnn", inputs, opParams);
         }
 
-        NDList result = getManager().invoke("_npx_rnn", inputs, opParams);
+        MxNDList result = getManager().invoke("_npx_rnn", inputs, opParams);
         try (MxNDArray temp = result.head()) {
-            return new NDList(temp.swapAxes(0, 1), result.get(1));
+            return new MxNDList(temp.swapAxes(0, 1), result.get(1));
         }
     }
 
     /** {@inheritDoc} */
     @Override
-    public NDList gru(
+    public MxNDList gru(
             MxNDArray input,
             MxNDArray state,
-            NDList params,
+            MxNDList params,
             boolean hasBiases,
             int numLayers,
             double dropRate,
@@ -739,10 +744,10 @@ public class MxNDArrayEx {
         opParams.addParam("state_outputs", true);
         opParams.addParam("mode", "gru");
 
-        NDList inputs = new NDList();
+        MxNDList inputs = new MxNDList();
         inputs.add(input);
 
-        try (NDList temp = new NDList()) {
+        try (MxNDList temp = new MxNDList()) {
             for (MxNDArray param : params) {
                 temp.add(param.flatten());
             }
@@ -757,9 +762,9 @@ public class MxNDArrayEx {
             return getManager().invoke("_npx_rnn", inputs, opParams);
         }
 
-        NDList result = getManager().invoke("_npx_rnn", inputs, opParams);
+        MxNDList result = getManager().invoke("_npx_rnn", inputs, opParams);
         try (MxNDArray temp = result.head()) {
-            return new NDList(temp.swapAxes(0, 1), result.get(1));
+            return new MxNDList(temp.swapAxes(0, 1), result.get(1));
         }
     }
 
@@ -928,7 +933,7 @@ public class MxNDArrayEx {
 
     /** {@inheritDoc} */
     @Override
-    public MxNDArrayIndexer getIndexer() {
+    public NDArrayIndexer getIndexer() {
         return INDEXER;
     }
 
@@ -936,8 +941,6 @@ public class MxNDArrayEx {
     // Miscellaneous
     ////////////////////////////////////////
 
-    /** {@inheritDoc} */
-    @Override
     @SuppressWarnings("PMD.UseTryWithResources")
     public MxNDArray where(MxNDArray condition, MxNDArray other) {
         MxNDArray array1;
@@ -975,7 +978,7 @@ public class MxNDArrayEx {
 
     /** {@inheritDoc} */
     @Override
-    public MxNDArray stack(NDList arrays, int axis) {
+    public MxNDArray stack(MxNDList arrays, int axis) {
         MxOpParams params = new MxOpParams();
         params.addParam("axis", axis);
         MxNDArray[] srcArray = new MxNDArray[arrays.size() + 1];
@@ -986,7 +989,7 @@ public class MxNDArrayEx {
 
     /** {@inheritDoc} */
     @Override
-    public MxNDArray concat(NDList list, int axis) {
+    public MxNDArray concat(MxNDList list, int axis) {
         NDUtils.checkConcatInput(list);
 
         MxOpParams params = new MxOpParams();
@@ -1000,8 +1003,8 @@ public class MxNDArrayEx {
 
     /** {@inheritDoc} */
     @Override
-    public NDList multiBoxTarget(
-            NDList inputs,
+    public MxNDList multiBoxTarget(
+            MxNDList inputs,
             float iouThreshold,
             float ignoreLabel,
             float negativeMiningRatio,
@@ -1018,7 +1021,7 @@ public class MxNDArrayEx {
 
     /** {@inheritDoc} */
     @Override
-    public NDList multiBoxPrior(
+    public MxNDList multiBoxPrior(
             List<Float> sizes,
             List<Float> ratios,
             List<Float> steps,
@@ -1030,13 +1033,13 @@ public class MxNDArrayEx {
         parameters.add("steps", steps);
         parameters.add("offsets", offsets);
         parameters.add("clip", clip);
-        return getManager().invoke("MultiBoxPrior", new NDList(array), parameters);
+        return getManager().invoke("MultiBoxPrior", new MxNDList(array), parameters);
     }
 
     /** {@inheritDoc} */
     @Override
-    public NDList multiBoxDetection(
-            NDList inputs,
+    public MxNDList multiBoxDetection(
+            MxNDList inputs,
             boolean clip,
             float threshold,
             int backgroundId,
@@ -1053,14 +1056,8 @@ public class MxNDArrayEx {
         return getManager().invoke("MultiBoxDetection", inputs, parameters);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray getArray() {
         return array;
-    }
-
-    private MxNDManager getManager() {
-        return array.getManager();
     }
 
     private int getGlobalPoolingDim() {

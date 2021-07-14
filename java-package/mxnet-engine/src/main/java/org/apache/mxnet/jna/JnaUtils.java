@@ -1,8 +1,11 @@
 package org.apache.mxnet.jna;
 
+import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
@@ -19,9 +22,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.mxnet.api.exception.EngineException;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.DeviceType;
-import org.apache.mxnet.engine.MxNDArray;
-import org.apache.mxnet.engine.MxNDList;
+import org.apache.mxnet.ndarray.MxNDArray;
+import org.apache.mxnet.ndarray.MxNDList;
 import org.apache.mxnet.engine.MxResource;
+import org.apache.mxnet.engine.MxResourceFactory;
 import org.apache.mxnet.engine.Symbol;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
@@ -341,12 +345,12 @@ public final class JnaUtils {
         MxNDList ndList = new MxNDList();
         if (nameCount == 0) {
             for (Pointer handle : handles) {
-                ndList.add(manager.create(handle));
+                ndList.add(MxResourceFactory.createNDArray(parent, handle));
             }
         } else {
             String[] names = namesRef.getValue().getStringArray(0, nameCount);
             for (int i = 0; i < ndArrayCount; i++) {
-                MxNDArray array = manager.create(handles[i]);
+                MxNDArray array = MxResourceFactory.createNDArray(parent, handles[i]);
                 array.setName(names[i]);
                 ndList.add(array);
             }
@@ -360,7 +364,7 @@ public final class JnaUtils {
             return ndList;
         }
 
-        NDList ret = ndList.toDevice(device, true);
+        MxNDList ret = ndList.toDevice(device, true);
         ndList.close();
         return ret;
     }
@@ -659,7 +663,7 @@ public final class JnaUtils {
         IntBuffer deviceId = IntBuffer.allocate(1);
         checkNDArray(handle, "get the device of");
         checkCall(LIB.MXNDArrayGetContext(handle, deviceType, deviceId));
-        String deviceTypeStr = MxDeviceType.fromDeviceType(deviceType.get(0));
+        String deviceTypeStr = DeviceType.fromDeviceType(deviceType.get(0));
         // CPU is special case which don't have device id
         return Device.of(deviceTypeStr, deviceId.get(0));
     }
@@ -766,7 +770,7 @@ public final class JnaUtils {
     }
 
     public static MxNDArray[] cachedOpInvoke(
-            MxNDManager manager, Pointer cachedOpHandle, MxNDArray[] inputs, Device device) {
+            MxResource parent, Pointer cachedOpHandle, MxNDArray[] inputs, Device device) {
         IntBuffer buf = IntBuffer.allocate(1);
         PointerArray array = toPointerArray(inputs);
         PointerByReference ref = REFS.acquire();
@@ -781,9 +785,9 @@ public final class JnaUtils {
         MxNDArray[] output = new MxNDArray[numOutputs];
         for (int i = 0; i < numOutputs; i++) {
             if (sTypes[i] != 0) {
-                output[i] = new MxNDArray(manager, ptrArray[i], SparseFormat.fromValue(sTypes[i]));
+                output[i] = MxNDArray.create(parent, ptrArray[i], SparseFormat.fromValue(sTypes[i]));
             } else {
-                output[i] = new MxNDArray(manager, ptrArray[i]);
+                output[i] = MxNDArray.create(parent, ptrArray[i]);
             }
         }
         REFS.recycle(ref);
