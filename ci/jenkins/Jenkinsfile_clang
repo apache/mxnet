@@ -36,7 +36,7 @@ core_logic: {
   utils.parallel_stage('Build', [
     custom_steps.compile_unix_clang_6_cpu(),
     custom_steps.compile_unix_clang_tidy_cpu(),
-    custom_steps.compile_unix_clang_6_mkldnn_cpu()
+    custom_steps.compile_unix_clang_6_onednn_cpu()
   ]) 
 }
 ,

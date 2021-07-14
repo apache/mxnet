@@ -169,7 +169,7 @@ build_ubuntu_cpu_release() {
         -j$(nproc)
 }
 
-build_ubuntu_cpu_mkldnn_release() {
+build_ubuntu_cpu_onednn_release() {
     set -ex
 
     build_ccache_wrappers
@@ -203,7 +203,7 @@ build_ubuntu_gpu_release() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_mkldnn_release() {
+build_ubuntu_gpu_onednn_release() {
     set -ex
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
     # build_ccache_wrappers
@@ -236,11 +236,11 @@ build_dynamic_libmxnet() {
     if [[ ${mxnet_variant} = "cpu" ]]; then
         build_ubuntu_cpu_release
     elif [[ ${mxnet_variant} = "mkl" ]]; then
-        build_ubuntu_cpu_mkldnn_release
+        build_ubuntu_cpu_onednn_release
     elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
         build_ubuntu_gpu_release
     elif [[ ${mxnet_variant} =~ cu[0-9]+mkl$ ]]; then
-        build_ubuntu_gpu_mkldnn_release
+        build_ubuntu_gpu_onednn_release
     else
         echo "Error: Unrecognized mxnet variant '${mxnet_variant}'"
     fi
@@ -437,7 +437,7 @@ build_amzn_linux_cpu() {
     ninja
 }
 
-build_centos7_mkldnn() {
+build_centos7_onednn() {
     set -ex
     cd /work/mxnet
     export CC="ccache gcc"
@@ -641,7 +641,7 @@ build_ubuntu_cpu_clang_tidy() {
     popd
 }
 
-build_ubuntu_cpu_clang39_mkldnn() {
+build_ubuntu_cpu_clang39_onednn() {
     set -ex
 
     export CXX=clang++-3.9
@@ -657,7 +657,7 @@ build_ubuntu_cpu_clang39_mkldnn() {
         -j$(nproc)
 }
 
-build_ubuntu_cpu_clang60_mkldnn() {
+build_ubuntu_cpu_clang60_onednn() {
     set -ex
 
     export CXX=clang++-6.0
@@ -673,7 +673,7 @@ build_ubuntu_cpu_clang60_mkldnn() {
         -j$(nproc)
 }
 
-build_ubuntu_cpu_mkldnn() {
+build_ubuntu_cpu_onednn() {
     set -ex
 
     build_ccache_wrappers
@@ -688,7 +688,7 @@ build_ubuntu_cpu_mkldnn() {
         -j$(nproc)
 }
 
-build_ubuntu_cpu_mkldnn_mkl() {
+build_ubuntu_cpu_onednn_mkl() {
     set -ex
 
     build_ccache_wrappers
@@ -734,7 +734,7 @@ build_ubuntu_gpu_tensorrt() {
     cp -L 3rdparty/onnx-tensorrt/libnvonnxparser.so* /work/mxnet/lib/
 }
 
-build_ubuntu_gpu_mkldnn() {
+build_ubuntu_gpu_onednn() {
     set -ex
 
     build_ccache_wrappers
@@ -753,7 +753,7 @@ build_ubuntu_gpu_mkldnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_mkldnn_nocudnn() {
+build_ubuntu_gpu_onednn_nocudnn() {
     set -ex
 
     build_ccache_wrappers
@@ -811,7 +811,7 @@ build_ubuntu_gpu_cuda110_cudnn8() {
     make cython PYTHON=python3
 }
 
-build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
+build_ubuntu_gpu_cuda101_cudnn7_onednn_cpp_test() {
     set -ex
     build_ccache_wrappers
     make \
@@ -849,7 +849,7 @@ build_ubuntu_amalgamation_min() {
         MIN=1
 }
 
-build_ubuntu_gpu_cmake_mkldnn() {
+build_ubuntu_gpu_cmake_onednn() {
     set -ex
     cd /work/build
     build_ccache_wrappers
@@ -1025,7 +1025,7 @@ unittest_ubuntu_python3_cpu() {
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
 
-unittest_ubuntu_python3_cpu_mkldnn() {
+unittest_ubuntu_python3_cpu_onednn() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_ONEDNN_DEBUG=0  # Ignored if not present

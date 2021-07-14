@@ -34,27 +34,27 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_unix_mkldnn_gpu(),
-    custom_steps.compile_unix_mkldnn_nocudnn_gpu(),
+    custom_steps.compile_unix_onednn_gpu(),
+    custom_steps.compile_unix_onednn_nocudnn_gpu(),
     custom_steps.compile_unix_full_gpu(),
-    custom_steps.compile_unix_cmake_mkldnn_gpu(),
+    custom_steps.compile_unix_cmake_onednn_gpu(),
     custom_steps.compile_unix_cmake_gpu(),
     custom_steps.compile_unix_tensorrt_gpu(),
     custom_steps.compile_unix_int64_gpu(),
     custom_steps.compile_unix_cmake_gpu_no_rtc(),
-    custom_steps.compile_unix_full_gpu_mkldnn_cpp_test()
+    custom_steps.compile_unix_full_gpu_onednn_cpp_test()
   ])
 
   utils.parallel_stage('Tests', [
     custom_steps.test_unix_python3_gpu(),
     custom_steps.test_unix_python3_quantize_gpu(),
-    custom_steps.test_unix_python3_mkldnn_gpu(),
-    custom_steps.test_unix_python3_mkldnn_nocudnn_gpu(),
+    custom_steps.test_unix_python3_onednn_gpu(),
+    custom_steps.test_unix_python3_onednn_nocudnn_gpu(),
     custom_steps.test_unix_perl_gpu(),
     custom_steps.test_unix_python3_tensorrt_gpu(),
     custom_steps.test_unix_r_gpu(),
     custom_steps.test_unix_cpp_gpu(),
-    custom_steps.test_unix_cpp_mkldnn_gpu(),
+    custom_steps.test_unix_cpp_onednn_gpu(),
     custom_steps.test_unix_python3_integration_gpu(),
     custom_steps.test_unix_cpp_package_gpu(),
     custom_steps.test_unix_scala_gpu(),
