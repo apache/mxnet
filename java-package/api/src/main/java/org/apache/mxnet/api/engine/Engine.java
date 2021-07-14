@@ -1,7 +1,5 @@
 package org.apache.mxnet.api.engine;
 
-import org.apache.mxnet.api.Device;
-import org.apache.mxnet.api.ndarray.NDManager;
 import org.apache.mxnet.api.util.cuda.CudaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

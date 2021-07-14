@@ -1,6 +1,9 @@
 package org.apache.mxnet.jna;
 
 import com.sun.jna.Pointer;
+import org.apache.mxnet.engine.Device;
+import org.apache.mxnet.engine.MxNDArray;
+import org.apache.mxnet.ndarray.types.SparseFormat;
 import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +23,59 @@ public class FunctionInfo {
         this.arguments = arguments;
     }
 
+    public String getFunctionName() {
+        return name;
+    }
     // TODO : complete other methods
+    /**
+     * Calls an operator with the given arguments.
+     *
+     * @param src the input NDArray(s) to the operator
+     * @param dest the destination NDArray(s) to be overwritten with the result of the operator
+     * @param params the non-NDArray arguments to the operator. Should be a {@code PairList<String,
+     *     String>}
+     * @return the error code or zero for no errors
+     */
+    public int invoke(
+            MxNDArray[] src, MxNDArray[] dest, PairList<String, ?> params) {
+        checkDevices(src);
+        checkDevices(dest);
+        return JnaUtils.imperativeInvoke(handle, src, dest, params).size();
+    }
 
+    /**
+     * Calls an operator with the given arguments.
+     *
+     * @param src the input NDArray(s) to the operator
+     * @param params the non-NDArray arguments to the operator. Should be a {@code PairList<String,
+     *     String>}
+     * @return the error code or zero for no errors
+     */
+    public MxNDArray[] invoke(MxNDArray parent, MxNDArray[] src, PairList<String, ?> params) {
+        checkDevices(src);
+        PairList<Pointer, SparseFormat> pairList =
+                JnaUtils.imperativeInvoke(handle, src, null, params);
+        return pairList.stream()
+                .map(
+                        pair -> {
+                            if (pair.getValue() != SparseFormat.DENSE) {
+                                return parent.create(pair.getKey(), pair.getValue());
+                            }
+                            return parent.create(pair.getKey());
+                        })
+                .toArray(MxNDArray[]::new);
+    }
+
+    private void checkDevices(MxNDArray[] src) {
+        // check if all the NDArrays are in the same device
+        if (logger.isDebugEnabled() && src.length > 1) {
+            Device device = src[0].getDevice();
+            for (int i = 1; i < src.length; ++i) {
+                if (!device.equals(src[i].getDevice())) {
+                    logger.warn(
+                            "Please make sure all the NDArrays are in the same device. You can call toDevice() to move the NDArray to the desired Device.");
+                }
+            }
+        }
+    }
 }

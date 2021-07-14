@@ -1,7 +1,5 @@
 package org.apache.mxnet.api.engine;
 
-import org.apache.mxnet.api.ndarray.NDManager;
-
 /**
  * The {@code EngineProvider} instance manufactures an {@link Engine} instance, which is available
  * in the system.

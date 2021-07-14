@@ -1,4 +1,4 @@
-package org.apache.mxnet.api;
+package org.apache.mxnet.engine;
 
 import org.apache.mxnet.api.engine.Engine;
 import org.apache.mxnet.api.engine.StandardCapabilities;
@@ -29,6 +29,8 @@ public final class Device {
     private String deviceType;
 
     private int deviceId;
+
+    public static final Device DEFAULT_DEVICE = CPU;
 
     /**
      * Creates a {@code Device} with basic information.
@@ -206,7 +208,7 @@ public final class Device {
      * @return a {@link Device}
      */
     public static Device defaultDevice(Engine engine) {
-        return engine.defaultDevice();
+        return DEFAULT_DEVICE;
     }
 
     /**

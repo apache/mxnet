@@ -1,7 +1,8 @@
-package org.apache.mxnet.api.util.cuda;
+package org.apache.mxnet.util.cuda;
 
 import com.sun.jna.Native;
 import org.apache.mxnet.api.exception.EngineException;
+import org.apache.mxnet.engine.Device;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
