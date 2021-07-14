@@ -708,7 +708,7 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
                        std::vector<int> *out_attrs);
 
 #define MKLDNN_OPCHECK_INIT(backward, num_checks, inputs, outputs)  \
-    static bool debug = dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false);  \
+    static bool debug = dmlc::GetEnv("MXNET_ONEDNN_DEBUG", false);  \
     OpCheck check(backward, num_checks);                            \
     if (debug) check.Init(inputs, outputs);
 
