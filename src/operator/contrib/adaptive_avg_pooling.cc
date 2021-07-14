@@ -253,13 +253,22 @@ void AdaptiveAvgPoolComputeExCPU(const nnvm::NodeAttrs &attrs,
 }
 #endif
 
-inline bool AdaptivePoolingStorageType(const nnvm::NodeAttrs &attrs,
-                                       const int dev_mask,
-                                       DispatchMode *dispatch_mode,
-                                       std::vector<int> *in_attrs,
-                                       std::vector<int> *out_attrs) {
+inline static bool AdaptivePoolingStorageType(const nnvm::NodeAttrs &attrs,
+                                              const int dev_mask,
+                                              DispatchMode *dispatch_mode,
+                                              std::vector<int> *in_attrs,
+                                              std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+  if (!MKLDNNEnvSet()) {
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+  }
+#else
   for (int &v : *in_attrs)
     if (v == -1) v = kDefaultStorage;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
@@ -269,6 +278,7 @@ inline bool AdaptivePoolingStorageType(const nnvm::NodeAttrs &attrs,
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
+#endif
   return dispatched;
 }
 

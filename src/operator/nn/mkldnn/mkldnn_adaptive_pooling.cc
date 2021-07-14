@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2021 by Contributors
  * \file mkldnn_adaptive_pooling.cc
-*/
+ */
 
 #if MXNET_USE_MKLDNN == 1
 
@@ -28,13 +28,16 @@
 
 namespace mxnet {
 namespace op {
-void MKLDNNAdaptivePoolingFwd::Init(
-    const mxnet::NDArray &input, const mxnet::NDArray &output,
-    const mkldnn::memory::dims &kernel, const mkldnn::memory::dims &strides,
-    const mkldnn::memory::dims &pad_l, const mkldnn::memory::dims &pad_r,
-    const bool is_train, const mkldnn::algorithm alg_kind) {
-  const auto src_md = input.GetMKLDNNData()->get_desc();
-  const auto dst_md = GetMemDesc(output);
+void MKLDNNAdaptivePoolingFwd::Init(const mxnet::NDArray& input,
+                                    const mxnet::NDArray& output,
+                                    const mkldnn::memory::dims& kernel,
+                                    const mkldnn::memory::dims& strides,
+                                    const mkldnn::memory::dims& pad_l,
+                                    const mkldnn::memory::dims& pad_r,
+                                    const bool is_train,
+                                    const mkldnn::algorithm alg_kind) {
+  const auto src_md           = input.GetMKLDNNData()->get_desc();
+  const auto dst_md           = GetMemDesc(output);
   const mkldnn::engine engine = CpuEngine::Get()->get_engine();
 
   if (alg_kind != mkldnn::algorithm::pooling_avg &&
@@ -51,27 +54,25 @@ void MKLDNNAdaptivePoolingFwd::Init(
     LOG(INFO) << "MKLDNN Pooling: training with prop_kind is forward_scoring";
   }
 
-  const auto fwd_desc = mkldnn::pooling_forward::desc(
-      prop, alg_kind, src_md, dst_md, strides, kernel, pad_l, pad_r);
-  this->fwd_pd_.reset(
-      new mkldnn::pooling_forward::primitive_desc(fwd_desc, engine));
+  const auto fwd_desc =
+      mkldnn::pooling_forward::desc(prop, alg_kind, src_md, dst_md, strides, kernel, pad_l, pad_r);
+  this->fwd_pd_.reset(new mkldnn::pooling_forward::primitive_desc(fwd_desc, engine));
   this->fwd_.reset(new mkldnn::pooling_forward(*(this->fwd_pd_)));
 }
 
-void MKLDNNAdaptivePoolingFwd::Execute(const NDArray &input,
+void MKLDNNAdaptivePoolingFwd::Execute(const NDArray& input,
                                        const OpReqType req,
-                                       const NDArray &output,
-                                       const NDArray *workspace) {
+                                       const NDArray& output,
+                                       const NDArray* workspace) {
   NDArray in_buffer = input;
   if (input.IsView() && input.IsMKLDNNData()) {
     in_buffer = input.Reorder2Default();
   }
 
-  auto input_mem = in_buffer.GetMKLDNNData();
+  auto input_mem    = in_buffer.GetMKLDNNData();
   auto output_mem_t = CreateMKLDNNMem(output, this->fwd_pd_->dst_desc(), req);
 
-  mkldnn_args_map_t args = {{MKLDNN_ARG_SRC, *input_mem},
-                            {MKLDNN_ARG_DST, *(output_mem_t.second)}};
+  mkldnn_args_map_t args = {{MKLDNN_ARG_SRC, *input_mem}, {MKLDNN_ARG_DST, *(output_mem_t.second)}};
 
   if (this->with_workspace_) {
     auto engine = CpuEngine::Get()->get_engine();
@@ -79,8 +80,7 @@ void MKLDNNAdaptivePoolingFwd::Execute(const NDArray &input,
       LOG(FATAL) << "MKLDNN Average Pooling: incorrect worskapce input";
     }
     auto ws = std::make_shared<mkldnn::memory>(
-        this->fwd_pd_->workspace_desc(), engine,
-        workspace->GetMKLDNNData()->get_data_handle());
+        this->fwd_pd_->workspace_desc(), engine, workspace->GetMKLDNNData()->get_data_handle());
     args[MKLDNN_ARG_WORKSPACE] = *ws;
   }
   if (this->fwd_) {
