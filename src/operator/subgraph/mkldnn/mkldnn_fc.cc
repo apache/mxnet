@@ -45,35 +45,6 @@
 namespace mxnet {
 namespace op {
 
-FCInputIndex::FCInputIndex(const MKLDNNFCFullParam& full_param) {
-    auto &mkldnn_param = full_param.mkldnn_param;
-    const bool has_bias = !full_param.default_param.no_bias;
-    const bool quantized = mkldnn_param.quantized;
-    const bool sum_input_quantized = quantized && mkldnn_param.with_sum &&
-                                     !mkldnn_param.enable_float_output;
-    const bool channel_wise = quantized && mkldnn_param.channel_wise_quantize.has_value() &&
-                              mkldnn_param.channel_wise_quantize.value();
-
-    // Calculate position of particular input in the input vector:
-    int index     = 0;
-    data          = index++;
-    weight        = index++;
-    bias          = has_bias ? index++ : 0;
-    num_quantized = index + (sum_input_quantized ? 1 : 0);
-    sum           = mkldnn_param.with_sum ? index++: 0;
-    num_base      = index;
-
-    data_min      = quantized ? index++ : 0;
-    data_max      = quantized ? index++ : 0;
-    weight_min    = (quantized && !channel_wise) ? index++ : 0;
-    weight_max    = (quantized && !channel_wise) ? index++ : 0;
-    bias_min      = (quantized && !channel_wise && has_bias) ? index++ : 0;
-    bias_max      = (quantized && !channel_wise && has_bias) ? index++ : 0;
-    sum_min       = sum_input_quantized ? index++ : 0;
-    sum_max       = sum_input_quantized ? index++ : 0;
-    num_total     = index;
-}
-
 class SgMKLDNNFCOp {
  public:
   explicit SgMKLDNNFCOp(const nnvm::NodeAttrs &attrs)
