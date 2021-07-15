@@ -96,7 +96,7 @@ static NDArray* FindInArgByName(const Graph &g, const std::string& name) {
   }
   return g.GetAttr<NDArray **>("in_args")[i];
 }
-
+#if MXNET_USE_MKLDNN == 1
 // Rescales weights, min_weight and max_weight. Returns bias_int32_rescale.
 static inline float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray* weight_tensor) {
   ObjectPtr &quantize = fc->inputs[0].node;
@@ -138,6 +138,7 @@ static inline float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray*
   }
   return bias_int32_rescale;
 }
+#endif
 
 static inline void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
                              NDArray* weight_tensor, int32_t shift_value) {
