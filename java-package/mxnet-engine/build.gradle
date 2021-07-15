@@ -10,7 +10,6 @@ repositories {
 }
 
 dependencies {
-    api project(":api")
 
     // Solve the problem: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
     implementation "org.slf4j:slf4j-simple:${slf4j_version}"

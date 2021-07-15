@@ -1,6 +1,5 @@
 package org.apache.mxnet.engine;
 
-import org.apache.mxnet.api.engine.StandardCapabilities;
 import org.apache.mxnet.util.cuda.CudaUtils;
 
 import java.util.Map;

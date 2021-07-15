@@ -1,6 +1,5 @@
 rootProject.name = 'java-package'
 
-include 'api'
 include 'mxnet-engine'
 include 'native'
 include 'jnarator'
