@@ -1720,10 +1720,10 @@ def test_onnx_export_np_reduce_op(tmp_path, dtype, shape, axis, keepdims, op_nam
 
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [(1,), (3, ), (4, 5), (3, 4, 5)])
-@pytest.mark.parametrize('op_name', ['add', 'subtract', 'multiply', 'divide'])
+@pytest.mark.parametrize('op_name', ['power', 'add', 'subtract', 'multiply', 'divide'])
 def test_onnx_export_np_arithmetic(tmp_path, dtype, shape, op_name):
     x = mx.np.random.uniform(1, 100, size=shape).astype(dtype)
-    y = mx.np.random.uniform(1, 100, size=shape).astype(dtype)
+    y = mx.np.random.uniform(1, 2, size=shape).astype(dtype)
     M = def_model(mx.np, op_name)
     op_export_test(op_name, M, [x, y], tmp_path)
 
@@ -1733,7 +1733,7 @@ def test_onnx_export_np_arithmetic(tmp_path, dtype, shape, op_name):
 @pytest.mark.parametrize('op_name', ['add', 'subtract', 'multiply', 'divide'])
 def test_onnx_export_np_arithmetic_broadcast_case(tmp_path, dtype, shape, op_name):
     x = mx.np.random.uniform(1, 100, size=shape[0]).astype(dtype)
-    y = mx.np.random.uniform(1, 100, size=shape[1]).astype(dtype)
+    y = mx.np.random.uniform(1, 2, size=shape[1]).astype(dtype)
     M = def_model(mx.np, op_name)
     op_export_test(op_name, M, [x, y], tmp_path)
 
