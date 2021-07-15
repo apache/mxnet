@@ -18,6 +18,7 @@
 import mxnet as mx
 import numpy as np
 import onnxruntime
+import pytest
 import shutil
 from mxnet import gluon
 from mxnet.test_utils import assert_almost_equal
