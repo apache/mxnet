@@ -1677,6 +1677,7 @@ def covert_broadcast_add(node, **kwargs):
 
 
 @mx_op.register("elemwise_sub")
+@mx_op.register("_npi_subtract")
 def convert_elementwise_sub(node, **kwargs):
     """Map MXNet's elemwise_sub operator attributes to onnx's Sub operator
     and return the created node.
@@ -1691,6 +1692,7 @@ def covert_broadcast_sub(node, **kwargs):
     return create_basic_op_node('Sub', node, kwargs)
 
 @mx_op.register("elemwise_mul")
+@mx_op.register("_npi_multiply")
 def convert_elemwise_mul(node, **kwargs):
     """Map MXNet's elemwise_mul operator attributes to onnx's Mul operator
     and return the created node.
@@ -1735,6 +1737,7 @@ def convert_broadcast_div(node, **kwargs):
     return create_basic_op_node('Div', node, kwargs)
 
 @mx_op.register("negative")
+@mx_op.register("_npi_negative")
 def convert_negative(node, **kwargs):
     """Map MXNet's negative operator attributes to onnx's Neg operator
     and return the created node.
@@ -5325,3 +5328,22 @@ def convert_np_logical_not(node, **kwargs):
         make_node("Not", [name+"_cast"], [name]),
     ]
     return nodes, (np.dtype('bool'),)
+
+
+@mx_op.register("_npi_true_divide")
+def convert_np_divide(node, **kwargs):
+    """np.divide
+    """
+    from onnx.helper import make_node
+    from onnx import TensorProto
+    name, input_nodes, _ = get_inputs(node, kwargs)
+    input_dtypes = get_input_dtypes(node, kwargs)
+    print(input_dtypes[0])
+    if np.issubdtype(input_dtypes[0], np.integer):
+        nodes = [
+            make_node("Cast", [input_nodes[0]], [name+"_cast0"], to=int(TensorProto.FLOAT)),
+            make_node("Cast", [input_nodes[1]], [name+"_cast1"], to=int(TensorProto.FLOAT)),
+            make_node("Div", [name+"_cast0", name+"_cast1"], [name]),
+        ]
+        return nodes, (np.dtype('float32'),)
+    return create_basic_op_node('Div', node, kwargs)

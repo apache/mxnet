@@ -73,7 +73,7 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_
     model.initialize(ctx=mx.cpu(0))
     model.hybridize()
     pred_mx = model(*inputs)
-    #print('pred_mx', pred_mx, pred_mx.shape, pred_mx.dtype)
+
     # this is for ops such as mx.np.concatenate
     if isinstance(inputs[0], tuple):
         inputs = list(inputs[0])
@@ -1718,34 +1718,31 @@ def test_onnx_export_np_reduce_op(tmp_path, dtype, shape, axis, keepdims, op_nam
     op_export_test(op_name, M, [x], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [(1,), (3, ), (4, 5), (3, 4, 5)])
-@pytest.mark.parametrize('op_name', ['elemwise_add', 'elemwise_sub', 'elemwise_mul', 'elemwise_div'])
-def test_onnx_export_elemwise_op(tmp_path, dtype, shape, op_name):
-    x = mx.nd.random.uniform(1, 100, shape=shape).astype(dtype)
-    y = mx.nd.random.uniform(1, 100, shape=shape).astype(dtype)
-    M = def_model(op_name)
+@pytest.mark.parametrize('op_name', ['add', 'subtract', 'multiply', 'divide'])
+def test_onnx_export_np_arithmetic(tmp_path, dtype, shape, op_name):
+    x = mx.np.random.uniform(1, 100, size=shape).astype(dtype)
+    y = mx.np.random.uniform(1, 100, size=shape).astype(dtype)
+    M = def_model(mx.np, op_name)
     op_export_test(op_name, M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [[(3, 4), (3, 4)], [(3, 4), (3, 1)], [(3, 4), (4)]])
-@pytest.mark.parametrize('op_name', ['broadcast_sub', 'broadcast_div'])
-def test_onnx_export_broadcast_op(tmp_path, dtype, shape, op_name):
-    x = mx.nd.random.uniform(1, 100, shape=shape[0]).astype(dtype)
-    y = mx.nd.random.uniform(1, 100, shape=shape[1]).astype(dtype)
-    M = def_model(op_name)
+@pytest.mark.parametrize('op_name', ['add', 'subtract', 'multiply', 'divide'])
+def test_onnx_export_np_arithmetic_broadcast_case(tmp_path, dtype, shape, op_name):
+    x = mx.np.random.uniform(1, 100, size=shape[0]).astype(dtype)
+    y = mx.np.random.uniform(1, 100, size=shape[1]).astype(dtype)
+    M = def_model(mx.np, op_name)
     op_export_test(op_name, M, [x, y], tmp_path)
 
 
-@pytest.mark.skip(reason='TODO')
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int32', 'int64'])
 @pytest.mark.parametrize('shape', [(1,), (3, ), (4, 5), (3, 4, 5)])
-def test_onnx_export_negative(tmp_path, dtype, shape):
-    x = mx.nd.random.uniform(-100, 100, shape=shape).astype(dtype)
-    M = def_model('negative')
+def test_onnx_export_np_negative(tmp_path, dtype, shape):
+    x = mx.np.random.uniform(-100, 100, size=shape).astype(dtype)
+    M = def_model(mx.np, 'negative')
     op_export_test('negative', M, [x], tmp_path)
 
 
