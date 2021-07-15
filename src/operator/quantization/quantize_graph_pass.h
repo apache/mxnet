@@ -65,10 +65,11 @@ static inline bool IsOneDNNFullyConnected(const ObjectPtr& n) {
 #if MXNET_USE_MKLDNN == 1
   if (n->op() == Op::Get("_sg_mkldnn_fully_connected")) {
     auto const& param = nnvm::get<MKLDNNFCFullParam>(n->attrs.parsed);
+    FCInputIndex idx(param);
     if (!(param.mkldnn_param.channel_wise_quantize.has_value() &&
           param.mkldnn_param.channel_wise_quantize.value())) {
       return !require_bias || (param.default_param.no_bias == false &&
-                               n->inputs[2].node->is_variable());
+                               n->inputs[idx.bias].node->is_variable());
     }
   }
 #endif
@@ -86,6 +87,7 @@ static inline bool IsQuantize(const ObjectPtr& n) {
   return false;
 }
 
+#if MXNET_USE_MKLDNN == 1
 static NDArray* FindInArgByName(const Graph &g, const std::string& name) {
   const std::vector<std::string>& in_arg_names =
       g.GetAttr<std::vector<std::string>>("in_arg_names");
@@ -96,21 +98,25 @@ static NDArray* FindInArgByName(const Graph &g, const std::string& name) {
   }
   return g.GetAttr<NDArray **>("in_args")[i];
 }
-#if MXNET_USE_MKLDNN == 1
+
 // Rescales weights, min_weight and max_weight. Returns bias_int32_rescale.
 static inline float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray* weight_tensor) {
-  ObjectPtr &quantize = fc->inputs[0].node;
-  auto min_data = std::stof(quantize->attrs.dict.at("min_calib_range"));
-  auto max_data = std::stof(quantize->attrs.dict.at("max_calib_range"));
+  aut& param = nnvm::get<MKLDNNFCFullParam>(fc->attrs.parsed);
+  FCInputIndex idx(param);
 
-  FCInputIndex id(nnvm::get<MKLDNNFCFullParam>(fc->attrs.parsed));
-  auto in = fc->inputs;
+  ObjectPtr &quantize = fc->inputs[idx.data].node;
 
-  float *min_weight = FindInArgByName(g, in[id.weight_min].node->attrs.name)->data().dptr<float>();
-  float *max_weight = FindInArgByName(g, in[id.weight_max].node->attrs.name)->data().dptr<float>();
-  float min_bias = *FindInArgByName(g, in[id.bias_min].node->attrs.name)->data().dptr<float>();
-  float max_bias = *FindInArgByName(g, in[id.bias_max].node->attrs.name)->data().dptr<float>();
+  float* min_weight =
+      FindInArgByName(g, fc->inputs[idx.weight_min].node->attrs.name)->data().dptr<float>();
+  float* max_weight =
+      FindInArgByName(g, fc->inputs[idx.weight_max].node->attrs.name)->data().dptr<float>();
+  float min_bias =
+      *FindInArgByName(g, fc->inputs[idx.bias_min].node->attrs.name)->data().dptr<float>();
+  float max_bias =
+      *FindInArgByName(g, fc->inputs[idx.bias_max].node->attrs.name)->data().dptr<float>();
 
+  float min_data = param.mkldnn_param.min_calib_range.value();
+  float max_data = param.mkldnn_param.max_calib_range.value();
   float data_scale_ = kUint8Range / (max_data - min_data);
   float weight_scale = GetQuantizeScale(mshadow::kInt8, *min_weight, *max_weight);
   float bias_scale = GetQuantizeScale(mshadow::kInt8, min_bias, max_bias);
@@ -138,7 +144,6 @@ static inline float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray*
   }
   return bias_int32_rescale;
 }
-#endif
 
 static inline void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
                              NDArray* weight_tensor, int32_t shift_value) {
@@ -150,6 +155,7 @@ static inline void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
     }
   }
 }
+#endif
 
 }  // namespace op
 }  // namespace mxnet

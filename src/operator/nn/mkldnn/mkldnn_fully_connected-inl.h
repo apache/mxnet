@@ -86,7 +86,7 @@ struct MKLDNNFCFullParam {
   std::vector<float> output_scales = {0.0f};
 };
 
-// Forward declaration
+#if MXNET_USE_MKLDNN == 1
 class FCInputIndex {
  public:
   explicit FCInputIndex(const MKLDNNFCFullParam& full_param) {
@@ -145,6 +145,7 @@ class FCInputIndex {
   int num_total;      // Number of total inputs: standard + additional needed for quantization
   int num_quantized;  // Number of standard inputs which are quantized
 };
+#endif
 
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
     const MKLDNNFCFullParam &full_param, const bool is_train,
