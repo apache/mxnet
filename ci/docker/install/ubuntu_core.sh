@@ -45,7 +45,6 @@ apt-get install -y \
     libopencv-dev \
     libjpeg-turbo8-dev \
     libjpeg8-dev \
-    libturbojpeg0-dev \
     libzmq3-dev \
     libtinfo-dev \
     zlib1g-dev \
@@ -62,6 +61,11 @@ apt-get install -y \
 
 # Use libturbojpeg package as it is correctly compiled with -fPIC flag
 # https://github.com/HaxeFoundation/hashlink/issues/147
+#  libturbojpeg0-dev is not available on 16.04
+source /etc/os-release
+if [[ "$VERSION_ID" != "16.04" ]]; then
+    apt-get install -y libturbojpeg0-dev
+fi
 
 
 # CMake 3.13.2+ is required
