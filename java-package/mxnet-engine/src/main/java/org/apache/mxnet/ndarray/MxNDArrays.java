@@ -1807,7 +1807,9 @@ public final class MxNDArrays {
      *     the the {@link MxNDArray}
      */
     public static MxNDArray stack(MxNDList arrays, int axis) {
-        Preconditions.checkArgument(arrays.size() > 0, "need at least one array to stack");
+        if (arrays.size() <= 0) {
+            throw new IllegalArgumentException("need at least one array to stack");
+        }
         MxNDArray array = arrays.head();
         return array.getNDArrayInternal().stack(arrays.subNDList(1), axis);
     }
@@ -1861,7 +1863,11 @@ public final class MxNDArrays {
      * @return the concatenated {@link MxNDArray}
      */
     public static MxNDArray concat(MxNDList arrays, int axis) {
-        Preconditions.checkArgument(arrays.size() > 0, "need at least one array to concatenate");
+
+        if (arrays.size() <= 0) {
+            throw new IllegalArgumentException("need at least one array to concatenate");
+        }
+
         if (arrays.size() == 1) {
             return arrays.singletonOrThrow().duplicate();
         }

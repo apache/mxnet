@@ -1,8 +1,7 @@
 package org.apache.mxnet.engine;
 
-import org.apache.mxnet.api.engine.Engine;
 import org.apache.mxnet.api.engine.StandardCapabilities;
-import org.apache.mxnet.api.util.cuda.CudaUtils;
+import org.apache.mxnet.util.cuda.CudaUtils;
 
 import java.util.Map;
 import java.util.Objects;
@@ -180,10 +179,7 @@ public final class Device {
      * @return the number of GPUs available in the system
      */
     public static int getGpuCount() {
-        if (Engine.getInstance().hasCapability(StandardCapabilities.CUDA)) {
-            return CudaUtils.getGpuCount();
-        }
-        return 0;
+        return CudaUtils.getGpuCount();
     }
 
     /**
@@ -195,19 +191,6 @@ public final class Device {
      * @return a {@link Device}
      */
     public static Device defaultDevice() {
-        return defaultDevice(Engine.getInstance());
-    }
-
-    /**
-     * Returns the default context used in Engine.
-     *
-     * <p>The default type is defined by whether the deep learning engine is recognizing GPUs
-     * available on your machine. If there is no GPU available, CPU will be used.
-     *
-     * @param engine the engine to retrieve
-     * @return a {@link Device}
-     */
-    public static Device defaultDevice(Engine engine) {
         return DEFAULT_DEVICE;
     }
 
@@ -215,14 +198,13 @@ public final class Device {
      * Returns the given device or the default if it is null.
      *
      * @param device the device to try to return
-     * @param engine the engine to retrieve
      * @return the given device or the default if it is null
      */
-    public static Device defaultIfNull(Device device, Engine engine) {
+    public static Device defaultIfNull(Device device) {
         if (device != null) {
             return device;
         }
-        return defaultDevice(engine);
+        return defaultDevice();
     }
 
     /** Contains device type string constants. */

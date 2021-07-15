@@ -1,7 +1,7 @@
 package org.apache.mxnet.ndarray.types;
 
-import org.apache.mxnet.api.util.Pair;
-import org.apache.mxnet.api.util.PairList;
+import org.apache.mxnet.util.Pair;
+import org.apache.mxnet.util.PairList;
 
 import java.io.DataInputStream;
 import java.io.IOException;

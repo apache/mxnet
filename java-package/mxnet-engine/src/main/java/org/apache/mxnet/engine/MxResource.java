@@ -8,14 +8,14 @@ public class MxResource extends NativeResource<Pointer> {
 
     private MxResource parent = null;
 
-    private ConcurrentHashMap<String, NativeResource> subResources;
+    private ConcurrentHashMap<String, MxResource> subResources;
 
-    public void addSubResource(NativeResource<Pointer> nativeResource) {
-        subResources.put(nativeResource.getUid(), nativeResource);
+    public void addSubResource(MxResource subResource) {
+        subResources.put(subResource.getUid(), subResource);
     }
 
     public void freeSubResources() {
-        subResources.values().stream().forEach(NativeResource::close);
+        subResources.values().stream().forEach(MxResource::close);
         subResources = null;
     }
 

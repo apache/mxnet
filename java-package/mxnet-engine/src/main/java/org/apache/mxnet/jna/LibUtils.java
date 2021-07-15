@@ -15,8 +15,9 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
-import org.apache.mxnet.api.util.Platform;
-import org.apache.mxnet.api.util.Utils;
+
+import org.apache.mxnet.util.Platform;
+import org.apache.mxnet.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,16 +1,47 @@
 package org.apache.mxnet.ndarray;
 
 import org.apache.mxnet.engine.MxOpParams;
+import org.apache.mxnet.ndarray.dim.NDIndexBooleans;
+import org.apache.mxnet.ndarray.dim.NDIndexElement;
 import org.apache.mxnet.ndarray.dim.full.NDIndexFullPick;
 import org.apache.mxnet.ndarray.dim.full.NDIndexFullSlice;
 import org.apache.mxnet.ndarray.index.NDIndex;
 import org.apache.mxnet.ndarray.types.Shape;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.Stack;
 
 /** A helper class for {@link MxNDArray} implementations for operations with an {@link NDIndex}. */
 public class NDArrayIndexer {
 
+    public MxNDArray get(MxNDArray array, NDIndex index) {
+        if (index.getRank() == 0 && array.getShape().isScalar()) {
+            return array.duplicate();
+        }
+
+        // use booleanMask for NDIndexBooleans case
+        List<NDIndexElement> indices = index.getIndices();
+        if (!indices.isEmpty() && indices.get(0) instanceof NDIndexBooleans) {
+            if (indices.size() != 1) {
+                throw new IllegalArgumentException(
+                        "get() currently didn't support more that one boolean NDArray");
+            }
+            return array.booleanMask(((NDIndexBooleans) indices.get(0)).getIndex());
+        }
+
+        Optional<NDIndexFullPick> fullPick = NDIndexFullPick.fromIndex(index, array.getShape());
+        if (fullPick.isPresent()) {
+            return get(array, fullPick.get());
+        }
+
+        Optional<NDIndexFullSlice> fullSlice = NDIndexFullSlice.fromIndex(index, array.getShape());
+        if (fullSlice.isPresent()) {
+            return get(array, fullSlice.get());
+        }
+        throw new UnsupportedOperationException(
+                "get() currently supports all, fixed, and slices indices");
+    }
 
     public MxNDArray get(MxNDArray array, NDIndexFullPick fullPick) {
         MxOpParams params = new MxOpParams();

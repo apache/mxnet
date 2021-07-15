@@ -1,9 +1,11 @@
 package org.apache.mxnet.ndarray.types;
 
+import org.apache.mxnet.ndarray.MxNDArray;
+
 import java.util.stream.IntStream;
 
 /**
- * An enum to represent the meaning of a particular axis in an {@link NDArray}.
+ * An enum to represent the meaning of a particular axis in an {@link MxNDArray}.
  *
  * <p>The options are:
  *

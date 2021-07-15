@@ -3,6 +3,7 @@ package org.apache.mxnet.engine;
 
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
+import org.apache.mxnet.ndarray.types.SparseFormat;
 import org.apache.mxnet.util.PairList;
 
 public class MxOpParams extends PairList<String, Object> {

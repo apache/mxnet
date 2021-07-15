@@ -1,8 +1,5 @@
 package org.apache.mxnet.ndarray;
 
-import org.apache.mxnet.api.Device;
-import org.apache.mxnet.api.ndarray.types.DataType;
-import org.apache.mxnet.api.ndarray.types.Shape;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.engine.MxResourceFactory;
@@ -139,7 +136,7 @@ public final class MxNDSerializer {
             data.put(buf, 0, length);
             data.rewind();
         }
-        MxNDArray array = MxResourceFactory.createNDArray(parent, dataType.asDataType(data), shape, Device.defaultDevice());
+        MxNDArray array = MxNDArray.create(parent, dataType.asDataType(data), shape, dataType);
         array.setName(name);
         return array;
     }

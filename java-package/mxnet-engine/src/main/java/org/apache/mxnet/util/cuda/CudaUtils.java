@@ -17,6 +17,8 @@ public final class CudaUtils {
 
     private static final CudaLibrary LIB = loadLibrary();
 
+    private static int GPU_COUNT = -1;
+
     private CudaUtils() {}
 
     /**
@@ -34,6 +36,11 @@ public final class CudaUtils {
      * @return the number of GPUs available in the system
      */
     public static int getGpuCount() {
+
+        if (GPU_COUNT != -1) {
+            return GPU_COUNT;
+        }
+
         try {
             validateLibrary();
         } catch (IllegalStateException e) {
@@ -43,11 +50,13 @@ public final class CudaUtils {
         int result = LIB.cudaGetDeviceCount(count);
         switch (result) {
             case 0:
-                return count[0];
+                GPU_COUNT = count[0];
+                return GPU_COUNT;
             case CudaLibrary.ERROR_NO_DEVICE:
                 logger.debug(
                         "No GPU device found: {} ({})", LIB.cudaGetErrorString(result), result);
-                return 0;
+                GPU_COUNT = 0;
+                return GPU_COUNT;
             case CudaLibrary.INITIALIZATION_ERROR:
             case CudaLibrary.INSUFFICIENT_DRIVER:
             case CudaLibrary.ERROR_NOT_PERMITTED:
@@ -56,7 +65,8 @@ public final class CudaUtils {
                         "Failed to detect GPU count: {} ({})",
                         LIB.cudaGetErrorString(result),
                         result);
-                return 0;
+                GPU_COUNT = 0;
+                return GPU_COUNT;
         }
 
     }

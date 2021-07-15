@@ -5,9 +5,11 @@ import org.apache.mxnet.engine.MxOpParams;
 import org.apache.mxnet.jna.JnaUtils;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
+import org.apache.mxnet.ndarray.types.SparseFormat;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class MxNDArrayEx {
     
@@ -59,106 +61,76 @@ public class MxNDArrayEx {
     // MxNDArrays
     ////////////////////////////////////////
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rdiv(Number n) {
         MxOpParams params = new MxOpParams();
         params.add("scalar", n.toString());
-        return getManager().invoke("_rdiv_scalar", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_rdiv_scalar", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rdiv(MxNDArray b) {
         return b.div(array);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rdivi(Number n) {
         MxOpParams params = new MxOpParams();
         params.add("scalar", n.toString());
-        getManager().invoke("_rdiv_scalar", new MxNDArray[] {array}, new MxNDArray[] {array}, params);
+        MxNDArray.invoke("_rdiv_scalar", new MxNDArray[] {array}, new MxNDArray[] {array}, params);
         return array;
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rdivi(MxNDArray b) {
-        getManager().invoke("elemwise_div", new MxNDArray[] {b, array}, new MxNDArray[] {array}, null);
+        MxNDArray.invoke("elemwise_div", new MxNDArray[] {b, array}, new MxNDArray[] {array}, null);
         return array;
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rsub(Number n) {
         return array.sub(n).neg();
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rsub(MxNDArray b) {
         return array.sub(b).neg();
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rsubi(Number n) {
         return array.subi(n).negi();
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rsubi(MxNDArray b) {
         return array.subi(b).negi();
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rmod(Number n) {
         MxOpParams params = new MxOpParams();
         params.add("scalar", n.toString());
-        return getManager().invoke("_npi_rmod_scalar", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npi_rmod_scalar", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rmod(MxNDArray b) {
         return b.mod(array);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rmodi(Number n) {
         MxOpParams params = new MxOpParams();
         params.add("scalar", n.toString());
-        getManager()
-                .invoke("_npi_rmod_scalar", new MxNDArray[] {array}, new MxNDArray[] {array}, params);
+        MxNDArray.invoke("_npi_rmod_scalar", new MxNDArray[] {array}, new MxNDArray[] {array}, params);
         return array;
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rmodi(MxNDArray b) {
-        getManager().invoke("_npi_mod", new MxNDArray[] {b, array}, new MxNDArray[] {array}, null);
+        MxNDArray.invoke("_npi_mod", new MxNDArray[] {b, array}, new MxNDArray[] {array}, null);
         return array;
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rpow(Number n) {
         MxOpParams params = new MxOpParams();
         params.add("scalar", n.toString());
-        return getManager().invoke("_npi_rpower_scalar", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npi_rpower_scalar", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray rpowi(Number n) {
         MxOpParams params = new MxOpParams();
         params.add("scalar", n.toString());
-        getManager()
-                .invoke("_npi_rpower_scalar", new MxNDArray[] {array}, new MxNDArray[] {array}, params);
+        MxNDArray.invoke("_npi_rpower_scalar", new MxNDArray[] {array}, new MxNDArray[] {array}, params);
         return array;
     }
 
@@ -166,86 +138,66 @@ public class MxNDArrayEx {
     // Activations
     ////////////////////////////////////////
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray relu() {
         MxOpParams params = new MxOpParams();
         params.addParam("act_type", "relu");
-        return getManager().invoke("_npx_activation", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_activation", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray sigmoid() {
         MxOpParams params = new MxOpParams();
         params.addParam("act_type", "sigmoid");
-        return getManager().invoke("_npx_activation", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_activation", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray tanh() {
         MxOpParams params = new MxOpParams();
         params.addParam("act_type", "tanh");
-        return getManager().invoke("_npx_activation", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_activation", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray softPlus() {
         MxOpParams params = new MxOpParams();
         params.addParam("act_type", "softrelu");
-        return getManager().invoke("_npx_activation", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_activation", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray softSign() {
         MxOpParams params = new MxOpParams();
         params.addParam("act_type", "softsign");
-        return getManager().invoke("_npx_activation", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_activation", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray leakyRelu(float alpha) {
         MxOpParams params = new MxOpParams();
         params.addParam("act_type", "leaky");
         params.addParam("slope", alpha);
-        return getManager().invoke("_npx_leaky_relu", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_leaky_relu", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray elu(float alpha) {
         MxOpParams params = new MxOpParams();
         params.addParam("act_type", "elu");
         params.addParam("slope", alpha);
-        return getManager().invoke("_npx_leaky_relu", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_leaky_relu", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray selu() {
         MxOpParams params = new MxOpParams();
         params.addParam("act_type", "selu");
-        return getManager().invoke("_npx_leaky_relu", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_leaky_relu", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray gelu() {
         MxOpParams params = new MxOpParams();
         params.addParam("act_type", "gelu");
-        return getManager().invoke("_npx_leaky_relu", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_leaky_relu", array, params);
     }
 
     ////////////////////////////////////////
     // Pooling Operations
     ////////////////////////////////////////
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray maxPool(Shape kernelShape, Shape stride, Shape padding, boolean ceilMode) {
         MxOpParams params = new MxOpParams();
         params.addParam("kernel", kernelShape);
@@ -253,24 +205,20 @@ public class MxNDArrayEx {
         params.addParam("stride", stride);
         params.addParam("pad", padding);
         params.add("pooling_convention", ceilMode ? "full" : "valid");
-        return getManager().invoke("_npx_pooling", getArray(), params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_pooling", getArray(), params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray globalMaxPool() {
         MxOpParams params = new MxOpParams();
         params.add("kernel", getGlobalPoolingShapes(1));
         params.add("pad", getGlobalPoolingShapes(0));
         params.add("pool_type", "max");
         params.addParam("global_pool", true);
-        try (MxNDArray temp = getManager().invoke("_npx_pooling", getArray(), params)) {
+        try (MxNDArray temp = MxNDArray.invoke(getArray().getParent(), "_npx_pooling", getArray(), params)) {
             return temp.reshape(temp.getShape().size(0), temp.getShape().size(1));
         }
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray avgPool(
             Shape kernelShape,
             Shape stride,
@@ -284,24 +232,20 @@ public class MxNDArrayEx {
         params.addParam("pad", padding);
         params.add("pooling_convention", ceilMode ? "full" : "valid");
         params.addParam("count_include_pad", countIncludePad);
-        return getManager().invoke("_npx_pooling", getArray(), params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_pooling", getArray(), params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray globalAvgPool() {
         MxOpParams params = new MxOpParams();
         params.add("kernel", getGlobalPoolingShapes(1));
         params.add("pad", getGlobalPoolingShapes(0));
         params.add("pool_type", "avg");
         params.addParam("global_pool", true);
-        try (MxNDArray temp = getManager().invoke("_npx_pooling", getArray(), params)) {
+        try (MxNDArray temp = MxNDArray.invoke(getArray().getParent(), "_npx_pooling", getArray(), params)) {
             return temp.reshape(temp.getShape().size(0), temp.getShape().size(1));
         }
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray lpPool(
             float normType, Shape kernelShape, Shape stride, Shape padding, boolean ceilMode) {
         if (((int) normType) != normType) {
@@ -316,11 +260,9 @@ public class MxNDArrayEx {
         params.addParam("pad", padding);
         params.add("pooling_convention", ceilMode ? "full" : "valid");
 
-        return getManager().invoke("_npx_pooling", getArray(), params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_pooling", getArray(), params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray globalLpPool(float normType) {
         if (((int) normType) != normType) {
             throw new IllegalArgumentException(
@@ -330,7 +272,7 @@ public class MxNDArrayEx {
         params.add("pool_type", "lp");
         params.addParam("p_value", (int) normType);
         params.addParam("global_pool", true);
-        try (MxNDArray temp = getManager().invoke("_npx_pooling", getArray(), params)) {
+        try (MxNDArray temp = MxNDArray.invoke(getArray().getParent(), "_npx_pooling", getArray(), params)) {
             return temp.reshape(temp.getShape().size(0), temp.getShape().size(1));
         }
     }
@@ -338,48 +280,44 @@ public class MxNDArrayEx {
     ////////////////////////////////////////
     // Optimizer
     ////////////////////////////////////////
+    
+//    public void adadeltaUpdate(
+//            MxNDList inputs,
+//            MxNDList weights,
+//            float weightDecay,
+//            float rescaleGrad,
+//            float clipGrad,
+//            float rho,
+//            float epsilon) {
+//        MxNDArray weight = inputs.get(0);
+//        MxNDArray grad = inputs.get(1);
+//        MxNDArray s = inputs.get(2);
+//        MxNDArray delta = inputs.get(3);
+//
+//        // create a baseManager to close all intermediate MxNDArrays
+//        try (NDManager subManager = NDManager.newBaseManager()) {
+//            subManager.tempAttachAll(inputs, weights);
+//
+//            // Preprocess Gradient
+//            grad.muli(rescaleGrad);
+//            if (clipGrad > 0) {
+//                grad = grad.clip(-clipGrad, clipGrad);
+//            }
+//            grad.addi(weight.mul(weightDecay));
+//
+//            // Update s, g, and delta
+//            s.muli(rho).addi(grad.square().mul(1 - rho));
+//            MxNDArray g = delta.add(epsilon).sqrt().div(s.add(epsilon).sqrt()).mul(grad);
+//            delta.muli(rho).addi(g.square().mul(1 - rho));
+//
+//            // Update weight
+//            weight.subi(g);
+//        }
+//    }
 
-    /** {@inheritDoc} */
-    @Override
-    public void adadeltaUpdate(
-            NDList inputs,
-            NDList weights,
-            float weightDecay,
-            float rescaleGrad,
-            float clipGrad,
-            float rho,
-            float epsilon) {
-        MxNDArray weight = inputs.get(0);
-        MxNDArray grad = inputs.get(1);
-        MxNDArray s = inputs.get(2);
-        MxNDArray delta = inputs.get(3);
-
-        // create a baseManager to close all intermediate MxNDArrays
-        try (NDManager subManager = NDManager.newBaseManager()) {
-            subManager.tempAttachAll(inputs, weights);
-
-            // Preprocess Gradient
-            grad.muli(rescaleGrad);
-            if (clipGrad > 0) {
-                grad = grad.clip(-clipGrad, clipGrad);
-            }
-            grad.addi(weight.mul(weightDecay));
-
-            // Update s, g, and delta
-            s.muli(rho).addi(grad.square().mul(1 - rho));
-            MxNDArray g = delta.add(epsilon).sqrt().div(s.add(epsilon).sqrt()).mul(grad);
-            delta.muli(rho).addi(g.square().mul(1 - rho));
-
-            // Update weight
-            weight.subi(g);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
     public void adagradUpdate(
-            NDList inputs,
-            NDList weights,
+            MxNDList inputs,
+            MxNDList weights,
             float learningRate,
             float weightDecay,
             float rescaleGrad,
@@ -393,14 +331,12 @@ public class MxNDArrayEx {
 
         params.addParam("epsilon", epsilon);
 
-        getManager().invoke("adagrad_update", inputs, weights, params);
+        MxNDArray.invoke("adagrad_update", inputs, weights, params);
     }
-
-    /** {@inheritDoc} */
-    @Override
+    
     public void adamUpdate(
-            NDList inputs,
-            NDList weights,
+            MxNDList inputs,
+            MxNDList weights,
             float learningRate,
             float weightDecay,
             float rescaleGrad,
@@ -420,14 +356,12 @@ public class MxNDArrayEx {
         params.addParam("epsilon", epsilon);
         params.addParam("lazy_update", lazyUpdate);
 
-        getManager().invoke("adam_update", inputs, weights, params);
+        MxNDArray.invoke("adam_update", inputs, weights, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public void rmspropUpdate(
-            NDList inputs,
-            NDList weights,
+            MxNDList inputs,
+            MxNDList weights,
             float learningRate,
             float weightDecay,
             float rescaleGrad,
@@ -446,19 +380,17 @@ public class MxNDArrayEx {
         params.addParam("epsilon", epsilon);
 
         if (!centered) {
-            getManager().invoke("rmsprop_update", inputs, weights, params);
+            MxNDArray.invoke("rmsprop_update", inputs, weights, params);
         } else {
             params.addParam("gamma2", gamma2);
 
-            getManager().invoke("rmspropalex_update", inputs, weights, params);
+            MxNDArray.invoke("rmspropalex_update", inputs, weights, params);
         }
     }
 
-    /** {@inheritDoc} */
-    @Override
     public void nagUpdate(
-            NDList inputs,
-            NDList weights,
+            MxNDList inputs,
+            MxNDList weights,
             float learningRate,
             float weightDecay,
             float rescaleGrad,
@@ -470,14 +402,12 @@ public class MxNDArrayEx {
         params.addParam("rescale_grad", rescaleGrad);
         params.addParam("clip_gradient", clipGrad);
         params.addParam("momentum", momentum);
-        getManager().invoke("nag_mom_update", inputs, weights, params);
+        MxNDArray.invoke("nag_mom_update", inputs, weights, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public void sgdUpdate(
-            NDList inputs,
-            NDList weights,
+            MxNDList inputs,
+            MxNDList weights,
             float learningRate,
             float weightDecay,
             float rescaleGrad,
@@ -493,9 +423,9 @@ public class MxNDArrayEx {
 
         if (momentum != 0) {
             params.addParam("momentum", momentum);
-            getManager().invoke("sgd_mom_update", inputs, weights, params);
+            MxNDArray.invoke("sgd_mom_update", inputs, weights, params);
         } else {
-            getManager().invoke("sgd_update", inputs, weights, params);
+            MxNDArray.invoke("sgd_update", inputs, weights, params);
         }
     }
 
@@ -503,9 +433,7 @@ public class MxNDArrayEx {
     // Neural network
     ////////////////////////////////////////
 
-    /** {@inheritDoc} */
-    @Override
-    public NDList convolution(
+    public MxNDList convolution(
             MxNDArray input,
             MxNDArray weight,
             MxNDArray bias,
@@ -521,7 +449,7 @@ public class MxNDArrayEx {
         params.addParam("num_group", groups);
         params.addParam("num_filter", weight.getShape().get(0));
 
-        NDList inputs = new NDList(input, weight);
+        MxNDList inputs = new MxNDList(input, weight);
         if (bias != null) {
             params.add("no_bias", false);
             inputs.add(bias);
@@ -529,12 +457,10 @@ public class MxNDArrayEx {
             params.add("no_bias", true);
         }
 
-        return getManager().invoke("_npx_convolution", inputs, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_convolution", inputs, params);
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public NDList deconvolution(
+    
+    public MxNDList deconvolution(
             MxNDArray input,
             MxNDArray weight,
             MxNDArray bias,
@@ -552,7 +478,7 @@ public class MxNDArrayEx {
         params.addParam("num_group", groups);
         params.addParam("num_filter", weight.getShape().get(0));
 
-        NDList inputs = new NDList(input, weight);
+        MxNDList inputs = new MxNDList(input, weight);
         if (bias != null) {
             params.add("no_bias", false);
             inputs.add(bias);
@@ -560,27 +486,23 @@ public class MxNDArrayEx {
             params.add("no_bias", true);
         }
 
-        return getManager().invoke("_npx_deconvolution", inputs, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_deconvolution", inputs, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public NDList linear(MxNDArray input, MxNDArray weight, MxNDArray bias) {
+    public MxNDList linear(MxNDArray input, MxNDArray weight, MxNDArray bias) {
         MxOpParams params = new MxOpParams();
         params.addParam("num_hidden", weight.size(0));
         params.addParam("flatten", false);
         params.addParam("no_bias", bias == null);
-        NDList inputs = new NDList(input, weight);
+        MxNDList inputs = new MxNDList(input, weight);
         if (bias != null) {
             inputs.add(bias);
         }
 
-        return getManager().invoke("_npx_fully_connected", inputs, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_fully_connected", inputs, params);
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public NDList embedding(MxNDArray input, MxNDArray weight, SparseFormat sparse) {
+    
+    public MxNDList embedding(MxNDArray input, MxNDArray weight, SparseFormat sparse) {
         if (!sparse.equals(SparseFormat.DENSE) && !sparse.equals(SparseFormat.ROW_SPARSE)) {
             throw new IllegalArgumentException("MXNet only supports row sparse");
         }
@@ -590,20 +512,16 @@ public class MxNDArrayEx {
         params.addParam("input_dim", inputDim);
         params.addParam("output_dim", outputDim);
         params.addParam("sparse_grad", sparse.getValue());
-        return getManager().invoke("_npx_embedding", new NDList(input, weight), params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_embedding", new MxNDList(input, weight), params);
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public NDList prelu(MxNDArray input, MxNDArray alpha) {
+    
+    public MxNDList prelu(MxNDArray input, MxNDArray alpha) {
         MxOpParams params = new MxOpParams();
         params.addParam("act_type", "prelu");
-        return getManager().invoke("_npx_leaky_relu", new NDList(input, alpha), params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_leaky_relu", new MxNDList(input, alpha), params);
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public NDList dropout(MxNDArray input, float rate, boolean training) {
+    
+    public MxNDList dropout(MxNDArray input, float rate, boolean training) {
         if (training != JnaUtils.autogradIsTraining()) {
             throw new IllegalArgumentException(
                     "the mode of dropout in MXNet should align with the mode of GradientCollector");
@@ -612,12 +530,10 @@ public class MxNDArrayEx {
         MxOpParams params = new MxOpParams();
         params.addParam("p", rate);
 
-        return getManager().invoke("_npx_dropout", new NDList(input), params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx_dropout", new MxNDList(input), params);
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public NDList batchNorm(
+    
+    public MxNDList batchNorm(
             MxNDArray input,
             MxNDArray runningMean,
             MxNDArray runningVar,
@@ -638,217 +554,207 @@ public class MxNDArrayEx {
                     "the mode of batchNorm in MXNet should align with the mode of GradientCollector");
         }
 
-        return getManager()
+        return MxNDArray
                 .invoke(
+                        getArray().getParent(),
                         "_npx_batch_norm",
-                        new NDList(input, gamma, beta, runningMean, runningVar),
+                        new MxNDList(input, gamma, beta, runningMean, runningVar),
                         params);
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public NDList rnn(
-            MxNDArray input,
-            MxNDArray state,
-            NDList params,
-            boolean hasBiases,
-            int numLayers,
-            RNN.Activation activation,
-            double dropRate,
-            boolean training,
-            boolean bidirectional,
-            boolean batchFirst) {
-        int numParams = numLayers * ((hasBiases) ? 4 : 2) * ((bidirectional) ? 2 : 1);
-        Preconditions.checkArgument(
-                params.size() == numParams,
-                "The size of Params is incorrect expect "
-                        + numParams
-                        + " parameters but got "
-                        + params.size());
+//    public MxNDList rnn(
+//            MxNDArray input,
+//            MxNDArray state,
+//            MxNDList params,
+//            boolean hasBiases,
+//            int numLayers,
+//            RNN.Activation activation,
+//            double dropRate,
+//            boolean training,
+//            boolean bidirectional,
+//            boolean batchFirst) {
+//        int numParams = numLayers * ((hasBiases) ? 4 : 2) * ((bidirectional) ? 2 : 1);
+//        Preconditions.checkArgument(
+//                params.size() == numParams,
+//                "The size of Params is incorrect expect "
+//                        + numParams
+//                        + " parameters but got "
+//                        + params.size());
+//
+//        if (training != JnaUtils.autogradIsTraining()) {
+//            throw new IllegalArgumentException(
+//                    "the mode of rnn in MXNet should align with the mode of GradientCollector");
+//        }
+//
+//        if (batchFirst) {
+//            input = input.swapAxes(0, 1);
+//        }
+//
+//        MxOpParams opParams = new MxOpParams();
+//        opParams.addParam("p", dropRate);
+//        opParams.addParam("state_size", state.getShape().tail());
+//        opParams.addParam("num_layers", numLayers);
+//        opParams.addParam("bidirectional", bidirectional);
+//        opParams.addParam("state_outputs", true);
+//        opParams.addParam("mode", activation == RNN.Activation.TANH ? "rnn_tanh" : "rnn_relu");
+//
+//        MxNDList inputs = new MxNDList();
+//        inputs.add(input);
+//
+//        try (MxNDList temp = new MxNDList()) {
+//            for (MxNDArray param : params) {
+//                temp.add(param.flatten());
+//            }
+//            MxNDArray tempParam = MxNDArrays.concat(temp);
+//            tempParam.attach(input.getManager());
+//            inputs.add(tempParam);
+//        }
+//
+//        inputs.add(state);
+//
+//        if (!batchFirst) {
+//            return getManager().invoke("_npx_rnn", inputs, opParams);
+//        }
+//
+//        MxNDList result = getManager().invoke("_npx_rnn", inputs, opParams);
+//        try (MxNDArray temp = result.head()) {
+//            return new MxNDList(temp.swapAxes(0, 1), result.get(1));
+//        }
+//    }
 
-        if (training != JnaUtils.autogradIsTraining()) {
-            throw new IllegalArgumentException(
-                    "the mode of rnn in MXNet should align with the mode of GradientCollector");
-        }
 
-        if (batchFirst) {
-            input = input.swapAxes(0, 1);
-        }
-
-        MxOpParams opParams = new MxOpParams();
-        opParams.addParam("p", dropRate);
-        opParams.addParam("state_size", state.getShape().tail());
-        opParams.addParam("num_layers", numLayers);
-        opParams.addParam("bidirectional", bidirectional);
-        opParams.addParam("state_outputs", true);
-        opParams.addParam("mode", activation == RNN.Activation.TANH ? "rnn_tanh" : "rnn_relu");
-
-        MxNDList inputs = new MxNDList();
-        inputs.add(input);
-
-        try (MxNDList temp = new MxNDList()) {
-            for (MxNDArray param : params) {
-                temp.add(param.flatten());
-            }
-            MxNDArray tempParam = MxNDArrays.concat(temp);
-            tempParam.attach(input.getManager());
-            inputs.add(tempParam);
-        }
-
-        inputs.add(state);
-
-        if (!batchFirst) {
-            return getManager().invoke("_npx_rnn", inputs, opParams);
-        }
-
-        MxNDList result = getManager().invoke("_npx_rnn", inputs, opParams);
-        try (MxNDArray temp = result.head()) {
-            return new MxNDList(temp.swapAxes(0, 1), result.get(1));
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public MxNDList gru(
-            MxNDArray input,
-            MxNDArray state,
-            MxNDList params,
-            boolean hasBiases,
-            int numLayers,
-            double dropRate,
-            boolean training,
-            boolean bidirectional,
-            boolean batchFirst) {
-        int numParams = numLayers * ((hasBiases) ? 4 : 2) * ((bidirectional) ? 2 : 1);
-        Preconditions.checkArgument(
-                params.size() == numParams,
-                "The size of Params is incorrect expect "
-                        + numParams
-                        + " parameters but got "
-                        + params.size());
-
-        if (training != JnaUtils.autogradIsTraining()) {
-            throw new IllegalArgumentException(
-                    "the mode of gru in MXNet should align with the mode of GradientCollector");
-        }
-
-        if (batchFirst) {
-            input = input.swapAxes(0, 1);
-        }
-
-        MxOpParams opParams = new MxOpParams();
-        opParams.addParam("p", dropRate);
-        opParams.addParam("state_size", state.getShape().tail());
-        opParams.addParam("num_layers", numLayers);
-        opParams.addParam("bidirectional", bidirectional);
-        opParams.addParam("state_outputs", true);
-        opParams.addParam("mode", "gru");
-
-        MxNDList inputs = new MxNDList();
-        inputs.add(input);
-
-        try (MxNDList temp = new MxNDList()) {
-            for (MxNDArray param : params) {
-                temp.add(param.flatten());
-            }
-            MxNDArray tempParam = MxNDArrays.concat(temp);
-            tempParam.attach(input.getManager());
-            inputs.add(tempParam);
-        }
-
-        inputs.add(state);
-
-        if (!batchFirst) {
-            return getManager().invoke("_npx_rnn", inputs, opParams);
-        }
-
-        MxNDList result = getManager().invoke("_npx_rnn", inputs, opParams);
-        try (MxNDArray temp = result.head()) {
-            return new MxNDList(temp.swapAxes(0, 1), result.get(1));
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public NDList lstm(
-            MxNDArray input,
-            NDList states,
-            NDList params,
-            boolean hasBiases,
-            int numLayers,
-            double dropRate,
-            boolean training,
-            boolean bidirectional,
-            boolean batchFirst) {
-        int numParams = numLayers * ((hasBiases) ? 4 : 2) * ((bidirectional) ? 2 : 1);
-        Preconditions.checkArgument(
-                params.size() == numParams,
-                "The size of Params is incorrect expect "
-                        + numParams
-                        + " parameters but got "
-                        + params.size());
-
-        if (training != JnaUtils.autogradIsTraining()) {
-            throw new IllegalArgumentException(
-                    "the mode of lstm in MXNet should align with the mode of GradientCollector");
-        }
-
-        if (batchFirst) {
-            input = input.swapAxes(0, 1);
-        }
-
-        MxOpParams opParams = new MxOpParams();
-        opParams.addParam("mode", "lstm");
-        opParams.addParam("p", dropRate);
-        opParams.addParam("state_size", states.head().getShape().tail());
-        opParams.addParam("state_outputs", true);
-        opParams.addParam("num_layers", numLayers);
-        opParams.addParam("bidirectional", bidirectional);
-        opParams.addParam("lstm_state_clip_nan", true);
-
-        NDList inputs = new NDList();
-        inputs.add(input);
-        try (NDList temp = new NDList()) {
-            for (MxNDArray param : params) {
-                temp.add(param.flatten());
-            }
-            MxNDArray tempParam = MxNDArrays.concat(temp);
-            tempParam.attach(input.getManager());
-            inputs.add(tempParam);
-        }
-        inputs.addAll(states);
-
-        if (!batchFirst) {
-            return getManager().invoke("_npx_rnn", inputs, opParams);
-        }
-
-        NDList result = getManager().invoke("_npx_rnn", inputs, opParams);
-        try (MxNDArray temp = result.head()) {
-            return new NDList(temp.swapAxes(0, 1), result.get(1), result.get(2));
-        }
-    }
+//    public MxNDList gru(
+//            MxNDArray input,
+//            MxNDArray state,
+//            MxNDList params,
+//            boolean hasBiases,
+//            int numLayers,
+//            double dropRate,
+//            boolean training,
+//            boolean bidirectional,
+//            boolean batchFirst) {
+//        int numParams = numLayers * ((hasBiases) ? 4 : 2) * ((bidirectional) ? 2 : 1);
+//        Preconditions.checkArgument(
+//                params.size() == numParams,
+//                "The size of Params is incorrect expect "
+//                        + numParams
+//                        + " parameters but got "
+//                        + params.size());
+//
+//        if (training != JnaUtils.autogradIsTraining()) {
+//            throw new IllegalArgumentException(
+//                    "the mode of gru in MXNet should align with the mode of GradientCollector");
+//        }
+//
+//        if (batchFirst) {
+//            input = input.swapAxes(0, 1);
+//        }
+//
+//        MxOpParams opParams = new MxOpParams();
+//        opParams.addParam("p", dropRate);
+//        opParams.addParam("state_size", state.getShape().tail());
+//        opParams.addParam("num_layers", numLayers);
+//        opParams.addParam("bidirectional", bidirectional);
+//        opParams.addParam("state_outputs", true);
+//        opParams.addParam("mode", "gru");
+//
+//        MxNDList inputs = new MxNDList();
+//        inputs.add(input);
+//
+//        try (MxNDList temp = new MxNDList()) {
+//            for (MxNDArray param : params) {
+//                temp.add(param.flatten());
+//            }
+//            MxNDArray tempParam = MxNDArrays.concat(temp);
+//            tempParam.attach(input.getManager());
+//            inputs.add(tempParam);
+//        }
+//
+//        inputs.add(state);
+//
+//        if (!batchFirst) {
+//            return getManager().invoke("_npx_rnn", inputs, opParams);
+//        }
+//
+//        MxNDList result = getManager().invoke("_npx_rnn", inputs, opParams);
+//        try (MxNDArray temp = result.head()) {
+//            return new MxNDList(temp.swapAxes(0, 1), result.get(1));
+//        }
+//    }
+//
+//    public MxNDList lstm(
+//            MxNDArray input,
+//            MxNDList states,
+//            MxNDList params,
+//            boolean hasBiases,
+//            int numLayers,
+//            double dropRate,
+//            boolean training,
+//            boolean bidirectional,
+//            boolean batchFirst) {
+//        int numParams = numLayers * ((hasBiases) ? 4 : 2) * ((bidirectional) ? 2 : 1);
+//        Preconditions.checkArgument(
+//                params.size() == numParams,
+//                "The size of Params is incorrect expect "
+//                        + numParams
+//                        + " parameters but got "
+//                        + params.size());
+//
+//        if (training != JnaUtils.autogradIsTraining()) {
+//            throw new IllegalArgumentException(
+//                    "the mode of lstm in MXNet should align with the mode of GradientCollector");
+//        }
+//
+//        if (batchFirst) {
+//            input = input.swapAxes(0, 1);
+//        }
+//
+//        MxOpParams opParams = new MxOpParams();
+//        opParams.addParam("mode", "lstm");
+//        opParams.addParam("p", dropRate);
+//        opParams.addParam("state_size", states.head().getShape().tail());
+//        opParams.addParam("state_outputs", true);
+//        opParams.addParam("num_layers", numLayers);
+//        opParams.addParam("bidirectional", bidirectional);
+//        opParams.addParam("lstm_state_clip_nan", true);
+//
+//        MxNDList inputs = new MxNDList();
+//        inputs.add(input);
+//        try (MxNDList temp = new MxNDList()) {
+//            for (MxNDArray param : params) {
+//                temp.add(param.flatten());
+//            }
+//            MxNDArray tempParam = MxNDArrays.concat(temp);
+//            tempParam.attach(input.getManager());
+//            inputs.add(tempParam);
+//        }
+//        inputs.addAll(states);
+//
+//        if (!batchFirst) {
+//            return getManager().invoke("_npx_rnn", inputs, opParams);
+//        }
+//
+//        MxNDList result = getManager().invoke("_npx_rnn", inputs, opParams);
+//        try (MxNDArray temp = result.head()) {
+//            return new MxNDList(temp.swapAxes(0, 1), result.get(1), result.get(2));
+//        }
+//    }
 
     ////////////////////////////////////////
     // Image and CV
     ////////////////////////////////////////
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray normalize(float[] mean, float[] std) {
         MxOpParams params = new MxOpParams();
         params.addTupleParam("mean", mean);
         params.addTupleParam("std", std);
-        return getManager().invoke("_npx__image_normalize", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx__image_normalize", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray toTensor() {
-        return getManager().invoke("_npx__image_to_tensor", array, null);
+        return MxNDArray.invoke(getArray().getParent(), "_npx__image_to_tensor", array, null);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray resize(int width, int height, int interpolation) {
         if (array.isEmpty()) {
             throw new IllegalArgumentException("attempt to resize of an empty MxNDArray");
@@ -856,40 +762,33 @@ public class MxNDArrayEx {
         MxOpParams params = new MxOpParams();
         params.addTupleParam("size", width, height);
         params.addParam("interp", interpolation);
-        return getManager().invoke("_npx__image_resize", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx__image_resize", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray crop(int x, int y, int width, int height) {
         MxOpParams params = new MxOpParams();
         params.add("x", x);
         params.add("y", y);
         params.add("width", width);
         params.add("height", height);
-        return getManager().invoke("_npx__image_crop", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx__image_crop", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray randomFlipLeftRight() {
         if (array.getDevice().getDeviceType().equals(Device.Type.GPU)) {
             throw new UnsupportedOperationException("randomFlipLeftRight is not supported on GPU");
         }
-        return getManager().invoke("_npx__image_random_flip_left_right", array, null);
+        return MxNDArray.invoke(getArray().getParent(), "_npx__image_random_flip_left_right", array, null);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray randomFlipTopBottom() {
         if (array.getDevice().getDeviceType().equals(Device.Type.GPU)) {
             throw new UnsupportedOperationException("randomFlipTopBottom is not supported on GPU");
         }
-        return getManager().invoke("_npx__image_random_flip_top_bottom", array, null);
+        return MxNDArray.invoke(getArray().getParent(), "_npx__image_random_flip_top_bottom", array, null);
     }
 
-    /** {@inheritDoc} */
-    @Override
+
     public MxNDArray randomBrightness(float brightness) {
         if (array.getDevice().getDeviceType().equals(Device.Type.GPU)) {
             throw new UnsupportedOperationException("randomBrightness is not supported on GPU");
@@ -899,11 +798,9 @@ public class MxNDArrayEx {
         float max = 1 + brightness;
         params.addParam("min_factor", min);
         params.addParam("max_factor", max);
-        return getManager().invoke("_npx__image_random_brightness", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx__image_random_brightness", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray randomHue(float hue) {
         if (array.getDevice().getDeviceType().equals(Device.Type.GPU)) {
             throw new UnsupportedOperationException("randomHue is not supported on GPU");
@@ -913,11 +810,9 @@ public class MxNDArrayEx {
         float max = 1 + hue;
         params.addParam("min_factor", min);
         params.addParam("max_factor", max);
-        return getManager().invoke("_npx__image_random_hue", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx__image_random_hue", array, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray randomColorJitter(
             float brightness, float contrast, float saturation, float hue) {
         if (array.getDevice().getDeviceType().equals(Device.Type.GPU)) {
@@ -928,11 +823,9 @@ public class MxNDArrayEx {
         params.addParam("contrast", contrast);
         params.addParam("saturation", saturation);
         params.addParam("hue", hue);
-        return getManager().invoke("_npx__image_random_color_jitter", array, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npx__image_random_color_jitter", array, params);
     }
-
-    /** {@inheritDoc} */
-    @Override
+    
     public NDArrayIndexer getIndexer() {
         return INDEXER;
     }
@@ -965,7 +858,7 @@ public class MxNDArrayEx {
             array2 = other;
         }
         try {
-            return getManager().invoke("where", new MxNDArray[] {condition, array1, array2}, null);
+            return MxNDArray.invoke(getArray().getParent(), "where", new MxNDArray[] {condition, array1, array2}, null);
         } finally {
             if (array1 != array) {
                 array1.close();
@@ -976,21 +869,44 @@ public class MxNDArrayEx {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDArray stack(MxNDList arrays, int axis) {
         MxOpParams params = new MxOpParams();
         params.addParam("axis", axis);
         MxNDArray[] srcArray = new MxNDArray[arrays.size() + 1];
         srcArray[0] = array;
         System.arraycopy(arrays.toArray(new MxNDArray[0]), 0, srcArray, 1, arrays.size());
-        return getManager().invoke("_npi_stack", srcArray, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npi_stack", srcArray, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /**
+     * Check two criteria of concat input: 1. no scalar 2. dimensions of all the array must be the
+     * same.
+     *
+     * @param list input {@link MxNDList}
+     */
+    public static void checkConcatInput(MxNDList list) {
+        MxNDArray[] arrays = list.toArray(new MxNDArray[0]);
+        if (Stream.of(arrays).allMatch(array -> array.getShape().dimension() == 0)) {
+            throw new IllegalArgumentException(
+                    "scalar(zero-dimensional) arrays cannot be concatenated");
+        }
+        int dimension = arrays[0].getShape().dimension();
+        for (int i = 1; i < arrays.length; i++) {
+            if (arrays[i].getShape().dimension() != dimension) {
+                throw new IllegalArgumentException(
+                        "all the input arrays must have same number of dimensions, but the array at index 0 has "
+                                + dimension
+                                + " dimension(s) and the array at index "
+                                + i
+                                + " has "
+                                + arrays[i].getShape().dimension()
+                                + " dimension(s)");
+            }
+        }
+    }
+
     public MxNDArray concat(MxNDList list, int axis) {
-        NDUtils.checkConcatInput(list);
+        checkConcatInput(list);
 
         MxOpParams params = new MxOpParams();
         // MXNet backend use dim as argument name
@@ -998,11 +914,9 @@ public class MxNDArrayEx {
         MxNDArray[] srcArray = new MxNDArray[list.size() + 1];
         srcArray[0] = array;
         System.arraycopy(list.toArray(new MxNDArray[0]), 0, srcArray, 1, list.size());
-        return getManager().invoke("_npi_concatenate", srcArray, params);
+        return MxNDArray.invoke(getArray().getParent(), "_npi_concatenate", srcArray, params);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDList multiBoxTarget(
             MxNDList inputs,
             float iouThreshold,
@@ -1016,11 +930,9 @@ public class MxNDArrayEx {
         parameters.add("ignore_label", ignoreLabel);
         parameters.add("negative_mining_ratio", negativeMiningRatio);
         parameters.add("negative_mining_thresh", negativeMiningThreshold);
-        return getManager().invoke("MultiBoxTarget", inputs, parameters);
+        return MxNDArray.invoke(getArray().getParent(), "MultiBoxTarget", inputs, parameters);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDList multiBoxPrior(
             List<Float> sizes,
             List<Float> ratios,
@@ -1033,11 +945,9 @@ public class MxNDArrayEx {
         parameters.add("steps", steps);
         parameters.add("offsets", offsets);
         parameters.add("clip", clip);
-        return getManager().invoke("MultiBoxPrior", new MxNDList(array), parameters);
+        return MxNDArray.invoke(getArray().getParent(), "MultiBoxPrior", new MxNDList(array), parameters);
     }
 
-    /** {@inheritDoc} */
-    @Override
     public MxNDList multiBoxDetection(
             MxNDList inputs,
             boolean clip,
@@ -1053,7 +963,7 @@ public class MxNDArrayEx {
         parameters.add("nms_threshold", nmsThreashold);
         parameters.add("force_suppress", forceSuppress);
         parameters.add("nms_topk", nmsTopK);
-        return getManager().invoke("MultiBoxDetection", inputs, parameters);
+        return MxNDArray.invoke(getArray().getParent(), "MultiBoxDetection", inputs, parameters);
     }
 
     public MxNDArray getArray() {

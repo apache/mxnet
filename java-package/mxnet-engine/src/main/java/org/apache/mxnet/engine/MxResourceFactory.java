@@ -12,18 +12,19 @@ import java.nio.Buffer;
 public class MxResourceFactory {
 
     public static MxNDArray createNDArray(MxResource parent, Pointer pointer) {
-        return new MxNDArray(parent, pointer);
+        return MxNDArray.create(parent, pointer);
     }
 
     public static MxNDArray createNDArray(MxResource parent, DataType dataType, Shape shape, Device device) {
         Pointer handle = JnaUtils.createNdArray(device, shape, dataType, shape.dimension(), false);
-        return new MxNDArray(parent, handle, device, shape, dataType, false);
+        return MxNDArray.create(parent, handle);
     }
 
+    // TODO
     // create the MxNDArray with the baseMxResource as it's parent
-    public static MxNDArray createNDArray(Pointer handle) {
-        return new MxNDArray(handle);
-    }
+//    public static MxNDArray createNDArray(Pointer handle) {
+//        return MxNDArray.create(handle);
+//    }
 
     /**
      * Creates and initializes a {@link MxNDArray} with specified {@link Shape}.

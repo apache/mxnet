@@ -2,7 +2,6 @@ package org.apache.mxnet.ndarray;
 
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
-import javafx.scene.Parent;
 import org.apache.mxnet.engine.BaseMxResource;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.GradReq;
@@ -185,7 +184,7 @@ public class MxNDArray extends MxResource {
             return;
         }
         MxNDArray grad =
-                hasGradient() ? (MxNDArray) getGradient() : createGradient(getSparseFormat());
+                hasGradient() ? getGradient() : createGradient(getSparseFormat());
         // DJL go with write as only MXNet support GradReq
         int gradReqValue = requiresGrad ? GradReq.WRITE.getValue() : GradReq.NULL.getValue();
         IntBuffer gradReqBuffer = IntBuffer.allocate(1);
@@ -208,7 +207,7 @@ public class MxNDArray extends MxResource {
 
     private MxNDArray createGradient(SparseFormat format) {
         try (MxNDArray zeros = this.zeros(getShape(), getDataType(), getDevice())) {
-            return (MxNDArray) zeros.toSparse(format);
+            return zeros.toSparse(format);
         }
     }
 
@@ -277,7 +276,11 @@ public class MxNDArray extends MxResource {
     long size() {
         return getShape().size();
     }
-    
+
+    long size(int axis) {
+        return getShape().size(axis);
+    }
+
     public void set(Buffer data) {
         int size = Math.toIntExact(size());
         if (data.remaining() < size) {
@@ -1150,7 +1153,7 @@ public class MxNDArray extends MxResource {
 
     
     public void intern (MxNDArray replaced) {
-        MxNDArray arr = (MxNDArray) replaced;
+        MxNDArray arr = replaced;
         Pointer oldHandle = handle.getAndSet(arr.handle.getAndSet(null));
         JnaUtils.waitToRead(oldHandle);
         JnaUtils.freeNdArray(oldHandle);
@@ -1508,8 +1511,8 @@ public class MxNDArray extends MxResource {
      * @param params the parameters to be passed to the native operator
      * @throws IllegalArgumentException if operation is not supported by Engine
      */
-    public void invoke(String operation, MxNDList src, MxNDList dest, PairList<String, ?> params) {
-        invoke(operation, (MxNDArray[]) src.toArray(EMPTY), (MxNDArray[]) dest.toArray(EMPTY), params);
+    public static void invoke(String operation, MxNDList src, MxNDList dest, PairList<String, ?> params) {
+        invoke(operation, src.toArray(EMPTY), dest.toArray(EMPTY), params);
     }
 
     /**

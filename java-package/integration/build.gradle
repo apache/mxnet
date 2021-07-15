@@ -11,7 +11,7 @@ repositories {
 }
 
 application {
-    mainClassName = System.getProperty("main", "org.apache.mxnet.IntegrationTest")
+    mainClassName = System.getProperty("main", "org.apache.mxnet.integration.IntegrationTest")
 }
 
 dependencies {
