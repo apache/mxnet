@@ -226,7 +226,9 @@ Graph OneDNNShiftedQuantization(Graph&& g) {
       dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS", true);
   bool quantize_fc = !dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZE_FC_OPTIMIZATION", false);
   bool fc_fc = !dmlc::GetEnv("MXNET_DISABLE_SHIFTED_FC_FC_OPTIMIZATION", false);
-  LOG(INFO) << "Running OneDNN shifted quantization: " << !disable_shifted_quant;
+  if (!disable_shifted_quant) {
+    LOG(INFO) << "Running OneDNN shifted quantization";
+  }
   // No change to aux params
   g.attrs["new_aux_names"] = std::make_shared<nnvm::any>(std::vector<std::string>());
   g.attrs["new_aux"] = std::make_shared<nnvm::any>(std::vector<NDArray *>());
