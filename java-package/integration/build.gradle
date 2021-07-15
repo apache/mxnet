@@ -33,6 +33,8 @@ run {
     systemProperties.remove("user.dir")
     systemProperty("file.encoding", "UTF-8")
     jvmArgs "-Xverify:none"
+    args("-p=org.apache.mxnet.integration.tests.", "-m=createCachedOpTest")
+
 }
 
 test {

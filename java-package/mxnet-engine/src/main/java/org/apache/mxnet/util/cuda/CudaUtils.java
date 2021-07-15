@@ -1,8 +1,8 @@
 package org.apache.mxnet.util.cuda;
 
 import com.sun.jna.Native;
-import org.apache.mxnet.api.exception.EngineException;
 import org.apache.mxnet.engine.Device;
+import org.apache.mxnet.exception.JnaCallException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -188,7 +188,7 @@ public final class CudaUtils {
     private static void checkCall(int ret) {
         validateLibrary();
         if (ret != 0) {
-            throw new EngineException(
+            throw new JnaCallException(
                     String.format("CUDA API call failed: %s (%d)", LIB.cudaGetErrorString(ret), ret));
         }
     }

@@ -19,9 +19,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.mxnet.api.exception.EngineException;
+import org.apache.mxnet.engine.CachedOp;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.DeviceType;
+import org.apache.mxnet.exception.JnaCallException;
+import org.apache.mxnet.nn.MxSymbolBlock;
 import org.apache.mxnet.ndarray.MxNDArray;
 import org.apache.mxnet.ndarray.MxNDList;
 import org.apache.mxnet.engine.MxResource;
@@ -30,9 +32,15 @@ import org.apache.mxnet.engine.Symbol;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.ndarray.types.SparseFormat;
+import org.apache.mxnet.nn.Parameter;
 import org.apache.mxnet.util.PairList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class JnaUtils {
+
+    private static final Logger logger = LoggerFactory.getLogger(JnaUtils.class);
+
     public static final MxnetLibrary LIB = LibUtils.loadLibrary();
     public static final ObjectPool<PointerByReference> REFS =
             new ObjectPool<>(PointerByReference::new, r -> r.setValue(null));
@@ -65,41 +73,41 @@ public final class JnaUtils {
      * About CacheOp
      ******************************************************************************/
     // TODO
-//    public static CachedOp createCachedOp(
-//            MxSymbolBlock block, MxNDManager manager, boolean training) {
-//        Symbol symbol = block.getSymbol();
-//
-//        List<Parameter> parameters = block.getAllParameters();
-//
-//        // record data index in all inputs
-//        PairList<String, Integer> dataIndices = new PairList<>();
-//        // record parameter index in all inputs
-//        List<Integer> paramIndices = new ArrayList<>();
-//        int index = 0;
-//        for (Parameter parameter : parameters) {
-//            // We assume uninitialized parameters are data inputs
-//            if (parameter.isInitialized()) {
-//                paramIndices.add(index);
-//            } else {
-//                dataIndices.add(parameter.getName(), index);
-//            }
-//            ++index;
-//        }
-//
-//        // Creating CachedOp
-//        Pointer symbolHandle = symbol.getHandle();
-//        PointerByReference ref = REFS.acquire();
-//
-//        // static_alloc and static_shape are enabled by default
-//        String[] keys = {"data_indices", "param_indices", "static_alloc", "static_shape"};
-//        String[] values = {dataIndices.values().toString(), paramIndices.toString(), "1", "1"};
-//
-//        checkCall(LIB.MXCreateCachedOp(symbolHandle, keys.length, keys, values, ref, (byte) 0));
-//        Pointer pointer = ref.getValue();
-//        REFS.recycle(ref);
-//
-//        return new CachedOp(pointer, manager, parameters, paramIndices, dataIndices);
-//    }
+    public static CachedOp createCachedOp(
+            MxSymbolBlock block, MxResource parent, boolean training) {
+        Symbol symbol = block.getSymbol();
+
+        List<Parameter> parameters = block.getAllParameters();
+
+        // record data index in all inputs
+        PairList<String, Integer> dataIndices = new PairList<>();
+        // record parameter index in all inputs
+        List<Integer> paramIndices = new ArrayList<>();
+        int index = 0;
+        for (Parameter parameter : parameters) {
+            // We assume uninitialized parameters are data inputs
+            if (parameter.isInitialized()) {
+                paramIndices.add(index);
+            } else {
+                dataIndices.add(parameter.getName(), index);
+            }
+            ++index;
+        }
+
+        // Creating CachedOp
+        Pointer symbolHandle = symbol.getHandle();
+        PointerByReference ref = REFS.acquire();
+
+        // static_alloc and static_shape are enabled by default
+        String[] keys = {"data_indices", "param_indices", "static_alloc", "static_shape"};
+        String[] values = {dataIndices.values().toString(), paramIndices.toString(), "1", "1"};
+
+        checkCall(LIB.MXCreateCachedOp(symbolHandle, keys.length, keys, values, ref, (byte) 0));
+        Pointer pointer = ref.getValue();
+        REFS.recycle(ref);
+
+        return new CachedOp(parent, pointer, parameters, paramIndices, dataIndices);
+    }
 
     public static void freeCachedOp(Pointer handle) {
         checkCall(LIB.MXFreeCachedOp(handle));
@@ -805,7 +813,7 @@ public final class JnaUtils {
 
     public static void checkCall(int ret) {
         if (ret != 0) {
-            throw new EngineException("MXNet engine call failed: " + getLastError());
+            throw new JnaCallException("MXNet engine call failed: " + getLastError());
         }
     }
 

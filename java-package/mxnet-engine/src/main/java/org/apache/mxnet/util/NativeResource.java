@@ -22,6 +22,15 @@ public abstract class NativeResource<T> implements AutoCloseable {
     }
 
     /**
+     * To initialize a NativeResource with handle = null
+     * @param uid
+     */
+    protected NativeResource(String uid) {
+        this.handle = null;
+        this.uid = uid;
+    }
+
+    /**
      * Gets the boolean that indicates whether this resource has been released.
      *
      * @return whether this resource has been released

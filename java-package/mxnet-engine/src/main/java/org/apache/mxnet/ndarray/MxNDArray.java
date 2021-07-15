@@ -86,6 +86,10 @@ public class MxNDArray extends MxResource {
         return new MxNDArray(parent, handle, fmt);
     }
 
+    public static MxNDArray create(MxResource parent, Shape shape, Device device) {
+        return create(parent, shape, DataType.FLOAT32 ,device);
+    }
+
     public static MxNDArray create(MxResource parent, Shape shape, DataType dataType, Device device, boolean hasGradient) {
         Pointer handle = JnaUtils.createNdArray(device, shape, dataType, shape.dimension(), hasGradient);
         return new MxNDArray(parent, handle, device, shape, dataType, hasGradient);
@@ -198,6 +202,10 @@ public class MxNDArray extends MxResource {
         return fill("_npi_zeros", shape, dataType);
     }
 
+    public MxNDArray zeros() {
+        return fill("_npi_zeros", getShape(), getDataType());
+    }
+
     MxNDArray zeros(Shape shape, DataType dataType, Device device) {
         if (device == null || device.equals(getDevice())) {
             return zeros(shape, dataType);
@@ -220,6 +228,46 @@ public class MxNDArray extends MxResource {
         params.setDevice(device);
         params.setDataType(dataType);
         return invoke(getParent(), opName, params);
+    }
+
+    /**
+     * Creates an instance of {@link MxNDArray} with specified {@link Shape} filled with ones.
+     *
+     * @param shape the {@link Shape} of the {@link MxNDArray}
+     * @param dataType the {@link DataType} of the {@link MxNDArray}
+     * @return a new instance of {@link MxNDArray}
+     */
+    MxNDArray ones(Shape shape, DataType dataType) {
+        return fill("_npi_ones", shape, dataType);
+    }
+
+    public MxNDArray ones() {
+        return ones(getShape(), getDataType());
+    }
+    /**
+     * Creates an instance of {@link MxNDArray} with specified {@link Shape} filled with ones.
+     *
+     * @param shape the {@link Shape} of the {@link MxNDArray}
+     * @return a new instance of {@link MxNDArray}
+     */
+    MxNDArray ones(Shape shape) {
+        return ones(shape, DataType.FLOAT32);
+    }
+
+    /**
+     * Creates an instance of {@link MxNDArray} with specified {@link Device}, {@link Shape}, and
+     * {@link DataType} filled with ones.
+     *
+     * @param shape the {@link Shape} of the {@link MxNDArray}
+     * @param dataType the {@link DataType} of the {@link MxNDArray}
+     * @param device the {@link Device} of the {@link MxNDArray}
+     * @return a new instance of {@link MxNDArray}
+     */
+    MxNDArray ones(Shape shape, DataType dataType, Device device) {
+        if (device == null || device.equals(getDevice())) {
+            return ones(shape, dataType);
+        }
+        return create(getParent(), shape, dataType, device).ones();
     }
 
     
@@ -1902,6 +1950,70 @@ public class MxNDArray extends MxResource {
         MxNDArray array = create(parent, shape, dataType, null);
         array.set(data);
         return array;
+    }
+
+    /**
+     * Draws samples from a uniform distribution.
+     *
+     * <p>Samples are uniformly distributed over the half-open interval [low, high) (includes low,
+     * but excludes high). In other words, any value within the given interval is equally likely to
+     * be drawn by uniform.
+     *
+     * @param low the lower boundary of the output interval. All values generated will be greater
+     *     than or equal to low.
+     * @param high the upper boundary of the output interval. All values generated will be less than
+     *     high.
+     * @param shape the {@link Shape} of the {@link MxNDArray}
+     * @param dataType the {@link DataType} of the {@link MxNDArray}
+     * @param device the {@link Device} of the {@link MxNDArray}
+     * @return the drawn samples {@link MxNDArray}
+     */
+    public static MxNDArray randomUniform(
+            MxResource parent, float low, float high, Shape shape, DataType dataType, Device device) {
+        MxOpParams params = new MxOpParams();
+        params.addParam("low", low);
+        params.addParam("high", high);
+        params.addParam("size", shape);
+        params.setDevice(device);
+        params.setDataType(dataType);
+        return invoke(parent, "_npi_uniform", params);
+    }
+
+    /**
+     * Draws samples from a uniform distribution.
+     *
+     * <p>Samples are uniformly distributed over the half-open interval [low, high) (includes low,
+     * but excludes high). In other words, any value within the given interval is equally likely to
+     * be drawn by uniform.
+     *
+     * @param low the lower boundary of the output interval. All values generated will be greater
+     *     than or equal to low.
+     * @param high the upper boundary of the output interval. All values generated will be less than
+     *     high.
+     * @param shape the {@link Shape} of the {@link MxNDArray}
+     * @param dataType the {@link DataType} of the {@link MxNDArray}
+     * @return the drawn samples {@link MxNDArray}
+     */
+    private static MxNDArray randomUniform(MxResource parent, float low, float high, Shape shape, DataType dataType) {
+        return randomUniform(parent, low, high, shape, dataType, Device.defaultDevice());
+    }
+
+    public static MxNDArray randomNormal(
+            MxResource parent, float loc, float scale, Shape shape, DataType dataType, Device device) {
+        if (device == null) {
+            return randomNormal(parent, loc, scale, shape, dataType);
+        }
+        return randomNormal(parent, loc, scale, shape, dataType);
+    }
+
+    public static MxNDArray randomNormal(MxResource parent, float loc, float scale, Shape shape, DataType dataType) {
+        MxOpParams params = new MxOpParams();
+        params.addParam("loc", loc);
+        params.addParam("scale", scale);
+        params.addParam("size", shape);
+        params.setDevice(Device.defaultDevice());
+        params.setDataType(dataType);
+        return invoke(parent, "_npi_normal", params);
     }
 
 }

@@ -1,4 +1,4 @@
-package org.apache.mxnet.api.exception;
+package org.apache.mxnet.exception;
 
 /** Thrown to indicate that a native error is raised from the underlying. */
 public class BaseException extends RuntimeException {
