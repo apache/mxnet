@@ -333,6 +333,10 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Values: Int ```(default=-1)```
   - Flag to set num of elements that ONEDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use ONEDNN and different input shape.
 
+* MXNET_MKLDNN_DISABLE_BRGEMM_FC
+  - Values: 0, 1 ```(default=1)```
+  - Flag which disables BRGEMM kernels in FullyConnected executed with MKLDNN support - Should only be set to 0 if your model has constant input shapes or FullyConnected is calculated with large tensors. Supported on machines with AVX512-VNNI.
+
 * MXNET_ENFORCE_DETERMINISM
   - Values: 0(false) or 1(true) ```(default=0)```
   - If set to true, MXNet will only use deterministic algorithms in forward and backward computation.
