@@ -21,19 +21,22 @@
  * \file mkldnn_copy.cc
  * \brief
  * \author
-*/
+ */
 
-#include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
+#include "./mkldnn_ops-inl.h"
 
 #if MXNET_USE_MKLDNN == 1
 namespace mxnet {
 namespace op {
 
-void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                const NDArray &in_data, const OpReqType &req,
-                const NDArray &out_data) {
-  if (req == kNullOp || req == kWriteInplace) return;
+void MKLDNNCopy(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const NDArray& in_data,
+                const OpReqType& req,
+                const NDArray& out_data) {
+  if (req == kNullOp || req == kWriteInplace)
+    return;
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   auto in_mem = in_data.GetMKLDNNData();
   if (req == kAddTo) {
@@ -41,16 +44,16 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     // We should try and force the input memory has the same format
     // as the input output. If not, we'll have to reorder memory.
     auto out_mem = out_data.GetMKLDNNData();
-    in_mem = in_data.GetMKLDNNData(out_mem ->get_desc());
+    in_mem       = in_data.GetMKLDNNData(out_mem->get_desc());
     if (in_mem == nullptr)
       in_mem = in_data.GetMKLDNNDataReorder(out_mem->get_desc());
     MKLDNNSum(*out_mem, *in_mem, *out_mem);
   } else {
-    const_cast<NDArray &>(out_data).CopyFrom(*in_mem);
+    const_cast<NDArray&>(out_data).CopyFrom(*in_mem);
   }
   MKLDNNStream::Get()->Submit();
 }
 
-}   // namespace op
-}   // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 #endif

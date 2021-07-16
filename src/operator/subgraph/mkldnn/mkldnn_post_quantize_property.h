@@ -23,6 +23,7 @@
 #include <set>
 #include <string>
 #include <vector>
+
 #include "../../nn/mkldnn/mkldnn_convolution-inl.h"
 #include "../../quantization/requantize-inl.h"
 #include "../common.h"
@@ -43,7 +44,7 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
 
  private:
   SelectStatus status;
-  std::vector<const nnvm::Node *> matched_list;
+  std::vector<const nnvm::Node*> matched_list;
   std::set<std::string> support_requantize_fusion_op_name;
 
  public:
@@ -52,10 +53,10 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
     support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
   }
 
-  bool Select(const nnvm::Node &n) override {
+  bool Select(const nnvm::Node& n) override {
     if (n.op() && support_requantize_fusion_op_name.count(n.op()->name)) {
       if (n.op()->name == "_sg_mkldnn_conv") {
-        auto const &param = nnvm::get<MKLDNNConvFusionParam>(n.attrs.parsed);
+        auto const& param = nnvm::get<MKLDNNConvFusionParam>(n.attrs.parsed);
         if (param.full_conv_param.mkldnn_param.quantized) {
           status = kStart;
           matched_list.clear();
@@ -72,11 +73,11 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
     return false;
   }
 
-  bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) override {
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     return false;
   }
 
-  bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
+  bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     if (status == kFail || status == kSuccess || new_node.is_variable())
       return false;
     // If n isn't the last matched node, then we encoutered a internal
@@ -86,9 +87,8 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
       return false;
     }
     if (new_node.op()->name == "_contrib_requantize") {
-      auto const &param = nnvm::get<RequantizeParam>(new_node.attrs.parsed);
-      if (param.min_calib_range.has_value() &&
-          param.max_calib_range.has_value()) {
+      auto const& param = nnvm::get<RequantizeParam>(new_node.attrs.parsed);
+      if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
         matched_list.push_back(&new_node);
         status = kSuccess;
         return true;
@@ -99,10 +99,9 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
     return false;
   }
 
-  std::vector<nnvm::Node *> Filter(
-      const std::vector<nnvm::Node *> &candidates) override {
+  std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) override {
     if (status != kSuccess) {
-      return std::vector<nnvm::Node *>(0);
+      return std::vector<nnvm::Node*>(0);
     } else {
       return candidates;
     }
@@ -123,19 +122,20 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
     support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
   }
   static SubgraphPropertyPtr Create() {
-    static const std::string &name = "MKLDNN post-quantization optimization pass";
-    auto property = std::make_shared<SgMKLDNNPostQuantizeProperty>();
+    static const std::string& name = "MKLDNN post-quantization optimization pass";
+    auto property                  = std::make_shared<SgMKLDNNPostQuantizeProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
-  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
-                                   const int subgraph_id = 0) const override {
-    nnvm::ObjectPtr fuse_node = nullptr;
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
+                                     const int subgraph_id = 0) const override {
+    nnvm::ObjectPtr fuse_node       = nullptr;
     nnvm::ObjectPtr requantize_node = nullptr;
-    DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr &node) {
-      if (node->is_variable()) return;
-      auto &op_name = node->op()->name;
+    DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
+      if (node->is_variable())
+        return;
+      auto& op_name = node->op()->name;
       if (support_requantize_fusion_op_name.count(op_name)) {
         fuse_node = node;
       } else if (op_name == "_contrib_requantize") {
@@ -144,8 +144,7 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
     });
     CHECK_NOTNULL(fuse_node);
     CHECK_NOTNULL(requantize_node);
-    auto const &requantize_param =
-        nnvm::get<RequantizeParam>(requantize_node->attrs.parsed);
+    auto const& requantize_param = nnvm::get<RequantizeParam>(requantize_node->attrs.parsed);
     CHECK(requantize_param.min_calib_range.has_value());
     CHECK(requantize_param.max_calib_range.has_value());
     fuse_node->attrs.dict["min_calib_range"] =
@@ -161,12 +160,11 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
     return selector;
   }
 
-  void ConnectSubgraphOutputs(
-      const nnvm::ObjectPtr n,
-      std::vector<nnvm::NodeEntry *> *output_entries) const override {
+  void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
+                              std::vector<nnvm::NodeEntry*>* output_entries) const override {
     for (size_t i = 0; i < output_entries->size(); ++i) {
       auto entry_ptr = output_entries->at(i);
-      *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
+      *entry_ptr     = nnvm::NodeEntry{n, entry_ptr->index, 0};
     }
   }
 

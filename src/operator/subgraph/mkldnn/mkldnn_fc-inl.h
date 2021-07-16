@@ -24,20 +24,16 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "mkldnn.hpp"
+
 #include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
+#include "mkldnn.hpp"
 
 namespace mxnet {
 namespace op {
 
 static inline bool SupportMKLDNNFCEltwiseFusion(const std::string op_name) {
-  if (op_name == "Activation" ||
-      op_name == "square" ||
-      op_name == "sqrt" ||
-      op_name == "exp" ||
-      op_name == "abs" ||
-      op_name == "clip" ||
-      op_name == "LeakyReLU") {
+  if (op_name == "Activation" || op_name == "square" || op_name == "sqrt" || op_name == "exp" ||
+      op_name == "abs" || op_name == "clip" || op_name == "LeakyReLU") {
     return true;
   } else {
     return false;
@@ -63,13 +59,10 @@ static inline bool IsOutputUint8(const MKLDNNFCFullParam& full_param) {
   auto alg = full_param.eltwise_param.alg;
   // TODO(ciyong): some alg doesn't support int8 so far.
   if (full_param.mkldnn_param.with_eltwise &&
-      (alg == mkldnn::algorithm::eltwise_relu ||
-       alg == mkldnn::algorithm::eltwise_logistic ||
+      (alg == mkldnn::algorithm::eltwise_relu || alg == mkldnn::algorithm::eltwise_logistic ||
        alg == mkldnn::algorithm::eltwise_soft_relu ||
-       alg == mkldnn::algorithm::eltwise_bounded_relu ||
-       alg == mkldnn::algorithm::eltwise_square ||
-       alg == mkldnn::algorithm::eltwise_sqrt ||
-       alg == mkldnn::algorithm::eltwise_exp ||
+       alg == mkldnn::algorithm::eltwise_bounded_relu || alg == mkldnn::algorithm::eltwise_square ||
+       alg == mkldnn::algorithm::eltwise_sqrt || alg == mkldnn::algorithm::eltwise_exp ||
        alg == mkldnn::algorithm::eltwise_abs)) {
     return true;
   }
