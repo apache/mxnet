@@ -3009,7 +3009,6 @@ def _check_interoperability_helper(op_name, rel_tol, abs_tol, *args, **kwargs):
         assert False
     if not is_op_runnable():
         return
-
     out = onp_op(*args, **kwargs)
     expected_out = _get_numpy_op_output(onp_op, *args, **kwargs)
     if isinstance(out, (tuple, list)):
