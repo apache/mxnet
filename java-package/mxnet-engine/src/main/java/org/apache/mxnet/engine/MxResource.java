@@ -4,10 +4,21 @@ import com.sun.jna.Pointer;
 import org.apache.mxnet.util.NativeResource;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 public class MxResource extends NativeResource<Pointer> {
 
     public static final String EMPTY_UID = "EMPTY_UID";
+
+    private static boolean closed = false;
+
+    public void setClosed() {
+        this.closed = true;
+    }
+
+    public boolean getClosed() {
+        return closed;
+    }
 
     protected MxResource(MxResource parent, String uid) {
         super(uid);
@@ -27,18 +38,22 @@ public class MxResource extends NativeResource<Pointer> {
     }
 
     public void freeSubResources() {
-        if (!subResourceInitialized()) {
-            subResources.values().forEach(MxResource::close);
+        if (subResourceInitialized()) {
+            for (MxResource e : subResources.values()) {
+                if (!e.getClosed()) {
+                    e.close();
+                }
+            }
             subResources = null;
         }
     }
 
     public boolean subResourceInitialized() {
-        return subResources == null;
+        return subResources != null;
     }
 
     public ConcurrentHashMap<String, MxResource> getSubResource() {
-        if (subResourceInitialized()) {
+        if (!subResourceInitialized()) {
             subResources = new ConcurrentHashMap<>();
         }
         return subResources;

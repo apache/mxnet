@@ -353,12 +353,12 @@ public final class JnaUtils {
         MxNDList ndList = new MxNDList();
         if (nameCount == 0) {
             for (Pointer handle : handles) {
-                ndList.add(MxResourceFactory.createNDArray(parent, handle));
+                ndList.add(MxNDArray.create(parent, handle));
             }
         } else {
             String[] names = namesRef.getValue().getStringArray(0, nameCount);
             for (int i = 0; i < ndArrayCount; i++) {
-                MxNDArray array = MxResourceFactory.createNDArray(parent, handles[i]);
+                MxNDArray array = MxNDArray.create(parent, handles[i]);
                 array.setName(names[i]);
                 ndList.add(array);
             }

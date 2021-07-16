@@ -85,6 +85,8 @@ public class CachedOp extends MxResource {
         // fill allInputsNDArray with data values
         int index = 0;
         for (MxNDArray array : data) {
+            // TODO: NDArray name doesn't match
+//            String inputName = array.getName().split(":")[1];
             String inputName = array.getName();
             // if inputName not provided, value will follow the default order
             int idx = indexOf(inputName, index++);
@@ -116,11 +118,14 @@ public class CachedOp extends MxResource {
     @Override
     public void close() {
         super.close();
-        Pointer pointer = handle.getAndSet(null);
-        if (pointer != null) {
+        if (!getClosed()) {
+            Pointer pointer = handle.getAndSet(null);
+            if (pointer != null) {
 //            manager.detachInternal(getUid());
-            JnaUtils.freeCachedOp(pointer);
+                JnaUtils.freeCachedOp(pointer);
 //            manager = null;
+            }
+            setClosed();
         }
     }
 

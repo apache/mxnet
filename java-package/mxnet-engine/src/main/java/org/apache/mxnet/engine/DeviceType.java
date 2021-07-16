@@ -13,6 +13,7 @@ public class DeviceType {
      * @return the MXNet device number
      */
     public static int toDeviceType(Device device) {
+        // TODO : bug fix, device is null
         String deviceType = device.getDeviceType();
 
         if (Device.Type.CPU.equals(deviceType)) {

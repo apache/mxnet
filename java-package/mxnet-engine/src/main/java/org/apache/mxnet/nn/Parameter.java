@@ -221,6 +221,7 @@ public class Parameter extends MxResource {
     /** {@inheritDoc} */
     @Override
     public void close() {
+        super.close();
         if (array != null) {
             array.close();
             array = null;

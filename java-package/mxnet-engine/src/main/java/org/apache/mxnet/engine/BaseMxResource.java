@@ -15,4 +15,10 @@ public class BaseMxResource extends MxResource{
     public boolean isReleased() {
         return handle.get() == null;
     }
+
+    @Override
+    public void close() {
+        // only clean sub resources
+        super.close();
+    }
 }

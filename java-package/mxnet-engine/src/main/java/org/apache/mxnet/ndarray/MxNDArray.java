@@ -12,6 +12,7 @@ import org.apache.mxnet.ndarray.index.NDIndex;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.ndarray.types.SparseFormat;
+import org.apache.mxnet.util.Float16Utils;
 import org.apache.mxnet.util.PairList;
 
 import java.nio.Buffer;
@@ -96,6 +97,9 @@ public class MxNDArray extends MxResource {
 
     }
     public static MxNDArray create(MxResource parent, Shape shape, DataType dataType, Device device) {
+        if (device == null) {
+            device = Device.defaultDevice();
+        }
         Pointer handle = JnaUtils.createNdArray(device, shape, dataType, shape.dimension(), false);
         return new MxNDArray(parent, handle, device, shape, dataType, false);
     }
@@ -484,19 +488,6 @@ public class MxNDArray extends MxResource {
             throw new IllegalArgumentException("The supplied Index does not produce a scalar");
         }
         return value;
-    }
-
-    boolean[] toBooleanArray() {
-        if (getDataType() != DataType.BOOLEAN) {
-            throw new IllegalStateException(
-                    "DataType mismatch, Required boolean" + " Actual " + getDataType());
-        }
-        ByteBuffer bb = toByteBuffer();
-        boolean[] ret = new boolean[bb.remaining()];
-        for (int i = 0; i < ret.length; ++i) {
-            ret[i] = bb.get() != 0;
-        }
-        return ret;
     }
 
     boolean getBoolean(long... indices) {
@@ -1521,9 +1512,17 @@ public class MxNDArray extends MxResource {
         return mxNDArrayEx;
     }
 
-    
+    @Override
     public void close() {
-
+        if (!getClosed()) {
+            // release sub resources
+            super.close();
+            // release itself
+            if (this.getHandle() != null) {
+                JnaUtils.freeNdArray(this.getHandle());
+            }
+            setClosed();
+        }
     }
     
     public boolean isEmpty() {
@@ -1627,7 +1626,7 @@ public class MxNDArray extends MxResource {
     }
 
 
-    static MxNDArray create(MxResource parent, Number data) {
+    public static MxNDArray create(MxResource parent, Number data) {
         if (data instanceof Integer) {
             return create(parent, data.intValue());
         } else if (data instanceof Float) {
@@ -1651,7 +1650,7 @@ public class MxNDArray extends MxResource {
      * @param shape the {@link Shape} of the {@link MxNDArray}
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, float[] data, Shape shape) {
+    public static MxNDArray create(MxResource parent, float[] data, Shape shape) {
         return create(parent, FloatBuffer.wrap(data), shape);
     }
 
@@ -1663,7 +1662,7 @@ public class MxNDArray extends MxResource {
      * @param shape the {@link Shape} of the {@link MxNDArray}
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, int[] data, Shape shape) {
+    public static MxNDArray create(MxResource parent, int[] data, Shape shape) {
         return create(parent, IntBuffer.wrap(data), shape);
     }
 
@@ -1675,7 +1674,7 @@ public class MxNDArray extends MxResource {
      * @param shape the {@link Shape} of the {@link MxNDArray}
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, double[] data, Shape shape) {
+    public static MxNDArray create(MxResource parent, double[] data, Shape shape) {
         return create(parent, DoubleBuffer.wrap(data), shape);
     }
 
@@ -1687,7 +1686,7 @@ public class MxNDArray extends MxResource {
      * @param shape the {@link Shape} of the {@link MxNDArray}
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, long[] data, Shape shape) {
+    public static MxNDArray create(MxResource parent, long[] data, Shape shape) {
         return create(parent, LongBuffer.wrap(data), shape);
     }
 
@@ -1699,7 +1698,7 @@ public class MxNDArray extends MxResource {
      * @param shape the {@link Shape} of the {@link MxNDArray}
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, byte[] data, Shape shape) {
+    public static MxNDArray create(MxResource parent, byte[] data, Shape shape) {
         return create(parent, ByteBuffer.wrap(data), shape);
     }
 
@@ -1711,7 +1710,7 @@ public class MxNDArray extends MxResource {
      * @param shape the {@link Shape} of the {@link MxNDArray}
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, boolean[] data, Shape shape) {
+    public  static MxNDArray create(MxResource parent, boolean[] data, Shape shape) {
         byte[] byteData = new byte[data.length];
         for (int i = 0; i < data.length; i++) {
             byteData[i] = (byte) (data[i] ? 1 : 0);
@@ -1725,7 +1724,7 @@ public class MxNDArray extends MxResource {
      * @param data the float that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, float data) {
+    public static MxNDArray create(MxResource parent, float data) {
         return create(parent, new float[] {data}, new Shape());
     }
 
@@ -1735,7 +1734,7 @@ public class MxNDArray extends MxResource {
      * @param data the float data that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, int data) {
+    public static MxNDArray create(MxResource parent, int data) {
         return create(parent, new int[] {data}, new Shape());
     }
 
@@ -1745,7 +1744,7 @@ public class MxNDArray extends MxResource {
      * @param data the double data that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, double data) {
+    public static MxNDArray create(MxResource parent, double data) {
         return create(parent, new double[] {data}, new Shape());
     }
 
@@ -1755,7 +1754,7 @@ public class MxNDArray extends MxResource {
      * @param data the long data that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, long data) {
+    public static MxNDArray create(MxResource parent, long data) {
         return create(parent, new long[] {data}, new Shape());
     }
 
@@ -1765,7 +1764,7 @@ public class MxNDArray extends MxResource {
      * @param data the byte data that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, byte data) {
+    public static MxNDArray create(MxResource parent, byte data) {
         return create(parent, new byte[] {data}, new Shape());
     }
 
@@ -1775,7 +1774,7 @@ public class MxNDArray extends MxResource {
      * @param data the boolean data that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, boolean data) {
+    public static MxNDArray create(MxResource parent, boolean data) {
         
         return create(parent, new boolean[] {data}, new Shape());
     }
@@ -1786,7 +1785,7 @@ public class MxNDArray extends MxResource {
      * @param data the float array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, float[] data) {
+    public static MxNDArray create(MxResource parent, float[] data) {
         return create(parent, data, new Shape(data.length));
     }
 
@@ -1796,7 +1795,7 @@ public class MxNDArray extends MxResource {
      * @param data the float array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, int[] data) {
+    public static MxNDArray create(MxResource parent, int[] data) {
         return create(parent, data, new Shape(data.length));
     }
 
@@ -1806,7 +1805,7 @@ public class MxNDArray extends MxResource {
      * @param data the float array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, double[] data) {
+    public static MxNDArray create(MxResource parent, double[] data) {
         return create(parent, data, new Shape(data.length));
     }
 
@@ -1816,7 +1815,7 @@ public class MxNDArray extends MxResource {
      * @param data the float array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, long[] data) {
+    public static MxNDArray create(MxResource parent, long[] data) {
         return create(parent, data, new Shape(data.length));
     }
 
@@ -1826,7 +1825,7 @@ public class MxNDArray extends MxResource {
      * @param data the float array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, byte[] data) {
+    public static MxNDArray create(MxResource parent, byte[] data) {
         return create(parent, data, new Shape(data.length));
     }
 
@@ -1836,7 +1835,7 @@ public class MxNDArray extends MxResource {
      * @param data the bool array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, boolean[] data) {
+    public static MxNDArray create(MxResource parent, boolean[] data) {
         return create(parent, data, new Shape(data.length));
     }
 
@@ -1846,7 +1845,7 @@ public class MxNDArray extends MxResource {
      * @param data the float array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, float[][] data) {
+    public static MxNDArray create(MxResource parent, float[][] data) {
         FloatBuffer buffer = FloatBuffer.allocate(data.length * data[0].length);
         for (float[] d : data) {
             buffer.put(d);
@@ -1861,7 +1860,7 @@ public class MxNDArray extends MxResource {
      * @param data the float array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, int[][] data) {
+    public static MxNDArray create(MxResource parent, int[][] data) {
         IntBuffer buffer = IntBuffer.allocate(data.length * data[0].length);
         for (int[] d : data) {
             buffer.put(d);
@@ -1876,7 +1875,7 @@ public class MxNDArray extends MxResource {
      * @param data the float array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, double[][] data) {
+    public static MxNDArray create(MxResource parent, double[][] data) {
         DoubleBuffer buffer = DoubleBuffer.allocate(data.length * data[0].length);
         for (double[] d : data) {
             buffer.put(d);
@@ -1891,7 +1890,7 @@ public class MxNDArray extends MxResource {
      * @param data the float array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, long[][] data) {
+    public static MxNDArray create(MxResource parent, long[][] data) {
         LongBuffer buffer = LongBuffer.allocate(data.length * data[0].length);
         for (long[] d : data) {
             buffer.put(d);
@@ -1906,7 +1905,7 @@ public class MxNDArray extends MxResource {
      * @param data the float array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, byte[][] data) {
+    public static MxNDArray create(MxResource parent, byte[][] data) {
         ByteBuffer buffer = ByteBuffer.allocate(data.length * data[0].length);
         for (byte[] d : data) {
             buffer.put(d);
@@ -1921,7 +1920,7 @@ public class MxNDArray extends MxResource {
      * @param data the boolean array that needs to be set
      * @return a new instance of {@link MxNDArray}
      */
-    static MxNDArray create(MxResource parent, boolean[][] data) {
+    public static MxNDArray create(MxResource parent, boolean[][] data) {
         ByteBuffer buffer = ByteBuffer.allocate(data.length * data[0].length);
         for (boolean[] d : data) {
             for (boolean b : d) {
@@ -2015,5 +2014,160 @@ public class MxNDArray extends MxResource {
         params.setDataType(dataType);
         return invoke(parent, "_npi_normal", params);
     }
+
+    /**
+     * Converts this {@code NDArray} to a Number array based on its {@link DataType}.
+     *
+     * @return a Number array
+     */
+    public Number[] toArray() {
+        switch (getDataType()) {
+            case FLOAT16:
+            case FLOAT32:
+                float[] floatArray = toFloatArray();
+                return IntStream.range(0, floatArray.length)
+                        .mapToObj(i -> floatArray[i])
+                        .toArray(Number[]::new);
+            case FLOAT64:
+                return Arrays.stream(toDoubleArray()).boxed().toArray(Double[]::new);
+            case INT32:
+                return Arrays.stream(toIntArray()).boxed().toArray(Integer[]::new);
+            case INT64:
+                return Arrays.stream(toLongArray()).boxed().toArray(Long[]::new);
+            case BOOLEAN:
+            case INT8:
+                ByteBuffer bb = toByteBuffer();
+                Byte[] ret = new Byte[bb.remaining()];
+                for (int i = 0; i < ret.length; ++i) {
+                    ret[i] = bb.get();
+                }
+                return ret;
+            case UINT8:
+                return Arrays.stream(toUint8Array()).boxed().toArray(Integer[]::new);
+            default:
+                throw new IllegalStateException("Unsupported DataType: " + getDataType());
+        }
+    }
+
+    /**
+     * Converts this {@code NDArray} to a boolean array.
+     *
+     * @return a boolean array
+     * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
+     */
+    public boolean[] toBooleanArray() {
+        if (getDataType() != DataType.BOOLEAN) {
+            throw new IllegalStateException(
+                    "DataType mismatch, Required boolean" + " Actual " + getDataType());
+        }
+        ByteBuffer bb = toByteBuffer();
+        boolean[] ret = new boolean[bb.remaining()];
+        for (int i = 0; i < ret.length; ++i) {
+            ret[i] = bb.get() != 0;
+        }
+        return ret;
+    }
+
+    /**
+     * Converts this {@code NDArray} to a double array.
+     *
+     * @return a double array
+     * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
+     */
+     double[] toDoubleArray() {
+        if (getDataType() != DataType.FLOAT64) {
+            throw new IllegalStateException(
+                    "DataType mismatch, Required double" + " Actual " + getDataType());
+        }
+        DoubleBuffer db = toByteBuffer().asDoubleBuffer();
+        double[] ret = new double[db.remaining()];
+        db.get(ret);
+        return ret;
+    }
+
+    /**
+     * Converts this {@code NDArray} to a float array.
+     *
+     * @return a float array
+     * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
+     */
+    float[] toFloatArray() {
+        if (getDataType() == DataType.FLOAT16) {
+            return Float16Utils.fromByteBuffer(toByteBuffer());
+        } else if (getDataType() != DataType.FLOAT32) {
+            throw new IllegalStateException(
+                    "DataType mismatch, Required float, Actual " + getDataType());
+        }
+        FloatBuffer fb = toByteBuffer().asFloatBuffer();
+        float[] ret = new float[fb.remaining()];
+        fb.get(ret);
+        return ret;
+    }
+
+    /**
+     * Converts this {@code NDArray} to an int array.
+     *
+     * @return an int array
+     * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
+     */
+    int[] toIntArray() {
+        if (getDataType() != DataType.INT32) {
+            throw new IllegalStateException(
+                    "DataType mismatch, Required int" + " Actual " + getDataType());
+        }
+        IntBuffer ib = toByteBuffer().asIntBuffer();
+        int[] ret = new int[ib.remaining()];
+        ib.get(ret);
+        return ret;
+    }
+
+    /**
+     * Converts this {@code NDArray} to a long array.
+     *
+     * @return a long array
+     * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
+     */
+    long[] toLongArray() {
+        if (getDataType() != DataType.INT64) {
+            throw new IllegalStateException(
+                    "DataType mismatch, Required long" + " Actual " + getDataType());
+        }
+        LongBuffer lb = toByteBuffer().asLongBuffer();
+        long[] ret = new long[lb.remaining()];
+        lb.get(ret);
+        return ret;
+    }
+
+    /**
+     * Converts this {@code NDArray} to a byte array.
+     *
+     * @return a byte array
+     * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
+     */
+    public byte[] toByteArray() {
+        ByteBuffer bb = toByteBuffer();
+        if (bb.hasArray()) {
+            return bb.array();
+        }
+        byte[] buf = new byte[bb.remaining()];
+        bb.get(buf);
+        return buf;
+    }
+
+    /**
+     * Converts this {@code NDArray} to a uint8 array.
+     *
+     * @return a uint8 array
+     * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
+     */
+    int[] toUint8Array() {
+        ByteBuffer bb = toByteBuffer();
+        int[] buf = new int[bb.remaining()];
+        for (int i = 0; i < buf.length; ++i) {
+            buf[i] = bb.get() & 0xff;
+        }
+        return buf;
+    }
+
 
 }
