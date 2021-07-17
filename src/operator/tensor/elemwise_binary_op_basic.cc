@@ -108,7 +108,16 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
    - otherwise, ``elemwise_add`` generates output with default storage
 
 )code")
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_add"});
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> ret;
+    const size_t input_count = n->inputs.size();
+    ret.reserve(input_count);
+    for (size_t i = 0; i < input_count; ++i) {
+      ret.emplace_back(MakeNode("ones_like", n->attrs.name + "_grad_ones", {n->inputs[i]}, nullptr, &n));
+    }
+    return ret;
+});
 
 // specialized gradient add function to do add to optimization
 // this must differ from elemwise_add to prevent add to optimization in forward pass.
