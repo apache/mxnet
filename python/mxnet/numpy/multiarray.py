@@ -48,7 +48,7 @@ from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
                    is_np_default_dtype
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
-from ..ndarray.numpy import _internal as _npi
+from ..ndarray.numpy import _internal as _npi, _api_internal
 from ..ndarray.ndarray import _storage_type
 from ..dlpack import ndarray_from_numpy
 from .utils import _get_np_op
@@ -1015,7 +1015,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__iadd__(y) <=> x += y"""
         if not self.writable:
             raise ValueError('trying to add to a readonly ndarray')
-        return add(self, other, out=self)
+        return _api_internal.add(self, other, self, True)
 
     def __invert__(self):
         """x.__invert__() <=> ~x"""
@@ -1039,17 +1039,17 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @wrap_mxnp_np_ufunc
     def __iand__(self, other):
         """x.__iand__(y) <=> x &= y"""
-        return bitwise_and(self, other, out=self)
+        return _api_internal.bitwise_and(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __ior__(self, other):
         r"""x.__ior__(y) <=> x \|= y"""
-        return bitwise_or(self, other, out=self)
+        return _api_internal.bitwise_or(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __ixor__(self, other):
         """x.__ixor__(y) <=> x ^= y"""
-        return bitwise_xor(self, other, out=self)
+        return _api_internal.bitwise_xor(self, other, self, True)
 
     def __round__(self, n=0):
         """x.__round__(n)"""
@@ -1081,7 +1081,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__isub__(y) <=> x -= y"""
         if not self.writable:
             raise ValueError('trying to subtract from a readonly ndarray')
-        return subtract(self, other, out=self)
+        return _api_internal.subtract(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __rsub__(self, other):
@@ -1101,7 +1101,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         r"""x.__imul__(y) <=> x \*= y"""
         if not self.writable:
             raise ValueError('trying to add to a readonly ndarray')
-        return multiply(self, other, out=self)
+        return _api_internal.multiply(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __rmul__(self, other):
@@ -1121,7 +1121,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @wrap_mxnp_np_ufunc
     def __idiv__(self, other):
         """x.__idiv__(y) <=> x /= y"""
-        return divide(self, other, out=self)
+        return _api_internal.true_divide(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __truediv__(self, other):
@@ -1136,7 +1136,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @wrap_mxnp_np_ufunc
     def __itruediv__(self, other):
         """x.__itruediv__(y) <=> x /= y"""
-        return divide(self, other, out=self)
+        return _api_internal.true_divide(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __mod__(self, other):
@@ -1151,7 +1151,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @wrap_mxnp_np_ufunc
     def __imod__(self, other):
         """x.__imod__(y) <=> x %= y"""
-        return mod(self, other, out=self)
+        return _api_internal.mod(self, other, self, True)
 
     @wrap_mxnp_np_ufunc
     def __pow__(self, other):
@@ -1209,7 +1209,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @wrap_mxnp_np_ufunc
     def __imatmul__(self, other):
         """x.__imatmul__(y) <=> x @= y"""
-        return matmul(self, other, out=self)
+        return _api_internal.matmul(self, other, self, True)
 
     def __bool__(self):
         num_elements = self.size

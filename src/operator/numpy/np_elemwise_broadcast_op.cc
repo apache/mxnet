@@ -29,6 +29,7 @@ namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyBinaryScalarParam);
+DMLC_REGISTER_PARAMETER(NumpyBinaryParam);
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)                    \
   NNVM_REGISTER_OP(name)                                                  \
@@ -51,6 +52,13 @@ bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const int ltype = in_attrs->at(0);
   const int rtype = in_attrs->at(1);
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace = param.in_place;
+  if (is_inplace && ((common::is_float(ltype) && common::is_float(rtype)) ||
+                     (!common::is_float(ltype) && !common::is_float(rtype)))) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, ltype);
+    return true;
+  }
   if (ltype != -1 && rtype != -1 && (ltype != rtype)) {
     // Only when both input types are known and not the same, we enter the mixed-precision mode
     TYPE_ASSIGN_CHECK(*out_attrs, 0, common::np_binary_out_infer_type(ltype, rtype));
@@ -64,6 +72,7 @@ bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
   NNVM_REGISTER_OP(name)                                                       \
   .set_num_inputs(2)                                                           \
   .set_num_outputs(1)                                                          \
+  .set_attr_parser(ParamParser<NumpyBinaryParam>)                              \
   .set_attr<nnvm::FListInputNames>("FListInputNames",                          \
     [](const NodeAttrs& attrs) {                                               \
       return std::vector<std::string>{"lhs", "rhs"};                           \

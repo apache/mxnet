@@ -35,6 +35,21 @@
 namespace mxnet {
 namespace op {
 
+struct NumpyBinaryParam : public dmlc::Parameter<NumpyBinaryParam> {
+  bool in_place;
+  DMLC_DECLARE_PARAMETER(NumpyBinaryParam) {
+    DMLC_DECLARE_FIELD(in_place)
+    .set_default(false)
+    .describe("Indicate whether this binary operation is in-place");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream in_place_s;
+    in_place_s << in_place;
+    (*dict)["in_place"] = in_place_s.str();
+  }
+};
+
 inline void PrintErrorMessage(const std::string& op_name, const int dtype1, const int dtype2) {
   LOG(FATAL) << "Operator " << op_name << " does not support combination of "
              << mshadow::dtype_string(dtype1) << " with " << mshadow::dtype_string(dtype2)
@@ -235,10 +250,23 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   mxnet::TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(lhs.shape_, rhs.shape_, out.shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
-  if (!ndim) {
+
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const NumpyBinaryParam& param = nnvm::get<NumpyBinaryParam>(attrs.parsed);
+  bool is_inplace = param.in_place;
+  if (is_inplace) {
+    TBlob temp_tblob;
+    MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
+      Tensor<xpu, 1, LType> temp_tensor =
+        ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+    });
+    CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
+    BinaryBroadcastCompute<xpu, OP>(
+      attrs, ctx, {temp_tblob.reshape(rhs.shape_), lhs}, req, outputs);
+  } else if (!ndim) {
     MixedBinaryElemwiseCompute<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
-    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
       if (lhs.type_flag_ == out.type_flag_) {
         MixedAllRealBinaryBroadcastCompute<xpu, ROP>(
