@@ -21,7 +21,7 @@ import java.util.Map;
  * {@link MxSymbolBlock}.
  *
  * <p>We don't recommended users interact with this class directly. Users should use {@link
- * ai.djl.inference.Predictor} instead. CachedOp is an operator that simplifies calling and
+ * Predictor} instead. CachedOp is an operator that simplifies calling and
  * analyzing the input shape. It requires minimum input to do inference because most of the
  * information can be obtained from the model itself.
  */
@@ -39,6 +39,7 @@ public class CachedOp extends MxResource {
      *
      * <p>It can be created by using {@link JnaUtils#createCachedOp(MxSymbolBlock, MxResource, boolean)}
      *
+     * @param parent the MxResource object to manage this instance of CachedOp
      * @param handle the C handle of the CachedOp
      * @param parameters the parameter values
      * @param paramIndices the parameters required by the model and their corresponding location
@@ -85,9 +86,9 @@ public class CachedOp extends MxResource {
         // fill allInputsNDArray with data values
         int index = 0;
         for (MxNDArray array : data) {
-            // TODO: NDArray name doesn't match
-//            String inputName = array.getName().split(":")[1];
-            String inputName = array.getName();
+            // TODO: NDArray name doesn't match. To confirm the format of input name
+            String inputName = array.getName().split(":")[1];
+//            String inputName = array.getName();
             // if inputName not provided, value will follow the default order
             int idx = indexOf(inputName, index++);
             allInputsNDArray[idx] = array;
@@ -110,7 +111,7 @@ public class CachedOp extends MxResource {
                 allInputsNDArray[pair.getValue()] = MxNDArray.create(this, new Shape(batchSize), device);
             }
         }
-        MxNDArray[] result = JnaUtils.cachedOpInvoke(getParent(), getHandle(), allInputsNDArray, device);
+        MxNDArray[] result = JnaUtils.cachedOpInvoke(getParent(), getHandle(), allInputsNDArray);
         return new MxNDList(result);
     }
 
@@ -121,9 +122,7 @@ public class CachedOp extends MxResource {
         if (!getClosed()) {
             Pointer pointer = handle.getAndSet(null);
             if (pointer != null) {
-//            manager.detachInternal(getUid());
                 JnaUtils.freeCachedOp(pointer);
-//            manager = null;
             }
             setClosed();
         }
@@ -144,4 +143,5 @@ public class CachedOp extends MxResource {
         }
         return index;
     }
+
 }

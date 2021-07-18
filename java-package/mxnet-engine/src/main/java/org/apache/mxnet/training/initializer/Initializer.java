@@ -9,7 +9,7 @@ import org.apache.mxnet.ndarray.types.Shape;
 /**
  * An interface representing an initialization method.
  *
- * <p>Used to initialize the {@link MxNDArray} parameters stored within a {@link Block}.
+ * <p>Used to initialize the {@link MxNDArray} parameters stored within a {@link org.apache.mxnet.nn.MxSymbolBlock}.
  *
  * @see <a
  *     href="https://d2l.djl.ai/chapter_multilayer-perceptrons/numerical-stability-and-init.html">The

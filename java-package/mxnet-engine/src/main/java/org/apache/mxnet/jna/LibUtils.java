@@ -314,12 +314,4 @@ public final class LibUtils {
         // to be loaded from properties
         return false;
     }
-
-    //    public static void main(String... args) {
-    //        String libPath = System.getProperty("java.library.path");
-    //        String absolutePath = "";
-    //        if (libPath != null) {
-    //            absolutePath = LibUtils.findLibraryInPath(libPath);
-    //        }
-    //    }
 }

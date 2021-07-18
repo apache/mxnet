@@ -1,9 +1,6 @@
 package org.apache.mxnet.util;
 
 import com.sun.jna.Pointer;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class NativeResource<T> implements AutoCloseable {

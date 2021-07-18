@@ -27,7 +27,6 @@ import org.apache.mxnet.nn.MxSymbolBlock;
 import org.apache.mxnet.ndarray.MxNDArray;
 import org.apache.mxnet.ndarray.MxNDList;
 import org.apache.mxnet.engine.MxResource;
-import org.apache.mxnet.engine.MxResourceFactory;
 import org.apache.mxnet.engine.Symbol;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
@@ -49,8 +48,8 @@ public final class JnaUtils {
             "_contrib_", "_linalg_", "_sparse_", "_image_", "_random_"
     };
 
-    private static final Map<String, FunctionInfo> OPS = getNdArrayFunctions();
-//    private static final Map<String, FunctionInfo> OPS = null;
+//    private static final Map<String, FunctionInfo> OPS = getNdArrayFunctions();
+    private static final Map<String, FunctionInfo> OPS = null;
 
     private static final Set<String> FEATURES = getFeaturesInternal();
 
@@ -778,11 +777,12 @@ public final class JnaUtils {
     }
 
     public static MxNDArray[] cachedOpInvoke(
-            MxResource parent, Pointer cachedOpHandle, MxNDArray[] inputs, Device device) {
+            MxResource parent, Pointer cachedOpHandle, MxNDArray[] inputs) {
         IntBuffer buf = IntBuffer.allocate(1);
         PointerArray array = toPointerArray(inputs);
         PointerByReference ref = REFS.acquire();
         PointerByReference outSTypeRef = REFS.acquire();
+        Device device = inputs[0].getDevice();
         // TODO: check the init value of default_dev_type and default_dev_id
         checkCall(
                 LIB.MXInvokeCachedOp(
@@ -879,39 +879,31 @@ public final class JnaUtils {
         checkCall(LIB.MXNDArrayWaitAll());
     }
 
-    public static void loadLib(String path, boolean verbose) {
-        int intVerbose = verbose ? 1 : 0;
-        PointerByReference ret = REFS.acquire();
-        checkCall(LIB.MXLoadLib(path, intVerbose, ret));
-        // TODO : what to return?
-        REFS.recycle(ret);
-    }
-
-
-
     /*****************************************************************************
      * Tests
      *****************************************************************************/
-    public static void main(String... args) {
-        Set<String> opNames = JnaUtils.getAllOpNames();
-        Map<String, FunctionInfo> map = new ConcurrentHashMap<>();
-
-        PointerByReference ref = REFS.acquire();
-        for (String opName : opNames) {
-            checkCall(LIB.NNGetOpHandle(opName, ref));
-
-            String functionName = getOpNamePrefix(opName);
-            System.out.println(ref.getValue());
-            // System.out.println("Name: " + opName + "/" + functionName);
-            FunctionInfo functionInfo = getFunctionByName(opName, functionName, ref.getValue());
-            map.put(functionName, functionInfo);
-//            map.put(functionName, "1");
-            System.out.println(opName);
-            System.out.println(functionInfo.getFunctionName());
-            ref.setValue(null);
-        }
-        REFS.recycle(ref);
-        System.out.println(map.size());
-
-    }
+//    public static void main(String... args) {
+//        try {
+//            Set<String> opNames = JnaUtils.getAllOpNames();
+//            List<String> list = new ArrayList<>(opNames);
+//
+//            PointerByReference ref = REFS.acquire();
+//            for (String opName : list.subList(0, 400)) {
+//                checkCall(LIB.NNGetOpHandle(opName, ref));
+//                String functionName = getOpNamePrefix(opName);
+//                // System.out.println("Name: " + opName + "/" + functionName);
+//                getFunctionByName(opName, functionName, ref.getValue());
+//            }
+//            ref.setValue(null);
+//            REFS.recycle(ref);
+//
+//        } catch (RuntimeException e) {
+//            e.printStackTrace();
+//            System.out.println(e.getMessage());
+//        } finally {
+//            System.out.println("END!.....");
+//        }
+//
+//
+//    }
 }

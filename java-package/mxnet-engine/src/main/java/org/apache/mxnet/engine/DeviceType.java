@@ -11,9 +11,13 @@ public class DeviceType {
      *
      * @param device the java {@link Device}
      * @return the MXNet device number
+     * @exception IllegalArgumentException the device is null or is not supported
      */
     public static int toDeviceType(Device device) {
-        // TODO : bug fix, device is null
+        if (device == null) {
+            throw new IllegalArgumentException("Unsupported device: null");
+        }
+
         String deviceType = device.getDeviceType();
 
         if (Device.Type.CPU.equals(deviceType)) {

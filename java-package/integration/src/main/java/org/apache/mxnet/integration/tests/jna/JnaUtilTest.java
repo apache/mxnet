@@ -36,10 +36,10 @@ public class JnaUtilTest {
             MxNDList mxNDArray = JnaUtils.loadNdArray(
                     base,
                     Paths.get("/Users/cspchen/Downloads/mxnet_resnet18/resnet18_v1-0000.params"),
-                    Device.DEFAULT_DEVICE);
+                    Device.defaultIfNull(null));
 
             CachedOp cachedOp = JnaUtils.createCachedOp(block, base, false);
-            cachedOp.forward(new ParameterStore(base, false, Device.DEFAULT_DEVICE), mxNDArray, false);
+            cachedOp.forward(new ParameterStore(base, false, Device.defaultIfNull(null)), mxNDArray, false);
             System.out.println(base.getSubResource().size());
         } catch (Exception e) {
             e.printStackTrace();
@@ -103,7 +103,7 @@ public class JnaUtilTest {
                 MxNDList mxNDArray = JnaUtils.loadNdArray(
                         base,
                         Paths.get("/Users/cspchen/Downloads/mxnet_resnet18/resnet18_v1-0000.params"),
-                        Device.DEFAULT_DEVICE);
+                        Device.defaultIfNull(null));
 
             System.out.println(base.getSubResource().size());
         }

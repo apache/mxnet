@@ -10,8 +10,7 @@ import java.util.stream.IntStream;
  * <p>The options are:
  *
  * <ul>
- *   <li>{@link LayoutType#BATCH} - Different elements in a batch, usually from a {@link
- *       ai.djl.translate.StackBatchifier}.
+ *   <li>{@link LayoutType#BATCH} - Different elements in a batch
  *   <li>{@link LayoutType#CHANNEL} - Each channel represents a different aspect of the data such as
  *       RGB showing different color channels.
  *   <li>{@link LayoutType#DEPTH} - The depth of a 3-D input

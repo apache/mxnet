@@ -2,6 +2,7 @@ package org.apache.mxnet.nn;
 
 import org.apache.mxnet.engine.CachedOp;
 import org.apache.mxnet.engine.Device;
+import org.apache.mxnet.engine.Model;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.engine.Symbol;
 import org.apache.mxnet.exception.MalformedModelException;
@@ -36,7 +37,7 @@ public class MxSymbolBlock extends MxResource {
     /**
      * All direct parameters of this Block. Keys are name of the parameters.
      *
-     * <p>Use the {@link AbstractBlock#addParameter(Parameter)} method to add children. All
+     * <p>Use the {@link #addParameter(Parameter)} method to add children. All
      * parameters in this map are automatically loaded / saved.
      */
     protected LinkedHashMap<String, Parameter> parameters = new LinkedHashMap<>();
@@ -59,7 +60,7 @@ public class MxSymbolBlock extends MxResource {
     /**
      * Constructs a {@code MxSymbolBlock} for a {@link Symbol}.
      *
-     * <p>You can create a {@code MxSymbolBlock} using {@link ai.djl.Model#load(java.nio.file.Path,
+     * <p>You can create a {@code MxSymbolBlock} using {@link Model#load(java.nio.file.Path,
      * String)}.
      *
      * @param parent the parent MxResource to use for the block

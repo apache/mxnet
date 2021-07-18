@@ -6,6 +6,8 @@ import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.ndarray.types.SparseFormat;
 import org.apache.mxnet.util.PairList;
 
+import java.util.Arrays;
+
 public class MxOpParams extends PairList<String, Object> {
     // mxnet cpu take index
     private static final String MXNET_CPU = "cpu(0)";

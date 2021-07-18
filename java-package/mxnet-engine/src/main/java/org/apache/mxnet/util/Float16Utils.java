@@ -1,6 +1,5 @@
 package org.apache.mxnet.util;
 
-import org.apache.mxnet.ndarray.MxNDArray;
 import org.apache.mxnet.ndarray.MxNDSerializer;
 
 import java.nio.ByteBuffer;

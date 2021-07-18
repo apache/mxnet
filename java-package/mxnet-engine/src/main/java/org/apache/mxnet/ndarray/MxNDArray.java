@@ -97,11 +97,8 @@ public class MxNDArray extends MxResource {
 
     }
     public static MxNDArray create(MxResource parent, Shape shape, DataType dataType, Device device) {
-        if (device == null) {
-            device = Device.defaultDevice();
-        }
         Pointer handle = JnaUtils.createNdArray(device, shape, dataType, shape.dimension(), false);
-        return new MxNDArray(parent, handle, device, shape, dataType, false);
+        return new MxNDArray(parent, handle, Device.defaultIfNull(device), shape, dataType, false);
     }
 
     public String getName() {
@@ -1994,7 +1991,7 @@ public class MxNDArray extends MxResource {
      * @return the drawn samples {@link MxNDArray}
      */
     private static MxNDArray randomUniform(MxResource parent, float low, float high, Shape shape, DataType dataType) {
-        return randomUniform(parent, low, high, shape, dataType, Device.defaultDevice());
+        return randomUniform(parent, low, high, shape, dataType, Device.defaultIfNull(null));
     }
 
     public static MxNDArray randomNormal(
@@ -2010,7 +2007,7 @@ public class MxNDArray extends MxResource {
         params.addParam("loc", loc);
         params.addParam("scale", scale);
         params.addParam("size", shape);
-        params.setDevice(Device.defaultDevice());
+        params.setDevice(Device.defaultIfNull(null));
         params.setDataType(dataType);
         return invoke(parent, "_npi_normal", params);
     }

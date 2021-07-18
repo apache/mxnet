@@ -28,7 +28,7 @@ public final class Device {
 
     private int deviceId;
 
-    public static final Device DEFAULT_DEVICE = CPU;
+    private static final Device DEFAULT_DEVICE = CPU;
 
     /**
      * Creates a {@code Device} with basic information.
@@ -189,7 +189,7 @@ public final class Device {
      *
      * @return a {@link Device}
      */
-    public static Device defaultDevice() {
+    private static Device defaultDevice() {
         return DEFAULT_DEVICE;
     }
 
