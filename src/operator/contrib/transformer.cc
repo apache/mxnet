@@ -648,6 +648,7 @@ void BackwardInterleavedMatMulEncDecValAttCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_interleaved_matmul_selfatt_qk)
+.add_alias("_npx_interleaved_matmul_selfatt_qk")
 .describe(R"code(Compute the matrix multiplication between the projections of
 queries and keys in multihead attention use as self attention.
 
@@ -691,6 +692,7 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_selfatt_qk)
 .set_attr<FCompute>("FCompute<cpu>", BackwardInterleavedMatMulSelfAttQKCPU);
 
 NNVM_REGISTER_OP(_contrib_interleaved_matmul_selfatt_valatt)
+.add_alias("_npx_interleaved_matmul_selfatt_valatt")
 .describe(R"code(Compute the matrix multiplication between the projections of
 values and the attention weights in multihead attention use as self attention.
 
@@ -738,6 +740,7 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_selfatt_valatt)
 .set_attr<FCompute>("FCompute<cpu>", BackwardInterleavedMatMulSelfAttValAttCPU);
 
 NNVM_REGISTER_OP(_contrib_interleaved_matmul_encdec_qk)
+.add_alias("_npx_interleaved_matmul_encdec_qk")
 .describe(R"code(Compute the matrix multiplication between the projections of
 queries and keys in multihead attention use as encoder-decoder.
 
@@ -784,6 +787,7 @@ NNVM_REGISTER_OP(_backward_interleaved_matmul_encdec_qk)
 .set_attr<FCompute>("FCompute<cpu>", BackwardInterleavedMatMulEncDecQKCPU);
 
 NNVM_REGISTER_OP(_contrib_interleaved_matmul_encdec_valatt)
+.add_alias("_npx_interleaved_matmul_encdec_valatt")
 .describe(R"code(Compute the matrix multiplication between the projections of
 values and the attention weights in multihead attention use as encoder-decoder.
 

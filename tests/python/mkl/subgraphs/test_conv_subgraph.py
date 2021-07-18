@@ -289,7 +289,6 @@ def test_pos_single_concat_pos_neg(data_shape, out_type):
 @mx.util.use_np
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('out_type', ['int8', 'auto'])
-@pytest.mark.skip("Scale doesn't align in numpy for numpy operators")
 def test_pos_concat_scale_align(data_shape, out_type):
   # concat scale alignment case
   class ConcatScaleAlign(nn.HybridBlock):

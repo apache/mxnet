@@ -23,6 +23,10 @@
  */
 
 #include "./dot-inl.h"
+#if MXNET_USE_ONEDNN == 1
+#include "./../nn/mkldnn/mkldnn_base-inl.h"
+#include "./../nn/mkldnn/mkldnn_ops-inl.h"
+#endif  // MXNET_USE_ONEDNN
 
 namespace mxnet {
 namespace op {
@@ -111,6 +115,34 @@ NNVM_REGISTER_OP(_backward_dot)
 .set_attr<FComputeEx>("FComputeEx<cpu>", DotBackwardEx<cpu>)
 .add_arguments(DotParam::__FIELDS__());
 
+#if MXNET_USE_ONEDNN == 1
+static void BatchDotComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
+  if (SupportMKLDNNBatchDot(inputs, outputs[0])) {
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    MKLDNNRun(MKLDNNBatchDotForward, attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(BatchDotForward_<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  FallBackCompute(BatchDotForward_<cpu>, attrs, ctx, inputs, req, outputs);
+}
+
+static bool BatchDotStorageType(const nnvm::NodeAttrs& attrs,
+                                const int dev_mask,
+                                DispatchMode* dispatch_mode,
+                                std::vector<int>* in_attrs,
+                                std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2);
+  CHECK_EQ(out_attrs->size(), 1);
+
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
+                           out_attrs);
+}
+#endif
+
 NNVM_REGISTER_OP(batch_dot)
 .add_alias("_npx_batch_dot")
 .describe(R"doc(Batchwise dot product.
@@ -140,6 +172,11 @@ which is computed by::
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", BatchDotForward_<cpu>)
+#if MXNET_USE_ONEDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FInferStorageType>("FInferStorageType", BatchDotStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BatchDotComputeExCPU)
+#endif
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::ObjectPtr& n,
        const std::vector<nnvm::NodeEntry>& ograds) {

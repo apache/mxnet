@@ -29,13 +29,13 @@ def train_lenet_gluon_save_params_api():
     net.initialize(weights, ctx=[mx.cpu(0)])
     # Prepare data
 
-    test_data = mx.nd.array(np.random.uniform(-1, 1, size=(20, 1, 30, 30)))
+    test_data = mx.np.random.uniform(-1, 1, size=(20, 1, 30, 30))
     output = net(test_data)
     # print (y)
 
-    mx.nd.save(os.path.join(get_model_path(model_name), ''.join([model_name, '-data'])), {'data': test_data})
+    mx.npx.savez(os.path.join(get_model_path(model_name), ''.join([model_name, '-data'])), **{'data': test_data})
     save_inference_results(output, model_name)
-    net.save_params(os.path.join(get_model_path(model_name), ''.join([model_name, '-params'])))
+    net.save(os.path.join(get_model_path(model_name), ''.join([model_name, '-params'])))
 
 
 @mx.util.use_np
@@ -55,7 +55,7 @@ def train_lenet_gluon_hybrid_export_api():
     # Save the inference output ys
     # Save the model params
 
-    mx.npx.savez(os.path.join(get_model_path(model_name), ''.join([model_name, '-data'])), {'data': test_data})
+    mx.npx.savez(os.path.join(get_model_path(model_name), ''.join([model_name, '-data'])), **{'data': test_data})
     save_inference_results(output, model_name)
     if compare_versions(str(mxnet_version) , '1.1.0') < 0:
         # v1.0.0 does not have the epoch param in the .exports API. Hence adding this safety net
@@ -81,10 +81,10 @@ def train_lstm_gluon_save_parameters_api():
     weights = mx.initializer.Xavier(magnitude=2.57)
     net.initialize(weights, ctx=[mx.cpu(0)])
 
-    test_data = mx.nd.array(np.random.uniform(-1, 1, size=(10, 30)))
+    test_data = mx.np.array(np.random.uniform(-1, 1, size=(10, 30)))
     output = net(test_data)
     # print output
-    mx.nd.save(os.path.join(get_model_path(model_name), ''.join([model_name, '-data'])), {'data': test_data})
+    mx.npx.savez(os.path.join(get_model_path(model_name), ''.join([model_name, '-data'])), **{'data': test_data})
     save_inference_results(output, model_name)
     net.save_parameters(os.path.join(get_model_path(model_name), ''.join([model_name, '-params'])))
 

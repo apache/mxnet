@@ -875,7 +875,7 @@ def get_cuda_compute_capability(ctx):
         raise ValueError('Expecting a gpu context to get cuda compute capability, '
                          'while received ctx {}'.format(str(ctx)))
 
-    libnames = ('libcuda.so', 'libcuda.dylib', 'cuda.dll')
+    libnames = ('libcuda.so', 'libcuda.dylib', 'nvcuda.dll', 'cuda.dll')
     for libname in libnames:
         try:
             cuda = ctypes.CDLL(libname)
@@ -1176,3 +1176,27 @@ def setenv(name, value):
     """
     passed_value = None if value is None else c_str(value)
     check_call(_LIB.MXSetEnv(c_str(name), passed_value))
+
+
+def get_max_supported_compute_capability():
+    """Get the maximum compute capability (SM arch) supported by the nvrtc compiler
+    """
+    max_supported_cc = ctypes.c_int()
+    check_call(_LIB.MXGetMaxSupportedArch(ctypes.byref(max_supported_cc)))
+    return max_supported_cc.value
+
+
+def get_rtc_compile_opts(ctx):
+    """Get the compile ops suitable for the context, given the toolkit/driver config
+    """
+    device_cc = get_cuda_compute_capability(ctx)
+    max_supported_cc = get_max_supported_compute_capability()
+
+    # CUDA toolkits starting with 11.1 (first to support arch 86) can compile directly to SASS
+    can_compile_to_SASS = max_supported_cc >= 86
+    should_compile_to_SASS = can_compile_to_SASS and \
+                             device_cc <= max_supported_cc
+    device_cc_as_used = min(device_cc, max_supported_cc)
+    arch_opt = "--gpu-architecture={}_{}".format("sm" if should_compile_to_SASS else "compute",
+                                                 device_cc_as_used)
+    return [arch_opt]

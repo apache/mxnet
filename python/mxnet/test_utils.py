@@ -50,6 +50,7 @@ from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
 from .util import use_np, use_np_default_dtype, getenv, setenv  # pylint: disable=unused-import
+from .util import get_max_supported_compute_capability, get_rtc_compile_opts # pylint: disable=unused-import
 from .runtime import Features
 from .numpy_extension import get_cuda_compute_capability
 

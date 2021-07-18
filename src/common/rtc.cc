@@ -44,8 +44,8 @@ CudaModule::Chunk::Chunk(
       << "For lower version of CUDA, please prepend your kernel defintiions "
       << "with extern \"C\" instead.";
 #endif
-  std::vector<const char*> c_options(options.size());
-  for (const auto& i : options) c_options.emplace_back(i.c_str());
+  std::vector<const char*> c_options;
+  for (const auto& i : options) c_options.push_back(i.c_str());
   nvrtcResult compile_res = nvrtcCompileProgram(prog_, c_options.size(), c_options.data());
   if (compile_res != NVRTC_SUCCESS) {
     size_t err_size;

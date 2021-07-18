@@ -360,10 +360,17 @@ void seq_reduce_compute(const size_t N, const size_t M, const bool addto,
                         const Shape<ndim> sshape, const Shape<ndim> rshape,
                         const Shape<ndim> rstride) {
   const int thread_count = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-  #pragma omp parallel for num_threads(thread_count) if (N >= thread_count)
-  for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
-    seq_reduce_assign<Reducer, ndim, AType, DType, OType, OP, IndexOP>
-        (idx, M, addto, big, small, bshape, sshape, rshape, rstride, N < thread_count);
+  if (N >= thread_count) {
+    #pragma omp parallel for num_threads(thread_count)
+    for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
+      seq_reduce_assign<Reducer, ndim, AType, DType, OType, OP, IndexOP>
+          (idx, M, addto, big, small, bshape, sshape, rshape, rstride, false);
+    }
+  } else {
+    for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
+      seq_reduce_assign<Reducer, ndim, AType, DType, OType, OP, IndexOP>
+          (idx, M, addto, big, small, bshape, sshape, rshape, rstride, true);
+    }
   }
 }
 

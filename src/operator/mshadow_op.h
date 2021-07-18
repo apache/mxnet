@@ -413,7 +413,7 @@ MXNET_UNARY_MATH_OP(sigmoid_grad, math::id(a) * (1.0f - math::id(a)));
 
 MXNET_UNARY_MATH_OP(log_sigmoid, math::log(1.0f / (1.0f + math::exp(-a))));
 
-MXNET_UNARY_MATH_OP(log_sigmoid_grad, 1.0f / (1.0f + math::exp(a)));
+MXNET_UNARY_MATH_OP(log_sigmoid_grad, 1.0f - math::exp(a));
 
 struct mish : public mxnet_op::tunable {
   template<typename DType>
