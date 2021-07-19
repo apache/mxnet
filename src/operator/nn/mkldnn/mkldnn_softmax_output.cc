@@ -84,7 +84,7 @@ static MKLDNNSoftmaxOutputFwd& GetSoftmaxOutputForward(const SoftmaxOutputParam&
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    auto in_mem = *(in_data.GetMKLDNNData());
+    auto in_mem = *(static_cast<const mkldnn::memory*>(in_data.GetMKLDNNData()));
     MKLDNNSoftmaxOutputFwd fwd(param, ctx.is_train, axis, in_mem);
     it = AddToCache(&fwds, key, fwd);
   }
@@ -109,7 +109,7 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
     idata = in_data[softmaxout_enum::kData].Reorder2Default();
   }
 
-  auto input_mem = idata.GetMKLDNNData();
+  auto input_mem = static_cast<const mkldnn::memory*>(idata.GetMKLDNNData());
   auto out_mem   = CreateMKLDNNMem(
       out_data[softmaxout_enum::kOut], input_mem->get_desc(), req[softmaxout_enum::kOut]);
 

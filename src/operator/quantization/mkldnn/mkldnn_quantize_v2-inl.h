@@ -81,13 +81,14 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
       }
     }
     if (req[0] != kWriteInplace) {
-      const_cast<NDArray&>(outputs[0]).CopyFrom(*inputs[0].GetMKLDNNData());
+      const_cast<NDArray&>(outputs[0])
+          .CopyFrom(static_cast<const mkldnn::memory*>(inputs[0].GetMKLDNNData()));
       MKLDNNStream::Get()->Submit();
     }
   } else {
     if (in_buffer.IsView() && in_buffer.IsMKLDNNData())
       in_buffer = inputs[0].Reorder2Default();
-    auto i_mem = in_buffer.GetMKLDNNData();
+    auto i_mem = static_cast<const mkldnn::memory*>(in_buffer.GetMKLDNNData());
 
     if (param_.min_calib_range.has_value() && param_.max_calib_range.has_value()) {
       data_min = param_.min_calib_range.value();

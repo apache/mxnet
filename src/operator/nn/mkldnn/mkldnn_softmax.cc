@@ -62,8 +62,7 @@ bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray& data, const 
   const int axis      = CheckAxis(param.axis, ndim);
   // MKLDNN does not support temperature argument in their softmax function
   // now. Need update this once they start to support it.
-  // Currently, MKLDNN shows bad performance when softmax is not performed on
-  // the last dimension
+  // Currently, MKLDNN shows bad performance when softmax is not performed on the last dimension
   if (param.temperature.has_value() || in_dtype != mshadow::kFloat32 || in_dtype != out_dtype ||
       axis != (ndim - 1)) {
     return false;
@@ -111,7 +110,8 @@ static MKLDNNSoftmaxFwd& GetSoftmaxFwd(const SoftmaxParam& param,
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    MKLDNNSoftmaxFwd fwd(is_train, real_axis, *(data.GetMKLDNNData()));
+    MKLDNNSoftmaxFwd fwd(
+        is_train, real_axis, *(static_cast<const mkldnn::memory*>(data.GetMKLDNNData())));
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
@@ -124,16 +124,16 @@ void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
                           const NDArray& out_data) {
   if (req == kNullOp)
     return;
-  // same as the FCompute path, softmax only supports kWriteTo and kWriteInplace
-  // for now.
+  // same as the FCompute path, softmax only supports kWriteTo and kWriteInplace for now.
   CHECK_NE(req, kAddTo);
 
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis                  = CheckAxis(param.axis, in_data.shape().ndim());
   auto fwd                  = GetSoftmaxFwd(param, axis, ctx.is_train, in_data, out_data);
 
-  auto in_mem          = in_data.GetMKLDNNData();
-  auto out_mem         = out_data.GetMKLDNNData(fwd.pd.dst_desc());
+  auto in_mem          = static_cast<const mkldnn::memory*>(in_data.GetMKLDNNData());
+  auto fwd_desc        = fwd.pd.dst_desc();
+  auto out_mem         = static_cast<const mkldnn::memory*>(out_data.GetMKLDNNData(&fwd_desc));
   MKLDNNStream* stream = MKLDNNStream::Get();
   stream->RegisterPrimArgs(fwd.GetFwd(), {{MKLDNN_ARG_SRC, *in_mem}, {MKLDNN_ARG_DST, *out_mem}});
   stream->Submit();
@@ -176,8 +176,8 @@ static MKLDNNSoftmaxBwd& GetSoftmaxBwd(const SoftmaxParam& param,
 
   auto it = bwds.find(key);
   if (it == bwds.end()) {
-    auto diff_mem = data[0].GetMKLDNNData();
-    auto data_mem = data[1].GetMKLDNNData();
+    auto diff_mem = static_cast<const mkldnn::memory*>(data[0].GetMKLDNNData());
+    auto data_mem = static_cast<const mkldnn::memory*>(data[1].GetMKLDNNData());
     auto fwd_pd   = GetSoftmaxFwdPd(true, real_axis, *data_mem);
     MKLDNNSoftmaxBwd bwd(*diff_mem, *data_mem, real_axis, fwd_pd);
     it = AddToCache(&bwds, key, bwd);
@@ -195,8 +195,8 @@ void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_data.size(), 2U);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis                  = CheckAxis(param.axis, in_data[1].shape().ndim());
-  auto diff_mem             = in_data[0].GetMKLDNNData();
-  auto data_mem             = in_data[1].GetMKLDNNData();
+  auto diff_mem             = static_cast<const mkldnn::memory*>(in_data[0].GetMKLDNNData());
+  auto data_mem             = static_cast<const mkldnn::memory*>(in_data[1].GetMKLDNNData());
   auto bwd                  = GetSoftmaxBwd(param, axis, in_data, out_data);
 
   auto out_mem           = CreateMKLDNNMem(out_data[0], bwd.pd.diff_src_desc(), req[0]);

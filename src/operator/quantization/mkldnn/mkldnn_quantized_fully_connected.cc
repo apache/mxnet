@@ -91,17 +91,20 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
   auto& fwd =
       GetFCFwd(param, is_train, data, weight, param.no_bias ? nullptr : &quantized_bias, out_md);
 
-  auto data_mem = in_data[fullc::kData].GetMKLDNNDataReorder(fwd.fwd_pd.src_desc());
+  auto fwd_src_desc = fwd.fwd_pd.src_desc();
+  auto data_mem =
+      static_cast<const mkldnn::memory*>(in_data[fullc::kData].GetMKLDNNDataReorder(&fwd_src_desc));
   const mkldnn::memory* weight_mem = nullptr;
 
   if (weight.IsDefaultData()) {
     // We also need to modify the layout on the original weight array.
     // Don't switch below sequence because naive engine will executes
     // pushAsync synchronously.
-    weight.MKLDNNDataReorderAsync(fwd.fwd_pd.weights_desc());
+    auto fwd_weight_desc = fwd.fwd_pd.weights_desc();
+    weight.MKLDNNDataReorderAsync(&fwd_weight_desc);
     weight_mem = GetWeights(weight, fwd.fwd_pd.weights_desc(), 1);
   } else {
-    weight_mem = weight.GetMKLDNNData();
+    weight_mem = static_cast<const mkldnn::memory*>(weight.GetMKLDNNData());
     CHECK(weight_mem->get_desc() == fwd.fwd_pd.weights_desc());
   }
   auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut], fwd.fwd_pd.dst_desc(), req[fullc::kOut]);
@@ -114,7 +117,9 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
 
   const mkldnn::memory* bias_mem = nullptr;
   if (!param.no_bias) {
-    bias_mem              = quantized_bias.GetMKLDNNDataReorder(fwd.fwd_pd.bias_desc());
+    auto fwd_bias_desc = fwd.fwd_pd.bias_desc();
+    bias_mem =
+        static_cast<const mkldnn::memory*>(quantized_bias.GetMKLDNNDataReorder(&fwd_bias_desc));
     args[MKLDNN_ARG_BIAS] = *bias_mem;
   }
 

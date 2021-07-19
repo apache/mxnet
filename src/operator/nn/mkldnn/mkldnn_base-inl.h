@@ -175,8 +175,7 @@ static inline int GetMKLDNNCacheSize() {
   return mkldnn_cache_size;
 }
 
-// TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size
-// during runtime
+// TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
 template <typename S, typename I, typename H>
 static typename std::unordered_map<S, I, H>::iterator AddToCache(std::unordered_map<S, I, H>* cache,
                                                                  const S& key,
@@ -227,7 +226,8 @@ static int GetTypeSize(int dtype) {
 
 static inline size_t GetArraySize(const NDArray& arr) {
   if (arr.IsMKLDNNData()) {
-    return arr.GetMKLDNNData()->get_desc().get_size();
+    auto arr_data = static_cast<const mkldnn::memory*>(arr.GetMKLDNNData());
+    return arr_data->get_desc().get_size();
   }
   return arr.shape().Size() * GetTypeSize(arr.dtype());
 }
@@ -540,8 +540,7 @@ static inline void InvalidateOutputs(const std::vector<NDArray>& arrs,
   }
 }
 
-// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature
-// added
+// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature added
 static inline void CreateDefaultInputs(const std::vector<NDArray>& arrs,
                                        std::vector<NDArray>* out_arrs) {
   out_arrs->clear();

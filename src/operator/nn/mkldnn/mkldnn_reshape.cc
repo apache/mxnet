@@ -36,7 +36,7 @@ MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType& req,
                                    const NDArray& input,
                                    const NDArray& output) {
   const auto engine = CpuEngine::Get()->get_engine();
-  auto in_mem       = input.GetMKLDNNData();
+  auto in_mem       = static_cast<const mkldnn::memory*>(input.GetMKLDNNData());
 
   // Create temp memory
   auto temp_dims = mkldnn::memory::dims(input.shape().begin(), input.shape().end());
@@ -71,18 +71,22 @@ void MKLDNNReshapeFwd::Execute(const NDArray& input,
                                const OpReqType& req,
                                void* workspace) {
   auto stream = MKLDNNStream::Get();
-  auto in_mem = input.GetMKLDNNData();
+  auto in_mem = static_cast<const mkldnn::memory*>(input.GetMKLDNNData());
   // register primitives and arguments
   std::vector<mkldnn_args_map_t> args_map;
   size_t prims_size = prims_.size();
   if (prims_size == 1) {
-    args_map.push_back({{MKLDNN_ARG_FROM, *in_mem}, {MKLDNN_ARG_TO, *output.GetMKLDNNData()}});
+    args_map.push_back(
+        {{MKLDNN_ARG_FROM, *in_mem},
+         {MKLDNN_ARG_TO, *static_cast<const mkldnn::memory*>(output.GetMKLDNNData())}});
   } else if (prims_size == 2) {
     if (workspace) {
       temp_->set_data_handle(workspace);
     }
     args_map.push_back({{MKLDNN_ARG_FROM, *in_mem}, {MKLDNN_ARG_TO, *temp_}});
-    args_map.push_back({{MKLDNN_ARG_FROM, *temp_}, {MKLDNN_ARG_TO, *output.GetMKLDNNData()}});
+    args_map.push_back(
+        {{MKLDNN_ARG_FROM, *temp_},
+         {MKLDNN_ARG_TO, *static_cast<const mkldnn::memory*>(output.GetMKLDNNData())}});
   } else {
     CHECK(prims_size == 0 && req != kWriteTo) << "kWriteTo should never reach here.";
   }
@@ -120,8 +124,8 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const NDArray& input,
                           const OpReqType& req,
                           const NDArray& output) {
-  // For mkldnn non-supported input, it shouldn't hold mkldnn memory, so let's
-  // simply fallback to naive implement.
+  // For mkldnn non-supported input, it shouldn't hold mkldnn memory, so let's simply fallback to
+  // naive implement.
   const int input_ndims = input.shape().ndim();
   if ((input_ndims < 1 || input_ndims > 4) || !SupportMKLDNNQuantize(input.dtype())) {
     if (req != kWriteInplace) {

@@ -109,8 +109,10 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
   const float dataA_absmax = MaxAbs(dataA_min, dataA_max);
   const float dataB_absmax = MaxAbs(dataB_min, dataB_max);
 
-  auto dataA_mem = in_data[quantized_elemwise_add_enum::kDataA].GetMKLDNNData();
-  auto dataB_mem = in_data[quantized_elemwise_add_enum::kDataB].GetMKLDNNData();
+  auto dataA_mem = static_cast<const mkldnn::memory*>(
+      in_data[quantized_elemwise_add_enum::kDataA].GetMKLDNNData());
+  auto dataB_mem = static_cast<const mkldnn::memory*>(
+      in_data[quantized_elemwise_add_enum::kDataB].GetMKLDNNData());
   const bool is_dataA_int8 =
       (in_data[quantized_elemwise_add_enum::kDataA].dtype() == mshadow::kInt8);
   const float dataA_range = is_dataA_int8 ? kInt8Range : kUint8Range;

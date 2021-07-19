@@ -66,7 +66,7 @@ class MKLDNNTransposeForward {
     }
 
     auto engine = CpuEngine::Get()->get_engine();
-    auto in_mem = data.GetMKLDNNData();
+    auto in_mem = static_cast<const mkldnn::memory*>(data.GetMKLDNNData());
     auto src_md = in_mem->get_desc();
     data_       = std::make_shared<mkldnn::memory>(src_md, engine, nullptr);
 
@@ -90,7 +90,8 @@ class MKLDNNTransposeForward {
 
   void SetNewMem(const NDArray& data, const NDArray& output) {
     if (data.IsMKLDNNData()) {
-      this->data_->set_data_handle(data.GetMKLDNNData()->get_data_handle());
+      this->data_->set_data_handle(
+          static_cast<const mkldnn::memory*>(data.GetMKLDNNData())->get_data_handle());
     } else {
       MSHADOW_TYPE_SWITCH(
           data.dtype(), DTYPE, { this->data_->set_data_handle(data.data().dptr<DTYPE>()); });

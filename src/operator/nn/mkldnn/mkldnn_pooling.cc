@@ -42,8 +42,8 @@ void MKLDNNPoolingFwd::Init(const mxnet::NDArray& input,
                             const mkldnn::memory::dims& pad_r,
                             const bool is_train,
                             const mkldnn::algorithm alg_kind) {
-  const auto src_md           = input.GetMKLDNNData()->get_desc();
-  const auto dst_md           = GetMemDesc(output);
+  const auto src_md = static_cast<const mkldnn::memory*>(input.GetMKLDNNData())->get_desc();
+  const auto dst_md = GetMemDesc(output);
   const mkldnn::engine engine = CpuEngine::Get()->get_engine();
   if (alg_kind != mkldnn::algorithm::pooling_max && alg_kind != mkldnn::algorithm::pooling_avg &&
       alg_kind != mkldnn::algorithm::pooling_avg_include_padding &&
@@ -75,7 +75,7 @@ void MKLDNNPoolingFwd::Execute(const NDArray& in_data,
   if (in_data.IsView() && in_data.IsMKLDNNData())
     in_buffer = in_data.Reorder2Default();
 
-  auto input_mem     = in_buffer.GetMKLDNNData();
+  auto input_mem     = static_cast<const mkldnn::memory*>(in_buffer.GetMKLDNNData());
   auto output_mem_t_ = CreateMKLDNNMem(out_data, this->fwd_pd_->dst_desc(), req);
 
   mkldnn_args_map_t args = {
@@ -91,7 +91,11 @@ void MKLDNNPoolingFwd::Execute(const NDArray& in_data,
     }
 
     auto ws = std::make_shared<mkldnn::memory>(
-        (*(this->fwd_pd_)).workspace_desc(), engine, workspace->GetMKLDNNData()->get_data_handle());
+        (*(this->fwd_pd_)).workspace_desc(),
+        engine,
+        static_cast<const mkldnn::memory*>(
+            static_cast<const mkldnn::memory*>(workspace->GetMKLDNNData()))
+            ->get_data_handle());
     args[MKLDNN_ARG_WORKSPACE] = *ws;
   }
   if (this->fwd_) {
@@ -231,7 +235,7 @@ MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param,
   if (it == pooling_fwds.end()) {
     CHECK(param.kernel.ndim() == 1 || param.kernel.ndim() == 2 || param.kernel.ndim() == 3)
         << "Not Implemented";
-    auto data_md = data.GetMKLDNNData()->get_desc();
+    auto data_md = static_cast<const mkldnn::memory*>(data.GetMKLDNNData())->get_desc();
 
     const auto kernel_ndims = param.kernel.ndim();
     mkldnn::memory::dims kernel(kernel_ndims);
@@ -288,7 +292,7 @@ MKLDNNPoolingBwd& GetPoolingBwd(const PoolingParam& param,
 
   auto it = pooling_bwds.find(key);
   if (it == pooling_bwds.end()) {
-    auto input_mem                     = in_data.GetMKLDNNData();
+    auto input_mem = static_cast<const mkldnn::memory*>(in_data.GetMKLDNNData());
     const mkldnn::memory::desc data_md = input_mem->get_desc();
 
     auto dst_dims = mkldnn::memory::dims(out_grad.shape().begin(), out_grad.shape().end());
@@ -302,7 +306,8 @@ MKLDNNPoolingBwd& GetPoolingBwd(const PoolingParam& param,
     auto diff_src_dims = mkldnn::memory::dims(in_grad.shape().begin(), in_grad.shape().end());
     auto diff_src_md   = mkldnn::memory::desc(diff_src_dims, get_data_type(data_md), any);
     auto cpu_engine    = CpuEngine::Get()->get_engine();
-    auto alg           = GetMKLDNNPoolAlgo(param);
+    ;
+    auto alg = GetMKLDNNPoolAlgo(param);
 
     const int kernel_ndims = param.kernel.ndim();
     mkldnn::memory::dims kernel(kernel_ndims);
@@ -337,14 +342,16 @@ void MKLDNNPoolingGradCompute(const OpContext& ctx,
   TmpMemMgr::Get()->Init(ctx.requested[0]);
 
   auto& bwd              = GetPoolingBwd(param, in_data, in_grad, out_grad);
-  auto diff_dst_mem      = out_grad.GetMKLDNNDataReorder(bwd.pd.diff_dst_desc());
+  auto bwd_diff_dst_desc = bwd.pd.diff_dst_desc();
+  auto diff_dst_mem =
+      static_cast<const mkldnn::memory*>(out_grad.GetMKLDNNDataReorder(&bwd_diff_dst_desc));
   auto diff_src_mem      = CreateMKLDNNMem(in_grad, bwd.pd.diff_src_desc(), req);
   mkldnn_args_map_t args = {
       {MKLDNN_ARG_DIFF_DST, *diff_dst_mem},
       {MKLDNN_ARG_DIFF_SRC, *diff_src_mem.second},
   };
   if (MKLDNNRequireWorkspace(param) && workspace != nullptr) {
-    args[MKLDNN_ARG_WORKSPACE] = *(workspace->GetMKLDNNData());
+    args[MKLDNN_ARG_WORKSPACE] = *(static_cast<const mkldnn::memory*>(workspace->GetMKLDNNData()));
   }
 
   MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), args);

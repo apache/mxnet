@@ -425,8 +425,7 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
   return CreateNodeEntries(p);
 }
 
-// quick helper to make gradient nodes that simply pass back zero. could be used
-// in output ops.
+// quick helper to make gradient nodes that simply pass back zero. could be used in output ops.
 inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(const nnvm::ObjectPtr& n,
                                                       const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> ret;
@@ -614,7 +613,8 @@ class OpSignature {
   void AddSign(const NDArray& arr) {
 #if MXNET_USE_MKLDNN == 1
     if (arr.IsMKLDNNData()) {
-      AddSign(*(arr.GetMKLDNNData()));
+      auto arr_data = static_cast<const mkldnn::memory*>(arr.GetMKLDNNData());
+      AddSign(*(arr_data));
     } else {
 #endif
       hash = hash * 2 + arr.dtype();

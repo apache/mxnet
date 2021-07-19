@@ -176,11 +176,13 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs& attrs,
   NDArray& data = in_data[batchnorm::kData];
   if (data.IsMKLDNNData() && data.IsView())
     data = data.Reorder2Default();
-  auto data_mem = data.GetMKLDNNData();
+  auto data_mem = static_cast<const mkldnn::memory*>(data.GetMKLDNNData());
   auto& fwd     = GetBNForward<DType>(param, ctx, data_mem, flags);
 
   // for output memory
-  auto out_mem = const_cast<NDArray&>(out).CreateMKLDNNData(fwd.GetPd().dst_desc());
+  auto fwd_dst_desc = fwd.GetPd().dst_desc();
+  auto out_mem =
+      static_cast<mkldnn::memory*>(const_cast<NDArray&>(out).CreateMKLDNNData(&fwd_dst_desc));
 
   // mxnet will always use scale shift.
   // But if fix_gamma is true, then all scale elements will be set to 1.0f
@@ -226,7 +228,9 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs& attrs,
         LOG(FATAL) << "MKLDNN BatchNorm: incorrect workspace input";
       }
       auto ws = std::make_shared<mkldnn::memory>(
-          fwd.GetPd().workspace_desc(), engine, workspace->GetMKLDNNData()->get_data_handle());
+          fwd.GetPd().workspace_desc(),
+          engine,
+          static_cast<const mkldnn::memory*>(workspace->GetMKLDNNData())->get_data_handle());
       net_args[MKLDNN_ARG_WORKSPACE] = *ws;
     }
     if (!ctx.is_train || param.use_global_stats) {
@@ -239,15 +243,17 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs& attrs,
         omean[i] = inmean[i];
         ovar[i]  = VARIANCE_TO_INVSTD(invar[i], param.eps);
       }
-      net_args[MKLDNN_ARG_MEAN]     = *(aux_states[batchnorm::kMovingMean].GetMKLDNNData());
-      net_args[MKLDNN_ARG_VARIANCE] = *(aux_states[batchnorm::kMovingVar].GetMKLDNNData());
+      net_args[MKLDNN_ARG_MEAN] =
+          *(static_cast<const mkldnn::memory*>(aux_states[batchnorm::kMovingMean].GetMKLDNNData()));
+      net_args[MKLDNN_ARG_VARIANCE] =
+          *(static_cast<const mkldnn::memory*>(aux_states[batchnorm::kMovingVar].GetMKLDNNData()));
       MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       MKLDNNStream::Get()->Submit();
     } else {  // training
-      const NDArray& outMean        = outputs[batchnorm::kMean];
-      const NDArray& outVar         = outputs[batchnorm::kVar];
-      net_args[MKLDNN_ARG_MEAN]     = *(outMean.GetMKLDNNData());
-      net_args[MKLDNN_ARG_VARIANCE] = *(outVar.GetMKLDNNData());
+      const NDArray& outMean    = outputs[batchnorm::kMean];
+      const NDArray& outVar     = outputs[batchnorm::kVar];
+      net_args[MKLDNN_ARG_MEAN] = *(static_cast<const mkldnn::memory*>(outMean.GetMKLDNNData()));
+      net_args[MKLDNN_ARG_VARIANCE] = *(static_cast<const mkldnn::memory*>(outVar.GetMKLDNNData()));
       MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       MKLDNNStream::Get()->Submit();
 
@@ -374,14 +380,17 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs& attrs,
     gradIn = gradIn.Reshape(new_shape);
   }
 
-  auto data_mem = data.GetMKLDNNData();
-  auto diff_mem = diff.GetMKLDNNData();
+  auto data_mem = static_cast<const mkldnn::memory*>(data.GetMKLDNNData());
+  auto diff_mem = static_cast<const mkldnn::memory*>(diff.GetMKLDNNData());
   // MKLDNN batchnorm should run on special layouts. If one of them isn't, we
   // should reorder them.
-  if (data.IsDefaultData())
-    data_mem = data.GetMKLDNNDataReorder(diff_mem->get_desc());
-  else if (diff.IsDefaultData())
-    diff_mem = diff.GetMKLDNNDataReorder(data_mem->get_desc());
+  if (data.IsDefaultData()) {
+    auto diff_desc = diff_mem->get_desc();
+    data_mem       = static_cast<const mkldnn::memory*>(data.GetMKLDNNDataReorder(&diff_desc));
+  } else if (diff.IsDefaultData()) {
+    auto data_mem_desc = data_mem->get_desc();
+    diff_mem = static_cast<const mkldnn::memory*>(diff.GetMKLDNNDataReorder(&data_mem_desc));
+  }
   auto& bwd = GetBNBackward<DType>(param, ctx, data, *data_mem, diff, *diff_mem, flags);
   auto gradi_mem =
       CreateMKLDNNMem(const_cast<NDArray&>(gradIn), bwd.pd.diff_src_desc(), req[batchnorm::kData]);
@@ -414,7 +423,8 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs& attrs,
       const NDArray* workspace = nullptr;
       workspace                = &inputs[8];
       if (workspace != nullptr) {
-        net_args[MKLDNN_ARG_WORKSPACE] = *(workspace->GetMKLDNNData());
+        net_args[MKLDNN_ARG_WORKSPACE] =
+            *(static_cast<const mkldnn::memory*>(workspace->GetMKLDNNData()));
       }
     }
 
@@ -434,11 +444,13 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs& attrs,
         tmp_var_ptr[i]     = variance;
         moving_var_ptr[i]  = moving_var_ptr[i] * param.momentum + variance * minus_mom;
       }
-      net_args[MKLDNN_ARG_MEAN]     = *(out_mean.GetMKLDNNData());
+      net_args[MKLDNN_ARG_MEAN] = *(static_cast<const mkldnn::memory*>(out_mean.GetMKLDNNData()));
       net_args[MKLDNN_ARG_VARIANCE] = var_mem;
     } else {
-      net_args[MKLDNN_ARG_MEAN]     = *(moving_mean.GetMKLDNNData());
-      net_args[MKLDNN_ARG_VARIANCE] = *(moving_var.GetMKLDNNData());
+      net_args[MKLDNN_ARG_MEAN] =
+          *(static_cast<const mkldnn::memory*>(moving_mean.GetMKLDNNData()));
+      net_args[MKLDNN_ARG_VARIANCE] =
+          *(static_cast<const mkldnn::memory*>(moving_var.GetMKLDNNData()));
     }
     MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
     CommitOutput(gradIn, gradi_mem);

@@ -49,8 +49,13 @@ MKLDNNSliceFwd::MKLDNNSliceFwd(const SliceParam& param, const NDArray& in, const
     offsets[i] = s;
   }
 
+<<<<<<< HEAD
   auto in_md  = in.GetMKLDNNData()->get_desc();
   auto out_md = out.GetMKLDNNData()->get_desc();
+=======
+  auto in_md  = static_cast<const mkldnn::memory*>(in.GetMKLDNNData())->get_desc();
+  auto out_md = static_cast<const mkldnn::memory*>(out.GetMKLDNNData())->get_desc();
+>>>>>>> 5b414c93e (NDArry file has been modified, there are a few chnages:)
   auto sub_md = in_md.submemory_desc(dims, offsets);
 
   auto engine = CpuEngine::Get()->get_engine();
@@ -98,8 +103,8 @@ void MKLDNNSlice(const nnvm::NodeAttrs& attrs,
                  const NDArray& out) {
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   MKLDNNSliceFwd& fwd     = GetSliceForward(param, ctx.is_train, in, out);
-  auto in_mem             = in.GetMKLDNNData();
-  auto out_md             = out.GetMKLDNNData()->get_desc();
+  auto in_mem             = static_cast<const mkldnn::memory*>(in.GetMKLDNNData());
+  auto out_md             = static_cast<const mkldnn::memory*>(out.GetMKLDNNData())->get_desc();
   auto out_mem            = CreateMKLDNNMem(out, out_md, req);
   fwd.SetNewMem(*in_mem, *out_mem.second);
   fwd.Register();

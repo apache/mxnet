@@ -159,9 +159,12 @@ void MKLDNNMemoryCopy(const mkldnn::memory& mem, const mkldnn::memory* this_mem)
 }
 
 bool CanWriteTo(const NDArray& out_arr, const NDArray& in_arr, const mkldnn::memory::desc& desc) {
-  auto in_mem     = in_arr.GetMKLDNNData();
-  bool add_same   = in_mem->get_data_handle() == out_arr.GetMKLDNNData()->get_data_handle();
-  bool pdesc_same = out_arr.GetMKLDNNData()->get_desc() == desc && in_mem->get_desc() == desc;
+  auto in_mem   = static_cast<const mkldnn::memory*>(in_arr.GetMKLDNNData());
+  bool add_same = in_mem->get_data_handle() ==
+                  static_cast<const mkldnn::memory*>(out_arr.GetMKLDNNData())->get_data_handle();
+  bool pdesc_same =
+      static_cast<const mkldnn::memory*>(out_arr.GetMKLDNNData())->get_desc() == desc &&
+      in_mem->get_desc() == desc;
   return add_same && pdesc_same;
 }
 
@@ -173,7 +176,8 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray& out_arr,
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::AddBack, tmp);
   } else if (kWriteInplace == req && in_arr != nullptr && CanWriteTo(out_arr, *in_arr, desc)) {
-    mkldnn::memory* mem = const_cast<NDArray&>(out_arr).CreateMKLDNNData(desc);
+    mkldnn::memory* mem =
+        static_cast<mkldnn::memory*>(const_cast<NDArray&>(out_arr).CreateMKLDNNData(&desc));
     // mem is nullptr if out_arr is view and desc is MKLDNN format.
     // need to Reorder2Default before calling CreateMKLDNNMem
     CHECK(mem != nullptr);
@@ -182,7 +186,8 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray& out_arr,
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::CopyBack, tmp);
   } else if (kWriteTo == req) {
-    mkldnn::memory* mem = const_cast<NDArray&>(out_arr).CreateMKLDNNData(desc);
+    mkldnn::memory* mem =
+        static_cast<mkldnn::memory*>(const_cast<NDArray&>(out_arr).CreateMKLDNNData(&desc));
     if (nullptr == mem) {
       auto tmp = TmpMemMgr::Get()->Alloc(desc);
       return mkldnn_output_t(OutDataOp::CopyBack, tmp);
@@ -205,7 +210,7 @@ mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray& out_arr,
   } else {
     mkldnn::memory* mem = nullptr;
     if (IsDefaultFormat(desc)) {
-      mem = const_cast<NDArray&>(out_arr).CreateMKLDNNData(desc);
+      mem = static_cast<mkldnn::memory*>(const_cast<NDArray&>(out_arr).CreateMKLDNNData(&desc));
     }
     if (mem == nullptr) {
       auto tmp = TmpMemMgr::Get()->Alloc(desc);
@@ -218,16 +223,17 @@ mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray& out_arr,
 
 void CommitOutput(const NDArray& arr, const mkldnn_output_t& res) {
   if (res.first == CopyBack) {
-    const_cast<NDArray&>(arr).CopyFrom(*res.second);
+    const_cast<NDArray&>(arr).CopyFrom(res.second);
   } else if (res.first == AddBack) {
     auto res_memory = res.second;
-    auto target_pd  = arr.GetMKLDNNData()->get_desc();
-    auto mem        = arr.GetMKLDNNData(res.second->get_desc());
+    auto target_pd  = static_cast<const mkldnn::memory*>(arr.GetMKLDNNData())->get_desc();
+    auto res_desc   = res.second->get_desc();
+    auto mem        = static_cast<const mkldnn::memory*>(arr.GetMKLDNNData(&res_desc));
     if (mem == nullptr) {
       auto tmp_memory = TmpMemMgr::Get()->Alloc(target_pd);
       MKLDNNMemoryCopy(*res_memory, tmp_memory);
       res_memory = tmp_memory;
-      mem        = arr.GetMKLDNNData();
+      mem        = static_cast<const mkldnn::memory*>(arr.GetMKLDNNData());
     }
     op::MKLDNNSum(*mem, *res_memory, *mem);
   }
@@ -283,22 +289,24 @@ const mkldnn::memory* GetWeights(const NDArray& arr, int num_groups) {
     LOG(FATAL) << "The weight array has an unsupported number of dimensions";
   }
   const auto md = mkldnn::memory::desc{tz, type, format_tag};
-  return arr.GetMKLDNNData(md);
+  return static_cast<const mkldnn::memory*>(arr.GetMKLDNNData(&md));
 }
 
 const mkldnn::memory* GetWeights(const NDArray& arr,
                                  const mkldnn::memory::desc& target_desc,
                                  int num_groups) {
-  const mkldnn::memory* mem = arr.GetMKLDNNData(target_desc);
-  // If the weight array already uses the target layout, simply return it
-  // directly.
-  if (mem)
+  const mkldnn::memory* mem = static_cast<const mkldnn::memory*>(arr.GetMKLDNNData(&target_desc));
+  // If the weight array already uses the target layout, simply return it directly.
+  if (mem) {
     return mem;
+  }
   mem = GetWeights(arr, num_groups);
-  if (mem == nullptr)
-    mem = arr.GetMKLDNNDataReorder(target_desc);
-  if (mem->get_desc() == target_desc)
+  if (mem == nullptr) {
+    mem = static_cast<const mkldnn::memory*>(arr.GetMKLDNNDataReorder(&target_desc));
+  }
+  if (mem->get_desc() == target_desc) {
     return mem;
+  }
 
   auto ret = TmpMemMgr::Get()->Alloc(target_desc);
   std::unordered_map<int, mkldnn::memory> args({{MKLDNN_ARG_FROM, *mem}, {MKLDNN_ARG_TO, *ret}});
@@ -307,8 +315,7 @@ const mkldnn::memory* GetWeights(const NDArray& arr,
 }
 
 // default: block and dims' stride increase monotonically
-// mkldnn: 1.winograd 2.rnn packed 3. block and dims'stride is not increase
-// monotonically
+// mkldnn: 1.winograd 2.rnn packed 3. block and dims'stride is not increase monotonically
 bool IsMKLDNN(const mkldnn::memory::desc& desc) {
   bool rslt = true;
   if (desc.data.format_kind == mkldnn_blocked) {
@@ -454,8 +461,8 @@ void FallBackCompute(Compute fn,
   fn(attrs_states, ctx, in_blobs, new_req, out_blobs);
   for (size_t i = 0, bf16_pos = 0; i < out_blobs.size(); i++) {
     if (outputs[i].dtype() == mshadow::kBfloat16) {
-      auto src_mem = temp_bf16_src[bf16_pos].GetMKLDNNData();
-      auto dst_mem = temp_bf16_dst[bf16_pos].GetMKLDNNData();
+      auto src_mem = static_cast<const mkldnn::memory*>(temp_bf16_src[bf16_pos].GetMKLDNNData());
+      auto dst_mem = static_cast<const mkldnn::memory*>(temp_bf16_dst[bf16_pos].GetMKLDNNData());
       bf16_pos++;
       ReorderTo(src_mem, dst_mem);
     } else if (req[i] == kAddTo && outputs[i].IsMKLDNNData()) {
@@ -489,13 +496,13 @@ static bool SimilarArray(const mxnet::NDArray& arr1,
   NDArray buf1, buf2;
   if (arr1.IsMKLDNNData()) {
     buf1     = NDArray(arr1.shape(), arr1.ctx(), false, arr1.dtype());
-    auto mem = arr1.GetMKLDNNData();
-    buf1.CopyFrom(*mem);
+    auto mem = static_cast<const mkldnn::memory*>(arr1.GetMKLDNNData());
+    buf1.CopyFrom(mem);
   }
   if (arr2.IsMKLDNNData()) {
     buf2     = NDArray(arr2.shape(), arr2.ctx(), false, arr2.dtype());
-    auto mem = arr2.GetMKLDNNData();
-    buf2.CopyFrom(*mem);
+    auto mem = static_cast<const mkldnn::memory*>(arr2.GetMKLDNNData());
+    buf2.CopyFrom(mem);
   }
   MKLDNNStream::Get()->Submit();
 
@@ -519,25 +526,25 @@ static bool SimilarArray(const mxnet::NDArray& arr1,
 
 template void FallBackCompute(void (*)(nnvm::NodeAttrs const&,
                                        OpContext const&,
-                                       std::vector<TBlob, std::allocator<TBlob>> const&,
-                                       std::vector<OpReqType, std::allocator<OpReqType>> const&,
-                                       std::vector<TBlob, std::allocator<TBlob>> const&),
+                                       std::vector<TBlob, std::allocator<TBlob> > const&,
+                                       std::vector<OpReqType, std::allocator<OpReqType> > const&,
+                                       std::vector<TBlob, std::allocator<TBlob> > const&),
                               nnvm::NodeAttrs const&,
                               OpContext const&,
-                              std::vector<NDArray, std::allocator<NDArray>> const&,
-                              std::vector<OpReqType, std::allocator<OpReqType>> const&,
-                              std::vector<NDArray, std::allocator<NDArray>> const&);
+                              std::vector<NDArray, std::allocator<NDArray> > const&,
+                              std::vector<OpReqType, std::allocator<OpReqType> > const&,
+                              std::vector<NDArray, std::allocator<NDArray> > const&);
 
 template void FallBackCompute(void (*)(OpStatePtr const&,
                                        OpContext const&,
-                                       std::vector<TBlob, std::allocator<TBlob>> const&,
-                                       std::vector<OpReqType, std::allocator<OpReqType>> const&,
-                                       std::vector<TBlob, std::allocator<TBlob>> const&),
+                                       std::vector<TBlob, std::allocator<TBlob> > const&,
+                                       std::vector<OpReqType, std::allocator<OpReqType> > const&,
+                                       std::vector<TBlob, std::allocator<TBlob> > const&),
                               OpStatePtr const&,
                               OpContext const&,
-                              std::vector<NDArray, std::allocator<NDArray>> const&,
-                              std::vector<OpReqType, std::allocator<OpReqType>> const&,
-                              std::vector<NDArray, std::allocator<NDArray>> const&);
+                              std::vector<NDArray, std::allocator<NDArray> > const&,
+                              std::vector<OpReqType, std::allocator<OpReqType> > const&,
+                              std::vector<NDArray, std::allocator<NDArray> > const&);
 
 void OpCheck::Init(const std::vector<mxnet::NDArray>& inputs_,
                    const std::vector<mxnet::NDArray>& outputs_) {
@@ -548,14 +555,14 @@ void OpCheck::Init(const std::vector<mxnet::NDArray>& inputs_,
     inputs.emplace_back(data.shape(), ctx, false, data.dtype());
     if (data.IsMKLDNNData() && data.IsView())
       data = data.Reorder2Default();
-    auto mem = data.GetMKLDNNData();
-    inputs[i].CopyFrom(*mem);
+    auto mem = static_cast<const mkldnn::memory*>(data.GetMKLDNNData());
+    inputs[i].CopyFrom(mem);
   }
   for (size_t i = 0; i < outputs_.size(); i++) {
     outputs.emplace_back(outputs_[i].shape(), ctx, false, outputs_[i].dtype());
     if (backward) {
-      auto mem = outputs_[i].GetMKLDNNData();
-      outputs[i].CopyFrom(*mem);
+      auto mem = static_cast<const mkldnn::memory*>(outputs_[i].GetMKLDNNData());
+      outputs[i].CopyFrom(mem);
     }
   }
   MKLDNNStream::Get()->Submit();
@@ -602,8 +609,8 @@ void OpCheck::CopyResult(const std::vector<mxnet::NDArray>& outputs_,
   CHECK(!MKLDNNStream::Get()->HasOps());
   auto non_const_outputs_ = const_cast<std::vector<mxnet::NDArray>&>(outputs_);
   for (auto i = indice.begin(); i != indice.end(); ++i) {
-    auto mem = outputs[*i].GetMKLDNNData();
-    non_const_outputs_[*i].CopyFrom(*mem);
+    auto mem = static_cast<const mkldnn::memory*>(outputs[*i].GetMKLDNNData());
+    non_const_outputs_[*i].CopyFrom(mem);
   }
   MKLDNNStream::Get()->Submit();
 }
