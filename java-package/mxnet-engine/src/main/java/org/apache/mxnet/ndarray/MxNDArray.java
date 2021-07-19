@@ -101,6 +101,11 @@ public class MxNDArray extends MxResource {
         return new MxNDArray(parent, handle, Device.defaultIfNull(device), shape, dataType, false);
     }
 
+
+    public static MxNDArray ones(MxResource parent, Shape shape, DataType dataType, Device device) {
+        return create(parent, shape, dataType, device).ones();
+    }
+
     public String getName() {
         return name;
     }

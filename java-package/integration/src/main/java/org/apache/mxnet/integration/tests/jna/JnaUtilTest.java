@@ -8,16 +8,25 @@ import org.apache.mxnet.engine.Symbol;
 import org.apache.mxnet.jna.JnaUtils;
 import org.apache.mxnet.ndarray.MxNDArray;
 import org.apache.mxnet.ndarray.MxNDList;
+import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.nn.MxSymbolBlock;
+import org.apache.mxnet.nn.Parameter;
 import org.apache.mxnet.training.ParameterStore;
+import org.apache.mxnet.training.initializer.Initializer;
+import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.Test;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 
 public class JnaUtilTest {
@@ -25,21 +34,39 @@ public class JnaUtilTest {
     private static final Logger logger = LoggerFactory.getLogger(JnaUtilTest.class);
 
     @Test
-    public void createCachedOpTest() {
+    public void doForwardTest() {
+        // TODO: replace the Path of model with soft decoding
         try (
                 MxResource base = BaseMxResource.getSystemMxResource()
                 ) {
             Symbol symbol  = Symbol.loadFromFile(base,
-                    "/Users/cspchen/Downloads/mxnet_resnet18/resnet18_v1-symbol.json");
+                    "/Users/cspchen/.djl.ai/cache/repo/model/cv/image_classification/ai/djl/mxnet/mlp/mnist/0.0.1/mlp-symbol.json");
             MxSymbolBlock block = new MxSymbolBlock(base, symbol);
-
+            Device device = Device.defaultIfNull();
             MxNDList mxNDArray = JnaUtils.loadNdArray(
                     base,
-                    Paths.get("/Users/cspchen/Downloads/mxnet_resnet18/resnet18_v1-0000.params"),
+                    Paths.get("/Users/cspchen/.djl.ai/cache/repo/model/cv/image_classification/ai/djl/mxnet/mlp/mnist/0.0.1/mlp-0000.params"),
                     Device.defaultIfNull(null));
 
-            CachedOp cachedOp = JnaUtils.createCachedOp(block, base, false);
-            cachedOp.forward(new ParameterStore(base, false, Device.defaultIfNull(null)), mxNDArray, false);
+            // load parameters
+            List<Parameter> parameters = block.getAllParameters();
+            Map<String, Parameter> map = new LinkedHashMap<>();
+            parameters.forEach(p -> map.put(p.getName(), p));
+
+            for (MxNDArray nd : mxNDArray) {
+                String key = nd.getName();
+                if (key == null) {
+                    throw new IllegalArgumentException("Array names must be present in parameter file");
+                }
+
+                String paramName = key.split(":", 2)[1];
+                Parameter parameter = map.remove(paramName);
+                parameter.setArray(nd);
+            }
+            block.setInputNames(new ArrayList<>(map.keySet()));
+
+            MxNDArray arr = MxNDArray.create(base, new Shape(1, 28, 28), device).ones();
+            block.forward(new ParameterStore(base, false, device), new MxNDList(arr), false, new PairList<>(), device);
             System.out.println(base.getSubResource().size());
         } catch (Exception e) {
             e.printStackTrace();

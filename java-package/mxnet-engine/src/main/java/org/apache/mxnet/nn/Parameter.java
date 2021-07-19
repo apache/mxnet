@@ -20,7 +20,7 @@ import java.util.UUID;
 /**
  * {@code Parameter} is a container class that holds a learnable parameter of a model.
  *
- * <p>Every {@code Parameter} is associated with a {@link Block}. The output of the block's forward
+ * <p>Every {@code Parameter} is associated with a {@link MxSymbolBlock}. The output of the block's forward
  * function depends on the values in the {@code Parameter}. During training, the values in the
  * {@code Parameter} are updated to reflect the training data. This process forms the crux of
  * learning.

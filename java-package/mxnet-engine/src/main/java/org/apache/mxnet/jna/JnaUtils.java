@@ -48,8 +48,8 @@ public final class JnaUtils {
             "_contrib_", "_linalg_", "_sparse_", "_image_", "_random_"
     };
 
-//    private static final Map<String, FunctionInfo> OPS = getNdArrayFunctions();
-    private static final Map<String, FunctionInfo> OPS = null;
+    private static final Map<String, FunctionInfo> OPS = getNdArrayFunctions();
+//    private static final Map<String, FunctionInfo> OPS = null;
 
     private static final Set<String> FEATURES = getFeaturesInternal();
 
@@ -786,7 +786,7 @@ public final class JnaUtils {
         // TODO: check the init value of default_dev_type and default_dev_id
         checkCall(
                 LIB.MXInvokeCachedOp(
-                        cachedOpHandle, inputs.length, array, DeviceType.toDeviceType(device), device.getDeviceId(), buf, ref, outSTypeRef));
+                        cachedOpHandle, inputs.length, array, DeviceType.toDeviceType(device), 0, buf, ref, outSTypeRef));
         int numOutputs = buf.get();
         Pointer[] ptrArray = ref.getValue().getPointerArray(0, numOutputs);
         int[] sTypes = outSTypeRef.getValue().getIntArray(0, numOutputs);
@@ -882,28 +882,28 @@ public final class JnaUtils {
     /*****************************************************************************
      * Tests
      *****************************************************************************/
-//    public static void main(String... args) {
-//        try {
-//            Set<String> opNames = JnaUtils.getAllOpNames();
-//            List<String> list = new ArrayList<>(opNames);
-//
-//            PointerByReference ref = REFS.acquire();
-//            for (String opName : list.subList(0, 400)) {
-//                checkCall(LIB.NNGetOpHandle(opName, ref));
-//                String functionName = getOpNamePrefix(opName);
-//                // System.out.println("Name: " + opName + "/" + functionName);
-//                getFunctionByName(opName, functionName, ref.getValue());
-//            }
-//            ref.setValue(null);
-//            REFS.recycle(ref);
-//
-//        } catch (RuntimeException e) {
-//            e.printStackTrace();
-//            System.out.println(e.getMessage());
-//        } finally {
-//            System.out.println("END!.....");
-//        }
-//
-//
-//    }
+    public static void main(String... args) {
+        try {
+            Set<String> opNames = JnaUtils.getAllOpNames();
+            List<String> list = new ArrayList<>(opNames);
+
+            PointerByReference ref = REFS.acquire();
+            for (String opName : list.subList(0, 400)) {
+                checkCall(LIB.NNGetOpHandle(opName, ref));
+                String functionName = getOpNamePrefix(opName);
+                // System.out.println("Name: " + opName + "/" + functionName);
+                getFunctionByName(opName, functionName, ref.getValue());
+            }
+            ref.setValue(null);
+            REFS.recycle(ref);
+
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            System.out.println(e.getMessage());
+        } finally {
+            System.out.println("END!.....");
+        }
+
+
+    }
 }

@@ -206,6 +206,10 @@ public final class Device {
         return defaultDevice();
     }
 
+    public static Device defaultIfNull() {
+        return defaultIfNull(null);
+    }
+
     /** Contains device type string constants. */
     public interface Type {
         String CPU = "cpu";

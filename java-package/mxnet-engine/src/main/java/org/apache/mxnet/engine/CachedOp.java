@@ -71,7 +71,7 @@ public class CachedOp extends MxResource {
         // reset the input data index at the beginning
         MxNDArray[] allInputsNDArray = new MxNDArray[parameters.size()];
         // check device of input
-        Device device = data.head().getDevice();
+        Device device = data.isEmpty() ? Device.defaultIfNull() : data.head().getDevice();
         // get the manager of the data
         // fill allInputsNDArray with parameter values on correct device
         for (int index : paramIndices) {
@@ -87,8 +87,8 @@ public class CachedOp extends MxResource {
         int index = 0;
         for (MxNDArray array : data) {
             // TODO: NDArray name doesn't match. To confirm the format of input name
-            String inputName = array.getName().split(":")[1];
-//            String inputName = array.getName();
+//            String inputName = array.getName().split(":")[1];
+            String inputName = array.getName();
             // if inputName not provided, value will follow the default order
             int idx = indexOf(inputName, index++);
             allInputsNDArray[idx] = array;

@@ -4,13 +4,16 @@ import org.apache.mxnet.engine.CachedOp;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.Model;
 import org.apache.mxnet.engine.MxResource;
+import org.apache.mxnet.engine.MxResourceList;
 import org.apache.mxnet.engine.Symbol;
 import org.apache.mxnet.exception.MalformedModelException;
 import org.apache.mxnet.jna.JnaUtils;
 import org.apache.mxnet.ndarray.MxNDArray;
 import org.apache.mxnet.ndarray.MxNDList;
+import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.training.ParameterStore;
+import org.apache.mxnet.util.Pair;
 import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,18 +35,25 @@ public class MxSymbolBlock extends MxResource {
 
     private static final Logger logger = LoggerFactory.getLogger(MxSymbolBlock.class);
 
+    /** The shape of the input for this block, set by the initialization process. */
     protected Shape[] inputShapes;
+
+    /** List of names for the input, named inputs should be manually set in sub class. */
+    protected List<String> inputNames = Collections.emptyList();
+
+    /**
+     * The model version of this block, used for checking if parameters are still valid during
+     * parameter loading.
+     */
+    protected byte version;
 
     /**
      * All direct parameters of this Block. Keys are name of the parameters.
      *
-     * <p>Use the {@link #addParameter(Parameter)} method to add children. All
+     * <p>Use the {@link MxSymbolBlock#addParameter(Parameter)} method to add children. All
      * parameters in this map are automatically loaded / saved.
      */
     protected LinkedHashMap<String, Parameter> parameters = new LinkedHashMap<>();
-
-    /** List of names for the input, named inputs should be manually set in sub class. */
-    protected List<String> inputNames = Collections.emptyList();
 
     private static final byte VERSION = 3;
 
@@ -165,6 +175,146 @@ public class MxSymbolBlock extends MxResource {
                             + "and call describeOutput again.");
         }
         return outputDescriptions;
+    }
+
+    /**
+     * Applies the operating function of the mxSymbolBlock once. This method should be called only on blocks
+     * that are initialized.
+     *
+     * @param parameterStore the parameter store
+     * @param inputs the input NDList
+     * @param training true for a training forward pass
+     * @param params optional parameters
+     * @param device device to use
+     * @return the output of the forward pass
+     */
+    public final MxNDList forward(
+            ParameterStore parameterStore,
+            MxNDList inputs,
+            boolean training,
+            PairList<String, Object> params,
+            Device device) {
+
+        if (!isInitialized()) {
+            initialize(getParent(), DataType.FLOAT32, device, inputs.getShapes());
+        }
+        return forwardInternal(parameterStore, inputs, training, params);
+    }
+
+    /**
+     * A forward call using both training data and labels.
+     *
+     * <p>Within this forward call, it can be assumed that training is true.
+     *
+     * @param parameterStore the parameter store
+     * @param data the input data NDList
+     * @param labels the input labels NDList
+     * @param params optional parameters
+     * @return the output of the forward pass
+     * @see #forward(ParameterStore, MxNDList, boolean, PairList, Device)
+     */
+    public MxNDList forward(
+            ParameterStore parameterStore,
+            MxNDList data,
+            MxNDList labels,
+            PairList<String, Object> params,
+            Device device) {
+        if (!isInitialized()) {
+            initialize(getParent(), DataType.FLOAT32, device, data.getShapes());
+        }
+        return forwardInternal(parameterStore, data, labels, params);
+    }
+
+    /**
+     * A helper for {@link MxSymbolBlock#forward(ParameterStore, MxNDList, MxNDList, PairList, Device)} after
+     * initialization.
+     *
+     * @param parameterStore the parameter store
+     * @param data the input data NDList
+     * @param labels the input labels NDList
+     * @param params optional parameters
+     * @return the output of the forward pass
+     * @see #forward(ParameterStore, MxNDList, boolean, PairList, Device)
+     */
+    protected MxNDList forwardInternal(
+            ParameterStore parameterStore,
+            MxNDList data,
+            MxNDList labels,
+            PairList<String, Object> params) {
+        return forwardInternal(parameterStore, data, true, params);
+    }
+
+    public boolean isInitialized() {
+        for (Parameter param : getParameters().values()) {
+            if (!param.isInitialized()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void initialize(MxResource parent, DataType dataType, Device device, Shape... inputShapes) {
+        beforeInitialize(inputShapes);
+        // if parameters are initialized, skip it
+        if (!isInitialized()) {
+            // setShape for all params
+//            prepare(inputShapes);
+            // do nothing
+        }
+        for (Parameter parameter : parameters.values()) {
+            parameter.initialize(parent, dataType, device);
+        }
+        initializeChildBlocks();
+    }
+
+    /**
+     * Initializes the Child blocks of this block. You need to override this method if your subclass
+     * has child blocks. Used to determine the correct input shapes for child blocks based on the
+     * requested input shape for this block.
+     */
+    protected void initializeChildBlocks() {
+        if (!getSubResource().isEmpty()) {
+            throw new IllegalStateException(
+                    getClass().getSimpleName()
+                            + " has child blocks but initializeChildBlocks is not overwritten.");
+        }
+    }
+
+    protected void beforeInitialize(Shape... inputShapes) {
+        if (inputNames.isEmpty()) {
+            // automatically assign input names
+            inputNames = new ArrayList<>();
+            for (int i = 0; i < inputShapes.length; ++i) {
+                inputNames.add("data" + i);
+            }
+        }
+        this.inputShapes = inputShapes;
+    }
+
+    public ParameterList getParameters() {
+        // we accumulate a list of all parameters by starting with a list of the direct parameters
+        ParameterList allParams = getDirectParameters();
+        // then we add the parameters of child blocks
+        for (Pair<String, MxResource> childPair : getChildren()) {
+            MxSymbolBlock mxSymbolBlock = (MxSymbolBlock) childPair.getValue();
+            for (Pair<String, Parameter> paramPair : mxSymbolBlock.getParameters()) {
+                // we prepend the name of the child block to the parameter name
+                allParams.add(childPair.getKey() + "_" + paramPair.getKey(), paramPair.getValue());
+            }
+        }
+        return allParams;
+    }
+
+    public MxResourceList getChildren() {
+        MxResourceList defensiveCopy = new MxResourceList(getSubResource().size());
+        for (Map.Entry<String, MxResource> entry : getSubResource().entrySet()) {
+            defensiveCopy.add(entry.getKey(), entry.getValue());
+        }
+        return defensiveCopy;
+    }
+
+    public ParameterList getDirectParameters() {
+        return new ParameterList(parameters);
     }
 
     protected MxNDList forwardInternal(
