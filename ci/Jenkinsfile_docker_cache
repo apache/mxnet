@@ -38,7 +38,7 @@ core_logic: {
         timeout(time: total_timeout, unit: 'MINUTES') {
           utils.init_git()
           sh "ci/docker_cache.py --docker-registry ${env.DOCKER_ECR_REGISTRY}"
-          sh "cd ci && $(aws ecr get-login --region ${env.DOCKER_ECR_REGION} --no-include-email) && DOCKER_CACHE_REGISTRY=${env.DOCKER_ECR_REGISTRY} docker-compose -f docker/docker-compose.yml build --parallel && DOCKER_CACHE_REGISTRY=${env.DOCKER_ECR_REGISTRY} docker-compose -f docker/docker-compose.yml push"
+          sh "cd ci && DOCKER_CACHE_REGISTRY=${env.DOCKER_ECR_REGISTRY} docker-compose -f docker/docker-compose.yml build --parallel && DOCKER_CACHE_REGISTRY=${env.DOCKER_ECR_REGISTRY} docker-compose -f docker/docker-compose.yml push"
         }
       }
     }
