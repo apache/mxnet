@@ -60,12 +60,7 @@ bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param,
   const int axis      = CheckAxis(param.axis, ndim);
   // MKLDNN does not support temperature argument in their log_softmax function
   // now. Need update this once they start to support it.
-<<<<<<< HEAD
-  // Currently, MKLDNN shows bad performance when log_softmax is not performed
-  // on the last dimension
-=======
   // Currently, MKLDNN shows bad performance when log_softmax is not performed on the last dimension
->>>>>>> 5b414c93e (NDArry file has been modified, there are a few chnages:)
   if (param.temperature.has_value() || in_dtype != mshadow::kFloat32 || in_dtype != out_dtype ||
       axis != (ndim - 1)) {
     return false;

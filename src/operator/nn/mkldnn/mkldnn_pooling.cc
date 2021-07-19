@@ -306,8 +306,7 @@ MKLDNNPoolingBwd& GetPoolingBwd(const PoolingParam& param,
     auto diff_src_dims = mkldnn::memory::dims(in_grad.shape().begin(), in_grad.shape().end());
     auto diff_src_md   = mkldnn::memory::desc(diff_src_dims, get_data_type(data_md), any);
     auto cpu_engine    = CpuEngine::Get()->get_engine();
-    ;
-    auto alg = GetMKLDNNPoolAlgo(param);
+    auto alg           = GetMKLDNNPoolAlgo(param);
 
     const int kernel_ndims = param.kernel.ndim();
     mkldnn::memory::dims kernel(kernel_ndims);
