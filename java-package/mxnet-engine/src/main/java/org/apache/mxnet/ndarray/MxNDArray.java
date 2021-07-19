@@ -1948,7 +1948,7 @@ public class MxNDArray extends MxResource {
     }
 
     static MxNDArray create(MxResource parent, Buffer data, Shape shape, DataType dataType) {
-        MxNDArray array = create(parent, shape, dataType, null);
+        MxNDArray array = create(parent, shape, dataType, Device.defaultIfNull());
         array.set(data);
         return array;
     }
