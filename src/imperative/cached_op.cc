@@ -965,6 +965,8 @@ void CachedOp::StaticBackward(
     arrays[eid] = inputs[BwdOriginalInput(state.info.input_map, i)];
   }
 
+  auto ref_count = g.GetAttr<std::vector<uint32_t> >(AddPrefix(BACKWARD, REF_COUNT));
+
   if (config_.static_shape) {
     for (auto i : config_.param_indices) {
       const auto iter = state.info.fwd_input_to_grad_output.find(i);
@@ -989,7 +991,12 @@ void CachedOp::StaticBackward(
       auto entry = state.info.grad_graph.outputs[iter->second];
       if (!idx.exist(entry.node.get())) continue;
       auto eid = idx.entry_id(entry);
-      state.array_reqs[eid] = reqs[iter->second];
+      // if ref count is not 0, then we should not assign req user provide
+      if (reqs[iter->second] == kNullOp && !(ref_count[eid] == 0)) {
+        state.array_reqs[eid] = kWriteTo;
+      } else {
+        state.array_reqs[eid] = reqs[iter->second];
+      }
       // An input and an output may share the same array.
       INIT_DETACHED(outputs[iter->second], arrays[eid]);
       arrays[eid] = outputs[iter->second];
@@ -999,7 +1006,12 @@ void CachedOp::StaticBackward(
       auto entry = state.info.grad_graph.outputs[i];
       if (!idx.exist(entry.node.get())) continue;
       auto eid = idx.entry_id(entry);
-      state.array_reqs[eid] = reqs[i];
+      // if ref count is not 0, then we should not assign req user provide
+      if (reqs[i] == kNullOp && !(ref_count[eid] == 0)) {
+        state.array_reqs[eid] = kWriteTo;
+      } else {
+        state.array_reqs[eid] = reqs[i];
+      }
       // An input and an output may share the same array.
       INIT_DETACHED(outputs[i], arrays[eid]);
       arrays[eid] = outputs[i];
