@@ -888,11 +888,12 @@ public final class JnaUtils {
             List<String> list = new ArrayList<>(opNames);
 
             PointerByReference ref = REFS.acquire();
-            for (String opName : list.subList(0, 400)) {
+            for (String opName : list.subList(0, 300)) {
                 checkCall(LIB.NNGetOpHandle(opName, ref));
                 String functionName = getOpNamePrefix(opName);
                 // System.out.println("Name: " + opName + "/" + functionName);
                 getFunctionByName(opName, functionName, ref.getValue());
+
             }
             ref.setValue(null);
             REFS.recycle(ref);

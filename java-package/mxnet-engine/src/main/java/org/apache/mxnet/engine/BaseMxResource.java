@@ -12,6 +12,10 @@ public class BaseMxResource extends MxResource{
         return SYSTEM_MX_RESOURCE;
     }
 
+    public BaseMxResource newSubMxResource() {
+        return (BaseMxResource) new MxResource(this);
+    }
+
     public boolean isReleased() {
         return handle.get() == null;
     }

@@ -3,14 +3,16 @@ package org.apache.mxnet.engine;
 import com.sun.jna.Pointer;
 import org.apache.mxnet.util.NativeResource;
 
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
 
 public class MxResource extends NativeResource<Pointer> {
 
     public static final String EMPTY_UID = "EMPTY_UID";
 
     private static boolean closed = false;
+
+    protected Device device = null;
 
     public void setClosed() {
         this.closed = true;
@@ -23,6 +25,11 @@ public class MxResource extends NativeResource<Pointer> {
     protected MxResource(MxResource parent, String uid) {
         super(uid);
         setParent(parent);
+    }
+
+    // initial a MxResource object with random uid
+    protected MxResource(MxResource parent) {
+        this(parent, UUID.randomUUID().toString());
     }
 
 //    protected static MxResource createEmptyMxResource(MxResource parent) {
@@ -80,6 +87,14 @@ public class MxResource extends NativeResource<Pointer> {
     protected MxResource() {
         super();
         setParent(null);
+    }
+
+    public void setDevice(Device device) {
+        this.device = device;
+    }
+
+    public Device getDevice() {
+        return null;
     }
 
     /** {@inheritDoc} */

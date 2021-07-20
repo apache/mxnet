@@ -23,7 +23,7 @@ public final class Utils {
 
     private static final int BUFF_SIZE = 81920;
     private static final String ENGINE_CACHE_DIR = "ENGINE_CACHE_DIR";
-    private static final String DJL_CACHE_DIR = "DJL_CACHE_DIR";
+    private static final String MXNET_CACHE_DIR = "MXNET_CACHE_DIR";
 
     private Utils() {}
 
@@ -315,15 +315,15 @@ public final class Utils {
      * @return DJL cache directory
      */
     public static Path getCacheDir() {
-        String cacheDir = System.getProperty(DJL_CACHE_DIR);
+        String cacheDir = System.getProperty(MXNET_CACHE_DIR);
         if (cacheDir == null || cacheDir.isEmpty()) {
-            cacheDir = System.getenv(DJL_CACHE_DIR);
+            cacheDir = System.getenv(MXNET_CACHE_DIR);
             if (cacheDir == null || cacheDir.isEmpty()) {
                 Path dir = Paths.get(System.getProperty("user.home"));
                 if (!Files.isWritable(dir)) {
                     dir = Paths.get(System.getProperty("java.io.tmpdir"));
                 }
-                return dir.resolve(".mxnet.javapackage");
+                return dir.resolve("mxnet.java_package");
             }
         }
         return Paths.get(cacheDir);

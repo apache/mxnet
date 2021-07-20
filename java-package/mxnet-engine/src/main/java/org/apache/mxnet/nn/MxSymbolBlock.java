@@ -2,7 +2,7 @@ package org.apache.mxnet.nn;
 
 import org.apache.mxnet.engine.CachedOp;
 import org.apache.mxnet.engine.Device;
-import org.apache.mxnet.engine.Model;
+import org.apache.mxnet.engine.MxModel;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.engine.MxResourceList;
 import org.apache.mxnet.engine.Symbol;
@@ -70,7 +70,7 @@ public class MxSymbolBlock extends MxResource {
     /**
      * Constructs a {@code MxSymbolBlock} for a {@link Symbol}.
      *
-     * <p>You can create a {@code MxSymbolBlock} using {@link Model#load(java.nio.file.Path,
+     * <p>You can create a {@code MxSymbolBlock} using {@link MxModel#load(java.nio.file.Path,
      * String)}.
      *
      * @param parent the parent MxResource to use for the block

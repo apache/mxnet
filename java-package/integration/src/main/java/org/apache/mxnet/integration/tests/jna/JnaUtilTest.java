@@ -10,12 +10,17 @@ import org.apache.mxnet.ndarray.MxNDList;
 import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.nn.MxSymbolBlock;
 import org.apache.mxnet.nn.Parameter;
+import org.apache.mxnet.repository.Item;
+import org.apache.mxnet.repository.Repository;
 import org.apache.mxnet.training.ParameterStore;
 import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,18 +33,21 @@ public class JnaUtilTest {
     private static final Logger logger = LoggerFactory.getLogger(JnaUtilTest.class);
 
     @Test
-    public void doForwardTest() {
+    public void doForwardTest() throws IOException {
         // TODO: replace the Path of model with soft decoding
         try (
                 MxResource base = BaseMxResource.getSystemMxResource()
                 ) {
+            Path modelPath = Repository.initRepository(Item.MLP);
+            Path symbolPath = modelPath.resolve("mlp-symbol.json");
+            Path paramsPath = modelPath.resolve("mlp-0000.params");
             Symbol symbol  = Symbol.loadFromFile(base,
-                    "/Users/cspchen/.djl.ai/cache/repo/model/cv/image_classification/ai/djl/mxnet/mlp/mnist/0.0.1/mlp-symbol.json");
+                    symbolPath.toString());
             MxSymbolBlock block = new MxSymbolBlock(base, symbol);
             Device device = Device.defaultIfNull();
             MxNDList mxNDArray = JnaUtils.loadNdArray(
                     base,
-                    Paths.get("/Users/cspchen/.djl.ai/cache/repo/model/cv/image_classification/ai/djl/mxnet/mlp/mnist/0.0.1/mlp-0000.params"),
+                    paramsPath,
                     Device.defaultIfNull(null));
 
             // load parameters
@@ -61,14 +69,16 @@ public class JnaUtilTest {
 
             MxNDArray arr = MxNDArray.create(base, new Shape(1, 28, 28), device).ones();
             block.forward(new ParameterStore(base, false, device), new MxNDList(arr), false, new PairList<>(), device);
-            System.out.println(base.getSubResource().size());
+            logger.info("Number of MxResource managed by baseMxResource: {}",
+                    BaseMxResource.getSystemMxResource().getSubResource().size());
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println(e.getMessage());
+            logger.error(e.getMessage(), e);
             throw e;
         }
-        System.out.println("Ok");
-        System.out.println(BaseMxResource.getSystemMxResource().getSubResource().size());
+        Assert.assertEquals(BaseMxResource.getSystemMxResource().getSubResource().size(), 0);
 
     }
 
