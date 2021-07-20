@@ -75,6 +75,9 @@ struct MKLDNNFCParam : public dmlc::Parameter<MKLDNNFCParam> {
             "The maximum scalar value in the form of float32 obtained "
             "through calibration. If present, it will be used to by "
             "quantized fullyconnected op to calculate primitive scale");
+    DMLC_DECLARE_FIELD(shifted_output)
+        .set_default(dmlc::optional<bool>())
+        .describe("Whether quantized output should be shifted to u8.");
     DMLC_DECLARE_FIELD(channel_wise_quantize)
         .set_default(dmlc::optional<bool>())
         .describe("Whether support channel-wise-quantize for weight.");
