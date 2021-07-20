@@ -9,3 +9,10 @@
 ```bash
 export MXNET_LIBRARY_PATH=//anaconda3/lib/python3.8/site-packages/mxnet/
 ```
+
+
+## Tests  
+Test case for a rough inference run with MXNet model  
+```bash
+./gradlew :integration:run  
+```
