@@ -33,7 +33,7 @@ using nnvm::ObjectPtr;
 using nnvm::Graph;
 
 template <bool require_bias>
-bool IsOneDNNFullyConnected(const ObjectPtr& n) {
+static bool IsOneDNNFullyConnected(const ObjectPtr& n) {
   if (n->op() == Op::Get("_sg_mkldnn_fully_connected")) {
     auto const& param = nnvm::get<MKLDNNFCFullParam>(n->attrs.parsed);
     FCInputIndex idx(param);
@@ -46,7 +46,7 @@ bool IsOneDNNFullyConnected(const ObjectPtr& n) {
   return false;
 }
 
-bool IsQuantize(const ObjectPtr& n) {
+static bool IsQuantize(const ObjectPtr& n) {
   if (n->op() == Op::Get("_contrib_quantize_v2")) {
     auto const &param = nnvm::get<QuantizeV2Param>(n->attrs.parsed);
     if (param.min_calib_range.has_value() &&
@@ -57,7 +57,7 @@ bool IsQuantize(const ObjectPtr& n) {
   return false;
 }
 
-NDArray* FindInArgByName(const Graph &g, const std::string& name) {
+static NDArray* FindInArgByName(const Graph &g, const std::string& name) {
   const std::vector<std::string>& in_arg_names =
       g.GetAttr<std::vector<std::string>>("in_arg_names");
   size_t i = std::distance(in_arg_names.begin(),
@@ -69,7 +69,7 @@ NDArray* FindInArgByName(const Graph &g, const std::string& name) {
 }
 
 // Rescales weights, min_weight and max_weight. Returns bias_int32_rescale.
-float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray* weight_tensor) {
+static float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray* weight_tensor) {
   FCInputIndex idx(nnvm::get<MKLDNNFCFullParam>(fc->attrs.parsed));
 
   float* min_weight =
@@ -111,7 +111,7 @@ float RescaleWeights(const Graph &g, const ObjectPtr &fc, NDArray* weight_tensor
   return bias_int32_rescale;
 }
 
-void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
+static void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
                              NDArray* weight_tensor, int32_t shift_value) {
   CHECK_EQ(static_cast<size_t>(weight_tensor->shape()[0]), bias_size);
   int8_t* weight_ptr = weight_tensor->data().dptr<int8_t>();
@@ -124,7 +124,7 @@ void ShiftBias(int32_t* bias_ptr_int32, size_t bias_size,
 
 enum class Pattern {QuantizeFc, FcFc, None};
 
-Pattern FindPattern(const ObjectPtr &node) {
+static Pattern FindPattern(const ObjectPtr &node) {
   if (IsOneDNNFullyConnected<true>(node)) {
     if (IsQuantize(node->inputs[0].node)) {
       return Pattern::QuantizeFc;
@@ -135,7 +135,7 @@ Pattern FindPattern(const ObjectPtr &node) {
   return Pattern::None;
 }
 
-void QuantizeFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
+static void QuantizeFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
                                    std::vector<NDArray *>* new_arg_vector,
                                    std::vector<std::string>* new_arg_names) {
   ObjectPtr &quantize = node->inputs[0].node;
@@ -172,7 +172,7 @@ void QuantizeFcShiftedQuantization(const ObjectPtr &node, Graph&& g,
   ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
 }
 
-void FcFcShiftedQuantization(const ObjectPtr& node, Graph&& g,
+static void FcFcShiftedQuantization(const ObjectPtr& node, Graph&& g,
                              std::vector<NDArray*>* new_arg_vector,
                              std::vector<std::string>* new_arg_names) {
   ObjectPtr& first_fc = node->inputs[0].node;
@@ -213,7 +213,7 @@ void FcFcShiftedQuantization(const ObjectPtr& node, Graph&& g,
   ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
 }
 
-Graph OneDNNShiftedQuantization(Graph&& g) {
+static Graph OneDNNShiftedQuantization(Graph&& g) {
   bool disable_shifted_quant =
       dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS", true);
   bool quantize_fc = !dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZE_FC_OPTIMIZATION", false);

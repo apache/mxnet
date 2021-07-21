@@ -1349,7 +1349,6 @@ def test_onednn_shifted_quantize_fc():
             check(i, qdtype)
 
 
-#@with_seed()
 @pytest.mark.parametrize('with_eltwise', [False, True])
 @pytest.mark.parametrize('qdtype', ['int8', 'uint8', 'auto'])
 def test_onednn_shifted_quantize_fc_relu_fc_sum(with_eltwise, qdtype):
@@ -1370,15 +1369,12 @@ def test_onednn_shifted_quantize_fc_relu_fc_sum(with_eltwise, qdtype):
                 self.fc2 = mx.gluon.nn.Dense(20, use_bias=True, flatten=True,
                                              weight_initializer=mx.initializer.Normal(),
                                              bias_initializer=mx.initializer.Normal())
-                # self.y = mx.gluon.Parameter('y',shape=(2,20),dtype='float32',allow_deferred_init=False,init=mx.initializer.Normal())
-                self.y = self.params.get('y_weight', shape=(2, 20), init=mx.initializer.Normal(), differentiable=False)
-                # self.y.initialize()
 
-            def hybrid_forward(self, F, x, y):
+            def hybrid_forward(self, F, x):
                 out = self.fc1(x)
                 if with_eltwise:
                     out = self.relu(out)
-                out = self.fc2(out) + y
+                out = self.fc2(out)
                 return out
 
         net = Net()
