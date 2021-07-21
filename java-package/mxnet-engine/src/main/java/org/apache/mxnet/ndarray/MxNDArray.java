@@ -91,6 +91,10 @@ public class MxNDArray extends MxResource {
         return create(parent, shape, DataType.FLOAT32 ,device);
     }
 
+    public static MxNDArray create(MxResource parent, Shape shape) {
+        return create(parent, shape, DataType.FLOAT32, Device.defaultIfNull());
+    }
+
     public static MxNDArray create(MxResource parent, Shape shape, DataType dataType, Device device, boolean hasGradient) {
         Pointer handle = JnaUtils.createNdArray(device, shape, dataType, shape.dimension(), hasGradient);
         return new MxNDArray(parent, handle, device, shape, dataType, hasGradient);

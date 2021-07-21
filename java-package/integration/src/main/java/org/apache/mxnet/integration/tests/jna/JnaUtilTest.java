@@ -41,8 +41,7 @@ public class JnaUtilTest {
             Path modelPath = Repository.initRepository(Item.MLP);
             Path symbolPath = modelPath.resolve("mlp-symbol.json");
             Path paramsPath = modelPath.resolve("mlp-0000.params");
-            Symbol symbol  = Symbol.loadFromFile(base,
-                    symbolPath.toString());
+            Symbol symbol  = Symbol.loadSymbol(base, symbolPath);
             MxSymbolBlock block = new MxSymbolBlock(base, symbol);
             Device device = Device.defaultIfNull();
             MxNDList mxNDArray = JnaUtils.loadNdArray(

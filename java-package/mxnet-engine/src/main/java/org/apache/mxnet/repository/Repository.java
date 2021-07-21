@@ -4,7 +4,6 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.mxnet.util.FilenameUtils;
-import org.apache.mxnet.util.Progress;
 import org.apache.mxnet.util.Utils;
 import org.apache.mxnet.util.ZipUtils;
 import org.slf4j.Logger;
@@ -17,9 +16,6 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipInputStream;
 

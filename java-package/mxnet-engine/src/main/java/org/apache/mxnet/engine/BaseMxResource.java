@@ -1,19 +1,22 @@
 package org.apache.mxnet.engine;
 
-public class BaseMxResource extends MxResource{
+public final class BaseMxResource extends MxResource{
 
-    static BaseMxResource SYSTEM_MX_RESOURCE = new BaseMxResource();
+    static BaseMxResource SYSTEM_MX_RESOURCE;
 
     protected BaseMxResource() {
         super();
     }
 
     public static BaseMxResource getSystemMxResource() {
+        if (SYSTEM_MX_RESOURCE == null) {
+            SYSTEM_MX_RESOURCE = new BaseMxResource();
+        }
         return SYSTEM_MX_RESOURCE;
     }
 
-    public BaseMxResource newSubMxResource() {
-        return (BaseMxResource) new MxResource(this);
+    public static MxResource newSubMxResource() {
+        return new MxResource(getSystemMxResource());
     }
 
     public boolean isReleased() {

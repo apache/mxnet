@@ -2,7 +2,6 @@ package org.apache.mxnet.nn;
 
 import org.apache.mxnet.engine.CachedOp;
 import org.apache.mxnet.engine.Device;
-import org.apache.mxnet.engine.MxModel;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.engine.MxResourceList;
 import org.apache.mxnet.engine.Symbol;
@@ -22,6 +21,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -70,9 +70,6 @@ public class MxSymbolBlock extends MxResource {
     /**
      * Constructs a {@code MxSymbolBlock} for a {@link Symbol}.
      *
-     * <p>You can create a {@code MxSymbolBlock} using {@link MxModel#load(java.nio.file.Path,
-     * String)}.
-     *
      * @param parent the parent MxResource to use for the block
      * @param symbol the symbol containing the block's symbolic graph
      */
@@ -91,6 +88,24 @@ public class MxSymbolBlock extends MxResource {
     public MxSymbolBlock(MxResource parent) {
         super();
         setParent(parent);
+    }
+
+    /**
+     * Constructs an {@code MxSymbolBlock} and load the symbol according to {@code Path}
+     * The life circle of the {@code Symbol} object is managed by the {@codd MxResource} object
+     * @param parent the parent MxResource Object to manage this MxSymbolBlock
+     * @param symbolPath the Path to load symbol
+     */
+    public static MxSymbolBlock createMxSymbolBlock(MxResource parent, Path symbolPath) {
+        MxSymbolBlock mxSymbolBlock = new MxSymbolBlock(parent);
+        mxSymbolBlock.loadSymbol(symbolPath);
+        mxSymbolBlock.initBlock();
+        return mxSymbolBlock;
+    }
+
+    public void loadSymbol(Path symbolPath) {
+        Symbol symbol = Symbol.loadSymbol(this, symbolPath);
+        this.symbol = symbol;
     }
 
     /**
@@ -202,6 +217,19 @@ public class MxSymbolBlock extends MxResource {
     }
 
     /**
+     * Applies the operating function of the block once. This method should be called only on blocks
+     * that are initialized.
+     *
+     * @param parameterStore the parameter store
+     * @param inputs the input NDList
+     * @param training true for a training forward pass
+     * @return the output of the forward pass
+     */
+    public MxNDList forward(ParameterStore parameterStore, MxNDList inputs, boolean training) {
+        return forward(parameterStore, inputs, training, null, getDevice());
+    }
+
+    /**
      * A forward call using both training data and labels.
      *
      * <p>Within this forward call, it can be assumed that training is true.
@@ -296,10 +324,12 @@ public class MxSymbolBlock extends MxResource {
         ParameterList allParams = getDirectParameters();
         // then we add the parameters of child blocks
         for (Pair<String, MxResource> childPair : getChildren()) {
-            MxSymbolBlock mxSymbolBlock = (MxSymbolBlock) childPair.getValue();
-            for (Pair<String, Parameter> paramPair : mxSymbolBlock.getParameters()) {
-                // we prepend the name of the child block to the parameter name
-                allParams.add(childPair.getKey() + "_" + paramPair.getKey(), paramPair.getValue());
+            if (MxSymbolBlock.class.equals(childPair.getValue().getClass())) {
+                MxSymbolBlock mxSymbolBlock = (MxSymbolBlock) childPair.getValue();
+                for (Pair<String, Parameter> paramPair : mxSymbolBlock.getParameters()) {
+                    // we prepend the name of the child block to the parameter name
+                    allParams.add(childPair.getKey() + "_" + paramPair.getKey(), paramPair.getValue());
+                }
             }
         }
         return allParams;

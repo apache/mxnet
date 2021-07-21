@@ -25,6 +25,7 @@ public class MxResource extends NativeResource<Pointer> {
     protected MxResource(MxResource parent, String uid) {
         super(uid);
         setParent(parent);
+        getParent().addSubResource(this);
     }
 
     // initial a MxResource object with random uid
@@ -94,7 +95,8 @@ public class MxResource extends NativeResource<Pointer> {
     }
 
     public Device getDevice() {
-        return null;
+        Device device = getParent() == null ? null : getParent().getDevice();
+        return Device.defaultIfNull(device);
     }
 
     /** {@inheritDoc} */

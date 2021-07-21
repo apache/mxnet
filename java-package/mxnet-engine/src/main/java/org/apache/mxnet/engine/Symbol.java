@@ -7,6 +7,7 @@ import org.apache.mxnet.util.NativeResource;
 import org.apache.mxnet.util.PairList;
 import org.apache.mxnet.util.Utils;
 
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -24,9 +25,13 @@ public class Symbol extends MxResource {
         super(parent, handle);
     }
 
-    public static Symbol loadFromFile(MxResource parent, String path) {
+    static Symbol loadFromFile(MxResource parent, String path) {
         Pointer p = JnaUtils.createSymbolFromFile(path);
         return new Symbol(parent, p);
+    }
+
+    public static Symbol loadSymbol(MxResource parent, Path path) {
+        return loadFromFile(parent, path.toAbsolutePath().toString());
     }
 
     /**
