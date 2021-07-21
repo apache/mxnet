@@ -29,10 +29,7 @@ namespace mxnet {
 namespace op {
 namespace asym_quant {
 
-using nnvm::Symbol;
-using nnvm::Node;
 using nnvm::ObjectPtr;
-using nnvm::NodeEntry;
 using nnvm::Graph;
 
 template <bool require_bias>

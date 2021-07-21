@@ -91,7 +91,6 @@ struct MKLDNNFCFullParam {
   std::vector<float> output_scales = {0.0f};
 };
 
-#if MXNET_USE_MKLDNN == 1
 static inline size_t GetInSumIndex(const MKLDNNFCFullParam& param) {
   assert(param.mkldnn_param.with_sum);
   return fullc::kWeight + 1 + (param.default_param.no_bias ? 0 : 1);
@@ -165,7 +164,6 @@ class FCInputIndex {
                       // quantization
   int num_quantized;  // Number of standard inputs which are quantized
 };
-#endif
 
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(const MKLDNNFCFullParam& full_param,
                                                            const bool is_train,
