@@ -19,7 +19,6 @@
 Language: Cpp
 BasedOnStyle: Google
 ColumnLimit: 100
-#AlignAfterOpenBracket: AlwaysBreak
 AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: false
 AlignConsecutiveMacros: true
@@ -27,4 +26,35 @@ DerivePointerAlignment: false
 SortIncludes: true
 MaxEmptyLinesToKeep: 1
 PointerAlignment: Left
-#Standard: Cpp11
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: true
+BinPackArguments: false
+BinPackParameters: false
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Headers in <> from specific external libraries.
+  - Regex:           '<((mxnet)|(nnvm)|(dmlc)|(gtest))\/([-\/_A-Za-z0-9])+((\.h)|(\.hpp))>'
+    Priority:        1
+  # Headers in <> with extension.
+  - Regex:           '<([-\/_A-Za-z0-9])+((\.h)|(\.hpp))>'
+    Priority:        2
+  # Headers in <> without extension.
+  - Regex:           '<([-\/_A-Za-z0-9])+>'
+    Priority:        3
+  # Local (./) Headers in "" with extension.
+  - Regex:           '"(\.\/)([-\/_A-Za-z0-9])+((\.h)|(\.hpp))"'
+    Priority:        4
+  # Local (../) Headers in "" with extension.
+  - Regex:           '"(\.\.\/)+([-\/_A-Za-z0-9])+((\.h)|(\.hpp))"'
+    Priority:        5
+  # Headers in "" with extension.
+  - Regex:           '"([-\/_A-Za-z0-9])+((\.h)|(\.hpp))"'
+    Priority:        6
