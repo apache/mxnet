@@ -965,8 +965,6 @@ void CachedOp::StaticBackward(
     arrays[eid] = inputs[BwdOriginalInput(state.info.input_map, i)];
   }
 
-  auto ref_count = g.GetAttr<std::vector<uint32_t> >(AddPrefix(BACKWARD, REF_COUNT));
-
   if (config_.static_shape) {
     for (auto i : config_.param_indices) {
       const auto iter = state.info.fwd_input_to_grad_output.find(i);
