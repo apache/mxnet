@@ -42,18 +42,43 @@ public class MxModel extends MxResource {
     protected Map<String, String> properties = new ConcurrentHashMap<>();
 
     MxModel(String name, Device device) {
-        super(BaseMxResource.newSubMxResource());
+        this(BaseMxResource.getSystemMxResource(), name, device);
+    }
+
+    private MxModel(MxResource parent, String name, Device device) {
+        super(parent);
         setDevice(Device.defaultIfNull(device));
         setDataType(DataType.FLOAT32);
         setModelName(name);
     }
 
+    /**
+     * Create a default {@link Predictor} instance, with {@link NoOpTranslator} as default translator
+     * , and do not copy parameters to parameter store
+     * @return {@link Predictor}
+     */
     public Predictor<MxNDList, MxNDList> newPredictor() {
         Translator<MxNDList, MxNDList> noOpTranslator = new NoOpTranslator();
         return newPredictor(noOpTranslator, false);
     }
 
-    public <I, O> Predictor<I, O> newPredictor(Translator<I, O> translator, boolean copy) {
+    /**
+     * Create a default {@link Predictor} instance, with {@link NoOpTranslator} as default translator
+     * @param copy whether to copy the parameters to the parameter store
+     * @return {@link Predictor}
+     */
+    public Predictor<MxNDList, MxNDList> newPredictor(boolean copy) {
+        Translator<MxNDList, MxNDList> noOpTranslator = new NoOpTranslator();
+        return newPredictor(noOpTranslator, copy);
+    }
+
+    /**
+     * Create {@link Predictor} instance, with specific {@link Translator} and {@code copy}
+     * @param translator {@link Translator} used to convert inputs and outputs into {@link MxNDList} to get inferred
+     * @param copy whether to copy the parameters to the parameter store
+     * @return {@link Predictor}
+     */
+    public  <I, O> Predictor<I, O> newPredictor(Translator<I, O> translator, boolean copy) {
         return new Predictor<>(this, translator, copy);
     }
 
@@ -78,7 +103,8 @@ public class MxModel extends MxResource {
     }
 
     /**
-     * Create and initialize a MxModel from the model directory
+     * Create and initialize a MxModel with a model name from the model directory
+     * @param modelName {@String} model name
      * @param modelPath {@Path} model directory
      * @throws IOException when IO operation fails in loading a resource
      */
@@ -89,7 +115,8 @@ public class MxModel extends MxResource {
     }
 
     /**
-     * Create a MxModel with specific model name and model directory
+     * Create a MxModel with specific model name and model directory. By default, the {@link MxModel}
+     * instance is managed by the top level {@link BaseMxResource}
      * @param modelName {@String} model name
      * @param modelDir {@Path} local model path
      * @throws IOException when IO operation fails in loading a resource
@@ -193,21 +220,23 @@ public class MxModel extends MxResource {
     }
 
     protected Path paramPathResolver(String prefix, Map<String, ?> options) throws IOException {
-        Object epochOption = null;
-        if (options != null) {
-            epochOption = options.get("epoch");
-        }
-        int epoch;
-        if (epochOption == null) {
-            epoch = Utils.getCurrentEpoch(getModelDir(), prefix);
-            if (epoch == -1) {
-                return null;
-            }
-        } else {
-            epoch = Integer.parseInt(epochOption.toString());
+        try {
+            int epoch = getEpoch(prefix, options);
+            return getModelDir().resolve(String.format(Locale.ROOT, "%s-%04d.params", prefix, epoch));
+        } catch (FileNotFoundException e) {
+            return null;
         }
 
-        return getModelDir().resolve(String.format(Locale.ROOT, "%s-%04d.params", prefix, epoch));
+    }
+
+    private int getEpoch(String prefix, Map<String, ?> options) throws IOException {
+        if (options != null) {
+            Object epochOption = options.getOrDefault("epoch", null);
+            if (epochOption != null) {
+                return Integer.parseInt(epochOption.toString());
+            }
+        }
+        return Utils.getCurrentEpoch(getModelDir(), prefix);
     }
 
     private void loadParameters(Path paramFile, Map<String, ?> options)

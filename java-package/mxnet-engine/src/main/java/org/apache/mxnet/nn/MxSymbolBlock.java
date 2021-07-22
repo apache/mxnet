@@ -83,16 +83,16 @@ public class MxSymbolBlock extends MxResource {
     /**
      * Constructs an empty {@code MxSymbolBlock}.
      *
-     * @param parent the parent MxResource Object to manage this MxSymbolBlock
+     * @param parent the parent {@code MxSymbolBlock} instance to manage this MxSymbolBlock
      */
-    public MxSymbolBlock(MxResource parent) {
+    private MxSymbolBlock(MxResource parent) {
         super();
         setParent(parent);
     }
 
     /**
      * Constructs an {@code MxSymbolBlock} and load the symbol according to {@code Path}
-     * The life circle of the {@code Symbol} object is managed by the {@codd MxResource} object
+     * The life circle of the {@code Symbol} instance is managed by parent {@codd MxResource}.
      * @param parent the parent MxResource Object to manage this MxSymbolBlock
      * @param symbolPath the Path to load symbol
      */
@@ -103,7 +103,7 @@ public class MxSymbolBlock extends MxResource {
         return mxSymbolBlock;
     }
 
-    public void loadSymbol(Path symbolPath) {
+    private void loadSymbol(Path symbolPath) {
         Symbol symbol = Symbol.loadSymbol(this, symbolPath);
         this.symbol = symbol;
     }
@@ -454,7 +454,7 @@ public class MxSymbolBlock extends MxResource {
             }
             // init block only if it is not set
             symbol =
-                    Symbol.loadJson(parent, new String(bytes, StandardCharsets.UTF_8));
+                    Symbol.loadJson(this, new String(bytes, StandardCharsets.UTF_8));
             initBlock();
         }
         int size = is.readInt();

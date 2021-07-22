@@ -722,7 +722,7 @@ public final class JnaUtils {
     }
 
     public static Pointer createNdArray(
-            Device device, Shape shape, DataType dtype, int size, boolean delayedAlloc) {
+            Device device, Shape shape, DataType dataType, int size, boolean delayedAlloc) {
         int deviceType = DeviceType.toDeviceType(device);
         int deviceId = (deviceType != 1) ? device.getDeviceId() : -1;
         int delay = delayedAlloc ? 1 : 0;
@@ -731,7 +731,7 @@ public final class JnaUtils {
         int[] shapeArray = Arrays.stream(shape.getShape()).mapToInt(Math::toIntExact).toArray();
         checkCall(
                 LIB.MXNDArrayCreate(
-                        shapeArray, size, deviceType, deviceId, delay, dtype.ordinal(), ref));
+                        shapeArray, size, deviceType, deviceId, delay, dataType.ordinal(), ref));
 
         Pointer pointer = ref.getValue();
         REFS.recycle(ref);

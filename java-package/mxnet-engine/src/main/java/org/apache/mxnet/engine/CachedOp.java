@@ -72,7 +72,6 @@ public class CachedOp extends MxResource {
         MxNDArray[] allInputsNDArray = new MxNDArray[parameters.size()];
         // check device of input
         Device device = data.isEmpty() ? Device.defaultIfNull() : data.head().getDevice();
-        // get the manager of the data
         // fill allInputsNDArray with parameter values on correct device
         for (int index : paramIndices) {
             Parameter parameter = parameters.get(index);
@@ -108,6 +107,7 @@ public class CachedOp extends MxResource {
                                     + batchSize
                                     + ") by default");
                 }
+                //TODO: consider how to manage MxNDArray generated during inference
                 allInputsNDArray[pair.getValue()] = MxNDArray.create(this, new Shape(batchSize), device);
             }
         }

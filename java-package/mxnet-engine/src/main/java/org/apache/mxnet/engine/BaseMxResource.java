@@ -4,7 +4,7 @@ import org.apache.mxnet.jna.JnaUtils;
 
 public final class BaseMxResource extends MxResource{
 
-    static BaseMxResource SYSTEM_MX_RESOURCE;
+    private static BaseMxResource SYSTEM_MX_RESOURCE;
 
     protected BaseMxResource() {
         super();
@@ -24,9 +24,9 @@ public final class BaseMxResource extends MxResource{
         return SYSTEM_MX_RESOURCE;
     }
 
-    public static MxResource newSubMxResource() {
-        return new MxResource(getSystemMxResource());
-    }
+//    public static MxResource newSubMxResource() {
+//        return new MxResource(getSystemMxResource());
+//    }
 
     public boolean isReleased() {
         return handle.get() == null;

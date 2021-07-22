@@ -103,6 +103,7 @@ public class MxResource extends NativeResource<Pointer> {
     @Override
     public void close() {
         freeSubResources();
+        setClosed();
     }
 
 }

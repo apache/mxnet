@@ -1,6 +1,7 @@
 package org.apache.mxnet.util;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -234,8 +235,9 @@ public final class Utils {
      *
      * @param modelDir the path to the directory where the model files are stored
      * @param modelName the name of the model
-     * @return the current epoch number
+     * @return the current epoch number, if no epoch number found, return null
      * @throws IOException if an I/O error occurs
+     * @throws FileNotFoundException if no matched parameter file with epoch number is found
      */
     public static int getCurrentEpoch(Path modelDir, String modelName) throws IOException {
         final Pattern pattern = Pattern.compile(Pattern.quote(modelName) + "-(\\d{4}).params");
@@ -253,7 +255,7 @@ public final class Utils {
                         .sorted()
                         .collect(Collectors.toList());
         if (checkpoints.isEmpty()) {
-            return -1;
+            throw new FileNotFoundException(String.format("No matched params file is found in directory: {} for model {}", modelDir.toAbsolutePath(), modelName));
         }
         return checkpoints.get(checkpoints.size() - 1);
     }
