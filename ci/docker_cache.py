@@ -119,7 +119,12 @@ def _ecr_login(registry):
     assert(regionMatch)
     region = regionMatch.group(1)
     logging.info("Logging into ECR region %s using aws-cli..", region)
-    os.system("$(aws ecr get-login --region "+region+" --no-include-email)")
+    # first check version of aws-cli
+    aws_cli_output = subprocess.check_output(["aws","--version"])
+    if aws_cli_output.decode('utf-8').startswith("aws-cli/2"):
+        os.system("aws ecr get-login-password --region "+region+" | docker login --username AWS --password-stdin "+registry)
+    else:
+        os.system("$(aws ecr get-login --region "+region+" --no-include-email)")
     ECR_LOGGED_IN = True
 
 def _upload_image(registry, docker_tag, image_id) -> None:
