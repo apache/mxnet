@@ -64,7 +64,7 @@ test {
         useDefaultListeners = true
     }
     environment "PATH", "src/test/bin:${environment.PATH}"
-    environment "MXNET_LIBRARY_PATH", "${MXNET_LIBRARY_PATH}"
+//    environment "MXNET_LIBRARY_PATH", "${MXNET_LIBRARY_PATH}"
     maxHeapSize = '6G'
     testLogging.showStandardStreams = true
     beforeTest { descriptor ->

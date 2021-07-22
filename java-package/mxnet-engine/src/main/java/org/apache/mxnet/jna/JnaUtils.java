@@ -41,6 +41,7 @@ public final class JnaUtils {
     private static final Logger logger = LoggerFactory.getLogger(JnaUtils.class);
 
     public static final MxnetLibrary LIB = LibUtils.loadLibrary();
+
     public static final ObjectPool<PointerByReference> REFS =
             new ObjectPool<>(PointerByReference::new, r -> r.setValue(null));
 
@@ -61,6 +62,14 @@ public final class JnaUtils {
         OFF,
         THREAD_LOCAL_ON,
         GLOBAL_ON
+    }
+
+    public static void waitAll() {
+        checkCall(LIB.MXNDArrayWaitAll());
+    }
+
+    public static void init() {
+        Runtime.getRuntime().addShutdownHook(new Thread(JnaUtils::waitAll)); // NOPMD
     }
 
     public static void setNumpyMode(NumpyMode mode) {
@@ -813,6 +822,7 @@ public final class JnaUtils {
 
     public static void checkCall(int ret) {
         if (ret != 0) {
+            logger.error("MXNet engine call failed: " + getLastError());
             throw new JnaCallException("MXNet engine call failed: " + getLastError());
         }
     }
@@ -875,26 +885,25 @@ public final class JnaUtils {
         return isTraining.get(0) == 1;
     }
 
-    public static void waitAll() {
-        checkCall(LIB.MXNDArrayWaitAll());
-    }
-
     /*****************************************************************************
      * Tests
      *****************************************************************************/
     public static void main(String... args) {
         try {
+            Runtime.getRuntime().addShutdownHook(new Thread(JnaUtils::waitAll));
             Set<String> opNames = JnaUtils.getAllOpNames();
             List<String> list = new ArrayList<>(opNames);
 
             PointerByReference ref = REFS.acquire();
-            for (String opName : list.subList(0, 300)) {
+
+            for (String opName : list.subList(0, 400)) {
                 checkCall(LIB.NNGetOpHandle(opName, ref));
                 String functionName = getOpNamePrefix(opName);
                 // System.out.println("Name: " + opName + "/" + functionName);
                 getFunctionByName(opName, functionName, ref.getValue());
 
             }
+
             ref.setValue(null);
             REFS.recycle(ref);
 

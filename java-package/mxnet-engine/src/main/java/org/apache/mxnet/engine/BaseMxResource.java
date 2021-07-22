@@ -1,11 +1,20 @@
 package org.apache.mxnet.engine;
 
+import org.apache.mxnet.jna.JnaUtils;
+
 public final class BaseMxResource extends MxResource{
 
     static BaseMxResource SYSTEM_MX_RESOURCE;
 
     protected BaseMxResource() {
         super();
+        // Workaround MXNet engine lazy initialization issue
+        JnaUtils.getAllOpNames();
+
+        JnaUtils.setNumpyMode(JnaUtils.NumpyMode.GLOBAL_ON);
+
+        // Workaround MXNet shutdown crash issue
+        Runtime.getRuntime().addShutdownHook(new Thread(JnaUtils::waitAll)); // NOPMD
     }
 
     public static BaseMxResource getSystemMxResource() {

@@ -6,6 +6,7 @@ import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.engine.Predictor;
 import org.apache.mxnet.integration.tests.jna.JnaUtilTest;
 import org.apache.mxnet.integration.util.Assertions;
+import org.apache.mxnet.jna.JnaUtils;
 import org.apache.mxnet.ndarray.MxNDArray;
 import org.apache.mxnet.ndarray.MxNDList;
 import org.apache.mxnet.ndarray.types.Shape;
@@ -15,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.nio.file.Paths;
 
 public class ModelTest {
     private static final Logger logger = LoggerFactory.getLogger(JnaUtilTest.class);

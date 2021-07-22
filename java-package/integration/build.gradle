@@ -28,13 +28,11 @@ dependencies {
 }
 
 run {
-    environment("TF_CPP_MIN_LOG_LEVEL", "1") // turn off TensorFlow print out
     systemProperties System.getProperties()
     systemProperties.remove("user.dir")
     systemProperty("file.encoding", "UTF-8")
     jvmArgs "-Xverify:none"
     args("-p=org.apache.mxnet.integration.tests.", "-m=modelLoadAndPredictTest")
-
 }
 
 test {
