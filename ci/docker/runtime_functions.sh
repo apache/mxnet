@@ -701,6 +701,7 @@ build_ubuntu_gpu_large_tensor() {
 
 sanity_check() {
     set -ex
+    sanity_clang
     sanity_license
     sanity_python
     sanity_cpp
@@ -714,6 +715,30 @@ sanity_license() {
 sanity_cpp() {
     set -ex
     3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests --exclude_path src/operator/contrib/ctc_include include/onednn
+}
+
+sanity_clang() {
+    set -ex
+    BASE_SHA=${{ github.event.pull_request.base.sha }}
+    git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
+    git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
+    git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
+    git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "| clang-format failures found! Run: "
+    echo "|    tool/lint/clang_format_ci.sh ${BASE_SHA} "
+    echo "| to fix this error. "
+    echo "| For more info, see: "
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    tools/lint/clang_format_ci.sh "${BASE_SHA}"
+    GIT_DIFFERENCE=$(git diff)
+    if [[ -z $GIT_DIFFERENCE ]]; then
+        git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
+        exit 0
+    fi
+    echo "$GIT_DIFFERENCE"
+    git remote remove "${GITHUB_RUN_ID}" # temporary remote is removed
+    exit 1
 }
 
 sanity_python() {
