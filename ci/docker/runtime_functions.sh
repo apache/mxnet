@@ -722,8 +722,6 @@ sanity_clang() {
     BASE_SHA=${{ github.event.pull_request.base.sha }}
     git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
     git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
-    git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
-    git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "| clang-format failures found! Run: "
     echo "|    tool/lint/clang_format_ci.sh ${BASE_SHA} "
