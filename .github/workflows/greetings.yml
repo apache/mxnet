@@ -7,6 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/first-interaction@v1
+      env:
+        GITHUB_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         issue-message: |

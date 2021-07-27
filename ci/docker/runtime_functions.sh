@@ -717,9 +717,11 @@ sanity_cpp() {
     3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests --exclude_path src/operator/contrib/ctc_include include/onednn
 }
 
+# .github/workgflows/greetings.yml passes BASE_SHA for pull requests.
+# That's the place we want to check for PRs. 
 sanity_clang() {
     set -ex
-    BASE_SHA=$(git show-ref --hash refs/heads/master)
+    BASE_SHA="${GITHUB_PR_BASE_SHA}"
     git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
     git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
