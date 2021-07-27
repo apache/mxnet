@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.Test;
 import java.io.IOException;
+import java.nio.file.Paths;
 
 public class ModelTest {
     private static final Logger logger = LoggerFactory.getLogger(JnaUtilTest.class);
@@ -40,7 +41,7 @@ public class ModelTest {
         try (MxResource base = BaseMxResource.getSystemMxResource())
         {
             Model model = Model.loadModel(Item.MLP);
-//            MxModel mxModel = MxModel.loadModel("trest", Paths.get("/Users/cspchen/mxnet.java_package/cache/repo/test-models/mlp.tar.gz/mlp/"));
+//            Model model = Model.loadModel("test", Paths.get("/Users/cspchen/mxnet.java_package/cache/repo/test-models/mlp.tar.gz/mlp/"));
             Predictor<NDList, NDList> predictor = model.newPredictor();
             NDArray input = NDArray.create(base, new Shape(1, 28, 28)).ones();
             NDList inputs = new NDList();
