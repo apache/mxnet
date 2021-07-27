@@ -719,7 +719,7 @@ sanity_cpp() {
 
 sanity_clang() {
     set -ex
-    BASE_SHA=${{ github.event.pull_request.base.sha }}
+    BASE_SHA=$(git show-ref --hash refs/heads/master)
     git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
     git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
