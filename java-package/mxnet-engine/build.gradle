@@ -52,8 +52,8 @@ task jnarator(dependsOn: ":jnarator:jar") {
                     "-m",
                     "${project.projectDir}/src/main/jna/mapping.properties",
                     "-f",
-                    "src/main/include/mxnet/c_api.h",
-                    "src/main/include/nnvm/c_api.h"
+                    "../../include/mxnet/c_api.h",
+                    "../../include/nnvm/c_api.h"
             ]
         }
     }

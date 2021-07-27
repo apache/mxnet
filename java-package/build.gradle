@@ -5,7 +5,7 @@ plugins {
 defaultTasks 'build'
 
 allprojects {
-    group 'incubator-mxnet.java-package'
+    group 'org.apache.mxnet'
     boolean isRelease = project.hasProperty("release") || project.hasProperty("staging")
     version = "${java_package_version}" + (isRelease ? "" : "-SNAPSHOT")
 
