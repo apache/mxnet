@@ -719,7 +719,7 @@ sanity_cpp() {
 
 sanity_clang() {
     set -ex
-    # .github/workgflows/os_x_staticbuild.yml passes BASE_SHA, GITHUB_RUN_ID, GITHUB_BASE_REF for pull requests.
+    # .github/workgflows/greetings.yml passes BASE_SHA, GITHUB_RUN_ID, GITHUB_BASE_REF for pull requests.
     BASE_SHA="${GITHUB_PR_BASE_SHA}"
     GITHUB_RUN_ID="${GITHUB_PR_RUN_ID}"
     GITHUB_BASE_REF="${GITHUB_PR_BASE_REF}"
