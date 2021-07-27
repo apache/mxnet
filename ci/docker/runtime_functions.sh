@@ -723,24 +723,25 @@ sanity_clang() {
     BASE_SHA="${GITHUB_PR_BASE_SHA:-refs/heads/master}"
     GITHUB_RUN_ID="${GITHUB_PR_RUN_ID}"
     GITHUB_BASE_REF="${GITHUB_PR_BASE_REF}"
-    if [ "${BASE_SHA}" == "refs/heads/master" ]; then
-        BASE_SHA=`git show-ref ${BASE_SHA}`
-    fi
-    if [ "${GITHUB_RUN_ID}" == "" ]; then
-        GITHUB_RUN_ID=`(git rev-parse HEAD)`
-    fi
-    if [ "${GITHUB_BASE_REF}" == "" ]; then
-        GITHUB_BASE_REF="master"
-    fi
 
+    if [ "${BASE_SHA}" == "refs/heads/master" ]; then
+        git show-ref 
+        BASE_SHA=`git show-ref --hash refs/heads/master`
+        if [ "${GITHUB_RUN_ID}" == "" || "${GITHUB_BASE_REF}" == "" ]; then
+             GITHUB_RUN_ID=`(git rev-parse HEAD)`
+             GITHUB_BASE_REF="master"
+        fi
+    fi
     git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
     git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
+
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "| clang-format failures found! Run: "
     echo "|    tool/lint/clang_format_ci.sh ${BASE_SHA} "
     echo "| to fix this error. "
     echo "| For more info, see: "
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    
     tools/lint/clang_format_ci.sh "${BASE_SHA}"
     GIT_DIFFERENCE=$(git diff)
     if [[ -z $GIT_DIFFERENCE ]]; then
