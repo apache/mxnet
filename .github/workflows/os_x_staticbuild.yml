@@ -8,7 +8,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-
+        env:
+          GITHUB_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_PR_RUN_ID: ${{ GITHUB_RUN_ID }}
+          GITHUB_PR_BASE_REF: ${{ GITHUB_BASE_REF }} 
       - name: Compilation cache
         uses: actions/cache@v2
         with:
