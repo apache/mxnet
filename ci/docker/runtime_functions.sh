@@ -726,11 +726,12 @@ sanity_clang() {
 
     if [ "${BASE_SHA}" == "refs/remotes/origin/master" ]; then
         BASE_SHA=`git show-ref --hash refs/remotes/origin/master`
-        if [ "${GITHUB_RUN_ID}" == "" || "${GITHUB_BASE_REF}" == "" ]; then
+        if [ "${GITHUB_RUN_ID}" == "" ] || [ "${GITHUB_BASE_REF}" == "" ]; then
              GITHUB_RUN_ID=`(git log --pretty=format:'%h' -n 1)`
              GITHUB_BASE_REF="master"
         fi
     fi
+
     git remote add "${GITHUB_RUN_ID}" https://github.com/apache/incubator-mxnet.git
     git fetch "${GITHUB_RUN_ID}" "$GITHUB_BASE_REF"
 
