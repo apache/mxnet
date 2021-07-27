@@ -306,6 +306,20 @@ bool CachedOp::SetBackwardGraph(
     g.attrs[AddPrefix(BACKWARD, REF_COUNT)] = std::make_shared<dmlc::any>(std::move(ref_count));
   }
 
+  // Set AddTo Entry based on the req that users provide
+  if (detect_inplace_addto) {
+    std::vector<int> addto_entry(idx.num_node_entries(), 0);
+    for (size_t i = 0; i < info->grad_graph.outputs.size(); ++i) {
+      if (reqs[i] == kAddTo) {
+        auto entry = info->grad_graph.outputs[i];
+        if (!idx.exist(entry.node.get())) continue;
+        auto eid = idx.entry_id(entry);
+        addto_entry[eid] = 1;
+      }
+    }
+    g.attrs["addto_entry"] = std::make_shared<nnvm::any>(std::move(addto_entry));
+  }
+
   auto shapes = info->fwd_graph.GetAttr<mxnet::ShapeVector>("shape");
   shapes.resize(idx.num_node_entries(), mxnet::TShape());
   auto dtypes = info->fwd_graph.GetAttr<DTypeVector>("dtype");
