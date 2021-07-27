@@ -723,13 +723,13 @@ sanity_clang() {
     BASE_SHA="${GITHUB_PR_BASE_SHA:-refs/heads/master}"
     GITHUB_RUN_ID="${GITHUB_PR_RUN_ID}"
     GITHUB_BASE_REF="${GITHUB_PR_BASE_REF}"
-    if [ "${BASE_SHA}" == "refs/heads/master"]; then
+    if [ "${BASE_SHA}" == "refs/heads/master" ]; then
         BASE_SHA=`git show-ref ${BASE_SHA}`
     fi
-    if [ "${GITHUB_RUN_ID}" == ""]; then
+    if [ "${GITHUB_RUN_ID}" == "" ]; then
         GITHUB_RUN_ID=`(git rev-parse HEAD)`
     fi
-    if [ "${GITHUB_BASE_REF}" == ""]; then
+    if [ "${GITHUB_BASE_REF}" == "" ]; then
         GITHUB_BASE_REF="master"
     fi
 
