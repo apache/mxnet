@@ -21,7 +21,6 @@ Ref: http://images.nvidia.com/content/pdf/tesla/184457-Tesla-P4-Datasheet-NV-Fin
 import os
 import mxnet as mx
 import numpy as np
-import pytest
 from mxnet.gluon.model_zoo import vision
 from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err, assert_exception
 from mxnet.test_utils import rand_ndarray, rand_shape_nd, same, DummyIter, environment
@@ -1349,39 +1348,37 @@ def test_onednn_shifted_quantize_fc():
             check(i, qdtype)
 
 
-@pytest.mark.parametrize('with_eltwise', [False, True])
-@pytest.mark.parametrize('qdtype', ['int8', 'uint8', 'auto'])
-def test_onednn_shifted_quantize_fc_relu_fc_sum(with_eltwise, qdtype):
+@with_seed()
+def test_onednn_shifted_quantize_fc_fc():
     batch_size = 2
     if not is_test_for_mkldnn():
         print("Test only for mkldnn")
         return
 
-    def get_fc_fc_layers():
+    def get_fc_fc_layers(with_eltwise):
         class Net(mx.gluon.nn.HybridBlock):
             def __init__(self):
                 super(Net, self).__init__()
                 self.fc1 = mx.gluon.nn.Dense(20, use_bias=True, flatten=True,
                                              weight_initializer=mx.initializer.Normal(),
                                              bias_initializer=mx.initializer.Normal())
-                if with_eltwise:
-                    self.relu = mx.gluon.nn.Activation('relu')
+                self.relu = mx.gluon.nn.Activation('relu') if with_eltwise else None
                 self.fc2 = mx.gluon.nn.Dense(20, use_bias=True, flatten=True,
                                              weight_initializer=mx.initializer.Normal(),
                                              bias_initializer=mx.initializer.Normal())
 
             def hybrid_forward(self, F, x):
                 out = self.fc1(x)
-                if with_eltwise:
+                if self.relu is not None:
                     out = self.relu(out)
                 out = self.fc2(out)
                 return out
 
         net = Net()
-        net.collect_params().initialize()
+        net.initialize()
         return net
 
-    def quantize_net(net, random_data):
+    def quantize_net(with_eltwise, qdtype, net, random_data):
         calib_data = NDArrayIter(data=random_data, batch_size=batch_size)
         calib_data = DummyIter(calib_data)
         net = mx.contrib.quant.quantize_net(net, quantize_mode='smart',
@@ -1393,31 +1390,40 @@ def test_onednn_shifted_quantize_fc_relu_fc_sum(with_eltwise, qdtype):
                                             num_calib_examples=1,
                                             ctx=mx.current_context())
         net.hybridize(static_alloc=True, static_shape=True)
-        print("calibrated, now run to get symbol")
         out = net(random_data)
         out.wait_to_read()
 
         _, sym = net._cached_graph
-        fc_attrs = sym.attr_dict()["quantized_sg_mkldnn_fully_connected%s_0" %("_eltwise" if with_eltwise else "")]
-        return fc_attrs, out
+        fc0_name = "quantized_sg_mkldnn_fully_connected%s_0" %("_eltwise" if with_eltwise else "")
+        fc0_attrs = sym.attr_dict()[fc0_name]
 
-    def check(random_data):
-        net_ref = get_fc_fc_layers()
+        if qdtype == 'auto':
+            assert fc0_attrs['shifted_output'] == 'True'
+        else:
+            assert 'shifted_output' not in fc0_attrs
+
+        return out
+
+    def check(with_eltwise, qdtype, random_data):
+        net_ref = get_fc_fc_layers(with_eltwise)
         out_ref = net_ref(random_data)
         out_ref.wait_to_read()
 
-        fc_attrs, out_q = quantize_net(net_ref, random_data)
+        out_q = quantize_net(with_eltwise, qdtype, net_ref, random_data)
 
-        assert_almost_equal(out_q, out_ref)
-
-        if qdtype == 'auto':
-            assert fc_attrs['shifted_output'] == 'True'
-        else:
-            assert 'shifted' not in fc_attrs
+        min_range = mx.nd.min(out_ref).asscalar()
+        max_range = mx.nd.max(out_ref).asscalar()
+        atol = 0.1 * max(abs(min_range), abs(max_range))
+        assert_almost_equal_with_err(out_q.asnumpy(), out_ref.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
 
     with environment({'MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS': '0',
                       'MXNET_DISABLE_SHIFTED_QUANTIZE_FC_OPTIMIZATION': '0'}):
-        check(mx.nd.random_uniform(low=0 if qdtype == 'uint8' else -1, high=1, shape=(batch_size, 10)))
+        for with_eltwise in [False, True]:
+            for qdtype in ['int8', 'uint8', 'auto']:
+                print("with_eltwise:", with_eltwise)
+                print("qdtype:", qdtype)
+                data = mx.nd.random_uniform(low=0 if qdtype == 'uint8' else -1, high=1, shape=(batch_size, 10))
+                check(with_eltwise, qdtype, data)
 
 
 if __name__ == "__main__":
