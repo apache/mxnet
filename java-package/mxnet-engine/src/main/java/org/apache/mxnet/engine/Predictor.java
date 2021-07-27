@@ -1,7 +1,24 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.mxnet.engine;
 
 import org.apache.mxnet.exception.TranslateException;
-import org.apache.mxnet.ndarray.MxNDList;
+import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.training.ParameterStore;
 import org.apache.mxnet.translate.Translator;
 import org.slf4j.Logger;
@@ -17,22 +34,22 @@ public class Predictor<I, O> extends MxResource {
     private Translator<I, O> translator;
     private long timestamp;
     private boolean prepared;
-    private MxModel mxModel;
+    private Model model;
     protected ParameterStore parameterStore;
 
     /**
-     * Creates a new instance of {@code Predictor} with the given {@link MxModel} and {@link
+     * Creates a new instance of {@code Predictor} with the given {@link Model} and {@link
      * Translator}.
      *
-     * @param mxModel the model on which the predictions are based
+     * @param model the model on which the predictions are based
      * @param translator the translator to be used
      * @param copy whether to copy the parameters to the parameter store
      */
-    public Predictor(MxModel mxModel, Translator<I, O> translator, boolean copy) {
-        super(mxModel);
-        this.mxModel = mxModel;
+    public Predictor(Model model, Translator<I, O> translator, boolean copy) {
+        super(model);
+        this.model = model;
         this.translator = translator;
-        this.parameterStore = new ParameterStore(getParent(), copy, mxModel.getDevice());
+        this.parameterStore = new ParameterStore(getParent(), copy, model.getDevice());
     }
 
 
@@ -45,7 +62,7 @@ public class Predictor<I, O> extends MxResource {
      */
     @SuppressWarnings("PMD.AvoidRethrowingException")
     public List<O> predict(List<I> input) {
-        MxNDList[] ndLists = processInputs(input);
+        NDList[] ndLists = processInputs(input);
         for (int i = 0; i < ndLists.length; ++i) {
             ndLists[i] = forward(ndLists[i]);
         }
@@ -57,16 +74,16 @@ public class Predictor<I, O> extends MxResource {
     }
 
 
-    private MxNDList forward(MxNDList ndList) {
+    private NDList forward(NDList ndList) {
         logger.trace("Predictor input data: {}", ndList);
-        return mxModel.getMxSymbolBlock().forward(parameterStore, ndList, false);
+        return model.getMxSymbolBlock().forward(parameterStore, ndList, false);
     }
 
     // TODO: add batch predict
 
-    private MxNDList[] processInputs(List<I> inputs) throws TranslateException {
+    private NDList[] processInputs(List<I> inputs) throws TranslateException {
         int batchSize = inputs.size();
-        MxNDList[] preprocessed = new MxNDList[batchSize];
+        NDList[] preprocessed = new NDList[batchSize];
         try {
             for (int i = 0; i < batchSize; ++i) {
                 preprocessed[i] = translator.processInput(inputs.get(i));
@@ -79,10 +96,10 @@ public class Predictor<I, O> extends MxResource {
         return preprocessed;
     }
 
-    private List<O> processOutPut(MxNDList[] ndLists) throws TranslateException {
+    private List<O> processOutPut(NDList[] ndLists) throws TranslateException {
         List<O> outputs = new ArrayList<>();
         try {
-            for (MxNDList mxNDList : ndLists) {
+            for (NDList mxNDList : ndLists) {
                 outputs.add(translator.processOutput(mxNDList));
             }
         } catch (RuntimeException e) {

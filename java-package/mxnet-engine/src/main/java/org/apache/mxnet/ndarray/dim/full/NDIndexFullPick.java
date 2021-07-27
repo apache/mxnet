@@ -1,18 +1,22 @@
 /*
- * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance
- * with the License. A copy of the License is located at
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * http://aws.amazon.com/apache2.0/
- *
- * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
- * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
- * and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.mxnet.ndarray.dim.full;
 
-import org.apache.mxnet.ndarray.MxNDArray;
+import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.ndarray.dim.NDIndexAll;
 import org.apache.mxnet.ndarray.dim.NDIndexElement;
 import org.apache.mxnet.ndarray.dim.NDIndexPick;
@@ -21,10 +25,10 @@ import org.apache.mxnet.ndarray.types.Shape;
 
 import java.util.Optional;
 
-/** A simplified representation of a pick-based {@link MxNDArray}. */
+/** A simplified representation of a pick-based {@link NDArray}. */
 public final class NDIndexFullPick {
 
-    private MxNDArray indices;
+    private NDArray indices;
     private int axis;
 
     /**
@@ -33,7 +37,7 @@ public final class NDIndexFullPick {
      * @param indices the indices to pick
      * @param axis the axis to pick at
      */
-    private NDIndexFullPick(MxNDArray indices, int axis) {
+    private NDIndexFullPick(NDArray indices, int axis) {
         this.indices = indices;
         this.axis = axis;
     }
@@ -72,7 +76,7 @@ public final class NDIndexFullPick {
      *
      * @return the indices to pick
      */
-    public MxNDArray getIndices() {
+    public NDArray getIndices() {
         return indices;
     }
 

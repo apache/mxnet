@@ -1,6 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.mxnet.translate;
 
-import org.apache.mxnet.ndarray.MxNDArray;
+import org.apache.mxnet.ndarray.NDArray;
 
 /**
  * An interface to apply various transforms to the input.
@@ -11,10 +28,10 @@ import org.apache.mxnet.ndarray.MxNDArray;
 // TODO : not used by now
 public interface Transform {
     /**
-     * Applies the {@code Transform} to the given {@link MxNDArray}.
+     * Applies the {@code Transform} to the given {@link NDArray}.
      *
-     * @param array the {@link MxNDArray} on which the {@link Transform} is applied
+     * @param array the {@link NDArray} on which the {@link Transform} is applied
      * @return the output of the {@code Transform}
      */
-    MxNDArray transform(MxNDArray array);
+    NDArray transform(NDArray array);
 }

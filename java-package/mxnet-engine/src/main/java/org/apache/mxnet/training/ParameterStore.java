@@ -1,8 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.mxnet.training;
 
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.MxResource;
-import org.apache.mxnet.ndarray.MxNDArray;
+import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.nn.Parameter;
 
 import java.util.ArrayList;
@@ -57,7 +74,7 @@ public class ParameterStore extends MxResource {
             String parameterId = entry.getKey();
             ParameterData data = entry.getValue();
             if (data.requireGradient()) {
-                MxNDArray[] params = data.toArray();
+                NDArray[] params = data.toArray();
                 parameterServer.update(parameterId, params);
             }
         }
@@ -71,7 +88,7 @@ public class ParameterStore extends MxResource {
      * @param training true for a training forward pass
      * @return the value of the mirrored parameter on the device
      */
-    public MxNDArray getValue(Parameter parameter, Device device, boolean training) {
+    public NDArray getValue(Parameter parameter, Device device, boolean training) {
         // for those optional parameters, they might not be in the ParameterStore
         if (parameter == null) {
             return null;
@@ -82,12 +99,12 @@ public class ParameterStore extends MxResource {
                 parameterMap.computeIfAbsent(parameterId, k -> new ParameterData(parameter));
 
         if (data.isEmpty()) {
-            MxNDArray array = parameter.getArray();
+            NDArray array = parameter.getArray();
 
             if (parameterServer != null) {
                 // initialize on parameter store for first time
-                parameterServer.init(parameterId, new MxNDArray[] {array});
-                MxNDArray[] arrays = new MxNDArray[deviceMap.size()];
+                parameterServer.init(parameterId, new NDArray[] {array});
+                NDArray[] arrays = new NDArray[deviceMap.size()];
                 for (Map.Entry<Device, Integer> entry : deviceMap.entrySet()) {
                     Device dev = entry.getKey();
                     int i = entry.getValue();
@@ -132,14 +149,14 @@ public class ParameterStore extends MxResource {
     private final class ParameterData {
 
         private Parameter parameter;
-        private List<MxNDArray> list;
+        private List<NDArray> list;
 
         private ParameterData(Parameter parameter) {
             this.parameter = parameter;
             list = Collections.synchronizedList(new ArrayList<>());
         }
 
-        private List<MxNDArray> getNDArrays() {
+        private List<NDArray> getNDArrays() {
             return list;
         }
 
@@ -147,16 +164,16 @@ public class ParameterStore extends MxResource {
             return list.isEmpty();
         }
 
-        private void add(MxNDArray array) {
+        private void add(NDArray array) {
             list.add(array);
         }
 
-        private MxNDArray get(int index) {
+        private NDArray get(int index) {
             return list.get(index);
         }
 
-        private MxNDArray[] toArray() {
-            return list.toArray(new MxNDArray[0]);
+        private NDArray[] toArray() {
+            return list.toArray(new NDArray[0]);
         }
 
         private boolean requireGradient() {
@@ -164,7 +181,7 @@ public class ParameterStore extends MxResource {
         }
 
         private void sync() {
-            MxNDArray array = parameter.getArray();
+            NDArray array = parameter.getArray();
             Device device = array.getDevice();
             if (!deviceMap.containsKey(device)) {
                 // model's parameters maybe loaded on different device than any of training devices.

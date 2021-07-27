@@ -1,8 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.mxnet.jna;
 
 import com.sun.jna.Pointer;
 import org.apache.mxnet.engine.Device;
-import org.apache.mxnet.ndarray.MxNDArray;
+import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.ndarray.types.SparseFormat;
 import org.apache.mxnet.util.PairList;
@@ -38,7 +55,7 @@ public class FunctionInfo {
      * @return the error code or zero for no errors
      */
     public int invoke(
-            MxNDArray[] src, MxNDArray[] dest, PairList<String, ?> params) {
+            NDArray[] src, NDArray[] dest, PairList<String, ?> params) {
         checkDevices(src);
         checkDevices(dest);
         return JnaUtils.imperativeInvoke(handle, src, dest, params).size();
@@ -52,7 +69,7 @@ public class FunctionInfo {
      *     String>}
      * @return the error code or zero for no errors
      */
-    public MxNDArray[] invoke(MxResource parent, MxNDArray[] src, PairList<String, ?> params) {
+    public NDArray[] invoke(MxResource parent, NDArray[] src, PairList<String, ?> params) {
         checkDevices(src);
         PairList<Pointer, SparseFormat> pairList =
                 JnaUtils.imperativeInvoke(handle, src, null, params);
@@ -60,14 +77,14 @@ public class FunctionInfo {
                 .map(
                         pair -> {
                             if (pair.getValue() != SparseFormat.DENSE) {
-                                return MxNDArray.create(parent, pair.getKey(), pair.getValue());
+                                return NDArray.create(parent, pair.getKey(), pair.getValue());
                             }
-                            return MxNDArray.create(parent, pair.getKey());
+                            return NDArray.create(parent, pair.getKey());
                         })
-                .toArray(MxNDArray[]::new);
+                .toArray(NDArray[]::new);
     }
 
-    private void checkDevices(MxNDArray[] src) {
+    private void checkDevices(NDArray[] src) {
         // check if all the NDArrays are in the same device
         if (logger.isDebugEnabled() && src.length > 1) {
             Device device = src[0].getDevice();

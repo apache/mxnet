@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.mxnet.jna;
 
 import com.sun.jna.Memory;
@@ -23,9 +40,9 @@ import org.apache.mxnet.engine.CachedOp;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.DeviceType;
 import org.apache.mxnet.exception.JnaCallException;
-import org.apache.mxnet.nn.MxSymbolBlock;
-import org.apache.mxnet.ndarray.MxNDArray;
-import org.apache.mxnet.ndarray.MxNDList;
+import org.apache.mxnet.nn.SymbolBlock;
+import org.apache.mxnet.ndarray.NDArray;
+import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.engine.Symbol;
 import org.apache.mxnet.ndarray.types.DataType;
@@ -82,7 +99,7 @@ public final class JnaUtils {
      ******************************************************************************/
     // TODO
     public static CachedOp createCachedOp(
-            MxSymbolBlock block, MxResource parent, boolean training) {
+            SymbolBlock block, MxResource parent, boolean training) {
         Symbol symbol = block.getSymbol();
 
         List<Parameter> parameters = block.getAllParameters();
@@ -345,7 +362,7 @@ public final class JnaUtils {
     /*******************************************************************************
      * About NdArray
      ******************************************************************************/
-    public static MxNDList loadNdArray(MxResource parent, Path path, Device device) {
+    public static NDList loadNdArray(MxResource parent, Path path, Device device) {
         IntBuffer handlesSize = IntBuffer.allocate(1);
         PointerByReference handlesRef = REFS.acquire();
         PointerByReference namesRef = REFS.acquire();
@@ -358,15 +375,15 @@ public final class JnaUtils {
                     "Mismatch between names and arrays in checkpoint file: " + path.toString());
         }
         Pointer[] handles = handlesRef.getValue().getPointerArray(0, ndArrayCount);
-        MxNDList ndList = new MxNDList();
+        NDList ndList = new NDList();
         if (nameCount == 0) {
             for (Pointer handle : handles) {
-                ndList.add(MxNDArray.create(parent, handle));
+                ndList.add(NDArray.create(parent, handle));
             }
         } else {
             String[] names = namesRef.getValue().getStringArray(0, nameCount);
             for (int i = 0; i < ndArrayCount; i++) {
-                MxNDArray array = MxNDArray.create(parent, handles[i]);
+                NDArray array = NDArray.create(parent, handles[i]);
                 array.setName(names[i]);
                 ndList.add(array);
             }
@@ -380,7 +397,7 @@ public final class JnaUtils {
             return ndList;
         }
 
-        MxNDList ret = ndList.toDevice(device, true);
+        NDList ret = ndList.toDevice(device, true);
         ndList.close();
         return ret;
     }
@@ -530,7 +547,7 @@ public final class JnaUtils {
     }
 
     public static PairList<Pointer, SparseFormat> imperativeInvoke(
-            Pointer function, MxNDArray[] src, MxNDArray[] dest, PairList<String, ?> params) {
+            Pointer function, NDArray[] src, NDArray[] dest, PairList<String, ?> params) {
         String[] keys;
         String[] values;
         if (params == null) {
@@ -580,7 +597,7 @@ public final class JnaUtils {
         return pairList;
     }
 
-    private static PointerArray toPointerArray(MxNDArray[] vals) {
+    private static PointerArray toPointerArray(NDArray[] vals) {
         if (vals == null) {
             return null;
         }
@@ -775,7 +792,7 @@ public final class JnaUtils {
         return pointer;
     }
 
-    public static void ndArraySyncCopyFromNdArray(MxNDArray dest, MxNDArray src, int location) {
+    public static void ndArraySyncCopyFromNdArray(NDArray dest, NDArray src, int location) {
         checkCall(LIB.MXNDArraySyncCopyFromNDArray(dest.getHandle(), src.getHandle(), location));
     }
 
@@ -785,8 +802,8 @@ public final class JnaUtils {
         return version.get();
     }
 
-    public static MxNDArray[] cachedOpInvoke(
-            MxResource parent, Pointer cachedOpHandle, MxNDArray[] inputs) {
+    public static NDArray[] cachedOpInvoke(
+            MxResource parent, Pointer cachedOpHandle, NDArray[] inputs) {
         IntBuffer buf = IntBuffer.allocate(1);
         PointerArray array = toPointerArray(inputs);
         PointerByReference ref = REFS.acquire();
@@ -799,12 +816,12 @@ public final class JnaUtils {
         int numOutputs = buf.get();
         Pointer[] ptrArray = ref.getValue().getPointerArray(0, numOutputs);
         int[] sTypes = outSTypeRef.getValue().getIntArray(0, numOutputs);
-        MxNDArray[] output = new MxNDArray[numOutputs];
+        NDArray[] output = new NDArray[numOutputs];
         for (int i = 0; i < numOutputs; i++) {
             if (sTypes[i] != 0) {
-                output[i] = MxNDArray.create(parent, ptrArray[i], SparseFormat.fromValue(sTypes[i]));
+                output[i] = NDArray.create(parent, ptrArray[i], SparseFormat.fromValue(sTypes[i]));
             } else {
-                output[i] = MxNDArray.create(parent, ptrArray[i]);
+                output[i] = NDArray.create(parent, ptrArray[i]);
             }
         }
         REFS.recycle(ref);

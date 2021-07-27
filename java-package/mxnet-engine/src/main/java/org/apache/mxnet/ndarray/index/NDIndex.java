@@ -1,18 +1,22 @@
 /*
- * Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance
- * with the License. A copy of the License is located at
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * http://aws.amazon.com/apache2.0/
- *
- * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
- * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
- * and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.mxnet.ndarray.index;
 
-import org.apache.mxnet.ndarray.MxNDArray;
+import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.ndarray.dim.NDIndexAll;
 import org.apache.mxnet.ndarray.dim.NDIndexBooleans;
 import org.apache.mxnet.ndarray.dim.NDIndexElement;
@@ -110,7 +114,7 @@ public class NDIndex {
      * @param indices a comma separated list of indices corresponding to either subsections,
      *     everything, or slices on a particular dimension
      * @param args arguments to replace the variable "{}" in the indices string. Can be an integer,
-     *     long, boolean {@link MxNDArray}, or integer {@link MxNDArray}.
+     *     long, boolean {@link NDArray}, or integer {@link NDArray}.
      * @see <a href="https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html">Numpy
      *     Indexing</a>
      */
@@ -189,7 +193,7 @@ public class NDIndex {
      *
      * @param indices the indices to add similar to {@link #NDIndex(String, Object...)}
      * @param args arguments to replace the variable "{}" in the indices string. Can be an integer,
-     *     long, boolean {@link MxNDArray}, or integer {@link MxNDArray}.
+     *     long, boolean {@link NDArray}, or integer {@link NDArray}.
      * @return the updated {@link NDIndex}
      * @see #NDIndex(String, Object...)
      */
@@ -242,7 +246,7 @@ public class NDIndex {
      * @param index a boolean NDArray where all nonzero elements correspond to elements to return
      * @return the updated {@link NDIndex}
      */
-    public NDIndex addBooleanIndex(MxNDArray index) {
+    public NDIndex addBooleanIndex(NDArray index) {
         rank += index.getShape().dimension();
         indices.add(new NDIndexBooleans(index));
         return this;
@@ -314,7 +318,7 @@ public class NDIndex {
      *     element).
      * @return the updated {@link NDIndex}
      */
-    public NDIndex addPickDim(MxNDArray index) {
+    public NDIndex addPickDim(NDArray index) {
         rank++;
         indices.add(new NDIndexPick(index));
         return this;
@@ -352,8 +356,8 @@ public class NDIndex {
                 } else if (arg instanceof Long) {
                     indices.add(new NDIndexFixed((Long) arg));
                     return argIndex + 1;
-                } else if (arg instanceof MxNDArray) {
-                    MxNDArray array = (MxNDArray) arg;
+                } else if (arg instanceof NDArray) {
+                    NDArray array = (NDArray) arg;
                     if (array.getDataType() == DataType.BOOLEAN) {
                         indices.add(new NDIndexBooleans(array));
                         return argIndex + 1;

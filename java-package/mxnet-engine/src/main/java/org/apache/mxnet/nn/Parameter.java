@@ -1,11 +1,27 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.mxnet.nn;
 
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.exception.MalformedModelException;
-import org.apache.mxnet.ndarray.MxNDArray;
-import org.apache.mxnet.ndarray.MxNDArrays;
-import org.apache.mxnet.ndarray.MxNDSerializer;
+import org.apache.mxnet.ndarray.NDArray;
+import org.apache.mxnet.ndarray.NDSerializer;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.training.initializer.Initializer;
@@ -20,7 +36,7 @@ import java.util.UUID;
 /**
  * {@code Parameter} is a container class that holds a learnable parameter of a model.
  *
- * <p>Every {@code Parameter} is associated with a {@link MxSymbolBlock}. The output of the block's forward
+ * <p>Every {@code Parameter} is associated with a {@link SymbolBlock}. The output of the block's forward
  * function depends on the values in the {@code Parameter}. During training, the values in the
  * {@code Parameter} are updated to reflect the training data. This process forms the crux of
  * learning.
@@ -37,7 +53,7 @@ public class Parameter extends MxResource {
     private Shape shape;
     private Type type;
     private Initializer initializer;
-    private MxNDArray array;
+    private NDArray array;
     private boolean requiresGrad;
 
     Parameter(Builder builder) {
@@ -81,9 +97,9 @@ public class Parameter extends MxResource {
     /**
      * Sets the values of this {@code Parameter}.
      *
-     * @param array the {@link MxNDArray} that contains values of this {@code Parameter}
+     * @param array the {@link NDArray} that contains values of this {@code Parameter}
      */
-    public void setArray(MxNDArray array) {
+    public void setArray(NDArray array) {
         if (shape != null) {
             throw new IllegalStateException("array has been set! Use either setArray or setShape");
         }
@@ -105,11 +121,11 @@ public class Parameter extends MxResource {
     }
 
     /**
-     * Gets the values of this {@code Parameter} as an {@link MxNDArray}.
+     * Gets the values of this {@code Parameter} as an {@link NDArray}.
      *
-     * @return an {@link MxNDArray} that contains values of this {@code Parameter}
+     * @return an {@link NDArray} that contains values of this {@code Parameter}
      */
-    public MxNDArray getArray() {
+    public NDArray getArray() {
         if (!isInitialized()) {
             throw new IllegalStateException("The array has not been initialized");
         }
@@ -213,7 +229,7 @@ public class Parameter extends MxResource {
                     "Unexpected parameter name: " + parameterName + ", expected: " + name);
         }
 
-        array = MxNDSerializer.decode(parent, dis);
+        array = NDSerializer.decode(parent, dis);
         // set the shape of the parameter and prepare() can be skipped
         shape = array.getShape();
     }
@@ -274,7 +290,7 @@ public class Parameter extends MxResource {
         Shape shape;
         Type type;
         Initializer initializer;
-        MxNDArray array;
+        NDArray array;
         boolean requiresGrad = true;
 
         /**
@@ -327,7 +343,7 @@ public class Parameter extends MxResource {
          * @param array the array of the {@code Parameter}
          * @return this {@code Parameter}
          */
-        public Builder optArray(MxNDArray array) {
+        public Builder optArray(NDArray array) {
             this.array = array;
             return this;
         }

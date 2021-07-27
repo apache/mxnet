@@ -5,10 +5,10 @@ import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.engine.Symbol;
 import org.apache.mxnet.jna.JnaUtils;
-import org.apache.mxnet.ndarray.MxNDArray;
-import org.apache.mxnet.ndarray.MxNDList;
+import org.apache.mxnet.ndarray.NDArray;
+import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.nn.MxSymbolBlock;
+import org.apache.mxnet.nn.SymbolBlock;
 import org.apache.mxnet.nn.Parameter;
 import org.apache.mxnet.repository.Item;
 import org.apache.mxnet.repository.Repository;
@@ -42,9 +42,9 @@ public class JnaUtilTest {
             Path symbolPath = modelPath.resolve("mlp-symbol.json");
             Path paramsPath = modelPath.resolve("mlp-0000.params");
             Symbol symbol  = Symbol.loadSymbol(base, symbolPath);
-            MxSymbolBlock block = new MxSymbolBlock(base, symbol);
+            SymbolBlock block = new SymbolBlock(base, symbol);
             Device device = Device.defaultIfNull();
-            MxNDList mxNDArray = JnaUtils.loadNdArray(
+            NDList mxNDArray = JnaUtils.loadNdArray(
                     base,
                     paramsPath,
                     Device.defaultIfNull(null));
@@ -54,7 +54,7 @@ public class JnaUtilTest {
             Map<String, Parameter> map = new LinkedHashMap<>();
             parameters.forEach(p -> map.put(p.getName(), p));
 
-            for (MxNDArray nd : mxNDArray) {
+            for (NDArray nd : mxNDArray) {
                 String key = nd.getName();
                 if (key == null) {
                     throw new IllegalArgumentException("Array names must be present in parameter file");
@@ -66,8 +66,8 @@ public class JnaUtilTest {
             }
             block.setInputNames(new ArrayList<>(map.keySet()));
 
-            MxNDArray arr = MxNDArray.create(base, new Shape(1, 28, 28), device).ones();
-            block.forward(new ParameterStore(base, false, device), new MxNDList(arr), false, new PairList<>(), device);
+            NDArray arr = NDArray.create(base, new Shape(1, 28, 28), device).ones();
+            block.forward(new ParameterStore(base, false, device), new NDList(arr), false, new PairList<>(), device);
             logger.info("Number of MxResource managed by baseMxResource: {}",
                     BaseMxResource.getSystemMxResource().getSubResource().size());
         } catch (IOException e) {
@@ -91,18 +91,18 @@ public class JnaUtilTest {
                 long[] originLongArray = new long[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
                 boolean[] originBooleanArray = new boolean[]{true, false, false, true, true, true, true, false, false, true, true, true};
                 byte[] originByteArray = new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-                MxNDArray intArray = MxNDArray.create(base, originIntegerArray, new Shape(3, 4));
-                MxNDArray floatArray = MxNDArray.create(base, originFlaotArray, new Shape(3, 4));
-                MxNDArray doubleArray = MxNDArray.create(base, originDoubleArray, new Shape(3, 4));
-                MxNDArray longArray = MxNDArray.create(base, originLongArray, new Shape(3, 4));
-                MxNDArray booleanArray = MxNDArray.create(base, originBooleanArray, new Shape(3, 4));
-                MxNDArray byteArray = MxNDArray.create(base, originByteArray, new Shape(3, 4));
-                MxNDArray intArray2 = MxNDArray.create(base, originIntegerArray);
-                MxNDArray floatArray2 = MxNDArray.create(base, originFlaotArray);
-                MxNDArray doubleArray2 = MxNDArray.create(base, originDoubleArray);
-                MxNDArray longArray2 = MxNDArray.create(base, originLongArray);
-                MxNDArray booleanArray2 = MxNDArray.create(base, originBooleanArray);
-                MxNDArray byteArray2 = MxNDArray.create(base, originByteArray);
+                NDArray intArray = NDArray.create(base, originIntegerArray, new Shape(3, 4));
+                NDArray floatArray = NDArray.create(base, originFlaotArray, new Shape(3, 4));
+                NDArray doubleArray = NDArray.create(base, originDoubleArray, new Shape(3, 4));
+                NDArray longArray = NDArray.create(base, originLongArray, new Shape(3, 4));
+                NDArray booleanArray = NDArray.create(base, originBooleanArray, new Shape(3, 4));
+                NDArray byteArray = NDArray.create(base, originByteArray, new Shape(3, 4));
+                NDArray intArray2 = NDArray.create(base, originIntegerArray);
+                NDArray floatArray2 = NDArray.create(base, originFlaotArray);
+                NDArray doubleArray2 = NDArray.create(base, originDoubleArray);
+                NDArray longArray2 = NDArray.create(base, originLongArray);
+                NDArray booleanArray2 = NDArray.create(base, originBooleanArray);
+                NDArray byteArray2 = NDArray.create(base, originByteArray);
 
                 Integer[] ndArrayInt = (Integer[]) intArray.toArray();
                 Assert.assertEquals(originIntegerArray, ndArrayInt);
@@ -151,7 +151,7 @@ public class JnaUtilTest {
     public void loadNdArray() {
 
         try (BaseMxResource base = BaseMxResource.getSystemMxResource()) {
-                MxNDList mxNDArray = JnaUtils.loadNdArray(
+                NDList mxNDArray = JnaUtils.loadNdArray(
                         base,
                         Paths.get("/Users/cspchen/Downloads/mxnet_resnet18/resnet18_v1-0000.params"),
                         Device.defaultIfNull(null));

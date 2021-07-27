@@ -1,9 +1,26 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.mxnet.ndarray;
 
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.util.MxNDArrayUtils;
+import org.apache.mxnet.util.NDArrayUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -15,11 +32,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 
-public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
+public class NDList extends ArrayList<NDArray> implements AutoCloseable {
     private static final long serialVersionUID = 1L;
 
     /** Constructs an empty NDList. */
-    public MxNDList() {}
+    public NDList() {}
 
     /**
      * Constructs an empty NDList with the specified initial capacity.
@@ -27,25 +44,25 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
      * @param initialCapacity the initial capacity of the list
      * @throws IllegalArgumentException if the specified initial capacity is negative
      */
-    public MxNDList(int initialCapacity) {
+    public NDList(int initialCapacity) {
         super(initialCapacity);
     }
 
     /**
-     * Constructs and initiates an NDList with the specified {@link MxNDList}s.
+     * Constructs and initiates an NDList with the specified {@link NDList}s.
      *
-     * @param arrays the {@link MxNDList}s
+     * @param arrays the {@link NDList}s
      */
-    public MxNDList(MxNDArray... arrays) {
+    public NDList(NDArray... arrays) {
         super(Arrays.asList(arrays));
     }
 
     /**
-     * Constructs and initiates an NDList with the specified {@link MxNDArray}s.
+     * Constructs and initiates an NDList with the specified {@link NDArray}s.
      *
-     * @param other the {@link MxNDArray}s
+     * @param other the {@link NDArray}s
      */
-    public MxNDList(Collection<MxNDArray> other) {
+    public NDList(Collection<NDArray> other) {
         super(other);
     }
 
@@ -55,26 +72,26 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
      * @param byteArray byte array to load from
      * @return {@code NDList}
      */
-    public static MxNDList decode(MxResource parent, byte[] byteArray) {
+    public static NDList decode(MxResource parent, byte[] byteArray) {
         return decode(parent, new ByteArrayInputStream(byteArray));
     }
 
     /**
      * Decodes NDList from {@link InputStream}.
      *
-     * @param parent manager assigned to {@link MxNDArray}
+     * @param parent manager assigned to {@link NDArray}
      * @param is input stream contains the ndlist information
      * @return {@code NDList}
      */
-    public static MxNDList decode(MxResource parent, InputStream is) {
+    public static NDList decode(MxResource parent, InputStream is) {
         try (DataInputStream dis = new DataInputStream(is)) {
             int size = dis.readInt();
             if (size < 0) {
                 throw new IllegalArgumentException("Invalid NDList size: " + size);
             }
-            MxNDList list = new MxNDList();
+            NDList list = new NDList();
             for (int i = 0; i < size; i++) {
-                list.add(i, MxNDArrayUtils.decode(parent, dis));
+                list.add(i, NDArrayUtils.decode(parent, dis));
             }
             return list;
         } catch (IOException e) {
@@ -92,9 +109,9 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
      * @param name the name of the NDArray to be removed from this NDList, if present
      * @return the element that was removed
      */
-    public MxNDArray remove(String name) {
+    public NDArray remove(String name) {
         int index = 0;
-        for (MxNDArray array : this) {
+        for (NDArray array : this) {
             if (name.equals(array.getName())) {
                 remove(index);
                 return array;
@@ -111,7 +128,7 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
      * @return {@code true} if this list contains the specified element
      */
     public boolean contains(String name) {
-        for (MxNDArray array : this) {
+        for (NDArray array : this) {
             if (name.equals(array.getName())) {
                 return true;
             }
@@ -126,7 +143,7 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
      * @throws IndexOutOfBoundsException if the index is out of range ({@code index &lt; 0 || index
      *     &gt;= size()})
      */
-    public MxNDArray head() {
+    public NDArray head() {
         return get(0);
     }
 
@@ -137,7 +154,7 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
      * @return the head NDArray
      * @throws IndexOutOfBoundsException if the list does not contain exactly one element
      */
-    public MxNDArray singletonOrThrow() {
+    public NDArray singletonOrThrow() {
         if (size() != 1) {
             throw new IndexOutOfBoundsException(
                     "Incorrect number of elements in NDList.singletonOrThrow: Expected 1 and was "
@@ -153,8 +170,8 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
      * @param other the NDList containing NDArray to be added to this list
      * @return this NDList after the addition
      */
-    public MxNDList addAll(MxNDList other) {
-        for (MxNDArray array : other) {
+    public NDList addAll(NDList other) {
+        for (NDArray array : other) {
             add(array);
         }
         return this;
@@ -167,8 +184,8 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
      * @param fromIndex the start index (inclusive)
      * @return a view of the portion of this NDList
      */
-    public MxNDList subNDList(int fromIndex) {
-        return new MxNDList(subList(fromIndex, size()));
+    public NDList subNDList(int fromIndex) {
+        return new NDList(subList(fromIndex, size()));
     }
 
     /**
@@ -178,14 +195,14 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
      * @param copy set {@code true} if you want to return a copy of the underlying NDArray
      * @return a new {@code NDList} with the NDArrays on specified {@link Device}
      */
-    public MxNDList toDevice(Device device, boolean copy) {
+    public NDList toDevice(Device device, boolean copy) {
         if (!copy) {
             // if all arrays in NDList are already on device, return itself
             if (this.stream().allMatch(array -> array.getDevice() == device)) {
                 return this;
             }
         }
-        MxNDList newNDList = new MxNDList(size());
+        NDList newNDList = new NDList(size());
         forEach(a -> newNDList.add(a.toDevice(device, copy)));
         return newNDList;
     }
@@ -199,7 +216,7 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             DataOutputStream dos = new DataOutputStream(baos);
             dos.writeInt(size());
-            for (MxNDArray nd : this) {
+            for (NDArray nd : this) {
                 dos.write(nd.encode());
             }
             dos.flush();
@@ -215,13 +232,13 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
      * @return shapes in {@code NDList}
      */
     public Shape[] getShapes() {
-        return stream().map(MxNDArray::getShape).toArray(Shape[]::new);
+        return stream().map(NDArray::getShape).toArray(Shape[]::new);
     }
 
     /** {@inheritDoc} */
     @Override
     public void close() {
-        forEach(MxNDArray::close);
+        forEach(NDArray::close);
         clear();
     }
 
@@ -231,7 +248,7 @@ public class MxNDList extends ArrayList<MxNDArray> implements AutoCloseable {
         StringBuilder builder = new StringBuilder(200);
         builder.append("NDList size: ").append(size()).append('\n');
         int index = 0;
-        for (MxNDArray array : this) {
+        for (NDArray array : this) {
             String name = array.getName();
             builder.append(index++).append(' ');
             if (name != null) {

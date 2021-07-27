@@ -22,9 +22,9 @@ Test case for a rough inference run with MXNet model
 ```java
 try (MxResource base = BaseMxResource.getSystemMxResource())
         {
-            MxModel mxModel = MxModel.loadModel(Item.MLP);
+            MxModel model = MxModel.loadModel(Item.MLP);
 //            MxModel.loadModel(Item.MLP.getName(), Paths.get(Item.MLP.getUrl());
-            Predictor<MxNDList, MxNDList> predictor = mxModel.newPredictor();
+            Predictor<MxNDList, MxNDList> predictor = model.newPredictor();
             MxNDArray input = MxNDArray.create(base, new Shape(1, 28, 28)).ones();
             MxNDList inputs = new MxNDList();
             inputs.add(input);

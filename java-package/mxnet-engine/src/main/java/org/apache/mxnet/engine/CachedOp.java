@@ -1,11 +1,27 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.mxnet.engine;
 
 import com.sun.jna.Pointer;
 import org.apache.mxnet.jna.JnaUtils;
-import org.apache.mxnet.ndarray.MxNDArray;
-import org.apache.mxnet.ndarray.MxNDList;
+import org.apache.mxnet.ndarray.NDArray;
+import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.nn.MxSymbolBlock;
+import org.apache.mxnet.nn.SymbolBlock;
 import org.apache.mxnet.nn.Parameter;
 import org.apache.mxnet.training.ParameterStore;
 import org.apache.mxnet.util.Pair;
@@ -18,7 +34,7 @@ import java.util.Map;
 
 /**
  * The {@code CachedOp} is an internal helper that provides the core functionality to execute a
- * {@link MxSymbolBlock}.
+ * {@link SymbolBlock}.
  *
  * <p>We don't recommended users interact with this class directly. Users should use {@link
  * Predictor} instead. CachedOp is an operator that simplifies calling and
@@ -37,7 +53,7 @@ public class CachedOp extends MxResource {
     /**
      * Creates an instance of {@link CachedOp}.
      *
-     * <p>It can be created by using {@link JnaUtils#createCachedOp(MxSymbolBlock, MxResource, boolean)}
+     * <p>It can be created by using {@link JnaUtils#createCachedOp(SymbolBlock, MxResource, boolean)}
      *
      * @param parent the MxResource object to manage this instance of CachedOp
      * @param handle the C handle of the CachedOp
@@ -63,19 +79,19 @@ public class CachedOp extends MxResource {
      * Assigns inputs to the empty locations of the input NDArray.
      *
      * @param parameterStore the parameterStore
-     * @param data the input in {@link MxNDList} format
+     * @param data the input in {@link NDList} format
      * @param training true for a training forward pass
-     * @return an {@link MxNDList}
+     * @return an {@link NDList}
      */
-    public MxNDList forward(ParameterStore parameterStore, MxNDList data, boolean training) {
+    public NDList forward(ParameterStore parameterStore, NDList data, boolean training) {
         // reset the input data index at the beginning
-        MxNDArray[] allInputsNDArray = new MxNDArray[parameters.size()];
+        NDArray[] allInputsNDArray = new NDArray[parameters.size()];
         // check device of input
         Device device = data.isEmpty() ? Device.defaultIfNull() : data.head().getDevice();
         // fill allInputsNDArray with parameter values on correct device
         for (int index : paramIndices) {
             Parameter parameter = parameters.get(index);
-            MxNDArray value = parameterStore.getValue(parameter, device, training);
+            NDArray value = parameterStore.getValue(parameter, device, training);
             if (value == null) {
                 throw new NullPointerException("Failed to find parameter from parameterStore");
             }
@@ -84,7 +100,7 @@ public class CachedOp extends MxResource {
 
         // fill allInputsNDArray with data values
         int index = 0;
-        for (MxNDArray array : data) {
+        for (NDArray array : data) {
             // TODO: NDArray name doesn't match. To confirm the format of input name
 //            String inputName = array.getName().split(":")[1];
             String inputName = array.getName();
@@ -108,11 +124,11 @@ public class CachedOp extends MxResource {
                                     + ") by default");
                 }
                 //TODO: consider how to manage MxNDArray generated during inference
-                allInputsNDArray[pair.getValue()] = MxNDArray.create(this, new Shape(batchSize), device);
+                allInputsNDArray[pair.getValue()] = NDArray.create(this, new Shape(batchSize), device);
             }
         }
-        MxNDArray[] result = JnaUtils.cachedOpInvoke(getParent(), getHandle(), allInputsNDArray);
-        return new MxNDList(result);
+        NDArray[] result = JnaUtils.cachedOpInvoke(getParent(), getHandle(), allInputsNDArray);
+        return new NDList(result);
     }
 
     /** {@inheritDoc} */

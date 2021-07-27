@@ -12,8 +12,8 @@
  */
 package org.apache.mxnet.integration.util;
 
-import org.apache.mxnet.ndarray.MxNDArray;
-import org.apache.mxnet.ndarray.MxNDList;
+import org.apache.mxnet.ndarray.NDArray;
+import org.apache.mxnet.ndarray.NDList;
 import org.testng.Assert;
 
 public final class Assertions {
@@ -40,11 +40,11 @@ public final class Assertions {
         return sb.toString();
     }
 
-    public static void assertAlmostEquals(MxNDArray actual, MxNDArray expected) {
+    public static void assertAlmostEquals(NDArray actual, NDArray expected) {
         assertAlmostEquals(actual, expected, RTOL, ATOL);
     }
 
-    public static void assertAlmostEquals(MxNDList actual, MxNDList expected) {
+    public static void assertAlmostEquals(NDList actual, NDList expected) {
         assertAlmostEquals(actual, expected, RTOL, ATOL);
     }
 
@@ -60,7 +60,7 @@ public final class Assertions {
     }
 
     public static void assertAlmostEquals(
-            MxNDList actual, MxNDList expected, double rtol, double atol) {
+            NDList actual, NDList expected, double rtol, double atol) {
         Assert.assertEquals(
                 actual.size(),
                 expected.size(),
@@ -73,7 +73,7 @@ public final class Assertions {
     }
 
     public static void assertAlmostEquals(
-            MxNDArray actual, MxNDArray expected, double rtol, double atol) {
+            NDArray actual, NDArray expected, double rtol, double atol) {
         if (!actual.getShape().equals(expected.getShape())) {
             throw new AssertionError(
                     getDefaultErrorMessage(
@@ -92,7 +92,7 @@ public final class Assertions {
         }
     }
 
-    public static void assertInPlaceEquals(MxNDArray actual, MxNDArray expected, MxNDArray original) {
+    public static void assertInPlaceEquals(NDArray actual, NDArray expected, NDArray original) {
         Assert.assertEquals(
                 actual, expected, getDefaultErrorMessage(actual, expected, "Assert Equal failed!"));
         Assert.assertSame(
@@ -102,12 +102,12 @@ public final class Assertions {
     }
 
     public static void assertInPlaceAlmostEquals(
-            MxNDArray actual, MxNDArray expected, MxNDArray original) {
+            NDArray actual, NDArray expected, NDArray original) {
         assertInPlaceAlmostEquals(actual, expected, original, RTOL, ATOL);
     }
 
     public static void assertInPlaceAlmostEquals(
-            MxNDArray actual, MxNDArray expected, MxNDArray original, double rtol, double atol) {
+            NDArray actual, NDArray expected, NDArray original, double rtol, double atol) {
         assertAlmostEquals(actual, expected, rtol, atol);
         Assert.assertSame(
                 original,

@@ -6,7 +6,6 @@ import org.apache.mxnet.exception.JnaCallException;
 import org.apache.mxnet.jna.JnaUtils;
 import org.testng.annotations.Test;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class SymbolTest {

@@ -1,12 +1,29 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.mxnet.engine;
 
 import org.apache.mxnet.exception.MalformedModelException;
 import org.apache.mxnet.jna.JnaUtils;
-import org.apache.mxnet.ndarray.MxNDArray;
-import org.apache.mxnet.ndarray.MxNDList;
+import org.apache.mxnet.ndarray.NDArray;
+import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.nn.MxSymbolBlock;
+import org.apache.mxnet.nn.SymbolBlock;
 import org.apache.mxnet.nn.Parameter;
 import org.apache.mxnet.repository.Item;
 import org.apache.mxnet.repository.Repository;
@@ -28,24 +45,24 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class MxModel extends MxResource {
+public class Model extends MxResource {
 
-    private static final Logger logger = LoggerFactory.getLogger(MxModel.class);
+    private static final Logger logger = LoggerFactory.getLogger(Model.class);
     private static final int MODEL_VERSION = 1;
 
     protected Path modelDir;
-    protected MxSymbolBlock mxSymbolBlock;
+    protected SymbolBlock symbolBlock;
     protected String modelName;
     protected DataType dataType;
     protected PairList<String, Shape> inputData;
     protected Map<String, Object> artifacts = new ConcurrentHashMap<>();
     protected Map<String, String> properties = new ConcurrentHashMap<>();
 
-    MxModel(String name, Device device) {
+    Model(String name, Device device) {
         this(BaseMxResource.getSystemMxResource(), name, device);
     }
 
-    private MxModel(MxResource parent, String name, Device device) {
+    private Model(MxResource parent, String name, Device device) {
         super(parent);
         setDevice(Device.defaultIfNull(device));
         setDataType(DataType.FLOAT32);
@@ -57,8 +74,8 @@ public class MxModel extends MxResource {
      * , and do not copy parameters to parameter store
      * @return {@link Predictor}
      */
-    public Predictor<MxNDList, MxNDList> newPredictor() {
-        Translator<MxNDList, MxNDList> noOpTranslator = new NoOpTranslator();
+    public Predictor<NDList, NDList> newPredictor() {
+        Translator<NDList, NDList> noOpTranslator = new NoOpTranslator();
         return newPredictor(noOpTranslator, false);
     }
 
@@ -67,14 +84,14 @@ public class MxModel extends MxResource {
      * @param copy whether to copy the parameters to the parameter store
      * @return {@link Predictor}
      */
-    public Predictor<MxNDList, MxNDList> newPredictor(boolean copy) {
-        Translator<MxNDList, MxNDList> noOpTranslator = new NoOpTranslator();
+    public Predictor<NDList, NDList> newPredictor(boolean copy) {
+        Translator<NDList, NDList> noOpTranslator = new NoOpTranslator();
         return newPredictor(noOpTranslator, copy);
     }
 
     /**
      * Create {@link Predictor} instance, with specific {@link Translator} and {@code copy}
-     * @param translator {@link Translator} used to convert inputs and outputs into {@link MxNDList} to get inferred
+     * @param translator {@link Translator} used to convert inputs and outputs into {@link NDList} to get inferred
      * @param copy whether to copy the parameters to the parameter store
      * @return {@link Predictor}
      */
@@ -87,7 +104,7 @@ public class MxModel extends MxResource {
      * @param modelPath {@Path} model directory
      * @throws IOException when IO operation fails in loading a resource
      */
-    public static MxModel loadModel(Path modelPath) throws IOException {
+    public static Model loadModel(Path modelPath) throws IOException {
         return loadModel("model", modelPath);
     }
 
@@ -96,10 +113,10 @@ public class MxModel extends MxResource {
      * @param modelItem {@Item} model directory
      * @throws IOException when IO operation fails in loading a resource
      */
-    public static MxModel loadModel(Item modelItem) throws IOException {
-        MxModel mxModel = createModel(modelItem);
-        mxModel.initial();
-        return mxModel;
+    public static Model loadModel(Item modelItem) throws IOException {
+        Model model = createModel(modelItem);
+        model.initial();
+        return model;
     }
 
     /**
@@ -108,23 +125,23 @@ public class MxModel extends MxResource {
      * @param modelPath {@Path} model directory
      * @throws IOException when IO operation fails in loading a resource
      */
-    public static MxModel loadModel(String modelName, Path modelPath) throws IOException {
-        MxModel mxModel = createModel(modelName, modelPath);
-        mxModel.initial();
-        return mxModel;
+    public static Model loadModel(String modelName, Path modelPath) throws IOException {
+        Model model = createModel(modelName, modelPath);
+        model.initial();
+        return model;
     }
 
     /**
-     * Create a MxModel with specific model name and model directory. By default, the {@link MxModel}
+     * Create a MxModel with specific model name and model directory. By default, the {@link Model}
      * instance is managed by the top level {@link BaseMxResource}
      * @param modelName {@String} model name
      * @param modelDir {@Path} local model path
      * @throws IOException when IO operation fails in loading a resource
      */
-    static MxModel createModel(String modelName, Path modelDir) {
-        MxModel mxModel = new MxModel(modelName, Device.defaultIfNull());
-        mxModel.setModelDir(modelDir);
-        return mxModel;
+    static Model createModel(String modelName, Path modelDir) {
+        Model model = new Model(modelName, Device.defaultIfNull());
+        model.setModelDir(modelDir);
+        return model;
     }
 
     /**
@@ -133,7 +150,7 @@ public class MxModel extends MxResource {
      * @param item {@@Item} sample model to be created
      * @throws IOException when IO operation fails in loading a resource
      */
-    static MxModel createModel(Item item) throws IOException {
+    static Model createModel(Item item) throws IOException {
         Path modelDir = Repository.initRepository(item);
         return createModel(item.getName(), modelDir);
     }
@@ -209,7 +226,7 @@ public class MxModel extends MxResource {
             }
 
             // TODO: change default name "data" to model-specific one
-            setMxSymbolBlock(MxSymbolBlock.createMxSymbolBlock(this, symbolFile));
+            setMxSymbolBlock(SymbolBlock.createMxSymbolBlock(this, symbolFile));
         }
         loadParameters(paramFile, options);
         // TODO: Check if Symbol has all names that params file have
@@ -242,13 +259,13 @@ public class MxModel extends MxResource {
     private void loadParameters(Path paramFile, Map<String, ?> options)
             throws IOException, MalformedModelException {
 
-        MxNDList paramNDlist = JnaUtils.loadNdArray(this, paramFile, getDevice());
+        NDList paramNDlist = JnaUtils.loadNdArray(this, paramFile, getDevice());
 
         List<Parameter> parameters = getMxSymbolBlock().getAllParameters();
         Map<String, Parameter> map = new LinkedHashMap<>();
         parameters.forEach(p -> map.put(p.getName(), p));
 
-        for (MxNDArray nd : paramNDlist) {
+        for (NDArray nd : paramNDlist) {
             String key = nd.getName();
             if (key == null) {
                 throw new IllegalArgumentException("Array names must be present in parameter file");
@@ -273,12 +290,12 @@ public class MxModel extends MxResource {
         this.modelDir = modelDir;
     }
 
-    public MxSymbolBlock getMxSymbolBlock() {
-        return mxSymbolBlock;
+    public SymbolBlock getMxSymbolBlock() {
+        return symbolBlock;
     }
 
-    public void setMxSymbolBlock(MxSymbolBlock mxSymbolBlock) {
-        this.mxSymbolBlock = mxSymbolBlock;
+    public void setMxSymbolBlock(SymbolBlock symbolBlock) {
+        this.symbolBlock = symbolBlock;
     }
 
     public String getModelName() {

@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.mxnet.nn;
 
 import org.apache.mxnet.engine.CachedOp;
@@ -7,8 +24,8 @@ import org.apache.mxnet.engine.MxResourceList;
 import org.apache.mxnet.engine.Symbol;
 import org.apache.mxnet.exception.MalformedModelException;
 import org.apache.mxnet.jna.JnaUtils;
-import org.apache.mxnet.ndarray.MxNDArray;
-import org.apache.mxnet.ndarray.MxNDList;
+import org.apache.mxnet.ndarray.NDArray;
+import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.training.ParameterStore;
@@ -31,9 +48,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class MxSymbolBlock extends MxResource {
+public class SymbolBlock extends MxResource {
 
-    private static final Logger logger = LoggerFactory.getLogger(MxSymbolBlock.class);
+    private static final Logger logger = LoggerFactory.getLogger(SymbolBlock.class);
 
     /** The shape of the input for this block, set by the initialization process. */
     protected Shape[] inputShapes;
@@ -50,7 +67,7 @@ public class MxSymbolBlock extends MxResource {
     /**
      * All direct parameters of this Block. Keys are name of the parameters.
      *
-     * <p>Use the {@link MxSymbolBlock#addParameter(Parameter)} method to add children. All
+     * <p>Use the {@link SymbolBlock#addParameter(Parameter)} method to add children. All
      * parameters in this map are automatically loaded / saved.
      */
     protected LinkedHashMap<String, Parameter> parameters = new LinkedHashMap<>();
@@ -73,7 +90,7 @@ public class MxSymbolBlock extends MxResource {
      * @param parent the parent MxResource to use for the block
      * @param symbol the symbol containing the block's symbolic graph
      */
-    public MxSymbolBlock(MxResource parent, Symbol symbol) {
+    public SymbolBlock(MxResource parent, Symbol symbol) {
         super();
         setParent(parent);
         this.symbol = symbol;
@@ -85,7 +102,7 @@ public class MxSymbolBlock extends MxResource {
      *
      * @param parent the parent {@code MxSymbolBlock} instance to manage this MxSymbolBlock
      */
-    private MxSymbolBlock(MxResource parent) {
+    private SymbolBlock(MxResource parent) {
         super();
         setParent(parent);
     }
@@ -96,11 +113,11 @@ public class MxSymbolBlock extends MxResource {
      * @param parent the parent MxResource Object to manage this MxSymbolBlock
      * @param symbolPath the Path to load symbol
      */
-    public static MxSymbolBlock createMxSymbolBlock(MxResource parent, Path symbolPath) {
-        MxSymbolBlock mxSymbolBlock = new MxSymbolBlock(parent);
-        mxSymbolBlock.loadSymbol(symbolPath);
-        mxSymbolBlock.initBlock();
-        return mxSymbolBlock;
+    public static SymbolBlock createMxSymbolBlock(MxResource parent, Path symbolPath) {
+        SymbolBlock symbolBlock = new SymbolBlock(parent);
+        symbolBlock.loadSymbol(symbolPath);
+        symbolBlock.initBlock();
+        return symbolBlock;
     }
 
     private void loadSymbol(Path symbolPath) {
@@ -203,9 +220,9 @@ public class MxSymbolBlock extends MxResource {
      * @param device device to use
      * @return the output of the forward pass
      */
-    public final MxNDList forward(
+    public final NDList forward(
             ParameterStore parameterStore,
-            MxNDList inputs,
+            NDList inputs,
             boolean training,
             PairList<String, Object> params,
             Device device) {
@@ -225,7 +242,7 @@ public class MxSymbolBlock extends MxResource {
      * @param training true for a training forward pass
      * @return the output of the forward pass
      */
-    public MxNDList forward(ParameterStore parameterStore, MxNDList inputs, boolean training) {
+    public NDList forward(ParameterStore parameterStore, NDList inputs, boolean training) {
         return forward(parameterStore, inputs, training, null, getDevice());
     }
 
@@ -239,12 +256,12 @@ public class MxSymbolBlock extends MxResource {
      * @param labels the input labels NDList
      * @param params optional parameters
      * @return the output of the forward pass
-     * @see #forward(ParameterStore, MxNDList, boolean, PairList, Device)
+     * @see #forward(ParameterStore, NDList, boolean, PairList, Device)
      */
-    public MxNDList forward(
+    public NDList forward(
             ParameterStore parameterStore,
-            MxNDList data,
-            MxNDList labels,
+            NDList data,
+            NDList labels,
             PairList<String, Object> params,
             Device device) {
         if (!isInitialized()) {
@@ -254,7 +271,7 @@ public class MxSymbolBlock extends MxResource {
     }
 
     /**
-     * A helper for {@link MxSymbolBlock#forward(ParameterStore, MxNDList, MxNDList, PairList, Device)} after
+     * A helper for {@link SymbolBlock#forward(ParameterStore, NDList, NDList, PairList, Device)} after
      * initialization.
      *
      * @param parameterStore the parameter store
@@ -262,12 +279,12 @@ public class MxSymbolBlock extends MxResource {
      * @param labels the input labels NDList
      * @param params optional parameters
      * @return the output of the forward pass
-     * @see #forward(ParameterStore, MxNDList, boolean, PairList, Device)
+     * @see #forward(ParameterStore, NDList, boolean, PairList, Device)
      */
-    protected MxNDList forwardInternal(
+    protected NDList forwardInternal(
             ParameterStore parameterStore,
-            MxNDList data,
-            MxNDList labels,
+            NDList data,
+            NDList labels,
             PairList<String, Object> params) {
         return forwardInternal(parameterStore, data, true, params);
     }
@@ -324,9 +341,9 @@ public class MxSymbolBlock extends MxResource {
         ParameterList allParams = getDirectParameters();
         // then we add the parameters of child blocks
         for (Pair<String, MxResource> childPair : getChildren()) {
-            if (MxSymbolBlock.class.equals(childPair.getValue().getClass())) {
-                MxSymbolBlock mxSymbolBlock = (MxSymbolBlock) childPair.getValue();
-                for (Pair<String, Parameter> paramPair : mxSymbolBlock.getParameters()) {
+            if (SymbolBlock.class.equals(childPair.getValue().getClass())) {
+                SymbolBlock symbolBlock = (SymbolBlock) childPair.getValue();
+                for (Pair<String, Parameter> paramPair : symbolBlock.getParameters()) {
                     // we prepend the name of the child block to the parameter name
                     allParams.add(childPair.getKey() + "_" + paramPair.getKey(), paramPair.getValue());
                 }
@@ -347,24 +364,24 @@ public class MxSymbolBlock extends MxResource {
         return new ParameterList(parameters);
     }
 
-    protected MxNDList forwardInternal(
+    protected NDList forwardInternal(
             ParameterStore parameterStore,
-            MxNDList inputs,
+            NDList inputs,
             boolean training,
             PairList<String, Object> params) {
         if (first) {
-            synchronized (MxSymbolBlock.class) {
+            synchronized (SymbolBlock.class) {
                 if (first) {
                     // create CachedOp is not thread-safe
                     // add synchronized block to avoid creating multiple CachedOps
                     op = JnaUtils.createCachedOp(this, getParent(), training);
                     inputDescriptions = new PairList<>();
                     outputDescriptions = new PairList<>();
-                    for (MxNDArray array : inputs) {
+                    for (NDArray array : inputs) {
                         inputDescriptions.add(array.getName(), array.getShape());
                     }
-                    MxNDList outputs = op.forward(parameterStore, inputs, training);
-                    for (MxNDArray array : outputs) {
+                    NDList outputs = op.forward(parameterStore, inputs, training);
+                    for (NDArray array : outputs) {
                         outputDescriptions.add(array.getName(), array.getShape());
                     }
                     first = false;
