@@ -17,13 +17,12 @@
 
 package org.apache.mxnet.translate;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.util.Pair;
 import org.apache.mxnet.util.PairList;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** {@code Pipeline} allows applying multiple transforms on an input {@link NDList}. */
 public class Pipeline {

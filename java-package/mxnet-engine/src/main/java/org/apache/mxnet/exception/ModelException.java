@@ -17,6 +17,7 @@
 
 package org.apache.mxnet.exception;
 
+/** Thrown to indicate . */
 public class ModelException extends BaseException {
 
     private static final long serialVersionUID = 1L;
@@ -59,5 +60,4 @@ public class ModelException extends BaseException {
     public ModelException(Throwable cause) {
         super(cause);
     }
-
 }

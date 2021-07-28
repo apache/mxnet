@@ -27,5 +27,4 @@ public final class StandardCapabilities {
     public static final String OPENMP = "OPENMP";
 
     private StandardCapabilities() {}
-
 }

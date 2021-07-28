@@ -19,7 +19,7 @@ package org.apache.mxnet.translate;
 
 import org.apache.mxnet.ndarray.NDList;
 
-public class NoOpTranslator implements Translator<NDList, NDList>{
+public class NoOpTranslator implements Translator<NDList, NDList> {
 
     public NoOpTranslator() {}
 

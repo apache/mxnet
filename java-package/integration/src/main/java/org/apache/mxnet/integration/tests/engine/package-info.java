@@ -15,16 +15,5 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet.engine;
-
-public class EmptyMxResource extends MxResource {
-
-    private EmptyMxResource() {
-        super();
-    }
-
-    public EmptyMxResource(MxResource parent) {
-        super(parent, EMPTY_UID);
-    }
-
-}
+/** Contains integration tests that use the engine to test the actual behavior of the API. */
+package org.apache.mxnet.integration.tests.engine;

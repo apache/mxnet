@@ -16,6 +16,11 @@
  */
 package org.apache.mxnet.ndarray.index;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.ndarray.dim.NDIndexAll;
 import org.apache.mxnet.ndarray.dim.NDIndexBooleans;
@@ -24,12 +29,6 @@ import org.apache.mxnet.ndarray.dim.NDIndexFixed;
 import org.apache.mxnet.ndarray.dim.NDIndexPick;
 import org.apache.mxnet.ndarray.dim.NDIndexSlice;
 import org.apache.mxnet.ndarray.types.DataType;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 /**
  * The {@code NDIndex} allows you to specify a subset of an NDArray that can be used for fetching or

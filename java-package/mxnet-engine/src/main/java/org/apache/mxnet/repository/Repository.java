@@ -17,15 +17,6 @@
 
 package org.apache.mxnet.repository;
 
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
-import org.apache.mxnet.util.FilenameUtils;
-import org.apache.mxnet.util.Utils;
-import org.apache.mxnet.util.ZipUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,6 +26,14 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipInputStream;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.apache.mxnet.util.FilenameUtils;
+import org.apache.mxnet.util.Utils;
+import org.apache.mxnet.util.ZipUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Repository {
 
@@ -88,7 +87,8 @@ public class Repository {
     }
 
     public void prepare() throws IOException {
-        // TODO: specify the resource path according to Artifact's properties, including name, version and so on.
+        // TODO: specify the resource path according to Artifact's properties, including name,
+        // version and so on.
         String uriPath = getUri().getPath();
         if (uriPath != null && !"".equals(uriPath) && uriPath.charAt(0) == '/') {
             uriPath = uriPath.substring(1);
@@ -101,13 +101,15 @@ public class Repository {
         }
         Path parentDir = getResourceDir().toAbsolutePath().getParent();
         if (parentDir == null) {
-            throw new AssertionError(String.format("Parent path should never be null: {}", getResourceDir().toString()));
+            throw new AssertionError(
+                    String.format(
+                            "Parent path should never be null: {}", getResourceDir().toString()));
         }
 
         Files.createDirectories(parentDir);
         Path tmp = Files.createTempDirectory(parentDir, getResourceDir().toFile().getName());
 
-        //dismiss Progress related
+        // dismiss Progress related
 
         try {
             logger.debug("Repository to download: {}", getUri().toString());
@@ -135,7 +137,7 @@ public class Repository {
     protected void save(
             InputStream is, Path tmp, String repoName, String extension, boolean archive)
             throws IOException {
-//        ProgressInputStream pis = new ProgressInputStream(is);
+        //        ProgressInputStream pis = new ProgressInputStream(is);
 
         if (archive) {
             Path diretory;
@@ -167,9 +169,8 @@ public class Repository {
                 Files.copy(is, file, StandardCopyOption.REPLACE_EXISTING);
             }
         }
-//        pis.validateChecksum(item);
+        //        pis.validateChecksum(item);
     }
-
 
     private void untar(InputStream is, Path dir, boolean gzip) throws IOException {
         InputStream bis;
@@ -210,6 +211,4 @@ public class Repository {
         }
         return dir;
     }
-
-
 }

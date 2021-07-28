@@ -17,16 +17,15 @@
 
 package org.apache.mxnet.training;
 
-import org.apache.mxnet.engine.Device;
-import org.apache.mxnet.engine.MxResource;
-import org.apache.mxnet.ndarray.NDArray;
-import org.apache.mxnet.nn.Parameter;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.mxnet.engine.Device;
+import org.apache.mxnet.engine.MxResource;
+import org.apache.mxnet.ndarray.NDArray;
+import org.apache.mxnet.nn.Parameter;
 
 /**
  * The {@code ParameterStore} contains a map from a parameter to the mirrors of it on other devices.
@@ -41,6 +40,7 @@ public class ParameterStore extends MxResource {
     /**
      * Constructs an empty {@code ParameterStore}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param copy whether to always copy even for the same device as the original parameter
      */
     public ParameterStore(MxResource parent, boolean copy, Device device) {
@@ -112,7 +112,7 @@ public class ParameterStore extends MxResource {
                         arrays[i] = array;
                     } else {
                         arrays[i] = array.toDevice(dev, true);
-//                        arrays[i].attach(manager);
+                        //                        arrays[i].attach(manager);
                         // some parameter doesn't require grad
                         // for example running_mean in BatchNorm
                         if (parameter.requiresGradient()) {
@@ -124,7 +124,7 @@ public class ParameterStore extends MxResource {
             } else {
                 if (copy || !array.getDevice().equals(device)) {
                     array = array.toDevice(device, true);
-//                    array.attach(manager);
+                    //                    array.attach(manager);
                     // some parameter doesn't require grad
                     // for example running_mean in BatchNorm
                     if (parameter.requiresGradient() && training) {
@@ -189,5 +189,4 @@ public class ParameterStore extends MxResource {
             }
         }
     }
-
 }

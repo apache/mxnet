@@ -17,10 +17,9 @@
 
 package org.apache.mxnet.translate;
 
+import java.io.IOException;
 import org.apache.mxnet.engine.Model;
 import org.apache.mxnet.engine.Predictor;
-
-import java.io.IOException;
 
 /**
  * The {@code Translator} interface provides model pre-processing and postprocessing functionality.

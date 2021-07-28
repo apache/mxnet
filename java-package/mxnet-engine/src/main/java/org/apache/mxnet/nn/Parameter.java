@@ -17,6 +17,11 @@
 
 package org.apache.mxnet.nn;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.Objects;
+import java.util.UUID;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.exception.MalformedModelException;
@@ -27,18 +32,12 @@ import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.training.initializer.Initializer;
 import org.apache.mxnet.training.initializer.XavierInitializer;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.Objects;
-import java.util.UUID;
-
 /**
  * {@code Parameter} is a container class that holds a learnable parameter of a model.
  *
- * <p>Every {@code Parameter} is associated with a {@link SymbolBlock}. The output of the block's forward
- * function depends on the values in the {@code Parameter}. During training, the values in the
- * {@code Parameter} are updated to reflect the training data. This process forms the crux of
+ * <p>Every {@code Parameter} is associated with a {@link SymbolBlock}. The output of the block's
+ * forward function depends on the values in the {@code Parameter}. During training, the values in
+ * the {@code Parameter} are updated to reflect the training data. This process forms the crux of
  * learning.
  *
  * @see <a href="https://d2l.djl.ai/chapter_deep-learning-computation/parameters.html">The D2L
@@ -161,9 +160,9 @@ public class Parameter extends MxResource {
     }
 
     /**
-     * Initializes the parameter, with given {@link DataType} for
-     * the given expected input shapes.
+     * Initializes the parameter, with given {@link DataType} for the given expected input shapes.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param dataType the datatype of the {@code Parameter}
      */
     public void initialize(MxResource parent, DataType dataType, Device device) {
@@ -203,6 +202,7 @@ public class Parameter extends MxResource {
      * <p>Currently, we cannot deserialize into the exact subclass of NDArray. The SparseNDArray
      * will be loaded as NDArray only.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param dis the InputStream
      * @throws IOException if failed to read
      * @throws MalformedModelException Exception thrown when model is not in expected format

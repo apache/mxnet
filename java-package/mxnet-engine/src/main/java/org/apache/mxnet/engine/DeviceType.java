@@ -17,6 +17,7 @@
 
 package org.apache.mxnet.engine;
 
+/** {@code DeviceType} is a class used to map the Device name to their corresponding type number. */
 public class DeviceType {
 
     private static final String CPU_PINNED = "cpu_pinned";
@@ -68,5 +69,4 @@ public class DeviceType {
                 throw new IllegalArgumentException("Unsupported deviceType: " + deviceType);
         }
     }
-
 }

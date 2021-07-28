@@ -17,9 +17,8 @@
 
 package org.apache.mxnet.training;
 
-import org.apache.mxnet.ndarray.NDArray;
-
 import java.util.Arrays;
+import org.apache.mxnet.ndarray.NDArray;
 
 /** An interface for a key-value store to store parameters, and their corresponding gradients. */
 public interface ParameterServer extends AutoCloseable {

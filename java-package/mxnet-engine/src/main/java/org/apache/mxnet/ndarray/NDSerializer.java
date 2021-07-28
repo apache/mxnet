@@ -17,10 +17,6 @@
 
 package org.apache.mxnet.ndarray;
 
-import org.apache.mxnet.engine.MxResource;
-import org.apache.mxnet.ndarray.types.DataType;
-import org.apache.mxnet.ndarray.types.Shape;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -28,6 +24,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import org.apache.mxnet.engine.MxResource;
+import org.apache.mxnet.ndarray.types.DataType;
+import org.apache.mxnet.ndarray.types.Shape;
 
 /** A interface contains encoding and decoding logic for NDArray. */
 public final class NDSerializer {
@@ -37,8 +36,6 @@ public final class NDSerializer {
     static final int VERSION = 2;
 
     private NDSerializer() {}
-
-
 
     public static ByteBuffer allocateDirect(int capacity) {
         return ByteBuffer.allocateDirect(capacity).order(ByteOrder.nativeOrder());
@@ -96,6 +93,7 @@ public final class NDSerializer {
 
     /**
      * Decodes {@link NDArray} through {@link DataInputStream}.
+     *
      * @param parent the parent MxResource object which create the returned object
      * @param is input stream data to load from
      * @return {@link NDArray}

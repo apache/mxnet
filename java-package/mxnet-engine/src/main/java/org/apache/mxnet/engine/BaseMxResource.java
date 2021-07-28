@@ -19,6 +19,11 @@ package org.apache.mxnet.engine;
 
 import org.apache.mxnet.jna.JnaUtils;
 
+/**
+ * The top-level {@link MxResource} instance, with no parent Resource to manage. The {@link
+ * BaseMxResource} instance will be lazy loaded when the first time called, like when {@link Model}
+ * instance is loaded for the first time.
+ */
 public final class BaseMxResource extends MxResource {
 
     private static BaseMxResource SYSTEM_MX_RESOURCE;
@@ -41,9 +46,9 @@ public final class BaseMxResource extends MxResource {
         return SYSTEM_MX_RESOURCE;
     }
 
-//    public static MxResource newSubMxResource() {
-//        return new MxResource(getSystemMxResource());
-//    }
+    //    public static MxResource newSubMxResource() {
+    //        return new MxResource(getSystemMxResource());
+    //    }
 
     public boolean isReleased() {
         return handle.get() == null;

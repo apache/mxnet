@@ -19,19 +19,6 @@ package org.apache.mxnet.ndarray;
 
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
-import org.apache.mxnet.engine.BaseMxResource;
-import org.apache.mxnet.engine.Device;
-import org.apache.mxnet.engine.GradReq;
-import org.apache.mxnet.engine.OpParams;
-import org.apache.mxnet.engine.MxResource;
-import org.apache.mxnet.jna.JnaUtils;
-import org.apache.mxnet.ndarray.index.NDIndex;
-import org.apache.mxnet.ndarray.types.DataType;
-import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.ndarray.types.SparseFormat;
-import org.apache.mxnet.util.Float16Utils;
-import org.apache.mxnet.util.PairList;
-
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
@@ -40,6 +27,18 @@ import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.util.Arrays;
 import java.util.stream.IntStream;
+import org.apache.mxnet.engine.BaseMxResource;
+import org.apache.mxnet.engine.Device;
+import org.apache.mxnet.engine.GradReq;
+import org.apache.mxnet.engine.MxResource;
+import org.apache.mxnet.engine.OpParams;
+import org.apache.mxnet.jna.JnaUtils;
+import org.apache.mxnet.ndarray.index.NDIndex;
+import org.apache.mxnet.ndarray.types.DataType;
+import org.apache.mxnet.ndarray.types.Shape;
+import org.apache.mxnet.ndarray.types.SparseFormat;
+import org.apache.mxnet.util.Float16Utils;
+import org.apache.mxnet.util.PairList;
 
 public class NDArray extends MxResource {
 
@@ -105,23 +104,24 @@ public class NDArray extends MxResource {
     }
 
     public static NDArray create(MxResource parent, Shape shape, Device device) {
-        return create(parent, shape, DataType.FLOAT32 ,device);
+        return create(parent, shape, DataType.FLOAT32, device);
     }
 
     public static NDArray create(MxResource parent, Shape shape) {
         return create(parent, shape, DataType.FLOAT32, Device.defaultIfNull());
     }
 
-    public static NDArray create(MxResource parent, Shape shape, DataType dataType, Device device, boolean hasGradient) {
-        Pointer handle = JnaUtils.createNdArray(device, shape, dataType, shape.dimension(), hasGradient);
+    public static NDArray create(
+            MxResource parent, Shape shape, DataType dataType, Device device, boolean hasGradient) {
+        Pointer handle =
+                JnaUtils.createNdArray(device, shape, dataType, shape.dimension(), hasGradient);
         return new NDArray(parent, handle, device, shape, dataType, hasGradient);
-
     }
+
     public static NDArray create(MxResource parent, Shape shape, DataType dataType, Device device) {
         Pointer handle = JnaUtils.createNdArray(device, shape, dataType, shape.dimension(), false);
         return new NDArray(parent, handle, Device.defaultIfNull(device), shape, dataType, false);
     }
-
 
     public static NDArray ones(MxResource parent, Shape shape, DataType dataType, Device device) {
         return create(parent, shape, dataType, device).ones();
@@ -131,12 +131,10 @@ public class NDArray extends MxResource {
         return name;
     }
 
-    
     public void setName(String name) {
         this.name = name;
     }
 
-    
     public DataType getDataType() {
         if (this.dataType == null) {
             this.dataType = JnaUtils.getDataTypeOfNdArray(getHandle());
@@ -144,7 +142,6 @@ public class NDArray extends MxResource {
         return this.dataType;
     }
 
-    
     public Device getDevice() {
         if (this.device == null) {
             this.device = JnaUtils.getDeviceOfNdArray(getHandle());
@@ -152,7 +149,6 @@ public class NDArray extends MxResource {
         return this.device;
     }
 
-    
     public Shape getShape() {
         if (this.shape == null) {
             this.shape = JnaUtils.getShapeOfNdArray(getHandle());
@@ -160,7 +156,6 @@ public class NDArray extends MxResource {
         return this.shape;
     }
 
-    
     public SparseFormat getSparseFormat() {
         if (this.sparseFormat == null) {
             this.sparseFormat = JnaUtils.getStorageType(getHandle());
@@ -175,10 +170,7 @@ public class NDArray extends MxResource {
         return this.version;
     }
 
-
-    private NDArray duplicate(
-            Shape shape, DataType dataType, Device device, String name
-    ) {
+    private NDArray duplicate(Shape shape, DataType dataType, Device device, String name) {
         // TODO get copy parameter
         NDArray array = create(getParent(), shape, dataType, device);
         array.setName(name);
@@ -193,7 +185,6 @@ public class NDArray extends MxResource {
         return array;
     }
 
-    
     public NDArray toDevice(Device device, boolean copy) {
         if (device.equals(getDevice()) && !copy) {
             return this;
@@ -201,7 +192,6 @@ public class NDArray extends MxResource {
         return duplicate(getShape(), getDataType(), device, getName());
     }
 
-    
     public NDArray toType(DataType dataType, boolean copy) {
         if (dataType.equals(getDataType()) && !copy) {
             return this;
@@ -209,13 +199,11 @@ public class NDArray extends MxResource {
         return duplicate(getShape(), dataType, getDevice(), getName());
     }
 
-    
     public void setRequiresGradient(boolean requiresGrad) {
         if ((requiresGrad && hasGradient()) || (!requiresGrad && !hasGradient())) {
             return;
         }
-        NDArray grad =
-                hasGradient() ? getGradient() : createGradient(getSparseFormat());
+        NDArray grad = hasGradient() ? getGradient() : createGradient(getSparseFormat());
         // DJL go with write as only MXNet support GradReq
         int gradReqValue = requiresGrad ? GradReq.WRITE.getValue() : GradReq.NULL.getValue();
         IntBuffer gradReqBuffer = IntBuffer.allocate(1);
@@ -297,7 +285,6 @@ public class NDArray extends MxResource {
         return create(getParent(), shape, dataType, device).ones();
     }
 
-    
     public NDArray getGradient() {
         if (!hasGradient()) {
             throw new IllegalStateException(
@@ -308,7 +295,6 @@ public class NDArray extends MxResource {
         return create(getParent(), pointer);
     }
 
-    
     public boolean hasGradient() {
         if (hasGradient == null) {
             Pointer pointer = JnaUtils.getGradient(getHandle());
@@ -317,18 +303,15 @@ public class NDArray extends MxResource {
         return hasGradient;
     }
 
-    
     public NDArray stopGradient() {
         Pointer pointer = JnaUtils.detachGradient(getHandle());
         return create(getParent(), pointer);
     }
 
-    
     public String[] toStringArray() {
         throw new UnsupportedOperationException("String MxNDArray is not supported!");
     }
 
-    
     public ByteBuffer toByteBuffer() {
         if (getSparseFormat() != SparseFormat.DENSE) {
             throw new IllegalStateException("Require Dense MxNDArray, actual " + getSparseFormat());
@@ -404,7 +387,7 @@ public class NDArray extends MxResource {
     private void validate(DataType inputType) {
         if (getDataType() != inputType
                 && ((dataType != DataType.UINT8 && dataType != DataType.BOOLEAN)
-                || inputType != DataType.INT8)) {
+                        || inputType != DataType.INT8)) {
             // Infer DataType from Buffer always return INT8, make this two special case that
             // allows set UINT8 and BOOL array with regular ByteBuffer.
             throw new IllegalStateException(
@@ -413,11 +396,11 @@ public class NDArray extends MxResource {
     }
 
     /**
-     * Returns {@code true} if this {@code MxNDArray} is a scalar {@code MxNDArray} with empty {@link
-     * Shape}.
+     * Returns {@code true} if this {@code MxNDArray} is a scalar {@code MxNDArray} with empty
+     * {@link Shape}.
      *
-     * @return {@code true} if this {@code MxNDArray} is a scalar {@code MxNDArray} with empty {@link
-     *     Shape}
+     * @return {@code true} if this {@code MxNDArray} is a scalar {@code MxNDArray} with empty
+     *     {@link Shape}
      */
     boolean isScalar() {
         return getShape().isScalar();
@@ -427,7 +410,7 @@ public class NDArray extends MxResource {
         // result of sum operation is int64 now
         return toType(DataType.BOOLEAN, false).sum().eq(size());
     }
-    
+
     public void copyTo(NDArray NdArray) {
 
         Shape inShape = getShape();
@@ -439,7 +422,6 @@ public class NDArray extends MxResource {
         JnaUtils.op("_npi_copyto").invoke(new NDArray[] {this}, new NDArray[] {NdArray}, null);
     }
 
-    
     public NDArray booleanMask(NDArray index, int axis) {
         if (isScalar() || index.isScalar()) {
             throw new IllegalArgumentException("booleanMask didn't support scalar!");
@@ -454,17 +436,17 @@ public class NDArray extends MxResource {
         OpParams params = new OpParams();
         params.addParam("axis", axis);
         try (NDArray reshaped = this.reshape(new Shape(reshape));
-             NDArray reshapedIndex = index.toType(DataType.INT32, false).reshape(-1);
-             NDArray result =
-                     invoke(
-                             getParent(),
-                             "_npi_boolean_mask",
-                             new NDArray[] {reshaped, reshapedIndex},
-                             params)) {
+                NDArray reshapedIndex = index.toType(DataType.INT32, false).reshape(-1);
+                NDArray result =
+                        invoke(
+                                getParent(),
+                                "_npi_boolean_mask",
+                                new NDArray[] {reshaped, reshapedIndex},
+                                params)) {
             return result.reshape(reshape);
         }
     }
-    
+
     public NDArray sequenceMask(NDArray sequenceLength, float value) {
         if (getShape().dimension() < 2 || getShape().isScalar() || getShape().hasZeroDimension()) {
             throw new IllegalArgumentException(
@@ -482,19 +464,16 @@ public class NDArray extends MxResource {
                 .head();
     }
 
-    
     public NDArray sequenceMask(NDArray sequenceLength) {
         return sequenceMask(sequenceLength, 0);
     }
 
-    
     public NDArray zerosLike() {
         OpParams params = new OpParams();
         params.addParam("fill_value", 0);
         return invoke(getParent(), "_npi_full_like", this, params);
     }
 
-    
     public NDArray onesLike() {
         OpParams params = new OpParams();
         params.addParam("fill_value", 1);
@@ -526,7 +505,6 @@ public class NDArray extends MxResource {
         }
     }
 
-    
     public boolean contentEquals(NDArray other) {
         if (other == null || (!shapeEquals(other))) {
             return false;
@@ -539,152 +517,126 @@ public class NDArray extends MxResource {
         }
     }
 
-    
     public NDArray eq(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return invoke(getParent(), "_npi_equal_scalar", this, params);
     }
 
-    
     public NDArray eq(NDArray other) {
         return invoke(getParent(), "_npi_equal", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray neq(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return invoke(getParent(), "_npi_not_equal_scalar", this, params);
     }
 
-    
     public NDArray neq(NDArray other) {
         return invoke(getParent(), "_npi_not_equal", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray gt(Number other) {
         OpParams params = new OpParams();
         params.add("scalar", other.toString());
         return invoke(getParent(), "_npi_greater_scalar", this, params);
     }
 
-    
     public NDArray gt(NDArray other) {
         return invoke(getParent(), "_npi_greater", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray gte(Number other) {
         OpParams params = new OpParams();
         params.add("scalar", other.toString());
         return invoke(getParent(), "_npi_greater_equal_scalar", this, params);
     }
 
-    
     public NDArray gte(NDArray other) {
         return invoke(getParent(), "_npi_greater_equal", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray lt(Number other) {
         OpParams params = new OpParams();
         params.add("scalar", other.toString());
         return invoke(getParent(), "_npi_less_scalar", this, params);
     }
 
-    
     public NDArray lt(NDArray other) {
         return invoke(getParent(), "_npi_less", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray lte(Number other) {
         OpParams params = new OpParams();
         params.add("scalar", other.toString());
         return invoke(getParent(), "_npi_less_equal_scalar", this, params);
     }
 
-    
-    public NDArray lte (NDArray other) {
+    public NDArray lte(NDArray other) {
         return invoke(getParent(), "_npi_less_equal", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray add(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return invoke(getParent(), "_npi_add_scalar", this, params);
     }
 
-    
-    public NDArray add (NDArray other) {
+    public NDArray add(NDArray other) {
         return invoke(getParent(), "_npi_add", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray sub(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return invoke(getParent(), "_npi_subtract_scalar", this, params);
     }
 
-    
-    public NDArray sub (NDArray other) {
+    public NDArray sub(NDArray other) {
         return invoke(getParent(), "_npi_subtract", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray mul(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return invoke(getParent(), "_npi_multiply_scalar", this, params);
     }
 
-    
-    public NDArray mul (NDArray other) {
+    public NDArray mul(NDArray other) {
         return invoke(getParent(), "_npi_multiply", new NDArray[] {this, other}, null);
     }
 
-
-    
     public NDArray div(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return invoke(getParent(), "_npi_true_divide_scalar", this, params);
     }
 
-    
-    public NDArray div (NDArray other) {
+    public NDArray div(NDArray other) {
         return invoke(getParent(), "_npi_true_divide", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray mod(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return invoke(getParent(), "_npi_mod_scalar", this, params);
     }
 
-    
-    public NDArray mod (NDArray other) {
+    public NDArray mod(NDArray other) {
         return invoke(getParent(), "_npi_mod", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray pow(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return invoke(getParent(), "_npi_power_scalar", this, params);
     }
 
-    
-    public NDArray pow (NDArray other) {
+    public NDArray pow(NDArray other) {
         return invoke(getParent(), "_npi_power", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray addi(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
@@ -692,13 +644,11 @@ public class NDArray extends MxResource {
         return this;
     }
 
-    
-    public NDArray addi (NDArray other) {
+    public NDArray addi(NDArray other) {
         invoke("_npi_add", new NDArray[] {this, other}, new NDArray[] {this}, null);
         return this;
     }
 
-    
     public NDArray subi(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
@@ -706,13 +656,11 @@ public class NDArray extends MxResource {
         return this;
     }
 
-    
-    public NDArray subi (NDArray other) {
+    public NDArray subi(NDArray other) {
         invoke("_npi_subtract", new NDArray[] {this, other}, new NDArray[] {this}, null);
         return this;
     }
 
-    
     public NDArray muli(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
@@ -720,28 +668,23 @@ public class NDArray extends MxResource {
         return this;
     }
 
-    
-    public NDArray muli (NDArray other) {
+    public NDArray muli(NDArray other) {
         invoke("_npi_multiply", new NDArray[] {this, other}, new NDArray[] {this}, null);
         return this;
     }
 
-    
     public NDArray divi(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
-        invoke(
-                "_npi_true_divide_scalar", new NDArray[] {this}, new NDArray[] {this}, params);
+        invoke("_npi_true_divide_scalar", new NDArray[] {this}, new NDArray[] {this}, params);
         return this;
     }
 
-    
-    public NDArray divi (NDArray other) {
+    public NDArray divi(NDArray other) {
         invoke("_npi_true_divide", new NDArray[] {this, other}, new NDArray[] {this}, null);
         return this;
     }
 
-    
     public NDArray modi(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
@@ -749,13 +692,11 @@ public class NDArray extends MxResource {
         return this;
     }
 
-    
-    public NDArray modi (NDArray other) {
+    public NDArray modi(NDArray other) {
         invoke("_npi_mod", new NDArray[] {this, other}, new NDArray[] {this}, null);
         return this;
     }
 
-    
     public NDArray powi(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
@@ -763,201 +704,163 @@ public class NDArray extends MxResource {
         return this;
     }
 
-    
-    public NDArray powi (NDArray other) {
+    public NDArray powi(NDArray other) {
         invoke("_npi_power", new NDArray[] {this, other}, new NDArray[] {this}, null);
         return this;
     }
 
-    
     public NDArray sign() {
         return invoke(getParent(), "_npi_sign", this, null);
     }
 
-    
     public NDArray signi() {
         invoke("_npi_sign", new NDArray[] {this}, new NDArray[] {this}, null);
         return this;
     }
 
-    
     public NDArray maximum(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return invoke(getParent(), "_npi_maximum_scalar", this, params);
     }
 
-    
-    public NDArray maximum (NDArray other) {
+    public NDArray maximum(NDArray other) {
         return invoke(getParent(), "_npi_maximum", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray minimum(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return invoke(getParent(), "_npi_minimum_scalar", this, params);
     }
 
-    
-    public NDArray minimum (NDArray other) {
+    public NDArray minimum(NDArray other) {
         return invoke(getParent(), "_npi_minimum", new NDArray[] {this, other}, null);
     }
-    
+
     public NDArray neg() {
         return invoke(getParent(), "_npi_negative", this, null);
     }
 
-    
     public NDArray negi() {
         invoke("_npi_negative", new NDArray[] {this}, new NDArray[] {this}, null);
         return this;
     }
 
-    
     public NDArray abs() {
         return invoke(getParent(), "_npi_absolute", this, null);
     }
 
-    
     public NDArray square() {
         return invoke(getParent(), "_npi_square", this, null);
     }
 
-    
     public NDArray sqrt() {
         return invoke(getParent(), "_npi_sqrt", this, null);
     }
 
-    
     public NDArray cbrt() {
         return invoke(getParent(), "_npi_cbrt", this, null);
     }
 
-    
     public NDArray floor() {
         return invoke(getParent(), "_npi_floor", this, null);
     }
 
-    
     public NDArray ceil() {
         return invoke(getParent(), "_npi_ceil", this, null);
     }
 
-    
     public NDArray round() {
         return invoke(getParent(), "round", this, null);
     }
 
-    
     public NDArray trunc() {
         return invoke(getParent(), "_npi_trunc", this, null);
     }
 
-    
     public NDArray exp() {
         return invoke(getParent(), "_npi_exp", this, null);
     }
 
-    
     public NDArray log() {
         return invoke(getParent(), "_npi_log", this, null);
     }
 
-    
     public NDArray log10() {
         return invoke(getParent(), "_npi_log10", this, null);
     }
 
-    
     public NDArray log2() {
         return invoke(getParent(), "_npi_log2", this, null);
     }
 
-    
     public NDArray sin() {
         return invoke(getParent(), "_npi_sin", this, null);
     }
 
-    
     public NDArray cos() {
         return invoke(getParent(), "_npi_cos", this, null);
     }
 
-    
     public NDArray tan() {
         return invoke(getParent(), "_npi_tan", this, null);
     }
 
-    
     public NDArray asin() {
         return invoke(getParent(), "_npi_arcsin", this, null);
     }
 
-    
     public NDArray acos() {
         return invoke(getParent(), "_npi_arccos", this, null);
     }
 
-    
     public NDArray atan() {
         return invoke(getParent(), "_npi_arctan", this, null);
     }
 
-    
     public NDArray sinh() {
         return invoke(getParent(), "_npi_sinh", this, null);
     }
 
-    
     public NDArray cosh() {
         return invoke(getParent(), "_npi_cosh", this, null);
     }
 
-    
     public NDArray tanh() {
         return invoke(getParent(), "_npi_tanh", this, null);
     }
 
-    
     public NDArray asinh() {
         return invoke(getParent(), "_npi_arcsinh", this, null);
     }
 
-    
     public NDArray acosh() {
         return invoke(getParent(), "_npi_arccosh", this, null);
     }
 
-    
     public NDArray atanh() {
         return invoke(getParent(), "_npi_arctanh", this, null);
     }
 
-    
     public NDArray toDegrees() {
         return invoke(getParent(), "_npi_degrees", this, null);
     }
 
-    
     public NDArray toRadians() {
         return invoke(getParent(), "_npi_radians", this, null);
     }
 
-
-    
     public NDArray max() {
         return invoke(getParent(), "_np_max", this, null);
     }
 
-    
     public NDArray max(int[] axes) {
         OpParams params = new OpParams();
         params.addTupleParam("axis", axes);
         return invoke(getParent(), "_np_max", this, params);
     }
 
-    
     public NDArray max(int[] axes, boolean keepDims) {
         OpParams params = new OpParams();
         params.addTupleParam("axis", axes);
@@ -965,12 +868,10 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_np_max", this, params);
     }
 
-    
     public NDArray min() {
         return invoke(getParent(), "_np_min", this, null);
     }
 
-    
     public NDArray min(int[] axes, boolean keepDims) {
         OpParams params = new OpParams();
         params.addTupleParam("axis", axes);
@@ -978,17 +879,16 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_np_min", this, params);
     }
 
-    
     public NDArray sum() {
         // TODO current windows doesn't support boolean MxNDArray
         if (System.getProperty("os.name").toLowerCase().contains("win")) {
             DataType target = getDataType();
             if (!target.isFloating()) {
-                try  (NDArray thisArr = toType(DataType.FLOAT32, false)) {
+                try (NDArray thisArr = toType(DataType.FLOAT32, false)) {
                     if (target == DataType.BOOLEAN) {
                         target = DataType.INT64;
                     }
-                    try  (NDArray array = invoke(getParent(), "_np_sum", thisArr, null)) {
+                    try (NDArray array = invoke(getParent(), "_np_sum", thisArr, null)) {
                         return array.toType(target, false);
                     }
                 }
@@ -1001,7 +901,6 @@ public class NDArray extends MxResource {
         return sum(axes, false);
     }
 
-    
     public NDArray sum(int[] axes, boolean keepDims) {
         OpParams params = new OpParams();
         params.addTupleParam("axis", axes);
@@ -1009,7 +908,6 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_np_sum", this, params);
     }
 
-    
     public NDArray prod() {
         return invoke(getParent(), "_np_prod", this, null);
     }
@@ -1018,7 +916,6 @@ public class NDArray extends MxResource {
         return prod(axes, false);
     }
 
-
     public NDArray prod(int[] axes, boolean keepDims) {
         OpParams params = new OpParams();
         params.addTupleParam("axis", axes);
@@ -1026,12 +923,10 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_np_prod", this, params);
     }
 
-    
     public NDArray mean() {
         return invoke(getParent(), "_npi_mean", this, null);
     }
 
-    
     public NDArray mean(int[] axes, boolean keepDims) {
         OpParams params = new OpParams();
         params.addTupleParam("axis", axes);
@@ -1039,7 +934,6 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npi_mean", this, params);
     }
 
-    
     public NDArray rotate90(int times, int[] axes) {
         if (axes.length != 2) {
             throw new IllegalArgumentException("Axes must be 2");
@@ -1050,7 +944,6 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npi_rot90", this, params);
     }
 
-    
     public NDArray trace(int offset, int axis1, int axis2) {
         OpParams params = new OpParams();
         params.addParam("offset", offset);
@@ -1059,7 +952,6 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_np_trace", this, params);
     }
 
-    
     public NDList split(long[] indices, int axis) {
         if (indices.length == 0) {
             return new NDList(this);
@@ -1078,12 +970,10 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npi_split", new NDList(this), params);
     }
 
-    
     public NDArray flatten() {
         return reshape(new Shape(Math.toIntExact(size())));
     }
 
-    
     public NDArray reshape(Shape shape) {
         OpParams params = new OpParams();
         params.addParam("newshape", shape);
@@ -1094,27 +984,23 @@ public class NDArray extends MxResource {
         return reshape(new Shape(newShape));
     }
 
-    
     public NDArray expandDims(int axis) {
         OpParams params = new OpParams();
         params.addParam("axis", axis);
         return invoke(getParent(), "_npi_expand_dims", this, params);
     }
 
-    
     public NDArray squeeze() {
         return invoke(getParent(), "_np_squeeze", this, null);
     }
 
-    
     public NDArray squeeze(int[] axes) {
         OpParams params = new OpParams();
         params.addTupleParam("axis", axes);
         return invoke(getParent(), "_np_squeeze", this, params);
     }
 
-    
-    public NDArray logicalAnd (NDArray other) {
+    public NDArray logicalAnd(NDArray other) {
         // TODO switch to numpy op, although current op support zero-dim, scalar
         NDArray thisArr =
                 (getDataType() == DataType.BOOLEAN) ? toType(DataType.INT32, false) : this;
@@ -1126,8 +1012,7 @@ public class NDArray extends MxResource {
                 .toType(DataType.BOOLEAN, false);
     }
 
-    
-    public NDArray logicalOr (NDArray other) {
+    public NDArray logicalOr(NDArray other) {
         // TODO switch to numpy op, although current op support zero-dim, scalar
         NDArray thisArr =
                 (getDataType() == DataType.BOOLEAN) ? toType(DataType.INT32, false) : this;
@@ -1139,8 +1024,7 @@ public class NDArray extends MxResource {
                 .toType(DataType.BOOLEAN, false);
     }
 
-    
-    public NDArray logicalXor (NDArray other) {
+    public NDArray logicalXor(NDArray other) {
         // TODO switch to numpy op, although current op support zero-dim, scalar
         NDArray thisArr =
                 (getDataType() == DataType.BOOLEAN) ? toType(DataType.INT32, false) : this;
@@ -1152,12 +1036,10 @@ public class NDArray extends MxResource {
                 .toType(DataType.BOOLEAN, false);
     }
 
-    
     public NDArray logicalNot() {
         return invoke(getParent(), "_npi_logical_not", this, null);
     }
 
-    
     public NDArray argSort(int axis, boolean ascending) {
         OpParams params = new OpParams();
         params.addParam("axis", axis);
@@ -1167,19 +1049,16 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npi_argsort", this, params);
     }
 
-    
     public NDArray sort(int axis) {
         OpParams params = new OpParams();
         params.addParam("axis", axis);
         return invoke(getParent(), "_npi_sort", this, params);
     }
 
-    
     public NDArray sort() {
         return invoke(getParent(), "_npi_sort", this, null);
     }
 
-    
     public NDArray softmax(int axis) {
         // MXNet softmax op bug on GPU
         if (isEmpty()) {
@@ -1190,7 +1069,6 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npx_softmax", this, params);
     }
 
-    
     public NDArray logSoftmax(int axis) {
         // MXNet logsoftmax op bug on GPU
         if (isEmpty()) {
@@ -1201,20 +1079,17 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npx_log_softmax", this, params);
     }
 
-    
     public NDArray cumSum() {
         return invoke(getParent(), "_np_cumsum", this, null);
     }
 
-    
     public NDArray cumSum(int axis) {
         OpParams params = new OpParams();
         params.addParam("axis", axis);
         return invoke(getParent(), "_np_cumsum", this, params);
     }
 
-    
-    public void intern (NDArray replaced) {
+    public void intern(NDArray replaced) {
         NDArray arr = replaced;
         Pointer oldHandle = handle.getAndSet(arr.handle.getAndSet(null));
         JnaUtils.waitToRead(oldHandle);
@@ -1223,17 +1098,14 @@ public class NDArray extends MxResource {
         arr.close();
     }
 
-    
     public NDArray isInfinite() {
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
-    
     public NDArray isNaN() {
         return invoke(getParent(), "_npi_isnan", this, null);
     }
 
-    
     public NDArray toDense() {
         if (!isSparse()) {
             return duplicate();
@@ -1241,7 +1113,6 @@ public class NDArray extends MxResource {
         return castStorage(SparseFormat.DENSE);
     }
 
-    
     public NDArray toSparse(SparseFormat fmt) {
         if (fmt != SparseFormat.DENSE
                 && fmt != SparseFormat.CSR
@@ -1259,7 +1130,7 @@ public class NDArray extends MxResource {
         params.setParam("stype", fmt.getType());
         return invoke(getParent(), "cast_storage", this, params);
     }
-    
+
     public NDArray tile(long repeats) {
         // zero-dim
         if (isEmpty()) {
@@ -1272,7 +1143,6 @@ public class NDArray extends MxResource {
         return tile(repeatsArray);
     }
 
-    
     public NDArray tile(int axis, long repeats) {
         // scalar
         if (isScalar()) {
@@ -1287,14 +1157,13 @@ public class NDArray extends MxResource {
     private int withAxis(int axis) {
         return Math.floorMod(axis, getShape().dimension());
     }
-    
+
     public NDArray tile(long[] repeats) {
         OpParams params = new OpParams();
         params.addTupleParam("reps", repeats);
         return invoke(getParent(), "_npi_tile", this, params);
     }
 
-    
     public NDArray tile(Shape desiredShape) {
         return tile(repeatsToMatchShape(desiredShape));
     }
@@ -1320,7 +1189,6 @@ public class NDArray extends MxResource {
         return repeats;
     }
 
-    
     public NDArray repeat(long repeats) {
         // zero-dim
         if (isEmpty()) {
@@ -1333,7 +1201,6 @@ public class NDArray extends MxResource {
         return repeat(repeatsArray);
     }
 
-    
     public NDArray repeat(int axis, long repeats) {
         long[] repeatsArray = new long[getShape().dimension()];
         Arrays.fill(repeatsArray, 1);
@@ -1341,7 +1208,6 @@ public class NDArray extends MxResource {
         return repeat(repeatsArray);
     }
 
-    
     public NDArray repeat(long[] repeats) {
         // TODO get rid of for loop once bug in MXNet np.repeat is fixed
         NDArray array = this;
@@ -1361,25 +1227,21 @@ public class NDArray extends MxResource {
         return array;
     }
 
-    
     public NDArray repeat(Shape desiredShape) {
         return repeat(repeatsToMatchShape(desiredShape));
     }
 
-    
-    public NDArray dot (NDArray other) {
+    public NDArray dot(NDArray other) {
         return invoke(getParent(), "_np_dot", new NDArray[] {this, other}, null);
     }
 
-    
-    public NDArray matMul (NDArray other) {
+    public NDArray matMul(NDArray other) {
         if (isScalar() || other.isScalar()) {
             throw new IllegalArgumentException("scalar is not allowed for matMul()");
         }
         return invoke(getParent(), "_npi_matmul", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArray clip(Number min, Number max) {
         OpParams params = new OpParams();
         params.addParam("a_min", min);
@@ -1387,7 +1249,6 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npi_clip", this, params);
     }
 
-    
     public NDArray swapAxes(int axis1, int axis2) {
         OpParams params = new OpParams();
         params.addParam("dim1", axis1);
@@ -1395,19 +1256,16 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npi_swapaxes", this, params);
     }
 
-    
     public NDArray flip(int... axes) {
         OpParams params = new OpParams();
         params.addTupleParam("axis", axes);
         return invoke(getParent(), "_npi_flip", this, params);
     }
 
-    
     public NDArray transpose() {
         return invoke(getParent(), "_np_transpose", this, null);
     }
 
-    
     public NDArray transpose(int... dimensions) {
         if (Arrays.stream(dimensions).anyMatch(d -> d < 0)) {
             throw new UnsupportedOperationException(
@@ -1425,14 +1283,12 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_np_transpose", this, params);
     }
 
-    
     public NDArray broadcast(Shape shape) {
         OpParams params = new OpParams();
         params.setShape(shape);
         return invoke(getParent(), "_npi_broadcast_to", this, params);
     }
 
-    
     public NDArray argMax() {
         if (isEmpty()) {
             throw new IllegalArgumentException("attempt to get argMax of an empty MxNDArray");
@@ -1440,14 +1296,12 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npi_argmax", this, null);
     }
 
-    
     public NDArray argMax(int axis) {
         OpParams params = new OpParams();
         params.addParam("axis", axis);
         return invoke(getParent(), "_npi_argmax", this, params);
     }
 
-    
     public NDArray argMin() {
         if (isEmpty()) {
             throw new IllegalArgumentException("attempt to get argMin of an empty MxNDArray");
@@ -1455,46 +1309,38 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npi_argmin", this, null);
     }
 
-    
     public NDArray argMin(int axis) {
         OpParams params = new OpParams();
         params.addParam("axis", axis);
         return invoke(getParent(), "_npi_argmin", this, params);
     }
 
-    
     public NDArray percentile(Number percentile) {
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
-    
     public NDArray percentile(Number percentile, int[] dimension) {
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
-    
     public NDArray median() {
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
-    
     public NDArray median(int[] axes) {
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
-    
     public NDArray nonzero() {
         NDArray thisArr =
                 (getDataType() == DataType.BOOLEAN) ? toType(DataType.INT32, false) : this;
         return invoke(getParent(), "_npx_nonzero", thisArr, null);
     }
 
-    
     public NDArray erfinv() {
         return invoke(getParent(), "erfinv", this, null);
     }
 
-    
     public NDArray norm(boolean keepDims) {
         OpParams params = new OpParams();
         params.add("flag", -2);
@@ -1502,7 +1348,6 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npi_norm", this, params);
     }
 
-    
     public NDArray norm(int ord, int[] axes, boolean keepDims) {
         OpParams params = new OpParams();
         params.addParam("ord", (double) ord);
@@ -1511,11 +1356,10 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npi_norm", this, params);
     }
 
-//    public MxNDArray oneHot(int depth) {
-//        return LazyNDArray.super.oneHot(depth);
-//    }
+    //    public MxNDArray oneHot(int depth) {
+    //        return LazyNDArray.super.oneHot(depth);
+    //    }
 
-    
     public NDArray oneHot(int depth, float onValue, float offValue, DataType dataType) {
         OpParams params = new OpParams();
         params.add("depth", depth);
@@ -1525,12 +1369,10 @@ public class NDArray extends MxResource {
         return invoke(getParent(), "_npx_one_hot", this, params).toType(dataType, false);
     }
 
-    
     public NDArray batchDot(NDArray other) {
         return invoke(getParent(), "_npx_batch_dot", new NDArray[] {this, other}, null);
     }
 
-    
     public NDArrayEx getNDArrayInternal() {
         return mxNDArrayEx;
     }
@@ -1547,7 +1389,7 @@ public class NDArray extends MxResource {
             setClosed();
         }
     }
-    
+
     public boolean isEmpty() {
         return getShape().size() == 0;
     }
@@ -1564,10 +1406,11 @@ public class NDArray extends MxResource {
         return getShape().equals(other.getShape());
     }
 
-    public static NDList invoke(MxResource parent, String operation, NDList src, PairList<String, ?> params) {
+    public static NDList invoke(
+            MxResource parent, String operation, NDList src, PairList<String, ?> params) {
         return new NDList(JnaUtils.op(operation).invoke(parent, src.toArray(EMPTY), params));
     }
-    
+
     /**
      * An engine specific generic invocation to native operator.
      *
@@ -1581,7 +1424,8 @@ public class NDArray extends MxResource {
      * @param params the parameters to be passed to the native operator
      * @throws IllegalArgumentException if operation is not supported by Engine
      */
-    public static void invoke(String operation, NDList src, NDList dest, PairList<String, ?> params) {
+    public static void invoke(
+            String operation, NDList src, NDList dest, PairList<String, ?> params) {
         invoke(operation, src.toArray(EMPTY), dest.toArray(EMPTY), params);
     }
 
@@ -1592,12 +1436,14 @@ public class NDArray extends MxResource {
      * using this API may cause portability issues. A native operation may not be compatible between
      * each version.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param operation the native operation to perform
      * @param src the array of source {@link NDArray}
      * @param params the parameters to be passed to the native operator
      * @return the output array of {@link NDArray}
      */
-    public static NDArray invoke(MxResource parent, String operation, NDArray[] src, PairList<String, ?> params) {
+    public static NDArray invoke(
+            MxResource parent, String operation, NDArray[] src, PairList<String, ?> params) {
         return JnaUtils.op(operation).invoke(parent, src, params)[0];
     }
 
@@ -1613,13 +1459,14 @@ public class NDArray extends MxResource {
      * using this API may cause portability issues. A native operation may not be compatible between
      * each version.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param operation the native operation to perform
      * @param src the source {@link NDArray}
      * @param params the parameters to be passed to the native operator
      * @return the output array of {@link NDArray}
-
      */
-    public static NDArray invoke(MxResource parent, String operation, NDArray src, PairList<String, ?> params) {
+    public static NDArray invoke(
+            MxResource parent, String operation, NDArray src, PairList<String, ?> params) {
         return invoke(parent, operation, new NDArray[] {src}, params);
     }
 
@@ -1630,10 +1477,10 @@ public class NDArray extends MxResource {
      * using this API may cause portability issues. A native operation may not be compatible between
      * each version.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param operation the native operation to perform
      * @param params the parameters to be passed to the native operator
      * @return the output array of {@link NDArray}
-
      */
     public static NDArray invoke(MxResource parent, String operation, PairList<String, ?> params) {
         return invoke(parent, operation, EMPTY, params);
@@ -1647,7 +1494,6 @@ public class NDArray extends MxResource {
     public byte[] encode() {
         return NDSerializer.encode(this);
     }
-
 
     public static NDArray create(MxResource parent, Number data) {
         if (data instanceof Integer) {
@@ -1669,6 +1515,7 @@ public class NDArray extends MxResource {
      * Creates and initializes an instance of {@link NDArray} with specified {@link Shape} and float
      * array.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @param shape the {@link Shape} of the {@link NDArray}
      * @return a new instance of {@link NDArray}
@@ -1681,6 +1528,7 @@ public class NDArray extends MxResource {
      * Creates and initializes an instance of {@link NDArray} with specified {@link Shape} and int
      * array.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @param shape the {@link Shape} of the {@link NDArray}
      * @return a new instance of {@link NDArray}
@@ -1693,6 +1541,7 @@ public class NDArray extends MxResource {
      * Creates and initializes an instance of {@link NDArray} with specified {@link Shape} and
      * double array.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @param shape the {@link Shape} of the {@link NDArray}
      * @return a new instance of {@link NDArray}
@@ -1705,6 +1554,7 @@ public class NDArray extends MxResource {
      * Creates and initializes an instance of {@link NDArray} with specified {@link Shape} and long
      * array.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @param shape the {@link Shape} of the {@link NDArray}
      * @return a new instance of {@link NDArray}
@@ -1717,6 +1567,7 @@ public class NDArray extends MxResource {
      * Creates and initializes an instance of {@link NDArray} with specified {@link Shape} and byte
      * array.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @param shape the {@link Shape} of the {@link NDArray}
      * @return a new instance of {@link NDArray}
@@ -1729,21 +1580,23 @@ public class NDArray extends MxResource {
      * Creates and initializes an instance of {@link NDArray} with specified {@link Shape} and
      * boolean array.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the boolean array that needs to be set
      * @param shape the {@link Shape} of the {@link NDArray}
      * @return a new instance of {@link NDArray}
      */
-    public  static NDArray create(MxResource parent, boolean[] data, Shape shape) {
+    public static NDArray create(MxResource parent, boolean[] data, Shape shape) {
         byte[] byteData = new byte[data.length];
         for (int i = 0; i < data.length; i++) {
             byteData[i] = (byte) (data[i] ? 1 : 0);
         }
         return create(parent, ByteBuffer.wrap(byteData), shape, DataType.BOOLEAN);
     }
-    
+
     /**
      * Creates and initializes a scalar {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1754,6 +1607,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a scalar {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float data that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1764,6 +1618,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a scalar {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the double data that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1774,6 +1629,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a scalar {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the long data that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1784,6 +1640,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a scalar {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the byte data that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1794,17 +1651,19 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a scalar {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the boolean data that needs to be set
      * @return a new instance of {@link NDArray}
      */
     public static NDArray create(MxResource parent, boolean data) {
-        
+
         return create(parent, new boolean[] {data}, new Shape());
     }
 
     /**
      * Creates and initializes a 1D {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1815,6 +1674,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a 1D {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1825,6 +1685,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a 1D {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1835,6 +1696,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a 1D {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1845,6 +1707,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a 1D {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1855,6 +1718,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a 1D {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the bool array that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1865,6 +1729,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a 2D {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1880,6 +1745,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a 2D {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1895,6 +1761,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a 2D {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1910,6 +1777,7 @@ public class NDArray extends MxResource {
     /**
      * Creates and initializes a 2-D {@link NDArray}.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param data the float array that needs to be set
      * @return a new instance of {@link NDArray}
      */
@@ -1991,7 +1859,12 @@ public class NDArray extends MxResource {
      * @return the drawn samples {@link NDArray}
      */
     public static NDArray randomUniform(
-            MxResource parent, float low, float high, Shape shape, DataType dataType, Device device) {
+            MxResource parent,
+            float low,
+            float high,
+            Shape shape,
+            DataType dataType,
+            Device device) {
         OpParams params = new OpParams();
         params.addParam("low", low);
         params.addParam("high", high);
@@ -2016,19 +1889,26 @@ public class NDArray extends MxResource {
      * @param dataType the {@link DataType} of the {@link NDArray}
      * @return the drawn samples {@link NDArray}
      */
-    private static NDArray randomUniform(MxResource parent, float low, float high, Shape shape, DataType dataType) {
+    private static NDArray randomUniform(
+            MxResource parent, float low, float high, Shape shape, DataType dataType) {
         return randomUniform(parent, low, high, shape, dataType, Device.defaultIfNull(null));
     }
 
     public static NDArray randomNormal(
-            MxResource parent, float loc, float scale, Shape shape, DataType dataType, Device device) {
+            MxResource parent,
+            float loc,
+            float scale,
+            Shape shape,
+            DataType dataType,
+            Device device) {
         if (device == null) {
             return randomNormal(parent, loc, scale, shape, dataType);
         }
         return randomNormal(parent, loc, scale, shape, dataType);
     }
 
-    public static NDArray randomNormal(MxResource parent, float loc, float scale, Shape shape, DataType dataType) {
+    public static NDArray randomNormal(
+            MxResource parent, float loc, float scale, Shape shape, DataType dataType) {
         OpParams params = new OpParams();
         params.addParam("loc", loc);
         params.addParam("scale", scale);
@@ -2097,7 +1977,7 @@ public class NDArray extends MxResource {
      * @return a double array
      * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
      */
-     double[] toDoubleArray() {
+    public double[] toDoubleArray() {
         if (getDataType() != DataType.FLOAT64) {
             throw new IllegalStateException(
                     "DataType mismatch, Required double" + " Actual " + getDataType());
@@ -2114,7 +1994,7 @@ public class NDArray extends MxResource {
      * @return a float array
      * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
      */
-    float[] toFloatArray() {
+    public float[] toFloatArray() {
         if (getDataType() == DataType.FLOAT16) {
             return Float16Utils.fromByteBuffer(toByteBuffer());
         } else if (getDataType() != DataType.FLOAT32) {
@@ -2133,7 +2013,7 @@ public class NDArray extends MxResource {
      * @return an int array
      * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
      */
-    int[] toIntArray() {
+    public int[] toIntArray() {
         if (getDataType() != DataType.INT32) {
             throw new IllegalStateException(
                     "DataType mismatch, Required int" + " Actual " + getDataType());
@@ -2150,7 +2030,7 @@ public class NDArray extends MxResource {
      * @return a long array
      * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
      */
-    long[] toLongArray() {
+    public long[] toLongArray() {
         if (getDataType() != DataType.INT64) {
             throw new IllegalStateException(
                     "DataType mismatch, Required long" + " Actual " + getDataType());
@@ -2183,7 +2063,7 @@ public class NDArray extends MxResource {
      * @return a uint8 array
      * @throws IllegalStateException when {@link DataType} of this {@code NDArray} mismatches
      */
-    int[] toUint8Array() {
+    public int[] toUint8Array() {
         ByteBuffer bb = toByteBuffer();
         int[] buf = new int[bb.remaining()];
         for (int i = 0; i < buf.length; ++i) {
@@ -2191,6 +2071,4 @@ public class NDArray extends MxResource {
         }
         return buf;
     }
-
-
 }

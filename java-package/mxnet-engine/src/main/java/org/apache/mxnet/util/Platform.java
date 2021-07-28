@@ -17,12 +17,11 @@
 
 package org.apache.mxnet.util;
 
-import org.apache.mxnet.util.cuda.CudaUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Properties;
+import org.apache.mxnet.util.cuda.CudaUtils;
 
 /**
  * The platform contains information regarding the version, os, and build flavor of the MXNet native
@@ -183,5 +182,4 @@ public final class Platform {
         }
         return "".equals(flavor) || "cpu".equals(flavor) || "mkl".equals(flavor);
     }
-
 }

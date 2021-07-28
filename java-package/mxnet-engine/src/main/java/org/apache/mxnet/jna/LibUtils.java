@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
-
 import org.apache.mxnet.util.Platform;
 import org.apache.mxnet.util.Utils;
 import org.slf4j.Logger;
@@ -81,7 +80,6 @@ public final class LibUtils {
     }
 
     public static String getLibName() {
-        // TODO
         String libName = findOverrideLibrary();
         if (libName == null) {
             libName = LibUtils.findLibraryInClasspath();

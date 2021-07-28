@@ -17,11 +17,11 @@
 
 package org.apache.mxnet.engine;
 
-import org.apache.mxnet.ndarray.types.DataType;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.mxnet.ndarray.types.DataType;
 
+/** Helper to convert between {@link DataType} and the MXNet internal DataTypes. */
 public final class MxDataType {
 
     private static Map<DataType, String> toMx = createMapToMx();

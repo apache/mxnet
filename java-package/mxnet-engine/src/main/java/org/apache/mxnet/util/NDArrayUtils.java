@@ -17,14 +17,13 @@
 
 package org.apache.mxnet.util;
 
-import org.apache.mxnet.ndarray.NDArray;
-import org.apache.mxnet.ndarray.NDSerializer;
-import org.apache.mxnet.engine.MxResource;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import org.apache.mxnet.engine.MxResource;
+import org.apache.mxnet.ndarray.NDArray;
+import org.apache.mxnet.ndarray.NDSerializer;
 
 public class NDArrayUtils {
 
@@ -52,6 +51,4 @@ public class NDArrayUtils {
     public static NDArray decode(MxResource parent, InputStream is) throws IOException {
         return NDSerializer.decode(parent, is);
     }
-
-
 }

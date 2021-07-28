@@ -17,23 +17,6 @@
 
 package org.apache.mxnet.engine;
 
-import org.apache.mxnet.exception.MalformedModelException;
-import org.apache.mxnet.jna.JnaUtils;
-import org.apache.mxnet.ndarray.NDArray;
-import org.apache.mxnet.ndarray.NDList;
-import org.apache.mxnet.ndarray.types.DataType;
-import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.nn.SymbolBlock;
-import org.apache.mxnet.nn.Parameter;
-import org.apache.mxnet.repository.Item;
-import org.apache.mxnet.repository.Repository;
-import org.apache.mxnet.translate.NoOpTranslator;
-import org.apache.mxnet.translate.Translator;
-import org.apache.mxnet.util.PairList;
-import org.apache.mxnet.util.Utils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -44,7 +27,30 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.mxnet.exception.MalformedModelException;
+import org.apache.mxnet.jna.JnaUtils;
+import org.apache.mxnet.ndarray.NDArray;
+import org.apache.mxnet.ndarray.NDList;
+import org.apache.mxnet.ndarray.types.DataType;
+import org.apache.mxnet.ndarray.types.Shape;
+import org.apache.mxnet.nn.Parameter;
+import org.apache.mxnet.nn.SymbolBlock;
+import org.apache.mxnet.repository.Item;
+import org.apache.mxnet.repository.Repository;
+import org.apache.mxnet.translate.NoOpTranslator;
+import org.apache.mxnet.translate.Translator;
+import org.apache.mxnet.util.PairList;
+import org.apache.mxnet.util.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/**
+ * A model is a collection of artifacts that is created by the training process.
+ *
+ * <p>Model contains methods to load and process a model object. In addition, it provides MXNet
+ * Specific functionality, such as getSymbol to obtain the Symbolic graph and getParameters to
+ * obtain the parameter NDArrays
+ */
 public class Model extends MxResource {
 
     private static final Logger logger = LoggerFactory.getLogger(Model.class);
@@ -70,8 +76,9 @@ public class Model extends MxResource {
     }
 
     /**
-     * Create a default {@link Predictor} instance, with {@link NoOpTranslator} as default translator
-     * , and do not copy parameters to parameter store
+     * Create a default {@link Predictor} instance, with {@link NoOpTranslator} as default
+     * translator , and do not copy parameters to parameter store
+     *
      * @return {@link Predictor}
      */
     public Predictor<NDList, NDList> newPredictor() {
@@ -80,7 +87,9 @@ public class Model extends MxResource {
     }
 
     /**
-     * Create a default {@link Predictor} instance, with {@link NoOpTranslator} as default translator
+     * Create a default {@link Predictor} instance, with {@link NoOpTranslator} as default
+     * translator
+     *
      * @param copy whether to copy the parameters to the parameter store
      * @return {@link Predictor}
      */
@@ -91,17 +100,20 @@ public class Model extends MxResource {
 
     /**
      * Create {@link Predictor} instance, with specific {@link Translator} and {@code copy}
-     * @param translator {@link Translator} used to convert inputs and outputs into {@link NDList} to get inferred
+     *
+     * @param translator {@link Translator} used to convert inputs and outputs into {@link NDList}
+     *     to get inferred
      * @param copy whether to copy the parameters to the parameter store
      * @return {@link Predictor}
      */
-    public  <I, O> Predictor<I, O> newPredictor(Translator<I, O> translator, boolean copy) {
+    public <I, O> Predictor<I, O> newPredictor(Translator<I, O> translator, boolean copy) {
         return new Predictor<>(this, translator, copy);
     }
 
     /**
      * Create and initialize a MxModel from the model directory
-     * @param modelPath {@Path} model directory
+     *
+     * @param modelPath {@code Path} model directory
      * @throws IOException when IO operation fails in loading a resource
      */
     public static Model loadModel(Path modelPath) throws IOException {
@@ -110,7 +122,8 @@ public class Model extends MxResource {
 
     /**
      * Create and initialize a MxModel from repository Item
-     * @param modelItem {@Item} model directory
+     *
+     * @param modelItem {@link Item} model directory
      * @throws IOException when IO operation fails in loading a resource
      */
     public static Model loadModel(Item modelItem) throws IOException {
@@ -121,8 +134,9 @@ public class Model extends MxResource {
 
     /**
      * Create and initialize a MxModel with a model name from the model directory
-     * @param modelName {@String} model name
-     * @param modelPath {@Path} model directory
+     *
+     * @param modelName {@link String} model name
+     * @param modelPath {@link Path} model directory
      * @throws IOException when IO operation fails in loading a resource
      */
     public static Model loadModel(String modelName, Path modelPath) throws IOException {
@@ -134,6 +148,7 @@ public class Model extends MxResource {
     /**
      * Create a MxModel with specific model name and model directory. By default, the {@link Model}
      * instance is managed by the top level {@link BaseMxResource}
+     *
      * @param modelName {@String} model name
      * @param modelDir {@Path} local model path
      * @throws IOException when IO operation fails in loading a resource
@@ -145,8 +160,8 @@ public class Model extends MxResource {
     }
 
     /**
-     * Create a sample MxModel
-     * Download or find the local path for the sample model
+     * Create a sample MxModel Download or find the local path for the sample model
+     *
      * @param item {@@Item} sample model to be created
      * @throws IOException when IO operation fails in loading a resource
      */
@@ -156,9 +171,8 @@ public class Model extends MxResource {
     }
 
     /**
-     * Initialize the model object
-     * Download or find the path for target model
-     * Load parameters and symbol from the path.
+     * Initialize the model object Download or find the path for target model Load parameters and
+     * symbol from the path.
      *
      * @throws IOException when IO operation fails in loading a resource
      * @throws FileNotFoundException if Model Directory is not assigned
@@ -185,8 +199,8 @@ public class Model extends MxResource {
      * Loads the MXNet model from a specified location.
      *
      * <p>MXNet Model looks for {MODEL_NAME}-symbol.json and {MODEL_NAME}-{EPOCH}.params files in
-     * the specified directory. By default, It will pick up the latest epoch of the
-     * parameter file. However, users can explicitly specify an epoch to be loaded:
+     * the specified directory. By default, It will pick up the latest epoch of the parameter file.
+     * However, users can explicitly specify an epoch to be loaded:
      *
      * <pre>
      * Map&lt;String, String&gt; options = new HashMap&lt;&gt;()
@@ -239,11 +253,11 @@ public class Model extends MxResource {
     protected Path paramPathResolver(String prefix, Map<String, ?> options) throws IOException {
         try {
             int epoch = getEpoch(prefix, options);
-            return getModelDir().resolve(String.format(Locale.ROOT, "%s-%04d.params", prefix, epoch));
+            return getModelDir()
+                    .resolve(String.format(Locale.ROOT, "%s-%04d.params", prefix, epoch));
         } catch (FileNotFoundException e) {
             return null;
         }
-
     }
 
     private int getEpoch(String prefix, Map<String, ?> options) throws IOException {
@@ -344,5 +358,4 @@ public class Model extends MxResource {
         }
         return device;
     }
-
 }

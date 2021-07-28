@@ -16,16 +16,15 @@
  */
 package org.apache.mxnet.ndarray.dim.full;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.apache.mxnet.ndarray.dim.NDIndexAll;
 import org.apache.mxnet.ndarray.dim.NDIndexElement;
 import org.apache.mxnet.ndarray.dim.NDIndexFixed;
 import org.apache.mxnet.ndarray.dim.NDIndexSlice;
 import org.apache.mxnet.ndarray.index.NDIndex;
 import org.apache.mxnet.ndarray.types.Shape;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 /** An index as a slice on all dimensions where some dimensions can be squeezed. */
 public final class NDIndexFullSlice {

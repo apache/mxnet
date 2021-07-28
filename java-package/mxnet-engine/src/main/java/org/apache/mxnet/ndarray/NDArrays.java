@@ -17,9 +17,8 @@
 
 package org.apache.mxnet.ndarray;
 
-import org.apache.mxnet.ndarray.types.Shape;
-
 import java.util.Arrays;
+import org.apache.mxnet.ndarray.types.Shape;
 
 /** This class contains various methods for manipulating MxNDArrays. */
 public final class NDArrays {
@@ -129,9 +128,9 @@ public final class NDArrays {
      * @param b the {@link NDArray} to compare with
      * @return the boolean result
      */
-//    public static boolean allClose(MxNDArray a, MxNDArray b) {
-//        return a.allClose(b);
-//    }
+    //    public static boolean allClose(MxNDArray a, MxNDArray b) {
+    //        return a.allClose(b);
+    //    }
 
     /**
      * Returns {@code true} if two {@link NDArray} are element-wise equal within a tolerance.
@@ -161,10 +160,10 @@ public final class NDArrays {
      *     NDArray} will be considered equal to NaN’s in the other {@link NDArray}
      * @return the boolean result
      */
-//    public static boolean allClose(
-//            MxNDArray a, MxNDArray b, double rtol, double atol, boolean equalNan) {
-//        return a.allClose(b, rtol, atol, equalNan);
-//    }
+    //    public static boolean allClose(
+    //            MxNDArray a, MxNDArray b, double rtol, double atol, boolean equalNan) {
+    //        return a.allClose(b, rtol, atol, equalNan);
+    //    }
 
     /**
      * Returns the boolean {@link NDArray} for element-wise "Equals" comparison.
@@ -1716,11 +1715,11 @@ public final class NDArrays {
      * <p>The behavior depends on the arguments in the following way.
      *
      * <ul>
-     *   <li>If both this {@code MxNDArray} and the other {@code MxNDArray} are 2-D {@code MxNDArray}s,
-     *       they are multiplied like conventional matrices
-     *   <li>If either this {@code MxNDArray} or the other {@code MxNDArray} is N-D {@code MxNDArray}, N
-     *       &gt; 2 , it is treated as a stack of matrices residing in the last two indexes and
-     *       broadcast accordingly.
+     *   <li>If both this {@code MxNDArray} and the other {@code MxNDArray} are 2-D {@code
+     *       MxNDArray}s, they are multiplied like conventional matrices
+     *   <li>If either this {@code MxNDArray} or the other {@code MxNDArray} is N-D {@code
+     *       MxNDArray}, N &gt; 2 , it is treated as a stack of matrices residing in the last two
+     *       indexes and broadcast accordingly.
      *   <li>If this {@code MxNDArray} is 1-D {@code MxNDArray}, it is promoted to a matrix by
      *       prepending a 1 to its dimensions. After matrix multiplication the prepended 1 is
      *       removed.

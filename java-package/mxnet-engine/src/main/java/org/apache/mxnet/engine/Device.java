@@ -17,21 +17,17 @@
 
 package org.apache.mxnet.engine;
 
-import org.apache.mxnet.util.cuda.CudaUtils;
-
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.mxnet.util.cuda.CudaUtils;
 
 /**
- * The {@code Device} class provides the specified assignment for CPU/GPU processing on the {@code
- * NDArray}.
+ * The {@code Device} class provides the specified assignment for CPU/GPU processing on the {@link
+ * org.apache.mxnet.ndarray.NDArray}.
  *
  * <p>Users can use this to specify whether to load/compute the {@code NDArray} on CPU/GPU with
  * deviceType and deviceId provided.
- *
- * @see <a href="https://d2l.djl.ai/chapter_deep-learning-computation/use-gpu.html">The D2L chapter
- *     on GPU devices</a>
  */
 public final class Device {
 

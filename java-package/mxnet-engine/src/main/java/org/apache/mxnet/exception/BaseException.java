@@ -63,5 +63,4 @@ public class BaseException extends RuntimeException {
     public BaseException(Throwable cause) {
         super(cause);
     }
-
 }

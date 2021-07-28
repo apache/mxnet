@@ -20,6 +20,7 @@ package org.apache.mxnet.integration.util;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+
 public class Arguments {
 
     private String methodName;
@@ -105,4 +106,3 @@ public class Arguments {
         return methodName;
     }
 }
-

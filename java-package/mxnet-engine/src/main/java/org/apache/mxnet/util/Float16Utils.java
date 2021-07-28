@@ -17,10 +17,9 @@
 
 package org.apache.mxnet.util;
 
-import org.apache.mxnet.ndarray.NDSerializer;
-
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
+import org.apache.mxnet.ndarray.NDSerializer;
 
 /** {@code Float16Utils} is a set of utilities for working with float16. */
 @SuppressWarnings("PMD.AvoidUsingShortType")
@@ -127,4 +126,3 @@ public final class Float16Utils {
         return Float.intBitsToFloat((half & 0x8000) << 16 | (exp | mant) << 13);
     }
 }
-

@@ -18,11 +18,6 @@
 package org.apache.mxnet.engine;
 
 import com.sun.jna.Pointer;
-import org.apache.mxnet.jna.JnaUtils;
-import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.util.PairList;
-import org.apache.mxnet.util.Utils;
-
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -31,8 +26,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import org.apache.mxnet.jna.JnaUtils;
+import org.apache.mxnet.ndarray.types.Shape;
+import org.apache.mxnet.util.PairList;
+import org.apache.mxnet.util.Utils;
 
-// TODO
+/**
+ * {@code Symbol} is an internal helper for symbolic model graphs used by the {@link
+ * org.apache.mxnet.nn.SymbolBlock}.
+ *
+ * @see org.apache.mxnet.nn.SymbolBlock
+ */
 public class Symbol extends MxResource {
 
     private String[] outputs;
@@ -112,7 +116,6 @@ public class Symbol extends MxResource {
     public String[] getArgNames() {
         return JnaUtils.listSymbolArguments(getHandle());
     }
-
 
     /**
      * Returns the MXNet auxiliary states for the symbol.

@@ -17,6 +17,9 @@
 
 package org.apache.mxnet.engine;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.apache.mxnet.exception.TranslateException;
 import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.training.ParameterStore;
@@ -24,10 +27,24 @@ import org.apache.mxnet.translate.Translator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
+/**
+ * The {@code Predictor} class provides a session for model inference.
+ *
+ * <p>You can use a {@code Predictor}, with a specified {@link Translator}, to perform inference on
+ * a {@link Model}
+ *
+ * @param <I> the input type
+ * @param <O> the output type
+ * @see Model
+ * @see Translator
+ * @see <a href="http://docs.djl.ai/docs/development/memory_management.html">The guide on memory
+ *     management</a>
+ * @see <a
+ *     href="https://github.com/deepjavalibrary/djl/blob/master/examples/docs/multithread_inference.md">The
+ *     guide on running multi-threaded inference</a>
+ * @see <a href="http://docs.djl.ai/docs/development/inference_performance_optimization.html">The
+ *     guide on inference performance optimization</a>
+ */
 public class Predictor<I, O> extends MxResource {
 
     private static final Logger logger = LoggerFactory.getLogger(Predictor.class);
@@ -52,7 +69,6 @@ public class Predictor<I, O> extends MxResource {
         this.parameterStore = new ParameterStore(getParent(), copy, model.getDevice());
     }
 
-
     /**
      * Predicts an item for inference.
      *
@@ -72,7 +88,6 @@ public class Predictor<I, O> extends MxResource {
     public O predict(I input) {
         return predict(Collections.singletonList(input)).get(0);
     }
-
 
     private NDList forward(NDList ndList) {
         logger.trace("Predictor input data: {}", ndList);

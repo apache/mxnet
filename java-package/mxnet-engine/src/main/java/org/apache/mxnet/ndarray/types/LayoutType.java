@@ -17,9 +17,8 @@
 
 package org.apache.mxnet.ndarray.types;
 
-import org.apache.mxnet.ndarray.NDArray;
-
 import java.util.stream.IntStream;
+import org.apache.mxnet.ndarray.NDArray;
 
 /**
  * An enum to represent the meaning of a particular axis in an {@link NDArray}.

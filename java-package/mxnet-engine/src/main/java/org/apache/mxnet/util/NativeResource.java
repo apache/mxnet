@@ -37,6 +37,7 @@ public abstract class NativeResource<T> implements AutoCloseable {
 
     /**
      * To initialize a NativeResource with handle = null
+     *
      * @param uid
      */
     protected NativeResource(String uid) {

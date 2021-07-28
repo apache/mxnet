@@ -17,6 +17,9 @@
 
 package org.apache.mxnet.ndarray;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.Stack;
 import org.apache.mxnet.engine.OpParams;
 import org.apache.mxnet.ndarray.dim.NDIndexBooleans;
 import org.apache.mxnet.ndarray.dim.NDIndexElement;
@@ -24,10 +27,6 @@ import org.apache.mxnet.ndarray.dim.full.NDIndexFullPick;
 import org.apache.mxnet.ndarray.dim.full.NDIndexFullSlice;
 import org.apache.mxnet.ndarray.index.NDIndex;
 import org.apache.mxnet.ndarray.types.Shape;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.Stack;
 
 /** A helper class for {@link NDArray} implementations for operations with an {@link NDIndex}. */
 public class NDArrayIndexer {
@@ -65,7 +64,8 @@ public class NDArrayIndexer {
         params.addParam("axis", fullPick.getAxis());
         params.addParam("keepdims", true);
         params.add("mode", "wrap");
-        return NDArray.invoke(array.getParent(), "pick", new NDList(array, fullPick.getIndices()), params)
+        return NDArray.invoke(
+                        array.getParent(), "pick", new NDList(array, fullPick.getIndices()), params)
                 .singletonOrThrow();
     }
 
@@ -75,7 +75,7 @@ public class NDArrayIndexer {
         params.addTupleParam("end", fullSlice.getMax());
         params.addTupleParam("step", fullSlice.getStep());
 
-        NDArray result = NDArray.invoke(array.getParent(),"_npi_slice", array, params);
+        NDArray result = NDArray.invoke(array.getParent(), "_npi_slice", array, params);
         int[] toSqueeze = fullSlice.getToSqueeze();
         if (toSqueeze.length > 0) {
             NDArray oldResult = result;
@@ -105,10 +105,10 @@ public class NDArrayIndexer {
         prepareValue.add(prepareValue.peek().broadcast(fullSlice.getShape()));
 
         NDArray.invoke(
-                        "_npi_slice_assign",
-                        new NDArray[] {array, prepareValue.peek()},
-                        new NDArray[] {array},
-                        params);
+                "_npi_slice_assign",
+                new NDArray[] {array, prepareValue.peek()},
+                new NDArray[] {array},
+                params);
         for (NDArray toClean : prepareValue) {
             if (toClean != value) {
                 toClean.close();
@@ -123,9 +123,6 @@ public class NDArrayIndexer {
         params.addTupleParam("step", fullSlice.getStep());
         params.addParam("scalar", value);
         NDArray.invoke(
-                        "_npi_slice_assign_scalar",
-                        new NDArray[] {array},
-                        new NDArray[] {array},
-                        params);
+                "_npi_slice_assign_scalar", new NDArray[] {array}, new NDArray[] {array}, params);
     }
 }

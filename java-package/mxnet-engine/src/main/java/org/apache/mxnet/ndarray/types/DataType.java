@@ -17,14 +17,13 @@
 
 package org.apache.mxnet.ndarray.types;
 
-import org.apache.mxnet.ndarray.NDArray;
-
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
+import org.apache.mxnet.ndarray.NDArray;
 
 /** An enum representing the underlying {@link NDArray}'s data type. */
 public enum DataType {

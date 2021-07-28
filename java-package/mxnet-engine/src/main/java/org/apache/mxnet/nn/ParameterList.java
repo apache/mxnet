@@ -17,11 +17,10 @@
 
 package org.apache.mxnet.nn;
 
-import org.apache.mxnet.util.Pair;
-import org.apache.mxnet.util.PairList;
-
 import java.util.List;
 import java.util.Map;
+import org.apache.mxnet.util.Pair;
+import org.apache.mxnet.util.PairList;
 
 /** Represents a set of names and Parameters. */
 public class ParameterList extends PairList<String, Parameter> {

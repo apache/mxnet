@@ -16,11 +16,11 @@
  */
 package org.apache.mxnet.jnarator;
 
-import org.apache.mxnet.jnarator.parser.CParser;
 import java.util.ArrayList;
 import java.util.List;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.apache.mxnet.jnarator.parser.CParser;
 
 public final class AntlrUtils {
 

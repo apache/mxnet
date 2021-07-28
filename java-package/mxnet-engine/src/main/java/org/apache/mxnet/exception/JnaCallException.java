@@ -17,6 +17,7 @@
 
 package org.apache.mxnet.exception;
 
+/** Thrown to indicate JNA functions are not called as expected. */
 public class JnaCallException extends BaseException {
 
     private static final long serialVersionUID = 1L;

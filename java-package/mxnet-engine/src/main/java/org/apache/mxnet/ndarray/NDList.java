@@ -17,11 +17,6 @@
 
 package org.apache.mxnet.ndarray;
 
-import org.apache.mxnet.engine.Device;
-import org.apache.mxnet.engine.MxResource;
-import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.util.NDArrayUtils;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -31,6 +26,10 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import org.apache.mxnet.engine.Device;
+import org.apache.mxnet.engine.MxResource;
+import org.apache.mxnet.ndarray.types.Shape;
+import org.apache.mxnet.util.NDArrayUtils;
 
 public class NDList extends ArrayList<NDArray> implements AutoCloseable {
     private static final long serialVersionUID = 1L;
@@ -69,6 +68,7 @@ public class NDList extends ArrayList<NDArray> implements AutoCloseable {
     /**
      * Decodes NDList from byte array.
      *
+     * @param parent the parent {@link MxResource} to manage this instance
      * @param byteArray byte array to load from
      * @return {@code NDList}
      */

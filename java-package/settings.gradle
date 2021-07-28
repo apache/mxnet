@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-rootProject.name = 'java-package'
+rootProject.name = 'org.apache.mxnet'
 
 include 'mxnet-engine'
 include 'native'

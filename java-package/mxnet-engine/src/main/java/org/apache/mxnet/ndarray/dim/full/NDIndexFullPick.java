@@ -16,14 +16,13 @@
  */
 package org.apache.mxnet.ndarray.dim.full;
 
+import java.util.Optional;
 import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.ndarray.dim.NDIndexAll;
 import org.apache.mxnet.ndarray.dim.NDIndexElement;
 import org.apache.mxnet.ndarray.dim.NDIndexPick;
 import org.apache.mxnet.ndarray.index.NDIndex;
 import org.apache.mxnet.ndarray.types.Shape;
-
-import java.util.Optional;
 
 /** A simplified representation of a pick-based {@link NDArray}. */
 public final class NDIndexFullPick {

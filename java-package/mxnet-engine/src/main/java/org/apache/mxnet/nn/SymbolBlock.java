@@ -17,6 +17,19 @@
 
 package org.apache.mxnet.nn;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.apache.mxnet.engine.CachedOp;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.MxResource;
@@ -33,20 +46,6 @@ import org.apache.mxnet.util.Pair;
 import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class SymbolBlock extends MxResource {
 
@@ -67,8 +66,8 @@ public class SymbolBlock extends MxResource {
     /**
      * All direct parameters of this Block. Keys are name of the parameters.
      *
-     * <p>Use the {@link SymbolBlock#addParameter(Parameter)} method to add children. All
-     * parameters in this map are automatically loaded / saved.
+     * <p>Use the {@link SymbolBlock#addParameter(Parameter)} method to add children. All parameters
+     * in this map are automatically loaded / saved.
      */
     protected LinkedHashMap<String, Parameter> parameters = new LinkedHashMap<>();
 
@@ -82,7 +81,6 @@ public class SymbolBlock extends MxResource {
     private PairList<String, Shape> inputDescriptions;
     private PairList<String, Shape> outputDescriptions;
     private boolean first;
-
 
     /**
      * Constructs a {@code MxSymbolBlock} for a {@link Symbol}.
@@ -108,10 +106,12 @@ public class SymbolBlock extends MxResource {
     }
 
     /**
-     * Constructs an {@code MxSymbolBlock} and load the symbol according to {@code Path}
-     * The life circle of the {@code Symbol} instance is managed by parent {@codd MxResource}.
+     * Constructs an {@code MxSymbolBlock} and load the symbol according to {@code Path} The life
+     * circle of the {@code Symbol} instance is managed by parent {@code MxResource}.
+     *
      * @param parent the parent MxResource Object to manage this MxSymbolBlock
      * @param symbolPath the Path to load symbol
+     * @return created {@code SymbolBlock} instance
      */
     public static SymbolBlock createMxSymbolBlock(MxResource parent, Path symbolPath) {
         SymbolBlock symbolBlock = new SymbolBlock(parent);
@@ -178,6 +178,7 @@ public class SymbolBlock extends MxResource {
      * Applies Optimization algorithm for the model.
      *
      * @param optimization the name of the optimization
+     * @param device the device assigned
      */
     public void optimizeFor(String optimization, Device device) {
         Symbol newSymbol = symbol.optimizeFor(optimization, device);
@@ -210,8 +211,8 @@ public class SymbolBlock extends MxResource {
     }
 
     /**
-     * Applies the operating function of the mxSymbolBlock once. This method should be called only on blocks
-     * that are initialized.
+     * Applies the operating function of the mxSymbolBlock once. This method should be called only
+     * on blocks that are initialized.
      *
      * @param parameterStore the parameter store
      * @param inputs the input NDList
@@ -255,6 +256,7 @@ public class SymbolBlock extends MxResource {
      * @param data the input data NDList
      * @param labels the input labels NDList
      * @param params optional parameters
+     * @param device the device assigned
      * @return the output of the forward pass
      * @see #forward(ParameterStore, NDList, boolean, PairList, Device)
      */
@@ -271,8 +273,8 @@ public class SymbolBlock extends MxResource {
     }
 
     /**
-     * A helper for {@link SymbolBlock#forward(ParameterStore, NDList, NDList, PairList, Device)} after
-     * initialization.
+     * A helper for {@link SymbolBlock#forward(ParameterStore, NDList, NDList, PairList, Device)}
+     * after initialization.
      *
      * @param parameterStore the parameter store
      * @param data the input data NDList
@@ -298,12 +300,13 @@ public class SymbolBlock extends MxResource {
         return true;
     }
 
-    public void initialize(MxResource parent, DataType dataType, Device device, Shape... inputShapes) {
+    public void initialize(
+            MxResource parent, DataType dataType, Device device, Shape... inputShapes) {
         beforeInitialize(inputShapes);
         // if parameters are initialized, skip it
         if (!isInitialized()) {
             // setShape for all params
-//            prepare(inputShapes);
+            //            prepare(inputShapes);
             // do nothing
         }
         for (Parameter parameter : parameters.values()) {
@@ -345,7 +348,8 @@ public class SymbolBlock extends MxResource {
                 SymbolBlock symbolBlock = (SymbolBlock) childPair.getValue();
                 for (Pair<String, Parameter> paramPair : symbolBlock.getParameters()) {
                     // we prepend the name of the child block to the parameter name
-                    allParams.add(childPair.getKey() + "_" + paramPair.getKey(), paramPair.getValue());
+                    allParams.add(
+                            childPair.getKey() + "_" + paramPair.getKey(), paramPair.getValue());
                 }
             }
         }
@@ -470,8 +474,7 @@ public class SymbolBlock extends MxResource {
                 throw new MalformedModelException("InputStream ends at symbol loading!");
             }
             // init block only if it is not set
-            symbol =
-                    Symbol.loadJson(this, new String(bytes, StandardCharsets.UTF_8));
+            symbol = Symbol.loadJson(this, new String(bytes, StandardCharsets.UTF_8));
             initBlock();
         }
         int size = is.readInt();

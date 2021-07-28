@@ -19,8 +19,8 @@ package org.apache.mxnet.jna;
 
 import com.sun.jna.Pointer;
 import org.apache.mxnet.engine.Device;
-import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.engine.MxResource;
+import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.ndarray.types.SparseFormat;
 import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
@@ -54,8 +54,7 @@ public class FunctionInfo {
      *     String>}
      * @return the error code or zero for no errors
      */
-    public int invoke(
-            NDArray[] src, NDArray[] dest, PairList<String, ?> params) {
+    public int invoke(NDArray[] src, NDArray[] dest, PairList<String, ?> params) {
         checkDevices(src);
         checkDevices(dest);
         return JnaUtils.imperativeInvoke(handle, src, dest, params).size();

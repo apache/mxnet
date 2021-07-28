@@ -18,11 +18,14 @@
 package org.apache.mxnet.engine;
 
 import com.sun.jna.Pointer;
-import org.apache.mxnet.util.NativeResource;
-
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.mxnet.util.NativeResource;
 
+/**
+ * An auto closable Resource object whose life circle can be managed by its parent {@link
+ * MxResource} instance. Meanwhile, it manages life circle of child {@link MxResource} instances.
+ */
 public class MxResource extends NativeResource<Pointer> {
 
     public static final String EMPTY_UID = "EMPTY_UID";
@@ -50,9 +53,9 @@ public class MxResource extends NativeResource<Pointer> {
         this(parent, UUID.randomUUID().toString());
     }
 
-//    protected static MxResource createEmptyMxResource(MxResource parent) {
-//        return new MxResource(parent, EMPTY_UID);
-//    }
+    //    protected static MxResource createEmptyMxResource(MxResource parent) {
+    //        return new MxResource(parent, EMPTY_UID);
+    //    }
 
     private MxResource parent = null;
 
@@ -122,5 +125,4 @@ public class MxResource extends NativeResource<Pointer> {
         freeSubResources();
         setClosed();
     }
-
 }

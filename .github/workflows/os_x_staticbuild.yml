@@ -1,6 +1,6 @@
 name: continuous build
 
-on: [push, pull_request]
+on: []
 
 jobs:
   macosx-x86_64:

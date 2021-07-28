@@ -17,7 +17,7 @@
 
 package org.apache.mxnet.exception;
 
-public class TranslateException extends BaseException{
+public class TranslateException extends BaseException {
 
     private static final long serialVersionUID = 1L;
 

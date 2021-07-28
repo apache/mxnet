@@ -54,5 +54,4 @@ public interface Processor<I, O> {
      */
     @SuppressWarnings("PMD.SignatureDeclareThrowsException")
     O processOutput(NDList output) throws Exception;
-
 }

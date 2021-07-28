@@ -17,9 +17,6 @@
 
 package org.apache.mxnet.ndarray.types;
 
-import org.apache.mxnet.util.Pair;
-import org.apache.mxnet.util.PairList;
-
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,6 +27,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
+import org.apache.mxnet.util.Pair;
+import org.apache.mxnet.util.PairList;
 
 public class Shape {
 
@@ -267,8 +266,8 @@ public class Shape {
      */
     public Stream<Pair<Long, LayoutType>> stream() {
         return new PairList<>(
-                Arrays.stream(shape).boxed().collect(Collectors.toList()),
-                Arrays.asList(layout))
+                        Arrays.stream(shape).boxed().collect(Collectors.toList()),
+                        Arrays.asList(layout))
                 .stream();
     }
 
@@ -480,5 +479,4 @@ public class Shape {
         }
         return new Shape(shapeValue, new String(layout));
     }
-
 }

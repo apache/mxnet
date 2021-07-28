@@ -115,8 +115,7 @@ public final class Utils {
                                 } catch (IOException ignore) {
                                     // ignore
                                 }
-                            }
-                            );
+                            });
         } catch (IOException ignore) {
             // ignore
         }
@@ -272,7 +271,11 @@ public final class Utils {
                         .sorted()
                         .collect(Collectors.toList());
         if (checkpoints.isEmpty()) {
-            throw new FileNotFoundException(String.format("No matched params file is found in directory: {} for model {}", modelDir.toAbsolutePath(), modelName));
+            throw new FileNotFoundException(
+                    String.format(
+                            "No matched params file is found in directory: {} for model {}",
+                            modelDir.toAbsolutePath(),
+                            modelName));
         }
         return checkpoints.get(checkpoints.size() - 1);
     }
@@ -285,10 +288,10 @@ public final class Utils {
      * @param logger the logger to log the result
      */
     // TODO
-//    public static void checkParameterValues(
-//            Pairlist<String, Parameter> parameters, boolean checkGradient, Logger logger) {
-//
-//    }
+    //    public static void checkParameterValues(
+    //            Pairlist<String, Parameter> parameters, boolean checkGradient, Logger logger) {
+    //
+    //    }
 
     /**
      * Utility function to help summarize the values in an {@link NDArray}.
@@ -298,9 +301,9 @@ public final class Utils {
      * @param prefix the prefix or name to be displayed
      */
     // TODO
-//    public static void checkNDArrayValues(NDArray array, Logger logger, String prefix) {
-//
-//    }
+    //    public static void checkNDArrayValues(NDArray array, Logger logger, String prefix) {
+    //
+    //    }
 
     /**
      * Utility function to get Engine specific cache directory.
@@ -347,5 +350,4 @@ public final class Utils {
         }
         return Paths.get(cacheDir);
     }
-
 }

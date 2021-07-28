@@ -17,12 +17,19 @@
 
 package org.apache.mxnet.engine;
 
+import java.util.List;
+import java.util.Map;
 import org.apache.mxnet.util.Pair;
 import org.apache.mxnet.util.PairList;
 
-import java.util.List;
-import java.util.Map;
-
+/**
+ * An {@code MxResourceList} represents a sequence of {@link MxResource}s with names.
+ *
+ * <p>Each {@link MxResource} in this list can optionally have a name. You can use the name to look
+ * up an MxResource in the MxResourceList.
+ *
+ * @see MxResource
+ */
 public class MxResourceList extends PairList<String, MxResource> {
 
     /** Creates an empty {@code MxResourceList}. */
@@ -41,8 +48,10 @@ public class MxResourceList extends PairList<String, MxResource> {
     /**
      * Constructs a {@code BlockList} containing the elements of the specified keys and values.
      *
-     * @param keys the key list containing the elements to be placed into this {@code MxResourceList}
-     * @param values the value list containing the elements to be placed into this {@code MxResource}
+     * @param keys the key list containing the elements to be placed into this {@code
+     *     MxResourceList}
+     * @param values the value list containing the elements to be placed into this {@code
+     *     MxResource}
      * @throws IllegalArgumentException if the keys and values size are different
      */
     public MxResourceList(List<String> keys, List<MxResource> values) {
@@ -66,5 +75,4 @@ public class MxResourceList extends PairList<String, MxResource> {
     public MxResourceList(Map<String, MxResource> map) {
         super(map);
     }
-
 }

@@ -18,14 +18,13 @@
 package org.apache.mxnet.util.cuda;
 
 import com.sun.jna.Native;
+import java.io.File;
+import java.lang.management.MemoryUsage;
+import java.util.regex.Pattern;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.exception.JnaCallException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.lang.management.MemoryUsage;
-import java.util.regex.Pattern;
 
 /** A class containing CUDA utility methods. */
 public final class CudaUtils {
@@ -85,7 +84,6 @@ public final class CudaUtils {
                 GPU_COUNT = 0;
                 return GPU_COUNT;
         }
-
     }
 
     /**
@@ -93,7 +91,7 @@ public final class CudaUtils {
      *
      * @return the version if CUDA runtime
      */
-    public static int getCudaVersion(){
+    public static int getCudaVersion() {
         validateLibrary();
         int[] version = new int[1];
         int result = LIB.cudaRuntimeGetVersion(version);
@@ -198,15 +196,16 @@ public final class CudaUtils {
         if (cudaPath == null) {
             return path.split(";");
         } else {
-            return ";".split(
-                    String.format("%s\\bin\\;%s", cudaPath, path)); }
+            return ";".split(String.format("%s\\bin\\;%s", cudaPath, path));
+        }
     }
 
     private static void checkCall(int ret) {
         validateLibrary();
         if (ret != 0) {
             throw new JnaCallException(
-                    String.format("CUDA API call failed: %s (%d)", LIB.cudaGetErrorString(ret), ret));
+                    String.format(
+                            "CUDA API call failed: %s (%d)", LIB.cudaGetErrorString(ret), ret));
         }
     }
 
@@ -223,5 +222,4 @@ public final class CudaUtils {
             throw new IllegalStateException(msg);
         }
     }
-
 }

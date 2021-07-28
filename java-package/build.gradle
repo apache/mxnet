@@ -100,11 +100,12 @@ configure(javaProjects()) {
         doFirst {
             systemProperties System.getProperties()
             systemProperties.remove("user.dir")
-            systemProperty "incubator-mxnet.java-package.logging.level", "debug"
+            systemProperty "org.apache.mxnet.logging.level", "debug"
             systemProperty "org.slf4j.simpleLogger.defaultLogLevel", "debug"
             systemProperty "org.slf4j.simpleLogger.log.org.mortbay.log", "warn"
             systemProperty "disableProgressBar", "true"
             systemProperty "nightly", System.getProperty("nightly", "false")
+            systemProperty "java.library.path", "/Users/cspchen/Work/incubator-mxnet/build"
             if (gradle.startParameter.offline) {
                 systemProperty "offline", "true"
             }
@@ -121,7 +122,7 @@ configure(javaProjects()) {
 
     jar {
         manifest {
-            attributes("Automatic-Module-Name": "incubator-mxnet.java-package.${project.name.replace('-', '_')}")
+            attributes("Automatic-Module-Name": "org.apach.mxnet.${project.name.replace('-', '_')}")
         }
     }
 }

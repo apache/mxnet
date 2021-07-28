@@ -17,29 +17,28 @@
 package org.apache.mxnet.engine;
 
 import com.sun.jna.Pointer;
+import java.util.List;
+import java.util.Map;
 import org.apache.mxnet.jna.JnaUtils;
 import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.nn.SymbolBlock;
 import org.apache.mxnet.nn.Parameter;
+import org.apache.mxnet.nn.SymbolBlock;
 import org.apache.mxnet.training.ParameterStore;
 import org.apache.mxnet.util.Pair;
 import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
-
 /**
  * The {@code CachedOp} is an internal helper that provides the core functionality to execute a
  * {@link SymbolBlock}.
  *
- * <p>We don't recommended users interact with this class directly. Users should use {@link
- * Predictor} instead. CachedOp is an operator that simplifies calling and
- * analyzing the input shape. It requires minimum input to do inference because most of the
- * information can be obtained from the model itself.
+ * <p>We don't recommend users interact with this class directly. Users should use {@link Predictor}
+ * instead. CachedOp is an operator that simplifies calling and analyzing the input shape. It
+ * requires minimum input to do inference because most of the information can be obtained from the
+ * model itself.
  */
 public class CachedOp extends MxResource {
 
@@ -53,7 +52,8 @@ public class CachedOp extends MxResource {
     /**
      * Creates an instance of {@link CachedOp}.
      *
-     * <p>It can be created by using {@link JnaUtils#createCachedOp(SymbolBlock, MxResource, boolean)}
+     * <p>It can be created by using {@link JnaUtils#createCachedOp(SymbolBlock, MxResource,
+     * boolean)}
      *
      * @param parent the MxResource object to manage this instance of CachedOp
      * @param handle the C handle of the CachedOp
@@ -102,7 +102,7 @@ public class CachedOp extends MxResource {
         int index = 0;
         for (NDArray array : data) {
             // TODO: NDArray name doesn't match. To confirm the format of input name
-//            String inputName = array.getName().split(":")[1];
+            //            String inputName = array.getName().split(":")[1];
             String inputName = array.getName();
             // if inputName not provided, value will follow the default order
             int idx = indexOf(inputName, index++);
@@ -123,8 +123,9 @@ public class CachedOp extends MxResource {
                                     + batchSize
                                     + ") by default");
                 }
-                //TODO: consider how to manage MxNDArray generated during inference
-                allInputsNDArray[pair.getValue()] = NDArray.create(this, new Shape(batchSize), device);
+                // TODO: consider how to manage MxNDArray generated during inference
+                allInputsNDArray[pair.getValue()] =
+                        NDArray.create(this, new Shape(batchSize), device);
             }
         }
         NDArray[] result = JnaUtils.cachedOpInvoke(getParent(), getHandle(), allInputsNDArray);
@@ -159,5 +160,4 @@ public class CachedOp extends MxResource {
         }
         return index;
     }
-
 }

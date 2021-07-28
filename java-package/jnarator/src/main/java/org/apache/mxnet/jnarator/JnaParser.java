@@ -16,9 +16,6 @@
  */
 package org.apache.mxnet.jnarator;
 
-import org.apache.mxnet.jnarator.parser.CBaseListener;
-import org.apache.mxnet.jnarator.parser.CLexer;
-import org.apache.mxnet.jnarator.parser.CParser;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -30,6 +27,9 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.apache.mxnet.jnarator.parser.CBaseListener;
+import org.apache.mxnet.jnarator.parser.CLexer;
+import org.apache.mxnet.jnarator.parser.CParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
