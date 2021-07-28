@@ -172,6 +172,39 @@ Output for the above benchmark run, on a CPU machine, would look something like 
 Currently, opperf supports operators in `mx.nd.*` namespace.
 However, locally, one can profile internal operators in `mx.nd.internal.*` namespace.
 
+## Usecase 6 - Compare performance for chosen operator from both NDArray library and its Numpy/Numpy_extension counterpart
+For example, you want to compare add operator from `mx.nd` and `mx.np`. You just run the following python script.
+
+```
+#!/usr/bin/python
+from benchmark.opperf.utils.benchmark_utils import run_benchmark_operator
+
+run_benchmark_operator(name = "add", run_backward=True)
+```
+
+Output for the above benchmark run, on a CPU machine, would look something like below:
+
+```
+<module 'mxnet.ndarray'>
+[{'add': [{'inputs': {'lhs': (128, 128), 'rhs': (128, 128)},
+           'max_storage_mem_alloc_cpu/0': 32.768,
+           'avg_time_forward_add': 0.0496,
+           'avg_time_backward_add': 0.0793}]}]
+<module 'mxnet.numpy'>
+[{'add': [{'inputs': {'x1': (128, 128), 'x2': (128, 128)},
+           'max_storage_mem_alloc_cpu/0': 32.768,
+           'avg_time_forward_add': 0.0484,
+           'avg_time_backward_add': 0.0898}]}]
+
+```
+This function uses `run_performance_test` function mentioned in Usecase 3 and Usecase 4 and it is possible to change all parameters from it.
+All arguments that are of type NDArray will be automatically provided with shape that is passed as `size`.
+If any fuction requires more arguments or different shaped NDArrays, provide those arguments as `additional_inputs` as it is shown below:
+```
+run_benchmark_operator(name = "pick", size = (128,128), additional_inputs = {"index": (128,1)})
+```
+
+
 #### Changes
 Remove the hasattr check for `op.__name__` to be in `mx.nd`
 
