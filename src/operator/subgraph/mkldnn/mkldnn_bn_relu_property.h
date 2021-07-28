@@ -23,37 +23,36 @@
 
 #include <string>
 #include <vector>
-#include "../common.h"
-#include "mkldnn_subgraph_base-inl.h"
+
 #include "../../nn/mkldnn/mkldnn_batch_norm-inl.h"
+#include "../common.h"
+
+#include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
 class SgMKLDNNBNReLUSelector : public SubgraphSelector {
  public:
-  enum SelectStatus {
-    kStart,
-    kSuccess,
-    kFail
-  };
+  enum SelectStatus { kStart, kSuccess, kFail };
 
-  explicit SgMKLDNNBNReLUSelector(const bool disable_bn_relu) :
-      disable_bn_relu_(disable_bn_relu), status_(kStart) {}
+  explicit SgMKLDNNBNReLUSelector(const bool disable_bn_relu)
+      : disable_bn_relu_(disable_bn_relu), status_(kStart) {}
 
-  bool Select(const nnvm::Node &n) override {
+  bool Select(const nnvm::Node& n) override {
     return n.op() && n.op()->name == "BatchNorm";
   }
 
-  bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) override {
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     return false;
   }
 
-  bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
+  bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     if (n.op() && n.op()->name == "BatchNorm") {
       if (new_node.op() && status_ == kStart &&
-          (new_node.op()->name == "relu" || (new_node.op()->name == "Activation" &&
-           nnvm::get<ActivationParam>(new_node.attrs.parsed).act_type == activation::kReLU))) {
+          (new_node.op()->name == "relu" ||
+           (new_node.op()->name == "Activation" &&
+            nnvm::get<ActivationParam>(new_node.attrs.parsed).act_type == activation::kReLU))) {
         status_ = kSuccess;
         return true;
       } else {
@@ -68,12 +67,11 @@ class SgMKLDNNBNReLUSelector : public SubgraphSelector {
     return false;
   }
 
-  std::vector<nnvm::Node *> Filter(
-      const std::vector<nnvm::Node *> &candidates) override {
+  std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) override {
     if (!disable_bn_relu_ && status_ == kSuccess)
       return candidates;
     else
-      return std::vector<nnvm::Node *>();
+      return std::vector<nnvm::Node*>();
   }
 
  private:
@@ -88,13 +86,13 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
   }
 
   void PrePartition(const nnvm::Graph& g,
-    const std::unordered_map<std::string, std::string>& options_map) override {
+                    const std::unordered_map<std::string, std::string>& options_map) override {
     dedup_subgraph = true;
   }
 
   static SubgraphPropertyPtr Create() {
-    static const std::string &name = "MKLDNN BN + ReLU optimization pass";
-    auto property = std::make_shared<SgMKLDNNBNReLUProperty>();
+    static const std::string& name = "MKLDNN BN + ReLU optimization pass";
+    auto property                  = std::make_shared<SgMKLDNNBNReLUProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     if (dmlc::GetEnv("MXNET_DISABLE_ONEDNN_BN_RELU_OPT", 0)) {
@@ -103,8 +101,8 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
     return property;
   }
 
-  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
-                                   const int subgraph_id = 0) const override {
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
+                                     const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
 
     std::ostringstream node_name;
@@ -112,14 +110,14 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
 
     // Copy params from BatchNorm node into subgraph BatchNormReLU node
     BatchNormParam param;
-    DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr &node) {
+    DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->op() && node->op()->name == "BatchNorm") {
         param = nnvm::get<BatchNormParam>(node->attrs.parsed);
       }
     });
 
     n->attrs.name = node_name.str();
-    n->attrs.op = Op::Get("_contrib_BatchNormWithReLU");
+    n->attrs.op   = Op::Get("_contrib_BatchNormWithReLU");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(sym));
     n->attrs.parsed = param;
