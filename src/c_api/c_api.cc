@@ -59,6 +59,23 @@
 #include "../common/utils.h"
 #include "nnvm/pass_functions.h"
 
+// FTZ only applies to SSE and AVX instructions.
+#if defined(__SSE__) || defined(__x86_64__) || defined(_M_X64) || \
+    (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
+#define SUPPORT_FTZ_DMZ 1
+#else
+#define SUPPORT_FTZ_DMZ 0
+#endif
+
+#if SUPPORT_FTZ_DMZ
+#include <immintrin.h>
+#include <xmmintrin.h>
+#endif
+#if SUPPORT_FTZ_DMZ && !defined(_MSC_VER)
+#include <x86intrin.h>
+#endif
+
+
 using namespace mxnet;
 
 // Internal function to get the information
@@ -1570,6 +1587,52 @@ int MXRandomSeedContext(int seed, int dev_type, int dev_id) {
   API_BEGIN();
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
   mxnet::RandomSeed(ctx, seed);
+  API_END();
+}
+
+int MXSetFlushDenorms(bool value, bool* prev_state) {
+  API_BEGIN();
+  *prev_state = false;
+
+  #if SUPPORT_FTZ_DMZ
+    std::function<bool()> is_dmz_flag_available = []() {
+      // Intel 64 and IA-32 Architectures Software Developer’s Manual: Vol. 1
+      // "Checking for the DAZ Flag in the MXCSR Register"
+      constexpr unsigned int mxcsr_mask_offset = 28;
+      constexpr unsigned int dmz_flag_offset = 5;
+      constexpr unsigned int fxsave_req_bytes = 512;
+
+      char* fxsave_area_ptr = reinterpret_cast<char*>(malloc(fxsave_req_bytes));
+      memset(fxsave_area_ptr, 0, fxsave_req_bytes);  // fill memory with 0
+      _fxsave(fxsave_area_ptr);
+
+      char* mxcsr_mask_ptr = fxsave_area_ptr + mxcsr_mask_offset;
+      uint32_t mxcsr_mask = *(reinterpret_cast<uint32_t*>((mxcsr_mask_ptr)));
+      // DMZ flag is supported if sixth bit of MXCSR_MASK is hot
+      bool dmz_flag = (mxcsr_mask >> dmz_flag_offset) & 0x1;
+      free(fxsave_area_ptr);
+      return dmz_flag;
+    };
+
+    Engine::Get()->PushSync(
+      [value, prev_state, is_dmz_flag_available](RunContext rctx) {
+        const unsigned int DMZ_STATE = value ? _MM_DENORMALS_ZERO_ON : _MM_DENORMALS_ZERO_OFF;
+        const unsigned int FTZ_STATE = value ? _MM_FLUSH_ZERO_ON : _MM_FLUSH_ZERO_OFF;
+        *prev_state = _MM_GET_FLUSH_ZERO_MODE();
+        _MM_SET_FLUSH_ZERO_MODE(FTZ_STATE);
+
+        // If the DAZ flag is not supported, then it is a reserved bit and attempting to write a 1
+        // to it will cause a general-protection exception (#GP)
+        if (is_dmz_flag_available()) {
+          _MM_SET_DENORMALS_ZERO_MODE(DMZ_STATE);
+        }
+      }, Context::CPU(), {}, {},
+      FnProperty::kNormal, 0, "SetFlushDenorms");
+
+    Engine::Get()->WaitForAll();
+
+  #endif
+
   API_END();
 }
 

@@ -22,9 +22,10 @@ from distutils.version import StrictVersion
 import sys
 import platform
 import itertools
-import numpy as _np
 import unittest
-from mxnet import np
+
+from mxnet import np, util
+import numpy as _np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
 from mxnet.test_utils import is_op_runnable
@@ -3075,7 +3076,11 @@ def test_np_array_function_protocol():
 @use_np
 @with_array_ufunc_protocol
 def test_np_array_ufunc_protocol():
-    check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
+    prev_state = util.set_flush_denorms(False)
+    try:
+        check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
+    finally:
+        util.set_flush_denorms(prev_state)
 
 
 @with_seed()
