@@ -316,11 +316,9 @@ NDArray NDArray::ReshapeWithRecord(const mxnet::TShape& shape) {
   os << shape;
   if (!Imperative::Get()->is_np_shape()) {
     attrs.op = nnvm::Op::Get("Reshape");
-    ;
     attrs.dict.insert({"shape", os.str()});
   } else {
     attrs.op = nnvm::Op::Get("_np_reshape");
-    ;
     attrs.dict.insert({"newshape", os.str()});
   }
   attrs.op->attr_parser(&attrs);
@@ -413,13 +411,11 @@ NDArray NDArray::AtWithRecord(index_t idx) {
     if (!Imperative::Get()->is_np_shape()) {
       os << mxnet::TShape({-3, -2});  // See ndarray.py reshape for definition of magic numbers
       attrs.op = nnvm::Op::Get("Reshape");
-      ;
       attrs.dict.insert({"shape", os.str()});
     } else {
       // See NumpyXReshapeInferShape for definition of magic numbers
       os << mxnet::TShape({-3, -4});
       attrs.op = nnvm::Op::Get("_npx_reshape");
-      ;
       attrs.dict.insert({"newshape", os.str()});
     }
     attrs.op->attr_parser(&attrs);
