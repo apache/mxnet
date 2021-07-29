@@ -24,11 +24,11 @@
 #include <string>
 #include <vector>
 
+#include "../../nn/mkldnn/mkldnn_act-inl.h"
 #include "../../nn/mkldnn/mkldnn_batch_norm-inl.h"
 #include "../common.h"
 
 #include "mkldnn_subgraph_base-inl.h"
-
 namespace mxnet {
 namespace op {
 
