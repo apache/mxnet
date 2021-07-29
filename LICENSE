@@ -353,3 +353,10 @@
     =======================================================================================
 
     docs/python_docs/themes/mx-theme/mxtheme/static/webfonts/ (Copy of the License available at licenses/OFL1_1)
+    
+    =======================================================================================
+    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+    =======================================================================================
+
+    tools/lint/git-clang-format-13
+    
