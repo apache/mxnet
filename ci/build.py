@@ -47,7 +47,7 @@ DOCKER_COMPOSE_WHITELIST = ('centos7_cpu', 'centos7_gpu_cu92', 'centos7_gpu_cu10
                             'centos7_gpu_cu112')
 
 # Files for docker compose
-DOCKER_COMPOSE_FILES = set(('docker/build.centos7'))
+DOCKER_COMPOSE_FILES = set(['docker/build.centos7'])
 
 def get_dockerfiles_path():
     return "docker"
