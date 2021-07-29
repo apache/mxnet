@@ -720,11 +720,11 @@ sanity_cpp() {
 sanity_clang() {
     set -ex
     # .github/workgflows/greetings.yml passes BASE_SHA, GITHUB_RUN_ID, GITHUB_BASE_REF for pull requests.
-    BASE_SHA="${GITHUB_PR_BASE_SHA:-refs/remotes/origin/master}"
+    BASE_SHA="${GITHUB_PR_BASE_SHA}"
     GITHUB_RUN_ID="${GITHUB_PR_RUN_ID}"
     GITHUB_BASE_REF="${GITHUB_PR_BASE_REF}"
 
-    if [ "${BASE_SHA}" == "refs/remotes/origin/master" ]; then
+    if [ "${BASE_SHA}" == "" ]; then
         BASE_SHA=`git show-ref --hash refs/remotes/origin/master`
         if [ "${GITHUB_RUN_ID}" == "" ] || [ "${GITHUB_BASE_REF}" == "" ]; then
              GITHUB_RUN_ID=`(git log --pretty=format:'%h' -n 1)`
