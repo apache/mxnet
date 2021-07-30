@@ -704,12 +704,30 @@ sanity_check() {
     sanity_clang
     sanity_license
     sanity_python
+    sanity_python_flake8
     sanity_cpp
 }
 
 sanity_license() {
     set -ex
     tools/license_header.py check
+}
+
+sanity_python_flake8() {
+    set -ex
+    
+    # Install dependencies
+    pip install -r requirements-flake8.txt --user
+    flake8 --version
+
+    # Run flake8
+    flake8 | tee "${GITHUB_WORKSPACE}"/flake8-output.txt
+
+    if [ -s "${GITHUB_WORKSPACE}"/flake8-output.txt ]; then
+        echo 'Please fix the above Flake8 warnings.'
+        exit 1
+    fi
+    exit 0
 }
 
 sanity_cpp() {
