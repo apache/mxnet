@@ -38,8 +38,9 @@ from util import retry
 
 DOCKER_CACHE_NUM_RETRIES = 3
 DOCKER_CACHE_TIMEOUT_MINS = 45
-PARALLEL_BUILDS = 10
+PARALLEL_BUILDS = 1
 DOCKER_CACHE_RETRY_SECONDS = 5
+DOCKER_BUILD_NUM_RETRIES = 1
 
 
 def build_save_containers(platforms, registry, load_cache) -> int:
@@ -79,7 +80,8 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     if platform in build_util.DOCKER_COMPOSE_WHITELIST:
         if "dkr.ecr" in registry:
             _ecr_login(registry)
-        build_util.build_docker(platform=platform, registry=registry, num_retries=10, no_cache=False)
+        build_util.build_docker(platform=platform, registry=registry,
+                                num_retries=DOCKER_BUILD_NUM_RETRIES, no_cache=False)
         push_cmd = ['docker-compose', 'push', platform]
         subprocess.check_call(push_cmd)
         return None
@@ -94,7 +96,8 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     logging.debug('Building %s as %s', platform, docker_tag)
     try:
         # Increase the number of retries for building the cache.
-        image_id = build_util.build_docker(platform=platform, registry=registry, num_retries=10, no_cache=False)
+        image_id = build_util.build_docker(platform=platform, registry=registry,
+                                           num_retries=DOCKER_BUILD_NUM_RETRIES, no_cache=False)
         logging.info('Built %s as %s', docker_tag, image_id)
 
         # Push cache to registry
