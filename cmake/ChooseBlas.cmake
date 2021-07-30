@@ -122,10 +122,19 @@ set(FORTRAN_DIR \\\"\$\{CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES\}\\\")
   endif()
 elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
   # ---[ MKL Options
+  find_path(MKL_INCLUDE_DIR mkl.h
+    HINTS ${INTEL_HOME_ROOT}/mkl ${INTEL_OPT_ROOT}/mkl ${INTEL_OPT_ROOT}/oneapi/mkl/latest
+    PATHS $ENV{MKLROOT} $ENV{MKLROOT}/latest
+    PATH_SUFFIXES include mkl REQUIRED)
+  file(STRINGS ${MKL_INCLUDE_DIR}/mkl_version.h MKL_VERSION_DEF REGEX "INTEL_MKL_VERSION")
+  string(REGEX MATCH "([0-9]+)" MKL_VERSION ${MKL_VERSION_DEF})
   if(UNIX)
     # Single dynamic library interface leads to conflicts between intel omp and llvm omp
     # https://github.com/apache/incubator-mxnet/issues/17641
-    option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" OFF)
+    # Fixed in oneMKL 2021.3: [MKLD-11109] MKL is opening libgomp.so instead of
+    # libgomp.so.1 while SDL=1 & MKL_THREADING_LAYER=GNU
+    cmake_dependent_option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON
+      "NOT BLA_STATIC;MKL_VERSION GREATER_EQUAL 20210003" OFF)
   else()
     option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
   endif()
@@ -161,14 +170,16 @@ elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
     endif()
   endif()
   # Setting up BLAS_mkl_MKLROOT for non-Ubuntu 20.04 OSes
-  find_path(BLAS_mkl_MKLROOT mkl PATHS $ENV{MKLROOT} ${INTEL_HOME_ROOT} ${INTEL_OPT_ROOT})
+  find_path(BLAS_mkl_MKLROOT include/mkl.h
+    PATHS $ENV{MKLROOT} ${INTEL_HOME_ROOT} ${INTEL_OPT_ROOT} ${INTEL_OPT_ROOT}/oneapi/mkl
+    PATH_SUFFIXES mkl latest)
   find_package(BLAS)
-  find_path(MKL_INCLUDE_DIR mkl.h HINTS ${INTEL_HOME_ROOT}/mkl ${INTEL_OPT_ROOT}/mkl PATHS ENV MKLROOT PATH_SUFFIXES include mkl REQUIRED)
   include_directories(SYSTEM ${MKL_INCLUDE_DIR})
   list(APPEND mshadow_LINKER_LIBS ${BLAS_LIBRARIES})
   add_definitions(-DMSHADOW_USE_CBLAS=0)
   add_definitions(-DMSHADOW_USE_MKL=1)
   add_definitions(-DMXNET_USE_BLAS_MKL=1)
+  message("-- Found MKL (version: ${MKL_VERSION})")
 elseif(BLAS STREQUAL "apple")
   find_package(Accelerate REQUIRED)
   include_directories(SYSTEM ${Accelerate_INCLUDE_DIR})
