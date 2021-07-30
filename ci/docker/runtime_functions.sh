@@ -718,10 +718,9 @@ sanity_python_flake8() {
     
     # Install dependencies
     pip install -r requirements-flake8.txt --user
-    flake8 --version
 
     # Run flake8
-    flake8 | tee "${GITHUB_WORKSPACE}"/flake8-output.txt
+    flake8-3.8.2 | tee "${GITHUB_WORKSPACE}"/flake8-output.txt
 
     if [ -s "${GITHUB_WORKSPACE}"/flake8-output.txt ]; then
         echo 'Please fix the above Flake8 warnings.'
