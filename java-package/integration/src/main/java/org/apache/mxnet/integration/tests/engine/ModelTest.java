@@ -63,7 +63,6 @@ public class ModelTest {
                             },
                             new Shape(1, 10));
             Assertions.assertAlmostEquals(result.get(0), expected);
-            logger.info("Trigger ci~");
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }

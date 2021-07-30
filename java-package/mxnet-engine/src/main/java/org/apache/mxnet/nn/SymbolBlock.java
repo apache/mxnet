@@ -41,7 +41,6 @@ import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.training.ParameterStore;
 import org.apache.mxnet.util.Pair;
 import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
@@ -214,37 +213,28 @@ public class SymbolBlock extends MxResource {
      * Applies the operating function of the mxSymbolBlock once. This method should be called only
      * on blocks that are initialized.
      *
-     * @param parameterStore the parameter store
      * @param inputs the input NDList
-     * @param training true for a training forward pass
      * @param params optional parameters
      * @param device device to use
      * @return the output of the forward pass
      */
-    public final NDList forward(
-            ParameterStore parameterStore,
-            NDList inputs,
-            boolean training,
-            PairList<String, Object> params,
-            Device device) {
+    public final NDList forward(NDList inputs, PairList<String, Object> params, Device device) {
 
         if (!isInitialized()) {
             initialize(getParent(), DataType.FLOAT32, device, inputs.getShapes());
         }
-        return forwardInternal(parameterStore, inputs, training, params);
+        return forwardInternal(inputs, params);
     }
 
     /**
      * Applies the operating function of the block once. This method should be called only on blocks
      * that are initialized.
      *
-     * @param parameterStore the parameter store
      * @param inputs the input NDList
-     * @param training true for a training forward pass
      * @return the output of the forward pass
      */
-    public NDList forward(ParameterStore parameterStore, NDList inputs, boolean training) {
-        return forward(parameterStore, inputs, training, null, getDevice());
+    public NDList forward(NDList inputs) {
+        return forward(inputs, null, getDevice());
     }
 
     /**
@@ -252,43 +242,33 @@ public class SymbolBlock extends MxResource {
      *
      * <p>Within this forward call, it can be assumed that training is true.
      *
-     * @param parameterStore the parameter store
      * @param data the input data NDList
      * @param labels the input labels NDList
      * @param params optional parameters
      * @param device the device assigned
      * @return the output of the forward pass
-     * @see #forward(ParameterStore, NDList, boolean, PairList, Device)
+     * @see #forward(NDList, PairList, Device)
      */
     public NDList forward(
-            ParameterStore parameterStore,
-            NDList data,
-            NDList labels,
-            PairList<String, Object> params,
-            Device device) {
+            NDList data, NDList labels, PairList<String, Object> params, Device device) {
         if (!isInitialized()) {
             initialize(getParent(), DataType.FLOAT32, device, data.getShapes());
         }
-        return forwardInternal(parameterStore, data, labels, params);
+        return forwardInternal(data, labels, params);
     }
 
     /**
-     * A helper for {@link SymbolBlock#forward(ParameterStore, NDList, NDList, PairList, Device)}
-     * after initialization.
+     * A helper for {@link SymbolBlock#forward(NDList, NDList, PairList, Device)} after
+     * initialization.
      *
-     * @param parameterStore the parameter store
      * @param data the input data NDList
      * @param labels the input labels NDList
      * @param params optional parameters
      * @return the output of the forward pass
-     * @see #forward(ParameterStore, NDList, boolean, PairList, Device)
+     * @see #forward(NDList, PairList, Device)
      */
-    protected NDList forwardInternal(
-            ParameterStore parameterStore,
-            NDList data,
-            NDList labels,
-            PairList<String, Object> params) {
-        return forwardInternal(parameterStore, data, true, params);
+    protected NDList forwardInternal(NDList data, NDList labels, PairList<String, Object> params) {
+        return forwardInternal(data, params);
     }
 
     public boolean isInitialized() {
@@ -368,23 +348,19 @@ public class SymbolBlock extends MxResource {
         return new ParameterList(parameters);
     }
 
-    protected NDList forwardInternal(
-            ParameterStore parameterStore,
-            NDList inputs,
-            boolean training,
-            PairList<String, Object> params) {
+    protected NDList forwardInternal(NDList inputs, PairList<String, Object> params) {
         if (first) {
             synchronized (SymbolBlock.class) {
                 if (first) {
                     // create CachedOp is not thread-safe
                     // add synchronized block to avoid creating multiple CachedOps
-                    op = JnaUtils.createCachedOp(this, getParent(), training);
+                    op = JnaUtils.createCachedOp(this, getParent());
                     inputDescriptions = new PairList<>();
                     outputDescriptions = new PairList<>();
                     for (NDArray array : inputs) {
                         inputDescriptions.add(array.getName(), array.getShape());
                     }
-                    NDList outputs = op.forward(parameterStore, inputs, training);
+                    NDList outputs = op.forward(inputs);
                     for (NDArray array : outputs) {
                         outputDescriptions.add(array.getName(), array.getShape());
                     }
@@ -393,7 +369,7 @@ public class SymbolBlock extends MxResource {
                 }
             }
         }
-        return op.forward(parameterStore, inputs, training);
+        return op.forward(inputs);
     }
 
     public Shape[] getOutputShapes(Shape[] inputShapes) {

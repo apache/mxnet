@@ -29,8 +29,6 @@ import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.ndarray.NDSerializer;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.training.initializer.Initializer;
-import org.apache.mxnet.training.initializer.XavierInitializer;
 
 /**
  * {@code Parameter} is a container class that holds a learnable parameter of a model.
@@ -51,7 +49,6 @@ public class Parameter extends MxResource {
     private String name;
     private Shape shape;
     private Type type;
-    private Initializer initializer;
     private NDArray array;
     private boolean requiresGrad;
 
@@ -62,8 +59,6 @@ public class Parameter extends MxResource {
         this.type = builder.type;
         this.array = builder.array;
         this.requiresGrad = builder.requiresGrad;
-        this.initializer =
-                (builder.initializer != null) ? builder.initializer : type.getInitializer();
     }
 
     /**
@@ -150,29 +145,13 @@ public class Parameter extends MxResource {
     }
 
     /**
-     * Sets the {@link Initializer} for this {@code Parameter}, if not already set. If overwrite
-     * flag is true, sets the initializer regardless.
-     *
-     * @param initializer the initializer to be set
-     */
-    public void setInitializer(Initializer initializer) {
-        this.initializer = initializer;
-    }
-
-    /**
      * Initializes the parameter, with given {@link DataType} for the given expected input shapes.
      *
      * @param parent the parent {@link MxResource} to manage this instance
      * @param dataType the datatype of the {@code Parameter}
      */
     public void initialize(MxResource parent, DataType dataType, Device device) {
-        Objects.requireNonNull(initializer, "No initializer has been set");
         Objects.requireNonNull(shape, "No parameter shape has been set");
-        if (!isInitialized()) {
-            array = initializer.initialize(parent, shape, dataType, device);
-            array.setName(name);
-        }
-
         if (requiresGradient()) {
             array.setRequiresGradient(true);
         }
@@ -258,30 +237,13 @@ public class Parameter extends MxResource {
 
     /** Enumerates the types of {@link Parameter}. */
     public enum Type {
-        WEIGHT(
-                new XavierInitializer(
-                        XavierInitializer.RandomType.GAUSSIAN, XavierInitializer.FactorType.IN, 2)),
-        BIAS(Initializer.ZEROS),
-        GAMMA(Initializer.ONES),
-        BETA(Initializer.ZEROS),
-        RUNNING_MEAN(Initializer.ZEROS),
-        RUNNING_VAR(Initializer.ONES),
-        OTHER(null);
-
-        private final transient Initializer initializer;
-
-        Type(Initializer initializer) {
-            this.initializer = initializer;
-        }
-
-        /**
-         * Gets the {@link Initializer} of this {@code ParameterType}.
-         *
-         * @return the {@link Initializer} of this {@code ParameterType}
-         */
-        public Initializer getInitializer() {
-            return initializer;
-        }
+        WEIGHT,
+        BIAS,
+        GAMMA,
+        BETA,
+        RUNNING_MEAN,
+        RUNNING_VAR,
+        OTHER;
     }
 
     /** A Builder to construct a {@code Parameter}. */
@@ -289,7 +251,6 @@ public class Parameter extends MxResource {
         String name;
         Shape shape;
         Type type;
-        Initializer initializer;
         NDArray array;
         boolean requiresGrad = true;
 
@@ -323,17 +284,6 @@ public class Parameter extends MxResource {
          */
         public Builder optShape(Shape shape) {
             this.shape = shape;
-            return this;
-        }
-
-        /**
-         * Sets the Initializer of the {@code Parameter}.
-         *
-         * @param initializer the Initializer of the {@code Parameter}
-         * @return this {@code Parameter}
-         */
-        public Builder optInitializer(Initializer initializer) {
-            this.initializer = initializer;
             return this;
         }
 

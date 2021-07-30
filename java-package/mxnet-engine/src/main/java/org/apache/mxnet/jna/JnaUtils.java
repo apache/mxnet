@@ -96,7 +96,7 @@ public final class JnaUtils {
      * ****************************************************************************
      */
     // TODO
-    public static CachedOp createCachedOp(SymbolBlock block, MxResource parent, boolean training) {
+    public static CachedOp createCachedOp(SymbolBlock block, MxResource parent) {
         Symbol symbol = block.getSymbol();
 
         List<Parameter> parameters = block.getAllParameters();

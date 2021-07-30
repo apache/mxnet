@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.mxnet.exception.TranslateException;
 import org.apache.mxnet.ndarray.NDList;
-import org.apache.mxnet.training.ParameterStore;
 import org.apache.mxnet.translate.Translator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +51,6 @@ public class Predictor<I, O> extends MxResource {
     private long timestamp;
     private boolean prepared;
     private Model model;
-    protected ParameterStore parameterStore;
 
     /**
      * Creates a new instance of {@code Predictor} with the given {@link Model} and {@link
@@ -66,7 +64,6 @@ public class Predictor<I, O> extends MxResource {
         super(model);
         this.model = model;
         this.translator = translator;
-        this.parameterStore = new ParameterStore(getParent(), copy, model.getDevice());
     }
 
     /**
@@ -91,7 +88,7 @@ public class Predictor<I, O> extends MxResource {
 
     private NDList forward(NDList ndList) {
         logger.trace("Predictor input data: {}", ndList);
-        return model.getMxSymbolBlock().forward(parameterStore, ndList, false);
+        return model.getMxSymbolBlock().forward(ndList);
     }
 
     // TODO: add batch predict

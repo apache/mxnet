@@ -36,7 +36,6 @@ import org.apache.mxnet.nn.Parameter;
 import org.apache.mxnet.nn.SymbolBlock;
 import org.apache.mxnet.repository.Item;
 import org.apache.mxnet.repository.Repository;
-import org.apache.mxnet.training.ParameterStore;
 import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,12 +77,7 @@ public class JnaUtilTest {
             block.setInputNames(new ArrayList<>(map.keySet()));
 
             NDArray arr = NDArray.create(base, new Shape(1, 28, 28), device).ones();
-            block.forward(
-                    new ParameterStore(base, false, device),
-                    new NDList(arr),
-                    false,
-                    new PairList<>(),
-                    device);
+            block.forward(new NDList(arr), new PairList<>(), device);
             logger.info(
                     "Number of MxResource managed by baseMxResource: {}",
                     BaseMxResource.getSystemMxResource().getSubResource().size());

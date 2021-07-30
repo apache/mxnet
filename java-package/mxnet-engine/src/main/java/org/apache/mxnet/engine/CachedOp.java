@@ -25,7 +25,6 @@ import org.apache.mxnet.ndarray.NDList;
 import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.nn.Parameter;
 import org.apache.mxnet.nn.SymbolBlock;
-import org.apache.mxnet.training.ParameterStore;
 import org.apache.mxnet.util.Pair;
 import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
@@ -52,8 +51,7 @@ public class CachedOp extends MxResource {
     /**
      * Creates an instance of {@link CachedOp}.
      *
-     * <p>It can be created by using {@link JnaUtils#createCachedOp(SymbolBlock, MxResource,
-     * boolean)}
+     * <p>It can be created by using {@link JnaUtils#createCachedOp(SymbolBlock, MxResource)}
      *
      * @param parent the MxResource object to manage this instance of CachedOp
      * @param handle the C handle of the CachedOp
@@ -78,12 +76,10 @@ public class CachedOp extends MxResource {
     /**
      * Assigns inputs to the empty locations of the input NDArray.
      *
-     * @param parameterStore the parameterStore
      * @param data the input in {@link NDList} format
-     * @param training true for a training forward pass
      * @return an {@link NDList}
      */
-    public NDList forward(ParameterStore parameterStore, NDList data, boolean training) {
+    public NDList forward(NDList data) {
         // reset the input data index at the beginning
         NDArray[] allInputsNDArray = new NDArray[parameters.size()];
         // check device of input
@@ -91,10 +87,11 @@ public class CachedOp extends MxResource {
         // fill allInputsNDArray with parameter values on correct device
         for (int index : paramIndices) {
             Parameter parameter = parameters.get(index);
-            NDArray value = parameterStore.getValue(parameter, device, training);
+            NDArray value = parameter.getArray();
             if (value == null) {
                 throw new NullPointerException("Failed to find parameter from parameterStore");
             }
+            value.setDevice(device);
             allInputsNDArray[index] = value;
         }
 
