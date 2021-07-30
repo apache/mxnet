@@ -1,14 +1,12 @@
 name: Java Package CI
 
-on: [push, pull_request]
+on:
   push:
-    paths-ignore:
-      - "**.md"
-      - "**.ipynb"
-      - "**.json"
-      - "**.html"
-      - "**.js"
-      - "**.css"
+    paths:
+      - java-package/**
+  pull_request:
+    paths:
+      - java-package/**
 
 jobs:
   build:
