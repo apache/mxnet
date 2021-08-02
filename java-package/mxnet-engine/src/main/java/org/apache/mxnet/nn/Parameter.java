@@ -29,6 +29,8 @@ import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.ndarray.NDSerializer;
 import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@code Parameter} is a container class that holds a learnable parameter of a model.
@@ -42,6 +44,7 @@ import org.apache.mxnet.ndarray.types.Shape;
  *     chapter on parameter management</a>
  */
 public class Parameter extends MxResource {
+    private static final Logger logger = LoggerFactory.getLogger(Parameter.class);
 
     private static final byte VERSION = 1;
 
@@ -216,10 +219,15 @@ public class Parameter extends MxResource {
     /** {@inheritDoc} */
     @Override
     public void close() {
-        super.close();
-        if (array != null) {
-            array.close();
-            array = null;
+        if (!getClosed()) {
+            logger.debug(String.format("Start to free Symbol instance: %S", this.getUid()));
+            super.freeSubResources();
+            if (array != null) {
+                array.close();
+                array = null;
+            }
+            setClosed();
+            logger.debug(String.format("Start to free Symbol instance: %S", this.getUid()));
         }
     }
 

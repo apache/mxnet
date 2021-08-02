@@ -306,8 +306,34 @@ build_centos7_gpu() {
     ninja
 }
 
+
 build_ubuntu_cpu() {
     build_ubuntu_cpu_openblas
+}
+
+build_ubuntu_cpu_and_test() {
+    build_ubuntu_cpu
+    java_package_integration_test
+}
+
+build_ubuntu_gpu_and_test() {
+    build_ubuntu_gpu
+    java_package_integration_test
+}
+
+java_package_integration_test() {
+    # install gradle
+    add-apt-repository ppa:cwchien/gradle
+    apt-get update -y
+    apt-get install gradle -y
+    # build java prokect
+    cd /work/mxnet/java-package
+    ./gradlew build -x javadoc
+    # generate native library
+    ./gradlew :native:buildLocalLibraryJarDefault
+    ./gradlew :native:mkl-linuxJar
+    # run integration
+    ./gradlew :integration:run
 }
 
 build_ubuntu_cpu_openblas() {
@@ -1402,6 +1428,21 @@ test_artifact_repository() {
     cd cd/utils/
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 test_artifact_repository.py
     popd
+}
+
+integration_test() {
+    # install gradle
+    add-apt-repository ppa:cwchien/gradle
+    apt-get update -y
+    apt-get install gradle -y
+    # build java prokect
+    cd /work/mxnet/java-package
+    ./gradle build -x javadoc
+    # generate native library
+    ./gradlew :native:buildLocalLibraryJarDefault
+    ./gradlew :native:mkl-linuxJar
+    # run integration
+    ./gradlew :integration:run
 }
 
 ##############################################################

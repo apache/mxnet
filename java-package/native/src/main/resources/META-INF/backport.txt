@@ -1,0 +1,2 @@
+The file is based off Apache MXNet 1.7 branch (https://github.com/apache/incubator-mxnet/commit/7a84fe11dd7399d1c2bdd0fb679c46af69e48861)
+and has been patched with master commit (https://github.com/apache/incubator-mxnet/commit/5fd90249cafd14910633d25d3bc370a522736ac7).

@@ -66,6 +66,8 @@ public class IntegrationTest {
 
     public static void main(String[] args) {
         new IntegrationTest(IntegrationTest.class).runTests(args);
+        // TODO: not elegant solution to native library crash
+        //        System.exit(0);
     }
 
     public boolean runTests(String[] args) {

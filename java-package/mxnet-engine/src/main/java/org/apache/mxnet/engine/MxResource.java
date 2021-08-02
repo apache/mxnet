@@ -21,12 +21,16 @@ import com.sun.jna.Pointer;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.mxnet.util.NativeResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An auto closable Resource object whose life circle can be managed by its parent {@link
  * MxResource} instance. Meanwhile, it manages life circle of child {@link MxResource} instances.
  */
 public class MxResource extends NativeResource<Pointer> {
+
+    private static final Logger logger = LoggerFactory.getLogger(MxResource.class);
 
     public static final String EMPTY_UID = "EMPTY_UID";
 
@@ -67,9 +71,11 @@ public class MxResource extends NativeResource<Pointer> {
 
     public void freeSubResources() {
         if (subResourceInitialized()) {
-            for (MxResource e : subResources.values()) {
-                if (!e.getClosed()) {
-                    e.close();
+            for (MxResource subResource : subResources.values()) {
+                try {
+                    subResource.close();
+                } catch (Exception e) {
+                    logger.error("MxResource close failed.", e);
                 }
             }
             subResources = null;

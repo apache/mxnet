@@ -901,34 +901,4 @@ public final class JnaUtils {
         checkCall(LIB.MXAutogradIsTraining(isTraining));
         return isTraining.get(0) == 1;
     }
-
-    /**
-     * *************************************************************************** Tests
-     * ***************************************************************************
-     */
-    public static void main(String... args) {
-        try {
-            Runtime.getRuntime().addShutdownHook(new Thread(JnaUtils::waitAll));
-            Set<String> opNames = JnaUtils.getAllOpNames();
-            List<String> list = new ArrayList<>(opNames);
-
-            PointerByReference ref = REFS.acquire();
-
-            for (String opName : list.subList(0, 400)) {
-                checkCall(LIB.NNGetOpHandle(opName, ref));
-                String functionName = getOpNamePrefix(opName);
-                // System.out.println("Name: " + opName + "/" + functionName);
-                getFunctionByName(opName, functionName, ref.getValue());
-            }
-
-            ref.setValue(null);
-            REFS.recycle(ref);
-
-        } catch (RuntimeException e) {
-            e.printStackTrace();
-            System.out.println(e.getMessage());
-        } finally {
-            System.out.println("END!.....");
-        }
-    }
 }

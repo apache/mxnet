@@ -30,6 +30,8 @@ import org.apache.mxnet.jna.JnaUtils;
 import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.util.PairList;
 import org.apache.mxnet.util.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@code Symbol} is an internal helper for symbolic model graphs used by the {@link
@@ -38,6 +40,8 @@ import org.apache.mxnet.util.Utils;
  * @see org.apache.mxnet.nn.SymbolBlock
  */
 public class Symbol extends MxResource {
+
+    private static final Logger logger = LoggerFactory.getLogger(Symbol.class);
 
     private String[] outputs;
 
@@ -75,9 +79,15 @@ public class Symbol extends MxResource {
     /** {@inheritDoc} */
     @Override
     public void close() {
-        Pointer pointer = handle.getAndSet(null);
-        if (pointer != null) {
-            JnaUtils.freeSymbol(pointer);
+        if (!getClosed()) {
+            logger.debug(String.format("Start to free Symbol instance: %S", this.toJsonString()));
+            super.freeSubResources();
+            Pointer pointer = handle.getAndSet(null);
+            if (pointer != null) {
+                JnaUtils.freeSymbol(pointer);
+            }
+            setClosed();
+            logger.debug(String.format("Finish to free Symbol instance: %S", this.toJsonString()));
         }
     }
 

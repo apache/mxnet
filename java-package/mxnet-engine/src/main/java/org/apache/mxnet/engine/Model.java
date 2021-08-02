@@ -358,4 +358,19 @@ public class Model extends MxResource {
         }
         return device;
     }
+
+    @Override
+    public void close() {
+        if (!getClosed()) {
+            logger.debug(String.format("Start to free Model instance: %S", this.getModelName()));
+            // release sub resources
+            super.freeSubResources();
+            // release itself
+            this.symbolBlock = null;
+            this.artifacts = null;
+            this.properties = null;
+            setClosed();
+            logger.debug(String.format("Finish to free Model instance: %S", this.getModelName()));
+        }
+    }
 }

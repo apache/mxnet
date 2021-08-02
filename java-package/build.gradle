@@ -105,7 +105,7 @@ configure(javaProjects()) {
             systemProperty "org.slf4j.simpleLogger.log.org.mortbay.log", "warn"
             systemProperty "disableProgressBar", "true"
             systemProperty "nightly", System.getProperty("nightly", "false")
-            systemProperty "java.library.path", "/Users/cspchen/Work/incubator-mxnet/build"
+//            systemProperty "java.library.path", "/Users/cspchen/Work/incubator-mxnet/build"
             if (gradle.startParameter.offline) {
                 systemProperty "offline", "true"
             }

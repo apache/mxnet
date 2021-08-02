@@ -132,13 +132,15 @@ public class CachedOp extends MxResource {
     /** {@inheritDoc} */
     @Override
     public void close() {
-        super.close();
         if (!getClosed()) {
+            logger.debug(String.format("Start to free CachedOp instance: %S", this.getUid()));
+            super.freeSubResources();
             Pointer pointer = handle.getAndSet(null);
             if (pointer != null) {
                 JnaUtils.freeCachedOp(pointer);
             }
             setClosed();
+            logger.debug(String.format("Finish to free CachedOp instance: %S", this.getUid()));
         }
     }
 

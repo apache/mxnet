@@ -39,8 +39,12 @@ import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.ndarray.types.SparseFormat;
 import org.apache.mxnet.util.Float16Utils;
 import org.apache.mxnet.util.PairList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class NDArray extends MxResource {
+
+    private static final Logger logger = LoggerFactory.getLogger(NDArray.class);
 
     protected NDArray(Pointer handle) {
         super(BaseMxResource.getSystemMxResource(), handle);
@@ -1380,13 +1384,14 @@ public class NDArray extends MxResource {
     @Override
     public void close() {
         if (!getClosed()) {
-            // release sub resources
-            super.close();
-            // release itself
+            logger.debug(String.format("Start to free NDArray instance: %S", this.getUid()));
+            super.freeSubResources();
+
             if (this.getHandle() != null) {
                 JnaUtils.freeNdArray(this.getHandle());
             }
             setClosed();
+            logger.debug(String.format("Finish to free NDArray instance: %S", this.getUid()));
         }
     }
 

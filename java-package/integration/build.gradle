@@ -48,7 +48,7 @@ run {
     systemProperties System.getProperties()
     systemProperties.remove("user.dir")
     systemProperty("file.encoding", "UTF-8")
-    systemProperty "java.library.path", "/Users/cspchen/Work/incubator-mxnet/build"
+//    systemProperty "java.library.path", "/Users/cspchen/Work/incubator-mxnet/build"
     jvmArgs "-Xverify:none"
     args("-p=org.apache.mxnet.integration.tests.", "-m=modelLoadAndPredictTest")
 }

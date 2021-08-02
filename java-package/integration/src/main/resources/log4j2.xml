@@ -27,7 +27,7 @@
     <Root level="info" additivity="false">
       <AppenderRef ref="console"/>
     </Root>
-    <Logger name="com.apache.mxnet" level="${sys:com.apache.mxnet.level:-info}" additivity="false">
+    <Logger name="com.apache.mxnet" level="${sys:com.apache.mxnet.level:-debug}" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>
   </Loggers>

@@ -18,6 +18,8 @@
 package org.apache.mxnet.engine;
 
 import org.apache.mxnet.jna.JnaUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The top-level {@link MxResource} instance, with no parent Resource to manage. The {@link
@@ -25,6 +27,8 @@ import org.apache.mxnet.jna.JnaUtils;
  * instance is loaded for the first time.
  */
 public final class BaseMxResource extends MxResource {
+
+    private static final Logger logger = LoggerFactory.getLogger(BaseMxResource.class);
 
     private static BaseMxResource SYSTEM_MX_RESOURCE;
 
@@ -56,7 +60,14 @@ public final class BaseMxResource extends MxResource {
 
     @Override
     public void close() {
-        // only clean sub resources
-        super.close();
+        if (!getClosed()) {
+            logger.debug(String.format("Start to free BaseMxResource instance: %S", this.getUid()));
+            // only clean sub resources
+            JnaUtils.waitAll();
+            super.freeSubResources();
+            setClosed();
+            logger.debug(
+                    String.format("Finish to free BaseMxResource instance: %S", this.getUid()));
+        }
     }
 }
