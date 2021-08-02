@@ -111,7 +111,6 @@ if(MXNET_FORCE_SHARED_CRT)
 endif()
 
 message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
-project(mxnet C CXX)
 if(USE_CUDA)
   cmake_minimum_required(VERSION 3.13.2)  # CUDA 10 (Turing) detection available starting 3.13.2
   include(CheckLanguage)
