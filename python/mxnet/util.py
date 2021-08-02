@@ -1200,3 +1200,27 @@ def get_rtc_compile_opts(ctx):
     arch_opt = "--gpu-architecture={}_{}".format("sm" if should_compile_to_SASS else "compute",
                                                  device_cc_as_used)
     return [arch_opt]
+
+def set_flush_denorms(value):
+    """Change floating-point calculations on CPU when dealing with denormalized values.
+       This is only applicable to architectures which supports flush-to-zero.
+       Denormalized values are positive and negative values that are very close to 0
+       (exponent is the smallest possible value).
+       Flushing denormalized values to 0 can speedup calculations if such values occurs,
+       but if fulfilling whole IEEE 754 standard is required this option should be disabled.
+       Flushing denormalized values is enabled in MXNet by default.
+
+    Parameters
+    ----------
+    value : bool
+        State of flush-to-zero and denormals-are-zero in MXCSR register
+
+    Returns
+    -------
+    prev_state : bool
+        Previous state of flush-to-zero in MXCSR register
+    """
+    ret = ctypes.c_bool()
+    passed_value = ctypes.c_bool(value)
+    check_call(_LIB.MXSetFlushDenorms(passed_value, ctypes.byref(ret)))
+    return ret.value

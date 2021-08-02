@@ -70,6 +70,12 @@ class RMSProp(Optimizer):
     def __init__(self, learning_rate=0.001, rho=0.9, momentum=0.9,
                  epsilon=1e-8, centered=False, clip_weights=None,
                  use_fused_step=True, **kwargs):
+        if kwargs.get("gamma1") is not None:
+            raise DeprecationWarning(
+                'parameter \'gamma1\' is deprecated. Please use \'rho\' instead...')
+        if kwargs.get("gamma2") is not None:
+            raise DeprecationWarning(
+                'parameter \'gamma2\' is deprecated. Please use \'momentum\' instead...')
         super(RMSProp, self).__init__(learning_rate=learning_rate,
                                       use_fused_step=use_fused_step,
                                       **kwargs)
