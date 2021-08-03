@@ -293,7 +293,7 @@ void launch(CUfunction function,
   void* cuda_lib_handle = LibraryInitializer::Get()->lib_load("libcuda.so");
   cuLaunchKernelPtr launch_kernel_ptr =
     get_func<cuLaunchKernelPtr>(cuda_lib_handle, "cuLaunchKernel");
-  CUresult err = (*launch_kernel_ptr)(function, // function to launch
+  CUresult err = (*launch_kernel_ptr)(function,  // function to launch
     grid_dim.x, grid_dim.y, grid_dim.z,       // grid dim
     block_dim.x, block_dim.y, block_dim.z,    // block dim
     shared_mem_bytes,                         // shared memory
