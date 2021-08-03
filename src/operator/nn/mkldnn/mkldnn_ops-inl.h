@@ -125,6 +125,13 @@ void MKLDNNLogSoftmaxBackward(const nnvm::NodeAttrs& attrs,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& out_data);
 
+/* For softmax_output */
+void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& in_data,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& out_data);
+
 /* For sum */
 void MKLDNNSumForward(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,

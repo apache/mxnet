@@ -199,6 +199,7 @@ struct LeakyReLUParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
+struct SoftmaxOutputParam;
 struct TransposeParam;
 struct ReshapeParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
@@ -212,6 +213,7 @@ bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray& input, const
 bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param,
                              const NDArray& input,
                              const NDArray& output);
+bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam& param);
 bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray& data);
 bool SupportMKLDNNBatchDot(const std::vector<NDArray>& inputs, const NDArray& output);
 }  // namespace op
