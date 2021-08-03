@@ -250,9 +250,9 @@ CUfunction get_function(const std::string &parameters,
     CUcontext context;
     cuDeviceGetPtr device_get_ptr = get_func<cuDeviceGetPtr>(cuda_lib_handle, "cuDeviceGet");
     CUDA_DRIVER_CALL((*device_get_ptr)(&cu_device, dev_id));
-    cuDevicePrimaryCtxRetainPtr device_primary_ctx_retain =
+    cuDevicePrimaryCtxRetainPtr device_primary_ctx_retain_ptr =
       get_func<cuDevicePrimaryCtxRetainPtr>(cuda_lib_handle, "cuDevicePrimaryCtxRetain");
-    CUDA_DRIVER_CALL((*device_primary_ctx_retain)(&context, cu_device));
+    CUDA_DRIVER_CALL((*device_primary_ctx_retain_ptr)(&context, cu_device));
 
     // Jit-compile ptx for the driver's current context
     CUmodule module;
