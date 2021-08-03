@@ -307,6 +307,7 @@ if(USE_MKLDNN)
       # Also ACL_ROOT_DIR need to be set
       set(CMAKE_CXX_STANDARD 14)
       set(DNNL_AARCH64_USE_ACL ON CACHE INTERNAL "" FORCE)
+      add_definitions(-DDNNL_AARCH64_USE_ACL=1)
     endif()
     if (MKLDNN_USE_APL)
       # APL needs to be added to LD_LIBRARY_PATH

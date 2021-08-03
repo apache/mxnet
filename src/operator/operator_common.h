@@ -620,6 +620,12 @@ class OpSignature {
       hash = hash * 2 + arr.dtype();
       eles.push_back(arr.dtype());
       AddSign(arr.shape());
+// Note:Temporary workaround for the accuracy issue noted here #20265.
+// Future releases of Compute Library will aim to fix this.
+#if DNNL_AARCH64_USE_ACL == 1
+      auto ival = reinterpret_cast<const uint64_t>(arr.storage_handle().dptr);
+      AddSign(ival);
+#endif
 #if MXNET_USE_MKLDNN == 1
     }
 #endif
@@ -639,6 +645,11 @@ class OpSignature {
   }
 
   void AddSign(int val) {
+    hash = hash * 2 + val;
+    eles.push_back(val);
+  }
+
+  void AddSign(uint64_t val) {
     hash = hash * 2 + val;
     eles.push_back(val);
   }

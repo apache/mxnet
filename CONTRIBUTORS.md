@@ -255,6 +255,7 @@ List of Contributors
 * [Zhaoqi Zhu](https://github.com/zha0q1)
 * [Harshit Sharma](https://github.com/harshitshrma)
 * [Andrzej Kotlowski](https://github.com/anko-intel)
+* [Crefeda Faviola Rodrigues](https://github.com/cfRod)
 
 Label Bot
 ---------
