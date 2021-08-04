@@ -718,9 +718,9 @@ sanity_python_flake8() {
     
     # Install dependencies
     pip3 install -r requirements-flake8.txt --user
-    pip3 list | grep flake
+    
     # Run flake8
-    flake8 | tee flake8-output.txt
+    python3 -m flake8 | tee flake8-output.txt
 
     if [ -s flake8-output.txt ]; then
         echo 'Please fix the above Flake8 warnings.'
