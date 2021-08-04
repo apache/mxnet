@@ -14,41 +14,28 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
 
-# Required dependencies
-numpy>=1.17,<1.20.0
-requests>=2.20.0,<3
-graphviz<0.9.0,>=0.8.1
-contextvars;python_version<"3.7"
+"""
+setup.py for mx2onnx
+"""
 
-# Optional dependencies
-onnx==1.8.0
-onnxruntime==1.7.0
-protobuf==3.14.0
-scipy==1.4.1
-tabulate==0.7.5
-Cython==0.29.7
+from setuptools import setup, find_packages
 
-# Development dependencies
-cpplint==1.3.0
-pylint==2.3.1  # pylint and astroid need to be aligned
-astroid==2.3.3  # pylint and astroid need to be aligned
-pytest==6.1.2
-pytest-env==0.6.2
-pytest-cov==2.10.1
-pytest-xdist==2.1.0
-pytest-timeout==1.4.2
-flaky==3.7.0
-setuptools==49.6.0  # https://github.com/pypa/setuptools/issues/2352
-wheel
-
-# TVM dependencies
-decorator==4.4.0
-
-# Used in examples
-boto3==1.9.229
-h5py==2.10.0
-Pillow<6
+setup(
+    name='mx2onnx',
+    version='0.0.0',
+    description='Module to convert MXNet models to the ONNX format',
+    author='',
+    author_email='',
+    url='https://github.com/apache/incubator-mxnet/tree/v1.x/python/mxnet/onnx',
+    install_requires=[
+        'onnx >= 1.7.0',
+    ],
+    classifiers=[
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python :: 3 :: Only',
+    ],
+    packages=find_packages(),
+    python_requires='>=3.6'
+)

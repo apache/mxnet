@@ -26,6 +26,7 @@
 #include <nnvm/pass.h>
 #include "./c_api_common.h"
 #include "../operator/subgraph/subgraph_property.h"
+#include "../common/cuda/rtc.h"
 
 int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
                               const char* prop_name,
@@ -125,6 +126,16 @@ int MXSetEnv(const char* name,
     unsetenv(name);
   else
     setenv(name, value, 1);
+#endif
+  API_END();
+}
+
+int MXGetMaxSupportedArch(uint32_t *max_arch) {
+  API_BEGIN();
+#if MXNET_USE_CUDA
+  *max_arch = static_cast<uint32_t>(mxnet::common::cuda::rtc::GetMaxSupportedArch());
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }

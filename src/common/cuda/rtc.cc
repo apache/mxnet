@@ -67,6 +67,33 @@ std::string to_string(OpReqType req) {
 
 }  // namespace util
 
+int GetMaxSupportedArch() {
+#if CUDA_VERSION < 10000
+  constexpr int max_supported_sm_arch = 72;
+#elif CUDA_VERSION < 11000
+  constexpr int max_supported_sm_arch = 75;
+#elif CUDA_VERSION < 11010
+  constexpr int max_supported_sm_arch = 80;
+#elif CUDA_VERSION < 11020
+  constexpr int max_supported_sm_arch = 86;
+#else
+  // starting with cuda 11.2, nvrtc can report the max supported arch,
+  // removing the need to update this routine with each new cuda version.
+  static int max_supported_sm_arch = []() {
+    int num_archs = 0;
+    NVRTC_CALL(nvrtcGetNumSupportedArchs(&num_archs));
+    std::vector<int> archs(num_archs);
+    if (num_archs > 0) {
+      NVRTC_CALL(nvrtcGetSupportedArchs(archs.data()));
+    } else {
+      LOG(FATAL) << "Could not determine supported cuda archs.";
+    }
+    return archs[num_archs - 1];
+  }();
+#endif
+  return max_supported_sm_arch;
+}
+
 namespace {
 
 // Obtain compilation log from the program.
@@ -97,27 +124,14 @@ std::string GetCompiledCode(nvrtcProgram program, bool use_cubin) {
 }
 
 std::tuple<bool, std::string> GetArchString(const int sm_arch) {
-#if CUDA_VERSION < 10000
-  constexpr int max_supported_sm_arch = 72;
-#elif CUDA_VERSION < 11000
-  constexpr int max_supported_sm_arch = 75;
-#elif CUDA_VERSION < 11010
-  constexpr int max_supported_sm_arch = 80;
-#else
-  constexpr int max_supported_sm_arch = 86;
-#endif
-
-#if CUDA_VERSION <= 11000
+  const int sm_arch_as_used = std::min(sm_arch, GetMaxSupportedArch());
   // Always use PTX for CUDA <= 11.0
-  const bool known_arch = false;
-#else
-  const bool known_arch = sm_arch <= max_supported_sm_arch;
-#endif
-  const int actual_sm_arch = std::min(sm_arch, max_supported_sm_arch);
+  const bool known_arch = (CUDA_VERSION > 11000) &&
+                          (sm_arch == sm_arch_as_used);
   if (known_arch) {
-    return {known_arch, "sm_" + std::to_string(actual_sm_arch)};
+    return {known_arch, "sm_" + std::to_string(sm_arch_as_used)};
   } else {
-    return {known_arch, "compute_" + std::to_string(actual_sm_arch)};
+    return {known_arch, "compute_" + std::to_string(sm_arch_as_used)};
   }
 }
 
