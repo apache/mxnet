@@ -720,7 +720,7 @@ sanity_python_flake8() {
     pip install -r requirements-flake8.txt --user
     
     # Run flake8
-    flake8-3.8.2 | tee flake8-output.txt
+    flake8 | tee flake8-output.txt
 
     if [ -s flake8-output.txt ]; then
         echo 'Please fix the above Flake8 warnings.'
