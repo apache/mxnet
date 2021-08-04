@@ -38,7 +38,7 @@ class CPUDeviceStorage {
    * \brief Aligned allocation on CPU.
    * \param handle Handle struct.
    */
-  inline static void Alloc(Storage::Handle* handle);
+  inline static void Alloc(Storage::Handle* handle, bool failsafe = false);
   /*!
    * \brief Deallocation.
    * \param handle Handle struct.
@@ -58,7 +58,7 @@ class CPUDeviceStorage {
 #endif
 };  // class CPUDeviceStorage
 
-inline void CPUDeviceStorage::Alloc(Storage::Handle* handle) {
+inline void CPUDeviceStorage::Alloc(Storage::Handle* handle, bool /* failsafe */) {
   bool success = mxnet::common::AlignedMemAlloc(&(handle->dptr), handle->size, alignment_);
   if (!success)
     LOG(FATAL) << "Failed to allocate CPU Memory";

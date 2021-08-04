@@ -40,7 +40,7 @@ class StorageManager {
    * \brief Allocation.
    * \param handle Handle struct.
    */
-  virtual void Alloc(Storage::Handle* handle) = 0;
+  virtual void Alloc(Storage::Handle* handle, bool failsafe = false) = 0;
   /*!
    * \brief Deallocation.
    * \param handle Handle struct.

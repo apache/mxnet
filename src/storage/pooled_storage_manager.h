@@ -126,7 +126,7 @@ class PooledStorageManager : public StorageManager, public BucketingStrategy, pu
     ReleaseAll();
   }
 
-  void Alloc(Storage::Handle* handle) override;
+  void Alloc(Storage::Handle* handle, bool failsafe) override;
   void Free(Storage::Handle handle) override {
     // Insert returned memory in cache
     std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(dev_type_));
@@ -171,8 +171,9 @@ class PooledStorageManager : public StorageManager, public BucketingStrategy, pu
   std::unique_ptr<ContextHelper> contextHelper_;
 };
 
-template <typename BucketingStrategy, typename StoringMethod>
-void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Handle* handle) {
+template<typename BucketingStrategy, typename StoringMethod>
+void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Handle* handle,
+                                                                   bool failsafe) {
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(dev_type_));
   const auto bucket_id = BucketingStrategy::get_bucket(handle->size);
   size_t roundSize     = 0;
@@ -189,6 +190,16 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
       // retry in case of fragmentation
       ReleaseAllNoLock(false);
       e = contextHelper_->Malloc(&ret, roundSize);
+#if MXNET_USE_CUDA
+      if (failsafe && dev_type_ == Context::kGPU && e == cudaErrorMemoryAllocation) {
+        // In failsafe mode, the only indication of the
+        // failed allocation is a null dptr.  The used_memory_
+        // should not grow.
+        ret = nullptr;
+        roundSize = 0;
+        e = cudaSuccess;
+      }
+#endif
       if (e) {
         const std::string err(
 #if MXNET_USE_CUDA
@@ -228,7 +239,8 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
       roundSize = BucketingStrategy::RoundAllocSizeForBucket(bucket_id);
 
     // record the allocation event in the memory profiler
-    profilerGPU->OnAlloc(*handle, roundSize, reuse_pool);
+    if (!failsafe || handle->dptr != nullptr)
+      profilerGPU->OnAlloc(*handle, roundSize, reuse_pool);
   }
 #endif
 }
