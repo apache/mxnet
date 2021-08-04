@@ -71,10 +71,10 @@ def softmax(data, axis=-1, length=None, temperature=None, use_length=False, dtyp
     >>> data = np.ones((2, 3))
     >>> npx.softmax(data, axis=0)
     array([[0.5, 0.5, 0.5],
-        [0.5, 0.5, 0.5]])
+           [0.5, 0.5, 0.5]])
     >>> npx.softmax(data, axis=1)
-    array([[0.33333334, 0.33333334, 0.33333334],
-        [0.33333334, 0.33333334, 0.33333334]])
+    array([[0.33333333, 0.33333333, 0.33333333],
+           [0.33333333, 0.33333333, 0.33333333]])
     """
     if dtype and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name

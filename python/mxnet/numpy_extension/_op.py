@@ -68,10 +68,10 @@ def softmax(data, length=None, axis=-1, temperature=None, use_length=False, dtyp
     >>> data = np.ones((2, 3))
     >>> npx.softmax(data, axis=0)
     array([[0.5, 0.5, 0.5],
-        [0.5, 0.5, 0.5]])
+           [0.5, 0.5, 0.5]])
     >>> npx.softmax(data, axis=1)
-    array([[0.33333334, 0.33333334, 0.33333334],
-        [0.33333334, 0.33333334, 0.33333334]])
+    array([[0.33333333, 0.33333333, 0.33333333],
+           [0.33333333, 0.33333333, 0.33333333]])
     """
     return _mx_nd_npx.softmax(data, axis=axis, length=length, temperature=temperature,
                               use_length=use_length, dtype=dtype)

@@ -120,6 +120,7 @@ class BatchSampler(Sampler):
 
     Examples
     --------
+    >>> from mxnet import gluon
     >>> sampler = gluon.data.SequentialSampler(10)
     >>> batch_sampler = gluon.data.BatchSampler(sampler, 3, 'keep')
     >>> list(batch_sampler)
@@ -179,6 +180,7 @@ class IntervalSampler(Sampler):
 
     Examples
     --------
+    >>> from mxnet import contrib
     >>> sampler = contrib.data.IntervalSampler(13, interval=3)
     >>> list(sampler)
     [0, 3, 6, 9, 12, 1, 4, 7, 10, 2, 5, 8, 11]

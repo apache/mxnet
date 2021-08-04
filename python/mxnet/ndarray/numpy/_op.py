@@ -1348,26 +1348,26 @@ def matmul(a, b, out=None):
     Examples
     --------
     For 2-D arrays it is the matrix product:
-    >>> a = np.array([[1, 0],
-    ...               [0, 1]])
-    >>> b = np.array([[4, 1],
-    ...               [2, 2]])
+    >>> a = np.array([[1., 0.],
+    ...               [0., 1.]])
+    >>> b = np.array([[4., 1.],
+    ...               [2., 2.]])
     >>> np.matmul(a, b)
     array([[4., 1.],
            [2., 2.]])
 
     For 2-D mixed with 1-D, the result is the usual.
-    >>> a = np.array([[1, 0],
-    ...               [0, 1]])
-    >>> b = np.array([1, 2])
+    >>> a = np.array([[1., 0.],
+    ...               [0., 1.]])
+    >>> b = np.array([1., 2.])
     >>> np.matmul(a, b)
     array([1., 2.])
     >>> np.matmul(b, a)
     array([1., 2.])
 
     Broadcasting is conventional for stacks of arrays
-    >>> a = np.arange(2 * 2 * 4).reshape((2, 2, 4))
-    >>> b = np.arange(2 * 2 * 4).reshape((2, 4, 2))
+    >>> a = np.arange(2 * 2 * 4).reshape((2, 2, 4)).astype('float64')
+    >>> b = np.arange(2 * 2 * 4).reshape((2, 4, 2)).astype('float64')
     >>> np.matmul(a, b).shape
     (2, 2, 2)
     >>> np.matmul(a, b)[0, 1, 1]
@@ -1377,9 +1377,7 @@ def matmul(a, b, out=None):
 
     Scalar multiplication raises an error.
     >>> np.matmul([1, 2], 3)
-    Traceback (most recent call last):
-    ...
-    mxnet.base.MXNetError: ... : Multiplication by scalars is not allowed.
+    ../src/api/operator/numpy/np_matmul_op.cc:38: matmul: Input operand does not have enough dimensions ...
     """
     return _api_internal.matmul(a, b, out)
 
@@ -2531,9 +2529,9 @@ def cos(x, out=None, **kwargs):
     Examples
     --------
     >>> np.cos(np.array([0, np.pi/2, np.pi]))
-    array([ 1.000000e+00, -4.371139e-08, -1.000000e+00])
+    array([ 1.000000e+00,  6.123234e-17, -1.000000e+00])
     >>> # Example of providing the optional output parameter
-    >>> out1 = np.array([0], dtype='f')
+    >>> out1 = np.array([0], dtype='float_')
     >>> out2 = np.cos(np.array([0.1]), out1)
     >>> out2 is out1
     True
@@ -2962,7 +2960,7 @@ def expm1(x, out=None, **kwargs):
     1.718281828459045
     >>> x = np.array([-1, 1, -2, 2])
     >>> np.expm1(x)
-    array([-0.63212056,  1.71828183, -0.86466472,  6.3890561])
+    array([-0.63212056,  1.71828183, -0.86466472,  6.3890561], dtype=float32)
     """
     return _pure_unary_func_helper(x, _api_internal.expm1, _np.expm1, out=out, **kwargs)
 
@@ -3319,7 +3317,7 @@ def log2(x, out=None, **kwargs):
     --------
     >>> x = np.array([0, 1, 2, 2**4])
     >>> np.log2(x)
-    array([-inf,   0.,   1.,   4.])
+    array([-inf,   0.,   1.,   4.], dtype=float32)
     """
     return _pure_unary_func_helper(x, _api_internal.log2, _np.log2, out=out, **kwargs)
 
@@ -4327,21 +4325,20 @@ def hsplit(ary, indices_or_sections):
 
     Examples
     --------
-    >>> x = np.arange(16.0).reshape(4, 4)
+    >>> x = np.arange(16).reshape(4, 4)
     >>> x
-    array([[ 0.,  1.,  2.,  3.],
-           [ 4.,  5.,  6.,  7.],
-           [ 8.,  9., 10., 11.],
-           [12., 13., 14., 15.]])
+    array([[ 0,  1,  2,  3],
+           [ 4,  5,  6,  7],
+           [ 8,  9, 10, 11],
+           [12, 13, 14, 15]])
     >>> np.hsplit(x, 2)
-    [array([[ 0.,  1.],
-           [ 4.,  5.],
-           [ 8.,  9.],
-           [12., 13.]]),
-    array([[ 2.,  3.],
-           [ 6.,  7.],
-           [10., 11.],
-           [14., 15.]])]
+    [array([[ 0,  1],
+           [ 4,  5],
+           [ 8,  9],
+           [12, 13]]), array([[ 2,  3],
+           [ 6,  7],
+           [10, 11],
+           [14, 15]])]
     >>> np.hsplit(x, [3, 6])
     [array([[ 0.,  1.,  2.],
            [ 4.,  5.,  6.],
@@ -4624,7 +4621,36 @@ def stack(arrays, axis=0, out=None):
     Returns
     -------
     stacked : ndarray
-        The stacked array has one more dimension than the input arrays."""
+        The stacked array has one more dimension than the input arrays.
+
+    See Also
+    --------
+    concatenate : Join a sequence of arrays along an existing axis.
+    split : Split array into a list of multiple sub-arrays of equal size.
+
+    Examples
+    --------
+    >>> arrays = [np.random.rand(3, 4) for _ in range(10)]
+    >>> np.stack(arrays, axis=0).shape
+    (10, 3, 4)
+
+    >>> np.stack(arrays, axis=1).shape
+    (3, 10, 4)
+
+    >>> np.stack(arrays, axis=2).shape
+    (3, 4, 10)
+
+    >>> a = np.array([1, 2, 3])
+    >>> b = np.array([2, 3, 4])
+    >>> np.stack((a, b))
+    array([[1, 2, 3],
+           [2, 3, 4]])
+
+    >>> np.stack((a, b), axis=-1)
+    array([[1, 2],
+           [2, 3],
+           [3, 4]])
+    """
     def get_list(arrays):
         if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
             raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
@@ -4788,13 +4814,13 @@ def hstack(arrays):
     >>> a = np.array((1,2,3))
     >>> b = np.array((2,3,4))
     >>> np.hstack((a,b))
-    array([1., 2., 3., 2., 3., 4.])
+    array([1, 2, 3, 2, 3, 4])
     >>> a = np.array([[1],[2],[3]])
     >>> b = np.array([[2],[3],[4]])
     >>> np.hstack((a,b))
-    array([[1., 2.],
-           [2., 3.],
-           [3., 4.]])
+    array([[1, 2],
+           [2, 3],
+           [3, 4]])
     """
     return _api_internal.hstack(*arrays)
 
@@ -5036,18 +5062,18 @@ def min(a, axis=None, out=None, keepdims=False):
     --------
     >>> a = np.arange(4).reshape((2,2))
     >>> a
-    array([[0., 1.],
-        [2., 3.]])
+    array([[0, 1],
+           [2, 3]])
     >>> np.min(a)           # Minimum of the flattened array
-    array(0.)
+    array(0)
     >>> np.min(a, axis=0)   # Minima along the first axis
-    array([0., 1.])
+    array([0, 1])
     >>> np.min(a, axis=1)   # Minima along the second axis
-    array([0., 2.])
+    array([0, 2])
     >>> b = np.arange(5, dtype=np.float32)
     >>> b[2] = np.nan
     >>> np.min(b)
-    array(0.) # nan will be ignored
+    array(nan, dtype=float32)
     """
     return _api_internal.min(a, axis, keepdims, out)
 
@@ -5163,18 +5189,18 @@ def amin(a, axis=None, out=None, keepdims=False):
     --------
     >>> a = np.arange(4).reshape((2,2))
     >>> a
-    array([[0., 1.],
-        [2., 3.]])
+    array([[0, 1],
+           [2, 3]])
     >>> np.min(a)           # Minimum of the flattened array
-    array(0.)
+    array(0)
     >>> np.min(a, axis=0)   # Minima along the first axis
-    array([0., 1.])
+    array([0, 1])
     >>> np.min(a, axis=1)   # Minima along the second axis
-    array([0., 2.])
+    array([0, 2])
     >>> b = np.arange(5, dtype=np.float32)
     >>> b[2] = np.nan
     >>> np.min(b)
-    array(0.) # nan will be ignored
+    array(nan, dtype=float32)
     """
     return _api_internal.amin(a, axis, keepdims, out)
 
@@ -6905,14 +6931,15 @@ def vdot(a, b):
     Examples
     --------
     Note that higher-dimensional arrays are flattened!
-    >>> a = np.array([[1, 4], [5, 6]])
-    >>> b = np.array([[4, 1], [2, 2]])
+
+    >>> a = np.array([[1., 4.], [5., 6.]])
+    >>> b = np.array([[4., 1.], [2., 2.]])
     >>> np.vdot(a, b)
-    30
+    array(30.)
     >>> np.vdot(b, a)
-    30
-    >>> 1*4 + 4*1 + 5*2 + 6*2
-    30
+    array(30.)
+    >>> 1.*4. + 4.*1. + 5.*2. + 6.*2.
+    30.0
     """
     return tensordot(a.flatten(), b.flatten(), 1)
 
@@ -7828,13 +7855,13 @@ def einsum(*operands, **kwargs):
     might be achieved by repeatedly computing a 'greedy' path. Performance
     improvements can be particularly significant with larger arrays:
 
-    >>> a = np.ones(64).reshape(2,4,8)
+    >>> a = np.ones(64).reshape(2,4,8)        #doctest:+SKIP
     # Basic `einsum`: ~42.22ms  (benchmarked on 3.4GHz Intel Xeon.)
     >>> for iteration in range(500):
-    ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a)
+    ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a)        #doctest:+SKIP
     # Greedy `einsum` (faster optimal path approximation): ~0.117ms
     >>> for iteration in range(500):
-    ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a, optimize=True)
+    ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a, optimize=True)    #doctest:+SKIP
     """
     # Grab non-einsum kwargs; do not optimize by default.
     optimize_arg = kwargs.pop('optimize', False)
@@ -8553,7 +8580,7 @@ def squeeze(x, axis=None):
     (3,)
     >>> np.squeeze(x, axis=0).shape
     (3, 1)
-    >>> np.squeeze(x, axis=1).shape
+    >>> np.squeeze(x, axis=1).shape        #doctest:+SKIP
     Traceback (most recent call last):
     ...
     ValueError: cannot select an axis to squeeze out which has size not equal to one
@@ -8626,29 +8653,30 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
     0.0
     >>> x = np.array([np.inf, -np.inf, np.nan, -128, 128])
     >>> np.nan_to_num(x)
-    array([ 3.4028235e+38, -3.4028235e+38,  0.0000000e+00, -1.2800000e+02,
-            1.2800000e+02])
+    array([ 1.79769313e+308, -1.79769313e+308,  0.00000000e+000,
+           -1.28000000e+002,  1.28000000e+002])
     >>> np.nan_to_num(x, nan=-9999, posinf=33333333, neginf=33333333)
-    array([ 3.3333332e+07,  3.3333332e+07, -9.9990000e+03, -1.2800000e+02,
+    array([ 3.3333333e+07,  3.3333333e+07, -9.9990000e+03, -1.2800000e+02,
             1.2800000e+02])
     >>> y = np.array([[-1, 0, 1],[9999,234,-14222]],dtype="float64")/0
+    >>> y
     array([[-inf,  nan,  inf],
-        [ inf,  inf, -inf]], dtype=float64)
+           [ inf,  inf, -inf]])
     >>> np.nan_to_num(y)
     array([[-1.79769313e+308,  0.00000000e+000,  1.79769313e+308],
-        [ 1.79769313e+308,  1.79769313e+308, -1.79769313e+308]], dtype=float64)
+           [ 1.79769313e+308,  1.79769313e+308, -1.79769313e+308]])
     >>> np.nan_to_num(y, nan=111111, posinf=222222)
     array([[-1.79769313e+308,  1.11111000e+005,  2.22222000e+005],
-        [ 2.22222000e+005,  2.22222000e+005, -1.79769313e+308]], dtype=float64)
+           [ 2.22222000e+005,  2.22222000e+005, -1.79769313e+308]])
     >>> y
     array([[-inf,  nan,  inf],
-       [ inf,  inf, -inf]], dtype=float64)
+           [ inf,  inf, -inf]])
     >>> np.nan_to_num(y, copy=False, nan=111111, posinf=222222)
     array([[-1.79769313e+308,  1.11111000e+005,  2.22222000e+005],
-       [ 2.22222000e+005,  2.22222000e+005, -1.79769313e+308]], dtype=float64)
+           [ 2.22222000e+005,  2.22222000e+005, -1.79769313e+308]])
     >>> y
     array([[-1.79769313e+308,  1.11111000e+005,  2.22222000e+005],
-       [ 2.22222000e+005,  2.22222000e+005, -1.79769313e+308]], dtype=float64)
+           [ 2.22222000e+005,  2.22222000e+005, -1.79769313e+308]])
     """
     if isinstance(x, numeric_types):
         return _np.nan_to_num(x, copy, nan, posinf, neginf)
@@ -8932,13 +8960,13 @@ def atleast_1d(*arys):
     --------
     >>> np.atleast_1d(1.0)
     array([1.])
-    >>> x = np.arange(9.0).reshape(3,3)
+    >>> x = np.arange(9).reshape(3,3)
     >>> np.atleast_1d(x)
-    array([[0., 1., 2.],
-           [3., 4., 5.],
-           [6., 7., 8.]])
+    array([[0, 1, 2],
+           [3, 4, 5],
+           [6, 7, 8]])
     >>> np.atleast_1d(np.array(1), np.array([3, 4]))
-    [array([1.]), array([3., 4.])]
+    [array([1]), array([3, 4])]
     """
     if len(arys) == 1:
         return _api_internal.atleast_1d(*arys)[0]
@@ -9010,7 +9038,7 @@ def atleast_3d(*arys):
     >>> x = np.arange(12.0).reshape(4,3)
     >>> np.atleast_3d(x).shape
     (4, 3, 1)
-    >>> for arr in np.atleast_3d(np.array([1, 2]), np.array([[1, 2]]), np.array([[[1, 2]]])):
+    >>> for arr in np.atleast_3d(np.array([1., 2.]), np.array([[1., 2.]]), np.array([[[1., 2.]]])):
     ...     print(arr, arr.shape)
     ...
     [[[1.]
@@ -9469,7 +9497,7 @@ def cumsum(a, axis=None, dtype=None, out=None):
     >>> np.cumsum(a)
     array([ 1,  3,  6, 10, 15, 21])
     >>> np.cumsum(a, dtype=float)     # specifies type of output value(s)
-    array([  1.,   3.,   6.,  10.,  15.,  21.])
+    array([ 1.,  3.,  6., 10., 15., 21.])
     >>> np.cumsum(a,axis=0)      # sum over rows for each of the 3 columns
     array([[1, 2, 3],
            [5, 7, 9]])
