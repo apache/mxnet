@@ -60,6 +60,12 @@ namespace common {
 namespace cuda {
 namespace rtc {
 
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  const char cuda_lib_name[] = "nvcuda.dll";
+#else
+  const char cuda_lib_name[] = "libcuda.so";
+#endif
+
 std::mutex lock;
 
 namespace util {
@@ -162,7 +168,7 @@ CUfunction get_function(const std::string &parameters,
     std::string ptx;
     std::vector<CUfunction> functions;
   };
-  void* cuda_lib_handle = LibraryInitializer::Get()->lib_load("libcuda.so");
+  void* cuda_lib_handle = LibraryInitializer::Get()->lib_load(cuda_lib_name);
 
   // Maps from the kernel name and parameters to the ptx and jit-compiled CUfunctions.
   using KernelCache = std::unordered_map<std::string, KernelInfo>;
@@ -290,7 +296,7 @@ void launch(CUfunction function,
             std::vector<const void*> *args) {
   CHECK(args->size() != 0) <<
     "Empty argument list passed to a kernel.";
-  void* cuda_lib_handle = LibraryInitializer::Get()->lib_load("libcuda.so");
+  void* cuda_lib_handle = LibraryInitializer::Get()->lib_load(cuda_lib_name);
   cuLaunchKernelPtr launch_kernel_ptr =
     get_func<cuLaunchKernelPtr>(cuda_lib_handle, "cuLaunchKernel");
   CUresult err = (*launch_kernel_ptr)(function,  // function to launch
