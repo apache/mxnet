@@ -3475,7 +3475,7 @@ def fix(x, out=None, **kwargs):
     Examples:
     ----------
     >>> np.fix(3.14)
-    3
+    3.0
     """
     return _unary_func_helper(x, _npi.fix, _np.fix, out=out)
 

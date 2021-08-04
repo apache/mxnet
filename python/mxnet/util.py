@@ -1097,7 +1097,7 @@ def is_np_default_dtype():
     >>> from mxnet import npx
     >>> prev_state = npx.set_np_default_dtype(True)
     >>> print(prev_state)
-    False
+    True
     >>> print(npx.is_np_default_dtype())
     True
     """

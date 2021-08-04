@@ -116,19 +116,19 @@ Examples::
        [ 3, 1]]
 
   // sorts along the last axis
-  sort(x) = [[ 1.,  4.],
-             [ 1.,  3.]]
+  sort(x) = [[ 1,  4],
+             [ 1,  3]]
 
   // flattens and then sorts
-  sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
+  sort(x, axis=None) = [ 1,  1,  3,  4]
 
   // sorts along the first axis
-  sort(x, axis=0) = [[ 1.,  1.],
-                     [ 3.,  4.]]
+  sort(x, axis=0) = [[ 1,  1],
+                     [ 3,  4]]
 
   // in a descend order
-  sort(x, is_ascend=0) = [[ 4.,  1.],
-                          [ 3.,  1.]]
+  sort(x, is_ascend=0) = [[ 4,  1],
+                          [ 3,  1]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)

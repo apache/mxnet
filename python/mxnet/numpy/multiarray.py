@@ -29,6 +29,7 @@ except ImportError:
     from builtins import slice as py_slice
 
 from array import array as native_array
+from struct import calcsize
 import functools
 import ctypes
 import warnings
@@ -1323,24 +1324,16 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         [[0.5488135  0.5928446  0.71518934]
          [0.84426576 0.60276335 0.8579456 ]]
         >>> a.dtype
-        dtype('float32')
-        >>> npx.set_np_float64()
-        >>> a
-        array([[0.5488135 , 0.5928446 , 0.71518934],
-               [0.84426576, 0.60276335, 0.8579456 ]], dtype=float32)
-        >>> npx.set_np_float64(default_float64=False)
-        >>> a
-        array([[0.5488135 , 0.5928446 , 0.71518934],
-               [0.84426576, 0.60276335, 0.8579456 ]])
-        >>> b = a.astype(np.float64)
+        dtype('float64')
+        >>> b = a.astype(np.float32)
         >>> b
         array([[0.54881352, 0.59284461, 0.71518934],
-               [0.84426576, 0.60276335, 0.85794562]], dtype=float64)
+               [0.84426576, 0.60276335, 0.85794562]], dtype=float32)
         >>> print(b)
         [[0.54881352 0.59284461 0.71518934]
          [0.84426576 0.60276335 0.85794562]]
         >>> b.dtype
-        dtype('float64')
+        dtype('float32')
         >>> c = a.copyto(npx.gpu(0))
         >>> c
         array([[0.5488135 , 0.5928446 , 0.71518934],
@@ -1360,11 +1353,15 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         if self._alive:
             array_str = self.asnumpy().__repr__()
             dtype = self.dtype
-            default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
+            default_dtype = (_np.float64,) if is_np_default_dtype() else (_np.float32,)
+            if calcsize("P") == 8:
+                default_dtype += (_np.int64,)
+            else:
+                default_dtype += (_np.int32,)
             if 'dtype=' in array_str:
-                if dtype == default_dtype:
+                if dtype in default_dtype:
                     array_str = array_str[:array_str.rindex(',')] + ')'
-            elif dtype not in (default_dtype, _np.bool_):
+            elif dtype not in default_dtype + (_np.bool_,):
                 array_str = array_str[:-1] + ', dtype={})'.format(dtype)
 
             context = self.ctx
@@ -2421,6 +2418,39 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         else:
             return tuple(pdata[:num_dim.value])  # pylint: disable=invalid-slice-index
 
+    @shape.setter
+    def shape(self, new_shape):
+        """Tuple of array dimensions.
+
+        Examples
+        --------
+        >>> x = mx.np.array([1, 2, 3, 4])
+        >>> x.shape
+        (4,)
+        >>> y = mx.np.zeros((2, 3, 4))
+        >>> y.shape
+        (2, 3, 4)
+        >>> y.shape = (3, 8)
+        >>> y
+        array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]])
+        """
+        if not isinstance(new_shape, (list, tuple)):
+            raise TypeError("The input new shape should be list or tuple types")
+        if len(new_shape) > 0 and not isinstance(new_shape[0], int):
+            raise TypeError("The type of dim should be int")
+        handle = NDArrayHandle()
+        if _int64_enabled():
+            check_call(_LIB.MXNDArrayReshape64(
+                self.handle, len(new_shape),
+                c_array(ctypes.c_int64, new_shape), False, ctypes.byref(handle)))
+        else:
+            check_call(_LIB.MXNDArrayReshape(
+                self.handle, len(new_shape),
+                c_array(ctypes.c_int, new_shape), ctypes.byref(handle)))
+        self.handle = handle
+
     @property
     def ndim(self):
         """Number of array dimensions."""
@@ -2534,22 +2564,22 @@ def array(object, dtype=None, ctx=None):
     Examples
     --------
     >>> np.array([1, 2, 3])
-    array([1., 2., 3.])
+    array([1, 2, 3], dtype=int64)
 
     >>> np.array([[1, 2], [3, 4]])
-    array([[1., 2.],
-           [3., 4.]])
+    array([[1, 2],
+           [3, 4]], dtype=int64)
 
     >>> np.array([[1, 0], [0, 1]], dtype=bool)
     array([[ True, False],
            [False,  True]])
 
     >>> np.array([1, 2, 3]).dtype
-    dtype('float32')
+    dtype('int64')
 
     >>> npx.set_np(dtype=True)
     >>> np.array([1, 2, 3]).dtype
-    dtype('float64')
+    dtype('int64')
     """
     if ctx is None:
         ctx = current_context()
@@ -2564,15 +2594,13 @@ def array(object, dtype=None, ctx=None):
         raise ValueError("If you're trying to create a mxnet.numpy.ndarray "
                          "from mx.nd.NDArray, please use the zero-copy as_np_ndarray function.")
     else:
-        if dtype is None:
-            default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
-            dtype = object.dtype if hasattr(object, "dtype") else default_dtype
         try:
             object = _np.array(object, dtype=dtype)
         except Exception as e:
             # printing out the error raised by official NumPy's array function
             # for transparency on users' side
             raise TypeError('{}'.format(str(e)))
+        dtype = object.dtype
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     if len(object.shape) == 0:
         ret[()] = object
@@ -3453,7 +3481,7 @@ def fmod(x1, x2, out=None, **kwargs):
     Examples
     --------
     >>> np.fmod(np.arange(7), 5)
-    array([0., 1., 2., 3., 4., 0., 1.])
+    array([0, 1, 2, 3, 4, 0, 1])
     """
     return _mx_nd_np.fmod(x1, x2, out=out)
 
@@ -4840,7 +4868,7 @@ def fix(x, out=None, **kwargs):
     Examples
     ---------
     >>> np.fix(3.14)
-    3
+    3.0
     """
     return _mx_nd_np.fix(x, out=out)
 

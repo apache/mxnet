@@ -3580,7 +3580,7 @@ def fix(x, out=None, **kwargs):
     Examples
     ---------
     >>> np.fix(3.14)
-    3
+    3.0
     """
     return _pure_unary_func_helper(x, _api_internal.fix, _np.fix, out=out)
 
@@ -6532,7 +6532,7 @@ def around(x, decimals=0, out=None, **kwargs):
     array([ 0,  0,  0, 10])
     """
     from ...numpy import ndarray
-    if isinstance(x, numeric_types):
+    if isinstance(x, (numeric_types, list)):
         return _np.around(x, decimals, **kwargs)
     elif isinstance(x, ndarray):
         return _api_internal.around(x, decimals, out, **kwargs)
