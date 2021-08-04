@@ -717,8 +717,8 @@ sanity_python_flake8() {
     set -ex
     
     # Install dependencies
-    pip install -r requirements-flake8.txt --user
-    
+    pip3 install -r requirements-flake8.txt --user
+    echo `(pip3 list | grep flake)`
     # Run flake8
     flake8 | tee flake8-output.txt
 
