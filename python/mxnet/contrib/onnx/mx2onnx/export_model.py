@@ -33,7 +33,8 @@ def export_model(sym, params, input_shape, input_type=np.float32,
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
     Operator support and coverage -
-    https://cwiki.apache.org/confluence/display/MXNET/ONNX+Operator+Coverage
+    https://github.com/apache/incubator-mxnet/tree/v1.x/\
+    python/mxnet/onnx#user-content-operator-support-matrix
 
     Parameters
     ----------
