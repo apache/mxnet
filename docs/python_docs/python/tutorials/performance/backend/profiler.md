@@ -46,7 +46,7 @@ From the timings above, it seems as if converting to numpy takes lot more time t
 
 This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. However, [asnumpy](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.asnumpy) has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include [asscalar](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.asscalar) and [wait_to_read](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.wait_to_read).
 
-While it is possible to use [NDArray.waitall()](../../../api/ndarray/ndarray.rst#mxnet.ndarray.waitall) before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a [Sequential](../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Sequential) or hybridized network.
+While it is possible to use [NDArray.waitall()](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.waitall) before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a [Sequential](../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Sequential) or hybridized network.
 
 ## The correct way to profile
 
