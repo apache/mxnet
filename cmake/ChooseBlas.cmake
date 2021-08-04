@@ -139,7 +139,7 @@ elseif(BLAS STREQUAL "MKL" OR BLAS STREQUAL "mkl")
     option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
   endif()
   cmake_dependent_option(BLA_STATIC "Use static libraries" ON "NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY" OFF)
-  cmake_dependent_option(MKL_MULTI_THREADED  "Use multi-threading"  ON "NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY" OFF)
+  option(MKL_MULTI_THREADED  "Use multi-threading" ON)
 
   if(BLA_VENDOR)
       message(FATAL_ERROR "Do not set BLA_VENDOR manually. MKL version (BLA_VENDOR) is selected based on MKL_USE_SINGLE_DYNAMIC_LIBRARY, "
