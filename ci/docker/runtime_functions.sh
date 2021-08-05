@@ -1144,7 +1144,7 @@ build_python_docs() {
 
     pushd python
     make clean
-    make html EVAL=0
+    make html EVAL=1
 
     GZIP=-9 tar zcvf python-artifacts.tgz -C build/_build/html .
     popd
