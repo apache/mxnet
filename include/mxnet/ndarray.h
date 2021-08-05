@@ -902,7 +902,7 @@ class NDArray {
 
     /*! \brief construct a new chunk */
     Chunk(mxnet::TShape shape, Context ctx_, bool delay_alloc_, int dtype)
-        : static_data(false), delay_alloc(true), ctx(ctx_),
+        : static_data(false), delay_alloc(delay_alloc_), ctx(ctx_),
           storage_ref_(Storage::_GetSharedRef()),
           engine_ref_(Engine::_GetSharedRef()) {
       storage_shape = shape;
