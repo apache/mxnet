@@ -39,6 +39,7 @@
 #include "../../src/operator/nn/pooling-inl.h"
 #include "../include/test_mkldnn.h"
 #include "../include/test_util.h"
+
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 

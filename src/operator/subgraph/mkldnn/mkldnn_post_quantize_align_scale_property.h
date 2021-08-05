@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "../common.h"
+
 #include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {

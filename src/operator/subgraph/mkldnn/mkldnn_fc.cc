@@ -40,6 +40,7 @@
 #include "../../quantization/quantization_utils.h"
 #include "../../tensor/matrix_op-inl.h"
 #include "../common.h"
+
 #include "mkldnn_common.h"
 #include "mkldnn_fc-inl.h"
 

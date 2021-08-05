@@ -34,6 +34,7 @@
 #include "../../nn/fully_connected-inl.h"
 #include "../../quantization/requantize-inl.h"
 #include "../common.h"
+
 #include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {

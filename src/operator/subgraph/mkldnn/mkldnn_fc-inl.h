@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
+
 #include "mkldnn.hpp"
 
 namespace mxnet {

@@ -27,6 +27,7 @@
 #include "../../nn/mkldnn/mkldnn_convolution-inl.h"
 #include "../../quantization/requantize-inl.h"
 #include "../common.h"
+
 #include "mkldnn_conv-inl.h"
 #include "mkldnn_subgraph_base-inl.h"
 

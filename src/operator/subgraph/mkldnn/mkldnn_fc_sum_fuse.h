@@ -34,6 +34,7 @@
 
 #include "../../tensor/matrix_op-inl.h"
 #include "../common.h"
+
 #include "mkldnn_fc-inl.h"
 #include "mkldnn_subgraph_base-inl.h"
 

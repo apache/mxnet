@@ -34,6 +34,7 @@
 #include "../../quantization/requantize-inl.h"
 #include "../../tensor/elemwise_binary_op-inl.h"
 #include "../common.h"
+
 #include "mkldnn_subgraph_base-inl.h"
 
 namespace mxnet {

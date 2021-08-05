@@ -23,11 +23,12 @@
 #include <utility>
 #include <vector>
 
+#include "./mkldnn_transformer-inl.h"
+
 #include "../../contrib/transformer-inl.h"
 #include "../../quantization/quantization_utils.h"
 #include "../../tensor/elemwise_unary_op.h"
 #include "../common.h"
-#include "./mkldnn_transformer-inl.h"
 
 namespace mxnet {
 namespace op {
