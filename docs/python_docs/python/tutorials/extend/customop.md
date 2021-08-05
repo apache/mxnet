@@ -31,6 +31,7 @@ import numpy as np
 import mxnet as mx
 from mxnet import gluon, autograd
 import os
+mx.npx.reset_np()
 ```
 
 ## Parameter-less operators

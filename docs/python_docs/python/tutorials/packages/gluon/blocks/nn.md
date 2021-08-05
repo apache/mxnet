@@ -38,11 +38,11 @@ follows:
 
 ```{.python .input  n=1}
 import mxnet as mx
-from mxnet import nd
-from mxnet.gluon import nn, Block
+from mxnet import np, npx
+from mxnet.gluon import nn, Block, Parameter, Constant
 
 
-x = nd.random.uniform(shape=(2, 20))
+x = np.random.uniform(size=(2, 20))
 
 net = nn.Sequential()
 net.add(nn.Dense(256, activation='relu'))
@@ -97,19 +97,21 @@ This may help you understand more clearly how the `Sequential` class works.
 
 ```{.python .input  n=3}
 class MySequential(Block):
-    def __init__(self, **kwargs):
-        super(MySequential, self).__init__(**kwargs)
+    def __init__(self):
+        super(MySequential, self).__init__()
+        self._layers = []
 
     def add(self, block):
         # Here, block is an instance of a Block subclass, and we assume it has a unique name. We save it in the
-        # member variable _children of the Block class, and its type is OrderedDict. When the MySequential instance
-        # calls the initialize function, the system automatically initializes all members of _children.
-        self._children[block.name] = block
+        # member variable _layers of the Block class, and its type is List. When the MySequential instance
+        # calls the initialize function, the system automatically initializes all members of _layers.
+        self._layers.append(block)
+        self.register_child(block)
 
     def forward(self, x):
         # OrderedDict guarantees that members will be traversed in the order they were added.
         for block in self._children.values():
-            x = block(x)
+            x = block()(x)
         return x
 ```
 
@@ -229,8 +231,7 @@ class FancyMLP(nn.Block):
 
         # Random weight parameters created with the get_constant are not
         # iterated during training (i.e. constant parameters).
-        self.rand_weight = mx.gluon.Constant(
-            'rand_weight', nd.random.uniform(shape=(20, 20)))
+        self.rand_weight = Constant(np.random.uniform(size=(20, 20)))
         self.dense = nn.Dense(20, activation='relu')
 
     def forward(self, x):
@@ -238,16 +239,16 @@ class FancyMLP(nn.Block):
         # Use the constant parameters created, as well as the ReLU and dot
         # functions of NDArray.
 
-        x = nd.relu(nd.dot(x, self.rand_weight.data()) + 1)
+        x = npx.relu(np.dot(x, self.rand_weight.data()) + 1)
         # Re-use the fully connected layer. This is equivalent to sharing
         # parameters with two fully connected layers.
         x = self.dense(x)
         # Here in the control flow, we need to call `asscalar` to return the
         # scalar for comparison.
 
-        while x.norm().asscalar() > 1:
+        while npx.norm(x).item() > 1:
             x /= 2
-        if x.norm().asscalar() < 0.8:
+        if npx.norm(x).item() < 0.8:
             x *= 10
         return x.sum()
 ```

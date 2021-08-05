@@ -45,7 +45,7 @@ import numpy as np
 
 from prepare_dataset import process_dataset #utility code to rearrange the data
 
-mx.random.seed(42)
+mx.np.random.seed(42)
 ```
 
 ```{.python .input}
@@ -322,13 +322,13 @@ hybridize the model.
 
 ```{.python .input}
 # Create the model based on the blueprint provided and initialize the parameters
-ctx = mx.cpu()
+ctx = mx.gpu()
 
 initializer = mx.initializer.Xavier()
 
 model = LeafNetwork()
 model.initialize(initializer, ctx=ctx)
-model.summary(mx.nd.random.uniform(shape=(4, 3, 128, 128)))
+model.summary(mx.np.random.uniform(size=(4, 3, 128, 128)))
 model.hybridize()
 ```
 

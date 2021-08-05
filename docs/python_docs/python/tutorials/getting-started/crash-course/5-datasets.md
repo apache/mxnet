@@ -37,9 +37,9 @@ You will first start by generating random data `X` (with 3 variables) and corres
 
 
 ```{.python .input}
-mx.random.seed(42) # Fix the seed for reproducibility
-X = mx.random.uniform(shape=(10, 3))
-y = mx.random.uniform(shape=(10, 1))
+mx.np.random.seed(42) # Fix the seed for reproducibility
+X = mx.np.random.uniform(size=(10, 3))
+y = mx.np.random.uniform(size=(10, 1))
 dataset = mx.gluon.data.dataset.ArrayDataset(X, y)
 ```
 
@@ -93,8 +93,8 @@ def transform(data, label):
     data = data.astype('float32')/255
     return data, label
 
-train_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=True, transform=transform)
-valid_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=False, transform=transform)
+train_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=True).transform(transform)
+valid_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=False).transform(transform)
 ```
 
 
@@ -109,7 +109,7 @@ label_desc = {0:'T-shirt/top', 1:'Trouser', 2:'Pullover', 3:'Dress', 4:'Coat', 5
 
 print("Data type: {}".format(data.dtype))
 print("Label: {}".format(label))
-print("Label description: {}".format(label_desc[label]))
+print("Label description: {}".format(label_desc[label.item()]))
 imshow(data[:,:,0].asnumpy(), cmap='gray')
 ```
 
@@ -169,8 +169,8 @@ You instantiate the ImageFolderDatasets by providing the path to the data, and t
 Optionally, you can pass a `transform` parameter to these `Dataset`'s as you've seen before.
 
 ```{.python .input}
-training_path='/home/ec2-user/SageMaker/data/101_ObjectCategories'
-testing_path='/home/ec2-user/SageMaker/data/101_ObjectCategories_test'
+training_path='./data/101_ObjectCategories'
+testing_path='./data/101_ObjectCategories_test'
 train_dataset = mx.gluon.data.vision.datasets.ImageFolderDataset(training_path)
 test_dataset = mx.gluon.data.vision.datasets.ImageFolderDataset(testing_path)
 ```

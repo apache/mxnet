@@ -118,6 +118,7 @@ class LeafNetwork(nn.HybridBlock):
 Load the saved parameters onto GPU 0 directly as shown below; additionally, you could use `net.collect_params().reset_ctx(gpu)` to change the device.
 
 ```{.python .input}
+net = LeafNetwork()
 net.load_parameters('leaf_models.params', ctx=gpu)
 ```
 

@@ -25,12 +25,12 @@ If you have just started to use MXNet, you might be tempted to measure the execu
 
 ```{.python .input}
 from time import time
-from mxnet import autograd, nd
+from mxnet import autograd, np
 import mxnet as mx
 
 start = time()
-x = nd.random_uniform(shape=(2000,2000))
-y = nd.dot(x, x)
+x = np.random.uniform(size=(2000,2000))
+y = np.dot(x, x)
 print('Time for matrix multiplication: %f sec\n' % (time() - start))
 
 start = time()                                
@@ -44,7 +44,7 @@ print('Time for converting to numpy: %f sec' % (time() - start))
 
 From the timings above, it seems as if converting to numpy takes lot more time than multiplying two large matrices. That doesn't seem right.
 
-This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. However, [asnumpy](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=asnumpy#mxnet.ndarray.NDArray.asnumpy) has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include [asscalar](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=asscalar#mxnet.ndarray.NDArray.asscalar) and [wait_to_read](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=wait_to_read#mxnet.ndarray.NDArray.wait_to_read).
+This is because, in MXNet, all operations are executed asynchronously. So, when `np.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. However, [asnumpy](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.asnumpy) has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include [asscalar](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.asscalar) and [wait_to_read](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.wait_to_read).
 
 While it is possible to use [NDArray.waitall()](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=waitall#mxnet.ndarray.waitall) before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a [Sequential](https://mxnet.apache.org/api/python/gluon/gluon.html?highlight=sequential#mxnet.gluon.nn.Sequential) or hybridized network.
 
@@ -151,7 +151,7 @@ profiler.set_state('run')
 run_training_iteration(*next(itr))
 
 # Make sure all operations have completed
-mx.nd.waitall()
+mx.npx.waitall()
 # Ask the profiler to stop recording
 profiler.set_state('stop')
 # Dump all results to log file before download
@@ -265,7 +265,7 @@ class CustomAddOneProp(mx.operator.CustomOpProp):
         return MyAddOne()
 
 
-inp = mx.nd.zeros(shape=(500, 500))
+inp = mx.np.zeros(shape=(500, 500))
 
 profiler.set_config(profile_all=True, continuous_dump=True, \
                     aggregate_stats=True)
@@ -273,7 +273,7 @@ profiler.set_state('run')
 
 w = nd.Custom(inp, op_type="MyAddOne")
 
-mx.nd.waitall()
+mx.npx.waitall()
 
 profiler.set_state('stop')
 print(profiler.dumps())
@@ -301,7 +301,7 @@ a = mx.symbol.Variable('a')
 b = mx.symbol.Custom(data=a, op_type='MyAddOne')
 c = b.bind(mx.cpu(), {'a': inp})
 y = c.forward()
-mx.nd.waitall()
+mx.npx.waitall()
 profiler.set_state('stop')
 print(profiler.dumps())
 profiler.dump()

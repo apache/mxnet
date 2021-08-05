@@ -94,17 +94,17 @@ img_path = gluon.utils.download('https://github.com/dmlc/web-data/blob/master/mx
 img = mx.image.imread(img_path)
 img = mx.image.imresize(img, 224, 224) # resize
 img = mx.image.color_normalize(img.astype(dtype='float32')/255,
-                               mean=mx.nd.array([0.485, 0.456, 0.406]),
-                               std=mx.nd.array([0.229, 0.224, 0.225])) # normalize
+                               mean=mx.np.array([0.485, 0.456, 0.406]),
+                               std=mx.np.array([0.229, 0.224, 0.225])) # normalize
 img = img.transpose((2, 0, 1)) # channel first
-img = img.expand_dims(axis=0) # batchify
-img = img.as_in_context(ctx)
+img = mx.np.expand_dims(img, axis=0) # batchify
+img = img.as_in_ctx(ctx)
 
-prob = net(img).softmax() # predict and normalize output
-idx = prob.topk(k=5)[0] # get top 5 result
+prob = mx.npx.softmax(net(img)) # predict and normalize output
+idx = mx.npx.topk(prob, k=5)[0] # get top 5 result
 for i in idx:
-    i = int(i.asscalar())
-    print('With prob = %.5f, it contains %s' % (prob[0,i].asscalar(), labels[i]))
+    i = int(i.item())
+    print('With prob = %.5f, it contains %s' % (prob[0,i].item(), labels[i]))
 ```
 
 After running the above script, you should get the following output showing the five classes that the image most relates to with probability:
