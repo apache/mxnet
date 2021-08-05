@@ -96,13 +96,20 @@ LibraryInitializer::LibraryInitializer()
   dmlc::InitLogging("mxnet");
 
 #if !(defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__))
-#if MKL_USE_SINGLE_DYNAMIC_LIBRARY
-#if defined( __INTEL_LLVM_COMPILER)
-  mkl_set_threading_layer(MKL_THREADING_INTEL);
-#else
-  mkl_set_threading_layer(MKL_THREADING_GNU);
-#endif
-#endif
+  #if MKL_USE_SINGLE_DYNAMIC_LIBRARY
+    #if USE_INT64_TENSOR_SIZE
+      int interface = MKL_INTERFACE_ILP64;
+    #else
+      int interface = MKL_INTERFACE_LP64;
+    #endif
+    #if defined( __INTEL_LLVM_COMPILER)
+      mkl_set_threading_layer(MKL_THREADING_INTEL);
+    #else
+      mkl_set_threading_layer(MKL_THREADING_GNU);
+      interface += MKL_INTERFACE_GNU;
+    #endif
+    mkl_set_interface_layer(interface);
+  #endif
 #endif
 
   engine::OpenMP::Get();   // force OpenMP initialization
