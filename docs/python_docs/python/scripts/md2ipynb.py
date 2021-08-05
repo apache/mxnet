@@ -26,15 +26,19 @@ def md2ipynb():
     (src_fn, input_fn, output_fn) = sys.argv
 
     # timeout for each notebook, in sec
-    timeout = 20 * 60
+    timeout = 60 * 60
     # if enable evaluation
     do_eval = int(os.environ.get('EVAL', True))
     
     # the files will be ignored for execution
-    ignore_execution = ["pytorch.md", "mnist.md", "custom-loss.md", "fit_api_tutorial.md", \
+    skip_lsit = ["pytorch.md", "mnist.md", "custom-loss.md", "fit_api_tutorial.md", \
         "01-ndarray-intro.md", "02-ndarray-operations.md", "03-ndarray-contexts.md", \
         "gotchas_numpy_in_mxnet.md", "csr.md", "row_sparse.md", "fine_tuning_gluon.md", \
         "inference_on_onnx_model.md", "amp.md", "profiler.md"]
+
+    require_gpu = []
+    # the files will be ignored for execution
+    ignore_execution = skip_lsit + require_gpu
 
     reader = notedown.MarkdownReader(match='strict')
     with open(input_fn, 'r', encoding="utf8") as f:
