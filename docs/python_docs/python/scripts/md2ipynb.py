@@ -30,13 +30,15 @@ def md2ipynb():
     # if enable evaluation
     do_eval = int(os.environ.get('EVAL', True))
     
-    # the files will be ignored for execution
+    # Skip these notebooks as some APIs will no longer be used
     skip_lsit = ["pytorch.md", "mnist.md", "custom-loss.md", "fit_api_tutorial.md", \
         "01-ndarray-intro.md", "02-ndarray-operations.md", "03-ndarray-contexts.md", \
         "gotchas_numpy_in_mxnet.md", "csr.md", "row_sparse.md", "fine_tuning_gluon.md", \
         "inference_on_onnx_model.md", "amp.md", "profiler.md", "customop.md"]
 
-    require_gpu = ["6-train-nn.md", "7-use-gpus.md"]
+    # Skip these notebooks as some require GPU
+    require_gpu = ["6-train-nn.md", "7-use-gpus.md", "gluon_from_experiment_to_deployment.md"]
+
     # the files will be ignored for execution
     ignore_execution = skip_lsit + require_gpu
 
