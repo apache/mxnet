@@ -37,7 +37,8 @@ def md2ipynb():
         "inference_on_onnx_model.md", "amp.md", "profiler.md"]
 
     # Skip these notebooks as some require GPU
-    require_gpu = ["6-train-nn.md", "7-use-gpus.md", "gluon_from_experiment_to_deployment.md"]
+    require_gpu = ["6-train-nn.md", "7-use-gpus.md", "gluon_from_experiment_to_deployment.md", \
+        "info_gan.md"]
 
     # the files will be ignored for execution
     ignore_execution = skip_lsit + require_gpu
