@@ -8,7 +8,7 @@
  * All rights reserved.
  *
  * All other contributions:
- * * Copyright (c) 2014-2017, the respective contributors
+ * Copyright (c) 2014-2017, the respective contributors
  * All rights reserved.
  *
  * Caffe uses a shared copyright model: each contributor holds copyright over
