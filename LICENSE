@@ -245,7 +245,6 @@
     3rdparty/onnx-tensorrt/third_party/onnx
     3rdparty/intgemm
     3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
-    src/operator/nn/layer_norm.cc
 
     =======================================================================================
     3-clause BSD license
@@ -263,9 +262,6 @@
     3rdparty/googletest/googletest
     cmake/upstream/FindCUDAToolkit.cmake
     cmake/upstream/select_compute_arch.cmake
-    src/operator/numpy/np_einsum_op-inl.h
-    src/operator/numpy/np_einsum_path_op-inl.h
-    src/operator/numpy/np_einsum_op.cc
     src/operator/contrib/erfinv-inl.h
 
     =======================================================================================
@@ -310,12 +306,16 @@
     python/mxnet/onnx/mx2onnx/_export_onnx.py
     python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset12.py
     python/mxnet/onnx/mx2onnx/_op_translations/_op_translations_opset13.py
+    src/operator/numpy/np_einsum_op-inl.h
+    src/operator/numpy/np_einsum_path_op-inl.h
+    src/operator/numpy/np_einsum_op.cc
 
     =======================================================================================
     Apache-2.0 license + MIT License
     =======================================================================================
 
     3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py (Copy of the referenced AL2 License available at top of current file)
+    src/operator/nn/layer_norm.cc (function LayerNormCPUKernel is adapated from MIT-licensed code)
 
     =======================================================================================
     Apache-2.0 license + Boost Software License, Version 1.0
