@@ -161,6 +161,13 @@ def get_mxnet_root():
     return curpath
 
 
+def _lines_have_old_license(lines):
+    for l in lines:
+        if _OLD_LICENSE.match(l):
+            return True
+    return False
+
+
 def _lines_have_multiple_license(lines):
     has_apache_license = False
     has_other_license = False
@@ -188,14 +195,15 @@ def file_have_valid_license(fname):
         lines = f.readlines()
     if not lines:
         return True
-    if (_lines_have_apache_license(lines) and (not _lines_have_multiple_license(lines))):
-        return True
-    elif _lines_have_multiple_license(lines):
-        if _file_listed_in_top_level_license(fname):
-            return True
-        else:
+    elif _lines_have_apache_license(lines):
+        has_issue = False
+        if _lines_have_old_license(lines):
+            has_issue = True
+            logging.error("File %s has old license", fname)
+        if _lines_have_multiple_license(lines) and not _file_listed_in_top_level_license(fname):
+            has_issue = True
             logging.error("File %s has multiple license", fname)
-            return False
+        return not has_issue
     else:
         if _file_listed_in_top_level_license(fname):
             return True
