@@ -17,7 +17,6 @@
  * under the License.
  */
 
-
 #include <mxnet/io.h>
 #include <dmlc/registry.h>
 #include "./image_augmenter.h"

@@ -17,8 +17,6 @@
  * under the License.
  */
 
-/*!
- */
 #ifndef MXNET_COMMON_OBJECT_POOL_H_
 #define MXNET_COMMON_OBJECT_POOL_H_
 #include <dmlc/logging.h>

@@ -17,8 +17,6 @@
  * under the License.
  */
 
-/*!
- */
 #ifndef MXNET_ENGINE_STREAM_MANAGER_H_
 #define MXNET_ENGINE_STREAM_MANAGER_H_
 

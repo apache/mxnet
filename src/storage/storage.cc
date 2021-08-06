@@ -17,8 +17,6 @@
  * under the License.
  */
 
-/*!
- */
 #include <mxnet/storage.h>
 #include "./storage_manager.h"
 #include "./naive_storage_manager.h"

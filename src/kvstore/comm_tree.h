@@ -17,8 +17,6 @@
  * under the License.
  */
 
-/**
- */
 #ifndef MXNET_KVSTORE_COMM_TREE_H_
 #define MXNET_KVSTORE_COMM_TREE_H_
 #include <dmlc/omp.h>
