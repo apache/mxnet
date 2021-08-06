@@ -257,10 +257,10 @@ def file_has_license(fname):
 def file_add_license(fname):
     if not should_have_license(fname):
         return
+    if file_have_valid_license(fname):
+        return
     with open(fname, 'r', encoding="utf-8") as f:
         lines = f.readlines()
-    if _lines_have_apache_license(lines):
-        return
     _, ext = os.path.splitext(fname)
     with open(fname, 'w', encoding="utf-8") as f:
         # shebang line
@@ -269,6 +269,8 @@ def file_add_license(fname):
             del lines[0]
         f.write(_get_license(_LANGS[ext]))
         for l in lines:
+            if _OLD_LICENSE.match(l):
+                continue
             f.write(l.rstrip()+'\n')
     logging.info('added license header to ' + fname)
     return
@@ -311,7 +313,7 @@ def main():
     parser.add_argument(
         'action', nargs=1, type=str,
         choices=['add', 'check'], default='add',
-        help = 'add or check')
+        help='add or check')
 
     parser.add_argument(
         'file', nargs='*', type=str, action='append',
@@ -320,7 +322,7 @@ def main():
     args = parser.parse_args()
     action = args.action[0]
     files = list(chain(*args.file))
-    if not files and action =='check':
+    if not files and action == 'check':
         if under_git():
             logging.info("Git detected: Using files under version control")
             files = git_files()
@@ -339,6 +341,7 @@ def main():
         assert action == 'add'
         foreach(file_add_license, files)
     return 0
+
 
 if __name__ == '__main__':
     sys.exit(main())
