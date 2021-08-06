@@ -63,7 +63,7 @@ for example, `python3 test.py --dataset voc --network vgg16 --params model/vgg16
 * Jun 22, 2018: We simplified code. 
 
 ### Disclaimer
-This repository used code from [MXNet](https://github.com/dmlc/mxnet),
+This repository used code from [MXNet](https://github.com/apache/incubator-mxnet),
 [Fast R-CNN](https://github.com/rbgirshick/fast-rcnn),
 [Faster R-CNN](https://github.com/rbgirshick/py-faster-rcnn),
 [caffe](https://github.com/BVLC/caffe),

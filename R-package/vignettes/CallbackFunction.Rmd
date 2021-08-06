@@ -75,7 +75,7 @@ head(logger$eval)
 ## How to write your own callback functions
 
 
-You can find the source code for two callback functions from [here](https://github.com/dmlc/mxnet/blob/master/R-package/R/callback.R) and they can be used as your template:
+You can find the source code for two callback functions from [here](https://github.com/apache/incubator-mxnet/blob/v1.x/R-package/R/callback.R) and they can be used as your template:
 
 Basically, all callback functions follow the structure below:
 

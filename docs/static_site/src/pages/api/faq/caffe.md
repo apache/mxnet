@@ -32,7 +32,7 @@ Key topics covered include the following:
 ## Converting Caffe trained models to MXNet
 
 The converting tool is available at
-[tools/caffe_converter](https://github.com/dmlc/mxnet/tree/master/tools/caffe_converter). On
+[tools/caffe_converter](https://github.com/apache/incubator-mxnet/tree/v1.x/tools/caffe_converter). On
 the remaining of this section, we assume we are on the `tools/caffe_converter`
 directory.
 
@@ -205,4 +205,4 @@ train = mx.io.CaffeDataIter(
 ### Put it all together
 
 The complete example is available at
-[example/caffe](https://github.com/dmlc/mxnet/blob/master/example/caffe/)
+[example/caffe](https://github.com/apache/incubator-mxnet/blob/v1.x/example/caffe/)

@@ -34,7 +34,7 @@ following command instead
 Pkg.checkout("MXNet")
 ```
 
-MXNet.jl is built on top of [libmxnet](https://github.com/dmlc/mxnet).
+MXNet.jl is built on top of [libmxnet](https://github.com/apache/incubator-mxnet).
 Upon installation, Julia will try to automatically download and build
 libmxnet.
 

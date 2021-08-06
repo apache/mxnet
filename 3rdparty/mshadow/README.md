@@ -50,5 +50,5 @@ Version
 
 Projects Using MShadow
 ----------------------
-* [MXNet: Efficient and Flexible Distributed Deep Learning Framework](https://github.com/dmlc/mxnet)
+* [MXNet: Efficient and Flexible Distributed Deep Learning Framework](https://github.com/apache/incubator-mxnet)
 * [CXXNet: A lightweight  C++ based deep learnig framework](https://github.com/dmlc/cxxnet)

@@ -32,7 +32,7 @@ Let's train a 3-layer network (i.e multilayer perceptron network) on the MNIST d
 To complete this tutorial, we need:
 
 - to compile the latest MXNet version. See the MXNet installation instructions for your operating system in [Setup and Installation]({{'/get_started'|relative_url}}).
-- to compile the Scala API. See Scala API build instructions in [Build](https://github.com/dmlc/mxnet/tree/master/scala-package).
+- to compile the Scala API. See Scala API build instructions in [Build](https://github.com/apache/incubator-mxnet/tree/v1.x/scala-package).
 
 ## Define the Network
 
@@ -56,7 +56,7 @@ val mlp = Symbol.api.SoftmaxOutput(Some(fc3), name = "sm")
 
 Then, load the training and validation data using DataIterators.
 
-You can download the MNIST data using the [get_mnist_data script](https://github.com/dmlc/mxnet/blob/master/scala-package/core/scripts/get_mnist_data.sh). We've already written a DataIterator for the MNIST dataset:
+You can download the MNIST data using the [get_mnist_data script](https://github.com/apache/incubator-mxnet/blob/v1.x/scala-package/core/scripts/get_mnist_data.sh). We've already written a DataIterator for the MNIST dataset:
 
 ```scala
 // load MNIST dataset
@@ -137,5 +137,5 @@ Check out more MXNet Scala examples below.
 
 ## Next Steps
 * [Scala API]({{'/api/scala'|relative_url}})
-* [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/)
+* [More Scala Examples](https://github.com/apache/incubator-mxnet/tree/v1.x/scala-package/examples/)
 * [MXNet tutorials index]({{'/api'|relative_url}})
