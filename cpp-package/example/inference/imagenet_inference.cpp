@@ -209,19 +209,34 @@ Predictor::Predictor(const std::string& model_json_file,
   args_map_["data"] = NDArray(input_shape_, global_ctx_, false, dtype);
   Shape label_shape(input_shape_[0]);
   args_map_["softmax_label"] = NDArray(label_shape, global_ctx_, false);
+
+  std::map<std::string, std::string> flags;
+
+  if(enable_tensorrt) {
+    flags = {{"static_alloc", "true"},
+             {"static_shape", "true"}};
+    net_ = net_.OptimizeForBackend("TensorRT", global_ctx_,
+                                   &args_map_,
+                                   &aux_map_,
+                                   flags);
+  }
+
   std::vector<NDArray> arg_arrays;
   std::vector<NDArray> grad_arrays;
   std::vector<OpReqType> grad_reqs;
   std::vector<NDArray> aux_arrays;
 
+  for (auto& i : grad_reqs) i = OpReqType::kNullOp;
+
   // infer and create ndarrays according to the given input ndarrays.
   net_.InferExecutorArrays(global_ctx_, &arg_arrays, &grad_arrays, &grad_reqs,
                            &aux_arrays, args_map_, std::map<std::string, NDArray>(),
                            std::map<std::string, OpReqType>(), aux_map_);
-  for (auto& i : grad_reqs) i = OpReqType::kNullOp;
 
   // Create an executor after binding the model to input parameters.
-  executor_ = new Executor(net_, global_ctx_, arg_arrays, grad_arrays, grad_reqs, aux_arrays);
+  executor_ = new Executor(net_, global_ctx_, arg_arrays, grad_arrays, grad_reqs, aux_arrays,
+                           std::map<std::string, Context>(),
+                           nullptr, flags);
 }
 
 /*
@@ -301,9 +316,6 @@ void Predictor::LoadModel(const std::string& model_json_file) {
   }
   LG << "Loading the model from " << model_json_file << std::endl;
   net_ = Symbol::Load(model_json_file);
-  if (enable_tensorrt_) {
-    net_ = net_.GetBackendSymbol("TensorRT");
-  }
 }
 
 /*
@@ -317,16 +329,7 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
   LG << "Loading the model parameters from " << model_parameters_file << std::endl;
   std::map<std::string, NDArray> parameters;
   NDArray::Load(model_parameters_file, 0, &parameters);
-  if (enable_tensorrt_) {
-    std::map<std::string, NDArray> intermediate_args_map;
-    std::map<std::string, NDArray> intermediate_aux_map;
-    SplitParamMap(parameters, &intermediate_args_map, &intermediate_aux_map, Context::cpu());
-    contrib::InitTensorRTParams(net_, &intermediate_args_map, &intermediate_aux_map);
-    ConvertParamMapToTargetContext(intermediate_args_map, &args_map_, global_ctx_);
-    ConvertParamMapToTargetContext(intermediate_aux_map, &aux_map_, global_ctx_);
-  } else {
-    SplitParamMap(parameters, &args_map_, &aux_map_, global_ctx_);
-  }
+  SplitParamMap(parameters, &args_map_, &aux_map_, global_ctx_);
   /*WaitAll is need when we copy data between GPU and the main memory*/
   NDArray::WaitAll();
 }

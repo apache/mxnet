@@ -197,8 +197,34 @@ class Symbol {
   mx_uint GetNumOutputs() const;
   /*! \return get the new symbol through subgraph API for this symbol */
   mxnet::cpp::Symbol GetBackendSymbol(const std::string& backendName) const;
+
+  /**!
+   * \brief partitions current symbol and optimizes it for a given backend
+   *
+   * @param backendName string representing the backend name
+   * @param ctx context for which optimization should be done
+   * @param arg_map map of some given arguments arrays. This map is updated to to match the return symbol.
+   * @param aux_map NDArray that stores the internal state in op. This map is updated to match the return symbol.
+   * @param options extra options, e.g. {{"static_alloc", "true"}}
+   * @param input_shapes input shape dictionary, not needed if available in arg_map
+   * @param input_dtypes input type dictionary, not needed if available in arg_map
+   * @param input_stypes input storage type dictionary, not needed if available in arg_map
+   * @param skip_infer if true, the optimization skips the shape, type and storage type inference pass
+   * @return get the new optimized symbol for this symbol
+   */
+  mxnet::cpp::Symbol OptimizeForBackend(const std::string &backendName,
+                                        const Context &ctx,
+                                        std::map<std::string, NDArray> *arg_map,
+                                        std::map<std::string, NDArray> *aux_map,
+                                        const std::map<std::string, std::string> &options = std::map<std::string, std::string>(),
+                                        const std::map<std::string, std::vector<mx_uint> > &input_shapes = std::map<std::string, std::vector<mx_uint >>(),
+                                        const std::map<std::string, int> input_dtypes = std::map<std::string, int>(),
+                                        const std::map<std::string, int> input_stypes = std::map<std::string, int>(),
+                                        bool skip_infer = false) const;
+
   /*! \return get the name of the symbol */
   std::string GetName() const;
+
   /*!
   * \brief infer and construct all the arrays to bind to executor by providing
   * some known arrays.
