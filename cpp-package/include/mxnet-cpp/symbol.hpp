@@ -219,15 +219,16 @@ inline mxnet::cpp::Symbol Symbol::GetBackendSymbol(const std::string &backendNam
     return mxnet::cpp::Symbol(symbolHandle);
 }
 
-inline mxnet::cpp::Symbol Symbol::OptimizeForBackend(const std::string &backendName,
-                                                     const Context &ctx,
-                                                     std::map<std::string, NDArray> *arg_map,
-                                                     std::map<std::string, NDArray> *aux_map,
-                                                     const std::map<std::string, std::string> &options,
-                                                     const std::map<std::string, std::vector<mx_uint> > &input_shapes,
-                                                     const std::map<std::string, int> input_dtypes,
-                                                     const std::map<std::string, int> input_stypes,
-                                                     bool skip_infer) const {
+inline mxnet::cpp::Symbol Symbol::OptimizeForBackend(
+    const std::string &backendName,
+    const Context &ctx,
+    std::map<std::string, NDArray> *arg_map,
+    std::map<std::string, NDArray> *aux_map,
+    const std::map<std::string, std::string> &options,
+    const std::map<std::string, std::vector<mx_uint> > &input_shapes,
+    const std::map<std::string, int> input_dtypes,
+    const std::map<std::string, int> input_stypes,
+    bool skip_infer) const {
 
 
   SymbolHandle symbolHandle;
@@ -255,33 +256,33 @@ inline mxnet::cpp::Symbol Symbol::OptimizeForBackend(const std::string &backendN
   mx_uint num_options = options.size();
   std::vector<const char *> opt_keys;
   std::vector<const char *> opt_vals;
-  for (auto &kv: options) {
+  for (auto &kv : options) {
     opt_keys.push_back(kv.first.c_str());
     opt_vals.push_back(kv.second.c_str());
   }
 
-  std::vector<const char*> input_shape_names;
+  std::vector<const char *> input_shape_names;
   std::vector<uint64_t> input_shape_data;
   std::vector<uint32_t> input_shape_idx(1, 0);
 
-  for(auto& kv: input_shapes) {
+  for (auto &kv : input_shapes) {
     input_shape_names.push_back(kv.first.c_str());
     input_shape_idx.push_back(input_shape_idx.back() + kv.second.size());
     input_shape_data.insert(input_shape_data.end(), kv.second.begin(), kv.second.end());
   }
 
-  std::vector<const char*> input_type_names;
+  std::vector<const char *> input_type_names;
   std::vector<int> input_dtypes_data;
 
-  for(auto& kv: input_dtypes) {
+  for (auto &kv : input_dtypes) {
     input_type_names.push_back(kv.first.c_str());
     input_dtypes_data.push_back(kv.second);
   }
 
-  std::vector<const char*> input_stype_names;
+  std::vector<const char *> input_stype_names;
   std::vector<int> input_stype_data;
 
-  for(auto& kv: input_stypes) {
+  for (auto &kv : input_stypes) {
     input_stype_names.push_back(kv.first.c_str());
     input_stype_data.push_back(kv.second);
   }
@@ -316,12 +317,12 @@ inline mxnet::cpp::Symbol Symbol::OptimizeForBackend(const std::string &backendN
                        &new_aux_names_handle);
 
   // Update arg_map and aux_map
-  for(int i = 0; i < new_args_cnt; ++i) {
+  for (int i = 0; i < new_args_cnt; ++i) {
     std::string arg_name(new_arg_names_handle[i]);
     (*arg_map)[arg_name] = NDArray(new_args_handle[i]);
   }
 
-  for(int i = 0; i < new_aux_cnt; ++i) {
+  for (int i = 0; i < new_aux_cnt; ++i) {
     std::string aux_name(new_aux_names_handle[i]);
     (*aux_map)[aux_name] = NDArray(new_aux_handle[i]);
   }
@@ -330,8 +331,8 @@ inline mxnet::cpp::Symbol Symbol::OptimizeForBackend(const std::string &backendN
 
   // Clean up arg_map to not contain arguments no longer relevant for new symbol
   auto new_arg_list = ret.ListArguments();
-  for(auto iter = arg_map->begin(); iter != arg_map->end();) {
-    if(std::find(new_arg_list.begin(), new_arg_list.end(), iter->first) == new_arg_list.end()) {
+  for (auto iter = arg_map->begin(); iter != arg_map->end();) {
+    if (std::find(new_arg_list.begin(), new_arg_list.end(), iter->first) == new_arg_list.end()) {
       iter = arg_map->erase(iter);
     } else {
       ++iter;
@@ -340,8 +341,8 @@ inline mxnet::cpp::Symbol Symbol::OptimizeForBackend(const std::string &backendN
 
   // Clean up arg_map to not contain arguments no longer relevant for new symbol
   auto new_aux_list = ret.ListAuxiliaryStates();
-  for(auto iter = aux_map->begin(); iter != aux_map->end();) {
-    if(std::find(new_aux_list.begin(), new_aux_list.end(), iter->first) == new_aux_list.end()) {
+  for (auto iter = aux_map->begin(); iter != aux_map->end();) {
+    if (std::find(new_aux_list.begin(), new_aux_list.end(), iter->first) == new_aux_list.end()) {
       iter = aux_map->erase(iter);
     } else {
       ++iter;

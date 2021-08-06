@@ -212,7 +212,7 @@ Predictor::Predictor(const std::string& model_json_file,
 
   std::map<std::string, std::string> flags;
 
-  if(enable_tensorrt) {
+  if (enable_tensorrt) {
     flags = {{"static_alloc", "true"},
              {"static_shape", "true"}};
     net_ = net_.OptimizeForBackend("TensorRT", global_ctx_,

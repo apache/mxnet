@@ -212,15 +212,18 @@ class Symbol {
    * @param skip_infer if true, the optimization skips the shape, type and storage type inference pass
    * @return get the new optimized symbol for this symbol
    */
-  mxnet::cpp::Symbol OptimizeForBackend(const std::string &backendName,
-                                        const Context &ctx,
-                                        std::map<std::string, NDArray> *arg_map,
-                                        std::map<std::string, NDArray> *aux_map,
-                                        const std::map<std::string, std::string> &options = std::map<std::string, std::string>(),
-                                        const std::map<std::string, std::vector<mx_uint> > &input_shapes = std::map<std::string, std::vector<mx_uint >>(),
-                                        const std::map<std::string, int> input_dtypes = std::map<std::string, int>(),
-                                        const std::map<std::string, int> input_stypes = std::map<std::string, int>(),
-                                        bool skip_infer = false) const;
+  mxnet::cpp::Symbol OptimizeForBackend(
+      const std::string &backendName,
+      const Context &ctx,
+      std::map<std::string, NDArray> *arg_map,
+      std::map<std::string, NDArray> *aux_map,
+      const std::map<std::string, std::string> &options =
+      std::map<std::string, std::string>(),
+      const std::map<std::string, std::vector<mx_uint> > &input_shapes =
+      std::map<std::string, std::vector<mx_uint >>(),
+      const std::map<std::string, int> input_dtypes = std::map<std::string, int>(),
+      const std::map<std::string, int> input_stypes = std::map<std::string, int>(),
+      bool skip_infer = false) const;
 
   /*! \return get the name of the symbol */
   std::string GetName() const;

@@ -92,11 +92,12 @@ inline Executor::Executor(const Symbol &symbol, Context context,
   this->combined_arrays = combined_arrays;
   std::vector<const char*> keys_cstr;
   std::vector<const char*> vals_cstr;
-  for(auto& kv: flags) {
+  for (auto &kv : flags) {
     keys_cstr.push_back(kv.first.c_str());
     vals_cstr.push_back(kv.second.c_str());
   }
-  CHECK_EQ(MXCreateCachedOp(symbol.GetHandle(), flags.size(), keys_cstr.data(), vals_cstr.data(), &handle_, false), 0);
+  CHECK_EQ(MXCreateCachedOp(symbol.GetHandle(), flags.size(), keys_cstr.data(), vals_cstr.data(),
+                            &handle_, false), 0);
 }
 
 
