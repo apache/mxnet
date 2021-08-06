@@ -218,7 +218,7 @@ Some of the differences in Apache MXNet when compared to PyTorch are as follows:
 
 * You need to specify the update step size (usually batch size) when performing [step()](../../../api/gluon/trainer.rst#mxnet.gluon.Trainer.step) on the trainer.
 
-* You need to call [.asscalar()](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.asscalar) to turn a multidimensional array into a scalar.
+* You need to call [.item()](../../../api/np/arrays.ndarray.rst#the-n-dimensional-array-ndarray) to turn a multidimensional array into a scalar.
 
 * In this sample, Apache MXNet is twice as fast as PyTorch. Though you need to be cautious with such toy comparisons.
 

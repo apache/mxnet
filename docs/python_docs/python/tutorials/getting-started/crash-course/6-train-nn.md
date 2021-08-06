@@ -405,7 +405,7 @@ for epoch in range(epochs):
             _, acc = accuracy.get()
 
             print(f"""Epoch[{epoch + 1}] Batch[{idx + 1}] Speed: {batch_size / (time.time() - btic)} samples/sec \
-                  batch loss = {loss.mean().asscalar()} | accuracy = {acc}""")
+                  batch loss = {loss.mean().item()} | accuracy = {acc}""")
             btic = time.time()
 
     _, acc = accuracy.get()

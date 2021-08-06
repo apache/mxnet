@@ -243,7 +243,7 @@ class FancyMLP(nn.Block):
         # Re-use the fully connected layer. This is equivalent to sharing
         # parameters with two fully connected layers.
         x = self.dense(x)
-        # Here in the control flow, we need to call `asscalar` to return the
+        # Here in the control flow, we need to call `item` to return the
         # scalar for comparison.
 
         while npx.norm(x).item() > 1:

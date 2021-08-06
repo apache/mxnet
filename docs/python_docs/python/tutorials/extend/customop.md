@@ -36,7 +36,7 @@ mx.npx.reset_np()
 
 ## Parameter-less operators
 
-This operator implements the standard sigmoid activation function. This is only for illustration purposes, in real life you would use the built-in operator `mx.nd.relu`.
+This operator implements the standard sigmoid activation function. This is only for illustration purposes, in real life you would use the built-in operator `mx.npx.relu`.
 
 ### Forward & backward implementation
 
@@ -219,7 +219,7 @@ print(y)
 ## Using custom operators with fork
 In Linux systems, the default method in multiprocessing to create process is by using fork. If there are unfinished async custom operations when forking, the program will be blocked because of python GIL. Always use sync calls like `wait_to_read` or `waitall` before calling fork.
 
-```{.python .input}
+```{.python}
 x = mx.nd.array([0, 1, 2, 3])
 y = mx.nd.Custom(x, op_type='sigmoid')
 # unfinished async sigmoid operation will cause blocking
@@ -228,7 +228,7 @@ os.fork()
 
 Correctly handling this will make mxnet depend upon libpython, so the workaround now is to ensure that all custom operations are executed before forking process.
 
-```{.python .input}
+```{.python}
 x = mx.nd.array([0, 1, 2, 3])
 y = mx.nd.Custom(x, op_type='sigmoid')
 # force execution by reading y

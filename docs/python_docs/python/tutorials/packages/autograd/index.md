@@ -207,7 +207,7 @@ import math
 def f(x):
     y = x  # going to change y but still want to use x
     if x < 0.75:  # variable num_loops because it depends on x
-        num_loops = math.floor(1/(1-x.asscalar()))
+        num_loops = math.floor(1/(1-x.item()))
         for i in range(num_loops):
             y = y * x  # increase polynomial degree
     else:  # otherwise flatline
@@ -229,8 +229,8 @@ def get_grad(f, x):
     y.backward()
     return x.grad
 
-xs = mx.nd.arange(0.0, 1.0, step=0.1)
-grads = [get_grad(f, x).asscalar() for x in xs]
+xs = mx.np.arange(0.0, 1.0, step=0.1)
+grads = [get_grad(f, x).item() for x in xs]
 print(grads)
 ```
 

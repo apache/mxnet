@@ -201,7 +201,7 @@ imshow(data.asnumpy(), cmap='gray')
 
 Sometimes you have data that doesn't quite fit the format expected by the included Datasets. You might be able to preprocess your data to fit the expected format, but it is easy to create your own dataset to do this.
 
-All you need to do is create a class that implements a `__getitem__` method, that returns a sample (i.e. a tuple of mx.nd.NDArrays).
+All you need to do is create a class that implements a `__getitem__` method, that returns a sample (i.e. a tuple of mx.np.ndarrays).
 
 # New in MXNet 2.0: faster C++ backend dataloaders
 
