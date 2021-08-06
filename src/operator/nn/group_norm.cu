@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file group_norm.cu
  * \brief Implements Group Normalization (https://arxiv.org/abs/1803.08494).
 */

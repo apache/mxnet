@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkldnn_fc_property.cc
  * \brief Partition gragph property for FullyConnected operator
  * \author Ciyong Chen

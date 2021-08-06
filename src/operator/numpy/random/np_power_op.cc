@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_power_op.cc
  * \brief Operator for numpy sampling from power distributions
  */

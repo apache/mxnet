@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file preloaded_multi_sgd-inl.h
  * \brief Multi-sgd optimizers with lrs and wds as mxnet inputs
  * \author Clement Fuji Tsang

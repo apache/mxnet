@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file c_predict_api.cc
  * \brief C predict API of mxnet
  */

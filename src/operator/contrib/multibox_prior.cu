@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file multibox_prior.cu
  * \brief generate multibox prior boxes cuda kernels
  * \author Joshua Zhang

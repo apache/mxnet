@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file loss_binary_op-inl.h
  * \brief Loss functions
  */

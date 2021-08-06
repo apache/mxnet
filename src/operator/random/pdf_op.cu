@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file pdf_op.cu
  * \brief GPU-operators for computing the pdf of random distributions. 
  */

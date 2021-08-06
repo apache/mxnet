@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file dequantize-inl.h
  * \brief Implementation of dequantize operation
  */

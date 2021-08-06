@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file gpu_device_storage.h
  * \brief GPU storage implementation.
  */

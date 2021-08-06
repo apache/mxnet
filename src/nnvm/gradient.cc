@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file gradients.cc
  * \brief Passes that takes gradient of the graph
  * This code code was modified based on mxnet codebase by Min Lin

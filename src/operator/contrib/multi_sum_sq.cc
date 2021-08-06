@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file multi_sum_sq.cc
  * \brief vectorized sum or squared over multiple arrays operators
  * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  */
 #ifndef MXNET_ENGINE_THREAD_POOL_H_
 #define MXNET_ENGINE_THREAD_POOL_H_

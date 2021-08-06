@@ -18,7 +18,6 @@
  */
 
  /*!
-  *  Copyright (c) 2017 by Contributors
   * \file bounding_box.cu
   * \brief Bounding box util functions and operators
   * \author Joshua Zhang

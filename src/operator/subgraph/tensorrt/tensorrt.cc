@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019-2020 by Contributors
  * \file tensorrt.cc
  * \brief TensorRT operation registration
  * \author Marek Kolodziej, Clement Fuji Tsang, Serge Panev

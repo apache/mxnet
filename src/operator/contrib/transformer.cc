@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file transformer.cc
  * \brief CPU implementation of the operators used in Transformer
  */

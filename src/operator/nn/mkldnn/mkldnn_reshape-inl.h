@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file mkldnn_reshape-inl.h
  * \brief Function definition of mkldnn reshape operator
  */

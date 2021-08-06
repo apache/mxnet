@@ -8,7 +8,6 @@
  * All rights reserved.
  *
  * All other contributions:
- * Copyright (c) 2014-2017, the respective contributors
  * All rights reserved.
  *
  * Caffe uses a shared copyright model: each contributor holds copyright over
@@ -48,7 +47,6 @@
  *
  ***************** END Caffe Copyright Notice and Disclaimer ********************
  *
- * Copyright (c) 2017 by Contributors
  * \file im2col.h
  * \brief Function definitions of converting an image to
  * column matrix based on kernel, padding, and dilation.

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file control_flow_op.cu
  * \brief GPU implementation of control flow
  */

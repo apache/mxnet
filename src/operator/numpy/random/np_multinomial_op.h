@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_multinomial_op.h
  * \brief Operator for sampling from multinomial distributions
  */

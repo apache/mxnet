@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file multibox_target-inl.h
  * \brief
  * \author Joshua Zhang

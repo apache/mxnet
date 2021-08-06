@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file node_op_util.h
  * \brief abstraction for commonly used nnvm::Node operations.
  */

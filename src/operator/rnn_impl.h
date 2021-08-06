@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file    rnn_impl.h
  * \brief
  * \author  Shu Zhang

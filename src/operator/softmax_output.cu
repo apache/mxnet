@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file softmax_output.cu
  * \brief
  * \author Bing Xu

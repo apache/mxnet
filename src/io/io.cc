@@ -17,7 +17,6 @@
  * under the License.
  */
 
-// Copyright (c) 2015 by Contributors
 
 #include <mxnet/io.h>
 #include <dmlc/registry.h>

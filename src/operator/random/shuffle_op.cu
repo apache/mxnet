@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file shuffle_op.cc
  * \brief Operator to shuffle elements of an NDArray
  */

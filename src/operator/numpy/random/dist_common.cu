@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file dist_common.cuh
  * \brief Function definition of common functions for distributions
  * \with two parameters.

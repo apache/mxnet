@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file image_recordio.h
  * \brief image recordio struct
  */

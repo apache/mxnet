@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file cuda_utils.h
  * \brief Common CUDA utilities.
  */

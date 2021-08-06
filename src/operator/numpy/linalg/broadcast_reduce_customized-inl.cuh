@@ -18,10 +18,8 @@
  */
 
 /*!
- * Copyright (c) 2015-2020 by Contributors
  * \file broadcast_reduce_customized-inl.cuh
  * \brief Customized CUDA implementations for binary broadcast and reduce
- * \author MXNet contributors
 */
 #ifndef MXNET_OPERATOR_NUMPY_LINALG_BROADCAST_REDUCE_INL_CUSTOMIZED_CUH_
 #define MXNET_OPERATOR_NUMPY_LINALG_BROADCAST_REDUCE_INL_CUSTOMIZED_CUH_

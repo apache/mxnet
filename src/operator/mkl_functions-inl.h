@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkl_functions-inl.h
  * \brief Wrapper for MKL VML functions
  * \author Tao Lv, Shufan Wu

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_insert_op_scalar.cc
  * \brief CPU Implementation of numpy insert operations
  */

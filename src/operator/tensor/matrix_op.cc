@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file matrix_op.cc
  * \brief CPU Implementation of matrix operations
  */

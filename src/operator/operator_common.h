@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file  operator_common.h
  * \brief common internal header of most operators
  *   this header includes utility functions operator can use

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_insert_op_scalar-inl.h
  * \brief Function definition of insert operators (insert by int index)
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkldnn_elemwisemul_post_quantize_property.cc
  * \brief Partition gragph property for MKLDNN Quantized ElemwiseMul operator
  * \author Xinyu Chen

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file iter_prefetcher.h
  * \brief define a prefetcher using threaditer to keep k batch fetched
  */

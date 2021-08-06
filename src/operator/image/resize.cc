@@ -17,7 +17,6 @@
 * under the License.
 */
 /*!
- * Copyright (c) 2019 by Contributors
  * \file resize.cc
  * \brief resize operator cpu
  * \author Jake Lee

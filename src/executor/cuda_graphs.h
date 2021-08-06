@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file cuda_graphs.h
  * \brief Wrappers for use of CUDA Graphs API
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 202o by Contributors
  * \file np_polynomial_op.cc
 */
 

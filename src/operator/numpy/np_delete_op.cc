@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_delete_op.cc
  * \brief CPU Implementation of numpy insert operations
  */

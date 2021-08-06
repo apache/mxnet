@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file hawkes_ll.cc
  * \brief Log likelihood of a marked self-exciting Hawkes process
  * \author Caner Turkmen <turkmen.ac@gmail.com>

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file upsampling-inl.h
  * \brief
  * \author Bing Xu
