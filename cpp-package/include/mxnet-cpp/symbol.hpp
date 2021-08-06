@@ -230,9 +230,9 @@ inline mxnet::cpp::Symbol Symbol::OptimizeForBackend(
     const std::map<std::string, int> input_stypes,
     bool skip_infer) const {
 
+  /* See: optimize_for in python/mxnet/symbol/symbol.py  */
 
   SymbolHandle symbolHandle;
-
   // Collect the symbol arguments as needed by the c_api
   std::vector<NDArrayHandle> arg_handles;
   std::vector<NDArrayHandle> aux_handles;
