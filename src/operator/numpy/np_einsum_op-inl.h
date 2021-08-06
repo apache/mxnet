@@ -36,6 +36,7 @@
  *     with the distribution.
  *
  *  * Neither the name of the NumPy Developers nor the names of any
+ *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
