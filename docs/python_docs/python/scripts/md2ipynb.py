@@ -34,9 +34,9 @@ def md2ipynb():
     skip_lsit = ["pytorch.md", "mnist.md", "custom-loss.md", "fit_api_tutorial.md", \
         "01-ndarray-intro.md", "02-ndarray-operations.md", "03-ndarray-contexts.md", \
         "gotchas_numpy_in_mxnet.md", "csr.md", "row_sparse.md", "fine_tuning_gluon.md", \
-        "inference_on_onnx_model.md", "amp.md", "profiler.md"]
+        "inference_on_onnx_model.md", "amp.md", "profiler.md", "customop.md"]
 
-    require_gpu = []
+    require_gpu = ["6-train-nn.md", "7-use-gpus.md"]
     # the files will be ignored for execution
     ignore_execution = skip_lsit + require_gpu
 
