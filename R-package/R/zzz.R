@@ -63,7 +63,7 @@ NULL
   if (!interactive() || stats::runif(1) > 0.1) return()
 
   tips <- c(
-    "Need help? Feel free to open an issue on https://github.com/dmlc/mxnet/issues",
+    "Need help? Feel free to open an issue on https://github.com/apache/incubator-mxnet/issues",
     "For more documents, please visit https://mxnet.io",
     "Use suppressPackageStartupMessages() to eliminate package startup messages."
   )

@@ -19,7 +19,7 @@
 
 [MXNet.jl](https://github.com/dmlc/MXNet.jl) is the
 [Julia](http://julialang.org/) package of
-[dmlc/mxnet](https://github.com/dmlc/mxnet). MXNet.jl brings flexible and efficient GPU
+[MXNet](https://github.com/apache/incubator-mxnet). MXNet.jl brings flexible and efficient GPU
 computing and state-of-art deep learning to Julia. Some highlight of features
 include:
 

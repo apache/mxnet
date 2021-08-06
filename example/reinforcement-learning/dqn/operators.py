@@ -30,7 +30,7 @@ class DQNOutput(mx.operator.CustomOp):
         self.assign(out_data[0], req[0], in_data[0])
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-        # TODO Backward using NDArray will cause some troubles see `https://github.com/dmlc/mxnet/issues/1720'
+        # TODO Backward using NDArray will cause some troubles see `https://github.com/apache/incubator-mxnet/issues/1720'
         x = out_data[0].asnumpy()
         action = in_data[1].asnumpy().astype(numpy.int)
         reward = in_data[2].asnumpy()

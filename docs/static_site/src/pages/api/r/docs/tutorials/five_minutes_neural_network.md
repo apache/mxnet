@@ -116,7 +116,7 @@ To get an idea of what is happening, view the computation graph from R:
     graph.viz(model$symbol)
  ```
 
-[<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/graph.computation.png">](https://github.com/dmlc/mxnet)
+[<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/graph.computation.png">](https://github.com/apache/incubator-mxnet)
 
  ```r
     preds = predict(model, test.x)

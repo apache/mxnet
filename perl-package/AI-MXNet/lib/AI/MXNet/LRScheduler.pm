@@ -54,7 +54,7 @@ has 'base_lr' => (is => 'rw', isa => 'Num', default => 0.01);
     The exact value is the upper bound of the number of updates applied to
     a weight/index
 
-    See more details in https://github.com/dmlc/mxnet/issues/625
+    See more details in https://github.com/apache/incubator-mxnet/issues/625
 
     Parameters
     ----------
