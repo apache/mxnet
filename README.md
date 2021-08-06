@@ -81,10 +81,10 @@ What's New
 * [0.12.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/0.12.0) - MXNet 0.12.0 Release.
 * [0.11.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/0.11.0) - MXNet 0.11.0 Release.
 * [Apache Incubator](http://incubator.apache.org/projects/mxnet.html) - We are now an Apache Incubator project.
-* [0.10.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.10.0) - MXNet 0.10.0 Release.
+* [0.10.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/v0.10.0) - MXNet 0.10.0 Release.
 * [0.9.3 Release](./docs/architecture/release_note_0_9.md) - First 0.9 official release.
 * [0.9.1 Release (NNVM refactor)](./docs/architecture/release_note_0_9.md) - NNVM branch is merged into master now. An official release will be made soon.
-* [0.8.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.8.0)
+* [0.8.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/v0.8.0)
 
 ### Ecosystem News
 
