@@ -17,8 +17,6 @@
  * under the License.
  */
 
-/**
- */
 #ifndef MXNET_KVSTORE_GPU_TOPOLOGY_H_
 #define MXNET_KVSTORE_GPU_TOPOLOGY_H_
 #if MXNET_USE_CUDA
