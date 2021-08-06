@@ -287,7 +287,7 @@ inline mxnet::cpp::Symbol Symbol::OptimizeForBackend(
     input_stype_data.push_back(kv.second);
   }
 
-  MXOptimizeForBackend(GetHandle(),
+  CHECK_EQ(MXOptimizeForBackend(GetHandle(),
                        backendName.c_str(),
                        ctx.GetDeviceType(),
                        &symbolHandle,
@@ -314,7 +314,7 @@ inline mxnet::cpp::Symbol Symbol::OptimizeForBackend(
                        &new_arg_names_handle,
                        &new_aux_cnt,
                        &new_aux_handle,
-                       &new_aux_names_handle);
+                       &new_aux_names_handle), 0);
 
   // Update arg_map and aux_map
   for (int i = 0; i < new_args_cnt; ++i) {
