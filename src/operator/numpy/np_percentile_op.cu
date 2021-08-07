@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_percentile_op.cu
  * \brief GPU Implementation of Numpy-compatible percentile
 */

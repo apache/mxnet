@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_moments_op.cc
  * \brief move some op here from np_reduce_op_value.cc.
  */

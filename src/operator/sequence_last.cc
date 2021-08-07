@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file sequence_last.cc
  * \brief
  * \author Sebastian Bodenstein

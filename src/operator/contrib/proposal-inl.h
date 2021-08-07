@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file proposal-inl.h
  * \brief Proposal Operator
  * \author Piotr Teterwak, Bing Xu, Jian Guo

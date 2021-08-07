@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file activation.cu
  * \brief
  * \author Bing Xu

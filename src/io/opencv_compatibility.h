@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file opencv_compatibility.h
  * \brief To be compatible with multiple versions of opencv
  */

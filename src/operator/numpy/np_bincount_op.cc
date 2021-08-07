@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_bicount_op.cc
  * \brief numpy compatible bincount operator CPU registration
  */

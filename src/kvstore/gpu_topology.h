@@ -17,9 +17,6 @@
  * under the License.
  */
 
-/**
- * Copyright (c) 2015 by Contributors
- */
 #ifndef MXNET_KVSTORE_GPU_TOPOLOGY_H_
 #define MXNET_KVSTORE_GPU_TOPOLOGY_H_
 #if MXNET_USE_CUDA

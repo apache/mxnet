@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file mrcnn_mask_target.cu
  * \brief Mask-RCNN target generator
  * \author Serge Panev

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file image_augmenter.h
  * \brief Interface of opencv based image augmenter
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file la_op-inl.h
  * \brief Operators for advanced linear algebra.
  * \note  See https://arxiv.org/pdf/1710.08717.pdf for details of gradient computations.

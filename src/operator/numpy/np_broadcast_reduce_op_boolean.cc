@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_broadcast_reduce_op_boolean.cc
  * \brief CPU Implementation of broadcast and reduce functions based on boolean.
  */

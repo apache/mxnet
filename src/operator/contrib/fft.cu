@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file fft-inl.h
  * \brief
  * \author Chen Zhu

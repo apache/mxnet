@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file multi_lars.cu
  * \brief vectorized lars coefficient computed from sums of squared weights and grads
  * \author Clement Fuji Tsang

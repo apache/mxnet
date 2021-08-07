@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file activation-inl.h
  * \brief Activation operator
  * \author Bing Xu, Da Zheng

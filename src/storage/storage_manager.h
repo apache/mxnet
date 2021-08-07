@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file storage_manager.h
  * \brief Storage manager.
  */

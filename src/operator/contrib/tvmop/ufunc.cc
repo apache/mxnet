@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file ufunc.cc
  * \brief
  * \author Yizhi Liu

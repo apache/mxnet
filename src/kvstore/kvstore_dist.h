@@ -18,7 +18,6 @@
  */
 
 /**
- * Copyright (c) 2015 by Contributors
  * @file   kvstore_dist.h
  * @brief  distributed implementation based on ps-lite
  */

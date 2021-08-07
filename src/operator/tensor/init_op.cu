@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file init_op.cu
  * \brief GPU Implementation of init op
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file ctc_loss.cu
  * \brief GPU Implementation of ctc_loss op
  */

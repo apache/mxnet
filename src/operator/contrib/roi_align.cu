@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file roi_align.cu
  * \brief roi align operator
  * \author Hang Zhang, Shesung

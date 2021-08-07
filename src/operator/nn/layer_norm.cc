@@ -49,7 +49,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file layer_norm.cc
  * \brief Implements Ba et. al, Layer Normalization (https://arxiv.org/abs/1607.06450).
 */

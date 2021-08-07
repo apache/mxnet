@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file svm_output.cc
  * \brief
  * \author Jonas Amaro

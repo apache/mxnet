@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.cu
  * \brief GPU implementation of elementwise sum operator
 */

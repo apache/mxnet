@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file all_finite-inl.h
  * \brief operator for checking if a group of array is all finite
  * \author Clement Fuji Tsang

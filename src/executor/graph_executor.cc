@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file graph_executor.cc
  * \brief graph executor
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file rroi_align-inl.h
  * \brief rroi align operator and symbol
  * \author Yixin Bao

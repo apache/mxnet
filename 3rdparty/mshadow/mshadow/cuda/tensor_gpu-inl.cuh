@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file tensor_gpu-inl.cuh
  * \brief implementation of GPU code using CUDA
  * \author Bing Xu, Tianqi Chen

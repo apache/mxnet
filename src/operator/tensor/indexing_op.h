@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file indexing_op.h
  * \brief Function definition of indexing operator
  * \author Bing Xu, Siyi Li, Chi Zhang, Haibin Lin

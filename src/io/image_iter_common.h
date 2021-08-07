@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file image_iter_common.h
  * \brief common types used by image data iterators
  */

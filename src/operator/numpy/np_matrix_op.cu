@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_matrix_op.cu
  * \brief GPU Implementation of numpy matrix operations
  */

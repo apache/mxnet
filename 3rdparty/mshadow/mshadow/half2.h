@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file half2.h
  * \brief definition of vector float16, half2 type.
  *

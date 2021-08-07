@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file iter_image_recordio_2.cc
  * \brief new version of recordio data iterator
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file batch_norm.cu
  * \brief CUDA Batch Normalization code
  * \author Chris Olivier, Bing Xu, Da Zheng

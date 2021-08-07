@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file nnpack_convolution-inl.h
  * \brief
  * \author Carwin

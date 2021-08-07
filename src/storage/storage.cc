@@ -17,9 +17,6 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2015 by Contributors
- */
 #include <mxnet/storage.h>
 #include "./storage_manager.h"
 #include "./naive_storage_manager.h"

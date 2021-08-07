@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file instance_norm.cu
  * \brief
  * \author Sebastian Bodenstein

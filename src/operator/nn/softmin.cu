@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file softmin.cu
  * \brief GPU Implementation of softmin
  */

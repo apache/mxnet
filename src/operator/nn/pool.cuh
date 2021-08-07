@@ -48,7 +48,6 @@
  *
  ***************** END Caffe Copyright Notice and Disclaimer ********************
  *
- * Copyright (c) 2017 by Contributors
  * \file pool.cuh
  * \brief Function definitions of pooling 1/2/3-D images.
  * We adopted looping 2-D image pixels from Caffe and extended it to 1-D and 3-D cases.

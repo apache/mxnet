@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file broadcast_reduce_op_customized.h
  * \brief Function definition of broadcast and reduce operators
  */

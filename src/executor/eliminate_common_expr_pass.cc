@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file eliminate_common_expr.cc
  * \brief Eliminate common expressions in the graph
  * \author Przemyslaw Tredak

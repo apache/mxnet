@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file tensor.h
  * \brief header file of tensor data structure and functions
  *  This lib requires explicit memory allocation and de-allocation

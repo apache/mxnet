@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file base.h
  * \brief definitions of base types, operators, macros functions
  *

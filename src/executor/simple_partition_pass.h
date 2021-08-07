@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019-2020 by Contributors
  * \file simple_partition_pass.h
  * \brief Simple pass for partitioning a graph.
  * \author Clement Fuji Tsang, Przemyslaw Tredak

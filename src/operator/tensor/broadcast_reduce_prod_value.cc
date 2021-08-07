@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_prod_value.cc
  * \brief CPU Implementation of broadcast and reduce of prod functions based on value.
  */

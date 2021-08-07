@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file ordering_op.cc
  * \brief CPU Implementation of the ordering operations
  */

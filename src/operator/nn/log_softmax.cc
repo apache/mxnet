@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file log_softmax.cc
  * \brief CPU Implementation of log_softmax
  */

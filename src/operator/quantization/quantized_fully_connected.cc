@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file quantized_fully_connected.cc
  * \brief
  * \author Ziheng Jiang, Jun Wu

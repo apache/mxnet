@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_location_scale_op.cu
  * \brief Operator for numpy sampling from location scale distributions
  */

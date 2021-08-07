@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file pooling_v1.cu
  * \brief
  * \author Bing Xu

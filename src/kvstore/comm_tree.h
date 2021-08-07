@@ -17,9 +17,6 @@
  * under the License.
  */
 
-/**
- * Copyright (c) 2018 by Contributors
- */
 #ifndef MXNET_KVSTORE_COMM_TREE_H_
 #define MXNET_KVSTORE_COMM_TREE_H_
 #include <dmlc/omp.h>

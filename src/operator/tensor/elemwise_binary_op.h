@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_op.h
  * \brief Function definition of elementwise binary operators
  */
