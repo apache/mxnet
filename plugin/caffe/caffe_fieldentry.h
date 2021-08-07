@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file caffe_fieldentry.h
  * \brief Implement FieldEntry<caffe::LayerParameter>
  * \author Haoran Wang

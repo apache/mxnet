@@ -18,7 +18,6 @@
  */
 
 /*!
-*  Copyright (c) 2016 by Contributors
 * \file optimizer.h
 * \brief definition of optimizer
 * \author Chuntao Hong, Zhang Chen

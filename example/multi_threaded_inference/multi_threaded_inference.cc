@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file multi_threaded_inference.cc
  * \brief Multi Threaded inference example with CachedOp
 */

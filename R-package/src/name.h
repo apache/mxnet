@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file name.h
  * \brief Name manager to get default names.
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file cv_api.h
  * \brief C API for opencv
  * \author Junyuan Xie

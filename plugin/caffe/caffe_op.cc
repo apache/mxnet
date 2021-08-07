@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file caffe_op.cc
  * \brief caffe operator
  * \author Haoran Wang

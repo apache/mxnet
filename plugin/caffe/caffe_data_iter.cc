@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file caffe_data_iter.cc
  * \brief register mnist iterator
 */
