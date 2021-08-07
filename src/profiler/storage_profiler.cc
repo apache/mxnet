@@ -100,18 +100,24 @@ void GpuDeviceStorageProfiler::DumpProfile() const {
   // If NVML has been enabled, add amend term to the GPU memory profile.
   nvmlDevice_t nvml_device;
 
+#if NVML_API_VERSION < 11
+  typedef std::vector<nvmlProcessInfo_t> ProcessInfoVector;
+#else
+  typedef std::vector<nvmlProcessInfo_v1_t> ProcessInfoVector;
+#endif
+
   NVML_CALL(nvmlInit());
   for (std::pair<const int, size_t>& dev_id_total_alloc_pair :
        gpu_dev_id_total_alloc_map) {
     unsigned info_count = 0;
-    std::vector<nvmlProcessInfo_t> infos(info_count);
+    ProcessInfoVector infos(info_count);
 
     NVML_CALL(nvmlDeviceGetHandleByIndex(dev_id_total_alloc_pair.first, &nvml_device));
     // The first call to `nvmlDeviceGetComputeRunningProcesses` is to set the
     // size of info. Since `NVML_ERROR_INSUFFICIENT_SIZE` will always be
     // returned, we do not wrap the function call with `NVML_CALL`.
     nvmlDeviceGetComputeRunningProcesses(nvml_device, &info_count, infos.data());
-    infos = std::vector<nvmlProcessInfo_t>(info_count);
+    infos = ProcessInfoVector(info_count);
     NVML_CALL(nvmlDeviceGetComputeRunningProcesses(nvml_device, &info_count, infos.data()));
 
     bool amend_made = false;
