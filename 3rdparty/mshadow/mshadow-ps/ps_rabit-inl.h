@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file ps_rabit-inl.h
  * \brief distributed version of PS using BSP
  *     synchronization in the backend

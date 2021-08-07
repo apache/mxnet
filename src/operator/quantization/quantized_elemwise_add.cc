@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file quantized_elemwise_add.cc
  * \brief
  */

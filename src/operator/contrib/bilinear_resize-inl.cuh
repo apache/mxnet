@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2019 by Contributors
  * \file bilinear_resize-inl.cuh
  * \brief bilinear resize operator cuda implementation
  * \author Hang Zhang, Jake Lee

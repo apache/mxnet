@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015-2017 by Contributors
  * \file broadcast_reduce-inl.h
  * \brief CPU-specific Function definition of broadcast and reduce operators
  */

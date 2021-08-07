@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkldnn_quantized_fully_connected.cc
  * \brief MKLDNN Quantized FullyConnected operator
  * \author Ciyong Chen

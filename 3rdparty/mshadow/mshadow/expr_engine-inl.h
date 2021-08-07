@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file expr_engine-inl.h
  * \brief definitions of how expressions should be evaluated
  * \author Tianqi Chen, Bing Xu

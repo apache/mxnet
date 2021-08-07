@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_reduce_op_value.cc
  * \brief CPU Implementation of broadcast and reduce functions based on value.
  */

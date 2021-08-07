@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file tensor_util-inl.cuh
  * \brief commonly utilized tensor operator GPU kernels
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file choose.h
  * \brief support for implicit array selection operation
  * \author Tianqi Chen

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file ordering_op-inl.h
  * \brief Function definition of ordering operators
  */

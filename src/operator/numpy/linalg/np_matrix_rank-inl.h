@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file np_matrix_rank-inl.h
  * \brief Placeholder for matrix_rank
  */

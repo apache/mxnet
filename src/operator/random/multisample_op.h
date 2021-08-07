@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file multisample_op.h
  * \brief Function definitions of operators for sampling from multiple distributions
  */

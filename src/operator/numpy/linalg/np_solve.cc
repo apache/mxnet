@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_solve.cc
  * \brief CPU implementation placeholder of Solve Operator
  */

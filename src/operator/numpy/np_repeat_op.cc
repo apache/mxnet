@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_repeat_op.cc
  * \brief CPU implementation of numpy repeat operator
  */

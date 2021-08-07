@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_potrf.cc
  * \brief CPU implementation placeholder of Cholesky Operator
  */

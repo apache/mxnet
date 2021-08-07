@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file indexing_op.cc
  * \brief CPU implementation of indexing operator
  * \author Siyi Li, Chi Zhang
