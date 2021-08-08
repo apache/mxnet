@@ -132,7 +132,7 @@ OpStatePtr Imperative::Invoke(
 // Create nnvm::NodeEntry for variables' and gradients' autograd_entry_
 // attribute and associate AGInfo with it's info attribute
 void Imperative::MarkVariables(
-    const std::vector<NDArray*>& variables,
+    const std::vector<NDArray*>& variables, // u_py
     const std::vector<uint32_t>& grad_reqs,
     const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
@@ -141,7 +141,7 @@ void Imperative::MarkVariables(
     variables[i]->autograd_entry_ = nnvm::NodeEntry{
         nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
     AGInfo& info = AGInfo::Create(variables[i]->autograd_entry_.node);
-    info.outputs.emplace_back(variables[i]->Detach());
+    info.outputs.emplace_back(variables[i]->Detach()); // node.info.output u_copy
     info.out_grads.emplace_back(gradients[i]->Detach());
     info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
     info.ctx = variables[i]->ctx();
@@ -154,6 +154,33 @@ void Imperative::MarkVariables(
   }
 }
 
+// Create nnvm::NodeEntry for retain_queried node' and gradients' autograd_entry_
+// attribute and associate AGInfo with it's info attribute
+void Imperative::MarkVariablesEx(
+    const std::vector<NDArray*>& variables,
+    const std::vector<uint32_t>& grad_reqs,
+    const std::vector<NDArray*>& gradients) {
+  for (uint32_t i = 0; i < variables.size(); ++i) {
+    AGInfo& info = dmlc::get<AGInfo>(variables[i]->autograd_entry_.node->info);
+    CHECK_EQ(info.out_grads.size(), 0)
+      <<"The node has already been marked. Cannot retain it again.";
+    info.out_grads.emplace_back(gradients[i]->Detach());
+    info.grad_req = static_cast<OpReqType>(grad_reqs[i]); // otherwise defaulted to be kNullOp
+    info.ctx = variables[i]->ctx(); // redundant operation
+
+    // CHECK_NE(info.grad_req, static_cast<OpReqType>(grad_reqs[i]))
+      // << "KX: info.grad_req possibly not initialized.";
+
+    // Do I need to create Node/NodeEntry for gradients[i]->autograd_entry_?
+    // That depends on which NDArray is retrieved from python. If it can be retrived 
+    // by u->info.out_grads, without using the Node of gradients[i], then no need to 
+    // create such node.
+
+    // Create Node for gradients[i] and set it as the node's output; this
+    // is useful for higher order grad wrt it.
+    // But here as intermediate node, it is not necessary to have a gradient node for it.
+  }
+}
 
 void Imperative::GetBackwardDependency(
     const nnvm::ObjectPtr& node,
@@ -481,11 +508,19 @@ std::vector<NDArray*> Imperative::Backward(
     CHECK_GT(xs.size(), 0)
         << "There are no inputs in computation graph that require gradients.";
   }
+  // std::vector<ObjectPtr> nleaf_vars = sym.ListNonleafVariables();
+  std::vector<ObjectPtr> nleaf_vars = ListNonleafVariables(sym); 
+  std::vector<NodeEntry> us;
+  us.reserve(nleaf_vars.size());
+  for (const auto& i : nleaf_vars) {
+    us.emplace_back(NodeEntry{i, 0, 0});
+  }
 
   Graph g_graph = pass::MXGradient(
-      graph, graph.outputs, xs, ograd_entries,
+      graph, graph.outputs, xs, ograd_entries, 
       mxnet::AggregateGradient, nullptr,
-      zero_ops, "_copy");
+      zero_ops, "_copy", ShapeVector(), DTypeVector(),
+      us);
   CHECK_EQ(g_graph.outputs.size(), xs.size());
   for (const auto& e : g_graph.outputs) {
     if (e.node->op() == nullptr) {
@@ -561,6 +596,33 @@ std::vector<NDArray*> Imperative::Backward(
     arrays[eid] = x_grads[i - num_forward_outputs];
     ref_count[eid] = 1;
   }
+  const std::vector<NodeEntry>& us_grads = 
+    g_graph.GetAttr<std::vector<NodeEntry>>("nleaf_grads");
+  CHECK_EQ(us_grads.size(), us.size())
+    << "Size of queried nleaf_vars and size of their gradients don't match.";
+  for (size_t i = 0; i < us_grads.size(); i++) {
+    size_t eid = idx.entry_id(us_grads[i]);
+    AGInfo& info = AGInfo::Get(us[i].node);
+    if (arrays[eid]->dtype_ == -1) {
+      arrays[eid] = &info.out_grads[0];
+    } else { 
+      // arrays[eid] has been assigned a value from ograd_entries
+      // So reset `us_grads.node->info.out_grads` to be 
+      // `ograd_entries.node->info.outputs`
+      info.out_grads[0] = *arrays[eid]; 
+      // By default this is a copy, not a reference assignment, since 
+      // the addresses are still different but the fields become the 
+      // same. For example, .ptr_ of the rvalued NDArray evaluated from
+      // *arrays[eid], will be copied to the object NDArray in 
+      // info.out_grads[0]. If info.out_grads were declared as reference:
+      // std::vector<NDArray&> then this would be just a copy of
+      // reference and the memo will be the same.
+      // For `info.out_grads[0] = std::move(*arrays[eid]);` value in
+      // `*arrays[eid]` is extracted and assigned to the left. After 
+      // this arrays[eid] becomes unintialized.
+    }
+    ref_count[eid] = 1;
+  }
 
   // Assign context
   auto vctx = PlaceDevice(idx);
@@ -609,6 +671,13 @@ std::vector<NDArray*> Imperative::Backward(
   for (size_t i = num_forward_outputs; i < idx.outputs().size(); ++i) {
     size_t eid = idx.entry_id(idx.outputs()[i]);
     array_reqs[eid] = x_reqs[i - num_forward_outputs];
+  }
+  for (size_t i = 0; i < us_grads.size(); i++) {
+    size_t eid = idx.entry_id(us_grads[i]);
+    AGInfo& info = AGInfo::Get(us[i].node);
+    // arrays[eid] = &info.out_grads[0]; // Leftover work: the accosicated arrays: ref_count, array_reqs
+    // ref_count[eid] = 1;
+    array_reqs[eid] = info.grad_req;
   }
 
   const auto& shapes = graph.GetAttr<mxnet::ShapeVector>("shape");
@@ -744,6 +813,19 @@ void Imperative::DCInfo::Compute(const NDArray &arr) {
   // Deallocate copies
   info.inputs_.clear();
   info.outputs_.clear();
+}
+
+std::vector<nnvm::ObjectPtr> Imperative::ListNonleafVariables(nnvm::Symbol& sym) const {
+  using namespace nnvm;
+  std::vector<ObjectPtr> ret;
+  // ret.reserve(sym.outputs.size());
+  DFSVisit(sym.outputs, [&ret](const ObjectPtr& node) {
+    AGInfo& info = AGInfo::Get(node);
+    if (info.out_grads.size()>0 && !node->is_variable()) { 
+      ret.push_back(node);
+    }
+  });
+  return ret;
 }
 
 }  // namespace mxnet

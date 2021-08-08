@@ -2426,6 +2426,24 @@ int MXNDArrayDetach(NDArrayHandle handle, NDArrayHandle *out) {
   API_END();
 }
 
+int MXNDArrayDetachEx(NDArrayHandle handle, NDArrayHandle *out) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+
+  // // Imperative *inst = Imperative::Get(); // what to next to benchmark `u`?
+  // Imperative::AGInfo& info = Imperative::AGInfo::Create(arr->get_autograd_symbol().outputs[0].node);
+
+  Imperative::AGInfo& info = dmlc::get<Imperative::AGInfo>(arr->get_autograd_symbol().outputs[0].node->info);
+
+  // std::vector<NDArray> outputs_copy = info.outputs;
+  // std::vector<NDArray> out_grads = info.out_grads;
+  // NDArray outputs_py = *arr;
+  // arr->get_autograd_symbol.outputs[0].node->info.clear();
+ 
+  *out = new NDArray(arr->Detach());
+  API_END();
+}
+
 int MXNDArraySetGradState(NDArrayHandle handle, int state) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);

@@ -1098,6 +1098,7 @@ MXNET_DLL int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayDetach(NDArrayHandle handle, NDArrayHandle *out);
+MXNET_DLL int MXNDArrayDetachEx(NDArrayHandle handle, NDArrayHandle *out);
 /*!
  * \brief set the flag for gradient array state.
  * \param handle NDArray handle
@@ -1271,6 +1272,16 @@ MXNET_DLL int MXSetIsNumpyDefaultDtype(bool dtype_flag, bool* prev);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXAutogradMarkVariables(uint32_t num_var,
+                                      NDArrayHandle *var_handles,
+                                      uint32_t *reqs_array,
+                                      NDArrayHandle *grad_handles);
+/*!
+ * \brief mark nonleaf NDArrays as variables to compute gradient for autograd
+ * \param num_var number of variable NDArrays
+ * \param var_handles variable NDArrays
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXAutogradMarkVariablesEx(uint32_t num_var,
                                       NDArrayHandle *var_handles,
                                       uint32_t *reqs_array,
                                       NDArrayHandle *grad_handles);

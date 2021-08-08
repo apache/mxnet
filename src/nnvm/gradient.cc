@@ -64,7 +64,8 @@ Graph BuildGradientGraph(
     const std::vector<ObjectPtr>& topo_order,
     std::unordered_map<const Node*, std::vector<GradEntry> > output_grads,
     std::function<int(const Node&)> mirror_fun,
-    const std::unordered_map<const Node*, ObjectPtr>& mirror_map);
+    const std::unordered_map<const Node*, ObjectPtr>& mirror_map,
+    const std::vector<NodeEntry>& us = std::vector<NodeEntry>() );
 
 /*!
  * \brief Auxiliary function that maps the forward node of the source graph to
@@ -96,6 +97,8 @@ Graph Gradient(Graph src) {
   const std::vector<NodeEntry>& ys_out_grad =
       src.GetAttr<std::vector<NodeEntry> >("grad_ys_out_grad");
   CHECK_EQ(ys.size(), ys_out_grad.size());
+  const std::vector<NodeEntry>& us =  
+      src.GetAttr<std::vector<NodeEntry> >("grad_us");
 
   // initialize a topological order of the graph nodes and `output_grads`
   // that maps every operator node to its gradient entries
@@ -132,7 +135,7 @@ Graph Gradient(Graph src) {
   // complete the backward graph of the src, but without backward mirroring
   nnvm::Graph gsrc = BuildGradientGraph(src, xs, topo_order,
                                         output_grads,
-                                        nullptr, mirror_map);
+                                        nullptr, mirror_map, us);
   if (mirror_fun == nullptr) {
     return gsrc;  // Gradient pass without mirroring ends here.
   }
@@ -537,7 +540,8 @@ Graph BuildGradientGraph(
     const std::vector<ObjectPtr>& topo_order,
     std::unordered_map<const Node*, std::vector<GradEntry> > output_grads,
     std::function<int(const Node&)> mirror_fun,
-    const std::unordered_map<const Node*, ObjectPtr>& mirror_map) {
+    const std::unordered_map<const Node*, ObjectPtr>& mirror_map,
+    const std::vector<NodeEntry>& us) {
   static auto& grad_fun_map = Op::GetAttr<nnvm::FGradient>("FGradient");
 
   // gradient aggregation function
@@ -646,7 +650,7 @@ Graph BuildGradientGraph(
       for (auto input_iter = src_fwd_node->inputs.begin();
            input_iter != src_fwd_node->inputs.end();
            ++input_iter, ++input_grad_iter) {
-        // propagate the input gradients to the output gradients of the input nodes
+        // propagate the input_grads to the corresponding GradEntries mapped by output_grads
         output_grads[input_iter->node.get()][input_iter->index]
             .grads.emplace_back(std::move(*input_grad_iter));
       }
@@ -691,6 +695,34 @@ Graph BuildGradientGraph(
       ret.outputs[kv.second.second] = kv.first;
     }
   }
+
+  // Take the us' grad NodeEntry and store them in graph.attrs
+  std::vector<NodeEntry> nleaf_grads;
+  nleaf_grads.reserve(us.size());
+  for (const NodeEntry& e : us){
+    GradEntry& entry = output_grads[e.node.get()][e.index];
+    // aggregate sum if it hasn't been
+    if (entry.sum.node.get() == nullptr) {
+      entry.sum = agg_fun(std::move(entry.grads));
+    }
+    // For nonleaf nodes, no need to consider `copy_op != nullptr`. 
+    // For leaf variables, if copy_op != nullptr, then possibily multiple 
+    // leaf variables correpsond to the same `grad_entry.sum`. In 
+    // this case, NodeEntryMap unique_grads is used. When a repetative 
+    // grad_entry.sum is found, this NodeEntry will be set as the input 
+    // of a new created node, which copies the value from the input ie 
+    // the eid corresponding to grad_entry.sum.
+
+    // These created Nodes' NodeEntry will be emplace_back to g_graph.outputs 
+    // which applies for these leaf variables. But for nonleaf variables, 
+    // no need to create node; it is ok to have multiple `nleaf_grads` pointing
+    // to the same grad_entry.sum 
+    nleaf_grads.push_back(entry.sum); 
+    // nleaf_grads.emplace_back(std::move(entry.sum));
+  }
+  ret.attrs["nleaf_grads"] = std::make_shared<any>(std::move(nleaf_grads));
+  // src.attrs["nleaf_grads"] = std::make_shared<any>(std::move(nleaf_grads));
+
   return ret;
 }
 
@@ -704,7 +736,8 @@ NNVM_REGISTER_PASS(MXGradient)
 .depend_graph_attr("grad_xs")
 .depend_graph_attr("in_arg_shapes")
 .depend_graph_attr("in_arg_dtypes")
-.depend_graph_attr("grad_ys_out_grad");
+.depend_graph_attr("grad_ys_out_grad")
+.depend_graph_attr("grad_us");
 
 }  // namespace
 
