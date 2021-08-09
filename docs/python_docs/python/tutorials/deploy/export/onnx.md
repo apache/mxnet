@@ -29,7 +29,7 @@ In this tutorial, we will learn how to use MXNet to ONNX exporter on pre-trained
 
 To run the tutorial you will need to have installed the following python modules:
 - [MXNet >= 1.3.0](https://mxnet.apache.org/get_started)
-- [onnx]( https://github.com/onnx/onnx#installation) v1.2.1 (follow the install guide)
+- [onnx]( https://github.com/onnx/onnx#user-content-installation) v1.2.1 (follow the install guide)
 
 *Note:* MXNet-ONNX importer and exporter follows version 7 of ONNX operator set which comes with ONNX v1.2.1.
 
