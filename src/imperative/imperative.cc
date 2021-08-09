@@ -166,7 +166,7 @@ void Imperative::MarkVariablesEx(
       <<"The node has already been marked. Cannot retain it again.";
     info.out_grads.emplace_back(gradients[i]->Detach());
     info.grad_req = static_cast<OpReqType>(grad_reqs[i]); // otherwise defaulted to be kNullOp
-    info.ctx = variables[i]->ctx(); // redundant operation
+    info.ctx = variables[i]->ctx(); 
   }
 }
 
@@ -649,8 +649,6 @@ std::vector<NDArray*> Imperative::Backward(
   for (size_t i = 0; i < us_grads.size(); i++) {
     size_t eid = idx.entry_id(us_grads[i]);
     AGInfo& info = AGInfo::Get(us[i].node);
-    // arrays[eid] = &info.out_grads[0]; // Leftover work: the accosicated arrays: ref_count, array_reqs
-    // ref_count[eid] = 1;
     array_reqs[eid] = info.grad_req;
   }
 
@@ -792,7 +790,6 @@ void Imperative::DCInfo::Compute(const NDArray &arr) {
 std::vector<nnvm::ObjectPtr> Imperative::ListNonleafVariables(nnvm::Symbol& sym) const {
   using namespace nnvm;
   std::vector<ObjectPtr> ret;
-  // ret.reserve(sym.outputs.size());
   DFSVisit(sym.outputs, [&ret](const ObjectPtr& node) {
     AGInfo& info = AGInfo::Get(node);
     if (info.out_grads.size()>0 && !node->is_variable()) { 
