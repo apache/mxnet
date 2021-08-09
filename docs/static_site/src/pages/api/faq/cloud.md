@@ -113,8 +113,8 @@ The following commands build _MXNet_ with CUDA/CUDNN, Amazon S3, and distributed
 training.
 
 ```bash
-git clone --recursive https://github.com/apache/incubator-mxnet
-cd incubator-mxnet; cp make/config.mk .
+git clone --recursive https://github.com/apache/mxnet
+cd mxnet; cp make/config.mk .
 echo "USE_CUDA=1" >>config.mk
 echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
 echo "USE_CUDNN=1" >>config.mk
@@ -192,7 +192,7 @@ cat hosts | xargs -I{} ssh -o StrictHostKeyChecking=no {} 'uname -a; pgrep pytho
 ```
 
 ***Note:*** The preceding example is very simple to train and therefore isn't a good
-benchmark for distributed training. Consider using other [examples](https://github.com/apache/incubator-mxnet/tree/v1.x/example/image-classification).
+benchmark for distributed training. Consider using other [examples](https://github.com/apache/mxnet/tree/v1.x/example/image-classification).
 
 ### More Options
 #### Use Multiple Data Shards

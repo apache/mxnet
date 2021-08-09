@@ -175,7 +175,7 @@ You also can save the training and evaluation errors for later use by passing a 
 How to Write Your Own Callback Functions
 ----------
 
-You can find the source code for the two callback functions on [GitHub](https://github.com/apache/incubator-mxnet/blob/v1.x/R-package/R/callback.R) and use it as a template:
+You can find the source code for the two callback functions on [GitHub](https://github.com/apache/mxnet/blob/v1.x/R-package/R/callback.R) and use it as a template:
 
 Basically, all callback functions follow the following structure:
 

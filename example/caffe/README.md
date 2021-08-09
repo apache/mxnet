@@ -19,7 +19,7 @@
 
 [Caffe](http://caffe.berkeleyvision.org/) has been a well-known and widely-used deep learning framework. Now MXNet has supported calling most caffe operators(layers) and loss functions directly in its symbolic graph! Using one's own customized caffe layer is also effortless.
 
-Besides Caffe, MXNet has already embedded Torch modules and its tensor mathematical functions. ([link](https://github.com/apache/incubator-mxnet/blob/v1.x/docs/faq/torch.md))
+Besides Caffe, MXNet has already embedded Torch modules and its tensor mathematical functions. ([link](https://github.com/apache/mxnet/blob/v1.x/docs/faq/torch.md))
 
 This blog demonstrates two steps to use Caffe op in MXNet:
 
@@ -38,7 +38,7 @@ This blog demonstrates two steps to use Caffe op in MXNet:
 
 ## Caffe Operator (Layer)
 Caffe's neural network operator and loss functions are supported by MXNet through `mxnet.symbol.CaffeOp` and `mxnet.symbol.CaffeLoss` respectively.
-For example, the following code shows multi-layer perception network for classifying MNIST digits ([full code](https://github.com/apache/incubator-mxnet/blob/v1.x/example/caffe/caffe_net.py)):
+For example, the following code shows multi-layer perception network for classifying MNIST digits ([full code](https://github.com/apache/mxnet/blob/v1.x/example/caffe/caffe_net.py)):
 
 ### Python
 ```Python

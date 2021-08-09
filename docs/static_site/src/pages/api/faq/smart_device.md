@@ -39,7 +39,7 @@ All that's necessary to create the library is to compile that single file.
 This simplifies the problem of porting to various platforms.
 
 Thanks to [Jack Deng](https://github.com/jdeng),
-MXNet provides an [amalgamation](https://github.com/apache/incubator-mxnet/tree/v1.x/amalgamation) script
+MXNet provides an [amalgamation](https://github.com/apache/mxnet/tree/v1.x/amalgamation) script
 that compiles all code needed for prediction based on trained DL models into a single `.cc` file,
 containing approximately 30K lines of code. This code only depends on the BLAS library.
 Moreover, we've also created an even more minimal version,
@@ -53,8 +53,8 @@ Porting to another language with a C foreign function interface requires little 
 For examples, see the following examples on GitHub:
 
 - Go: [https://github.com/jdeng/gomxnet](https://github.com/jdeng/gomxnet)
-- Java: [https://github.com/apache/incubator-mxnet/tree/v1.x/amalgamation/jni](https://github.com/apache/incubator-mxnet/tree/v1.x/amalgamation/jni)
-- Python: [https://github.com/apache/incubator-mxnet/tree/v1.x/amalgamation/python](https://github.com/apache/incubator-mxnet/tree/v1.x/amalgamation/python)
+- Java: [https://github.com/apache/mxnet/tree/v1.x/amalgamation/jni](https://github.com/apache/incubator-mxnet/tree/v1.x/amalgamation/jni)
+- Python: [https://github.com/apache/mxnet/tree/v1.x/amalgamation/python](https://github.com/apache/incubator-mxnet/tree/v1.x/amalgamation/python)
 
 
 If you plan to amalgamate your system, there are a few guidelines you ought to observe when building the project:

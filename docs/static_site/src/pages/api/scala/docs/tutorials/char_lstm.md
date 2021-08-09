@@ -56,7 +56,7 @@ Edit the CLASS_PATH variable in the script to include your operating system-spec
 
 ```
 
-- Run inference with the [run_test_charrnn.sh script](https://github.com/apache/incubator-mxnet/blob/v1.x/scala-package/examples/scripts/rnn/run_test_charrnn.sh). Edit the script as follows:
+- Run inference with the [run_test_charrnn.sh script](https://github.com/apache/mxnet/blob/v1.x/scala-package/examples/scripts/rnn/run_test_charrnn.sh). Edit the script as follows:
 
 Edit the CLASS_PATH variable in the script to include your operating system-specific folder (e.g., linux-x86_64-cpu/linux-x86_64-gpu/osx-x86_64-cpu) in the path. Run the script with the following command:
 
@@ -526,5 +526,5 @@ You can see the output generated from Obama's speeches. All of the line breaks, 
 
 ## Next Steps
 * [Scala API]({{'/api/scala'|relative_url}})
-* [More Scala Examples](https://github.com/apache/incubator-mxnet/tree/v1.x/scala-package/examples/)
+* [More Scala Examples](https://github.com/apache/mxnet/tree/v1.x/scala-package/examples/)
 * [MXNet tutorials index]({{'/api'|relative_url}})
