@@ -519,3 +519,22 @@ def test_gradient():
     dx.backward()
     assert abs(x.grad.asscalar() - 2.71828175) < 1e-7
 
+def test_retain_grad():
+    x = nd.array([1,2,3,4])
+    x.attach_grad()
+    y = nd.array([5,6,7,8])
+    y.attach_grad()
+
+    with mx.autograd.record():
+        u = x * y
+        z = u * x
+
+    u.retain_grad()
+    z.retain_grad()
+    out_grad = nd.array([10, 10, 10, 10])
+    z.backward(out_grad)
+    
+    assert (u.grad == out_grad * x).asnumpy().all()             # u.grad = out_grad * x
+    assert (z.grad == out_grad).asnumpy().all()                 # z.grad = out_grad
+    assert (x.grad == out_grad * 2 * x * y).asnumpy().all()     # x.grad = 2*x*y; y.grad = x**2
+    assert (y.grad == out_grad * x*x).asnumpy().all() 
