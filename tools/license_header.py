@@ -121,6 +121,7 @@ _WHITE_LIST = [
 
                # Licensed under Apache 2.0 license
                'example/image-classification/predict-cpp/image-classification-predict.cc',
+               'src/operator/nn/mkldnn/mkldnn_base-inl.h'
 
                # This file
                'tools/license_header.py',
