@@ -53,8 +53,8 @@ Porting to another language with a C foreign function interface requires little 
 For examples, see the following examples on GitHub:
 
 - Go: [https://github.com/jdeng/gomxnet](https://github.com/jdeng/gomxnet)
-- Java: [https://github.com/apache/mxnet/tree/v1.x/amalgamation/jni](https://github.com/apache/incubator-mxnet/tree/v1.x/amalgamation/jni)
-- Python: [https://github.com/apache/mxnet/tree/v1.x/amalgamation/python](https://github.com/apache/incubator-mxnet/tree/v1.x/amalgamation/python)
+- Java: [https://github.com/apache/mxnet/tree/v1.x/amalgamation/jni](https://github.com/apache/mxnet/tree/v1.x/amalgamation/jni)
+- Python: [https://github.com/apache/mxnet/tree/v1.x/amalgamation/python](https://github.com/apache/mxnet/tree/v1.x/amalgamation/python)
 
 
 If you plan to amalgamate your system, there are a few guidelines you ought to observe when building the project:
