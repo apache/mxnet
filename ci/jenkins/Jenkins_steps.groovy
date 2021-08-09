@@ -1074,8 +1074,7 @@ def docs_python(lib_name) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cython)
-            python3_gpu_ut_cython('ubuntu_gpu_cu111')
-            utils.docker_run('ubuntu_gpu_cu111', 'build_python_docs', false)
+            utils.docker_run('ubuntu_gpu_cu111', 'build_python_docs', true)
             if (should_pack_website()) {
               utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
             }
