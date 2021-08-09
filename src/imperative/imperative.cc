@@ -132,7 +132,7 @@ OpStatePtr Imperative::Invoke(
 // Create nnvm::NodeEntry for variables' and gradients' autograd_entry_
 // attribute and associate AGInfo with it's info attribute
 void Imperative::MarkVariables(
-    const std::vector<NDArray*>& variables, // u_py
+    const std::vector<NDArray*>& variables,
     const std::vector<uint32_t>& grad_reqs,
     const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
@@ -141,7 +141,7 @@ void Imperative::MarkVariables(
     variables[i]->autograd_entry_ = nnvm::NodeEntry{
         nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
     AGInfo& info = AGInfo::Create(variables[i]->autograd_entry_.node);
-    info.outputs.emplace_back(variables[i]->Detach()); // node.info.output u_copy
+    info.outputs.emplace_back(variables[i]->Detach());
     info.out_grads.emplace_back(gradients[i]->Detach());
     info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
     info.ctx = variables[i]->ctx();
@@ -167,18 +167,6 @@ void Imperative::MarkVariablesEx(
     info.out_grads.emplace_back(gradients[i]->Detach());
     info.grad_req = static_cast<OpReqType>(grad_reqs[i]); // otherwise defaulted to be kNullOp
     info.ctx = variables[i]->ctx(); // redundant operation
-
-    // CHECK_NE(info.grad_req, static_cast<OpReqType>(grad_reqs[i]))
-      // << "KX: info.grad_req possibly not initialized.";
-
-    // Do I need to create Node/NodeEntry for gradients[i]->autograd_entry_?
-    // That depends on which NDArray is retrieved from python. If it can be retrived 
-    // by u->info.out_grads, without using the Node of gradients[i], then no need to 
-    // create such node.
-
-    // Create Node for gradients[i] and set it as the node's output; this
-    // is useful for higher order grad wrt it.
-    // But here as intermediate node, it is not necessary to have a gradient node for it.
   }
 }
 
@@ -508,7 +496,6 @@ std::vector<NDArray*> Imperative::Backward(
     CHECK_GT(xs.size(), 0)
         << "There are no inputs in computation graph that require gradients.";
   }
-  // std::vector<ObjectPtr> nleaf_vars = sym.ListNonleafVariables();
   std::vector<ObjectPtr> nleaf_vars = ListNonleafVariables(sym); 
   std::vector<NodeEntry> us;
   us.reserve(nleaf_vars.size());
@@ -606,20 +593,7 @@ std::vector<NDArray*> Imperative::Backward(
     if (arrays[eid]->dtype_ == -1) {
       arrays[eid] = &info.out_grads[0];
     } else { 
-      // arrays[eid] has been assigned a value from ograd_entries
-      // So reset `us_grads.node->info.out_grads` to be 
-      // `ograd_entries.node->info.outputs`
       info.out_grads[0] = *arrays[eid]; 
-      // By default this is a copy, not a reference assignment, since 
-      // the addresses are still different but the fields become the 
-      // same. For example, .ptr_ of the rvalued NDArray evaluated from
-      // *arrays[eid], will be copied to the object NDArray in 
-      // info.out_grads[0]. If info.out_grads were declared as reference:
-      // std::vector<NDArray&> then this would be just a copy of
-      // reference and the memo will be the same.
-      // For `info.out_grads[0] = std::move(*arrays[eid]);` value in
-      // `*arrays[eid]` is extracted and assigned to the left. After 
-      // this arrays[eid] becomes unintialized.
     }
     ref_count[eid] = 1;
   }

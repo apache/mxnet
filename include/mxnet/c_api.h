@@ -1098,7 +1098,6 @@ MXNET_DLL int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayDetach(NDArrayHandle handle, NDArrayHandle *out);
-MXNET_DLL int MXNDArrayDetachEx(NDArrayHandle handle, NDArrayHandle *out);
 /*!
  * \brief set the flag for gradient array state.
  * \param handle NDArray handle
