@@ -71,7 +71,7 @@ import mxnet as mx
 module = mx.module.Module(context=[mx.gpu(0), mx.gpu(2)], ...)
 ```
 while if the program accepts a `--gpus` flag (as seen in
-[example/image-classification](https://github.com/apache/incubator-mxnet/tree/v1.x/example/image-classification)),
+[example/image-classification](https://github.com/apache/mxnet/tree/v1.x/example/image-classification)),
 then we can try
 ```bash
 python train_mnist.py --gpus 0,2 ...
@@ -130,7 +130,7 @@ When using a large number of GPUs, e.g. >=4, we suggest using `device` for bette
 
 Launching a distributed job is a bit different from running on a single
 machine. MXNet provides
-[tools/launch.py](https://github.com/apache/incubator-mxnet/blob/v1.x/tools/launch.py) to
+[tools/launch.py](https://github.com/apache/mxnet/blob/v1.x/tools/launch.py) to
 start a job by using `ssh`, `mpi`, `sge`, or `yarn`.
 
 An easy way to set up a cluster of EC2 instances for distributed deep learning
@@ -139,7 +139,7 @@ If you do not have a cluster, you can check the repository before you continue.
 
 Assume we are at the directory `mxnet/example/image-classification`
 and want to train LeNet to classify MNIST images, as demonstrated here:
-[train_mnist.py](https://github.com/apache/incubator-mxnet/blob/v1.x/example/image-classification/train_mnist.py).
+[train_mnist.py](https://github.com/apache/mxnet/blob/v1.x/example/image-classification/train_mnist.py).
 
 On a single machine, we can run:
 

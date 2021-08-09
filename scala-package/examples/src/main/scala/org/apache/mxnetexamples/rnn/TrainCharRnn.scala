@@ -25,7 +25,7 @@ import org.apache.mxnet.optimizer.Adam
 
 /**
   * Follows the demo, to train the char rnn:
-  * https://github.com/apache/incubator-mxnet/blob/v1.x/example/rnn/char-rnn.ipynb
+  * https://github.com/apache/mxnet/blob/v1.x/example/rnn/char-rnn.ipynb
   */
 object TrainCharRnn {
 

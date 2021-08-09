@@ -575,7 +575,7 @@ class ThreadedEngine : public Engine {
 
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
-   * See also #309 (https://github.com/apache/incubator-mxnet/issues/309)
+   * See also #309 (https://github.com/apache/mxnet/issues/309)
    */
   std::shared_ptr<common::ObjectPool<ThreadedOpr> >       objpool_opr_ref_;
   std::shared_ptr<common::ObjectPool<OprBlock> >          objpool_blk_ref_;

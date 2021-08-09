@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-## based on https://github.com/apache/incubator-mxnet/issues/1302
+## based on https://github.com/apache/mxnet/issues/1302
 ## Parses the model fit log file and generates a train/val vs epoch plot
 import matplotlib.pyplot as plt
 import numpy as np
