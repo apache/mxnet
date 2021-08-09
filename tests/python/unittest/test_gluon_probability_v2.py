@@ -77,7 +77,7 @@ def test_gluon_uniform():
         net = TestUniform("log_prob")
         if hybridize:
             net.hybridize()
-        for i in range(2):
+        for _ in range(2):
             mx_out = net(low, high, samples).asnumpy()
             np_out = ss.uniform(low.asnumpy(),
                                 (high - low).asnumpy()).logpdf(samples.asnumpy())
@@ -1842,7 +1842,7 @@ def test_affine_transform():
                             rtol=1e-3, use_broadcast=False)
 
     # Test sampling
-    for shape, hybridize in itertools.product(shapes, [True, False]):
+    for shape, _ in itertools.product(shapes, [True, False]):
         loc = np.random.uniform(-1, 1, shape)
         loc.attach_grad()
         scale = np.random.uniform(0.5, 1.5, shape)

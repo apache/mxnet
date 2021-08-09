@@ -387,7 +387,7 @@ def test_function1():
     with mx.autograd.record():
         X = mx.nd.zeros((3, 4))
         #X.attach_grad()  # uncommenting this line works
-        for i in range(5):
+        for _ in range(5):
             f = Foo()
             X = f(X)
         X.wait_to_read()
@@ -446,7 +446,7 @@ def test_np_function1():
     with mx.autograd.record():
         X = mx.np.zeros((3, 4))
         #X.attach_grad()  # uncommenting this line works
-        for i in range(5):
+        for _ in range(5):
             f = Foo()
             X = f(X)
         X.wait_to_read()

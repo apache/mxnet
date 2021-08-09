@@ -193,7 +193,7 @@ def check_elementwise_sum_with_shape(shape, n):
 def test_elementwise_sum():
     nrepeat = 2
     maxdim = 4
-    for repeat in range(nrepeat):
+    for _ in range(nrepeat):
         for dim in range(1, maxdim):
             shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
             check_elementwise_sum_with_shape(shape, np.random.randint(1, 8))
@@ -2518,7 +2518,7 @@ def test_reduce():
 
 def test_broadcast():
     sample_num = 200
-    for i in range(sample_num):
+    for _ in range(sample_num):
         # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
         ndim = np.random.randint(1, 6)
         target_shape = np.random.randint(1, 6, size=(ndim,))
@@ -2561,7 +2561,7 @@ def test_broadcast():
 
 def test_transpose():
     for ndim in range(1, 10):
-        for t in range(5):
+        for _ in range(5):
             dims = list(np.random.randint(1, 5, size=ndim))
             axes = list(range(ndim))
             random.shuffle(axes)
@@ -2634,12 +2634,12 @@ def test_expand_dims():
 
 def test_crop():
     for ndim in range(1, 6):
-        for t in range(5):
+        for _ in range(5):
             dims = []
             begin = []
             end = []
             idx = []
-            for i in range(ndim):
+            for _ in range(ndim):
                 d = random.randint(1, 5)
                 b = random.randint(0, d-1)
                 e = random.randint(b+1, d)
@@ -2779,7 +2779,7 @@ def test_broadcast_like_different_types():
 
 def test_flip():
     for ndim in range(1, 6):
-        for t in range(5):
+        for _ in range(5):
             dims = [random.randint(1,10) for i in range(ndim)]
             axis = random.randint(0, ndim-1)
             idx = [slice(None, None, -1) if i == axis else slice(None, None) for i in range(ndim)]
@@ -4180,7 +4180,7 @@ def test_take(mode, out_of_range, data_ndim, idx_ndim):
         else:
             raise ValueError("axis %d is not supported..." % axis)
 
-    for axis in range(-data_ndim, data_ndim):
+    for _ in range(-data_ndim, data_ndim):
         data_shape = ()
         for _ in range(data_ndim):
             data_shape += (np.random.randint(low=1, high=5), )
@@ -4443,7 +4443,7 @@ def test_repeat():
         repeats = 3
         for ndim in range(1, ndim_max+1):
             shape = ()
-            for i in range(0, ndim):
+            for _ in range(0, ndim):
                 shape += (np.random.randint(1, size_max+1), )
             a = np.random.random_sample(size=shape)
             aa = np.repeat(a, repeats)
@@ -4530,7 +4530,7 @@ def test_tile():
         rep_max = 10  # max number of tiling in each dim
         for ndim in range(ndim_min, ndim_max+1):
             shape = []
-            for i in range(1, ndim+1):
+            for _ in range(1, ndim+1):
                 shape.append(np.random.randint(1, size_max+1))
             shape = tuple(shape)
             a = np.random.randint(0, 100, shape)
@@ -4538,7 +4538,7 @@ def test_tile():
 
             reps_len = np.random.randint(1, length_max+1)
             reps_tuple = ()
-            for i in range(1, reps_len):
+            for _ in range(1, reps_len):
                 reps_tuple += (np.random.randint(1, rep_max), )
             reps_array = np.asarray(reps_tuple)
 
@@ -4623,7 +4623,7 @@ def test_one_hot():
         off_value = 0
         for ndim in range(1, ndim_max+1):
             shape = ()
-            for i in range(1, ndim+1):
+            for _ in range(1, ndim+1):
                 shape += (np.random.randint(1, dim_size_max+1), )
             indices = np.random.randint(-dim_size_max, dim_size_max+1,
                                         size=np.prod(shape)).reshape(shape)
@@ -8703,7 +8703,7 @@ def test_np_shape_decorator():
     check_concat((0, 3, 4), (5, 3, 4), 0)
     check_concat((8, 0, 5), (8, 7, 5), 1)
     check_concat((8, 0, 0), (8, 0, 0), 2)
-    for active in [True, False]:
+    for _ in [True, False]:
         check_concat((0, 3, 4), (5, 3, 4), 0)
         check_concat((8, 0, 5), (8, 7, 5), 1)
         check_concat((8, 0, 0), (8, 0, 0), 2)
@@ -9523,7 +9523,7 @@ def test_take_grads():
 
     def run_model(model, loss, X, Y, num_iters=5):
         grads = []
-        for i in range(num_iters):
+        for _ in range(num_iters):
             with autograd.record():
                 Y_hat = model(X)
                 ll = loss(Y_hat, Y)
