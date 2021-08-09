@@ -29,29 +29,41 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
+
 #include <mshadow/base.h>
+
 #include <map>
-#include <vector>
 #include <string>
 #include <utility>
+#include <vector>
+
 #include "../mshadow_op.h"
-#include "../operator_common.h"
 #include "../mxnet_op.h"
+#include "../operator_common.h"
 
 #ifdef __GNUG__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
 #endif
 
+/*! \brief inverse standard deviation <-> variance */
+#define VARIANCE_TO_INVSTD(__var$, __eps$)    (1.0 / std::sqrt((__var$) + DType(__eps$)))
+#define INVSTD_TO_VARIANCE(__invstd$, __eps$) ((1.0 / ((__invstd$) * (__invstd$))) - (__eps$))
+
 namespace mxnet {
 namespace op {
 
 namespace batchnorm {
-enum BatchNormOpInputs {kData, kGamma, kBeta, kInMovingMean,
-  kInMovingVar};  // kGamma: weights, kBeta: biases
-enum BatchNormOpOutputs {kOut, kMean, kVar};  // req, out_data
-enum BatchNormOpResource {kTempSpace};
-enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
+enum BatchNormOpInputs {
+  kData,
+  kGamma,
+  kBeta,
+  kInMovingMean,
+  kInMovingVar
+};                                              // kGamma: weights, kBeta: biases
+enum BatchNormOpOutputs { kOut, kMean, kVar };  // req, out_data
+enum BatchNormOpResource { kTempSpace };
+enum BatchNormOpAuxiliary { kMovingMean, kMovingVar };  // aux_states
 
 /*! \brief Default channel axis if none specified in the params */
 constexpr int DEFAULT_AXIS = 1;
@@ -59,11 +71,18 @@ constexpr int DEFAULT_AXIS = 1;
 
 /*! \brief Parameters for BatchNorm operator */
 namespace quantized_batchnorm {
-enum QuantizedBatchNormOpInputs {kData, kGamma, kBeta, kInMovingMean,
-  kInMovingVar, kDataMin, kDataMax};
-enum QuantizedBatchNormOutputs {kOut, kOutMin, kOutMax};
-enum QuantizedBatchNormOpAuxiliary {kMovingMean, kMovingVar};
-}  // quantized_batchnorm
+enum QuantizedBatchNormOpInputs {
+  kData,
+  kGamma,
+  kBeta,
+  kInMovingMean,
+  kInMovingVar,
+  kDataMin,
+  kDataMax
+};
+enum QuantizedBatchNormOutputs { kOut, kOutMin, kOutMax };
+enum QuantizedBatchNormOpAuxiliary { kMovingMean, kMovingVar };
+}  // namespace quantized_batchnorm
 
 /*! \brief Parameters for BatchNoram operator */
 struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
@@ -79,38 +98,42 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
 
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
-    DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
-    .describe("Epsilon to prevent div 0. "
-              "Must be no less than CUDNN_BN_MIN_EPSILON "
-              "defined in cudnn.h when using cudnn (usually 1e-5)");
-    DMLC_DECLARE_FIELD(momentum).set_default(0.9f)
-    .describe("Momentum for moving average");
-    DMLC_DECLARE_FIELD(fix_gamma).set_default(true)
-    .describe("Fix gamma while training");
-    DMLC_DECLARE_FIELD(use_global_stats).set_default(false)
-    .describe("Whether use global moving statistics instead of local batch-norm. "
-              "This will force change batch-norm into a scale shift operator.");
-    DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
-    .describe("Output the mean and inverse std ");
-    DMLC_DECLARE_FIELD(axis).set_default(mxnet::op::batchnorm::DEFAULT_AXIS)
-    .describe("Specify which shape axis the channel is specified");
-    DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
-    .describe("Do not select CUDNN operator, if available");
+    DMLC_DECLARE_FIELD(eps).set_default(1e-3f).describe(
+        "Epsilon to prevent div 0. "
+        "Must be no less than CUDNN_BN_MIN_EPSILON "
+        "defined in cudnn.h when using cudnn (usually 1e-5)");
+    DMLC_DECLARE_FIELD(momentum).set_default(0.9f).describe("Momentum for moving average");
+    DMLC_DECLARE_FIELD(fix_gamma).set_default(true).describe("Fix gamma while training");
+    DMLC_DECLARE_FIELD(use_global_stats)
+        .set_default(false)
+        .describe(
+            "Whether use global moving statistics instead of local batch-norm. "
+            "This will force change batch-norm into a scale shift operator.");
+    DMLC_DECLARE_FIELD(output_mean_var)
+        .set_default(false)
+        .describe("Output the mean and inverse std ");
+    DMLC_DECLARE_FIELD(axis)
+        .set_default(mxnet::op::batchnorm::DEFAULT_AXIS)
+        .describe("Specify which shape axis the channel is specified");
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(false).describe(
+        "Do not select CUDNN operator, if available");
     DMLC_DECLARE_FIELD(min_calib_range)
-    .set_default(dmlc::optional<float>())
-    .describe("The minimum scalar value in the form of float32 obtained "
-              "through calibration. If present, it will be used to by "
-              "quantized batch norm op to calculate primitive scale."
-              "Note: this calib_range is to calib bn output.");
+        .set_default(dmlc::optional<float>())
+        .describe(
+            "The minimum scalar value in the form of float32 obtained "
+            "through calibration. If present, it will be used to by "
+            "quantized batch norm op to calculate primitive scale."
+            "Note: this calib_range is to calib bn output.");
     DMLC_DECLARE_FIELD(max_calib_range)
-    .set_default(dmlc::optional<float>())
-    .describe("The maximum scalar value in the form of float32 obtained "
-              "through calibration. If present, it will be used to by "
-              "quantized batch norm op to calculate primitive scale."
-              "Note: this calib_range is to calib bn output.");
+        .set_default(dmlc::optional<float>())
+        .describe(
+            "The maximum scalar value in the form of float32 obtained "
+            "through calibration. If present, it will be used to by "
+            "quantized batch norm op to calculate primitive scale."
+            "Note: this calib_range is to calib bn output.");
   }
 
-  bool operator==(const BatchNormParam &other) const {
+  bool operator==(const BatchNormParam& other) const {
     bool flag = this->eps == other.eps && this->momentum == other.momentum &&
                 this->fix_gamma == other.fix_gamma &&
                 this->use_global_stats == other.use_global_stats &&
@@ -127,7 +150,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream eps_s, momentum_s, fix_gamma_s, use_global_stats_s, output_mean_var_s,
-                       axis_s, cudnn_off_s, min_calib_range_s, max_calib_range_s;
+        axis_s, cudnn_off_s, min_calib_range_s, max_calib_range_s;
     eps_s << eps;
     momentum_s << momentum;
     fix_gamma_s << fix_gamma;
@@ -137,15 +160,15 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     cudnn_off_s << cudnn_off;
     min_calib_range_s << min_calib_range;
     max_calib_range_s << max_calib_range;
-    (*dict)["eps"] = eps_s.str();
-    (*dict)["momentum"] = momentum_s.str();
-    (*dict)["fix_gamma"] = fix_gamma_s.str();
+    (*dict)["eps"]              = eps_s.str();
+    (*dict)["momentum"]         = momentum_s.str();
+    (*dict)["fix_gamma"]        = fix_gamma_s.str();
     (*dict)["use_global_stats"] = use_global_stats_s.str();
-    (*dict)["output_mean_var"] = output_mean_var_s.str();
-    (*dict)["axis"] = axis_s.str();
-    (*dict)["cudnn_off"] = cudnn_off_s.str();
-    (*dict)["min_calib_range"] = min_calib_range_s.str();
-    (*dict)["max_calib_range"] = max_calib_range_s.str();
+    (*dict)["output_mean_var"]  = output_mean_var_s.str();
+    (*dict)["axis"]             = axis_s.str();
+    (*dict)["cudnn_off"]        = cudnn_off_s.str();
+    (*dict)["min_calib_range"]  = min_calib_range_s.str();
+    (*dict)["max_calib_range"]  = max_calib_range_s.str();
   }
 };
 
@@ -153,15 +176,15 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
 }  // namespace mxnet
 
 namespace std {
-template<>
+template <>
 struct hash<mxnet::op::BatchNormParam> {
   size_t operator()(const mxnet::op::BatchNormParam& val) {
     size_t ret = 0;
-    ret = dmlc::HashCombine(ret, val.momentum);
-    ret = dmlc::HashCombine(ret, val.fix_gamma);
-    ret = dmlc::HashCombine(ret, val.use_global_stats);
-    ret = dmlc::HashCombine(ret, val.output_mean_var);
-    ret = dmlc::HashCombine(ret, val.axis);
+    ret        = dmlc::HashCombine(ret, val.momentum);
+    ret        = dmlc::HashCombine(ret, val.fix_gamma);
+    ret        = dmlc::HashCombine(ret, val.use_global_stats);
+    ret        = dmlc::HashCombine(ret, val.output_mean_var);
+    ret        = dmlc::HashCombine(ret, val.axis);
     return ret;
   }
 };
@@ -175,40 +198,44 @@ static inline bool IsBNWriting(const OpReqType ort) {
 }
 
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormForwardImpl(mshadow::Stream<cpu> *stream,
-                          const OpContext &ctx, const BatchNormParam& param,
-                          const std::vector<TBlob> &in_data,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<TBlob> &out_data,
-                          const std::vector<TBlob> &aux_states);
+void BatchNormForwardImpl(mshadow::Stream<cpu>* stream,
+                          const OpContext& ctx,
+                          const BatchNormParam& param,
+                          const std::vector<TBlob>& in_data,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& out_data,
+                          const std::vector<TBlob>& aux_states);
 
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormBackwardImpl(mshadow::Stream<cpu> *stream,
-                           const OpContext &ctx, const BatchNormParam& param,
-                           const std::vector<TBlob> &out_grad,
-                           const std::vector<TBlob> &in_data,
-                           const std::vector<TBlob> &out_data,
-                           const std::vector<OpReqType> &req,
-                           const std::vector<TBlob> &in_grad,
-                           const std::vector<TBlob> &aux_states);
+void BatchNormBackwardImpl(mshadow::Stream<cpu>* stream,
+                           const OpContext& ctx,
+                           const BatchNormParam& param,
+                           const std::vector<TBlob>& out_grad,
+                           const std::vector<TBlob>& in_data,
+                           const std::vector<TBlob>& out_data,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& in_grad,
+                           const std::vector<TBlob>& aux_states);
 
 #if MXNET_USE_CUDA
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormForwardImpl(mshadow::Stream<gpu> *stream,
-                          const OpContext &ctx, const BatchNormParam& param,
-                          const std::vector<TBlob> &in_data,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<TBlob> &out_data,
-                          const std::vector<TBlob> &aux_states);
+void BatchNormForwardImpl(mshadow::Stream<gpu>* stream,
+                          const OpContext& ctx,
+                          const BatchNormParam& param,
+                          const std::vector<TBlob>& in_data,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& out_data,
+                          const std::vector<TBlob>& aux_states);
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormBackwardImpl(mshadow::Stream<gpu> *stream,
-                           const OpContext &ctx, const BatchNormParam& param,
-                           const std::vector<TBlob> &out_grad,
-                           const std::vector<TBlob> &in_data,
-                           const std::vector<TBlob> &out_data,
-                           const std::vector<OpReqType> &req,
-                           const std::vector<TBlob> &in_grad,
-                           const std::vector<TBlob> &aux_states);
+void BatchNormBackwardImpl(mshadow::Stream<gpu>* stream,
+                           const OpContext& ctx,
+                           const BatchNormParam& param,
+                           const std::vector<TBlob>& out_grad,
+                           const std::vector<TBlob>& in_data,
+                           const std::vector<TBlob>& out_data,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& in_grad,
+                           const std::vector<TBlob>& aux_states);
 #endif  // MXNET_USE_CUDA
 
 /*!
@@ -223,11 +250,12 @@ void BatchNormBackwardImpl(mshadow::Stream<gpu> *stream,
  * \sa OpReqType, OpContext
  */
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormForward(const OpContext &ctx, const BatchNormParam& param,
-                      const std::vector<TBlob> &in_data,
-                      const std::vector<OpReqType> &req,
-                      const std::vector<TBlob> &out_data,
-                      const std::vector<TBlob> &aux_states) {
+void BatchNormForward(const OpContext& ctx,
+                      const BatchNormParam& param,
+                      const std::vector<TBlob>& in_data,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& out_data,
+                      const std::vector<TBlob>& aux_states) {
   using namespace mshadow;
   using namespace mshadow::expr;
 
@@ -241,9 +269,8 @@ void BatchNormForward(const OpContext &ctx, const BatchNormParam& param,
     CHECK_GE(req.size(), 1U);
     CHECK_EQ(req[batchnorm::kOut], kWriteTo);
   }
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  BatchNormForwardImpl<xpu, DType, AccReal>(s, ctx, param, in_data, req,
-                                            out_data, aux_states);
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  BatchNormForwardImpl<xpu, DType, AccReal>(s, ctx, param, in_data, req, out_data, aux_states);
 }
 
 /*!
@@ -275,10 +302,11 @@ void BatchNormForward(const OpContext &ctx, const BatchNormParam& param,
  * \sa OperatorProperty, OpReqType, OpContext
  */
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormBackward(const OpContext &ctx, const BatchNormParam& param,
-                       const std::vector<TBlob> &inputs,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &outputs) {
+void BatchNormBackward(const OpContext& ctx,
+                       const BatchNormParam& param,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 8U);
   CHECK_EQ(outputs.size(), 3U);
 
@@ -287,40 +315,39 @@ void BatchNormBackward(const OpContext &ctx, const BatchNormParam& param,
   std::vector<TBlob> in_data(3);
   std::vector<TBlob> aux_states(2);
 
-  out_grad[0] = inputs[0];
-  out_data[batchnorm::kMean] = inputs[1];
-  out_data[batchnorm::kVar] = inputs[2];
-  in_data[batchnorm::kData] = inputs[3];
-  in_data[batchnorm::kGamma] = inputs[4];
-  in_data[batchnorm::kBeta] = inputs[5];
+  out_grad[0]                        = inputs[0];
+  out_data[batchnorm::kMean]         = inputs[1];
+  out_data[batchnorm::kVar]          = inputs[2];
+  in_data[batchnorm::kData]          = inputs[3];
+  in_data[batchnorm::kGamma]         = inputs[4];
+  in_data[batchnorm::kBeta]          = inputs[5];
   aux_states[batchnorm::kMovingMean] = inputs[6];
-  aux_states[batchnorm::kMovingVar] = inputs[7];
-  const std::vector<TBlob> &in_grad = outputs;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  BatchNormBackwardImpl<xpu, DType, AccReal>(s, ctx, param, out_grad, in_data,
-                                             out_data, req, in_grad, aux_states);
+  aux_states[batchnorm::kMovingVar]  = inputs[7];
+  const std::vector<TBlob>& in_grad  = outputs;
+  mshadow::Stream<xpu>* s            = ctx.get_stream<xpu>();
+  BatchNormBackwardImpl<xpu, DType, AccReal>(
+      s, ctx, param, out_grad, in_data, out_data, req, in_grad, aux_states);
 }
 
-template<typename xpu>
+template <typename xpu>
 void BatchNormCompute(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx, const std::vector<TBlob>& inputs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 5U);
-  std::vector<TBlob> in_data(inputs.begin(),
-                             inputs.begin() + batchnorm::kInMovingMean);
-  std::vector<TBlob> aux_states(inputs.begin() + batchnorm::kInMovingMean,
-                                inputs.end());
+  std::vector<TBlob> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
+  std::vector<TBlob> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
-    BatchNormForward<xpu, DType, AccReal>(ctx, param, in_data, req, outputs,
-                                          aux_states);
+    BatchNormForward<xpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
   });
 }
 
-template<typename xpu>
+template <typename xpu>
 void BatchNormGradCompute(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx, const std::vector<TBlob>& inputs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 8U);
@@ -335,15 +362,15 @@ void BatchNormGradCompute(const nnvm::NodeAttrs& attrs,
 
 namespace batchnorm {
 
-template<typename DType>
+template <typename DType>
 class BNTensor3 {
   enum { OUTER, CHANNEL, INNER, COUNT };
 
  public:
   inline BNTensor3(const TBlob& blob, const int indexOfChannel)
-    : dptr_(blob.dptr<DType>())
-      , indexOfChannel_(static_cast<size_t>(indexOfChannel < 0
-                               ? (static_cast<int>(blob.shape_.ndim()) + indexOfChannel)
+      : dptr_(blob.dptr<DType>()),
+        indexOfChannel_(static_cast<size_t>(
+            indexOfChannel < 0 ? (static_cast<int>(blob.shape_.ndim()) + indexOfChannel)
                                : indexOfChannel)) {
     CHECK_EQ(blob.type_flag_, mshadow::DataType<DType>::kFlag);
     shape_[OUTER] = 1;
@@ -351,23 +378,23 @@ class BNTensor3 {
       shape_[OUTER] *= blob.shape_[i];
     }
     shape_[CHANNEL] = blob.shape_[indexOfChannel_];
-    shape_[INNER] = 1;
+    shape_[INNER]   = 1;
     for (size_t i = indexOfChannel_ + 1, n = blob.shape_.ndim(); i < n; ++i) {
       shape_[INNER] *= blob.shape_[i];
     }
   }
 
-  inline BNTensor3(DType *p, const mxnet::TShape& shape, const int indexOfChannel)
-    : dptr_(p)
-      , indexOfChannel_(static_cast<size_t>(indexOfChannel < 0
-                               ? (static_cast<int>(shape.ndim()) + indexOfChannel)
-                               : indexOfChannel)) {
+  inline BNTensor3(DType* p, const mxnet::TShape& shape, const int indexOfChannel)
+      : dptr_(p),
+        indexOfChannel_(static_cast<size_t>(indexOfChannel < 0
+                                                ? (static_cast<int>(shape.ndim()) + indexOfChannel)
+                                                : indexOfChannel)) {
     shape_[OUTER] = 1;
     for (size_t i = 0; i < indexOfChannel_; ++i) {
       shape_[OUTER] *= shape[i];
     }
     shape_[CHANNEL] = shape[indexOfChannel_];
-    shape_[INNER] = 1;
+    shape_[INNER]   = 1;
     for (size_t i = indexOfChannel_ + 1, n = shape.ndim(); i < n; ++i) {
       shape_[INNER] *= shape[i];
     }
@@ -414,12 +441,10 @@ class BNTensor3 {
     return (ChannelCount() - 1) * InnerSize();
   }
 
-  MSHADOW_XINLINE size_t offset(const size_t outer,
-                                const size_t channel,
-                                const size_t i) const {
+  MSHADOW_XINLINE size_t offset(const size_t outer, const size_t channel, const size_t i) const {
     const size_t spatial_size = InnerSize();
-    const size_t skip_length = SkipLengthToNextSameChannelData();
-    size_t off = StartOffset(channel);
+    const size_t skip_length  = SkipLengthToNextSameChannelData();
+    size_t off                = StartOffset(channel);
     off += outer * shape_[CHANNEL] * shape_[INNER];
     const size_t skips = i / spatial_size;
     off += (1 + skip_length) * skips;
@@ -427,9 +452,7 @@ class BNTensor3 {
     return off;
   }
 
-  MSHADOW_XINLINE DType& get_ref(const size_t batch,
-                                 const size_t channel,
-                                 const size_t i) {
+  MSHADOW_XINLINE DType& get_ref(const size_t batch, const size_t channel, const size_t i) {
     const size_t off = offset(batch, channel, i);
     return dptr_[off];
   }
@@ -441,7 +464,7 @@ class BNTensor3 {
     return dptr_[off];
   }
 
-  DType *dptr_;
+  DType* dptr_;
   size_t indexOfChannel_;
   size_t shape_[COUNT];
 };
