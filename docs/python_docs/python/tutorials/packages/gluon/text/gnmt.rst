@@ -483,6 +483,6 @@ Summary
 In this notebook, we have shown how to train a GNMT model on IWSLT 2015
 English-Vietnamese using Gluon NLP toolkit. The complete training script
 can be found
-`here <https://github.com/dmlc/gluon-nlp/blob/master/scripts/nmt/train_gnmt.py>`__.
+`here <https://github.com/dmlc/gluon-nlp/blob/v0.x/scripts/machine_translation/train_gnmt.py>`__.
 The command to reproduce the result can be seen in the `nmt scripts
 page <http://gluon-nlp.mxnet.io/scripts/index.html#machine-translation>`__.

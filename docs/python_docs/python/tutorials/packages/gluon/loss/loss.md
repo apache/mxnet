@@ -236,7 +236,7 @@ The network would learn to minimize the distance between the two `A`'s and maxim
 
 #### [CTC Loss](../../../../api/gluon/loss/index.rst#mxnet.gluon.loss.CTCLoss)
 
-CTC Loss is the [connectionist temporal classification loss](https://distill.pub/2017/ctc/) . It is used to train recurrent neural networks with variable time dimension. It learns the alignment and labelling of input sequences. It takes a sequence as input and gives probabilities for each timestep. For instance, in the following image the word is not well aligned with the 5 timesteps because of the different sizes of characters. CTC Loss finds for each timestep the highest probability e.g. `t1` presents with high probability a `C`. It combines the highest probapilities and returns the best path decoding. For an in-depth tutorial on how to use CTC-Loss in MXNet, check out this [example](https://github.com/apache/incubator-mxnet/tree/master/example/ctc).
+CTC Loss is the [connectionist temporal classification loss](https://distill.pub/2017/ctc/) . It is used to train recurrent neural networks with variable time dimension. It learns the alignment and labelling of input sequences. It takes a sequence as input and gives probabilities for each timestep. For instance, in the following image the word is not well aligned with the 5 timesteps because of the different sizes of characters. CTC Loss finds for each timestep the highest probability e.g. `t1` presents with high probability a `C`. It combines the highest probapilities and returns the best path decoding.
 
 ![ctc_loss](/_static/ctc_loss.png)
 
