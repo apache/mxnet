@@ -112,7 +112,7 @@ cat hosts | xargs -I{} ssh -o StrictHostKeyChecking=no {} 'uname -a; pgrep pytho
 ```
 
 ***Note:*** The preceding example is very simple to train and therefore isn't a good
-benchmark for distributed training. Consider using other [examples](https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training).
+benchmark for distributed training. Consider using other [examples](https://github.com/apache/mxnet/tree/master/example/distributed_training).
 
 ### More Options
 #### Use Multiple Data Shards
