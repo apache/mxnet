@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file threaded_engine_pooled.cc
  * \brief Pooled threaded engine
  * \author Yutian Li

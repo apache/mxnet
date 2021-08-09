@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file c_api_test.h
  * \brief C API of mxnet for ease of testing backend in Python
  */

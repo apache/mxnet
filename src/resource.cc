@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file resource.cc
  * \brief Implementation of resource manager.
  */

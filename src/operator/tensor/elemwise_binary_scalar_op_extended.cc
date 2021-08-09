@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_scalar_op_extended.cc
  * \brief CPU Implementation of extended binary scalar functions.
  */

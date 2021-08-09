@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file nnz.cc
  * \brief CPU Implementation of nnz operator
  */

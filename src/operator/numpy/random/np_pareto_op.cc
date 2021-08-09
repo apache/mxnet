@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_pareto_op.cc
  * \brief Operator for numpy sampling from Pareto distributions
  */

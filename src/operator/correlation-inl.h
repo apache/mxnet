@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file correlation-inl.h
  * \brief correlation operator and symbol
  * \author Xu Dong

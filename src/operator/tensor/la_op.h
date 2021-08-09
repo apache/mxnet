@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file la_op.h
  * \brief Function definition of Operators for advanced linear algebra.
  */

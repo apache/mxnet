@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file convolution.cc
  * \brief
  * \author Bing Xu, Jun Wu, Da Zheng

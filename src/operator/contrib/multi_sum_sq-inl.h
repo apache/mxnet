@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file multi_l2_norm-inl.h
  * \brief vectorized L2 norm over multiple arrays operators
  * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez

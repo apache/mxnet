@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file np_gesvd-inl.h
  * \brief Function definition of the SVD Operator.
  */

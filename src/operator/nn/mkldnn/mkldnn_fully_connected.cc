@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file mkldnn_fully_connected.cc
  * \brief MKLDNN FullyConnected operator
  * \author Da Zheng, Ciyong Chen

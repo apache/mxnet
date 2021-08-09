@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2019 by Contributors
  * \file mkldnn_quantized_act.cc
  * \brief MKLDNN(Quantized) Activation operator based on subgraph
  * /author Zhiyuan Huang

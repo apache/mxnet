@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file im2col.cu
  * \brief
  * \author Jiajun Wang

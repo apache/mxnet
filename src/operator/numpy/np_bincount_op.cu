@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_bicount_op.cu
  * \brief numpy compatible bincount operator GPU registration
  */

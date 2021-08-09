@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file c_api_error.h
  * \brief Error handling for C API.
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file engine.h
  * \brief Engine that schedules all the operations according to dependency.
  */

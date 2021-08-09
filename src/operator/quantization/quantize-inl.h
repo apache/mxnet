@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file quantize-inl.h
  * \brief implementation of quantize operation
  */

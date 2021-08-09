@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file packet-inl.h
  * \brief Generic packet vectorization code
  */

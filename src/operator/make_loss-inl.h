@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file make_loss-inl.h
  * \brief special layer for propagating loss
 */

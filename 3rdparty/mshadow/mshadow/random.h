@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  *  \file random.h
  *  \brief Random inline functions for tensor.
  *  \author Bing Xu, Tianqi Chen

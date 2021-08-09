@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file pointwise_fusion_pass.cc
  * \brief Pass applying pointwise fusion.
  * \author Clement Fuji Tsang

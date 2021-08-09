@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file calibraite-inl.h
  * \brief Implementation of calibrate operator
  */

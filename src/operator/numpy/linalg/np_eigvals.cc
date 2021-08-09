@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_eigvals.cc
  * \brief CPU implementation placeholder of Eigvals Operator
  */

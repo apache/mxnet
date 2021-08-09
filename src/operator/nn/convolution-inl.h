@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file convolution-inl.h
  * \brief
  * \ref: https://github.com/Yangqing/caffe/wiki/Convolution-in-Caffe:-a-memo

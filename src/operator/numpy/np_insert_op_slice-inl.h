@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_insert_op_slice-inl.h
  * \brief Function definition of insert operators (insert by slice index)
  */

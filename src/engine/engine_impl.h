@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file engine_impl.h
  * \brief Internal implementation header of engine components.
  */

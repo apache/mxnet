@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file mask.h
  * \brief
  * \author Bing Xu

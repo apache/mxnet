@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file graph_executor.h
  * \brief Executor to execute the computation graph.
  */

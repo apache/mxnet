@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.h
  * \brief Function definition of elementwise sum
  * \author Bing Xu

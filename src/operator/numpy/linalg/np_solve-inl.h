@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_solve-inl.h
  * \brief Placeholder for solve linear equation
  */

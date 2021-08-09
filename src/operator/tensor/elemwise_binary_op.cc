@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_op.cc
  * \brief CPU implementation of elementwise binary operators
  */

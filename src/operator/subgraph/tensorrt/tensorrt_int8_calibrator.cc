@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2020 by Contributors
  * \file tensorrt-inl.h
  * \brief TensorRT operation registration
  * \author Serge Panev

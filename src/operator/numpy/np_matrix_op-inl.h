@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file np_matrix_op-inl.h
  * \brief Function definition of matrix related operators
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file sample_op.h
  * \brief Elementary unique sampling operators
  */

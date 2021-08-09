@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file transpose.h
  * \brief support for transpose
  * \author Junyuan Xie

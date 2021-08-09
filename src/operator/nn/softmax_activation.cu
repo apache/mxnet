@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file softmax_activation.cu
  * \brief
  * \author Junyuan Xie, Da Zheng

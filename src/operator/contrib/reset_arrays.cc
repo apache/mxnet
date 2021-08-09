@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file reset_arrays.cc
  * \brief setting all array element values to zeros
  * \author Moises Hernandez-Fernandez, Andrei Ivanov

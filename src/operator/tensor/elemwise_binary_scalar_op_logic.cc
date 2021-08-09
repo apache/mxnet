@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_scalar_op_logic.cc
  * \brief CPU Implementation of binary scalar logic functions.
  */

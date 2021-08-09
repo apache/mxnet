@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file adamw.cu
  * \brief Optimizer operators
  * \author Haibin Lin, Moises Hernandez, Andrei Ivanov

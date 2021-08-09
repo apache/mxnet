@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file special_functions-inl.h
  * \brief
  * \author Valentin Flunkert

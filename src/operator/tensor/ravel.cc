@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file ravel.cc
  * \brief CPU implementation of operators for ravel/unravel.
  */

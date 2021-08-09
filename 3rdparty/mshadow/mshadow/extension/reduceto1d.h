@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file reduceto1d.h
  * \brief support for sum_rows and sumall_except_dim
  * \author Tianqi Chen

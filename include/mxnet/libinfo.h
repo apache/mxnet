@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file libinfo.h
  * \author larroy
  * \brief get features of the MXNet library at runtime

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file l2_normalization.cc
  * \brief l2 normalization operator
 */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file softmax_output.cc
  * \brief
  * \author Bing Xu, Zhang Rong A

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file batch_norm_v1-inl.h
  * \brief
  * \author Bing Xu

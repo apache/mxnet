@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file control_flow_op.cc
  * \brief CPU Implementation of flow control
  */

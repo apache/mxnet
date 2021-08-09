@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
  * \file np_weibull_op.cu
  * \brief Operator for numpy sampling from weibull distributions
  */

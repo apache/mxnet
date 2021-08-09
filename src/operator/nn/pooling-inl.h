@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file pooling-inl.h
  * \brief
  * \author Bing Xu, Jun Wu, Da Zheng, Hao Jin

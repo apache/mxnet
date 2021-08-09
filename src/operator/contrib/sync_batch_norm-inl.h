@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file sync_batch_norm-inl.h
  * \brief Synchronized BatchNorm modified from BatchNormV1
  * \author Hang Zhang

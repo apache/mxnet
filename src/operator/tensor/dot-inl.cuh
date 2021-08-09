@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file dot-inl.cuh
  * \brief GPU specific function definition of matrix dot operator
  */

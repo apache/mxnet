@@ -17,7 +17,6 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
  * \file adaptive_avg_pooling-inl.h
  * \brief adaptive average pooling operator
  * \author Hang Zhang

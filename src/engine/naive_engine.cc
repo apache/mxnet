@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file naive_engine.cc
  * \brief Implementation of NaiveEngine
  */

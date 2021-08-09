@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
  * \file random_generator.h
  * \brief Parallel random number generator.
  */

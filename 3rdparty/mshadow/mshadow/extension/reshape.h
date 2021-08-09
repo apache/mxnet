@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file reshape.h
  * \brief support for reshape
  * \author Tianqi Chen

@@ -18,7 +18,6 @@
 */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file image_utils.h
  * \brief the image operator utility function implementation
  * \author Jake Lee

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_broadcast_op_extended.cu
  * \brief GPU Implementation of extended functions for elementwise binary broadcast operator.
  */

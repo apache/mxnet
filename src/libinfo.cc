@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
  * \file libinfo.cc
  * \author larroy
  * \brief check MXNet features including compile time support

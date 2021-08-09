@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file quantized_elemwise_mul.cc
  * \brief CPU Implementation of basic elementwise binary mul operators
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
  * \file multi_sum_sq.cu
  * \brief vectorized sums of squares norm over multiple arrays operators
  * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez
