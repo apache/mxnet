@@ -7956,7 +7956,7 @@ def test_np_take():
         mx_out.backward()
         same(x.grad.asnumpy(), grad_in)
 
-    for _ in [True, False]:
+    for hybridize in [True, False]:
         for mode in ['clip', 'wrap']:
             for data_ndim in range(1, 5):
                 for idx_ndim in range(1, 4):
