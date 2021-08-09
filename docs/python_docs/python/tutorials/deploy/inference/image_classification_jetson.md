@@ -78,8 +78,7 @@ from mxnet import gluon
 import mxnet as mx
 
 # set context
-gpus = mx.test_utils.list_gpus()
-ctx =  mx.gpu() if gpus else mx.cpu()
+ctx = mx.gpu()
 
 # load pre-trained model
 net = gluon.model_zoo.vision.resnet50_v1(pretrained=True, ctx=ctx)

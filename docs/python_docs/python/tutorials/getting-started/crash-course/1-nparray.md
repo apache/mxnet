@@ -198,7 +198,7 @@ a = np.array(a)
 Additionally, you can move them to different GPU contexts. You will dive more
 into this later, but here is an example for now.
 
-```{.python}
+```{.python .input}
 a.copyto(mx.gpu(0))
 ```
 
