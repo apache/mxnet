@@ -36,6 +36,7 @@ WORKDIR /work/deps
 SHELL ["/bin/bash", "-c"]
 RUN export DEBIAN_FRONTEND=noninteractive && \
     export OS_RELEASE="$(cat /etc/os-release)" && \
+    apt-get clean && \
     apt-get update && \
     apt-get install -y wget software-properties-common && \
     wget -qO - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB -O - | apt-key add -; \
