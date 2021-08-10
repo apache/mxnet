@@ -53,7 +53,7 @@ Due to the permission issue, this example is maintained in this [repository](htt
 * Monitor validation mAP during training.
 * More network symbols under development and test.
 * Extra operators are now in `mxnet/src/operator/contrib`.
-* Old models are incompatible, use [e06c55d](https://github.com/dmlc/mxnet/commits/e06c55d6466a0c98c7def8f118a48060fb868901) or [e4f73f1](https://github.com/dmlc/mxnet/commits/e4f73f1f4e76397992c4b0a33c139d52b4b7af0e) for backward compatibility. Or, you can modify the json file to update the symbols if you are familiar with it, because only names have changed while weights and bias should still be good.
+* Old models are incompatible, use [e06c55d](https://github.com/apache/mxnet/commits/e06c55d6466a0c98c7def8f118a48060fb868901) or [e4f73f1](https://github.com/apache/mxnet/commits/e4f73f1f4e76397992c4b0a33c139d52b4b7af0e) for backward compatibility. Or, you can modify the json file to update the symbols if you are familiar with it, because only names have changed while weights and bias should still be good.
 
 ### Demo results
 ![demo1](https://cloud.githubusercontent.com/assets/3307514/19171057/8e1a0cc4-8be0-11e6-9d8f-088c25353b40.png)

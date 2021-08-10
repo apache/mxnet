@@ -27,7 +27,7 @@ import scala.collection.JavaConverters._
 
 /**
  * Follows the demo, to test the char rnn:
- * https://github.com/dmlc/mxnet/blob/master/example/rnn/char-rnn.ipynb
+ * https://github.com/apache/mxnet/blob/v1.x/example/rnn/char-rnn.ipynb
  */
 object TestCharRnn {
 

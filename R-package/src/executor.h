@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file executor.h
  * \brief Rcpp Symbolic Execution interface of MXNet
  */

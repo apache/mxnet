@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file torch_function.h
  * \brief Torch interface.
  * \author Junyuan Xie

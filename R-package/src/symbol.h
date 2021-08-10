@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file symbol.h
  * \brief Rcpp Symbolic construction interface of MXNet
  */

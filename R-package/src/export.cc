@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file export.cc
  * \brief Exporter module to export document and wrapper functions.
  */

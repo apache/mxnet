@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file kvstore.h
  * \brief Rcpp Parameter Store interface of MXNet
  */

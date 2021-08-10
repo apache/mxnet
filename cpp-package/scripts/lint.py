@@ -19,7 +19,6 @@
 
 # pylint: disable=protected-access, unused-variable, locally-disabled, redefined-variable-type
 """Lint helper to generate lint summary of source.
-Copyright by Contributors
 """
 from __future__ import print_function
 import codecs

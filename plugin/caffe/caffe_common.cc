@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file caffe_common.h
  * \brief Common functions for caffeOp and caffeLoss symbols
  * \author Haoran Wang

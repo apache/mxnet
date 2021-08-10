@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
  * \file LogUniformGenerator.h
  * \brief log uniform distribution generator
 */

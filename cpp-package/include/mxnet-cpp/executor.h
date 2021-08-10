@@ -18,7 +18,6 @@
  */
 
 /*!
-*  Copyright (c) 2016 by Contributors
 * \file executor.h
 * \brief executor definition
 * \author Chuntao Hong, Zhang Chen
