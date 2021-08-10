@@ -531,6 +531,7 @@ def _add_workload_linalg_cholesky():
             t[-2:] = -1, -2
 
             a = _np.matmul(a.transpose(t).conj(), a)
+            a = _np.asarray(a, dtype=dtype)
 
             OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
 
