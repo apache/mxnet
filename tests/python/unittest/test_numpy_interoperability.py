@@ -527,12 +527,12 @@ def _add_workload_linalg_cholesky():
         for shape, dtype in itertools.product(shapes, dtypes):
             a = _np.random.randn(*shape)
 
-        t = list(range(len(shape)))
-        t[-2:] = -1, -2
+            t = list(range(len(shape)))
+            t[-2:] = -1, -2
 
-        a = _np.matmul(a.transpose(t).conj(), a)
+            a = _np.matmul(a.transpose(t).conj(), a)
 
-        OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
+            OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
 
     # test_0_size
     for dtype in dtypes:
