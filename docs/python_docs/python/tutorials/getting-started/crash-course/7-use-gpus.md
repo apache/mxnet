@@ -161,6 +161,11 @@ validation_transformer = transforms.Compose([
     transforms.Normalize(mean, std)
 ])
 
+# Use ImageFolderDataset to create a Dataset object from directory structure
+train_dataset = gluon.data.vision.ImageFolderDataset('./datasets/train')
+val_dataset = gluon.data.vision.ImageFolderDataset('./datasets/validation')
+test_dataset = gluon.data.vision.ImageFolderDataset('./datasets/test')
+
 # Create data loaders
 batch_size = 4
 train_loader = gluon.data.DataLoader(train_dataset.transform_first(training_transformer),batch_size=batch_size, shuffle=True, try_nopython=True)
