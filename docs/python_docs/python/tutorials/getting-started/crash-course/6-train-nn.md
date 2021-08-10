@@ -368,7 +368,7 @@ def test(val_data):
     for batch in val_data:
         data = batch[0]
         labels = batch[1]
-        outputs = model(data)
+        outputs = model(data.as_in_ctx(ctx))
         acc.update([labels], [outputs])
 
     _, accuracy = acc.get()
@@ -396,7 +396,7 @@ for epoch in range(epochs):
         data = batch[0]
         label = batch[1]
         with mx.autograd.record():
-            outputs = model(data)
+            outputs = model(data.as_in_ctx(ctx))
             loss = loss_fn(outputs, label)
         mx.autograd.backward(loss)
         trainer.step(batch_size)
