@@ -397,7 +397,7 @@ for epoch in range(epochs):
         label = batch[1]
         with mx.autograd.record():
             outputs = model(data.as_in_ctx(ctx))
-            loss = loss_fn(outputs, label)
+            loss = loss_fn(outputs, label.as_in_ctx(ctx))
         mx.autograd.backward(loss)
         trainer.step(batch_size)
         accuracy.update([label], [outputs])
