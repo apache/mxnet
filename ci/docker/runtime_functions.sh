@@ -1143,6 +1143,7 @@ build_python_docs() {
     export PATH=/home/jenkins_slave/.local/bin:$PATH
 
     pushd python
+    cp tutorials/getting-started/crash-course/prepare_dataset.py .
     make clean
     make html EVAL=1
 
