@@ -183,7 +183,7 @@ def test(val_data):
     for batch in val_data:
         data = batch[0]
         labels = batch[1]
-        outputs = model(data)
+        outputs = net(data)
         acc.update([labels], [outputs])
 
     _, accuracy = acc.get()
