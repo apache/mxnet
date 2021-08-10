@@ -250,7 +250,7 @@ class NaiveEngine final : public Engine {
 #endif
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
-   * See also #309 (https://github.com/dmlc/mxnet/issues/309) and similar fix in threaded_engine.h.
+   * See also #309 (https://github.com/apache/mxnet/issues/309) and similar fix in threaded_engine.h.
    * Without this, segfaults seen on CentOS7 in
    * test_operator_gpu.py:test_convolution_multiple_streams
    */
