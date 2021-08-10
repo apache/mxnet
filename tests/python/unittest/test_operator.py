@@ -4188,6 +4188,7 @@ def test_take(mode, out_of_range, data_ndim, idx_ndim):
         for _ in range(idx_ndim):
             idx_shape += (np.random.randint(low=1, high=5), )
 
+    axis = data_ndim - 1
     data = mx.sym.Variable('a')
     idx = mx.sym.Variable('indices')
     idx = mx.sym.BlockGrad(idx)
