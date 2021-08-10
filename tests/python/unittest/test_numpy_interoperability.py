@@ -524,7 +524,7 @@ def _add_workload_linalg_cholesky():
     dtypes = (np.float32, np.float64)
 
     with random_seed(1):
-        for shape, _ in itertools.product(shapes, dtypes):
+        for shape, dtype in itertools.product(shapes, dtypes):
             a = _np.random.randn(*shape)
 
         t = list(range(len(shape)))
