@@ -154,7 +154,7 @@ for param in aux_params:
         net_params[param]._load_init(aux_params[param], ctx=ctx)
 ```
 
-We can now cache the computational graph through [hybridization](https://mxnet.apache.org/tutorials/gluon/hybrid.html) to gain some performance
+We can now cache the computational graph through [hybridization](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/packages/gluon/blocks/hybridize.html) to gain some performance
 
 
 
