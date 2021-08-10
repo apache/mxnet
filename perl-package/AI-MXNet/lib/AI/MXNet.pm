@@ -241,7 +241,7 @@ AI::MXNet - Perl interface to MXNet machine learning library
 =head1 SEE ALSO
 
     L<https://mxnet.io/>
-    L<https://github.com/dmlc/mxnet/tree/master/perl-package>
+    L<https://github.com/apache/mxnet/tree/v1.x/perl-package>
     L<Function::Parameters|https://metacpan.org/pod/Function::Parameters>, L<Mouse|https://metacpan.org/pod/Mouse>
 
 =head1 AUTHOR

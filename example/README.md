@@ -48,7 +48,7 @@ Example applications or scripts should be submitted in this `example` folder.
 
 ### Tutorials
 
-If you have a tutorial idea for the website, download the [Jupyter notebook tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
+If you have a tutorial idea for the website, download the [Jupyter notebook tutorial template](https://github.com/apache/mxnet/tree/v1.x/example/MXNetTutorialTemplate.ipynb).
 
 #### Tutorial location
 
@@ -93,8 +93,8 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [MXNet Julia API](https://mxnet.apache.org/api/julia/index.html)
 * [MXNet Perl API](https://mxnet.apache.org/api/perl/index.html)
 * [go-mxnet-predictor](https://github.com/songtianyi/go-mxnet-predictor) - Go binding for inference
-* [MXNet JNI](https://github.com/dmlc/mxnet/tree/master/amalgamation/jni) - JNI(Android) library
-* [MXNet Amalgamation](https://github.com/dmlc/mxnet/tree/master/amalgamation) - Amalgamation (entire library in a single file)
+* [MXNet JNI](https://github.com/apache/mxnet/tree/v1.x/amalgamation/jni) - JNI(Android) library
+* [MXNet Amalgamation](https://github.com/apache/mxnet/tree/v1.x/amalgamation) - Amalgamation (entire library in a single file)
 * [MXNet Javascript](https://github.com/dmlc/mxnet.js/) - MXNetJS: Javascript Package for Deep Learning in Browser (without server)
 
 ### <a name="deep-learning-examples-mxnet"></a>Deep Learning Examples in the MXNet Project Repository
@@ -160,7 +160,7 @@ If your tutorial depends on specific packages, simply add them to this provision
 * "Learn to sort by LSTM" by [xlvector](https://github.com/xlvector) [github link](https://github.com/xlvector/learning-dl/tree/master/mxnet/lstm_sort) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-lstm-example/)
 * [Neural Art using extremely lightweight (<500K) neural network](https://github.com/pavelgonchar/neural-art-mini) Lightweight version of mxnet neural art implementation by [Pavel Gonchar](https://github.com/pavelgonchar)
 * [Neural Art with generative networks](https://github.com/zhaw/neural_style) by [zhaw](https://github.com/zhaw)
-* [Faster R-CNN in MXNet with distributed implementation and data parallelization](https://github.com/dmlc/mxnet/tree/master/example/rcnn)
+* [Faster R-CNN in MXNet with distributed implementation and data parallelization](https://github.com/apache/mxnet/tree/v1.x/example/rcnn)
 * [Asynchronous Methods for Deep Reinforcement Learning in MXNet](https://github.com/zmonoid/Asyn-RL-MXNet/blob/master/mx_asyn.py) by [zmonoid](https://github.com/zmonoid)
 * [Deep Q-learning in MXNet](https://github.com/zmonoid/DQN-MXNet) by [zmonoid](https://github.com/zmonoid)
 * [Face Detection with End-to-End Integration of a ConvNet and a 3D Model (ECCV16)](https://github.com/tfwu/FaceDetection-ConvNet-3D) by [tfwu](https://github.com/tfwu), source code for paper Yunzhu Li, Benyuan Sun, Tianfu Wu and Yizhou Wang, "Face Detection with End-to-End Integration of a ConvNet and a 3D Model", ECCV 2016 <https://arxiv.org/abs/1606.00850>
