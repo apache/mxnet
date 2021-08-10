@@ -148,7 +148,7 @@ static MKLDNNLRNFwd& GetLRNFwd(const LRNParam& param,
                                const OpContext& ctx,
                                const NDArray& in_data) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNLRNSignature, MKLDNNLRNFwd, OpHash> lrn_fwds;
+  thread_local std::unordered_map<MKLDNNLRNSignature, MKLDNNLRNFwd, OpHash> lrn_fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNLRNSignature, MKLDNNLRNFwd, OpHash> lrn_fwds;
 #endif
@@ -223,7 +223,7 @@ static MKLDNNLRNBwd& GetLRNBwd(const LRNParam& param,
                                const NDArray& in_grad,
                                const NDArray& out_grad) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNLRNSignature, MKLDNNLRNBwd, OpHash> lrn_bwds;
+  thread_local std::unordered_map<MKLDNNLRNSignature, MKLDNNLRNBwd, OpHash> lrn_bwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNLRNSignature, MKLDNNLRNBwd, OpHash> lrn_bwds;
 #endif

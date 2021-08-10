@@ -292,7 +292,7 @@ MKLDNNDeconvForward& GetDeconvFwd(const nnvm::NodeAttrs& attrs,
                                   const NDArray* bias,
                                   const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<DeconvSignature, MKLDNNDeconvForward, OpHash> fwds;
+  thread_local std::unordered_map<DeconvSignature, MKLDNNDeconvForward, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<DeconvSignature, MKLDNNDeconvForward, OpHash> fwds;
 #endif
@@ -459,8 +459,7 @@ static inline MKLDNNDeconvBackwardWeights& GetDeconvBwdWeights(
     const NDArray& output,
     const mkldnn::convolution_forward::primitive_desc& bwd_data_pd) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNDeconvSignature, MKLDNNDeconvBackwardWeights, OpHash>
-      bwds;
+  thread_local std::unordered_map<MKLDNNDeconvSignature, MKLDNNDeconvBackwardWeights, OpHash> bwds;
 #else
   static MX_THREAD_LOCAL
       std::unordered_map<MKLDNNDeconvSignature, MKLDNNDeconvBackwardWeights, OpHash>

@@ -117,8 +117,7 @@ class MKLDNNTransposeForward {
 static MKLDNNTransposeForward& GetTransposeForward(const TransposeParam& param,
                                                    const NDArray& data) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNTransposeSignature, MKLDNNTransposeForward, OpHash>
-      fwds;
+  thread_local std::unordered_map<MKLDNNTransposeSignature, MKLDNNTransposeForward, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL
       std::unordered_map<MKLDNNTransposeSignature, MKLDNNTransposeForward, OpHash>

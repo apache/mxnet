@@ -98,7 +98,7 @@ static MKLDNNSoftmaxFwd& GetSoftmaxFwd(const SoftmaxParam& param,
                                        const NDArray& data,
                                        const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxFwd, OpHash> fwds;
+  thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxFwd, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxFwd, OpHash> fwds;
 #endif

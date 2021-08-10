@@ -49,7 +49,7 @@ MKLDNNBatchDotFwd& MKLDNNBatchDotFwd::GetCached(const DotParam& param,
                                                 const std::vector<NDArray>& outputs) {
   using batch_dot_fwd_map = std::unordered_map<BatchDotSignature, MKLDNNBatchDotFwd, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local batch_dot_fwd_map fwds;
+  thread_local batch_dot_fwd_map fwds;
 #else
   static MX_THREAD_LOCAL batch_dot_fwd_map fwds;
 #endif

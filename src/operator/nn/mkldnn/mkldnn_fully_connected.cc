@@ -126,9 +126,8 @@ MKLDNNFullyConnectedForward& GetFCFwd(const FullyConnectedParam& param,
                                       const NDArray* bias,
                                       const mkldnn::memory::desc& out_md) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::
-      unordered_map<MKLDNNFullyconSignature, MKLDNNFullyConnectedForward, OpHash>
-          fcFwds;
+  thread_local std::unordered_map<MKLDNNFullyconSignature, MKLDNNFullyConnectedForward, OpHash>
+      fcFwds;
 #else
   static MX_THREAD_LOCAL
       std::unordered_map<MKLDNNFullyconSignature, MKLDNNFullyConnectedForward, OpHash>

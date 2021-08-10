@@ -261,8 +261,7 @@ MKLDNNPoolingFwd& GetPoolingFwd(const PoolingParam& param,
                                 const NDArray& data,
                                 const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNPoolingSignature, MKLDNNPoolingFwd, OpHash>
-      pooling_fwds;
+  thread_local std::unordered_map<MKLDNNPoolingSignature, MKLDNNPoolingFwd, OpHash> pooling_fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNPoolingSignature, MKLDNNPoolingFwd, OpHash>
       pooling_fwds;
@@ -321,8 +320,7 @@ MKLDNNPoolingBwd& GetPoolingBwd(const PoolingParam& param,
                                 const NDArray& in_grad,
                                 const NDArray& out_grad) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNPoolingSignature, MKLDNNPoolingBwd, OpHash>
-      pooling_bwds;
+  thread_local std::unordered_map<MKLDNNPoolingSignature, MKLDNNPoolingBwd, OpHash> pooling_bwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNPoolingSignature, MKLDNNPoolingBwd, OpHash>
       pooling_bwds;

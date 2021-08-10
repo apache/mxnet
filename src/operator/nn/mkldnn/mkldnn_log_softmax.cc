@@ -96,7 +96,7 @@ static MKLDNNLogSoftmaxFwd& GetLogSoftmaxFwd(const SoftmaxParam& param,
                                              const NDArray& data,
                                              const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNLogSoftmaxFwd, OpHash> fwds;
+  thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNLogSoftmaxFwd, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNLogSoftmaxFwd, OpHash>
       fwds;
@@ -162,7 +162,7 @@ static MKLDNNLogSoftmaxBwd& GetLogSoftmaxBwd(const SoftmaxParam& param,
                                              const std::vector<NDArray>& data,
                                              const std::vector<NDArray>& output) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNLogSoftmaxBwd, OpHash> bwds;
+  thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNLogSoftmaxBwd, OpHash> bwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNLogSoftmaxBwd, OpHash>
       bwds;

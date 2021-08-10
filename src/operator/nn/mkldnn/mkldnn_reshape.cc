@@ -100,7 +100,7 @@ MKLDNNReshapeFwd& GetReshapeForward(const OpReqType& req,
                                     const NDArray& input,
                                     const NDArray& output) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNReshapeSignature, MKLDNNReshapeFwd, OpHash> fwds;
+  thread_local std::unordered_map<MKLDNNReshapeSignature, MKLDNNReshapeFwd, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNReshapeSignature, MKLDNNReshapeFwd, OpHash> fwds;
 #endif

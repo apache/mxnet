@@ -470,7 +470,7 @@ void MKLDNNRnnForward::SetNewDataMem(void* x,
 
 inline void MKLDNNMemoryReorder(const mkldnn::memory& src, const mkldnn::memory& dst) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, mkldnn::reorder, OpHash> reorderPrimitives;
+  thread_local std::unordered_map<OpSignature, mkldnn::reorder, OpHash> reorderPrimitives;
 #else
   static MX_THREAD_LOCAL std::unordered_map<OpSignature, mkldnn::reorder, OpHash> reorderPrimitives;
 #endif

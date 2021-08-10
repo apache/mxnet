@@ -82,7 +82,7 @@ static MKLDNNSumFwd& GetSumForward(const std::vector<float>& scales,
                                    const std::vector<NDArray>& in_data,
                                    const std::vector<mkldnn::memory::desc>& data_md) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<OpSignature, MKLDNNSumFwd, OpHash> fwds;
+  thread_local std::unordered_map<OpSignature, MKLDNNSumFwd, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<OpSignature, MKLDNNSumFwd, OpHash> fwds;
 #endif

@@ -132,7 +132,7 @@ MKLDNNActForward& GetActForward(const MKLDNNActParam& param,
                                 const NDArray& in_data,
                                 const mkldnn::memory& in_mem) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNActSignature, MKLDNNActForward, OpHash> fwds;
+  thread_local std::unordered_map<MKLDNNActSignature, MKLDNNActForward, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNActSignature, MKLDNNActForward, OpHash> fwds;
 #endif

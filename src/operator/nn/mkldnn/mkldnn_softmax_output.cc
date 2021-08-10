@@ -24,9 +24,10 @@
  */
 
 #if MXNET_USE_ONEDNN == 1
-#include "../../softmax_output-inl.h"
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_ops-inl.h"
+
+#include "../../softmax_output-inl.h"
 namespace mxnet {
 namespace op {
 
@@ -67,9 +68,7 @@ static MKLDNNSoftmaxOutputFwd& GetSoftmaxOutputForward(const SoftmaxOutputParam&
                                                        const OpContext& ctx,
                                                        const NDArray& in_data) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::
-      unordered_map<MKLDNNSoftmaxOuputSignature, MKLDNNSoftmaxOutputFwd, OpHash>
-          fwds;
+  thread_local std::unordered_map<MKLDNNSoftmaxOuputSignature, MKLDNNSoftmaxOutputFwd, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL
       std::unordered_map<MKLDNNSoftmaxOuputSignature, MKLDNNSoftmaxOutputFwd, OpHash>

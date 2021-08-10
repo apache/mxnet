@@ -446,7 +446,7 @@ MKLDNNConvForward& GetConvFwd(const MKLDNNConvFullParam& param,
                               const NDArray& output) {
   using conv_fwd_map = std::unordered_map<MKLDNNConvSignature, MKLDNNConvForward, OpHash>;
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local conv_fwd_map fwds;
+  thread_local conv_fwd_map fwds;
 #else
   static MX_THREAD_LOCAL conv_fwd_map fwds;
 #endif
