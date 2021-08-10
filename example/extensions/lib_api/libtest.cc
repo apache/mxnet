@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file libtest.cc
  * \brief This test checks if the library is implemented correctly
  * and does not involve dynamic loading of library into MXNet

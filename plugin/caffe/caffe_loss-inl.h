@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file caffe_loss-inl.h
  * \brief Caffe Operator
  * \author Haoran Wang

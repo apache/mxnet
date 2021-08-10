@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file mxnet.cc
  * \brief The registry of all module functions and objects
  */

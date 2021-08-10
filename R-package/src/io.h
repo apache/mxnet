@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file io.h
  * \brief Rcpp Data Loading and Iteration Interface of MXNet.
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file caffe_blob.h
  * \brief conversion between tensor and caffeBlob
  * \author Haoran Wang

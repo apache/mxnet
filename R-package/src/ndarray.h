@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file ndarray.h
  * \brief Rcpp NDArray interface of MXNet
  */

@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file io.cc
  * \brief Rcpp IO module of mxnet.
  */

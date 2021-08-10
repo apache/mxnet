@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file export.h
  * \brief Export module that takes charge of code generation and document
  *  Generation for functions exported from R-side

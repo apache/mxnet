@@ -18,7 +18,6 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file org_apache_mxnet_native_c_api.cc
  * \brief JNI function implementations
  */

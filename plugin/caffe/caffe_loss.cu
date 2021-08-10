@@ -18,7 +18,6 @@
  */
 
 /*!
- * Copyright (c) 2016 by Contributors
  * \file caffe_loss_gpu.cc
  * \brief caffe loss
  * \author Haoran Wang
