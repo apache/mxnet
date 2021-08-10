@@ -178,7 +178,7 @@ This is the same test function defined previously in the **Step 6**.
 
 ```{.python .input}
 # Function to return the accuracy for the validation and test set
-def test(val_data):
+def test(val_data, ctx):
     acc = gluon.metric.Accuracy()
     for batch in val_data:
         data = batch[0]
@@ -248,7 +248,7 @@ for epoch in range(10):
 
     _, acc = accuracy.get()
 
-    acc_val = test(validation_loader)
+    acc_val = test(validation_loader, ctx)
     print(f"[Epoch {epoch + 1}] training: accuracy={acc}")
     print(f"[Epoch {epoch + 1}] time cost: {time.time() - tic}")
     print(f"[Epoch {epoch + 1}] validation: validation accuracy={acc_val}")
