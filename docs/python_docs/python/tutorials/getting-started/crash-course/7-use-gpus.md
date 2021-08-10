@@ -183,8 +183,8 @@ def test(val_data):
     for batch in val_data:
         data = batch[0]
         labels = batch[1]
-        outputs = net(data)
-        acc.update([labels], [outputs])
+        outputs = net(data.as_in_ctx(ctx))
+        acc.update([labels.as_in_ctx(ctx)], [outputs])
 
     _, accuracy = acc.get()
     return accuracy
