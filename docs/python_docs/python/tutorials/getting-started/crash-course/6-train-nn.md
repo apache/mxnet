@@ -328,7 +328,7 @@ initializer = mx.initializer.Xavier()
 
 model = LeafNetwork()
 model.initialize(initializer, ctx=ctx)
-model.summary(mx.np.random.uniform(size=(4, 3, 128, 128)))
+model.summary(mx.np.random.uniform(size=(4, 3, 128, 128), ctx=ctx))
 model.hybridize()
 ```
 
