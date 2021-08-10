@@ -1255,7 +1255,7 @@ def test_get_optimal_thresholds():
 
 
 @with_seed()
-def test_onednn_shifted_quantization():
+def test_onednn_shifted_quantize_fc():
     batch_size = 1
     if not is_test_for_mkldnn():
         print("Test only for mkldnn")
@@ -1303,7 +1303,7 @@ def test_onednn_shifted_quantization():
         return fc_layer, quantize_attrs
 
     def get_fc_layer():
-        fc_layer = mx.gluon.nn.Dense(5, use_bias=True, flatten=True,
+        fc_layer = mx.gluon.nn.Dense(20, use_bias=True, flatten=True,
                                      weight_initializer=mx.initializer.Normal(),
                                      bias_initializer=mx.initializer.Normal())
         fc_layer.initialize()
@@ -1330,7 +1330,7 @@ def test_onednn_shifted_quantization():
         min_range = mx.nd.min(out).asscalar()
         max_range = mx.nd.max(out).asscalar()
         atol = 0.1 * max(abs(min_range), abs(max_range))
-        assert_almost_equal_with_err(out.asnumpy(), out_q.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+        assert_almost_equal_with_err(out_q.asnumpy(), out.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
 
         if qdtype == 'auto':
             assert quantize_attrs['shifted'] == 'True'
@@ -1346,6 +1346,84 @@ def test_onednn_shifted_quantization():
     with environment({'MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS': '0'}):
         for i, qdtype in enumerate(['int8', 'uint8', 'auto']):
             check(i, qdtype)
+
+
+@with_seed()
+def test_onednn_shifted_quantize_fc_fc():
+    batch_size = 2
+    if not is_test_for_mkldnn():
+        print("Test only for mkldnn")
+        return
+
+    def get_fc_fc_layers(with_eltwise):
+        class Net(mx.gluon.nn.HybridBlock):
+            def __init__(self):
+                super(Net, self).__init__()
+                self.fc1 = mx.gluon.nn.Dense(20, use_bias=True, flatten=True,
+                                             weight_initializer=mx.initializer.Normal(),
+                                             bias_initializer=mx.initializer.Normal())
+                self.relu = mx.gluon.nn.Activation('relu') if with_eltwise else None
+                self.fc2 = mx.gluon.nn.Dense(20, use_bias=True, flatten=True,
+                                             weight_initializer=mx.initializer.Normal(),
+                                             bias_initializer=mx.initializer.Normal())
+
+            def hybrid_forward(self, F, x):
+                out = self.fc1(x)
+                if self.relu is not None:
+                    out = self.relu(out)
+                out = self.fc2(out)
+                return out
+
+        net = Net()
+        net.initialize()
+        return net
+
+    def quantize_net(with_eltwise, qdtype, net, random_data):
+        calib_data = NDArrayIter(data=random_data, batch_size=batch_size)
+        calib_data = DummyIter(calib_data)
+        net = mx.contrib.quant.quantize_net(net, quantize_mode='smart',
+                                            quantized_dtype=qdtype,
+                                            exclude_layers=None,
+                                            exclude_layers_match=[],
+                                            calib_data=calib_data,
+                                            calib_mode='naive',
+                                            num_calib_examples=1,
+                                            ctx=mx.current_context())
+        net.hybridize(static_alloc=True, static_shape=True)
+        out = net(random_data)
+        out.wait_to_read()
+
+        _, sym = net._cached_graph
+        fc0_name = "quantized_sg_mkldnn_fully_connected%s_0" %("_eltwise" if with_eltwise else "")
+        fc0_attrs = sym.attr_dict()[fc0_name]
+
+        if qdtype == 'auto':
+            assert fc0_attrs['shifted_output'] == 'True'
+        else:
+            assert 'shifted_output' not in fc0_attrs
+
+        return out
+
+    def check(with_eltwise, qdtype, random_data):
+        net_ref = get_fc_fc_layers(with_eltwise)
+        out_ref = net_ref(random_data)
+        out_ref.wait_to_read()
+
+        out_q = quantize_net(with_eltwise, qdtype, net_ref, random_data)
+
+        min_range = mx.nd.min(out_ref).asscalar()
+        max_range = mx.nd.max(out_ref).asscalar()
+        atol = 0.1 * max(abs(min_range), abs(max_range))
+        assert_almost_equal_with_err(out_q.asnumpy(), out_ref.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+
+    with environment({'MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS': '0',
+                      'MXNET_DISABLE_SHIFTED_QUANTIZE_FC_OPTIMIZATION': '0'}):
+        for with_eltwise in [False, True]:
+            for qdtype in ['int8', 'uint8', 'auto']:
+                print("with_eltwise:", with_eltwise)
+                print("qdtype:", qdtype)
+                data = mx.nd.random_uniform(low=0 if qdtype == 'uint8' else -1, high=1, shape=(batch_size, 10))
+                check(with_eltwise, qdtype, data)
 
 
 if __name__ == "__main__":
