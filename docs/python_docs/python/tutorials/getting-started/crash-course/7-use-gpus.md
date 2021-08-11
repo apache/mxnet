@@ -178,7 +178,7 @@ This is the same test function defined previously in the **Step 6**.
 
 ```{.python .input}
 # Function to return the accuracy for the validation and test set
-def test(val_data, ctx):
+def test(val_data, devices):
     acc = gluon.metric.Accuracy()
     for batch in val_data:
         data, label = batch[0], batch[1]
