@@ -17,6 +17,7 @@
 
 package org.apache.mxnet.jna;
 
+import com.sun.jna.Library;
 import com.sun.jna.Native;
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +30,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -69,13 +72,13 @@ public final class LibUtils {
 
         String libName = getLibName();
         logger.debug("Loading mxnet library from: {}", libName);
-        // TODO: consider Linux platform
-        //        if (System.getProperty("os.name").startsWith("Linux")) {
-        //            Map<String, Integer> options = new ConcurrentHashMap<>();
-        //            int rtld = 1; // Linux RTLD lazy + local
-        //            options.put(Library.OPTION_OPEN_FLAGS, rtld);
-        //            return Native.load(libName, MxnetLibrary.class, options);
-        //        }
+        if (System.getProperty("os.name").startsWith("Linux")) {
+            logger.info("Loading on Linux platform");
+            Map<String, Integer> options = new ConcurrentHashMap<>();
+            int rtld = 1; // Linux RTLD lazy + local
+            options.put(Library.OPTION_OPEN_FLAGS, rtld);
+            return Native.load(libName, MxnetLibrary.class, options);
+        }
         return Native.load(libName, MxnetLibrary.class);
     }
 
