@@ -84,5 +84,5 @@ You should see computation graph something like the following image:
 width=400/>
 
 # References
-* [Example MXNet Matrix Factorization](https://github.com/dmlc/mxnet/blob/master/example/recommenders/demo1-MF.ipynb)
+* [Example MXNet Matrix Factorization](https://github.com/apache/mxnet/blob/v1.x/example/recommenders/demo1-MF.ipynb)
 * [Visualizing CNN Architecture of MXNet Tutorials](http://josephpcohen.com/w/visualizing-cnn-architectures-side-by-side-with-mxnet/)
