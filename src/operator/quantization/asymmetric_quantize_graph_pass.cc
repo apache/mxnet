@@ -68,20 +68,19 @@ static NDArray* FindInArgByName(const Graph& g, const std::string& name) {
 }
 
 // Rescales weights, min_weight and max_weight. Returns bias_int32_rescale.
-static float RescaleWeights(const Graph& g, const ObjectPtr& fc, NDArray* weight_tensor) {
-  FCInputIndex idx(nnvm::get<MKLDNNFCFullParam>(fc->attrs.parsed));
+static float RescaleWeights(const Graph& g,
+                            const ObjectPtr& fc,
+                            NDArray* weight_tensor,
+                            float min_data,
+                            float max_data,
+                            FCInputIndex idx) {
+  auto fc_input_node_name = [&fc](int input) { return fc->inputs[input].node->attrs.name; };
 
-  float* min_weight =
-      FindInArgByName(g, fc->inputs[idx.weight_min].node->attrs.name)->data().dptr<float>();
-  float* max_weight =
-      FindInArgByName(g, fc->inputs[idx.weight_max].node->attrs.name)->data().dptr<float>();
-  float min_bias =
-      *FindInArgByName(g, fc->inputs[idx.bias_min].node->attrs.name)->data().dptr<float>();
-  float max_bias =
-      *FindInArgByName(g, fc->inputs[idx.bias_max].node->attrs.name)->data().dptr<float>();
+  float* min_weight = FindInArgByName(g, fc_input_node_name(idx.weight_min))->data().dptr<float>();
+  float* max_weight = FindInArgByName(g, fc_input_node_name(idx.weight_max))->data().dptr<float>();
+  float min_bias    = *FindInArgByName(g, fc_input_node_name(idx.bias_min))->data().dptr<float>();
+  float max_bias    = *FindInArgByName(g, fc_input_node_name(idx.bias_max))->data().dptr<float>();
 
-  float min_data           = std::stof(fc->inputs[idx.data].node->attrs.dict.at("min_calib_range"));
-  float max_data           = std::stof(fc->inputs[idx.data].node->attrs.dict.at("max_calib_range"));
   float data_scale_        = kUint8Range / (max_data - min_data);
   float weight_scale       = GetQuantizeScale(mshadow::kInt8, *min_weight, *max_weight);
   float bias_scale         = GetQuantizeScale(mshadow::kInt8, min_bias, max_bias);
@@ -136,12 +135,14 @@ static Pattern FindPattern(const ObjectPtr& node) {
   return Pattern::None;
 }
 
-static void QuantizeFcShiftedQuantization(const ObjectPtr& node,
-                                          Graph&& g,
-                                          std::vector<NDArray*>* new_arg_vector,
-                                          std::vector<std::string>* new_arg_names) {
-  ObjectPtr& quantize       = node->inputs[0].node;
-  ObjectPtr& bias_node      = node->inputs[2].node;
+static void FCShiftedQuantization(const ObjectPtr& node,
+                                  const Graph& g,
+                                  std::vector<NDArray*>* new_arg_vector,
+                                  std::vector<std::string>* new_arg_names,
+                                  const char* attr_name) {
+  FCInputIndex idx(nnvm::get<MKLDNNFCFullParam>(node->attrs.parsed));
+
+  ObjectPtr& bias_node      = node->inputs[idx.bias].node;
   std::string bias_name_old = bias_node->attrs.name;
   NDArray* bias_in_arg_ptr  = FindInArgByName(g, bias_name_old);
   if (bias_in_arg_ptr->dtype() != mshadow::kInt8)
@@ -150,51 +151,15 @@ static void QuantizeFcShiftedQuantization(const ObjectPtr& node,
   bias_node                 = CreateNode("nullptr", bias_name_s32);
   new_arg_names->push_back(bias_name_s32);
 
-  quantize->attrs.dict["shifted"] = "True";
-  if (quantize->op()->attr_parser)
-    quantize->op()->attr_parser(&(quantize->attrs));
+  ObjectPtr& input_node             = node->inputs[idx.data].node;
+  input_node->attrs.dict[attr_name] = "True";
+  if (input_node->op()->attr_parser)
+    input_node->op()->attr_parser(&(input_node->attrs));
 
-  NDArray* weight_tensor = FindInArgByName(g, node->inputs[1].node->attrs.name);
-
-  float bias_int32_rescale = RescaleWeights(g, node, weight_tensor);
-
-  new_arg_vector->push_back(new NDArray(
-      kDefaultStorage, bias_in_arg_ptr->shape(), Context::CPU(), false, mshadow::kInt32));
-  int32_t* bias_ptr_int32 = new_arg_vector->back()->data().dptr<int32_t>();
-  size_t bias_size        = bias_in_arg_ptr->shape().Size();
-  int8_t* bias_ptr_old    = bias_in_arg_ptr->data().dptr<int8_t>();
-
-  for (size_t i = 0; i < bias_size; ++i) {
-    bias_ptr_int32[i] = static_cast<int32_t>(std::round(bias_ptr_old[i] * bias_int32_rescale));
-  }
-  float min_data      = std::stof(quantize->attrs.dict.at("min_calib_range"));
-  float max_data      = std::stof(quantize->attrs.dict.at("max_calib_range"));
-  float data_scale    = kUint8Range / (max_data - min_data);
-  int32_t shift_value = static_cast<int32_t>(std::round(data_scale * -min_data));
-  ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
-}
-
-static void FcFcShiftedQuantization(const ObjectPtr& node,
-                                    Graph&& g,
-                                    std::vector<NDArray*>* new_arg_vector,
-                                    std::vector<std::string>* new_arg_names) {
-  ObjectPtr& first_fc       = node->inputs[0].node;
-  ObjectPtr& bias_node      = node->inputs[2].node;
-  std::string bias_name_old = bias_node->attrs.name;
-  NDArray* bias_in_arg_ptr  = FindInArgByName(g, bias_name_old);
-  if (bias_in_arg_ptr->dtype() != mshadow::kInt8)
-    return;
-  std::string bias_name_s32 = bias_node->attrs.name + "_s32";
-  bias_node                 = CreateNode("nullptr", bias_name_s32);
-  new_arg_names->push_back(bias_name_s32);
-
-  first_fc->attrs.dict["shifted_output"] = "True";
-  if (first_fc->op()->attr_parser)
-    first_fc->op()->attr_parser(&(first_fc->attrs));
-
-  NDArray* weight_tensor = FindInArgByName(g, node->inputs[1].node->attrs.name);
-
-  float bias_int32_rescale = RescaleWeights(g, node, weight_tensor);
+  float min_data           = std::stof(input_node->attrs.dict.at("min_calib_range"));
+  float max_data           = std::stof(input_node->attrs.dict.at("max_calib_range"));
+  NDArray* weight_tensor   = FindInArgByName(g, node->inputs[1].node->attrs.name);
+  float bias_int32_rescale = RescaleWeights(g, node, weight_tensor, min_data, max_data, idx);
 
   new_arg_vector->push_back(new NDArray(
       kDefaultStorage, bias_in_arg_ptr->shape(), Context::CPU(), false, mshadow::kInt32));
@@ -207,8 +172,6 @@ static void FcFcShiftedQuantization(const ObjectPtr& node,
     bias_ptr_int32[i] = static_cast<int32_t>(std::round(bias_ptr_old[i] * bias_int32_rescale));
   }
 
-  float min_data      = std::stof(first_fc->attrs.dict.at("min_calib_range"));
-  float max_data      = std::stof(first_fc->attrs.dict.at("max_calib_range"));
   float data_scale    = kUint8Range / (max_data - min_data);
   int32_t shift_value = static_cast<int32_t>(std::round(data_scale * -min_data));
   ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
@@ -238,14 +201,13 @@ static Graph OneDNNShiftedQuantization(Graph&& g) {
       switch (p) {
         case Pattern::QuantizeFc:
           if (quantize_fc) {
-            QuantizeFcShiftedQuantization(
-                node, std::forward<Graph>(g), &new_arg_vector, &new_arg_names);
+            FCShiftedQuantization(node, g, &new_arg_vector, &new_arg_names, "shifted");
             ++quantize_fc_counter;
           }
           break;
         case Pattern::FcFc:
           if (fc_fc) {
-            FcFcShiftedQuantization(node, std::forward<Graph>(g), &new_arg_vector, &new_arg_names);
+            FCShiftedQuantization(node, g, &new_arg_vector, &new_arg_names, "shifted_output");
             ++fc_fc_counter;
           }
           break;
