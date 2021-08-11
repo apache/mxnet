@@ -787,7 +787,7 @@ void Imperative::DCInfo::Compute(const NDArray &arr) {
   info.outputs_.clear();
 }
 
-std::vector<nnvm::ObjectPtr> Imperative::ListNonleafVariables(nnvm::Symbol& sym) const {
+std::vector<nnvm::ObjectPtr> Imperative::ListNonleafVariables(const nnvm::Symbol& sym) const {
   using namespace nnvm;
   std::vector<ObjectPtr> ret;
   DFSVisit(sym.outputs, [&ret](const ObjectPtr& node) {
