@@ -33,7 +33,7 @@ using nnvm::Graph;
 using nnvm::ObjectPtr;
 
 template <bool require_bias>
-static bool IsOneDNNFullyConnected(const ObjectPtr& n) {
+static bool IsMKLDNNFullyConnected(const ObjectPtr& n) {
   if (n->op() == Op::Get("_sg_mkldnn_fully_connected")) {
     auto const& param = nnvm::get<MKLDNNFCFullParam>(n->attrs.parsed);
     FCInputIndex idx(param);
@@ -125,10 +125,10 @@ static void ShiftBias(int32_t* bias_ptr_int32,
 enum class Pattern { QuantizeFc, FcFc, None };
 
 static Pattern FindPattern(const ObjectPtr& node) {
-  if (IsOneDNNFullyConnected<true>(node)) {
+  if (IsMKLDNNFullyConnected<true>(node)) {
     if (IsQuantize(node->inputs[0].node)) {
       return Pattern::QuantizeFc;
-    } else if (IsOneDNNFullyConnected<false>(node->inputs[0].node)) {
+    } else if (IsMKLDNNFullyConnected<false>(node->inputs[0].node)) {
       return Pattern::FcFc;
     }
   }
@@ -177,13 +177,13 @@ static void FCShiftedQuantization(const ObjectPtr& node,
   ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
 }
 
-static Graph OneDNNShiftedQuantization(Graph&& g) {
+static Graph MKLDNNShiftedQuantization(Graph&& g) {
   bool disable_shifted_quant =
       dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS", true);
   bool quantize_fc = !dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZE_FC_OPTIMIZATION", false);
   bool fc_fc       = !dmlc::GetEnv("MXNET_DISABLE_SHIFTED_FC_FC_OPTIMIZATION", false);
   if (!disable_shifted_quant) {
-    LOG(INFO) << "Running OneDNN shifted quantization";
+    LOG(INFO) << "Running MKLDNN shifted quantization";
   }
   // No change to aux params
   g.attrs["new_aux_names"] = std::make_shared<nnvm::any>(std::vector<std::string>());
@@ -228,9 +228,9 @@ static Graph OneDNNShiftedQuantization(Graph&& g) {
   return g;
 }
 
-NNVM_REGISTER_PASS(OneDNNShiftedQuantization)
+NNVM_REGISTER_PASS(MKLDNNShiftedQuantization)
     .describe("Enables shifted quantization.")
-    .set_body(OneDNNShiftedQuantization)
+    .set_body(MKLDNNShiftedQuantization)
     .set_change_graph(true);
 
 }  // namespace asym_quant

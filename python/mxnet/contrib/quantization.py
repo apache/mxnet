@@ -999,7 +999,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         net.collect_params().load(param_name, cast_dtype=True, dtype_source='saved')
         net.collect_params().reset_ctx(ctx)
         if quantized_dtype == 'auto':
-            net.optimize_for(x=data_nd, backend="OneDNNShiftedQuantization")
+            net.optimize_for(x=data_nd, backend="MKLDNNShiftedQuantization")
             tmp_file = os.path.join(tmpdirname, 'model')
             net.export(tmp_file)
             net = SymbolBlock.imports(tmp_file + '-symbol.json', data_names, tmp_file + '-0000.params')
