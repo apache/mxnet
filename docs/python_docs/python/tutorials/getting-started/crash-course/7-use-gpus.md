@@ -181,10 +181,11 @@ This is the same test function defined previously in the **Step 6**.
 def test(val_data, ctx):
     acc = gluon.metric.Accuracy()
     for batch in val_data:
-        data = batch[0]
-        labels = batch[1]
-        outputs = net(data.as_in_ctx(ctx))
-        acc.update([labels.as_in_ctx(ctx)], [outputs])
+        data, label = batch[0], batch[1]
+        data_list = gluon.utils.split_and_load(data, devices)
+        label_list = gluon.utils.split_and_load(label, devices)
+        outputs = [net(X) for X in data_list]
+        acc.update(label_list, outputs)
 
     _, accuracy = acc.get()
     return accuracy
