@@ -213,7 +213,7 @@ epochs = 2
 accuracy = gluon.metric.Accuracy()
 log_interval = 5
 
-for epoch in range(10):
+for epoch in range(epochs):
     train_loss = 0.
     tic = time.time()
     btic = time.time()
