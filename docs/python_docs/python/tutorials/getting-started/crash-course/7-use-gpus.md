@@ -248,7 +248,7 @@ for epoch in range(10):
 
     _, acc = accuracy.get()
 
-    acc_val = test(validation_loader, ctx)
+    acc_val = test(validation_loader, devices)
     print(f"[Epoch {epoch + 1}] training: accuracy={acc}")
     print(f"[Epoch {epoch + 1}] time cost: {time.time() - tic}")
     print(f"[Epoch {epoch + 1}] validation: validation accuracy={acc_val}")
