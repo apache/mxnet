@@ -165,8 +165,8 @@ void Imperative::MarkVariablesEx(
     CHECK_EQ(info.out_grads.size(), 0)
       <<"The node has already been marked. Cannot retain it again.";
     info.out_grads.emplace_back(gradients[i]->Detach());
-    info.grad_req = static_cast<OpReqType>(grad_reqs[i]); // otherwise defaulted to be kNullOp
-    info.ctx = variables[i]->ctx(); 
+    info.grad_req = static_cast<OpReqType>(grad_reqs[i]);  // otherwise defaulted to be kNullOp
+    info.ctx = variables[i]->ctx();
   }
 }
 
@@ -496,7 +496,7 @@ std::vector<NDArray*> Imperative::Backward(
     CHECK_GT(xs.size(), 0)
         << "There are no inputs in computation graph that require gradients.";
   }
-  std::vector<ObjectPtr> nleaf_vars = ListNonleafVariables(sym); 
+  std::vector<ObjectPtr> nleaf_vars = ListNonleafVariables(sym);
   std::vector<NodeEntry> us;
   us.reserve(nleaf_vars.size());
   for (const auto& i : nleaf_vars) {
@@ -504,7 +504,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
 
   Graph g_graph = pass::MXGradient(
-      graph, graph.outputs, xs, ograd_entries, 
+      graph, graph.outputs, xs, ograd_entries,
       mxnet::AggregateGradient, nullptr,
       zero_ops, "_copy", ShapeVector(), DTypeVector(),
       us);
@@ -583,7 +583,7 @@ std::vector<NDArray*> Imperative::Backward(
     arrays[eid] = x_grads[i - num_forward_outputs];
     ref_count[eid] = 1;
   }
-  const std::vector<NodeEntry>& us_grads = 
+  const std::vector<NodeEntry>& us_grads =
     g_graph.GetAttr<std::vector<NodeEntry>>("nleaf_grads");
   CHECK_EQ(us_grads.size(), us.size())
     << "Size of queried nleaf_vars and size of their gradients don't match.";
@@ -592,8 +592,8 @@ std::vector<NDArray*> Imperative::Backward(
     AGInfo& info = AGInfo::Get(us[i].node);
     if (arrays[eid]->dtype_ == -1) {
       arrays[eid] = &info.out_grads[0];
-    } else { 
-      info.out_grads[0] = *arrays[eid]; 
+    } else {
+      info.out_grads[0] = *arrays[eid];
     }
     ref_count[eid] = 1;
   }
@@ -792,7 +792,7 @@ std::vector<nnvm::ObjectPtr> Imperative::ListNonleafVariables(nnvm::Symbol& sym)
   std::vector<ObjectPtr> ret;
   DFSVisit(sym.outputs, [&ret](const ObjectPtr& node) {
     AGInfo& info = AGInfo::Get(node);
-    if (info.out_grads.size()>0 && !node->is_variable()) { 
+    if (info.out_grads.size() > 0 && !node->is_variable()) {
       ret.push_back(node);
     }
   });

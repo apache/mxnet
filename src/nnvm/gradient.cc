@@ -97,7 +97,7 @@ Graph Gradient(Graph src) {
   const std::vector<NodeEntry>& ys_out_grad =
       src.GetAttr<std::vector<NodeEntry> >("grad_ys_out_grad");
   CHECK_EQ(ys.size(), ys_out_grad.size());
-  const std::vector<NodeEntry>& us =  
+  const std::vector<NodeEntry>& us =
       src.GetAttr<std::vector<NodeEntry> >("grad_us");
 
   // initialize a topological order of the graph nodes and `output_grads`
@@ -699,29 +699,15 @@ Graph BuildGradientGraph(
   // Take the us' grad NodeEntry and store them in graph.attrs
   std::vector<NodeEntry> nleaf_grads;
   nleaf_grads.reserve(us.size());
-  for (const NodeEntry& e : us){
+  for (const NodeEntry& e : us) {
     GradEntry& entry = output_grads[e.node.get()][e.index];
     // aggregate sum if it hasn't been
     if (entry.sum.node.get() == nullptr) {
       entry.sum = agg_fun(std::move(entry.grads));
     }
-    // For nonleaf nodes, no need to consider `copy_op != nullptr`. 
-    // For leaf variables, if copy_op != nullptr, then possibily multiple 
-    // leaf variables correpsond to the same `grad_entry.sum`. In 
-    // this case, NodeEntryMap unique_grads is used. When a repetative 
-    // grad_entry.sum is found, this NodeEntry will be set as the input 
-    // of a new created node, which copies the value from the input ie 
-    // the eid corresponding to grad_entry.sum.
-
-    // These created Nodes' NodeEntry will be emplace_back to g_graph.outputs 
-    // which applies for these leaf variables. But for nonleaf variables, 
-    // no need to create node; it is ok to have multiple `nleaf_grads` pointing
-    // to the same grad_entry.sum 
-    nleaf_grads.push_back(entry.sum); 
-    // nleaf_grads.emplace_back(std::move(entry.sum));
+    nleaf_grads.push_back(entry.sum);
   }
   ret.attrs["nleaf_grads"] = std::make_shared<any>(std::move(nleaf_grads));
-  // src.attrs["nleaf_grads"] = std::make_shared<any>(std::move(nleaf_grads));
 
   return ret;
 }
