@@ -54,6 +54,8 @@ inline void GPUDeviceStorage::Alloc(Storage::Handle* handle, bool failsafe) {
 #endif  // MXNET_USE_NCCL
   cudaError_t err = cudaMalloc(&handle->dptr, handle->size);
   if (failsafe && err == cudaErrorMemoryAllocation) {
+    // Clear sticky cuda mem alloc error
+    cudaGetLastError();
     handle->dptr = nullptr;
   } else {
     CUDA_CALL(err);

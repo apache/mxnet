@@ -195,6 +195,8 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
         // In failsafe mode, the only indication of the
         // failed allocation is a null dptr.  The used_memory_
         // should not grow.
+        // Clear sticky cuda mem alloc error
+        cudaGetLastError();
         ret = nullptr;
         roundSize = 0;
         e = cudaSuccess;
