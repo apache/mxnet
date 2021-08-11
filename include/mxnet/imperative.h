@@ -282,7 +282,7 @@ class Imperative {
                                  const std::vector<NDArray*>& variables,
                                  bool is_train, bool retain_graph,
                                  bool create_graph);
-  std::vector<nnvm::ObjectPtr> ListNonleafVariables(nnvm::Symbol& sym);
+  std::vector<nnvm::ObjectPtr> ListNonleafVariables(const nnvm::Symbol& sym);
   /*! \return AutogradRuntime singleton */
   static Imperative* Get();
   /*! \brief Should op execution bulking be employed during inference. */
