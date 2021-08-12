@@ -18,7 +18,7 @@
 
 # Custom Layers
 
-While Gluon API for Apache MxNet comes with [a decent number of pre-defined layers](https://mxnet.apache.org/api/python/gluon/nn.html), at some point one may find that a new layer is needed. Adding a new layer in Gluon API is straightforward, yet there are a few things that one needs to keep in mind.
+While Gluon API for Apache MxNet comes with [a decent number of pre-defined layers](https://mxnet.apache.org/versions/master/api/python/docs/api/gluon/nn/index.html), at some point one may find that a new layer is needed. Adding a new layer in Gluon API is straightforward, yet there are a few things that one needs to keep in mind.
 
 In this article, I will cover how to create a new layer from scratch, how to use it, what are possible pitfalls and how to avoid them.
 
@@ -54,7 +54,7 @@ The rest of methods of the `Block` class are already implemented, and majority o
 
 ## Hybridization and the difference between Block and HybridBlock
 
-Looking into implementation of [existing layers](https://mxnet.apache.org/api/python/gluon/nn.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
+Looking into implementation of [existing layers](https://mxnet.apache.org/versions/master/api/python/docs/api/gluon/nn/index.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
 
 The reason for that is that `HybridBlock` allows to write custom layers in imperative programming style, while computing in a symbolic way. It unifies the flexibility of imperative programming with the performance benefits of symbolic programming. You can learn more about the difference between symbolic and imperative programming from [this article](https://mxnet.apache.org/api/architecture/overview.html).
 

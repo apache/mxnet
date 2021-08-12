@@ -550,7 +550,7 @@ class Embedding(HybridBlock):
         AdaGrad and Adam. By default lazy updates is turned on, which may perform
         differently from standard updates. For more details, please check the
         Optimization API at:
-        https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
+        https://mxnet.apache.org/versions/master/api/python/docs/api/optimizer/index.html
 
     Parameters
     ----------
