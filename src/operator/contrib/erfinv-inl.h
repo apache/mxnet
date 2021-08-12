@@ -45,8 +45,8 @@
 
 #include <mxnet/base.h>
 #include <limits>
-#include "math.h"
 #include <assert.h>
+#include "math.h"
 
 namespace mxnet {
 namespace op {
@@ -96,35 +96,37 @@ namespace mshadow_op {
  */
 
 static inline double polevl(double x, const double coef[], int N) {
-    const double *p;
-    double ans;
-    int i;
+  const double *p;
+  double ans;
+  int i;
 
-    p = coef;
-    ans = *p++;
-    i = N;
+  p = coef;
+  ans = *p++;
+  i = N;
 
-    do
-	ans = ans * x + *p++;
-    while (--i);
+  do {
+    ans = ans * x + *p++;
+  }
+  while (--i);
 
-    return (ans);
+  return (ans);
 }
 
 static inline double p1evl(double x, const double coef[], int N) {
-    const double *p;
-    double ans;
-    int i;
+  const double *p;
+  double ans;
+  int i;
 
-    p = coef;
-    ans = x + *p++;
-    i = N - 1;
+  p = coef;
+  ans = x + *p++;
+  i = N - 1;
 
-    do
-	ans = ans * x + *p++;
-    while (--i);
+  do {
+    ans = ans * x + *p++;
+  }
+  while (--i);
 
-    return (ans);
+  return (ans);
 }
 
 
@@ -244,36 +246,39 @@ static double Q2[8] = {
 
 /*! brief inverse of normal distribution function */
 static double ndtri(double y0) {
-    assert(y0 > 0 && y0 < 1);
+  assert(y0 > 0 && y0 < 1);
 
-    double x, y, z, y2, x0, x1;
-    int code = 1;
-    y = y0;
-    if (y > (1.0 - 0.13533528323661269189)) {	/* 0.135... = exp(-2) */
-	y = 1.0 - y;
-	code = 0;
-    }
+  double x, y, z, y2, x0, x1;
+  int code = 1;
+  y = y0;
+  if (y > (1.0 - 0.13533528323661269189)) {	/* 0.135... = exp(-2) */
+    y = 1.0 - y;
+    code = 0;
+  }
 
-    if (y > 0.13533528323661269189) {
-	y = y - 0.5;
-	y2 = y * y;
-	x = y + y * (y2 * polevl(y2, P0, 4) / p1evl(y2, Q0, 8));
-	x = x * s2pi;
-	return (x);
-    }
-
-    x = sqrt(-2.0 * log(y));
-    x0 = x - log(x) / x;
-
-    z = 1.0 / x;
-    if (x < 8.0)		/* y > exp(-32) = 1.2664165549e-14 */
-	x1 = z * polevl(z, P1, 8) / p1evl(z, Q1, 8);
-    else
-	x1 = z * polevl(z, P2, 8) / p1evl(z, Q2, 8);
-    x = x0 - x1;
-    if (code != 0)
-	x = -x;
+  if (y > 0.13533528323661269189) {
+    y = y - 0.5;
+    y2 = y * y;
+    x = y + y * (y2 * polevl(y2, P0, 4) / p1evl(y2, Q0, 8));
+    x = x * s2pi;
     return (x);
+  }
+
+  x = sqrt(-2.0 * log(y));
+  x0 = x - log(x) / x;
+
+  z = 1.0 / x;
+  if (x < 8.0) {		/* y > exp(-32) = 1.2664165549e-14 */
+    x1 = z * polevl(z, P1, 8) / p1evl(z, Q1, 8);
+  } else {
+    x1 = z * polevl(z, P2, 8) / p1evl(z, Q2, 8);
+  }
+
+  x = x0 - x1;
+  if (code != 0) {
+    x = -x;
+  }
+  return (x);
 }
 
 
@@ -299,16 +304,14 @@ struct erfinv : public mxnet_op::tunable {
      * Otherwise, y + 1 loses precision for |y| << 1.
      */
     if ((-thresh < y) && (y < thresh)){
-        return DType(y / M_2_SQRTPI);
+      return DType(y / M_2_SQRTPI);
     }
     if ((domain_lb < y) && (y < domain_ub)) {
-        return DType(ndtri(0.5 * (y+1)) * M_SQRT1_2);
-    }
-    else if (y == domain_lb || y == domain_ub) {
-        return DType((std::copysign(1.0, y))*std::numeric_limits<double>::infinity());
-    }
-    else {
-        return DType(std::numeric_limits<double>::quiet_NaN());
+      return DType(ndtri(0.5 * (y+1)) * M_SQRT1_2);
+    } else if (y == domain_lb || y == domain_ub) {
+      return DType((std::copysign(1.0, y))*std::numeric_limits<double>::infinity());
+    } else {
+      return DType(std::numeric_limits<double>::quiet_NaN());
     }
   }
 };
