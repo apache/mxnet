@@ -19,7 +19,6 @@
 
 /*
  * Copyright (c) 2005-2019, NumPy Developers.
- * Copyright (c) 2019, The Apache Software Foundation.
  *
  * All rights reserved.
  *
