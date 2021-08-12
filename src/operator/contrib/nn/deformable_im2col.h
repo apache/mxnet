@@ -47,15 +47,6 @@
  * license and copyright terms herein.
  *
  ***************** END Caffe Copyright Notice and Disclaimer ********************
- *
- * Copyright (c) 2017 Microsoft
- * Licensed under The Apache-2.0 License [see LICENSE for details]
- * \file deformable_im2col.h
- * \brief Function definitions of converting an image to
- * column matrix based on kernel, padding, dilation, and offset.
- * These functions are mainly used in deformable convolution operators.
- * \ref: https://arxiv.org/abs/1703.06211
- * \author Yuwen Xiong, Haozhi Qi, Jifeng Dai
  */
 
 #ifndef MXNET_OPERATOR_CONTRIB_NN_DEFORMABLE_IM2COL_H_
