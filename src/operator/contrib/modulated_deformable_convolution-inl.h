@@ -17,15 +17,6 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2018 Microsoft
- * Licensed under The MIT License [see LICENSE for details]
- * \file modulated_deformable_convolution-inl.h
- * \brief
- * \ref: https://github.com/Yangqing/caffe/wiki/Convolution-in-Caffe:-a-memo
- * \ref: https://arxiv.org/abs/1811.11168
- * \author Yuwen Xiong, Haozhi Qi, Jifeng Dai, Xizhou Zhu, Han Hu
-*/
 #ifndef MXNET_OPERATOR_CONTRIB_MODULATED_DEFORMABLE_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_CONTRIB_MODULATED_DEFORMABLE_CONVOLUTION_INL_H_
 

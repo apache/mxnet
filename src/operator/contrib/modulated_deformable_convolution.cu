@@ -17,14 +17,6 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2018 Microsoft
- * Licensed under The MIT License [see LICENSE for details]
- * \file modulated_deformable_convolution.cu
- * \brief
- * \author Yuwen Xiong, Haozhi Qi, Jifeng Dai, Xizhou Zhu, Han Hu
-*/
-
 #include "./modulated_deformable_convolution-inl.h"
 #include <vector>
 
