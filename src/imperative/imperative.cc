@@ -163,6 +163,19 @@ void Imperative::MarkVariables(
   }
 }
 
+// Unmark the variables to free the memory. 
+void Imperative::DropGrads(std::vector<NDArray*>& variables) {
+  for (uint32_t i = 0; i < variables.size(); ++i) {
+    CHECK_NE(variables[i]->autograd_entry_.node, nullptr)
+      <<"The variable has empty autograd_entry_. Cannot DropGrads.";
+    AGInfo& info = AGInfo::Get(variables[i]->autograd_entry_.node);
+    CHECK_NE(info.out_grads.size(), 0)
+      <<"The node has empty out_grads already. Cannot DropGrads again.";
+    info.out_grads.clear();
+    info.grad_req = kNullOp;
+  }
+}
+
 void Imperative::GetBackwardDependency(
     const nnvm::ObjectPtr& node,
     uint32_t num_inputs, uint32_t num_outputs,

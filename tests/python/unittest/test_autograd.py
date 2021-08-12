@@ -243,7 +243,7 @@ def test_detach_updated_grad():
     assert x._fresh_grad == False
 
 
-def test_retain_grad():
+def test_retain_graph():
     x = mx.nd.ones((2, 2))
     dx = mx.nd.zeros((2, 2))
     mark_variables([x], [dx], grad_reqs='add')
@@ -519,7 +519,7 @@ def test_gradient():
     dx.backward()
     assert abs(x.grad.asscalar() - 2.71828175) < 1e-7
 
-def test_retain_grad():
+def test_retain_grad_drop_grad():
     x = nd.array([1,2,3,4])
     x.attach_grad()
     y = nd.array([5,6,7,8])
@@ -529,12 +529,20 @@ def test_retain_grad():
         u = x * y
         z = u * x
 
-    u.retain_grad()
-    z.retain_grad()
+    u.attach_grad()
+    z.attach_grad()
     out_grad = nd.array([10, 10, 10, 10])
-    z.backward(out_grad)
+    z.backward(out_grad, retain_graph=True)
     
-    assert (u.grad == out_grad * x).asnumpy().all()             # u.grad = out_grad * x
-    assert (z.grad == out_grad).asnumpy().all()                 # z.grad = out_grad
-    assert (x.grad == out_grad * 2 * x * y).asnumpy().all()     # x.grad = 2*x*y; y.grad = x**2
-    assert (y.grad == out_grad * x*x).asnumpy().all() 
+    assert (u.grad == out_grad * x).asnumpy().all()
+    assert (z.grad == out_grad).asnumpy().all()     
+    assert (x.grad == out_grad * 2 * x * y).asnumpy().all()
+    assert (y.grad == out_grad * x*x).asnumpy().all()
+
+    u.drop_grad()
+    z.drop_grad()
+    out_grad = nd.array([0.1, 0.1, 0.1, 0.1])
+    z.backward(out_grad)
+
+    assert u.grad is None            
+    assert z.grad is None
