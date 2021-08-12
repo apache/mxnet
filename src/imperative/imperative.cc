@@ -137,7 +137,7 @@ void Imperative::MarkVariables(
     const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
     // Unmarked leaf nodes have null autograd_entry_, while marked nonleaf nodes don't.
-    if (variables[i]->autograd_entry_.node == nullptr) { 
+    if (variables[i]->autograd_entry_.node == nullptr) {
       std::string str_c(std::to_string(variable_count_++));
       variables[i]->autograd_entry_ = nnvm::NodeEntry{
           nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
@@ -156,7 +156,6 @@ void Imperative::MarkVariables(
       AGInfo& info = AGInfo::Get(variables[i]->autograd_entry_.node);
       CHECK_EQ(info.out_grads.size(), 0)
         <<"The node has already been marked. Cannot mark it again.";
-      
       info.out_grads.emplace_back(gradients[i]->Detach());
       info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
       info.ctx = variables[i]->ctx();
