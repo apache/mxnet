@@ -33,7 +33,7 @@ Gluon provides State of the Art models for many of the standard tasks such as Cl
 
 To complete this tutorial, you need:
 
-- [Build MXNet from source](https://mxnet.apache.org/get_started/ubuntu_setup#build-mxnet-from-source) with Python(Gluon) and C++ Packages
+- [Build MXNet from source](https://mxnet.apache.org/get_started/build_from_source) with Python(Gluon) and C++ Packages
 - Learn the basics about Gluon with [A 60-minute Gluon Crash Course](https://gluon-crash-course.mxnet.io/)
 
 

@@ -24,6 +24,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+
 #include "../../nn/activation-inl.h"
 #include "../../nn/batch_norm-inl.h"
 #include "../../nn/convolution-inl.h"
@@ -38,9 +39,9 @@ struct MKLDNNConvFusionParam {
 };
 
 static inline bool IsOutputUInt8(const MKLDNNConvFusionParam& param) {
-  bool result = false;
+  bool result              = false;
   const auto& mkldnn_param = param.full_conv_param.mkldnn_param;
-  auto IsOutputUInt8Helper = [](const MKLDNNPostEltwiseParam &param) {
+  auto IsOutputUInt8Helper = [](const MKLDNNPostEltwiseParam& param) {
     return ((param.alg == mkldnn::algorithm::eltwise_relu && param.alpha == 0.f) ||
             param.alg == mkldnn::algorithm::eltwise_logistic ||
             param.alg == mkldnn::algorithm::eltwise_soft_relu ||
