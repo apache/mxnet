@@ -132,7 +132,7 @@ OpStatePtr Imperative::Invoke(
 // Create nnvm::NodeEntry for variables' and gradients' autograd_entry_
 // attribute and associate AGInfo with it's info attribute
 void Imperative::MarkVariables(
-    const std::vector<NDArray*>& variables, // u_py
+    const std::vector<NDArray*>& variables,
     const std::vector<uint32_t>& grad_reqs,
     const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
@@ -142,7 +142,7 @@ void Imperative::MarkVariables(
       variables[i]->autograd_entry_ = nnvm::NodeEntry{
           nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
       AGInfo& info = AGInfo::Create(variables[i]->autograd_entry_.node);
-      info.outputs.emplace_back(variables[i]->Detach()); // node.info.output u_copy
+      info.outputs.emplace_back(variables[i]->Detach());
       info.out_grads.emplace_back(gradients[i]->Detach());
       info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
       info.ctx = variables[i]->ctx();
@@ -158,8 +158,8 @@ void Imperative::MarkVariables(
         <<"The node has already been marked. Cannot mark it again.";
       
       info.out_grads.emplace_back(gradients[i]->Detach());
-      info.grad_req = static_cast<OpReqType>(grad_reqs[i]); // otherwise defaulted to be kNullOp
-      info.ctx = variables[i]->ctx(); // redundant operation
+      info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
+      info.ctx = variables[i]->ctx();
     }
   }
 }
