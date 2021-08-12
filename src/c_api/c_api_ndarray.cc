@@ -329,25 +329,6 @@ int MXAutogradMarkVariables(uint32_t num_var,
   API_END();
 }
 
-int MXAutogradMarkVariablesEx(uint32_t num_var,
-                            NDArrayHandle *var_handles,
-                            uint32_t *reqs_array,
-                            NDArrayHandle *grad_handles) {
-  API_BEGIN();
-  std::vector<NDArray*> variables, gradients;
-  std::vector<uint32_t> grad_reqs;
-  variables.reserve(num_var);
-  gradients.reserve(num_var);
-  grad_reqs.reserve(num_var);
-  for (uint32_t i = 0; i < num_var; ++i) {
-    variables.emplace_back(static_cast<NDArray*>(var_handles[i]));
-    gradients.emplace_back(static_cast<NDArray*>(grad_handles[i]));
-    grad_reqs.emplace_back(reqs_array[i]);
-  }
-  Imperative::Get()->MarkVariablesEx(variables, grad_reqs, gradients);
-  API_END();
-}
-
 int MXAutogradComputeGradient(uint32_t num_output,
                               NDArrayHandle *output_handles) {
   return MXAutogradBackward(num_output, output_handles, nullptr, 0);

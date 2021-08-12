@@ -2885,29 +2885,6 @@ fixed-size items.
             ctypes.pointer(mx_uint(grad_req)),
             ctypes.pointer(grad.handle)))
 
-    def retain_grad(self, grad_req='write', stype=None):
-        """
-        Parameters
-        ----------
-        grad_req : {'write', 'add', 'null'}
-            How gradient will be accumulated.
-            - 'write': gradient will be overwritten on every backward.
-            - 'add': gradient will be added to existing value on every backward.
-            - 'null': do not compute gradient for this NDArray.
-        stype : str, optional
-            The storage type of the gradient array. Defaults to the same stype of this NDArray.
-        """
-        from . import zeros as _zeros
-        if stype is not None:
-            grad = _zeros(self.shape, stype=stype, dtype=self.dtype)
-        else:
-            grad = op.zeros_like(self)  # pylint: disable=undefined-variable
-        grad_req = _GRAD_REQ_MAP[grad_req]
-        check_call(_LIB.MXAutogradMarkVariablesEx(
-            1, ctypes.pointer(self.handle),
-            ctypes.pointer(mx_uint(grad_req)),
-            ctypes.pointer(grad.handle)))
-
     @property
     def grad(self):
         """Returns gradient buffer attached to this NDArray."""

@@ -132,41 +132,35 @@ OpStatePtr Imperative::Invoke(
 // Create nnvm::NodeEntry for variables' and gradients' autograd_entry_
 // attribute and associate AGInfo with it's info attribute
 void Imperative::MarkVariables(
-    const std::vector<NDArray*>& variables,
+    const std::vector<NDArray*>& variables, // u_py
     const std::vector<uint32_t>& grad_reqs,
     const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
-    std::string str_c(std::to_string(variable_count_++));
+    // Unmarked leaf nodes have null autograd_entry_, while marked nonleaf nodes don't.
+    if (variables[i]->autograd_entry_.node == nullptr) { 
+      std::string str_c(std::to_string(variable_count_++));
+      variables[i]->autograd_entry_ = nnvm::NodeEntry{
+          nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
+      AGInfo& info = AGInfo::Create(variables[i]->autograd_entry_.node);
+      info.outputs.emplace_back(variables[i]->Detach()); // node.info.output u_copy
+      info.out_grads.emplace_back(gradients[i]->Detach());
+      info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
+      info.ctx = variables[i]->ctx();
 
-    variables[i]->autograd_entry_ = nnvm::NodeEntry{
-        nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
-    AGInfo& info = AGInfo::Create(variables[i]->autograd_entry_.node);
-    info.outputs.emplace_back(variables[i]->Detach());
-    info.out_grads.emplace_back(gradients[i]->Detach());
-    info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
-    info.ctx = variables[i]->ctx();
-
-    gradients[i]->autograd_entry_ = nnvm::NodeEntry{
-        nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
-    AGInfo& grad_info = AGInfo::Create(gradients[i]->autograd_entry_.node);
-    grad_info.outputs.emplace_back(gradients[i]->Detach());
-    grad_info.ctx = gradients[i]->ctx();
-  }
-}
-
-// Create nnvm::NodeEntry for retain_queried node' and gradients' autograd_entry_
-// attribute and associate AGInfo with it's info attribute
-void Imperative::MarkVariablesEx(
-    const std::vector<NDArray*>& variables,
-    const std::vector<uint32_t>& grad_reqs,
-    const std::vector<NDArray*>& gradients) {
-  for (uint32_t i = 0; i < variables.size(); ++i) {
-    AGInfo& info = dmlc::get<AGInfo>(variables[i]->autograd_entry_.node->info);
-    CHECK_EQ(info.out_grads.size(), 0)
-      <<"The node has already been marked. Cannot retain it again.";
-    info.out_grads.emplace_back(gradients[i]->Detach());
-    info.grad_req = static_cast<OpReqType>(grad_reqs[i]);  // otherwise defaulted to be kNullOp
-    info.ctx = variables[i]->ctx();
+      gradients[i]->autograd_entry_ = nnvm::NodeEntry{
+          nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
+      AGInfo& grad_info = AGInfo::Create(gradients[i]->autograd_entry_.node);
+      grad_info.outputs.emplace_back(gradients[i]->Detach());
+      grad_info.ctx = gradients[i]->ctx();
+    } else {
+      AGInfo& info = AGInfo::Get(variables[i]->autograd_entry_.node);
+      CHECK_EQ(info.out_grads.size(), 0)
+        <<"The node has already been marked. Cannot mark it again.";
+      
+      info.out_grads.emplace_back(gradients[i]->Detach());
+      info.grad_req = static_cast<OpReqType>(grad_reqs[i]); // otherwise defaulted to be kNullOp
+      info.ctx = variables[i]->ctx(); // redundant operation
+    }
   }
 }
 

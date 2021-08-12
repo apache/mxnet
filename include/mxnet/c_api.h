@@ -1275,16 +1275,6 @@ MXNET_DLL int MXAutogradMarkVariables(uint32_t num_var,
                                       uint32_t *reqs_array,
                                       NDArrayHandle *grad_handles);
 /*!
- * \brief mark nonleaf NDArrays as variables to compute gradient for autograd
- * \param num_var number of variable NDArrays
- * \param var_handles variable NDArrays
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXAutogradMarkVariablesEx(uint32_t num_var,
-                                      NDArrayHandle *var_handles,
-                                      uint32_t *reqs_array,
-                                      NDArrayHandle *grad_handles);
-/*!
  * \brief compute the gradient of outputs w.r.t variabels
  * \param num_output number of output NDArray
  * \param output_handles output NDArrays
