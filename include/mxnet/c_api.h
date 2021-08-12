@@ -233,10 +233,11 @@ MXNET_DLL const char *MXGetLastError();
 /*!
  * \brief Load library dynamically
  * \param path to the library .so file
- * \param 0 for quiet, 1 for verbose
+ * \param verbose 0 for quiet, 1 for verbose
+ * \param lib handle to opened library
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXLoadLib(const char *path, unsigned verbose);
+MXNET_DLL int MXLoadLib(const char *path, unsigned verbose, void** lib);
 
 /*!
  * \brief Get list of features supported on the runtime

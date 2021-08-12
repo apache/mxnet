@@ -1514,16 +1514,19 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
 /*!
  * \brief Loads dynamic custom library and initializes it
  * \param path library path
+ * \param verbose 0 for quiet, 1 for verbose
+ * \param lib handle to opened library
+ * \return 0 when success, -1 when failure happens.
  */
-int MXLoadLib(const char *path, unsigned verbose) {
+int MXLoadLib(const char *path, unsigned verbose, void** lib) {
   API_BEGIN();
-  void *lib = LibraryInitializer::Get()->lib_load(path);
-  if (!lib)
+  *lib = LibraryInitializer::Get()->lib_load(path);
+  if (!*lib)
     LOG(FATAL) << "Unable to load library";
 
   // check that library and MXNet use same version of library API
   mxnet::ext::opVersion_t opVersion =
-    get_func<mxnet::ext::opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
+    get_func<mxnet::ext::opVersion_t>(*lib, const_cast<char*>(MXLIB_OPVERSION_STR));
   int libVersion =  opVersion();
   if (MX_LIBRARY_VERSION != libVersion)
     LOG(FATAL) << "Library version (" << libVersion << ") does not match MXNet version ("
@@ -1531,22 +1534,22 @@ int MXLoadLib(const char *path, unsigned verbose) {
 
   // get error messaging APIs
   mxnet::ext::msgSize_t msgSize =
-    get_func<mxnet::ext::msgSize_t>(lib, const_cast<char*>(MXLIB_MSGSIZE_STR));
+    get_func<mxnet::ext::msgSize_t>(*lib, const_cast<char*>(MXLIB_MSGSIZE_STR));
   mxnet::ext::msgGet_t msgGet =
-    get_func<mxnet::ext::msgGet_t>(lib, const_cast<char*>(MXLIB_MSGGET_STR));
+    get_func<mxnet::ext::msgGet_t>(*lib, const_cast<char*>(MXLIB_MSGGET_STR));
 
   // initialize library by passing MXNet version
   mxnet::ext::initialize_t initialize =
-    get_func<mxnet::ext::initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
+    get_func<mxnet::ext::initialize_t>(*lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
   if (!initialize(static_cast<int>(MXNET_VERSION))) {
     std::string msgs = getExtensionMsgs(msgSize, msgGet);
     LOG(FATAL) << "Library failed to initialize" << msgs;
   }
 
   // find ops, partitioners, and passes in library
-  registerOperators(lib, verbose, msgSize, msgGet);
-  registerPartitioners(lib, verbose, msgSize, msgGet);
-  registerPasses(lib, verbose, msgSize, msgGet);
+  registerOperators(*lib, verbose, msgSize, msgGet);
+  registerPartitioners(*lib, verbose, msgSize, msgGet);
+  registerPasses(*lib, verbose, msgSize, msgGet);
   API_END();
 }
 
