@@ -281,6 +281,22 @@
     3rdparty/openmp
 
     =======================================================================================
+    Apache-2.0 license + Microsoft Copyright
+    =======================================================================================
+
+    src/operator/contrib/deformable_psroi_pooling.cu
+    src/operator/contrib/deformable_convolution.cu
+    src/operator/contrib/deformable_convolution-inl.h
+    src/operator/contrib/psroi_pooling.cc
+    src/operator/contrib/multi_proposal.cu
+    src/operator/contrib/deformable_psroi_pooling-inl.h
+    src/operator/contrib/deformable_psroi_pooling.cc
+    src/operator/contrib/deformable_convolution.cc
+    src/operator/contrib/psroi_pooling.cu
+    src/operator/contrib/multi_proposal.cc
+    src/operator/contrib/multi_proposal-inl.h
+
+    =======================================================================================
     Caffe Licensing Model
     =======================================================================================
 
