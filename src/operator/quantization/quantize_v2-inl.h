@@ -41,7 +41,7 @@ struct QuantizeV2Param : public dmlc::Parameter<QuantizeV2Param> {
   int out_type;
   dmlc::optional<float> min_calib_range;
   dmlc::optional<float> max_calib_range;
-  dmlc::optional<bool> shifted;
+  dmlc::optional<bool> shifted_output;
   DMLC_DECLARE_PARAMETER(QuantizeV2Param) {
     DMLC_DECLARE_FIELD(out_type)
       .add_enum("auto", QuantizeOutType::qAuto)
@@ -58,7 +58,7 @@ struct QuantizeV2Param : public dmlc::Parameter<QuantizeV2Param> {
       .set_default(dmlc::optional<float>())
       .describe("The maximum scalar value in the form of float32. If present, it will be used to "
                 "quantize the fp32 data into int8 or uint8.");
-    DMLC_DECLARE_FIELD(shifted)
+    DMLC_DECLARE_FIELD(shifted_output)
       .set_default(dmlc::optional<bool>())
       .describe("Whether quantization ouptut should be shifted.");
   }
@@ -134,7 +134,8 @@ static inline bool QuantizeV2Type(const nnvm::NodeAttrs &attrs, std::vector<int>
   CHECK(in_attrs->at(0) == mshadow::kFloat32 || in_attrs->at(0) == mshadow::kUint8 ||
         in_attrs->at(0) == mshadow::kInt8);
   auto out_type = GetQuantizeOutputType(param);
-  if (out_type == mshadow::kUint8 || (param.shifted.has_value() && param.shifted.value())) {
+  if (out_type == mshadow::kUint8 ||
+      (param.shifted_output.has_value() && param.shifted_output.value())) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kUint8);
   } else if (out_type == mshadow::kInt8) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);

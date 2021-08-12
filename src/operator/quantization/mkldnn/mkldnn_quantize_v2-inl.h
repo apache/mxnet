@@ -119,11 +119,11 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
     }
 
     // Write output min/max
-    auto out_type      = GetQuantizeOutputType(param_);
-    const bool shifted = param_.shifted.has_value() && param_.shifted.value();
-    if (shifted) {
-      // if shifted == true we have guarantee that data_min is negative because
-      // we require that in shifted quantization pass in quantize_graph_pass
+    auto out_type             = GetQuantizeOutputType(param_);
+    const bool shifted_output = param_.shifted_output.has_value() && param_.shifted_output.value();
+    if (shifted_output) {
+      // if shifted_output == true we have guarantee that data_min is negative because
+      // we require that in asymmetric quantization pass in quantize_graph_pass
       // Modify out min/max range to reflect shifted data
       out_type                         = mshadow::kUint8;
       *outputs[1].data().dptr<float>() = 0;
@@ -142,7 +142,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
     if (!initalized_) {
       cached_data_min_ = data_min;
       cached_data_max_ = data_max;
-      if (shifted) {
+      if (shifted_output) {
         CHECK_LT(data_min, 0);  // assert that we are working on signed
         cached_scale_ = kUint8Range / (data_max - data_min);
         cached_shift_ = static_cast<uint8_t>(std::round(cached_scale_ * -cached_data_min_));
@@ -153,7 +153,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
       const int mask            = 0;
       std::vector<float> scales = {cached_scale_};
       attr.set_output_scales(mask, scales);
-      if (shifted) {
+      if (shifted_output) {
         // TODO(sfraczek): change to zero point when optimized in oneDNN
         dnnl::post_ops po;
         po.append_sum();
@@ -180,7 +180,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext& ctx,
     args_[MKLDNN_ARG_TO]   = *o_mem.second;
     MKLDNNStream::Get()->RegisterPrimArgs(*fwd_pd_, args_);
     CommitOutput(outputs[0], o_mem);
-    if (shifted) {
+    if (shifted_output) {
       uint8_t* raw_out_mem = static_cast<uint8_t*>(o_mem.second->get_data_handle());
       std::fill_n(raw_out_mem, outputs[0].shape().Size(), cached_shift_);
     }

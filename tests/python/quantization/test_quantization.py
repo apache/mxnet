@@ -1309,7 +1309,7 @@ def test_mkldnn_shifted_quantize_fc():
         fc_layer.initialize()
         return fc_layer
 
-    # Shifted quantization should set new bias to FC and add shift to output of quantize
+    # Asymmetric quantization should set new bias to FC and add shift to output of quantize
     # b'=b-shift*w because FC(x+shift,w,b)=(x+shift)*w+b
     def check(number, qdtype):
         random_data = mx.nd.random_uniform(low=0 if qdtype == 'uint8' else -1, high=1, shape=(batch_size, 32))
@@ -1333,13 +1333,13 @@ def test_mkldnn_shifted_quantize_fc():
         assert_almost_equal_with_err(out_q.asnumpy(), out.asnumpy(), rtol=0.1, atol=atol, etol=0.2)
 
         if qdtype == 'auto':
-            assert quantize_attrs['shifted'] == 'True'
+            assert quantize_attrs['shifted_output'] == 'True'
             bias_s32 = collect_param(fc_layer_quantized, 'dense%d_bias_quantize_s32' % number)
             assert bias_s32.dtype == np.int32
             bias_shifted = get_shifted_bias(quantize_attrs, weights_int8, weights_scale, bias_int8, bias_scale)
             assert_almost_equal(bias_s32, bias_shifted, rtol=1e-3, atol=1e-3)
         else:
-            assert 'shifted' not in quantize_attrs
+            assert 'shifted_output' not in quantize_attrs
             bias = collect_param(fc_layer_quantized, 'dense%d_bias_quantize' % number)
             assert bias.dtype == np.int8
 

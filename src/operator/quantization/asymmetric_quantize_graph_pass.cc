@@ -91,9 +91,9 @@ static float RescaleWeights(const Graph& g,
   float bias_max_rescale =
       mshadow::red::limits::MaxValue<int32_t>() / 2 / MaxAbs(min_bias, max_bias) / bias_scale;
   if (bias_int32_rescale > bias_max_rescale) {
-    LOG(INFO) << "RESCALING WEIGHTS in shifted quantization because bias scale "
-                 "is too big in layer "
-              << fc->attrs.name;
+    LOG(INFO)
+        << "RESCALING WEIGHTS in asymmetric quantization because bias scale is too big in layer "
+        << fc->attrs.name;
     // avoid overflow on bias
     bias_int32_rescale   = bias_max_rescale;
     float weight_rescale = bias_int32_rescale * bias_scale / data_scale_ / weight_scale;
@@ -138,8 +138,7 @@ static Pattern FindPattern(const ObjectPtr& node) {
 static void FCShiftedQuantization(const ObjectPtr& node,
                                   const Graph& g,
                                   std::vector<NDArray*>* new_arg_vector,
-                                  std::vector<std::string>* new_arg_names,
-                                  const char* attr_name) {
+                                  std::vector<std::string>* new_arg_names) {
   FCInputIndex idx(nnvm::get<MKLDNNFCFullParam>(node->attrs.parsed));
 
   ObjectPtr& bias_node      = node->inputs[idx.bias].node;
@@ -152,7 +151,7 @@ static void FCShiftedQuantization(const ObjectPtr& node,
   new_arg_names->push_back(bias_name_s32);
 
   ObjectPtr& input_node             = node->inputs[idx.data].node;
-  input_node->attrs.dict[attr_name] = "True";
+  input_node->attrs.dict["shifted_output"] = "True";
   if (input_node->op()->attr_parser)
     input_node->op()->attr_parser(&(input_node->attrs));
 
@@ -183,7 +182,7 @@ static Graph MKLDNNShiftedQuantization(Graph&& g) {
   bool quantize_fc = !dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZE_FC_OPTIMIZATION", false);
   bool fc_fc       = !dmlc::GetEnv("MXNET_DISABLE_SHIFTED_FC_FC_OPTIMIZATION", false);
   if (!disable_shifted_quant) {
-    LOG(INFO) << "Running MKLDNN shifted quantization";
+    LOG(INFO) << "Running MKLDNN asymmetric quantization";
   }
   // No change to aux params
   g.attrs["new_aux_names"] = std::make_shared<nnvm::any>(std::vector<std::string>());
@@ -201,13 +200,13 @@ static Graph MKLDNNShiftedQuantization(Graph&& g) {
       switch (p) {
         case Pattern::QuantizeFc:
           if (quantize_fc) {
-            FCShiftedQuantization(node, g, &new_arg_vector, &new_arg_names, "shifted");
+            FCShiftedQuantization(node, g, &new_arg_vector, &new_arg_names);
             ++quantize_fc_counter;
           }
           break;
         case Pattern::FcFc:
           if (fc_fc) {
-            FCShiftedQuantization(node, g, &new_arg_vector, &new_arg_names, "shifted_output");
+            FCShiftedQuantization(node, g, &new_arg_vector, &new_arg_names);
             ++fc_fc_counter;
           }
           break;
@@ -216,11 +215,11 @@ static Graph MKLDNNShiftedQuantization(Graph&& g) {
       }
     });
     if (quantize_fc_counter > 0) {
-      LOG(INFO) << "applied shifted quantization on QUANTIZE->FC " << quantize_fc_counter
+      LOG(INFO) << "applied asymmetric quantization on QUANTIZE->FC " << quantize_fc_counter
                 << " times";
     }
     if (fc_fc_counter > 0) {
-      LOG(INFO) << "applied shifted quantization on FC->FC " << fc_fc_counter << " times";
+      LOG(INFO) << "applied asymmetric quantization on FC->FC " << fc_fc_counter << " times";
     }
   }
   g.attrs["new_arg_names"] = std::make_shared<nnvm::any>(new_arg_names);
@@ -229,7 +228,7 @@ static Graph MKLDNNShiftedQuantization(Graph&& g) {
 }
 
 NNVM_REGISTER_PASS(MKLDNNShiftedQuantization)
-    .describe("Enables shifted quantization.")
+    .describe("Enables asymmetric quantization.")
     .set_body(MKLDNNShiftedQuantization)
     .set_change_graph(true);
 
