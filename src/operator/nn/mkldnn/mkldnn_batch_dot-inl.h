@@ -29,30 +29,33 @@
 #include <numeric>
 #include <utility>
 #include <vector>
-#include "../../tensor/dot-inl.h"
+
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_ops-inl.h"
+
+#include "../../tensor/dot-inl.h"
 
 namespace mxnet {
 namespace op {
 
-using batch_dot_fwd_t = mkldnn::matmul;
+using batch_dot_fwd_t    = mkldnn::matmul;
 using batch_dot_fwd_pd_t = mkldnn::matmul::primitive_desc;
 
 typedef ParamOpSign<DotParam> BatchDotSignature;
 
 class MKLDNNBatchDotFwd {
  public:
-  static MKLDNNBatchDotFwd &GetCached(const DotParam &param,
-                                      const std::vector<NDArray> &inputs,
-                                      const std::vector<NDArray> &outputs);
+  static MKLDNNBatchDotFwd& GetCached(const DotParam& param,
+                                      const std::vector<NDArray>& inputs,
+                                      const std::vector<NDArray>& outputs);
 
-  MKLDNNBatchDotFwd(const DotParam &param, const std::vector<NDArray> &inputs,
-                    const std::vector<NDArray> &outputs);
+  MKLDNNBatchDotFwd(const DotParam& param,
+                    const std::vector<NDArray>& inputs,
+                    const std::vector<NDArray>& outputs);
 
-  void Execute(const std::vector<NDArray> &inputs,
-               const std::vector<OpReqType> &req,
-               const std::vector<NDArray> &outputs);
+  void Execute(const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs);
 
  private:
   std::shared_ptr<batch_dot_fwd_t> fwd;

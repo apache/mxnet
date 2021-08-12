@@ -17,7 +17,7 @@
 
 # Normalization Blocks
 
-When training deep neural networks there are a number of techniques that are thought to be essential for model convergence. One important area is deciding how to initialize the parameters of the network. Using techniques such as [Xavier](https://mxnet.apache.org/api/python/optimization/optimization.html#mxnet.initializer.Xavier) initialization, we can can improve the gradient flow through the network at the start of training. Another important technique is normalization: i.e. scaling and shifting certain values towards a distribution with a mean of 0 (i.e. zero-centered) and a standard distribution of 1 (i.e. unit variance). Which values you normalize depends on the exact method used as we'll see later on.
+When training deep neural networks there are a number of techniques that are thought to be essential for model convergence. One important area is deciding how to initialize the parameters of the network. Using techniques such as [Xavier](../../../../../api/initializer/index.rst#mxnet.initializer.Xavier) initialization, we can can improve the gradient flow through the network at the start of training. Another important technique is normalization: i.e. scaling and shifting certain values towards a distribution with a mean of 0 (i.e. zero-centered) and a standard distribution of 1 (i.e. unit variance). Which values you normalize depends on the exact method used as we'll see later on.
 
 <p align="center">
     <img src="./imgs/data_normalization.jpeg" alt="drawing" width="500"/>
