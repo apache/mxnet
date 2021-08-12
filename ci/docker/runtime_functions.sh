@@ -885,7 +885,6 @@ unittest_centos7_gpu() {
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=100
-    ln -s -f /usr/lib64/libcuda.so libcuda.so
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
         OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator and not test_amp_init.py' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
