@@ -39,7 +39,7 @@ Tip: A `BatchNorm` layer at the start of your network can have a similar effect 
 
 Warning: You should calculate the normalization means and standard deviations using the training dataset only. Any leakage of information from you testing dataset will effect the reliability of your testing metrics.
 
-When using pre-trained models from the [Gluon Model Zoo](https://mxnet.apache.org/api/python/gluon/model_zoo.html) you'll usually see the normalization statistics used for training (i.e. statistics from step 1). You'll want to use these statistics to normalize your own input data for fine-tuning or inference with these models. Using `transforms.Normalize` is one way of applying the normalization, and this should be used in the `Dataset`.
+When using pre-trained models from the [Gluon Model Zoo](https://mxnet.apache.org/versions/master/api/python/docs/api/gluon/model_zoo/index.html) you'll usually see the normalization statistics used for training (i.e. statistics from step 1). You'll want to use these statistics to normalize your own input data for fine-tuning or inference with these models. Using `transforms.Normalize` is one way of applying the normalization, and this should be used in the `Dataset`.
 
 ```{.python .input}
 import mxnet as mx

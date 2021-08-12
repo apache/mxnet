@@ -286,7 +286,7 @@ Here, we have created a custom operator called `MyAddOne`, and within its `forwa
 
 As shown by the screenshot, in the **Custom Operator** domain where all the custom operator-related events fall into, we can easily visualize the execution time of each segment of `MyAddOne`. We can tell that `MyAddOne::pure_python` is executed first. We also know that `CopyCPU2CPU` and `_plus_scalr` are two "sub-operators" of `MyAddOne` and the sequence in which they are executed.
 
-Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.apache.org/versions/master/tutorials/basic/symbol.html) (refer to the code snippet below, which is the symbolic-mode equivelent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively. 
+Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.apache.org/versions/master/api/python/docs/api/legacy/symbol/index.html) (refer to the code snippet below, which is the symbolic-mode equivelent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively. 
 
 ```{.python .input} 
 # Set profile_all to True
