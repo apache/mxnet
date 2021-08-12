@@ -43,9 +43,9 @@
 
 #define _USE_MATH_DEFINES
 
+#include <assert.h>
 #include <mxnet/base.h>
 #include <limits>
-#include <assert.h>
 #include "math.h"
 
 namespace mxnet {
@@ -106,8 +106,7 @@ static inline double polevl(double x, const double coef[], int N) {
 
   do {
     ans = ans * x + *p++;
-  }
-  while (--i);
+  } while (--i);
 
   return (ans);
 }
@@ -123,8 +122,7 @@ static inline double p1evl(double x, const double coef[], int N) {
 
   do {
     ans = ans * x + *p++;
-  }
-  while (--i);
+  } while (--i);
 
   return (ans);
 }
@@ -251,7 +249,7 @@ static double ndtri(double y0) {
   double x, y, z, y2, x0, x1;
   int code = 1;
   y = y0;
-  if (y > (1.0 - 0.13533528323661269189)) {	/* 0.135... = exp(-2) */
+  if (y > (1.0 - 0.13533528323661269189)) {  /* 0.135... = exp(-2) */
     y = 1.0 - y;
     code = 0;
   }
@@ -268,7 +266,7 @@ static double ndtri(double y0) {
   x0 = x - log(x) / x;
 
   z = 1.0 / x;
-  if (x < 8.0) {		/* y > exp(-32) = 1.2664165549e-14 */
+  if (x < 8.0) {  /* y > exp(-32) = 1.2664165549e-14 */
     x1 = z * polevl(z, P1, 8) / p1evl(z, Q1, 8);
   } else {
     x1 = z * polevl(z, P2, 8) / p1evl(z, Q2, 8);
@@ -303,7 +301,7 @@ struct erfinv : public mxnet_op::tunable {
      * where we only retain the linear term.
      * Otherwise, y + 1 loses precision for |y| << 1.
      */
-    if ((-thresh < y) && (y < thresh)){
+    if ((-thresh < y) && (y < thresh)) {
       return DType(y / M_2_SQRTPI);
     }
     if ((domain_lb < y) && (y < domain_ub)) {
