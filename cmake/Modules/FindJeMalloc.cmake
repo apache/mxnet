@@ -1,3 +1,9 @@
+# Copyright (c)      2014 Thomas Heller
+# Copyright (c) 2007-2012 Hartmut Kaiser
+# Copyright (c) 2010-2011 Matt Anderson
+# Copyright (c) 2011      Bryce Lelbach
+#
+#----
 # Distributed under the Boost Software License, Version 1.0.
 # Boost Software License - Version 1.0 - August 17th, 2003
 #
