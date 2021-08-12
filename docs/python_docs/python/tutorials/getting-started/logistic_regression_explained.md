@@ -140,13 +140,13 @@ Our validation function is very similar to the training one. The main difference
 
 `Accuracy` metric requires 2 arguments: 1) a vector of ground-truth classes and 2) A vector or matrix of predictions. When predictions are of the same shape as the vector of ground-truth classes, `Accuracy` class assumes that prediction vector contains predicted classes. So, it converts the vector to `Int32` and compare each item of ground-truth classes to prediction vector.
 
-Because of the behaviour above, you will get an unexpected result if you just apply [Sigmoid](../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.sigmoid) function to the network result and pass it to `Accuracy` metric. As mentioned before, we need to apply `Sigmoid` function to the output of the neuron to get a probability of belonging to the class 1. But `Sigmoid` function produces output in range [0; 1], and all numbers in that range are going to be casted to 0, even if it is as high as 0.99. To avoid this we write a custom bit of code on line 12, that:
+Because of the behaviour above, you will get an unexpected result if you just apply [Sigmoid](https://mxnet.apache.org/versions/master/api/python/docs/api/npx/generated/mxnet.npx.sigmoid.html) function to the network result and pass it to `Accuracy` metric. As mentioned before, we need to apply `Sigmoid` function to the output of the neuron to get a probability of belonging to the class 1. But `Sigmoid` function produces output in range [0; 1], and all numbers in that range are going to be casted to 0, even if it is as high as 0.99. To avoid this we write a custom bit of code on line 12, that:
 
 1. Calculates sigmoid using `Sigmoid` function
 
 2. Subtracts a threshold from the original sigmoid output. Usually, the threshold is equal to 0.5, but it can be higher, if you want to increase certainty of an item to belong to class 1.
 
-3. Uses [mx.np.ceil](../../api/np/routines.math.rst#mxnet-np-ceil) function, which converts all negative values to 0 and all positive values to 1
+3. Uses [mx.np.ceil](https://mxnet.apache.org/versions/master/api/python/docs/api/np/generated/mxnet.np.ceil.html#mxnet-np-ceil) function, which converts all negative values to 0 and all positive values to 1
 
 After these transformations we can pass the result to `Accuracy.update()` method and expect it to behave in a proper way.
 
