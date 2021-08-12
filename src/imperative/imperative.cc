@@ -163,8 +163,8 @@ void Imperative::MarkVariables(
   }
 }
 
-// Unmark the variables to free the memory. 
-void Imperative::DropGrads(std::vector<NDArray*>& variables) {
+// Unmark the variables to free the memory.
+void Imperative::DropGrads(const std::vector<NDArray*>& variables) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
     CHECK_NE(variables[i]->autograd_entry_.node, nullptr)
       <<"The variable has empty autograd_entry_. Cannot DropGrads.";
