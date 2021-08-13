@@ -1255,7 +1255,7 @@ def test_get_optimal_thresholds():
 
 
 @with_seed()
-def test_mkldnn_shifted_quantize_fc():
+def test_mkldnn_asymmetric_quantize_fc():
     batch_size = 1
     if not is_test_for_mkldnn():
         print("Test only for mkldnn")
@@ -1349,7 +1349,7 @@ def test_mkldnn_shifted_quantize_fc():
 
 
 @with_seed()
-def test_mkldnn_shifted_quantize_fc_fc():
+def test_mkldnn_asymmetric_quantize_fc_fc():
     batch_size = 2
     if not is_test_for_mkldnn():
         print("Test only for mkldnn")
