@@ -215,11 +215,11 @@ static Graph MKLDNNShiftedQuantization(Graph&& g) {
       }
     });
     if (quantize_fc_counter > 0) {
-      LOG(INFO) << "applied asymmetric quantization on QUANTIZE->FC " << quantize_fc_counter
+      LOG(INFO) << "Applied asymmetric quantization on QUANTIZE->FC " << quantize_fc_counter
                 << " times";
     }
     if (fc_fc_counter > 0) {
-      LOG(INFO) << "applied asymmetric quantization on FC->FC " << fc_fc_counter << " times";
+      LOG(INFO) << "Applied asymmetric quantization on FC->FC " << fc_fc_counter << " times";
     }
   }
   g.attrs["new_arg_names"] = std::make_shared<nnvm::any>(new_arg_names);
