@@ -404,7 +404,7 @@ rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
 
 ## Sparse Operators and Storage Type Inference
 
-Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](http://mxnet.apache.org/api/python/ndarray/sparse.html) to find what sparse operators are available.
+Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](https://mxnet.apache.org/versions/master/api/python/docs/api/legacy/ndarray/sparse/index.html) to find what sparse operators are available.
 
 
 ```{.python .input}
