@@ -63,7 +63,7 @@ namespace rtc {
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   const char cuda_lib_name[] = "nvcuda.dll";
 #else
-  const char cuda_lib_name[] = "libcuda.so";
+  const char cuda_lib_name[] = "libcuda.so.1";
 #endif
 
 std::mutex lock;

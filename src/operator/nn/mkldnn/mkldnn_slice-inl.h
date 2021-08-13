@@ -21,7 +21,7 @@
  * \file mkldnn_slice-inl.h
  * \brief
  * \author Zhiyuan Huang
-*/
+ */
 
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_SLICE_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_SLICE_INL_H_
@@ -31,20 +31,21 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
+
 #include <utility>
+
+#include "./mkldnn_base-inl.h"
+
 #include "../../operator_common.h"
 #include "../../tensor/slice-inl.h"
-#include "./mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
 
 class MKLDNNSliceFwd {
  public:
-  MKLDNNSliceFwd(const SliceParam &param,
-                 const NDArray &in,
-                 const NDArray &out);
-  void SetNewMem(const mkldnn::memory &input, const mkldnn::memory &output);
+  MKLDNNSliceFwd(const SliceParam& param, const NDArray& in, const NDArray& out);
+  void SetNewMem(const mkldnn::memory& input, const mkldnn::memory& output);
   void Register();
 
  private:
@@ -54,11 +55,16 @@ class MKLDNNSliceFwd {
 };
 
 typedef ParamOpSign<SliceParam> MKLDNNSliceSignature;
-MKLDNNSliceFwd &GetSliceForward(const SliceParam &param, const bool is_train,
-                 const NDArray &in_data, const NDArray &out_data);
+MKLDNNSliceFwd& GetSliceForward(const SliceParam& param,
+                                const bool is_train,
+                                const NDArray& in_data,
+                                const NDArray& out_data);
 
-void MKLDNNSlice(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                 const NDArray &in, OpReqType req, const NDArray &out);
+void MKLDNNSlice(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const NDArray& in,
+                 OpReqType req,
+                 const NDArray& out);
 
 }  // namespace op
 }  // namespace mxnet
