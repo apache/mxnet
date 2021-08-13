@@ -95,7 +95,7 @@ namespace mshadow_op {
  *
  */
 
-static inline double polevl(double x, const double coef[], int N) {
+MSHADOW_XINLINE static double polevl(double x, const double coef[], int N) {
   const double *p;
   double ans;
   int i;
@@ -111,7 +111,7 @@ static inline double polevl(double x, const double coef[], int N) {
   return (ans);
 }
 
-static inline double p1evl(double x, const double coef[], int N) {
+MSHADOW_XINLINE static double p1evl(double x, const double coef[], int N) {
   const double *p;
   double ans;
   int i;
@@ -164,19 +164,21 @@ static inline double p1evl(double x, const double coef[], int N) {
  *
  */
 
-/* sqrt(2pi) */
-static double s2pi = 2.50662827463100050242E0;
+MSHADOW_XINLINE static double ndtri(double y0) {
+  assert(y0 > 0 && y0 < 1);
 
-/* approximation for 0 <= |y - 0.5| <= 3/8 */
-static double P0[5] = {
+  /* sqrt(2pi) */
+  double s2pi = 2.50662827463100050242E0;
+
+  /* approximation for 0 <= |y - 0.5| <= 3/8 */
+  double P0[5] = {
     -5.99633501014107895267E1,
     9.80010754185999661536E1,
     -5.66762857469070293439E1,
     1.39312609387279679503E1,
     -1.23916583867381258016E0,
-};
-
-static double Q0[8] = {
+  };
+  double Q0[8] = {
     /* 1.00000000000000000000E0, */
     1.95448858338141759834E0,
     4.67627912898881538453E0,
@@ -186,12 +188,12 @@ static double Q0[8] = {
     -8.20372256168333339912E1,
     1.59056225126211695515E1,
     -1.18331621121330003142E0,
-};
+  };
 
-/* Approximation for interval z = sqrt(-2 log y ) between 2 and 8
- * i.e., y between exp(-2) = .135 and exp(-32) = 1.27e-14.
- */
-static double P1[9] = {
+  /* Approximation for interval z = sqrt(-2 log y ) between 2 and 8
+   * i.e., y between exp(-2) = .135 and exp(-32) = 1.27e-14.
+   */
+  double P1[9] = {
     4.05544892305962419923E0,
     3.15251094599893866154E1,
     5.71628192246421288162E1,
@@ -201,9 +203,8 @@ static double P1[9] = {
     -1.40256079171354495875E-1,
     -3.50424626827848203418E-2,
     -8.57456785154685413611E-4,
-};
-
-static double Q1[8] = {
+  };
+  double Q1[8] = {
     /*  1.00000000000000000000E0, */
     1.57799883256466749731E1,
     4.53907635128879210584E1,
@@ -213,12 +214,12 @@ static double Q1[8] = {
     -1.42182922854787788574E-1,
     -3.80806407691578277194E-2,
     -9.33259480895457427372E-4,
-};
+  };
 
-/* Approximation for interval z = sqrt(-2 log y ) between 8 and 64
- * i.e., y between exp(-32) = 1.27e-14 and exp(-2048) = 3.67e-890.
- */
-static double P2[9] = {
+  /* Approximation for interval z = sqrt(-2 log y ) between 8 and 64
+   * i.e., y between exp(-32) = 1.27e-14 and exp(-2048) = 3.67e-890.
+   */
+  double P2[9] = {
     3.23774891776946035970E0,
     6.91522889068984211695E0,
     3.93881025292474443415E0,
@@ -228,9 +229,8 @@ static double P2[9] = {
     3.01581553508235416007E-4,
     2.65806974686737550832E-6,
     6.23974539184983293730E-9,
-};
-
-static double Q2[8] = {
+  };
+  double Q2[8] = {
     /*  1.00000000000000000000E0, */
     6.02427039364742014255E0,
     3.67983563856160859403E0,
@@ -240,18 +240,14 @@ static double Q2[8] = {
     3.28014464682127739104E-4,
     2.89247864745380683936E-6,
     6.79019408009981274425E-9,
-};
-
-/*! brief inverse of normal distribution function */
-static double ndtri(double y0) {
-  assert(y0 > 0 && y0 < 1);
+  };
 
   double x, y, z, y2, x0, x1;
-  int code = 1;
+  bool code = false;
   y = y0;
   if (y > (1.0 - 0.13533528323661269189)) {  /* 0.135... = exp(-2) */
     y = 1.0 - y;
-    code = 0;
+    code = true;
   }
 
   if (y > 0.13533528323661269189) {
@@ -273,7 +269,7 @@ static double ndtri(double y0) {
   }
 
   x = x0 - x1;
-  if (code != 0) {
+  if (code) {
     x = -x;
   }
   return (x);
@@ -304,10 +300,11 @@ struct erfinv : public mxnet_op::tunable {
     if ((-thresh < y) && (y < thresh)) {
       return DType(y / M_2_SQRTPI);
     }
+
     if ((domain_lb < y) && (y < domain_ub)) {
       return DType(ndtri(0.5 * (y+1)) * M_SQRT1_2);
     } else if (y == domain_lb || y == domain_ub) {
-      return DType((std::copysign(1.0, y))*std::numeric_limits<double>::infinity());
+      return DType(std::copysign(1.0, y) * std::numeric_limits<double>::infinity());
     } else {
       return DType(std::numeric_limits<double>::quiet_NaN());
     }
