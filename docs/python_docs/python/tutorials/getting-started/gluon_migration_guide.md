@@ -40,13 +40,13 @@ Adopting these new functionalities may or may not require modifications on your 
 
 **Migration Guide**: Users can continue with the traditional gluon.data.Dataloader and the C++ backend will be applied automatically. 
 
-[Gluon2.0 dataloader](../../api/gluon/data/index.html#mxnet.gluon.data.DataLoader) will provide a new parameter called `try_nopython`. This parameter takes default value of None; when set to `True` the dataloader will compile python dataloading pipeline into pure MXNet c++ implementation. The compilation is not guaranteed to support all use cases, but it will fallback to python in case of failure: 
+[Gluon2.0 dataloader](../../api/gluon/data/index.rst#mxnet.gluon.data.DataLoader) will provide a new parameter called `try_nopython`. This parameter takes default value of None; when set to `True` the dataloader will compile python dataloading pipeline into pure MXNet c++ implementation. The compilation is not guaranteed to support all use cases, but it will fallback to python in case of failure: 
 
-- The dataset is not fully [supported by backend](../../api/gluon/data/index.html#mxnet.gluon.data.Dataset)(e.g., there are custom python datasets).
+- The dataset is not fully [supported by backend](../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset)(e.g., there are custom python datasets).
 - Transform is not fully hybridizable. 
 - Bachify is not fully [supported by backend](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/data/batchify.py). 
 
-You can refer to [Step5 in Crash Course](./crash-course/5-datasets.html#New-in-MXNet-2.0:-faster-C++-backend-dataloaders) for a detailed performance increase with C++ backend. 
+You can refer to [Step5 in Crash Course](./crash-course/5-datasets.rst#New-in-MXNet-2.0:-faster-C++-backend-dataloaders) for a detailed performance increase with C++ backend. 
 ## Modeling
 In Gluon2.0, users will have a brand new modeling experience with NumPy-compatible APIs and deferred compute mechanism. 
 - **NumPy-compatible programing experience**: users can build their models with MXNet implementation with NumPy array library, NumPy-compatible math operators and some neural network extension operators. 
@@ -64,7 +64,7 @@ import mxnet as mx
 nd_array = mx.ones((5,3))
 np_array = nd_array.as_np_ndarray()
 ```
-3. Compared with legacy NDArray, some attributes are deprecated in NumPy ndarray. Listed below are some of the deprecated APIs and their corresponding replacements in NumPy ndarray, others can be found in [**Appendix/NumPy Array Deprecated Attributes**](#NumPy-Array-Deprecated-Attributes). 
+3. Compared with legacy NDArray, some attributes are deprecated in NumPy ndarray. Listed below are some of the deprecated APIs and their corresponding replacements in NumPy ndarray, others can be found in [**Appendix/NumPy Array Deprecated Attributes**](#NumPy-Array-Deprecated-Attributes).
 
 |                   Deprecated Attributes               |    NumPy ndarray Equivalent    |
 | ----------------------------------------------------- | ------------------------------ |
@@ -74,8 +74,6 @@ np_array = nd_array.as_np_ndarray()
 |                   `a.reshape_like(b)`                 |    `a.reshape(b.shape)`    |
 |                    `a.zeros_like(b)`                  |   `mx.np.zeros_like(b)`  |
 |                    `a.ones_like(b)`                   |   `mx.np.ones_like(b)`   |
-
-
 4. Compared with legacy NDArray, some attributes will have different behaviors and take different inputs. 
 
 |          Attribute            | Legacy Inputs | NumPy Inputs |
@@ -287,7 +285,8 @@ Optimizer module in MXNet provides a lot of optimization algorithms to reduce th
 2. RMSProp:
     - use `rho` instead of `gamma1` and use `momentum` instead of `gamma2`
     - e.g. `rmsprop_optimizer = optimizer.RMSProp(learning_rate=0.001, rho=0.9, momentum=0.9, epsilon=1e-07, centered=False)`
-3. `optimizer.ccSGD` and `optimizer.LBSGD` are deprecated. 
+3. `optimizer.ccSGD` and `optimizer.LBSGD` are deprecated.
+
 ## Metrics
 Metrics module in MXNet provides different methods for users to judge the performance of models. In Gluon 2.0, metrics will use MXNet NumPy-compatible interface and also introduce a lot of new evaluation metrics.
 **Changes**:
@@ -310,6 +309,7 @@ Metrics module in MXNet provides different methods for users to judge the perfor
         - "multiclass": f1 for multiclassification problem.
         - "multilabel": f1 for multilabel classification.
     - **threshold**: threshold for postive confidence value.
+
 ## Key-Value Store
 Gluon 2.0 will provide a new and unified low level API for data parallel training. These unified APIs can support different communication backends, including native Parameter Server, Horovod and BytePS. 
 Example: 
@@ -329,7 +329,8 @@ kv.pushpull('3', val * scale)
 A new module called `mxnet.gluon.probability` has been introduced in Gluon 2.0. It is analogous to pytorch distribution and the main difference is that `mxnet.gluon.probability` will use MXNet NumPy compatible operators and will allow hybridization. It has three parts: 
 1. [Distribution Objects](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/distributions): `gluon.probability.Bernoulli`, `gluon.probability.Beta` ...
 2. [StochasticBlock](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/block): support accumulating loss in the forward phase, which is useful in building Bayesian Neural Network. 
-3. [Transformation](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/transformation): implement invertible transformation with computable log det jacobians. 
+3. [Transformation](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/transformation): implement invertible transformation with computable log det jacobians.
+
 ## Appendix
 ### NumPy Array Deprecated Attributes
 |                   Deprecated Attributes               |    NumPy ndarray Equivalent    |

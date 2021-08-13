@@ -52,6 +52,12 @@ The following tutorials teach how to use MXNet.
 
       A tutorial on implementing linear regression using MXNet APIs.
 
+   .. card::
+      :title: Gluon2.0: Migration Guide
+      :link: gluon_migration_guide.html
+
+      Migrate from MXNet v1.x to v2.x.
+
 .. toctree::
    :hidden:
    :maxdepth: 2
