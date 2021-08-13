@@ -38,8 +38,9 @@ from util import retry
 
 DOCKER_CACHE_NUM_RETRIES = 3
 DOCKER_CACHE_TIMEOUT_MINS = 45
-PARALLEL_BUILDS = 10
+PARALLEL_BUILDS = 5
 DOCKER_CACHE_RETRY_SECONDS = 5
+DOCKER_BUILD_NUM_RETRIES = 2
 
 
 def build_save_containers(platforms, registry, load_cache) -> int:
@@ -76,12 +77,16 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     :return: Platform if failed, None otherwise
     """
     # docker-compose
-    if platform in build_util.DOCKER_COMPOSE_WHITELIST:
+    if build_util.is_docker_compose(platform):
         if "dkr.ecr" in registry:
             _ecr_login(registry)
-        build_util.build_docker(platform=platform, registry=registry, num_retries=10, no_cache=False)
-        push_cmd = ['docker-compose', 'push', platform]
-        subprocess.check_call(push_cmd)
+        build_util.build_docker(platform=platform, registry=registry,
+                                num_retries=DOCKER_BUILD_NUM_RETRIES, no_cache=False)
+        docker_compose_service = platform.split(".")[1]
+        env = os.environ.copy()
+        env["DOCKER_CACHE_REGISTRY"] = registry
+        push_cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'push', docker_compose_service]
+        subprocess.check_call(push_cmd, env=env)
         return None
 
     docker_tag = build_util.get_docker_tag(platform=platform, registry=registry)
@@ -94,7 +99,8 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     logging.debug('Building %s as %s', platform, docker_tag)
     try:
         # Increase the number of retries for building the cache.
-        image_id = build_util.build_docker(platform=platform, registry=registry, num_retries=10, no_cache=False)
+        image_id = build_util.build_docker(platform=platform, registry=registry,
+                                           num_retries=DOCKER_BUILD_NUM_RETRIES, no_cache=False)
         logging.info('Built %s as %s', docker_tag, image_id)
 
         # Push cache to registry
@@ -219,7 +225,7 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    platforms = build_util.get_platforms(legacy_only=True)
+    platforms = build_util.get_platforms()
 
     if "dkr.ecr" in args.docker_registry:
         _ecr_login(args.docker_registry)
