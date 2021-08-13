@@ -28,6 +28,7 @@
 #include <unordered_map>
 
 #include "mkldnn_fully_connected-inl.h"
+#include "../../quantization/quantization_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -54,6 +55,14 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(const MKLDNNFCFullPar
                        full_param.eltwise_param.alg,
                        full_param.eltwise_param.alpha,
                        full_param.eltwise_param.beta);
+  }
+  if (full_param.mkldnn_param.shifted_output.has_value() &&
+      full_param.mkldnn_param.shifted_output.value()) {
+    auto max = full_param.mkldnn_param.max_calib_range.value();
+    auto min = full_param.mkldnn_param.min_calib_range.value();
+    float scale = GetQuantizeScale(mshadow::kUint8, 0, max - min);
+    float shift = -min * scale;
+    ops.append_eltwise(1.f, dnnl::algorithm::eltwise_linear, 1.f, shift);
   }
   if (full_param.mkldnn_param.with_sum) {
     ops.append_sum(full_param.mkldnn_param.sum_scale);

@@ -103,11 +103,11 @@ def convert_reshape(net, node, module, builder):
 
     if any(item <= 0 for item in target_shape):
         raise NotImplementedError('Special dimensional values less than or equal to 0 are not supported yet.'
-                                  'Feel free to file an issue here: https://github.com/dmlc/mxnet/issues.')
+                                  'Feel free to file an issue here: https://github.com/apache/mxnet/issues.')
 
     if 'reverse' in node and node['reverse'] == 'True':
         raise NotImplementedError('"reverse" parameter is not supported by yet.'
-                                  'Feel free to file an issue here: https://github.com/dmlc/mxnet/issues.')
+                                  'Feel free to file an issue here: https://github.com/apache/mxnet/issues.')
 
     mode = 0 # CHANNEL_FIRST
     builder.add_reshape(name, input_name, output_name, target_shape, mode)

@@ -83,6 +83,7 @@ def op_export_test(model_name, Model, inputs, tmp_path, dummy_input=False, onnx_
             pred_onx_i = onnx_map(pred_onx[i]) if onnx_map else pred_onx[i]
             pred_mx_i = mx_map(pred_mx[i]) if mx_map else pred_mx[i]
             assert_almost_equal(pred_onx_i, pred_mx_i, equal_nan=True, rtol=rtol, atol=atol)
+            
     else:
         pred_onx = onnx_map(pred_onx[0]) if onnx_map else pred_onx[0]
         pred_mx = mx_map(pred_mx) if mx_map else pred_mx
@@ -1261,14 +1262,12 @@ def test_onnx_export_RNN(tmp_path, mode, dtype, state_size, input_size, num_laye
     # for num_layers >= 2, input_size must equal to state_size
     if num_layers >= 2 and input_size != state_size:
         return
-    # Currently only bidirectional supports lstm with num_layers = 1
-    if bidirectional and (mode != 'lstm' or num_layers != 1):
+    # Currently bidirectional only supports lstm with num_layers = 1 or 2
+    if bidirectional and (mode != 'lstm' or num_layers > 2):
         return
-
     b = 1
     if bidirectional:
         b = 2
-
     factor = 1
     if mode == 'gru':
         factor = 3
@@ -1277,9 +1276,14 @@ def test_onnx_export_RNN(tmp_path, mode, dtype, state_size, input_size, num_laye
 
     M = def_model('RNN', mode=mode, state_size=state_size, state_outputs=True,  num_layers=num_layers, p=0, bidirectional=bidirectional)
     x = mx.nd.random.normal(0, 10, (seq_length, batch_size, input_size)).astype(dtype)
-    param = mx.nd.random.normal(0, 1, [b*num_layers*factor*state_size*input_size +
-                                       b*num_layers*factor*state_size*state_size +
-                                       b*num_layers*2*factor*state_size]).astype(dtype)
+    if mode == 'lstm' and bidirectional and num_layers == 2:
+        param = mx.nd.random.normal(0, 1, [b*(num_layers+1)*factor*state_size*input_size +
+                                        b*num_layers*factor*state_size*state_size +
+                                        b*num_layers*2*factor*state_size]).astype(dtype)
+    else:
+        param = mx.nd.random.normal(0, 1, [b*num_layers*factor*state_size*input_size +
+                                        b*num_layers*factor*state_size*state_size +
+                                        b*num_layers*2*factor*state_size]).astype(dtype)
     state = mx.nd.random.uniform(-1, 1, [b*num_layers, batch_size, state_size]).astype(dtype)
     if mode == 'lstm':
         cell = mx.nd.random.uniform(-1, 1, [b*num_layers, batch_size, state_size]).astype(dtype)
