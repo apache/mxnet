@@ -69,7 +69,7 @@ class LibraryInitializer {
   bool lib_is_loaded(const std::string& path) const;
   void* lib_load(const char* path);
   void lib_close(void* handle);
-  static void get_sym(void* handle, void** func, char* name);
+  static void get_sym(void* handle, void** func, const char* name);
 
   /**
    * Original pid of the process which first loaded and initialized the library
@@ -114,7 +114,7 @@ class LibraryInitializer {
  * \return func a function pointer
  */
 template<typename T>
-T get_func(void *lib, char *func_name) {
+T get_func(void *lib, const char *func_name) {
   T func;
   LibraryInitializer::Get()->get_sym(lib, reinterpret_cast<void**>(&func), func_name);
   if (!func)

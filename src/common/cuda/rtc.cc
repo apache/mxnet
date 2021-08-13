@@ -32,6 +32,7 @@
 #include <algorithm>
 
 #include "rtc.h"
+#include "../../initialize.h"
 #include "rtc/half-inl.h"
 #include "rtc/util-inl.h"
 #include "rtc/forward_functions-inl.h"
@@ -41,11 +42,29 @@
 #include "rtc/reducer-inl.h"
 #include "utils.h"
 
+typedef CUresult (*cuDeviceGetPtr) (CUdevice* device, int ordinal);
+typedef CUresult (*cuDevicePrimaryCtxRetainPtr) (CUcontext* pctx, CUdevice dev);
+typedef CUresult (*cuModuleLoadDataExPtr) (CUmodule* module, const void* image,
+  unsigned int numOptions, CUjit_option* options, void** optionValues);
+typedef CUresult (*cuModuleGetFunctionPtr) (CUfunction* hfunc, CUmodule hmod,
+  const char* name);
+typedef CUresult (*cuLaunchKernelPtr) (CUfunction f, unsigned int  gridDimX,
+  unsigned int  gridDimY, unsigned int  gridDimZ,
+  unsigned int  blockDimX, unsigned int blockDimY, unsigned int blockDimZ,
+  unsigned int sharedMemBytes, CUstream hStream, void** kernelParams,
+  void** extra);
+typedef CUresult (*cuGetErrorStringPtr) (CUresult error, const char** pStr);
 
 namespace mxnet {
 namespace common {
 namespace cuda {
 namespace rtc {
+
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  const char cuda_lib_name[] = "nvcuda.dll";
+#else
+  const char cuda_lib_name[] = "libcuda.so.1";
+#endif
 
 std::mutex lock;
 
@@ -149,6 +168,8 @@ CUfunction get_function(const std::string &parameters,
     std::string ptx;
     std::vector<CUfunction> functions;
   };
+  void* cuda_lib_handle = LibraryInitializer::Get()->lib_load(cuda_lib_name);
+
   // Maps from the kernel name and parameters to the ptx and jit-compiled CUfunctions.
   using KernelCache = std::unordered_map<std::string, KernelInfo>;
   // Per-gpu-architecture compiled kernel cache with jit-compiled function for each device context
@@ -233,8 +254,12 @@ CUfunction get_function(const std::string &parameters,
     // Make sure driver context is set to the proper device
     CUdevice cu_device;
     CUcontext context;
-    CUDA_DRIVER_CALL(cuDeviceGet(&cu_device, dev_id));
-    CUDA_DRIVER_CALL(cuDevicePrimaryCtxRetain(&context, cu_device));
+    cuDeviceGetPtr device_get_ptr = get_func<cuDeviceGetPtr>(cuda_lib_handle, "cuDeviceGet");
+    CUDA_DRIVER_CALL((*device_get_ptr)(&cu_device, dev_id));
+    cuDevicePrimaryCtxRetainPtr device_primary_ctx_retain_ptr =
+      get_func<cuDevicePrimaryCtxRetainPtr>(cuda_lib_handle, "cuDevicePrimaryCtxRetain");
+    CUDA_DRIVER_CALL((*device_primary_ctx_retain_ptr)(&context, cu_device));
+
     // Jit-compile ptx for the driver's current context
     CUmodule module;
 
@@ -250,10 +275,15 @@ CUfunction get_function(const std::string &parameters,
     void* jit_opt_values[] = {reinterpret_cast<void*>(debug_info),
                               reinterpret_cast<void*>(line_info)};
 
-    CUDA_DRIVER_CALL(cuModuleLoadDataEx(&module, kinfo.ptx.c_str(), 2, jit_opts, jit_opt_values));
-    CUDA_DRIVER_CALL(cuModuleGetFunction(&kinfo.functions[dev_id],
-                                         module,
-                                         kinfo.mangled_name.c_str()));
+    cuModuleLoadDataExPtr module_load_data_ex_ptr =
+      get_func<cuModuleLoadDataExPtr>(cuda_lib_handle, "cuModuleLoadDataEx");
+    CUDA_DRIVER_CALL((*module_load_data_ex_ptr)(&module, kinfo.ptx.c_str(), 2,
+                                                jit_opts, jit_opt_values));
+    cuModuleGetFunctionPtr module_get_function_ptr =
+      get_func<cuModuleGetFunctionPtr>(cuda_lib_handle, "cuModuleGetFunction");
+    CUDA_DRIVER_CALL((*module_get_function_ptr)(&kinfo.functions[dev_id],
+                                                module,
+                                                kinfo.mangled_name.c_str()));
   }
   return kinfo.functions[dev_id];
 }
@@ -266,8 +296,10 @@ void launch(CUfunction function,
             std::vector<const void*> *args) {
   CHECK(args->size() != 0) <<
     "Empty argument list passed to a kernel.";
-  // CUDA_DRIVER_CALL(
-  CUresult err = cuLaunchKernel(function,                    // function to launch
+  void* cuda_lib_handle = LibraryInitializer::Get()->lib_load(cuda_lib_name);
+  cuLaunchKernelPtr launch_kernel_ptr =
+    get_func<cuLaunchKernelPtr>(cuda_lib_handle, "cuLaunchKernel");
+  CUresult err = (*launch_kernel_ptr)(function,  // function to launch
     grid_dim.x, grid_dim.y, grid_dim.z,       // grid dim
     block_dim.x, block_dim.y, block_dim.z,    // block dim
     shared_mem_bytes,                         // shared memory
@@ -276,7 +308,9 @@ void launch(CUfunction function,
     nullptr);  // );
   if (err != CUDA_SUCCESS) {
     const char* error_string;
-    cuGetErrorString(err, &error_string);
+    cuGetErrorStringPtr get_error_string_ptr =
+      get_func<cuGetErrorStringPtr>(cuda_lib_handle, "cuGetErrorString");
+    (*get_error_string_ptr)(err, &error_string);
     LOG(FATAL) << "cuLaunchKernel failed: "
                << err << " " << error_string << ": "
                << reinterpret_cast<void*>(function) << " "
