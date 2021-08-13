@@ -78,7 +78,7 @@ _WHITE_LIST = [
                '3rdparty/tvm',
 
                # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-               'tools/lint/git-clang-format-13'
+               'tools/lint/git-clang-format-13',
                
                # 3rdparty headerfiles under different licenses
                'include/onednn',
