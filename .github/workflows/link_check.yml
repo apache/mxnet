@@ -7,7 +7,7 @@ defaults:
     shell: bash
 
 jobs:
-  unittest:
+  linkcheck:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
