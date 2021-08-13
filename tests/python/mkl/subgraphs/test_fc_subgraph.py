@@ -59,18 +59,19 @@ def test_single_fc(data_shape, use_bias, flatten):
 @pytest.mark.parametrize('use_bias', [True, False])
 @pytest.mark.parametrize('flatten', [True, False])
 @pytest.mark.parametrize('alg', fc_post_ops_list)
-@pytest.mark.skip("Operator square, square_root, abs, exp cannot be found in numpy mode")
 def test_fc_eltwise(data_shape, use_bias, flatten, alg):
   # fc + eltwise fusion case
   class FCEltwise(nn.HybridBlock):
     def __init__(self, use_bias, flatten, alg, **kwargs):
       super(FCEltwise, self).__init__(**kwargs)
       self.fc = nn.Dense(units=64, use_bias=use_bias, flatten=flatten,
-                         weight_initializer=CustomNormalInit(mean=0.5, sigma=0.1) if alg == 'square_root' else None)
+                         weight_initializer=CustomNormalInit(mean=0.5, sigma=0.1, bounded=True) if alg == 'square_root' else None)
                                             #avoid calculating square root of negative values
       self.alg = alg
 
     def forward(self, x):
+      if self.alg == 'square_root':
+        x = abs(x)
       fc_out = self.fc(x)
       if self.alg in ['relu', 'sigmoid', 'log_sigmoid', 'mish', 'tanh', 'softrelu']:
         out = mx.npx.activation(fc_out, act_type=self.alg)
@@ -173,3 +174,29 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   out_quantized = qnet(data_nd)
   assert_almost_equal_with_err(out.asnumpy(), out_quantized.asnumpy(),
                                rtol=1e-2, atol=1e-2, etol=0.01)
+
+
+@mx.util.use_np
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('flatten', [True, False])
+def test_fc_int8_and_fp32_outputs(data_shape, flatten):
+
+#                 /---> Quantizable op
+# Input ---> FC -|
+#                 \---> Non quantizable op
+
+  class MultiOutputFC(nn.HybridBlock):
+    def __init__(self, **kwargs):
+      super(MultiOutputFC, self).__init__(**kwargs)
+      self.dense0 = nn.Dense(64, flatten=flatten)
+      self.dense1 = nn.Dense(64, flatten=flatten)
+
+    def forward(self, x):
+      x = self.dense0(x)
+      y = self.dense1(x)      # quantizable
+      z = mx.npx.softmax(x)   # non quantizable
+      return y + z
+
+  attrs = {'fc': {}}
+  net = MultiOutputFC()
+  check_fusion(net, data_shape, attrs, check_quantization=flatten)

@@ -18,7 +18,7 @@
 
 # Custom Layers
 
-While Gluon API for Apache MxNet comes with [a decent number of pre-defined layers](https://mxnet.apache.org/api/python/gluon/nn.html), at some point one may find that a new layer is needed. Adding a new layer in Gluon API is straightforward, yet there are a few things that one needs to keep in mind.
+While Gluon API for Apache MxNet comes with [a decent number of pre-defined layers](https://mxnet.apache.org/versions/master/api/python/docs/api/gluon/nn/index.html), at some point one may find that a new layer is needed. Adding a new layer in Gluon API is straightforward, yet there are a few things that one needs to keep in mind.
 
 In this article, I will cover how to create a new layer from scratch, how to use it, what are possible pitfalls and how to avoid them.
 
@@ -54,7 +54,7 @@ The rest of methods of the `Block` class are already implemented, and majority o
 
 ## Hybridization and the difference between Block and HybridBlock
 
-Looking into implementation of [existing layers](https://mxnet.apache.org/api/python/gluon/nn.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
+Looking into implementation of [existing layers](https://mxnet.apache.org/versions/master/api/python/docs/api/gluon/nn/index.html), one may find that more often a block inherits from a [HybridBlock](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L428), instead of directly inheriting from `Block`.
 
 The reason for that is that `HybridBlock` allows to write custom layers in imperative programming style, while computing in a symbolic way. It unifies the flexibility of imperative programming with the performance benefits of symbolic programming. You can learn more about the difference between symbolic and imperative programming from [this article](https://mxnet.apache.org/api/architecture/overview.html).
 
@@ -93,7 +93,7 @@ Output:
 
 As a rule of thumb, one should always implement custom layers by inheriting from `HybridBlock`. This allows to have more flexibility, and doesn't affect execution speed once hybridization is done. 
 
-Unfortunately, at the moment of writing this tutorial, NLP related layers such as [RNN](https://mxnet.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.RNN), [GRU](https://mxnet.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.GRU) and [LSTM](https://mxnet.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.LSTM) are directly inhereting from the `Block` class via common `_RNNLayer` class. That means that networks with such layers cannot be hybridized. But this might change in the future, so stay tuned.
+Unfortunately, at the moment of writing this tutorial, NLP related layers such as [RNN](../../../../api/gluon/rnn/index.rst#mxnet.gluon.rnn.RNN), [GRU](../../../../api/gluon/rnn/index.rst#mxnet.gluon.rnn.GRU) and [LSTM](../../../../api/gluon/rnn/index.rst#mxnet.gluon.rnn.LSTM) are directly inhereting from the `Block` class via common `_RNNLayer` class. That means that networks with such layers cannot be hybridized. But this might change in the future, so stay tuned.
 
 It is important to notice that hybridization has nothing to do with computation on GPU. One can train both hybridized and non-hybridized networks on both CPU and GPU, though hybridized networks would work faster. Though, it is hard to say in advance how much faster it is going to be.
 
@@ -101,7 +101,7 @@ It is important to notice that hybridization has nothing to do with computation 
 
 While it is possible, custom layers are rarely used separately. Most often they are used with predefined layers to create a neural network. Output of one layer is used as an input of another layer.
 
-Depending on which class you used as a base one, you can use either [Sequential](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential) or [HybridSequential](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.HybridSequential) container to form a sequential neural network. By adding layers one by one, one adds dependencies of one layer's input from another layer's output. It is worth noting, that both `Sequential` and `HybridSequential` containers inherit from `Block` and `HybridBlock` respectively. 
+Depending on which class you used as a base one, you can use either [Sequential](../../../../api/gluon/nn/index.rst#mxnet.gluon.nn.Sequential) or [HybridSequential](../../../../api/gluon/nn/index.rst#mxnet.gluon.nn.HybridSequential) container to form a sequential neural network. By adding layers one by one, one adds dependencies of one layer's input from another layer's output. It is worth noting, that both `Sequential` and `HybridSequential` containers inherit from `Block` and `HybridBlock` respectively. 
 
 Below is an example of how to create a simple neural network with a custom layer. In this example, `NormalizationHybridLayer` gets as an input the output from `Dense(5)` layer and pass its output as an input to `Dense(1)` layer.
 
@@ -133,7 +133,7 @@ Output:
 
 ## Parameters of a custom layer
 
-Usually, a layer has a set of associated parameters, sometimes also referred as weights. This is an internal state of a layer. Most often, these parameters are the ones, that we want to learn during backpropogation step, but sometimes these parameters might be just constants we want to use during forward pass. The parameters are usually represented as [Parameter](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Parameter) class inside of Apache MXNet neural network.
+Usually, a layer has a set of associated parameters, sometimes also referred as weights. This is an internal state of a layer. Most often, these parameters are the ones, that we want to learn during backpropogation step, but sometimes these parameters might be just constants we want to use during forward pass. The parameters are usually represented as [Parameter](../../../../api/gluon/parameter.rst#gluon-parameter) class inside of Apache MXNet neural network.
 
 
 ```{.python .input}

@@ -5333,19 +5333,21 @@ def test_boolean_mask():
     assert same(data.grad.asnumpy(), expected_grad)
 
     # test 0-size output
-    mx.set_np_shape(True)
-    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
-    index = mx.nd.array([0, 0, 0])
-    data.attach_grad()
-    with mx.autograd.record():
-        out = mx.nd.contrib.boolean_mask(data, index)
-    out.backward()
-    data.grad.wait_to_read()
-    expected = np.zeros((0, 3))
-    expected_grad = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
-    assert same(out.asnumpy(), expected)
-    assert same(data.grad.asnumpy(), expected_grad)
-    mx.set_np_shape(False)
+    prev_np_shape = mx.set_np_shape(True)
+    try:
+        data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+        index = mx.nd.array([0, 0, 0])
+        data.attach_grad()
+        with mx.autograd.record():
+            out = mx.nd.contrib.boolean_mask(data, index)
+        out.backward()
+        data.grad.wait_to_read()
+        expected = np.zeros((0, 3))
+        expected_grad = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+        assert same(out.asnumpy(), expected)
+        assert same(data.grad.asnumpy(), expected_grad)
+    finally:
+        mx.set_np_shape(prev_np_shape)
 
     # test gradient
     shape = (100, 30)
@@ -9463,7 +9465,8 @@ def test_sldwin_selfatten_operators():
 
 def test_zero_sized_dim():
 
-    mx.util.set_np_shape(True)  # Must be done to prevent zero-sized dimension conversion to 'unknown'
+    # Must be done to prevent zero-sized dimension conversion to 'unknown'
+    prev_np_shape = mx.util.set_np_shape(True)
 
     def seq_last():
         """Test for issue: https://github.com/apache/incubator-mxnet/issues/18938"""
@@ -9483,9 +9486,12 @@ def test_zero_sized_dim():
         res = mx.nd.op.SequenceReverse(data)
         assert data.shape == res.shape
 
-    seq_last()
-    seq_reverse()
-    seq_mask()
+    try:
+        seq_last()
+        seq_reverse()
+        seq_mask()
+    finally:
+        mx.util.set_np_shape(prev_np_shape)
 
 @mx.util.use_np
 def test_take_grads():

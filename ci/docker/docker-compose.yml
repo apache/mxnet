@@ -48,7 +48,7 @@ services:
       dockerfile: Dockerfile.build.centos7
       target: base
       args:
-        BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-centos7
+        BASE_IMAGE: nvidia/cuda:10.1-cudnn8-devel-centos7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu101:latest
   centos7_gpu_cu102:

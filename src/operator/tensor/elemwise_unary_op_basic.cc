@@ -161,10 +161,34 @@ The storage type of ``log_sigmoid`` output is always dense
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::log_sigmoid>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log_sigmoid"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_log_sigmoid"});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_log_sigmoid,
-                                               unary_bwd<mshadow_op::log_sigmoid_grad>);
+                                               unary_bwd<mshadow_op::log_sigmoid_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // n->inputs[0] : y_grad
+      // n->inputs[1] : f(x) = log_sigmoid(x)
+      // ograds[0] : head_grads
+      // f''(x) = f'(x) * (f'(x) - 1)
+      // NodeEntry{n} : y_grad * f'(x)
+      auto ones = MakeNode("ones_like", n->attrs.name + "_grad_ones", {n->inputs[1]}, nullptr, &n);
+      auto grad_minus_one = MakeNode("elemwise_sub", n->attrs.name + "_grad_sub",
+                                    {n->inputs[0], nnvm::NodeEntry{ones}}, nullptr, &n);
+      auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "_grad_mul",
+                                    {n->inputs[0], nnvm::NodeEntry{grad_minus_one}}, nullptr, &n);
+      auto dydx = MakeNode("elemwise_div", n->attrs.name + "_grad_div",
+                           {nnvm::NodeEntry{n}, n->inputs[0]}, nullptr, &n);
+
+      // when building gradient graph, the backward node of n->inputs[1] will be
+      // added to the graph again, therefore f`(x) will be multiplied
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry{grad_grad_mid}}, nullptr, &n));
+      return ret;
+    });
 
 // mish
 MXNET_OPERATOR_REGISTER_UNARY(mish)

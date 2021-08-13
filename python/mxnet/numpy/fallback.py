@@ -135,6 +135,12 @@ for obj_name in fallbacks:
             # remove unused reference
             new_fn_doc = new_fn_doc.replace(
                 '.. [1] Wikipedia page: https://en.wikipedia.org/wiki/Trapezoidal_rule', '')
+        elif obj_name == "i0":
+            # replace broken link
+            new_fn_doc = new_fn_doc.replace(
+                '.. [3] http://kobesearch.cpan.org/htdocs/Math-Cephes/Math/Cephes.html',
+                '.. [3] https://metacpan.org/pod/distribution/Math-Cephes/lib/Math/Cephes.pod \
+                    #i0:-Modified-Bessel-function-of-order-zero')
         setattr(fallback_mod, obj_name, get_func(onp_obj, new_fn_doc))
     else:
         setattr(fallback_mod, obj_name, onp_obj)

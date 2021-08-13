@@ -32,14 +32,6 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(QuantizeElemwiseMulParam);
 
-static std::vector<std::string> QuantizedElemwiseMulOutputNames(const NodeAttrs &attrs) {
-  const QuantizeElemwiseMulParam& params = nnvm::get<QuantizeElemwiseMulParam>(attrs.parsed);
-  if (params.enable_float_output)
-    return std::vector<std::string>{"output"};
-  else
-    return std::vector<std::string>{"output", "min_output", "max_output"};
-}
-
 inline bool QuantizedElemwiseMulOpShape(const nnvm::NodeAttrs& attrs,
                                         mxnet::ShapeVector *in_attrs,
                                         mxnet::ShapeVector *out_attrs) {
@@ -229,7 +221,6 @@ NNVM_REGISTER_OP(_contrib_quantized_elemwise_mul)
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"lhs", "rhs", "lhs_min", "lhs_max", "rhs_min", "rhs_max"};
   })
-.set_attr<nnvm::FListOutputNames>("FListOutputNames", QuantizedElemwiseMulOutputNames)
 .set_attr<mxnet::FInferShape>("FInferShape", QuantizedElemwiseMulOpShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedElemwiseMulOpType)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizedElemwiseMulOpStorageType)

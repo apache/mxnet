@@ -61,6 +61,9 @@ class AdaGrad(Optimizer):
 
     """
     def __init__(self, learning_rate=0.01, epsilon=1e-6, use_fused_step=True, **kwargs):
+        if kwargs.get("eps") is not None:
+            raise DeprecationWarning(
+                'parameter \'eps\' is deprecated. Please use \'epsilon\' instead...')
         super(AdaGrad, self).__init__(learning_rate=learning_rate,
                                       use_fused_step=use_fused_step,
                                       **kwargs)

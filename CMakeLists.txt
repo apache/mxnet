@@ -111,7 +111,6 @@ if(MXNET_FORCE_SHARED_CRT)
 endif()
 
 message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
-project(mxnet C CXX)
 if(USE_CUDA)
   cmake_minimum_required(VERSION 3.13.2)  # CUDA 10 (Turing) detection available starting 3.13.2
   include(CheckLanguage)
@@ -586,11 +585,11 @@ if(USE_CUDA)
 
   string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
 
-  find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand nvrtc cuda_driver
+  find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand nvrtc
     OPTIONAL_COMPONENTS nvToolsExt)
 
   list(APPEND mxnet_LINKER_LIBS CUDA::cudart CUDA::cublas CUDA::cufft CUDA::cusolver CUDA::curand
-                                CUDA::nvrtc CUDA::cuda_driver)
+                                CUDA::nvrtc)
   list(APPEND SOURCE ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
 

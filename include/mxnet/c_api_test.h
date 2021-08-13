@@ -91,6 +91,13 @@ MXNET_DLL int MXGetEnv(const char* name,
 MXNET_DLL int MXSetEnv(const char* name,
                        const char* value);
 
+/*!
+ * \brief Get the maximum SM architecture supported by the nvrtc compiler
+ * \param max_arch The maximum supported architecture (e.g. would be 80, if Ampere)
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXGetMaxSupportedArch(uint32_t *max_arch);
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

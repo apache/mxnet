@@ -24,7 +24,6 @@ import os
 import numpy as np
 import logging
 from mxnet import gluon
-import mxnet.ndarray as F
 from mxnet.gluon import nn
 import re
 from mxnet.test_utils import assert_almost_equal
@@ -57,11 +56,11 @@ def save_inference_results(inference_results, model_name):
     assert (isinstance(inference_results, mx.ndarray.ndarray.NDArray))
     save_path = os.path.join(get_model_path(model_name), ''.join([model_name, '-inference']))
 
-    mx.nd.save(save_path, {'inference': inference_results})
+    mx.npx.savez(save_path, **{'inference': inference_results})
 
 
 def load_inference_results(model_name):
-    inf_dict = mx.nd.load(model_name+'-inference')
+    inf_dict = mx.npx.load(model_name+'-inference')
     return inf_dict['inference']
 
 
@@ -70,7 +69,7 @@ def save_data_and_labels(test_data, test_labels, model_name):
     assert (isinstance(test_labels, mx.ndarray.ndarray.NDArray))
 
     save_path = os.path.join(get_model_path(model_name), ''.join([model_name, '-data']))
-    mx.nd.save(save_path, {'data': test_data, 'labels': test_labels})
+    mx.npx.savez(save_path, **{'data': test_data, 'labels': test_labels})
 
 
 def clean_model_files(files, model_name):
@@ -135,6 +134,7 @@ def create_model_folder(model_name):
         os.makedirs(path)
 
 
+@mx.util.use_np
 class Net(gluon.Block):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
@@ -146,13 +146,13 @@ class Net(gluon.Block):
         self.fc2 = nn.Dense(2)
 
     def forward(self, x):
-        x = self.pool1(F.tanh(self.conv1(x)))
-        x = self.pool2(F.tanh(self.conv2(x)))
+        x = self.pool1(mx.np.tanh(self.conv1(x)))
+        x = self.pool2(mx.np.tanh(self.conv2(x)))
         # 0 means copy over size from corresponding dimension.
         # -1 means infer size from the rest of dimensions.
-        x = x.reshape((0, -1))
-        x = F.tanh(self.fc1(x))
-        x = F.tanh(self.fc2(x))
+        x = x.reshape(-1)
+        x = mx.np.tanh(self.fc1(x))
+        x = mx.np.tanh(self.fc2(x))
         return x
 
 
@@ -172,7 +172,7 @@ class HybridNet(gluon.HybridBlock):
         x = self.pool2(mx.np.tanh(self.conv2(x)))
         # 0 means copy over size from corresponding dimension.
         # -1 means infer size from the rest of dimensions.
-        x = x.reshape((0, -1))
+        x = x.reshape(-1)
         x = mx.np.tanh(self.fc1(x))
         x = mx.np.tanh(self.fc2(x))
         return x

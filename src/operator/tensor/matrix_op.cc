@@ -612,6 +612,7 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxisGrad_<cpu>);
 
 NNVM_REGISTER_OP(slice_like)
+.add_alias("_npx_slice_like")
 .describe(R"code(Slices a region of the array like the shape of another array.
 This function is similar to ``slice``, however, the `begin` are always `0`s
 and `end` of specific axes are inferred from the second input `shape_like`.
@@ -990,7 +991,7 @@ NNVM_REGISTER_OP(_backward_squeeze)
 NNVM_REGISTER_OP(depth_to_space)
 .describe(R"code(Rearranges(permutes) data from depth into blocks of spatial data.
 Similar to ONNX DepthToSpace operator:
-https://github.com/onnx/onnx/blob/master/docs/Operators.md#DepthToSpace.
+https://github.com/onnx/onnx/blob/master/docs/Operators.md#user-content-depthtospace.
 The output is a new tensor where the values from depth dimension are moved in spatial blocks
 to height and width dimension. The reverse of this operation is ``space_to_depth``.
 
@@ -1042,7 +1043,7 @@ Example::
 NNVM_REGISTER_OP(space_to_depth)
 .describe(R"code(Rearranges(permutes) blocks of spatial data into depth.
 Similar to ONNX SpaceToDepth operator:
-https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth
+https://github.com/onnx/onnx/blob/master/docs/Operators.md#user-content-spacetodepth
 The output is a new tensor where the values from height and width dimension are
 moved to the depth dimension. The reverse of this operation is ``depth_to_space``.
 .. math::

@@ -30,7 +30,7 @@ __all__ = ['softmax', 'log_softmax', 'masked_softmax', 'masked_log_softmax',
 
 # pylint: disable=too-many-arguments
 @set_module('mxnet.numpy_extension')
-def softmax(data, axis=-1, length=None, temperature=None, use_length=False, dtype=None):
+def softmax(data, length=None, axis=-1, temperature=None, use_length=False, dtype=None):
     r"""Applies the softmax function.
 
     The resulting array contains elements in the range (0,1) and the elements along the given axis sum up to 1.
@@ -1001,7 +1001,7 @@ def embedding(data, weight, input_dim=None, output_dim=None, dtype="float32", sp
         "row_sparse". Only a subset of optimizers support sparse gradients, including SGD, AdaGrad
         and Adam. Note that by default lazy updates is turned on, which may perform differently
         from standard updates. For more details, please check the Optimization API at:
-        https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
+        https://mxnet.apache.org/versions/master/api/python/docs/api/optimizer/index.html
 
     Parameters
     ----------
