@@ -243,11 +243,11 @@ MSHADOW_XINLINE static double ndtri(double y0) {
   };
 
   double x, y, z, y2, x0, x1;
-  bool code = false;
+  bool code = true;
   y = y0;
   if (y > (1.0 - 0.13533528323661269189)) {  /* 0.135... = exp(-2) */
     y = 1.0 - y;
-    code = true;
+    code = false;
   }
 
   if (y > 0.13533528323661269189) {
