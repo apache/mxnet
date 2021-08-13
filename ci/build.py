@@ -56,7 +56,7 @@ def get_docker_compose_platforms(path: str = get_dockerfiles_path()):
     with open(os.path.join(path, "docker-compose.yml"), "r") as f:
         compose_config = yaml.load(f.read(), yaml.SafeLoader)
         for platform in compose_config["services"]:
-            platforms.add("build." + platform)
+            platforms.add(platform)
     return platforms
 
 
@@ -66,7 +66,7 @@ def get_platforms(path: str = get_dockerfiles_path(), arch='x86') -> List[str]:
     dockerfiles = set(filter(lambda x: x[-1] != '~', dockerfiles))
     files = set(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
     files = files - DOCKER_COMPOSE_FILES
-    files.update(get_docker_compose_platforms())
+    files.update(["build."+x for x in get_docker_compose_platforms()])
     arm_files = set(filter(lambda x: any(y in x for y in AARCH_FILE_KEYWORDS), files))
     if arch == 'x86':
         files = files - arm_files
@@ -101,7 +101,9 @@ def _hash_file(ctx, filename):
 
 def is_docker_compose(platform: str) -> bool:
     """:return: boolean whether specified platform container uses docker-compose"""
-    return platform in get_docker_compose_platforms()
+    platlist = get_docker_compose_platforms()
+    platform = platform.split(".")[1] if any(x in platform for x in ['build.', 'publish.']) else platform
+    return platform in platlist
 
 
 def get_docker_tag(platform: str, registry: str) -> str:
@@ -140,7 +142,7 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     tag = get_docker_tag(platform=platform, registry=registry)
     # docker-compose
     if is_docker_compose(platform):
-        docker_compose_platform = platform.split(".")[1]
+        docker_compose_platform = platform.split(".")[1] if any(x in platform for x in ['build.', 'publish.']) else platform
         logging.info('Building docker container tagged \'%s\' based on ci/docker/docker-compose.yml', tag)
         # We add a user with the same group as the executing non-root user so files created in the
         # container match permissions of the local user. Same for the group.
@@ -311,7 +313,7 @@ def load_docker_cache(platform, tag, docker_registry) -> None:
     """Imports tagged container from the given docker registry"""
     if docker_registry:
         if is_docker_compose(platform):
-            docker_compose_service = platform.split(".")[1]
+            docker_compose_platform = platform.split(".")[1] if any(x in platform for x in ['build.', 'publish.']) else platform
             env = os.environ.copy()
             env["DOCKER_CACHE_REGISTRY"] = docker_registry
             if "dkr.ecr" in docker_registry:
@@ -320,7 +322,7 @@ def load_docker_cache(platform, tag, docker_registry) -> None:
                     docker_cache._ecr_login(docker_registry)
                 except Exception:
                     logging.exception('Unable to login to ECR...')
-            cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', docker_compose_service]
+            cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', docker_compose_platform]
             logging.info("Running command: 'DOCKER_CACHE_REGISTRY=%s %s'", docker_registry, ' '.join(cmd))
             check_call(cmd, env=env)
             return
