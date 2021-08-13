@@ -154,8 +154,7 @@ void Imperative::MarkVariables(
       grad_info.ctx = gradients[i]->ctx();
     } else {
       AGInfo& info = AGInfo::Get(variables[i]->autograd_entry_.node);
-      CHECK_EQ(info.out_grads.size(), 0)
-        <<"The node has already been marked. Cannot mark it again.";
+      if (info.out_grads.size() > 0) continue;
       info.out_grads.emplace_back(gradients[i]->Detach());
       info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
       info.ctx = variables[i]->ctx();
