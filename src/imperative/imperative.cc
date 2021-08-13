@@ -137,7 +137,7 @@ void Imperative::MarkVariables(
     const std::vector<NDArray*>& gradients) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
     // Unmarked leaf nodes have null autograd_entry_, while marked nonleaf nodes don't.
-    if (variables[i]->autograd_entry_.node == nullptr) {
+    if (!variables[i]->autograd_entry_.node) {
       std::string str_c(std::to_string(variable_count_++));
       variables[i]->autograd_entry_ = nnvm::NodeEntry{
           nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
@@ -166,13 +166,13 @@ void Imperative::MarkVariables(
 // Unmark the variables to free the memory.
 void Imperative::DropGrads(const std::vector<NDArray*>& variables) {
   for (uint32_t i = 0; i < variables.size(); ++i) {
-    CHECK_NE(variables[i]->autograd_entry_.node, nullptr)
-      <<"The variable has empty autograd_entry_. Cannot DropGrads.";
-    AGInfo& info = AGInfo::Get(variables[i]->autograd_entry_.node);
-    CHECK_NE(info.out_grads.size(), 0)
-      <<"The node has empty out_grads already. Cannot DropGrads again.";
-    info.out_grads.clear();
-    info.grad_req = kNullOp;
+    if (variables[i]->autograd_entry_.node) {
+      AGInfo& info = AGInfo::Get(variables[i]->autograd_entry_.node);
+      CHECK_NE(info.out_grads.size(), 0)
+        <<"The node has empty out_grads already. Cannot DropGrads again.";
+      info.out_grads.clear();
+      info.grad_req = kNullOp;
+    }
   }
 }
 
