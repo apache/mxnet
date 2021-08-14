@@ -541,8 +541,11 @@ def test_retain_grad_drop_grad():
 
     u.drop_grad()
     z.drop_grad()
+    y.drop_grad()
     out_grad = nd.array([0.1, 0.1, 0.1, 0.1])
     z.backward(out_grad)
 
     assert u.grad is None
     assert z.grad is None
+    assert (x.grad == out_grad * 2 * x * y).asnumpy().all()
+    assert y.grad is None
