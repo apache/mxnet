@@ -171,7 +171,7 @@ void Imperative::DropGrads(const std::vector<NDArray*>& variables) {
       CHECK_NE(info.out_grads.size(), 0)
         <<"The node has empty out_grads already. Cannot DropGrads again.";
       for (auto grad : info.out_grads) {
-        grad.ReInit(); 
+        grad.ReInit();
       }
       info.out_grads.clear();
       info.grad_req = kNullOp;
