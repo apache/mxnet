@@ -119,6 +119,13 @@ _WHITE_LIST = [
                # Licensed under the Boost Software License, Version 1.0
                'cmake/Modules/FindJeMalloc.cmake',
 
+               # Licensed under MIT license and contributed by Microsoft
+               'src/operator/contrib/nn/modulated_deformable_im2col.cuh',
+               'src/operator/contrib/nn/modulated_deformable_im2col.h',
+               'src/operator/contrib/modulated_deformable_convolution-inl.h',
+               'src/operator/contrib/modulated_deformable_convolution.cc',
+               'src/operator/contrib/modulated_deformable_convolution.cu',
+
                # Licensed under Apache 2.0 license and contributed by Microsoft
                'src/operator/contrib/deformable_psroi_pooling.cu',
                'src/operator/contrib/deformable_convolution.cu',
