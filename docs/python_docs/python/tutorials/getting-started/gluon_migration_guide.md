@@ -43,27 +43,38 @@ Adopting these new functionalities may or may not require modifications on your 
 [Gluon2.0 dataloader](../../api/gluon/data/index.rst#mxnet.gluon.data.DataLoader) will provide a new parameter called `try_nopython`. This parameter takes default value of None; when set to `True` the dataloader will compile python dataloading pipeline into pure MXNet c++ implementation. The compilation is not guaranteed to support all use cases, but it will fallback to python in case of failure: 
 
 - The dataset is not fully [supported by backend](../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset)(e.g., there are custom python datasets).
+
 - Transform is not fully hybridizable. 
+
 - Bachify is not fully [supported by backend](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/data/batchify.py). 
+
 
 You can refer to [Step5 in Crash Course](./crash-course/5-datasets.rst#New-in-MXNet-2.0:-faster-C++-backend-dataloaders) for a detailed performance increase with C++ backend. 
 ## Modeling
 In Gluon2.0, users will have a brand new modeling experience with NumPy-compatible APIs and deferred compute mechanism. 
+
 - **NumPy-compatible programing experience**: users can build their models with MXNet implementation with NumPy array library, NumPy-compatible math operators and some neural network extension operators. 
+
 - **Imperative-only coding experience**: with deferred compute and tracing being introduced, users only need to specify the computation through imperative coding but can still make hybridization work. Users will no longer need to interact with symbol APIs. 
 
 To help users migrate smoothly to use these simplified interface, we will provide the following guidance on how to replace legacy operators with NumPy-compatible operators, how to build models with `forward` instead of `hybrid_forward` and how to use `Parameter` class to register your parameters. 
+
+
 ### NumPy-compatible Programming Experience
 #### NumPy Arrays
 MXNet [NumPy ndarray(i.e. `mx.np.ndarray`)](../../api/np/arrays.ndarray.html) is a multidimensional container of items of the same type and size. Most of its properties and attributes are the same as legacy NDArrays(i.e. `mx.nd.ndarray`), so users can use NumPy array library just as they did with legacy NDArrays. But, there are still some changes and deprecations that needs attention, as mentioned below. 
 **Migration Guide**: 
+
 1. Currently, NumPy ndarray only supports `default` storage type, other storage types, like `row_sparse`, `csr` are not supported. Also, `tostype()` attribute is deprecated. 
+
 2. Users can use `as_np_ndarray` attribute to switch from a legacy NDArray to NumPy ndarray just like this:
+
 ```{.python}
 import mxnet as mx
 nd_array = mx.ones((5,3))
 np_array = nd_array.as_np_ndarray()
 ```
+
 3. Compared with legacy NDArray, some attributes are deprecated in NumPy ndarray. Listed below are some of the deprecated APIs and their corresponding replacements in NumPy ndarray, others can be found in [**Appendix/NumPy Array Deprecated Attributes**](#NumPy-Array-Deprecated-Attributes).
 
 |                   Deprecated Attributes               |    NumPy ndarray Equivalent    |
@@ -74,6 +85,7 @@ np_array = nd_array.as_np_ndarray()
 |                   `a.reshape_like(b)`                 |    `a.reshape(b.shape)`    |
 |                    `a.zeros_like(b)`                  |   `mx.np.zeros_like(b)`  |
 |                    `a.ones_like(b)`                   |   `mx.np.ones_like(b)`   |
+
 4. Compared with legacy NDArray, some attributes will have different behaviors and take different inputs. 
 
 |          Attribute            | Legacy Inputs | NumPy Inputs |
@@ -84,6 +96,7 @@ np_array = nd_array.as_np_ndarray()
 #### NumPy and NumPy-extension Operators
 Most of the legacy NDArray operators(`mx.nd.op`) have the equivalent ones in np/npx namespace, users can just repalce them with `mx.np.op` or `mx.npx.op` to migrate. Some of the operators will have different inputs and behaviors as listed in the table below. 
 **Migration Guide**:
+
 1. Operators migration with name/inputs changes
 
 |                   Legacy Operators               |    NumPy Operators Equivalent    |   Changes  |
@@ -97,8 +110,11 @@ Most of the legacy NDArray operators(`mx.nd.op`) have the equivalent ones in np/
 |      `mx.nd.Activation(*args, **kwargs)`              |            `mx.npx.activation(*args, **kwargs)`                 |              - moved to `npx` namespace with new name `activation`.          |
 |      `mx.nd.elemwise_add(a, b)`              |            `a + b`                 |              - Just use ndarray python operator.          |
 |      `mx.nd.elemwise_mul(a, b)`              |            `mx.np.multiply(a, b)`                 |              - Use `multiply` operator in `np` namespace.          |
+
 2. Operators migration with multiple steps
+
     - `mx.nd.mean` -> `mx.np.mean`
+
 ```{.python}
 import mxnet as mx
 # Legacy: calculate mean value with reduction on axis 1
@@ -110,12 +126,14 @@ axes = list(range(data.ndim))
 del axes[1]
 np_mean = mx.np.mean(data, axis=axes)
 ```
+
 3. Random Operators
 
 |                   Legacy Operators               |    NumPy Operators Equivalent    |   Changes  |
 | ----------------------------------------------------- | ------------------------------ | ---------------------------- |
 |       `mx.random.uniform(-1.0, 1.0, shape=(2, 3))` <br> `mx.nd.random.uniform(-1.0, 1.0, shape=(2, 3))`                |            `mx.np.random.uniform(-1.0, 1.0, size=(2, 3))`                    |                For all the NumPy random operators, use **size** key word instead of **shape**           |
 |       `mx.nd.random.multinomial(*args, **kwargs)`              |            `mx.npx.random.categorical(*args, **kwargs)`                    |                [use `npx.random.categorical` to have the behavior of drawing 1 sample from multiple distributions.](https://github.com/apache/incubator-mxnet/issues/20373#issuecomment-869120214)           |
+
 4. Control Flow Operators
 
 |                   Legacy Operators               |    NumPy Operators Equivalent    |   Changes  |
@@ -123,6 +141,7 @@ np_mean = mx.np.mean(data, axis=axes)
 |       `mx.nd.contrib.foreach(body, data, init_states, name)`                |            `mx.npx.foreach(body, data, init_states, name)`                    |                - moved to `npx` namespace. <br> - Will not support global variables as body's inputs(body's inputs must be either data or states or both)           |
 |       `mx.nd.contrib.while_loop(cond, func, loop_vars, max_iterations, name)`                |            `mx.npx.while_loop(cond, func, loop_vars, max_iterations, name)`                    |                - moved to `npx` namespace. <br> - Will not support global variables as cond or func's inputs(cond or func's inputs must be in loop_vars)           |
 |       `mx.nd.contrib.cond(pred, then_func, else_func, inputs, name)`                |            `mx.npx.cond(pred, then_func, else_func, name)`                    |                - moved to `npx` namespace. <br> - users needs to provide the inputs of pred, then_func and else_func as inputs <br> - Will not support global variables as pred, then_func or else_func's inputs(pred, then_func or else_func's inputs must be in inputs)           |
+
 5. Functionalities
 
 |                   Legacy Operators               |    NumPy Operators Equivalent    |   Changes  |
@@ -162,7 +181,9 @@ class SampleBlock(HybridBlock):
         self.weight = Constant('const', const_arr)
 ```
 Also, there will be new mechanism for parameter loading, sharing and setting context. 
+
 1. Parameter loading in Gluon 1.x vs Gluon 2.0:
+
 ```{.python}
 # in Gluon 1.x
 net = nn.Dense(8, activation='relu')
@@ -171,7 +192,9 @@ net.collect_params().load_dict(arg_dict, ctx=ctx)
 net = nn.Dense(8, activation='relu')
 net.load_dict(arg_dict, ctx=ctx)
 ```
+
 2. Parameter sharing in Gluon 1.x vs Gluon 2.0:
+
 ```{.python}
 # in Gluon 1.x
 shared = nn.Dense(8, activation='relu')
@@ -180,7 +203,9 @@ net = nn.Dense(8, activation='relu', params=shared.params)
 shared = nn.Dense(8, activation='relu')
 net = nn.Dense(8, activation='relu').share_parameters(shared.params)
 ```
+
 3. Parameter setting context in Gluon 1.x vs Gluon 2.0:
+
 ```{.python}
 # in Gluon 1.x
 net = nn.Dense(8, activation='relu')
@@ -192,6 +217,7 @@ net.reset_ctx(devices)
 
 #### Forward Interface
 `hybrid_forward` interface in Gluon1.x provides the user with a unified imperative and symbolic programming interface to do graph construction and imperative execution. For the inputs of `hybrid_forward`, `F` can be either mx.symbol or mx.ndarray depending on the running mode(symbolic or imperative) of variable recording. Apart from `F` and input arrays, the parameters registered when Block is initialized are also required as part of the inputs. Take `nn.Dense` as an example:
+
 ```{.python}
 # hybrid_forward interface, F can be either symbol or ndarray, weights
 # and bias are part of inputs
@@ -203,7 +229,9 @@ def hybrid_forward(self, F, x, weight, bias=None):
         act = self.act(act)
     return act
 ```
+
 Now, in deferred computation mode of Gluon2.0, the divergence of NDArray and Symbol is unified, which means users no longer need to define `F` with specific running mode. One can easily specify the computation through imperative programming, hybridization will work through the tracing mechanism(data flow of the first input batch). What's more, users can implement the forward interface with `npx/npx` operators instead of `nd` and `symbol`. 
+
 ```{.python}
 # forward interface, no F any more
 def forward(self, x):
@@ -218,8 +246,10 @@ def forward(self, x):
         act = self.act(act)
     return act
 ```
+
 #### Implement Infer Shape
 In Gluon1.x, parameter shape inference happens in MXNet backend. Now in Gluon2.0, shape inference is disabled in the case of deferred parameter initialization. So, users should now always implement `infer_shape` method to set the parameter shapes if the parameter shape was not set during HybridBlock initialization. 
+
 ```{.python}
 def infer_shape(self, x, *args):
     # if true, self.weight.shape[1] will be flattened of input's shape
@@ -234,6 +264,7 @@ def infer_shape(self, x, *args):
 ```
 
 Now, in Gluon2.0, users can implement a Dense Block like this: 
+
 ```{.python}
 class Dense(HybridBlock):
     def __init__(self, units, activation=None, use_bias=True, flatten=True,
@@ -279,12 +310,15 @@ class Dense(HybridBlock):
 
 ## Optimizers
 Optimizer module in MXNet provides a lot of optimization algorithms to reduce the training error. In Gluon 2.0, optimizers will also switch to use MXNet NumPy-compatible interface. Some important changes that needs attention are: 
+
 1. AdaGrad: 
     - use `epsilon` instead of `eps`
     - e.g. `adagrad_optimizer = optimizer.AdaGrad(learning_rate=0.1, epsilon=1e-07)`
+
 2. RMSProp:
     - use `rho` instead of `gamma1` and use `momentum` instead of `gamma2`
     - e.g. `rmsprop_optimizer = optimizer.RMSProp(learning_rate=0.001, rho=0.9, momentum=0.9, epsilon=1e-07, centered=False)`
+
 3. `optimizer.ccSGD` and `optimizer.LBSGD` are deprecated.
 
 ## Metrics
@@ -292,23 +326,29 @@ Metrics module in MXNet provides different methods for users to judge the perfor
 **Changes**:
 1. metric module has been moved to gluon namespace
     - `mxnet.metric` -> `mxnet.gluon.metric`
+
 2. Add new evaluation metrics: 
     - `Class BinaryAccuracy(threshold=0.5)`
     - `Class MeanCosineSimilarity(axis=-1, eps=1e-12)`
     - `Class MeanPairwiseDistance(p=2)`
     - `Class Fbeta(class_type="binary", beta=1, threshold=0.5, average="micro")`
+
 3. Improve Class F1
     - `Class F1(name='f1',output_names=None, label_names=None, average="macro")` to
       `Class F1(name='f1',output_names=None, label_names=None, class_type="binary", threshold=0.5, average="micro")`
+
     - **average**: Strategy to be used for aggregating across mini-batches.
         - "macro": Calculate metrics for each label and return unweighted mean of f1.
         - "micro": Calculate metrics globally by counting the total TP, FN and FP.
         - None: Return f1 scores for each class (numpy.ndarray).
+
     - **class_type**:
         - "binary": f1 for binary classification.
         - "multiclass": f1 for multiclassification problem.
         - "multilabel": f1 for multilabel classification.
+
     - **threshold**: threshold for postive confidence value.
+
 
 ## Key-Value Store
 Gluon 2.0 will provide a new and unified low level API for data parallel training. These unified APIs can support different communication backends, including native Parameter Server, Horovod and BytePS. 
@@ -327,8 +367,11 @@ kv.pushpull('3', val * scale)
 ```
 ## Probability
 A new module called `mxnet.gluon.probability` has been introduced in Gluon 2.0. It is analogous to pytorch distribution and the main difference is that `mxnet.gluon.probability` will use MXNet NumPy compatible operators and will allow hybridization. It has three parts: 
+
 1. [Distribution Objects](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/distributions): `gluon.probability.Bernoulli`, `gluon.probability.Beta` ...
+
 2. [StochasticBlock](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/block): support accumulating loss in the forward phase, which is useful in building Bayesian Neural Network. 
+
 3. [Transformation](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet/gluon/probability/transformation): implement invertible transformation with computable log det jacobians.
 
 ## Appendix
