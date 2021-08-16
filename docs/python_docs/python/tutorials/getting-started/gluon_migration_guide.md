@@ -112,7 +112,6 @@ Most of the legacy NDArray operators(`mx.nd.op`) have the equivalent ones in np/
 |      `mx.nd.elemwise_mul(a, b)`              |            `mx.np.multiply(a, b)`                 |              - Use `multiply` operator in `np` namespace.          |
 
 2. Operators migration with multiple steps
-
     - `mx.nd.mean` -> `mx.np.mean`
 
 ```{.python}
@@ -336,17 +335,14 @@ Metrics module in MXNet provides different methods for users to judge the perfor
 3. Improve Class F1
     - `Class F1(name='f1',output_names=None, label_names=None, average="macro")` to
       `Class F1(name='f1',output_names=None, label_names=None, class_type="binary", threshold=0.5, average="micro")`
-
     - **average**: Strategy to be used for aggregating across mini-batches.
         - "macro": Calculate metrics for each label and return unweighted mean of f1.
         - "micro": Calculate metrics globally by counting the total TP, FN and FP.
         - None: Return f1 scores for each class (numpy.ndarray).
-
     - **class_type**:
         - "binary": f1 for binary classification.
         - "multiclass": f1 for multiclassification problem.
         - "multilabel": f1 for multilabel classification.
-
     - **threshold**: threshold for postive confidence value.
 
 
