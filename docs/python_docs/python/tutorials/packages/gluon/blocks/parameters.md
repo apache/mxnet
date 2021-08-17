@@ -28,7 +28,7 @@ This section shows how to manipulate parameters. In particular we will cover the
 As always, we start with a Multilayer Perceptron with a single hidden layer. We will use it to demonstrate the aspects mentioned above.
 
 ```{.python .input  n=1}
-from mxnet import init, nd
+from mxnet import init, np
 from mxnet.gluon import nn
 
 
@@ -37,7 +37,7 @@ net.add(nn.Dense(256, activation='relu'))
 net.add(nn.Dense(10))
 net.initialize()  # Use the default initialization method
 
-x = nd.random.uniform(shape=(2, 20))
+x = np.random.uniform(size=(2, 20))
 net(x)            # Forward computation
 ```
 
@@ -46,11 +46,10 @@ net(x)            # Forward computation
 In case of a Sequential class we can access the parameters simply by indexing each layer of the network. The `params` variable contains the required data. Let's try this out in practice by inspecting the parameters of the first layer.
 
 ```{.python .input  n=2}
-print(net[0].params)
-print(net[1].params)
+print(net.collect_params())
 ```
 
-From the output we can see that the layer consists of two sets of parameters: `dense0_weight` and `dense0_bias`. They are both single precision and they have the necessary shapes that we would expect from the first layer, given that the input dimension is 20 and the output dimension 256. The names of the parameters are very useful, because they allow us to identify parameters *uniquely* even in a network of hundreds of layers and with nontrivial structure. The second layer is structured in a similar way.
+From the output we can see that the layer consists of two sets of parameters: `0.weight` and `0.bias`. They are both single precision and they have the necessary shapes that we would expect from the first layer, given that the input dimension is 20 and the output dimension 256. The names of the parameters are very useful, because they allow us to identify parameters *uniquely* even in a network of hundreds of layers and with nontrivial structure. The second layer is structured in a similar way.
 
 ### Targeted Parameters
 
@@ -63,11 +62,11 @@ print(net[1].bias.data())
 
 The first line returns the bias of the second layer. Since this is an object containing data, gradients, and additional information, we need to request the data explicitly. To request the data, we call `data` method on the parameter on the second line. Note that the bias is all 0 since we initialized the bias to contain all zeros.
 
-We can also access the parameter by name, such as `dense0_weight`. This is possible since each layer comes with its own parameter dictionary that can be accessed directly. Both methods are entirely equivalent, but the first method leads to more readable code.
+We can also access the parameter by name, such as `0.weight`. This is possible since each layer comes with its own parameter dictionary that can be accessed directly. Both methods are entirely equivalent, but the first method leads to more readable code.
 
 ```{.python .input  n=4}
-print(net[0].params['dense0_weight'])
-print(net[0].params['dense0_weight'].data())
+print(net[0].params['weight'])
+print(net[0].params['weight'].data())
 ```
 
 Note that the weights are nonzero as they were randomly initialized when we constructed the network.
@@ -92,14 +91,14 @@ print(net.collect_params())
 This provides us with the third way of accessing the parameters of the network. If we want to get the value of the bias term of the second layer we could simply use this:
 
 ```{.python .input  n=7}
-net.collect_params()['dense1_bias'].data()
+net.collect_params()['1.bias'].data()
 ```
 
 By adding a regular expression as an argument to `collect_params` method, we can select only a particular set of parameters whose names are matched by the regular expression.
 
 ```{.python .input  n=8}
 print(net.collect_params('.*weight'))
-print(net.collect_params('dense0.*'))
+print(net.collect_params('0.*'))
 ```
 
 ### Rube Goldberg strikes again
@@ -197,8 +196,8 @@ $$
 class MyInit(init.Initializer):
     def _init_weight(self, name, data):
         print('Init', name, data.shape)
-        data[:] = nd.random.uniform(low=-10, high=10, shape=data.shape)
-        data *= data.abs() >= 5
+        data[:] = np.random.uniform(low=-10, high=10, size=data.shape)
+        data *= np.abs(data) >= 5
 
 net.initialize(MyInit(), force_reinit=True)
 net[0].weight.data()[0]
@@ -223,11 +222,11 @@ net = nn.Sequential()
 shared = nn.Dense(8, activation='relu')
 net.add(nn.Dense(8, activation='relu'),
         shared,
-        nn.Dense(8, activation='relu', params=shared.params),
+        nn.Dense(8, activation='relu').share_parameters(shared.params),
         nn.Dense(10))
 net.initialize()
 
-x = nd.random.uniform(shape=(2, 20))
+x = np.random.uniform(size=(2, 20))
 net(x)
 
 # Check whether the parameters are the same

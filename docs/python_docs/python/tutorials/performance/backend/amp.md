@@ -70,9 +70,9 @@ class SyntheticDataLoader(object):
         shape = (batch_size, 3, data_shape, data_shape)
         cls_targets_shape = (batch_size, 6132)
         box_targets_shape = (batch_size, 6132, 4)
-        self.data = mx.nd.random.uniform(-1, 1, shape=shape, ctx=mx.cpu_pinned())
-        self.cls_targets = mx.nd.random.uniform(0, 1, shape=cls_targets_shape, ctx=mx.cpu_pinned())
-        self.box_targets = mx.nd.random.uniform(0, 1, shape=box_targets_shape, ctx=mx.cpu_pinned())
+        self.data = mx.np.random.uniform(-1, 1, size=shape, ctx=mx.cpu_pinned())
+        self.cls_targets = mx.np.random.uniform(0, 1, size=cls_targets_shape, ctx=mx.cpu_pinned())
+        self.box_targets = mx.np.random.uniform(0, 1, size=box_targets_shape, ctx=mx.cpu_pinned())
     
     def next(self):
         if self.counter >= self.epoch_size:
@@ -274,11 +274,11 @@ with mx.Context(mx.gpu(0)):
         model = get_model("resnet50_v1")
         model.initialize(ctx=mx.current_context())
         model.hybridize()
-        model(mx.nd.zeros((1, 3, 224, 224)))
+        model(mx.np.zeros((1, 3, 224, 224)))
         converted_model = amp.convert_hybrid_block(model)
 
     # Run dummy inference with the converted gluon model
-    result = converted_model.forward(mx.nd.random.uniform(shape=(1, 3, 224, 224),
+    result = converted_model.forward(mx.np.random.uniform(size=(1, 3, 224, 224),
                                                           dtype=np.float32))
 
     print("Conversion and Inference completed successfully")
