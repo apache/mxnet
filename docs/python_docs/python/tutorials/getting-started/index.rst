@@ -65,6 +65,7 @@ The following tutorials teach how to use MXNet.
    crash-course/index
    to-mxnet/index
    gluon_from_experiment_to_deployment
+   gluon_migration_guide
    logistic_regression_explained.md
    MNIST <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/image/mnist.html>
 
