@@ -326,7 +326,8 @@ java_package_integration_test() {
     apt-get update -y
     apt-get install gradle -y
     # build java prokect
-    ./gradle build -x javadoc
+    cd /work/mxnet/java-package
+    ./gradlew build -x javadoc
     # generate native library
     ./gradlew :native:buildLocalLibraryJarDefault
     ./gradlew :native:mkl-linuxJar
