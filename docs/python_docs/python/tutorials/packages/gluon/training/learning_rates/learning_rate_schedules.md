@@ -242,7 +242,7 @@ for epoch in range(1, num_epochs+1):
 
         # Show loss and learning rate after first iteration of epoch
         if batch_num == 1:
-            curr_loss = mx.nd.mean(loss).asscalar()
+            curr_loss = mx.np.mean(loss).item()
             curr_lr = trainer.learning_rate
             print("Epoch: %d; Batch %d; Loss %f; LR %f" % (epoch, batch_num, curr_loss, curr_lr))
 ```
@@ -310,7 +310,7 @@ for epoch in range(1, num_epochs + 1):
         trainer.step(data.shape[0])
         # Show loss and learning rate after first iteration of epoch
         if batch_num == 1:
-            curr_loss = mx.nd.mean(loss).asscalar()
+            curr_loss = mx.np.mean(loss).item()
             curr_lr = trainer.learning_rate
             print("Epoch: %d; Batch %d; Loss %f; LR %f" % (epoch, batch_num, curr_loss, curr_lr))
         iteration_idx += 1
