@@ -1409,7 +1409,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             1, ctypes.pointer(self.handle),
             ctypes.pointer(mx_uint(grad_req)),
             ctypes.pointer(grad.handle)))
-            
+
     def drop_grad(self):
         """Free the memory of the marked ndarray."""
         check_call(_LIB.MXAutogradDropGrads(
