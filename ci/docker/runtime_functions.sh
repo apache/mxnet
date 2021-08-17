@@ -306,7 +306,6 @@ build_centos7_gpu() {
     ninja
 }
 
-
 build_ubuntu_cpu() {
     build_ubuntu_cpu_openblas
 }
@@ -1428,21 +1427,6 @@ test_artifact_repository() {
     cd cd/utils/
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 test_artifact_repository.py
     popd
-}
-
-integration_test() {
-    # install gradle
-    add-apt-repository ppa:cwchien/gradle
-    apt-get update -y
-    apt-get install gradle -y
-    # build java prokect
-    cd /work/mxnet/java-package
-    ./gradle build -x javadoc
-    # generate native library
-    ./gradlew :native:buildLocalLibraryJarDefault
-    ./gradlew :native:mkl-linuxJar
-    # run integration
-    ./gradlew :integration:run
 }
 
 ##############################################################
