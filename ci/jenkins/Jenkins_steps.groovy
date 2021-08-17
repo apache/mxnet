@@ -82,6 +82,14 @@ def python3_gpu_ut_cython(docker_container_name) {
   }
 }
 
+
+// Java package integration test for CPU
+// Java11
+def java_package_it(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'java_package_integration_test', false)
+  }
+}
 //------------------------------------------------------------------------------------------
 
 def compile_unix_cpu_openblas(lib_name) {
@@ -1025,6 +1033,40 @@ def test_windows_python3_cpu(lib_name) {
         }
       }
     }]
+}
+
+def test_unix_java_package_gpu(lib_name) {
+  return ['java-package GPU Makefile': {
+    node(NODE_LINUX_GPU_G4) {
+      ws('workspace/it-java-package-gpu') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          utils.unpack_and_init(lib_name, mx_lib_cpp_examples)
+          utils.docker_run('ubuntu_gpu_cu111', 'integrationtest_ubuntu_cpp_package_gpu', true)
+          utils.publish_test_coverage()
+        }
+      }
+    }
+  }]
+}
+
+def test_unix_java_cpu(lib_name) {
+  return ['Java: CPU': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/ut-java11-cpu') {
+        try {
+          utils.unpack_and_init(lib_name, mx_lib, true)
+          java_package_it('ubuntu_cpu')
+//          utils.publish_test_coverage()
+        } catch (Exception e) {
+          println(e.getMessage())
+        }
+//        finally {
+//          utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_cpu_unittest.xml')
+//          utils.collect_test_results_unix('tests_quantization.xml', 'tests_python3_cpu_quantization.xml')
+//        }
+      }
+    }
+  }]
 }
 
 def test_qemu_armv7_cpu(lib_name) {

@@ -44,6 +44,7 @@ core_logic: {
   ])
 
   utils.parallel_stage('Tests', [
+    custom_steps.test_unix_java_cpu('cpu'),
     custom_steps.test_unix_python3_cpu('cpu'),
     custom_steps.test_unix_python3_onnx_cpu('cpu'),
     custom_steps.test_unix_python3_mkl_cpu('cpu_mkl'),
