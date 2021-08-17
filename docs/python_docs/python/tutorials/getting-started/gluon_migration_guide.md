@@ -349,6 +349,7 @@ Metrics module in MXNet provides different methods for users to judge the perfor
 ## Key-Value Store
 Gluon 2.0 will provide a new and unified low level API for data parallel training. These unified APIs can support different communication backends, including native Parameter Server, Horovod and BytePS. 
 Example: 
+
 ```{.python}
 import mxnet as mx
 # create key-value store with horovod backend
@@ -361,6 +362,7 @@ scale = kv.rank + 1
 # performs allreduce on a single array
 kv.pushpull('3', val * scale)
 ```
+
 ## Probability
 A new module called `mxnet.gluon.probability` has been introduced in Gluon 2.0. It is analogous to pytorch distribution and the main difference is that `mxnet.gluon.probability` will use MXNet NumPy compatible operators and will allow hybridization. It has three parts: 
 
