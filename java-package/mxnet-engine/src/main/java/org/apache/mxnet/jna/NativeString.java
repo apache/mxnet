@@ -26,7 +26,7 @@ import java.nio.charset.Charset;
  * const wchar_t*</code>) for use when converting a Java String into a native memory function
  * argument.
  */
-public final class NativeString {
+final class NativeString {
 
     private static final ObjectPool<NativeString> POOL = new ObjectPool<>(null, null);
 

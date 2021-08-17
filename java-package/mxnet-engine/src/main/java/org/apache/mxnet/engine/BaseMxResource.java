@@ -30,7 +30,7 @@ public final class BaseMxResource extends MxResource {
 
     private static final Logger logger = LoggerFactory.getLogger(BaseMxResource.class);
 
-    private static BaseMxResource SYSTEM_MX_RESOURCE;
+    private static BaseMxResource systemMxResource;
 
     protected BaseMxResource() {
         super();
@@ -43,21 +43,19 @@ public final class BaseMxResource extends MxResource {
         Runtime.getRuntime().addShutdownHook(new Thread(JnaUtils::waitAll)); // NOPMD
     }
 
-    public static BaseMxResource getSystemMxResource() {
-        if (SYSTEM_MX_RESOURCE == null) {
-            SYSTEM_MX_RESOURCE = new BaseMxResource();
+    /**
+     * Getter method for the singleton {@code systemMxResource} instance.
+     *
+     * @return The top-leve {@link BaseMxResource} instance.
+     */
+    public static synchronized BaseMxResource getSystemMxResource() {
+        if (systemMxResource == null) {
+            systemMxResource = new BaseMxResource();
         }
-        return SYSTEM_MX_RESOURCE;
+        return systemMxResource;
     }
 
-    //    public static MxResource newSubMxResource() {
-    //        return new MxResource(getSystemMxResource());
-    //    }
-
-    public boolean isReleased() {
-        return handle.get() == null;
-    }
-
+    /** {@inheritDoc} */
     @Override
     public void close() {
         if (!getClosed()) {
@@ -65,7 +63,7 @@ public final class BaseMxResource extends MxResource {
             // only clean sub resources
             JnaUtils.waitAll();
             super.freeSubResources();
-            setClosed();
+            setClosed(true);
             logger.debug(
                     String.format("Finish to free BaseMxResource instance: %S", this.getUid()));
         }

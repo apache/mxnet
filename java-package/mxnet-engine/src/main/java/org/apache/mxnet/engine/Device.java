@@ -219,6 +219,11 @@ public final class Device {
         return defaultDevice();
     }
 
+    /**
+     * Returns the default device.
+     *
+     * @return the default device
+     */
     public static Device defaultIfNull() {
         return defaultIfNull(null);
     }

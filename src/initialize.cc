@@ -373,7 +373,18 @@ std::shared_ptr<void(int)> HANDLER_NAME(                             \
       }                                                              \
     }                                                                \
   }),                                                                \
-  [](auto f) { signal(SIGNAL, f); });
+  [](auto f) {                                                       \
+    struct sigaction sa;                                             \
+    sigaction(SIGNAL, nullptr, &sa);                                 \
+    if (sa.sa_handler == nullptr) {                                  \
+      LOG(INFO) << "Register the signal handler for '"               \
+        << strsignal(SIGNAL) << "'.";                                \
+      signal(SIGNAL, f);                                             \
+    } else {                                                         \
+      LOG(INFO) << "Skip register of signal handler for '"           \
+        << strsignal(SIGNAL) << "' which already gets registered.";  \
+     }                                                               \
+  });
 
 SIGNAL_HANDLER(SIGSEGV, SIGSEGVHandler, true);
 SIGNAL_HANDLER(SIGFPE, SIGFPEHandler, false);

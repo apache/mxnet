@@ -17,6 +17,10 @@
 
 package org.apache.mxnet.repository;
 
+/**
+ * {@link Item} is some listed repositories where we can download pre-trained models data. It is
+ * used by developers to download specific models data by initialize a {@link Repository}.
+ */
 public enum Item {
     MLP("mlp", "https://resources.djl.ai/test-models/mlp.tar.gz");
 
@@ -28,10 +32,20 @@ public enum Item {
         this.url = url;
     }
 
+    /**
+     * Gets the name of this {@code Item}.
+     *
+     * @return the name of this {@code Item}
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Gets the URL of this {@code Item} to download.
+     *
+     * @return the URL of this {@code Item}
+     */
     public String getUrl() {
         return url;
     }

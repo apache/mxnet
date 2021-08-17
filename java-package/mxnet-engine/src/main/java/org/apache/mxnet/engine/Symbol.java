@@ -54,6 +54,13 @@ public class Symbol extends MxResource {
         return new Symbol(parent, p);
     }
 
+    /**
+     * Load {@link Symbol} from the given {@link Path}.
+     *
+     * @param parent the parent {@link MxResource}
+     * @param path the {@link Path} to load the {@link Symbol}
+     * @return {@link Symbol}
+     */
     public static Symbol loadSymbol(MxResource parent, Path path) {
         return loadFromFile(parent, path.toAbsolutePath().toString());
     }
@@ -61,6 +68,7 @@ public class Symbol extends MxResource {
     /**
      * Loads a symbol from a json string.
      *
+     * @param parent the parent {@link MxResource}
      * @param json the json string of the symbol.
      * @return the new symbol
      */
@@ -69,6 +77,11 @@ public class Symbol extends MxResource {
         return new Symbol(parent, pointer);
     }
 
+    /**
+     * Returns the symbol outputs.
+     *
+     * @return the symbol outputs
+     */
     public String[] getOutputNames() {
         if (this.outputs == null) {
             this.outputs = JnaUtils.listSymbolOutputs(getHandle());
@@ -86,7 +99,7 @@ public class Symbol extends MxResource {
             if (pointer != null) {
                 JnaUtils.freeSymbol(pointer);
             }
-            setClosed();
+            setClosed(true);
             logger.debug(String.format("Finish to free Symbol instance: %S", this.toJsonString()));
         }
     }

@@ -31,6 +31,13 @@ import org.apache.mxnet.ndarray.types.Shape;
 /** A helper class for {@link NDArray} implementations for operations with an {@link NDIndex}. */
 public class NDArrayIndexer {
 
+    /**
+     * Returns a subarray by picking the elements.
+     *
+     * @param array the array to get from
+     * @param index the index to get
+     * @return the subArray
+     */
     public NDArray get(NDArray array, NDIndex index) {
         if (index.getRank() == 0 && array.getShape().isScalar()) {
             return array.duplicate();
@@ -59,6 +66,13 @@ public class NDArrayIndexer {
                 "get() currently supports all, fixed, and slices indices");
     }
 
+    /**
+     * Returns a subarray by picking the elements.
+     *
+     * @param array the array to get from
+     * @param fullPick the elements to pick
+     * @return the subArray
+     */
     public NDArray get(NDArray array, NDIndexFullPick fullPick) {
         OpParams params = new OpParams();
         params.addParam("axis", fullPick.getAxis());
@@ -69,6 +83,13 @@ public class NDArrayIndexer {
                 .singletonOrThrow();
     }
 
+    /**
+     * Returns a subarray at the slice.
+     *
+     * @param array the array to get from
+     * @param fullSlice the fullSlice index of the array
+     * @return the subArray
+     */
     public NDArray get(NDArray array, NDIndexFullSlice fullSlice) {
         OpParams params = new OpParams();
         params.addTupleParam("begin", fullSlice.getMin());
@@ -85,6 +106,13 @@ public class NDArrayIndexer {
         return result;
     }
 
+    /**
+     * Sets the values of the array at the fullSlice with an array.
+     *
+     * @param array the array to set
+     * @param fullSlice the fullSlice of the index to set in the array
+     * @param value the value to set with
+     */
     public void set(NDArray array, NDIndexFullSlice fullSlice, NDArray value) {
         OpParams params = new OpParams();
         params.addTupleParam("begin", fullSlice.getMin());
@@ -116,6 +144,13 @@ public class NDArrayIndexer {
         }
     }
 
+    /**
+     * Sets the values of the array at the fullSlice with a number.
+     *
+     * @param array the array to set
+     * @param fullSlice the fullSlice of the index to set in the array
+     * @param value the value to set with
+     */
     public void set(NDArray array, NDIndexFullSlice fullSlice, Number value) {
         OpParams params = new OpParams();
         params.addTupleParam("begin", fullSlice.getMin());

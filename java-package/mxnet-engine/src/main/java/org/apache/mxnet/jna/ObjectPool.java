@@ -22,6 +22,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+/**
+ * A generic object pool implementation.
+ *
+ * @param <T> the type of object to put in the pool
+ */
+@SuppressWarnings("MissingJavadocMethod")
 public class ObjectPool<T> {
 
     private Queue<T> queue;

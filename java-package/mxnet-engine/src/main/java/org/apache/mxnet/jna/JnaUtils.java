@@ -51,6 +51,10 @@ import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A class containing utilities to interact with the MXNet Engine's Java Native Access (JNA) layer.
+ */
+@SuppressWarnings("MissingJavadocMethod")
 public final class JnaUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(JnaUtils.class);
@@ -70,7 +74,11 @@ public final class JnaUtils {
     private static final Set<String> FEATURES = getFeaturesInternal();
 
     public static final String[] EMPTY_ARRAY = new String[0];
-    // TODO
+
+    private JnaUtils() {
+        // not called
+    }
+
     /** An enum that enumerates the statuses of numpy mode. */
     public enum NumpyMode {
         OFF,
@@ -82,20 +90,14 @@ public final class JnaUtils {
         checkCall(LIB.MXNDArrayWaitAll());
     }
 
-    public static void init() {
-        Runtime.getRuntime().addShutdownHook(new Thread(JnaUtils::waitAll)); // NOPMD
-    }
-
     public static void setNumpyMode(NumpyMode mode) {
         IntBuffer ret = IntBuffer.allocate(1);
         checkCall(LIB.MXSetIsNumpyShape(mode.ordinal(), ret));
     }
 
-    /**
-     * ***************************************************************************** About CacheOp
-     * ****************************************************************************
-     */
-    // TODO
+    /////////////////////////////////
+    // Related to CacheOp
+    /////////////////////////////////
     public static CachedOp createCachedOp(SymbolBlock block, MxResource parent) {
         Symbol symbol = block.getSymbol();
 
@@ -135,10 +137,9 @@ public final class JnaUtils {
         checkCall(LIB.MXFreeCachedOp(handle));
     }
 
-    /**
-     * ***************************************************************************** About Symbol
-     * ****************************************************************************
-     */
+    /////////////////////////////////
+    // About Symbol
+    /////////////////////////////////
     public static Pointer createSymbolFromFile(String path) {
         PointerByReference ref = REFS.acquire();
         checkCall(LIB.MXSymbolCreateFromFile(path, ref));
@@ -172,7 +173,7 @@ public final class JnaUtils {
     }
 
     public static void freeSymbol(Pointer symbol) {
-        checkCall(LIB.NNSymbolFree(symbol));
+        checkCall(LIB.MXSymbolFree(symbol));
     }
 
     public static String[] listSymbolArguments(Pointer symbol) {
@@ -355,10 +356,6 @@ public final class JnaUtils {
         return pointer;
     }
 
-    /**
-     * ***************************************************************************** About NdArray
-     * ****************************************************************************
-     */
     public static NDList loadNdArray(MxResource parent, Path path, Device device) {
         IntBuffer handlesSize = IntBuffer.allocate(1);
         PointerByReference handlesRef = REFS.acquire();
@@ -529,10 +526,7 @@ public final class JnaUtils {
         PointerByReference ref = REFS.acquire();
         for (String opName : opNames) {
             checkCall(LIB.NNGetOpHandle(opName, ref));
-
             String functionName = getOpNamePrefix(opName);
-
-            // System.out.println("Name: " + opName + "/" + functionName);
             map.put(functionName, getFunctionByName(opName, functionName, ref.getValue()));
             ref.setValue(null);
         }
@@ -862,15 +856,10 @@ public final class JnaUtils {
         return arr;
     }
 
-    /**
-     * *************************************************************************** Others
-     * ***************************************************************************
-     */
     private static Set<String> getFeaturesInternal() {
         PointerByReference ref = REFS.acquire();
         NativeSizeByReference outSize = new NativeSizeByReference();
         checkCall(LIB.MXLibInfoFeatures(ref, outSize));
-
         int size = outSize.getValue().intValue();
         if (size == 0) {
             REFS.recycle(ref);

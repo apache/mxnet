@@ -139,7 +139,7 @@ public class CachedOp extends MxResource {
             if (pointer != null) {
                 JnaUtils.freeCachedOp(pointer);
             }
-            setClosed();
+            setClosed(true);
             logger.debug(String.format("Finish to free CachedOp instance: %S", this.getUid()));
         }
     }

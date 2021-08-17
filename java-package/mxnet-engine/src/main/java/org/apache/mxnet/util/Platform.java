@@ -100,7 +100,7 @@ public final class Platform {
     }
 
     /**
-     * Returns the Engine Version
+     * Returns the Engine Version.
      *
      * @return the Engine version
      */

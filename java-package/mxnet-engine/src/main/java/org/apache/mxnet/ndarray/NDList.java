@@ -29,8 +29,15 @@ import java.util.Collection;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.ndarray.types.Shape;
-import org.apache.mxnet.util.NDArrayUtils;
 
+/**
+ * An {@code NDList} represents a sequence of {@link NDArray}s with names.
+ *
+ * <p>Each {@link NDArray} in this list can optionally have a name. You can use the name to look up
+ * an NDArray in the NDList.
+ *
+ * @see NDArray
+ */
 public class NDList extends ArrayList<NDArray> implements AutoCloseable {
     private static final long serialVersionUID = 1L;
 
@@ -79,7 +86,7 @@ public class NDList extends ArrayList<NDArray> implements AutoCloseable {
     /**
      * Decodes NDList from {@link InputStream}.
      *
-     * @param parent manager assigned to {@link NDArray}
+     * @param parent {@link MxResource} assigned to {@link NDArray}
      * @param is input stream contains the ndlist information
      * @return {@code NDList}
      */
@@ -91,7 +98,7 @@ public class NDList extends ArrayList<NDArray> implements AutoCloseable {
             }
             NDList list = new NDList();
             for (int i = 0; i < size; i++) {
-                list.add(i, NDArrayUtils.decode(parent, dis));
+                list.add(i, NDArray.decode(parent, dis));
             }
             return list;
         } catch (IOException e) {

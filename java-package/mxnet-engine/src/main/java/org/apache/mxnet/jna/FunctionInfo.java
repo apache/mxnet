@@ -18,6 +18,7 @@
 package org.apache.mxnet.jna;
 
 import com.sun.jna.Pointer;
+import java.util.List;
 import org.apache.mxnet.engine.Device;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.ndarray.NDArray;
@@ -41,10 +42,32 @@ public class FunctionInfo {
         this.arguments = arguments;
     }
 
+    /**
+     * Returns the name of the operator.
+     *
+     * @return the name of the operator
+     */
     public String getFunctionName() {
         return name;
     }
-    // TODO : complete other methods
+
+    /**
+     * Returns the names of the params to the operator.
+     *
+     * @return the names of the params to the operator
+     */
+    public List<String> getArgumentNames() {
+        return arguments.keys();
+    }
+
+    /**
+     * Returns the types of the operator arguments.
+     *
+     * @return the types of the operator arguments
+     */
+    public List<String> getArgumentTypes() {
+        return arguments.values();
+    }
     /**
      * Calls an operator with the given arguments.
      *
@@ -63,6 +86,7 @@ public class FunctionInfo {
     /**
      * Calls an operator with the given arguments.
      *
+     * @param parent {@link MxResource} for the current instance
      * @param src the input NDArray(s) to the operator
      * @param params the non-NDArray arguments to the operator. Should be a {@code PairList<String,
      *     String>}

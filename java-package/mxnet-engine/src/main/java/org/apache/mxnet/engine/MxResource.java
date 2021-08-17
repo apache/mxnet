@@ -32,43 +32,49 @@ public class MxResource extends NativeResource<Pointer> {
 
     private static final Logger logger = LoggerFactory.getLogger(MxResource.class);
 
-    public static final String EMPTY_UID = "EMPTY_UID";
+    private static boolean closed;
 
-    private static boolean closed = false;
+    protected Device device;
 
-    protected Device device = null;
+    private MxResource parent;
 
-    public void setClosed() {
-        this.closed = true;
-    }
+    private ConcurrentHashMap<String, MxResource> subResources;
 
-    public boolean getClosed() {
-        return closed;
+    protected MxResource() {
+        super();
+        setParent(null);
     }
 
     protected MxResource(MxResource parent, String uid) {
         super(uid);
+        setClosed(false);
         setParent(parent);
         getParent().addSubResource(this);
     }
 
-    // initial a MxResource object with random uid
     protected MxResource(MxResource parent) {
         this(parent, UUID.randomUUID().toString());
     }
 
-    //    protected static MxResource createEmptyMxResource(MxResource parent) {
-    //        return new MxResource(parent, EMPTY_UID);
-    //    }
-
-    private MxResource parent = null;
-
-    private ConcurrentHashMap<String, MxResource> subResources = null;
-
+    protected MxResource(MxResource parent, Pointer handle) {
+        super(handle);
+        setParent(parent);
+        if (parent != null) {
+            parent.addSubResource(this);
+        } else {
+            BaseMxResource.getSystemMxResource().addSubResource(this);
+        }
+    }
+    /**
+     * Add the sub {@link MxResource} under the current instance.
+     *
+     * @param subMxResource the instance to be added
+     */
     public void addSubResource(MxResource subMxResource) {
         getSubResource().put(subMxResource.getUid(), subMxResource);
     }
 
+    /** Free all sub {@link MxResource} instances of the current instance. */
     public void freeSubResources() {
         if (subResourceInitialized()) {
             for (MxResource subResource : subResources.values()) {
@@ -82,10 +88,20 @@ public class MxResource extends NativeResource<Pointer> {
         }
     }
 
+    /**
+     * Check whether {@code subResource} has been initialized.
+     *
+     * @return boolean
+     */
     public boolean subResourceInitialized() {
         return subResources != null;
     }
 
+    /**
+     * Get the {@code subResources} of the {@link MxResource}.
+     *
+     * @return subResources
+     */
     public ConcurrentHashMap<String, MxResource> getSubResource() {
         if (!subResourceInitialized()) {
             subResources = new ConcurrentHashMap<>();
@@ -93,42 +109,63 @@ public class MxResource extends NativeResource<Pointer> {
         return subResources;
     }
 
-    protected MxResource(MxResource parent, Pointer handle) {
-        super(handle);
-        setParent(parent);
-        if (parent != null) {
-            parent.addSubResource(this);
-        } else {
-            BaseMxResource.getSystemMxResource().addSubResource(this);
-        }
-    }
-
-    protected void setParent(MxResource parent) {
+    protected final void setParent(MxResource parent) {
         this.parent = parent;
     }
 
+    /**
+     * Get parent {@link MxResource} of the current instance.
+     *
+     * @return {@link MxResource}
+     */
     public MxResource getParent() {
         return this.parent;
     }
 
-    protected MxResource() {
-        super();
-        setParent(null);
-    }
-
+    /**
+     * Set the {@link Device} for the {@link MxResource}.
+     *
+     * @param device {@link Device}
+     */
     public void setDevice(Device device) {
         this.device = device;
     }
 
+    /**
+     * Returns the {@link Device} of this {@code MxResource}.
+     *
+     * <p>{@link Device} class contains the information where this {@code NDArray} stored in memory,
+     * like CPU/GPU.
+     *
+     * @return the {@link Device} of this {@code MxResource}
+     */
     public Device getDevice() {
-        Device device = getParent() == null ? null : getParent().getDevice();
-        return Device.defaultIfNull(device);
+        Device curDevice = getParent() == null ? null : getParent().getDevice();
+        return Device.defaultIfNull(curDevice);
+    }
+
+    /**
+     * Sets closed for MxResource instance.
+     *
+     * @param isClosed whether this {@link MxResource} get closed
+     */
+    public final void setClosed(boolean isClosed) {
+        this.closed = isClosed;
+    }
+
+    /**
+     * Get the attribute closed for the MxResource to check out whether it is closed.
+     *
+     * @return closed
+     */
+    public boolean getClosed() {
+        return closed;
     }
 
     /** {@inheritDoc} */
     @Override
     public void close() {
         freeSubResources();
-        setClosed();
+        setClosed(true);
     }
 }

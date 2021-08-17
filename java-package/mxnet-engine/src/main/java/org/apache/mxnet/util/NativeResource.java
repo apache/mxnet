@@ -20,6 +20,11 @@ package org.apache.mxnet.util;
 import com.sun.jna.Pointer;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * {@code NativeResource} is an internal class for {@link AutoCloseable} blocks of memory.
+ *
+ * @param <T> the resource that could map to a native pointer or java object
+ */
 public abstract class NativeResource<T> implements AutoCloseable {
 
     protected final AtomicReference<T> handle;
@@ -36,9 +41,9 @@ public abstract class NativeResource<T> implements AutoCloseable {
     }
 
     /**
-     * To initialize a NativeResource with handle = null
+     * To initialize a NativeResource with handle = null.
      *
-     * @param uid
+     * @param uid for the {@link NativeResource}
      */
     protected NativeResource(String uid) {
         this.handle = null;

@@ -15,31 +15,5 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet.translate;
-
-import org.apache.mxnet.ndarray.NDList;
-
-/**
- * Default no operational implement for {@link Translator} to process input and output {@link
- * org.apache.mxnet.ndarray.NDArray}.
- */
-public class NoOpTranslator implements Translator<NDList, NDList> {
-
-    /** {@inheritDoc} */
-    @Override
-    public Pipeline getPipeline() {
-        return Translator.super.getPipeline();
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public NDList processInput(NDList input) {
-        return input;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public NDList processOutput(NDList output) {
-        return output;
-    }
-}
+/** Contains the Java front-end implementation for Apache MXNet. */
+package org.apache.mxnet.ndarray.types;

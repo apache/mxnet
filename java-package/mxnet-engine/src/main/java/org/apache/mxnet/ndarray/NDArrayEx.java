@@ -27,6 +27,8 @@ import org.apache.mxnet.ndarray.types.DataType;
 import org.apache.mxnet.ndarray.types.Shape;
 import org.apache.mxnet.ndarray.types.SparseFormat;
 
+/** An internal interface that encapsulates engine specific operations. */
+@SuppressWarnings("MissingJavadocMethod")
 public class NDArrayEx {
 
     private static final NDArrayIndexer INDEXER = new NDArrayIndexer();
@@ -76,17 +78,34 @@ public class NDArrayEx {
     ////////////////////////////////////////
     // MxNDArrays
     ////////////////////////////////////////
-
+    /**
+     * Applies reverse division with a scalar - i.e., (n / thisArrayValues).
+     *
+     * @param n the Value to use for reverse division
+     * @return a copy of the array after applying reverse division
+     */
     public NDArray rdiv(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return NDArray.invoke(getArray().getParent(), "_rdiv_scalar", array, params);
     }
 
+    /**
+     * Applies reverse division with a scalar - i.e., (n / thisArrayValues).
+     *
+     * @param b the ndarray to use for reverse division
+     * @return a copy of the array after applying reverse division
+     */
     public NDArray rdiv(NDArray b) {
         return b.div(array);
     }
 
+    /**
+     * Applies in place reverse division - i.e., (n / thisArrayValues).
+     *
+     * @param n the value to use for reverse division
+     * @return this array after applying reverse division
+     */
     public NDArray rdivi(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
@@ -94,23 +113,53 @@ public class NDArrayEx {
         return array;
     }
 
+    /**
+     * Applies in place reverse division - i.e., (n / thisArrayValues).
+     *
+     * @param b the ndarray to use for reverse division
+     * @return this array after applying reverse division
+     */
     public NDArray rdivi(NDArray b) {
         NDArray.invoke("elemwise_div", new NDArray[] {b, array}, new NDArray[] {array}, null);
         return array;
     }
 
+    /**
+     * Applies reverse subtraction with duplicates - i.e., (n - thisArrayValues).
+     *
+     * @param n the value to use for reverse subtraction
+     * @return a copy of array after reverse subtraction
+     */
     public NDArray rsub(Number n) {
         return array.sub(n).neg();
     }
 
+    /**
+     * Applies reverse subtraction with duplicates - i.e., (n - thisArrayValues).
+     *
+     * @param b the ndarray to use for reverse subtraction
+     * @return a copy of the array after reverse subtraction
+     */
     public NDArray rsub(NDArray b) {
         return array.sub(b).neg();
     }
 
+    /**
+     * Applies reverse subtraction in place - i.e., (n - thisArrayValues).
+     *
+     * @param n the value to use for reverse subtraction
+     * @return this array after reverse subtraction
+     */
     public NDArray rsubi(Number n) {
         return array.subi(n).negi();
     }
 
+    /**
+     * Applies reverse subtraction in place - i.e., (n - thisArrayValues).
+     *
+     * @param b the ndarray to use for reverse subtraction
+     * @return this array after reverse subtraction
+     */
     public NDArray rsubi(NDArray b) {
         return array.subi(b).negi();
     }
@@ -121,10 +170,22 @@ public class NDArrayEx {
         return NDArray.invoke(getArray().getParent(), "_npi_rmod_scalar", array, params);
     }
 
+    /**
+     * Applies reverse remainder of division with a scalar.
+     *
+     * @param b the value to use for reverse division
+     * @return a copy of array after applying reverse division
+     */
     public NDArray rmod(NDArray b) {
         return b.mod(array);
     }
 
+    /**
+     * Applies in place reverse remainder of division with a scalar.
+     *
+     * @param n the value to use for reverse division
+     * @return this array after applying reverse division
+     */
     public NDArray rmodi(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
@@ -132,17 +193,35 @@ public class NDArrayEx {
         return array;
     }
 
+    /**
+     * Applies in place reverse remainder of division.
+     *
+     * @param b the ndarray to use for reverse division
+     * @return this array after applying reverse division
+     */
     public NDArray rmodi(NDArray b) {
         NDArray.invoke("_npi_mod", new NDArray[] {b, array}, new NDArray[] {array}, null);
         return array;
     }
 
+    /**
+     * Reverses the power of each element being raised in the {@code NDArray}.
+     *
+     * @param n the value to use for reverse power
+     * @return a copy of array after applying reverse power
+     */
     public NDArray rpow(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
         return NDArray.invoke(getArray().getParent(), "_npi_rpower_scalar", array, params);
     }
 
+    /**
+     * Reverses the power of each element being raised in the {@code NDArray} in place.
+     *
+     * @param n the value to use for reverse power
+     * @return a copy of array after applying reverse power
+     */
     public NDArray rpowi(Number n) {
         OpParams params = new OpParams();
         params.add("scalar", n.toString());
@@ -153,7 +232,11 @@ public class NDArrayEx {
     ////////////////////////////////////////
     // Activations
     ////////////////////////////////////////
-
+    /**
+     * Computes rectified linear activation.
+     *
+     * @return a copy of array after applying relu
+     */
     public NDArray relu() {
         OpParams params = new OpParams();
         params.addParam("act_type", "relu");

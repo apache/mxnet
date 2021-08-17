@@ -35,6 +35,10 @@ import org.apache.mxnet.util.ZipUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * {@code Repository} is a format for storing data {@link Item}s for various uses including deep
+ * learning models and datasets.
+ */
 public class Repository {
 
     private static final Logger logger = LoggerFactory.getLogger(Repository.class);
@@ -52,49 +56,84 @@ public class Repository {
         this(item.getName(), item.getUrl());
     }
 
+    /**
+     * Initialize a {@link Repository} by a specific {@link Item}, which provides the name for the
+     * repository and the URL to achieve it.
+     *
+     * @param item {@link Item} to initialize the {@link Repository}
+     * @return {@link Path} of the initialized {@link Repository}
+     * @throws IOException when fail to prepare the {@link Repository}
+     */
     public static Path initRepository(Item item) throws IOException {
         Repository repository = new Repository(item);
         repository.prepare();
         return repository.getLocalDir();
     }
 
-    private void setResourceDir(Path resourceDir) {
-        this.resourceDir = resourceDir;
+    private void setResourceDir(Path mResourceDir) {
+        this.resourceDir = mResourceDir;
     }
 
     private Path getResourceDir() {
         return resourceDir;
     }
 
+    /**
+     * Returns the local directory to store resources.
+     *
+     * @return {@link Path} of the local resource directory
+     */
     public Path getLocalDir() {
         return getResourceDir().resolve(getName());
     }
 
-    public void setUri(URI uri) {
+    /**
+     * Sets the {@link URI} for the {@link Repository}.
+     *
+     * @param uri of the repository
+     */
+    public final void setUri(URI uri) {
         this.uri = uri;
     }
 
+    /**
+     * Returns {@link URI} for the {@link Repository}.
+     *
+     * @return {@link URI} of the {@link Repository}
+     */
     public URI getUri() {
         return uri;
     }
 
-    public void setName(String name) {
+    /**
+     * Sets the name for the {@link Repository}.
+     *
+     * @param name for the {@link Repository}
+     */
+    public final void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * Returns the name for the {@link Repository}.
+     *
+     * @return name for the {@link Repository}
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Prepares the repository for use.
+     *
+     * @throws IOException if it failed to prepare
+     */
     public void prepare() throws IOException {
-        // TODO: specify the resource path according to Artifact's properties, including name,
-        // version and so on.
         String uriPath = getUri().getPath();
         if (uriPath != null && !"".equals(uriPath) && uriPath.charAt(0) == '/') {
             uriPath = uriPath.substring(1);
         }
-        Path resourceDir = getCacheDirectory().resolve(uriPath);
-        setResourceDir(resourceDir);
+        setResourceDir(getCacheDirectory().resolve(uriPath));
         if (Files.exists(getResourceDir())) {
             logger.debug("Files have been downloaded already: {}", getResourceDir());
             return;
@@ -121,11 +160,9 @@ public class Repository {
     }
 
     private void download(Path tmp) throws IOException {
-        String name = getName();
-        URI fileUri = getUri();
-        logger.debug("Downloading artifact: {} at {}...", name, fileUri);
-        try (InputStream is = fileUri.toURL().openStream()) {
-            String extension = FilenameUtils.getFileType(fileUri.getPath());
+        logger.debug("Downloading artifact: {} at {}...", getName(), getUri());
+        try (InputStream is = getUri().toURL().openStream()) {
+            String extension = FilenameUtils.getFileType(getUri().getPath());
             save(is, tmp, name, extension, isArchiveFile(extension));
         }
     }
@@ -202,6 +239,12 @@ public class Repository {
         }
     }
 
+    /**
+     * Returns the cache directory for the repository.
+     *
+     * @return the cache directory path
+     * @throws IOException if it failed to ensure the creation of the cache directory
+     */
     public Path getCacheDirectory() throws IOException {
         Path dir = Utils.getCacheDir().resolve("cache/repo");
         if (Files.notExists(dir)) {

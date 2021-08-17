@@ -46,6 +46,10 @@ import org.apache.mxnet.util.PairList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * {@code SymbolBlock} is a {@link MxResource}. It is used to load models that were exported
+ * directly from the engine in its native format.
+ */
 public class SymbolBlock extends MxResource {
 
     private static final Logger logger = LoggerFactory.getLogger(SymbolBlock.class);
@@ -68,7 +72,8 @@ public class SymbolBlock extends MxResource {
      * <p>Use the {@link SymbolBlock#addParameter(Parameter)} method to add children. All parameters
      * in this map are automatically loaded / saved.
      */
-    protected LinkedHashMap<String, Parameter> parameters = new LinkedHashMap<>();
+    @SuppressWarnings("PMD.UseConcurrentHashMap")
+    protected Map<String, Parameter> parameters = new LinkedHashMap<>();
 
     private static final byte VERSION = 3;
 
@@ -120,8 +125,7 @@ public class SymbolBlock extends MxResource {
     }
 
     private void loadSymbol(Path symbolPath) {
-        Symbol symbol = Symbol.loadSymbol(this, symbolPath);
-        this.symbol = symbol;
+        this.symbol = Symbol.loadSymbol(this, symbolPath);
     }
 
     /**
@@ -185,6 +189,11 @@ public class SymbolBlock extends MxResource {
         symbol = newSymbol;
     }
 
+    /**
+     * Returns a {@link PairList} of input names, and shapes.
+     *
+     * @return the {@link PairList} of input names, and shapes
+     */
     public PairList<String, Shape> describeInput() {
         if (inputDescriptions == null) {
             inputDescriptions = new PairList<>();
@@ -200,6 +209,11 @@ public class SymbolBlock extends MxResource {
         return inputDescriptions;
     }
 
+    /**
+     * Returns a {@link PairList} of output names and shapes stored in model file.
+     *
+     * @return the {@link PairList} of output names, and shapes
+     */
     public PairList<String, Shape> describeOutput() {
         if (outputDescriptions == null) {
             logger.warn(
@@ -271,6 +285,35 @@ public class SymbolBlock extends MxResource {
         return forwardInternal(data, params);
     }
 
+    protected NDList forwardInternal(NDList inputs, PairList<String, Object> params) {
+        if (first) {
+            synchronized (SymbolBlock.class) {
+                if (first) {
+                    // create CachedOp is not thread-safe
+                    // add synchronized block to avoid creating multiple CachedOps
+                    op = JnaUtils.createCachedOp(this, getParent());
+                    inputDescriptions = new PairList<>();
+                    outputDescriptions = new PairList<>();
+                    for (NDArray array : inputs) {
+                        inputDescriptions.add(array.getName(), array.getShape());
+                    }
+                    NDList outputs = op.forward(inputs);
+                    for (NDArray array : outputs) {
+                        outputDescriptions.add(array.getName(), array.getShape());
+                    }
+                    first = false;
+                    return outputs;
+                }
+            }
+        }
+        return op.forward(inputs);
+    }
+
+    /**
+     * Returns a boolean whether the {@link SymbolBlock} is initialized.
+     *
+     * @return whether the block is initialized
+     */
     public boolean isInitialized() {
         for (Parameter param : getParameters().values()) {
             if (!param.isInitialized()) {
@@ -280,15 +323,20 @@ public class SymbolBlock extends MxResource {
         return true;
     }
 
+    /**
+     * Initializes the parameters of the block. This method must be called before calling `forward`.
+     *
+     * @param parent the parent {@link MxResource} to manage this initialized
+     * @param dataType the datatype of the parameters
+     * @param device the device of the parameters
+     * @param inputShapes the shapes of the inputs to the block
+     */
     public void initialize(
             MxResource parent, DataType dataType, Device device, Shape... inputShapes) {
         beforeInitialize(inputShapes);
-        // if parameters are initialized, skip it
-        if (!isInitialized()) {
-            // setShape for all params
-            //            prepare(inputShapes);
-            // do nothing
-        }
+
+        // no need to initialize() for inference
+
         for (Parameter parameter : parameters.values()) {
             parameter.initialize(parent, dataType, device);
         }
@@ -319,6 +367,12 @@ public class SymbolBlock extends MxResource {
         this.inputShapes = inputShapes;
     }
 
+    /**
+     * Returns a list of all the parameters of the block, including the parameters of its children
+     * fetched recursively.
+     *
+     * @return the list of all parameters of the SymbolBlock
+     */
     public ParameterList getParameters() {
         // we accumulate a list of all parameters by starting with a list of the direct parameters
         ParameterList allParams = getDirectParameters();
@@ -336,6 +390,11 @@ public class SymbolBlock extends MxResource {
         return allParams;
     }
 
+    /**
+     * Returns a list of all the children of the SymbolBlock.
+     *
+     * @return the list of child blocks
+     */
     public MxResourceList getChildren() {
         MxResourceList defensiveCopy = new MxResourceList(getSubResource().size());
         for (Map.Entry<String, MxResource> entry : getSubResource().entrySet()) {
@@ -344,34 +403,21 @@ public class SymbolBlock extends MxResource {
         return defensiveCopy;
     }
 
+    /**
+     * Returns a list of all the direct parameters of the SymbolBlock.
+     *
+     * @return the list of {@link Parameter}
+     */
     public ParameterList getDirectParameters() {
         return new ParameterList(parameters);
     }
 
-    protected NDList forwardInternal(NDList inputs, PairList<String, Object> params) {
-        if (first) {
-            synchronized (SymbolBlock.class) {
-                if (first) {
-                    // create CachedOp is not thread-safe
-                    // add synchronized block to avoid creating multiple CachedOps
-                    op = JnaUtils.createCachedOp(this, getParent());
-                    inputDescriptions = new PairList<>();
-                    outputDescriptions = new PairList<>();
-                    for (NDArray array : inputs) {
-                        inputDescriptions.add(array.getName(), array.getShape());
-                    }
-                    NDList outputs = op.forward(inputs);
-                    for (NDArray array : outputs) {
-                        outputDescriptions.add(array.getName(), array.getShape());
-                    }
-                    first = false;
-                    return outputs;
-                }
-            }
-        }
-        return op.forward(inputs);
-    }
-
+    /**
+     * Returns the expected output shapes of the SymbolBlock for the specified input shapes.
+     *
+     * @param inputShapes the shapes of the inputs
+     * @return the expected output shapes of the block
+     */
     public Shape[] getOutputShapes(Shape[] inputShapes) {
         if (outputShapes == null) {
             String[] outputNames = symbol.getOutputNames();
@@ -383,6 +429,7 @@ public class SymbolBlock extends MxResource {
         return outputShapes;
     }
 
+    /** Removes the last block in the symbolic graph. */
     public void removeLastBlock() {
         List<String> layerNames = getLayerNames();
         String layerName = layerNames.get(layerNames.size() - 2);
@@ -416,6 +463,12 @@ public class SymbolBlock extends MxResource {
         }
     }
 
+    /**
+     * Writes the parameters of the SymbolBlock to the given outputStream.
+     *
+     * @param os the outputstream to save the parameters to
+     * @throws IOException if an I/O error occurs
+     */
     public void saveParameters(DataOutputStream os) throws IOException {
         os.writeByte(VERSION);
         String json = symbol.toJsonString();
@@ -433,17 +486,24 @@ public class SymbolBlock extends MxResource {
         }
     }
 
-    public void loadParameters(MxResource parent, DataInputStream is)
-            throws IOException, MalformedModelException {
-        byte version = is.readByte();
-        if (version > VERSION) {
+    /**
+     * Loads the parameters from the given input stream.
+     *
+     * @param parent the parent {@link MxResource} to create the parameter arrays
+     * @param is the inputstream that stream the parameter values
+     * @throws IOException if an I/O error occurs
+     * @throws MalformedModelException if the model file is corrupted or unsupported
+     */
+    public void loadParameters(MxResource parent, DataInputStream is) throws IOException {
+        Byte currentVersion = is.readByte();
+        if (currentVersion > VERSION) {
             throw new MalformedModelException("Unsupported encoding version: " + version);
         }
-        if (version < VERSION && symbol == null) {
+        if (currentVersion < VERSION && symbol == null) {
             throw new IllegalStateException(
                     "Symbol is required for version 2, please use Model to load");
         }
-        if (version == VERSION) {
+        if (currentVersion == VERSION) {
             int len = is.readInt();
             byte[] bytes = new byte[len];
             if (is.read(bytes) == -1) {

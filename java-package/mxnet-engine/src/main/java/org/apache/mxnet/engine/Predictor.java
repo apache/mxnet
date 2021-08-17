@@ -48,8 +48,6 @@ public class Predictor<I, O> extends MxResource {
 
     private static final Logger logger = LoggerFactory.getLogger(Predictor.class);
     private Translator<I, O> translator;
-    private long timestamp;
-    private boolean prepared;
     private Model model;
 
     /**
@@ -58,9 +56,8 @@ public class Predictor<I, O> extends MxResource {
      *
      * @param model the model on which the predictions are based
      * @param translator the translator to be used
-     * @param copy whether to copy the parameters to the parameter store
      */
-    public Predictor(Model model, Translator<I, O> translator, boolean copy) {
+    public Predictor(Model model, Translator<I, O> translator) {
         super(model);
         this.model = model;
         this.translator = translator;
@@ -82,41 +79,46 @@ public class Predictor<I, O> extends MxResource {
         return processOutPut(ndLists);
     }
 
+    /**
+     * Predicts an Item for inference.
+     *
+     * @param input input data
+     * @return O the output object defined by the user
+     * @throws TranslateException if an error occurs during prediction
+     */
     public O predict(I input) {
         return predict(Collections.singletonList(input)).get(0);
     }
 
     private NDList forward(NDList ndList) {
         logger.trace("Predictor input data: {}", ndList);
-        return model.getMxSymbolBlock().forward(ndList);
+        return model.getSymbolBlock().forward(ndList);
     }
 
     // TODO: add batch predict
 
-    private NDList[] processInputs(List<I> inputs) throws TranslateException {
+    private NDList[] processInputs(List<I> inputs) {
         int batchSize = inputs.size();
         NDList[] preprocessed = new NDList[batchSize];
         try {
             for (int i = 0; i < batchSize; ++i) {
                 preprocessed[i] = translator.processInput(inputs.get(i));
             }
-        } catch (RuntimeException e) {
-            throw e;
         } catch (Exception e) {
+            logger.error("Error occurs when process input items.", e);
             throw new TranslateException(e);
         }
         return preprocessed;
     }
 
-    private List<O> processOutPut(NDList[] ndLists) throws TranslateException {
+    private List<O> processOutPut(NDList[] ndLists) {
         List<O> outputs = new ArrayList<>();
         try {
             for (NDList mxNDList : ndLists) {
                 outputs.add(translator.processOutput(mxNDList));
             }
-        } catch (RuntimeException e) {
-            throw e;
         } catch (Exception e) {
+            logger.error("Error occurs when process output items.", e);
             throw new TranslateException(e);
         }
         return outputs;

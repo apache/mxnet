@@ -37,6 +37,12 @@ public final class NDSerializer {
 
     private NDSerializer() {}
 
+    /**
+     * Allocates a new engine specific direct byte buffer.
+     *
+     * @param capacity the new buffer's capacity, in bytes
+     * @return the new byte buffer
+     */
     public static ByteBuffer allocateDirect(int capacity) {
         return ByteBuffer.allocateDirect(capacity).order(ByteOrder.nativeOrder());
     }

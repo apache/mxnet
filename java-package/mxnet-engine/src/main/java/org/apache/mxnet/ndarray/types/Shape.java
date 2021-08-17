@@ -27,9 +27,11 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
+import org.apache.mxnet.ndarray.NDArray;
 import org.apache.mxnet.util.Pair;
 import org.apache.mxnet.util.PairList;
 
+/** A class that presents the {@link NDArray}'s shape information. */
 public class Shape {
 
     private long[] shape;
