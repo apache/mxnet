@@ -1,0 +1,44 @@
+name: Native Build MXNet OSX
+
+on: [push]
+#on:
+#  schedule:
+#    # Trigger the job at 5:30 everyday
+#    - cron: '30 5 * * *'
+
+jobs:
+  native_build_mxnet_osx:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Dependencies
+        run: |
+          brew install nasm automake ninja libtool
+      - name: Build
+        run: |
+          git --version
+          clang --version
+          CMAKE_STATICBUILD=1 ./tools/staticbuild/build.sh cpu
+      - name: Upload libmxnet.dylib
+        uses: actions/upload-artifact@v2
+        with:
+          name: libmxnet.dylib
+          path: build/libmxnet.dylib
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v2
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+        with:
+          working-directory: ./java-package
+      - name: jar mxnet library
+        with:
+          working-directory: ./java-package
+        run: |
+          ./gradlew :native:jar
+          ls native/build/libs
