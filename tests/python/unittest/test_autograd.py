@@ -545,7 +545,42 @@ def test_retain_grad_drop_grad():
     out_grad = nd.array([0.1, 0.1, 0.1, 0.1])
     z.backward(out_grad)
 
-    assert u.grad is None
-    assert z.grad is None
+    assert u.grad is None and z.grad is None and y.grad is None
     assert (x.grad == out_grad * 2 * x * y).asnumpy().all()
-    assert y.grad is None
+
+def test_retain_grad_drop_grad_gluon():
+    class CompBlock(mx.gluon.HybridBlock):
+        def __init__(self):
+            super().__init__()
+            self.marked_var = None
+        def forward(self, a, b):
+            out1 = a*b
+            out2 = out1 * a
+            self.marked_var = out1
+            return out2
+    x = mx.np.array([1,2,3,4])
+    y = mx.np.array([5,6,7,8])
+    x.attach_grad()
+    y.attach_grad()
+    block2 = CompBlock()
+    block2.initialize()
+    # block2.hybridize()
+    with mx.autograd.record():
+        z = block2(x, y)
+    u = block2.marked_var
+    u.attach_grad()
+    z.attach_grad()
+    z.backward(retain_graph=True)
+
+    assert (u.grad == x).all()
+    assert (z.grad == mx.np.array([1,1,1,1])).all()
+    assert (x.grad == 2 * x * y).all()
+    assert (y.grad == x*x).all()
+
+    u.drop_grad()
+    z.drop_grad()
+    y.drop_grad()
+    z.backward()
+
+    assert u.grad is None and z.grad is None and y.grad is None
+    assert (x.grad == 2 * x * y).all()
