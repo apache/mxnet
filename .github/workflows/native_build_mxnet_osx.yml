@@ -1,4 +1,4 @@
-name: Native Build MXNet OSX
+name: Native Build MXNet OSX and Upload jar
 
 on: [push]
 #on:
@@ -16,17 +16,12 @@ jobs:
       - name: Install Dependencies
         run: |
           brew install nasm automake ninja libtool
-      - name: Build
-        run: |
-          git --version
-          clang --version
-          CMAKE_STATICBUILD=1 ./tools/staticbuild/build.sh cpu
-      - name: Upload libmxnet.dylib
-        uses: actions/upload-artifact@v2
-        with:
-          name: libmxnet.dylib
-          path: build/libmxnet.dylib
 
+#      - name: Build
+#        run: |
+#          git --version
+#          clang --version
+#          CMAKE_STATICBUILD=1 ./tools/staticbuild/build.sh cpu
       - name: Set up JDK 8
         uses: actions/setup-java@v2
         with:
@@ -37,8 +32,8 @@ jobs:
         with:
           working-directory: ./java-package
       - name: jar mxnet library
-        with:
-          working-directory: ./java-package
+        working-directory: ./java-package
         run: |
+          pwd
           ./gradlew :native:jar
-          ls native/build/libs
+#          ls native/build/libs
