@@ -165,6 +165,18 @@ void MKLDNNBatchDotForward(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<NDArray>& outputs);
 
+/* For layer normalization */
+void MKLDNNLayerNormForward(const nnvm::NodeAttrs &attrs,
+                            const OpContext &ctx,
+                            const std::vector<NDArray> &inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray> &outputs);
+void MKLDNNLayerNormBackward(const nnvm::NodeAttrs &attrs,
+                             const OpContext &ctx,
+                             const std::vector<NDArray> &inputs,
+                             const std::vector<OpReqType> &req,
+                             const std::vector<NDArray> &outputs);
+
 void MKLDNNSum(const mkldnn::memory& arr1, const mkldnn::memory& arr2, const mkldnn::memory& out);
 
 void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
