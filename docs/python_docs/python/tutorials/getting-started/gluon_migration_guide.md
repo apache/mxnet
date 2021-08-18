@@ -49,7 +49,7 @@ Adopting these new functionalities may or may not require modifications on your 
 - Bachify is not fully [supported by backend](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/data/batchify.py). 
 
 
-You can refer to [Step5 in Crash Course](./crash-course/5-datasets.rst#New-in-MXNet-2.0:-faster-C++-backend-dataloaders) for a detailed performance increase with C++ backend. 
+You can refer to [Step5 in Crash Course](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/getting-started/crash-course/5-datasets.html#New-in-MXNet-2.0:-faster-C++-backend-dataloaders) for a detailed performance increase with C++ backend. 
 ## Modeling
 In Gluon2.0, users will have a brand new modeling experience with NumPy-compatible APIs and deferred compute mechanism. 
 
