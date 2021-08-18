@@ -24,3 +24,4 @@ R-package
 3rdparty/mkldnn/doc
 3rdparty/googletest/ci
 docs
+example/image-classification/predict-cpp
