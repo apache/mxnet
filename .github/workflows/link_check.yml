@@ -35,7 +35,6 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt-get update
           sudo apt-get install -y libopenblas-dev ninja-build ccache python3-sphinx \
               pandoc gcc-7 g++-7 libopencv-dev protobuf-compiler libprotobuf-dev
           ccache -M 500M  # Limit the ccache size; Github's overall cache limit is 5GB
