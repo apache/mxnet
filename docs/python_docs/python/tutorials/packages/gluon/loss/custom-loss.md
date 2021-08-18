@@ -114,7 +114,7 @@ class GetImagePairs(mx.gluon.data.vision.ImageFolderDataset):
             image1_index, image1_tuple = random.choice(items_with_index)
         image0 = super().__getitem__(image0_index)
         image1 = super().__getitem__(image1_index)
-        label = mx.nd.array([int(image1_tuple[1] != image0_tuple[1])])
+        label = mx.np.array([int(image1_tuple[1] != image0_tuple[1])])
         return image0[0], image1[0], label
 
     def __len__(self):
@@ -146,7 +146,7 @@ Following code plots some examples from the test dataset.
 
 ```{.python .input}
 img1, img2, label = test[0]
-print("Same: {}".format(int(label.asscalar()) == 0))
+print("Same: {}".format(int(label.item()) == 0))
 fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(10, 5))
 ax0.imshow(img1.asnumpy()[:,:,0], cmap='gray')
 ax0.axis('off')
@@ -183,7 +183,7 @@ for epoch in range(10):
             loss_contrastive = loss(output1, output2, label)
         loss_contrastive.backward()
         trainer.step(image1.shape[0])
-        loss_mean = loss_contrastive.mean().asscalar()
+        loss_mean = loss_contrastive.mean().item()
         print("Epoch number {}\n Current loss {}\n".format(epoch, loss_mean))
 
 ```
@@ -196,9 +196,9 @@ During inference we compute the Euclidean distance between the output vectors of
 for i, data in enumerate(test_dataloader):
     img1, img2, label = data
     output1, output2 = model(img1, img2)
-    dist_sq = mx.ndarray.sum(mx.ndarray.square(output1 - output2))
-    dist = mx.ndarray.sqrt(dist_sq).asscalar()
-    print("Euclidean Distance:", dist, "Test label", label[0].asscalar())
+    dist_sq = mx.np.sum(mx.np.square(output1 - output2))
+    dist = mx.np.sqrt(dist_sq).item()
+    print("Euclidean Distance:", dist, "Test label", label[0].item())
     fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(10, 5))
     ax0.imshow(img1.asnumpy()[0, 0, :, :], cmap='gray')
     ax0.axis('off')

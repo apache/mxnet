@@ -31,8 +31,8 @@ import mxnet as mx
 
 kv = mx.kv.create('local') # create a local kv store.
 shape = (2,3)
-kv.init(3, mx.nd.ones(shape)*2)
-a = mx.nd.zeros(shape)
+kv.init(3, mx.np.ones(shape)*2)
+a = mx.np.zeros(shape)
 kv.pull(3, out = a)
 print(a.asnumpy())
 ```
@@ -44,7 +44,7 @@ print(a.asnumpy())
 For any key that has been initialized, you can push a new value with the same shape to the key:
 
 ```{.python .input}
-kv.push(3, mx.nd.ones(shape)*8)
+kv.push(3, mx.np.ones(shape)*8)
 kv.pull(3, out = a) # pull out the value
 print(a.asnumpy())
 ```
@@ -58,7 +58,7 @@ Please note summation only happens if the value list is longer than one
 
 ```{.python .input}
 contexts = [mx.cpu(i) for i in range(4)]
-b = [mx.nd.ones(shape, ctx) for ctx in contexts]
+b = [mx.np.ones(shape=shape, ctx=ctx) for ctx in contexts]
 kv.push(3, b)
 kv.pull(3, out = a)
 print(a.asnumpy())
@@ -82,7 +82,7 @@ print(a.asnumpy())
 `[[ 4.  4.  4.],[ 4.  4.  4.]]`<!--notebook-skip-line-->
 
 ```{.python .input}
-kv.push(3, mx.nd.ones(shape))
+kv.push(3, mx.np.ones(shape))
 kv.pull(3, out=a)
 print(a.asnumpy())
 ```
@@ -98,7 +98,7 @@ You've already seen how to pull a single key-value pair. Similarly, to push, you
 pull the value onto several devices with a single call:
 
 ```{.python .input}
-b = [mx.nd.ones(shape, ctx) for ctx in contexts]
+b = [mx.np.ones(shape=shape, ctx=ctx) for ctx in contexts]
 kv.pull(3, out = b)
 print(b[1].asnumpy())
 ```
@@ -114,9 +114,9 @@ For a single device:
 
 ```{.python .input}
 keys = [5, 7, 9]
-kv.init(keys, [mx.nd.ones(shape)]*len(keys))
-kv.push(keys, [mx.nd.ones(shape)]*len(keys))
-b = [mx.nd.zeros(shape)]*len(keys)
+kv.init(keys, [mx.np.ones(shape)]*len(keys))
+kv.push(keys, [mx.np.ones(shape)]*len(keys))
+b = [mx.np.zeros(shape)]*len(keys)
 kv.pull(keys, out = b)
 print(b[1].asnumpy())
 ```
@@ -132,7 +132,7 @@ print(b[1].asnumpy())
 For multiple devices:
 
 ```{.python .input}
-b = [[mx.nd.ones(shape, ctx) for ctx in contexts]] * len(keys)
+b = [[mx.np.ones(shape=shape, ctx=ctx) for ctx in contexts]] * len(keys)
 kv.push(keys, b)
 kv.pull(keys, out = b)
 print(b[1][1].asnumpy())

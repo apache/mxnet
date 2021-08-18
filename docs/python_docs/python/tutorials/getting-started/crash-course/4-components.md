@@ -273,7 +273,7 @@ print(curr_weight)
 
 ```{.python .input}
 batch_size = len(nn_input)
-trainer.step(batch_size)
+trainer.step(batch_size, ignore_stale_grad=True)
 print(net.weight.data())
 ```
 
@@ -364,7 +364,7 @@ p = precision()
 And finally, call the `update` method to return the results of `precision` for your data
 
 ```{.python .input}
-p.update(np.array(y_true), np.array(y_pred))
+p.update(np.array(labels), np.array(preds))
 ```
 
 ## Next steps

@@ -28,41 +28,47 @@ In this tutorial, we will learn how to use MXNet to ONNX exporter on pre-trained
 ## Prerequisites
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet >= 1.3.0](https://mxnet.apache.org/get_started)
-- [onnx]( https://github.com/onnx/onnx#user-content-installation) v1.2.1 (follow the install guide)
+- [MXNet >= 2.0.0](https://mxnet.apache.org/get_started)
+- [onnx]( https://github.com/onnx/onnx#user-content-installation) v1.7 & v1.8 (follow the install guide)
 
-*Note:* MXNet-ONNX importer and exporter follows version 7 of ONNX operator set which comes with ONNX v1.2.1.
+*Note:* MXNet-ONNX importer and exporter follows version 12 & 13 of ONNX operator set which comes with ONNX v1.7 & v1.8.
 
 
 ```{.python .input}
 import mxnet as mx
-import numpy as np
-from mxnet.contrib import onnx as onnx_mxnet
+from mxnet import initializer as init, np, onnx as mxnet_onnx
+from mxnet.gluon import nn
 import logging
 logging.basicConfig(level=logging.INFO)
 ```
 
-## Downloading a model from the MXNet model zoo
+## Create a model from the MXNet Gluon
 
-We download the pre-trained ResNet-18 [ImageNet](http://www.image-net.org/) model from the [MXNet Model Zoo](../../../api/gluon/model_zoo/index.rst).
-We will also download synset file to match labels.
+Let's build a concise model with [MXNet gluon](../../../api/gluon/index.rst) package. The model is multilayer perceptrons with two fully-connected layers. The first one is our hidden layer, which contains 256 hidden units and applies ReLU activation function. The second is our output layer. 
 
 ```{.python .input}
-# Download pre-trained resnet model - json and params by running following code.
-path='http://data.mxnet.io/models/imagenet/'
-[mx.test_utils.download(path+'resnet/18-layers/resnet-18-0000.params'),
- mx.test_utils.download(path+'resnet/18-layers/resnet-18-symbol.json'),
- mx.test_utils.download(path+'synset.txt')]
+net = nn.HybridSequential()
+net.add(nn.Dense(256, activation='relu'), nn.Dense(10))
 ```
 
-Now, we have downloaded ResNet-18 symbol, params and synset file on the disk.
+Then we initialize the model and export it into symbol file and parameter file. 
+
+```{.python .input}
+net.initialize(init.Normal(sigma=0.01))
+net.hybridize()
+input = np.ones(shape=(50,), dtype=np.float32)
+output = net(input)
+net.export("mlp")
+```
+
+Now, we have exported the model symbol, params file on the disk.
 
 ## MXNet to ONNX exporter API
 
 Let us describe the MXNet's `export_model` API.
 
 ```{.python .input}
-help(onnx_mxnet.export_model)
+help(mxnet_onnx.export_model)
 ```
 
 Output:
@@ -110,22 +116,22 @@ Since we have downloaded pre-trained model files, we will use the `export_model`
 We will use the downloaded pre-trained model files (sym, params) and define input variables.
 
 ```{.python .input}
-# Downloaded input symbol and params files
-sym = './resnet-18-symbol.json'
-params = './resnet-18-0000.params'
+# The input symbol and params files
+sym = './mlp-symbol.json'
+params = './mlp-0000.params'
 
 # Standard Imagenet input - 3 channels, 224*224
-input_shape = (1,3,224,224)
+input_shape = (50,)
 
 # Path of the output file
-onnx_file = './mxnet_exported_resnet50.onnx'
+onnx_file = './mxnet_exported_mlp.onnx'
 ```
 
 We have defined the input parameters required for the `export_model` API. Now, we are ready to covert the MXNet model into ONNX format.
 
 ```{.python .input}
 # Invoke export model API. It returns path of the converted onnx model
-converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file)
+converted_model_path = mxnet_onnx.export_model(sym, params, [input_shape], [np.float32], onnx_file)
 ```
 
 This API returns path of the converted model which you can later use to import the model into other frameworks.

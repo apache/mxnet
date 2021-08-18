@@ -26,7 +26,7 @@ In the next 10 minutes, we'll do a quick comparison between the two frameworks a
 PyTorch uses conda for installation by default, for example:
 
 ```{.python .input}
-# !conda install pytorch-cpu -c pytorch
+# !conda install pytorch-cpu -c pytorch, torchvision
 ```
 
 For MXNet we use pip:
@@ -35,10 +35,10 @@ For MXNet we use pip:
 # !pip install mxnet
 ```
 
-To install Apache MXNet with GPU support, you need to specify CUDA version. For example, the snippet below will install Apache MXNet with CUDA 9.2 support:
+To install Apache MXNet with GPU support, you need to specify CUDA version. For example, the snippet below will install Apache MXNet with CUDA 10.2 support:
 
 ```{.python .input}
-# !pip install mxnet-cuda92
+# !pip install mxnet-cu102
 ```
 
 ## Data manipulation
@@ -60,9 +60,9 @@ y
 **MXNet:**
 
 ```{.python .input}
-from mxnet import nd
+from mxnet import np
 
-x = nd.ones((5,3))
+x = np.ones((5,3))
 y = x + 1
 y
 ```
@@ -203,7 +203,7 @@ for epoch in range(5):
             loss = mx_loss_fn(mx_net(X), y)
         loss.backward()
         mx_trainer.step(batch_size=128)
-        total_loss += loss.mean().asscalar()
+        total_loss += loss.mean().item()
     print('epoch %d, avg loss %.4f, time %.2f' % (
         epoch, total_loss/len(mx_train_data), time.time()-tic))
 ```
@@ -218,7 +218,7 @@ Some of the differences in Apache MXNet when compared to PyTorch are as follows:
 
 * You need to specify the update step size (usually batch size) when performing [step()](../../../api/gluon/trainer.rst#mxnet.gluon.Trainer.step) on the trainer.
 
-* You need to call [.asscalar()](../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray.asscalar) to turn a multidimensional array into a scalar.
+* You need to call [.item()](../../../api/np/arrays.ndarray.rst#the-n-dimensional-array-ndarray) to turn a multidimensional array into a scalar.
 
 * In this sample, Apache MXNet is twice as fast as PyTorch. Though you need to be cautious with such toy comparisons.
 

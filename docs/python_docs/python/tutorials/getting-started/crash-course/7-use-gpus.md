@@ -118,6 +118,7 @@ class LeafNetwork(nn.HybridBlock):
 Load the saved parameters onto GPU 0 directly as shown below; additionally, you could use `net.collect_params().reset_ctx(gpu)` to change the device.
 
 ```{.python .input}
+net = LeafNetwork()
 net.load_parameters('leaf_models.params', ctx=gpu)
 ```
 
@@ -160,6 +161,11 @@ validation_transformer = transforms.Compose([
     transforms.Normalize(mean, std)
 ])
 
+# Use ImageFolderDataset to create a Dataset object from directory structure
+train_dataset = gluon.data.vision.ImageFolderDataset('./datasets/train')
+val_dataset = gluon.data.vision.ImageFolderDataset('./datasets/validation')
+test_dataset = gluon.data.vision.ImageFolderDataset('./datasets/test')
+
 # Create data loaders
 batch_size = 4
 train_loader = gluon.data.DataLoader(train_dataset.transform_first(training_transformer),batch_size=batch_size, shuffle=True, try_nopython=True)
@@ -172,13 +178,14 @@ This is the same test function defined previously in the **Step 6**.
 
 ```{.python .input}
 # Function to return the accuracy for the validation and test set
-def test(val_data):
+def test(val_data, devices):
     acc = gluon.metric.Accuracy()
     for batch in val_data:
-        data = batch[0]
-        labels = batch[1]
-        outputs = model(data)
-        acc.update([labels], [outputs])
+        data, label = batch[0], batch[1]
+        data_list = gluon.utils.split_and_load(data, devices)
+        label_list = gluon.utils.split_and_load(label, devices)
+        outputs = [net(X) for X in data_list]
+        acc.update(label_list, outputs)
 
     _, accuracy = acc.get()
     return accuracy
@@ -206,7 +213,7 @@ epochs = 2
 accuracy = gluon.metric.Accuracy()
 log_interval = 5
 
-for epoch in range(10):
+for epoch in range(epochs):
     train_loss = 0.
     tic = time.time()
     btic = time.time()
@@ -242,7 +249,7 @@ for epoch in range(10):
 
     _, acc = accuracy.get()
 
-    acc_val = test(validation_loader)
+    acc_val = test(validation_loader, devices)
     print(f"[Epoch {epoch + 1}] training: accuracy={acc}")
     print(f"[Epoch {epoch + 1}] time cost: {time.time() - tic}")
     print(f"[Epoch {epoch + 1}] validation: validation accuracy={acc_val}")
