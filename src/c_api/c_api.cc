@@ -1520,7 +1520,7 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
 int MXLoadLib(const char *path, unsigned verbose) {
   API_BEGIN();
   void *lib = LibraryInitializer::Get()->lib_load(path);
-  if (!*lib)
+  if (!lib)
     LOG(FATAL) << "Unable to load library";
 
   // check that library and MXNet use same version of library API
