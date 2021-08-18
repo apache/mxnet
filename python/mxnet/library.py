@@ -37,7 +37,7 @@ def load(path, verbose=True):
 
     Returns
     ---------
-    ctypes.c_void_p : handle to opened library
+    None
     """
     #check if path exists
     if not os.path.exists(path):
@@ -53,8 +53,7 @@ def load(path, verbose=True):
     verbose_val = 1 if verbose else 0
     byt_obj = path.encode('utf-8')
     chararr = ctypes.c_char_p(byt_obj)
-    lib_ptr = ctypes.c_void_p(0)
-    check_call(_LIB.MXLoadLib(chararr, mx_uint(verbose_val), ctypes.byref(lib_ptr)))
+    check_call(_LIB.MXLoadLib(chararr, mx_uint(verbose_val)))
 
     #regenerate operators
     _init_op_module('mxnet', 'ndarray', _make_ndarray_function)
@@ -73,5 +72,3 @@ def load(path, verbose=True):
     for op in dir(mx_sym_op):
         func = getattr(mx_sym_op, op)
         setattr(mx_sym, op, func)
-
-    return lib_ptr
