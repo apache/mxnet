@@ -1514,6 +1514,8 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
 /*!
  * \brief Loads dynamic custom library and initializes it
  * \param path library path
+ * \param verbose 0 for quiet, 1 for verbose
+ * \return 0 when success, -1 when failure happens.
  */
 int MXLoadLib(const char *path, unsigned verbose) {
   API_BEGIN();

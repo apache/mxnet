@@ -56,7 +56,7 @@ class LibraryInitializer {
    */
   LibraryInitializer();
 
-  ~LibraryInitializer();
+  ~LibraryInitializer() = default;
 
   /**
    * @return true if the current pid doesn't match the one that initialized the library

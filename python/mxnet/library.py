@@ -37,7 +37,7 @@ def load(path, verbose=True):
 
     Returns
     ---------
-    void
+    None
     """
     #check if path exists
     if not os.path.exists(path):
