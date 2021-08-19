@@ -255,7 +255,6 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu>*,
   AccReal* gradBiasData            = gradBias.dptr<AccReal>();
 
   const bool is_train_and_not_global_stats = ctx.is_train && !param_.use_global_stats;
-  
   mxnet::common::parallel_for(0, static_cast<int>(channelCount), [=](size_t b, size_t e) {
   for (int channel = b; channel < e; ++channel) {
     const AccReal* weight = weights.dptr<AccReal>();
