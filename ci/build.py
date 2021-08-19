@@ -42,24 +42,36 @@ import yaml
 
 from util import *
 
-DOCKER_COMPOSE_WHITELIST = ('centos7_cpu', 'centos7_gpu_cu92', 'centos7_gpu_cu100',
-                            'centos7_gpu_cu101', 'centos7_gpu_cu102', 'centos7_gpu_cu110',
-                            'centos7_gpu_cu112')
-
 # Files for docker compose
-DOCKER_COMPOSE_FILES = set(('docker/build.centos7'))
+DOCKER_COMPOSE_FILES = set(['docker/build.centos7'])
+
+# keywords to identify arm-based dockerfiles
+AARCH_FILE_KEYWORDS = ['armv', 'aarch64']
 
 def get_dockerfiles_path():
     return "docker"
 
+def get_docker_compose_platforms(path: str = get_dockerfiles_path()):
+    platforms = set()
+    with open(os.path.join(path, "docker-compose.yml"), "r") as f:
+        compose_config = yaml.load(f.read(), yaml.SafeLoader)
+        for platform in compose_config["services"]:
+            platforms.add(platform)
+    return platforms
 
-def get_platforms(path: str = get_dockerfiles_path(), legacy_only=False) -> List[str]:
-    """Get a list of architectures given our dockerfiles"""
+
+def get_platforms(path: str = get_dockerfiles_path(), arch='x86') -> List[str]:
+    """Get a list of platforms given our dockerfiles"""
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
     dockerfiles = set(filter(lambda x: x[-1] != '~', dockerfiles))
     files = set(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
-    if legacy_only:
-        files = files - DOCKER_COMPOSE_FILES
+    files = files - DOCKER_COMPOSE_FILES
+    files.update(["build."+x for x in get_docker_compose_platforms()])
+    arm_files = set(filter(lambda x: any(y in x for y in AARCH_FILE_KEYWORDS), files))
+    if arch == 'x86':
+        files = files - arm_files
+    elif arch == 'aarch64':
+        files = arm_files
     platforms = list(map(lambda x: os.path.split(x)[1], sorted(files)))
     return platforms
 
@@ -87,14 +99,21 @@ def _hash_file(ctx, filename):
                 break
             ctx.update(d)
 
+def is_docker_compose(platform: str) -> bool:
+    """:return: boolean whether specified platform container uses docker-compose"""
+    platlist = get_docker_compose_platforms()
+    platform = platform.split(".")[1] if any(x in platform for x in ['build.', 'publish.']) else platform
+    return platform in platlist
+
+
 def get_docker_tag(platform: str, registry: str) -> str:
     """:return: docker tag to be used for the container"""
-    if platform in DOCKER_COMPOSE_WHITELIST:
+    platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
+    if is_docker_compose(platform):
         with open("docker/docker-compose.yml", "r") as f:
             compose_config = yaml.load(f.read(), yaml.SafeLoader)
-            return compose_config["services"][platform]["image"].replace('${DOCKER_CACHE_REGISTRY}', registry)
+            return compose_config["services"][platform.split(".")[1]]["image"].replace('${DOCKER_CACHE_REGISTRY}', registry)
 
-    platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
         registry = "mxnet_local"
     dockerfile = get_dockerfile(platform)
@@ -121,9 +140,9 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     :return: Id of the top level image
     """
     tag = get_docker_tag(platform=platform, registry=registry)
-    
     # docker-compose
-    if platform in DOCKER_COMPOSE_WHITELIST:
+    if is_docker_compose(platform):
+        docker_compose_platform = platform.split(".")[1] if any(x in platform for x in ['build.', 'publish.']) else platform
         logging.info('Building docker container tagged \'%s\' based on ci/docker/docker-compose.yml', tag)
         # We add a user with the same group as the executing non-root user so files created in the
         # container match permissions of the local user. Same for the group.
@@ -132,7 +151,7 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
                "--build-arg", "GROUP_ID={}".format(os.getgid())]
         if cache_intermediate:
             cmd.append('--no-rm')
-        cmd.append(platform)
+        cmd.append(docker_compose_platform)
     else:
         logging.info("Building docker container tagged '%s'", tag)
         #
@@ -286,17 +305,24 @@ def container_run(platform: str,
     return 0
 
 
-def list_platforms() -> str:
-    return "\nSupported platforms:\n{}".format('\n'.join(get_platforms()))
+def list_platforms(arch='x86') -> str:
+    return "\nSupported platforms:\n{}".format('\n'.join(get_platforms(arch=arch)))
 
 
 def load_docker_cache(platform, tag, docker_registry) -> None:
     """Imports tagged container from the given docker registry"""
     if docker_registry:
-        if platform in DOCKER_COMPOSE_WHITELIST:
+        if is_docker_compose(platform):
+            docker_compose_platform = platform.split(".")[1] if any(x in platform for x in ['build.', 'publish.']) else platform
             env = os.environ.copy()
             env["DOCKER_CACHE_REGISTRY"] = docker_registry
-            cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', platform]
+            if "dkr.ecr" in docker_registry:
+                try:
+                    import docker_cache
+                    docker_cache._ecr_login(docker_registry)
+                except Exception:
+                    logging.exception('Unable to login to ECR...')
+            cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'pull', docker_compose_platform]
             logging.info("Running command: 'DOCKER_CACHE_REGISTRY=%s %s'", docker_registry, ' '.join(cmd))
             check_call(cmd, env=env)
             return
@@ -334,6 +360,11 @@ def main() -> int:
     parser.add_argument("-p", "--platform",
                         help="platform",
                         type=str)
+
+    parser.add_argument("-A", "--architecture",
+                        help="Architecture of images to build (x86 or aarch64). Default is x86.",
+                        default='x86',
+                        dest='architecture')
 
     parser.add_argument("-b", "--build-only",
                         help="Only build the container, don't build the project",
@@ -401,7 +432,7 @@ def main() -> int:
                         for e in args.environment])
 
     if args.list:
-        print(list_platforms())
+        print(list_platforms(arch=args.architecture))
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
@@ -445,9 +476,9 @@ def main() -> int:
             return ret
 
     elif args.all:
-        platforms = get_platforms()
+        platforms = get_platforms(arch=args.architecture)
         platforms = [platform for platform in platforms if 'build.' in platform]
-        logging.info("Building for all architectures: %s", platforms)
+        logging.info("Building for all platforms: %s", platforms)
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
@@ -474,7 +505,7 @@ def main() -> int:
 
     else:
         parser.print_help()
-        list_platforms()
+        list_platforms(arch=args.architecture)
         print("""
 Examples:
 
