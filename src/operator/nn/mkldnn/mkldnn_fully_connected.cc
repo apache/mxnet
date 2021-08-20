@@ -41,11 +41,11 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(const MKLDNNFCFullPar
                                                            const NDArray& weight,
                                                            const NDArray* bias,
                                                            const mkldnn::memory::desc& out_md) {
+  auto engine    = CpuEngine::Get()->get_engine();
   auto data_md   = GetMemDesc(data);
   auto weight_md = full_param.mkldnn_param.quantized
                        ? GetFCWeightDesc(weight, data.shape()[0], mshadow::kInt8)
                        : GetFCWeightDesc(weight, data.shape()[0]);
-  auto engine = CpuEngine::Get()->get_engine();
   auto propagation =
       is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
 
