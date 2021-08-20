@@ -3667,7 +3667,7 @@ int MXPushStreamDep(NDArrayHandle handle, int stream) {
   API_END();
 }
 
-int MXGetCurrentStream(int device_id, int64_t* stream) {
+int MXGetCurrentStream(int device_id, int* stream) {
   API_BEGIN();
   #if MXNET_USE_CUDA
     RunContext rctx{Context::GPU(device_id), nullptr, nullptr, false};

@@ -25,7 +25,7 @@ import ctypes
 import enum
 
 from mxnet.context import current_context
-from .base import _LIB, c_str, check_call, NDArrayHandle, mx_int64
+from .base import _LIB, c_str, check_call, NDArrayHandle, mx_int
 
 DLPackHandle = ctypes.c_void_p
 
@@ -117,7 +117,7 @@ def ndarray_from_dlpack(array_cls):
             if ctx.device_type != "gpu":
                 dlpack = ctypes.py_object(dlpack.__dlpack__())
             else:
-                s = mx_int64()
+                s = mx_int()
                 check_call(_LIB.MXGetCurrentStream(
                     ctypes.c_int(ctypes.c_int(ctx.device_id), ctypes.byref(s))))
                 dlpack = ctypes.py_object(dlpack.__dlpack__(stream=s))

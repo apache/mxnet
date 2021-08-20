@@ -3173,7 +3173,7 @@ MXNET_DLL int MXGetCurrentStream(int device_type, int device_id, int* stream);
  * \param device_id Current device id.
  * \param stream A pointer pointing to current stream. 
  */
-MXNET_DLL int MXGetCurrentStream(int device_id, int64_t* stream);
+MXNET_DLL int MXGetCurrentStream(int device_id, int* stream);
 
 #ifdef __cplusplus
 }
