@@ -2436,6 +2436,28 @@ void NDArray::WaitToWrite() const {
   Engine::Get()->WaitForVar(ptr_->var);
 }
 
+void NDArray::StreamSync(int stream) const {
+  if (is_none()) return;
+  Imperative::DCInfo::Compute(*this);
+#if MXNET_USE_CUDA
+    Engine::Get()->PushAsync(
+      [stream](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+        cudaStream_t dst = reinterpret_cast<cudaStream_t>(stream);
+        mshadow::Stream<gpu>* src = ctx.get_stream<gpu>();
+        cudaEvent_t event;
+        CUDA_CALL(cudaEventCreate(&event));
+        CUDA_CALL(cudaEventRecord(event, mshadow::Stream<gpu>::GetStream(src)));
+        CUDA_CALL(cudaStreamWaitEvent(dst, event, 0));
+        CUDA_CALL(cudaEventDestroy(event));
+        on_complete();
+      }, this->ctx(), {this->var()}, {}
+      // FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME
+    );
+#else
+    LOG(FATAL) << "GPU is not enabled";
+#endif
+}
+
 #if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray

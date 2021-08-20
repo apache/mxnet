@@ -50,7 +50,7 @@ from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
-from ..dlpack import ndarray_from_numpy
+from ..dlpack import ndarray_from_numpy, ndarray_to_dlpack_for_write, DLDeviceType
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
@@ -410,6 +410,45 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                                            zero_copy=func_name in {'may_share_memory', 'shares_memory'})
                 new_kwargs = {k: _as_mx_np_array(v, cur_ctx) for k, v in kwargs.items()}
                 return mx_np_func(*new_args, **new_kwargs)
+
+
+    def __dlpack__(self, stream=None):
+        """Exports the array for consumption by from_dlpack() as a DLPack capsule.
+
+        Parameters
+        ----------
+        stream : int, optional
+            A Python integer representing a pointer to a stream (CUDA or ROCm).
+            Stream is provided by the consumer to the producer to instruct the producer
+            to ensure that operations can safely be performed on the array. The pointer must
+            be positive integer or -1. If stream is -1, the value must be used by the consumer
+            to signal "producer must not perform any synchronization". 
+
+        Returns
+        -------
+        capsule : PyCapsule
+            A DLPack capsule for the array, containing a DLPackManagedTensor.
+        """
+        if stream is not None:
+            if type(stream) is not int:
+                raise TypeError('The input stream must be int or None')
+            elif self.ctx.device_type != "gpu":
+                raise ValueError('Stream {} is not supported in current device {}'\
+                    .format(stream, self.ctx.device_type))
+            elif stream != -1:
+                check_call(_LIB.MXPushStreamDep(self.handle, ctypes.c_int64(stream)))
+        to_dlpack_write = ndarray_to_dlpack_for_write()
+        return to_dlpack_write(self)
+
+
+    def __dlpack_device__(self):
+        """Returns device type and device ID in DLPack format"""
+        devtype_map = {'cpu': DLDeviceType.kDLCPU,
+                       'gpu': DLDeviceType.kDLGPU,
+                       'cpu_pinned': DLDeviceType.kDLCPUPinned}
+        if self.ctx.device_type not in devtype_map:
+            raise ValueError('Unkown device type {} for DLPack'.format(self.ctx.device_type))
+        return (devtype_map(self.ctx.device_type), self.ctx.device_id)
 
 
     def _get_np_basic_indexing(self, key):

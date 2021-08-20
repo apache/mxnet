@@ -3153,6 +3153,28 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
 MXNET_DLL int MXCheckDynamicShapeOp(SymbolHandle sym_handle,
                                     bool* has_dynamic_shape);
 
+/*!
+ * \brief Synchronize the consumer stream with the producer stream where the NDArray lives.
+ * \param handle NDArray handle of producer.
+ * \param stream A pointer to a stream from consumer.
+ */
+MXNET_DLL int MXPushStreamDep(NDArrayHandle handle, int stream);
+
+/*!
+ * \brief Get current stream pointer based on current device type and id
+ * \param device_type Current device type.
+ * \param device_id Current device id.
+ * \param stream A pointer pointing to current stream. 
+ */
+MXNET_DLL int MXGetCurrentStream(int device_type, int device_id, int* stream);
+
+/*!
+ * \brief Get current stream pointer based on current device type and id
+ * \param device_id Current device id.
+ * \param stream A pointer pointing to current stream. 
+ */
+MXNET_DLL int MXGetCurrentStream(int device_id, int64_t* stream);
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

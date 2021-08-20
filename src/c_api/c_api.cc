@@ -3660,3 +3660,21 @@ int MXShallowCopyNDArray(NDArrayHandle src_handle, NDArrayHandle* out) {
   *out = ret;
   API_END_HANDLE_ERROR(delete ret);
 }
+
+int MXPushStreamDep(NDArrayHandle handle, int stream) {
+  API_BEGIN();
+  static_cast<NDArray*>(handle)->StreamSync(stream);
+  API_END();
+}
+
+int MXGetCurrentStream(int device_id, int64_t* stream) {
+  API_BEGIN();
+  #if MXNET_USE_CUDA
+    RunContext rctx{Context::GPU(device_id), nullptr, nullptr, false};
+    mshadow::Stream<gpu>* cur_stream = rctx.get_stream<gpu>();
+    *stream = reinterpret_cast<int64_t>(mshadow::Stream<gpu>::GetStream(cur_stream));
+  #else
+    LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
+  #endif
+  API_END();
+}
