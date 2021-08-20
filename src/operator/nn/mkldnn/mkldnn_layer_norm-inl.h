@@ -19,6 +19,7 @@
 
 /*!
  * \file mkldnn_layer_norm-inl.h
+ * \author: Bartosz Kuncer, bartosz.kuncer@intel.com
  */
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_LAYER_NORM_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_LAYER_NORM_INL_H_

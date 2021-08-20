@@ -19,6 +19,7 @@
 
 /*!
  * \file mkldnn_layer_norm.cc
+ * \author: Bartosz Kuncer, bartosz.kuncer@intel.com
  */
 
 #if MXNET_USE_ONEDNN == 1
