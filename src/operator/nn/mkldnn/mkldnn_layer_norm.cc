@@ -186,7 +186,8 @@ void MKLDNNLayerNormBwd::Execute(const std::vector<NDArray>& inputs,
   auto scale_shift_mem =
       GetScaleShiftMem(inputs[layernorm::kBwdGamma], inputs[layernorm::kBwdBeta]);
   auto diff_weights_ndarray = NDArray(scale_shift_mem.get_desc());
-  const auto bytes          = inputs[layernorm::kBwdGamma].shape()[0] * sizeof(float);
+  const auto bytes          = inputs[layernorm::kBwdGamma].shape()[0] *
+                     mshadow::mshadow_sizeof(inputs[layernorm::kBwdGamma].dtype());
   const auto diff_weights_ndaray_data_ptr_plus_bytes = reinterpret_cast<void*>(
       reinterpret_cast<std::uintptr_t>(diff_weights_ndarray.data().dptr_) + bytes);
   if (req[layernorm::kBwdGammaGrad] == kAddTo) {
