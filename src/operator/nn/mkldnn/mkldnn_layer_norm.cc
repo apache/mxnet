@@ -70,7 +70,6 @@ MKLDNNLayerNormFwd& MKLDNNLayerNormFwd::GetCached(const LayerNormParam& param,
 
   LayerNormSignature key(param);
   key.AddSign(data);
-  key.AddSign(param.eps);
 
   auto it = layer_norm_fwds.find(key);
   if (it == layer_norm_fwds.end()) {
@@ -83,7 +82,7 @@ MKLDNNLayerNormFwd& MKLDNNLayerNormFwd::GetCached(const LayerNormParam& param,
 MKLDNNLayerNormFwd::MKLDNNLayerNormFwd(const LayerNormParam& param, const NDArray& data) {
   const mkldnn::memory::desc data_md = data.GetMKLDNNData()->get_desc();
   fwd_pd                             = CreatePrimitiveDesc(param, data_md);
-  fwd = std::make_shared<mkldnn::layer_normalization_forward>(*fwd_pd);
+  fwd = std::make_shared<layernorm_fwd_t>(*fwd_pd);
 }
 
 std::shared_ptr<layernorm_fwd_pd_t> MKLDNNLayerNormFwd::CreatePrimitiveDesc(
@@ -234,7 +233,6 @@ MKLDNNLayerNormBwd& MKLDNNLayerNormBwd::GetCached(const LayerNormParam& param,
   key.AddSign(inputs[layernorm::kBwdMean]);
   key.AddSign(inputs[layernorm::kBwdStd]);
   key.AddSign(inputs[layernorm::kBwdBeta]);
-  key.AddSign(param.eps);
 
   auto it = layer_norm_bwds.find(key);
   if (it == layer_norm_bwds.end()) {
