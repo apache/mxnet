@@ -3162,14 +3162,6 @@ MXNET_DLL int MXPushStreamDep(NDArrayHandle handle, int stream);
 
 /*!
  * \brief Get current stream pointer based on current device type and id
- * \param device_type Current device type.
- * \param device_id Current device id.
- * \param stream A pointer pointing to current stream. 
- */
-MXNET_DLL int MXGetCurrentStream(int device_type, int device_id, int* stream);
-
-/*!
- * \brief Get current stream pointer based on current device type and id
  * \param device_id Current device id.
  * \param stream A pointer pointing to current stream. 
  */
