@@ -19,11 +19,11 @@
 # Gluon2.0: Migration Guide
 
 ## Overview
-Since the introduction of the Gluon API in MXNet 1.x, it has superceded commonly used symbolic, module and model APIs for model development. In fact, Gluon was the first in deep learning community to unify the flexibility of imperative programming with the performance benefits of symbolic programming, through just-in-time compilation. 
+Since the introduction of the Gluon API in MXNet 1.x, it has superseded commonly used symbolic, module and model APIs for model development. In fact, Gluon was the first in the deep learning community to unify the flexibility of imperative programming with the performance benefits of symbolic programming, through just-in-time compilation. 
 
 In Gluon2.0, we extend the support to MXNet numpy and numpy extension with simplified interface and new functionalities: 
 
-- **Simplified hybridization with deferred compute and tracing**: Deferred compute allows the imperative execution to be used for graph construction, which allows us to unify the historic divergence of NDArray and Symbol. Hybridization now works in a simplified hybrid forward interface. Users only need to specify the computation through imperative programming. Hybridization also works through tracing, i.e. tracing the data flow of the first input data to create graph.
+- **Simplified hybridization with deferred compute and tracing**: Deferred compute allows the imperative execution to be used for graph construction, which allows us to unify the historic divergence of NDArray and Symbol. Hybridization now works in a simplified hybrid forward interface. Users only need to specify the computation through imperative programming. Hybridization also works through tracing, i.e. tracing the data flow of the first input data to create a graph.
 
 - **Data 2.0**: The new design for data loading in Gluon allows hybridizing and deploying data processing pipeline in the same way as model hybridization. The new C++ data loader improves data loading efficiency on CIFAR 10 by 50%.
 
@@ -40,29 +40,29 @@ Adopting these new functionalities may or may not require modifications on your 
 
 **Migration Guide**: Users can continue with the traditional gluon.data.Dataloader and the C++ backend will be applied automatically. 
 
-[Gluon2.0 dataloader](../../api/gluon/data/index.rst#mxnet.gluon.data.DataLoader) will provide a new parameter called `try_nopython`. This parameter takes default value of None; when set to `True` the dataloader will compile python dataloading pipeline into pure MXNet c++ implementation. The compilation is not guaranteed to support all use cases, but it will fallback to python in case of failure: 
+[Gluon2.0 dataloader](../../api/gluon/data/index.rst#mxnet.gluon.data.DataLoader) will provide a new parameter called `try_nopython`. This parameter takes a default value of None; when set to `True` the dataloader will compile the python dataloading pipeline into pure MXNet c++ implementation. The compilation is not guaranteed to support all use cases, but it will fallback to python in case of failure: 
 
-- The dataset is not fully [supported by backend](../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset)(e.g., there are custom python datasets).
+- The dataset is not fully [supported by the backend](../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset)(e.g., there are custom python datasets).
 
 - Transform is not fully hybridizable. 
 
-- Bachify is not fully [supported by backend](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/data/batchify.py). 
+- Bachify is not fully [supported by the backend](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/data/batchify.py). 
 
 
 You can refer to [Step5 in Crash Course](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/getting-started/crash-course/5-datasets.html#New-in-MXNet-2.0:-faster-C++-backend-dataloaders) for a detailed performance increase with C++ backend. 
 ## Modeling
-In Gluon2.0, users will have a brand new modeling experience with NumPy-compatible APIs and deferred compute mechanism. 
+In Gluon2.0, users will have a brand new modeling experience with NumPy-compatible APIs and the deferred compute mechanism. 
 
 - **NumPy-compatible programing experience**: users can build their models with MXNet implementation with NumPy array library, NumPy-compatible math operators and some neural network extension operators. 
 
-- **Imperative-only coding experience**: with deferred compute and tracing being introduced, users only need to specify the computation through imperative coding but can still make hybridization work. Users will no longer need to interact with symbol APIs. 
+- **Imperative-only coding experience**: with the deferred compute and tracing being introduced, users only need to specify the computation through imperative coding but can still make hybridization work. Users will no longer need to interact with symbol APIs. 
 
-To help users migrate smoothly to use these simplified interface, we will provide the following guidance on how to replace legacy operators with NumPy-compatible operators, how to build models with `forward` instead of `hybrid_forward` and how to use `Parameter` class to register your parameters. 
+To help users migrate smoothly to use these simplified interfaces, we will provide the following guidance on how to replace legacy operators with NumPy-compatible operators, how to build models with `forward` instead of `hybrid_forward` and how to use `Parameter` class to register your parameters. 
 
 
 ### NumPy-compatible Programming Experience
 #### NumPy Arrays
-MXNet [NumPy ndarray(i.e. `mx.np.ndarray`)](../../api/np/arrays.ndarray.html) is a multidimensional container of items of the same type and size. Most of its properties and attributes are the same as legacy NDArrays(i.e. `mx.nd.ndarray`), so users can use NumPy array library just as they did with legacy NDArrays. But, there are still some changes and deprecations that needs attention, as mentioned below. 
+MXNet [NumPy ndarray(i.e. `mx.np.ndarray`)](../../api/np/arrays.ndarray.html) is a multidimensional container of items of the same type and size. Most of its properties and attributes are the same as legacy NDArrays(i.e. `mx.nd.ndarray`), so users can use the NumPy array library just as they did with legacy NDArrays. But, there are still some changes and deprecations that need attention, as mentioned below. 
 **Migration Guide**: 
 
 1. Currently, NumPy ndarray only supports `default` storage type, other storage types, like `row_sparse`, `csr` are not supported. Also, `tostype()` attribute is deprecated. 
@@ -87,11 +87,11 @@ MXNet [NumPy ndarray(i.e. `mx.np.ndarray`)](../../api/np/arrays.ndarray.html) is
 4. Compared with legacy NDArray, some attributes will have different behaviors and take different inputs. 
     |          Attribute            | Legacy Inputs | NumPy Inputs |
     | ----------------------------- | ------------------------ | -------- |
-    | `a.reshape(*args, **kwargs)`  | **shape**: Some dimensions of the shape can take special values from the set {0, -1, -2, -3, -4}. <br> The significance of each is explained below: <br>  ``0``  copy this dimension from the input to the output shape. <br>  ``-1`` infers the dimension of the output shape by using the remainder of the input dimensions. <br> ``-2`` copy all/remainder of the input dimensions to the output shape. <br> ``-3`` use the product of two consecutive dimensions of the input shape as the output dimension. <br> ``-4`` split one dimension of the input into two dimensions passed subsequent to -4 in shape (can contain -1). <br> **reverse**: If set to 1, then the special values are inferred from right to left | **shape**: shape parameter will be **positional argument** rather than key-word argument. <br> Some dimensions of the shape can take special values from the set {-1, -2, -3, -4, -5, -6}. <br> The significance of each is explained below: <br>  ``-1`` infers the dimension of the output shape by using the remainder of the input dimensions. <br> ``-2`` copy this dimension from the input to the output shape. <br> ``-3`` will skip current dimension if and only if the current dim size is one. <br> ``-4`` copy all remain of the input dimensions to the output shape. <br> ``-5`` use the product of two consecutive dimensions of the input shape as the output. <br> ``-6`` split one dimension of the input into two dimensions passed subsequent to -6 in the new shape. <br> **reverse**: No **reverse** parameter for `np.reshape` but for `npx.reshape`. <br> **order**: Read the elements of `a` using this index order, and place the elements into the reshaped array using this index order. |
+    | `a.reshape(*args, **kwargs)`  | **shape**: Some dimensions of the shape can take special values from the set {0, -1, -2, -3, -4}. <br> The significance of each is explained below: <br>  ``0``  copy this dimension from the input to the output shape. <br>  ``-1`` infers the dimension of the output shape by using the remainder of the input dimensions. <br> ``-2`` copy all/remainder of the input dimensions to the output shape. <br> ``-3`` use the product of two consecutive dimensions of the input shape as the output dimension. <br> ``-4`` split one dimension of the input into two dimensions passed subsequent to -4 in shape (can contain -1). <br> **reverse**: If set to 1, then the special values are inferred from right to left | **shape**: shape parameter will be **positional argument** rather than key-word argument. <br> Some dimensions of the shape can take special values from the set {-1, -2, -3, -4, -5, -6}. <br> The significance of each is explained below: <br>  ``-1`` infers the dimension of the output shape by using the remainder of the input dimensions. <br> ``-2`` copy this dimension from the input to the output shape. <br> ``-3`` skip the current dimension if and only if the current dim size is one. <br> ``-4`` copy all the remaining the input dimensions to the output shape. <br> ``-5`` use the product of two consecutive dimensions of the input shape as the output. <br> ``-6`` split one dimension of the input into two dimensions passed subsequent to -6 in the new shape. <br> **reverse**: No **reverse** parameter for `np.reshape` but for `npx.reshape`. <br> **order**: Read the elements of `a` using this index order, and place the elements into the reshaped array using this index order. |
 
 
 #### NumPy and NumPy-extension Operators
-Most of the legacy NDArray operators(`mx.nd.op`) have the equivalent ones in np/npx namespace, users can just repalce them with `mx.np.op` or `mx.npx.op` to migrate. Some of the operators will have different inputs and behaviors as listed in the table below. 
+Most of the legacy NDArray operators(`mx.nd.op`) have the equivalent ones in np/npx namespace. Users can just replace them with `mx.np.op` or `mx.npx.op` to migrate. Some of the operators will have different inputs and behaviors as listed in the table below. 
 **Migration Guide**:
 
 1. Operators migration with name/inputs changes
@@ -123,7 +123,7 @@ np_mean = mx.np.mean(data, axis=axes)
 3. Random Operators
     |                   Legacy Operators               |    NumPy Operators Equivalent    |   Changes  |
     | ----------------------------------------------------- | ------------------------------ | ---------------------------- |
-    |       `mx.random.uniform(-1.0, 1.0, shape=(2, 3))` <br> `mx.nd.random.uniform(-1.0, 1.0, shape=(2, 3))`                |            `mx.np.random.uniform(-1.0, 1.0, size=(2, 3))`                    |                For all the NumPy random operators, use **size** key word instead of **shape**           |
+    |       `mx.random.uniform(-1.0, 1.0, shape=(2, 3))` <br> `mx.nd.random.uniform(-1.0, 1.0, shape=(2, 3))`                |            `mx.np.random.uniform(-1.0, 1.0, size=(2, 3))`                    |                For all the NumPy random operators, use **size** keyword instead of **shape**           |
     |       `mx.nd.random.multinomial(*args, **kwargs)`              |            `mx.npx.random.categorical(*args, **kwargs)`                    |                [use `npx.random.categorical` to have the behavior of drawing 1 sample from multiple distributions.](https://github.com/apache/incubator-mxnet/issues/20373#issuecomment-869120214)           |
 
 4. Control Flow Operators
@@ -145,10 +145,10 @@ Other operator changes are included in [**Appendix/NumPy and NumPy-extension Ope
 
 
 ### Layers and Blocks
-With deferred compute and tracing being introduced in Gluon2.0, users do not need to interact with symbols any more. There are a lot of changes in building a model with Gluon API, including parameter management and naming, forward pass computing and parameter shape inferencing. We will provide a step-by-step migration guidance on how to build a model with new APIs.
+With the deferred compute and tracing being introduced in Gluon2.0, users do not need to interact with symbols any more. There are a lot of changes in building a model with Gluon API, including parameter management and naming, forward pass computing and parameter shape inferencing. We provide step-by-step migration guidance on how to build a model with new APIs. 
 
 #### Parameter Management and Block Naming
-In Gluon, each Parameter or Block has a name (and prefix). Parameter names are specified by users and Block names can be either specified by users or automatically created. In Gluon 1.x, parameters are accessed via the `params` variable of the `ParameterDict` in `Block`. Users will need to manually use `with self.name_scope():` for children blocks and specify prefix for the top level block. Otherwise, it will lead to wrong name scopes and can return parameters of children blocks that are not in current name scope. An example for initializing the Block and Parameter in Gluon 1.x: 
+In Gluon, each Parameter or Block has a name (and prefix). Parameter names are specified by users and Block names can be either specified by users or automatically created. In Gluon 1.x, parameters are accessed via the `params` variable of the `ParameterDict` in `Block`. Users will need to manually use `with self.name_scope():` for children blocks and specify prefix for the top level block. Otherwise, it will lead to wrong name scopes and can return parameters of children blocks that are not in the current name scope. An example for initializing the Block and Parameter in Gluon 1.x: 
 ```{.python}
 from mxnet.gluon import Parameter, Constant, HybridBlock
 class SampleBlock(HybridBlock):
@@ -170,7 +170,7 @@ class SampleBlock(HybridBlock):
         # Access constant parameters, which are not iterated during training
         self.weight = Constant('const', const_arr)
 ```
-Also, there will be new mechanism for parameter loading, sharing and setting context. 
+Also, there will be new mechanisms for parameter loading, sharing and setting context. 
 
 1. Parameter loading in Gluon 1.x vs Gluon 2.0:
     ```{.python}
