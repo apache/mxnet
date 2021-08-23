@@ -1070,7 +1070,7 @@ def should_pack_website() {
 // Call this function from Jenkins to generate just the Python API microsite artifacts.
 def docs_python(lib_name) {
     return ['Python Docs': {
-      node(NODE_LINUX_GPU_G4) {
+      node(NODE_LINUX_GPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cython)
