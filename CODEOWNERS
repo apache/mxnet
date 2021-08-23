@@ -1,0 +1,75 @@
+# Watchers and contributors to Apache MXNet repo directories/packages/files
+# Please see documentation of use of CODEOWNERS file at
+# https://help.github.com/articles/about-codeowners/ and
+# https://github.com/blog/2392-introducing-code-owners
+#
+# Anybody can add themselves or a team as additional watcher or contributor
+# to get notified about changes in a specific package.
+# See https://help.github.com/articles/about-teams how to setup teams.
+
+
+# Global owners
+*			@apache/mxnet-committers
+
+# Language bindings
+/R-package/                       @thirdwing
+/scala-package/                   @yzhliu @nswamy @pllarroy
+/perl-package/                    @sergeykolychev
+/python/                          @szha @pllarroy
+/python/mxnet/kvstore.py          @eric-haibin-lin
+/python/mxnet/optimizer/          @eric-haibin-lin
+/python/mxnet/gluon/trainer.py    @eric-haibin-lin
+/contrib/clojure-package/         @gigasquid
+/julia/                           @iblis17
+
+# C++ base
+/src/kvstore/     @rahul003 @eric-haibin-lin @apeforest
+/include/         @pllarroy @eric-haibin-lin
+/src/c_api/       @eric-haibin-lin @apeforest
+/src/engine/      @eric-haibin-lin @apeforest
+/src/executor/    @eric-haibin-lin @apeforest
+/src/imperative/  @eric-haibin-lin @apeforest
+/src/io/          @eric-haibin-lin @apeforest
+/src/ndarray/     @eric-haibin-lin @apeforest
+/src/nnvm/        @eric-haibin-lin @apeforest
+/src/operator/    @eric-haibin-lin @apeforest
+/src/profiler/    @eric-haibin-lin
+/src/storage/     @eric-haibin-lin
+/cpp-package/     @nswamy @pllarroy
+/src/             @pllarroy
+/plugin/          @pllarroy
+
+# Build system
+CMakeLists.txt    @szha @pllarroy @leezu
+/cmake/           @szha @pllarroy @leezu
+/make/            @szha
+
+# MXNet CI
+dev_menu.py         @pllarroy
+/ci/                @pllarroy @marcoabreu @aaronmarkham
+/ci/publish/        @szha
+/docker/            @marcoabreu
+/tests/ci_build/    @marcoabreu
+Jenkinsfile         @marcoabreu
+
+# MXNet CD
+/cd/                @szha
+
+# Build logic
+Makefile          @szha
+prepare_mkl.sh    @szha
+
+# Docs
+/docs/            @szha @pllarroy @aaronmarkham
+
+# Submodules
+.gitmodules       @szha
+
+# Examples
+/example/         @szha @pllarroy @aaronmarkham
+
+# Tools
+/tools/           @szha @pllarroy
+
+# Github configuration
+/.github/         @szha @leezu

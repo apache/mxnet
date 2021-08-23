@@ -1,0 +1,48 @@
+.mdl-card {
+    margin: 1em 1.5em 1em 0;
+    display: inline-block;
+    width: 250px;
+    min-height: 140px;
+    padding: 18px;
+}
+.mdl-card:hover {
+    box-shadow: 0 10px 20px rgba(0,0,0,0.25), 0 6px 6px rgba(0,0,0,0.22);
+    color: #000;
+    cursor: pointer;
+}
+.mdl-card__title {
+    padding: 0 0 1em 0;
+    font-size: 18px;
+    color: #444;
+}
+
+.mdl-card__supporting-text {
+    line-height: 1.5rem;
+    padding: 0px;
+    width: 100%;
+}
+
+.head-card.mdl-card {
+    width: auto;
+    display: block;
+    max-width: 800px;
+    padding: 24px;
+}
+
+.head-card > .mdl-card__title {
+    padding-bottom: 0px;
+    height: 60px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.head-card > .mdl-card__menu {
+    color: #fff;
+}
+.head-card > .mdl-card__actions {
+    padding: 0;
+}
+.cards {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}

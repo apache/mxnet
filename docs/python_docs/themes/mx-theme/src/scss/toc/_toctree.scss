@@ -1,0 +1,38 @@
+/*
+ *  Toctree and Contents Directive Styles
+ */
+ .toctree-wrapper,
+ .contents.topic {
+     border-left: 5px solid;
+ }
+
+ .toctree-wrapper > p.caption,
+ .contents.topic > p.topic-title {
+     color: rgb(117, 117, 117);
+     font-size: 1rem;
+     padding-left: 14px;
+ }
+
+ .toctree-wrapper ul,
+ .contents.topic ul{
+     padding-left: 14px;
+     list-style: none;
+     line-height: 30px;
+ }
+
+ .toctree-wrapper a,
+ .contents.topic a {
+     font-size: 1.2rem;
+     text-decoration: none;
+     .pre {
+         font-size: 1rem;
+     }
+ }
+
+ .toctree-wrapper > ul > li > a,
+ .contents.topic > ul > li > a {
+     font-size: 1.3rem;
+     .pre {
+         font-size: 1.1rem;
+     }
+ }

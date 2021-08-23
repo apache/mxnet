@@ -1,0 +1,44 @@
+---
+  # Licensed to the Apache Software Foundation (ASF) under one
+  # or more contributor license agreements.  See the NOTICE file
+  # distributed with this work for additional information
+  # regarding copyright ownership.  The ASF licenses this file
+  # to you under the Apache License, Version 2.0 (the
+  # "License"); you may not use this file except in compliance
+  # with the License.  You may obtain a copy of the License at
+  #   http://www.apache.org/licenses/LICENSE-2.0
+  # Unless required by applicable law or agreed to in writing,
+  # software distributed under the License is distributed on an
+  # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  # KIND, either express or implied.  See the License for the
+  # specific language governing permissions and limitations
+  # under the License.
+
+layout: default
+---
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+    <header class="post-header">
+        <h1 class="post-title p-name" itemprop="name headline">{{ page.title | escape }}</h1>
+        <p class="post-meta">
+            <time class="dt-published" datetime="{{ page.date | date_to_xmlschema }}" itemprop="datePublished">
+                {%- assign date_format = site.minima.date_format | default: "%b %-d, %Y" -%}
+                {{ page.date | date: date_format }}
+            </time>
+            {%- if page.author -%}
+            • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card"
+                                                                                          itemprop="name">{{ page.author }}</span></span>
+            {%- endif -%}
+        </p>
+    </header>
+
+    <div class="post-content e-content" itemprop="articleBody">
+        {{ content }}
+    </div>
+
+    {%- if site.disqus.shortname -%}
+    {%- include disqus_comments.html -%}
+    {%- endif -%}
+
+    <a class="u-url" href="{{ page.url | relative_url }}" hidden></a>
+</article>

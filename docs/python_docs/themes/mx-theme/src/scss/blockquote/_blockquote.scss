@@ -1,0 +1,18 @@
+/*
+ * Quotation Block Styles
+ */
+ .page-content {
+    blockquote {
+        font-size: 1rem;
+        padding: 0 1rem;
+        border-left: 3px solid $code_background;
+
+        &:after {
+            content: "" !important;
+            margin-left: 0;
+        }
+        &:before {
+            content: "" !important;
+        }
+    }
+ }

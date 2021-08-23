@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/apache/mxnet/discussions
+    about: Use GitHub Discussions to ask and answer questions, exchange ideas, and share learning.
+  - name: Discourse Forum
+    url: https://discuss.mxnet.io/
+    about: Discuss forum for usage questions.
+  - name: Stack Overflow
+    url: https://stackoverflow.com/questions/tagged/mxnet
+    about: Ask and answer usage questions on Stack Overflow

@@ -1,0 +1,45 @@
+<header class="mdl-layout__header {% if theme_header_waterfall|tobool %}mdl-layout__header--waterfall{% endif %} {% if theme_header_scroll|tobool %}mdl-layout__header--scroll{% endif %}">
+    <div class="mdl-layout__header-row">
+        {% if theme_show_header_title|tobool %}
+        <!-- Title -->
+        <span class="mdl-layout-title">
+            <a class="brand" href="{{ pathto(master_doc) }}">
+                {%- if logo %}
+                <img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="{{ project }}"/>
+                {%- else %}
+                {{ project }}
+                {%- endif %}
+            </a>
+        </span>
+        {% endif %}
+        <nav class="mdl-navigation breadcrumb">
+            {%- for parent in parents %}
+            <a class="mdl-navigation__link" href="{{ parent.link|e }}">{{ parent.title }}</a><i class="material-icons">navigate_next</i>
+            {%- endfor %}
+            <a class="mdl-navigation__link is-active">{{ title }}</a>
+        </nav>
+        <div class="mdl-layout-spacer"></div>
+        <nav class="mdl-navigation">
+        {% include "header_search.html" %}
+        {% include "header_sourcelink.html" %}
+        </nav>
+    </div>
+    <div class="mdl-layout__header-row header-links">
+      <div class="mdl-layout-spacer"></div>
+      <nav class="mdl-navigation">
+      {%- for title, href, isExternal, icon in theme_header_links %}
+          {% if isExternal %}
+              <a  class="mdl-navigation__link" href="{{ href }}">
+                  {% if icon %}<i class="{{ icon }}"></i>{% endif %}
+                  {{ title }}
+              </a>
+          {%- else -%}
+              <a  class="mdl-navigation__link" href="{{ pathto(href) }}">
+                  {% if icon %}<i class="{{ icon }}"></i>{% endif %}
+                  {{ title }}
+              </a>
+          {%- endif -%}
+      {%- endfor %}
+      </nav>
+    </div>
+</header>

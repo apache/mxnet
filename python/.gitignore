@@ -1,0 +1,4 @@
+dist
+*.egg-info
+build
+*.cpp

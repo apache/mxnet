@@ -1,0 +1,58 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# The checks defined here will be run and will display by default as warnings.
+Checks: >
+    -*, cppcoreguidelines-* clang-analyzer-*, modernize-*,
+    performance-faster-string-find, performance-for-range-copy,
+    performance-implicit-conversion-in-loop, performance-inefficient-algorithm,
+    performance-inefficient-string-concatenation, performance-trivially-destructible,
+    performance-inefficient-vector-operation, performance-move-const-arg,
+    performance-move-constructor-init, performance-noexcept-move-constructor,
+    performance-no-automatic-move, performance-unnecessary-copy-initialization,
+    performance-type-promotion-in-math-fn
+
+# performance checks not enabled due to segmentation fault in clang-tidy v8+:
+# performance-unnecessary-value-param
+
+# In order to trigger an error, you must have a rule defined both in checks and in this section.
+WarningsAsErrors: >
+    cppcoreguidelines-no-malloc, modernize-deprecated-headers,
+    modernize-loop-convert, modernize-make-shared, modernize-pass-by-value, modernize-make-unique,
+    modernize-raw-string-literal, modernize-redundant-void-arg, modernize-replace-auto-ptr,
+    modernize-replace-random-shuffle, modernize-return-braced-init-list, modernize-shrink-to-fit,
+    modernize-unary-static-assert, modernize-use-bool-literals, modernize-use-default-member-init,
+    modernize-use-emplace, modernize-use-equals-default, modernize-use-equals-delete,
+    modernize-use-noexcept, modernize-use-nullptr, modernize-use-override,
+    modernize-use-transparent-functors, modernize-use-using,
+    performance-faster-string-find, performance-implicit-conversion-in-loop,
+    performance-inefficient-algorithm, performance-inefficient-string-concatenation,
+    performance-trivially-destructible, performance-inefficient-vector-operation,
+    performance-move-const-arg, performance-move-constructor-init,
+    performance-noexcept-move-constructor, performance-no-automatic-move,
+    performance-unnecessary-copy-initialization, performance-type-promotion-in-math-fn
+
+# modernize checks not enforced:
+# modernize-use-auto
+# modernize-avoid-bind
+
+# performance checks not enforced due to segmentation fault
+# performance-for-range-copy
+
+# Todo: define a better regex match that includes most project headers, but excludes third party
+# code.
+HeaderFilterRegex: '^src/.*'

@@ -1,0 +1,78 @@
+.globaltoc {
+    
+    .caption, .toc {
+        display: none;
+    }
+
+    ul {
+
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+
+        li {
+            min-height: 18px;
+            .link-wrapper {
+                display: flex;
+                justify-content: space-between;
+                > a {
+                    padding: 4px 0;
+                    display: block;
+                    width: 100%;
+                    font-size: 1rem;
+                    text-decoration: none;
+                    color: $layout-drawer-navigation-color;
+                    &.current {
+                        font-weight: bold;
+                    }
+                }
+            }
+        }
+    }
+
+    .nav-toggle {
+        padding: 0;
+        float: right;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 36px;
+        > a {
+            padding: 0;
+            margin-left: 0;
+            margin-right: 4px;
+            cursor: pointer;
+            > i {
+                font-size: 18px;
+            }
+        }
+        &.show {
+            transform: rotateZ(180deg);
+            > a {
+                margin-right: 0;
+                margin-left: 4px;
+            }
+        }
+    }
+
+    nav {
+        > ul > li > span.link-wrapper {
+            padding-left: 8px;
+        }
+        > ul > li > ul > li > span.link-wrapper {
+            padding-left: 16px;
+        }
+        > ul > li > ul > li > ul > li > span.link-wrapper {
+            padding-left: 24px;
+        }
+        > ul > li > ul > li > ul > li > ul> li > span.link-wrapper {
+            padding-left: 32px;
+        }
+        > ul > li > ul > li > ul > li > ul > li > ul> li > span.link-wrapper {
+            padding-left: 40px;
+        }
+        > ul > li > ul > li > ul > li > ul > li > ul > li > ul> li > span.link-wrapper {
+            padding-left: 48px;
+        }
+    }
+}
