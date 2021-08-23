@@ -300,7 +300,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 
 * MXNET_MKLDNN_FORCE_FC_AB_FORMAT
   - Values: 0, 1 ```(default=0)```
-  - If set to true, FullyConnected will use only AB format for weights, thus MXNet won't use BRGEMM implementation of FC on machines with AVX512-VNNI support.
+  - If set to true, FullyConnected will use only AB format for weights, thus MXNet won't use BRGEMM implementation of FC on machines with AVX512-VNNI support which requires special weights format.
 
 * MXNET_ENFORCE_DETERMINISM
   - Values: 0(false) or 1(true) ```(default=0)```

@@ -305,11 +305,11 @@ inline static mkldnn::memory::desc GetMemDesc(const NDArray& arr, int dtype = -1
   return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
 }
 
-inline static bool ChooseBRGEMMImpl(mkldnn::memory::dims weight_dims, size_t batch_size) {
+inline static bool ChooseBRGEMMImpl(mkldnn::memory::dims& weight_dims, size_t batch_size) {
   // Conditions based on measurement results done on CLX8280
   // https://github.com/apache/incubator-mxnet/pull/20533
-  return weight_dims[0] % 64 == 0 && weight_dims[1] % 64 == 0 && weight_dims[0] >= 1024 &&
-         weight_dims[1] >= 1024 && batch_size >= 2 << 13;
+  return weight_dims[0] >= 1024 && weight_dims[1] >= 1024 && batch_size >= 16384 &&
+         weight_dims[0] % 64 == 0 && weight_dims[1] % 64 == 0;
 }
 
 inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray& arr,
