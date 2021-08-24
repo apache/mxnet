@@ -689,7 +689,11 @@ void LayerNormGradGPUContig(const LayerNormParam param,
                             const std::vector<OpReqType>& req,
                             const std::vector<TBlob>& outputs) {
   using namespace mshadow;
+#if MXNET_USE_ONEDNN == 1
+  CHECK_EQ(inputs.size(), 6U);  // additional beta tensor
+#else
   CHECK_EQ(inputs.size(), 5U);
+#endif
   const TBlob out_grad = inputs[0];
   const TBlob in_data = inputs[1];
   const TBlob gamma = inputs[2];
