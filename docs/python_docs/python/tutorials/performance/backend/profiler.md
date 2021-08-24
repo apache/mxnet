@@ -25,12 +25,12 @@ If you have just started to use MXNet, you might be tempted to measure the execu
 
 ```{.python .input}
 from time import time
-from mxnet import autograd, nd
+from mxnet import autograd, np
 import mxnet as mx
 
 start = time()
-x = nd.random_uniform(shape=(2000,2000))
-y = nd.dot(x, x)
+x = np.random.uniform(size=(2000,2000))
+y = np.dot(x, x)
 print('Time for matrix multiplication: %f sec\n' % (time() - start))
 
 start = time()                                
@@ -151,7 +151,7 @@ profiler.set_state('run')
 run_training_iteration(*next(itr))
 
 # Make sure all operations have completed
-mx.nd.waitall()
+mx.npx.waitall()
 # Ask the profiler to stop recording
 profiler.set_state('stop')
 # Dump all results to log file before download
@@ -265,7 +265,7 @@ class CustomAddOneProp(mx.operator.CustomOpProp):
         return MyAddOne()
 
 
-inp = mx.nd.zeros(shape=(500, 500))
+inp = mx.np.zeros(shape=(500, 500))
 
 profiler.set_config(profile_all=True, continuous_dump=True, \
                     aggregate_stats=True)
@@ -273,7 +273,7 @@ profiler.set_state('run')
 
 w = nd.Custom(inp, op_type="MyAddOne")
 
-mx.nd.waitall()
+mx.npx.waitall()
 
 profiler.set_state('stop')
 print(profiler.dumps())
@@ -301,7 +301,7 @@ a = mx.symbol.Variable('a')
 b = mx.symbol.Custom(data=a, op_type='MyAddOne')
 c = b.bind(mx.cpu(), {'a': inp})
 y = c.forward()
-mx.nd.waitall()
+mx.npx.waitall()
 profiler.set_state('stop')
 print(profiler.dumps())
 profiler.dump()

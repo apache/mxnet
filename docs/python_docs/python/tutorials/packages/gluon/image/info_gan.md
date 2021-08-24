@@ -34,7 +34,6 @@ import time
 
 import numpy as onp
 from matplotlib import pyplot as plt
-from mxboard import SummaryWriter
 import mxnet as mx
 from mxnet import gluon
 from mxnet import np, npx
@@ -141,7 +140,7 @@ class Generator(gluon.HybridBlock):
 
     def forward(self, x):
         x = self.prev(x)
-        x = np.reshape(x, (0, -1, 1, 1))
+        x = np.reshape(x, (-2, -1, 1, 1))
         return self.G(x)
 ```
 
@@ -274,75 +273,65 @@ Define the training loop.
 
 
 ```{.python .input}
-with SummaryWriter(logdir='./logs/') as sw:
+epochs = 1
+counter = 0
+for epoch in range(epochs):
+    print("Epoch", epoch)
+    starttime = time.time()
 
-    epochs = 1
-    counter = 0
-    for epoch in range(epochs):
-        print("Epoch", epoch)
-        starttime = time.time()
+    d_error_epoch = np.zeros((1,), ctx=ctx)
+    g_error_epoch = np.zeros((1,), ctx=ctx)
 
-        d_error_epoch = np.zeros((1,), ctx=ctx)
-        g_error_epoch = np.zeros((1,), ctx=ctx)
+    for idx, data in enumerate(train_dataloader):
 
-        for idx, data in enumerate(train_dataloader):
-
-            #get real data and generator input
-            real_data = data.as_in_context(ctx)
-            g_input, label, c2 = create_generator_input()
+        #get real data and generator input
+        real_data = data.as_in_context(ctx)
+        g_input, label, c2 = create_generator_input()
 
 
-            #Update discriminator: Input real data and fake data
-            with autograd.record():
-                output_real,_,_ = discriminator(real_data)
-                d_error_real    = loss1(output_real, real_label)
+        #Update discriminator: Input real data and fake data
+        with autograd.record():
+            output_real,_,_ = discriminator(real_data)
+            d_error_real    = loss1(output_real, real_label)
 
-                # create fake image and input it to discriminator
-                fake_image      = generator(g_input)
-                output_fake,_,_ = discriminator(fake_image.detach())
-                d_error_fake    = loss1(output_fake, fake_label)
+            # create fake image and input it to discriminator
+            fake_image      = generator(g_input)
+            output_fake,_,_ = discriminator(fake_image.detach())
+            d_error_fake    = loss1(output_fake, fake_label)
 
-                # total discriminator error
-                d_error         = d_error_real + d_error_fake
+            # total discriminator error
+            d_error         = d_error_real + d_error_fake
 
-            d_error_epoch += d_error.mean()
+        d_error_epoch += d_error.mean()
 
-            #Update D every second iteration
-            if (counter+1) % 2 == 0:
-                d_error.backward()
-                d_trainer.step(batch_size)
+        #Update D every second iteration
+        if (counter+1) % 2 == 0:
+            d_error.backward()
+            d_trainer.step(batch_size)
 
-            #Update generator: Input random noise and latent code vector
-            with autograd.record():
-                fake_image = generator(g_input)
-                output_fake, category_prob, continuous_mean = discriminator(fake_image)
-                g_error = loss1(output_fake, real_label) + loss3(category_prob, label) + loss2(c2, continuous_mean)
+        #Update generator: Input random noise and latent code vector
+        with autograd.record():
+            fake_image = generator(g_input)
+            output_fake, category_prob, continuous_mean = discriminator(fake_image)
+            g_error = loss1(output_fake, real_label) + loss3(category_prob, label) + loss2(c2, continuous_mean)
 
-            g_error.backward()
-            g_error_epoch += g_error.mean()
+        g_error.backward()
+        g_error_epoch += g_error.mean()
 
-            g_trainer.step(batch_size)
-            q_trainer.step(batch_size)
+        g_trainer.step(batch_size)
+        q_trainer.step(batch_size)
 
-            # logging
-            if idx % 10 == 0:
-                count = idx + 1
-                logging.info('speed: {} samples/s'.format(batch_size / (time.time() - starttime)))
-                logging.info('discriminator loss = %f, generator loss = %f at iter %d epoch %d'
-                         %(d_error_epoch.item()/count,g_error_epoch.item()/count, count, epoch))
+        # logging
+        if idx % 10 == 0:
+            count = idx + 1
+            logging.info('speed: {} samples/s'.format(batch_size / (time.time() - starttime)))
+            logging.info('discriminator loss = %f, generator loss = %f at iter %d epoch %d'
+                        %(d_error_epoch.item()/count,g_error_epoch.item()/count, count, epoch))
 
-                g_input,_,_ = create_generator_input()
+            g_input,_,_ = create_generator_input()
 
-                # create some fake image for logging in MXBoard
-                fake_image = generator(g_input)
-
-                sw.add_scalar(tag='Loss_D', value={'test':d_error_epoch.item()/count}, global_step=counter)
-                sw.add_scalar(tag='Loss_G', value={'test':d_error_epoch.item()/count}, global_step=counter)
-                sw.add_image(tag='data_image', image=((fake_image[0]+ 1.0) * 127.5).astype(onp.uint8)  , global_step=counter)
-                sw.flush()
-
-        discriminator.save_parameters("infogan_d_latest.params")
-        generator.save_parameters("infogan_g_latest.params")
+    discriminator.save_parameters("infogan_d_latest.params")
+    generator.save_parameters("infogan_g_latest.params")
 ```
 
 ## Image similarity
@@ -425,7 +414,7 @@ We trained the Generator for a couple of epochs and stored a couple of fake imag
 The following function computes the TSNE on the feature matrix and stores the result in a json-file. This file can be loaded with [TSNEViewer](https://ml4a.github.io/guides/ImageTSNEViewer/)
 
 
-```{.python .input}
+```{.python}
 import json
 
 from sklearn.manifold import TSNE

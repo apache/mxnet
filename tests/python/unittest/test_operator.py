@@ -4206,30 +4206,30 @@ def test_take(mode, out_of_range, data_ndim, idx_ndim):
     if axis < 0:
         axis += len(data_shape)
 
-    grad_out = np.ones((data_shape[0:axis] if axis > 0 else ()) + idx_shape + (data_shape[axis+1:] if axis < len(data_shape) - 1 else ()), dtype='float32')
-    grad_in = np.zeros(data_shape, dtype='float32')
+        grad_out = np.ones((data_shape[0:axis] if axis > 0 else ()) + idx_shape + (data_shape[axis+1:] if axis < len(data_shape) - 1 else ()), dtype='float32')
+        grad_in = np.zeros(data_shape, dtype='float32')
 
-    exe.arg_dict['a'][:] = mx.nd.array(data_real)
-    exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
-    exe.forward(is_train=True)
-    if out_of_range and mode == 'raise':
-        try:
-            mx_out = exe.outputs[0].asnumpy()
-        except MXNetError as e:
-            return
-        else:
-            # Did not raise exception
-            assert False, "did not raise %s" % MXNetError.__name__
+        exe.arg_dict['a'][:] = mx.nd.array(data_real)
+        exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
+        exe.forward(is_train=True)
+        if out_of_range and mode == 'raise':
+            try:
+                mx_out = exe.outputs[0].asnumpy()
+            except MXNetError as e:
+                return
+            else:
+                # Did not raise exception
+                assert False, "did not raise %s" % MXNetError.__name__
 
-    assert_almost_equal(exe.outputs[0], np.take(data_real, idx_real, axis=axis, mode=mode))
+        assert_almost_equal(exe.outputs[0], np.take(data_real, idx_real, axis=axis, mode=mode))
 
-    for i in np.nditer(idx_real):
-        if mode == 'clip':
-            i = np.clip(i, 0, data_shape[axis])
-        grad_helper(grad_in, axis, i)
+        for i in np.nditer(idx_real):
+            if mode == 'clip':
+                i = np.clip(i, 0, data_shape[axis])
+            grad_helper(grad_in, axis, i)
 
-    exe.backward([mx.nd.array(grad_out)])
-    assert_almost_equal(exe.grad_dict['a'], grad_in)
+        exe.backward([mx.nd.array(grad_out)])
+        assert_almost_equal(exe.grad_dict['a'], grad_in)
 
 
 def test_grid_generator():

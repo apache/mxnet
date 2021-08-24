@@ -21,3 +21,6 @@
 #  restrictions.
 
 3rdparty/onednn/doc
+3rdparty/googletest/ci
+docs
+example/image-classification/predict-cpp

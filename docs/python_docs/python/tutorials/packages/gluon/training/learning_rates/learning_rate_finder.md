@@ -45,7 +45,7 @@ Usually, our unit of work is an epoch (a full pass through the dataset) and the 
 import mxnet as mx
 
 # Set seed for reproducibility
-mx.random.seed(42)
+mx.np.random.seed(42)
 
 class Learner():
     def __init__(self, net, data_loader, ctx):
@@ -85,7 +85,7 @@ class Learner():
         # Update parameters
         if take_step: self.trainer.step(data.shape[0])
         # Set and return loss.
-        self.iteration_loss = mx.nd.mean(loss).asscalar()
+        self.iteration_loss = mx.np.mean(loss).item()
         return self.iteration_loss
 
     def close(self):

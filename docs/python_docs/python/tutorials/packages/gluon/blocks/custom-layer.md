@@ -37,7 +37,7 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet import np, npx, gluon, autograd
 from mxnet.gluon.nn import Dense
-mx.random.seed(1)                      # Set seed for reproducable results
+mx.np.random.seed(1)                      # Set seed for reproducable results
 ```
 
 

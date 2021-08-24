@@ -32,9 +32,9 @@ import mxnet as mx
 import os
 import tarfile
 
-mx.random.seed(42) # Fix the seed for reproducibility
-X = mx.random.uniform(shape=(10, 3))
-y = mx.random.uniform(shape=(10, 1))
+mx.np.random.seed(42) # Fix the seed for reproducibility
+X = mx.np.random.uniform(size=(10, 3))
+y = mx.np.random.uniform(size=(10, 1))
 dataset = mx.gluon.data.dataset.ArrayDataset(X, y)
 ```
 
@@ -50,12 +50,6 @@ assert sample[0].shape == (3, )
 assert sample[1].shape == (1, )
 print(sample)
 ```
-
-(
-[ 0.4375872   0.29753461  0.89177299]
-<NDArray 3 @cpu(0)>,
-[ 0.83261985]
-<NDArray 1 @cpu(0)>)
 
 
 We get a tuple of a data sample and its corresponding label, which makes sense because we passed the data `X` and the labels `y` in that order when we instantiated the `ArrayDataset`. We don't usually retrieve individual samples from `Dataset` objects though (unless we're quality checking the output samples). Instead we use a `DataLoader`.
@@ -100,8 +94,8 @@ def transform(data, label):
     data = data.astype('float32')/255
     return data, label
 
-train_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=True, transform=transform)
-valid_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=False, transform=transform)
+train_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=True).transform(transform)
+valid_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=False).transform(transform)
 ```
 
 
@@ -118,7 +112,7 @@ label_desc = {0:'T-shirt/top', 1:'Trouser', 2:'Pullover', 3:'Dress', 4:'Coat', 5
 imshow(data[:,:,0].asnumpy(), cmap='gray')
 print("Data type: {}".format(data.dtype))
 print("Label: {}".format(label))
-print("Label description: {}".format(label_desc[label]))
+print("Label description: {}".format(label_desc[label.item()]))
 ```
 
 `Data type: <class 'numpy.float32'>`<!--notebook-skip-line-->
@@ -172,31 +166,31 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
 epochs = 5
 for epoch in range(epochs):
     # training loop (with autograd and trainer steps, etc.)
-    cumulative_train_loss = mx.nd.zeros(1, ctx=ctx)
+    cumulative_train_loss = mx.np.zeros(1, ctx=ctx)
     training_samples = 0
     for batch_idx, (data, label) in enumerate(train_data_loader):
-        data = data.as_in_context(ctx).reshape((-1, 784)) # 28*28=784
-        label = label.as_in_context(ctx)
+        data = data.as_in_ctx(ctx).reshape((-1, 784)) # 28*28=784
+        label = label.as_in_ctx(ctx)
         with autograd.record():
             output = net(data)
             loss = criterion(output, label)
         loss.backward()
         trainer.step(data.shape[0])
-        cumulative_train_loss += loss.sum()
+        cumulative_train_loss += mx.np.sum(loss)
         training_samples += data.shape[0]
-    train_loss = cumulative_train_loss.asscalar()/training_samples
+    train_loss = cumulative_train_loss.item()/training_samples
 
     # validation loop
-    cumulative_valid_loss = mx.nd.zeros(1, ctx)
+    cumulative_valid_loss = mx.np.zeros(1, ctx=ctx)
     valid_samples = 0
     for batch_idx, (data, label) in enumerate(valid_data_loader):
-        data = data.as_in_context(ctx).reshape((-1, 784)) # 28*28=784
-        label = label.as_in_context(ctx)
+        data = data.as_in_ctx(ctx).reshape((-1, 784)) # 28*28=784
+        label = label.as_in_ctx(ctx)
         output = net(data)
         loss = criterion(output, label)
-        cumulative_valid_loss += loss.sum()
+        cumulative_valid_loss += mx.np.sum(loss)
         valid_samples += data.shape[0]
-    valid_loss = cumulative_valid_loss.asscalar()/valid_samples
+    valid_loss = cumulative_valid_loss.item()/valid_samples
 
     print("Epoch {}, training loss: {:.2f}, validation loss: {:.2f}".format(epoch, train_loss, valid_loss))
 ```
@@ -290,7 +284,7 @@ assert label == 1
 
 Sometimes you have data that doesn't quite fit the format expected by the included [Dataset](../../../../api/gluon/data/index.rst#mxnet.gluon.data.Dataset)s. You might be able to preprocess your data to fit the expected format, but it is easy to create your own dataset to do this.
 
-All you need to do is create a class that implements a `__getitem__` method, that returns a sample (i.e. a tuple of [mx.nd.NDArray](../../../../api/legacy/ndarray/ndarray.rst#mxnet.ndarray.NDArray)'s).
+All you need to do is create a class that implements a `__getitem__` method, that returns a sample (i.e. a tuple of [mx.np.ndarray](../../../../api/np/arrays.ndarray.rst#the-n-dimensional-array-ndarray)'s).
 
 # Appendix: Upgrading from Module `DataIter` to Gluon `DataLoader`
 
