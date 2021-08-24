@@ -31,12 +31,6 @@
 
 #include "../operator/mxnet_op.h"
 
-namespace {
-int64_t divup(int64_t x, int64_t y) {
-  return (x + y - 1) / y;
-}
-}  // namespace
-
 namespace mxnet {
 namespace common {
 namespace {
@@ -62,6 +56,10 @@ struct DefaultGrainSizeT {
 }  // namespace
 
 static DefaultGrainSizeT default_grain_size;
+
+int64_t divup(int64_t x, int64_t y) {
+  return (x + y - 1) / y;
+}
 
 template <typename F>
 void parallel_for(const size_t begin, const size_t end, const size_t grain_size, F&& f) {
