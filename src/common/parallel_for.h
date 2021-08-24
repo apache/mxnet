@@ -57,12 +57,9 @@ struct DefaultGrainSizeT {
 
 static DefaultGrainSizeT default_grain_size;
 
-int64_t divup(int64_t x, int64_t y) {
-  return (x + y - 1) / y;
-}
-
 template <typename F>
 void parallel_for(const size_t begin, const size_t end, const size_t grain_size, F&& f) {
+  auto divup = [&](int64_t x, int64_t y) { return (x + y - 1) / y; };
   if (begin >= end) {
     return;
   }
