@@ -87,14 +87,13 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
     new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
     std::string op_name;
-    MKLDNNSelfAttParam new_param;
     DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if (node->op() && (node->op()->name == SELFATT_QK || node->op()->name == SELFATT_VALATT)) {
         op_name                       = node->op()->name;
         auto param                    = nnvm::get<InterleavedMatMulParam>(node->attrs.parsed);
-        new_param.heads               = param.heads;
-        new_param.quantized           = false;
-        new_param.enable_float_output = false;
+        n->attrs.dict["heads"]               = std::to_string(param.heads);
+        n->attrs.dict["quantized"]           = "False";
+        n->attrs.dict["enable_float_output"] = "False";
       }
     });
     node_name << NameMapping.at(op_name) << "_" << std::to_string(subgraph_id);
@@ -103,7 +102,7 @@ class SgMKLDNNTransformerProperty : public SubgraphProperty {
     n->attrs.op   = Op::Get(OpMapping.at(op_name));
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
-    n->attrs.parsed = new_param;
+    n->op()->attr_parser(&(n->attrs));
     return n;
   }
 
