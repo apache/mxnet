@@ -218,7 +218,7 @@ def test_image_list_dataset_handle(prepare_record):
 def test_list_dataset():
     for num_worker in range(0, 3):
         data = mx.gluon.data.DataLoader([([1,2], 0), ([3, 4], 1)], batch_size=1, num_workers=num_worker)
-        for _, _ in data:
+        for _ in data:
             pass
 
 
@@ -326,13 +326,13 @@ def test_multi_worker_forked_data_loader():
     data = _Dummy(False)
     loader = DataLoader(data, batch_size=40, batchify_fn=_batchify, num_workers=2)
     for _ in range(1):
-        for _, _ in enumerate(loader):
+        for _ in enumerate(loader):
             pass
 
     data = _Dummy(True)
     loader = DataLoader(data, batch_size=40, batchify_fn=_batchify_list, num_workers=2)
     for _ in range(1):
-        for _, _ in enumerate(loader):
+        for _ in enumerate(loader):
             pass
 
 def test_multi_worker_dataloader_release_pool():
