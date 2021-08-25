@@ -33,29 +33,6 @@
 
 namespace mxnet {
 namespace common {
-namespace {
-
-struct DefaultGrainSizeT {
-  size_t grain_size;
-
-  DefaultGrainSizeT() {
-    auto var = std::getenv("MXNET_PARALLEL_FOR_GRAIN_SIZE");
-    grain_size = 1;
-    if (!var) {
-      grain_size = 1;
-    } else {
-      grain_size = std::stoul(var);
-      std::cout << grain_size << std::endl;
-    }
-  }
-
-  size_t operator()() {
-    return grain_size;
-  }
-};
-}  // namespace
-
-static DefaultGrainSizeT default_grain_size;
 
 template <typename F>
 void parallel_for(const size_t begin, const size_t end, const size_t grain_size, F&& f) {
@@ -88,7 +65,8 @@ void parallel_for(const size_t begin, const size_t end, const size_t grain_size,
 
 template <typename F>
 void parallel_for(const size_t begin, const size_t end, F&& f) {
-  parallel_for(begin, end, default_grain_size(), std::forward<F>(f));
+  constexpr int default_grain_size = 1;
+  parallel_for(begin, end, default_grain_size, std::forward<F>(f));
 }
 }  // namespace common
 }  // namespace mxnet
