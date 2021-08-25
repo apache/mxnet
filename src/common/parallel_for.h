@@ -34,9 +34,12 @@
 namespace mxnet {
 namespace common {
 
+inline int64_t div_up(int64_t x, int64_t y) {
+   return (x + y - 1) / y;
+}
+
 template <typename F>
 void parallel_for(const size_t begin, const size_t end, const size_t grain_size, F&& f) {
-  auto divup = [&](int64_t x, int64_t y) { return (x + y - 1) / y; };
   if (begin >= end) {
     return;
   }
@@ -47,10 +50,10 @@ void parallel_for(const size_t begin, const size_t end, const size_t grain_size,
     {
       int64_t num_threads = omp_get_num_threads();
       if (grain_size > 0) {
-        num_threads = std::min(num_threads, divup((end - begin), grain_size));
+        num_threads = std::min(num_threads, div_up((end - begin), grain_size));
       }
       auto tid = omp_get_thread_num();
-      auto chunk_size = divup((end - begin), num_threads);
+      auto chunk_size = div_up((end - begin), num_threads);
       auto begin_tid = begin + tid * chunk_size;
       if (begin_tid < end) {
         auto end_tid = std::min(end, chunk_size + begin_tid);
