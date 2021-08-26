@@ -60,10 +60,10 @@ void parallel_for(const size_t begin, const size_t end, const size_t grain_size,
         f(begin_tid, end_tid);
       }
     }
-  } else {
-#endif
-    f(begin, end);
+    return;
   }
+#endif
+  f(begin, end);
 }
 
 template <typename F>
@@ -71,6 +71,7 @@ void parallel_for(const size_t begin, const size_t end, F&& f) {
   constexpr int default_grain_size = 1;
   parallel_for(begin, end, default_grain_size, std::forward<F>(f));
 }
+
 }  // namespace common
 }  // namespace mxnet
 
