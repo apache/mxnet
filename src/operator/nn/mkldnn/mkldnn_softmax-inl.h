@@ -19,6 +19,15 @@
 
 /*!
  * \file mkldnn_softmax-inl.h
+ * Naming convention:
+ *                  ________
+ *                 |Softmax|
+ *  data  -------->|  FWD  |---> out
+ *                 |_______|
+ *                 ________
+ *                |Softmax|<--- out
+ *  data_grad <---|  BWD  |
+ *                |_______|<--- out_grad
  */
 
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_SOFTMAX_INL_H_
@@ -35,6 +44,9 @@ namespace op {
 
 using softmax_fwd_t    = mkldnn::softmax_forward;
 using softmax_fwd_pd_t = mkldnn::softmax_forward::primitive_desc;
+
+using softmax_bwd_t    = mkldnn::softmax_backward;
+using softmax_bwd_pd_t = mkldnn::softmax_backward::primitive_desc;
 
 using linear_t    = mkldnn::eltwise_forward;
 using linear_pd_t = mkldnn::eltwise_forward::primitive_desc;
@@ -77,11 +89,63 @@ MKLDNNSoftmaxFwd::MKLDNNSoftmaxFwd(const SoftmaxParam& param,
   float temperature = param.temperature.has_value() ? param.temperature.value() : 1.0f;
   int axis          = CheckAxis(param.axis, tensors.data.shape().ndim());
   auto input_mem    = tensors.data.GetMKLDNNData();
-  softmax_pd      = std::make_shared<softmax_fwd_pd_t>(GetSoftmaxFwdPd(*input_mem, axis, is_train));
-  softmax_fwd     = std::make_shared<softmax_fwd_t>(*softmax_pd);
-  temperature_pd  = std::make_shared<linear_pd_t>(GetTemperaturePd(*input_mem, temperature));
-  temperature_fwd = std::make_shared<linear_t>(*temperature_pd);
+
+  softmax_pd  = std::make_shared<softmax_fwd_pd_t>(GetSoftmaxFwdPd(*input_mem, axis, is_train));
+  softmax_fwd = std::make_shared<softmax_fwd_t>(*softmax_pd);
+
+  if (temperature != 1.0f) {
+    temperature_pd  = std::make_shared<linear_pd_t>(GetTemperaturePd(*input_mem, temperature));
+    temperature_fwd = std::make_shared<linear_t>(*temperature_pd);
+  }
 }
+
+class MKLDNNSoftmaxBwd {
+ public:
+  struct Tensors {
+    Tensors(const std::vector<NDArray>& inputs, const std::vector<NDArray>& outputs);
+    const NDArray& out_grad;
+    const NDArray& out;
+    const NDArray& data_grad;
+  };
+  static MKLDNNSoftmaxBwd& GetCached(const SoftmaxParam& param, const Tensors& tensors);
+
+  static softmax_bwd_pd_t GetSoftmaxBwdPd(const mkldnn::memory& out_grad_mem,
+                                          const mkldnn::memory& out_mem,
+                                          const int axis,
+                                          const softmax_fwd_pd_t& hint_fwd_pd);
+
+  MKLDNNSoftmaxBwd(const SoftmaxParam& param, const Tensors& tensors);
+  void Execute(const Tensors& tensors, const std::vector<OpReqType>& req) const;
+
+ private:
+  std::shared_ptr<softmax_bwd_pd_t> softmax_bwd_pd;
+  std::shared_ptr<softmax_bwd_t> softmax_bwd;
+  std::shared_ptr<linear_pd_t> temperature_pd;
+  std::shared_ptr<linear_t> temperature_fwd;
+};
+
+MKLDNNSoftmaxBwd::Tensors::Tensors(const std::vector<NDArray>& inputs,
+                                   const std::vector<NDArray>& outputs)
+    : out_grad(inputs[0]), out(inputs[1]), data_grad(outputs[0]){};
+
+MKLDNNSoftmaxBwd::MKLDNNSoftmaxBwd(const SoftmaxParam& param, const Tensors& tensors) {
+  float temperature   = param.temperature.has_value() ? param.temperature.value() : 1.0f;
+  int axis            = CheckAxis(param.axis, tensors.out.shape().ndim());
+  auto out_grad_mem   = tensors.out_grad.GetMKLDNNData();
+  auto out_mem        = tensors.out.GetMKLDNNData();
+  auto softmax_fwd_pd = MKLDNNSoftmaxFwd::GetSoftmaxFwdPd(*out_mem, axis, true);
+
+  softmax_bwd_pd = std::make_shared<softmax_bwd_pd_t>(
+      GetSoftmaxBwdPd(*out_grad_mem, *out_mem, axis, softmax_fwd_pd));
+  softmax_bwd = std::make_shared<softmax_bwd_t>(*softmax_bwd_pd);
+
+  if (temperature != 1.0f) {
+    temperature_pd =
+        std::make_shared<linear_pd_t>(MKLDNNSoftmaxFwd::GetTemperaturePd(*out_mem, temperature));
+    temperature_fwd = std::make_shared<linear_t>(*temperature_pd);
+  }
+}
+
 }  // namespace op
 }  // namespace mxnet
 #endif
