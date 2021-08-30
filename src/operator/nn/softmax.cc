@@ -62,7 +62,7 @@ static void SoftmaxGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray>& outputs) {
   if (inputs[0].shape().Size() == 0U) return;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  if (SupportMKLDNNSoftmax(param, inputs[1], outputs[0]) && !param.temperature.has_value()) {
+  if (SupportMKLDNNSoftmax(param, inputs[1], outputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNRun(MKLDNNSoftmaxBackward, attrs, ctx, inputs, req, outputs);
     auto fn = SoftmaxGradCompute<cpu, op::mshadow_op::mul, mxnet_op::softmax_bwd>;
@@ -189,6 +189,10 @@ NNVM_REGISTER_OP(_backward_softmax)
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxGradComputeExCPU)
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxGradStorageType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 #endif
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
