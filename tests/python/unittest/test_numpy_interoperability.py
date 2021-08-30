@@ -421,7 +421,7 @@ def _add_workload_swapaxes():
     # assertRaises(np.AxisError, np.swapaxes, -5, 0)
     for i in range(-4, 4):
         for j in range(-4, 4):
-            for _, src in enumerate((a, b)):
+            for src in (a, b):
                 OpArgMngr.add_workload('swapaxes', src, i, j)
 
 

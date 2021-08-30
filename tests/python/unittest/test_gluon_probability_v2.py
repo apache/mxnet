@@ -1842,7 +1842,7 @@ def test_affine_transform():
                             rtol=1e-3, use_broadcast=False)
 
     # Test sampling
-    for shape, _ in itertools.product(shapes, [True, False]):
+    for shape, hybridize in itertools.product(shapes, [True, False]):
         loc = np.random.uniform(-1, 1, shape)
         loc.attach_grad()
         scale = np.random.uniform(0.5, 1.5, shape)
@@ -1851,6 +1851,8 @@ def test_affine_transform():
             shape = (shape,)
         expected_shape = (4, 5) + shape
         net = TestAffineTransform('sample')
+        if hybridize:
+            net.hybridize()
         mx_out = net(loc, scale, expected_shape).asnumpy()
         assert mx_out.shape == expected_shape
 
