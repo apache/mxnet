@@ -23,48 +23,12 @@
  * \author Da Zheng
  */
 
-#include "./mkldnn_base-inl.h"
-#include "./mkldnn_ops-inl.h"
-
-#include "../softmax-inl.h"
-
 #if MXNET_USE_ONEDNN == 1
+
+#include "./mkldnn_softmax-inl.h"
+
 namespace mxnet {
 namespace op {
-
-static mkldnn::softmax_forward::primitive_desc GetSoftmaxFwdPd(bool is_train,
-                                                               const int axis,
-                                                               const mkldnn::memory& input_mem) {
-  mkldnn::memory::desc data_md = input_mem.get_desc();
-  auto cpu_engine              = CpuEngine::Get()->get_engine();
-  auto prop = is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
-  auto desc = mkldnn::softmax_forward::desc(prop, data_md, axis);
-  return mkldnn::softmax_forward::primitive_desc(desc, cpu_engine);
-}
-
-static mkldnn::eltwise_forward::primitive_desc GetTemperaturePd(bool is_train,
-                                                                double temperature,
-                                                                const mkldnn::memory& input_mem) {
-  mkldnn::memory::desc data_md = input_mem.get_desc();
-  auto cpu_engine              = CpuEngine::Get()->get_engine();
-  auto prop = is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
-  auto desc = mkldnn::eltwise_forward::desc(
-      prop, mkldnn::algorithm::eltwise_linear, data_md, 1.0f / temperature, 0.0f);
-
-  return mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine);
-}
-
-static mkldnn::softmax_backward::primitive_desc GetSoftmaxBwdPd(
-    const mkldnn::memory& diff_mem,
-    const mkldnn::memory& data_mem,
-    const int axis,
-    const mkldnn::softmax_forward::primitive_desc& hint_fwd_pd) {
-  mkldnn::memory::desc diff_md = diff_mem.get_desc();
-  mkldnn::memory::desc data_md = data_mem.get_desc();
-  auto cpu_engine              = CpuEngine::Get()->get_engine();
-  auto desc                    = mkldnn::softmax_backward::desc(diff_md, data_md, axis);
-  return mkldnn::softmax_backward::primitive_desc(desc, cpu_engine, hint_fwd_pd);
-}
 
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray& data, const NDArray& output) {
   // MKLDNN does not support temperature argument in their softmax function
@@ -83,65 +47,6 @@ bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray& data, const 
   return (ndim >= 1 && ndim <= 4);
 }
 
-class MKLDNNSoftmaxFwd {
- public:
-  mkldnn::eltwise_forward::primitive_desc temperature_pd;
-  mkldnn::softmax_forward::primitive_desc softmax_pd;
-
-  MKLDNNSoftmaxFwd(const bool is_train,
-                   const int axis,
-                   const double temperature,
-                   const mkldnn::memory& input)
-      : softmax_pd(GetSoftmaxFwdPd(is_train, axis, input)) {
-    if (temperature != 1.0) {
-      temperature_pd  = GetTemperaturePd(is_train, temperature, input);
-      temperature_fwd = std::make_shared<mkldnn::eltwise_forward>(temperature_pd);
-    }
-    softmax_fwd = std::make_shared<mkldnn::softmax_forward>(softmax_pd);
-  }
-
-  const mkldnn::eltwise_forward& GetTemperatureFwd() const {
-    return *temperature_fwd;
-  }
-
-  const mkldnn::softmax_forward& GetSoftmaxFwd() const {
-    return *softmax_fwd;
-  }
-
- private:
-  std::shared_ptr<mkldnn::eltwise_forward> temperature_fwd;
-  std::shared_ptr<mkldnn::softmax_forward> softmax_fwd;
-};
-
-typedef ParamOpSign<SoftmaxParam> MKLDNNSoftmaxSignature;
-
-static MKLDNNSoftmaxFwd& GetSoftmaxFwd(const SoftmaxParam& param,
-                                       const int real_axis,
-                                       const bool is_train,
-                                       const NDArray& data,
-                                       const NDArray& output) {
-#if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxFwd, OpHash> fwds;
-#else
-  static MX_THREAD_LOCAL std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxFwd, OpHash> fwds;
-#endif
-
-  MKLDNNSoftmaxSignature key(param);
-  float temperature = param.temperature.has_value() ? param.temperature.value() : 1.0f;
-  key.AddSign(real_axis);
-  key.AddSign(is_train);
-  key.AddSign(temperature);
-  key.AddSign(data);
-  key.AddSign(output);
-
-  auto it = fwds.find(key);
-  if (it == fwds.end()) {
-    MKLDNNSoftmaxFwd fwd(is_train, real_axis, temperature, *(data.GetMKLDNNData()));
-    it = AddToCache(&fwds, key, fwd);
-  }
-  return it->second;
-}
-
 void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const NDArray& in_data,
@@ -152,34 +57,101 @@ void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
   // same as the FCompute path, softmax only supports kWriteTo and kWriteInplace for now.
   CHECK_NE(req, kAddTo);
 
-  MKLDNNStream* stream = MKLDNNStream::Get();
-
-  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  double temperature        = param.temperature.has_value() ? param.temperature.value() : 1.0;
-  int axis                  = CheckAxis(param.axis, in_data.shape().ndim());
-  auto fwd                  = GetSoftmaxFwd(param, axis, ctx.is_train, in_data, out_data);
-
-  auto in_mem  = in_data.GetMKLDNNData();
-  auto out_mem = out_data.GetMKLDNNData(fwd.softmax_pd.dst_desc());
-
-  mkldnn::memory* softmax_in_mem;
-  if (temperature != 1.0) {  // temperature parameter used
-    // check whether additional buffer is needed
-    if (in_mem->get_desc() != out_mem->get_desc()) {
-      TmpMemMgr::Get()->Init(ctx.requested[0]);
-      softmax_in_mem = TmpMemMgr::Get()->Alloc(in_mem->get_desc());
-    } else {
-      softmax_in_mem = const_cast<mkldnn::memory*>(out_mem);
-    }
-    stream->RegisterPrimArgs(fwd.GetTemperatureFwd(),
-                             {{MKLDNN_ARG_SRC, *in_mem}, {MKLDNN_ARG_DST, *softmax_in_mem}});
-  } else {
-    softmax_in_mem = const_cast<mkldnn::memory*>(in_mem);
+  const auto& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+  if (param.temperature.has_value()) {
+    TmpMemMgr::Get()->Init(ctx.requested[0]);
   }
 
-  stream->RegisterPrimArgs(fwd.GetSoftmaxFwd(),
-                           {{MKLDNN_ARG_SRC, *softmax_in_mem}, {MKLDNN_ARG_DST, *out_mem}});
+  const bool is_train = ctx.is_train;
+  const auto tensors  = MKLDNNSoftmaxFwd::Tensors(in_data, out_data);
+  const auto& fwd     = MKLDNNSoftmaxFwd::GetCached(param, tensors, is_train);
+  fwd.Execute(tensors);
+}
+
+typedef ParamOpSign<SoftmaxParam> MKLDNNSoftmaxSignature;
+MKLDNNSoftmaxFwd& MKLDNNSoftmaxFwd::GetCached(const SoftmaxParam& param,
+                                              const Tensors& tensors,
+                                              const bool is_train) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxFwd, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxFwd, OpHash> fwds;
+#endif
+
+  MKLDNNSoftmaxSignature key(param);
+  float temperature = param.temperature.has_value() ? param.temperature.value() : 1.0f;
+  int real_axis     = CheckAxis(param.axis, tensors.data.shape().ndim());
+  key.AddSign(real_axis);
+  key.AddSign(is_train);
+  key.AddSign(temperature);
+  key.AddSign(tensors.data);
+  key.AddSign(tensors.out);
+
+  auto it = fwds.find(key);
+  if (it == fwds.end()) {
+    MKLDNNSoftmaxFwd fwd(param, tensors, is_train);
+    it = AddToCache(&fwds, key, fwd);
+  }
+  return it->second;
+}
+
+softmax_fwd_pd_t MKLDNNSoftmaxFwd::GetSoftmaxFwdPd(const mkldnn::memory& input_mem,
+                                                   const int axis,
+                                                   bool is_train) {
+  mkldnn::memory::desc data_md = input_mem.get_desc();
+  auto cpu_engine              = CpuEngine::Get()->get_engine();
+  auto prop = is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
+  auto desc = mkldnn::softmax_forward::desc(prop, data_md, axis);
+  return softmax_fwd_pd_t(desc, cpu_engine);
+}
+
+linear_pd_t MKLDNNSoftmaxFwd::GetTemperaturePd(const mkldnn::memory& input_mem, float temperature) {
+  mkldnn::memory::desc data_md = input_mem.get_desc();
+  auto cpu_engine              = CpuEngine::Get()->get_engine();
+  auto desc                    = mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_scoring,
+                                            mkldnn::algorithm::eltwise_linear,
+                                            data_md,
+                                            1.0f / temperature,
+                                            0.0f);
+  return linear_pd_t(desc, cpu_engine);
+}
+
+void MKLDNNSoftmaxFwd::Execute(const Tensors& tensors) const {
+  MKLDNNStream* stream = MKLDNNStream::Get();
+
+  auto original_input_mem = tensors.data.GetMKLDNNData();
+  auto out_mem            = tensors.out.GetMKLDNNData(softmax_pd->dst_desc());
+
+  mkldnn::memory* softmax_input_mem;
+  if (temperature_pd) {  // temperature parameter used
+    // check whether additional buffer is needed
+    if (original_input_mem->get_desc() != out_mem->get_desc()) {
+      softmax_input_mem = TmpMemMgr::Get()->Alloc(original_input_mem->get_desc());
+    } else {
+      softmax_input_mem = const_cast<mkldnn::memory*>(out_mem);
+    }
+    stream->RegisterPrimArgs(
+        *temperature_fwd,
+        {{MKLDNN_ARG_SRC, *original_input_mem}, {MKLDNN_ARG_DST, *softmax_input_mem}});
+  } else {
+    softmax_input_mem = const_cast<mkldnn::memory*>(original_input_mem);
+  }
+
+  stream->RegisterPrimArgs(*softmax_fwd,
+                           {{MKLDNN_ARG_SRC, *softmax_input_mem}, {MKLDNN_ARG_DST, *out_mem}});
   stream->Submit();
+}
+
+static mkldnn::softmax_backward::primitive_desc GetSoftmaxBwdPd(
+    const mkldnn::memory& diff_mem,
+    const mkldnn::memory& data_mem,
+    const int axis,
+    const mkldnn::softmax_forward::primitive_desc& hint_fwd_pd) {
+  mkldnn::memory::desc diff_md = diff_mem.get_desc();
+  mkldnn::memory::desc data_md = data_mem.get_desc();
+  auto cpu_engine              = CpuEngine::Get()->get_engine();
+  auto desc                    = mkldnn::softmax_backward::desc(diff_md, data_md, axis);
+  return mkldnn::softmax_backward::primitive_desc(desc, cpu_engine, hint_fwd_pd);
 }
 
 class MKLDNNSoftmaxBwd {
@@ -194,7 +166,7 @@ class MKLDNNSoftmaxBwd {
                    const mkldnn::softmax_forward::primitive_desc& hint_fwd_pd)
       : softmax_bwd_pd(GetSoftmaxBwdPd(diff_mem, data_mem, axis, hint_fwd_pd)) {
     if (temperature != 1.0) {
-      temperature_pd  = GetTemperaturePd(true, temperature, data_mem);
+      temperature_pd  = MKLDNNSoftmaxFwd::GetTemperaturePd(data_mem, temperature);
       temperature_fwd = std::make_shared<mkldnn::eltwise_forward>(temperature_pd);
     }
     softmax_bwd = std::make_shared<mkldnn::softmax_backward>(softmax_bwd_pd);
@@ -231,9 +203,9 @@ static MKLDNNSoftmaxBwd& GetSoftmaxBwd(const SoftmaxParam& param,
 
   auto it = bwds.find(key);
   if (it == bwds.end()) {
-    auto diff_mem = data[0].GetMKLDNNData();
-    auto data_mem = data[1].GetMKLDNNData();
-    auto softmax_fwd_pd   = GetSoftmaxFwdPd(true, real_axis, *data_mem);
+    auto diff_mem       = data[0].GetMKLDNNData();
+    auto data_mem       = data[1].GetMKLDNNData();
+    auto softmax_fwd_pd = MKLDNNSoftmaxFwd::GetSoftmaxFwdPd(*data_mem, real_axis, true);
     MKLDNNSoftmaxBwd bwd(*diff_mem, *data_mem, real_axis, temperature, softmax_fwd_pd);
     it = AddToCache(&bwds, key, bwd);
   }
@@ -252,12 +224,12 @@ void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs,
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   double temperature        = param.temperature.has_value() ? param.temperature.value() : 1.0;
   int axis                  = CheckAxis(param.axis, in_data[1].shape().ndim());
-  auto original_diff_mem             = in_data[0].GetMKLDNNData();
+  auto original_diff_mem    = in_data[0].GetMKLDNNData();
   auto data_mem             = in_data[1].GetMKLDNNData();
   auto bwd                  = GetSoftmaxBwd(param, axis, in_data, out_data);
 
-  auto out_mem           = CreateMKLDNNMem(out_data[0], bwd.softmax_bwd_pd.diff_src_desc(), req[0]);
-  MKLDNNStream* stream   = MKLDNNStream::Get();
+  auto out_mem         = CreateMKLDNNMem(out_data[0], bwd.softmax_bwd_pd.diff_src_desc(), req[0]);
+  MKLDNNStream* stream = MKLDNNStream::Get();
 
   mkldnn::memory* diff_mem;
   if (temperature != 1.0) {
@@ -273,7 +245,6 @@ void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs,
   } else {
     diff_mem = const_cast<mkldnn::memory*>(original_diff_mem);
   }
-
 
   mkldnn_args_map_t args = {{MKLDNN_ARG_DST, *data_mem},
                             {MKLDNN_ARG_DIFF_DST, *diff_mem},
