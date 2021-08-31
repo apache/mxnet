@@ -28,11 +28,12 @@
 #include <mkldnn.hpp>
 
 #include "../../tensor/matrix_op-inl.h"
+#include "../../numpy/np_matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray& data) {
+bool SupportMKLDNNTranspose(const NDArray& data) {
   auto data_ndim = data.shape().ndim();
 
   if (data_ndim > 4 || data_ndim == 0 || data.shape().Size() == 0 ||
@@ -42,7 +43,7 @@ bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray& data) {
   return true;
 }
 
-typedef ParamOpSign<TransposeParam> MKLDNNTransposeSignature;
+typedef ParamOpSign<NumpyTransposeParam> MKLDNNTransposeSignature;
 
 class MKLDNNTransposeForward {
  public:
@@ -52,12 +53,12 @@ class MKLDNNTransposeForward {
   std::shared_ptr<mkldnn::reorder> transpose_;
 
  public:
-  MKLDNNTransposeForward(const TransposeParam& param, const NDArray& data) {
+  MKLDNNTransposeForward(const NumpyTransposeParam& param, const NDArray& data) {
     auto shape     = data.shape();
     auto data_ndim = shape.ndim();
     auto axes_ndim = param.axes.ndim();
     auto axes      = mxnet::TShape(data_ndim, -1);
-    if (axes_ndim == 0) {
+    if (axes_ndim == -1) {
       for (int i = 0; i < data_ndim; i++) {
         axes[i] = data_ndim - i - 1;
       }
@@ -114,7 +115,7 @@ class MKLDNNTransposeForward {
   }
 };
 
-static MKLDNNTransposeForward& GetTransposeForward(const TransposeParam& param,
+static MKLDNNTransposeForward& GetTransposeForward(const NumpyTransposeParam& param,
                                                    const NDArray& data) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNTransposeSignature, MKLDNNTransposeForward, OpHash>
@@ -135,17 +136,52 @@ static MKLDNNTransposeForward& GetTransposeForward(const TransposeParam& param,
   return it->second;
 }
 
+NumpyTransposeParam ProcessTransposeParam(const TransposeParam &param) {
+  NumpyTransposeParam p;
+  if (param.axes.ndim() == 0)
+  {
+    p.axes = mxnet::TShape(-1,0);
+  }
+  else
+  {
+    p.axes = param.axes;
+  }
+  return p;
+}
+
+NumpyTransposeParam ProcessNumpyTransposeParam(const NumpyTransposeParam &param) {
+  NumpyTransposeParam p;
+  p.axes = common::CanonicalizeAxes(param.axes);
+  return p;
+}
+
 void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
                             const NDArray& data,
                             const OpReqType& req,
                             const NDArray& output) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
+  const NumpyTransposeParam processed_param = ProcessTransposeParam(param);
 
-  auto fwd = GetTransposeForward(param, data);
+  auto fwd = GetTransposeForward(processed_param, data);
+  fwd.SetNewMem(data, output);
+  fwd.Execute();
+}
+
+
+void MKLDNNNumpyTransposeForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const NDArray& data,
+                            const OpReqType& req,
+                            const NDArray& output) {
+  const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(attrs.parsed);
+  const NumpyTransposeParam processed_param = ProcessNumpyTransposeParam(param);
+
+  auto fwd = GetTransposeForward(processed_param, data);
   fwd.SetNewMem(data, output);
   fwd.Execute();
 }
 }  // namespace op
 }  // namespace mxnet
+
 #endif

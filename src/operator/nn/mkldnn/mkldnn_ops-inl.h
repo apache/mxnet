@@ -185,6 +185,12 @@ void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const OpReqType& req,
                             const NDArray& output);
 
+void MKLDNNNumpyTransposeForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const NDArray& data,
+                            const OpReqType& req,
+                            const NDArray& output);
+
 void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const NDArray& input,

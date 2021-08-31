@@ -182,6 +182,7 @@ struct DeconvolutionParam;
 struct SoftmaxParam;
 struct SoftmaxOutputParam;
 struct TransposeParam;
+struct NumpyTransposeParam;
 struct ReshapeParam;
 struct LayerNormParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
@@ -196,7 +197,7 @@ bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param,
                              const NDArray& input,
                              const NDArray& output);
 bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam& param);
-bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray& data);
+bool SupportMKLDNNTranspose(const NDArray& data);
 bool SupportMKLDNNBatchDot(const std::vector<NDArray>& inputs, const NDArray& output);
 bool SupportMKLDNNLayerNorm(const LayerNormParam& param, const std::vector<NDArray>& inputs);
 bool SupportMKLDNNReshape(const NDArray& input, const NDArray& output);
