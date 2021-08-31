@@ -530,16 +530,9 @@ public class SymbolBlock extends MxResource {
         String[] allNames = symbol.getAllNames();
         mxNetParams = new ArrayList<>(allNames.length);
 
-        Set<String> auxNameSet = new HashSet<>(Arrays.asList(symbol.getAuxNames()));
         for (String name : allNames) {
             Parameter.Type type = inferType(name);
-            boolean requireGrad = !auxNameSet.contains(name);
-            mxNetParams.add(
-                    Parameter.builder()
-                            .setName(name)
-                            .setType(type)
-                            .optRequiresGrad(requireGrad)
-                            .build());
+            mxNetParams.add(Parameter.builder().setName(name).setType(type).build());
         }
         first = true;
     }

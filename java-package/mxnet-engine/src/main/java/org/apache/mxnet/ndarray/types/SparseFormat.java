@@ -32,8 +32,7 @@ public enum SparseFormat {
     // the dense format is accelerated by MKLDNN by default
     DENSE("default", 0),
     ROW_SPARSE("row_sparse", 1),
-    CSR("csr", 2),
-    COO("coo", 3);
+    CSR("csr", 2);
 
     private String type;
     private int value;

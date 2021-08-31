@@ -53,7 +53,6 @@ public class Parameter extends MxResource {
     private Shape shape;
     private Type type;
     private NDArray array;
-    private boolean requiresGrad;
 
     Parameter(Builder builder) {
         this.id = UUID.randomUUID().toString();
@@ -61,7 +60,6 @@ public class Parameter extends MxResource {
         this.shape = builder.shape;
         this.type = builder.type;
         this.array = builder.array;
-        this.requiresGrad = builder.requiresGrad;
     }
 
     /**
@@ -130,15 +128,6 @@ public class Parameter extends MxResource {
     }
 
     /**
-     * Returns whether this parameter needs gradients to be computed.
-     *
-     * @return whether this parameter needs gradients to be computed
-     */
-    public boolean requiresGradient() {
-        return requiresGrad;
-    }
-
-    /**
      * Checks if this {@code Parameter} is initialized.
      *
      * @return {@code true} if this {@code Parameter} is initialized
@@ -156,9 +145,6 @@ public class Parameter extends MxResource {
      */
     public void initialize(MxResource parent, DataType dataType, Device device) {
         Objects.requireNonNull(shape, "No parameter shape has been set");
-        if (requiresGradient()) {
-            array.setRequiresGradient(true);
-        }
     }
 
     /**
@@ -258,7 +244,6 @@ public class Parameter extends MxResource {
         Shape shape;
         Type type;
         NDArray array;
-        boolean requiresGrad = true;
 
         /**
          * Sets the name of the {@code Parameter}.
@@ -301,17 +286,6 @@ public class Parameter extends MxResource {
          */
         public Builder optArray(NDArray array) {
             this.array = array;
-            return this;
-        }
-
-        /**
-         * Sets if the {@code Parameter} requires gradient.
-         *
-         * @param requiresGrad if the {@code Parameter} requires gradient
-         * @return this {@code Parameter}
-         */
-        public Builder optRequiresGrad(boolean requiresGrad) {
-            this.requiresGrad = requiresGrad;
             return this;
         }
 

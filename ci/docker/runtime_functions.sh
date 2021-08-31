@@ -321,11 +321,8 @@ build_ubuntu_gpu_and_test() {
 }
 
 java_package_integration_test() {
-    # install gradle
-    add-apt-repository ppa:cwchien/gradle
-    apt-get update -y
-    apt-get install gradle -y
-    # build java prokect
+    # make sure you are using java 11
+    # build java project
     cd /work/mxnet/java-package
     ./gradlew build -x javadoc
     # generate native library
@@ -1427,21 +1424,6 @@ test_artifact_repository() {
     cd cd/utils/
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 test_artifact_repository.py
     popd
-}
-
-integration_test() {
-    # install gradle
-    add-apt-repository ppa:cwchien/gradle
-    apt-get update -y
-    apt-get install gradle -y
-    # build java prokect
-    cd /work/mxnet/java-package
-    ./gradle build -x javadoc
-    # generate native library
-    ./gradlew :native:buildLocalLibraryJarDefault
-    ./gradlew :native:mkl-linuxJar
-    # run integration
-    ./gradlew :integration:run
 }
 
 ##############################################################

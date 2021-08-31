@@ -39,8 +39,6 @@ public class ModelTest {
     public void modelLoadAndPredictTest() {
         try (MxResource base = BaseMxResource.getSystemMxResource()) {
             Model model = Model.loadModel(Item.MLP);
-            //            Model model = Model.loadModel("test",
-            // Paths.get("/xxx/xxx/mxnet.java_package/cache/repo/test-models/mlp.tar.gz/mlp/"));
             Predictor<NDList, NDList> predictor = model.newPredictor();
             NDArray input = NDArray.create(base, new Shape(1, 28, 28)).ones();
             NDList inputs = new NDList();

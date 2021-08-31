@@ -19,6 +19,7 @@ package org.apache.mxnet.integration.tests.jna;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -144,33 +145,39 @@ public class JnaUtilTest {
                 throw e;
             }
             BaseMxResource base = BaseMxResource.getSystemMxResource();
-            Assert.assertEquals(base.getSubResource().size(), 0);
+            int countNotReleased = 0;
+            for (MxResource mxResource : base.getSubResource().values()) {
+                if (!mxResource.getClosed()) {
+                    ++countNotReleased;
+                }
+            }
+            Assert.assertEquals(countNotReleased, 0);
         } catch (ClassCastException e) {
             logger.error(e.getMessage());
             throw e;
         }
     }
 
-    //    @Test
-    //    public void loadNdArray() {
-    //
-    //        try (BaseMxResource base = BaseMxResource.getSystemMxResource()) {
-    //            NDList mxNDArray =
-    //                    JnaUtils.loadNdArray(
-    //                            base,
-    //                            Paths.get(
-    //
-    // "/Users/cspchen/Downloads/mxnet_resnet18/resnet18_v1-0000.params"),
-    //                            Device.defaultIfNull(null));
-    //            logger.info(mxNDArray.toString());
-    //            logger.info(
-    //                    String.format(
-    //                            "The amount of sub resources managed by BaseMxResource: %s",
-    //                            base.getSubResource().size()));
-    //        }
-    //        logger.info(
-    //                String.format(
-    //                        "The amount of sub resources managed by BaseMxResource: %s",
-    //                        BaseMxResource.getSystemMxResource().getSubResource().size()));
-    //    }
+    @Test
+    public void loadNdArray() throws IOException {
+        try (BaseMxResource base = BaseMxResource.getSystemMxResource()) {
+            Path modelPath = Repository.initRepository(Item.MLP);
+            Path paramsPath = modelPath.resolve("mlp-0000.params");
+            NDList mxNDArray =
+                    JnaUtils.loadNdArray(
+                            base, Paths.get(paramsPath.toUri()), Device.defaultIfNull(null));
+            logger.info(mxNDArray.toString());
+            logger.info(
+                    String.format(
+                            "The amount of sub resources managed by BaseMxResource: %s",
+                            base.getSubResource().size()));
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+            throw e;
+        }
+        logger.info(
+                String.format(
+                        "The amount of sub resources managed by BaseMxResource: %s",
+                        BaseMxResource.getSystemMxResource().getSubResource().size()));
+    }
 }

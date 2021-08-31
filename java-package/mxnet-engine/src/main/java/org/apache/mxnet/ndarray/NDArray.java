@@ -33,7 +33,6 @@ import java.util.Arrays;
 import java.util.stream.IntStream;
 import org.apache.mxnet.engine.BaseMxResource;
 import org.apache.mxnet.engine.Device;
-import org.apache.mxnet.engine.GradReq;
 import org.apache.mxnet.engine.MxResource;
 import org.apache.mxnet.engine.OpParams;
 import org.apache.mxnet.jna.JnaUtils;
@@ -694,26 +693,6 @@ public class NDArray extends MxResource {
             return this;
         }
         return duplicate(getShape(), dataType, getDevice(), getName());
-    }
-
-    /**
-     * Attaches a gradient {@code NDArray} to this {@code NDArray} and marks it. It is related to
-     * training so will not be used here.
-     *
-     * @param requiresGrad if {@code NDArray} requires gradient or not
-     */
-    public void setRequiresGradient(boolean requiresGrad) {
-        if ((requiresGrad && hasGradient()) || (!requiresGrad && !hasGradient())) {
-            return;
-        }
-        NDArray grad = hasGradient() ? getGradient() : createGradient(getSparseFormat());
-        // DJL go with write as only MXNet support GradReq
-        int gradReqValue = requiresGrad ? GradReq.WRITE.getValue() : GradReq.NULL.getValue();
-        IntBuffer gradReqBuffer = IntBuffer.allocate(1);
-        gradReqBuffer.put(0, gradReqValue);
-        JnaUtils.autogradMarkVariables(1, getHandle(), gradReqBuffer, grad.getHandle());
-        hasGradient = requiresGrad;
-        grad.close();
     }
 
     /**

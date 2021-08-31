@@ -373,20 +373,11 @@ std::shared_ptr<void(int)> HANDLER_NAME(                             \
       }                                                              \
     }                                                                \
   }),                                                                \
-  [](auto f) {                                                       \
-    struct sigaction sa;                                             \
-    sigaction(SIGNAL, nullptr, &sa);                                 \
-    if (sa.sa_handler == nullptr) {                                  \
-      LOG(INFO) << "Register the signal handler for '"               \
-        << strsignal(SIGNAL) << "'.";                                \
-      signal(SIGNAL, f);                                             \
-    } else {                                                         \
-      LOG(INFO) << "Skip register of signal handler for '"           \
-        << strsignal(SIGNAL) << "' which already gets registered.";  \
-     }                                                               \
-  });
+  [](auto f) { signal(SIGNAL, f); });
 
-SIGNAL_HANDLER(SIGSEGV, SIGSEGVHandler, true);
+// TODO: avoid jvm exit with code 139
+// By now, we just comment it
+//SIGNAL_HANDLER(SIGSEGV, SIGSEGVHandler, true);
 SIGNAL_HANDLER(SIGFPE, SIGFPEHandler, false);
 SIGNAL_HANDLER(SIGBUS, SIGBUSHandler, false);
 
