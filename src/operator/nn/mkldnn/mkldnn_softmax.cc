@@ -31,8 +31,6 @@ namespace mxnet {
 namespace op {
 
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray& data, const NDArray& output) {
-  // MKLDNN does not support temperature argument in their softmax function
-  // now. Need update this once they start to support it.
   const int ndim      = data.shape().ndim();
   const int in_dtype  = data.dtype();
   const int out_dtype = output.dtype();
