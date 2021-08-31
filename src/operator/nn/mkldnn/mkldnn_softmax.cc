@@ -41,8 +41,8 @@ bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray& data, const 
     return false;
   }
 
-  // only supports ndim = 1, 2, 3, 4 for now
-  return (ndim >= 1 && ndim <= 4);
+  // only supports up to 6 ndim
+  return (ndim >= 1 && ndim <= 6);
 }
 
 void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
