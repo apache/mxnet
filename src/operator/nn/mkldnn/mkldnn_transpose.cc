@@ -168,7 +168,6 @@ void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
   fwd.Execute();
 }
 
-
 void MKLDNNNumpyTransposeForward(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
                             const NDArray& data,
@@ -183,5 +182,4 @@ void MKLDNNNumpyTransposeForward(const nnvm::NodeAttrs& attrs,
 }
 }  // namespace op
 }  // namespace mxnet
-
 #endif
