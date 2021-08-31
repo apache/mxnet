@@ -1870,8 +1870,6 @@ void NumpyDiagIndicesFromForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-
-
 }  // namespace op
 }  // namespace mxnet
 
