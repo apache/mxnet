@@ -43,14 +43,9 @@ static void DeconvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
                                       const std::vector<NDArray>& outputs) {
   const DeconvolutionParam& params = nnvm::get<DeconvolutionParam>(attrs.parsed);
   if (SupportMKLDNNDeconv(params, inputs[0])) {
-    if (params.kernel.ndim() == 3) {
-      // we cannot check the output, as 3D deconvolution is not natively supported yet
-      MKLDNNRun(MKLDNNDeconvolutionForward, attrs, ctx, inputs, req, outputs);
-    } else {
-      MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-      MKLDNNRun(MKLDNNDeconvolutionForward, attrs, ctx, inputs, req, outputs);
-      MKLDNN_OPCHECK_RUN(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
-    }
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    MKLDNNRun(MKLDNNDeconvolutionForward, attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(DeconvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -63,14 +58,9 @@ static void DeconvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                           const std::vector<NDArray>& outputs) {
   const DeconvolutionParam& params = nnvm::get<DeconvolutionParam>(attrs.parsed);
   if (SupportMKLDNNDeconv(params, inputs[0])) {
-    if (params.kernel.ndim() == 3) {
-      // we cannot check the output, as 3D deconvolution is not natively supported yet
-      MKLDNNRun(MKLDNNDeconvolutionBackward, attrs, ctx, inputs, req, outputs);
-    } else {
-      MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-      MKLDNNRun(MKLDNNDeconvolutionBackward, attrs, ctx, inputs, req, outputs);
-      MKLDNN_OPCHECK_RUN(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
-    }
+    MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
+    MKLDNNRun(MKLDNNDeconvolutionBackward, attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(DeconvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);

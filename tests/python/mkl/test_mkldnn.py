@@ -429,7 +429,7 @@ def test_convolution():
 
 def test_Deconvolution():
     def check_Deconvolution_training(stype):
-        for shape in [(3, 3, 10), (3, 3, 10, 10), (3, 3, 10, 10, 10)]:
+        for shape in [(3, 3, 10), (3, 3, 10, 10), (3, 3, 3, 10, 10)]:
             data_tmp = np.random.normal(-0.1, 1, size=shape)
             data = mx.symbol.Variable('data', stype=stype)
 
@@ -439,9 +439,7 @@ def test_Deconvolution():
             elif np.array(shape).shape[0] == 4:
                 test = mx.symbol.Deconvolution(data=data, kernel=(3, 3), stride=(2, 2), num_filter=4)
                 weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3, 3))
-            elif np.array(shape).shape[0] == 5 and stype == "default":
-                # Unable to test fallback to native implementation for non-default storage types
-                # as 3D deconvolution is not natively supported
+            elif np.array(shape).shape[0] == 5:
                 test = mx.symbol.Deconvolution(data=data, kernel=(3,3,3), stride=(2,2,2), num_filter=4)
                 weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3, 3, 3))
             else:
