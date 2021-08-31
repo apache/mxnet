@@ -45,7 +45,11 @@ static void MKLDNNQuantizedFlattenForward(const nnvm::NodeAttrs& attrs,
                                           const std::vector<NDArray>& inputs,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<NDArray>& outputs) {
-  MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+  if (SupportMKLDNNReshape(inputs[0], outputs[0])) {
+    MKLDNNRun(MKLDNNReshapeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
+  } else {
+    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  }
   outputs[1].data().dptr<float>()[0] = inputs[1].data().dptr<float>()[0];
   outputs[2].data().dptr<float>()[0] = inputs[2].data().dptr<float>()[0];
 }

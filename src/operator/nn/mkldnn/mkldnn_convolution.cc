@@ -39,7 +39,7 @@ DMLC_REGISTER_PARAMETER(MKLDNNConvParam);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray& input) {
   if ((params.kernel.ndim() != 1) && (params.kernel.ndim() != 2) && (params.kernel.ndim() != 3))
     return false;
-  return SupportMKLDNNQuantize(input.dtype()) &&
+  return IsMKLDNNType(input.dtype()) &&
          ((input.shape().ndim() == 3) || (input.shape().ndim() == 4) ||
           (input.shape().ndim() == 5));
 }
