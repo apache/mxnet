@@ -10845,7 +10845,6 @@ def test_slice_like():
     ((1, 8, 3, 16, 16), 16, 2, (2, 2, 2), (0, 0, 0)),
     ((16, 16, 3, 16, 16), 16, 1, (3, 3, 3), (1, 1, 1))])
 def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
-    from math import prod
 
     class TestConv(mx.gluon.HybridBlock):
         def __init__(self, w):
@@ -10892,7 +10891,7 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
     y.backward()
     
     deconvData = np.ones_like(convOut)  # gradient of convOut
-    deconvBias = np.repeat(deconvNet.bias.data(), prod(convData.grad.shape[2:]))
+    deconvBias = np.repeat(deconvNet.bias.data(), int(np.prod(np.array(convData.grad.shape[2:])).item()))
     deconvRefOut = np.copy(convData.grad) + deconvBias.reshape((convData.grad.shape[1:]))
     deconvData.attach_grad()
     with mx.autograd.record():
@@ -10904,3 +10903,5 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
 
     assert_almost_equal(deconvOut, deconvRefOut)
     assert_almost_equal(deconvData.grad, deconvRefGrad)
+
+test_npx_deconvolution((1, 8, 3, 16, 16), 16, 2, (2, 2, 2), (0, 0, 0))
