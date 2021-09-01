@@ -241,11 +241,10 @@ class ConvolutionOp {
                const std::vector<TBlob>& out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(req[conv::kOut], kWriteTo);
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1U);
-    CHECK_EQ(req[conv::kOut], kWriteTo);
+    // CHECK_EQ(req[conv::kOut], kWriteTo);
     LayerSetUp(in_data[conv::kData].shape_, out_data[conv::kOut].shape_);
     Stream<xpu>* s = ctx.get_stream<xpu>();
 
