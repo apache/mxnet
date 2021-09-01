@@ -228,9 +228,11 @@ class ConvolutionOp {
     this->param_ = p;
     // convert MBytes first to Bytes and then to elements.
     param_.workspace = (param_.workspace << 20) / sizeof(DType);
-    CHECK(param_.layout.value() == mshadow::kNCW || param_.layout.value() == mshadow::kNCHW ||
-          param_.layout.value() == mshadow::kNCDHW)
-        << "Only support NCW, NCHW and NCDHW layout";
+    if (param_.layout.has_value()) {
+      CHECK(param_.layout.value() == mshadow::kNCW || param_.layout.value() == mshadow::kNCHW ||
+            param_.layout.value() == mshadow::kNCDHW)
+          << "Only support NCW, NCHW and NCDHW layout";
+    }
   }
 
   void Forward(const OpContext& ctx,
