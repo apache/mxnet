@@ -98,12 +98,6 @@ static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
                                mxnet::ShapeVector* in_shape,
                                mxnet::ShapeVector* out_shape) {
   const DeconvolutionParam& param_ = nnvm::get<DeconvolutionParam>(attrs.parsed);
-#if MXNET_USE_CUDNN == 0 && MXNET_USE_ONEDNN == 0
-  if (param_.kernel.ndim() > 2) {
-    LOG(FATAL) << "If not using CUDNN or MKLDNN, only 1D or 2D Deconvolution is supported";
-    return false;
-  }
-#endif
 
   using namespace mshadow;
   if (!param_.no_bias) {
