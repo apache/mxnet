@@ -10836,14 +10836,14 @@ def test_slice_like():
 
 @use_np
 @pytest.mark.parametrize('shape,num_filter,num_group,kernel,pad', [
-    ((1, 16, 15), 16, 2, (2,), (0,)),
-    ((16, 16, 16), 16, 1, (3,), (1,)),
+    ((1, 4, 15), 16, 2, (2,), (0,)),
+    ((1, 4, 16), 16, 1, (3,), (1,)),
 
-    ((1, 8, 15, 16), 16, 2, (2, 2), (0, 0)),
-    ((16, 16, 16, 16), 16, 1, (3, 3), (1, 1)),
+    ((1, 4, 15, 16), 16, 2, (2, 2), (0, 0)),
+    ((1, 4, 16, 16), 16, 1, (3, 3), (1, 1)),
 
-    ((1, 8, 3, 16, 16), 16, 2, (2, 2, 2), (0, 0, 0)),
-    ((16, 16, 3, 16, 16), 16, 1, (3, 3, 3), (1, 1, 1))])
+    ((1, 4, 3, 15, 16), 16, 2, (2, 2, 2), (0, 0, 0)),
+    ((1, 4, 3, 16, 16), 16, 1, (3, 3, 3), (1, 1, 1))])
 def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
 
     class TestConv(mx.gluon.HybridBlock):
@@ -10903,5 +10903,3 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
 
     assert_almost_equal(deconvOut, deconvRefOut)
     assert_almost_equal(deconvData.grad, deconvRefGrad)
-
-test_npx_deconvolution((1, 8, 3, 16, 16), 16, 2, (2, 2, 2), (0, 0, 0))
