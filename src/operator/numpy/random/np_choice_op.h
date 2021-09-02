@@ -47,8 +47,8 @@ struct NumpyChoiceParam : public dmlc::Parameter<NumpyChoiceParam> {
   bool replace;
   bool weighted;
   DMLC_DECLARE_PARAMETER(NumpyChoiceParam) {
-    DMLC_DECLARE_FIELD(a);
-    DMLC_DECLARE_FIELD(size);
+    DMLC_DECLARE_FIELD(a).set_default(dmlc::optional<int64_t>());
+    DMLC_DECLARE_FIELD(size).set_default(dmlc::optional<mxnet::Tuple<int64_t>>());
     DMLC_DECLARE_FIELD(ctx).set_default("cpu");
     DMLC_DECLARE_FIELD(replace).set_default(true);
     DMLC_DECLARE_FIELD(weighted).set_default(false);
