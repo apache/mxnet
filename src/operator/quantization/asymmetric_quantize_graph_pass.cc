@@ -33,7 +33,7 @@ using nnvm::Graph;
 using nnvm::ObjectPtr;
 
 template <bool require_bias>
-static bool IsOneDNNFullyConnected(const ObjectPtr& n) {
+static bool IsMKLDNNFullyConnected(const ObjectPtr& n) {
   if (n->op() == Op::Get("_sg_mkldnn_fully_connected")) {
     auto const& param = nnvm::get<MKLDNNFCFullParam>(n->attrs.parsed);
     FCInputIndex idx(param);
@@ -68,20 +68,19 @@ static NDArray* FindInArgByName(const Graph& g, const std::string& name) {
 }
 
 // Rescales weights, min_weight and max_weight. Returns bias_int32_rescale.
-static float RescaleWeights(const Graph& g, const ObjectPtr& fc, NDArray* weight_tensor) {
-  FCInputIndex idx(nnvm::get<MKLDNNFCFullParam>(fc->attrs.parsed));
+static float RescaleWeights(const Graph& g,
+                            const ObjectPtr& fc,
+                            NDArray* weight_tensor,
+                            float min_data,
+                            float max_data,
+                            FCInputIndex idx) {
+  auto fc_input_node_name = [&fc](int input) { return fc->inputs[input].node->attrs.name; };
 
-  float* min_weight =
-      FindInArgByName(g, fc->inputs[idx.weight_min].node->attrs.name)->data().dptr<float>();
-  float* max_weight =
-      FindInArgByName(g, fc->inputs[idx.weight_max].node->attrs.name)->data().dptr<float>();
-  float min_bias =
-      *FindInArgByName(g, fc->inputs[idx.bias_min].node->attrs.name)->data().dptr<float>();
-  float max_bias =
-      *FindInArgByName(g, fc->inputs[idx.bias_max].node->attrs.name)->data().dptr<float>();
+  float* min_weight = FindInArgByName(g, fc_input_node_name(idx.weight_min))->data().dptr<float>();
+  float* max_weight = FindInArgByName(g, fc_input_node_name(idx.weight_max))->data().dptr<float>();
+  float min_bias    = *FindInArgByName(g, fc_input_node_name(idx.bias_min))->data().dptr<float>();
+  float max_bias    = *FindInArgByName(g, fc_input_node_name(idx.bias_max))->data().dptr<float>();
 
-  float min_data           = std::stof(fc->inputs[idx.data].node->attrs.dict.at("min_calib_range"));
-  float max_data           = std::stof(fc->inputs[idx.data].node->attrs.dict.at("max_calib_range"));
   float data_scale_        = kUint8Range / (max_data - min_data);
   float weight_scale       = GetQuantizeScale(mshadow::kInt8, *min_weight, *max_weight);
   float bias_scale         = GetQuantizeScale(mshadow::kInt8, min_bias, max_bias);
@@ -92,9 +91,9 @@ static float RescaleWeights(const Graph& g, const ObjectPtr& fc, NDArray* weight
   float bias_max_rescale =
       mshadow::red::limits::MaxValue<int32_t>() / 2 / MaxAbs(min_bias, max_bias) / bias_scale;
   if (bias_int32_rescale > bias_max_rescale) {
-    LOG(INFO) << "RESCALING WEIGHTS in shifted quantization because bias scale "
-                 "is too big in layer "
-              << fc->attrs.name;
+    LOG(INFO)
+        << "RESCALING WEIGHTS in asymmetric quantization because bias scale is too big in layer "
+        << fc->attrs.name;
     // avoid overflow on bias
     bias_int32_rescale   = bias_max_rescale;
     float weight_rescale = bias_int32_rescale * bias_scale / data_scale_ / weight_scale;
@@ -126,22 +125,23 @@ static void ShiftBias(int32_t* bias_ptr_int32,
 enum class Pattern { QuantizeFc, FcFc, None };
 
 static Pattern FindPattern(const ObjectPtr& node) {
-  if (IsOneDNNFullyConnected<true>(node)) {
+  if (IsMKLDNNFullyConnected<true>(node)) {
     if (IsQuantize(node->inputs[0].node)) {
       return Pattern::QuantizeFc;
-    } else if (IsOneDNNFullyConnected<false>(node->inputs[0].node)) {
+    } else if (IsMKLDNNFullyConnected<false>(node->inputs[0].node)) {
       return Pattern::FcFc;
     }
   }
   return Pattern::None;
 }
 
-static void QuantizeFcShiftedQuantization(const ObjectPtr& node,
-                                          Graph&& g,
-                                          std::vector<NDArray*>* new_arg_vector,
-                                          std::vector<std::string>* new_arg_names) {
-  ObjectPtr& quantize       = node->inputs[0].node;
-  ObjectPtr& bias_node      = node->inputs[2].node;
+static void FCShiftedQuantization(const ObjectPtr& node,
+                                  const Graph& g,
+                                  std::vector<NDArray*>* new_arg_vector,
+                                  std::vector<std::string>* new_arg_names) {
+  FCInputIndex idx(nnvm::get<MKLDNNFCFullParam>(node->attrs.parsed));
+
+  ObjectPtr& bias_node      = node->inputs[idx.bias].node;
   std::string bias_name_old = bias_node->attrs.name;
   NDArray* bias_in_arg_ptr  = FindInArgByName(g, bias_name_old);
   if (bias_in_arg_ptr->dtype() != mshadow::kInt8)
@@ -150,51 +150,15 @@ static void QuantizeFcShiftedQuantization(const ObjectPtr& node,
   bias_node                 = CreateNode("nullptr", bias_name_s32);
   new_arg_names->push_back(bias_name_s32);
 
-  quantize->attrs.dict["shifted"] = "True";
-  if (quantize->op()->attr_parser)
-    quantize->op()->attr_parser(&(quantize->attrs));
+  ObjectPtr& input_node             = node->inputs[idx.data].node;
+  input_node->attrs.dict["shifted_output"] = "True";
+  if (input_node->op()->attr_parser)
+    input_node->op()->attr_parser(&(input_node->attrs));
 
-  NDArray* weight_tensor = FindInArgByName(g, node->inputs[1].node->attrs.name);
-
-  float bias_int32_rescale = RescaleWeights(g, node, weight_tensor);
-
-  new_arg_vector->push_back(new NDArray(
-      kDefaultStorage, bias_in_arg_ptr->shape(), Context::CPU(), false, mshadow::kInt32));
-  int32_t* bias_ptr_int32 = new_arg_vector->back()->data().dptr<int32_t>();
-  size_t bias_size        = bias_in_arg_ptr->shape().Size();
-  int8_t* bias_ptr_old    = bias_in_arg_ptr->data().dptr<int8_t>();
-
-  for (size_t i = 0; i < bias_size; ++i) {
-    bias_ptr_int32[i] = static_cast<int32_t>(std::round(bias_ptr_old[i] * bias_int32_rescale));
-  }
-  float min_data      = std::stof(quantize->attrs.dict.at("min_calib_range"));
-  float max_data      = std::stof(quantize->attrs.dict.at("max_calib_range"));
-  float data_scale    = kUint8Range / (max_data - min_data);
-  int32_t shift_value = static_cast<int32_t>(std::round(data_scale * -min_data));
-  ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
-}
-
-static void FcFcShiftedQuantization(const ObjectPtr& node,
-                                    Graph&& g,
-                                    std::vector<NDArray*>* new_arg_vector,
-                                    std::vector<std::string>* new_arg_names) {
-  ObjectPtr& first_fc       = node->inputs[0].node;
-  ObjectPtr& bias_node      = node->inputs[2].node;
-  std::string bias_name_old = bias_node->attrs.name;
-  NDArray* bias_in_arg_ptr  = FindInArgByName(g, bias_name_old);
-  if (bias_in_arg_ptr->dtype() != mshadow::kInt8)
-    return;
-  std::string bias_name_s32 = bias_node->attrs.name + "_s32";
-  bias_node                 = CreateNode("nullptr", bias_name_s32);
-  new_arg_names->push_back(bias_name_s32);
-
-  first_fc->attrs.dict["shifted_output"] = "True";
-  if (first_fc->op()->attr_parser)
-    first_fc->op()->attr_parser(&(first_fc->attrs));
-
-  NDArray* weight_tensor = FindInArgByName(g, node->inputs[1].node->attrs.name);
-
-  float bias_int32_rescale = RescaleWeights(g, node, weight_tensor);
+  float min_data           = std::stof(input_node->attrs.dict.at("min_calib_range"));
+  float max_data           = std::stof(input_node->attrs.dict.at("max_calib_range"));
+  NDArray* weight_tensor   = FindInArgByName(g, node->inputs[1].node->attrs.name);
+  float bias_int32_rescale = RescaleWeights(g, node, weight_tensor, min_data, max_data, idx);
 
   new_arg_vector->push_back(new NDArray(
       kDefaultStorage, bias_in_arg_ptr->shape(), Context::CPU(), false, mshadow::kInt32));
@@ -207,20 +171,18 @@ static void FcFcShiftedQuantization(const ObjectPtr& node,
     bias_ptr_int32[i] = static_cast<int32_t>(std::round(bias_ptr_old[i] * bias_int32_rescale));
   }
 
-  float min_data      = std::stof(first_fc->attrs.dict.at("min_calib_range"));
-  float max_data      = std::stof(first_fc->attrs.dict.at("max_calib_range"));
   float data_scale    = kUint8Range / (max_data - min_data);
   int32_t shift_value = static_cast<int32_t>(std::round(data_scale * -min_data));
   ShiftBias(bias_ptr_int32, bias_size, weight_tensor, shift_value);
 }
 
-static Graph OneDNNShiftedQuantization(Graph&& g) {
+static Graph MKLDNNShiftedQuantization(Graph&& g) {
   bool disable_shifted_quant =
       dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZATION_OPTIMIZATIONS", true);
   bool quantize_fc = !dmlc::GetEnv("MXNET_DISABLE_SHIFTED_QUANTIZE_FC_OPTIMIZATION", false);
   bool fc_fc       = !dmlc::GetEnv("MXNET_DISABLE_SHIFTED_FC_FC_OPTIMIZATION", false);
   if (!disable_shifted_quant) {
-    LOG(INFO) << "Running OneDNN shifted quantization";
+    LOG(INFO) << "Running MKLDNN asymmetric quantization";
   }
   // No change to aux params
   g.attrs["new_aux_names"] = std::make_shared<nnvm::any>(std::vector<std::string>());
@@ -238,14 +200,13 @@ static Graph OneDNNShiftedQuantization(Graph&& g) {
       switch (p) {
         case Pattern::QuantizeFc:
           if (quantize_fc) {
-            QuantizeFcShiftedQuantization(
-                node, std::forward<Graph>(g), &new_arg_vector, &new_arg_names);
+            FCShiftedQuantization(node, g, &new_arg_vector, &new_arg_names);
             ++quantize_fc_counter;
           }
           break;
         case Pattern::FcFc:
           if (fc_fc) {
-            FcFcShiftedQuantization(node, std::forward<Graph>(g), &new_arg_vector, &new_arg_names);
+            FCShiftedQuantization(node, g, &new_arg_vector, &new_arg_names);
             ++fc_fc_counter;
           }
           break;
@@ -254,11 +215,11 @@ static Graph OneDNNShiftedQuantization(Graph&& g) {
       }
     });
     if (quantize_fc_counter > 0) {
-      LOG(INFO) << "applied shifted quantization on QUANTIZE->FC " << quantize_fc_counter
+      LOG(INFO) << "Applied asymmetric quantization on QUANTIZE->FC " << quantize_fc_counter
                 << " times";
     }
     if (fc_fc_counter > 0) {
-      LOG(INFO) << "applied shifted quantization on FC->FC " << fc_fc_counter << " times";
+      LOG(INFO) << "Applied asymmetric quantization on FC->FC " << fc_fc_counter << " times";
     }
   }
   g.attrs["new_arg_names"] = std::make_shared<nnvm::any>(new_arg_names);
@@ -266,9 +227,9 @@ static Graph OneDNNShiftedQuantization(Graph&& g) {
   return g;
 }
 
-NNVM_REGISTER_PASS(OneDNNShiftedQuantization)
-    .describe("Enables shifted quantization.")
-    .set_body(OneDNNShiftedQuantization)
+NNVM_REGISTER_PASS(MKLDNNShiftedQuantization)
+    .describe("Enables asymmetric quantization.")
+    .set_body(MKLDNNShiftedQuantization)
     .set_change_graph(true);
 
 }  // namespace asym_quant
