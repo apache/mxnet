@@ -60,6 +60,12 @@ def python3_ut_onednn(docker_container_name) {
   }
 }
 
+def python3_ut_array_api(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_array_api_standardization', false)
+  }
+}
+
 // GPU test has two parts. 1) run unittest on GPU, 2) compare the results on
 // both CPU and GPU
 // Python 3
@@ -660,6 +666,18 @@ def test_unix_python3_cpu(lib_name) {
             utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_cpu_unittest.xml')
             utils.collect_test_results_unix('tests_quantization.xml', 'tests_python3_cpu_quantization.xml')
           }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_array_api(lib_name) {
+    return ['Python3: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-cpu') {
+          utils.unpack_and_init(lib_name, mx_lib, true)
+          python3_ut_array_api('ubuntu_cpu')
+          utils.publish_test_coverage()
         }
       }
     }]

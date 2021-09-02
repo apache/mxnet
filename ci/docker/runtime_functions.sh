@@ -806,6 +806,19 @@ unittest_ubuntu_python3_cpu_onednn() {
     pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
 }
 
+unittest_array_api_standardization() {
+    set -ex
+    pushd .
+    git clone https://github.com/data-apis/array-api-tests.git
+    cd array-api-tests
+    export ARRAY_API_TESTS_MODULE=mxnet.numpy pytest
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=100
+    python3 -m pytest --durations=50 --cov-report xml:tests_unittest.xml --cov-append \
+        array_api_tests/test_type_promotion.py::test_elementwise_function_two_arg_bool_type_promotion
+    popd
+}
+
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/
