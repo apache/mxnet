@@ -59,7 +59,7 @@ finfo = onp.finfo
 
 _STR_2_DTYPE_ = {'float16': float16, 'float32': float32, 'float64': float64, 'float': float64,
                  'int8': int8, 'int16': int16, 'int32': int32, 'int64': int64, 'int': int64,
-                 'uint8': uint8, 'uint16': uint16, 'uint32': uint32, 'uint64': uint64, 
+                 'uint8': uint8, 'uint16': uint16, 'uint32': uint32, 'uint64': uint64,
                  'bool': bool, 'bool_': bool_, 'None': None}
 
 _DTYPE_2_STR_ = {float16: 'float16', float32: 'float32', float64: 'float64', float: 'float64',
