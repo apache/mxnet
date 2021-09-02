@@ -33,7 +33,7 @@ MXNET_REGISTER_API("_npi.choice")
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_choice");
   nnvm::NodeAttrs attrs;
-  op::NumpyChoiceParam param;
+  op::NumpyChoiceParam param = nnvm::get<op::NumpyChoiceParam>(attrs.parsed);
 
   NDArray* inputs[2];
   int num_inputs = 0;
