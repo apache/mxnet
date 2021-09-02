@@ -16,7 +16,6 @@
 # under the License.
 
 # coding: utf-8
-"""ONNX Import module"""
-from . import import_model
-from . import import_onnx
-from . import import_to_gluon
+"""ONNX Export module"""
+
+from .mx2onnx import export_model, get_operator_support

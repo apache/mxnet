@@ -767,6 +767,16 @@ cd_unittest_ubuntu() {
     fi
 }
 
+unittest_ubuntu_python3_cpu_onnx() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+
+    pytest --cov-report xml:onnx_unittest.xml --verbose tests/python/onnx/test_operators.py
+    pytest --cov-report xml:onnx_unittest.xml --cov-append --verbose tests/python/onnx/test_models.py
+}
+
 unittest_ubuntu_python3_cpu() {
     set -ex
     export PYTHONPATH=./python/
@@ -1133,8 +1143,9 @@ build_python_docs() {
     export PATH=/home/jenkins_slave/.local/bin:$PATH
 
     pushd python
+    cp tutorials/getting-started/crash-course/prepare_dataset.py .
     make clean
-    make html EVAL=0
+    make html EVAL=1
 
     GZIP=-9 tar zcvf python-artifacts.tgz -C build/_build/html .
     popd

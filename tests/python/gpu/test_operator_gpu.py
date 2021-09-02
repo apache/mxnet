@@ -27,7 +27,7 @@ import scipy.sparse as sps
 import mxnet.ndarray.sparse as mxsps
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
-from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same, environment
+from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same, environment, get_rtc_compile_opts
 from mxnet.base import MXNetError
 from mxnet import autograd
 
@@ -1796,6 +1796,7 @@ def test_autograd_save_memory():
 
 @pytest.mark.serial
 def test_cuda_rtc():
+    ctx = mx.gpu(0)
     source = r'''
     extern "C" __global__ void axpy(const float *x, float *y, float alpha) {
         int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -1809,18 +1810,20 @@ def test_cuda_rtc():
         y[i] += alpha * smem[threadIdx.x];
     }
     '''
-    module = mx.rtc.CudaModule(source)
+
+    compile_opts = get_rtc_compile_opts(ctx)
+    module = mx.rtc.CudaModule(source, options=compile_opts)
     axpy = module.get_kernel("axpy", "const float *x, float *y, float alpha")
-    x = mx.nd.ones((10,), ctx=mx.gpu(0))
-    y = mx.nd.zeros((10,), ctx=mx.gpu(0))
-    axpy.launch([x, y, 3.0], mx.gpu(0), (1, 1, 1), (10, 1, 1))
+    x = mx.nd.ones((10,), ctx=ctx)
+    y = mx.nd.zeros((10,), ctx=ctx)
+    axpy.launch([x, y, 3.0], ctx, (1, 1, 1), (10, 1, 1))
     assert (y.asnumpy() == 3).all()
 
     saxpy = module.get_kernel("saxpy", "const float *x, float *y, float alpha")
-    saxpy.launch([x, y, 4.0], mx.gpu(0), (1, 1, 1), (10, 1, 1), 10)
+    saxpy.launch([x, y, 4.0], ctx, (1, 1, 1), (10, 1, 1), 10)
     assert (y.asnumpy() == 7).all()
 
-    saxpy.launch([x, y, 5.0], mx.gpu(0), (2, 1, 1), (5, 1, 1), 5)
+    saxpy.launch([x, y, 5.0], ctx, (2, 1, 1), (5, 1, 1), 5)
     assert (y.asnumpy() == 12).all()
 
 

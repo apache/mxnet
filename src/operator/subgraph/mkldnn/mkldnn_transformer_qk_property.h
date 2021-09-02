@@ -17,7 +17,6 @@
  * under the License.
  */
 
-
 #ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_QK_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_TRANSFORMER_QK_PROPERTY_H_
 #if MXNET_USE_ONEDNN == 1
@@ -25,10 +24,12 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "../common.h"
-#include "../../numpy/np_matrix_op-inl.h"
+
 #include "../../contrib/transformer-inl.h"
+#include "../../numpy/np_matrix_op-inl.h"
 #include "../../tensor/matrix_op-inl.h"
+#include "../common.h"
+
 #include "mkldnn_common.h"
 #include "mkldnn_subgraph_base-inl.h"
 #include "mkldnn_transformer-inl.h"
@@ -38,7 +39,7 @@
                  |
     _____________|_________________
    |            Split             |
-   |           /     \            | 
+   |           /     \            |
    |  _npx_reshape  _npx_reshape  |
    |      |              |        |
    |  SwapAxis        SwapAxis    |
@@ -61,17 +62,17 @@ class SgMKLDNNTransformerQKSelector : public SubgraphSelector {
     kSuccess
   };
 
-/*
-  kStart ---> kFirstSwapAx ---> kSecondSwapAx ---> kFirstReshape ---> kSecondReshape ---> kSuccess
-  Each status except kStart is connected with kFail
-*/
+  /*
+    kStart ---> kFirstSwapAx ---> kSecondSwapAx ---> kFirstReshape ---> kSecondReshape ---> kSuccess
+    Each status except kStart is connected with kFail
+  */
 
  private:
   SelectStatus status_;
-  std::vector<const nnvm::Node *> matched_list_;
+  std::vector<const nnvm::Node*> matched_list_;
 
  public:
-  bool Select(const nnvm::Node &n, const std::shared_ptr<NodeAttr>& node_attr) override {
+  bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() == Op::Get("batch_dot")) {
       status_ = kStart;
       matched_list_.clear();
@@ -81,7 +82,7 @@ class SgMKLDNNTransformerQKSelector : public SubgraphSelector {
     return false;
   }
 
-  bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) override {
+  bool SelectInput(const nnvm::Node& n, const nnvm::Node& new_node) override {
     if (status_ == kFail || status_ == kSuccess || new_node.is_variable())
       return false;
 
@@ -128,23 +129,21 @@ class SgMKLDNNTransformerQKSelector : public SubgraphSelector {
         status_ = kFail;
         return false;
     }
-      return false;
-  }
-
-  bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
     return false;
   }
 
-  std::vector<nnvm::Node *> Filter(
-      const std::vector<nnvm::Node *> &candidates) override {
+  bool SelectOutput(const nnvm::Node& n, const nnvm::Node& new_node) override {
+    return false;
+  }
+
+  std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) override {
     if (status_ == kFail) {
-      return std::vector<nnvm::Node *>(0);
+      return std::vector<nnvm::Node*>(0);
     } else {
-      std::vector<nnvm::Node *> ret;
+      std::vector<nnvm::Node*> ret;
       for (auto i : matched_list_) {
-        auto non_const_i = const_cast<nnvm::Node *>(i);
-        if (std::find(candidates.begin(), candidates.end(), non_const_i) !=
-            candidates.end()) {
+        auto non_const_i = const_cast<nnvm::Node*>(i);
+        if (std::find(candidates.begin(), candidates.end(), non_const_i) != candidates.end()) {
           ret.push_back(non_const_i);
         }
       }
@@ -165,8 +164,8 @@ class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
   SgMKLDNNTransformerQKProperty() {}
 
   static SubgraphPropertyPtr Create() {
-    static const std::string &name = "MKLDNN Transformer optimization pass";
-    auto property = std::make_shared<SgMKLDNNTransformerQKProperty>();
+    static const std::string& name = "MKLDNN Transformer optimization pass";
+    auto property                  = std::make_shared<SgMKLDNNTransformerQKProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_TRANSFORMER_OPT", 0)) {
@@ -175,7 +174,7 @@ class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
     return property;
   }
 
-  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                      const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
     // This op has single output, remove duplicated.
@@ -185,10 +184,9 @@ class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
     std::ostringstream node_name;
     std::string op_name;
 
-    DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
+    DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr& node) {
       if ((node->op() == Op::Get("_npx_reshape"))) {
-        auto const &reshape_param =
-            nnvm::get<NumpyXReshapeParam>(node->attrs.parsed);
+        auto const& reshape_param = nnvm::get<NumpyXReshapeParam>(node->attrs.parsed);
         // set heads attribute - all necessary conditions are checked before
         n->attrs.dict["heads"] = std::to_string(reshape_param.newshape[2]);
       }
@@ -197,7 +195,7 @@ class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
     node_name << "_sg_mkldnn_selfatt_qk_" << subgraph_id;
 
     n->attrs.name = node_name.str();
-    n->attrs.op = Op::Get("_sg_mkldnn_selfatt_qk");
+    n->attrs.op   = Op::Get("_sg_mkldnn_selfatt_qk");
     CHECK(n->attrs.op);
     n->op()->attr_parser(&(n->attrs));
     return n;
@@ -208,21 +206,18 @@ class SgMKLDNNTransformerQKProperty : public SubgraphProperty {
     return selector;
   }
 
-  void ConnectSubgraphOutputs(
-      const nnvm::ObjectPtr n,
-      std::vector<nnvm::NodeEntry *> *output_entries) const override {
+  void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
+                              std::vector<nnvm::NodeEntry*>* output_entries) const override {
     // Connect all extern output entries to output[0]
     for (size_t i = 0; i < output_entries->size(); ++i) {
       auto entry_ptr = output_entries->at(i);
-      *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
+      *entry_ptr     = nnvm::NodeEntry{n, entry_ptr->index, 0};
     }
   }
 
-
   void ConnectSubgraphInputs(const nnvm::ObjectPtr subgraph_node,
                              std::vector<nnvm::NodeEntry*>* input_entries,
-                             std::vector<nnvm::NodeEntry>* orig_input_entries)
-                             const override {
+                             std::vector<nnvm::NodeEntry>* orig_input_entries) const override {
     subgraph_node->inputs.resize(1);
     // split is not part of subgraph, skip split as input and
     // connect subgraph input with split input

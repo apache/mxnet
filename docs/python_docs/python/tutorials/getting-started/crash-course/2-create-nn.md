@@ -181,8 +181,19 @@ class Net(nn.Block):
 
 ```{.python .input}
 class MLP(nn.Block):
- def __init__(self): super().__init__() self.dense1 = nn.Dense(5,activation='relu') self.dense2 = nn.Dense(25,activation='relu') self.dense3 = nn.Dense(2)
- def forward(self, x): layer1 = self.dense1(x) layer2 = self.dense2(layer1) layer3 = self.dense3(layer2) return layer3  net = MLP()
+    def __init__(self):
+        super().__init__()
+        self.dense1 = nn.Dense(5,activation='relu')
+        self.dense2 = nn.Dense(25,activation='relu')
+        self.dense3 = nn.Dense(2)
+
+    def forward(self, x):
+        layer1 = self.dense1(x)
+        layer2 = self.dense2(layer1)
+        layer3 = self.dense3(layer2)
+        return layer3
+
+net = MLP()
 net
 ```
 

@@ -32,7 +32,7 @@ The final step is to update the neural network model parameters using an optimiz
 To illustrate how to use the Gluon `Trainer` we will create a simple perceptron model and create a `Trainer ` instance using the perceptron model parameters and a simple optimizer - `sgd` with learning rate as 1.
 
 ```{.python .input}
-from mxnet import nd, autograd, optimizer, gluon
+from mxnet import np, autograd, optimizer, gluon
 
 net = gluon.nn.Dense(1)
 net.initialize()
@@ -48,8 +48,8 @@ Before we can use the `trainer` to update model parameters, we must first run th
 
 ```{.python .input}
 batch_size = 8
-X = nd.random.uniform(shape=(batch_size, 4))
-y = nd.random.uniform(shape=(batch_size,))
+X = np.random.uniform(size=(batch_size, 4))
+y = np.random.uniform(size=(batch_size,))
 
 loss = gluon.loss.L2Loss()
 

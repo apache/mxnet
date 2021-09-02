@@ -53,6 +53,8 @@ std::string to_string(OpReqType req);
 
 }  // namespace util
 
+int GetMaxSupportedArch();
+
 extern std::mutex lock;
 
 /*! \brief Compile and get the GPU kernel. Uses cache in order to

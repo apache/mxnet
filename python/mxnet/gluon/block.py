@@ -1033,8 +1033,8 @@ class HybridBlock(Block):
 
     References
     ----------
-        `Hybrid - Faster training and easy deployment
-        <https://mxnet.io/tutorials/gluon/hybrid.html>`_
+        `Hybridize - A Hybrid of Imperative and Symbolic Programming
+        <https://mxnet.apache.org/versions/master/api/python/docs/tutorials/packages/gluon/blocks/hybridize.html>`_
     """
     def __init__(self):
         super(HybridBlock, self).__init__()
