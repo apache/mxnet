@@ -99,7 +99,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
         .describe("Shape of the output tensor: (w,), (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(num_filter).set_lower_bound(1).describe("Number of output filters.");
     DMLC_DECLARE_FIELD(num_group).set_default(1).describe("Number of groups partition.");
-    DMLC_DECLARE_FIELD(workspace).set_default(512).set_lower_bound(0).describe(
+    DMLC_DECLARE_FIELD(workspace).set_default(1024).set_lower_bound(0).describe(
         "Maximum temporary workspace allowed (MB) in deconvolution."
         "This parameter has two usages. When CUDNN is not used, it determines the "
         "effective batch size of the deconvolution kernel. When CUDNN is used, "
