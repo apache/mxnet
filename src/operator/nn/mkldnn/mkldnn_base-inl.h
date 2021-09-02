@@ -286,7 +286,16 @@ inline static mkldnn::memory::desc GetMemDesc(const NDArray& arr, int dtype = -1
   return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
 }
 
-inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray& arr, int dtype = -1) {
+inline static bool ChooseBRGEMMImpl(const mkldnn::memory::dims& weight_dims, size_t batch_size) {
+  // Conditions based on measurement results done on CLX8280
+  // https://github.com/apache/incubator-mxnet/pull/20533
+  return weight_dims[0] >= 1024 && weight_dims[1] >= 1024 && batch_size >= 16384 &&
+         weight_dims[0] % 64 == 0 && weight_dims[1] % 64 == 0;
+}
+
+inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray& arr,
+                                                   size_t batch_size,
+                                                   int dtype = -1) {
   int ndim = arr.shape().ndim();
   mkldnn::memory::dims dims(ndim);
   dtype = (dtype == -1) ? arr.dtype() : dtype;
@@ -294,9 +303,11 @@ inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray& arr, int dtype
     dims[i] = arr.shape()[i];
   auto format = mkldnn::memory::format_tag::any;
   // for batch 256 alexnet benchmark test
-  const bool brgemm_disabled = dmlc::GetEnv("MXNET_MKLDNN_DISABLE_BRGEMM_FC", true);
-  if (dims.size() == 2 && brgemm_disabled) {
-    format = mkldnn::memory::format_tag::ab;
+  const bool force_fc_ab_format = dmlc::GetEnv("MXNET_MKLDNN_FORCE_FC_AB_FORMAT", false);
+  if (dims.size() == 2) {
+    if (force_fc_ab_format || !ChooseBRGEMMImpl(dims, batch_size)) {
+      format = mkldnn::memory::format_tag::ab;
+    }
   }
 
   return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), format};
