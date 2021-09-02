@@ -36,8 +36,8 @@ namespace op {
 bool SupportMKLDNNReshape(const NDArray& input, const NDArray& output) {
   const int input_ndims  = input.shape().ndim();
   const int output_ndims = output.shape().ndim();
-  return input_ndims >= 1 && input_ndims <= 6 && output_ndims >= 1 && output_ndims <= 6 &&
-         IsMKLDNNType(input.dtype()) && input.shape().Size() > 0;
+  return input.shape().Size() > 0 && input_ndims >= 1 && input_ndims <= 6 && output_ndims >= 1 &&
+         output_ndims <= 6 && IsMKLDNNType(input.dtype());
 }
 
 MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType& req,

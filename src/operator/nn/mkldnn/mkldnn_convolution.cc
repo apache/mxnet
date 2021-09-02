@@ -37,11 +37,10 @@ namespace op {
 DMLC_REGISTER_PARAMETER(MKLDNNConvParam);
 
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray& input) {
-  if ((params.kernel.ndim() != 1) && (params.kernel.ndim() != 2) && (params.kernel.ndim() != 3))
+  if (params.kernel.ndim() > 3 || params.kernel.ndim() == 0)
     return false;
   return IsMKLDNNType(input.dtype()) &&
-         ((input.shape().ndim() == 3) || (input.shape().ndim() == 4) ||
-          (input.shape().ndim() == 5));
+         input.shape().ndim() >= 3 && input.shape().ndim() <= 5;
 }
 
 std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
