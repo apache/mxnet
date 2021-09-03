@@ -323,7 +323,7 @@ inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray& arr,
     dims[i] = arr.shape()[i];
   auto format = mkldnn::memory::format_tag::any;
   // for batch 256 alexnet benchmark test
-  const bool force_fc_ab_format = dmlc::GetEnv("MXNET_MKLDNN_FORCE_FC_AB_FORMAT", false);
+  const bool force_fc_ab_format = dmlc::GetEnv("MXNET_ONEDNN_FORCE_FC_AB_FORMAT", false);
   if (dims.size() == 2) {
     if (force_fc_ab_format || !ChooseBRGEMMImpl(dims, batch_size)) {
       format = mkldnn::memory::format_tag::ab;
