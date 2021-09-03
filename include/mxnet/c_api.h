@@ -3161,6 +3161,11 @@ MXNET_DLL int MXCUDAProfilerStart();
  */
 MXNET_DLL int MXCUDAProfilerStop();
 
+/*!
+  * \brief Initialize Automatic Layout Management
+  */
+MXNET_DLL int MXInitializeALM();
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

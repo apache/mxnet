@@ -36,6 +36,7 @@
 #include <utility>
 #include "./operator_common.h"
 #include "./mxnet_op.h"
+#include "../common/alm.h"
 
 namespace mxnet {
 namespace op {
@@ -195,6 +196,14 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
   }
   return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
       attrs, in_attrs, out_attrs, -1);
+}
+
+inline bool ElemwiseChangeLayout(nnvm::NodeAttrs* attrs, mshadow::LayoutFlag targetLayout,
+                                 std::vector<alm::Transpose>* inpTransposes,
+                                 std::vector<alm::Transpose>* outTransposes) {
+  CHECK_EQ(targetLayout, mshadow::kUNKNOWN);
+  outTransposes->assign(attrs->op->num_outputs, alm::FactorCommonTranspose(inpTransposes));
+  return false;
 }
 
 // Special case of ElemwiseType. Constrains dtype to integer types

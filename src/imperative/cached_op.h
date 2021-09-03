@@ -28,6 +28,7 @@
 #include <string>
 #include <unordered_map>
 #include <map>
+#include "../common/alm.h"
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
 #include "./imperative_utils.h"
@@ -208,6 +209,8 @@ void CreateForwardGraph(const nnvm::Symbol& sym, nnvm::Graph* fwd_graph) {
       fwd_graph->outputs.push_back(nodeEntry);
     }
   }
+  if (const auto& alm_params = alm::ALMParams::getALMParams(); !alm_params.empty())
+    *fwd_graph = alm::OptimizeLayout(std::move(*fwd_graph), alm_params.getTargets());
 }
 
 /* \brief construct grad_graph from fwd_graph and ograd_entries*/

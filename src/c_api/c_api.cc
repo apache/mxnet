@@ -55,6 +55,7 @@
 #include "../operator/tvmop/op_module.h"
 #include "../operator/subgraph/partitioner/custom_subgraph_property.h"
 #include "../operator/subgraph/subgraph_property.h"
+#include "../common/alm.h"
 #include "../common/utils.h"
 #include "../profiler/profiler.h"
 #include "../serialization/cnpy.h"
@@ -4002,5 +4003,13 @@ int MXCUDAProfilerStop() {
 #else
   LOG(FATAL) << "Compile with USE_CUDA=1 and USE_NVTX=1 to have CUDA Profiler support.";
 #endif
+  API_END();
+}
+
+int MXInitializeALM() {
+  API_BEGIN();
+  auto &alm = mxnet::alm::ALMParams::getALMParams();
+  alm.setTargets({{"Convolution", "NHWC"}, {"Deconvolution", "NHWC"}});
+  return -static_cast<int>(alm.empty());
   API_END();
 }

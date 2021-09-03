@@ -27,6 +27,7 @@
 
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
+#include "../../common/alm.h"
 
 #include "batch_norm-inl.h"
 #if MXNET_USE_ONEDNN == 1
@@ -445,6 +446,19 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+static bool BNChangeLayout(nnvm::NodeAttrs *attrs, mshadow::LayoutFlag targetLayout,
+                           std::vector<alm::Transpose> *inpTransposes,
+                           std::vector<alm::Transpose> *outTransposes) {
+  CHECK_EQ(targetLayout, mshadow::kUNKNOWN);
+  auto t = alm::FactorCommonTranspose(inpTransposes);
+  outTransposes->assign(1, t);
+  if (alm::IsIdentity(t)) return false;
+  const auto& param = nnvm::get<BatchNormParam>(attrs->parsed);
+  CHECK_LT(param.axis, t.size());
+  attrs->dict["axis"] = std::to_string(t[param.axis]);
+  return true;
+}
+
 #if MXNET_USE_ONEDNN == 1
 static inline bool SupportDNNLBN(const NDArray& input, const BatchNormParam& param) {
   if (mxnet::op::batchnorm::disable_mkl)
@@ -641,6 +655,7 @@ then set ``gamma`` to 1 and its gradient to 0.
                                    })
     .set_attr<mxnet::FInferShape>("FInferShape", BatchNormShape)
     .set_attr<nnvm::FInferType>("FInferType", BatchNormType)
+    .set_attr<mxnet::alm::FChangeLayout>("FChangeLayout", BNChangeLayout)
     .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)
     .set_attr<FCompute>("FCompute<cpu>", BatchNormCompute<cpu>)
 #if MXNET_USE_ONEDNN == 1

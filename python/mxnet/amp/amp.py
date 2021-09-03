@@ -307,7 +307,7 @@ def warn_if_model_exists():
                 return
 
 def init(target_dtype='float16', target_precision_ops=None,
-         conditional_fp32_ops=None, fp32_ops=None):
+         conditional_fp32_ops=None, fp32_ops=None, layout_optimization=False):
     """Initialize AMP (automatic mixed precision).
 
     This needs to be done before model creation.
@@ -333,7 +333,11 @@ def init(target_dtype='float16', target_precision_ops=None,
         assert target_dtype in ['float16', np.float16, 'bfloat16', bfloat16], \
                "AMP currently supports only float16 or bfloat16 as a target_dtype"
         _amp_initialized = True
-        logging.info("Using AMP")
+        log_msg = "Using AMP"
+        if layout_optimization:
+            log_msg += "\n - layout optimization: enabled"
+            check_call(_LIB.MXInitializeALM())
+        logging.info(log_msg)
         if target_dtype == "bfloat16":
             target_dtype = bfloat16
         else:
