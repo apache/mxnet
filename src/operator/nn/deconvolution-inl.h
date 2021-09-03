@@ -283,14 +283,15 @@ class DeconvolutionOp {
  public:
   void Init(DeconvolutionParam dp) {
     param_ = dp;
+    param_.workspace = (param_.workspace << 20) / sizeof(DType);
   }
 
   void Forward(const OpContext& ctx,
                const std::vector<TBlob>& in_data,
                const std::vector<OpReqType>& req,
                const std::vector<TBlob>& out_data) {
-    if (need_init)
-      Init(in_data[deconv::kData]);
+    if (need_init_conv)
+      InitConv(in_data[deconv::kData]);
 
     conv_op._BackwardData(ctx,
                           in_data[deconv::kData],
@@ -316,8 +317,8 @@ class DeconvolutionOp {
                 const std::vector<TBlob>& in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    if (need_init)
-      Init(in_data[deconv::kData]);
+    if (need_init_conv)
+      InitConv(in_data[deconv::kData]);
 
     // data gradient
     conv_op.Forward(ctx,
@@ -344,7 +345,7 @@ class DeconvolutionOp {
   }
 
  private:
-  void Init(const TBlob& in_data) {
+  void InitConv(const TBlob& in_data) {
     ConvolutionParam cp;
     cp.kernel     = param_.kernel;
     cp.stride     = param_.stride;
@@ -352,16 +353,16 @@ class DeconvolutionOp {
     cp.pad        = param_.pad;
     cp.num_filter = in_data.shape_[1];
     cp.num_group  = param_.num_group;
-    cp.workspace  = param_.workspace;
+    cp.workspace  = (param_.workspace * sizeof(DType)) >> 20;
     cp.no_bias    = true;
     cp.cudnn_tune = param_.cudnn_tune;
     cp.cudnn_off  = param_.cudnn_off;
     cp.layout     = param_.layout;
     conv_op.Init(cp);
-    need_init = false;
+    need_init_conv = false;
   }
 
-  bool need_init = true;
+  bool need_init_conv = true;
   DeconvolutionParam param_;
   ConvolutionOp<xpu, DType> conv_op;
 };  // class DeconvolutionOp
