@@ -808,7 +808,8 @@ unittest_ubuntu_python3_cpu_onednn() {
 
 unittest_array_api_standardization() {
     set -ex
-    pushd .
+    export PYTHONPATH=./python/
+    cd ..
     git clone https://github.com/data-apis/array-api-tests.git
     cd array-api-tests
     export ARRAY_API_TESTS_MODULE=mxnet.numpy pytest
