@@ -10875,7 +10875,7 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
 
     # test symbolic
     deconvNet.hybridize()
-    deconvNet(deconvData)  # first forward pass after hybridize is still imperative
+    deconvNet(deconvData)
     npx_out_sym = deconvNet(deconvData)
     assert_almost_equal(npx_out_imp, npx_out_sym)
 
