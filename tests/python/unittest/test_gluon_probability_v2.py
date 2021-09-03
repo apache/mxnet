@@ -1851,8 +1851,6 @@ def test_affine_transform():
             shape = (shape,)
         expected_shape = (4, 5) + shape
         net = TestAffineTransform('sample')
-        if hybridize:
-            net.hybridize()
         mx_out = net(loc, scale, expected_shape).asnumpy()
         assert mx_out.shape == expected_shape
 
