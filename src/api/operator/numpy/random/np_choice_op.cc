@@ -33,8 +33,12 @@ MXNET_REGISTER_API("_npi.choice")
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_choice");
   nnvm::NodeAttrs attrs;
-  op::NumpyChoiceParam param = nnvm::get<op::NumpyChoiceParam>(attrs.parsed);
-
+#pragma GCC diagnostic push
+#if __GNUC__ >= 6
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+  op::NumpyChoiceParam param;
+#pragma GCC diagnostic pop
   NDArray* inputs[2];
   int num_inputs = 0;
 
