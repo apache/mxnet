@@ -235,7 +235,7 @@ def test_mkldnn_sum_with_mkldnn_layout():
     num_inputs = [2, 3, 4, 5]
     for i in num_inputs:
         inputs = []
-        for n in range(i):
+        for _ in range(i):
             inputs.append(z)
         y = mx.sym.add_n(*inputs) # (only MKLDNN data input)
         exe = y._simple_bind(ctx=mx.cpu(), x=x_shape, w=w_shape)

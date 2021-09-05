@@ -150,7 +150,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
             assert_almost_equal(o.asnumpy(), exp)
 
     def pull_before_push(kv):
-        for i in range(nrepeat):
+        for _ in range(nrepeat):
             for j in range(len(keys)):
                 out = [mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)]
                 kv.pull(keys[j], out=out)
@@ -209,7 +209,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
                 check_diff_to_scalar(o, curr_val)
     
     def push_zeros(kv):
-        for i in range(nrepeat):
+        for _ in range(nrepeat):
             for j in range(len(keys)):
                 kv.push(keys[j], [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)])
                 out = [mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)]
@@ -249,7 +249,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
         return curval
 
     def check_neg(kv, neg, rate, curval):
-        for r in range(nrepeat):
+        for _ in range(nrepeat):
             curval = curval + rate*nworker*neg
             for j in range(len(keys)):
                 kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*neg for g in range(nworker)])

@@ -1312,7 +1312,7 @@ def test_optimal_threshold_adversarial_case():
     hist_edges = []
     min_val = -2
     max_val = 2
-    for i in range(0, 998):
+    for _ in range(0, 998):
         hist.append(0)
     for i in range(0, 999):
         hist_edges.append((max_val - min_val) / 999 * i + min_val)
