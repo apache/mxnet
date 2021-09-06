@@ -3307,7 +3307,8 @@ def check_interoperability(op_list):
             continue
         default_tols = (1e-3, 1e-4)
         tols = {'linalg.tensorinv': (1e-2, 5e-3),
-                'linalg.solve':     (1e-3, 5e-2)}
+                'linalg.solve':     (1e-3, 5e-2),
+                'linalg.cholesky':  (1e-3, 1e-3)}
         (rel_tol, abs_tol) = tols.get(name, default_tols)
         print('Dispatch test:', name)
         workloads = OpArgMngr.get_workloads(name)
