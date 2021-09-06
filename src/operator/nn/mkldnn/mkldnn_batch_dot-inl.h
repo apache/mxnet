@@ -19,6 +19,7 @@
 
 /*!
  * \file mkldnn_batch_dot-inl.h
+ * \author: Bartosz Kuncer, bartosz.kuncer@intel.com
  */
 
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BATCH_DOT_INL_H_

@@ -202,6 +202,7 @@ struct SoftmaxParam;
 struct SoftmaxOutputParam;
 struct TransposeParam;
 struct ReshapeParam;
+struct LayerNormParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNAct(const ActivationParam& param, const NDArray& input);
 bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param);
@@ -216,6 +217,7 @@ bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param,
 bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam& param);
 bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray& data);
 bool SupportMKLDNNBatchDot(const std::vector<NDArray>& inputs, const NDArray& output);
+bool SupportMKLDNNLayerNorm(const LayerNormParam& param, const std::vector<NDArray> &inputs);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {

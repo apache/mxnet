@@ -84,13 +84,13 @@ As suggested by the name, `autograd` is automatic and so the complexities of the
 
 Step one is to import the `autograd` package.
 
-```
+```{.python .input}
 from mxnet import autograd
 ```
 
 As a simple example, we'll implement the regression model shown in the diagrams above, and later use `autograd` to automatically calculate the gradient of the loss with respect to each of the weight parameters.
 
-```
+```{.python .input}
 import mxnet as mx
 from mxnet.gluon.nn import HybridSequential, Dense
 from mxnet.gluon.loss import L2Loss
@@ -106,13 +106,13 @@ net.initialize()
 loss_fn = L2Loss()
 
 # Create dummy data
-x = mx.nd.array([[0.3, 0.5]])
-y = mx.nd.array([[1.5]])
+x = mx.np.array([[0.3, 0.5]])
+y = mx.np.array([[1.5]])
 ```
 
 We're ready for our first forward pass through the network, and we want `autograd` to record the computational graph so we can calculate gradients. One of the simplest ways to do this is by running the network (and loss) code in the scope of an `autograd.record` context.
 
-```
+```{.python .input}
 with autograd.record():
     y_hat = net(x)
     loss = loss_fn(y_hat, y)
@@ -122,13 +122,13 @@ Only operations that we want recorded are in the scope of the `autograd.record` 
 
 Remember: if `loss` isn't a single scalar value (e.g. could be a loss for each sample, rather than for whole batch) a `sum` operation will be applied implicitly before starting the backward propagation, and the gradients calculated will be of this `sum` with respect to the parameters.
 
-```
+```{.python .input}
 loss.backward()
 ```
 
 And that's it! All the `autograd` magic is complete. We should now have gradients for each parameter of the network, which will be used by the optimizer to update the parameter values for improved performance. Check out the gradients of the first layer for example:
 
-```
+```{.python .input}
 net[0].weight.grad()
 ```
 
@@ -140,9 +140,9 @@ With MXNet Gluon, `autograd` is critical for switching between training and infe
 
 Creating a network of a single `Dropout` block will demonstrate this.
 
-```
+```{.python .input}
 dropout = mx.gluon.nn.Dropout(rate=0.5)
-data = mx.nd.ones(shape=(3,3))
+data = mx.np.ones(shape=(3,3))
 
 output = dropout(data)
 is_training = autograd.is_training()
@@ -151,7 +151,7 @@ print('is_training:', is_training, output)
 
 We called `dropout` when `autograd` wasn't recording, so our network was in inference mode and thus we didn't see any dropout of the input (i.e. it's still ones). We can confirm the current mode by calling `autograd.is_training()`.
 
-```
+```{.python .input}
 with autograd.record():
     output = dropout(data)
 print('is_training:', is_training, output)
@@ -167,7 +167,7 @@ When creating neural networks with MXNet Gluon it is assumed that you're interes
 
 Sometimes we don't need the gradients for all of the parameters though. One example would be 'freezing' the values of the parameters in certain layers. Since we don't need to update the values, we don't need the gradients. Using the `grad_req` property of a parameter and setting it to `'null'`, we can indicate this to `autograd`, saving us computation time and memory.
 
-```
+```{.python .input}
 net[0].weight.grad_req = 'null'
 ```
 
@@ -185,8 +185,8 @@ With `autograd` it's simple, but there's one key difference compared to paramete
 
 As a simple example, let's take the case where $y=2x^2$ and use `autograd` to calculate gradient of $y$ with respect to $x$ at three different values of $x$. We could obviously work out the gradient by hand in this case as $dy/dx=4x$, but let's use this knowledge to check `autograd`. Given $x$ is an `ndarray` and not a `Parameter`, we need to call `x.attach_grad()`.
 
-```
-x = mx.nd.array([1, 2, 3])
+```{.python .input}
+x = mx.np.array([1, 2, 3])
 x.attach_grad()
 with autograd.record():
     y = 2 * x ** 2
@@ -200,14 +200,14 @@ As mentioned before, one of the main advantages of `autograd` is the ability to 
 
 We'll write a function as a toy example of a dynamic network. We'll add an `if` condition and a loop with a variable number of iterations, both of which will depend on the input data. Although these can now be used in static graphs (with conditional operators) it's still much more natural to use native control flow.
 
-```
+```{.python .input}
 import math
 
 
 def f(x):
     y = x  # going to change y but still want to use x
     if x < 0.75:  # variable num_loops because it depends on x
-        num_loops = math.floor(1/(1-x.asscalar()))
+        num_loops = math.floor(1/(1-x.item()))
         for i in range(num_loops):
             y = y * x  # increase polynomial degree
     else:  # otherwise flatline
@@ -221,7 +221,7 @@ We can plot the resultant function for $x$ between 0 and 1, and we should recogn
 
 Using `autograd`, let's now find the gradient of this arbritrary function. We don't have a vectorized function in this case, because of the control flow, so let's also create a function to calculate the gradient using `autograd`.
 
-```
+```{.python .input}
 def get_grad(f, x):
     x.attach_grad()
     with autograd.record():
@@ -229,8 +229,8 @@ def get_grad(f, x):
     y.backward()
     return x.grad
 
-xs = mx.nd.arange(0.0, 1.0, step=0.1)
-grads = [get_grad(f, x).asscalar() for x in xs]
+xs = mx.np.arange(0.0, 1.0, step=0.1)
+grads = [get_grad(f, x).item() for x in xs]
 print(grads)
 ```
 
@@ -253,8 +253,8 @@ Most of the time `autograd` will be aware of the complete computational graph, a
 
 As an example, let's take $y=x^3$ (calculated with `mxnet`) and $z=y^2$. (calculated with `numpy`). We can manually calculate $dz/dy=2y$ (once again with `numpy`), and use this as the head gradient for `autograd` to automatically calculate $dz/dx$. Applying the chain rule by hand we could calculate $dz/dx=6x^5$, so for $x=2$ we expect $dz/dx=192$. Let's check to see whether `autograd` calculates the same.
 
-```
-x = mx.nd.array([2,])
+```{.python .input}
+x = mx.np.array([2,])
 x.attach_grad()
 # compute y inside of mxnet (with `autograd`)
 with autograd.record():
@@ -264,7 +264,7 @@ y_np = y.asnumpy()
 z_np = y_np**2
 dzdy_np = 2*y_np
 # compute dz/dx inside of mxnet (given dz/dy)
-dzdy = mx.nd.array(dzdy_np)
+dzdy = mx.np.array(dzdy_np)
 y.backward(dzdy)
 print(x.grad)
 ```

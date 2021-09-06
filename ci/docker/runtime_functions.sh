@@ -1143,8 +1143,9 @@ build_python_docs() {
     export PATH=/home/jenkins_slave/.local/bin:$PATH
 
     pushd python
+    cp tutorials/getting-started/crash-course/prepare_dataset.py .
     make clean
-    make html EVAL=0
+    make html EVAL=1
 
     GZIP=-9 tar zcvf python-artifacts.tgz -C build/_build/html .
     popd
