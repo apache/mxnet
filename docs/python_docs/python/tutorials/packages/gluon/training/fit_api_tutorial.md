@@ -125,12 +125,12 @@ In the basic usage example, with just 2 lines of code, we will set up our model 
 
 
 ```{.python .input}
-train_acc = mx.metric.Accuracy() # Metric to monitor
+train_acc = mx.gluon.metric.Accuracy() # Metric to monitor
 
 # Define the estimator, by passing to it the model, loss function, metrics, trainer object and context
 est = estimator.Estimator(net=resnet_18_v1,
                           loss=loss_fn,
-                          metrics=train_acc,
+                          train_metrics=train_acc,
                           trainer=trainer,
                           context=ctx)
 
@@ -194,7 +194,7 @@ class LossRecordHandler(TrainBegin, TrainEnd, EpochEnd):
         for metric in estimator.train_metrics:
             # look for train Loss in training metrics
             # we wrapped loss value as a metric to record it
-            if isinstance(metric, mx.metric.Loss):
+            if isinstance(metric, mx.gluon.metric.Loss):
                 loss_name, loss_val = metric.get()
                 # append loss value for this epoch
                 self.loss_history.setdefault(loss_name, []).append(loss_val)
@@ -207,7 +207,7 @@ class LossRecordHandler(TrainBegin, TrainEnd, EpochEnd):
 resnet_18_v1.initialize(force_reinit=True, init = mx.init.Xavier(), ctx=ctx)
 trainer = gluon.Trainer(resnet_18_v1.collect_params(),
                         'sgd', {'learning_rate': learning_rate})
-train_acc = mx.metric.Accuracy()
+train_acc = mx.gluon.metric.Accuracy()
 ```
 
 
@@ -215,7 +215,7 @@ train_acc = mx.metric.Accuracy()
 # Define the estimator, by passing to it the model, loss function, metrics, trainer object and context
 est = estimator.Estimator(net=resnet_18_v1,
                           loss=loss_fn,
-                          metrics=train_acc,
+                          train_metrics=train_acc,
                           trainer=trainer,
                           context=ctx)
 

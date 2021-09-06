@@ -86,7 +86,7 @@ def test_lstmp():
                                      num_layers=num_layers, layout='TNC', bidirectional=False)
 
         stack_layer = mx.gluon.rnn.HybridSequentialRNNCell()
-        for i in range(num_layers):
+        for _ in range(num_layers):
             stack_layer.add(gluon.rnn.LSTMPCell(hidden_size,
                                                 projection_size=projection_size))
         fused_layer.initialize()
@@ -118,7 +118,7 @@ def test_lstmp():
                                      num_layers=num_layers, layout='TNC', bidirectional=True)
 
         stack_layer = mx.gluon.rnn.HybridSequentialRNNCell()
-        for i in range(num_layers):
+        for _ in range(num_layers):
             stack_layer.add(
                 gluon.rnn.BidirectionalCell(gluon.rnn.LSTMPCell(hidden_size,
                                                                 projection_size=projection_size),
@@ -738,7 +738,7 @@ def check_rnn_unidir_layer_gradients(mode, input_size, hidden_size, num_layers, 
     fused_layer.initialize()
 
     stack_layer = mx.gluon.rnn.HybridSequentialRNNCell()
-    for n in range(num_layers):
+    for _ in range(num_layers):
         stack_layer.add(stack_op(hidden_size))
     stack_layer.initialize()
     check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size)
@@ -751,7 +751,7 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, num_layers, l
     fused_layer.initialize()
 
     stack_layer = mx.gluon.rnn.HybridSequentialRNNCell()
-    for n in range(num_layers):
+    for _ in range(num_layers):
         stack_layer.add(gluon.rnn.BidirectionalCell(stack_op(hidden_size),
                                                     stack_op(hidden_size)))
     stack_layer.initialize()

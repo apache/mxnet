@@ -1437,7 +1437,7 @@ def test_npx_index_add():
         ind = onp.array(ind).astype(onp.int32)
         # case: val is scalar
         configs.append(tuple([shape, ind, (), ind_ndim, ind_num]))
-        for val_ndim in range(1, 5 - ind_ndim):
+        for _ in range(1, 5 - ind_ndim):
             val_shape = [1 if onp.random.randint(0, 5)==0 else ind_num]
             for val_dim in range(ind_ndim, 4):
                 val_shape.append(1 if onp.random.randint(0, 5)==0 else shape[val_dim])
@@ -1600,7 +1600,7 @@ def test_npx_index_update():
         ind = onp.array(ind).astype(onp.int32)
         # case: val is scalar
         configs.append(tuple([shape, ind, (), ind_ndim, ind_num]))
-        for val_ndim in range(1, 5 - ind_ndim):
+        for _ in range(1, 5 - ind_ndim):
             val_shape = [1 if onp.random.randint(0, 5)==0 else ind_num]
             for val_dim in range(ind_ndim, 4):
                 val_shape.append(1 if onp.random.randint(0, 5)==0 else shape[val_dim])
@@ -4831,15 +4831,16 @@ def test_npx_sample_n():
         return (s,)
 
     class TestSampleN(HybridBlock):
-        def __init__(self, shape, op_name):
+        def __init__(self, shape, op_name, dtype):
             super(TestSampleN, self).__init__()
             self._shape = shape
             self._op_name = op_name
+            self._dtype = dtype
 
         def forward(self, param1, param2):
             op = getattr(npx.random, self._op_name, None)
             assert op is not None
-            return op(param1, param2, batch_shape=self._shape)
+            return op(param1, param2, batch_shape=self._shape, dtype=self._dtype)
 
     batch_shapes = [(10,), (2, 3), 6, ()]
     event_shapes = [(), (2,), (2,2)]
@@ -4848,7 +4849,7 @@ def test_npx_sample_n():
 
     for bshape, eshape, dtype, op in itertools.product(batch_shapes, event_shapes, dtypes, op_names):
         for hybridize in [True, False]:
-            net = TestSampleN(bshape, op)
+            net = TestSampleN(bshape, op, dtype)
             if hybridize:
                 net.hybridize()
             expected_shape = (shape_formatter(bshape) +
@@ -5498,7 +5499,7 @@ def test_np_choice():
         bins = onp.zeros((num_classes))
         expected_freq = (weight.asnumpy() if weight is not None else
                          onp.array([1 / num_classes] * num_classes))
-        for i in range(num_trials):
+        for _ in range(num_trials):
             out = sampler(num_classes, 1, replace=False, p=weight).item()
             bins[out] += 1
         bins /= num_trials
@@ -8396,7 +8397,7 @@ def test_np_einsum():
                                           dtype=dtype))
                 for optimize in [False, True]:
                     x = []
-                    for (iop, op) in enumerate(operands):
+                    for iop in range(len(operands)):
                         x.append(np.array(x_np[iop], dtype=dtype))
                         x[-1].attach_grad()
                     test_einsum = TestEinsum(subscripts, optimize)
@@ -8410,10 +8411,10 @@ def test_np_einsum():
                     assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
                     out_mx.backward()
                     cur_grad = []
-                    for (iop, op) in enumerate(x):
+                    for op in x:
                         cur_grad.append(op.grad.asnumpy())
                     grad.append(cur_grad)
-                for (iop, op) in enumerate(grad[0]):
+                for iop in range(len(grad[0])):
                     assert_almost_equal(grad[0][iop], grad[1][iop], rtol=rtol, atol=atol)
 
 
@@ -8482,7 +8483,7 @@ def test_np_pad():
             if (type(shape) == int):
                 pw += (2,3)
             else:
-                for i in range(len(shape)):
+                for _ in range(len(shape)):
                     pw += ((2,3),)
             test_pad = TestPad(pw, m)
             if hybridize:
@@ -8934,7 +8935,7 @@ def test_np_percentile():
 def test_np_diff():
     def np_diff_backward(ograd, n, axis):
         res = ograd
-        for i in range(n):
+        for _ in range(n):
             res = onp.negative(onp.diff(res, n=1, axis=axis, prepend=0, append=0))
         return res
 
