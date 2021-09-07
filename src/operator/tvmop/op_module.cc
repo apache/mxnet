@@ -74,7 +74,7 @@ PackedFunc GetFunction(const std::shared_ptr<Module> &module,
       case mshadow::kUint16:
         func_name << "uint16";
         break;
-      case mshadow::kUin32:
+      case mshadow::kUint32:
         func_name << "uint32";
         break;
       case mshadow::kUint64:
