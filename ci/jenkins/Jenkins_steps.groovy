@@ -672,7 +672,7 @@ def test_unix_python3_cpu(lib_name) {
 }
 
 def test_unix_python3_array_api(lib_name) {
-    return ['Python3: CPU': {
+    return ['Python3: Array-API': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu') {
           utils.unpack_and_init(lib_name, mx_lib, true)
