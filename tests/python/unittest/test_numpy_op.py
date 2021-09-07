@@ -10837,14 +10837,16 @@ def test_slice_like():
 @use_np
 @pytest.mark.parametrize('shape,num_filter,num_group,kernel,pad', [
     ((1, 4, 15), 16, 2, (2,), (0,)),
-    ((1, 4, 16), 16, 1, (3,), (1,)),
+    ((8, 4, 16), 16, 1, (3,), (1,)),
 
     ((1, 4, 15, 16), 16, 2, (2, 2), (0, 0)),
-    ((1, 4, 16, 16), 16, 1, (3, 3), (1, 1)),
+    ((8, 4, 16, 16), 16, 1, (3, 3), (1, 1)),
 
     ((1, 4, 3, 15, 16), 16, 2, (2, 2, 2), (0, 0, 0)),
-    ((1, 4, 3, 16, 16), 16, 1, (3, 3, 3), (1, 1, 1))])
+    ((8, 4, 3, 16, 16), 16, 1, (3, 3, 3), (1, 1, 1))])
 def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
+    if len(kernel) == 3 and mx.current_context().device_type == 'gpu':
+        pytest.skip('Skipping deconvoluition 3D tests for GPU')
 
     class TestConv(mx.gluon.HybridBlock):
         def __init__(self, w):
@@ -10858,8 +10860,8 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
     class TestDeconv(mx.gluon.HybridBlock):
         def __init__(self):
             super().__init__()
-            self.weight = mx.gluon.Parameter('weight',
-                                             shape=(shape[1], int(num_filter/num_group), *kernel))
+            self.weight = mx.gluon.Parameter('weight', shape=(shape[1], int(num_filter/num_group), 
+                                                              *kernel))
             self.bias = mx.gluon.Parameter('bias', shape=num_filter)
 
         def forward(self, x, *args):

@@ -431,6 +431,7 @@ def test_conv(layer, shape):
 def test_conv_nhwc(layer, shape):
     check_layer_forward(layer, shape)
 
+
 @pytest.mark.parametrize('layer,shape', [
     (nn.Conv1DTranspose(16, 3, in_channels=4), (1, 4, 10)),
     (nn.Conv1DTranspose(16, 3, groups=2, in_channels=4), (1, 4, 10)),
@@ -448,6 +449,8 @@ def test_conv_nhwc(layer, shape):
     (nn.Conv3DTranspose(16, (3, 3, 3), padding=4, in_channels=4), (1, 4, 10, 10, 10)),
 ])
 def test_deconv(layer, shape):
+    if len(shape) == 5 and mx.current_context().device_type == 'gpu':
+        pytest.skip('Skipping Conv3DTranspose tests for GPU')
     check_layer_forward(layer, shape)
 
 
