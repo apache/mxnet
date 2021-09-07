@@ -77,7 +77,7 @@ class CUDAEventPool final {
   }
 
   inline std::pair<std::weak_ptr<cudaEvent_t>, uint64_t> GetNextEvent() noexcept {
-    int c = counter_++;
+    uint64_t c = counter_++;
     return {events_.at((c) % kPoolSize).GetEvent(), c};
   }
 
