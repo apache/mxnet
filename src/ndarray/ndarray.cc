@@ -1511,7 +1511,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
             on_start();
             CopyFromToImpl<gpu, cpu>(from, to, ctx, requested);
             on_complete();
-          }, 
+          },
           from.ctx(),
           const_vars,
           mutable_vars,
@@ -1597,7 +1597,7 @@ void ElementwiseSum(const std::vector<NDArray>& source, NDArray* out, int priori
               ndarray::ElementwiseSum<gpu>(source_tblob, &tmp, ctx);
             },
             out->ctx(),
-            const_vars, 
+            const_vars,
             {ret.var()},
             FnProperty::kNormal,
             priority,
