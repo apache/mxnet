@@ -813,6 +813,8 @@ unittest_array_api_standardization() {
     git clone https://github.com/data-apis/array-api-tests.git
     pushd /work/array-api-tests
     export ARRAY_API_TESTS_MODULE=mxnet.numpy pytest
+    # OverflowError: Python int too large to convert to C long
+    # when cython is enabled
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=100
     python3 -m pytest --durations=50 --cov-report xml:tests_api.xml --verbose \
