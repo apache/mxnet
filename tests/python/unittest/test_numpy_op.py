@@ -10874,11 +10874,15 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
     # test imperative
     deconvData = np.random.uniform(0, 1, size=shape)
     npx_out_imp = deconvNet(deconvData)
+    mx.nd.waitall()
+    mx.npx.waitall()
 
     # test symbolic
     deconvNet.hybridize()
     deconvNet(deconvData)
     npx_out_sym = deconvNet(deconvData)
+    mx.nd.waitall()
+    mx.npx.waitall()
     assert_almost_equal(npx_out_imp, npx_out_sym)
 
     # compare outputs with reference tensors generated using convolution
@@ -10898,7 +10902,11 @@ def test_npx_deconvolution(shape, num_filter, num_group, kernel, pad):
     deconvData.attach_grad()
     with mx.autograd.record():
         deconvOut = deconvNet(deconvData)
+    mx.nd.waitall()
+    mx.npx.waitall()
     deconvOut.backward()
+    mx.nd.waitall()
+    mx.npx.waitall()
 
     convData = np.ones_like(deconvOut)
     deconvRefGrad = convNet(convData)

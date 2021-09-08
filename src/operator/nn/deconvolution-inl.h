@@ -290,13 +290,18 @@ class DeconvolutionOp {
                const std::vector<TBlob>& in_data,
                const std::vector<OpReqType>& req,
                const std::vector<TBlob>& out_data) {
+    size_t expected = param_.no_bias ? 2 : 3;
+    CHECK_EQ(req[deconv::kOut], kWriteTo);
+    CHECK_EQ(in_data.size(), expected);
+    CHECK_EQ(out_data.size(), 1U);
+
     if (need_init_conv)
       InitConv(in_data[deconv::kData]);
 
     conv_op._BackwardData(ctx,
                           in_data[deconv::kData],
                           in_data[deconv::kWeight],
-                          req[deconv::kData],
+                          req[deconv::kOut],
                           out_data[deconv::kOut]);
 
     if (!param_.no_bias) {
@@ -317,6 +322,13 @@ class DeconvolutionOp {
                 const std::vector<TBlob>& in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
+
+    const size_t expected = param_.no_bias == 0 ? 3 : 2;
+    CHECK_EQ(out_grad.size(), 1U);
+    CHECK_EQ(in_data.size(), expected);
+    CHECK_EQ(in_grad.size(), expected);
+    CHECK_EQ(req.size(), expected);
+
     if (need_init_conv)
       InitConv(in_data[deconv::kData]);
 
