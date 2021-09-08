@@ -572,9 +572,16 @@ static inline void AddEventHelper(
   }
 }
 
+static inline bool IsEngineAsync() {
+  std::string type = dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string(""));
+  std::string async_engine_tag("Async");
+  auto tag_pos = type.find(async_engine_tag);
+  return tag_pos != std::string::npos;
+}
+
 void ThreadedEngine::OnStartCPU(Engine *engine, void *opr_block,
                         const dmlc::Error* error) {
-  static bool use_new_dep_engine = dmlc::GetEnv("MXNET_ASYNC_GPU_ENGINE", false);
+  static bool use_new_dep_engine = IsEngineAsync();
   if (!use_new_dep_engine) {
     return;
   }
@@ -629,7 +636,7 @@ void ThreadedEngine::OnStartCPU(Engine *engine, void *opr_block,
 
 void ThreadedEngine::OnStartGPU(Engine *engine, void *sync_info,
                         const dmlc::Error* error) {
-  static bool use_new_dep_engine = dmlc::GetEnv("MXNET_ASYNC_GPU_ENGINE", false);
+  static bool use_new_dep_engine = IsEngineAsync();
   if (!use_new_dep_engine) {
     return;
   }
@@ -707,7 +714,7 @@ void ThreadedEngine::OnCompleteGPU(Engine *engine, void *sync_info,
   CHECK(info->stream != nullptr);
 
   auto *worker_stream = reinterpret_cast<mshadow::Stream<gpu> *>(info->stream);
-  static bool use_new_dep_engine = dmlc::GetEnv("MXNET_ASYNC_GPU_ENGINE", false);
+  static bool use_new_dep_engine = IsEngineAsync();
 
   if (!use_new_dep_engine) {
     worker_stream->Wait();

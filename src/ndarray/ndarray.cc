@@ -1188,10 +1188,9 @@ void SetValueOp(const real_t& rhs, NDArray* out) {
             } else {
               ndarray::Eval(ctx.get_stream<gpu>(), rhs, ret);
             }
-            // Wait GPU kernel to complete
-            ctx.get_stream<gpu>()->Wait();
             break;
           }
+#endif
           default:
             LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
         }

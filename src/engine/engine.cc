@@ -36,6 +36,14 @@ inline Engine* CreateEngine() {
     type = "ThreadedEnginePerDevice";
   std::string stype = type;
 
+  // The async tag is used later to determine if we use the GPU dependecy engine
+  std::string async_engine_tag = "Async";
+  auto tag_pos = stype.find(async_engine_tag);
+  if (tag_pos != std::string::npos
+      && tag_pos + async_engine_tag.length() == stype.length()) {
+    stype = stype.substr(0, tag_pos);
+  }
+
   Engine* ret = nullptr;
 #if MXNET_PREDICT_ONLY == 0
   if (stype == "NaiveEngine") {
