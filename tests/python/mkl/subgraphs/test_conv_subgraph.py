@@ -254,7 +254,7 @@ def test_pos_single_concat(data_shape, input_num, dim, out_type):
     def __init__(self, input_num, dim, **kwargs):
         super(SingleConcat, self).__init__(**kwargs)
         self.concat = nn.HybridConcatenate(axis=dim)
-        for i in range(input_num):
+        for _ in range(input_num):
             self.concat.add(nn.Identity())
 
     def forward(self, x):

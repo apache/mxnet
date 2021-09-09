@@ -50,11 +50,11 @@ logging.basicConfig(level=logging.INFO)
 
 import matplotlib.pyplot as plt
 import mxnet as mx
-from mxnet import gluon, nd, autograd
+from mxnet import gluon, np, npx, autograd
 from mxnet.gluon.data.vision.datasets import ImageFolderDataset
 from mxnet.gluon.data import DataLoader
 import mxnet.contrib.onnx as onnx_mxnet
-import numpy as np
+import numpy as onp
 
 %matplotlib inline
 ```
@@ -156,7 +156,7 @@ We transform the dataset images using the following operations:
 def transform(image, label):
     resized = mx.image.resize_short(image, EDGE)
     cropped, crop_info = mx.image.center_crop(resized, SIZE)
-    transposed = nd.transpose(cropped, (2,0,1))
+    transposed = np.transpose(cropped, (2,0,1))
     return transposed, label
 ```
 
@@ -340,22 +340,22 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd',
 
 ### Evaluation loop
 
-We measure the accuracy in a non-blocking way, using `nd.array` to take care of the parallelisation that MXNet and Gluon offers.
+We measure the accuracy in a non-blocking way, using `np.array` to take care of the parallelisation that MXNet and Gluon offers.
 
 
 ```{.python .input}
  def evaluate_accuracy_gluon(data_iterator, net):
     num_instance = 0
-    sum_metric = nd.zeros(1,ctx=ctx, dtype=np.int32)
+    sum_metric = np.zeros(1,ctx=ctx, dtype=np.int32)
     for i, (data, label) in enumerate(data_iterator):
         data = data.astype(np.float32).as_in_context(ctx)
         label = label.astype(np.int32).as_in_context(ctx)
         output = net(data)
-        prediction = nd.argmax(output, axis=1).astype(np.int32)
+        prediction = np.argmax(output, axis=1).astype(np.int32)
         num_instance += len(prediction)
         sum_metric += (prediction==label).sum()
     accuracy = (sum_metric.astype(np.float32)/num_instance)
-    return accuracy.asscalar()
+    return accuracy.item()
 ```
 
 
@@ -379,7 +379,7 @@ for epoch in range(5):
         label = label.as_in_context(ctx)
 
         if i%20==0 and i >0:
-            print('Batch [{0}] loss: {1:.4f}'.format(i, loss.mean().asscalar()))
+            print('Batch [{0}] loss: {1:.4f}'.format(i, loss.mean().item()))
 
         with autograd.record():
             output = net(data)
@@ -387,7 +387,7 @@ for epoch in range(5):
         loss.backward()
         trainer.step(data.shape[0])
 
-    nd.waitall() # wait at the end of the epoch
+    npx.waitall() # wait at the end of the epoch
     new_val_accuracy = evaluate_accuracy_gluon(dataloader_test, net)
     print("Epoch [{0}] Test Accuracy {1:.4f} ".format(epoch, new_val_accuracy))
 
@@ -416,7 +416,7 @@ TOP_P = 3
 ```{.python .input}
 # Convert img to format expected by the network
 def transform(img):
-    return nd.array(np.expand_dims(np.transpose(img, (2,0,1)),axis=0).astype(np.float32), ctx=ctx)
+    return np.array(np.expand_dims(np.transpose(img, (2,0,1)),axis=0).astype(np.float32), ctx=ctx)
 ```
 
 

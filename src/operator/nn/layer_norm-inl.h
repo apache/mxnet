@@ -45,7 +45,9 @@ namespace op {
 
 namespace layernorm {
 enum LayerNormOpInputs {kData, kGamma, kBeta};  // kGamma: scaling parameters, kBeta: shift biases
-enum LayerNormOpOutputs {kOut, kMean, kStd};  // req, out_data
+enum LayerNormOpOutputs {kOut, kMean, kStd};  // indices for req, out_data
+enum LayerNormOpInputsBwd {kBwdOutGrad, kBwdData, kBwdGamma, kBwdMean, kBwdStd, kBwdBeta};
+enum LayerNormOpOutputsBwd {kBwdDataGrad, kBwdGammaGrad, kBwdBetaGrad};
 }  // namespace layernorm
 
 struct LayerNormParam : public dmlc::Parameter<LayerNormParam> {
@@ -70,6 +72,11 @@ struct LayerNormParam : public dmlc::Parameter<LayerNormParam> {
     (*dict)["axis"] = axis_s.str();
     (*dict)["eps"] = eps_s.str();
     (*dict)["output_mean_var"] = output_mean_var_s.str();
+  }
+
+  bool operator==(const LayerNormParam& other) const {
+    return (this->axis == other.axis && this->eps == other.eps &&
+            this->output_mean_var == other.output_mean_var);
   }
 };
 
@@ -257,7 +264,11 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
                                  const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
+#if MXNET_USE_ONEDNN == 1
+  CHECK_EQ(inputs.size(), 6U);  // additional beta tensor
+#else
   CHECK_EQ(inputs.size(), 5U);
+#endif
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
   int axis = param.axis;
   if (axis < 0) {
@@ -313,4 +324,17 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+
+namespace std {
+template <>
+struct hash<mxnet::op::LayerNormParam> {
+  size_t operator()(const mxnet::op::LayerNormParam& val) {
+    size_t ret = 0;
+    ret        = dmlc::HashCombine(ret, val.axis);
+    ret        = dmlc::HashCombine(ret, val.eps);
+    ret        = dmlc::HashCombine(ret, val.output_mean_var);
+    return ret;
+  }
+};
+}  // namespace std
 #endif  // MXNET_OPERATOR_NN_LAYER_NORM_INL_H_

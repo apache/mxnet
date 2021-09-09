@@ -153,7 +153,7 @@ def test_sync_push_pull(nrepeat):
         v = mx.nd.sparse.zeros('row_sparse', shape, dtype=dtype)
         big_v = mx.nd.sparse.zeros('row_sparse', big_shape, dtype=dtype)
         # push
-        for i in range(nrepeat):
+        for _ in range(nrepeat):
             kv.push(k1, v)
             kv.push(k2, big_v)
             # pull a subset of rows this worker is interested in
@@ -301,7 +301,7 @@ def test_sync_1bit_compression(threshold, nrepeat):
             kv.init(k, mx.nd.zeros(s))
         for k,s in compr_random_keys_shapes:
             curr_residual = np.zeros(s)
-            for l in range(nrepeat):
+            for _ in range(nrepeat):
                 orig_val = mx.nd.zeros(s)
                 kv.pull(k, orig_val)
 
@@ -399,7 +399,7 @@ def test_sync_2bit_compression(threshold, nrepeat):
             kv.init(k, mx.nd.zeros(s))
         for k,s in compr_random_keys_shapes:
             curr_residual = np.zeros(s)
-            for l in range(nrepeat):
+            for _ in range(nrepeat):
                 orig_val = mx.nd.zeros(s)
                 kv.pull(k, orig_val)
 

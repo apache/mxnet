@@ -202,6 +202,7 @@ struct SoftmaxParam;
 struct SoftmaxOutputParam;
 struct TransposeParam;
 struct ReshapeParam;
+struct LayerNormParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNAct(const ActivationParam& param, const NDArray& input);
 bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param);
@@ -216,6 +217,7 @@ bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param,
 bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam& param);
 bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray& data);
 bool SupportMKLDNNBatchDot(const std::vector<NDArray>& inputs, const NDArray& output);
+bool SupportMKLDNNLayerNorm(const LayerNormParam& param, const std::vector<NDArray> &inputs);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {
@@ -304,7 +306,16 @@ inline static mkldnn::memory::desc GetMemDesc(const NDArray& arr, int dtype = -1
   return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
 }
 
-inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray& arr, int dtype = -1) {
+inline static bool ChooseBRGEMMImpl(const mkldnn::memory::dims& weight_dims, size_t batch_size) {
+  // Conditions based on measurement results done on CLX8280
+  // https://github.com/apache/incubator-mxnet/pull/20533
+  return weight_dims[0] >= 1024 && weight_dims[1] >= 1024 && batch_size >= 16384 &&
+         weight_dims[0] % 64 == 0 && weight_dims[1] % 64 == 0;
+}
+
+inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray& arr,
+                                                   size_t batch_size,
+                                                   int dtype = -1) {
   int ndim = arr.shape().ndim();
   mkldnn::memory::dims dims(ndim);
   dtype = (dtype == -1) ? arr.dtype() : dtype;
@@ -312,8 +323,11 @@ inline static mkldnn::memory::desc GetFCWeightDesc(const NDArray& arr, int dtype
     dims[i] = arr.shape()[i];
   auto format = mkldnn::memory::format_tag::any;
   // for batch 256 alexnet benchmark test
+  const bool force_fc_ab_format = dmlc::GetEnv("MXNET_ONEDNN_FORCE_FC_AB_FORMAT", false);
   if (dims.size() == 2) {
-    format = mkldnn::memory::format_tag::ab;
+    if (force_fc_ab_format || !ChooseBRGEMMImpl(dims, batch_size)) {
+      format = mkldnn::memory::format_tag::ab;
+    }
   }
 
   return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), format};

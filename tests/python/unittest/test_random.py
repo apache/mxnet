@@ -917,7 +917,7 @@ def test_shuffle():
         # Check that the shuffling is along the first axis.
         # The order of the elements in each subarray must not change.
         # This takes long time so `repeat1` need to be small.
-        for i in range(repeat1):
+        for _ in range(repeat1):
             ret = mx.nd.random.shuffle(data)
             check_first_axis_shuffle(ret)
         # Count the number of each different outcome.
@@ -925,7 +925,7 @@ def test_shuffle():
         # the outcomes as long as the order of the elements in each subarray does not change.
         count = {}
         stride = int(data.size / data.shape[0])
-        for i in range(repeat2):
+        for _ in range(repeat2):
             ret = mx.nd.random.shuffle(data)
             h = str(ret.reshape((ret.size,))[::stride])
             c = count.get(h, 0)
@@ -953,7 +953,7 @@ def test_shuffle():
         # and count the number of different outcomes.
         stride = int(data.size / data.shape[0])
         count = {}
-        for i in range(repeat):
+        for _ in range(repeat):
             ret = mx.nd.random.shuffle(data)
             check_first_axis_shuffle(ret)
             h = str(ret.reshape((ret.size,))[::stride])

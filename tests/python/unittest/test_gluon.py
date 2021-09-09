@@ -692,7 +692,7 @@ def test_sync_batchnorm():
         # check with unsync version
         for shape in [(batch_size, 2), (batch_size, 3, 4), (batch_size, 4, 4, 4), (batch_size, 5, 6, 4, 4)]:
             print(str((ndev, cuda, shape)))
-            for i in range(10):
+            for _ in range(10):
                 _check_batchnorm_result(mx.np.random.uniform(size=shape,
                                                              ctx=mx.cpu(0)),
                                         num_devices=ndev, cuda=cuda)
@@ -1741,7 +1741,7 @@ def test_share_inputs_outputs():
     for param in params:
         t = TestIOForward()
         t.hybridize(**param)
-        for i in range(5):
+        for _ in range(5):
             d1.attach_grad()
             out_grad = mx.np.random.uniform(size=(10))
             res = t(d1)
@@ -1751,7 +1751,7 @@ def test_share_inputs_outputs():
     for param in params:
         t = TestIOBackward()
         t.hybridize(**param)
-        for i in range(5):
+        for _ in range(5):
             d1.attach_grad()
             d2.attach_grad()
             out_grad = mx.np.random.uniform(size=(10))
@@ -1946,13 +1946,13 @@ def test_concat():
                      **kwargs):
             super(Net, self).__init__(**kwargs)
             self.concat = nn.HybridConcatenate(axis=check_dim)
-            for i in range(input_num):
+            for _ in range(input_num):
                 self.concat.add(gluon.nn.Conv2D(chn_num, (kernel, kernel)))
 
         def forward(self, x):
             return self.concat(x)
 
-    for s in range(len(shape_list)):
+    for _ in range(len(shape_list)):
         shape = (batch_size,) + (3,) + shape_list[i]
         x = mx.np.random.uniform(-1.0, 1.0, size=shape)
         for i in range(len(chn_list)):
