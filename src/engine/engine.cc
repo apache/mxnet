@@ -30,13 +30,14 @@
 namespace mxnet {
 namespace engine {
 inline Engine* CreateEngine() {
-  const char *type = getenv("MXNET_ENGINE_TYPE");
+  const char* type          = getenv("MXNET_ENGINE_TYPE");
   const bool default_engine = (type == nullptr);
-  if (type == nullptr) type = "ThreadedEnginePerDevice";
+  if (type == nullptr)
+    type = "ThreadedEnginePerDevice";
   std::string stype = type;
 
-  Engine *ret = nullptr;
-  #if MXNET_PREDICT_ONLY == 0
+  Engine* ret = nullptr;
+#if MXNET_PREDICT_ONLY == 0
   if (stype == "NaiveEngine") {
     ret = CreateNaiveEngine();
   } else if (stype == "ThreadedEngine") {
@@ -44,9 +45,9 @@ inline Engine* CreateEngine() {
   } else if (stype == "ThreadedEnginePerDevice") {
     ret = CreateThreadedEnginePerDevice();
   }
-  #else
+#else
   ret = CreateNaiveEngine();
-  #endif
+#endif
 
   if (ret == nullptr) {
     LOG(FATAL) << "Cannot find Engine " << type;
@@ -64,7 +65,7 @@ std::shared_ptr<Engine> Engine::_GetSharedRef() {
 }
 
 Engine* Engine::Get() {
-  static Engine *inst = _GetSharedRef().get();
+  static Engine* inst = _GetSharedRef().get();
   return inst;
 }
 }  // namespace mxnet

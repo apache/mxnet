@@ -45,13 +45,12 @@ inline int String2ComputeMode(const std::string& s) {
   return 0;
 }
 
-MXNET_REGISTER_API("_npx.rnn")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npx.rnn").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = Op::Get("_npx_rnn");
   op::RNNParam param;
-  int args_size = args.size();
+  int args_size  = args.size();
   int num_inputs = 0;
 
   // mode
@@ -63,7 +62,8 @@ MXNET_REGISTER_API("_npx.rnn")
   } else {
     param.use_sequence_length = args[args_size - 5].operator bool();
   }
-  if (param.use_sequence_length) num_inputs += 1;
+  if (param.use_sequence_length)
+    num_inputs += 1;
   // inputs
   std::vector<NDArray*> inputs;
   inputs.reserve(num_inputs);
@@ -71,9 +71,9 @@ MXNET_REGISTER_API("_npx.rnn")
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
   // state_size
-  param.state_size = (uint32_t) (args[args_size - 11].operator int());
+  param.state_size = (uint32_t)(args[args_size - 11].operator int());
   // num_layers
-  param.num_layers = (uint32_t) (args[args_size - 10].operator int());
+  param.num_layers = (uint32_t)(args[args_size - 10].operator int());
   // bidirectional
   if (args[args_size - 9].type_code() == kNull) {
     param.bidirectional = false;
@@ -120,11 +120,11 @@ MXNET_REGISTER_API("_npx.rnn")
   param.seq_length_ = 0;
   param.batch_size_ = 0;
   param.input_size_ = 0;
-  attrs.parsed = param;
-  attrs.op = op;
+  attrs.parsed      = param;
+  attrs.op          = op;
   SetAttrDict<op::RNNParam>(&attrs);
   int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
+  auto ndoutputs  = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
   if (num_outputs == 1) {
     *ret = ndoutputs[0];
   } else {

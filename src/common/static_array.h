@@ -36,7 +36,7 @@ namespace common {
  * \tparam T element type of the array, must be copyable between CPU and GPU
  * \tparam num number of elements in the array
  */
-template<typename T, int num>
+template <typename T, int num>
 struct StaticArray {
   static const int kNum = num;
 
@@ -47,7 +47,7 @@ struct StaticArray {
 
   /*! \brief constructor, fill in the array with the input value */
   MSHADOW_XINLINE StaticArray(const T& val) {
-    #pragma unroll
+#pragma unroll
     for (int i = 0; i < num; ++i) {
       this->array_[i] = val;
     }
@@ -55,7 +55,7 @@ struct StaticArray {
 
   /*! \brief constuctor */
   MSHADOW_XINLINE StaticArray(const StaticArray<T, num>& sa) {
-    #pragma unroll
+#pragma unroll
     for (int i = 0; i < num; ++i) {
       this->array_[i] = sa[i];
     }

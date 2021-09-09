@@ -22,7 +22,7 @@
  * \file concat.cu
  * \brief
  * \author Bing Xu
-*/
+ */
 
 #include "./concat-inl.h"
 
@@ -37,7 +37,8 @@ static void ConcatComputeExGPU(const nnvm::NodeAttrs& attrs,
   CHECK(!inputs.empty());
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  if (req[0] == kNullOp) return;
+  if (req[0] == kNullOp)
+    return;
   if (common::ContainsOnlyStorage(inputs, kCSRStorage) &&
       outputs[0].storage_type() == kCSRStorage) {
     ConcatCSRImpl<gpu>(attrs, op_ctx, inputs, req, outputs);
@@ -47,16 +48,14 @@ static void ConcatComputeExGPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(Concat)
-.set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", ConcatComputeExGPU);
+    .set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>)
+    .set_attr<FComputeEx>("FComputeEx<gpu>", ConcatComputeExGPU);
 
 NNVM_REGISTER_OP(_rnn_param_concat)
-.set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", ConcatComputeExGPU);
+    .set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>)
+    .set_attr<FComputeEx>("FComputeEx<gpu>", ConcatComputeExGPU);
 
-NNVM_REGISTER_OP(_backward_Concat)
-.set_attr<FCompute>("FCompute<gpu>", ConcatGradCompute<gpu>);
+NNVM_REGISTER_OP(_backward_Concat).set_attr<FCompute>("FCompute<gpu>", ConcatGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
-

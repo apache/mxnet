@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -46,35 +46,35 @@ inline static void SetNumpyWindowsParam(runtime::MXNetArgs args,
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
   attrs.parsed = param;
-  attrs.op = op;
+  attrs.op     = op;
   SetAttrDict<op::NumpyWindowsParam>(&attrs);
   if (args[2].type_code() != kNull) {
     attrs.dict["ctx"] = args[2].operator std::string();
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
+  auto ndoutputs  = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  *ret            = ndoutputs[0];
 }
 
 MXNET_REGISTER_API("_npi.blackman")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_blackman");
-  SetNumpyWindowsParam(args, ret, op);
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op = Op::Get("_npi_blackman");
+      SetNumpyWindowsParam(args, ret, op);
+    });
 
 MXNET_REGISTER_API("_npi.hamming")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_hamming");
-  SetNumpyWindowsParam(args, ret, op);
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op = Op::Get("_npi_hamming");
+      SetNumpyWindowsParam(args, ret, op);
+    });
 
 MXNET_REGISTER_API("_npi.hanning")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_hanning");
-  SetNumpyWindowsParam(args, ret, op);
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      const nnvm::Op* op = Op::Get("_npi_hanning");
+      SetNumpyWindowsParam(args, ret, op);
+    });
 
 }  // namespace mxnet

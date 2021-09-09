@@ -42,7 +42,7 @@ namespace op {
 /*
  * Only support tensor indices (the type of param 'obj' is tensor).
  */
-template<typename xpu>
+template <typename xpu>
 void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<TBlob>& inputs,
@@ -52,30 +52,31 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
 
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
-  int input_count = param.val.has_value() ? 1 : 2;
-  int insize = input_count + 1;
+  int input_count               = param.val.has_value() ? 1 : 2;
+  int insize                    = input_count + 1;
   CHECK_EQ(inputs.size(), insize);
   CHECK_EQ(outputs.size(), 1);
   CHECK_EQ(req.size(), 1);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const int arr_pos = 0;
-  const int val_pos = param.val.has_value() ? 0 : 1;
-  const int obj_pos = val_pos + 1;
-  const int out_pos = 0;
-  int ndim = inputs[arr_pos].shape_.ndim();
-  int axis = param.axis.has_value() ? param.axis.value() : 0;
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  const int arr_pos       = 0;
+  const int val_pos       = param.val.has_value() ? 0 : 1;
+  const int obj_pos       = val_pos + 1;
+  const int out_pos       = 0;
+  int ndim                = inputs[arr_pos].shape_.ndim();
+  int axis                = param.axis.has_value() ? param.axis.value() : 0;
   TBlob arr;
-  TBlob values = param.val.has_value() ?
-                 TBlob(nullptr, mxnet::TShape(0, 1), xpu::kDevMask, outputs[out_pos].type_flag_) :
-                 inputs[val_pos];
+  TBlob values =
+      param.val.has_value()
+          ? TBlob(nullptr, mxnet::TShape(0, 1), xpu::kDevMask, outputs[out_pos].type_flag_)
+          : inputs[val_pos];
   if (!param.axis.has_value()) {
-    arr = inputs[arr_pos].reshape(Shape1(inputs[arr_pos].shape_.Size()));
+    arr  = inputs[arr_pos].reshape(Shape1(inputs[arr_pos].shape_.Size()));
     ndim = 1;
   } else if (ndim == 0) {
     if (param.val.has_value()) {
       CHECK_EQ(inputs[val_pos].shape_.ndim(), 0)
-        << "'arr' is a 0-d array, 'values' can not assign to it. "
-        << "alueError: assignment to 0-d array.";
+          << "'arr' is a 0-d array, 'values' can not assign to it. "
+          << "alueError: assignment to 0-d array.";
       mxnet_op::copy(s, outputs[out_pos], inputs[val_pos]);
     } else {
       MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
@@ -86,11 +87,11 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
   } else {
     arr = inputs[arr_pos];
     CHECK(axis >= -1 * arr.shape_.ndim() && axis < arr.shape_.ndim())
-      << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
+        << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
     axis += (axis < 0) ? arr.shape_.ndim() : 0;
   }
 
-  size_t N = arr.shape_[axis];
+  size_t N           = arr.shape_[axis];
   size_t indices_len = inputs[obj_pos].shape_.Size();  // indices amount
 
   // get and check indices from tensor
@@ -98,9 +99,8 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
   mxnet::TShape val_newshape(arr.shape_.ndim(), -1);
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
-  for (index_t i = values.shape_.ndim() - 1, j = arr.shape_.ndim() - 1;
-        i >= 0 || j >= 0;
-        --i, --j) {
+  for (index_t i = values.shape_.ndim() - 1, j = arr.shape_.ndim() - 1; i >= 0 || j >= 0;
+       --i, --j) {
     if (i >= 0 && j >= 0) {
       val_newshape[j] = values.shape_[i];
     } else if (i >= 0) {
@@ -137,12 +137,9 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
   }
 
   const mxnet::TShape& outshape = outputs[out_pos].shape_;
-  int dtype = outputs[out_pos].type_flag_;
-  int vtype = param.val.has_value() ?
-              mshadow::DataType<double>::kFlag :
-              inputs[val_pos].type_flag_;
-  if ((inputs[obj_pos].shape_.ndim() == 0 || indices_len == 1)
-      && param.val.has_value()) {
+  int dtype                     = outputs[out_pos].type_flag_;
+  int vtype = param.val.has_value() ? mshadow::DataType<double>::kFlag : inputs[val_pos].type_flag_;
+  if ((inputs[obj_pos].shape_.ndim() == 0 || indices_len == 1) && param.val.has_value()) {
     MSHADOW_TYPE_SWITCH(vtype, VType, {
       // If insert use single index and 'value' is inputed as numerical parameter
       values = TBlob(ctx.requested[0].get_space_typed<xpu, 1, VType>(Shape1(1), s));
@@ -152,25 +149,47 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
   if (inputs[obj_pos].shape_.ndim() == 0) {
     // 'obj' is tensor and the tensor's ndim is 0, also need to moveaxis
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      InsertSizeOneTensorImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
+      InsertSizeOneTensorImpl<xpu, ndim>(s,
+                                         outputs[out_pos],
+                                         arr,
+                                         values,
                                          mxnet_op::calc_stride(arr.shape_.get<ndim>()),
                                          mxnet_op::calc_stride(values.shape_.get<ndim>()),
                                          mxnet_op::calc_stride(old_valshape.get<ndim>()),
                                          mxnet_op::calc_stride(outshape.get<ndim>()),
-                                         outshape.get<ndim>(), values.shape_.get<ndim>(),
-                                         dtype, vtype, req[out_pos], axis, inputs[obj_pos],
-                                         numnew, N, outshape.Size(), true);
+                                         outshape.get<ndim>(),
+                                         values.shape_.get<ndim>(),
+                                         dtype,
+                                         vtype,
+                                         req[out_pos],
+                                         axis,
+                                         inputs[obj_pos],
+                                         numnew,
+                                         N,
+                                         outshape.Size(),
+                                         true);
     });
   } else if (indices_len == 1) {
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      InsertSizeOneTensorImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
+      InsertSizeOneTensorImpl<xpu, ndim>(s,
+                                         outputs[out_pos],
+                                         arr,
+                                         values,
                                          mxnet_op::calc_stride(arr.shape_.get<ndim>()),
                                          mxnet_op::calc_stride(values.shape_.get<ndim>()),
                                          mxnet_op::calc_stride(old_valshape.get<ndim>()),
                                          mxnet_op::calc_stride(outshape.get<ndim>()),
-                                         outshape.get<ndim>(), values.shape_.get<ndim>(),
-                                         dtype, vtype, req[out_pos], axis, inputs[obj_pos],
-                                         numnew, N, outshape.Size(), false);
+                                         outshape.get<ndim>(),
+                                         values.shape_.get<ndim>(),
+                                         dtype,
+                                         vtype,
+                                         req[out_pos],
+                                         axis,
+                                         inputs[obj_pos],
+                                         numnew,
+                                         N,
+                                         outshape.Size(),
+                                         false);
     });
   } else {
     // broadcast check
@@ -183,27 +202,25 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
     }
     size_t temp_storage_bytes, temp_mem_size;
     temp_storage_bytes = SortByKeyWorkspaceSize<int64_t, index_t, xpu>(indices_len, false, true);
-    temp_mem_size = indices_len * sizeof(int64_t) * 2 +
-                    indices_len * sizeof(index_t) +
-                    outshape[axis] * sizeof(index_t) * 2 +
-                    temp_storage_bytes;
+    temp_mem_size      = indices_len * sizeof(int64_t) * 2 + indices_len * sizeof(index_t) +
+                    outshape[axis] * sizeof(index_t) * 2 + temp_storage_bytes;
     Tensor<xpu, 1, char> temp_mem =
-      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
-    int64_t* indices_ptr = reinterpret_cast<int64_t*>(temp_mem.dptr_);
+        ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
+    int64_t* indices_ptr        = reinterpret_cast<int64_t*>(temp_mem.dptr_);
     int64_t* sorted_indices_ptr = reinterpret_cast<int64_t*>(indices_ptr + indices_len);
-    index_t* order_ptr = reinterpret_cast<index_t*>(sorted_indices_ptr + indices_len);
-    index_t* is_insert = reinterpret_cast<index_t*>(order_ptr + indices_len);
-    index_t* origin_idx = reinterpret_cast<index_t*>(is_insert + outshape[axis]);
-    Tensor<xpu, 1, char> temp_storage(reinterpret_cast<char*>(origin_idx + outshape[axis]),
-                                      Shape1(temp_storage_bytes), s);
+    index_t* order_ptr          = reinterpret_cast<index_t*>(sorted_indices_ptr + indices_len);
+    index_t* is_insert          = reinterpret_cast<index_t*>(order_ptr + indices_len);
+    index_t* origin_idx         = reinterpret_cast<index_t*>(is_insert + outshape[axis]);
+    Tensor<xpu, 1, char> temp_storage(
+        reinterpret_cast<char*>(origin_idx + outshape[axis]), Shape1(temp_storage_bytes), s);
     Tensor<xpu, 1, int64_t> indices(indices_ptr, Shape1(indices_len), s);
     Tensor<xpu, 1, int64_t> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
     Tensor<xpu, 1, index_t> order(order_ptr, Shape1(indices_len), s);
     int num_bits = 8 * sizeof(int64_t);
-    Kernel<ObjToIndices, xpu>::Launch(s, indices_len, indices_ptr, N,
-                                      inputs[obj_pos].dptr<int64_t>());
-    Kernel<range_fwd, xpu>::Launch(s, indices_len, index_t{1}, index_t{0}, index_t{1},
-                                   kWriteTo, order_ptr);
+    Kernel<ObjToIndices, xpu>::Launch(
+        s, indices_len, indices_ptr, N, inputs[obj_pos].dptr<int64_t>());
+    Kernel<range_fwd, xpu>::Launch(
+        s, indices_len, index_t{1}, index_t{0}, index_t{1}, kWriteTo, order_ptr);
     mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
     Kernel<IndicesModify, xpu>::Launch(s, indices_len, indices_ptr, order_ptr);
 
@@ -213,13 +230,22 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
     Kernel<SetOriginValuesIdx, xpu>::Launch(s, indices_len, indices_ptr, origin_idx);
     Kernel<SetOriginArrIdx, xpu>::Launch(s, outshape[axis], is_insert, origin_idx);
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      InsertSequenceImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
+      InsertSequenceImpl<xpu, ndim>(s,
+                                    outputs[out_pos],
+                                    arr,
+                                    values,
                                     mxnet_op::calc_stride(arr.shape_.get<ndim>()),
                                     mxnet_op::calc_stride(values.shape_.get<ndim>()),
                                     mxnet_op::calc_stride(outshape.get<ndim>()),
-                                    outshape.get<ndim>(), values.shape_.get<ndim>(),
-                                    is_insert, origin_idx, dtype, vtype, req[out_pos],
-                                    axis, outshape.Size());
+                                    outshape.get<ndim>(),
+                                    values.shape_.get<ndim>(),
+                                    is_insert,
+                                    origin_idx,
+                                    dtype,
+                                    vtype,
+                                    req[out_pos],
+                                    axis,
+                                    outshape.Size());
     });
   }
 }

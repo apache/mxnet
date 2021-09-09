@@ -22,18 +22,17 @@
  * \file softmax_output.cu
  * \brief
  * \author Bing Xu
-*/
+ */
 
 #include "./softmax_output-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(SoftmaxOutput)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxOutputCompute<gpu>);
+NNVM_REGISTER_OP(SoftmaxOutput).set_attr<FCompute>("FCompute<gpu>", SoftmaxOutputCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_SoftmaxOutput)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxOutputGradCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", SoftmaxOutputGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

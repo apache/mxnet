@@ -29,7 +29,8 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_power)
-.describe(R"code(Returns result of first array elements raised to powers from second array, element-wise with broadcasting.
+    .describe(
+        R"code(Returns result of first array elements raised to powers from second array, element-wise with broadcasting.
 
 Example::
 
@@ -43,27 +44,28 @@ Example::
                             [ 4.,  4.,  4.]]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_power"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_power"});
 
 NNVM_REGISTER_OP(_backward_broadcast_power)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::power_grad,
-                                                              mshadow_op::power_rgrad>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>(
+        "FCompute<cpu>",
+        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::power_grad, mshadow_op::power_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_maximum)
-.add_alias("_npi_maximum")
-.describe(R"code(Returns element-wise maximum of the input arrays with broadcasting.
+    .add_alias("_npi_maximum")
+    .describe(R"code(Returns element-wise maximum of the input arrays with broadcasting.
 
 This function compares two input arrays and returns a new array having the element-wise maxima.
 
@@ -79,27 +81,27 @@ Example::
                               [ 1.,  1.,  1.]]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::maximum>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_maximum"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::maximum>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_maximum"});
 
 NNVM_REGISTER_OP(_backward_broadcast_maximum)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::ge,
-                                                              mshadow_op::lt>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::ge, mshadow_op::lt>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_minimum)
-.add_alias("_npi_minimum")
-.describe(R"code(Returns element-wise minimum of the input arrays with broadcasting.
+    .add_alias("_npi_minimum")
+    .describe(R"code(Returns element-wise minimum of the input arrays with broadcasting.
 
 This function compares two input arrays and returns a new array having the element-wise minima.
 
@@ -115,26 +117,26 @@ Example::
                               [ 1.,  1.,  1.]]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::minimum>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_minimum"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::minimum>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_minimum"});
 
 NNVM_REGISTER_OP(_backward_broadcast_minimum)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::le,
-                                                              mshadow_op::gt>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::le, mshadow_op::gt>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_hypot)
-.describe(R"code( Returns the hypotenuse of a right angled triangle, given its "legs"
+    .describe(R"code( Returns the hypotenuse of a right angled triangle, given its "legs"
 with broadcasting.
 
 It is equivalent to doing :math:`sqrt(x_1^2 + x_2^2)`.
@@ -156,23 +158,25 @@ Example::
                             [ 5.,  5.,  5.]]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::hypot>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_broadcast_hypot" });
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::hypot>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_hypot"});
 
 NNVM_REGISTER_OP(_backward_broadcast_hypot)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-[](const NodeAttrs& attrs) {
-  return std::vector<std::pair<int, int> > {{0, 1}};
-})
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::hypot_grad_left,
-                    mshadow_op::hypot_grad_right>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryBroadcastBackwardUseIn<cpu,
+                                                     mshadow_op::hypot_grad_left,
+                                                     mshadow_op::hypot_grad_right>);
 
 }  // namespace op
 }  // namespace mxnet

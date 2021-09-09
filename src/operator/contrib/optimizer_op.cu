@@ -30,7 +30,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_group_adagrad_update)
-.set_attr<FComputeEx>("FComputeEx<gpu>", GroupAdagradUpdateEx<gpu>);
+    .set_attr<FComputeEx>("FComputeEx<gpu>", GroupAdagradUpdateEx<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

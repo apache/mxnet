@@ -19,7 +19,7 @@
 /*!
  * Copyright (c) 2018 by Contributors
  * \file boolean_mask-inl.h
-*/
+ */
 
 #ifndef MXNET_OPERATOR_CONTRIB_BOOLEAN_MASK_INL_H_
 #define MXNET_OPERATOR_CONTRIB_BOOLEAN_MASK_INL_H_
@@ -45,18 +45,14 @@ namespace op {
 struct BooleanMaskParam : public dmlc::Parameter<BooleanMaskParam> {
   int axis;
   DMLC_DECLARE_PARAMETER(BooleanMaskParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(0)
-    .describe("An integer that represents the axis in NDArray to mask from.");
+    DMLC_DECLARE_FIELD(axis).set_default(0).describe(
+        "An integer that represents the axis in NDArray to mask from.");
   }
 };
 
 struct BooleanMaskForwardCPUKernel {
-  template<typename DType>
-  static void Map(int i,
-                  DType* out,
-                  const DType* data,
-                  const int32_t* idx,
-                  const size_t col_size) {
+  template <typename DType>
+  static void Map(int i, DType* out, const DType* data, const int32_t* idx, const size_t col_size) {
     // i is row id already
     int32_t prev = (i == 0) ? 0 : idx[i - 1];
     int32_t curr = idx[i];
@@ -72,14 +68,11 @@ struct BooleanMaskForwardCPUKernel {
 };
 
 struct BooleanMaskForwardKernel {
-  template<typename DType>
-  static void MSHADOW_XINLINE Map(int i,
-                                  DType* out,
-                                  const DType* data,
-                                  const int32_t* idx,
-                                  const size_t col_size) {
-    int row_id = i / col_size;
-    int col_id = i % col_size;
+  template <typename DType>
+  static void MSHADOW_XINLINE
+  Map(int i, DType* out, const DType* data, const int32_t* idx, const size_t col_size) {
+    int row_id   = i / col_size;
+    int col_id   = i % col_size;
     int32_t prev = (row_id == 0) ? 0 : idx[row_id - 1];
     int32_t curr = idx[row_id];
     if (prev != curr) {
@@ -89,15 +82,15 @@ struct BooleanMaskForwardKernel {
 };
 
 struct BooleanMaskBackwardKernel {
-  template<typename DType>
+  template <typename DType>
   static void MSHADOW_XINLINE Map(int i,
                                   DType* igrad,
                                   const OpReqType req,
                                   const DType* ograd,
                                   const int32_t* idx,
                                   const size_t col_size) {
-    int row_id = i / col_size;
-    int col_id = i % col_size;
+    int row_id   = i / col_size;
+    int col_id   = i % col_size;
     int32_t prev = (row_id == 0) ? 0 : idx[row_id - 1];
     int32_t curr = idx[row_id];
     if (prev != curr) {
@@ -112,19 +105,19 @@ struct BooleanMaskBackwardKernel {
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 inline void BooleanMaskForward(const nnvm::NodeAttrs& attrs,
-                               const OpContext &ctx,
-                               const std::vector<NDArray> &inputs,
-                               const std::vector<OpReqType> &req,
-                               const std::vector<NDArray> &outputs);
+                               const OpContext& ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs);
 
-template<typename xpu>
+template <typename xpu>
 inline void BooleanMaskBackward(const nnvm::NodeAttrs& attrs,
-                                const OpContext &ctx,
-                                const std::vector<NDArray> &inputs,
-                                const std::vector<OpReqType> &req,
-                                const std::vector<NDArray> &outputs);
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs);
 
 }  // namespace op
 }  // namespace mxnet

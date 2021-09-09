@@ -27,11 +27,11 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_quadratic)
-.set_attr<FComputeEx>("FComputeEx<gpu>", QuadraticOpForwardEx<gpu>)
-.set_attr<FCompute>("FCompute<gpu>", QuadraticOpForward<gpu>);
+    .set_attr<FComputeEx>("FComputeEx<gpu>", QuadraticOpForwardEx<gpu>)
+    .set_attr<FCompute>("FCompute<gpu>", QuadraticOpForward<gpu>);
 
 NNVM_REGISTER_OP(_contrib_backward_quadratic)
-.set_attr<FCompute>("FCompute<gpu>", QuadraticOpBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", QuadraticOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

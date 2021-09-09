@@ -29,7 +29,7 @@ namespace op {
 
 NNVM_REGISTER_OP(where)
 MXNET_ADD_SPARSE_OP_ALIAS(where)
-.describe(R"code(Return the elements, either from x or y, depending on the condition.
+    .describe(R"code(Return the elements, either from x or y, depending on the condition.
 
 Given three ndarrays, condition, x, and y, return an ndarray with the elements from x or y,
 depending on the elements from condition are true or false. x and y must have the same shape.
@@ -55,56 +55,56 @@ Examples::
   where(csr_cond, x, y) = [[5, 2], [3, 8]]
 
 )code" ADD_FILELINE)
-.set_num_inputs(3)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"condition", "x", "y"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", WhereOpShape)
-.set_attr<nnvm::FInferType>("FInferType", WhereOpType)
-.set_attr<FInferStorageType>("FInferStorageType", WhereOpForwardStorageType)
-.set_attr<FCompute>("FCompute<cpu>", WhereOpForward<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", WhereOpForwardEx<cpu>)
-.set_attr<nnvm::FGradient>("FGradient",
-  // Use the following lambda function instead of ElemwiseGradUseIn
-  // for best efficiency. grad[condition] = 0; to calculate grad[x] and grad[y]
-  // we need only condition from input.
-  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    std::vector<nnvm::NodeEntry> ret;
-    // make zero grad node for grad[condition]
-    auto p = MakeNode("zeros_like", n->attrs.name + "_cond_backward",
-                      {n->inputs[0]}, nullptr, &n);
-    ret.emplace_back(p);
+    .set_num_inputs(3)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"condition", "x", "y"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", WhereOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", WhereOpType)
+    .set_attr<FInferStorageType>("FInferStorageType", WhereOpForwardStorageType)
+    .set_attr<FCompute>("FCompute<cpu>", WhereOpForward<cpu>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", WhereOpForwardEx<cpu>)
+    .set_attr<nnvm::FGradient>(
+        "FGradient",
+        // Use the following lambda function instead of ElemwiseGradUseIn
+        // for best efficiency. grad[condition] = 0; to calculate grad[x] and grad[y]
+        // we need only condition from input.
+        [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+          std::vector<nnvm::NodeEntry> ret;
+          // make zero grad node for grad[condition]
+          auto p =
+              MakeNode("zeros_like", n->attrs.name + "_cond_backward", {n->inputs[0]}, nullptr, &n);
+          ret.emplace_back(p);
 
-    // make grad nodes for grad[x] and grad[y]
-    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-    heads.push_back(n->inputs[0]);  // only need condition to calculate gradients
-    p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("_backward_where");
-    p->attrs.name = n->attrs.name + "_backward";
-    p->attrs.dict = n->attrs.dict;
-    if (p->op()->attr_parser != nullptr) {
-      p->op()->attr_parser(&(p->attrs));
-    }
-    p->control_deps.emplace_back(n);
-    p->inputs = std::move(heads);
-    ret.emplace_back(p, 0, 0);
-    ret.emplace_back(p, 1, 0);
-    return ret;
-  })
-.add_argument("condition", "NDArray-or-Symbol", "condition array")
-.add_argument("x", "NDArray-or-Symbol", "")
-.add_argument("y", "NDArray-or-Symbol", "");
+          // make grad nodes for grad[x] and grad[y]
+          std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+          heads.push_back(n->inputs[0]);  // only need condition to calculate gradients
+          p             = nnvm::Node::Create();
+          p->attrs.op   = nnvm::Op::Get("_backward_where");
+          p->attrs.name = n->attrs.name + "_backward";
+          p->attrs.dict = n->attrs.dict;
+          if (p->op()->attr_parser != nullptr) {
+            p->op()->attr_parser(&(p->attrs));
+          }
+          p->control_deps.emplace_back(n);
+          p->inputs = std::move(heads);
+          ret.emplace_back(p, 0, 0);
+          ret.emplace_back(p, 1, 0);
+          return ret;
+        })
+    .add_argument("condition", "NDArray-or-Symbol", "condition array")
+    .add_argument("x", "NDArray-or-Symbol", "")
+    .add_argument("y", "NDArray-or-Symbol", "");
 
 NNVM_REGISTER_OP(_backward_where)
-.set_num_inputs(2)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", WhereOpBackwardStorageType)
-.set_attr<FCompute>("FCompute<cpu>", WhereOpBackward<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", WhereOpBackwardEx<cpu>);
-
+    .set_num_inputs(2)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FInferStorageType>("FInferStorageType", WhereOpBackwardStorageType)
+    .set_attr<FCompute>("FCompute<cpu>", WhereOpBackward<cpu>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", WhereOpBackwardEx<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

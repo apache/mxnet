@@ -20,7 +20,8 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_broadcast_op_extended_sec.cc
- * \brief CPU Implementation of extended functions for elementwise numpy binary broadcast operator. (Second extended file)
+ * \brief CPU Implementation of extended functions for elementwise numpy binary broadcast operator.
+ * (Second extended file)
  */
 
 #include "../../common/utils.h"
@@ -29,112 +30,114 @@
 namespace mxnet {
 namespace op {
 
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)                    \
-  NNVM_REGISTER_OP(name)                                                  \
-  .set_num_inputs(1)                                                      \
-  .set_num_outputs(1)                                                     \
-  .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)                   \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)       \
-  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)        \
-  .set_attr<FResourceRequest>("FResourceRequest",                         \
-    [](const NodeAttrs& attrs) {                                          \
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};   \
-    })                                                                    \
-  .add_argument("data", "NDArray-or-Symbol", "source input")              \
-  .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)                        \
+  NNVM_REGISTER_OP(name)                                                      \
+      .set_num_inputs(1)                                                      \
+      .set_num_outputs(1)                                                     \
+      .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)                   \
+      .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)       \
+      .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)        \
+      .set_attr<FResourceRequest>(                                            \
+          "FResourceRequest",                                                 \
+          [](const NodeAttrs& attrs) {                                        \
+            return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; \
+          })                                                                  \
+      .add_argument("data", "NDArray-or-Symbol", "source input")              \
+      .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_fmax)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::fmax>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmax"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::fmax>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmax"});
 
 NNVM_REGISTER_OP(_backward_npi_fmax)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::ge,
-                                                                  mshadow_op::lt>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::ge, mshadow_op::lt>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_fmax_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::fmax>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmax_scalar"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::fmax>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmax_scalar"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_fmax_scalar)
-.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
-.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::ge>);
+    .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+    .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::ge>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_fmin)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::fmin>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmin"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::fmin>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmin"});
 
 NNVM_REGISTER_OP(_backward_npi_fmin)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::le,
-                                                                  mshadow_op::gt>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::le, mshadow_op::gt>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_fmin_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::fmin>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmin_scalar"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::fmin>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmin_scalar"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_fmin_scalar)
-.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
-.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::le>);
+    .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+    .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::le>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_fmod)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::fmod>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmod"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::fmod>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmod"});
 
 NNVM_REGISTER_OP(_backward_npi_fmod)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::mod_grad,
-                                                                  mshadow_op::mod_rgrad>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>(
+        "FCompute<cpu>",
+        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::mod_grad, mshadow_op::mod_rgrad>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_fmod_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::fmod>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmod_scalar"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::fmod>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmod_scalar"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_fmod_scalar)
-.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
-.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::mod_grad>);
+    .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+    .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::mod_grad>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rfmod_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rfmod>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_rfmod_scalar"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rfmod>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_rfmod_scalar"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rfmod_scalar)
-.add_arguments(NumpyBinaryScalarParam::__FIELDS__())
-.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::rmod_grad>);
+    .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
+    .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
+    .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::rmod_grad>);
 
 }  // namespace op
 }  // namespace mxnet

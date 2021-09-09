@@ -22,7 +22,7 @@
  * \file upsampling_nearest.cc
  * \brief
  * \author Bing Xu, Da Zheng
-*/
+ */
 
 #include "./upsampling-inl.h"
 #include <nnvm/op_attr_types.h>
@@ -32,25 +32,26 @@ namespace mxnet {
 namespace op {
 
 static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
-                            mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape) {
+                            mxnet::ShapeVector* in_shape,
+                            mxnet::ShapeVector* out_shape) {
   const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(attrs.parsed);
   CHECK_GE(in_shape->size(), 1U);
-  const mxnet::TShape &dshape = (*in_shape)[0];
-  mxnet::TShape oshape = dshape;
+  const mxnet::TShape& dshape = (*in_shape)[0];
+  mxnet::TShape oshape        = dshape;
   if (param_.sample_type == up_enum::kNearest) {
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
     oshape[1] = 0;
     for (auto& shape : *in_shape) {
-      CHECK_EQ(shape.ndim(), 4U) << \
-        "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
-      int oh = dshape[2]*param_.scale, ow = dshape[3]*param_.scale;
-      CHECK_EQ(oh%shape[2], 0U) << "UpSamplingNearest: input height of " << shape[2] << \
-        "does not divide output height of " << oh;
-      CHECK_EQ(ow%shape[3], 0U) << "UpSamplingNearest: input width of " << shape[3] << \
-        "does not divide output width of " << ow;
+      CHECK_EQ(shape.ndim(), 4U)
+          << "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
+      int oh = dshape[2] * param_.scale, ow = dshape[3] * param_.scale;
+      CHECK_EQ(oh % shape[2], 0U) << "UpSamplingNearest: input height of " << shape[2]
+                                  << "does not divide output height of " << oh;
+      CHECK_EQ(ow % shape[3], 0U) << "UpSamplingNearest: input width of " << shape[3]
+                                  << "does not divide output width of " << ow;
       if (param_.multi_input_mode == up_enum::kSum) {
-        CHECK(oshape[1] == 0 || oshape[1] == shape[1]) << \
-                         "Number of channels must be the same when multi_input_mode==sum";
+        CHECK(oshape[1] == 0 || oshape[1] == shape[1])
+            << "Number of channels must be the same when multi_input_mode==sum";
         oshape[1] = shape[1];
       } else {
         oshape[1] += shape[1];
@@ -58,13 +59,12 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
     }
   } else {
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
-    CHECK_EQ(dshape.ndim(), 4U) << \
-      "UpSamplingBilinear: Input data should be 4D in (batch, channel, y, x)";
-    if (!shape_is_known(dshape)) return false;
+    CHECK_EQ(dshape.ndim(), 4U)
+        << "UpSamplingBilinear: Input data should be 4D in (batch, channel, y, x)";
+    if (!shape_is_known(dshape))
+      return false;
     int kernel = 2 * param_.scale - param_.scale % 2;
-    SHAPE_ASSIGN_CHECK(*in_shape,
-        up_enum::kWeight,
-        mshadow::Shape4(dshape[1], 1, kernel, kernel));
+    SHAPE_ASSIGN_CHECK(*in_shape, up_enum::kWeight, mshadow::Shape4(dshape[1], 1, kernel, kernel));
     oshape = dshape;
   }
   oshape[2] = dshape[2] * param_.scale;
@@ -88,7 +88,8 @@ static inline std::vector<std::string> ListArguments(const UpSamplingParam& para
 }
 
 static bool UpSamplingType(const nnvm::NodeAttrs& attrs,
-                           std::vector<int> *in_type, std::vector<int> *out_type) {
+                           std::vector<int>* in_type,
+                           std::vector<int>* out_type) {
   const UpSamplingParam& param = nnvm::get<UpSamplingParam>(attrs.parsed);
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
@@ -106,7 +107,7 @@ static bool UpSamplingType(const nnvm::NodeAttrs& attrs,
 }
 
 struct UpSamplingGrad {
-  const char *op_name;
+  const char* op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(n->attrs.parsed);
@@ -122,7 +123,7 @@ struct UpSamplingGrad {
 DMLC_REGISTER_PARAMETER(UpSamplingParam);
 
 NNVM_REGISTER_OP(UpSampling)
-.describe(R"code(Upsamples the given input data.
+    .describe(R"code(Upsamples the given input data.
 
 Two algorithms (``sample_type``) are available for upsampling:
 
@@ -172,69 +173,80 @@ Example::
                                                                        [2. 4. 4. 4. 4. 2.]
                                                                        [1. 2. 2. 2. 2. 1.]]]]
 )code" ADD_FILELINE)
-.set_num_inputs([](const NodeAttrs& attrs) {
-  const UpSamplingParam& params = nnvm::get<UpSamplingParam>(attrs.parsed);
-  return params.sample_type == up_enum::kNearest ? params.num_args : 2;
-})
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<UpSamplingParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-    [](const NodeAttrs& attrs) {
-  return ListArguments(nnvm::get<UpSamplingParam>(attrs.parsed));
-})
-.set_attr<nnvm::FListOutputNames>("FListOutputNames",
-    [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"output"};
-})
-.set_attr<mxnet::FInferShape>("FInferShape", UpSamplingShape)
-.set_attr<nnvm::FInferType>("FInferType", UpSamplingType)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-  const UpSamplingParam& param = nnvm::get<UpSamplingParam>(n.parsed);
-  if (param.sample_type == up_enum::kNearest) {
-    return std::vector<ResourceRequest>();
-  } else {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  }
-})
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", UpSamplingCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", UpSamplingGrad{"_backward_UpSampling"})
-.set_attr<std::string>("key_var_num_args", "num_args")
-.add_argument("data", "NDArray-or-Symbol[]", "Array of tensors to upsample. "
-              "For bilinear upsampling, there should be 2 inputs - 1 data and 1 weight.")
-.add_arguments(UpSamplingParam::__FIELDS__())
-.set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
-    [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
-      if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
-      if (index == 1) {
-        var->attrs.dict["__init__"] = "[\"bilinear\", {}]";
-      }
-    });
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      const UpSamplingParam& params = nnvm::get<UpSamplingParam>(attrs.parsed);
+      return params.sample_type == up_enum::kNearest ? params.num_args : 2;
+    })
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<UpSamplingParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return ListArguments(
+                                           nnvm::get<UpSamplingParam>(attrs.parsed));
+                                     })
+    .set_attr<nnvm::FListOutputNames>("FListOutputNames",
+                                      [](const NodeAttrs& attrs) {
+                                        return std::vector<std::string>{"output"};
+                                      })
+    .set_attr<mxnet::FInferShape>("FInferShape", UpSamplingShape)
+    .set_attr<nnvm::FInferType>("FInferType", UpSamplingType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  const UpSamplingParam& param =
+                                      nnvm::get<UpSamplingParam>(n.parsed);
+                                  if (param.sample_type == up_enum::kNearest) {
+                                    return std::vector<ResourceRequest>();
+                                  } else {
+                                    return std::vector<ResourceRequest>{
+                                        ResourceRequest::kTempSpace};
+                                  }
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", UpSamplingCompute<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", UpSamplingGrad{"_backward_UpSampling"})
+    .set_attr<std::string>("key_var_num_args", "num_args")
+    .add_argument("data",
+                  "NDArray-or-Symbol[]",
+                  "Array of tensors to upsample. "
+                  "For bilinear upsampling, there should be 2 inputs - 1 data and 1 weight.")
+    .add_arguments(UpSamplingParam::__FIELDS__())
+    .set_attr<nnvm::FSetInputVarAttrOnCompose>(
+        "FSetInputVarAttrOnCompose",
+        [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
+          if (var->attrs.dict.find("__init__") != var->attrs.dict.end())
+            return;
+          if (index == 1) {
+            var->attrs.dict["__init__"] = "[\"bilinear\", {}]";
+          }
+        });
 
 NNVM_REGISTER_OP(_backward_UpSampling)
-.set_num_inputs([](const NodeAttrs& attrs) {
-  const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(attrs.parsed);
-  if (param_.sample_type != up_enum::kNearest) {
-    return 3;
-  } else {
-    return 1;
-  }
-})
-.set_num_outputs([](const NodeAttrs& attrs) {
-  const UpSamplingParam& params = nnvm::get<UpSamplingParam>(attrs.parsed);
-  return params.sample_type == up_enum::kNearest ? params.num_args : 2;
-})
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-  const UpSamplingParam& param = nnvm::get<UpSamplingParam>(n.parsed);
-  if (param.sample_type == up_enum::kNearest) {
-    return std::vector<ResourceRequest>();
-  } else {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  }
-})
-.set_attr_parser(ParamParser<UpSamplingParam>)
-.set_attr<FCompute>("FCompute<cpu>", UpSamplingGradCompute<cpu>);
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(attrs.parsed);
+      if (param_.sample_type != up_enum::kNearest) {
+        return 3;
+      } else {
+        return 1;
+      }
+    })
+    .set_num_outputs([](const NodeAttrs& attrs) {
+      const UpSamplingParam& params = nnvm::get<UpSamplingParam>(attrs.parsed);
+      return params.sample_type == up_enum::kNearest ? params.num_args : 2;
+    })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  const UpSamplingParam& param =
+                                      nnvm::get<UpSamplingParam>(n.parsed);
+                                  if (param.sample_type == up_enum::kNearest) {
+                                    return std::vector<ResourceRequest>();
+                                  } else {
+                                    return std::vector<ResourceRequest>{
+                                        ResourceRequest::kTempSpace};
+                                  }
+                                })
+    .set_attr_parser(ParamParser<UpSamplingParam>)
+    .set_attr<FCompute>("FCompute<cpu>", UpSamplingGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -28,11 +28,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_rayleigh)
-.set_attr<FCompute>("FCompute<gpu>", NumpyRayleighForward<gpu>);
+NNVM_REGISTER_OP(_npi_rayleigh).set_attr<FCompute>("FCompute<gpu>", NumpyRayleighForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_broadcast_rayleigh)
-.set_attr<FCompute>("FCompute<gpu>", RayleighReparamBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", RayleighReparamBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

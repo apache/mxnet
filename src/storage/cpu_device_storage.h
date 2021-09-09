@@ -61,7 +61,8 @@ class CPUDeviceStorage {
 
 inline void CPUDeviceStorage::Alloc(Storage::Handle* handle) {
   bool success = mxnet::common::AlignedMemAlloc(&(handle->dptr), handle->size, alignment_);
-  if (!success) LOG(FATAL) << "Failed to allocate CPU Memory";
+  if (!success)
+    LOG(FATAL) << "Failed to allocate CPU Memory";
 }
 
 inline void CPUDeviceStorage::Free(Storage::Handle handle) {

@@ -265,20 +265,22 @@ class VectorizedStorer : public VectorizedAccessor<DType, nvec, aligned> {
 
 namespace {
 
-inline index_t get_num_aligned_elements(const void *ptr, const index_t lead_dim,
-                                        const int nvec, const int size) {
+inline index_t get_num_aligned_elements(const void* ptr,
+                                        const index_t lead_dim,
+                                        const int nvec,
+                                        const int size) {
   size_t ptr_as_number = reinterpret_cast<size_t>(ptr);
-  int alignment = (ptr_as_number % (nvec * size)) / size;
+  int alignment        = (ptr_as_number % (nvec * size)) / size;
   return (lead_dim + alignment + nvec - 1) / nvec;
 }
 
 enum class Alignment {
-  SAME_ALIGNED,  // All tensors aligned
+  SAME_ALIGNED,    // All tensors aligned
   SAME_UNALIGNED,  // All tensors have the same misalignment
-  DIFFERENT  // Tensors have different alignment
+  DIFFERENT        // Tensors have different alignment
 };
 
-inline int CalcAlignment(const void *ptr, const int size) {
+inline int CalcAlignment(const void* ptr, const int size) {
   size_t ptr_as_number = reinterpret_cast<size_t>(ptr);
   return ptr_as_number % size;
 }
@@ -292,18 +294,19 @@ inline int CalcAlignment(const void *ptr, const int size) {
    \param outputs Outputs of the operator.
 */
 template <typename Params>
-Alignment CheckAlignment(const Params& params, const index_t lead_dim,
-                         const index_t other_dim, const int nvec,
-                         const std::vector<TBlob> &inputs,
-                         const std::vector<TBlob> &outputs) {
+Alignment CheckAlignment(const Params& params,
+                         const index_t lead_dim,
+                         const index_t other_dim,
+                         const int nvec,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<TBlob>& outputs) {
   using namespace common;
   int align = -1;
 
   size_t i = 0;
-  for (const void *ptr : params.inputs) {
+  for (const void* ptr : params.inputs) {
     if (ptr != nullptr) {
-      int new_align = CalcAlignment(ptr,
-                                    mshadow_type_info(inputs[i].type_flag_).size * nvec);
+      int new_align = CalcAlignment(ptr, mshadow_type_info(inputs[i].type_flag_).size * nvec);
       if (align == -1) {
         align = new_align;
       } else {
@@ -316,10 +319,9 @@ Alignment CheckAlignment(const Params& params, const index_t lead_dim,
   }
 
   i = 0;
-  for (const void *ptr : params.outputs) {
+  for (const void* ptr : params.outputs) {
     if (ptr != nullptr) {
-      int new_align = CalcAlignment(ptr,
-                                    mshadow_type_info(outputs[i].type_flag_).size * nvec);
+      int new_align = CalcAlignment(ptr, mshadow_type_info(outputs[i].type_flag_).size * nvec);
       if (align == -1) {
         align = new_align;
       } else {
@@ -331,13 +333,11 @@ Alignment CheckAlignment(const Params& params, const index_t lead_dim,
     ++i;
   }
 
-  if ((other_dim != 1) &&
-      (lead_dim % nvec != 0)) {
+  if ((other_dim != 1) && (lead_dim % nvec != 0)) {
     return Alignment::DIFFERENT;
   }
 
-  if ((align == 0) &&
-      (lead_dim % nvec == 0)) {
+  if ((align == 0) && (lead_dim % nvec == 0)) {
     return Alignment::SAME_ALIGNED;
   } else {
     return Alignment::SAME_UNALIGNED;
@@ -366,24 +366,23 @@ constexpr int vectorized_kernel_thread_num = 512;
  *                Default is 0.
  */
 template <typename Params>
-void VectorizedKernelRTCLauncher(const std::string &parameters,
-                                 const std::string &kernel_name,
-                                 const std::string &code,
+void VectorizedKernelRTCLauncher(const std::string& parameters,
+                                 const std::string& kernel_name,
+                                 const std::string& code,
                                  int nvec,
                                  const index_t lead_dim,
                                  const index_t other_dim,
-                                 mshadow::Stream<gpu> *s,
+                                 mshadow::Stream<gpu>* s,
                                  const Params params,
-                                 const std::vector<TBlob> &inputs,
-                                 const std::vector<TBlob> &outputs,
+                                 const std::vector<TBlob>& inputs,
+                                 const std::vector<TBlob>& outputs,
                                  const int dev_id,
                                  const int lead_input_num = 0,
-                                 const index_t blocks = 0) {
+                                 const index_t blocks     = 0) {
   const index_t N = lead_dim * other_dim;
-  nvec = std::min(nvec, 4);  // Use at most 4-wide vectors
+  nvec            = std::min(nvec, 4);  // Use at most 4-wide vectors
   if (N != 0) {
-    auto align = CheckAlignment(params, lead_dim, other_dim,
-                                nvec, inputs, outputs);
+    auto align = CheckAlignment(params, lead_dim, other_dim, nvec, inputs, outputs);
     std::string kernel_builder;
     kernel_builder.reserve(2560);
 
@@ -413,21 +412,24 @@ void VectorizedKernelRTCLauncher(const std::string &parameters,
 
     switch (align) {
       case Alignment::SAME_ALIGNED:
-        kernel_builder += "const bool aligned = true;\n"
-                          "const int nvec = ";
+        kernel_builder +=
+            "const bool aligned = true;\n"
+            "const int nvec = ";
         kernel_builder += std::to_string(nvec);
         kernel_builder += ";\n";
         break;
       case Alignment::SAME_UNALIGNED:
-        kernel_builder += "const bool aligned = false;\n"
-                          "const int nvec = ";
+        kernel_builder +=
+            "const bool aligned = false;\n"
+            "const int nvec = ";
         kernel_builder += std::to_string(nvec);
         kernel_builder += ";\n";
         break;
       case Alignment::DIFFERENT: {
         // If the pointers are aligned differently we cannot vectorize
-        kernel_builder += "const bool aligned = true;\n"
-                          "const int nvec = 1;\n";
+        kernel_builder +=
+            "const bool aligned = true;\n"
+            "const int nvec = 1;\n";
         nvec = 1;
         break;
       }
@@ -435,35 +437,32 @@ void VectorizedKernelRTCLauncher(const std::string &parameters,
 
     kernel_builder += parameters;
 
-    index_t num_aligned_elements = get_num_aligned_elements(
-                                    params.inputs[lead_input_num],
-                                    lead_dim, nvec,
-                                    common::mshadow_type_info(
-                                      inputs[lead_input_num].type_flag_).size);
+    index_t num_aligned_elements =
+        get_num_aligned_elements(params.inputs[lead_input_num],
+                                 lead_dim,
+                                 nvec,
+                                 common::mshadow_type_info(inputs[lead_input_num].type_flag_).size);
     constexpr int threads = vectorized_kernel_thread_num;
     index_t num_blocks;
     if (blocks != 0) {
       num_blocks = blocks;
     } else {
-      size_t num_elements = other_dim * num_aligned_elements;
-      num_blocks = (num_elements + threads - 1) / threads;
+      size_t num_elements      = other_dim * num_aligned_elements;
+      num_blocks               = (num_elements + threads - 1) / threads;
       constexpr int max_blocks = 65535;
-      num_blocks = std::min(static_cast<int>(num_blocks), max_blocks);
+      num_blocks               = std::min(static_cast<int>(num_blocks), max_blocks);
     }
-    std::vector<const void*> args = {&params, &lead_dim, &other_dim,
-                                     &N, &num_aligned_elements};
-    auto function = common::cuda::rtc::get_function(kernel_builder,
-                                                    kernel_name,
-                                                    code,
-                                                    dev_id);
+    std::vector<const void*> args = {&params, &lead_dim, &other_dim, &N, &num_aligned_elements};
+    auto function = common::cuda::rtc::get_function(kernel_builder, kernel_name, code, dev_id);
 
     common::cuda::rtc::launch(function,
                               {static_cast<unsigned int>(num_blocks), 1, 1},
                               {static_cast<unsigned int>(threads), 1, 1},
-                              0, s, &args);
+                              0,
+                              s,
+                              &args);
   }
 }
-
 
 }  // namespace rtc
 }  // namespace cuda

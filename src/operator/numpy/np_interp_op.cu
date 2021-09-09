@@ -20,7 +20,7 @@
  * Copyright (c) 2020 by Contributors
  * \file np_interp_op.cu
  * \brief GPU Implementation of Numpy-compatible interp
-*/
+ */
 
 #include "np_interp_op-inl.h"
 
@@ -28,7 +28,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_interp)
-.set_attr<FCompute>("FCompute<gpu>", NumpyInterpForward<gpu, mshadow_op::mod>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyInterpForward<gpu, mshadow_op::mod>);
 
 }  // namespace op
 }  // namespace mxnet

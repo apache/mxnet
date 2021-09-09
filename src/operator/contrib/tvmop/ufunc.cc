@@ -36,11 +36,11 @@
 namespace mxnet {
 namespace op {
 
-static constexpr char func_vadd_cpu[] = "vadd";
-static constexpr char func_vadd_gpu[] = "cuda_vadd";
+static constexpr char func_vadd_cpu[]          = "vadd";
+static constexpr char func_vadd_gpu[]          = "cuda_vadd";
 static constexpr char func_bakcward_vadd_cpu[] = "backward_vadd";
 static constexpr char func_bakcward_vadd_gpu[] = "cuda_backward_vadd";
-static constexpr int max_dim = 5;
+static constexpr int max_dim                   = 5;
 
 TBlob padding(const TBlob& tblob, const int max_dim) {
   TShape tshape(max_dim, 1);
@@ -51,7 +51,7 @@ TBlob padding(const TBlob& tblob, const int max_dim) {
   return tblob.reshape(tshape);
 }
 
-template<const char* func>
+template <const char* func>
 void TVMBinaryCompute(const nnvm::NodeAttrs& attrs,
                       const mxnet::OpContext& ctx,
                       const std::vector<TBlob>& inputs,
@@ -67,7 +67,7 @@ void TVMBinaryCompute(const nnvm::NodeAttrs& attrs,
   tvm::runtime::TVMOpModule::Get()->Call(func, ctx, {idata[0], idata[1], odata});
 }
 
-template<const char* func>
+template <const char* func>
 void TVMBinaryBackwardComputeUseNone(const nnvm::NodeAttrs& attrs,
                                      const mxnet::OpContext& ctx,
                                      const std::vector<TBlob>& inputs,
@@ -122,9 +122,9 @@ NNVM_REGISTER_OP(_contrib_tvm_vadd)
     .add_argument("a", "NDArray-or-Symbol", "first input")
     .add_argument("b", "NDArray-or-Symbol", "second input")
     .set_attr<nnvm::FListInputNames>("FListInputNames",
-      [](const NodeAttrs& attrs) {
-        return std::vector<std::string>{"a", "b"};
-      })
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a", "b"};
+                                     })
     .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
     .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
 #if MXNET_USE_CUDA
@@ -152,13 +152,12 @@ inline bool DegandradOpType(const nnvm::NodeAttrs& attrs,
 
   TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  CHECK(in_attrs->at(0) == mshadow::kFloat64 ||
-        in_attrs->at(0) == mshadow::kFloat32)
-    << "Only support float32 and float64.";
+  CHECK(in_attrs->at(0) == mshadow::kFloat64 || in_attrs->at(0) == mshadow::kFloat32)
+      << "Only support float32 and float64.";
   return out_attrs->at(0) != -1;
 }
 
-template<const char* func>
+template <const char* func>
 void TVMUnaryCompute(const nnvm::NodeAttrs& attrs,
                      const mxnet::OpContext& ctx,
                      const std::vector<TBlob>& inputs,
@@ -173,7 +172,7 @@ void TVMUnaryCompute(const nnvm::NodeAttrs& attrs,
   tvm::runtime::TVMOpModule::Get()->Call(func, ctx, {inputs[0], outputs[0]});
 }
 
-template<const char* func>
+template <const char* func>
 void TVMUnaryBackwardComputeUseNone(const nnvm::NodeAttrs& attrs,
                                     const mxnet::OpContext& ctx,
                                     const std::vector<TBlob>& inputs,
@@ -193,70 +192,69 @@ void TVMUnaryBackwardComputeUseNone(const nnvm::NodeAttrs& attrs,
     } else {
       funcname += "kAddTo";
     }
-    tvm::runtime::TVMOpModule::Get()->Call(funcname, ctx,
-      {inputs[0], outputs[0], outputs[0]});
+    tvm::runtime::TVMOpModule::Get()->Call(funcname, ctx, {inputs[0], outputs[0], outputs[0]});
   })
 }
 
-static constexpr char func_deg2rad_cpu[] = "deg2rad";
-static constexpr char func_deg2rad_gpu[] = "cuda_deg2rad";
+static constexpr char func_deg2rad_cpu[]          = "deg2rad";
+static constexpr char func_deg2rad_gpu[]          = "cuda_deg2rad";
 static constexpr char func_backward_deg2rad_cpu[] = "backward_deg2rad";
 static constexpr char func_backward_deg2rad_gpu[] = "cuda_backward_deg2rad";
 
 NNVM_REGISTER_OP(_npi_deg2rad)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-[](const NodeAttrs& attrs) {
-  return std::vector<std::string>{"data"};
-})
-.set_attr<mxnet::FInferShape>("FInferShape", mxnet::op::ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", mxnet::op::DegandradOpType)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", mxnet::op::ElemwiseShape<1, 1>)
+    .set_attr<nnvm::FInferType>("FInferType", mxnet::op::DegandradOpType)
 #if MXNET_USE_CUDA
-.set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMUnaryCompute<func_deg2rad_gpu>)
+    .set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMUnaryCompute<func_deg2rad_gpu>)
 #endif  // MXNET_USE_CUDA
-.set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMUnaryCompute<func_deg2rad_cpu>)
-.add_argument("data", "NDArray-or-Symbol", "the input")
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_deg2rad"});
+    .set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMUnaryCompute<func_deg2rad_cpu>)
+    .add_argument("data", "NDArray-or-Symbol", "the input")
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_deg2rad"});
 
 NNVM_REGISTER_OP(_backward_npi_deg2rad)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 #if MXNET_USE_CUDA
-.set_attr<FCompute>("FCompute<gpu>",
-                    mxnet::op::TVMUnaryBackwardComputeUseNone<func_backward_deg2rad_gpu>)
+    .set_attr<FCompute>("FCompute<gpu>",
+                        mxnet::op::TVMUnaryBackwardComputeUseNone<func_backward_deg2rad_gpu>)
 #endif  // MXNET_USE_CUDA
-.set_attr<FCompute>("FCompute<cpu>",
-                    mxnet::op::TVMUnaryBackwardComputeUseNone<func_backward_deg2rad_cpu>);
+    .set_attr<FCompute>("FCompute<cpu>",
+                        mxnet::op::TVMUnaryBackwardComputeUseNone<func_backward_deg2rad_cpu>);
 
-static constexpr char func_rad2deg_cpu[] = "rad2deg";
-static constexpr char func_rad2deg_gpu[] = "cuda_rad2deg";
+static constexpr char func_rad2deg_cpu[]          = "rad2deg";
+static constexpr char func_rad2deg_gpu[]          = "cuda_rad2deg";
 static constexpr char func_backward_rad2deg_cpu[] = "backward_rad2deg";
 static constexpr char func_backward_rad2deg_gpu[] = "cuda_backward_rad2deg";
 
 NNVM_REGISTER_OP(_npi_rad2deg)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-[](const NodeAttrs& attrs) {
-  return std::vector<std::string>{"data"};
-})
-.set_attr<mxnet::FInferShape>("FInferShape", mxnet::op::ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", mxnet::op::DegandradOpType)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", mxnet::op::ElemwiseShape<1, 1>)
+    .set_attr<nnvm::FInferType>("FInferType", mxnet::op::DegandradOpType)
 #if MXNET_USE_CUDA
-.set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMUnaryCompute<func_rad2deg_gpu>)
+    .set_attr<mxnet::FCompute>("FCompute<gpu>", mxnet::op::TVMUnaryCompute<func_rad2deg_gpu>)
 #endif  // MXNET_USE_CUDA
-.set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMUnaryCompute<func_rad2deg_cpu>)
-.add_argument("data", "NDArray-or-Symbol", "the input")
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_rad2deg"});
+    .set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMUnaryCompute<func_rad2deg_cpu>)
+    .add_argument("data", "NDArray-or-Symbol", "the input")
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_rad2deg"});
 
 NNVM_REGISTER_OP(_backward_npi_rad2deg)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 #if MXNET_USE_CUDA
-.set_attr<FCompute>("FCompute<gpu>",
-                    mxnet::op::TVMUnaryBackwardComputeUseNone<func_backward_rad2deg_gpu>)
+    .set_attr<FCompute>("FCompute<gpu>",
+                        mxnet::op::TVMUnaryBackwardComputeUseNone<func_backward_rad2deg_gpu>)
 #endif  // MXNET_USE_CUDA
-.set_attr<FCompute>("FCompute<cpu>",
-                    mxnet::op::TVMUnaryBackwardComputeUseNone<func_backward_rad2deg_cpu>);
+    .set_attr<FCompute>("FCompute<cpu>",
+                        mxnet::op::TVMUnaryBackwardComputeUseNone<func_backward_rad2deg_cpu>);
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_TVM_OP

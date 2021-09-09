@@ -59,11 +59,11 @@ class ThreadedEnginePooled : public ThreadedEngine {
     streams_->Finalize();
     task_queue_->SignalForKill();
     io_task_queue_->SignalForKill();
-    task_queue_ = nullptr;
-    io_task_queue_ = nullptr;
-    thread_pool_ = nullptr;
+    task_queue_     = nullptr;
+    io_task_queue_  = nullptr;
+    thread_pool_    = nullptr;
     io_thread_pool_ = nullptr;
-    streams_ = nullptr;
+    streams_        = nullptr;
   }
 
   void Stop() override {
@@ -75,18 +75,22 @@ class ThreadedEnginePooled : public ThreadedEngine {
     streams_ = std::make_unique<StreamManager<kMaxNumGpus, kNumStreamsPerGpu>>();
     task_queue_.reset(new dmlc::ConcurrentBlockingQueue<OprBlock*>());
     io_task_queue_.reset(new dmlc::ConcurrentBlockingQueue<OprBlock*>());
-    thread_pool_ = std::make_unique<ThreadPool>(kNumWorkingThreads,
-                                      [this](std::shared_ptr<dmlc::ManualEvent> ready_event) {
-                                        ThreadWorker(task_queue_, ready_event); },
-                                      true);
-    io_thread_pool_ = std::make_unique<ThreadPool>(1,
-                                         [this](std::shared_ptr<dmlc::ManualEvent> ready_event) {
-                                           ThreadWorker(io_task_queue_, ready_event); },
-                                         true);
+    thread_pool_ = std::make_unique<ThreadPool>(
+        kNumWorkingThreads,
+        [this](std::shared_ptr<dmlc::ManualEvent> ready_event) {
+          ThreadWorker(task_queue_, ready_event);
+        },
+        true);
+    io_thread_pool_ = std::make_unique<ThreadPool>(
+        1,
+        [this](std::shared_ptr<dmlc::ManualEvent> ready_event) {
+          ThreadWorker(io_task_queue_, ready_event);
+        },
+        true);
   }
 
  protected:
-  void PushToExecute(OprBlock *opr_block, bool pusher_thread) override {
+  void PushToExecute(OprBlock* opr_block, bool pusher_thread) override {
     if (opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
       DoExecute(opr_block);
     } else {
@@ -139,17 +143,16 @@ class ThreadedEnginePooled : public ThreadedEngine {
 #endif
     assert(opr_block->wait.load() == 0);
     if (opr_block->ctx.dev_mask() == gpu::kDevMask) {
-      #if MXNET_USE_CUDA
+#if MXNET_USE_CUDA
       device_store.SetDevice(opr_block->ctx.dev_id);
-      #else   // MXNET_USE_CUDA
+#else   // MXNET_USE_CUDA
       LOG(FATAL) << "Please compile with CUDA enabled";
-      #endif  // MXNET_USE_CUDA
+#endif  // MXNET_USE_CUDA
     }
     bool is_copy = (opr_block->opr->prop == FnProperty::kCopyFromGPU ||
                     opr_block->opr->prop == FnProperty::kCopyToGPU);
-    auto&& rctx = is_copy
-        ? streams_->GetIORunContext(opr_block->ctx)
-        : streams_->GetRunContext(opr_block->ctx);
+    auto&& rctx  = is_copy ? streams_->GetIORunContext(opr_block->ctx)
+                           : streams_->GetRunContext(opr_block->ctx);
     this->ExecuteOprBlock(rctx, opr_block);
   }
   /*!
@@ -171,7 +174,7 @@ class ThreadedEnginePooled : public ThreadedEngine {
   }
 };
 
-Engine *CreateThreadedEnginePooled() {
+Engine* CreateThreadedEnginePooled() {
   return new ThreadedEnginePooled();
 }
 }  // namespace engine

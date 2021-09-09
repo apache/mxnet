@@ -31,46 +31,43 @@ namespace mxnet {
 namespace common {
 namespace random {
 
-template<>
+template <>
 const int RandGenerator<gpu, float>::kMinNumRandomPerThread = 64;
 
-template<>
+template <>
 const int RandGenerator<gpu, float>::kNumRandomStates = 32768;
 
-__global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_,
+__global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t* states_,
                                            const int size,
                                            uint32_t seed) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
-  if (id < size) curand_init(seed, id, 0, states_ + id);
+  if (id < size)
+    curand_init(seed, id, 0, states_ + id);
 }
 
-template<>
-void RandGenerator<gpu, float>::Seed(mshadow::Stream<gpu> *s, uint32_t seed) {
+template <>
+void RandGenerator<gpu, float>::Seed(mshadow::Stream<gpu>* s, uint32_t seed) {
   using namespace mshadow::cuda;
-  int ngrid = std::min(kMaxGridNum,
-                       (RandGenerator<gpu, float>::kNumRandomStates + kBaseThreadNum - 1) /
-                         kBaseThreadNum);
-  rand_generator_seed_kernel
-      <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
-          states_,
-          RandGenerator<gpu, float>::kNumRandomStates,
-          seed);
+  int ngrid =
+      std::min(kMaxGridNum,
+               (RandGenerator<gpu, float>::kNumRandomStates + kBaseThreadNum - 1) / kBaseThreadNum);
+  rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+      states_, RandGenerator<gpu, float>::kNumRandomStates, seed);
   MSHADOW_CUDA_POST_KERNEL_CHECK(rand_generator_seed_kernel);
   s->Wait();
 }
 
-template<>
-void RandGenerator<gpu, float>::AllocState(RandGenerator<gpu> *inst) {
-  CUDA_CALL(cudaMalloc(&inst->states_,
-                       kNumRandomStates * sizeof(curandStatePhilox4_32_10_t)));
+template <>
+void RandGenerator<gpu, float>::AllocState(RandGenerator<gpu>* inst) {
+  CUDA_CALL(cudaMalloc(&inst->states_, kNumRandomStates * sizeof(curandStatePhilox4_32_10_t)));
 }
 
-template<>
-void RandGenerator<gpu, float>::FreeState(RandGenerator<gpu> *inst) {
+template <>
+void RandGenerator<gpu, float>::FreeState(RandGenerator<gpu>* inst) {
   CUDA_CALL(cudaFree(inst->states_));
 }
 
-template<>
+template <>
 void* RandGenerator<gpu, float>::GetStates() {
   return static_cast<void*>(states_);
 }

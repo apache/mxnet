@@ -28,8 +28,8 @@ namespace mxnet {
 namespace op {
 
 bool NumpyReduceAxisShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          std::vector<TShape>* in_attrs,
+                          std::vector<TShape>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   if (!shape_is_known(in_attrs->at(0))) {
@@ -41,14 +41,13 @@ bool NumpyReduceAxisShape(const nnvm::NodeAttrs& attrs,
     mxnet::Tuple<int> t({param.axis.value()});
     axes = dmlc::optional<mxnet::Tuple<int>>(t);
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
-                     NumpyReduceAxesShapeImpl((*in_attrs)[0], axes, param.keepdims));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, NumpyReduceAxesShapeImpl((*in_attrs)[0], axes, param.keepdims));
   return shape_is_known(out_attrs->at(0));
 }
 
 bool ArgMinMaxType(const nnvm::NodeAttrs& attrs,
-                   std::vector<int> *in_attrs,
-                   std::vector<int> *out_attrs) {
+                   std::vector<int>* in_attrs,
+                   std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   CHECK_NE(in_attrs->at(0), -1);
@@ -57,34 +56,34 @@ bool ArgMinMaxType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npi_argmax)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<ReduceAxisParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxisShape)
-.set_attr<nnvm::FInferType>("FInferType", ArgMinMaxType)
-.add_argument("data", "NDArray-or-Symbol", "The input")
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", NumpyArgMinMaxCompute<mshadow_op::argmax, cpu, index_t>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_arguments(ReduceAxisParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<ReduceAxisParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxisShape)
+    .set_attr<nnvm::FInferType>("FInferType", ArgMinMaxType)
+    .add_argument("data", "NDArray-or-Symbol", "The input")
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyArgMinMaxCompute<mshadow_op::argmax, cpu, index_t>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_arguments(ReduceAxisParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_argmin)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<ReduceAxisParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxisShape)
-.set_attr<nnvm::FInferType>("FInferType", ArgMinMaxType)
-.add_argument("data", "NDArray-or-Symbol", "The input")
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", NumpyArgMinMaxCompute<mshadow_op::argmin, cpu, index_t>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_arguments(ReduceAxisParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<ReduceAxisParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxisShape)
+    .set_attr<nnvm::FInferType>("FInferType", ArgMinMaxType)
+    .add_argument("data", "NDArray-or-Symbol", "The input")
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyArgMinMaxCompute<mshadow_op::argmin, cpu, index_t>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_arguments(ReduceAxisParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

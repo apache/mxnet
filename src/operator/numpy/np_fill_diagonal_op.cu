@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_fill_diagonal)
-.set_attr<FCompute>("FCompute<gpu>", NumpyFillDiagonalForward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyFillDiagonalForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

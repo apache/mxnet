@@ -22,7 +22,7 @@
  * \file gradient_multiplier_op.cu
  * \brief
  * \author Istvan Fehervari
-*/
+ */
 #include "../tensor/elemwise_unary_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
 
@@ -30,12 +30,12 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_gradientmultiplier)
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeEx<gpu>)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+    .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeEx<gpu>)
+    .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(_contrib_backward_gradientmultiplier)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"mul"})
-.set_attr<FComputeEx>("(FComputeEx<gpu>", BinaryScalarRTCCompute{"mul"});
+    .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"mul"})
+    .set_attr<FComputeEx>("(FComputeEx<gpu>", BinaryScalarRTCCompute{"mul"});
 
 }  // namespace op
 }  // namespace mxnet

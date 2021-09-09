@@ -20,7 +20,7 @@
 /*!
  * \file sparse_retain.cc
  * \brief CPU implementation of sparse_retain operator
-*/
+ */
 
 #include "./sparse_retain-inl.h"
 namespace mxnet {
@@ -31,7 +31,7 @@ namespace op {
 // accepts row-sparse format ndarrays. It will be registered
 // under mxnet.ndarray.sparse with name retain.
 NNVM_REGISTER_OP(_sparse_retain)
-.describe(R"code(Pick rows specified by user input index array from a row sparse matrix
+    .describe(R"code(Pick rows specified by user input index array from a row sparse matrix
 and save them in the output sparse matrix.
 
 Example::
@@ -51,30 +51,33 @@ The storage type of ``retain`` output depends on storage types of inputs
 - otherwise, ``retain`` is not supported
 
 )code" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data", "indices"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", SparseRetainOpShape)
-.set_attr<nnvm::FInferType>("FInferType", SparseRetainOpType)
-.set_attr<FInferStorageType>("FInferStorageType", SparseRetainForwardInferStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpForwardEx<cpu>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeNonlossGradNode("_backward_sparse_retain", n, ograds,
-                               {n->inputs[sr::kIdx]}, n->attrs.dict);
-  })
-.add_argument("data", "NDArray-or-Symbol", "The input array for sparse_retain operator.")
-.add_argument("indices", "NDArray-or-Symbol", "The index array of rows ids that will be retained.");
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data", "indices"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", SparseRetainOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", SparseRetainOpType)
+    .set_attr<FInferStorageType>("FInferStorageType", SparseRetainForwardInferStorageType)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpForwardEx<cpu>)
+    .set_attr<nnvm::FGradient>(
+        "FGradient",
+        [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+          return MakeNonlossGradNode(
+              "_backward_sparse_retain", n, ograds, {n->inputs[sr::kIdx]}, n->attrs.dict);
+        })
+    .add_argument("data", "NDArray-or-Symbol", "The input array for sparse_retain operator.")
+    .add_argument("indices",
+                  "NDArray-or-Symbol",
+                  "The index array of rows ids that will be retained.");
 
 NNVM_REGISTER_OP(_backward_sparse_retain)
-.set_num_inputs(2)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", SparseRetainBackwardInferStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpBackwardEx<cpu>);
+    .set_num_inputs(2)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FInferStorageType>("FInferStorageType", SparseRetainBackwardInferStorageType)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpBackwardEx<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

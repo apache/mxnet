@@ -21,7 +21,7 @@
  * Copyright (c) 2019 by Contributors
  * \file quantized_elemwise_add.cc
  * \brief
-*/
+ */
 #include "../tensor/elemwise_unary_op.h"
 #include "./quantized_elemwise_add-inl.h"
 
@@ -36,7 +36,6 @@ static bool ElemwiseAddShape(const nnvm::NodeAttrs& attrs,
   // C, C_min, C_max
   CHECK_EQ(out_shape->size(), 3U);
   CHECK_EQ((*in_shape)[0], (*in_shape)[1]);
-
 
   SHAPE_ASSIGN_CHECK(*in_shape, 2, TShape{1});
   SHAPE_ASSIGN_CHECK(*in_shape, 3, TShape{1});
@@ -67,7 +66,7 @@ static bool ElemwiseAddType(const nnvm::NodeAttrs& attrs,
     }
   }
   // C
-  int dtype = mshadow::kInt32;
+  int dtype                              = mshadow::kInt32;
   const QuantizeElemwiseAddParam& params = nnvm::get<QuantizeElemwiseAddParam>(attrs.parsed);
   if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
     dtype = (in_type->at(0) == in_type->at(1)) ? in_type->at(0) : mshadow::kInt8;
@@ -82,17 +81,17 @@ static bool ElemwiseAddType(const nnvm::NodeAttrs& attrs,
 }
 
 void QuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
-                                 const OpContext &ctx,
-                                 const std::vector<TBlob> &in_data,
-                                 const std::vector<OpReqType> &req,
-                                 const std::vector<TBlob> &out_data) {
+                                 const OpContext& ctx,
+                                 const std::vector<TBlob>& in_data,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& out_data) {
   LOG(FATAL) << "Not supported for MXNet built without MKLDNN. "
                 "Please install MKLDNN enabled MXNet.";
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_elemwise_add)
-.add_alias("_npx_quantized_elemwise_add")
-.describe(R"code(elemwise_add operator for input dataA and input dataB data type of int8,
+    .add_alias("_npx_quantized_elemwise_add")
+    .describe(R"code(elemwise_add operator for input dataA and input dataB data type of int8,
 and accumulates in type int32 for the output. For each argument, two more arguments of type
 float32 must be provided representing the thresholds of quantizing argument from data
 type float32 to int8. The final outputs contain result in int32, and min
@@ -102,36 +101,38 @@ and max thresholds representing the threholds for quantizing the float32 output 
     This operator only supports forward propogation. DO NOT use it in training.
 
 )code")
-.set_num_inputs([](const NodeAttrs& attrs) {
-// A, B, A_min, A_max, B_min, B_max
-  return 6;
-})
-// C, C_min, C_max
-.set_num_outputs(3)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
-  return std::vector<std::string>{"lhs", "rhs", "lhs_min", "lhs_max", "rhs_min", "rhs_max"}; \
-})
-.set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
-  return std::vector<std::string>{"output", "min_output", "max_output"};
-})
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseAddType)
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseAddShape)
-.set_attr<FCompute>("FCompute<cpu>", QuantizedElemwiseAddForward)
-.set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
-.add_argument("lhs", "NDArray-or-Symbol", "first input")
-.add_argument("rhs", "NDArray-or-Symbol", "second input")
-.add_argument("lhs_min", "NDArray-or-Symbol", "3rd input")
-.add_argument("lhs_max", "NDArray-or-Symbol", "4th input")
-.add_argument("rhs_min", "NDArray-or-Symbol", "5th input")
-.add_argument("rhs_max", "NDArray-or-Symbol", "6th input");
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      // A, B, A_min, A_max, B_min, B_max
+      return 6;
+    })
+    // C, C_min, C_max
+    .set_num_outputs(3)
+    .set_attr<nnvm::FListInputNames>(
+        "FListInputNames",
+        [](const NodeAttrs& attrs) {
+          return std::vector<std::string>{"lhs", "rhs", "lhs_min", "lhs_max", "rhs_min", "rhs_max"};
+        })
+    .set_attr<nnvm::FListOutputNames>(
+        "FListOutputNames",
+        [](const NodeAttrs& attrs) {
+          return std::vector<std::string>{"output", "min_output", "max_output"};
+        })
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseAddType)
+    .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseAddShape)
+    .set_attr<FCompute>("FCompute<cpu>", QuantizedElemwiseAddForward)
+    .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
+    .add_argument("lhs", "NDArray-or-Symbol", "first input")
+    .add_argument("rhs", "NDArray-or-Symbol", "second input")
+    .add_argument("lhs_min", "NDArray-or-Symbol", "3rd input")
+    .add_argument("lhs_max", "NDArray-or-Symbol", "4th input")
+    .add_argument("rhs_min", "NDArray-or-Symbol", "5th input")
+    .add_argument("rhs_max", "NDArray-or-Symbol", "6th input");
 
-
-NNVM_REGISTER_OP(elemwise_add)
-.set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
+NNVM_REGISTER_OP(elemwise_add).set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
   nnvm::ObjectPtr node = nnvm::Node::Create();
-  node->attrs.op = Op::Get("_contrib_quantized_elemwise_add");
-  node->attrs.name = "quantized_" + attrs.name;
-  node->attrs.dict = attrs.dict;
+  node->attrs.op       = Op::Get("_contrib_quantized_elemwise_add");
+  node->attrs.name     = "quantized_" + attrs.name;
+  node->attrs.dict     = attrs.dict;
   if (node->op()->attr_parser != nullptr) {
     node->op()->attr_parser(&(node->attrs));
   }

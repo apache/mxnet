@@ -22,8 +22,7 @@
  * \file special_functions-inl.h
  * \brief
  * \author Valentin Flunkert
-*/
-
+ */
 
 #ifndef MXNET_OPERATOR_SPECIAL_FUNCTIONS_INL_H_
 #define MXNET_OPERATOR_SPECIAL_FUNCTIONS_INL_H_
@@ -33,35 +32,35 @@ namespace op {
 
 namespace special_functions {
 
-template<typename DType>
+template <typename DType>
 struct helper_numeric_limits {
   MSHADOW_XINLINE static DType max();
 };
 
-template<>
+template <>
 struct helper_numeric_limits<double> {
   MSHADOW_XINLINE static double max() {
     return DBL_MAX;
   }
 };
 
-template<>
+template <>
 struct helper_numeric_limits<float> {
   MSHADOW_XINLINE static double max() {
     return FLT_MAX;
   }
 };
 
-template<typename DType>
+template <typename DType>
 MSHADOW_XINLINE static DType trigamma(DType x);
 
-template<>
+template <>
 MSHADOW_XINLINE double trigamma<double>(double x) {
   double PI(3.14159265358979323846);
-  double sign = +1;
+  double sign   = +1;
   double result = 0;
   if (x < 0.5) {
-    sign = -1;
+    sign                  = -1;
     const double sin_pi_x = sin(PI * x);
     result -= (PI * PI) / (sin_pi_x * sin_pi_x);
     x = 1 - x;
@@ -70,18 +69,18 @@ MSHADOW_XINLINE double trigamma<double>(double x) {
     result += 1 / (x * x);
     x += 1;
   }
-  const double ixx = 1 / (x*x);
-  result += (1 + 1 / (2*x) + ixx * (1./6 - ixx * (1./30 - ixx * (1./42)))) / x;
+  const double ixx = 1 / (x * x);
+  result += (1 + 1 / (2 * x) + ixx * (1. / 6 - ixx * (1. / 30 - ixx * (1. / 42)))) / x;
   return sign * result;
 }
 
-template<>
+template <>
 MSHADOW_XINLINE float trigamma<float>(float x) {
   float PI(3.14159265358979323846);
-  float sign = +1;
+  float sign   = +1;
   float result = 0;
   if (x < 0.5f) {
-    sign = -1;
+    sign                 = -1;
     const float sin_pi_x = sinf(PI * x);
     result -= (PI * PI) / (sin_pi_x * sin_pi_x);
     x = 1 - x;
@@ -90,8 +89,8 @@ MSHADOW_XINLINE float trigamma<float>(float x) {
     result += 1 / (x * x);
     x += 1;
   }
-  const float ixx = 1 / (x*x);
-  result += (1 + 1 / (2*x) + ixx * (1.f/6 - ixx * (1.f/30 - ixx * (1.f/42)))) / x;
+  const float ixx = 1 / (x * x);
+  result += (1 + 1 / (2 * x) + ixx * (1.f / 6 - ixx * (1.f / 30 - ixx * (1.f / 42)))) / x;
   return sign * result;
 }
 
@@ -123,26 +122,25 @@ struct cephes {
   template <typename DType>
   MSHADOW_XINLINE static DType polevl(DType x, const DType coef[], int N) {
     DType ans;
-    DType const *p;
+    DType const* p;
     int i;
 
-    p = coef;
+    p   = coef;
     ans = *p++;
 
     i = N;
     do {
-      ans = ans * x  +  *p++;
-    } while ( --i );
+      ans = ans * x + *p++;
+    } while (--i);
 
-    return( ans );
+    return (ans);
   }
-
 
   /*
    * Helper function for psi that handles double/float specific differences
    * in the algorithm.
    */
-  template<typename DType>
+  template <typename DType>
   MSHADOW_XINLINE static DType psi_helper(DType s);
 
   /*
@@ -196,7 +194,7 @@ struct cephes {
    *     message         condition      value returned
    * psi singularity    x integer <=0      MAXNUMF
    */
-  template<typename DType>
+  template <typename DType>
   MSHADOW_XINLINE static DType psi(DType x) {
     DType p, q, nz, s, w, y;
     int i, n, negative;
@@ -205,25 +203,25 @@ struct cephes {
     DType PI(3.14159265358979323846);
 
     negative = 0;
-    nz = 0.0;
+    nz       = 0.0;
 
-    if ( x <= 0.0 ) {
+    if (x <= 0.0) {
       negative = 1;
-      q = x;
-      p = std::floor(q);
-      if ( p == q ) {
+      q        = x;
+      p        = std::floor(q);
+      if (p == q) {
         return helper_numeric_limits<double>::max();
       }
       /* Remove the zeros of tan(PI x)
        * by subtracting the nearest integer from x
        */
       nz = q - p;
-      if ( nz != 0.5 ) {
-        if ( nz > 0.5 ) {
+      if (nz != 0.5) {
+        if (nz > 0.5) {
           p += 1.0;
           nz = q - p;
         }
-        nz = PI/std::tan(PI*nz);
+        nz = PI / std::tan(PI * nz);
       } else {
         nz = 0.0;
       }
@@ -231,12 +229,12 @@ struct cephes {
     }
 
     /* check for positive integer up to 10 */
-    if ( (x <= 10.0) && (x == std::floor(x)) ) {
+    if ((x <= 10.0) && (x == std::floor(x))) {
       y = 0.0;
       n = x;
-      for ( i = 1; i < n; i++ ) {
+      for (i = 1; i < n; i++) {
         w = i;
-        y += 1.0/w;
+        y += 1.0 / w;
       }
       y -= EUL;
       goto done;
@@ -244,59 +242,54 @@ struct cephes {
 
     s = x;
     w = 0.0;
-    while ( s < 10.0 ) {
-      w += 1.0/s;
+    while (s < 10.0) {
+      w += 1.0 / s;
       s += 1.0;
     }
 
     y = psi_helper(s);
 
-    y = logf(s)  -  (0.5/s)  -  y  -  w;
+    y = logf(s) - (0.5 / s) - y - w;
 
-done:
+  done:
 
-    if ( negative ) {
+    if (negative) {
       y -= nz;
     }
 
-    return(y);
+    return (y);
   }
 };
 
-
-template<>
+template <>
 MSHADOW_XINLINE double cephes::psi_helper<double>(double s) {
   double z;
-  const double A[] = {
-    8.33333333333333333333E-2,
-    -2.10927960927960927961E-2,
-    7.57575757575757575758E-3,
-    -4.16666666666666666667E-3,
-    3.96825396825396825397E-3,
-    -8.33333333333333333333E-3,
-    8.33333333333333333333E-2
-  };
+  const double A[] = {8.33333333333333333333E-2,
+                      -2.10927960927960927961E-2,
+                      7.57575757575757575758E-3,
+                      -4.16666666666666666667E-3,
+                      3.96825396825396825397E-3,
+                      -8.33333333333333333333E-3,
+                      8.33333333333333333333E-2};
 
-  if ( s < 1.0e17 ) {
-    z = 1.0/(s * s);
+  if (s < 1.0e17) {
+    z = 1.0 / (s * s);
     return z * cephes::polevl<double>(z, A, 6);
   } else {
     return 0.0;
   }
 }
 
-template<>
+template <>
 MSHADOW_XINLINE float cephes::psi_helper<float>(float s) {
   float z;
-  const float A[] = {
-    -4.16666666666666666667E-3f,
-    3.96825396825396825397E-3f,
-    -8.33333333333333333333E-3f,
-    8.33333333333333333333E-2f
-  };
+  const float A[] = {-4.16666666666666666667E-3f,
+                     3.96825396825396825397E-3f,
+                     -8.33333333333333333333E-3f,
+                     8.33333333333333333333E-2f};
 
-  if ( s < 1.0e8 ) {
-    z = 1.0/(s * s);
+  if (s < 1.0e8) {
+    z = 1.0 / (s * s);
     return z * cephes::polevl<float>(z, A, 3);
   } else {
     return 0.0;

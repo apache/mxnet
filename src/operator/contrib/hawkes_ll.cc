@@ -84,58 +84,40 @@ References:
 )code" ADD_FILELINE)
     .set_num_inputs(8)
     .set_num_outputs(2)
-    .set_attr<nnvm::FListInputNames>("FListInputNames",
+    .set_attr<nnvm::FListInputNames>(
+        "FListInputNames",
         [](const NodeAttrs& attrs) {
-        return std::vector<std::string>{
-          "lda", "alpha", "beta", "state", "lags",
-          "marks", "valid_length", "max_time"
-        };
-    })
+          return std::vector<std::string>{
+              "lda", "alpha", "beta", "state", "lags", "marks", "valid_length", "max_time"};
+        })
     .set_attr<nnvm::FListOutputNames>("FListOutputNames",
-        [](const NodeAttrs& attrs) {
-        return std::vector<std::string>{"output", "out_state"};
-    })
+                                      [](const NodeAttrs& attrs) {
+                                        return std::vector<std::string>{"output", "out_state"};
+                                      })
     .set_attr<mxnet::FInferShape>("FInferShape", HawkesLLOpShape)
     .set_attr<nnvm::FInferType>("FInferType", HawkesLLOpType)
     .set_attr<FCompute>("FCompute<cpu>", HawkesLLForward<cpu>)
-    .set_attr<nnvm::FGradient>(
-      "FGradient", ElemwiseGradUseIn{"_contrib_backward_hawkesll"}
-    )
-    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-        return std::vector<ResourceRequest>{ResourceRequest::Type::kTempSpace};
-    })
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_hawkesll"})
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& n) {
+                                  return std::vector<ResourceRequest>{
+                                      ResourceRequest::Type::kTempSpace};
+                                })
     .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-    .add_argument(
-      "lda", "NDArray-or-Symbol",
-      "Shape (N, K) The intensity for each of the K processes, for each sample"
-    )
-    .add_argument(
-      "alpha", "NDArray-or-Symbol",
-      "Shape (K,) The infectivity factor (branching ratio) for each process"
-    )
-    .add_argument(
-      "beta", "NDArray-or-Symbol",
-      "Shape (K,) The decay parameter for each process"
-    )
-    .add_argument(
-      "state", "NDArray-or-Symbol",
-      "Shape (N, K) the Hawkes state for each process"
-    )
-    .add_argument(
-      "lags", "NDArray-or-Symbol",
-      "Shape (N, T) the interarrival times"
-    )
-    .add_argument(
-      "marks", "NDArray-or-Symbol",
-      "Shape (N, T) the marks (process ids)"
-    )
-    .add_argument(
-      "valid_length", "NDArray-or-Symbol",
-      "The number of valid points in the process"
-    )
-    .add_argument(
-      "max_time", "NDArray-or-Symbol",
-      "the length of the interval where the processes were sampled");
+    .add_argument("lda",
+                  "NDArray-or-Symbol",
+                  "Shape (N, K) The intensity for each of the K processes, for each sample")
+    .add_argument("alpha",
+                  "NDArray-or-Symbol",
+                  "Shape (K,) The infectivity factor (branching ratio) for each process")
+    .add_argument("beta", "NDArray-or-Symbol", "Shape (K,) The decay parameter for each process")
+    .add_argument("state", "NDArray-or-Symbol", "Shape (N, K) the Hawkes state for each process")
+    .add_argument("lags", "NDArray-or-Symbol", "Shape (N, T) the interarrival times")
+    .add_argument("marks", "NDArray-or-Symbol", "Shape (N, T) the marks (process ids)")
+    .add_argument("valid_length", "NDArray-or-Symbol", "The number of valid points in the process")
+    .add_argument("max_time",
+                  "NDArray-or-Symbol",
+                  "the length of the interval where the processes were sampled");
 
 NNVM_REGISTER_OP(_contrib_backward_hawkesll)
     .set_num_inputs(10)
@@ -143,7 +125,7 @@ NNVM_REGISTER_OP(_contrib_backward_hawkesll)
     .set_attr<nnvm::TIsBackward>("TIsBackward", true)
     .set_attr<FCompute>("FCompute<cpu>", HawkesLLBackward<cpu>)
     .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-        return std::vector<ResourceRequest>{ResourceRequest::Type::kTempSpace};
+      return std::vector<ResourceRequest>{ResourceRequest::Type::kTempSpace};
     });
 }  // namespace op
 }  // namespace mxnet

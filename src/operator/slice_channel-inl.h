@@ -22,7 +22,7 @@
  * \file slice_channel-inl.h
  * \brief
  * \author Bing Xu
-*/
+ */
 #ifndef MXNET_OPERATOR_SLICE_CHANNEL_INL_H_
 #define MXNET_OPERATOR_SLICE_CHANNEL_INL_H_
 
@@ -42,7 +42,7 @@ namespace mxnet {
 namespace op {
 
 namespace slice_enum {
-enum SliceChannelOpInputs {kData};
+enum SliceChannelOpInputs { kData };
 }  // namespace slice_enum
 
 struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
@@ -50,35 +50,37 @@ struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {
   int axis;
   bool squeeze_axis;
   DMLC_DECLARE_PARAMETER(SliceChannelParam) {
-    DMLC_DECLARE_FIELD(num_outputs).set_lower_bound(1)
-    .describe("Number of splits. Note that this should evenly divide the length of the `axis`.");
-    DMLC_DECLARE_FIELD(axis).set_default(1)
-    .describe("Axis along which to split.");
-    DMLC_DECLARE_FIELD(squeeze_axis).set_default(0)
-    .describe("If true, Removes the axis with length 1 from the shapes of the output arrays."
-              " **Note** that setting `squeeze_axis` to ``true`` removes axis with length 1"
-              " only along the `axis` which it is split."
-              " Also `squeeze_axis` can be set to ``true``"
-              " only if ``input.shape[axis] == num_outputs``.");
+    DMLC_DECLARE_FIELD(num_outputs)
+        .set_lower_bound(1)
+        .describe(
+            "Number of splits. Note that this should evenly divide the length of the `axis`.");
+    DMLC_DECLARE_FIELD(axis).set_default(1).describe("Axis along which to split.");
+    DMLC_DECLARE_FIELD(squeeze_axis)
+        .set_default(0)
+        .describe(
+            "If true, Removes the axis with length 1 from the shapes of the output arrays."
+            " **Note** that setting `squeeze_axis` to ``true`` removes axis with length 1"
+            " only along the `axis` which it is split."
+            " Also `squeeze_axis` can be set to ``true``"
+            " only if ``input.shape[axis] == num_outputs``.");
   }
 };  // struct SliceChannelParam
 
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 class SliceChannelOp : public Operator {
  public:
-  explicit SliceChannelOp(SliceChannelParam param)
-    : size_(param.num_outputs), axis_(param.axis) {}
+  explicit SliceChannelOp(SliceChannelParam param) : size_(param.num_outputs), axis_(param.axis) {}
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  virtual void Forward(const OpContext& ctx,
+                       const std::vector<TBlob>& in_data,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& out_data,
+                       const std::vector<TBlob>& aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), static_cast<size_t>(size_));
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
     size_t leading = 1, trailing = 1;
     int real_axis = axis_;
     if (real_axis < 0) {
@@ -92,10 +94,10 @@ class SliceChannelOp : public Operator {
     for (int i = real_axis + 1; i < in_data[slice_enum::kData].ndim(); ++i) {
       trailing *= in_data[slice_enum::kData].shape_[i];
     }
-    Shape<3> dshape = Shape3(leading, mid, trailing);
+    Shape<3> dshape      = Shape3(leading, mid, trailing);
     Shape<3> slice_shape = Shape3(leading, mid / size_, trailing);
-    Tensor<xpu, 3, DType> data = in_data[slice_enum::kData].get_with_shape<xpu, 3, DType>(
-        dshape, s);
+    Tensor<xpu, 3, DType> data =
+        in_data[slice_enum::kData].get_with_shape<xpu, 3, DType>(dshape, s);
     std::vector<Tensor<xpu, 3, DType> > outputs(size_);
     for (int i = 0; i < size_; ++i) {
       outputs[i] = out_data[i].get_with_shape<xpu, 3, DType>(slice_shape, s);
@@ -103,22 +105,22 @@ class SliceChannelOp : public Operator {
     Split(data, &outputs, 1, req);
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_states) {
+  virtual void Backward(const OpContext& ctx,
+                        const std::vector<TBlob>& out_grad,
+                        const std::vector<TBlob>& in_data,
+                        const std::vector<TBlob>& out_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& in_grad,
+                        const std::vector<TBlob>& aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), static_cast<size_t>(size_));
     CHECK_EQ(in_grad.size(), 1U);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
     size_t leading = 1, trailing = 1;
     int real_axis = axis_;
     if (real_axis < 0) {
-        real_axis += in_grad[slice_enum::kData].ndim();
+      real_axis += in_grad[slice_enum::kData].ndim();
     }
     CHECK_LT(real_axis, in_grad[slice_enum::kData].ndim());
     size_t mid = in_grad[slice_enum::kData].shape_[real_axis];
@@ -128,10 +130,10 @@ class SliceChannelOp : public Operator {
     for (int i = real_axis + 1; i < in_grad[slice_enum::kData].ndim(); ++i) {
       trailing *= in_grad[slice_enum::kData].shape_[i];
     }
-    Shape<3> dshape = Shape3(leading, mid, trailing);
+    Shape<3> dshape      = Shape3(leading, mid, trailing);
     Shape<3> slice_shape = Shape3(leading, mid / size_, trailing);
-    Tensor<xpu, 3, DType> grad = in_grad[slice_enum::kData].get_with_shape<xpu, 3, DType>(
-        dshape, s);
+    Tensor<xpu, 3, DType> grad =
+        in_grad[slice_enum::kData].get_with_shape<xpu, 3, DType>(dshape, s);
     std::vector<Tensor<xpu, 3, DType> > grad_out(size_);
     for (int i = 0; i < size_; ++i) {
       grad_out[i] = out_grad[i].get_with_shape<xpu, 3, DType>(slice_shape, s);
@@ -144,10 +146,8 @@ class SliceChannelOp : public Operator {
   int axis_;
 };  // class SliceChannelOp
 
-
-template<typename xpu>
-Operator *CreateOp(SliceChannelParam param, int dtype);
-
+template <typename xpu>
+Operator* CreateOp(SliceChannelParam param, int dtype);
 
 #if DMLC_USE_CXX11
 class SliceChannelProp : public OperatorProperty {
@@ -174,23 +174,23 @@ class SliceChannelProp : public OperatorProperty {
     return param_.num_outputs;
   }
 
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
+  bool InferType(std::vector<int>* in_type,
+                 std::vector<int>* out_type,
+                 std::vector<int>* aux_type) const override {
     std::string node_name = "slice_channel_node";
-    return ElemwiseAttrHelper<int, type_is_none,
-                              type_assign, true,
-                              type_string, 1>(node_name, in_type, out_type, -1);
+    return ElemwiseAttrHelper<int, type_is_none, type_assign, true, type_string, 1>(
+        node_name, in_type, out_type, -1);
   }
 
-  bool InferShape(mxnet::ShapeVector *in_shape,
-                  mxnet::ShapeVector *out_shape,
-                  mxnet::ShapeVector *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector* in_shape,
+                  mxnet::ShapeVector* out_shape,
+                  mxnet::ShapeVector* aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1U);
     mxnet::TShape dshape = in_shape->at(slice_enum::kData);
     mxnet::TShape ishape = in_shape->at(slice_enum::kData);
-    if (!mxnet::ndim_is_known(dshape)) return false;
+    if (!mxnet::ndim_is_known(dshape))
+      return false;
     if (param_.axis >= 0) {
       CHECK_LT(param_.axis, dshape.ndim());
     } else {
@@ -201,30 +201,28 @@ class SliceChannelProp : public OperatorProperty {
       real_axis += dshape.ndim();
     }
     CHECK_EQ(dshape[real_axis] % param_.num_outputs, 0U)
-      << "You are trying to split the " << real_axis
-      << "-th axis of input tensor with shape " << dshape
-      << " into num_outputs=" << param_.num_outputs
-      << " evenly sized chunks, but this is not possible because "
-      << param_.num_outputs << " does not evenly divide "
-      << dshape[real_axis];
+        << "You are trying to split the " << real_axis << "-th axis of input tensor with shape "
+        << dshape << " into num_outputs=" << param_.num_outputs
+        << " evenly sized chunks, but this is not possible because " << param_.num_outputs
+        << " does not evenly divide " << dshape[real_axis];
     if (param_.squeeze_axis && ishape[real_axis] != -1) {
       CHECK_EQ(ishape[real_axis], param_.num_outputs)
-        << "If squeeze axis is True, the size of the sliced axis must be the same as num_outputs."
-        << " Input shape=" << ishape << ", axis=" << real_axis
-        << ", num_outputs=" << param_.num_outputs << ".";
+          << "If squeeze axis is True, the size of the sliced axis must be the same as num_outputs."
+          << " Input shape=" << ishape << ", axis=" << real_axis
+          << ", num_outputs=" << param_.num_outputs << ".";
     }
     if (dshape[real_axis] >= 0) {
       dshape[real_axis] /= param_.num_outputs;
     }
-    if (param_.squeeze_axis && (dshape[real_axis] == 1
-        || !mxnet::dim_size_is_known(ishape, real_axis))) {
+    if (param_.squeeze_axis &&
+        (dshape[real_axis] == 1 || !mxnet::dim_size_is_known(ishape, real_axis))) {
       for (int d = real_axis; d < dshape.ndim() - 1; ++d) {
-        dshape[d] = dshape[d+1];
+        dshape[d] = dshape[d + 1];
       }
-      dshape = mxnet::TShape(&dshape[0], &dshape[dshape.ndim()-1]);
+      dshape = mxnet::TShape(&dshape[0], &dshape[dshape.ndim() - 1]);
     }
     CHECK_EQ(static_cast<int>((*out_shape).size()), param_.num_outputs)
-      << "Size of output shape mismatch!";
+        << "Size of output shape mismatch!";
     for (int i = 0; i < param_.num_outputs; ++i) {
       SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
       // Perform incomplete shape inference.
@@ -252,7 +250,7 @@ class SliceChannelProp : public OperatorProperty {
   }
 
   OperatorProperty* Copy() const override {
-    auto ptr = new SliceChannelProp();
+    auto ptr    = new SliceChannelProp();
     ptr->param_ = param_;
     return ptr;
   }
@@ -261,10 +259,9 @@ class SliceChannelProp : public OperatorProperty {
     return "SliceChannel";
   }
 
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
+  std::vector<int> DeclareBackwardDependency(const std::vector<int>& out_grad,
+                                             const std::vector<int>& in_data,
+                                             const std::vector<int>& out_data) const override {
     return out_grad;
   }
 
@@ -273,12 +270,13 @@ class SliceChannelProp : public OperatorProperty {
     return nullptr;
   }
 
-  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-                             std::vector<int> *in_type) const override;
+  Operator* CreateOperatorEx(Context ctx,
+                             mxnet::ShapeVector* in_shape,
+                             std::vector<int>* in_type) const override;
 
  private:
   SliceChannelParam param_;
-};  // class SliceChannelProp
+};      // class SliceChannelProp
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet

@@ -30,7 +30,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_insert_slice)
-.set_attr<FCompute>("FCompute<gpu>", NumpyInsertSliceCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyInsertSliceCompute<gpu>);
 
 }
-}
+}  // namespace mxnet

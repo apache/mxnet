@@ -22,7 +22,7 @@
  * \file rnn.cu
  * \brief
  * \author Sebastian Bodenstein
-*/
+ */
 
 #include "./rnn-inl.h"
 #include <algorithm>
@@ -30,11 +30,9 @@
 namespace mxnet {
 namespace op {
 
-
-NNVM_REGISTER_OP(RNN)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", RNNStatefulCompute<gpu>);
+NNVM_REGISTER_OP(RNN).set_attr<FStatefulCompute>("FStatefulCompute<gpu>", RNNStatefulCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_RNN)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", RNNStatefulGradCompute<gpu>);
+    .set_attr<FStatefulCompute>("FStatefulCompute<gpu>", RNNStatefulGradCompute<gpu>);
 }  // namespace op
 }  // namespace mxnet

@@ -22,7 +22,7 @@
  * \file convolution.cu
  * \brief
  * \author Bing Xu, Jun Wu, Da Zheng
-*/
+ */
 
 #include "./convolution-inl.h"
 #include <vector>
@@ -35,7 +35,7 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_CUDNN == 1
-template<typename DType>
+template <typename DType>
 static CuDNNConvolutionOp<DType>& GetCuDNNConvOp(const ConvolutionParam& param,
                                                  int forward_compute_type,
                                                  int backward_compute_type,
@@ -44,25 +44,22 @@ static CuDNNConvolutionOp<DType>& GetCuDNNConvOp(const ConvolutionParam& param,
                                                  const RunContext& rctx,
                                                  bool add_to_weight) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<ConvSignature,
-                                         std::shared_ptr<CuDNNConvolutionOp<DType> >,
-                                         OpHash> ops;
+  static thread_local std::
+      unordered_map<ConvSignature, std::shared_ptr<CuDNNConvolutionOp<DType>>, OpHash>
+          ops;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<ConvSignature,
-                                            std::shared_ptr<CuDNNConvolutionOp<DType> >,
-                                            OpHash> ops;
+  static MX_THREAD_LOCAL
+      std::unordered_map<ConvSignature, std::shared_ptr<CuDNNConvolutionOp<DType>>, OpHash>
+          ops;
 #endif
   ConvSignature key(param);
   size_t ndim = 0;
-  for (auto &s : in_shape)
+  for (auto& s : in_shape)
     ndim += s.ndim();
-  for (auto &s : out_shape)
+  for (auto& s : out_shape)
     ndim += s.ndim();
-  key.Reserve(1 /* for forward_compute_type */ +
-              1 /* for backward_compute_type */ +
-              ndim /* for in and out shapes */ +
-              1 /* for dev_id */ +
-              1 /* for add_to_weight */);
+  key.Reserve(1 /* for forward_compute_type */ + 1 /* for backward_compute_type */ +
+              ndim /* for in and out shapes */ + 1 /* for dev_id */ + 1 /* for add_to_weight */);
 
   key.AddSign(forward_compute_type);
   key.AddSign(backward_compute_type);
@@ -74,25 +71,30 @@ static CuDNNConvolutionOp<DType>& GetCuDNNConvOp(const ConvolutionParam& param,
   auto it = ops.find(key);
   if (it == ops.end()) {
     std::shared_ptr<CuDNNConvolutionOp<DType>> op(new CuDNNConvolutionOp<DType>());
-    auto ins_ret = ops.insert(std::pair<ConvSignature, std::shared_ptr<CuDNNConvolutionOp<DType>>>(
-                              key, op));
+    auto ins_ret =
+        ops.insert(std::pair<ConvSignature, std::shared_ptr<CuDNNConvolutionOp<DType>>>(key, op));
     CHECK(ins_ret.second);
     it = ins_ret.first;
-    it->second->Init(param, forward_compute_type, backward_compute_type, in_shape,
-                     out_shape, rctx, add_to_weight);
+    it->second->Init(param,
+                     forward_compute_type,
+                     backward_compute_type,
+                     in_shape,
+                     out_shape,
+                     rctx,
+                     add_to_weight);
   }
   return *it->second;
 }
 #endif
 
-template<>
+template <>
 void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
                              const OpContext& ctx,
                              const std::vector<TBlob>& inputs,
                              const std::vector<OpReqType>& req,
                              const std::vector<TBlob>& outputs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
-  int dtype = inputs[conv::kData].type_flag_;
+  int dtype                     = inputs[conv::kData].type_flag_;
 
 #if MXNET_USE_CUDNN == 1
   STATIC_ASSERT_CUDNN_VERSION_GE(7000);
@@ -104,8 +106,8 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       ConvolutionOp<gpu, DType> op;
       op.Init(param);
       op.Forward(ctx, inputs, req, outputs);
-    } else if (!CuDNNConvolutionOp<DType>::Supports(param,
-          compute_type, compute_type, ctx.run_ctx.ctx.dev_id)) {
+    } else if (!CuDNNConvolutionOp<DType>::Supports(
+                   param, compute_type, compute_type, ctx.run_ctx.ctx.dev_id)) {
       LOG(WARNING) << "This convolution is not supported by cudnn, MXNET convolution is applied.";
       ConvolutionOp<gpu, DType> op;
       op.Init(param);
@@ -116,19 +118,16 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       for (size_t i = 0; i < in_shape.size(); i++)
         in_shape[i] = inputs[i].shape_;
       // req[conv::kWeight] is only set for backward, so assume the typical 'write' for now.
-      auto add_to_weight = false;
-      CuDNNConvolutionOp<DType> &op = GetCuDNNConvOp<DType>(param,
-          compute_type, compute_type, in_shape, out_shape, ctx.run_ctx, add_to_weight);
+      auto add_to_weight            = false;
+      CuDNNConvolutionOp<DType>& op = GetCuDNNConvOp<DType>(
+          param, compute_type, compute_type, in_shape, out_shape, ctx.run_ctx, add_to_weight);
       op.Forward(ctx, inputs, req, outputs);
     }
   })
 #else
-  if (param.num_filter == param.num_group &&
-      param.layout.value() == mshadow::kNCHW &&
-      param.num_filter == inputs[conv::kData].shape_[1] &&
-      param.kernel.ndim() == 2 &&
-      param.dilate == mshadow::Shape2(1, 1) &&
-      dtype == mshadow::kFloat32) {
+  if (param.num_filter == param.num_group && param.layout.value() == mshadow::kNCHW &&
+      param.num_filter == inputs[conv::kData].shape_[1] && param.kernel.ndim() == 2 &&
+      param.dilate == mshadow::Shape2(1, 1) && dtype == mshadow::kFloat32) {
     mxnet::ShapeVector in_shape(inputs.size());
     mxnet::ShapeVector out_shape(1, outputs[0].shape_);
     for (size_t i = 0; i < in_shape.size(); i++)
@@ -147,7 +146,7 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
 #endif  // MXNET_USE_CUDNN
 }
 
-template<>
+template <>
 void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                  const OpContext& ctx,
                                  const std::vector<TBlob>& inputs,
@@ -155,9 +154,9 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                  const std::vector<TBlob>& outputs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   std::vector<TBlob> in_data(inputs.begin() + 1, inputs.end());
-  const TBlob &out_grad = inputs[0];
-  const std::vector<TBlob> &in_grad = outputs;
-  int dtype = out_grad.type_flag_;
+  const TBlob& out_grad             = inputs[0];
+  const std::vector<TBlob>& in_grad = outputs;
+  int dtype                         = out_grad.type_flag_;
 
 #if MXNET_USE_CUDNN == 1
   STATIC_ASSERT_CUDNN_VERSION_GE(7000);
@@ -169,8 +168,8 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       ConvolutionOp<gpu, DType> op;
       op.Init(param);
       op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
-    } else if (!CuDNNConvolutionOp<DType>::Supports(param,
-          compute_type, compute_type, ctx.run_ctx.ctx.dev_id)) {
+    } else if (!CuDNNConvolutionOp<DType>::Supports(
+                   param, compute_type, compute_type, ctx.run_ctx.ctx.dev_id)) {
       LOG(WARNING) << "This convolution is not supported by cudnn, MXNET convolution is applied.";
       ConvolutionOp<gpu, DType> op;
       op.Init(param);
@@ -181,19 +180,16 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       mxnet::ShapeVector out_shape(1, out_grad.shape_);
       for (size_t i = 0; i < in_shape.size(); i++)
         in_shape[i] = in_data[i].shape_;
-      auto add_to_weight = req[conv::kWeight] == kAddTo;
-      CuDNNConvolutionOp<DType> &op = GetCuDNNConvOp<DType>(param,
-          compute_type, compute_type, in_shape, out_shape, ctx.run_ctx, add_to_weight);
+      auto add_to_weight            = req[conv::kWeight] == kAddTo;
+      CuDNNConvolutionOp<DType>& op = GetCuDNNConvOp<DType>(
+          param, compute_type, compute_type, in_shape, out_shape, ctx.run_ctx, add_to_weight);
       op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     }
   })
 #else
-  if (param.num_filter == param.num_group &&
-      param.layout.value() == mshadow::kNCHW &&
-      param.num_filter == in_data[conv::kData].shape_[1] &&
-      param.kernel.ndim() == 2 &&
-      param.dilate == mshadow::Shape2(1, 1) &&
-      dtype == mshadow::kFloat32) {
+  if (param.num_filter == param.num_group && param.layout.value() == mshadow::kNCHW &&
+      param.num_filter == in_data[conv::kData].shape_[1] && param.kernel.ndim() == 2 &&
+      param.dilate == mshadow::Shape2(1, 1) && dtype == mshadow::kFloat32) {
     // The first element stores out grad.
     mxnet::ShapeVector in_shape(in_data.size());
     mxnet::ShapeVector out_shape(1, out_grad.shape_);
@@ -213,12 +209,10 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
 #endif  // MXNET_USE_CUDNN
 }
 
-NNVM_REGISTER_OP(Convolution)
-.set_attr<FCompute>("FCompute<gpu>", ConvolutionCompute<gpu>);
+NNVM_REGISTER_OP(Convolution).set_attr<FCompute>("FCompute<gpu>", ConvolutionCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_Convolution)
-.set_attr<FCompute>("FCompute<gpu>", ConvolutionGradCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", ConvolutionGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
-

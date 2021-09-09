@@ -28,11 +28,9 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_cross)
-.set_attr<FCompute>("FCompute<gpu>", NumpyCrossForward<gpu>);
+NNVM_REGISTER_OP(_npi_cross).set_attr<FCompute>("FCompute<gpu>", NumpyCrossForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_npi_cross)
-.set_attr<FCompute>("FCompute<gpu>", NumpyCrossBackward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_cross).set_attr<FCompute>("FCompute<gpu>", NumpyCrossBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -30,41 +30,49 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(MultiSampleParam);
 
-#define MXNET_OPERATOR_REGISTER_SAMPLING(distr, sampler, num_inputs, \
-                                         input_name_1, input_name_2, \
-                                         input_desc_1, input_desc_2, \
-                                         description) \
-  NNVM_REGISTER_OP(_sample_##distr) \
-  .add_alias("sample_" #distr) \
-  .describe(description()+std::string(ADD_FILELINE)) \
-  .set_num_inputs(num_inputs) \
-  .set_num_outputs(1) \
-  .set_attr_parser(ParamParser<MultiSampleParam>) \
-  .set_attr<nnvm::FListInputNames>("FListInputNames", \
-    [](const NodeAttrs& attrs) { \
-      std::vector<std::string> v = {input_name_1, input_name_2}; v.resize(num_inputs); return v; \
-    }) \
-  .set_attr<mxnet::FInferShape>("FInferShape", MultiSampleOpShape) \
-  .set_attr<nnvm::FInferType>("FInferType", MultiSampleOpType) \
-  .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) { \
-      return std::vector<ResourceRequest>{ResourceRequest::kParallelRandom, \
-                                          ResourceRequest::kTempSpace}; \
-    }) \
-  .set_attr<FCompute>("FCompute<cpu>", MultiSampleOpForward<cpu, sampler, num_inputs>) \
-  .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes) \
-  .add_argument(input_name_1, "NDArray-or-Symbol", input_desc_1) \
-  .add_arguments(MultiSampleParam::__FIELDS__())
+#define MXNET_OPERATOR_REGISTER_SAMPLING(distr,                                            \
+                                         sampler,                                          \
+                                         num_inputs,                                       \
+                                         input_name_1,                                     \
+                                         input_name_2,                                     \
+                                         input_desc_1,                                     \
+                                         input_desc_2,                                     \
+                                         description)                                      \
+  NNVM_REGISTER_OP(_sample_##distr)                                                        \
+      .add_alias("sample_" #distr)                                                         \
+      .describe(description() + std::string(ADD_FILELINE))                                 \
+      .set_num_inputs(num_inputs)                                                          \
+      .set_num_outputs(1)                                                                  \
+      .set_attr_parser(ParamParser<MultiSampleParam>)                                      \
+      .set_attr<nnvm::FListInputNames>(                                                    \
+          "FListInputNames",                                                               \
+          [](const NodeAttrs& attrs) {                                                     \
+            std::vector<std::string> v = {input_name_1, input_name_2};                     \
+            v.resize(num_inputs);                                                          \
+            return v;                                                                      \
+          })                                                                               \
+      .set_attr<mxnet::FInferShape>("FInferShape", MultiSampleOpShape)                     \
+      .set_attr<nnvm::FInferType>("FInferType", MultiSampleOpType)                         \
+      .set_attr<FResourceRequest>("FResourceRequest",                                      \
+                                  [](const NodeAttrs& attrs) {                             \
+                                    return std::vector<ResourceRequest>{                   \
+                                        ResourceRequest::kParallelRandom,                  \
+                                        ResourceRequest::kTempSpace};                      \
+                                  })                                                       \
+      .set_attr<FCompute>("FCompute<cpu>", MultiSampleOpForward<cpu, sampler, num_inputs>) \
+      .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)                           \
+      .add_argument(input_name_1, "NDArray-or-Symbol", input_desc_1)                       \
+      .add_arguments(MultiSampleParam::__FIELDS__())
 
-#define MXNET_OPERATOR_REGISTER_SAMPLING1(distr, sampler, input_name, input_desc, \
-                                          description) \
-    MXNET_OPERATOR_REGISTER_SAMPLING(distr, sampler, 1, input_name, input_name, \
-                                     input_desc, input_desc, description)
+#define MXNET_OPERATOR_REGISTER_SAMPLING1(distr, sampler, input_name, input_desc, description) \
+  MXNET_OPERATOR_REGISTER_SAMPLING(                                                            \
+      distr, sampler, 1, input_name, input_name, input_desc, input_desc, description)
 
-#define MXNET_OPERATOR_REGISTER_SAMPLING2(distr, sampler, input_name_1, input_name_2, \
-                                          input_desc_1, input_desc_2, description) \
-  MXNET_OPERATOR_REGISTER_SAMPLING(distr, sampler, 2, input_name_1, input_name_2, \
-                                   input_desc_1, input_desc_2, description) \
-  .add_argument(input_name_2, "NDArray-or-Symbol", input_desc_2)
+#define MXNET_OPERATOR_REGISTER_SAMPLING2(                                                    \
+    distr, sampler, input_name_1, input_name_2, input_desc_1, input_desc_2, description)      \
+  MXNET_OPERATOR_REGISTER_SAMPLING(                                                           \
+      distr, sampler, 2, input_name_1, input_name_2, input_desc_1, input_desc_2, description) \
+      .add_argument(input_name_2, "NDArray-or-Symbol", input_desc_2)
 
 inline std::string uniform_desc() {
   return std::string(R"code(Concurrent sampling from multiple
@@ -273,25 +281,52 @@ Examples::
 )code");
 }
 
-MXNET_OPERATOR_REGISTER_SAMPLING2(uniform, UniformSampler<cpu>, "low", "high",
-  "Lower bounds of the distributions.", "Upper bounds of the distributions.", uniform_desc);
-MXNET_OPERATOR_REGISTER_SAMPLING2(normal, NormalSampler<cpu>, "mu", "sigma",
-  "Means of the distributions.", "Standard deviations of the distributions.", normal_desc);
-MXNET_OPERATOR_REGISTER_SAMPLING2(gamma, GammaSampler<cpu>, "alpha", "beta",
-  "Alpha (shape) parameters of the distributions.", "Beta (scale) parameters of the distributions.",
-  gamma_desc);
-MXNET_OPERATOR_REGISTER_SAMPLING1(exponential, ExponentialSampler<cpu>, "lam",
-  "Lambda (rate) parameters of the distributions.", exponential_desc);
-MXNET_OPERATOR_REGISTER_SAMPLING1(poisson, PoissonSampler<cpu>, "lam",
-  "Lambda (rate) parameters of the distributions.", poisson_desc)
-.add_alias("_npx_tensor_poisson");
-MXNET_OPERATOR_REGISTER_SAMPLING2(negative_binomial, NegativeBinomialSampler<cpu>, "k", "p",
-  "Limits of unsuccessful experiments.", "Failure probabilities in each experiment.",
-  negative_binomial_desc);
+MXNET_OPERATOR_REGISTER_SAMPLING2(uniform,
+                                  UniformSampler<cpu>,
+                                  "low",
+                                  "high",
+                                  "Lower bounds of the distributions.",
+                                  "Upper bounds of the distributions.",
+                                  uniform_desc);
+MXNET_OPERATOR_REGISTER_SAMPLING2(normal,
+                                  NormalSampler<cpu>,
+                                  "mu",
+                                  "sigma",
+                                  "Means of the distributions.",
+                                  "Standard deviations of the distributions.",
+                                  normal_desc);
+MXNET_OPERATOR_REGISTER_SAMPLING2(gamma,
+                                  GammaSampler<cpu>,
+                                  "alpha",
+                                  "beta",
+                                  "Alpha (shape) parameters of the distributions.",
+                                  "Beta (scale) parameters of the distributions.",
+                                  gamma_desc);
+MXNET_OPERATOR_REGISTER_SAMPLING1(exponential,
+                                  ExponentialSampler<cpu>,
+                                  "lam",
+                                  "Lambda (rate) parameters of the distributions.",
+                                  exponential_desc);
+MXNET_OPERATOR_REGISTER_SAMPLING1(poisson,
+                                  PoissonSampler<cpu>,
+                                  "lam",
+                                  "Lambda (rate) parameters of the distributions.",
+                                  poisson_desc)
+    .add_alias("_npx_tensor_poisson");
+MXNET_OPERATOR_REGISTER_SAMPLING2(negative_binomial,
+                                  NegativeBinomialSampler<cpu>,
+                                  "k",
+                                  "p",
+                                  "Limits of unsuccessful experiments.",
+                                  "Failure probabilities in each experiment.",
+                                  negative_binomial_desc);
 MXNET_OPERATOR_REGISTER_SAMPLING2(generalized_negative_binomial,
-  GeneralizedNegativeBinomialSampler<cpu>, "mu", "alpha",
-  "Means of the distributions.", "Alpha (dispersion) parameters of the distributions.",
-  generalized_negative_binomial_desc);
+                                  GeneralizedNegativeBinomialSampler<cpu>,
+                                  "mu",
+                                  "alpha",
+                                  "Means of the distributions.",
+                                  "Alpha (dispersion) parameters of the distributions.",
+                                  generalized_negative_binomial_desc);
 
 }  // namespace op
 }  // namespace mxnet
