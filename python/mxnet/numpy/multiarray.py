@@ -5600,9 +5600,9 @@ def linspace(start, stop, /, num=50, *, endpoint=True, retstep=False, dtype=None
 
     Parameters
     ----------
-    start : real number
+    start : int or float
         The starting value of the sequence.
-    stop : real number
+    stop : int or float
         The end value of the sequence, unless endpoint is set to False. In
         that case, the sequence consists of all but the last of num + 1
         evenly spaced samples, so that stop is excluded. Note that the step

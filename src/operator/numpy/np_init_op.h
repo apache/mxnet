@@ -103,6 +103,77 @@ struct IndicesOpParam : public dmlc::Parameter<IndicesOpParam> {
   }
 };
 
+/*! \brief Initialize and fill output with an arbitrary value */
+struct NumpyInitOpWithScalarParam : public dmlc::Parameter<NumpyInitOpWithScalarParam> {
+  mxnet::TShape shape;
+  std::string ctx;
+  int dtype;
+  double double_value;
+  int64_t int_value;
+  uint64_t uint_value;
+  int value_type;
+  DMLC_DECLARE_PARAMETER(NumpyInitOpWithScalarParam) {
+    DMLC_DECLARE_FIELD(shape)
+      .set_default(mxnet::TShape())
+      .describe("The shape of the output");
+    DMLC_DECLARE_FIELD(ctx)
+      .set_default("")
+      .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+                  "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+      .set_default(-1)
+      .add_enum("None", -1)
+      MXNET_ADD_ALL_TYPES_EXT_WITH_BOOL
+      .describe("Target data type.");
+    DMLC_DECLARE_FIELD(double_value)
+      .describe("Float value with which to fill newly created tensor");
+    DMLC_DECLARE_FIELD(int_value)
+      .describe("Integer value with which to fill newly created tensor");
+    DMLC_DECLARE_FIELD(uint_value)
+      .describe("Unsigned integer value with which to fill newly created tensor");
+    DMLC_DECLARE_FIELD(value_type)
+      .describe("Choose the value type");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s, dtype_s, double_value_s, int_value_s, value_type_s,
+    uint_value_s;
+    shape_s << shape;
+    dtype_s << dtype;
+    double_value_s << double_value;
+    int_value_s << int_value;
+    uint_value_s << uint_value;
+    value_type_s << value_type;
+    (*dict)["shape"] = shape_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    (*dict)["int_value"] = int_value_s.str();
+    (*dict)["uint_value"] = uint_value_s.str();
+    (*dict)["double_value"] = double_value_s.str();
+    (*dict)["value_type"] = value_type_s.str();
+    // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
+    // Setting ctx here results in an error.
+  }
+};
+
+/*! \brief Fill output with an arbitrary value */
+template<typename xpu>
+void NumpyInitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
+                                    const OpContext &ctx,
+                                    const std::vector<TBlob> &inputs,
+                                    const std::vector<OpReqType> &req,
+                                    const std::vector<TBlob> &outputs) {
+  CHECK_EQ(inputs.size(), 0);
+  CHECK_EQ(outputs.size(), 1U);
+  const auto& param = nnvm::get<NumpyInitOpWithScalarParam>(attrs.parsed);
+  if (param.value_type == 0) {
+    Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.int_value);
+  } else if (param.value_type == 1) {
+    Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.uint_value);
+  } else {
+    Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.double_value);
+  }
+}
+
 inline bool NumpyRangeShape(const nnvm::NodeAttrs& attrs,
                             mxnet::ShapeVector* in_shapes,
                             mxnet::ShapeVector* out_shapes) {

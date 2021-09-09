@@ -1877,7 +1877,8 @@ def eye(N, M=None, k=0, dtype=float, **kwargs):
         dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _api_internal.eye(N, M, k, ctx, dtype)
+    k = minimum(k, N) if M is None else minimum(k, M)
+    return _api_internal.eye(N, M, int(k), ctx, dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1889,9 +1890,9 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
 
     Parameters
     ----------
-    start : real number
+    start : int or float
         The starting value of the sequence.
-    stop : real number
+    stop : int or float
         The end value of the sequence, unless endpoint is set to False. In
         that case, the sequence consists of all but the last of num + 1
         evenly spaced samples, so that stop is excluded. Note that the step

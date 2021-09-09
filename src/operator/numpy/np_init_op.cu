@@ -42,7 +42,7 @@ NNVM_REGISTER_OP(_npi_full_like)
 .set_attr<FCompute>("FCompute<gpu>", FullLikeOpCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_full)
-.set_attr<FCompute>("FCompute<gpu>", InitFillWithScalarCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyInitFillWithScalarCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_atleast_1d)
 .set_attr<FCompute>("FCompute<gpu>", AtleastNDCompute<gpu>);
