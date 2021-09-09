@@ -98,16 +98,16 @@ services:
         BASE_IMAGE: ubuntu:20.04
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu:latest
-  ubuntu_tensorrt_cu111:
-    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_tensorrt_cu111:latest
+  ubuntu_tensorrt_cu113:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_tensorrt_cu113:latest
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu
       target: gpu
       args:
-        BASE_IMAGE: nvidia/cuda:11.1-cudnn8-devel-ubuntu18.04
+        BASE_IMAGE: nvidia/cuda:11.3.0-cudnn8-devel-ubuntu18.04
       cache_from:
-        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_tensorrt_cu111:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_tensorrt_cu113:latest
   ubuntu_gpu_cu111:
     image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu111:latest
     build:
