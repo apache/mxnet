@@ -152,7 +152,12 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
   BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(
       attrs, ctx, {data_grp, mean_grp}, {kWriteTo}, {output_grp});
 #else
-  BinaryBroadcastRTCCompute{"sub"}(attrs, ctx, {data_grp, mean_grp}, {kWriteTo}, {output_grp});
+  BinaryBroadcastRTCCompute{"sub"}(  // NOLINT
+      attrs,
+      ctx,
+      {data_grp, mean_grp},
+      {kWriteTo},
+      {output_grp});
 #endif  // !defined(__CUDACC__)
 
   // Calculate std
@@ -180,7 +185,12 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
   BinaryBroadcastCompute<xpu, mshadow_op::div>(
       attrs, ctx, {output_grp, std_grp}, {kWriteTo}, {output_grp});
 #else
-  BinaryBroadcastRTCCompute{"div"}(attrs, ctx, {output_grp, std_grp}, {kWriteTo}, {output_grp});
+  BinaryBroadcastRTCCompute{"div"}(  // NOLINT
+      attrs,
+      ctx,
+      {output_grp, std_grp},
+      {kWriteTo},
+      {output_grp});
 #endif  // !defined(__CUDACC__)
 
   const TBlob& output = outputs[groupnorm::kOut];
@@ -199,9 +209,19 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
       attrs, ctx, {output, beta}, {kWriteTo}, {output});
 #else
   // Calculate data = data * gamma
-  BinaryBroadcastRTCCompute{"mul"}(attrs, ctx, {output, gamma}, {kWriteTo}, {output});
+  BinaryBroadcastRTCCompute{"mul"}(  // NOLINT
+      attrs,
+      ctx,
+      {output, gamma},
+      {kWriteTo},
+      {output});
   // Calculate data = data + beta
-  BinaryBroadcastRTCCompute{"add"}(attrs, ctx, {output, beta}, {kWriteTo}, {output});
+  BinaryBroadcastRTCCompute{"add"}(  // NOLINT
+      attrs,
+      ctx,
+      {output, beta},
+      {kWriteTo},
+      {output});
 #endif  // !defined(__CUDACC__)
 }
 
@@ -329,9 +349,18 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
     });
   }
 #else
-  BinaryBroadcastRTCCompute{"sub"}(attrs, ctx, {data_, mean_}, {kWriteTo}, {normalized_data});
-  BinaryBroadcastRTCCompute{"div"}(
-      attrs, ctx, {normalized_data, std_}, {kWriteTo}, {normalized_data});
+  BinaryBroadcastRTCCompute{"sub"}(  // NOLINT
+      attrs,
+      ctx,
+      {data_, mean_},
+      {kWriteTo},
+      {normalized_data});
+  BinaryBroadcastRTCCompute{"div"}(  // NOLINT
+      attrs,
+      ctx,
+      {normalized_data, std_},
+      {kWriteTo},
+      {normalized_data});
   // Calculate grad_beta
   if (req[2] != kNullOp) {
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
@@ -346,7 +375,12 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
     });
   }
   // Calculate grad_gamma, it will be sum(ograd * normalized_data, exclude_axis)
-  ElemwiseBinaryRTCCompute{"mul"}(attrs, ctx, {normalized_data, ograd}, {kWriteTo}, {ograd_mult});
+  ElemwiseBinaryRTCCompute{"mul"}(  // NOLINT
+      attrs,
+      ctx,
+      {normalized_data, ograd},
+      {kWriteTo},
+      {ograd_mult});
   if (req[1] != kNullOp) {
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
       broadcast::RTCReduce(ctx,
@@ -403,9 +437,18 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
     BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(
         attrs, ctx, {normalized_data, red_out}, {kAddTo}, {output_});
 #else
-    BinaryBroadcastRTCCompute{"mul"}(
-        attrs, ctx, {inputs[0], gamma}, {kWriteTo}, {ograd_mult.reshape(data.shape_)});
-    BinaryBroadcastRTCCompute{"div"}(attrs, ctx, {ograd_mult, std_}, {kWriteTo}, {ograd_mult});
+    BinaryBroadcastRTCCompute{"mul"}(  // NOLINT
+        attrs,
+        ctx,
+        {inputs[0], gamma},
+        {kWriteTo},
+        {ograd_mult.reshape(data.shape_)});
+    BinaryBroadcastRTCCompute{"div"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd_mult, std_},
+        {kWriteTo},
+        {ograd_mult});
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       broadcast::RTCReduce(ctx,
                            red_out.reshape(red_dst_shape),
@@ -420,9 +463,18 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 1, DType> red_out_tensor = red_out.FlatTo1D<xpu, DType>(s);
       red_out_tensor /= scalar<DType>(N);
     });
-    BinaryBroadcastRTCCompute{"sub"}(attrs, ctx, {ograd_mult, red_out}, {req[0]}, {output_});
-    ElemwiseBinaryRTCCompute{"mul"}(
-        attrs, ctx, {ograd_mult, normalized_data}, {kWriteTo}, {ograd_mult});
+    BinaryBroadcastRTCCompute{"sub"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd_mult, red_out},
+        {req[0]},
+        {output_});
+    ElemwiseBinaryRTCCompute{"mul"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd_mult, normalized_data},
+        {kWriteTo},
+        {ograd_mult});
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       broadcast::RTCReduce(ctx,
                            red_out.reshape(red_dst_shape),
@@ -437,7 +489,12 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 1, DType> red_out_tensor = red_out.FlatTo1D<xpu, DType>(s);
       red_out_tensor /= scalar<DType>(-N);
     });
-    BinaryBroadcastRTCCompute{"mul"}(attrs, ctx, {normalized_data, red_out}, {kAddTo}, {output_});
+    BinaryBroadcastRTCCompute{"mul"}(  // NOLINT
+        attrs,
+        ctx,
+        {normalized_data, red_out},
+        {kAddTo},
+        {output_});
 #endif  // !defined(__CUDACC__)
   }
 }

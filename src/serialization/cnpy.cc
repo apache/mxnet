@@ -296,7 +296,7 @@ NDArray load_array(const std::string& fname) {
   uint32_t header_len = parse_npy_header_len(strm);
   std::string header(header_len, ' ');
   strm.read(header.data(), header_len);
-  auto [type_flag, fortran_order, shape] = parse_npy_header_descr(header);
+  auto [type_flag, fortran_order, shape] = parse_npy_header_descr(header);  // NOLINT
 
   if (fortran_order) {
     fortran_order_transpose_prepare(shape);
@@ -320,7 +320,8 @@ NDArray load_array(const std::string& fname) {
 namespace npz {
 
 size_t npy_header_blob_read_callback(void* pOpaque, mz_uint64 file_ofs, void* pBuf, size_t n) {
-  auto [npy_header, blob] = *static_cast<std::tuple<const std::string*, const TBlob*>*>(pOpaque);
+  auto [npy_header, blob] =
+      *static_cast<std::tuple<const std::string*, const TBlob*>*>(pOpaque);  // NOLINT
 
   if (file_ofs < npy_header->size() && file_ofs + n < npy_header->size()) {
     // Read n bytes from npy_header
@@ -557,13 +558,13 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
       continue;  // only .npy
 
     auto dir_sep_search = entry_name_v.rfind("/");
-    if (dir_sep_search == std::string::npos) {  // top level file
-      [[maybe_unused]] auto [iter, inserted] = names[""].emplace(entry_name_v);
+    if (dir_sep_search == std::string::npos) {                                   // top level file
+      [[maybe_unused]] auto [iter, inserted] = names[""].emplace(entry_name_v);  // NOLINT
       CHECK(inserted);
     } else {  // file inside a folder
       std::string dirname{entry_name_v.substr(0, dir_sep_search + 1)};
       std::string fname{entry_name_v.substr(dir_sep_search + 1)};
-      [[maybe_unused]] auto [iter, inserted] = names[dirname].insert(fname);
+      [[maybe_unused]] auto [iter, inserted] = names[dirname].insert(fname);  // NOLINT
       CHECK(inserted);
     }
   }
@@ -616,7 +617,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
         CHECK_EQ(mz_zip_reader_extract_iter_read(data_file, header.data(), header_len), header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
-        auto [storage_type_flag, storage_fortran_order, storage_shape] =
+        auto [storage_type_flag, storage_fortran_order, storage_shape] =  // NOLINT
             npy::parse_npy_header_descr(header);
         if (storage_fortran_order) {
           LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
@@ -635,7 +636,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
                  header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
-        auto [indptr_type_flag, indptr_fortran_order, indptr_shape] =
+        auto [indptr_type_flag, indptr_fortran_order, indptr_shape] =  // NOLINT
             npy::parse_npy_header_descr(header);
         if (indptr_fortran_order) {
           LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
@@ -654,7 +655,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
                  header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
-        auto [indices_type_flag, indices_fortran_order, indices_shape] =
+        auto [indices_type_flag, indices_fortran_order, indices_shape] =  // NOLINT
             npy::parse_npy_header_descr(header);
         if (indices_fortran_order) {
           LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
@@ -672,7 +673,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
         CHECK_EQ(mz_zip_reader_extract_iter_read(shape_file, header.data(), header_len), header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
-        auto [shape_type_flag, shape_fortran_order, shape_shape] =
+        auto [shape_type_flag, shape_fortran_order, shape_shape] =  // NOLINT
             npy::parse_npy_header_descr(header);
         if (shape_fortran_order) {
           LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
@@ -782,7 +783,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
         CHECK_EQ(mz_zip_reader_extract_iter_read(data_file, header.data(), header_len), header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
-        auto [storage_type_flag, storage_fortran_order, storage_shape] =
+        auto [storage_type_flag, storage_fortran_order, storage_shape] =  // NOLINT
             npy::parse_npy_header_descr(header);
         if (storage_fortran_order) {
           LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
@@ -801,7 +802,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
                  header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
-        auto [indices_type_flag, indices_fortran_order, indices_shape] =
+        auto [indices_type_flag, indices_fortran_order, indices_shape] =  // NOLINT
             npy::parse_npy_header_descr(header);
         if (indices_fortran_order) {
           LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
@@ -819,7 +820,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
         CHECK_EQ(mz_zip_reader_extract_iter_read(shape_file, header.data(), header_len), header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
-        auto [shape_type_flag, shape_fortran_order, shape_shape] =
+        auto [shape_type_flag, shape_fortran_order, shape_shape] =  // NOLINT
             npy::parse_npy_header_descr(header);
         if (shape_fortran_order) {
           LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
@@ -904,7 +905,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(
         CHECK_EQ(mz_zip_reader_extract_iter_read(file, header.data(), header_len), header_len)
             << "Failed to read from " << fname << " member of " << zip_fname << ": "
             << mz_zip_get_error_string(mz_zip_get_last_error(&archive));
-        auto [type_flag, fortran_order, shape] = npy::parse_npy_header_descr(header);
+        auto [type_flag, fortran_order, shape] = npy::parse_npy_header_descr(header);  // NOLINT
 
         if (fortran_order) {
           fortran_order_transpose_prepare(shape);

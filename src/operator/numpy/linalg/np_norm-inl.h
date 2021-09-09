@@ -72,7 +72,7 @@ struct nrmlp {
 
   /*! \brief do stable reduction into dst */
   template <typename AType, typename DType>
-  MSHADOW_XINLINE void Reduce(volatile AType& sum_of_powers,
+  MSHADOW_XINLINE void Reduce(volatile AType& sum_of_powers,  // NOLINT(*)
                               volatile DType src,
                               volatile DType& scale) {  // NOLINT(*)
 #pragma GCC diagnostic push
@@ -94,16 +94,16 @@ struct nrmlp {
 
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,    // NOLINT(*)
                                     volatile DType& src_val) {  // NOLINT(*)
     dst_val += src_val;
   }
 
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_ssq,
-                                    volatile DType& dst_scale,
-                                    volatile DType& src_ssq,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_ssq,      // NOLINT(*)
+                                    volatile DType& dst_scale,    // NOLINT(*)
+                                    volatile DType& src_ssq,      // NOLINT(*)
                                     volatile DType& src_scale) {  // NOLINT(*)
     if (dst_scale != 0 && dst_scale >= src_scale) {
       dst_ssq = dst_ssq + src_ssq * DType(lp_power(static_cast<double>(src_scale / dst_scale), 2));
@@ -123,8 +123,8 @@ struct nrmlp {
 
   /*! \brief finalize reduction result */
   template <typename DType>
-  MSHADOW_XINLINE void Finalize(volatile DType& sum_of_powers,
-                                volatile DType& scale) {  // NOLINT(*)
+  MSHADOW_XINLINE void Finalize(volatile DType& sum_of_powers,  // NOLINT(*)
+                                volatile DType& scale) {        // NOLINT(*)
 #pragma GCC diagnostic push
 #if __GNUC__ >= 7
 #pragma GCC diagnostic ignored "-Wint-in-bool-context"

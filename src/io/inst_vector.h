@@ -52,8 +52,9 @@ class TensorVector {
   inline mshadow::Tensor<cpu, dim, DType> operator[](size_t i) const {
     CHECK_LT(i + 1, offset_.size());
     CHECK_EQ(shape_[i].Size(), offset_[i + 1] - offset_[i]);
-    return mshadow::Tensor<cpu, dim, DType>((DType*)dmlc::BeginPtr(content_) + offset_[i],
-                                            shape_[i]);  // NOLINT(*)
+    return mshadow::Tensor<cpu, dim, DType>(
+        (DType*)dmlc::BeginPtr(content_) + offset_[i],  // NOLINT(*)
+        shape_[i]);                                     // NOLINT(*)
   }
   inline mshadow::Tensor<cpu, dim, DType> Back() const {
     return (*this)[Size() - 1];

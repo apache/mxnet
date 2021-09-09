@@ -96,7 +96,6 @@ inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   oshape_vec.emplace_back(pvals_length);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
   return out_attrs->at(0).ndim() != 0U;
-  ;
 }
 
 inline bool NumpyMultinomialOpType(const nnvm::NodeAttrs& attrs,

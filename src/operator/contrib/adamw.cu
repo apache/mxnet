@@ -30,7 +30,7 @@ namespace op {
 namespace adamw {
 
 template <>
-void GetScaleFloat<gpu>(mshadow::Stream<gpu>* s, const TBlob& scale_blob, float* pScalef){
+void GetScaleFloat<gpu>(mshadow::Stream<gpu>* s, const TBlob& scale_blob, float* pScalef) {
     MSHADOW_REAL_TYPE_SWITCH(
         scale_blob.type_flag_,
         DType,

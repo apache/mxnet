@@ -158,7 +158,7 @@ void UnaryBwdInOutRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
                                          const std::vector<TBlob>& inputs,
                                          const std::vector<OpReqType>& req,
                                          const std::vector<TBlob>& outputs) {
-  ElemwiseBinaryRTCCompute{OP}(attrs, ctx, {inputs[0], inputs[2]}, req, outputs);
+  ElemwiseBinaryRTCCompute{OP}(attrs, ctx, {inputs[0], inputs[2]}, req, outputs);  // NOLINT
 }
 
 #endif  // MXNET_USE_CUDA

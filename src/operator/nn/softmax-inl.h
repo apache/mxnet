@@ -1154,9 +1154,9 @@ struct SoftmaxFGradient {
   std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     if (softmax_has_dtype_override(n->attrs) || softmax_use_length(n->attrs)) {
-      return ElemwiseGradUseInOut{op_name}(n, ograds);
+      return ElemwiseGradUseInOut{op_name}(n, ograds);  // NOLINT
     } else {
-      return ElemwiseGradUseOut{op_name}(n, ograds);
+      return ElemwiseGradUseOut{op_name}(n, ograds);  // NOLINT
     }
   }
 };

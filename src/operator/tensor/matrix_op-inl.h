@@ -469,7 +469,7 @@ void TransposeExImpl(RunContext ctx,
                      const TBlob& src,
                      const TBlob& ret,
                      const mxnet::TShape& axes,
-                     mshadow::Tensor<xpu, 1, dim_t>& strides_xpu) {
+                     mshadow::Tensor<xpu, 1, dim_t>& strides_xpu) {  // NOLINT(*)
   /*
    * If ndim <= 6, it is not necessary to allocate any space for `strides_xpu`
    * If ndim > 6, `strides_xpu` should be allocated `ndim * 2` elements

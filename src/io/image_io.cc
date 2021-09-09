@@ -151,7 +151,7 @@ void ImdecodeImpl(int flag, bool to_rgb, void* data, size_t size, NDArray* out) 
 #if (CV_MAJOR_VERSION > 3 || (CV_MAJOR_VERSION == 3 && CV_MINOR_VERSION >= 3))
     cv::imdecode(buf, flag | cv::IMREAD_IGNORE_ORIENTATION, &dst);
     CHECK(!dst.empty()) << "Decoding failed. Invalid image file.";
-#elif (CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >= 4))
+#elif (CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >= 4))  // NOLINT
     cv::imdecode(buf, flag, &dst);
     CHECK(!dst.empty()) << "Decoding failed. Invalid image file.";
 #else

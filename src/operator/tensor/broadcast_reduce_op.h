@@ -1508,7 +1508,7 @@ struct sq_sum {
   }
   /*! \brief do stable reduction into dst */
   template <typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& dst,
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst,  // NOLINT(*)
                                      volatile DType src,
                                      volatile DType& residual) {  // NOLINT(*)
     DType y  = src * src - residual;

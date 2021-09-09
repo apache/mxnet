@@ -774,8 +774,8 @@ static inline __device__ void atomicAdd(int8_t* address, int8_t val) {
 
 // Overload atomicAdd to work for signed int64 on all architectures
 static inline __device__ void atomicAdd(int64_t* address, int64_t val) {
-  atomicAdd(reinterpret_cast<unsigned long long*>(address),
-            static_cast<unsigned long long>(val));  // NOLINT
+  atomicAdd(reinterpret_cast<unsigned long long*>(address),  // NOLINT
+            static_cast<unsigned long long>(val));           // NOLINT
 }
 
 template <typename DType>

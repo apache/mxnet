@@ -325,7 +325,7 @@ class LeakyReLUOp : public Operator {
               req,
               in_grad);
 #else
-          ElemwiseBinaryRTCBwdUseIn{"xelu_grad", "prelu_grad"}(
+          ElemwiseBinaryRTCBwdUseIn{"xelu_grad", "prelu_grad"}(  // NOLINT
               nnvm::NodeAttrs(),
               ctx,
               {out_grad[leakyrelu::kOut], in_data[leakyrelu::kData], in_data[leakyrelu::kGamma]},
@@ -352,7 +352,7 @@ class LeakyReLUOp : public Operator {
           std::vector<TBlob> new_in_grad(2);
           new_in_grad[leakyrelu::kData]  = in_grad[leakyrelu::kData];
           new_in_grad[leakyrelu::kGamma] = in_grad[leakyrelu::kGamma].reshape(gshape);
-          BinaryBroadcastRTCBackwardUseIn{"xelu_grad", "prelu_grad"}(
+          BinaryBroadcastRTCBackwardUseIn{"xelu_grad", "prelu_grad"}(  // NOLINT
               nnvm::NodeAttrs(),
               ctx,
               {out_grad[leakyrelu::kOut], in_data[leakyrelu::kData], in_data[leakyrelu::kGamma]},

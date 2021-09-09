@@ -264,7 +264,7 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
   });
 
   if (!ndim) {
-    ElemwiseBinaryRTCCompute{OP}(attrs, ctx, inputs, req, outputs);
+    ElemwiseBinaryRTCCompute{OP}(attrs, ctx, inputs, req, outputs);  // NOLINT
   } else {
     mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
     const TBlob& lhs        = inputs[0].reshape(new_lshape);
@@ -378,7 +378,7 @@ void BinaryBroadcastRTCBackwardUseNone::operator()(const nnvm::NodeAttrs& attrs,
                                          &new_rshape,
                                          &new_oshape);
   if (!ndim) {
-    ElemwiseBinaryRTCBwdUseNone{LOP, ROP}(attrs, ctx, inputs, req, outputs);
+    ElemwiseBinaryRTCBwdUseNone{LOP, ROP}(attrs, ctx, inputs, req, outputs);  // NOLINT
   } else {
     Stream<gpu>* s  = ctx.get_stream<gpu>();
     const TBlob lhs = outputs[0].reshape(new_lshape);
@@ -430,7 +430,7 @@ void BinaryBroadcastRTCBackwardUseIn::operator()(const nnvm::NodeAttrs& attrs,
                                                    &new_rshape,
                                                    &new_oshape) != 0;
   if (!need_bc) {
-    ElemwiseBinaryRTCBwdUseIn{LOP, ROP}(attrs, ctx, inputs, req, outputs);
+    ElemwiseBinaryRTCBwdUseIn{LOP, ROP}(attrs, ctx, inputs, req, outputs);  // NOLINT
   } else {
     BROADCAST_NDIM_SWITCH(new_oshape.ndim(), NDim, {
       using namespace mshadow;

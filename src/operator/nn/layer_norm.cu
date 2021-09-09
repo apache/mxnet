@@ -52,9 +52,18 @@ void LayerNormGradComputeGeneralImpl<gpu>(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   Stream<gpu>* s = ctx.get_stream<gpu>();
   // Compute normalized_data = (data - mean) / std
-  BinaryBroadcastRTCCompute{"sub"}(attrs, ctx, {data, mean}, {kWriteTo}, {normalized_data});
-  BinaryBroadcastRTCCompute{"div"}(
-      attrs, ctx, {normalized_data, std}, {kWriteTo}, {normalized_data});
+  BinaryBroadcastRTCCompute{"sub"}(  // NOLINT
+      attrs,
+      ctx,
+      {data, mean},
+      {kWriteTo},
+      {normalized_data});
+  BinaryBroadcastRTCCompute{"div"}(  // NOLINT
+      attrs,
+      ctx,
+      {normalized_data, std},
+      {kWriteTo},
+      {normalized_data});
   // Calculate grad_beta
   if (req[2] != kNullOp) {
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
@@ -69,7 +78,12 @@ void LayerNormGradComputeGeneralImpl<gpu>(const nnvm::NodeAttrs& attrs,
     });
   }
   // Calculate grad_gamma, it will be sum(ograd * normalized_data, exclude_axis)
-  ElemwiseBinaryRTCCompute{"mul"}(attrs, ctx, {normalized_data, ograd}, {kWriteTo}, {ograd_mult});
+  ElemwiseBinaryRTCCompute{"mul"}(  // NOLINT
+      attrs,
+      ctx,
+      {normalized_data, ograd},
+      {kWriteTo},
+      {ograd_mult});
   if (req[1] != kNullOp) {
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
       broadcast::RTCReduce(ctx,
@@ -87,8 +101,18 @@ void LayerNormGradComputeGeneralImpl<gpu>(const nnvm::NodeAttrs& attrs,
   //   grad_data = ograd_mult - mean(ograd_mult, axis)
   //               + normalized_data * (-mean(normalized_data * ograd_mult, axis))
   if (req[0] != kNullOp) {
-    BinaryBroadcastRTCCompute{"mul"}(attrs, ctx, {ograd, gamma}, {kWriteTo}, {ograd_mult});
-    BinaryBroadcastRTCCompute{"div"}(attrs, ctx, {ograd_mult, std}, {kWriteTo}, {ograd_mult});
+    BinaryBroadcastRTCCompute{"mul"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd, gamma},
+        {kWriteTo},
+        {ograd_mult});
+    BinaryBroadcastRTCCompute{"div"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd_mult, std},
+        {kWriteTo},
+        {ograd_mult});
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       broadcast::RTCReduce(ctx,
                            red_out.reshape(red_dst_shape),
@@ -103,9 +127,18 @@ void LayerNormGradComputeGeneralImpl<gpu>(const nnvm::NodeAttrs& attrs,
       Tensor<gpu, 1, DType> red_out_tensor = red_out.FlatTo1D<gpu, DType>(s);
       red_out_tensor /= scalar<DType>(channel_size);
     });
-    BinaryBroadcastRTCCompute{"sub"}(attrs, ctx, {ograd_mult, red_out}, {req[0]}, {outputs[0]});
-    ElemwiseBinaryRTCCompute{"mul"}(
-        attrs, ctx, {ograd_mult, normalized_data}, {kWriteTo}, {ograd_mult});
+    BinaryBroadcastRTCCompute{"sub"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd_mult, red_out},
+        {req[0]},
+        {outputs[0]});
+    ElemwiseBinaryRTCCompute{"mul"}(  // NOLINT
+        attrs,
+        ctx,
+        {ograd_mult, normalized_data},
+        {kWriteTo},
+        {ograd_mult});
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       broadcast::RTCReduce(ctx,
                            red_out.reshape(red_dst_shape),
@@ -120,8 +153,12 @@ void LayerNormGradComputeGeneralImpl<gpu>(const nnvm::NodeAttrs& attrs,
       Tensor<gpu, 1, DType> red_out_tensor = red_out.FlatTo1D<gpu, DType>(s);
       red_out_tensor /= scalar<DType>(-channel_size);
     });
-    BinaryBroadcastRTCCompute{"mul"}(
-        attrs, ctx, {normalized_data, red_out}, {kAddTo}, {outputs[0]});
+    BinaryBroadcastRTCCompute{"mul"}(  // NOLINT
+        attrs,
+        ctx,
+        {normalized_data, red_out},
+        {kAddTo},
+        {outputs[0]});
   }
 }
 template <typename DType>

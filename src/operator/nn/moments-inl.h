@@ -140,7 +140,7 @@ inline void MomentsForwardImpl(const OpContext& ctx,
     }
     Tensor<xpu, 1, DType> temp_data =
         ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(data.shape_.Size()), s);
-    ;
+
     Kernel<VarBroadcastKernel, xpu>::Launch(s,
                                             data.shape_.Size(),
                                             temp_data.dptr_,

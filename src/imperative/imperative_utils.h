@@ -38,9 +38,9 @@ namespace mxnet {
 
 #if MXNET_USE_ONEDNN == 1
 template <typename T>
-T* pntr(T& obj) {
+T* pntr(T& obj) {  // NOLINT
   return &obj;
-}  // NOLINT
+}
 template <typename T>
 T* pntr(T* obj) {
   return obj;
@@ -81,8 +81,9 @@ static inline void CreateDefaultInputs(std::vector<NDArray>* pArrs) {
 // back to A, we shouldn't invalidate outputs for copying B back to A, because at this time,
 // copying A to B may not happen, and will corrupt A's memory.
 #define INVALIDATE_OUTPUTS_COND(cond, outputs, req) \
-  if (cond)                                         \
-  INVALIDATE_OUTPUTS(outputs, req)
+  if (cond) {                                       \
+    INVALIDATE_OUTPUTS(outputs, req)                \
+  }
 
 // add for mkldnn OP + no mkldnn OP
 #define CREATE_DEFAULT_INPUTS(cond, attrs, func_call)      \

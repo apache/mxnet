@@ -939,7 +939,7 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
       ctx, {wa}, {kWriteTo}, {sum_of_wa}, small1, &workspace);
 #else
-  BinaryBroadcastRTCCompute{"mul"}(attrs, ctx, {data, weights}, {kWriteTo}, {wa});
+  BinaryBroadcastRTCCompute{"mul"}(attrs, ctx, {data, weights}, {kWriteTo}, {wa});  // NOLINT
 
   // Compute sum of weighted data
   ReduceAxesRTCComputeImpl(
@@ -960,7 +960,12 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
     ReduceAxesRTCComputeImpl(
         ctx, {weights}, {kWriteTo}, {scl}, small2, "red::sum{}", &workspace, false, "identity");
     // Compute avg and assign output
-    BinaryBroadcastRTCCompute{"div"}(attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
+    BinaryBroadcastRTCCompute{"div"}(  // NOLINT
+        attrs,
+        ctx,
+        {sum_of_wa, scl},
+        req,
+        {avg.reshape(small1)});
 #endif
   } else {
     MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
@@ -1185,7 +1190,7 @@ void NumpyMomentsForward(const nnvm::NodeAttrs& attrs,
                              "identity",
                              param.ddof);
     if (sqrt && req[0] != kNullOp) {
-      UnaryRTCCompute{"sqrt"}({}, ctx, {moment}, {kWriteInplace}, {moment});
+      UnaryRTCCompute{"sqrt"}({}, ctx, {moment}, {kWriteInplace}, {moment});  // NOLINT
     }
   });
 #endif

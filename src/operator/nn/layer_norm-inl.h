@@ -193,8 +193,12 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
     mean_data_tensor /= scalar<DType>(channel_size);
   });
   // Calculate data = data - mean
-  BinaryBroadcastRTCCompute{"sub"}(
-      attrs, ctx, {inputs[0], outputs[layernorm::kMean]}, {kWriteTo}, {outputs[0]});
+  BinaryBroadcastRTCCompute{"sub"}(  // NOLINT
+      attrs,
+      ctx,
+      {inputs[0], outputs[layernorm::kMean]},
+      {kWriteTo},
+      {outputs[0]});
   // Calculate std
   const TBlob centered_out = outputs[0].reshape(red_src_shape);
   BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
@@ -207,12 +211,26 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
                                                  scalar<DType>(param.eps));
   });
   // Calculate data = data / std
-  BinaryBroadcastRTCCompute{"div"}(
-      attrs, ctx, {outputs[0], outputs[layernorm::kStd]}, {kWriteTo}, {outputs[0]});
+  BinaryBroadcastRTCCompute{"div"}(  // NOLINT
+      attrs,
+      ctx,
+      {outputs[0], outputs[layernorm::kStd]},
+      {kWriteTo},
+      {outputs[0]});
   // Calculate data = data * gamma
-  BinaryBroadcastRTCCompute{"mul"}(attrs, ctx, {outputs[0], gamma}, {kWriteTo}, {outputs[0]});
+  BinaryBroadcastRTCCompute{"mul"}(  // NOLINT
+      attrs,
+      ctx,
+      {outputs[0], gamma},
+      {kWriteTo},
+      {outputs[0]});
   // Calculate data = data + beta
-  BinaryBroadcastRTCCompute{"add"}(attrs, ctx, {outputs[0], beta}, {kWriteTo}, {outputs[0]});
+  BinaryBroadcastRTCCompute{"add"}(  // NOLINT
+      attrs,
+      ctx,
+      {outputs[0], beta},
+      {kWriteTo},
+      {outputs[0]});
 #endif
 }
 

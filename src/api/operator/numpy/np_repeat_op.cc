@@ -34,7 +34,6 @@ MXNET_REGISTER_API("_npi.repeats")
       nnvm::NodeAttrs attrs;
       op::RepeatsParam param;
       param.repeats = Tuple<int>(args[1].operator ObjectRef());
-      ;
       if (args[2].type_code() == kNull) {
         param.axis = dmlc::optional<int>();
       } else {

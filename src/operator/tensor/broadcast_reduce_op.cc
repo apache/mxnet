@@ -59,7 +59,7 @@ void ReduceAxesRTCComputeImpl(const OpContext& ctx,
     p.scalar = static_cast<double>(src_shape.Size() / dst_shape.Size() - ddof);
     NodeAttrs a;
     a.parsed = p;
-    BinaryScalarRTCCompute{"div"}(a, ctx, {out_data}, {kWriteInplace}, {out_data});
+    BinaryScalarRTCCompute{"div"}(a, ctx, {out_data}, {kWriteInplace}, {out_data});  // NOLINT
   }
 }
 
@@ -161,7 +161,7 @@ void ReduceAxesRTCCompute<Param, init>::operator()(const nnvm::NodeAttrs& attrs,
       p.scalar = std::numeric_limits<float>::quiet_NaN();
       NodeAttrs a;
       a.parsed = p;
-      BinaryScalarRTCCompute{"right"}(a, ctx, outputs, {kWriteTo}, outputs);
+      BinaryScalarRTCCompute{"right"}(a, ctx, outputs, {kWriteTo}, outputs);  // NOLINT
     } else {
       if (normalize) {
         LOG(WARNING) << "WARNING: nan is outside the range of"
@@ -173,7 +173,7 @@ void ReduceAxesRTCCompute<Param, init>::operator()(const nnvm::NodeAttrs& attrs,
       p.scalar = init;
       NodeAttrs a;
       a.parsed = p;
-      BinaryScalarRTCCompute{"right"}(a, ctx, outputs, {req[0]}, outputs);
+      BinaryScalarRTCCompute{"right"}(a, ctx, outputs, {req[0]}, outputs);  // NOLINT
     }
     return;
   }

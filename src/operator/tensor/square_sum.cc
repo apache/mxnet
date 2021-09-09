@@ -27,7 +27,7 @@ namespace mxnet {
 namespace op {
 
 template <>
-void CheckSameIdx<cpu>(const OpContext& ctx, const TBlob& ograd_row_idx, const TBlob& in_row_idx){
+void CheckSameIdx<cpu>(const OpContext& ctx, const TBlob& ograd_row_idx, const TBlob& in_row_idx) {
     MSHADOW_IDX_TYPE_SWITCH(ograd_row_idx.type_flag_,
                             IType,
                             {

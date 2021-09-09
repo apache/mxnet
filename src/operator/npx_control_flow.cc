@@ -720,9 +720,10 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
         }
         if (i < (size_t)params.num_args) {
           // a var
-          igrads[i]   = (step == 0)
-                            ? outputs[i]
-                            : NDArray(outputs[i].shape(), outputs[i].ctx(), true, outputs[i].dtype());
+          igrads[i] = (step == 0)
+                          ? outputs[i]
+                          : NDArray(outputs[i].shape(), outputs[i].ctx(), true, outputs[i].dtype());
+
           iter_req[i] = (step == 0 || req[i] == kNullOp) ? req[i] : kWriteTo;
           ++i;
         } else {

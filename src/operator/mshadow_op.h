@@ -1249,22 +1249,22 @@ struct product {
   }
   /*! \brief do reduction into dst */
   template <typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& dst,
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst,  // NOLINT(*)
                                      volatile DType src,
                                      volatile DType& none) {  // NOLINT(*)
     Reduce(dst, src);
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,    // NOLINT(*)
                                     volatile DType& src_val) {  // NOLINT(*)
     Reduce(dst_val, src_val);
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
-                                    volatile DType& dst_residual,
-                                    volatile DType& src_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,         // NOLINT(*)
+                                    volatile DType& dst_residual,    // NOLINT(*)
+                                    volatile DType& src_val,         // NOLINT(*)
                                     volatile DType& src_residual) {  // NOLINT(*)
     Reduce(dst_val, src_val);
   }
@@ -1383,8 +1383,8 @@ struct nansum {
   }
   /*! \brief do reduction into dst */
   template <typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& dst,
-                                     volatile DType src,
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst,         // NOLINT(*)
+                                     volatile DType src,          // NOLINT(*)
                                      volatile DType& residual) {  // NOLINT(*)
     if (IsNan(src))
       return;
@@ -1395,15 +1395,15 @@ struct nansum {
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,    // NOLINT(*)
                                     volatile DType& src_val) {  // NOLINT(*)
     Reduce(dst_val, src_val);
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
-                                    volatile DType& dst_residual,
-                                    volatile DType& src_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,         // NOLINT(*)
+                                    volatile DType& dst_residual,    // NOLINT(*)
+                                    volatile DType& src_val,         // NOLINT(*)
                                     volatile DType& src_residual) {  // NOLINT(*)
     DType t1     = dst_val + src_val;
     DType e      = t1 - src_val;
@@ -1416,8 +1416,9 @@ struct nansum {
   MSHADOW_XINLINE static void Finalize(volatile DType& dst) {}  // NOLINT(*)
   /*! \brief finalize reduction */
   template <typename DType>
-  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {
-  }  // NOLINT(*)
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst,         // NOLINT(*)
+                                       volatile DType& residual) {  // NOLINT(*)
+  }
   /*!
    *\brief set the initial value during reduction
    */
@@ -1453,22 +1454,22 @@ struct nanprod {
   }
   /*! \brief do reduction into dst */
   template <typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& dst,
-                                     volatile DType src,
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst,     // NOLINT(*)
+                                     volatile DType src,      // NOLINT(*)
                                      volatile DType& none) {  // NOLINT(*)
     Reduce(dst, src);
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,    // NOLINT(*)
                                     volatile DType& src_val) {  // NOLINT(*)
     Reduce(dst_val, src_val);
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
-                                    volatile DType& dst_residual,
-                                    volatile DType& src_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,         // NOLINT(*)
+                                    volatile DType& dst_residual,    // NOLINT(*)
+                                    volatile DType& src_val,         // NOLINT(*)
                                     volatile DType& src_residual) {  // NOLINT(*)
     Reduce(dst_val, src_val);
   }
@@ -1499,15 +1500,15 @@ struct nanprod {
 struct nrm2 {
   /*! \brief do reduction into dst */
   template <typename AType, typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile AType& sum_of_squares,
-                                     volatile DType src) {  // NOLINT(*)
+  MSHADOW_XINLINE static void Reduce(volatile AType& sum_of_squares,  // NOLINT(*)
+                                     volatile DType src) {            // NOLINT(*)
     sum_of_squares += src * src;
   }
   /*! \brief do stable reduction into dst */
   template <typename AType, typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile AType& sum_of_squares,
-                                     volatile DType src,
-                                     volatile DType& scale) {  // NOLINT(*)
+  MSHADOW_XINLINE static void Reduce(volatile AType& sum_of_squares,  // NOLINT(*)
+                                     volatile DType src,              // NOLINT(*)
+                                     volatile DType& scale) {         // NOLINT(*)
     if (src != 0) {
       DType abs = mshadow_op::abs::Map(src);
       if (scale < abs) {
@@ -1520,15 +1521,15 @@ struct nrm2 {
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,    // NOLINT(*)
                                     volatile DType& src_val) {  // NOLINT(*)
     dst_val += src_val;
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_ssq,
-                                    volatile DType& dst_scale,
-                                    volatile DType& src_ssq,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_ssq,      // NOLINT(*)
+                                    volatile DType& dst_scale,    // NOLINT(*)
+                                    volatile DType& src_ssq,      // NOLINT(*)
                                     volatile DType& src_scale) {  // NOLINT(*)
     if (dst_scale != 0 && dst_scale >= src_scale) {
       dst_ssq = dst_ssq + src_ssq * (src_scale / dst_scale) * (src_scale / dst_scale);
@@ -1544,8 +1545,8 @@ struct nrm2 {
   }
   /*! \brief finalize reduction result */
   template <typename DType>
-  MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares,
-                                       volatile DType& scale) {  // NOLINT(*)
+  MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares,  // NOLINT(*)
+                                       volatile DType& scale) {         // NOLINT(*)
 #pragma GCC diagnostic push
 #if __GNUC__ >= 7
 #pragma GCC diagnostic ignored "-Wint-in-bool-context"
@@ -1587,8 +1588,8 @@ struct sum {
   }
   /*! \brief do stable reduction into dst */
   template <typename AType, typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile AType& dst,
-                                     volatile DType src,
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,         // NOLINT(*)
+                                     volatile DType src,          // NOLINT(*)
                                      volatile DType& residual) {  // NOLINT(*)
     DType y  = src - residual;
     DType t  = dst + y;
@@ -1597,15 +1598,15 @@ struct sum {
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,    // NOLINT(*)
                                     volatile DType& src_val) {  // NOLINT(*)
     Reduce(dst_val, src_val);
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
-                                    volatile DType& dst_residual,
-                                    volatile DType& src_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,         // NOLINT(*)
+                                    volatile DType& dst_residual,    // NOLINT(*)
+                                    volatile DType& src_val,         // NOLINT(*)
                                     volatile DType& src_residual) {  // NOLINT(*)
     DType t1     = dst_val + src_val;
     DType e      = t1 - dst_val;
@@ -1618,8 +1619,9 @@ struct sum {
   MSHADOW_XINLINE static void Finalize(volatile DType& dst) {}  // NOLINT(*)
   /*! \brief finalize reduction */
   template <typename DType>
-  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {
-  }  // NOLINT(*)
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst,         // NOLINT(*)
+                                       volatile DType& residual) {  // NOLINT(*)
+  }
   /*!
    *\brief calculate gradient of redres with respect to redsrc,
    * redres: reduced result, redsrc: one of reduction element
@@ -1657,8 +1659,8 @@ struct argmax {
   }
   /*! \brief do stable reduction into dst */
   template <typename AType, typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile AType& dst,
-                                     volatile DType src,
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,         // NOLINT(*)
+                                     volatile DType src,          // NOLINT(*)
                                      volatile DType& residual) {  // NOLINT(*)
     if (dst.num < src.num || (dst.num == src.num && dst.idx > src.idx)) {
       dst.num = src.num;
@@ -1667,7 +1669,7 @@ struct argmax {
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,    // NOLINT(*)
                                     volatile DType& src_val) {  // NOLINT(*)
     if (dst_val.num < src_val.num || (dst_val.num == src_val.num && dst_val.idx > src_val.idx)) {
       dst_val.num = src_val.num;
@@ -1676,9 +1678,9 @@ struct argmax {
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
-                                    volatile DType& dst_residual,
-                                    volatile DType& src_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,         // NOLINT(*)
+                                    volatile DType& dst_residual,    // NOLINT(*)
+                                    volatile DType& src_val,         // NOLINT(*)
                                     volatile DType& src_residual) {  // NOLINT(*)
     if (dst_val.num < src_val.num || (dst_val.num == src_val.num && dst_val.idx > src_val.idx)) {
       dst_val.num = src_val.num;
@@ -1690,8 +1692,9 @@ struct argmax {
   MSHADOW_XINLINE static void Finalize(volatile DType& dst) {}  // NOLINT(*)
   /*! \brief finalize reduction */
   template <typename DType>
-  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {
-  }  // NOLINT(*)
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst,         // NOLINT(*)
+                                       volatile DType& residual) {  // NOLINT(*)
+  }
   /*!
    *\brief calculate gradient of redres with respect to redsrc,
    * redres: reduced result, redsrc: one of reduction element
@@ -1728,8 +1731,8 @@ struct argmin {
   }
   /*! \brief do stable reduction into dst */
   template <typename AType, typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile AType& dst,
-                                     volatile DType src,
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,         // NOLINT(*)
+                                     volatile DType src,          // NOLINT(*)
                                      volatile DType& residual) {  // NOLINT(*)
     if (dst.num > src.num) {
       dst.num = src.num;
@@ -1738,7 +1741,7 @@ struct argmin {
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,    // NOLINT(*)
                                     volatile DType& src_val) {  // NOLINT(*)
     if (dst_val.num > src_val.num) {
       dst_val.num = src_val.num;
@@ -1747,9 +1750,9 @@ struct argmin {
   }
   /*! \brief combine the results of two reducers */
   template <typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,
-                                    volatile DType& dst_residual,
-                                    volatile DType& src_val,
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val,         // NOLINT(*)
+                                    volatile DType& dst_residual,    // NOLINT(*)
+                                    volatile DType& src_val,         // NOLINT(*)
                                     volatile DType& src_residual) {  // NOLINT(*)
     if (dst_val.num > src_val.num) {
       dst_val.num = src_val.num;
@@ -1761,8 +1764,9 @@ struct argmin {
   MSHADOW_XINLINE static void Finalize(volatile DType& dst) {}  // NOLINT(*)
   /*! \brief finalize reduction */
   template <typename DType>
-  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {
-  }  // NOLINT(*)
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst,         // NOLINT(*)
+                                       volatile DType& residual) {  // NOLINT(*)
+  }
   /*!
    *\brief calculate gradient of redres with respect to redsrc,
    * redres: reduced result, redsrc: one of reduction element
