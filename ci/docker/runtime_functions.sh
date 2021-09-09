@@ -1219,7 +1219,7 @@ build_docs() {
 
     # copy the full site for this version to versions folder
     mkdir -p html/versions/master
-    for f in 404.html api assets blog community ecosystem features feed.xml get_started index.html .asf.yaml; do
+    for f in 404.html api assets blog community ecosystem features feed.xml get_started index.html; do
         cp -r html/$f html/versions/master/
     done
 
