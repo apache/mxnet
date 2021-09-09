@@ -435,17 +435,17 @@ def test_conv_nhwc(layer, shape):
 @pytest.mark.parametrize('layer,shape', [
     (nn.Conv1DTranspose(16, 3, in_channels=4), (1, 4, 10)),
     (nn.Conv1DTranspose(16, 3, groups=2, in_channels=4), (1, 4, 10)),
-    (nn.Conv1DTranspose(16, 3, strides=3, groups=2, in_channels=4), (1, 4, 10)),
+    (nn.Conv1DTranspose(16, 3, strides=3, groups=2, in_channels=4, output_padding=2), (1, 4, 10)),
     (nn.Conv2DTranspose(16, (3, 4), in_channels=4), (1, 4, 20, 20)),
     (nn.Conv2DTranspose(16, (5, 4), in_channels=4), (1, 4, 20, 20)),
     (nn.Conv2DTranspose(16, (3, 4), groups=2, in_channels=4), (1, 4, 20, 20)),
-    (nn.Conv2DTranspose(16, (3, 4), strides=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2DTranspose(16, (3, 4), strides=4, in_channels=4, output_padding=3), (1, 4, 20, 20)),
     (nn.Conv2DTranspose(16, (3, 4), dilation=4, in_channels=4), (1, 4, 20, 20)),
     (nn.Conv2DTranspose(16, (3, 4), padding=4, in_channels=4), (1, 4, 20, 20)),
     (nn.Conv3DTranspose(16, (1, 8, 4), in_channels=4, activation='relu'), (1, 4, 10, 10, 10)),
     (nn.Conv3DTranspose(16, (5, 4, 3), in_channels=4), (1, 4, 10, 10, 10)),
     (nn.Conv3DTranspose(16, (3, 3, 3), groups=2, in_channels=4), (1, 4, 10, 10, 10)),
-    (nn.Conv3DTranspose(16, 4, strides=4, in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3DTranspose(16, 4, strides=4, in_channels=4, output_padding=3), (1, 4, 10, 10, 10)),
     (nn.Conv3DTranspose(16, (3, 3, 3), padding=4, in_channels=4), (1, 4, 10, 10, 10)),
 ])
 def test_deconv(layer, shape):
