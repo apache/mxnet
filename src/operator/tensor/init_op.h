@@ -291,7 +291,10 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
   mxnet::TShape shape;
   std::string ctx;
   int dtype;
-  double value;
+  double double_value;
+  int64_t int_value;
+  uint64_t uint_value;
+  int value_type;
   DMLC_DECLARE_PARAMETER(InitOpWithScalarParam) {
     DMLC_DECLARE_FIELD(shape)
       .set_default(mxnet::TShape())
@@ -303,20 +306,33 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
     DMLC_DECLARE_FIELD(dtype)
       .set_default(-1)
       .add_enum("None", -1)
-      MXNET_ADD_ALL_TYPES_WITH_BOOL
+      MXNET_ADD_ALL_TYPES_EXT_WITH_BOOL
       .describe("Target data type.");
-    DMLC_DECLARE_FIELD(value)
-      .describe("Value with which to fill newly created tensor");
+    DMLC_DECLARE_FIELD(double_value)
+      .describe("Float value with which to fill newly created tensor");
+    DMLC_DECLARE_FIELD(int_value)
+      .describe("Integer value with which to fill newly created tensor");
+    DMLC_DECLARE_FIELD(uint_value)
+      .describe("Unsigned integer value with which to fill newly created tensor");
+    DMLC_DECLARE_FIELD(value_type)
+      .describe("Choose the value type");
   }
 
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
-    std::ostringstream shape_s, dtype_s, value_s;
+    std::ostringstream shape_s, dtype_s, double_value_s, int_value_s, value_type_s,
+    uint_value_s;
     shape_s << shape;
     dtype_s << dtype;
-    value_s << value;
+    double_value_s << double_value;
+    int_value_s << int_value;
+    uint_value_s << uint_value;
+    value_type_s << value_type;
     (*dict)["shape"] = shape_s.str();
     (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
-    (*dict)["value"] = value_s.str();
+    (*dict)["int_value"] = int_value_s.str();
+    (*dict)["uint_value"] = uint_value_s.str();
+    (*dict)["double_value"] = double_value_s.str();
+    (*dict)["value_type"] = value_type_s.str();
     // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
     // Setting ctx here results in an error.
   }
@@ -547,7 +563,13 @@ void InitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 0);
   CHECK_EQ(outputs.size(), 1U);
   const auto& param = nnvm::get<InitOpWithScalarParam>(attrs.parsed);
-  Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
+  if (param.value_type == 0) {
+    Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.int_value);
+  } else if (param.value_type == 1) {
+    Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.uint_value);
+  } else {
+    Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.double_value);
+  }
 }
 
 struct PopulateFullIdxRspKernel : public mxnet_op::tunable {

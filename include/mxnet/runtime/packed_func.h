@@ -421,8 +421,8 @@ class MXNetPODValue_ {
     return value_.v_int64;
   }
   operator uint64_t() const {
-    MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);
-    return value_.v_int64;
+    MXNET_CHECK_TYPE_CODE(type_code_, kDLUInt);
+    return value_.v_uint64;
   }
   operator int() const {
     MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);

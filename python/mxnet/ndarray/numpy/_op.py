@@ -20,7 +20,7 @@
 """Namespace for numpy operators used in Gluon dispatched by F=ndarray."""
 
 import numpy as _np
-from ...base import numeric_types, integer_types
+from ...base import numeric_types, integer_types, _MAX_VALUE_64_BIT_SIGNED_
 from ...util import _sanity_check_params, set_module
 from ...util import wrap_np_unary_func, wrap_np_binary_func
 from ...util import is_np_default_dtype
@@ -383,6 +383,15 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
         dtype = _np.bool if dtype is None else dtype
+    elif isinstance(fill_value, integer_types):
+        # fill_value is uint64
+        if fill_value > _MAX_VALUE_64_BIT_SIGNED_:
+            dtype = _np.uint64 if dtype is None else dtype
+        else:
+            dtype = _np.int64 if dtype is None else dtype
+    elif isinstance(fill_value, numeric_types):
+        if dtype is None or dtype is float:
+            dtype = _np.float64
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
     return _api_internal.full(shape, dtype, fill_value, ctx, out)

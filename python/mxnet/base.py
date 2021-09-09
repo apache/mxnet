@@ -49,6 +49,9 @@ numeric_types = (float, int, long, _np.generic)
 string_types = basestring,
 error_types = {}
 
+_MAX_VALUE_64_BIT_SIGNED_ = 9_223_372_036_854_775_807
+_MAX_VALUE_64_BIT_UNSIGNED_ = 18_446_744_073_709_551_615
+
 # this function is needed for python3
 # to convert ctypes.char_p .value back to python str
 py_str = lambda x: x.decode('utf-8')
