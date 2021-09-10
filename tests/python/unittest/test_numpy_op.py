@@ -1218,8 +1218,8 @@ def test_np_linspace_gluon(config, dtype, endpoint, hybridize):
             if self._retstep:
                 raise ValueError("linspace didn't support retstep = True inside HybridBlock")
             else:
-                return x + np.linspace(self._start, self._stop, self._num, \
-                self._endpoint, self._retstep, self._dtype)
+                return x + np.linspace(self._start, self._stop, num=self._num, \
+                endpoint=self._endpoint, retstep=self._retstep, dtype=self._dtype)
 
     x = np.zeros(shape=(), dtype=dtype)
     if isinstance(config, tuple):

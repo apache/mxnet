@@ -45,7 +45,8 @@ from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
 from ..runtime import Features
 from ..context import Context
 from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
-                   is_np_default_dtype, wrap_data_api_creation_func
+                   is_np_default_dtype, wrap_data_api_creation_func,\
+                   numpy_eye_standardized
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
@@ -2792,8 +2793,10 @@ def full(shape, fill_value, *, dtype=None, order='C', device=None, out=None):
     fill_value : scalar or ndarray
         Fill value.
     dtype : data-type, optional
-        The desired data-type for the array. The default, `None`, means
-        `np.array(fill_value).dtype`.
+        If dtype is None, the output array data type must be inferred from fill_value.
+        If it’s an int, the output array dtype must be the default integer dtype;
+        If it’s a float, then the output array dtype must be the default floating-point data type;
+        If it’s a bool then the output array must have boolean dtype. Default: None.
     order : {'C'}, optional
         Whether to store multidimensional data in C- or Fortran-contiguous
         (row- or column-wise) order in memory. Currently only supports C order.
@@ -5547,6 +5550,7 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
+@numpy_eye_standardized
 def eye(N, M=None, /, *, k=0, dtype=None, device=None, **kwargs):
     """
     Return a 2-D array with ones on the diagonal and zeros elsewhere.

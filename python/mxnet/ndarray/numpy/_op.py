@@ -323,10 +323,10 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     fill_value : scalar or ndarray
         Fill value.
     dtype : data-type, optional
-        The desired data-type for the array. The default, `None`, means
-        `np.array(fill_value).dtype`.
-        - When npx.is_np_default_dtype() returns False, default dtype is float32;
-        - When npx.is_np_default_dtype() returns True, default dtype is float64.
+        If dtype is None, the output array data type must be inferred from fill_value.
+        If it’s an int, the output array dtype must be the default integer dtype;
+        If it’s a float, then the output array dtype must be the default floating-point data type;
+        If it’s a bool then the output array must have boolean dtype. Default: None.
     order : {'C'}, optional
         Whether to store multidimensional data in C- or Fortran-contiguous
         (row- or column-wise) order in memory. Currently only supports C order.

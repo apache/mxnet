@@ -265,7 +265,11 @@ struct numpy_linspace_fwd {
       // Special cases : start = 9007199254740993
       KERNEL_ASSIGN(out[i], req, static_cast<DType>(start));
     } else {
-      KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
+      if (std::is_integral<DType>::value) {
+        KERNEL_ASSIGN(out[i], req, static_cast<DType>(std::floor(start + step * i)));
+      } else {
+        KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
+      }
     }
     if (endpoint && i != 0 && i == size - 1) {
       KERNEL_ASSIGN(out[i], req, static_cast<DType>(stop));
@@ -287,7 +291,7 @@ void NumpyLinspaceCompute(const nnvm::NodeAttrs& attrs,
       if (param.value_type == 0) {
         int64_t start = param.start_int;
         int64_t stop = param.stop_int;
-        double step = step_num > 0 ? (stop - start) / step_num : 0.0f;
+        double step = step_num > 0 ? ((double)stop - (double)start) / step_num : 0.0f;
         Kernel<numpy_linspace_fwd, xpu>::Launch(s,
                                                 outputs[0].Size(),
                                                 outputs[0].Size(),
@@ -300,7 +304,7 @@ void NumpyLinspaceCompute(const nnvm::NodeAttrs& attrs,
       } else if (param.value_type == 1) {
         uint64_t start = param.start_uint;
         uint64_t stop = param.stop_uint;
-        double step = step_num > 0 ? (stop - start) / step_num : 0.0f;
+        double step = step_num > 0 ? ((double)stop - (double)start) / step_num : 0.0f;
         Kernel<numpy_linspace_fwd, xpu>::Launch(s,
                                                 outputs[0].Size(),
                                                 outputs[0].Size(),

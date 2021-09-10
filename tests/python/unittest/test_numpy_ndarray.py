@@ -69,12 +69,12 @@ def test_np_empty():
             for order in orders:
                 for ctx in ctxes:
                     if order == 'C':
-                        ret = np.empty(shape, dtype, order, ctx)
+                        ret = np.empty(shape, dtype=dtype, order=order, device=ctx)
                         assert ret.dtype == expected_dtype
                         assert ret.shape == shape if isinstance(shape, tuple) else (shape,)
                         assert ret.ctx == npx.current_context()
                     else:
-                        assert_exception(np.empty, NotImplementedError, shape, dtype, order, ctx)
+                        assert_exception(np.empty, NotImplementedError, shape, dtype=dtype, order=order, device=ctx)
 
 
 @use_np
