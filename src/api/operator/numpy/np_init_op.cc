@@ -306,7 +306,7 @@ MXNET_REGISTER_API("_npi.linspace")
   }
   attrs.parsed = param;
   attrs.op = op;
-  SetAttrDict<op::LinspaceParam>(&attrs);
+  SetAttrDict<op::NumpyLinspaceParam>(&attrs);
   if (args[4].type_code() != kNull) {
     attrs.dict["ctx"] = args[4].operator std::string();
   }

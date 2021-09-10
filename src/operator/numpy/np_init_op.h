@@ -174,6 +174,88 @@ void NumpyInitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
   }
 }
 
+struct NumpyLinspaceParam : public dmlc::Parameter<NumpyLinspaceParam> {
+  double start_double;
+  double stop_double;
+  int64_t start_int;
+  int64_t stop_int;
+  uint64_t start_uint;
+  uint64_t stop_uint;
+  index_t num;
+  bool endpoint;
+  std::string ctx;
+  int dtype;
+  int value_type;
+  DMLC_DECLARE_PARAMETER(NumpyLinspaceParam) {
+    DMLC_DECLARE_FIELD(start_double)
+    .describe("The double type starting value of the sequence.");
+    DMLC_DECLARE_FIELD(stop_double)
+    .describe("The double type ending value of the sequence");
+    DMLC_DECLARE_FIELD(start_int)
+    .describe("The int type starting value of the sequence.");
+    DMLC_DECLARE_FIELD(stop_int)
+    .describe("The int type ending value of the sequence");
+    DMLC_DECLARE_FIELD(start_uint)
+    .describe("The unsigned int type starting value of the sequence.");
+    DMLC_DECLARE_FIELD(stop_uint)
+    .describe("The unsigned int type ending value of the sequence");
+    DMLC_DECLARE_FIELD(num)
+    .describe("Number of samples to generate. Must be non-negative.");
+    DMLC_DECLARE_FIELD(endpoint)
+    .set_default(true)
+    .describe("If True, stop is the last sample. Otherwise, it is not included.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .add_enum("None", -1)
+    MXNET_ADD_ALL_TYPES_EXT_WITH_BOOL
+    .describe("Target data type.");
+    DMLC_DECLARE_FIELD(value_type)
+    .set_default(0)
+    .describe("Data type for start and stop value");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream start_double_s, stop_double_s, num_s, endpoint_s, dtype_s,
+    start_int_s, stop_int_s, start_uint_s, stop_uint_s, value_type_s;
+    start_double_s << start_double;
+    stop_double_s << stop_double;
+    start_int_s << start_int;
+    stop_int_s << stop_int;
+    start_uint_s << start_uint;
+    stop_uint_s << stop_uint;
+    value_type_s << value_type;
+    num_s << num;
+    endpoint_s << endpoint;
+    dtype_s << dtype;
+    (*dict)["start_double"] = start_double_s.str();
+    (*dict)["stop_double"] = stop_double_s.str();
+    (*dict)["start_int"] = start_int_s.str();
+    (*dict)["stop_int"] = stop_int_s.str();
+    (*dict)["start_uint"] = start_uint_s.str();
+    (*dict)["stop_uint"] = stop_uint_s.str();
+    (*dict)["value_type"] = value_type_s.str();
+    (*dict)["num"] = num_s.str();
+    (*dict)["endpoint"] = endpoint_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+  }
+};
+
+inline bool NumpyLinspaceShape(const nnvm::NodeAttrs& attrs,
+                               mxnet::ShapeVector *in_attrs,
+                               mxnet::ShapeVector *out_attrs) {
+  const NumpyLinspaceParam& param = nnvm::get<NumpyLinspaceParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_GE(param.num, 0)
+    << "Number of sequence should be non-negative, received " << param.num;
+  mxnet::TShape shape = mxnet::TShape({static_cast<nnvm::dim_t>(param.num)});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
+  return true;
+}
+
 struct numpy_linspace_fwd {
   template<typename DType, typename ValueType>
   MSHADOW_XINLINE static void Map(index_t i, index_t size, ValueType start,
