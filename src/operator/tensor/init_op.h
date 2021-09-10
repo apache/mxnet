@@ -744,13 +744,9 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
 
 struct linspace_fwd {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, index_t size, double start,
-                                  double stop, bool endpoint,
-                                  double step, int req, DType* out) {
+  MSHADOW_XINLINE static void Map(index_t i, double start, double stop, double step,
+                                  int req, DType* out) {
     KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
-    if (endpoint && i != 0 && i == size - 1) {
-      KERNEL_ASSIGN(out[i], req, static_cast<DType>(stop));
-    }
   }
 };
 
