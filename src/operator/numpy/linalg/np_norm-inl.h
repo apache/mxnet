@@ -217,7 +217,7 @@ struct NumpyNormParam : public dmlc::Parameter<NumpyNormParam> {
   int flag;
   DMLC_DECLARE_PARAMETER(NumpyNormParam) {
     DMLC_DECLARE_FIELD(ord).set_default(2)
-    .describe("Order of the norm. inf means numpy’s inf object.");
+    .describe("Order of the norm. inf means numpy's inf object.");
     DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<mxnet::TShape>())
     .describe(R"code(If axis is an integer, it specifies the axis of x along
      which to compute the vector norms. If axis is a 2-tuple,

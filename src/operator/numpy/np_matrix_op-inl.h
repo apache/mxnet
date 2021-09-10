@@ -665,7 +665,7 @@ struct NumpyRollaxisParam : public dmlc::Parameter<NumpyRollaxisParam> {
     DMLC_DECLARE_FIELD(start)
     .set_default(0)
     .describe("The axis is rolled until it lies before this position. "
-              "The default, 0, results in a “complete” roll.");
+              "The default, 0, results in a 'complete' roll.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream axis_s, start_s;
