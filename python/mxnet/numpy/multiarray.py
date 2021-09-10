@@ -80,7 +80,8 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
-           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal', 'asarray', 'from_dlpack']
+           'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal',
+           'asarray', 'from_dlpack']
 
 __all__ += fallback.__all__
 
@@ -826,14 +827,14 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         elif indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
             if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE:
                 return empty((0,) + self._get_np_basic_indexing(key).shape,
-                             dtype=self.dtype, ctx=self.ctx)
+                             dtype=self.dtype, device=self.ctx)
             if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE:
                 key = (_np.newaxis,) + key
             return self._get_np_basic_indexing(key)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
             if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE:
                 return empty((0,) + self._get_np_adanced_indexing(key).shape,
-                             dtype=self.dtype, ctx=self.ctx)
+                             dtype=self.dtype, device=self.ctx)
             if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE:
                 key = (_np.newaxis,) + key
             return self._get_np_advanced_indexing(key)
@@ -967,7 +968,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         Note: mxnet.numpy.ndarray not support NDArray as assigned value.
         """
         if isinstance(value, numeric_types):
-            value_nd = full(bcast_shape, value, ctx=self.ctx, dtype=self.dtype)
+            value_nd = full(bcast_shape, value, device=self.ctx, dtype=self.dtype)
         elif isinstance(value, self.__class__):
             value_nd = value.as_in_ctx(self.ctx)
             if value_nd.dtype != self.dtype:
@@ -2613,7 +2614,7 @@ def array(object, dtype=None, ctx=None):
             # printing out the error raised by official NumPy's array function
             # for transparency on users' side
             raise TypeError('{}'.format(str(e)))
-    ret = empty(object.shape, dtype=dtype, ctx=ctx)
+    ret = empty(object.shape, dtype=dtype, device=ctx)
     if len(object.shape) == 0:
         ret[()] = object
     else:
@@ -12310,6 +12311,7 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
 # pylint: enable=redefined-outer-name, too-many-arguments
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
 def asarray(obj, /, *, dtype=None, device=None, copy=None):
@@ -12318,7 +12320,7 @@ def asarray(obj, /, *, dtype=None, device=None, copy=None):
 
     Parameters
     ----------
-    obj : Union[ <array>, bool, int, float, NestedSequence[ bool | int | float ], SupportsDLPack, SupportsBufferProtocol ]
+    obj : <array>, bool, int, float, NestedSequence[ bool | int | float ]
         Object to be converted to an array. Can be a Python scalar,
         a (possibly nested) sequence of Python scalars,
         or an object supporting DLPack or the Python buffer protocol.
@@ -12373,6 +12375,8 @@ def asarray(obj, /, *, dtype=None, device=None, copy=None):
     array = _as_mx_np_array(obj, ctx=device, zero_copy=copy)
     return array.astype(dtype)
 
+
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 @wrap_data_api_creation_func
 def from_dlpack(x, /):

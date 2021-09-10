@@ -386,7 +386,7 @@ class Parameter(object):
             if self._grad_stype != 'default':
                 raise ValueError("mxnet.numpy.zeros does not support stype = {}"
                                  .format(self._grad_stype))
-            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, ctx=i.ctx)
+            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, device=i.ctx)
                           for i in self._data]
         else:
             self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.ctx,

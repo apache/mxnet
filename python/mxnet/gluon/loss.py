@@ -956,6 +956,7 @@ class SDMLLoss(Loss):
         return squared_diffs.sum(axis=2)
 
 
+    # pylint: disable=too-many-function-args
     def _compute_labels(self, batch_size):
         """
         The function creates the label matrix for the loss.

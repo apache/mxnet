@@ -65,7 +65,7 @@ def _make_mxnet_args(args, temp_args):
         elif isinstance(arg, Integral):
             if arg > _MAX_VALUE_64_BIT_UNSIGNED_:
                 raise OverflowError("Integer out of bounds")
-            elif arg > _MAX_VALUE_64_BIT_SIGNED_:
+            if arg > _MAX_VALUE_64_BIT_SIGNED_:
                 values[i].v_uint64 = arg
                 type_codes[i] = TypeCode.UINT
             else:

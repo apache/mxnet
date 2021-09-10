@@ -84,7 +84,7 @@ class TransformedDistribution(Distribution):
         """
         Compute the cumulative distribution function(CDF) p(Y < `value`)
         """
-        sign = np.ones_like(value)
+        sign = np.ones_like(value)  # pylint: disable=too-many-function-args
         for t in reversed(self._transforms):
             value = t.inv(value)
             sign = sign * t.sign
@@ -92,7 +92,7 @@ class TransformedDistribution(Distribution):
         return sign * (value - 0.5) + 0.5
 
     def icdf(self, value):
-        sign = np.ones_like(value)
+        sign = np.ones_like(value)  # pylint: disable=too-many-function-args
         for t in self._transforms:
             sign = sign * t.sign
         value = sign * (value - 0.5) + 0.5  # value or (1 - value)

@@ -158,7 +158,7 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
                 UserWarning('nan or inf is detected. '
                             'Clipping results will be undefined.'), stacklevel=2)
     scale = max_norm / (total_norm + 1e-8)
-    scale = _mx_np.min(_mx_np.concatenate([scale, _mx_np.ones(1, ctx=ctx)], axis=0))
+    scale = _mx_np.min(_mx_np.concatenate([scale, _mx_np.ones(1, device=ctx)], axis=0))
     for arr in arrays:
         arr *= scale.item()
     if check_isfinite:
