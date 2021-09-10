@@ -62,7 +62,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     DMLC_DECLARE_FIELD(dtype)
     .set_default(-1)
     .add_enum("None", -1)
-    MXNET_ADD_ALL_TYPES_WITH_BOOL
+    MXNET_ADD_ALL_TYPES_EXT_WITH_BOOL
     .describe("Target data type.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
@@ -106,7 +106,7 @@ struct FullLikeOpParam : public dmlc::Parameter<FullLikeOpParam> {
                 "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
       .set_default(dmlc::optional<int>())
-      MXNET_ADD_ALL_TYPES_WITH_BOOL
+      MXNET_ADD_ALL_TYPES_EXT_WITH_BOOL
       .describe("Target data type.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
@@ -303,7 +303,7 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
     DMLC_DECLARE_FIELD(dtype)
       .set_default(-1)
       .add_enum("None", -1)
-      MXNET_ADD_ALL_TYPES_WITH_BOOL
+      MXNET_ADD_ALL_TYPES_EXT_WITH_BOOL
       .describe("Target data type.");
     DMLC_DECLARE_FIELD(value)
       .describe("Value with which to fill newly created tensor");
@@ -357,7 +357,7 @@ struct LinspaceParam : public dmlc::Parameter<LinspaceParam> {
     DMLC_DECLARE_FIELD(dtype)
     .set_default(-1)
     .add_enum("None", -1)
-    MXNET_ADD_ALL_TYPES
+    MXNET_ADD_ALL_TYPES_EXT_WITH_BOOL
     .describe("Target data type.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
@@ -481,12 +481,12 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
     if (val == 0) {
       if (req != kAddTo) {
         if (b.dev_mask() == cpu::kDevMask && size < 50000) {
-          MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(b.type_flag_, DType, {
             memset(b.dptr_, 0, size * sizeof(DType));
           });
         } else {
           // Optimize common use-case of filling with ones
-          MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
+          MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(b.type_flag_, DType, {
             MXNET_ASSIGN_REQ_SWITCH(req, Req, {
               mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<0>, Req>, xpu>::Launch(
                 s, b.Size(), b.dptr<DType>());
@@ -496,7 +496,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
       }
     } else if (is_integer && val == 1) {
       // Optimize common use-case of filling with ones
-      MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(b.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_one, Req>, xpu>::Launch(
             s, b.Size(), b.dptr<DType>());
@@ -504,7 +504,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
       });
     } else {
       // Generic fill kernel from variable
-      MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(b.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
             s, b.Size(), b.dptr<DType>(), static_cast<DType>(val));
@@ -648,7 +648,7 @@ inline void EyeFillImpl(const TBlob& out_data,
   const nnvm::dim_t nnz = k > 0 ? std::min(cnnz, N) :
                           std::min(rnnz, num_cols);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_EXT(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Fill(s, out_data, req[0], static_cast<DType>(0));
         if (nnz > 0) {
@@ -692,7 +692,7 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_EXT(outputs[0].type_flag_, DType, {
       // Force unsigned params to take two's complement form on ARM to ensure consistency with x86
       // results.  Casting negative floats to unsigned types is undefined in the CPP standard.
       auto step = std::is_signed<DType>() ? param.step : static_cast<index_t>(param.step);
@@ -759,7 +759,7 @@ void LinspaceCompute(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const LinspaceParam& param = nnvm::get<LinspaceParam>(attrs.parsed);
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(outputs[0].type_flag_, DType, {
       index_t step_num = param.endpoint ? param.num - 1 : param.num;
       double step = step_num > 0 ? (param.stop - param.start) / step_num : 0.0f;
       Kernel<linspace_fwd, xpu>::Launch(s,

@@ -650,6 +650,37 @@ struct AccType<mshadow::half::half_t> {
   .add_enum("bool", mshadow::kBool)
 
 
+#define MXNET_ADD_ALL_TYPES_EXT \
+  .add_enum("float32", mshadow::kFloat32) \
+  .add_enum("float64", mshadow::kFloat64) \
+  .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("bfloat16", mshadow::kBfloat16) \
+  .add_enum("uint8", mshadow::kUint8) \
+  .add_enum("int8", mshadow::kInt8) \
+  .add_enum("int32", mshadow::kInt32) \
+  .add_enum("int64", mshadow::kInt64) \
+  .add_enum("int16", mshadow::kInt16) \
+  .add_enum("uint16", mshadow::kUint16) \
+  .add_enum("uint32", mshadow::kUint32) \
+  .add_enum("uint64", mshadow::kUint64)
+
+
+#define MXNET_ADD_ALL_TYPES_EXT_WITH_BOOL \
+  .add_enum("float32", mshadow::kFloat32) \
+  .add_enum("float64", mshadow::kFloat64) \
+  .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("bfloat16", mshadow::kBfloat16) \
+  .add_enum("uint8", mshadow::kUint8) \
+  .add_enum("int8", mshadow::kInt8) \
+  .add_enum("int32", mshadow::kInt32) \
+  .add_enum("int64", mshadow::kInt64) \
+  .add_enum("bool", mshadow::kBool) \
+  .add_enum("int16", mshadow::kInt16) \
+  .add_enum("uint16", mshadow::kUint16) \
+  .add_enum("uint32", mshadow::kUint32) \
+  .add_enum("uint64", mshadow::kUint64)
+
+
 /* \brief Compute flattened index given coordinates and shape. */
 template<int ndim>
 MSHADOW_XINLINE index_t ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
@@ -768,11 +799,11 @@ template <typename xpu>
 MSHADOW_CINLINE void copy(mshadow::Stream<xpu> *s, const TBlob& to, const TBlob& from) {
   CHECK_EQ(from.Size(), to.Size());
   CHECK_EQ(from.dev_mask(), to.dev_mask());
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(to.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(to.type_flag_, DType, {
     if (to.type_flag_ == from.type_flag_) {
       mshadow::Copy(to.FlatTo1D<xpu, DType>(s), from.FlatTo1D<xpu, DType>(s), s);
     } else {
-      MSHADOW_TYPE_SWITCH_WITH_BOOL(from.type_flag_, SrcDType, {
+      MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(from.type_flag_, SrcDType, {
         to.FlatTo1D<xpu, DType>(s) = mshadow::expr::tcast<DType>(from.FlatTo1D<xpu, SrcDType>(s));
       })
     }

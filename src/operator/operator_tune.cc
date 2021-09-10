@@ -61,6 +61,10 @@ IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(uint8_t);
 IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(int32_t);
 IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(int64_t);
 IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(bool);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(int16_t);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(uint16_t);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(uint32_t);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(uint64_t);
 
 /*!
  * \brief Init variable used to facilitate registering a tunable operator during
@@ -85,7 +89,11 @@ struct static_init_var {
   __macro$(__VA_ARGS__, uint8_t); \
   __macro$(__VA_ARGS__, int8_t); \
   __macro$(__VA_ARGS__, int32_t); \
-  __macro$(__VA_ARGS__, int64_t);
+  __macro$(__VA_ARGS__, int64_t); \
+  __macro$(__VA_ARGS__, int16_t); \
+  __macro$(__VA_ARGS__, uint16_t); \
+  __macro$(__VA_ARGS__, uint32_t); \
+  __macro$(__VA_ARGS__, uint64_t)
 
 #define MSHADOW_MACRO_FOREACH_TYPE_WITH_BOOL(__macro$, ...) \
   __macro$(__VA_ARGS__, float); \
@@ -96,7 +104,11 @@ struct static_init_var {
   __macro$(__VA_ARGS__, int8_t); \
   __macro$(__VA_ARGS__, int32_t); \
   __macro$(__VA_ARGS__, int64_t); \
-  __macro$(__VA_ARGS__, bool)
+  __macro$(__VA_ARGS__, bool); \
+  __macro$(__VA_ARGS__, int16_t); \
+  __macro$(__VA_ARGS__, uint16_t); \
+  __macro$(__VA_ARGS__, uint32_t); \
+  __macro$(__VA_ARGS__, uint64_t)
 
 #define IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$, __typ$) \
   namespace mxnet_op { \
