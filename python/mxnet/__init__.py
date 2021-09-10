@@ -109,4 +109,4 @@ from . import _api_internal
 from . import api
 from . import container
 
-npx.set_np()
+npx.set_np(dtype=True)
