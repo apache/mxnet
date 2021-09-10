@@ -28,6 +28,7 @@
 
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
+#include "../../common/parallel_for.h"
 
 #include "batch_norm-inl.h"
 #if MXNET_USE_ONEDNN == 1
@@ -140,8 +141,8 @@ void BatchNormForwardImpl(mshadow::Stream<cpu>*,
   const size_t channelCount                = inputData.ChannelCount();
   const size_t itemCountPerChannel         = inputData.Size() / channelCount;
 
-#pragma omp parallel for
-  for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {
+  mxnet::common::parallel_for(0, static_cast<int>(channelCount), [=](size_t b, size_t e) {
+  for (int channel = b; channel < e; ++channel) {
     if (is_train_and_not_global_stats) {
       // compute mean per input
       mean[channel] = 0;
@@ -211,7 +212,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu>*,
                     });
       }
     }
-  }
+  }});
 }
 
 template <typename xpu, typename DType, typename AccReal>
@@ -254,9 +255,8 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu>*,
   AccReal* gradBiasData            = gradBias.dptr<AccReal>();
 
   const bool is_train_and_not_global_stats = ctx.is_train && !param_.use_global_stats;
-
-#pragma omp parallel for
-  for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {
+  mxnet::common::parallel_for(0, static_cast<int>(channelCount), [=](size_t b, size_t e) {
+  for (int channel = b; channel < e; ++channel) {
     const AccReal* weight = weights.dptr<AccReal>();
     const AccReal w       = !param_.fix_gamma ? weight[channel] : AccReal(1);
     AccReal mean, invstd;
@@ -365,7 +365,7 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu>*,
     }
 
     KERNEL_ASSIGN(gradBiasData[channel], req[batchnorm::kBeta], scale * sumGradOut);
-  }
+  }});
 }
 
 DMLC_REGISTER_PARAMETER(BatchNormParam);

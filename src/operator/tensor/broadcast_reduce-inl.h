@@ -33,6 +33,7 @@
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+#include "../../common/parallel_for.h"
 
 namespace mxnet {
 namespace op {
@@ -361,16 +362,17 @@ void seq_reduce_compute(const size_t N, const size_t M, const bool addto,
                         const Shape<ndim> rstride) {
   const int thread_count = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   if (N >= thread_count) {
-    #pragma omp parallel for num_threads(thread_count)
-    for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
+    mxnet::common::parallel_for(0, static_cast<index_t>(N), [=](size_t b, size_t e) {
+    for (index_t idx = b; idx < e; ++idx) {
       seq_reduce_assign<Reducer, ndim, AType, DType, OType, OP, IndexOP>
           (idx, M, addto, big, small, bshape, sshape, rshape, rstride, false);
-    }
+    }});
   } else {
-    for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
+    mxnet::common::parallel_for(0, static_cast<index_t>(N), [=](size_t b, size_t e) {
+    for (index_t idx = b; idx < e; ++idx) {
       seq_reduce_assign<Reducer, ndim, AType, DType, OType, OP, IndexOP>
           (idx, M, addto, big, small, bshape, sshape, rshape, rstride, true);
-    }
+    }});
   }
 }
 

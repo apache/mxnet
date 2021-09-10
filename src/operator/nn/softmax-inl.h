@@ -34,7 +34,7 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../tensor/broadcast_reduce_op.h"
-
+#include "../../common/parallel_for.h"
 using mshadow::red::limits::MinValue;
 
 namespace mxnet {
@@ -80,8 +80,8 @@ inline void Softmax(Stream<cpu> *s, DType *in, OType *out, IType *length,
   index_t sa = stride[axis];
 
   if (length == nullptr) {
-    #pragma omp parallel for
-    for (index_t i = 0; i < N; ++i) {
+    mxnet::common::parallel_for(0, N, [=](size_t b, size_t e) {
+    for (index_t i = b; i < e; ++i) {
       index_t base = unravel_dot(i, sshape, stride);
 
       DType mmax = negate ? -in[base] : in[base];
@@ -116,10 +116,10 @@ inline void Softmax(Stream<cpu> *s, DType *in, OType *out, IType *length,
           out[base + j*sa] = OP::Map((in_val - mmax)/temperature, sum);
         }
       }
-    }
+    }});
   } else {
-    #pragma omp parallel for
-    for (index_t i = 0; i < N; ++i) {
+    mxnet::common::parallel_for(0, N, [=](size_t b, size_t e) {
+    for (index_t i = b; i < e; ++i) {
       index_t len = static_cast<index_t>(length[i]);
       index_t base = unravel_dot(i, sshape, stride);
 
@@ -158,7 +158,7 @@ inline void Softmax(Stream<cpu> *s, DType *in, OType *out, IType *length,
           out[base + j*sa] = OP::Map((in_val - mmax)/temperature, sum);
         }
       }
-    }
+    }});
   }
 }
 
@@ -239,8 +239,8 @@ inline void SoftmaxGrad(Stream<cpu> *s, OType *out, OType *ograd,
   index_t sa = stride[axis];
 
   if (length != nullptr) {
-    #pragma omp parallel for
-    for (index_t i = 0; i < N; ++i) {
+    mxnet::common::parallel_for(0, N, [=](size_t b, size_t e) {
+    for (index_t i = b; i < e; ++i) {
       index_t base = unravel_dot(i, sshape, stride);
       index_t len = static_cast<index_t>(length[i]);
 
@@ -269,10 +269,10 @@ inline void SoftmaxGrad(Stream<cpu> *s, OType *out, OType *ograd,
           KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
         }
       }
-    }
+    }});
   } else {
-    #pragma omp parallel for
-    for (index_t i = 0; i < N; ++i) {
+    mxnet::common::parallel_for(0, N, [=](size_t b, size_t e) {
+    for (index_t i = b; i < e; ++i) {
       index_t base = unravel_dot(i, sshape, stride);
 
       AType sum = AType(0);
@@ -298,7 +298,7 @@ inline void SoftmaxGrad(Stream<cpu> *s, OType *out, OType *ograd,
           KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
         }
       }
-    }
+    }});
   }
 }
 
