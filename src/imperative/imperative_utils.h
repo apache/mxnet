@@ -82,7 +82,7 @@ static inline void CreateDefaultInputs(std::vector<NDArray>* pArrs) {
 // copying A to B may not happen, and will corrupt A's memory.
 #define INVALIDATE_OUTPUTS_COND(cond, outputs, req) \
   if (cond) {                                       \
-    INVALIDATE_OUTPUTS(outputs, req)                \
+    INVALIDATE_OUTPUTS(outputs, req);               \
   }
 
 // add for mkldnn OP + no mkldnn OP
