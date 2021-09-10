@@ -34,7 +34,7 @@ RecordIO implements a file format for a sequence of records. We recommend storin
 
 We provide two tools for creating a RecordIO dataset.
 
-* [im2rec.cc](https://github.com/dmlc/mxnet/blob/master/tools/im2rec.cc) - implements the tool using the C++ API.
+* [im2rec.cc](https://github.com/apache/mxnet/blob/master/tools/im2rec.cc) - implements the tool using the C++ API.
 * [im2rec.py](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) - implements the tool using the Python API.
 
 Both provide the same output: a RecordIO dataset.

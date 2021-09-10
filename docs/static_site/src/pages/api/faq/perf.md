@@ -66,7 +66,7 @@ So whether you specify `cpu(0)` or `cpu()`, _MXNet_ will use all CPU cores on th
 ### Scoring results
 The following table shows performance of MXNet-1.2.0.rc1,
 namely number of images that can be predicted per second.
-We used [example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py)
+We used [example/image-classification/benchmark_score.py](https://github.com/apache/mxnet/blob/v1.x/example/image-classification/benchmark_score.py)
 to measure the performance on different AWS EC2 machines.
 
 AWS EC2 C5.18xlarge:
@@ -150,7 +150,7 @@ and V100 (EC2 p3.2xlarge).
 ### Scoring results
 
 Based on
-[example/image-classification/benchmark_score.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/benchmark_score.py)
+[example/image-classification/benchmark_score.py](https://github.com/apache/mxnet/blob/v1.x/example/image-classification/benchmark_score.py)
 and  MXNet-1.2.0.rc1, with cuDNN 7.0.5
 
 - K80 (single GPU)
@@ -213,7 +213,7 @@ Below is the performance result on V100 using float 16.
 ### Training results
 
 Based on
-[example/image-classification/train_imagenet.py](https://github.com/dmlc/mxnet/blob/master/example/image-classification/train_imagenet.py)
+[example/image-classification/train_imagenet.py](https://github.com/apache/mxnet/blob/v1.x/example/image-classification/train_imagenet.py)
 and  MXNet-1.2.0.rc1, with CUDNN 7.0.5. The benchmark script is available at
 [here](https://github.com/mli/mxnet-benchmark/blob/master/run_vary_batch.sh),
 where the batch size for Alexnet is increased by 16x.
@@ -260,7 +260,7 @@ It's critical to use the proper type of `kvstore` to get the best performance.
 Refer to [Distributed Training](https://mxnet.apache.org/api/faq/distributed_training.html) for more
 details.
 
-Besides, we can use [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth)
+Besides, we can use [tools/bandwidth](https://github.com/apache/mxnet/tree/master/tools/bandwidth)
 to find the communication cost per batch.
 Ideally, the communication cost should be less than the time to compute a batch.
 To reduce the communication cost, we can consider:
@@ -293,7 +293,7 @@ by summarizing at the operator level, instead of a function, kernel, or instruct
 
 The profiler can be turned on with an [environment variable]({{'/api/faq/env_var#control-the-profiler' | relative_url}})
 for an entire program run, or programmatically for just part of a run. Note that by default the profiler hides the details of each individual operator, and you can reveal the details by setting environment variables `MXNET_EXEC_BULK_EXEC_INFERENCE`, `MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN` and `MXNET_EXEC_BULK_EXEC_TRAIN` to 0.
-See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profiler)
+See [example/profiler](https://github.com/apache/mxnet/tree/master/example/profiler)
 for complete examples of how to use the profiler in code, or [this tutorial](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/profiler.html) on how to profile MXNet performance.
 
 Briefly, the Python code looks like:
