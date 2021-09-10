@@ -54,12 +54,12 @@ const std::string env_var_name(const char* dev_type, env_var_type type);
 #define SET_GPU_PROFILER(prof, contextHelper)                                                    \
   auto prof = contextHelper->contextGPU() ? profiler::GpuDeviceStorageProfiler::Get() : nullptr; \
   if (!prof->IsProfiling()) {                                                                    \
-    prof = nullptr                                                                               \
+    prof = nullptr;                                                                              \
   }
 
 #define GPU_PROFILER_ON_FREE(prof, pntr) \
   if (prof) {                            \
-    prof->OnFree(pntr)                   \
+    prof->OnFree(pntr);                  \
   }
 #else
 // empty macros when MxNet is compiled without CUDA support
