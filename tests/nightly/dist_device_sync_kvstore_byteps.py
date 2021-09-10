@@ -65,7 +65,7 @@ def test_pushpull():
         # init kv dns keys
         kv.broadcast('3', mx.nd.ones(shape, ctx=get_current_context(device=True)), mx.nd.ones(shape, ctx=get_current_context(device=True)))
         kv.broadcast('99', mx.nd.ones(big_shape, ctx=get_current_context(device=True)), mx.nd.ones(big_shape, ctx=get_current_context(device=True)))
-        for i in range(nrepeat):
+        for _ in range(nrepeat):
             scale = my_rank + 1
             num = (my_num_workers + 1) * my_num_workers / 2
 

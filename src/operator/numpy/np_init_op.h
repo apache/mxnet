@@ -62,7 +62,7 @@ struct NumpyEyeParam : public dmlc::Parameter<NumpyEyeParam> {
     DMLC_DECLARE_FIELD(dtype)
     .set_default(-1)
     .add_enum("None", -1)
-    MXNET_ADD_ALL_TYPES
+    MXNET_ADD_ALL_TYPES_EXT_WITH_BOOL
     .describe("Data-type of the returned array.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {

@@ -468,6 +468,26 @@ struct DataType<bool> {
   static const int kFlag = kBool;
   static const int kLanes = 1;
 };
+template<>
+struct DataType<int16_t> {
+  static const int kFlag = kInt16;
+  static const int kLanes = 1;
+};
+template<>
+struct DataType<uint16_t> {
+  static const int kFlag = kUint16;
+  static const int kLanes = 1;
+};
+template<>
+struct DataType<uint32_t> {
+  static const int kFlag = kUint32;
+  static const int kLanes = 1;
+};
+template<>
+struct DataType<uint64_t> {
+  static const int kFlag = kUint64;
+  static const int kLanes = 1;
+};
 
 /*! \brief type enum value for default real type */
 const int default_type_flag = DataType<default_real_t>::kFlag;
@@ -1113,6 +1133,26 @@ struct minimum {
       {__VA_ARGS__}                                 \
     }                                               \
     break;                                          \
+  case mshadow::kBool:                              \
+    LOG(FATAL) << "This operation does not "        \
+                  "support bool type";              \
+    break;                                          \
+  case mshadow::kInt16:                             \
+    LOG(FATAL) << "This operation does not "        \
+                  "support int16 type";             \
+    break;                                          \
+  case mshadow::kUint16:                            \
+    LOG(FATAL) << "This operation does not "        \
+                  "support uint16 type";            \
+    break;                                          \
+  case mshadow::kUint32:                            \
+    LOG(FATAL) << "This operation does not "        \
+                  "support uint32 type";            \
+    break;                                          \
+  case mshadow::kUint64:                            \
+    LOG(FATAL) << "This operation does not "        \
+                  "support uint64 type";            \
+    break;                                          \
   default:                                          \
     LOG(FATAL) << "Unknown type enum " << type;     \
   }
@@ -1160,6 +1200,26 @@ struct minimum {
       typedef int64_t DType;                        \
       {__VA_ARGS__}                                 \
     }                                               \
+    break;                                          \
+  case mshadow::kBool:                              \
+    LOG(FATAL) << "This operation does not "        \
+                  "support bool type";              \
+    break;                                          \
+  case mshadow::kInt16:                             \
+    LOG(FATAL) << "This operation does not "        \
+                  "support int16 type";             \
+    break;                                          \
+  case mshadow::kUint16:                            \
+    LOG(FATAL) << "This operation does not "        \
+                  "support uint16 type";            \
+    break;                                          \
+  case mshadow::kUint32:                            \
+    LOG(FATAL) << "This operation does not "        \
+                  "support uint32 type";            \
+    break;                                          \
+  case mshadow::kUint64:                            \
+    LOG(FATAL) << "This operation does not "        \
+                  "support uint64 type";            \
     break;                                          \
   default:                                          \
     LOG(FATAL) << "Unknown type enum " << type;     \
@@ -1221,6 +1281,26 @@ struct minimum {
     LOG(FATAL) << "This operation only support "    \
                   "floating point types, not int64";\
     break;                                          \
+  case mshadow::kBool:                              \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types, not bool"; \
+    break;                                          \
+  case mshadow::kInt16:                             \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types, not int16";\
+    break;                                          \
+  case mshadow::kUint16:                            \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not uint16";\
+    break;                                          \
+  case mshadow::kUint32:                            \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not uint32";\
+    break;                                          \
+  case mshadow::kUint64:                            \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not uint64";\
+    break;                                          \
   default:                                          \
     LOG(FATAL) << "Unknown type enum " << type;     \
   }
@@ -1272,6 +1352,26 @@ struct minimum {
     LOG(FATAL) << "This operation only support "    \
                   "floating point types, not int64";\
     break;                                          \
+  case mshadow::kBool:                              \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types, not bool"; \
+    break;                                          \
+  case mshadow::kInt16:                             \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types, not int16";\
+    break;                                          \
+  case mshadow::kUint16:                            \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not uint16";\
+    break;                                          \
+  case mshadow::kUint32:                            \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not uint32";\
+    break;                                          \
+  case mshadow::kUint64:                            \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not uint64";\
+    break;                                          \
   default:                                          \
     LOG(FATAL) << "Unknown type enum " << type$;    \
   }
@@ -1315,6 +1415,26 @@ struct minimum {
     LOG(FATAL) << "This operation only support "    \
                   "floating point types, not int64";\
     break;                                          \
+  case mshadow::kBool:                              \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types, not bool"; \
+    break;                                          \
+  case mshadow::kInt16:                             \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types, not int16";\
+    break;                                          \
+  case mshadow::kUint16:                            \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not uint16";\
+    break;                                          \
+  case mshadow::kUint32:                            \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not uint32";\
+    break;                                          \
+  case mshadow::kUint64:                            \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not uint64";\
+    break;                                          \
   default:                                          \
     LOG(FATAL) << "Unknown type enum " << type$;    \
   }
@@ -1351,7 +1471,7 @@ struct minimum {
 
 /*!
  * \brief Only supports int64 index type for aux_data
- * in NDArray class fow now.
+ * in NDArray class for now.
  */
 #define MSHADOW_IDX_TYPE_SWITCH(type, DType, ...)   \
   switch (type) {                                   \
@@ -1421,6 +1541,184 @@ struct minimum {
       {__VA_ARGS__}                                           \
     }                                                         \
     break;                                                    \
+  case mshadow::kInt16:                                       \
+    LOG(FATAL) << "This operation does not "                  \
+                  "support int16 type";                       \
+    break;                                                    \
+  case mshadow::kUint16:                                      \
+    LOG(FATAL) << "This operation does not "                  \
+                  "support uint16 type";                      \
+    break;                                                    \
+  case mshadow::kUint32:                                      \
+    LOG(FATAL) << "This operation does not "                  \
+                  "support uint32 type";                      \
+    break;                                                    \
+  case mshadow::kUint64:                                      \
+    LOG(FATAL) << "This operation does not "                  \
+                  "support uint64 type";                      \
+    break;                                                    \
+  default:                                                    \
+    LOG(FATAL) << "Unknown type enum " << type;               \
+  }
+
+#define MSHADOW_TYPE_SWITCH_EXT(type, DType, ...)             \
+  switch (type) {                                             \
+  case mshadow::kFloat32:                                     \
+    {                                                         \
+      typedef float DType;                                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kFloat64:                                     \
+    {                                                         \
+      typedef double DType;                                   \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kFloat16:                                     \
+    {                                                         \
+      typedef mshadow::half::half_t DType;                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kBfloat16:                                    \
+    {                                                         \
+      typedef mshadow::bfloat::bf16_t DType;                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint8:                                       \
+    {                                                         \
+      typedef uint8_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt8:                                        \
+    {                                                         \
+      typedef int8_t DType;                                   \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt32:                                       \
+    {                                                         \
+      typedef int32_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt64:                                       \
+    {                                                         \
+      typedef int64_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt16:                                       \
+    {                                                         \
+      typedef int16_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint16:                                      \
+    {                                                         \
+      typedef uint16_t DType;                                 \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint32:                                      \
+    {                                                         \
+      typedef uint32_t DType;                                 \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint64:                                      \
+    {                                                         \
+      typedef uint64_t DType;                                 \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  default:                                                    \
+    LOG(FATAL) << "Unknown type enum " << type;               \
+  }
+
+#define MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(type, DType, ...)   \
+  switch (type) {                                             \
+  case mshadow::kFloat32:                                     \
+    {                                                         \
+      typedef float DType;                                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kFloat64:                                     \
+    {                                                         \
+      typedef double DType;                                   \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kFloat16:                                     \
+    {                                                         \
+      typedef mshadow::half::half_t DType;                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kBfloat16:                                    \
+    {                                                         \
+      typedef mshadow::bfloat::bf16_t DType;                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint8:                                       \
+    {                                                         \
+      typedef uint8_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt8:                                        \
+    {                                                         \
+      typedef int8_t DType;                                   \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt32:                                       \
+    {                                                         \
+      typedef int32_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt64:                                       \
+    {                                                         \
+      typedef int64_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kBool:                                        \
+    {                                                         \
+      typedef bool DType;                                     \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt16:                                       \
+    {                                                         \
+      typedef int16_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint16:                                      \
+    {                                                         \
+      typedef uint16_t DType;                                 \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint32:                                      \
+    {                                                         \
+      typedef uint32_t DType;                                 \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint64:                                      \
+    {                                                         \
+      typedef uint64_t DType;                                 \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
   default:                                                    \
     LOG(FATAL) << "Unknown type enum " << type;               \
   }
@@ -1428,7 +1726,7 @@ struct minimum {
 /*! \brief get data type size from type enum */
 inline size_t mshadow_sizeof(int type) {
   int size = 0;
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(type, DType, size = sizeof(DType););
+  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(type, DType, size = sizeof(DType););
   return size;
 }
 
@@ -1451,6 +1749,14 @@ inline std::string dtype_string(const int dtype) {
       return "long long";
     case mshadow::kBool:
       return "bool";
+    case mshadow::kInt16:
+      return "short";
+    case mshadow::kUint16:
+      return "unsigned short";
+    case mshadow::kUint32:
+      return "unsigned int";
+    case mshadow::kUint64:
+      return "unsigned long long";
     default:
       LOG(FATAL) << "Unknown type enum " << dtype;
   }

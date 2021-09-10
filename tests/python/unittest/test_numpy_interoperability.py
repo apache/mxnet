@@ -421,7 +421,7 @@ def _add_workload_swapaxes():
     # assertRaises(np.AxisError, np.swapaxes, -5, 0)
     for i in range(-4, 4):
         for j in range(-4, 4):
-            for k, src in enumerate((a, b)):
+            for src in (a, b):
                 OpArgMngr.add_workload('swapaxes', src, i, j)
 
 
@@ -448,7 +448,7 @@ def _add_workload_tile():
     shape = [(3,), (2, 3), (3, 4, 3), (3, 2, 3), (4, 3, 2, 4), (2, 2)]
     for s in shape:
         b = np.random.randint(0, 10, size=s)
-        for r in reps:
+        for _ in reps:
             # RuntimeError to be tracked
             # where s = (3, 4, 3), r = (2, 3, 2)
             # OpArgMngr.add_workload('tile', b, r)

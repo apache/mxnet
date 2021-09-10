@@ -392,7 +392,7 @@ class Estimator(object):
             for handler in epoch_begin:
                 handler.epoch_begin(estimator_ref)
 
-            for i, batch in enumerate(train_data):
+            for batch in train_data:
                 # batch begin
                 for handler in batch_begin:
                     handler.batch_begin(estimator_ref, batch=batch)

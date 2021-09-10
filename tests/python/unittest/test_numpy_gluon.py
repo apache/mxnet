@@ -41,7 +41,7 @@ def test_create_np_param():
             net.hybridize()
         net(x)
         params = net.collect_params()
-        for k, v in params.items():
+        for _, v in params.items():
             assert type(v.data()) is expected_type
 
     @use_np
@@ -101,7 +101,7 @@ def test_optimizer_with_np_ndarrays():
                             'sgd',
                             {'learning_rate': 1e-3, 'momentum': 0.9})
 
-    for t in range(2):
+    for _ in range(2):
         with autograd.record():
             output = regressor(x)  # output is a type of np.ndarray because np.dot is the last op in the network
             loss = total_loss(output, y)  # loss is a scalar np.ndarray
