@@ -787,10 +787,10 @@ def set_np(shape=True, array=True, dtype=False):
 
     Creating zero-dim ndarray in legacy mode would fail at shape inference.
 
-    >>> mx.nd.ones(shape=())
+    >>> mx.nd.ones(shape=())      #doctest:+SKIP
     mxnet.base.MXNetError: Operator _ones inferring shapes failed.
 
-    >>> mx.nd.ones(shape=(2, 0, 3))
+    >>> mx.nd.ones(shape=(2, 0, 3))        #doctest:+SKIP
     mxnet.base.MXNetError: Operator _ones inferring shapes failed.
 
     In legacy mode, Gluon layers would create parameters and outputs of type `mx.nd.NDArray`.
@@ -798,13 +798,13 @@ def set_np(shape=True, array=True, dtype=False):
     >>> from mxnet.gluon import nn
     >>> dense = nn.Dense(2)
     >>> dense.initialize()
-    >>> dense(mx.nd.ones(shape=(3, 2)))
+    >>> dense(mx.nd.ones(shape=(3, 2)))       #doctest:+SKIP
     [[0.01983214 0.07832371]
      [0.01983214 0.07832371]
      [0.01983214 0.07832371]]
     <NDArray 3x2 @cpu(0)>
 
-    >>> [p.data() for p in dense.collect_params().values()]
+    >>> [p.data() for p in dense.collect_params().values()]        #doctest:+SKIP
     [
     [[0.0068339  0.01299825]
      [0.0301265  0.04819721]]
@@ -1097,7 +1097,7 @@ def is_np_default_dtype():
     >>> from mxnet import npx
     >>> prev_state = npx.set_np_default_dtype(True)
     >>> print(prev_state)
-    False
+    True
     >>> print(npx.is_np_default_dtype())
     True
     """

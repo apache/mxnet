@@ -34,6 +34,10 @@ MXNET_REGISTER_API("_npi.matmul")
   static const nnvm::Op* op = Op::Get("_npi_matmul");
   nnvm::NodeAttrs attrs;
   int num_inputs = 2;
+  if (args[0].type_code() != kNDArrayHandle || args[1].type_code() != kNDArrayHandle) {
+    LOG(ERROR) << "matmul: Input operand does not have enough dimensions ...";
+    return;
+  }
   NDArray* inputs[2] = {args[0].operator mxnet::NDArray*(),
                         args[1].operator mxnet::NDArray*()};
   attrs.op = op;

@@ -253,9 +253,9 @@ A slice is preferable when it is possible.
 .. admonition:: Example
 
     >>> x[1:2, 1:3]
-    array([[4, 5]])
-    >>> x[1:2, [1, 2]]
-    array([[4, 5]])
+    array([[4]])
+    >>> x[1:2, [0, 1]]
+    array([[3, 4]])
 
 The easiest way to understand the situation may be to think in
 terms of the result shape. There are two parts to the indexing operation,
@@ -345,7 +345,7 @@ with.
     >>> rowsum = x.sum(-1, keepdims=True)
     >>> rowsum.shape
     (3, 1)
-    >>> x[rowsum <= 2]  # fail
+    >>> x[rowsum <= 2]   #doctest:+SKIP
     IndexError: boolean index did not match indexed array along dimension 1
 
 Detailed notes

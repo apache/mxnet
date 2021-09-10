@@ -63,7 +63,7 @@ extensions = [
 
 doctest_global_setup = '''
 import mxnet as mx
-from mxnet import np, npx
+from mxnet import np, npx, gluon
 '''
 
 autosummary_generate = True

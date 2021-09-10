@@ -48,12 +48,12 @@ class Compose(Sequential):
 
     Examples
     --------
+    >>> from mxnet.gluon.data.vision import transforms
     >>> transformer = transforms.Compose([transforms.Resize(300),
     ...                                   transforms.CenterCrop(256),
     ...                                   transforms.ToTensor()])
-    >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
-    >>> transformer(image)
-    <NDArray 3x256x256 @cpu(0)>
+    >>> image = mx.np.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)                # doctest: +SKIP
     """
     def __init__(self, transforms):
         super(Compose, self).__init__()

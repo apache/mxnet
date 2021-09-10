@@ -47,7 +47,7 @@ def set_printoptions(precision=None, threshold=None, **kwarg):
 
     >>> np.set_printoptions(precision=4)
     >>> print(np.array([1.123456789]))
-    [ 1.1235]
+    [1.1235]
 
     Long arrays can be summarised:
 

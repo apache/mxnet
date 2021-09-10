@@ -66,9 +66,9 @@ class KVStoreServer(object):
         """Run the server, whose behavior is like.
 
 
-        >>> while receive(x):
-        ...     if is_command x: controller(x)
-        ...     else if is_key_value x: updater(x)
+        >>> while receive(x):                         #doctest:+SKIP
+        ...     if is_command x: controller(x)        #doctest:+SKIP
+        ...     else if is_key_value x: updater(x)    #doctest:+SKIP
         """
         _ctrl_proto = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p, ctypes.c_void_p)
         check_call(_LIB.MXKVStoreRunServer(self.handle, _ctrl_proto(self._controller()), None))

@@ -252,7 +252,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
     >>> net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=10)
     >>> digraph = mx.viz.plot_network(net, shape={'data':(100,200)},
     ... node_attrs={"fixedsize":"false"})
-    >>> digraph.view()
+    >>> digraph.view()              # doctest: +SKIP
 
     Notes
     -----

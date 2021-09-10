@@ -47,10 +47,10 @@ class LogMetricsCallback(object):
     >>> batch_end_callbacks = [mx.contrib.tensorboard.LogMetricsCallback(training_log)]
     >>> eval_end_callbacks = [mx.contrib.tensorboard.LogMetricsCallback(evaluation_log)]
     >>> # run
-    >>> model.fit(train,
-    >>>     ...
-    >>>     batch_end_callback = batch_end_callbacks,
-    >>>     eval_end_callback  = eval_end_callbacks)
+    >>> model.fit(train,                                #doctest:+SKIP
+    >>>     ...                                         #doctest:+SKIP
+    >>>     batch_end_callback = batch_end_callbacks,    #doctest:+SKIP
+    >>>     eval_end_callback  = eval_end_callbacks)      #doctest:+SKIP
     >>> # Then use `tensorboard --logdir=logs/` to launch TensorBoard visualization.
     """
     def __init__(self, logging_dir, prefix=None):
