@@ -245,6 +245,23 @@ def num_gpus():
     check_call(_LIB.MXGetGPUCount(ctypes.byref(count)))
     return count.value
 
+def gpu_sm_arch(device_id=0):
+    """Query CUDA for the GPU's streaming multiprocessor (SM) architecture.
+
+    Raises
+    ------
+    Will raise an exception on any CUDA error.
+
+    Returns
+    -------
+    sm_arch : int (= 10 * compute_capability_major + compute_capability_minor)
+        The SM arch, e.g. 70 for Volta.
+
+    """
+    arch = ctypes.c_int()
+    dev_id = ctypes.c_int(device_id)
+    check_call(_LIB.MXGetGPUSMArch(dev_id, ctypes.byref(arch)))
+    return arch.value
 
 def gpu_memory_info(device_id=0):
     """Query CUDA for the free and total bytes of GPU global memory.

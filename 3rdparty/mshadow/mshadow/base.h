@@ -200,6 +200,10 @@ extern "C" {
   #include <cudnn.h>
 #endif
 
+#if MXNET_USE_NCCL == 1
+  #include <nccl.h>
+#endif
+
 #if MSHADOW_USE_CUTENSOR == 1
   #include <cutensor.h>
 #endif
@@ -380,6 +384,9 @@ struct DataType<float> {
   static const cudnnDataType_t kCudnnFlag = CUDNN_DATA_FLOAT;
   typedef float ScaleType;
 #endif
+#if MXNET_USE_NCCL
+  static const ncclDataType_t kNCCLFlag = ncclFloat32;
+#endif
 #endif
 };
 template<>
@@ -394,6 +401,9 @@ struct DataType<double> {
   static const cudnnDataType_t kCudnnFlag = CUDNN_DATA_DOUBLE;
   typedef double ScaleType;
 #endif
+#if MXNET_USE_NCCL
+  static const ncclDataType_t kNCCLFlag = ncclFloat64;
+#endif
 #endif
 };
 template<>
@@ -407,6 +417,9 @@ struct DataType<half::half_t> {
 #if MSHADOW_USE_CUDNN
   static const cudnnDataType_t kCudnnFlag = CUDNN_DATA_HALF;
   typedef float ScaleType;
+#endif
+#if MXNET_USE_NCCL
+  static const ncclDataType_t kNCCLFlag = ncclFloat16;
 #endif
 #endif
 };
@@ -428,6 +441,9 @@ struct DataType<uint8_t> {
   static const cudnnDataType_t kCudnnFlag = CUDNN_DATA_INT8;
   typedef uint8_t ScaleType;
 #endif
+#if MXNET_USE_NCCL
+  static const ncclDataType_t kNCCLFlag = ncclUint8;
+#endif
 #endif
 };
 template<>
@@ -441,6 +457,9 @@ struct DataType<int8_t> {
 #if (MSHADOW_USE_CUDNN == 1 && CUDNN_MAJOR >= 6)
   static const cudnnDataType_t kCudnnFlag = CUDNN_DATA_INT8;
   typedef int8_t ScaleType;
+#endif
+#if MXNET_USE_NCCL
+  static const ncclDataType_t kNCCLFlag = ncclInt8;
 #endif
 #endif
 };
@@ -456,12 +475,18 @@ struct DataType<int32_t> {
   static const cudnnDataType_t kCudnnFlag = CUDNN_DATA_INT32;
   typedef int32_t ScaleType;
 #endif
+#if MXNET_USE_NCCL
+  static const ncclDataType_t kNCCLFlag = ncclInt32;
+#endif
 #endif
 };
 template<>
 struct DataType<int64_t> {
   static const int kFlag = kInt64;
   static const int kLanes = 1;
+#if MXNET_USE_NCCL
+  static const ncclDataType_t kNCCLFlag = ncclInt64;
+#endif
 };
 template<>
 struct DataType<bool> {
