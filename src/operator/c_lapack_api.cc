@@ -174,47 +174,47 @@
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
     return 1;                                                                               \
   }
-MXNET_LAPACK_CWRAPPER1(spotrf, float)
-MXNET_LAPACK_CWRAPPER1(dpotrf, double)
-MXNET_LAPACK_CWRAPPER1(spotri, float)
-MXNET_LAPACK_CWRAPPER1(dpotri, double)
+MXNET_LAPACK_CWRAPPER1(spotrf, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER1(dpotrf, double)  // NOLINT
+MXNET_LAPACK_CWRAPPER1(spotri, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER1(dpotri, double)  // NOLINT
 
-MXNET_LAPACK_UNAVAILABLE(sposv)
-MXNET_LAPACK_UNAVAILABLE(dposv)
+MXNET_LAPACK_UNAVAILABLE(sposv)  // NOLINT
+MXNET_LAPACK_UNAVAILABLE(dposv)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER2(sgelqf, float)
-MXNET_LAPACK_CWRAPPER2(dgelqf, double)
-MXNET_LAPACK_CWRAPPER2(sorglq, float)
-MXNET_LAPACK_CWRAPPER2(dorglq, double)
+MXNET_LAPACK_CWRAPPER2(sgelqf, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER2(dgelqf, double)  // NOLINT
+MXNET_LAPACK_CWRAPPER2(sorglq, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER2(dorglq, double)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER3(ssyevd, float)
-MXNET_LAPACK_CWRAPPER3(dsyevd, double)
+MXNET_LAPACK_CWRAPPER3(ssyevd, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER3(dsyevd, double)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER4(sgetrf, float)
-MXNET_LAPACK_CWRAPPER4(dgetrf, double)
+MXNET_LAPACK_CWRAPPER4(sgetrf, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER4(dgetrf, double)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER5(sgetri, float)
-MXNET_LAPACK_CWRAPPER5(dgetri, double)
+MXNET_LAPACK_CWRAPPER5(sgetri, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER5(dgetri, double)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER6(sgesvd, float)
-MXNET_LAPACK_CWRAPPER6(dgesvd, double)
+MXNET_LAPACK_CWRAPPER6(sgesvd, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER6(dgesvd, double)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER7(sgesv, float)
-MXNET_LAPACK_CWRAPPER7(dgesv, double)
+MXNET_LAPACK_CWRAPPER7(sgesv, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER7(dgesv, double)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER8(sgeev, float)
-MXNET_LAPACK_CWRAPPER8(dgeev, double)
+MXNET_LAPACK_CWRAPPER8(sgeev, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER8(dgeev, double)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER9(sgesdd, float)
-MXNET_LAPACK_CWRAPPER9(dgesdd, double)
+MXNET_LAPACK_CWRAPPER9(sgesdd, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER9(dgesdd, double)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER10(sgeqrf, float)
-MXNET_LAPACK_CWRAPPER10(dgeqrf, double)
+MXNET_LAPACK_CWRAPPER10(sgeqrf, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER10(dgeqrf, double)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER11(sgelsd, float)
-MXNET_LAPACK_CWRAPPER11(dgelsd, double)
+MXNET_LAPACK_CWRAPPER11(sgelsd, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER11(dgelsd, double)  // NOLINT
 
-MXNET_LAPACK_CWRAPPER12(sorgqr, float)
-MXNET_LAPACK_CWRAPPER12(dorgqr, double)
+MXNET_LAPACK_CWRAPPER12(sorgqr, float)   // NOLINT
+MXNET_LAPACK_CWRAPPER12(dorgqr, double)  // NOLINT
 
 #endif  // MSHADOW_USE_MKL == 0

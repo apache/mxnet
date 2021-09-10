@@ -320,7 +320,7 @@ NDArray load_array(const std::string& fname) {
 namespace npz {
 
 size_t npy_header_blob_read_callback(void* pOpaque, mz_uint64 file_ofs, void* pBuf, size_t n) {
-  auto [npy_header, blob] =
+  auto [npy_header, blob] =                                                  // NOLINT
       *static_cast<std::tuple<const std::string*, const TBlob*>*>(pOpaque);  // NOLINT
 
   if (file_ofs < npy_header->size() && file_ofs + n < npy_header->size()) {

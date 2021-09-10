@@ -1420,7 +1420,7 @@ void registerOperators(void* lib,
                msgSize,
                msgGet);
   }
-}
+}  // NOLINT
 
 void registerPartitioners(void* lib,
                           int verbose,
@@ -2300,8 +2300,8 @@ int MXNDArrayLoad(const char* fname,
   }
 
   if (magic == 0x04034b50 || magic == 0x504b0304 || magic == 0x06054b50 ||
-      magic == 0x504b0506) {  // zip file format; assumed to be npz
-    auto [data, names] = npz::load_arrays(fname);
+      magic == 0x504b0506) {                       // zip file format; assumed to be npz
+    auto [data, names] = npz::load_arrays(fname);  // NOLINT
     ret->ret_handles.resize(data.size());
     for (size_t i = 0; i < data.size(); ++i) {
       NDArray* ptr        = new NDArray();
