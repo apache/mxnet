@@ -174,6 +174,77 @@ void NumpyInitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
   }
 }
 
+struct numpy_linspace_fwd {
+  template<typename DType, typename ValueType>
+  MSHADOW_XINLINE static void Map(index_t i, index_t size, ValueType start,
+                                  ValueType stop, bool endpoint,
+                                  double step, int req, DType* out) {
+    if (i == 0) {
+      // Special cases : start = 9007199254740993
+      KERNEL_ASSIGN(out[i], req, static_cast<DType>(start));
+    } else {
+      KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
+    }
+    if (endpoint && i != 0 && i == size - 1) {
+      KERNEL_ASSIGN(out[i], req, static_cast<DType>(stop));
+    }
+  }
+};
+
+template<typename xpu>
+void NumpyLinspaceCompute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const NumpyLinspaceParam& param = nnvm::get<NumpyLinspaceParam>(attrs.parsed);
+  MSHADOW_TYPE_SWITCH_EXT_WITH_BOOL(outputs[0].type_flag_, DType, {
+      index_t step_num = param.endpoint ? param.num - 1 : param.num;
+      if (param.value_type == 0) {
+        int64_t start = param.start_int;
+        int64_t stop = param.stop_int;
+        double step = step_num > 0 ? (stop - start) / step_num : 0.0f;
+        Kernel<numpy_linspace_fwd, xpu>::Launch(s,
+                                                outputs[0].Size(),
+                                                outputs[0].Size(),
+                                                start,
+                                                stop,
+                                                param.endpoint,
+                                                step,
+                                                req[0],
+                                                outputs[0].dptr<DType>());
+      } else if (param.value_type == 1) {
+        uint64_t start = param.start_uint;
+        uint64_t stop = param.stop_uint;
+        double step = step_num > 0 ? (stop - start) / step_num : 0.0f;
+        Kernel<numpy_linspace_fwd, xpu>::Launch(s,
+                                                outputs[0].Size(),
+                                                outputs[0].Size(),
+                                                start,
+                                                stop,
+                                                param.endpoint,
+                                                step,
+                                                req[0],
+                                                outputs[0].dptr<DType>());
+      } else {
+        double start = param.start_double;
+        double stop = param.stop_double;
+        double step = step_num > 0 ? (stop - start) / step_num : 0.0f;
+        Kernel<numpy_linspace_fwd, xpu>::Launch(s,
+                                                outputs[0].Size(),
+                                                outputs[0].Size(),
+                                                start,
+                                                stop,
+                                                param.endpoint,
+                                                step,
+                                                req[0],
+                                                outputs[0].dptr<DType>());
+      }
+  });
+}
+
 inline bool NumpyRangeShape(const nnvm::NodeAttrs& attrs,
                             mxnet::ShapeVector* in_shapes,
                             mxnet::ShapeVector* out_shapes) {

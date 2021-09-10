@@ -63,7 +63,7 @@ NNVM_REGISTER_OP(_npi_indices)
 .set_attr<FCompute>("FCompute<gpu>", IndicesCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_linspace)
-.set_attr<FCompute>("FCompute<gpu>", LinspaceCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyLinspaceParam<gpu>);
 
 NNVM_REGISTER_OP(_npi_logspace)
 .set_attr<FCompute>("FCompute<gpu>", LogspaceCompute<gpu>);
