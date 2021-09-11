@@ -291,7 +291,8 @@ void NumpyLinspaceCompute(const nnvm::NodeAttrs& attrs,
       if (param.value_type == 0) {
         int64_t start = param.start_int;
         int64_t stop = param.stop_int;
-        double step = step_num > 0 ? ((double)stop - (double)start) / step_num : 0.0f;
+        double step = step_num > 0 ? \
+            (static_cast<double>(stop) - static_cast<double>(start)) / step_num : 0.0f;
         Kernel<numpy_linspace_fwd, xpu>::Launch(s,
                                                 outputs[0].Size(),
                                                 outputs[0].Size(),
@@ -304,7 +305,8 @@ void NumpyLinspaceCompute(const nnvm::NodeAttrs& attrs,
       } else if (param.value_type == 1) {
         uint64_t start = param.start_uint;
         uint64_t stop = param.stop_uint;
-        double step = step_num > 0 ? ((double)stop - (double)start) / step_num : 0.0f;
+        double step = step_num > 0 ? \
+            (static_cast<double>(stop) - static_cast<double>(start)) / step_num : 0.0f;
         Kernel<numpy_linspace_fwd, xpu>::Launch(s,
                                                 outputs[0].Size(),
                                                 outputs[0].Size(),
