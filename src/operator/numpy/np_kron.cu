@@ -27,11 +27,9 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_kron)
-.set_attr<FCompute>("FCompute<gpu>", KronOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_kron).set_attr<FCompute>("FCompute<gpu>", KronOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_npi_kron)
-.set_attr<FCompute>("FCompute<gpu>", KronOpBackward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_kron).set_attr<FCompute>("FCompute<gpu>", KronOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

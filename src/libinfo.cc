@@ -33,8 +33,7 @@ namespace features {
 
 class FeatureSet {
  public:
-  FeatureSet() :
-      feature_bits() {
+  FeatureSet() : feature_bits() {
     // GPU
     feature_bits.set(CUDA, MXNET_USE_CUDA);
     feature_bits.set(CUDNN, MXNET_USE_CUDNN);
@@ -115,50 +114,50 @@ bool is_enabled(const unsigned feat) {
 }
 
 LibInfo::LibInfo() {
-    for (size_t i = 0; i < MAX_FEATURES; ++i) {
-        m_lib_features[i].name = EnumNames::names[i].c_str();
-        m_lib_features[i].enabled = is_enabled(i);
-    }
+  for (size_t i = 0; i < MAX_FEATURES; ++i) {
+    m_lib_features[i].name    = EnumNames::names[i].c_str();
+    m_lib_features[i].enabled = is_enabled(i);
+  }
 }
 
-LibInfo *LibInfo::getInstance() {
-    if (!m_inst)
-        m_inst = std::make_unique<LibInfo>();
-    return m_inst.get();
+LibInfo* LibInfo::getInstance() {
+  if (!m_inst)
+    m_inst = std::make_unique<LibInfo>();
+  return m_inst.get();
 }
 
 std::unique_ptr<LibInfo> LibInfo::m_inst = nullptr;
 
 const std::vector<std::string> EnumNames::names = {
-  "CUDA",
-  "CUDNN",
-  "NCCL",
-  "TENSORRT",
-  "CUTENSOR",
-  "CPU_SSE",
-  "CPU_SSE2",
-  "CPU_SSE3",
-  "CPU_SSE4_1",
-  "CPU_SSE4_2",
-  "CPU_SSE4A",
-  "CPU_AVX",
-  "CPU_AVX2",
-  "OPENMP",
-  "SSE",
-  "F16C",
-  "JEMALLOC",
-  "BLAS_OPEN",
-  "BLAS_ATLAS",
-  "BLAS_MKL",
-  "BLAS_APPLE",
-  "LAPACK",
-  "ONEDNN",
-  "OPENCV",
-  "DIST_KVSTORE",
-  "INT64_TENSOR_SIZE",
-  "SIGNAL_HANDLER",
-  "DEBUG",
-  "TVM_OP",
+    "CUDA",
+    "CUDNN",
+    "NCCL",
+    "TENSORRT",
+    "CUTENSOR",
+    "CPU_SSE",
+    "CPU_SSE2",
+    "CPU_SSE3",
+    "CPU_SSE4_1",
+    "CPU_SSE4_2",
+    "CPU_SSE4A",
+    "CPU_AVX",
+    "CPU_AVX2",
+    "OPENMP",
+    "SSE",
+    "F16C",
+    "JEMALLOC",
+    "BLAS_OPEN",
+    "BLAS_ATLAS",
+    "BLAS_MKL",
+    "BLAS_APPLE",
+    "LAPACK",
+    "ONEDNN",
+    "OPENCV",
+    "DIST_KVSTORE",
+    "INT64_TENSOR_SIZE",
+    "SIGNAL_HANDLER",
+    "DEBUG",
+    "TVM_OP",
 };
 
 }  // namespace features

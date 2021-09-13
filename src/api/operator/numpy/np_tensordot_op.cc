@@ -27,26 +27,24 @@
 
 namespace mxnet {
 
-inline static void _npi_tensordot_int_axes(runtime::MXNetArgs args,
-                                           runtime::MXNetRetValue* ret) {
+inline static void _npi_tensordot_int_axes(runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_tensordot_int_axes");
   op::TensordotIntAxesParam param;
   nnvm::NodeAttrs attrs;
   param.axes = args[2].operator int();
-  attrs.op = op;
+  attrs.op   = op;
   // we directly copy TensordotIntAxesParam, which is trivially-copyable
   attrs.parsed = param;
   SetAttrDict<op::TensordotIntAxesParam>(&attrs);
-  int num_outputs = 0;
-  int num_inputs = 2;
+  int num_outputs   = 0;
+  int num_inputs    = 2;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret              = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 }
 
-inline static void _npi_tensordot(runtime::MXNetArgs args,
-                                  runtime::MXNetRetValue* ret) {
+inline static void _npi_tensordot(runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_tensordot");
   op::TensordotParam param;
@@ -61,23 +59,23 @@ inline static void _npi_tensordot(runtime::MXNetArgs args,
     param.a_axes_summed = Tuple<int>(adt[0]);
     param.b_axes_summed = Tuple<int>(adt[1]);
   }
-  attrs.op = op;
+  attrs.op     = op;
   attrs.parsed = param;
   SetAttrDict<op::TensordotParam>(&attrs);
-  int num_outputs = 0;
-  int num_inputs = 2;
+  int num_outputs   = 0;
+  int num_inputs    = 2;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  auto ndoutputs    = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret              = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 }
 
 MXNET_REGISTER_API("_npi.tensordot")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  if (args[2].type_code() == kDLInt) {
-    _npi_tensordot_int_axes(args, ret);
-  } else {
-    _npi_tensordot(args, ret);
-  }
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      if (args[2].type_code() == kDLInt) {
+        _npi_tensordot_int_axes(args, ret);
+      } else {
+        _npi_tensordot(args, ret);
+      }
+    });
 
 }  // namespace mxnet

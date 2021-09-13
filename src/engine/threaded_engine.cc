@@ -63,9 +63,9 @@ inline void ThreadedVar::AppendReadDependency(OprBlock* opr_block) {
     assert(head_->trigger == nullptr);
     assert(head_->write == false);
     // append things to next.
-    head_->next = new_var_block;
+    head_->next    = new_var_block;
     head_->trigger = opr_block;
-    head_ = new_var_block;
+    head_          = new_var_block;
   }
 }
 
@@ -77,9 +77,9 @@ inline void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
   assert(head_->trigger == nullptr);
   assert(head_->write == false);
   // attach to head.
-  head_->next = new_var_block;
+  head_->next    = new_var_block;
   head_->trigger = opr_block;
-  head_->write = true;
+  head_->write   = true;
 
   // check if it is ready to write
   if (pending_write_ == nullptr) {
@@ -99,7 +99,7 @@ inline void ThreadedVar::AppendWriteDependency(OprBlock* opr_block) {
 
 template <typename Dispatcher>
 inline void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
-  OprBlock *trigger = nullptr;
+  OprBlock* trigger = nullptr;
   {
     // this is lock scope
     std::lock_guard<std::mutex> lock{mutex_};
@@ -108,7 +108,7 @@ inline void ThreadedVar::CompleteReadDependency(Dispatcher dispatcher) {
     if (--num_pending_reads_ == 0) {
       if (pending_write_ != nullptr) {
         // STATE CHANGE
-        trigger = pending_write_->trigger;
+        trigger            = pending_write_->trigger;
         num_pending_reads_ = kWriteTriggered;
       }
     }
@@ -135,7 +135,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
 
     // really delete
     if (to_delete_) {
-      VersionedVarBlock *head = pending_write_->next;
+      VersionedVarBlock* head = pending_write_->next;
       VersionedVarBlock::Delete(pending_write_);
       assert(head_ == head);
       VersionedVarBlock::Delete(head);
@@ -147,8 +147,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
     end_of_read_chain = old_pending_write->next;
     // reset to 0 pending reads
     num_pending_reads_ = 0;
-    while (end_of_read_chain != head_ &&
-           end_of_read_chain->write == false) {
+    while (end_of_read_chain != head_ && end_of_read_chain->write == false) {
       ++num_pending_reads_;
       end_of_read_chain = end_of_read_chain->next;
     }
@@ -161,7 +160,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
       if (num_pending_reads_ == 0) {
         // mark write as already activated in this var
         num_pending_reads_ = kWriteTriggered;
-        trigger_write = end_of_read_chain->trigger;
+        trigger_write      = end_of_read_chain->trigger;
       }
     }
   }
@@ -171,7 +170,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   // The linked list \in [old_pending_write, end_of_read_chain)
   // is already detached from this Var.
   // So it is safe to modify these
-  VersionedVarBlock *cur_head = old_pending_write->next;
+  VersionedVarBlock* cur_head = old_pending_write->next;
   VersionedVarBlock::Delete(old_pending_write);
   // dispatch all the events
   while (cur_head != end_of_read_chain) {
@@ -179,7 +178,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
       dispatcher(cur_head->trigger);
     }
     auto prev = cur_head;
-    cur_head = cur_head->next;
+    cur_head  = cur_head->next;
     assert(cur_head != nullptr);
     VersionedVarBlock::Delete(prev);
   }
@@ -209,24 +208,25 @@ ThreadedVar* ThreadedEngine::NewVariable() {
   return ThreadedVar::New(VersionedVarBlock::New());
 }
 
-ThreadedOpr* ThreadedEngine::NewOperator(
-    ThreadedEngine::AsyncFn fn,
-    std::vector<VarHandle> const& const_vars,
-    std::vector<VarHandle> const& mutable_vars,
-    FnProperty prop,
-    const char* opr_name,
-    bool wait) {
-  auto ret = ThreadedOpr::New();
+ThreadedOpr* ThreadedEngine::NewOperator(ThreadedEngine::AsyncFn fn,
+                                         std::vector<VarHandle> const& const_vars,
+                                         std::vector<VarHandle> const& mutable_vars,
+                                         FnProperty prop,
+                                         const char* opr_name,
+                                         bool wait) {
+  auto ret      = ThreadedOpr::New();
   ret->opr_name = opr_name ? std::string(opr_name) : std::string();
-  ret->fn = std::move(fn);
-  ret->prop = prop;
+  ret->fn       = std::move(fn);
+  ret->prop     = prop;
   ret->const_vars.resize(const_vars.size());
   ret->mutable_vars.resize(mutable_vars.size());
   ret->wait = wait;
-  std::transform(const_vars.begin(), const_vars.end(),
-                 ret->const_vars.begin(), ThreadedVar::CastFromBase);
-  std::transform(mutable_vars.begin(), mutable_vars.end(),
-                 ret->mutable_vars.begin(), ThreadedVar::CastFromBase);
+  std::transform(
+      const_vars.begin(), const_vars.end(), ret->const_vars.begin(), ThreadedVar::CastFromBase);
+  std::transform(mutable_vars.begin(),
+                 mutable_vars.end(),
+                 ret->mutable_vars.begin(),
+                 ThreadedVar::CastFromBase);
   if (ENGINE_DEBUG != 0) {
     CheckDuplicate(const_vars, mutable_vars);
   }
@@ -236,9 +236,9 @@ ThreadedOpr* ThreadedEngine::NewOperator(
 void ThreadedEngine::CheckDuplicate(std::vector<VarHandle> const& const_vars,
                                     std::vector<VarHandle> const& mutable_vars) {
   // Check for duplicates.
-  auto use = const_vars;
-  auto mutate = mutable_vars;
-  const size_t use_size = use.size();
+  auto use                 = const_vars;
+  auto mutate              = mutable_vars;
+  const size_t use_size    = use.size();
   const size_t mutate_size = mutate.size();
   std::sort(use.begin(), use.end());
   std::sort(mutate.begin(), mutate.end());
@@ -261,8 +261,7 @@ void ThreadedEngine::CheckDuplicate(std::vector<VarHandle> const& const_vars,
       break;
     }
     if (mutate.at(j) == use.at(i)) {
-      LOG(FATAL)
-          << "duplicate items found between `const_vars` and `mutable_vars`";
+      LOG(FATAL) << "duplicate items found between `const_vars` and `mutable_vars`";
     }
   }
 }
@@ -270,19 +269,20 @@ void ThreadedEngine::CheckDuplicate(std::vector<VarHandle> const& const_vars,
 void ThreadedEngine::DeleteOperator(OprHandle op) {
   ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
   std::vector<VarHandle> deps;
-  deps.reserve(threaded_opr->const_vars.size() +
-               threaded_opr->mutable_vars.size());
-  deps.insert(deps.end(),
-              threaded_opr->const_vars.begin(),
-              threaded_opr->const_vars.end());
-  deps.insert(deps.end(),
-              threaded_opr->mutable_vars.begin(),
-              threaded_opr->mutable_vars.end());
-  this->PushAsync([threaded_opr](RunContext, CallbackOnComplete on_complete) {
-      ThreadedOpr::Delete(threaded_opr);
-      on_complete();
-    }, Context::CPU(), {}, deps, FnProperty::kDeleteVar, 0,
-    "DeleteOperator");
+  deps.reserve(threaded_opr->const_vars.size() + threaded_opr->mutable_vars.size());
+  deps.insert(deps.end(), threaded_opr->const_vars.begin(), threaded_opr->const_vars.end());
+  deps.insert(deps.end(), threaded_opr->mutable_vars.begin(), threaded_opr->mutable_vars.end());
+  this->PushAsync(
+      [threaded_opr](RunContext, CallbackOnComplete on_complete) {
+        ThreadedOpr::Delete(threaded_opr);
+        on_complete();
+      },
+      Context::CPU(),
+      {},
+      deps,
+      FnProperty::kDeleteVar,
+      0,
+      "DeleteOperator");
 }
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool profiling) {
@@ -293,13 +293,12 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool pro
         profiler::CustomOpProfiler::Get()->GenerateDisplayName(threaded_opr->opr_name.c_str());
   }
   OprBlock* opr_block = OprBlock::New();
-  opr_block->opr = threaded_opr;
+  opr_block->opr      = threaded_opr;
 
-  opr_block->wait.store(static_cast<int>(
-      threaded_opr->const_vars.size() +
-      threaded_opr->mutable_vars.size() + 1));
-  opr_block->ctx = exec_ctx;
-  opr_block->priority = priority;
+  opr_block->wait.store(
+      static_cast<int>(threaded_opr->const_vars.size() + threaded_opr->mutable_vars.size() + 1));
+  opr_block->ctx       = exec_ctx;
+  opr_block->priority  = priority;
   opr_block->profiling = profiling;
   ++pending_;
   // Add read dependencies.
@@ -315,7 +314,8 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool pro
   }
 }
 
-void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
+void ThreadedEngine::PushAsync(AsyncFn fn,
+                               Context exec_ctx,
                                std::vector<VarHandle> const& const_vars,
                                std::vector<VarHandle> const& mutable_vars,
                                FnProperty prop,
@@ -332,48 +332,59 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
     }
     CHECK_LT(exec_ctx.dev_id, device_count_)
         << "Invalid GPU Id: " << exec_ctx.dev_id
-        << ", Valid device id should be less than device_count: "
-        << device_count_;
+        << ", Valid device id should be less than device_count: " << device_count_;
   }
 #endif
   const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
-  ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars,
-                                 prop, opr_name, wait);
-  opr->temporary = true;
+  ThreadedOpr* opr     = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
+  opr->temporary       = true;
   Push(opr, exec_ctx, priority, profiling);
 }
 
-void ThreadedEngine::PushSync(SyncFn exec_fn, Context exec_ctx,
+void ThreadedEngine::PushSync(SyncFn exec_fn,
+                              Context exec_ctx,
                               std::vector<VarHandle> const& const_vars,
                               std::vector<VarHandle> const& mutable_vars,
                               FnProperty prop,
                               int priority,
                               const char* opr_name) {
   if (!bulk_size() || prop != FnProperty::kNormal || priority) {
-    this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
-        exec_fn(ctx);
-        on_complete();
-      }, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name);
+    this->PushAsync(
+        [exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
+          exec_fn(ctx);
+          on_complete();
+        },
+        exec_ctx,
+        const_vars,
+        mutable_vars,
+        prop,
+        priority,
+        opr_name);
     return;
   }
 
   const BulkStatus& bulk_status = *BulkStatusStore::Get();
-  if (bulk_status.count && exec_ctx != bulk_status.ctx) BulkFlush();
+  if (bulk_status.count && exec_ctx != bulk_status.ctx)
+    BulkFlush();
   BulkAppend(exec_fn, exec_ctx, const_vars, mutable_vars);
 }
 
-void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
-                                    Context exec_ctx,
-                                    VarHandle var) {
+void ThreadedEngine::DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) {
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
-  this->PushAsync([delete_fn, threaded_var](RunContext ctx, CallbackOnComplete on_complete) {
-      // Mark variable as orphan,
-      // so during `ThreadedEngine::OnComplete` it could be recycled.
-      threaded_var->SetToDelete();
-      delete_fn(ctx);
-      on_complete();
-    }, exec_ctx, {}, {var}, FnProperty::kDeleteVar, 0,
-    "DeleteVariable");
+  this->PushAsync(
+      [delete_fn, threaded_var](RunContext ctx, CallbackOnComplete on_complete) {
+        // Mark variable as orphan,
+        // so during `ThreadedEngine::OnComplete` it could be recycled.
+        threaded_var->SetToDelete();
+        delete_fn(ctx);
+        on_complete();
+      },
+      exec_ctx,
+      {},
+      {var},
+      FnProperty::kDeleteVar,
+      0,
+      "DeleteVariable");
 }
 
 void ThreadedEngine::WaitForVar(VarHandle var) {
@@ -388,26 +399,31 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
     debug_wait_var_ = threaded_var;
   }
   std::atomic<bool> done{false};
-  this->PushAsync([this, &done](RunContext, CallbackOnComplete on_complete) {
-      if (engine_info_) {
-        LOG(INFO) << "Sync is executed";
-      }
-      {
-        std::unique_lock<std::mutex> lock{finished_m_};
-        done.store(true);
-      }
-      finished_cv_.notify_all();
-      if (engine_info_) {
-        LOG(INFO) << "Sync is notified";
-      }
-      on_complete();
-    }, Context::CPU(), {var}, {}, FnProperty::kNormal, 0,
-    "WaitForVar", true);
+  this->PushAsync(
+      [this, &done](RunContext, CallbackOnComplete on_complete) {
+        if (engine_info_) {
+          LOG(INFO) << "Sync is executed";
+        }
+        {
+          std::unique_lock<std::mutex> lock{finished_m_};
+          done.store(true);
+        }
+        finished_cv_.notify_all();
+        if (engine_info_) {
+          LOG(INFO) << "Sync is notified";
+        }
+        on_complete();
+      },
+      Context::CPU(),
+      {var},
+      {},
+      FnProperty::kNormal,
+      0,
+      "WaitForVar",
+      true);
   {
     std::unique_lock<std::mutex> lock{finished_m_};
-    finished_cv_.wait(lock, [this, &done]() {
-        return done.load() || kill_.load();
-    });
+    finished_cv_.wait(lock, [this, &done]() { return done.load() || kill_.load(); });
   }
 
   ThrowException(threaded_var);
@@ -416,9 +432,7 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
 void ThreadedEngine::WaitForAll() {
   BulkFlush();
   std::unique_lock<std::mutex> lock{finished_m_};
-  finished_cv_.wait(lock, [this]() {
-      return pending_.load() == 0 || kill_.load();
-    });
+  finished_cv_.wait(lock, [this]() { return pending_.load() == 0 || kill_.load(); });
   std::exception_ptr exception_to_rethrow = nullptr;
   if (!global_exception_refs_.empty()) {
     // iterate through all exception refs
@@ -442,8 +456,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   bool is_temporary_opr = threaded_opr->temporary;
   // Mark complete for read variables
   for (auto&& i : threaded_opr->const_vars) {
-    i->CompleteReadDependency(
-        [this](OprBlock* opr) { this->PushToExecute(opr, false); });
+    i->CompleteReadDependency([this](OprBlock* opr) { this->PushToExecute(opr, false); });
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
@@ -457,17 +470,16 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
     if (debug_info) {
       LOG(INFO) << "Complete write dep for " << i;
     }
-    const bool to_delete =
-        i->CompleteWriteDependency([this, debug_info](OprBlock* opr) {
-          if (debug_info) {
-            LOG(INFO) << "PushToExecute " << opr;
-            debug_push_opr_ = opr;
-          }
-          this->PushToExecute(opr, false);
-          if (debug_info) {
-            LOG(INFO) << "Fin PushToExecute " << opr;
-          }
-        });
+    const bool to_delete = i->CompleteWriteDependency([this, debug_info](OprBlock* opr) {
+      if (debug_info) {
+        LOG(INFO) << "PushToExecute " << opr;
+        debug_push_opr_ = opr;
+      }
+      this->PushToExecute(opr, false);
+      if (debug_info) {
+        LOG(INFO) << "Fin PushToExecute " << opr;
+      }
+    });
     if (to_delete) {
       ThreadedVar::Delete(i);
     }
@@ -495,7 +507,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
 
 inline void ThreadedEngine::ThrowException(ThreadedVar* threaded_var) {
   if (threaded_var->var_exception && *threaded_var->var_exception) {
-    std::exception_ptr tmp = *threaded_var->var_exception;
+    std::exception_ptr tmp       = *threaded_var->var_exception;
     *threaded_var->var_exception = nullptr;
     std::rethrow_exception(tmp);
   }
@@ -503,16 +515,15 @@ inline void ThreadedEngine::ThrowException(ThreadedVar* threaded_var) {
 }
 
 void ThreadedEngine::Throw(VarHandle var) {
-  ThreadedVar *threaded_var = ThreadedVar::CastFromBase(var);
+  ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
   ThrowException(threaded_var);
 }
 
-void ThreadedEngine::OnCompleteStatic(Engine *engine, void *opr_block_,
-                                      const dmlc::Error* error) {
-  OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
-  ThreadedOpr *threaded_opr = opr_block->opr;
+void ThreadedEngine::OnCompleteStatic(Engine* engine, void* opr_block_, const dmlc::Error* error) {
+  OprBlock* opr_block       = static_cast<OprBlock*>(opr_block_);
+  ThreadedOpr* threaded_opr = opr_block->opr;
   if (error != nullptr) {
-    auto ex_p = std::make_exception_ptr(*error);
+    auto ex_p                   = std::make_exception_ptr(*error);
     threaded_opr->opr_exception = std::make_shared<std::exception_ptr>(ex_p);
   }
   if (opr_block->profiling && threaded_opr->opr_name.size()) {

@@ -1,21 +1,21 @@
 /*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 #ifndef MXNET_PROFILER_CUSTOM_OP_PROFILER_H_
 #define MXNET_PROFILER_CUSTOM_OP_PROFILER_H_
 
@@ -28,13 +28,13 @@
 namespace mxnet {
 namespace profiler {
 
-using Tid = std::thread::id;
+using Tid     = std::thread::id;
 using TaskPtr = std::unique_ptr<ProfileTask>;
 
-  /*!
-   * \brief Singleton class to assist profiling python callback of custom operators
-   * and to assist linking sub-operators to custom operators
-   */
+/*!
+ * \brief Singleton class to assist profiling python callback of custom operators
+ * and to assist linking sub-operators to custom operators
+ */
 class CustomOpProfiler {
  public:
   static CustomOpProfiler* Get() {
@@ -48,21 +48,21 @@ class CustomOpProfiler {
     return prof.get();
   }
   /*!
-   * \brief Called before the callback of custom operators to start a profile task for python 
+   * \brief Called before the callback of custom operators to start a profile task for python
    * code execution time
    * \param op_type The registed name of the custom operator
    */
   void OnCustomBegin(const std::string& op_type) {
-    const Tid tid = std::this_thread::get_id();
+    const Tid tid               = std::this_thread::get_id();
     const std::string task_name = MakePythonCodeName(op_type);
     std::lock_guard<std::mutex> lock(mutex_);
     tid_to_op_type_[tid] = op_type;
-    tasks_[tid] = std::make_unique<ProfileTask>(task_name.c_str(), &custom_op_domain);
+    tasks_[tid]          = std::make_unique<ProfileTask>(task_name.c_str(), &custom_op_domain);
     tasks_[tid]->start();
   }
 
   /*!
-   * \brief Called after the callback of custom operators to stop the profile task for python 
+   * \brief Called after the callback of custom operators to stop the profile task for python
    * code execution time
    */
   void OnCustomEnd() {
@@ -70,15 +70,16 @@ class CustomOpProfiler {
     std::lock_guard<std::mutex> lock(mutex_);
     tid_to_op_type_.erase(tid);
     // this should never fail
-    CHECK(tasks_.find(tid) != tasks_.end()) << "thread_id not found. " <<
-        "Please use OnCustomBegin() and OnCustomEnd() in pairs.";
+    CHECK(tasks_.find(tid) != tasks_.end())
+        << "thread_id not found. "
+        << "Please use OnCustomBegin() and OnCustomEnd() in pairs.";
     tasks_[tid]->stop();
     tasks_.erase(tid);
   }
 
   /*!
    * \brief Generate a display name for sub-operators, which is the name used for OprBlock
-   * and later by profiler, and store it in a unordered_set so that it can be referenced 
+   * and later by profiler, and store it in a unordered_set so that it can be referenced
    * in the future.
    * Notice if the operator is not a sub-operator, just return the char pointer back.
    * \param op_type The registed name of the operator

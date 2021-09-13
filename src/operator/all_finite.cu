@@ -42,21 +42,22 @@ __global__ void AllFiniteGPUKernel(const int size, const DType* in, float* out) 
 }
 
 inline void AllFiniteGPU(const nnvm::NodeAttrs& attrs,
-                         const OpContext &ctx,
-                         const std::vector<TBlob> &inputs,
-                         const std::vector<OpReqType> &req,
-                         const std::vector<TBlob> &outputs) {
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
-  Stream<gpu>* s = ctx.get_stream<gpu>();
+  Stream<gpu>* s                 = ctx.get_stream<gpu>();
   const AllFiniteParam& op_param = nnvm::get<AllFiniteParam>(attrs.parsed);
-  Tensor<gpu, 2, float> out = outputs[0].FlatTo2D<gpu, float>(s);
+  Tensor<gpu, 2, float> out      = outputs[0].FlatTo2D<gpu, float>(s);
   if (op_param.init_output)
     out = 1.;
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Tensor<gpu, 2, DType> in = inputs[0].FlatTo2D<gpu, DType>(s);
-    const int n = in.shape_.Size();
+    const int n              = in.shape_.Size();
     AllFiniteGPUKernel<DType><<<cuda_get_num_blocks(n),
-                                mshadow::cuda::kBaseThreadNum, 0,
+                                mshadow::cuda::kBaseThreadNum,
+                                0,
                                 mshadow::Stream<gpu>::GetStream(s)>>>(n, in.dptr_, out.dptr_);
     MSHADOW_CUDA_POST_KERNEL_CHECK(AllFiniteGPUKernel<DType>);
   });
@@ -77,31 +78,30 @@ __global__ void MultiAllFiniteGPUKernel(const MultiAllFiniteKernelParam<DType> p
 }
 
 inline void MultiAllFiniteGPU(const nnvm::NodeAttrs& attrs,
-                              const OpContext &ctx,
-                              const std::vector<TBlob> &inputs,
-                              const std::vector<OpReqType> &req,
-                              const std::vector<TBlob> &outputs) {
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
-  Stream<gpu>* s = ctx.get_stream<gpu>();
+  Stream<gpu>* s                      = ctx.get_stream<gpu>();
   const MultiAllFiniteParam& op_param = nnvm::get<MultiAllFiniteParam>(attrs.parsed);
-  Tensor<gpu, 2, float> out = outputs[0].FlatTo2D<gpu, float>(s);
+  Tensor<gpu, 2, float> out           = outputs[0].FlatTo2D<gpu, float>(s);
   if (op_param.init_output)
     out = 1.;
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MultiAllFiniteKernelParam<DType> param =
-      FillMultiAllFiniteParam<gpu, DType>(op_param, ctx, inputs);
+        FillMultiAllFiniteParam<gpu, DType>(op_param, ctx, inputs);
     MultiAllFiniteGPUKernel<DType><<<cuda_get_num_blocks(param.max_size),
-                                     mshadow::cuda::kBaseThreadNum, 1,
+                                     mshadow::cuda::kBaseThreadNum,
+                                     1,
                                      mshadow::Stream<gpu>::GetStream(s)>>>(param, out.dptr_);
     MSHADOW_CUDA_POST_KERNEL_CHECK(MultiAllFiniteGPUKernel<DType>);
   });
 }
 
-NNVM_REGISTER_OP(all_finite)
-.set_attr<FCompute>("FCompute<gpu>", AllFiniteGPU);
+NNVM_REGISTER_OP(all_finite).set_attr<FCompute>("FCompute<gpu>", AllFiniteGPU);
 
-NNVM_REGISTER_OP(multi_all_finite)
-.set_attr<FCompute>("FCompute<gpu>", MultiAllFiniteGPU);
+NNVM_REGISTER_OP(multi_all_finite).set_attr<FCompute>("FCompute<gpu>", MultiAllFiniteGPU);
 
 }  // namespace op
 }  // namespace mxnet

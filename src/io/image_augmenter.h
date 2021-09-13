@@ -29,9 +29,9 @@
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
-#include <vector>  // NOLINT(*)
-#include <utility> // NOLINT(*)
-#include <string> // NOLINT(*)
+#include <vector>   // NOLINT(*)
+#include <utility>  // NOLINT(*)
+#include <string>   // NOLINT(*)
 
 #include "../common/utils.h"
 
@@ -57,8 +57,9 @@ class ImageAugmenter {
    * \param prnd pointer to random number generator.
    * \return The processed image.
    */
-  virtual cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
-                          common::RANDOM_ENGINE *prnd) = 0;
+  virtual cv::Mat Process(const cv::Mat& src,
+                          std::vector<float>* label,
+                          common::RANDOM_ENGINE* prnd) = 0;
   // virtual destructor
   virtual ~ImageAugmenter() {}
   /*!
@@ -70,14 +71,12 @@ class ImageAugmenter {
 };
 
 /*! \brief typedef the factory function of data iterator */
-typedef std::function<ImageAugmenter *()> ImageAugmenterFactory;
+typedef std::function<ImageAugmenter*()> ImageAugmenterFactory;
 /*!
  * \brief Registry entry for DataIterator factory functions.
  */
 struct ImageAugmenterReg
-    : public dmlc::FunctionRegEntryBase<ImageAugmenterReg,
-                                        ImageAugmenterFactory> {
-};
+    : public dmlc::FunctionRegEntryBase<ImageAugmenterReg, ImageAugmenterFactory> {};
 //--------------------------------------------------------------
 // The following part are API Registration of Iterators
 //--------------------------------------------------------------
@@ -93,7 +92,7 @@ struct ImageAugmenterReg
  *   });
  * \endcode
  */
-#define MXNET_REGISTER_IMAGE_AUGMENTER(name)                            \
+#define MXNET_REGISTER_IMAGE_AUGMENTER(name) \
   DMLC_REGISTRY_REGISTER(::mxnet::io::ImageAugmenterReg, ImageAugmenterReg, name)
 }  // namespace io
 }  // namespace mxnet

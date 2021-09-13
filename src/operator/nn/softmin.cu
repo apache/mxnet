@@ -28,11 +28,11 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(softmin)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxRTCCompute{"softmax_fwd", true});
+NNVM_REGISTER_OP(softmin).set_attr<FCompute>("FCompute<gpu>",
+                                             SoftmaxRTCCompute{"softmax_fwd", true});
 
 NNVM_REGISTER_OP(_backward_softmin)
-.set_attr<FCompute>("FCompute<gpu>", SoftmaxRTCGradCompute{"op::mul", "softmax_bwd", true});
+    .set_attr<FCompute>("FCompute<gpu>", SoftmaxRTCGradCompute{"op::mul", "softmax_bwd", true});
 
 }  // namespace op
 }  // namespace mxnet

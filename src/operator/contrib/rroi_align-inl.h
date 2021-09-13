@@ -22,7 +22,7 @@
  * \file rroi_align-inl.h
  * \brief rroi align operator and symbol
  * \author Yixin Bao
-*/
+ */
 #ifndef MXNET_OPERATOR_CONTRIB_RROI_ALIGN_INL_H_
 #define MXNET_OPERATOR_CONTRIB_RROI_ALIGN_INL_H_
 
@@ -42,9 +42,9 @@ namespace op {
 // Declare enumeration of input order to make code more intuitive.
 // These enums are only visible within this header
 namespace rroialign {
-enum RROIAlignOpInputs{kData, kBox};
-enum RROIAlignOpOutputs {kOut};
-}  // rroialign
+enum RROIAlignOpInputs { kData, kBox };
+enum RROIAlignOpOutputs { kOut };
+}  // namespace rroialign
 
 struct RROIAlignParam : public dmlc::Parameter<RROIAlignParam> {
   mxnet::TShape pooled_size;
@@ -52,13 +52,17 @@ struct RROIAlignParam : public dmlc::Parameter<RROIAlignParam> {
   int sampling_ratio;
   DMLC_DECLARE_PARAMETER(RROIAlignParam) {
     DMLC_DECLARE_FIELD(pooled_size)
-    .set_expect_ndim(2).enforce_nonzero()
-    .describe("RROI align output shape (h,w) ");
-    DMLC_DECLARE_FIELD(spatial_scale).set_range(0.0, 1.0)
-    .describe("Ratio of input feature map height (or width) to raw image height (or width). "
-    "Equals the reciprocal of total stride in convolutional layers");
-    DMLC_DECLARE_FIELD(sampling_ratio).set_default(-1)
-    .describe("Optional sampling ratio of RROI align, using adaptive size by default.");
+        .set_expect_ndim(2)
+        .enforce_nonzero()
+        .describe("RROI align output shape (h,w) ");
+    DMLC_DECLARE_FIELD(spatial_scale)
+        .set_range(0.0, 1.0)
+        .describe(
+            "Ratio of input feature map height (or width) to raw image height (or width). "
+            "Equals the reciprocal of total stride in convolutional layers");
+    DMLC_DECLARE_FIELD(sampling_ratio)
+        .set_default(-1)
+        .describe("Optional sampling ratio of RROI align, using adaptive size by default.");
   }
 };
 

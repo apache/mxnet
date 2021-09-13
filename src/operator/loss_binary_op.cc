@@ -21,14 +21,14 @@
  * Copyright (c) 2015 by Contributors
  * \file loss_binary_op.cc
  * \brief loss function that takes a data and label
-*/
+ */
 #include "./loss_binary_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(softmax_cross_entropy)
-.describe(R"code(Calculate cross entropy of softmax output and one-hot label.
+    .describe(R"code(Calculate cross entropy of softmax output and one-hot label.
 
 - This operator computes the cross entropy in two steps:
   - Applies softmax function on the input array.
@@ -57,33 +57,33 @@ Example::
   softmax_cross_entropy(data, label) = - log(0.66524084) - log(0.97962922) = 0.4281871
 
 )code" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<mxnet::FInferShape>("FInferShape", SoftmaxCrossEntropyShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", SoftmaxCrossEntropyForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_softmax_cross_entropy"})
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data", "label"};
-})
-.add_argument("data", "NDArray-or-Symbol", "Input data")
-.add_argument("label", "NDArray-or-Symbol", "Input label");
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<mxnet::FInferShape>("FInferShape", SoftmaxCrossEntropyShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", SoftmaxCrossEntropyForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_softmax_cross_entropy"})
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data", "label"};
+                                     })
+    .add_argument("data", "NDArray-or-Symbol", "Input data")
+    .add_argument("label", "NDArray-or-Symbol", "Input label");
 
 NNVM_REGISTER_OP(_backward_softmax_cross_entropy)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", SoftmaxCrossEntropyBackward<cpu>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", SoftmaxCrossEntropyBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

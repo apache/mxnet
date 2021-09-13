@@ -29,36 +29,36 @@
 namespace mxnet {
 
 MXNET_REGISTER_API("_npx.embedding")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  nnvm::NodeAttrs attrs;
-  const nnvm::Op* op = Op::Get("_npx_embedding");
-  op::EmbeddingParam param;
-  // inputs
-  int num_inputs = 2;
-  std::vector<NDArray*> inputs;
-  inputs.reserve(num_inputs);
-  for (int i = 0; i < num_inputs; ++i) {
-    inputs.push_back(args[i].operator mxnet::NDArray*());
-  }
-  // input_dim
-  param.input_dim = args[2].operator int64_t();
-  // output_dim
-  param.output_dim = args[3].operator int64_t();
-  // dtype
-  param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
-  // sparse_grad;
-  if (args[5].type_code() == kNull) {
-    param.sparse_grad = false;
-  } else {
-    param.sparse_grad = args[5].operator bool();
-  }
-  attrs.parsed = param;
-  attrs.op = op;
-  SetAttrDict<op::EmbeddingParam>(&attrs);
-  int num_outputs = 1;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
-  *ret = ndoutputs[0];
-});
+    .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+      using namespace runtime;
+      nnvm::NodeAttrs attrs;
+      const nnvm::Op* op = Op::Get("_npx_embedding");
+      op::EmbeddingParam param;
+      // inputs
+      int num_inputs = 2;
+      std::vector<NDArray*> inputs;
+      inputs.reserve(num_inputs);
+      for (int i = 0; i < num_inputs; ++i) {
+        inputs.push_back(args[i].operator mxnet::NDArray*());
+      }
+      // input_dim
+      param.input_dim = args[2].operator int64_t();
+      // output_dim
+      param.output_dim = args[3].operator int64_t();
+      // dtype
+      param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
+      // sparse_grad;
+      if (args[5].type_code() == kNull) {
+        param.sparse_grad = false;
+      } else {
+        param.sparse_grad = args[5].operator bool();
+      }
+      attrs.parsed = param;
+      attrs.op     = op;
+      SetAttrDict<op::EmbeddingParam>(&attrs);
+      int num_outputs = 1;
+      auto ndoutputs  = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
+      *ret            = ndoutputs[0];
+    });
 
 }  // namespace mxnet

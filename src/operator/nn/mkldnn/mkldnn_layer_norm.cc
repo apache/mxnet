@@ -83,7 +83,7 @@ MKLDNNLayerNormFwd& MKLDNNLayerNormFwd::GetCached(const LayerNormParam& param,
 MKLDNNLayerNormFwd::MKLDNNLayerNormFwd(const LayerNormParam& param, const NDArray& data) {
   const mkldnn::memory::desc data_md = data.GetMKLDNNData()->get_desc();
   fwd_pd                             = CreatePrimitiveDesc(param, data_md);
-  fwd = std::make_shared<layernorm_fwd_t>(*fwd_pd);
+  fwd                                = std::make_shared<layernorm_fwd_t>(*fwd_pd);
 }
 
 std::shared_ptr<layernorm_fwd_pd_t> MKLDNNLayerNormFwd::CreatePrimitiveDesc(

@@ -30,7 +30,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_insert_scalar)
-.set_attr<FCompute>("FCompute<gpu>", NumpyInsertScalarCompute<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", NumpyInsertScalarCompute<gpu>);
 
 }
-}
+}  // namespace mxnet

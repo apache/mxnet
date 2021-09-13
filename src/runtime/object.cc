@@ -66,8 +66,10 @@ class TypeContext {
   // Most types are already checked by the fast-path via reserved slot checking.
   bool DerivedFrom(uint32_t child_tindex, uint32_t parent_tindex) {
     // invariance: child's type index is always bigger than its parent.
-    if (child_tindex < parent_tindex) return false;
-    if (child_tindex == parent_tindex) return true;
+    if (child_tindex < parent_tindex)
+      return false;
+    if (child_tindex == parent_tindex)
+      return true;
     {
       std::lock_guard<std::mutex> lock(mutex_);
       CHECK_LT(child_tindex, type_table_.size());
@@ -107,10 +109,8 @@ class TypeContext {
       allocated_tindex = static_tindex;
       CHECK_LT(static_tindex, type_table_.size());
       CHECK_EQ(type_table_[allocated_tindex].allocated_slots, 0U)
-          << "Conflicting static index " << static_tindex
-          << " between " << type_table_[allocated_tindex].name
-          << " and "
-          << skey;
+          << "Conflicting static index " << static_tindex << " between "
+          << type_table_[allocated_tindex].name << " and " << skey;
     } else if (pinfo.allocated_slots + num_slots < pinfo.num_slots) {
       // allocate the slot from parent's reserved pool
       allocated_tindex = parent_tindex + pinfo.allocated_slots;
@@ -127,14 +127,13 @@ class TypeContext {
     }
     CHECK_GT(allocated_tindex, parent_tindex);
     // initialize the slot.
-    type_table_[allocated_tindex].index = allocated_tindex;
-    type_table_[allocated_tindex].parent_index = parent_tindex;
-    type_table_[allocated_tindex].num_slots = num_slots;
-    type_table_[allocated_tindex].allocated_slots = 1;
-    type_table_[allocated_tindex].child_slots_can_overflow =
-        child_slots_can_overflow;
-    type_table_[allocated_tindex].name = skey;
-    type_table_[allocated_tindex].name_hash = std::hash<std::string>()(skey);
+    type_table_[allocated_tindex].index                    = allocated_tindex;
+    type_table_[allocated_tindex].parent_index             = parent_tindex;
+    type_table_[allocated_tindex].num_slots                = num_slots;
+    type_table_[allocated_tindex].allocated_slots          = 1;
+    type_table_[allocated_tindex].child_slots_can_overflow = child_slots_can_overflow;
+    type_table_[allocated_tindex].name                     = skey;
+    type_table_[allocated_tindex].name_hash                = std::hash<std::string>()(skey);
     // update the key2index mapping.
     type_key2index_[skey] = allocated_tindex;
     return allocated_tindex;
@@ -142,24 +141,21 @@ class TypeContext {
 
   std::string TypeIndex2Key(uint32_t tindex) {
     std::lock_guard<std::mutex> lock(mutex_);
-    CHECK(tindex < type_table_.size() &&
-          type_table_[tindex].allocated_slots != 0)
+    CHECK(tindex < type_table_.size() && type_table_[tindex].allocated_slots != 0)
         << "Unknown type index " << tindex;
     return type_table_[tindex].name;
   }
 
   size_t TypeIndex2KeyHash(uint32_t tindex) {
     std::lock_guard<std::mutex> lock(mutex_);
-    CHECK(tindex < type_table_.size() &&
-          type_table_[tindex].allocated_slots != 0)
+    CHECK(tindex < type_table_.size() && type_table_[tindex].allocated_slots != 0)
         << "Unknown type index " << tindex;
     return type_table_[tindex].name_hash;
   }
 
   uint32_t TypeKey2Index(const std::string& skey) {
     auto it = type_key2index_.find(skey);
-    CHECK(it != type_key2index_.end())
-        << "Cannot find type " << skey;
+    CHECK(it != type_key2index_.end()) << "Cannot find type " << skey;
     return it->second;
   }
 
@@ -189,8 +185,7 @@ uint32_t Object::GetOrAllocRuntimeTypeIndex(const std::string& key,
 }
 
 bool Object::DerivedFrom(uint32_t parent_tindex) const {
-  return TypeContext::Global()->DerivedFrom(
-      this->type_index_, parent_tindex);
+  return TypeContext::Global()->DerivedFrom(this->type_index_, parent_tindex);
 }
 
 std::string Object::TypeIndex2Key(uint32_t tindex) {
@@ -223,7 +218,6 @@ int MXNetObjectGetTypeIndex(MXNetObjectHandle obj, unsigned* out_tindex) {
 
 int MXNetObjectTypeKey2Index(const char* type_key, unsigned* out_tindex) {
   API_BEGIN();
-  out_tindex[0] = mxnet::runtime::ObjectInternal::ObjectTypeKey2Index(
-      type_key);
+  out_tindex[0] = mxnet::runtime::ObjectInternal::ObjectTypeKey2Index(type_key);
   API_END();
 }

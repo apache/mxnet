@@ -31,11 +31,13 @@
 namespace mxnet {
 namespace op {
 
-template<int ndim, int req>
+template <int ndim, int req>
 struct kron {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out,
-                                  const DType* a, const DType* b,
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType* out,
+                                  const DType* a,
+                                  const DType* b,
                                   mshadow::Shape<ndim> ashape,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> oshape) {
@@ -55,11 +57,13 @@ struct kron {
   }
 };
 
-template<int ndim, int req>
+template <int ndim, int req>
 struct kron_back_a {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* agrad,
-                                  const DType* b, const DType* ograd,
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType* agrad,
+                                  const DType* b,
+                                  const DType* ograd,
                                   mshadow::Shape<ndim> ashape,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> oshape) {
@@ -72,20 +76,22 @@ struct kron_back_a {
     for (index_t idx_b = 0; idx_b < bshape.Size(); idx_b++) {
       auto jb = unravel(idx_b, bshape);
       for (int q = 0; q < ndim; q++) {
-        k[q] = ia[q]*bshape[q] + jb[q];
+        k[q] = ia[q] * bshape[q] + jb[q];
       }
       auto idx_o = ravel(k, oshape);
-      temp_agrad += b[idx_b]*ograd[idx_o];
+      temp_agrad += b[idx_b] * ograd[idx_o];
     }
     KERNEL_ASSIGN(agrad[i], req, temp_agrad);
   }
 };
 
-template<int ndim, int req>
+template <int ndim, int req>
 struct kron_back_b {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, const DType* a,
-                                  DType* bgrad, const DType* ograd,
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  const DType* a,
+                                  DType* bgrad,
+                                  const DType* ograd,
                                   mshadow::Shape<ndim> ashape,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> oshape) {
@@ -101,19 +107,18 @@ struct kron_back_b {
         k[q] = ia[q] * bshape[q] + jb[q];
       }
       auto idx_o = ravel(k, oshape);
-      temp_bgrad += a[idx_a]*ograd[idx_o];
+      temp_bgrad += a[idx_a] * ograd[idx_o];
     }
     KERNEL_ASSIGN(bgrad[i], req, temp_bgrad);
   }
 };
 
-template<typename xpu>
+template <typename xpu>
 void KronOpForwardImpl(const OpContext& ctx,
                        OpReqType req,
                        const TBlob& a,
                        const TBlob& b,
-                       const TBlob& out
-                       ) {
+                       const TBlob& out) {
   using namespace mshadow;
 
   if (req == kNullOp) {
@@ -128,21 +133,20 @@ void KronOpForwardImpl(const OpContext& ctx,
   const mxnet::TShape& bshape = b.shape_;
   const mxnet::TShape& oshape = out.shape_;
 
-
   // TensordotIntAxesImpl<xpu>(0, ctx, a, b, out, req[0]);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
     if (ashape.Size() == 0U || bshape.Size() == 0U) {
       // 0-size input
       if (req != kAddTo) {
-        Tensor<xpu, 1, DType> out_data = out.get_with_shape<xpu, 1, DType>(
-            Shape1(out.shape_.Size()), s);
+        Tensor<xpu, 1, DType> out_data =
+            out.get_with_shape<xpu, 1, DType>(Shape1(out.shape_.Size()), s);
         out_data = static_cast<DType>(0);
       }
     } else if (ashape.ndim() == 0 && bshape.ndim() == 0) {
       // Both 0-D scalars, equivalent to multiply
-      Tensor<xpu, 1, DType> a_data = a.get_with_shape<xpu, 1, DType>(Shape1(1), s);
-      Tensor<xpu, 1, DType> b_data = b.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> a_data   = a.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> b_data   = b.get_with_shape<xpu, 1, DType>(Shape1(1), s);
       Tensor<xpu, 1, DType> out_data = out.get_with_shape<xpu, 1, DType>(Shape1(1), s);
       ASSIGN_DISPATCH(out_data, req, a_data * b_data);
     } else if (ashape.ndim() == 0 || bshape.ndim() == 0) {
@@ -151,15 +155,15 @@ void KronOpForwardImpl(const OpContext& ctx,
       const DType* scalar = (ashape.ndim() == 0) ? a.dptr<DType>() : b.dptr<DType>();
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
         mxnet_op::Kernel<scalar_mul_kernel<Req>, xpu>::Launch(
-          s, out.Size(), out.dptr<DType>(), tensor, scalar);
+            s, out.Size(), out.dptr<DType>(), tensor, scalar);
       });
     } else {
       MXNET_NDIM_SWITCH(oshape.ndim(), ndim, {
         Shape<ndim> ashape_ = oshape.get<ndim>();
         Shape<ndim> bshape_ = oshape.get<ndim>();
         Shape<ndim> oshape_ = oshape.get<ndim>();
-        int temp = ashape.ndim()-bshape.ndim();
-        int s_dim = (temp > 0)?bshape.ndim():ashape.ndim();
+        int temp            = ashape.ndim() - bshape.ndim();
+        int s_dim           = (temp > 0) ? bshape.ndim() : ashape.ndim();
         for (int i = 0; i < s_dim; i++) {
           ashape_[ndim - i - 1] = ashape[ashape.ndim() - i - 1];
           bshape_[ndim - i - 1] = bshape[bshape.ndim() - i - 1];
@@ -179,9 +183,14 @@ void KronOpForwardImpl(const OpContext& ctx,
           }
         }
         MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-          mxnet_op::Kernel<kron<ndim, req_type>, xpu>::Launch(
-            s, out.Size(), out.dptr<DType>(), a.dptr<DType>(), b.dptr<DType>(),
-            ashape_, bshape_, oshape_);
+          mxnet_op::Kernel<kron<ndim, req_type>, xpu>::Launch(s,
+                                                              out.Size(),
+                                                              out.dptr<DType>(),
+                                                              a.dptr<DType>(),
+                                                              b.dptr<DType>(),
+                                                              ashape_,
+                                                              bshape_,
+                                                              oshape_);
         });
       });
     }
@@ -196,7 +205,7 @@ void KronOpForwardImpl(const OpContext& ctx,
   ReduceAxesRTCComputeImpl(__VA_ARGS__, "red::sum{}", &workspace)
 #endif
 
-template<typename xpu>
+template <typename xpu>
 void KronOpBackwardImpl(const OpContext& ctx,
                         const std::vector<OpReqType>& req,
                         const TBlob& a,
@@ -208,56 +217,61 @@ void KronOpBackwardImpl(const OpContext& ctx,
   const mxnet::TShape& bshape = b.shape_;
   const mxnet::TShape& oshape = ograd.shape_;
 
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
     if (ashape.ndim() == 0 && bshape.ndim() == 0) {
       // Both 0-D scalars, equivalent to multiply
       Tensor<xpu, 1, DType> ograd_data = ograd.get_with_shape<xpu, 1, DType>(Shape1(1), s);
-      Tensor<xpu, 1, DType> a_data = a.get_with_shape<xpu, 1, DType>(Shape1(1), s);
-      Tensor<xpu, 1, DType> b_data = b.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> a_data     = a.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> b_data     = b.get_with_shape<xpu, 1, DType>(Shape1(1), s);
       Tensor<xpu, 1, DType> agrad_data = agrad.get_with_shape<xpu, 1, DType>(Shape1(1), s);
       Tensor<xpu, 1, DType> bgrad_data = bgrad.get_with_shape<xpu, 1, DType>(Shape1(1), s);
       ASSIGN_DISPATCH(agrad_data, req[0], b_data * ograd_data);
       ASSIGN_DISPATCH(bgrad_data, req[1], a_data * ograd_data);
     } else if (ashape.ndim() == 0 || bshape.ndim() == 0) {
       // Either of them is a scalar, just scale by one of them
-      const TBlob& tensor = (ashape.ndim() == 0) ? b : a;
-      const TBlob& tensor_grad = (ashape.ndim() == 0) ? bgrad : agrad;
-      const TBlob& scalar = (ashape.ndim() == 0) ? a : b;
-      const TBlob& scalar_grad = (ashape.ndim() == 0) ? agrad : bgrad;
-      Tensor<xpu, 1, DType> scalar_ = scalar.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      const TBlob& tensor                = (ashape.ndim() == 0) ? b : a;
+      const TBlob& tensor_grad           = (ashape.ndim() == 0) ? bgrad : agrad;
+      const TBlob& scalar                = (ashape.ndim() == 0) ? a : b;
+      const TBlob& scalar_grad           = (ashape.ndim() == 0) ? agrad : bgrad;
+      Tensor<xpu, 1, DType> scalar_      = scalar.get_with_shape<xpu, 1, DType>(Shape1(1), s);
       Tensor<xpu, 1, DType> scalar_grad_ = scalar_grad.get_with_shape<xpu, 1, DType>(Shape1(1), s);
-      Tensor<xpu, 1, DType> tensor_ = tensor.FlatTo1D<xpu, DType>(s);
+      Tensor<xpu, 1, DType> tensor_      = tensor.FlatTo1D<xpu, DType>(s);
       Tensor<xpu, 1, DType> tensor_grad_ = tensor_grad.FlatTo1D<xpu, DType>(s);
-      Tensor<xpu, 1, DType> ograd_ = ograd.FlatTo1D<xpu, DType>(s);
-      const OpReqType& tensor_req = (ashape.ndim() == 0) ? req[1] : req[0];
-      const OpReqType& scalar_req = (ashape.ndim() == 0) ? req[0] : req[1];
-      ASSIGN_DISPATCH(tensor_grad_, tensor_req,
-                      broadcast_scalar(scalar_, tensor_grad_.shape_) * ograd_);
+      Tensor<xpu, 1, DType> ograd_       = ograd.FlatTo1D<xpu, DType>(s);
+      const OpReqType& tensor_req        = (ashape.ndim() == 0) ? req[1] : req[0];
+      const OpReqType& scalar_req        = (ashape.ndim() == 0) ? req[0] : req[1];
+      ASSIGN_DISPATCH(
+          tensor_grad_, tensor_req, broadcast_scalar(scalar_, tensor_grad_.shape_) * ograd_);
       TShape src_shape, dst_shape;
       BroadcastReduceShapeCompact(ograd.shape_, scalar_grad_.shape_, &src_shape, &dst_shape);
-      size_t workspace_size = broadcast::ReduceWorkspaceSize(s, dst_shape,
-                                                             {scalar_req}, src_shape);
+      size_t workspace_size = broadcast::ReduceWorkspaceSize(s, dst_shape, {scalar_req}, src_shape);
       constexpr size_t align_size = 1024;
-      const size_t aligned_first_workspace_size = ((workspace_size + align_size - 1) / align_size)
-                                                  * align_size;
+      const size_t aligned_first_workspace_size =
+          ((workspace_size + align_size - 1) / align_size) * align_size;
       workspace_size = aligned_first_workspace_size + ograd.shape_.Size() * sizeof(DType);
       Tensor<xpu, 1, char> workspace =
-        ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      Tensor<xpu, 1, DType> temp(reinterpret_cast<DType*>(workspace.dptr_ +
-                                                          aligned_first_workspace_size),
-                                 Shape1(ograd.shape_.Size()), s);
+          ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+      Tensor<xpu, 1, DType> temp(
+          reinterpret_cast<DType*>(workspace.dptr_ + aligned_first_workspace_size),
+          Shape1(ograd.shape_.Size()),
+          s);
       ASSIGN_DISPATCH(temp, kWriteTo, tensor_ * ograd_);
 
-      NP_KRON_REDUCE_AXES(true, workspace, ctx, {TBlob(temp)}, {scalar_req},
-                          {TBlob(scalar_grad_)}, scalar_grad_.shape_);
+      NP_KRON_REDUCE_AXES(true,
+                          workspace,
+                          ctx,
+                          {TBlob(temp)},
+                          {scalar_req},
+                          {TBlob(scalar_grad_)},
+                          scalar_grad_.shape_);
     } else {
       MXNET_NDIM_SWITCH(oshape.ndim(), ndim, {
         Shape<ndim> ashape_ = oshape.get<ndim>();
         Shape<ndim> bshape_ = oshape.get<ndim>();
         Shape<ndim> oshape_ = oshape.get<ndim>();
-        int temp = ashape.ndim()-bshape.ndim();
-        int s_dim =  (temp > 0)?bshape.ndim():ashape.ndim();
+        int temp            = ashape.ndim() - bshape.ndim();
+        int s_dim           = (temp > 0) ? bshape.ndim() : ashape.ndim();
         for (int i = 0; i < s_dim; i++) {
           ashape_[ndim - i - 1] = ashape[ashape.ndim() - i - 1];
           bshape_[ndim - i - 1] = bshape[bshape.ndim() - i - 1];
@@ -278,16 +292,26 @@ void KronOpBackwardImpl(const OpContext& ctx,
         }
         MSHADOW_TYPE_SWITCH(agrad.type_flag_, DType, {
           MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-            mxnet_op::Kernel<kron_back_a<ndim, req_type>, xpu>::Launch(
-              s, agrad.Size(), agrad.dptr<DType>(), b.dptr<DType>(), ograd.dptr<DType>(),
-              ashape_, bshape_, oshape_);
+            mxnet_op::Kernel<kron_back_a<ndim, req_type>, xpu>::Launch(s,
+                                                                       agrad.Size(),
+                                                                       agrad.dptr<DType>(),
+                                                                       b.dptr<DType>(),
+                                                                       ograd.dptr<DType>(),
+                                                                       ashape_,
+                                                                       bshape_,
+                                                                       oshape_);
           });
         });
         MSHADOW_TYPE_SWITCH(bgrad.type_flag_, DType, {
           MXNET_ASSIGN_REQ_SWITCH(req[1], req_type, {
-            mxnet_op::Kernel<kron_back_b<ndim, req_type>, xpu>::Launch(
-              s, bgrad.Size(), a.dptr<DType>(), bgrad.dptr<DType>(), ograd.dptr<DType>(),
-              ashape_, bshape_, oshape_);
+            mxnet_op::Kernel<kron_back_b<ndim, req_type>, xpu>::Launch(s,
+                                                                       bgrad.Size(),
+                                                                       a.dptr<DType>(),
+                                                                       bgrad.dptr<DType>(),
+                                                                       ograd.dptr<DType>(),
+                                                                       ashape_,
+                                                                       bshape_,
+                                                                       oshape_);
           });
         });
       });
@@ -297,7 +321,7 @@ void KronOpBackwardImpl(const OpContext& ctx,
 
 #undef NP_KRON_REDUCE_AXES
 
-template<typename xpu>
+template <typename xpu>
 inline void KronOpForward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<TBlob>& inputs,
@@ -308,15 +332,14 @@ inline void KronOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 
-  const TBlob& a = inputs[0];
-  const TBlob& b = inputs[1];
+  const TBlob& a   = inputs[0];
+  const TBlob& b   = inputs[1];
   const TBlob& out = outputs[0];
 
   KronOpForwardImpl<xpu>(ctx, req[0], a, b, out);
 }
 
-
-template<typename xpu>
+template <typename xpu>
 inline void KronOpBackward(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
@@ -328,9 +351,9 @@ inline void KronOpBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 2U);
 
-  const TBlob& ograd = inputs[0];
-  const TBlob& a = inputs[1];
-  const TBlob& b = inputs[2];
+  const TBlob& ograd  = inputs[0];
+  const TBlob& a      = inputs[1];
+  const TBlob& b      = inputs[2];
   const TBlob& grad_a = outputs[0];
   const TBlob& grad_b = outputs[1];
 

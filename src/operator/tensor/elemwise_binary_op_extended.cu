@@ -26,30 +26,26 @@
 
 namespace mxnet {
 namespace op {
-NNVM_REGISTER_OP(_power)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"power"});
+NNVM_REGISTER_OP(_power).set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"power"});
 
 NNVM_REGISTER_OP(_backward_power)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCBwdUseIn{"power_grad", "power_rgrad"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCBwdUseIn{"power_grad", "power_rgrad"});
 
-NNVM_REGISTER_OP(_maximum)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"max"});
+NNVM_REGISTER_OP(_maximum).set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"max"});
 
 NNVM_REGISTER_OP(_backward_maximum)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCBwdUseIn{"greater_equal", "less"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCBwdUseIn{"greater_equal", "less"});
 
-NNVM_REGISTER_OP(_minimum)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"min"});
+NNVM_REGISTER_OP(_minimum).set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"min"});
 
 NNVM_REGISTER_OP(_backward_minimum)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCBwdUseIn{"less_equal", "greater"});
+    .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCBwdUseIn{"less_equal", "greater"});
 
-NNVM_REGISTER_OP(_hypot)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"hypot"});
+NNVM_REGISTER_OP(_hypot).set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"hypot"});
 
 NNVM_REGISTER_OP(_backward_hypot)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCBwdUseIn{"hypot_grad_left",
-                                                               "hypot_grad_right"});
+    .set_attr<FCompute>("FCompute<gpu>",
+                        ElemwiseBinaryRTCBwdUseIn{"hypot_grad_left", "hypot_grad_right"});
 
 }  // namespace op
 }  // namespace mxnet

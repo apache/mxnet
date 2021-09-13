@@ -30,8 +30,9 @@ namespace op {
 DMLC_REGISTER_PARAMETER(RavelParam);
 
 NNVM_REGISTER_OP(_ravel_multi_index)
-.add_alias("ravel_multi_index")
-.describe(R"code(Converts a batch of index arrays into an array of flat indices. The operator follows numpy conventions so a single multi index is given by a column of the input matrix. The leading dimension may be left unspecified by using -1 as placeholder.  
+    .add_alias("ravel_multi_index")
+    .describe(
+        R"code(Converts a batch of index arrays into an array of flat indices. The operator follows numpy conventions so a single multi index is given by a column of the input matrix. The leading dimension may be left unspecified by using -1 as placeholder.  
 
 Examples::
    
@@ -40,24 +41,29 @@ Examples::
    ravel(A, shape=(-1,6)) = [22,41,37]
 
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<RavelParam>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"data"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", RavelOpShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", RavelForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("data", "NDArray-or-Symbol", "Batch of multi-indices")
-.add_arguments(RavelParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<RavelParam>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", RavelOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", RavelForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("data", "NDArray-or-Symbol", "Batch of multi-indices")
+    .add_arguments(RavelParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_unravel_index)
-.add_alias("unravel_index")
-.describe(R"code(Converts an array of flat indices into a batch of index arrays. The operator follows numpy conventions so a single multi index is given by a column of the output matrix. The leading dimension may be left unspecified by using -1 as placeholder.  
+    .add_alias("unravel_index")
+    .describe(
+        R"code(Converts an array of flat indices into a batch of index arrays. The operator follows numpy conventions so a single multi index is given by a column of the output matrix. The leading dimension may be left unspecified by using -1 as placeholder.  
 
 Examples::
 
@@ -74,20 +80,24 @@ Examples::
                                      [[4,5,1],[4,5,3]]]
 
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<RavelParam>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
-  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"data"}; } )
-.set_attr<mxnet::FInferShape>("FInferShape", UnravelOpShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", UnravelForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("data", "NDArray-or-Symbol", "Array of flat indices")
-.add_arguments(RavelParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<RavelParam>)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", UnravelOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", UnravelForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("data", "NDArray-or-Symbol", "Array of flat indices")
+    .add_arguments(RavelParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

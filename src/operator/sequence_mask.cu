@@ -22,7 +22,7 @@
  * \file sequence_mask.cu
  * \brief
  * \author Sebastian Bodenstein
-*/
+ */
 
 #include "./sequence_mask-inl.h"
 
@@ -33,12 +33,16 @@ namespace op {
 template <int req>
 struct SequenceMask0GPUKernel {
   template <typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType *in, const IType *idx,
-                                  index_t max_s_len, index_t batch_size,
-                                  index_t restsize, DType value) {
-    index_t batch = i / restsize % batch_size;
+  MSHADOW_XINLINE static void Map(int i,
+                                  DType* in,
+                                  const IType* idx,
+                                  index_t max_s_len,
+                                  index_t batch_size,
+                                  index_t restsize,
+                                  DType value) {
+    index_t batch        = i / restsize % batch_size;
     const index_t seqpos = static_cast<int>(idx[batch]);
-    index_t seq = i / restsize / batch_size;
+    index_t seq          = i / restsize / batch_size;
     if (seq >= seqpos) {
       KERNEL_ASSIGN(in[i], req, value);
     }
@@ -49,52 +53,54 @@ struct SequenceMask0GPUKernel {
 template <int req>
 struct SequenceMask1GPUKernel {
   template <typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType *in, const IType *idx,
-                                  index_t max_s_len, index_t batch_size,
-                                  index_t restsize, DType value) {
-    index_t batch = i / restsize / max_s_len;
+  MSHADOW_XINLINE static void Map(int i,
+                                  DType* in,
+                                  const IType* idx,
+                                  index_t max_s_len,
+                                  index_t batch_size,
+                                  index_t restsize,
+                                  DType value) {
+    index_t batch        = i / restsize / max_s_len;
     const index_t seqpos = static_cast<int>(idx[batch]);
-    index_t seq = i / restsize % max_s_len;
+    index_t seq          = i / restsize % max_s_len;
     if (seq >= seqpos) {
       KERNEL_ASSIGN(in[i], req, value);
     }
   }
 };
 
-template<typename DType, typename IType>
-void SequenceMaskExec(
-       const mshadow::Tensor<gpu, 3, DType> &data,
-       const mshadow::Tensor<gpu, 1, IType> &indices,
-       const OpReqType req, mshadow::Stream<gpu> *const s,
-       int axis, DType val) {
+template <typename DType, typename IType>
+void SequenceMaskExec(const mshadow::Tensor<gpu, 3, DType>& data,
+                      const mshadow::Tensor<gpu, 1, IType>& indices,
+                      const OpReqType req,
+                      mshadow::Stream<gpu>* const s,
+                      int axis,
+                      DType val) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace mxnet_op;
 
-  index_t batch = indices.size(0);
+  index_t batch       = indices.size(0);
   index_t max_seq_len = data.size(axis);
-  index_t restsize = data.size(2);
+  index_t restsize    = data.size(2);
 
   MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
     if (axis == 1) {
       Kernel<SequenceMask1GPUKernel<req_type>, gpu>::Launch(
-        s, data.shape_.Size(), data.dptr_, indices.dptr_, max_seq_len, batch, restsize,
-        val);
+          s, data.shape_.Size(), data.dptr_, indices.dptr_, max_seq_len, batch, restsize, val);
     } else {
       Kernel<SequenceMask0GPUKernel<req_type>, gpu>::Launch(
-        s, data.shape_.Size(), data.dptr_, indices.dptr_, max_seq_len, batch, restsize,
-        val);
+          s, data.shape_.Size(), data.dptr_, indices.dptr_, max_seq_len, batch, restsize, val);
     }
   });
 }
 
-template <> Operator *CreateOp<gpu>(SequenceMaskParam param, int dtype, int itype) {
-  Operator *op = nullptr;
+template <>
+Operator* CreateOp<gpu>(SequenceMaskParam param, int dtype, int itype) {
+  Operator* op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          op = new SequenceMaskOp<gpu, DType, IType>(param);
-        });
-    });
+    MSHADOW_TYPE_SWITCH(itype, IType, { op = new SequenceMaskOp<gpu, DType, IType>(param); });
+  });
   return op;
 }
 

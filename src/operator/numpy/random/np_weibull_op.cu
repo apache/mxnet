@@ -28,11 +28,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_weibull)
-.set_attr<FCompute>("FCompute<gpu>", NumpyWeibullForward<gpu>);
+NNVM_REGISTER_OP(_npi_weibull).set_attr<FCompute>("FCompute<gpu>", NumpyWeibullForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_broadcast_weibull)
-.set_attr<FCompute>("FCompute<gpu>", WeibullReparamBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", WeibullReparamBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

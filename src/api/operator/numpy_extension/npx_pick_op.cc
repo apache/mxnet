@@ -41,8 +41,7 @@ inline int String2PickMode(const std::string& s) {
   return 0;
 }
 
-MXNET_REGISTER_API("_npx.pick")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+MXNET_REGISTER_API("_npx.pick").set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   const nnvm::Op* op = Op::Get("_npx_pick");
@@ -62,7 +61,7 @@ MXNET_REGISTER_API("_npx.pick")
     param.keepdims = args[4].operator bool();
   }
   attrs.parsed = param;
-  attrs.op = op;
+  attrs.op     = op;
   SetAttrDict<op::PickParam>(&attrs);
   // inputs
   int num_inputs = 2;
@@ -72,8 +71,8 @@ MXNET_REGISTER_API("_npx.pick")
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
-  *ret = ndoutputs[0];
+  auto ndoutputs  = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
+  *ret            = ndoutputs[0];
 });
 
 }  // namespace mxnet

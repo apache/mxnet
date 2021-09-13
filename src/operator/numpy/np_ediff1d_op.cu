@@ -27,11 +27,9 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_ediff1d)
-.set_attr<FCompute>("FCompute<gpu>", EDiff1DForward<gpu>);
+NNVM_REGISTER_OP(_npi_ediff1d).set_attr<FCompute>("FCompute<gpu>", EDiff1DForward<gpu>);
 
-NNVM_REGISTER_OP(_npi_backward_ediff1d)
-.set_attr<FCompute>("FCompute<gpu>", EDiff1DBackward<gpu>);
+NNVM_REGISTER_OP(_npi_backward_ediff1d).set_attr<FCompute>("FCompute<gpu>", EDiff1DBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

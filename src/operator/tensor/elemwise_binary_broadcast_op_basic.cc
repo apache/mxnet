@@ -31,8 +31,8 @@ namespace op {
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_add)
 MXNET_ADD_SPARSE_OP_ALIAS(broadcast_add)
 MXNET_ADD_SPARSE_OP_ALIAS(broadcast_plus)
-.add_alias("broadcast_plus")
-.describe(R"code(Returns element-wise sum of the input arrays with broadcasting.
+    .add_alias("broadcast_plus")
+    .describe(R"code(Returns element-wise sum of the input arrays with broadcasting.
 
 `broadcast_plus` is an alias to the function `broadcast_add`.
 
@@ -56,31 +56,33 @@ Supported sparse operations:
    broadcast_add(dense(1D), csr) = dense
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::plus>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeDenseEx<cpu, op::mshadow_op::plus>)
-.set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_add"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::plus>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>",
+                          BinaryBroadcastComputeDenseEx<cpu, op::mshadow_op::plus>)
+    .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_add"});
 
 NNVM_REGISTER_OP(_backward_broadcast_add)
-.set_num_inputs(1)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity,
-                                                                mshadow_op::identity>);
+    .set_num_inputs(1)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>(
+        "FCompute<cpu>",
+        BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity, mshadow_op::identity>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_sub)
 MXNET_ADD_SPARSE_OP_ALIAS(broadcast_sub)
 MXNET_ADD_SPARSE_OP_ALIAS(broadcast_minus)
-.add_alias("broadcast_minus")
-.describe(R"code(Returns element-wise difference of the input arrays with broadcasting.
+    .add_alias("broadcast_minus")
+    .describe(R"code(Returns element-wise difference of the input arrays with broadcasting.
 
 `broadcast_minus` is an alias to the function `broadcast_sub`.
 
@@ -104,29 +106,31 @@ Supported sparse operations:
    broadcast_sub/minus(dense(1D), csr) = dense
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::minus>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeDenseEx<cpu, op::mshadow_op::minus>)
-.set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_sub"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::minus>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>",
+                          BinaryBroadcastComputeDenseEx<cpu, op::mshadow_op::minus>)
+    .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_sub"});
 
 NNVM_REGISTER_OP(_backward_broadcast_sub)
-.set_num_inputs(1)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity,
-                                                                mshadow_op::negation>);
+    .set_num_inputs(1)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>(
+        "FCompute<cpu>",
+        BinaryBroadcastBackwardUseNone<cpu, mshadow_op::identity, mshadow_op::negation>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_mul)
 MXNET_ADD_SPARSE_OP_ALIAS(broadcast_mul)
-.describe(R"code(Returns element-wise product of the input arrays with broadcasting.
+    .describe(R"code(Returns element-wise product of the input arrays with broadcasting.
 
 Example::
 
@@ -144,30 +148,30 @@ Supported sparse operations:
    broadcast_mul(csr, dense(1D)) = csr
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::mul>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeSparseEx<cpu, op::mshadow_op::mul>)
-.set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mul"});
-
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::mul>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>",
+                          BinaryBroadcastComputeSparseEx<cpu, op::mshadow_op::mul>)
+    .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mul"});
 
 NNVM_REGISTER_OP(_backward_broadcast_mul)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::right,
-                                                              mshadow_op::left>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::right, mshadow_op::left>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_div)
 MXNET_ADD_SPARSE_OP_ALIAS(broadcast_div)
-.describe(R"code(Returns element-wise division of the input arrays with broadcasting.
+    .describe(R"code(Returns element-wise division of the input arrays with broadcasting.
 
 Example::
 
@@ -185,28 +189,30 @@ Supported sparse operations:
    broadcast_div(csr, dense(1D)) = csr
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::div>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeSparseEx<cpu, op::mshadow_op::div>)
-.set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_div"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::div>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>",
+                          BinaryBroadcastComputeSparseEx<cpu, op::mshadow_op::div>)
+    .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_div"});
 
 NNVM_REGISTER_OP(_backward_broadcast_div)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::div_grad,
-                                                              mshadow_op::div_rgrad>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>(
+        "FCompute<cpu>",
+        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_mod)
-.describe(R"code(Returns element-wise modulo of the input arrays with broadcasting.
+    .describe(R"code(Returns element-wise modulo of the input arrays with broadcasting.
 
 Example::
 
@@ -220,23 +226,24 @@ Example::
                           [ 2.,  2.,  2.]]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::mod>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mod"});
+    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::mod>)
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mod"});
 
 NNVM_REGISTER_OP(_backward_broadcast_mod)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 1}};
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::mod_grad,
-                                                                  mshadow_op::mod_rgrad>);
+    .set_num_inputs(3)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{0, 1}};
+                                    })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<FCompute>(
+        "FCompute<cpu>",
+        BinaryBroadcastBackwardUseIn<cpu, mshadow_op::mod_grad, mshadow_op::mod_rgrad>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -27,21 +27,21 @@
 namespace mxnet {
 namespace op {
 
-inline bool TensorinvOpShape(const nnvm::NodeAttrs &attrs,
-                             std::vector<mxnet::TShape> *in_attrs,
-                             std::vector<mxnet::TShape> *out_attrs) {
+inline bool TensorinvOpShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<mxnet::TShape>* in_attrs,
+                             std::vector<mxnet::TShape>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
   const mxnet::TShape& a_shape = (*in_attrs)[0];
-  const int a_ndim = a_shape.ndim();
+  const int a_ndim             = a_shape.ndim();
   mxnet::TShape inv_a_shape(a_shape);
   if (!ndim_is_known(a_shape)) {
     return false;
   }
   // ind > 0, defalut = 2
   int ind = 2;
-  ind = nnvm::get<TensorinvParam>(attrs.parsed).ind;
+  ind     = nnvm::get<TensorinvParam>(attrs.parsed).ind;
   CHECK_GT(ind, 0) << "Invalid ind argument.";
 
   if (a_ndim > 0 && ind < a_ndim) {
@@ -55,8 +55,7 @@ inline bool TensorinvOpShape(const nnvm::NodeAttrs &attrs,
   } else {  // ind >= a_ndim
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, inv_a_shape);
   }
-  CHECK_NE(inv_a_shape.ndim(), 0)
-    << "can not reshape array";
+  CHECK_NE(inv_a_shape.ndim(), 0) << "can not reshape array";
 
   dim_t prod_front = 1, prod_back = 1;
   if (ind < a_ndim) {
@@ -66,8 +65,7 @@ inline bool TensorinvOpShape(const nnvm::NodeAttrs &attrs,
     for (int i = ind; i < a_ndim; ++i) {
       prod_back *= a_shape[i];
     }
-    CHECK_GT(prod_back, 0)
-      << "can not reshape array of size 0 into shape";
+    CHECK_GT(prod_back, 0) << "can not reshape array of size 0 into shape";
   } else {
     for (int i = 0; i < a_ndim; ++i) {
       prod_front *= a_shape[i];
@@ -75,7 +73,7 @@ inline bool TensorinvOpShape(const nnvm::NodeAttrs &attrs,
   }
   // prod_back >= 1 and prod_front == prod_back
   CHECK_EQ(prod_front, prod_back)
-    << "a shape must be square, i. e., prod(a.shape[:ind]) == prod(a.shape[ind:]).";
+      << "a shape must be square, i. e., prod(a.shape[:ind]) == prod(a.shape[ind:]).";
   return !mxnet::op::shape_is_none(out_attrs->at(0));
 }
 
@@ -86,8 +84,7 @@ inline bool TensorinvOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   int a_type = in_attrs->at(0);
   // unsupport float16
-  CHECK_NE(a_type, mshadow::kFloat16)
-    << "array type float16 is unsupported in linalg";
+  CHECK_NE(a_type, mshadow::kFloat16) << "array type float16 is unsupported in linalg";
   if (mshadow::kFloat32 == a_type) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   } else {
@@ -99,36 +96,39 @@ inline bool TensorinvOpType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(TensorinvParam);
 
 NNVM_REGISTER_OP(_npi_tensorinv)
-.describe(R"code()code" ADD_FILELINE)
-.set_attr_parser(mxnet::op::ParamParser<TensorinvParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a"};
-})
-.set_attr<mxnet::FInferShape>("FInferShape", TensorinvOpShape)
-.set_attr<nnvm::FInferType>("FInferType", TensorinvOpType)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
-})
-.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", TensorinvOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", mxnet::op::ElemwiseGradUseOut{"_backward_npi_tensorinv"})
-.add_argument("a", "NDArray-or-Symbol", "First input")
-.add_arguments(TensorinvParam::__FIELDS__());
+    .describe(R"code()code" ADD_FILELINE)
+    .set_attr_parser(mxnet::op::ParamParser<TensorinvParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"a"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", TensorinvOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", TensorinvOpType)
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>(1,
+                                                                      ResourceRequest::kTempSpace);
+                                })
+    .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+    .set_attr<FCompute>("FCompute<cpu>", TensorinvOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient",
+                               mxnet::op::ElemwiseGradUseOut{"_backward_npi_tensorinv"})
+    .add_argument("a", "NDArray-or-Symbol", "First input")
+    .add_arguments(TensorinvParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_npi_tensorinv)
-.set_attr_parser(mxnet::op::ParamParser<TensorinvParam>)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& ){
-    return std::vector<ResourceRequest>{1, ResourceRequest::kTempSpace};
-})
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", TensorinvOpBackward<cpu>);
+    .set_attr_parser(mxnet::op::ParamParser<TensorinvParam>)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<FResourceRequest>(
+        "FResourceRequest",
+        [](const NodeAttrs&) {
+          return std::vector<ResourceRequest>{1, ResourceRequest::kTempSpace};
+        })
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", TensorinvOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

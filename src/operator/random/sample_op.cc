@@ -46,42 +46,42 @@ DMLC_REGISTER_PARAMETER(SamplePoissonLikeParam);
 DMLC_REGISTER_PARAMETER(SampleNegBinomialLikeParam);
 DMLC_REGISTER_PARAMETER(SampleGenNegBinomialLikeParam);
 
-#define MXNET_OPERATOR_REGISTER_SAMPLE(name, ParamType)                                      \
-  NNVM_REGISTER_OP(name)                                                                     \
-  .set_num_inputs(0)                                                                         \
-  .set_num_outputs(1)                                                                        \
-  .set_attr_parser(ParamParser<ParamType>)                                                   \
-  .set_attr<mxnet::FInferShape>("FInferShape", InitShape<ParamType>)                          \
-  .set_attr<nnvm::FInferType>("FInferType", SampleOpType<ParamType>)                \
-  .set_attr<FResourceRequest>("FResourceRequest", SampleResource)                            \
-  .add_arguments(ParamType::__FIELDS__())                                                    \
-  .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<ParamType, true, false>) \
-  .set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, ParamType>)                              \
-  .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, ParamType>)
+#define MXNET_OPERATOR_REGISTER_SAMPLE(name, ParamType)                                          \
+  NNVM_REGISTER_OP(name)                                                                         \
+      .set_num_inputs(0)                                                                         \
+      .set_num_outputs(1)                                                                        \
+      .set_attr_parser(ParamParser<ParamType>)                                                   \
+      .set_attr<mxnet::FInferShape>("FInferShape", InitShape<ParamType>)                         \
+      .set_attr<nnvm::FInferType>("FInferType", SampleOpType<ParamType>)                         \
+      .set_attr<FResourceRequest>("FResourceRequest", SampleResource)                            \
+      .add_arguments(ParamType::__FIELDS__())                                                    \
+      .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<ParamType, true, false>) \
+      .set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, ParamType>)                              \
+      .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, ParamType>)
 
-#define MXNET_OPERATOR_REGISTER_SAMPLE_LIKE(name, ParamType)                              \
-  NNVM_REGISTER_OP(name)                                                                  \
-  .set_num_inputs(1)                                                                      \
-  .set_num_outputs(1)                                                                     \
-  .set_attr_parser(ParamParser<ParamType>)                                                \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                        \
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)                           \
-  .set_attr<FResourceRequest>("FResourceRequest", SampleResource)                         \
-  .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",                                         \
-    [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })                   \
-  .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)                              \
-  .add_arguments(ParamType::__FIELDS__())                                                 \
-  .add_argument("data", "NDArray-or-Symbol", "The input")                                 \
-  .set_attr<FInferStorageType>("FInferStorageType",                                       \
-                               ElemwiseStorageType<1, 1, false, true, false>)             \
-  .set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, ParamType>)                           \
-  .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, ParamType>)
+#define MXNET_OPERATOR_REGISTER_SAMPLE_LIKE(name, ParamType)                                   \
+  NNVM_REGISTER_OP(name)                                                                       \
+      .set_num_inputs(1)                                                                       \
+      .set_num_outputs(1)                                                                      \
+      .set_attr_parser(ParamParser<ParamType>)                                                 \
+      .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                        \
+      .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)                            \
+      .set_attr<FResourceRequest>("FResourceRequest", SampleResource)                          \
+      .set_attr<nnvm::FIgnoreInputs>(                                                          \
+          "FIgnoreInputs", [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); }) \
+      .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)                               \
+      .add_arguments(ParamType::__FIELDS__())                                                  \
+      .add_argument("data", "NDArray-or-Symbol", "The input")                                  \
+      .set_attr<FInferStorageType>("FInferStorageType",                                        \
+                                   ElemwiseStorageType<1, 1, false, true, false>)              \
+      .set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, ParamType>)                            \
+      .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, ParamType>)
 
 // Add "uniform" alias for backward compatibility
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_uniform, SampleUniformParam)
-.add_alias("uniform")
-.add_alias("random_uniform")
-.describe(R"code(Draw random samples from a uniform distribution.
+    .add_alias("uniform")
+    .add_alias("random_uniform")
+    .describe(R"code(Draw random samples from a uniform distribution.
 
 .. note:: The existing alias ``uniform`` is deprecated.
 
@@ -97,9 +97,9 @@ Example::
 
 // Add "normal" alias for backward compatibility
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_normal, SampleNormalParam)
-.add_alias("normal")
-.add_alias("random_normal")
-.describe(R"code(Draw random samples from a normal (Gaussian) distribution.
+    .add_alias("normal")
+    .add_alias("random_normal")
+    .describe(R"code(Draw random samples from a normal (Gaussian) distribution.
 
 .. note:: The existing alias ``normal`` is deprecated.
 
@@ -113,8 +113,8 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_gamma, SampleGammaParam)
-.add_alias("random_gamma")
-.describe(R"code(Draw random samples from a gamma distribution.
+    .add_alias("random_gamma")
+    .describe(R"code(Draw random samples from a gamma distribution.
 
 Samples are distributed according to a gamma distribution parametrized by *alpha* (shape) and *beta* (scale).
 
@@ -125,8 +125,8 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_exponential, SampleExponentialParam)
-.add_alias("random_exponential")
-.describe(R"code(Draw random samples from an exponential distribution.
+    .add_alias("random_exponential")
+    .describe(R"code(Draw random samples from an exponential distribution.
 
 Samples are distributed according to an exponential distribution parametrized by *lambda* (rate).
 
@@ -137,9 +137,9 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_poisson, SamplePoissonParam)
-.add_alias("random_poisson")
-.add_alias("_npx_scalar_poisson")
-.describe(R"code(Draw random samples from a Poisson distribution.
+    .add_alias("random_poisson")
+    .add_alias("_npx_scalar_poisson")
+    .describe(R"code(Draw random samples from a Poisson distribution.
 
 Samples are distributed according to a Poisson distribution parametrized by *lambda* (rate).
 Samples will always be returned as a floating point data type.
@@ -151,8 +151,8 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_negative_binomial, SampleNegBinomialParam)
-.add_alias("random_negative_binomial")
-.describe(R"code(Draw random samples from a negative binomial distribution.
+    .add_alias("random_negative_binomial")
+    .describe(R"code(Draw random samples from a negative binomial distribution.
 
 Samples are distributed according to a negative binomial distribution parametrized by
 *k* (limit of unsuccessful experiments) and *p* (failure probability in each experiment).
@@ -165,8 +165,8 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_generalized_negative_binomial, SampleGenNegBinomialParam)
-.add_alias("random_generalized_negative_binomial")
-.describe(R"code(Draw random samples from a generalized negative binomial distribution.
+    .add_alias("random_generalized_negative_binomial")
+    .describe(R"code(Draw random samples from a generalized negative binomial distribution.
 
 Samples are distributed according to a generalized negative binomial distribution parametrized by
 *mu* (mean) and *alpha* (dispersion). *alpha* is defined as *1/k* where *k* is the failure limit of the
@@ -180,9 +180,9 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_randint, SampleRandIntParam)
-.add_alias("random_randint")
-.add_alias("_npi_random_randint")
-.describe(R"code(Draw random samples from a discrete uniform distribution.
+    .add_alias("random_randint")
+    .add_alias("_npi_random_randint")
+    .describe(R"code(Draw random samples from a discrete uniform distribution.
 
 Samples are uniformly distributed over the half-open interval *[low, high)*
 (includes *low*, but excludes *high*).
@@ -197,7 +197,8 @@ Example::
 // *_like operators
 
 MXNET_OPERATOR_REGISTER_SAMPLE_LIKE(_random_uniform_like, SampleUniformLikeParam)
-.describe(R"code(Draw random samples from a uniform distribution according to the input array shape.
+    .describe(
+        R"code(Draw random samples from a uniform distribution according to the input array shape.
 
 Samples are uniformly distributed over the half-open interval *[low, high)*
 (includes *low*, but excludes *high*).
@@ -210,7 +211,8 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE_LIKE(_random_normal_like, SampleNormalLikeParam)
-.describe(R"code(Draw random samples from a normal (Gaussian) distribution according to the input array shape.
+    .describe(
+        R"code(Draw random samples from a normal (Gaussian) distribution according to the input array shape.
 
 Samples are distributed according to a normal distribution parametrized by *loc* (mean) and *scale*
 (standard deviation).
@@ -222,7 +224,8 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE_LIKE(_random_gamma_like, SampleGammaLikeParam)
-.describe(R"code(Draw random samples from a gamma distribution according to the input array shape.
+    .describe(
+        R"code(Draw random samples from a gamma distribution according to the input array shape.
 
 Samples are distributed according to a gamma distribution parametrized by *alpha* (shape) and *beta* (scale).
 
@@ -233,7 +236,8 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE_LIKE(_random_exponential_like, SampleExponentialLikeParam)
-.describe(R"code(Draw random samples from an exponential distribution according to the input array shape.
+    .describe(
+        R"code(Draw random samples from an exponential distribution according to the input array shape.
 
 Samples are distributed according to an exponential distribution parametrized by *lambda* (rate).
 
@@ -244,7 +248,8 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE_LIKE(_random_poisson_like, SamplePoissonLikeParam)
-.describe(R"code(Draw random samples from a Poisson distribution according to the input array shape.
+    .describe(
+        R"code(Draw random samples from a Poisson distribution according to the input array shape.
 
 Samples are distributed according to a Poisson distribution parametrized by *lambda* (rate).
 Samples will always be returned as a floating point data type.
@@ -256,7 +261,8 @@ Example::
 )code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE_LIKE(_random_negative_binomial_like, SampleNegBinomialLikeParam)
-.describe(R"code(Draw random samples from a negative binomial distribution according to the input array shape.
+    .describe(
+        R"code(Draw random samples from a negative binomial distribution according to the input array shape.
 
 Samples are distributed according to a negative binomial distribution parametrized by
 *k* (limit of unsuccessful experiments) and *p* (failure probability in each experiment).
@@ -270,7 +276,8 @@ Example::
 
 MXNET_OPERATOR_REGISTER_SAMPLE_LIKE(_random_generalized_negative_binomial_like,
                                     SampleGenNegBinomialLikeParam)
-.describe(R"code(Draw random samples from a generalized negative binomial distribution according to the
+    .describe(
+        R"code(Draw random samples from a generalized negative binomial distribution according to the
 input array shape.
 
 Samples are distributed according to a generalized negative binomial distribution parametrized by

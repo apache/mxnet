@@ -33,19 +33,19 @@
 namespace mxnet {
 
 namespace fusion {
-  enum KernelVariants {kGeneral, kShapeOptimized,
-    kNumKernelVariants  // Not a variant- leave this at the end
-  };
+enum KernelVariants {
+  kGeneral,
+  kShapeOptimized,
+  kNumKernelVariants  // Not a variant- leave this at the end
+};
 }
 
 struct FusedOpConfig : public dmlc::Parameter<FusedOpConfig> {
   int num_inputs;
   int num_outputs;
   DMLC_DECLARE_PARAMETER(FusedOpConfig) {
-    DMLC_DECLARE_FIELD(num_inputs)
-    .describe("Number of inputs.");
-    DMLC_DECLARE_FIELD(num_outputs)
-    .describe("Number of outputs.");
+    DMLC_DECLARE_FIELD(num_inputs).describe("Number of inputs.");
+    DMLC_DECLARE_FIELD(num_outputs).describe("Number of outputs.");
   }
 };
 
@@ -70,82 +70,71 @@ class FusedOp {
 
   template <typename xpu>
   void Forward(const nnvm::NodeAttrs& attrs,
-               const OpContext &ctx,
-               const std::vector<TBlob> &inputs,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &outputs);
+               const OpContext& ctx,
+               const std::vector<TBlob>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<TBlob>& outputs);
 
-  bool InferShape(const nnvm::NodeAttrs &attrs,
-                  std::vector<mxnet::TShape> *in_attrs,
-                  std::vector<mxnet::TShape> *out_attrs);
+  bool InferShape(const nnvm::NodeAttrs& attrs,
+                  std::vector<mxnet::TShape>* in_attrs,
+                  std::vector<mxnet::TShape>* out_attrs);
 
-  bool InferType(const nnvm::NodeAttrs &attrs,
-                 std::vector<int> *in_attrs,
-                 std::vector<int> *out_attrs);
+  bool InferType(const nnvm::NodeAttrs& attrs,
+                 std::vector<int>* in_attrs,
+                 std::vector<int>* out_attrs);
 
   template <typename Attr>
-  std::tuple<const nnvm::ObjectPtr,
-             std::vector<Attr>,
-             std::vector<Attr>>
-    GetAttrs(const std::string& attr_name,
-             const uint32_t node_id);
+  std::tuple<const nnvm::ObjectPtr, std::vector<Attr>, std::vector<Attr>> GetAttrs(
+      const std::string& attr_name,
+      const uint32_t node_id);
 
   void ProvideShape(const std::vector<nnvm::ObjectPtr>& nodes,
-                    const std::vector<std::vector<mxnet::TShape>> &in_attrs,
-                    const std::vector<std::vector<mxnet::TShape>> &out_attrs) {
-    aux_nodes_ = nodes;
-    aux_in_shapes_ = in_attrs;
+                    const std::vector<std::vector<mxnet::TShape>>& in_attrs,
+                    const std::vector<std::vector<mxnet::TShape>>& out_attrs) {
+    aux_nodes_      = nodes;
+    aux_in_shapes_  = in_attrs;
     aux_out_shapes_ = out_attrs;
   }
 
   void ProvideType(const std::vector<nnvm::ObjectPtr>& nodes,
-                   const std::vector<std::vector<int>> &in_attrs,
-                   const std::vector<std::vector<int>> &out_attrs) {
-    aux_nodes_ = nodes;
-    aux_in_types_ = in_attrs;
+                   const std::vector<std::vector<int>>& in_attrs,
+                   const std::vector<std::vector<int>>& out_attrs) {
+    aux_nodes_     = nodes;
+    aux_in_types_  = in_attrs;
     aux_out_types_ = out_attrs;
   }
 
-  std::tuple<const nnvm::ObjectPtr,
-             std::vector<mxnet::TShape>,
-             std::vector<mxnet::TShape>>
-    GetAuxShape(const int node_id) const {
-    return std::make_tuple(aux_nodes_[node_id],
-                           aux_in_shapes_[node_id],
-                           aux_out_shapes_[node_id]);
+  std::tuple<const nnvm::ObjectPtr, std::vector<mxnet::TShape>, std::vector<mxnet::TShape>>
+  GetAuxShape(const int node_id) const {
+    return std::make_tuple(aux_nodes_[node_id], aux_in_shapes_[node_id], aux_out_shapes_[node_id]);
   }
 
-  std::tuple<const nnvm::ObjectPtr,
-             std::vector<int>,
-             std::vector<int>>
-    GetAuxType(const int node_id) const {
-    return std::make_tuple(aux_nodes_[node_id],
-                           aux_in_types_[node_id],
-                           aux_out_types_[node_id]);
+  std::tuple<const nnvm::ObjectPtr, std::vector<int>, std::vector<int>> GetAuxType(
+      const int node_id) const {
+    return std::make_tuple(aux_nodes_[node_id], aux_in_types_[node_id], aux_out_types_[node_id]);
   }
 
  private:
-  std::string GenerateCode(const std::vector<OpReqType> &req,
-                           const std::vector<int> &in_dtypes,
-                           const std::vector<int> &out_dtypes,
-                           const std::vector<int> &in_ndims,
-                           const std::vector<int> &out_ndims,
-                           const mxnet::ShapeVector &node_shapes,
-                           const std::vector<int> &node_dtypes,
+  std::string GenerateCode(const std::vector<OpReqType>& req,
+                           const std::vector<int>& in_dtypes,
+                           const std::vector<int>& out_dtypes,
+                           const std::vector<int>& in_ndims,
+                           const std::vector<int>& out_ndims,
+                           const mxnet::ShapeVector& node_shapes,
+                           const std::vector<int>& node_dtypes,
                            const int nvec,
                            const std::string& kernel_name,
-                           std::vector<uint32_t> *check_shapes);
+                           std::vector<uint32_t>* check_shapes);
 
-  CUfunction CompileCode(const std::string &code,
-                         const std::string &kernel_name, int dev_id);
+  CUfunction CompileCode(const std::string& code, const std::string& kernel_name, int dev_id);
 
-  void CheckShapesAndTypes(const std::vector<TBlob> &inputs,
-                           const std::vector<TBlob> &outputs,
-                           std::vector<int> *in_dtypes,
-                           std::vector<int> *in_ndims,
-                           std::vector<int> *out_dtypes,
-                           std::vector<int> *out_ndims,
-                           int *nvec);
+  void CheckShapesAndTypes(const std::vector<TBlob>& inputs,
+                           const std::vector<TBlob>& outputs,
+                           std::vector<int>* in_dtypes,
+                           std::vector<int>* in_ndims,
+                           std::vector<int>* out_dtypes,
+                           std::vector<int>* out_ndims,
+                           int* nvec);
 
   std::vector<FusedOpEntry> inputs_;
   std::vector<FusedOpEntry> outputs_;
@@ -165,8 +154,8 @@ class FusedOp {
   // original information stored in subgraph_
   // attributes while the previous iterations
   // still need them.
-  std::vector<IntermediateAttr<mxnet::TShape> > intermediate_shapes_;
-  std::vector<IntermediateAttr<int> > intermediate_dtypes_;
+  std::vector<IntermediateAttr<mxnet::TShape>> intermediate_shapes_;
+  std::vector<IntermediateAttr<int>> intermediate_dtypes_;
 
   std::vector<nnvm::ObjectPtr> aux_nodes_;
   std::vector<std::vector<mxnet::TShape>> aux_in_shapes_;
@@ -191,9 +180,7 @@ struct FusedOpHelperParam {
   FusedOpPtr op;
   uint32_t node_id;
 
-  FusedOpHelperParam(FusedOpPtr op, uint32_t node_id) :
-    op(op),
-    node_id(node_id) {}
+  FusedOpHelperParam(FusedOpPtr op, uint32_t node_id) : op(op), node_id(node_id) {}
 };
 
 using FusedOpHelperParamPtr = std::shared_ptr<FusedOpHelperParam>;

@@ -22,18 +22,17 @@
  * \file instance_norm.cu
  * \brief
  * \author Sebastian Bodenstein
-*/
+ */
 
 #include "./instance_norm-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(InstanceNorm)
-.set_attr<FCompute>("FCompute<gpu>", InstanceNormForward<gpu>);
+NNVM_REGISTER_OP(InstanceNorm).set_attr<FCompute>("FCompute<gpu>", InstanceNormForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_instance_norm)
-.set_attr<FCompute>("FCompute<gpu>", InstanceNormBackward<gpu>);
+    .set_attr<FCompute>("FCompute<gpu>", InstanceNormBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

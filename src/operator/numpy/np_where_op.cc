@@ -48,13 +48,16 @@ inline bool NumpyWhereOpShape(const nnvm::NodeAttrs& attrs,
   const int b3 = out.ndim() - operand3.ndim();
   for (int i = 0; i < out.ndim(); ++i) {
     int s1 = 1, s2 = 1, s3 = 1;
-    if (i >= b1) s1 = operand1[i-b1];
-    if (i >= b2) s2 = operand2[i-b2];
-    if (i >= b3) s3 = operand3[i-b3];
+    if (i >= b1)
+      s1 = operand1[i - b1];
+    if (i >= b2)
+      s2 = operand2[i - b2];
+    if (i >= b3)
+      s3 = operand3[i - b3];
     if (!(s1 == s2 && s2 == s3)) {
       CHECK((s1 == 1 && s2 == 1) || (s1 == 1 && s3 == 1) || (s2 == 1 && s3 == 1) ||
             (s1 == 1 && s2 == s3) || (s2 == 1 && s1 == s3) || (s3 == 1 && s1 == s2))
-        << "Operands could not be broadcast together.";
+          << "Operands could not be broadcast together.";
       out[i] = std::max({s1, s2, s3});
     } else {
       out[i] = s1;
@@ -67,8 +70,8 @@ inline bool NumpyWhereOpShape(const nnvm::NodeAttrs& attrs,
 inline bool NumpyWhereOpType(const nnvm::NodeAttrs& attrs,
                              std::vector<int>* in_attrs,
                              std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 3U)
-    << "where operator takes 3 arguments (" << in_attrs->size() << " given)";
+  CHECK_EQ(in_attrs->size(), 3U) << "where operator takes 3 arguments (" << in_attrs->size()
+                                 << " given)";
   CHECK_EQ(out_attrs->size(), 1U);
   std::vector<int> sub_in_attrs(in_attrs->begin() + 1, in_attrs->end());
   bool flag = ElemwiseType<2, 1>(attrs, &sub_in_attrs, out_attrs);
@@ -89,191 +92,192 @@ DMLC_REGISTER_PARAMETER(NumpyWhereScalarParam);
 DMLC_REGISTER_PARAMETER(NumpyWhereScalar2Param);
 
 NNVM_REGISTER_OP(_npi_where)
-.set_num_inputs(3)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"condition", "x", "y"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyWhereOpShape)
-.set_attr<nnvm::FInferType>("FInferType", NumpyWhereOpType)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{1, 0}, {2, 0}};
-  })
-.set_attr<FCompute>("FCompute<cpu>", NumpyWhereOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient",
-  // Use the following lambda function instead of ElemwiseGradUseIn
-  // for best efficiency. grad[condition] = 0; to calculate grad[x] and grad[y]
-  // we need only condition from input.
-  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    std::vector<nnvm::NodeEntry> ret;
-    // make zero grad node for grad[condition]
-    auto p = MakeNode("zeros_like", n->attrs.name + "_cond_backward",
-                      {n->inputs[0]}, nullptr, &n);
-    ret.emplace_back(p);
+    .set_num_inputs(3)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"condition", "x", "y"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyWhereOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyWhereOpType)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{1, 0}, {2, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyWhereOpForward<cpu>)
+    .set_attr<nnvm::FGradient>(
+        "FGradient",
+        // Use the following lambda function instead of ElemwiseGradUseIn
+        // for best efficiency. grad[condition] = 0; to calculate grad[x] and grad[y]
+        // we need only condition from input.
+        [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+          std::vector<nnvm::NodeEntry> ret;
+          // make zero grad node for grad[condition]
+          auto p =
+              MakeNode("zeros_like", n->attrs.name + "_cond_backward", {n->inputs[0]}, nullptr, &n);
+          ret.emplace_back(p);
 
-    // make grad nodes for grad[x] and grad[y]
-    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-    heads.push_back(n->inputs[0]);  // only need condition to calculate gradients
-    p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("_backward_np_where");
-    p->attrs.name = n->attrs.name + "_backward";
-    p->attrs.dict = n->attrs.dict;
-    if (p->op()->attr_parser != nullptr) {
-      p->op()->attr_parser(&(p->attrs));
-    }
-    p->control_deps.emplace_back(n);
-    p->inputs = std::move(heads);
-    ret.emplace_back(p, 0, 0);
-    ret.emplace_back(p, 1, 0);
-    return ret;
-  })
-.add_argument("condition", "NDArray-or-Symbol", "condition array")
-.add_argument("x", "NDArray-or-Symbol", "input x")
-.add_argument("y", "NDArray-or-Symbol", "input y");
+          // make grad nodes for grad[x] and grad[y]
+          std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+          heads.push_back(n->inputs[0]);  // only need condition to calculate gradients
+          p             = nnvm::Node::Create();
+          p->attrs.op   = nnvm::Op::Get("_backward_np_where");
+          p->attrs.name = n->attrs.name + "_backward";
+          p->attrs.dict = n->attrs.dict;
+          if (p->op()->attr_parser != nullptr) {
+            p->op()->attr_parser(&(p->attrs));
+          }
+          p->control_deps.emplace_back(n);
+          p->inputs = std::move(heads);
+          ret.emplace_back(p, 0, 0);
+          ret.emplace_back(p, 1, 0);
+          return ret;
+        })
+    .add_argument("condition", "NDArray-or-Symbol", "condition array")
+    .add_argument("x", "NDArray-or-Symbol", "input x")
+    .add_argument("y", "NDArray-or-Symbol", "input y");
 
 NNVM_REGISTER_OP(_backward_np_where)
-.set_num_inputs(2)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", NumpyWhereOpBackward<cpu>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  });
+    .set_num_inputs(2)
+    .set_num_outputs(2)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyWhereOpBackward<cpu>)
+    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    });
 
 NNVM_REGISTER_OP(_npi_where_lscalar)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NumpyWhereScalarParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"condition", "x"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
-.set_attr<nnvm::FInferType>("FInferType", NumpyWhereScalarOpType)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{1, 0}};
-  })
-.set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalarOpForward<cpu, true>)
-.set_attr<nnvm::FGradient>("FGradient",
-  // Use the following lambda function instead of ElemwiseGradUseIn
-  // for best efficiency. grad[condition] = 0; to calculate grad[x] or grad[y]
-  // we need only condition from input.
-  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    std::vector<nnvm::NodeEntry> ret;
-    // make zero grad node for grad[condition]
-    auto p = MakeNode("zeros_like", n->attrs.name + "_cond_backward",
-                      {n->inputs[0]}, nullptr, &n);
-    ret.emplace_back(p);
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<NumpyWhereScalarParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"condition", "x"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyWhereScalarOpType)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{1, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalarOpForward<cpu, true>)
+    .set_attr<nnvm::FGradient>(
+        "FGradient",
+        // Use the following lambda function instead of ElemwiseGradUseIn
+        // for best efficiency. grad[condition] = 0; to calculate grad[x] or grad[y]
+        // we need only condition from input.
+        [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+          std::vector<nnvm::NodeEntry> ret;
+          // make zero grad node for grad[condition]
+          auto p =
+              MakeNode("zeros_like", n->attrs.name + "_cond_backward", {n->inputs[0]}, nullptr, &n);
+          ret.emplace_back(p);
 
-    // make grad nodes for grad[x] and grad[y]
-    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-    heads.push_back(n->inputs[0]);  // only need condition to calculate gradients
-    p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("_backward_np_where_lscalar");
-    p->attrs.name = n->attrs.name + "_backward";
-    p->attrs.dict = n->attrs.dict;
-    if (p->op()->attr_parser != nullptr) {
-      p->op()->attr_parser(&(p->attrs));
-    }
-    p->control_deps.emplace_back(n);
-    p->inputs = std::move(heads);
-    ret.emplace_back(p, 0, 0);
-    return ret;
-  })
-.add_argument("condition", "NDArray-or-Symbol", "condition array")
-.add_argument("x", "NDArray-or-Symbol", "input x")
-.add_arguments(NumpyWhereScalarParam::__FIELDS__());
+          // make grad nodes for grad[x] and grad[y]
+          std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+          heads.push_back(n->inputs[0]);  // only need condition to calculate gradients
+          p             = nnvm::Node::Create();
+          p->attrs.op   = nnvm::Op::Get("_backward_np_where_lscalar");
+          p->attrs.name = n->attrs.name + "_backward";
+          p->attrs.dict = n->attrs.dict;
+          if (p->op()->attr_parser != nullptr) {
+            p->op()->attr_parser(&(p->attrs));
+          }
+          p->control_deps.emplace_back(n);
+          p->inputs = std::move(heads);
+          ret.emplace_back(p, 0, 0);
+          return ret;
+        })
+    .add_argument("condition", "NDArray-or-Symbol", "condition array")
+    .add_argument("x", "NDArray-or-Symbol", "input x")
+    .add_arguments(NumpyWhereScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_where_rscalar)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NumpyWhereScalarParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"condition", "y"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
-.set_attr<nnvm::FInferType>("FInferType", NumpyWhereScalarOpType)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{1, 0}};
-  })
-.set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalarOpForward<cpu, false>)
-.set_attr<nnvm::FGradient>("FGradient",
-  // Use the following lambda function instead of ElemwiseGradUseIn
-  // for best efficiency. grad[condition] = 0; to calculate grad[x] or grad[y]
-  // we need only condition from input.
-  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    std::vector<nnvm::NodeEntry> ret;
-    // make zero grad node for grad[condition]
-    auto p = MakeNode("zeros_like", n->attrs.name + "_cond_backward",
-                      {n->inputs[0]}, nullptr, &n);
-    ret.emplace_back(p);
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<NumpyWhereScalarParam>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"condition", "y"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+    .set_attr<nnvm::FInferType>("FInferType", NumpyWhereScalarOpType)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs& attrs) {
+                                      return std::vector<std::pair<int, int> >{{1, 0}};
+                                    })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalarOpForward<cpu, false>)
+    .set_attr<nnvm::FGradient>(
+        "FGradient",
+        // Use the following lambda function instead of ElemwiseGradUseIn
+        // for best efficiency. grad[condition] = 0; to calculate grad[x] or grad[y]
+        // we need only condition from input.
+        [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+          std::vector<nnvm::NodeEntry> ret;
+          // make zero grad node for grad[condition]
+          auto p =
+              MakeNode("zeros_like", n->attrs.name + "_cond_backward", {n->inputs[0]}, nullptr, &n);
+          ret.emplace_back(p);
 
-    // make grad nodes for grad[x] and grad[y]
-    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-    heads.push_back(n->inputs[0]);  // only need condition to calculate gradients
-    p = nnvm::Node::Create();
-    p->attrs.op = nnvm::Op::Get("_backward_np_where_rscalar");
-    p->attrs.name = n->attrs.name + "_backward";
-    p->attrs.dict = n->attrs.dict;
-    if (p->op()->attr_parser != nullptr) {
-      p->op()->attr_parser(&(p->attrs));
-    }
-    p->control_deps.emplace_back(n);
-    p->inputs = std::move(heads);
-    ret.emplace_back(p, 0, 0);
-    return ret;
-  })
-.add_argument("condition", "NDArray-or-Symbol", "condition array")
-.add_argument("y", "NDArray-or-Symbol", "input y")
-.add_arguments(NumpyWhereScalarParam::__FIELDS__());
+          // make grad nodes for grad[x] and grad[y]
+          std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+          heads.push_back(n->inputs[0]);  // only need condition to calculate gradients
+          p             = nnvm::Node::Create();
+          p->attrs.op   = nnvm::Op::Get("_backward_np_where_rscalar");
+          p->attrs.name = n->attrs.name + "_backward";
+          p->attrs.dict = n->attrs.dict;
+          if (p->op()->attr_parser != nullptr) {
+            p->op()->attr_parser(&(p->attrs));
+          }
+          p->control_deps.emplace_back(n);
+          p->inputs = std::move(heads);
+          ret.emplace_back(p, 0, 0);
+          return ret;
+        })
+    .add_argument("condition", "NDArray-or-Symbol", "condition array")
+    .add_argument("y", "NDArray-or-Symbol", "input y")
+    .add_arguments(NumpyWhereScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_np_where_lscalar)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalarOpBackward<cpu, true>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  });
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalarOpBackward<cpu, true>)
+    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    });
 
 NNVM_REGISTER_OP(_backward_np_where_rscalar)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalarOpBackward<cpu, false>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  });
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalarOpBackward<cpu, false>)
+    .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    });
 
 NNVM_REGISTER_OP(_npi_where_scalar2)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NumpyWhereScalar2Param>)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"condition"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
-                                             std::vector<int>* in_attrs,
-                                             std::vector<int>* out_attrs){
-    CHECK_EQ(in_attrs->size(), 1U);
-    CHECK_EQ(out_attrs->size(), 1U);
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
-    return in_attrs->at(0) != -1;
-  })
-.set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalar2OpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("condition", "NDArray-or-Symbol", "condition array")
-.add_arguments(NumpyWhereScalar2Param::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<NumpyWhereScalar2Param>)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       return std::vector<std::string>{"condition"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+    .set_attr<nnvm::FInferType>("FInferType",
+                                [](const nnvm::NodeAttrs& attrs,
+                                   std::vector<int>* in_attrs,
+                                   std::vector<int>* out_attrs) {
+                                  CHECK_EQ(in_attrs->size(), 1U);
+                                  CHECK_EQ(out_attrs->size(), 1U);
+                                  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
+                                  return in_attrs->at(0) != -1;
+                                })
+    .set_attr<FCompute>("FCompute<cpu>", NumpyWhereScalar2OpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_argument("condition", "NDArray-or-Symbol", "condition array")
+    .add_arguments(NumpyWhereScalar2Param::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

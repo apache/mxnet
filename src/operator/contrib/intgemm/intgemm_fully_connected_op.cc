@@ -42,18 +42,18 @@ struct IntgemmFullyConnectedParam : public dmlc::Parameter<IntgemmFullyConnected
   bool flatten;
   DMLC_DECLARE_PARAMETER(IntgemmFullyConnectedParam) {
     // This part os a copy of the FullyConnected parameters.
-    DMLC_DECLARE_FIELD(num_hidden).set_lower_bound(1)
-    .describe("Number of hidden nodes of the output.");
-    DMLC_DECLARE_FIELD(no_bias).set_default(false)
-    .describe("Whether to disable bias parameter.");
-    DMLC_DECLARE_FIELD(flatten).set_default(true)
-    .describe("Whether to collapse all but the first axis of the input data tensor.");
+    DMLC_DECLARE_FIELD(num_hidden)
+        .set_lower_bound(1)
+        .describe("Number of hidden nodes of the output.");
+    DMLC_DECLARE_FIELD(no_bias).set_default(false).describe("Whether to disable bias parameter.");
+    DMLC_DECLARE_FIELD(flatten).set_default(true).describe(
+        "Whether to collapse all but the first axis of the input data tensor.");
 
     DMLC_DECLARE_FIELD(out_type)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("int32", mshadow::kInt32)
-    .set_default(mshadow::kFloat32)
-    .describe("Output data type.");
+        .add_enum("float32", mshadow::kFloat32)
+        .add_enum("int32", mshadow::kInt32)
+        .set_default(mshadow::kFloat32)
+        .describe("Output data type.");
   }
 };
 DMLC_REGISTER_PARAMETER(IntgemmFullyConnectedParam);
@@ -62,14 +62,18 @@ namespace {
 // Parse the above fields into indices for parameters.
 // The order is: data weight [scaling] [bias].
 struct ParameterIndices {
-  explicit ParameterIndices(const IntgemmFullyConnectedParam& param) :
-    data(0),
-    weight(1),
-    scaling(param.out_type == mshadow::kFloat32 ? 2 : kInvalid),
-    bias(param.no_bias ? kInvalid : (HaveScaling() ? 3 : 2)),
-    count(2U + HaveScaling() + HaveBias()) {}
-  bool HaveScaling() const { return scaling != kInvalid; }
-  bool HaveBias() const { return bias != kInvalid; }
+  explicit ParameterIndices(const IntgemmFullyConnectedParam& param)
+      : data(0),
+        weight(1),
+        scaling(param.out_type == mshadow::kFloat32 ? 2 : kInvalid),
+        bias(param.no_bias ? kInvalid : (HaveScaling() ? 3 : 2)),
+        count(2U + HaveScaling() + HaveBias()) {}
+  bool HaveScaling() const {
+    return scaling != kInvalid;
+  }
+  bool HaveBias() const {
+    return bias != kInvalid;
+  }
   const unsigned int data;
   const unsigned int weight;
   const unsigned int scaling;
@@ -77,9 +81,8 @@ struct ParameterIndices {
   const unsigned int count;
   static const unsigned int kInvalid = std::numeric_limits<unsigned int>::max();
 };
-template<class T> ParameterIndices Sanity(const nnvm::NodeAttrs& attrs,
-                                          T* in,
-                                          T* out) {
+template <class T>
+ParameterIndices Sanity(const nnvm::NodeAttrs& attrs, T* in, T* out) {
   // 3-4 parameters: A, B, scaling, and optional bias
   ParameterIndices ret(nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed));
   CHECK_EQ(in->size(), ret.count);
@@ -89,8 +92,8 @@ template<class T> ParameterIndices Sanity(const nnvm::NodeAttrs& attrs,
 }  // namespace
 
 inline bool IntgemmFullyConnectedOpShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector* in_shape,
-                             mxnet::ShapeVector* out_shape) {
+                                         mxnet::ShapeVector* in_shape,
+                                         mxnet::ShapeVector* out_shape) {
   const ParameterIndices indices(Sanity(attrs, in_shape, out_shape));
   const IntgemmFullyConnectedParam& param = nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed);
   // This follows FullyConnectedShape except for scaling.
@@ -98,11 +101,12 @@ inline bool IntgemmFullyConnectedOpShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape dshape = (*in_shape)[indices.data];
   mxnet::TShape oshape = (*out_shape)[0];
   // require data to be known
-  if (!mxnet::ndim_is_known(dshape)) return false;
+  if (!mxnet::ndim_is_known(dshape))
+    return false;
 
   index_t num_input;
   if (!param.flatten) {
-    num_input = dshape[dshape.ndim()-1];
+    num_input = dshape[dshape.ndim() - 1];
   } else {
     num_input = dshape.ProdShape(1, dshape.ndim());
   }
@@ -119,7 +123,7 @@ inline bool IntgemmFullyConnectedOpShape(const nnvm::NodeAttrs& attrs,
 
   if (!param.flatten) {
     mxnet::TShape result_shape(dshape);
-    result_shape[dshape.ndim()-1] = param.num_hidden;
+    result_shape[dshape.ndim() - 1] = param.num_hidden;
     SHAPE_ASSIGN_CHECK(*out_shape, 0, result_shape);
   } else {
     SHAPE_ASSIGN_CHECK(*out_shape, 0, Shape2(dshape[0], param.num_hidden));
@@ -132,8 +136,8 @@ inline bool IntgemmFullyConnectedOpShape(const nnvm::NodeAttrs& attrs,
 }
 
 bool IntgemmFullyConnectedOpType(const nnvm::NodeAttrs& attrs,
-                            std::vector<int>* in_attrs,
-                            std::vector<int>* out_attrs) {
+                                 std::vector<int>* in_attrs,
+                                 std::vector<int>* out_attrs) {
   const ParameterIndices indices(Sanity(attrs, in_attrs, out_attrs));
   const IntgemmFullyConnectedParam& param = nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed);
 
@@ -155,14 +159,14 @@ bool IntgemmFullyConnectedOpType(const nnvm::NodeAttrs& attrs,
     return false;
   }
   return ((*in_attrs)[indices.data] == mshadow::kInt8 ||
-      (*in_attrs)[indices.data] == mshadow::kFloat32);
+          (*in_attrs)[indices.data] == mshadow::kFloat32);
 }
 
 void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const std::vector<TBlob>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<TBlob>& outputs) {
+                                       const OpContext& ctx,
+                                       const std::vector<TBlob>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<TBlob>& outputs) {
   const ParameterIndices indices(Sanity(attrs, &inputs, &outputs));
   const IntgemmFullyConnectedParam& param = nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed);
   CHECK_EQ(req.size(), 1U);
@@ -179,7 +183,7 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK_GE(A.shape_.ndim(), 1);
   CHECK_GE(B.shape_.ndim(), 2);
   size_t A_rows = A.shape_.ProdShape(0, A.shape_.ndim() - 1);
-  size_t inner = A.shape_[A.shape_.ndim() - 1];
+  size_t inner  = A.shape_[A.shape_.ndim() - 1];
   CHECK_EQ(B.shape_[B.shape_.ndim() - 1], inner);
   size_t B_cols = B.shape_.ProdShape(0, B.shape_.ndim() - 1);
 
@@ -190,11 +194,12 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(inputs[indices.bias].type_flag_, C.type_flag_);
     CHECK_EQ(inputs[indices.bias].shape_.Size(), param.num_hidden);
   }
-  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0) <<
-    "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::tile_info.b_rows;
-  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0) <<
-    "intgemm requires B have a multiple of " << ::intgemm::Int8::tile_info.b_cols <<
-    " columns in the equation C = AB.";
+  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0)
+      << "intgemm requires the inner dimension be a multiple of "
+      << ::intgemm::Int8::tile_info.b_rows;
+  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0)
+      << "intgemm requires B have a multiple of " << ::intgemm::Int8::tile_info.b_cols
+      << " columns in the equation C = AB.";
 
   float out_float_multiplier;
   if (indices.HaveScaling()) {
@@ -203,52 +208,48 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
     out_float_multiplier = 0.0;  // Unused; stop compiler from complaining.
   }
 
-  int8_t *A_quant;
+  int8_t* A_quant;
   mshadow::Tensor<cpu, 1, int8_t> A_quant_store;
   if (A.type_flag_ == mshadow::kFloat32) {
-    const float *A_raw = A.dptr<float>();
+    const float* A_raw = A.dptr<float>();
     // Quantize A for the user.
     // Future: allow scale to be passed in? Should the induced scale be an output?
     float scale = 127.0 / ::intgemm::MaxAbsolute(A_raw, A_raw + A.shape_.Size());
     out_float_multiplier /= scale;
     A_quant_store = ctx.requested[0].get_space_typed<cpu, 1, int8_t>(
-        mshadow::Shape1(A.shape_.Size()),
-        ctx.get_stream<cpu>());
+        mshadow::Shape1(A.shape_.Size()), ctx.get_stream<cpu>());
     A_quant = A_quant_store.dptr_;
     ::intgemm::Int8::PrepareA(A_raw, A_quant, scale, A_rows, inner);
   } else {
     CHECK_EQ(A.type_flag_, mshadow::kInt8);
     A_quant = A.dptr<int8_t>();
   }
-  const int8_t *B_quant = B.dptr<int8_t>();
-  CHECK_EQ(reinterpret_cast<intptr_t>(A_quant) % 64, 0) <<
-    "Pointers should be aligned to a multiple of 64.";
-  CHECK_EQ(reinterpret_cast<intptr_t>(B_quant) % 64, 0) <<
-    "Pointers should be aligned to a multiple of 64.";
+  const int8_t* B_quant = B.dptr<int8_t>();
+  CHECK_EQ(reinterpret_cast<intptr_t>(A_quant) % 64, 0)
+      << "Pointers should be aligned to a multiple of 64.";
+  CHECK_EQ(reinterpret_cast<intptr_t>(B_quant) % 64, 0)
+      << "Pointers should be aligned to a multiple of 64.";
   if (C.type_flag_ == mshadow::kFloat32) {
-    CHECK_EQ(reinterpret_cast<intptr_t>(C.dptr<float>()) % 64, 0) <<
-      "Pointers should be aligned to a multiple of 64.";
+    CHECK_EQ(reinterpret_cast<intptr_t>(C.dptr<float>()) % 64, 0)
+        << "Pointers should be aligned to a multiple of 64.";
   } else {
-    CHECK_EQ(reinterpret_cast<intptr_t>(C.dptr<int32_t>()) % 64, 0) <<
-      "Pointers should be aligned to a multiple of 64.";
+    CHECK_EQ(reinterpret_cast<intptr_t>(C.dptr<int32_t>()) % 64, 0)
+        << "Pointers should be aligned to a multiple of 64.";
   }
 
   if (bias) {
     if (C.type_flag_ == mshadow::kFloat32) {
-      CHECK_EQ(reinterpret_cast<intptr_t>(inputs[indices.bias].dptr<float>()) % 64, 0) <<
-        "Pointers should be aligned to a multiple of 64.";
+      CHECK_EQ(reinterpret_cast<intptr_t>(inputs[indices.bias].dptr<float>()) % 64, 0)
+          << "Pointers should be aligned to a multiple of 64.";
       ::intgemm::callbacks::UnquantizeAndAddBiasAndWrite cb(
-          out_float_multiplier,
-          inputs[indices.bias].dptr<float>(),
-          C.dptr<float>());
+          out_float_multiplier, inputs[indices.bias].dptr<float>(), C.dptr<float>());
       ::intgemm::Int8::Multiply(A_quant, B_quant, A_rows, inner, B_cols, cb);
     } else {
       // int32
-      CHECK_EQ(reinterpret_cast<intptr_t>(inputs[indices.bias].dptr<int32_t>()) % 64, 0) <<
-        "Pointers should be aligned to a multiple of 64.";
-      ::intgemm::callbacks::AddBiasAndWrite cb(
-          inputs[indices.bias].dptr<int32_t>(),
-          C.dptr<int32_t>());
+      CHECK_EQ(reinterpret_cast<intptr_t>(inputs[indices.bias].dptr<int32_t>()) % 64, 0)
+          << "Pointers should be aligned to a multiple of 64.";
+      ::intgemm::callbacks::AddBiasAndWrite cb(inputs[indices.bias].dptr<int32_t>(),
+                                               C.dptr<int32_t>());
       ::intgemm::Int8::Multiply(A_quant, B_quant, A_rows, inner, B_cols, cb);
     }
   } else {
@@ -264,8 +265,8 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_fully_connected)
-.add_alias("_npx_intgemm_fully_connected")
-.describe(R"code(Multiply matrices using 8-bit integers.  data * weight.
+    .add_alias("_npx_intgemm_fully_connected")
+    .describe(R"code(Multiply matrices using 8-bit integers.  data * weight.
 
 Input tensor arguments are: data weight [scaling] [bias]
 
@@ -281,48 +282,52 @@ bias: present if and only if !no_bias. This is added to the output after scaling
 
 out_type: type of the output.
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<IntgemmFullyConnectedParam>)
-.set_num_inputs([](const NodeAttrs& attrs) {
-  return ParameterIndices(nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed)).count;
-})
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    std::vector<std::string> ret{"data", "weight"};
-    ParameterIndices indices(nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed));
-    if (indices.HaveScaling()) {
-      ret.emplace_back("scaling");
-    }
-    if (indices.HaveBias()) {
-      ret.emplace_back("bias");
-    }
-    return ret;
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", IntgemmFullyConnectedOpShape)
-.set_attr<nnvm::FInferType>("FInferType", IntgemmFullyConnectedOpType)
-.set_attr<FCompute>("FCompute<cpu>", IntgemmFullyConnectedOpForwardCPU)
-.add_argument(
-    "data",
-    "NDArray-or-Symbol",
-    "First argument to multiplication. Tensor of float32 (quantized on the fly) or int8 from "
-      "intgemm_prepare_data. If you use a different quantizer, be sure to ban -128. The last "
-      "dimension must be a multiple of 64.")
-.add_argument(
-    "weight",
-    "NDArray-or-Symbol",
-    "Second argument to multiplication. Tensor of int8 from intgemm_prepare_weight. The last "
-      "dimension must be a multiple of 64.  The product of non-last dimensions must be a multiple "
-      "of 8.")
-.add_argument("scaling", "NDArray-or-Symbol", "Scaling factor to apply if output type is float32.")
-.add_argument("bias", "NDArray-or-Symbol", "Bias term.")
-// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
-// will be reverted after the improvement of CachedOP is done.
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_arguments(IntgemmFullyConnectedParam::__FIELDS__());
+    .set_attr_parser(ParamParser<IntgemmFullyConnectedParam>)
+    .set_num_inputs([](const NodeAttrs& attrs) {
+      return ParameterIndices(nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed)).count;
+    })
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs& attrs) {
+                                       std::vector<std::string> ret{"data", "weight"};
+                                       ParameterIndices indices(
+                                           nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed));
+                                       if (indices.HaveScaling()) {
+                                         ret.emplace_back("scaling");
+                                       }
+                                       if (indices.HaveBias()) {
+                                         ret.emplace_back("bias");
+                                       }
+                                       return ret;
+                                     })
+    .set_attr<FResourceRequest>("FResourceRequest",
+                                [](const NodeAttrs& attrs) {
+                                  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                                })
+    .set_attr<mxnet::FInferShape>("FInferShape", IntgemmFullyConnectedOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", IntgemmFullyConnectedOpType)
+    .set_attr<FCompute>("FCompute<cpu>", IntgemmFullyConnectedOpForwardCPU)
+    .add_argument(
+        "data",
+        "NDArray-or-Symbol",
+        "First argument to multiplication. Tensor of float32 (quantized on the fly) or int8 from "
+        "intgemm_prepare_data. If you use a different quantizer, be sure to ban -128. The last "
+        "dimension must be a multiple of 64.")
+    .add_argument(
+        "weight",
+        "NDArray-or-Symbol",
+        "Second argument to multiplication. Tensor of int8 from intgemm_prepare_weight. The last "
+        "dimension must be a multiple of 64.  The product of non-last dimensions must be a "
+        "multiple "
+        "of 8.")
+    .add_argument("scaling",
+                  "NDArray-or-Symbol",
+                  "Scaling factor to apply if output type is float32.")
+    .add_argument("bias", "NDArray-or-Symbol", "Bias term.")
+    // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+    // will be reverted after the improvement of CachedOP is done.
+    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+    .add_arguments(IntgemmFullyConnectedParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

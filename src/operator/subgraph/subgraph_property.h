@@ -42,7 +42,9 @@ using BiDirectedNodePtr = std::shared_ptr<BiDirectedNode>;
  * subgraphs.
  */
 struct BiDirectedNode {
-  static BiDirectedNodePtr Create() { return std::make_shared<BiDirectedNode>(); }
+  static BiDirectedNodePtr Create() {
+    return std::make_shared<BiDirectedNode>();
+  }
   BiDirectedNode() : label(-1), node(nullptr) {}
   /*! subgraph label */
   int label;
@@ -106,7 +108,8 @@ class SubgraphSelector {
     LOG(FATAL) << "No SelectInput is implemented.";
     return false;
   }
-  virtual bool SelectInput(const nnvm::Node& cur_node, const nnvm::Node& input_node,
+  virtual bool SelectInput(const nnvm::Node& cur_node,
+                           const nnvm::Node& input_node,
                            const std::shared_ptr<NodeAttr>& input_node_attr) {
     return SelectInput(cur_node, input_node);
   }
@@ -120,7 +123,8 @@ class SubgraphSelector {
     LOG(FATAL) << "No SelectOutput is implemented.";
     return false;
   }
-  virtual bool SelectOutput(const nnvm::Node& cur_node, const nnvm::Node& output_node,
+  virtual bool SelectOutput(const nnvm::Node& cur_node,
+                            const nnvm::Node& output_node,
                             const std::shared_ptr<NodeAttr>& output_node_attr) {
     return SelectOutput(cur_node, output_node);
   }
@@ -165,7 +169,8 @@ class SubgraphSelectorV2 {
     LOG(FATAL) << "No SelectInput is implemented.";
     return false;
   }
-  virtual bool SelectInput(const BiDirectedNode& cur_node, const BiDirectedNode& input_node,
+  virtual bool SelectInput(const BiDirectedNode& cur_node,
+                           const BiDirectedNode& input_node,
                            const std::shared_ptr<NodeAttr>& input_node_attr) {
     return SelectInput(cur_node, input_node);
   }
@@ -179,7 +184,8 @@ class SubgraphSelectorV2 {
     LOG(FATAL) << "No SelectOutput is implemented.";
     return false;
   }
-  virtual bool SelectOutput(const BiDirectedNode& cur_node, const BiDirectedNode& output_node,
+  virtual bool SelectOutput(const BiDirectedNode& cur_node,
+                            const BiDirectedNode& output_node,
                             const std::shared_ptr<NodeAttr>& output_node_attr) {
     return SelectOutput(cur_node, output_node);
   }
@@ -213,12 +219,14 @@ class SubgraphSelectorV2Bridge : public SubgraphSelectorV2 {
     return ss_ptr_->Select(*seed_node.node, node_attr);
   }
 
-  bool SelectInput(const BiDirectedNode& cur_node, const BiDirectedNode& input_node,
+  bool SelectInput(const BiDirectedNode& cur_node,
+                   const BiDirectedNode& input_node,
                    const std::shared_ptr<NodeAttr>& node_attr) override {
     return ss_ptr_->SelectInput(*cur_node.node, *input_node.node, node_attr);
   }
 
-  bool SelectOutput(const BiDirectedNode& cur_node, const BiDirectedNode& output_node,
+  bool SelectOutput(const BiDirectedNode& cur_node,
+                    const BiDirectedNode& output_node,
                     const std::shared_ptr<NodeAttr>& node_attr) override {
     return ss_ptr_->SelectOutput(*cur_node.node, *output_node.node, node_attr);
   }
@@ -232,13 +240,18 @@ class SubgraphSelectorV2Bridge : public SubgraphSelectorV2 {
     }
     auto n_ret = ss_ptr_->Filter(n_candidates);
     std::vector<BiDirectedNode*> ret;
-    for (auto i : n_ret) ret.push_back(node_2_snode_map[i]);
+    for (auto i : n_ret)
+      ret.push_back(node_2_snode_map[i]);
     return ret;
   }
 
-  void Reset() override { ss_ptr_->Reset(); }
+  void Reset() override {
+    ss_ptr_->Reset();
+  }
 
-  const SubgraphSelectorPtr& GetV1ptr() const { return ss_ptr_; }
+  const SubgraphSelectorPtr& GetV1ptr() const {
+    return ss_ptr_;
+  }
 
  private:
   SubgraphSelectorPtr ss_ptr_;
@@ -269,7 +282,7 @@ class SubgraphProperty {
   }
 
   virtual void PrePartition(const nnvm::Graph& g,
-    const std::unordered_map<std::string, std::string>& options_map) {
+                            const std::unordered_map<std::string, std::string>& options_map) {
     if (options_map.count("dedup_subgraph") > 0 &&
         options_map.at("dedup_subgraph").compare("True") == 0) {
       dedup_subgraph = true;
@@ -292,7 +305,7 @@ class SubgraphProperty {
    * \param subgraph_id subgraph id
    */
   virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
-                                           const int subgraph_id = 0) const {
+                                             const int subgraph_id = 0) const {
     CHECK_EQ(GetPropertyType(), kCreate);
     LOG(FATAL) << "Not implement CreateSubgraphNode() for this subgraph property.";
     return nullptr;
@@ -306,8 +319,8 @@ class SubgraphProperty {
    * \param subgraph_id subgraph id
    */
   virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
-                                           const SubgraphSelectorPtr& subgraph_selector,
-                                           const int subgraph_id = 0) const {
+                                             const SubgraphSelectorPtr& subgraph_selector,
+                                             const int subgraph_id = 0) const {
     return CreateSubgraphNode(sym, subgraph_id);
   }
 
@@ -319,8 +332,8 @@ class SubgraphProperty {
    * \param subgraph_id subgraph id
    */
   virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
-                                           const SubgraphSelectorV2Ptr& subgraph_selector,
-                                           const int subgraph_id = 0) const {
+                                             const SubgraphSelectorV2Ptr& subgraph_selector,
+                                             const int subgraph_id = 0) const {
     CHECK_EQ(GetPropertyType(), kCreate);
     const auto bridge = static_cast<SubgraphSelectorV2Bridge*>(subgraph_selector.get());
     return CreateSubgraphNode(sym, bridge->GetV1ptr(), subgraph_id);
@@ -424,7 +437,9 @@ class SubgraphProperty {
   /*!
    * \brief Get the property type.
    */
-  SgPropertyType GetPropertyType() const { return type_; }
+  SgPropertyType GetPropertyType() const {
+    return type_;
+  }
 
  protected:
   SgPropertyType type_;
@@ -440,7 +455,8 @@ class SubgraphPropertyEntry {
 
   template <typename T>
   SubgraphPropertyEntry set_attr(const std::string& name, const T value) const {
-    if (entry_) entry_->SetAttr<T>(name, value);
+    if (entry_)
+      entry_->SetAttr<T>(name, value);
     return *this;
   }
 
@@ -494,9 +510,13 @@ class SubgraphBackend {
     return prop;
   }
 
-  const std::string& GetName() const { return name_; }
+  const std::string& GetName() const {
+    return name_;
+  }
 
-  const std::vector<SubgraphPropertyPtr>& GetSubgraphProperties() const { return prop_ptr_; }
+  const std::vector<SubgraphPropertyPtr>& GetSubgraphProperties() const {
+    return prop_ptr_;
+  }
 
  private:
   const std::string name_;
@@ -561,9 +581,9 @@ class SubgraphBackendRegistry {
     return SubgraphPropertyEntry(prop);
   }
 
-  SubgraphBackendRegistry() = default;
+  SubgraphBackendRegistry()                               = default;
   SubgraphBackendRegistry(const SubgraphBackendRegistry&) = delete;
-  SubgraphBackendRegistry(SubgraphBackendRegistry&&) = delete;
+  SubgraphBackendRegistry(SubgraphBackendRegistry&&)      = delete;
   SubgraphBackendRegistry& operator=(const SubgraphBackendRegistry&) = delete;
   std::unordered_map<std::string, SubgraphBackendPtr> backend_map_;
 };

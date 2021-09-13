@@ -23,7 +23,7 @@
  * \file psroi_pooling-inl.h
  * \brief psroi pooling operator and symbol
  * \author Yi Li, Tairui Chen, Guodong Zhang, Haozhi Qi, Jifeng Dai
-*/
+ */
 #ifndef MXNET_OPERATOR_CONTRIB_PSROI_POOLING_INL_H_
 #define MXNET_OPERATOR_CONTRIB_PSROI_POOLING_INL_H_
 
@@ -37,16 +37,15 @@
 #include "../mshadow_op.h"
 #include "../operator_common.h"
 
-
 namespace mxnet {
 namespace op {
 
 // Declare enumeration of input order to make code more intuitive.
 // These enums are only visible within this header
 namespace psroipool {
-enum PSROIPoolingOpInputs {kData, kBox};
-enum PSROIPoolingOpOutputs {kOut};
-}  // psroipool
+enum PSROIPoolingOpInputs { kData, kBox };
+enum PSROIPoolingOpOutputs { kOut };
+}  // namespace psroipool
 
 struct PSROIPoolingParam : public dmlc::Parameter<PSROIPoolingParam> {
   // mxnet::TShape pooled_size;
@@ -55,36 +54,38 @@ struct PSROIPoolingParam : public dmlc::Parameter<PSROIPoolingParam> {
   int pooled_size;
   int group_size;
   DMLC_DECLARE_PARAMETER(PSROIPoolingParam) {
-    DMLC_DECLARE_FIELD(spatial_scale).set_range(0.0, 1.0)
-    .describe("Ratio of input feature map height (or w) to raw image height (or w). "
-    "Equals the reciprocal of total stride in convolutional layers");
+    DMLC_DECLARE_FIELD(spatial_scale)
+        .set_range(0.0, 1.0)
+        .describe(
+            "Ratio of input feature map height (or w) to raw image height (or w). "
+            "Equals the reciprocal of total stride in convolutional layers");
     DMLC_DECLARE_FIELD(output_dim).describe("fix output dim");
-  DMLC_DECLARE_FIELD(pooled_size).describe("fix pooled size");
+    DMLC_DECLARE_FIELD(pooled_size).describe("fix pooled size");
     DMLC_DECLARE_FIELD(group_size).set_default(0).describe("fix group size");
   }
 };
 
-template<typename xpu, typename DType>
+template <typename xpu, typename DType>
 class PSROIPoolingOp : public Operator {
  public:
   explicit PSROIPoolingOp(PSROIPoolingParam p) {
     this->param_ = p;
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  virtual void Forward(const OpContext& ctx,
+                       const std::vector<TBlob>& in_data,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& out_data,
+                       const std::vector<TBlob>& aux_args) {
     using namespace mshadow;
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
     CHECK_EQ(out_data[psroipool::kOut].shape_[0], in_data[psroipool::kBox].shape_[0]);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu>* s = ctx.get_stream<xpu>();
 
     Tensor<xpu, 4, DType> data = in_data[psroipool::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 2, DType> bbox = in_data[psroipool::kBox].get<xpu, 2, DType>(s);
-    Tensor<xpu, 4, DType> out = out_data[psroipool::kOut].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, DType> out  = out_data[psroipool::kOut].get<xpu, 4, DType>(s);
     CHECK_EQ(data.CheckContiguous(), true);
     CHECK_EQ(bbox.CheckContiguous(), true);
     CHECK_EQ(out.CheckContiguous(), true);
@@ -92,26 +93,26 @@ class PSROIPoolingOp : public Operator {
     PSROIPoolForward(out, data, bbox, param_.spatial_scale, param_.output_dim, param_.group_size);
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+  virtual void Backward(const OpContext& ctx,
+                        const std::vector<TBlob>& out_grad,
+                        const std::vector<TBlob>& in_data,
+                        const std::vector<TBlob>& out_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& in_grad,
+                        const std::vector<TBlob>& aux_args) {
     using namespace mshadow;
     CHECK_EQ(in_data.size(), 2);
     CHECK_EQ(out_data.size(), 1);
     CHECK_EQ(out_grad[psroipool::kOut].shape_[0], in_data[psroipool::kBox].shape_[0]);
-    CHECK_NE(req[psroipool::kData], kWriteInplace) <<
-      "ROIPooling: Backward doesn't support kWriteInplace.";
-    CHECK_NE(req[psroipool::kBox], kWriteInplace) <<
-      "ROIPooling: Backward doesn't support kWriteInplace.";
-    Stream<xpu> *s = ctx.get_stream<xpu>();
+    CHECK_NE(req[psroipool::kData], kWriteInplace)
+        << "ROIPooling: Backward doesn't support kWriteInplace.";
+    CHECK_NE(req[psroipool::kBox], kWriteInplace)
+        << "ROIPooling: Backward doesn't support kWriteInplace.";
+    Stream<xpu>* s = ctx.get_stream<xpu>();
 
     Tensor<xpu, 4, DType> grad_out = out_grad[psroipool::kOut].get<xpu, 4, DType>(s);
-    Tensor<xpu, 2, DType> bbox = in_data[psroipool::kBox].get<xpu, 2, DType>(s);
-    Tensor<xpu, 4, DType> grad_in = in_grad[psroipool::kData].get<xpu, 4, DType>(s);
+    Tensor<xpu, 2, DType> bbox     = in_data[psroipool::kBox].get<xpu, 2, DType>(s);
+    Tensor<xpu, 4, DType> grad_in  = in_grad[psroipool::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 2, DType> grad_roi = in_grad[psroipool::kBox].get<xpu, 2, DType>(s);
 
     CHECK_EQ(grad_out.CheckContiguous(), true);
@@ -122,8 +123,8 @@ class PSROIPoolingOp : public Operator {
       if (kWriteTo == req[psroipool::kData]) {
         grad_in = 0.0f;
       }
-      PSROIPoolBackwardAcc(grad_in, grad_out, bbox, param_.spatial_scale,
-                           param_.output_dim, param_.group_size);
+      PSROIPoolBackwardAcc(
+          grad_in, grad_out, bbox, param_.spatial_scale, param_.output_dim, param_.group_size);
     }
     if (kWriteTo == req[psroipool::kBox]) {
       grad_roi = 0.0f;
@@ -135,7 +136,7 @@ class PSROIPoolingOp : public Operator {
 };  // class PSROIPoolingOp
 
 // Decalre Factory function, used for dispatch specialization
-template<typename xpu>
+template <typename xpu>
 Operator* CreateOp(PSROIPoolingParam param, int dtype);
 
 #if DMLC_USE_CXX11
@@ -159,18 +160,18 @@ class PSROIPoolingProp : public OperatorProperty {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-  if (param_.group_size == 0) {
-    param_.group_size = param_.pooled_size;
-  }
+    if (param_.group_size == 0) {
+      param_.group_size = param_.pooled_size;
+    }
   }
 
   std::map<std::string, std::string> GetParams() const override {
     return param_.__DICT__();
   }
 
-  bool InferShape(mxnet::ShapeVector *in_shape,
-                  mxnet::ShapeVector *out_shape,
-                  mxnet::ShapeVector *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector* in_shape,
+                  mxnet::ShapeVector* out_shape,
+                  mxnet::ShapeVector* aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, rois]";
 
@@ -186,13 +187,13 @@ class PSROIPoolingProp : public OperatorProperty {
     // out: [num_rois, c, pooled_h, pooled_w]
     out_shape->clear();
     out_shape->push_back(
-         Shape4(bshape[0], param_.output_dim, param_.pooled_size, param_.pooled_size));
+        Shape4(bshape[0], param_.output_dim, param_.pooled_size, param_.pooled_size));
     return true;
   }
 
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
+  bool InferType(std::vector<int>* in_type,
+                 std::vector<int>* out_type,
+                 std::vector<int>* aux_type) const override {
     CHECK_EQ(in_type->size(), 2);
     int dtype = (*in_type)[0];
     CHECK_EQ(dtype, (*in_type)[1]);
@@ -205,7 +206,7 @@ class PSROIPoolingProp : public OperatorProperty {
 
   OperatorProperty* Copy() const override {
     PSROIPoolingProp* psroi_pooling_sym = new PSROIPoolingProp();
-    psroi_pooling_sym->param_ = this->param_;
+    psroi_pooling_sym->param_           = this->param_;
     return psroi_pooling_sym;
   }
 
@@ -214,22 +215,20 @@ class PSROIPoolingProp : public OperatorProperty {
   }
 
   // decalre dependency and inplace optimization options
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
+  std::vector<int> DeclareBackwardDependency(const std::vector<int>& out_grad,
+                                             const std::vector<int>& in_data,
+                                             const std::vector<int>& out_data) const override {
     return {out_grad[psroipool::kOut], in_data[psroipool::kBox]};
   }
-
 
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
     return nullptr;
   }
 
-  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-                             std::vector<int> *in_type) const override;
-
+  Operator* CreateOperatorEx(Context ctx,
+                             mxnet::ShapeVector* in_shape,
+                             std::vector<int>* in_type) const override;
 
  private:
   PSROIPoolingParam param_;

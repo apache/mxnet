@@ -41,14 +41,21 @@
 #define __shared__
 inline void __syncthreads() {}
 inline void __threadfence_block() {}
-template<class T> inline T __clz(const T val) { return val; }
-struct __cuda_fake_struct { int x; int y; int z; };
+template <class T>
+inline T __clz(const T val) {
+  return val;
+}
+struct __cuda_fake_struct {
+  int x;
+  int y;
+  int z;
+};
 extern __cuda_fake_struct blockDim;
 extern __cuda_fake_struct threadIdx;
 extern __cuda_fake_struct blockIdx;
 #endif
 
-#define QUOTE(x) #x
+#define QUOTE(x)      #x
 #define QUOTEVALUE(x) QUOTE(x)
 
 #if MXNET_USE_CUDA
@@ -98,11 +105,10 @@ inline __device__ bool __is_supported_cuda_architecture() {
  *
  * It checks for CUDA errors after invocation of the expression.
  */
-#define CUDA_CALL(func)                                            \
-  {                                                                \
-    cudaError_t e = (func);                                        \
-    CHECK(e == cudaSuccess || e == cudaErrorCudartUnloading)       \
-        << "CUDA: " << cudaGetErrorString(e);                      \
+#define CUDA_CALL(func)                                                                            \
+  {                                                                                                \
+    cudaError_t e = (func);                                                                        \
+    CHECK(e == cudaSuccess || e == cudaErrorCudartUnloading) << "CUDA: " << cudaGetErrorString(e); \
   }
 
 /*!
@@ -111,10 +117,10 @@ inline __device__ bool __is_supported_cuda_architecture() {
  *
  * It checks for cuBLAS errors after invocation of the expression.
  */
-#define CUBLAS_CALL(func)                                       \
-  {                                                             \
-    cublasStatus_t e = (func);                                  \
-    CHECK_EQ(e, CUBLAS_STATUS_SUCCESS)                          \
+#define CUBLAS_CALL(func)                                              \
+  {                                                                    \
+    cublasStatus_t e = (func);                                         \
+    CHECK_EQ(e, CUBLAS_STATUS_SUCCESS)                                 \
         << "cuBLAS: " << mxnet::common::cuda::CublasGetErrorString(e); \
   }
 
@@ -124,10 +130,10 @@ inline __device__ bool __is_supported_cuda_architecture() {
  *
  * It checks for cuSolver errors after invocation of the expression.
  */
-#define CUSOLVER_CALL(func)                                         \
-  {                                                                 \
-    cusolverStatus_t e = (func);                                    \
-    CHECK_EQ(e, CUSOLVER_STATUS_SUCCESS)                            \
+#define CUSOLVER_CALL(func)                                                \
+  {                                                                        \
+    cusolverStatus_t e = (func);                                           \
+    CHECK_EQ(e, CUSOLVER_STATUS_SUCCESS)                                   \
         << "cuSolver: " << mxnet::common::cuda::CusolverGetErrorString(e); \
   }
 
@@ -137,10 +143,10 @@ inline __device__ bool __is_supported_cuda_architecture() {
  *
  * It checks for cuRAND errors after invocation of the expression.
  */
-#define CURAND_CALL(func)                                       \
-  {                                                             \
-    curandStatus_t e = (func);                                  \
-    CHECK_EQ(e, CURAND_STATUS_SUCCESS)                          \
+#define CURAND_CALL(func)                                              \
+  {                                                                    \
+    curandStatus_t e = (func);                                         \
+    CHECK_EQ(e, CURAND_STATUS_SUCCESS)                                 \
         << "cuRAND: " << mxnet::common::cuda::CurandGetErrorString(e); \
   }
 
@@ -150,12 +156,10 @@ inline __device__ bool __is_supported_cuda_architecture() {
  *
  * It checks for NVRTC errors after invocation of the expression.
  */
-#define NVRTC_CALL(x)                                   \
-  {                                                     \
-    nvrtcResult result = x;                             \
-    CHECK_EQ(result, NVRTC_SUCCESS)                     \
-      << #x " failed with error "                       \
-      << nvrtcGetErrorString(result);                   \
+#define NVRTC_CALL(x)                                                                           \
+  {                                                                                             \
+    nvrtcResult result = x;                                                                     \
+    CHECK_EQ(result, NVRTC_SUCCESS) << #x " failed with error " << nvrtcGetErrorString(result); \
   }
 
 /*!
@@ -164,19 +168,18 @@ inline __device__ bool __is_supported_cuda_architecture() {
  *
  * It checks for CUDA driver errors after invocation of the expression.
  */
-#define CUDA_DRIVER_CALL(func)                                          \
-  {                                                                     \
-    CUresult e = (func);                                                \
-    if (e != CUDA_SUCCESS) {                                            \
-      char const * err_msg = nullptr;                                   \
-      if (cuGetErrorString(e, &err_msg) == CUDA_ERROR_INVALID_VALUE) {  \
-        LOG(FATAL) << "CUDA Driver: Unknown error " << e;               \
-      } else {                                                          \
-        LOG(FATAL) << "CUDA Driver: " << e << " " << err_msg;           \
-      }                                                                 \
-    }                                                                   \
+#define CUDA_DRIVER_CALL(func)                                         \
+  {                                                                    \
+    CUresult e = (func);                                               \
+    if (e != CUDA_SUCCESS) {                                           \
+      char const* err_msg = nullptr;                                   \
+      if (cuGetErrorString(e, &err_msg) == CUDA_ERROR_INVALID_VALUE) { \
+        LOG(FATAL) << "CUDA Driver: Unknown error " << e;              \
+      } else {                                                         \
+        LOG(FATAL) << "CUDA Driver: " << e << " " << err_msg;          \
+      }                                                                \
+    }                                                                  \
   }
-
 
 #if MXNET_USE_NVML
 /*!
@@ -185,17 +188,15 @@ inline __device__ bool __is_supported_cuda_architecture() {
  *
  * It checks for NVML errors after invocation of the expression.
  */
-#define NVML_CALL(func)                                 \
-  {                                                     \
-    nvmlReturn_t result = (func);                       \
-    CHECK_EQ(result, NVML_SUCCESS)                      \
-      << #func " failed with error "                    \
-      << nvmlErrorString(result);                       \
+#define NVML_CALL(func)                                                                       \
+  {                                                                                           \
+    nvmlReturn_t result = (func);                                                             \
+    CHECK_EQ(result, NVML_SUCCESS) << #func " failed with error " << nvmlErrorString(result); \
   }
 #endif  // MXNET_USE_NVML
 
 #if !defined(_MSC_VER)
-#define CUDA_UNROLL _Pragma("unroll")
+#define CUDA_UNROLL   _Pragma("unroll")
 #define CUDA_NOUNROLL _Pragma("nounroll")
 #else
 #define CUDA_UNROLL
@@ -209,7 +210,7 @@ namespace cuda {
 /*!
  * \brief Converts between C++ datatypes and enums/constants needed by cuBLAS.
  */
-template<typename DType>
+template <typename DType>
 struct CublasType;
 
 // With CUDA v8, cuBLAS adopted use of cudaDataType_t instead of its own
@@ -218,7 +219,7 @@ struct CublasType;
 // call cublasGemmEx(), burdening the class with the legacy type values
 // was not needed.
 
-template<>
+template <>
 struct CublasType<float> {
   static const int kFlag = mshadow::kFloat32;
 #if CUDA_VERSION >= 8000
@@ -228,7 +229,7 @@ struct CublasType<float> {
   static const float one;
   static const float zero;
 };
-template<>
+template <>
 struct CublasType<double> {
   static const int kFlag = mshadow::kFloat64;
 #if CUDA_VERSION >= 8000
@@ -238,7 +239,7 @@ struct CublasType<double> {
   static const double one;
   static const double zero;
 };
-template<>
+template <>
 struct CublasType<mshadow::half::half_t> {
   static const int kFlag = mshadow::kFloat16;
 #if CUDA_VERSION >= 8000
@@ -248,24 +249,24 @@ struct CublasType<mshadow::half::half_t> {
   static const mshadow::half::half_t one;
   static const mshadow::half::half_t zero;
 };
-template<>
+template <>
 struct CublasType<uint8_t> {
   static const int kFlag = mshadow::kUint8;
 #if CUDA_VERSION >= 8000
   static const cudaDataType_t kCudaFlag = CUDA_R_8I;
 #endif
   typedef uint8_t ScaleType;
-  static const uint8_t one = 1;
+  static const uint8_t one  = 1;
   static const uint8_t zero = 0;
 };
-template<>
+template <>
 struct CublasType<int32_t> {
   static const int kFlag = mshadow::kInt32;
 #if CUDA_VERSION >= 8000
   static const cudaDataType_t kCudaFlag = CUDA_R_32I;
 #endif
   typedef int32_t ScaleType;
-  static const int32_t one = 1;
+  static const int32_t one  = 1;
   static const int32_t zero = 0;
 };
 
@@ -276,26 +277,26 @@ struct CublasType<int32_t> {
  */
 inline const char* CublasGetErrorString(cublasStatus_t error) {
   switch (error) {
-  case CUBLAS_STATUS_SUCCESS:
-    return "CUBLAS_STATUS_SUCCESS";
-  case CUBLAS_STATUS_NOT_INITIALIZED:
-    return "CUBLAS_STATUS_NOT_INITIALIZED";
-  case CUBLAS_STATUS_ALLOC_FAILED:
-    return "CUBLAS_STATUS_ALLOC_FAILED";
-  case CUBLAS_STATUS_INVALID_VALUE:
-    return "CUBLAS_STATUS_INVALID_VALUE";
-  case CUBLAS_STATUS_ARCH_MISMATCH:
-    return "CUBLAS_STATUS_ARCH_MISMATCH";
-  case CUBLAS_STATUS_MAPPING_ERROR:
-    return "CUBLAS_STATUS_MAPPING_ERROR";
-  case CUBLAS_STATUS_EXECUTION_FAILED:
-    return "CUBLAS_STATUS_EXECUTION_FAILED";
-  case CUBLAS_STATUS_INTERNAL_ERROR:
-    return "CUBLAS_STATUS_INTERNAL_ERROR";
-  case CUBLAS_STATUS_NOT_SUPPORTED:
-    return "CUBLAS_STATUS_NOT_SUPPORTED";
-  default:
-    break;
+    case CUBLAS_STATUS_SUCCESS:
+      return "CUBLAS_STATUS_SUCCESS";
+    case CUBLAS_STATUS_NOT_INITIALIZED:
+      return "CUBLAS_STATUS_NOT_INITIALIZED";
+    case CUBLAS_STATUS_ALLOC_FAILED:
+      return "CUBLAS_STATUS_ALLOC_FAILED";
+    case CUBLAS_STATUS_INVALID_VALUE:
+      return "CUBLAS_STATUS_INVALID_VALUE";
+    case CUBLAS_STATUS_ARCH_MISMATCH:
+      return "CUBLAS_STATUS_ARCH_MISMATCH";
+    case CUBLAS_STATUS_MAPPING_ERROR:
+      return "CUBLAS_STATUS_MAPPING_ERROR";
+    case CUBLAS_STATUS_EXECUTION_FAILED:
+      return "CUBLAS_STATUS_EXECUTION_FAILED";
+    case CUBLAS_STATUS_INTERNAL_ERROR:
+      return "CUBLAS_STATUS_INTERNAL_ERROR";
+    case CUBLAS_STATUS_NOT_SUPPORTED:
+      return "CUBLAS_STATUS_NOT_SUPPORTED";
+    default:
+      break;
   }
   return "Unknown cuBLAS status";
 }
@@ -318,24 +319,24 @@ inline cublasOperation_t CublasTransposeOp(bool transpose) {
  */
 inline const char* CusolverGetErrorString(cusolverStatus_t error) {
   switch (error) {
-  case CUSOLVER_STATUS_SUCCESS:
-    return "CUSOLVER_STATUS_SUCCESS";
-  case CUSOLVER_STATUS_NOT_INITIALIZED:
-    return "CUSOLVER_STATUS_NOT_INITIALIZED";
-  case CUSOLVER_STATUS_ALLOC_FAILED:
-    return "CUSOLVER_STATUS_ALLOC_FAILED";
-  case CUSOLVER_STATUS_INVALID_VALUE:
-    return "CUSOLVER_STATUS_INVALID_VALUE";
-  case CUSOLVER_STATUS_ARCH_MISMATCH:
-    return "CUSOLVER_STATUS_ARCH_MISMATCH";
-  case CUSOLVER_STATUS_EXECUTION_FAILED:
-    return "CUSOLVER_STATUS_EXECUTION_FAILED";
-  case CUSOLVER_STATUS_INTERNAL_ERROR:
-    return "CUSOLVER_STATUS_INTERNAL_ERROR";
-  case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
-    return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
-  default:
-    break;
+    case CUSOLVER_STATUS_SUCCESS:
+      return "CUSOLVER_STATUS_SUCCESS";
+    case CUSOLVER_STATUS_NOT_INITIALIZED:
+      return "CUSOLVER_STATUS_NOT_INITIALIZED";
+    case CUSOLVER_STATUS_ALLOC_FAILED:
+      return "CUSOLVER_STATUS_ALLOC_FAILED";
+    case CUSOLVER_STATUS_INVALID_VALUE:
+      return "CUSOLVER_STATUS_INVALID_VALUE";
+    case CUSOLVER_STATUS_ARCH_MISMATCH:
+      return "CUSOLVER_STATUS_ARCH_MISMATCH";
+    case CUSOLVER_STATUS_EXECUTION_FAILED:
+      return "CUSOLVER_STATUS_EXECUTION_FAILED";
+    case CUSOLVER_STATUS_INTERNAL_ERROR:
+      return "CUSOLVER_STATUS_INTERNAL_ERROR";
+    case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
+      return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+    default:
+      break;
   }
   return "Unknown cuSOLVER status";
 }
@@ -347,53 +348,51 @@ inline const char* CusolverGetErrorString(cusolverStatus_t error) {
  */
 inline const char* CurandGetErrorString(curandStatus_t status) {
   switch (status) {
-  case CURAND_STATUS_SUCCESS:
-    return "CURAND_STATUS_SUCCESS";
-  case CURAND_STATUS_VERSION_MISMATCH:
-    return "CURAND_STATUS_VERSION_MISMATCH";
-  case CURAND_STATUS_NOT_INITIALIZED:
-    return "CURAND_STATUS_NOT_INITIALIZED";
-  case CURAND_STATUS_ALLOCATION_FAILED:
-    return "CURAND_STATUS_ALLOCATION_FAILED";
-  case CURAND_STATUS_TYPE_ERROR:
-    return "CURAND_STATUS_TYPE_ERROR";
-  case CURAND_STATUS_OUT_OF_RANGE:
-    return "CURAND_STATUS_OUT_OF_RANGE";
-  case CURAND_STATUS_LENGTH_NOT_MULTIPLE:
-    return "CURAND_STATUS_LENGTH_NOT_MULTIPLE";
-  case CURAND_STATUS_DOUBLE_PRECISION_REQUIRED:
-    return "CURAND_STATUS_DOUBLE_PRECISION_REQUIRED";
-  case CURAND_STATUS_LAUNCH_FAILURE:
-    return "CURAND_STATUS_LAUNCH_FAILURE";
-  case CURAND_STATUS_PREEXISTING_FAILURE:
-    return "CURAND_STATUS_PREEXISTING_FAILURE";
-  case CURAND_STATUS_INITIALIZATION_FAILED:
-    return "CURAND_STATUS_INITIALIZATION_FAILED";
-  case CURAND_STATUS_ARCH_MISMATCH:
-    return "CURAND_STATUS_ARCH_MISMATCH";
-  case CURAND_STATUS_INTERNAL_ERROR:
-    return "CURAND_STATUS_INTERNAL_ERROR";
+    case CURAND_STATUS_SUCCESS:
+      return "CURAND_STATUS_SUCCESS";
+    case CURAND_STATUS_VERSION_MISMATCH:
+      return "CURAND_STATUS_VERSION_MISMATCH";
+    case CURAND_STATUS_NOT_INITIALIZED:
+      return "CURAND_STATUS_NOT_INITIALIZED";
+    case CURAND_STATUS_ALLOCATION_FAILED:
+      return "CURAND_STATUS_ALLOCATION_FAILED";
+    case CURAND_STATUS_TYPE_ERROR:
+      return "CURAND_STATUS_TYPE_ERROR";
+    case CURAND_STATUS_OUT_OF_RANGE:
+      return "CURAND_STATUS_OUT_OF_RANGE";
+    case CURAND_STATUS_LENGTH_NOT_MULTIPLE:
+      return "CURAND_STATUS_LENGTH_NOT_MULTIPLE";
+    case CURAND_STATUS_DOUBLE_PRECISION_REQUIRED:
+      return "CURAND_STATUS_DOUBLE_PRECISION_REQUIRED";
+    case CURAND_STATUS_LAUNCH_FAILURE:
+      return "CURAND_STATUS_LAUNCH_FAILURE";
+    case CURAND_STATUS_PREEXISTING_FAILURE:
+      return "CURAND_STATUS_PREEXISTING_FAILURE";
+    case CURAND_STATUS_INITIALIZATION_FAILED:
+      return "CURAND_STATUS_INITIALIZATION_FAILED";
+    case CURAND_STATUS_ARCH_MISMATCH:
+      return "CURAND_STATUS_ARCH_MISMATCH";
+    case CURAND_STATUS_INTERNAL_ERROR:
+      return "CURAND_STATUS_INTERNAL_ERROR";
   }
   return "Unknown cuRAND status";
 }
 
 template <typename DType>
 inline DType __device__ CudaMax(DType a, DType b) {
-    return a > b ? a : b;
+  return a > b ? a : b;
 }
 
 template <typename DType>
 inline DType __device__ CudaMin(DType a, DType b) {
-    return a < b ? a : b;
+  return a < b ? a : b;
 }
 
 class DeviceStore {
  public:
   /*! \brief default constructor- only optionally restores previous device */
-  explicit DeviceStore(int requested_device = -1, bool restore = true) :
-    restore_device_(-1),
-    current_device_(requested_device),
-    restore_(restore) {
+  explicit DeviceStore(int requested_device = -1, bool restore = true)
+      : restore_device_(-1), current_device_(requested_device), restore_(restore) {
     if (restore_)
       CUDA_CALL(cudaGetDevice(&restore_device_));
     if (requested_device != restore_device_) {
@@ -402,9 +401,7 @@ class DeviceStore {
   }
 
   ~DeviceStore() {
-    if (restore_ &&
-        current_device_ != restore_device_ &&
-        current_device_ != -1 &&
+    if (restore_ && current_device_ != restore_device_ && current_device_ != -1 &&
         restore_device_ != -1)
       CUDA_CALL(cudaSetDevice(restore_device_));
   }
@@ -462,8 +459,10 @@ constexpr size_t kMaxNumGpus = 64;
  * \param attr_name A string representation of the attribute, for error messages.
  * \return the gpu's attribute value.
  */
-inline int cudaAttributeLookup(int device_id, std::vector<int32_t> *cached_values,
-                               cudaDeviceAttr attr, const char *attr_name) {
+inline int cudaAttributeLookup(int device_id,
+                               std::vector<int32_t>* cached_values,
+                               cudaDeviceAttr attr,
+                               const char* attr_name) {
   if (device_id < 0 || device_id >= static_cast<int>(cached_values->size())) {
     LOG(FATAL) << attr_name << "(device_id) called with invalid id: " << device_id;
   } else if ((*cached_values)[device_id] < 0) {
@@ -481,8 +480,8 @@ inline int cudaAttributeLookup(int device_id, std::vector<int32_t> *cached_value
  */
 inline int ComputeCapabilityMajor(int device_id) {
   static std::vector<int32_t> capability_major(kMaxNumGpus, -1);
-  return cudaAttributeLookup(device_id, &capability_major,
-                             cudaDevAttrComputeCapabilityMajor, "ComputeCapabilityMajor");
+  return cudaAttributeLookup(
+      device_id, &capability_major, cudaDevAttrComputeCapabilityMajor, "ComputeCapabilityMajor");
 }
 
 /*!
@@ -492,8 +491,8 @@ inline int ComputeCapabilityMajor(int device_id) {
  */
 inline int ComputeCapabilityMinor(int device_id) {
   static std::vector<int32_t> capability_minor(kMaxNumGpus, -1);
-  return cudaAttributeLookup(device_id, &capability_minor,
-                             cudaDevAttrComputeCapabilityMinor, "ComputeCapabilityMinor");
+  return cudaAttributeLookup(
+      device_id, &capability_minor, cudaDevAttrComputeCapabilityMinor, "ComputeCapabilityMinor");
 }
 
 /*!
@@ -514,8 +513,8 @@ inline int SMArch(int device_id) {
  */
 inline int MultiprocessorCount(int device_id) {
   static std::vector<int32_t> sm_counts(kMaxNumGpus, -1);
-  return cudaAttributeLookup(device_id, &sm_counts,
-                             cudaDevAttrMultiProcessorCount, "MultiprocessorCount");
+  return cudaAttributeLookup(
+      device_id, &sm_counts, cudaDevAttrMultiProcessorCount, "MultiprocessorCount");
 }
 
 /*!
@@ -525,7 +524,8 @@ inline int MultiprocessorCount(int device_id) {
  */
 inline int MaxSharedMemoryPerMultiprocessor(int device_id) {
   static std::vector<int32_t> max_smem_per_mutiprocessor(kMaxNumGpus, -1);
-  return cudaAttributeLookup(device_id, &max_smem_per_mutiprocessor,
+  return cudaAttributeLookup(device_id,
+                             &max_smem_per_mutiprocessor,
                              cudaDevAttrMaxSharedMemoryPerMultiprocessor,
                              "MaxSharedMemoryPerMultiprocessor");
 }
@@ -537,8 +537,8 @@ inline int MaxSharedMemoryPerMultiprocessor(int device_id) {
  */
 inline bool SupportsCooperativeLaunch(int device_id) {
   static std::vector<int32_t> coop_launch(kMaxNumGpus, -1);
-  return cudaAttributeLookup(device_id, &coop_launch,
-                             cudaDevAttrCooperativeLaunch, "SupportsCooperativeLaunch");
+  return cudaAttributeLookup(
+      device_id, &coop_launch, cudaDevAttrCooperativeLaunch, "SupportsCooperativeLaunch");
 }
 
 /*!
@@ -566,8 +566,7 @@ inline bool SupportsFloat16Compute(int device_id) {
  */
 inline bool SupportsTensorCore(int device_id) {
   // Volta (sm_70) supports TensorCore algos
-  return device_id >= 0 &&
-         ComputeCapabilityMajor(device_id) >=7;
+  return device_id >= 0 && ComputeCapabilityMajor(device_id) >= 7;
 }
 
 // The policy if the user hasn't set the environment variable MXNET_CUDA_ALLOW_TENSOR_CORE
@@ -582,12 +581,12 @@ inline bool GetEnvAllowTensorCore() {
   // separately in each compilation unit.  Not ideal, but cleaner than creating a
   // cuda_utils.cc solely to have a single instance and initialization.
   static bool allow_tensor_core = false;
-  static bool is_set = false;
+  static bool is_set            = false;
   if (!is_set) {
     // Use of optional<bool> here permits: "0", "1", "true" and "false" to all be legal.
     bool default_value = MXNET_CUDA_ALLOW_TENSOR_CORE_DEFAULT;
-    allow_tensor_core = dmlc::GetEnv("MXNET_CUDA_ALLOW_TENSOR_CORE",
-                                     dmlc::optional<bool>(default_value)).value();
+    allow_tensor_core =
+        dmlc::GetEnv("MXNET_CUDA_ALLOW_TENSOR_CORE", dmlc::optional<bool>(default_value)).value();
     is_set = true;
   }
   return allow_tensor_core;
@@ -630,19 +629,22 @@ inline cublasMath_t SetCublasMathMode(cublasHandle_t blas_handle, cublasMath_t n
 static_assert(CUDNN_PATCHLEVEL < 100 && CUDNN_MINOR < 10,
               "CUDNN_VERSION_AS_STRING macro assumptions violated.");
 #if CUDNN_PATCHLEVEL >= 10
-#define CUDNN_VERSION_AS_STRING QUOTEVALUE(CUDNN_MAJOR) \
-                                QUOTEVALUE(CUDNN_MINOR) \
-                                QUOTEVALUE(CUDNN_PATCHLEVEL)
+#define CUDNN_VERSION_AS_STRING \
+  QUOTEVALUE(CUDNN_MAJOR)       \
+  QUOTEVALUE(CUDNN_MINOR)       \
+  QUOTEVALUE(CUDNN_PATCHLEVEL)
 #else
-#define CUDNN_VERSION_AS_STRING QUOTEVALUE(CUDNN_MAJOR) \
-                                QUOTEVALUE(CUDNN_MINOR) \
-                                "0" QUOTEVALUE(CUDNN_PATCHLEVEL)
+#define CUDNN_VERSION_AS_STRING \
+  QUOTEVALUE(CUDNN_MAJOR)       \
+  QUOTEVALUE(CUDNN_MINOR)       \
+  "0" QUOTEVALUE(CUDNN_PATCHLEVEL)
 #endif
 
-#define STATIC_ASSERT_CUDNN_VERSION_GE(min_version) \
-  static_assert(CUDNN_VERSION >= min_version, "Compiled-against cuDNN version " \
-      CUDNN_VERSION_AS_STRING " is too old, please upgrade system to version " \
-      QUOTEVALUE(min_version) " or later.")
+#define STATIC_ASSERT_CUDNN_VERSION_GE(min_version)             \
+  static_assert(                                                \
+      CUDNN_VERSION >= min_version,                             \
+      "Compiled-against cuDNN version " CUDNN_VERSION_AS_STRING \
+      " is too old, please upgrade system to version " QUOTEVALUE(min_version) " or later.")
 
 #define CUDNN_CALL(func)                                                      \
   {                                                                           \
@@ -703,17 +705,16 @@ inline int MaxBackwardDataAlgos(cudnnHandle_t cudnn_handle) {
 // Overload atomicAdd to work for floats on all architectures
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
 // From CUDA Programming Guide
-static inline  __device__  void atomicAdd(double *address, double val) {
-  unsigned long long* address_as_ull =                  // NOLINT(*)
-    reinterpret_cast<unsigned long long*>(address);     // NOLINT(*)
-  unsigned long long old = *address_as_ull;             // NOLINT(*)
-  unsigned long long assumed;                           // NOLINT(*)
+static inline __device__ void atomicAdd(double* address, double val) {
+  unsigned long long* address_as_ull =                 // NOLINT(*)
+      reinterpret_cast<unsigned long long*>(address);  // NOLINT(*)
+  unsigned long long old = *address_as_ull;            // NOLINT(*)
+  unsigned long long assumed;                          // NOLINT(*)
 
   do {
     assumed = old;
-    old = atomicCAS(address_as_ull, assumed,
-                    __double_as_longlong(val +
-                    __longlong_as_double(assumed)));
+    old     = atomicCAS(
+        address_as_ull, assumed, __double_as_longlong(val + __longlong_as_double(assumed)));
 
     // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
   } while (assumed != old);
@@ -724,68 +725,65 @@ static inline  __device__  void atomicAdd(double *address, double val) {
 // Taken from:
 // https://github.com/torch/cutorch/blob/master/lib/THC/THCAtomics.cuh
 #ifdef __CUDACC__
-static inline __device__ void atomicAdd(mshadow::half::half_t *address,
-                                        mshadow::half::half_t val) {
-  unsigned int *address_as_ui =
-      reinterpret_cast<unsigned int *>(reinterpret_cast<char *>(address) -
-                                   (reinterpret_cast<size_t>(address) & 2));
+static inline __device__ void atomicAdd(mshadow::half::half_t* address, mshadow::half::half_t val) {
+  unsigned int* address_as_ui = reinterpret_cast<unsigned int*>(
+      reinterpret_cast<char*>(address) - (reinterpret_cast<size_t>(address) & 2));
   unsigned int old = *address_as_ui;
   unsigned int assumed;
 
   do {
     assumed = old;
     mshadow::half::half_t hsum;
-    hsum.half_ =
-        reinterpret_cast<size_t>(address) & 2 ? (old >> 16) : (old & 0xffff);
+    hsum.half_ = reinterpret_cast<size_t>(address) & 2 ? (old >> 16) : (old & 0xffff);
     hsum += val;
-    old = reinterpret_cast<size_t>(address) & 2
-              ? (old & 0xffff) | (hsum.half_ << 16)
-              : (old & 0xffff0000) | hsum.half_;
+    old = reinterpret_cast<size_t>(address) & 2 ? (old & 0xffff) | (hsum.half_ << 16)
+                                                : (old & 0xffff0000) | hsum.half_;
     old = atomicCAS(address_as_ui, assumed, old);
   } while (assumed != old);
 }
 
-static inline __device__ void atomicAdd(uint8_t *address, uint8_t val) {
-  unsigned int * address_as_ui = (unsigned int *) (address - ((size_t)address & 0x3));
-  unsigned int old = *address_as_ui;
-  unsigned int shift = (((size_t)address & 0x3) << 3);
+static inline __device__ void atomicAdd(uint8_t* address, uint8_t val) {
+  unsigned int* address_as_ui = (unsigned int*)(address - ((size_t)address & 0x3));
+  unsigned int old            = *address_as_ui;
+  unsigned int shift          = (((size_t)address & 0x3) << 3);
   unsigned int sum;
   unsigned int assumed;
 
   do {
     assumed = old;
-    sum = val + static_cast<uint8_t>((old >> shift) & 0xff);
-    old = (old & ~(0x000000ff << shift)) | (sum << shift);
-    old = atomicCAS(address_as_ui, assumed, old);
+    sum     = val + static_cast<uint8_t>((old >> shift) & 0xff);
+    old     = (old & ~(0x000000ff << shift)) | (sum << shift);
+    old     = atomicCAS(address_as_ui, assumed, old);
   } while (assumed != old);
 }
 
-static inline __device__ void atomicAdd(int8_t *address, int8_t val) {
-  unsigned int * address_as_ui = (unsigned int *) (address - ((size_t)address & 0x3));
-  unsigned int old = *address_as_ui;
-  unsigned int shift = (((size_t)address & 0x3) << 3);
+static inline __device__ void atomicAdd(int8_t* address, int8_t val) {
+  unsigned int* address_as_ui = (unsigned int*)(address - ((size_t)address & 0x3));
+  unsigned int old            = *address_as_ui;
+  unsigned int shift          = (((size_t)address & 0x3) << 3);
   unsigned int sum;
   unsigned int assumed;
 
   do {
     assumed = old;
-    sum = val + static_cast<int8_t>((old >> shift) & 0xff);
-    old = (old & ~(0x000000ff << shift)) | (sum << shift);
-    old = atomicCAS(address_as_ui, assumed, old);
+    sum     = val + static_cast<int8_t>((old >> shift) & 0xff);
+    old     = (old & ~(0x000000ff << shift)) | (sum << shift);
+    old     = atomicCAS(address_as_ui, assumed, old);
   } while (assumed != old);
 }
 
 // Overload atomicAdd to work for signed int64 on all architectures
-static inline  __device__  void atomicAdd(int64_t *address, int64_t val) {
-  atomicAdd(reinterpret_cast<unsigned long long*>(address), static_cast<unsigned long long>(val)); // NOLINT
+static inline __device__ void atomicAdd(int64_t* address, int64_t val) {
+  atomicAdd(reinterpret_cast<unsigned long long*>(address),  // NOLINT
+            static_cast<unsigned long long>(val));           // NOLINT
 }
 
 template <typename DType>
 __device__ inline DType ldg(const DType* address) {
 #if __CUDA_ARCH__ >= 350
-    return __ldg(address);
+  return __ldg(address);
 #else
-    return *address;
+  return *address;
 #endif
 }
 
@@ -806,7 +804,8 @@ template <int NVALUES = warp_size, typename OP, typename T>
 __device__ inline T warp_reduce(T value, OP redfun) {
 #pragma unroll
   for (int i = warp_size / 2; i >= 1; i /= 2) {
-    if (NVALUES > i) value = redfun(value, __shfl_down_sync(0xffffffff, value, i));
+    if (NVALUES > i)
+      value = redfun(value, __shfl_down_sync(0xffffffff, value, i));
   }
   return value;
 }
@@ -824,7 +823,8 @@ __device__ inline mshadow::half::half_t warp_reduce(mshadow::half::half_t value,
   float v = static_cast<float>(value);
 #pragma unroll
   for (int i = warp_size / 2; i >= 1; i /= 2) {
-    if (NValues > i) v = redfun(v, __shfl_down_sync(0xffffffff, v, i));
+    if (NValues > i)
+      v = redfun(v, __shfl_down_sync(0xffffffff, v, i));
   }
   return mshadow::half::half_t(v);
 }
@@ -843,12 +843,11 @@ __device__ inline mshadow::half::half_t warp_reduce(mshadow::half::half_t value,
  */
 template <int NTHREADS, bool all_reduce = true, typename OP, typename T>
 __device__ inline T reduce(const T& value, OP redfun) {
-  static_assert(NTHREADS <= warp_size * warp_size,
-                "Number of threads too large for reduction");
+  static_assert(NTHREADS <= warp_size * warp_size, "Number of threads too large for reduction");
   __shared__ T scratch[NTHREADS / warp_size];
   const int thread_idx_in_warp = threadIdx.x % warp_size;
-  const int warp_id = threadIdx.x / warp_size;
-  const T my_val = warp_reduce<warp_size>(value, redfun);
+  const int warp_id            = threadIdx.x / warp_size;
+  const T my_val               = warp_reduce<warp_size>(value, redfun);
   if (thread_idx_in_warp == 0) {
     scratch[warp_id] = my_val;
   }
@@ -856,7 +855,7 @@ __device__ inline T reduce(const T& value, OP redfun) {
   T ret = 0;
   if (warp_id == 0) {
     const T prev_val = threadIdx.x < (NTHREADS / warp_size) ? scratch[threadIdx.x] : 0;
-    const T my_val = warp_reduce<NTHREADS / warp_size>(prev_val, redfun);
+    const T my_val   = warp_reduce<NTHREADS / warp_size>(prev_val, redfun);
     if (all_reduce) {
       scratch[threadIdx.x] = my_val;
     } else {

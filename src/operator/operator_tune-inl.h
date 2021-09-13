@@ -36,9 +36,9 @@
 #include "./operator_tune.h"
 
 #if (__GNUC__ >= 4 || (__GNUC__ >= 3 && __GNUC_MINOR__ >= 4)) && !defined(__mips__)
-#  define HAS_CXA_DEMANGLE 1
+#define HAS_CXA_DEMANGLE 1
 #else
-#  define HAS_CXA_DEMANGLE 0
+#define HAS_CXA_DEMANGLE 0
 #endif
 
 #if HAS_CXA_DEMANGLE
@@ -56,7 +56,7 @@ namespace op {
 #endif
 #endif  // MXNET_NO_INLINE
 
-#define OUTSIDE_COUNT_SHIFT  3
+#define OUTSIDE_COUNT_SHIFT 3
 
 namespace tune {
 
@@ -65,7 +65,7 @@ namespace tune {
  * \param tm  Scalar TuningMode value
  * \return Character pointer to a string representing the TuningMode value
  */
-inline const char *TuningModeToString(const TuningMode tm) {
+inline const char* TuningModeToString(const TuningMode tm) {
   switch (tm) {
     case kAuto:
       return "Auto";
@@ -102,10 +102,10 @@ inline const char *TuningModeToString(const TuningMode tm) {
  *
  * Results and efficiency of the tuning is tested in the gtest OMP_TUNING test suite
  */
-template<typename DType>
+template <typename DType>
 class OperatorTune : public OperatorTuneByType<DType> {
  public:
-  using Tick = OperatorTuneBase::Tick;
+  using Tick       = OperatorTuneBase::Tick;
   using duration_t = OperatorTuneBase::duration_t;
   using OperatorTuneByType<DType>::tuning_mode_;
 
@@ -125,7 +125,7 @@ class OperatorTune : public OperatorTuneByType<DType> {
       initialized_ = true;
       // Generate some random data for calling the operator kernels
       data_set_ =
-        std::unique_ptr<DType[]>(reinterpret_cast<DType*>(new char[0x100 * sizeof(DType)]));
+          std::unique_ptr<DType[]>(reinterpret_cast<DType*>(new char[0x100 * sizeof(DType)]));
       std::random_device rd;
       std::mt19937 gen(rd());
       if (!std::is_integral<DType>::value) {
@@ -153,8 +153,8 @@ class OperatorTune : public OperatorTuneByType<DType> {
       }
       // Use this environment variable to generate new tuning statistics
       // In order to avoid printing too many copies, only the float32 object prints
-      output_tuning_data_ = mshadow::DataType<DType>::kFlag == mshadow::kFloat32
-                            && dmlc::GetEnv("MXNET_OUTPUT_TUNING_DATA", false);
+      output_tuning_data_ = mshadow::DataType<DType>::kFlag == mshadow::kFloat32 &&
+                            dmlc::GetEnv("MXNET_OUTPUT_TUNING_DATA", false);
       // If outputting tuning data, then also output verbose logging info
       OperatorTuneBase::verbose_tuning_info_ = dmlc::GetEnv("MXNET_VERBOSE_TUNING_INFO", false);
 
@@ -190,7 +190,7 @@ class OperatorTune : public OperatorTuneByType<DType> {
    * \param tune_func Function to call which tunes the operator
    * \return true if the tune operation was scheduled
    */
-  template<typename OP>
+  template <typename OP>
   static bool ScheduleTune(void (*tune_func)()) {
 #ifdef MXNET_USE_OPERATOR_TUNING
     if (tune_func) {
@@ -209,7 +209,7 @@ class OperatorTune : public OperatorTuneByType<DType> {
    * \tparam OP kernel operator type
    * \return true if the operator/kernel is tuned
    */
-  template<typename OP>
+  template <typename OP>
   static bool IsTuned() {
     return operator_names_.find(demangle(typeid(OP).name())) != operator_names_.end();
   }
@@ -219,15 +219,16 @@ class OperatorTune : public OperatorTuneByType<DType> {
    */
   static bool TuneAll() {
     Initialize();
-    std::list<void (*)()> *tl = GetTuningList();
-    const size_t size_save = tl->size();  // For checking if anything asynchronous is
+    std::list<void (*)()>* tl = GetTuningList();
+    const size_t size_save    = tl->size();  // For checking if anything asynchronous is
     // adding or removing items, which is forbidden
     if (output_tuning_data_ && !tl->empty()) {
       // Only emit this once, use the most common case, 'float32'
       if (mshadow::DataType<DType>::kFlag == mshadow::kFloat32) {
         std::cout << "OperatorTuneBase::duration_t "
                   << "OperatorTuneBase::omp_overhead_ns_ = " << OperatorTuneBase::omp_overhead_ns_
-                  << ";" << std::endl << std::flush;
+                  << ";" << std::endl
+                  << std::flush;
       }
     }
     const Tick start = std::chrono::high_resolution_clock::now();
@@ -236,8 +237,8 @@ class OperatorTune : public OperatorTuneByType<DType> {
     }
     if (OperatorTuneBase::verbose_tuning_info_) {
       const duration_t duration = OperatorTune::GetDurationInNanoseconds(start);
-      LOG(INFO) << "Op Tuning  for " << type_name<DType>()
-                << " took " << (duration / 1000000) << " ms";
+      LOG(INFO) << "Op Tuning  for " << type_name<DType>() << " took " << (duration / 1000000)
+                << " ms";
     }
     CHECK_EQ(size_save, tl->size()) << "Tuning list size should not have changed while tuning";
     tl->clear();
@@ -258,20 +259,18 @@ class OperatorTune : public OperatorTuneByType<DType> {
    * \brief Get the list of tuning function calls for the operators
    * \return Pointer to list of tuning function calls
    */
-  static std::list<void (*)()> *GetTuningList();
+  static std::list<void (*)()>* GetTuningList();
 
   /*!
    * \brief Demangle typeid::name() in order to generate source macros
    * \param name C++ Mangled name
    * \return Demangled name as string
    */
-  static inline std::string demangle(const char *name) {
+  static inline std::string demangle(const char* name) {
 #if HAS_CXA_DEMANGLE
     int status = -4;  // some arbitrary value to eliminate the compiler warning
-    std::unique_ptr<char, void (*)(void *)> res{
-      abi::__cxa_demangle(name, nullptr, nullptr, &status),
-      &std::free
-    };
+    std::unique_ptr<char, void (*)(void*)> res{abi::__cxa_demangle(name, nullptr, nullptr, &status),
+                                               &std::free};
     return status ? name : res.get();
 #else
     return name;
@@ -283,7 +282,8 @@ class OperatorTune : public OperatorTuneByType<DType> {
    * \tparam T Type
    * \return std::string representing the human-readable demangled type name
    */
-  template<typename T> static inline std::string type_name() {
+  template <typename T>
+  static inline std::string type_name() {
     return demangle(typeid(T).name());
   }
 
@@ -305,7 +305,7 @@ class OperatorTune : public OperatorTuneByType<DType> {
       }
     }
     const OperatorTuneBase::duration_t no_omp_duration =
-      OperatorTuneBase::GetDurationInNanoseconds(start);
+        OperatorTuneBase::GetDurationInNanoseconds(start);
 
     // Scale OMP iterations by type calculation complexity
     double factor;
@@ -338,16 +338,16 @@ class OperatorTune : public OperatorTuneByType<DType> {
     }
 
     wl_count = static_cast<int>(factor * OperatorTuneBase::WORKLOAD_COUNT * omp_thread_count);
-    start = std::chrono::high_resolution_clock::now();
+    start    = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < OUTSIDE_COUNT; ++i) {
-      #pragma omp parallel for num_threads(omp_thread_count)
+#pragma omp parallel for num_threads(omp_thread_count)
       for (int x = 0; x < wl_count; ++x) {
         // trivial operation
         volatile_int_ += x;
       }
     }
-    const duration_t omp_duration = OperatorTuneBase::GetDurationInNanoseconds(start)
-                                    - no_omp_duration;
+    const duration_t omp_duration =
+        OperatorTuneBase::GetDurationInNanoseconds(start) - no_omp_duration;
     return omp_duration >> OUTSIDE_COUNT_SHIFT;
   }
 
@@ -391,13 +391,12 @@ class OperatorTune : public OperatorTuneByType<DType> {
      * \return reference to the modified string. This is the same std::string object as what was
      *         supplied in the parameters
      */
-    static std::string &trim(std::string *s) {
-      s->erase(s->begin(), std::find_if(s->begin(), s->end(), [](int ch) {
-        return !std::isspace(ch);
-      }));
-      s->erase(std::find_if(s->rbegin(), s->rend(), [](int ch) {
-        return !std::isspace(ch);
-      }).base(), s->end());
+    static std::string& trim(std::string* s) {
+      s->erase(s->begin(),
+               std::find_if(s->begin(), s->end(), [](int ch) { return !std::isspace(ch); }));
+      s->erase(
+          std::find_if(s->rbegin(), s->rend(), [](int ch) { return !std::isspace(ch); }).base(),
+          s->end());
       return *s;
     }
 
@@ -406,7 +405,7 @@ class OperatorTune : public OperatorTuneByType<DType> {
      * \param s String to tokenize
      * \return std::list of tokens
      */
-    static std::list<std::string> string2list(const std::string &s) {
+    static std::list<std::string> string2list(const std::string& s) {
       std::list<std::string> res;
       std::istringstream iss(s);
       std::string token;
@@ -537,12 +536,12 @@ class OperatorTune : public OperatorTuneByType<DType> {
  * \brief Class that tunes unary operators
  * \tparam DType Data type to be used when tuning the kernel operations
  */
-template<typename DType>
+template <typename DType>
 class UnaryOpTune : public OperatorTune<DType> {
  protected:
   typedef OperatorTune<DType> Super;
   using duration_t = typename Super::duration_t;
-  using Tick = typename Super::Tick;
+  using Tick       = typename Super::Tick;
 
   /*!
    * \brief Determine the time it takes a kernel operator to execute WORKLOAD_COUNT iterations
@@ -550,11 +549,11 @@ class UnaryOpTune : public OperatorTune<DType> {
    * \tparam OP Kernel operator
    * \return Duration in nanoseconds for the 'WORKLOAD_COUNT' operations
    */
-  template<typename OP>
+  template <typename OP>
   static duration_t GetBlankWorkload() {
     DType tmp;
-    volatile DType *res = &tmp;
-    const Tick start = std::chrono::high_resolution_clock::now();
+    volatile DType* res = &tmp;
+    const Tick start    = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < Super::WORKLOAD_COUNT; ++i) {
       // Use a logical AND instead of mod to avoid affecting the timing result with a slow divide
       *res += OP::Map();
@@ -569,11 +568,11 @@ class UnaryOpTune : public OperatorTune<DType> {
    * \tparam OP Kernel operator
    * \return Duration in nanoseconds for the 'WORKLOAD_COUNT' operations
    */
-  template<typename OP>
+  template <typename OP>
   static duration_t GetUnaryWorkload() {
     DType tmp;
-    volatile DType *res = &tmp;
-    const Tick start = std::chrono::high_resolution_clock::now();
+    volatile DType* res = &tmp;
+    const Tick start    = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < Super::WORKLOAD_COUNT; ++i) {
       // Use a logical AND instead of mod to avoid affecting the timing result with a slow divide
       *res = OP::Map(Super::data_set_[i & 0xFF]);
@@ -588,11 +587,11 @@ class UnaryOpTune : public OperatorTune<DType> {
    * \tparam OP Kernel operator
    * \return Duration in nanoseconds for the 'WORKLOAD_COUNT' operations
    */
-  template<typename OP>
+  template <typename OP>
   static inline duration_t GetBinaryWorkload() {
     DType tmp;
-    volatile DType *res = &tmp;
-    const Tick start = std::chrono::high_resolution_clock::now();
+    volatile DType* res = &tmp;
+    const Tick start    = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < Super::WORKLOAD_COUNT; ++i) {
       // Use a logical AND instead of mod to avoid affecting the timing result with a slow divide
       *res = OP::Map(Super::data_set_[i & 0xFF], Super::data_set_[(i + 1) & 0xFF]);
@@ -607,16 +606,15 @@ class UnaryOpTune : public OperatorTune<DType> {
    * \tparam OP Kernel operator
    * \return Duration in nanoseconds for the 'WORKLOAD_COUNT' operations
    */
-  template<typename OP>
+  template <typename OP>
   static duration_t GetTertiaryWorkload() {
     DType tmp;
-    volatile DType *res = &tmp;
-    const Tick start = std::chrono::high_resolution_clock::now();
+    volatile DType* res = &tmp;
+    const Tick start    = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < Super::WORKLOAD_COUNT; ++i) {
       // Use a logical AND instead of mod to avoid affecting the timing result with a slow divide
-      *res = OP::Map(Super::data_set_[i & 0xFF],
-                     Super::data_set_[(i + 1) & 0xFF],
-                     Super::data_set_[i & 0xFF]);
+      *res = OP::Map(
+          Super::data_set_[i & 0xFF], Super::data_set_[(i + 1) & 0xFF], Super::data_set_[i & 0xFF]);
     }
     const duration_t omp_duration = Super::GetDurationInNanoseconds(start);
     return omp_duration ? omp_duration : 1;
@@ -628,10 +626,10 @@ class UnaryOpTune : public OperatorTune<DType> {
    * \tparam OP Kernel operator
    * \return Duration in nanoseconds for the 'WORKLOAD_COUNT' operations
    */
-  template<typename OP>
+  template <typename OP>
   static duration_t GetBlankWorkloadEx() {
     std::unique_ptr<DType[]> tmp(new DType[Super::WORKLOAD_COUNT]);
-    DType *tmp_ptr = tmp.get();
+    DType* tmp_ptr   = tmp.get();
     const Tick start = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < Super::WORKLOAD_COUNT; ++i) {
       OP::Map(i, tmp_ptr);
@@ -647,13 +645,13 @@ class UnaryOpTune : public OperatorTune<DType> {
    *        This function tunes an operator which takes no arguments
    * \tparam OP The kernel operator to be tuned
    */
-  template<typename OP>
+  template <typename OP>
   static void TuneBlankOperator() {
     mxnet::op::mxnet_op::tuned_op<OP, DType>::workload_[0] = GetBlankWorkload<OP>();
     if (Super::output_tuning_data_) {
-      std::cout << "IMPLEMENT_UNARY_WORKLOAD_FWD("
-                << Super::template type_name<OP>()
-                << ");  // NOLINT()" << std::endl << std::flush;  // For long lines
+      std::cout << "IMPLEMENT_UNARY_WORKLOAD_FWD(" << Super::template type_name<OP>()
+                << ");  // NOLINT()" << std::endl
+                << std::flush;  // For long lines
     }
   }
 
@@ -663,13 +661,13 @@ class UnaryOpTune : public OperatorTune<DType> {
    *        This function tunes an operator which takes one argument
    * \tparam OP The kernel operator to be tuned
    */
-  template<typename OP>
+  template <typename OP>
   static void TuneUnaryOperator() {
     mxnet::op::mxnet_op::tuned_op<OP, DType>::workload_[0] = GetUnaryWorkload<OP>();
     if (Super::output_tuning_data_) {
-      std::cout << "IMPLEMENT_UNARY_WORKLOAD_FWD("
-                << Super::template type_name<OP>()
-                << ");  // NOLINT()" << std::endl << std::flush;  // For long lines
+      std::cout << "IMPLEMENT_UNARY_WORKLOAD_FWD(" << Super::template type_name<OP>()
+                << ");  // NOLINT()" << std::endl
+                << std::flush;  // For long lines
     }
   }
 
@@ -679,14 +677,14 @@ class UnaryOpTune : public OperatorTune<DType> {
    *        This function tunes a backward operator which takes one argument
    * \tparam OP The kernel operator to be tuned
    */
-  template<typename OP>
+  template <typename OP>
   static void TuneUnaryBackwardOperator() {
     mxnet::op::mxnet_op::tuned_op<mxnet_op::backward_grad_tuned<OP>, DType>::workload_[0] =
-      GetBinaryWorkload<mxnet::op::mxnet_op::backward_grad_tuned<OP>>();
+        GetBinaryWorkload<mxnet::op::mxnet_op::backward_grad_tuned<OP>>();
     if (Super::output_tuning_data_) {
-      std::cout << "IMPLEMENT_UNARY_WORKLOAD_BWD("
-                << Super::template type_name<OP>()
-                << ");  // NOLINT()" << std::endl << std::flush;  // For long lines
+      std::cout << "IMPLEMENT_UNARY_WORKLOAD_BWD(" << Super::template type_name<OP>()
+                << ");  // NOLINT()" << std::endl
+                << std::flush;  // For long lines
     }
   }
 
@@ -697,13 +695,13 @@ class UnaryOpTune : public OperatorTune<DType> {
    *        This function tunes an operator which takes no arguments
    * \tparam OP The kernel operator to be tuned
    */
-  template<typename OP>
+  template <typename OP>
   static void TuneBlankOperatorEx() {
     mxnet::op::mxnet_op::tuned_op<OP, DType>::workload_[0] = GetBlankWorkloadEx<OP>();
     if (Super::output_tuning_data_) {
-      std::cout << "IMPLEMENT_BLANK_WORKLOAD_FWD("
-                << Super::template type_name<OP>()
-                << ");  // NOLINT()" << std::endl << std::flush;  // For long lines
+      std::cout << "IMPLEMENT_BLANK_WORKLOAD_FWD(" << Super::template type_name<OP>()
+                << ");  // NOLINT()" << std::endl
+                << std::flush;  // For long lines
     }
   }
 
@@ -715,11 +713,10 @@ class UnaryOpTune : public OperatorTune<DType> {
    * \param thread_count Number of OMP threads available to perform the iterations
    * \returns Whether it's faster to use OMP for these iterations
    */
-  template<typename OP>
+  template <typename OP>
   inline static bool UseOMP(size_t N, size_t thread_count) {
-      return OperatorTune<DType>::UseOMP(N,
-                                         thread_count,
-                                         static_cast<uint64_t>(N) * OP::workload_[0]);
+    return OperatorTune<DType>::UseOMP(
+        N, thread_count, static_cast<uint64_t>(N) * OP::workload_[0]);
   }
 };
 
@@ -727,7 +724,7 @@ class UnaryOpTune : public OperatorTune<DType> {
  * \brief Class that tunes binary and unary operators
  * \tparam DType Data type to be used when tuning the kernel operations
  */
-template<typename DType>
+template <typename DType>
 class BinaryOpTune : public UnaryOpTune<DType> {
  protected:
   typedef UnaryOpTune<DType> Super;
@@ -737,13 +734,13 @@ class BinaryOpTune : public UnaryOpTune<DType> {
    * \brief Tune a generic binary operator
    * @tparam OP - Operator type
    */
-  template<typename OP>
+  template <typename OP>
   static void TuneBinaryOperator() {
     mxnet_op::tuned_op<OP, DType>::workload_[0] = Super::template GetBinaryWorkload<OP>();
     if (Super::Super::output_tuning_data_) {
-      std::cout << "IMPLEMENT_BINARY_WORKLOAD_FWD("
-                << Super::template type_name<OP>()
-                << ");  // NOLINT()" << std::endl << std::flush;  // For long lines
+      std::cout << "IMPLEMENT_BINARY_WORKLOAD_FWD(" << Super::template type_name<OP>()
+                << ");  // NOLINT()" << std::endl
+                << std::flush;  // For long lines
     }
   }
 
@@ -751,14 +748,14 @@ class BinaryOpTune : public UnaryOpTune<DType> {
    * \brief Tune binary backward operator
    * \tparam OP - operator
    */
-  template<typename OP>
+  template <typename OP>
   static void TuneBinaryBackwardOperator() {
     mxnet::op::mxnet_op::tuned_op<mxnet_op::backward_grad_tuned<OP>, DType>::workload_[0] =
-      Super::template GetTertiaryWorkload<mxnet::op::mxnet_op::backward_grad_tuned<OP>>();
+        Super::template GetTertiaryWorkload<mxnet::op::mxnet_op::backward_grad_tuned<OP>>();
     if (Super::Super::output_tuning_data_) {
-      std::cout << "IMPLEMENT_BINARY_WORKLOAD_BWD("
-                << Super::template type_name<OP>()
-                << ");  // NOLINT()" << std::endl << std::flush;  // For long lines
+      std::cout << "IMPLEMENT_BINARY_WORKLOAD_BWD(" << Super::template type_name<OP>()
+                << ");  // NOLINT()" << std::endl
+                << std::flush;  // For long lines
     }
   }
 };

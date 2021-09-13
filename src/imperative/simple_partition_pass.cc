@@ -36,10 +36,9 @@ namespace detail {
 const IntervalVec* LargerSet(const IntervalVec* const first,
                              const IntervalVec* const second) noexcept {
   const IntervalVec* ret = nullptr;
-  auto first_iter = first->begin();
-  auto second_iter = second->begin();
-  while (first_iter != first->end() &&
-         second_iter != second->end()) {
+  auto first_iter        = first->begin();
+  auto second_iter       = second->begin();
+  while (first_iter != first->end() && second_iter != second->end()) {
     if (*first_iter == *second_iter) {
       ++first_iter;
       ++second_iter;
@@ -65,8 +64,7 @@ const IntervalVec* LargerSet(const IntervalVec* const first,
         continue;
       }
       // Entry in first set fully encloses the entry in the second set
-      if (first_iter->first <= second_iter->first &&
-          first_iter->second >= second_iter->second) {
+      if (first_iter->first <= second_iter->first && first_iter->second >= second_iter->second) {
         if (ret == first || ret == nullptr) {
           ret = first;
           ++second_iter;
@@ -76,8 +74,7 @@ const IntervalVec* LargerSet(const IntervalVec* const first,
         continue;
       }
       // Entry in second set fully encloses the entry in the first set
-      if (second_iter->first <= first_iter->first &&
-          second_iter->second >= first_iter->second) {
+      if (second_iter->first <= first_iter->first && second_iter->second >= first_iter->second) {
         if (ret == second || ret == nullptr) {
           ret = second;
           ++first_iter;
@@ -117,13 +114,12 @@ void MergeSets(const IntervalVec** const my_set,
     *my_set = larger_set;
     return;
   }
-  auto my_iter = (*my_set)->cbegin();
+  auto my_iter    = (*my_set)->cbegin();
   auto other_iter = other_set->cbegin();
-  auto new_set = IntervalVec();
-  int last_end = -10;  // less than -1
-  while (my_iter != (*my_set)->cend() &&
-         other_iter != other_set->cend()) {
-    const auto& mine = *my_iter;
+  auto new_set    = IntervalVec();
+  int last_end    = -10;  // less than -1
+  while (my_iter != (*my_set)->cend() && other_iter != other_set->cend()) {
+    const auto& mine  = *my_iter;
     const auto& other = *other_iter;
     if (other.second < mine.first - 1) {
       // other interval is before ours
@@ -145,8 +141,7 @@ void MergeSets(const IntervalVec** const my_set,
       ++my_iter;
     } else {
       // Intervals can be merged together
-      Interval n(std::min(mine.first, other.first),
-                 std::max(mine.second, other.second));
+      Interval n(std::min(mine.first, other.first), std::max(mine.second, other.second));
       if (last_end >= n.first - 1) {
         new_set.back().second = n.second;
       } else {
@@ -162,10 +157,10 @@ void MergeSets(const IntervalVec** const my_set,
     }
   }
   auto remaining_iter = my_iter == (*my_set)->cend() ? other_iter : my_iter;
-  auto remaining_end = my_iter == (*my_set)->cend() ? other_set->cend() : (*my_set)->cend();
+  auto remaining_end  = my_iter == (*my_set)->cend() ? other_set->cend() : (*my_set)->cend();
   // Add the rest of entries
   for (; remaining_iter != remaining_end; ++remaining_iter) {
-    auto& mine = new_set.back();
+    auto& mine        = new_set.back();
     const auto& other = *remaining_iter;
     if (other.second < mine.first - 1) {
       // other interval is before ours, should never happen
@@ -175,7 +170,7 @@ void MergeSets(const IntervalVec** const my_set,
       new_set.emplace_back(other);
     } else {
       // Intervals can be merged together
-      mine.first = std::min(mine.first, other.first);
+      mine.first  = std::min(mine.first, other.first);
       mine.second = std::max(mine.second, other.second);
     }
   }
@@ -183,12 +178,10 @@ void MergeSets(const IntervalVec** const my_set,
   *my_set = storage->back().get();
 }
 
-bool Intersect(const IntervalVec& checked_sets,
-               const IntervalVec& excluded_sets) noexcept {
+bool Intersect(const IntervalVec& checked_sets, const IntervalVec& excluded_sets) noexcept {
   size_t current_interval = 0, current_other_interval = 0;
-  while (current_interval < checked_sets.size() &&
-         current_other_interval < excluded_sets.size()) {
-    const auto& mine = checked_sets[current_interval];
+  while (current_interval < checked_sets.size() && current_other_interval < excluded_sets.size()) {
+    const auto& mine  = checked_sets[current_interval];
     const auto& other = excluded_sets[current_other_interval];
     if (other.second < mine.first) {
       // other interval is before ours
@@ -204,23 +197,23 @@ bool Intersect(const IntervalVec& checked_sets,
   return false;
 }
 
-void AddSet(const IntervalVec** const sets, const int set_to_add,
+void AddSet(const IntervalVec** const sets,
+            const int set_to_add,
             std::vector<std::unique_ptr<const IntervalVec>>* const storage) noexcept {
   if (*sets != nullptr && (*sets)->size() != 0) {
     for (auto& interval : (**sets)) {
-      if (set_to_add >= interval.first &&
-          set_to_add <= interval.second) {
+      if (set_to_add >= interval.first && set_to_add <= interval.second) {
         return;
       }
     }
   }
-  storage->emplace_back(
-      std::make_unique<IntervalVec>(1, std::make_pair(set_to_add, set_to_add)));
+  storage->emplace_back(std::make_unique<IntervalVec>(1, std::make_pair(set_to_add, set_to_add)));
   MergeSets(sets, storage->back().get(), storage);
 }
 
 int GetSetMapping(const int set, std::vector<int>* const set_mapping) noexcept {
-  if (set == -1) return -1;
+  if (set == -1)
+    return -1;
   int temp = set;
   while ((*set_mapping)[temp] != temp) {
     temp = (*set_mapping)[temp];
@@ -229,17 +222,17 @@ int GetSetMapping(const int set, std::vector<int>* const set_mapping) noexcept {
   return temp;
 }
 
-void CheckAndUpdateCombinedExcludedSets(const IntervalVec** const combined_excluded_sets_ptr,
-                                        const IntervalVec* const new_excluded_sets,
-                                        std::vector<const IntervalVec*>* const excluded_sets_ptr,
-                                        const int set_id,
-                                        const int first_node_in_set,
-                                        const size_t new_node_id,
-                                        const std::vector<int>& set_assignment,
-                                        std::vector<int>* const set_mapping_ptr,
-                                        const IntervalVec& inverse_set_mapping,
-                                        std::vector<std::unique_ptr<const IntervalVec>>* const
-                                          storage) noexcept {
+void CheckAndUpdateCombinedExcludedSets(
+    const IntervalVec** const combined_excluded_sets_ptr,
+    const IntervalVec* const new_excluded_sets,
+    std::vector<const IntervalVec*>* const excluded_sets_ptr,
+    const int set_id,
+    const int first_node_in_set,
+    const size_t new_node_id,
+    const std::vector<int>& set_assignment,
+    std::vector<int>* const set_mapping_ptr,
+    const IntervalVec& inverse_set_mapping,
+    std::vector<std::unique_ptr<const IntervalVec>>* const storage) noexcept {
   const auto* previous_excluded_sets = *combined_excluded_sets_ptr;
   MergeSets(combined_excluded_sets_ptr, new_excluded_sets, storage);
   if (new_excluded_sets != nullptr) {
@@ -250,8 +243,7 @@ void CheckAndUpdateCombinedExcludedSets(const IntervalVec** const combined_exclu
       auto& excluded_sets = *excluded_sets_ptr;
       for (size_t j = first_node_in_set; j < new_node_id; ++j) {
         if (GetSetMapping(set_assignment[j], set_mapping_ptr) == set_id ||
-            (excluded_sets[j] != nullptr &&
-             Intersect(inverse_set_mapping, *excluded_sets[j]))) {
+            (excluded_sets[j] != nullptr && Intersect(inverse_set_mapping, *excluded_sets[j]))) {
           MergeSets(&excluded_sets[j], *combined_excluded_sets_ptr, storage);
         }
       }

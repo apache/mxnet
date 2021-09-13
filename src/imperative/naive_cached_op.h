@@ -30,41 +30,36 @@
 #include <unordered_map>
 #include "./cached_op.h"
 
-
-
 namespace mxnet {
 /*! \brief NaiveCachedOp which does not involve engine which is useful when executed in parallel.
     It does not support advanced features of CachedOp, including backward/recording, etc...
  */
 class NaiveCachedOp : public CachedOp {
  public:
-  NaiveCachedOp(
-      const nnvm::Symbol &sym,
-      const std::vector<std::pair<std::string, std::string>> &flags) : CachedOp(sym, flags) {}
+  NaiveCachedOp(const nnvm::Symbol& sym,
+                const std::vector<std::pair<std::string, std::string>>& flags)
+      : CachedOp(sym, flags) {}
   virtual ~NaiveCachedOp() {}
-  OpStatePtr Forward(
-      const std::shared_ptr<CachedOp>& op_ptr,
-      const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs,
-      const Context& default_ctx) override;
-  void Backward(
-      const bool retain_graph,
-      const OpStatePtr& state,
-      const std::vector<NDArray*>& inputs,
-      const std::vector<OpReqType>& reqs,
-      const std::vector<NDArray*>& outputs) override {
-          LOG(FATAL) << "Backward is not supported in NaiveCachedOp.";
-      }
+  OpStatePtr Forward(const std::shared_ptr<CachedOp>& op_ptr,
+                     const std::vector<NDArray*>& inputs,
+                     const std::vector<NDArray*>& outputs,
+                     const Context& default_ctx) override;
+  void Backward(const bool retain_graph,
+                const OpStatePtr& state,
+                const std::vector<NDArray*>& inputs,
+                const std::vector<OpReqType>& reqs,
+                const std::vector<NDArray*>& outputs) override {
+    LOG(FATAL) << "Backward is not supported in NaiveCachedOp.";
+  }
   // backward storage type inference
-  bool BackwardStorageType(
-      const nnvm::NodeAttrs& attrs,
-      const int dev_mask,
-      DispatchMode* dispatch_mode,
-      std::vector<int> *in_attrs,
-      std::vector<int> *out_attrs) override {
-          LOG(FATAL) << "Backward is not supported in NaiveCachedOp.";
-          return false;
-      }
+  bool BackwardStorageType(const nnvm::NodeAttrs& attrs,
+                           const int dev_mask,
+                           DispatchMode* dispatch_mode,
+                           std::vector<int>* in_attrs,
+                           std::vector<int>* out_attrs) override {
+    LOG(FATAL) << "Backward is not supported in NaiveCachedOp.";
+    return false;
+  }
 };  // NaiveCachedOp
 
 using NaiveCachedOpPtr = std::shared_ptr<NaiveCachedOp>;

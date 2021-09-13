@@ -34,18 +34,16 @@
 namespace mxnet {
 namespace kvstore {
 
-enum class CompressionType {
-  kNone, kOneBit, kTwoBit
-};
+enum class CompressionType { kNone, kOneBit, kTwoBit };
 
 struct GradientCompressionParam : public dmlc::Parameter<GradientCompressionParam> {
   std::string type;
   float threshold;
   DMLC_DECLARE_PARAMETER(GradientCompressionParam) {
-    DMLC_DECLARE_FIELD(type)
-      .describe("Type of gradient compression to use, like `2bit` for example");
-    DMLC_DECLARE_FIELD(threshold).set_default(0.5)
-      .describe("Threshold to use for 2bit gradient compression");
+    DMLC_DECLARE_FIELD(type).describe(
+        "Type of gradient compression to use, like `2bit` for example");
+    DMLC_DECLARE_FIELD(threshold).set_default(0.5).describe(
+        "Threshold to use for 2bit gradient compression");
   }
 };
 
@@ -92,7 +90,7 @@ class GradientCompression {
   /*!
    * \brief decodes parameters of gc from a string and assigns them to member variables
    */
-  void DecodeParams(const std::string &s);
+  void DecodeParams(const std::string& s);
 
   /*!
    * \brief returns compression factor, which is the factor by which size of gradient
@@ -106,25 +104,27 @@ class GradientCompression {
   int64_t GetCompressedSize(const int64_t original_size);
 
   /*!
-  * \brief Issues quantize operation to be scheduled by the engine
-  * Compresses `from` into `to` and accumulates the quantization error
-  * into 'residual', using the quantization of type `type_`
-  * \param from the ndarray containing original data to be quantized
-  * \param to the target ndarray which contains quantized data
-  * \param residual the ndarray which accumulates quantization error
-  * \param priority Priority of the action.
-  */
-  void Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
-                mxnet::NDArray *residual, const int priority);
+   * \brief Issues quantize operation to be scheduled by the engine
+   * Compresses `from` into `to` and accumulates the quantization error
+   * into 'residual', using the quantization of type `type_`
+   * \param from the ndarray containing original data to be quantized
+   * \param to the target ndarray which contains quantized data
+   * \param residual the ndarray which accumulates quantization error
+   * \param priority Priority of the action.
+   */
+  void Quantize(const mxnet::NDArray& from,
+                mxnet::NDArray* to,
+                mxnet::NDArray* residual,
+                const int priority);
 
   /*!
-  * \brief Issues dequantize operation to be scheduled by the engine
-  * Decompresses `from` into `to` using current parameters of `type` and `threshold`
-  * \param from the ndarray containing quantized data
-  * \param to the target ndarray which contains final dequantized data
-  * \param priority Priority of the action.
-  */
-  void Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int priority);
+   * \brief Issues dequantize operation to be scheduled by the engine
+   * Decompresses `from` into `to` using current parameters of `type` and `threshold`
+   * \param from the ndarray containing quantized data
+   * \param to the target ndarray which contains final dequantized data
+   * \param priority Priority of the action.
+   */
+  void Dequantize(const mxnet::NDArray& from, mxnet::NDArray* to, const int priority);
 
  private:
   /*!

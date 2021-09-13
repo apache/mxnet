@@ -34,7 +34,7 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu>
+template <typename xpu>
 void NumpyShareMemoryCompute(const nnvm::NodeAttrs& attrs,
                              const OpContext& ctx,
                              const std::vector<TBlob>& inputs,
@@ -44,9 +44,9 @@ void NumpyShareMemoryCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob& a = inputs[0];
-  const TBlob& b = inputs[1];
+  Stream<xpu>* s               = ctx.get_stream<xpu>();
+  const TBlob& a               = inputs[0];
+  const TBlob& b               = inputs[1];
   Tensor<xpu, 1, bool> outdata = outputs[0].FlatTo1D<xpu, bool>(s);
 
   if (a.Size() == 0 || b.Size() == 0) {
@@ -56,9 +56,9 @@ void NumpyShareMemoryCompute(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH_WITH_BOOL(a.type_flag_, AType, {
     MSHADOW_TYPE_SWITCH_WITH_BOOL(b.type_flag_, BType, {
       uint64_t start1 = reinterpret_cast<uint64_t>(a.dptr_);
-      uint64_t end1 = start1 + a.Size() * sizeof(AType);
+      uint64_t end1   = start1 + a.Size() * sizeof(AType);
       uint64_t start2 = reinterpret_cast<uint64_t>(b.dptr_);
-      uint64_t end2 = start2 + b.Size() * sizeof(BType);
+      uint64_t end2   = start2 + b.Size() * sizeof(BType);
       if (!(start1 < end2 && start2 < end1 && start1 < end1 && start2 < end2)) {
         ASSIGN_DISPATCH(outdata, OpReqType::kWriteTo, false);
       } else {

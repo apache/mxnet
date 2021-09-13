@@ -32,18 +32,18 @@
 #include "op_module.h"
 
 namespace dmlc {
-  DMLC_REGISTRY_ENABLE(::tvm::runtime::TVMOpConfig);
+DMLC_REGISTRY_ENABLE(::tvm::runtime::TVMOpConfig);
 }  // namespace dmlc
 
 namespace tvm {
 namespace runtime {
 
-void TVMOpModule::Load(const std::string &filepath) {
-  static const PackedFunc *f_load = Registry::Get("runtime.ModuleLoadFromFile");
+void TVMOpModule::Load(const std::string& filepath) {
+  static const PackedFunc* f_load = Registry::Get("runtime.ModuleLoadFromFile");
   std::lock_guard<std::mutex> lock(mutex_);
   Module module = (*f_load)(filepath, "");
-  module_ptr_ = std::make_shared<Module>();
-  *module_ptr_ = module;
+  module_ptr_   = std::make_shared<Module>();
+  *module_ptr_  = module;
 }
 
 void TVMOpModule::Import(const TVMOpModule& module) {
@@ -52,12 +52,12 @@ void TVMOpModule::Import(const TVMOpModule& module) {
   module_ptr_->Import(*(module.module_ptr_));
 }
 
-PackedFunc GetFunction(const std::shared_ptr<Module> &module,
-                       const std::string &op_name,
-                       const std::vector<mxnet::TBlob> &args) {
+PackedFunc GetFunction(const std::shared_ptr<Module>& module,
+                       const std::string& op_name,
+                       const std::vector<mxnet::TBlob>& args) {
   std::ostringstream func_name;
   func_name << op_name;
-  for (const auto &arg : args) {
+  for (const auto& arg : args) {
     switch (arg.type_flag_) {
       case mshadow::kFloat32:
         func_name << "float32";
@@ -103,17 +103,17 @@ PackedFunc GetFunction(const std::shared_ptr<Module> &module,
   return module->GetFunction(func_name.str(), false);
 }
 
-void TVMOpModule::Call(const std::string &func_name,
+void TVMOpModule::Call(const std::string& func_name,
                        const mxnet::OpContext& ctx,
-                       const std::vector<mxnet::TBlob> &args) const {
+                       const std::vector<mxnet::TBlob>& args) const {
   std::vector<int> type_codes;
   std::vector<TVMValue> values;
 
   type_codes.resize(args.size());
   values.resize(args.size());
   for (size_t i = 0; i < args.size(); ++i) {
-    type_codes[i] = kTVMDLTensorHandle;
-    values[i].v_handle = const_cast<DLTensor *>(&(args[i].dltensor()));
+    type_codes[i]      = kTVMDLTensorHandle;
+    values[i].v_handle = const_cast<DLTensor*>(&(args[i].dltensor()));
   }
 
   TVMArgs tvm_args(&values[0], &type_codes[0], args.size());
@@ -121,9 +121,9 @@ void TVMOpModule::Call(const std::string &func_name,
 
 #if MXNET_USE_CUDA
   int dev_type = (ctx.run_ctx.ctx.dev_type == mxnet::Context::DeviceType::kGPU) ? kDLGPU : kDLCPU;
-  int dev_id = ctx.run_ctx.ctx.dev_id;
+  int dev_id   = ctx.run_ctx.ctx.dev_id;
   if (dev_type == kDLGPU) {
-    void *stream = static_cast<void *>(ctx.run_ctx.get_stream<mxnet::gpu>()->stream_);
+    void* stream = static_cast<void*>(ctx.run_ctx.get_stream<mxnet::gpu>()->stream_);
     TVMSetStream(dev_type, dev_id, stream);
   }
 #endif
@@ -135,7 +135,7 @@ void TVMOpModule::Call(const std::string &func_name,
 #endif
 }
 
-void TVMOpModule::CallEx(const std::string &func_name,
+void TVMOpModule::CallEx(const std::string& func_name,
                          const mxnet::OpContext& ctx,
                          const std::vector<mxnet::TBlob>& tblobs,
                          TVMArgs tvm_args) const {
@@ -143,9 +143,9 @@ void TVMOpModule::CallEx(const std::string &func_name,
 
 #if MXNET_USE_CUDA
   int dev_type = (ctx.run_ctx.ctx.dev_type == mxnet::Context::DeviceType::kGPU) ? kDLGPU : kDLCPU;
-  int dev_id = ctx.run_ctx.ctx.dev_id;
+  int dev_id   = ctx.run_ctx.ctx.dev_id;
   if (dev_type == kDLGPU) {
-    void *stream = static_cast<void *>(ctx.run_ctx.get_stream<mxnet::gpu>()->stream_);
+    void* stream = static_cast<void*>(ctx.run_ctx.get_stream<mxnet::gpu>()->stream_);
     TVMSetStream(dev_type, dev_id, stream);
   }
 #endif
@@ -159,8 +159,7 @@ void TVMOpModule::CallEx(const std::string &func_name,
 
 const TVMOpConfig& GetOpConfig(const std::string& name) {
   const TVMOpConfig* ret = ::dmlc::Registry<TVMOpConfig>::Get()->Find(name);
-  CHECK(ret != nullptr)
-    << "op " << name << "does not exist.";
+  CHECK(ret != nullptr) << "op " << name << "does not exist.";
   return *ret;
 }
 
