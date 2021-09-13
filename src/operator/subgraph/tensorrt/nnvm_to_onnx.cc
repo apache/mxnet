@@ -773,10 +773,12 @@ void ConvertConstant(
       initializer_proto->add_float_data(data_ptr[blob_idx]);
     }
   } else if (dtype == TensorProto_DataType_FLOAT16) {
-    std::shared_ptr<uint16_t[]> shared_data_ptr(new uint16_t[size]);
-    uint16_t* const data_ptr = shared_data_ptr.get();
+    std::shared_ptr<uint32_t[]> shared_data_ptr(new uint32_t[(size + 1) / 2]);
+    uint32_t* const data_ptr = shared_data_ptr.get();
+    // zeroing last el to avoid garbage if size is odd
+    data_ptr[(size + 1) / 2 - 1] = 0;
     nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
-    for (size_t blob_idx = 0; blob_idx < size; ++blob_idx) {
+    for (size_t blob_idx = 0; blob_idx < (size + 1) / 2; ++blob_idx) {
       initializer_proto->add_int32_data(
           reinterpret_cast<int32_t*>(data_ptr)[blob_idx]);
     }
